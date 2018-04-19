@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016, 2018 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2018 Bosch Software Innovations GmbH and others.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -8,7 +8,7 @@
  *
  * Contributors:
  *    Bosch Software Innovations GmbH - initial creation
- *
+ *    Red Hat Inc
  */
 
 package org.eclipse.hono.tests.client;
@@ -26,7 +26,7 @@ import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.impl.HonoClientImpl;
 import org.eclipse.hono.config.ClientConfigProperties;
-import org.eclipse.hono.connection.ConnectionFactoryImpl.ConnectionFactoryBuilder;
+import org.eclipse.hono.connection.ConnectionFactory;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
@@ -101,7 +101,7 @@ public abstract class ClientTestBase {
         downstreamProps.setPassword(IntegrationTestSupport.RESTRICTED_CONSUMER_PWD);
         downstreamClient = new HonoClientImpl(
                 vertx,
-                ConnectionFactoryBuilder.newBuilder(downstreamProps).vertx(vertx).build(),
+                ConnectionFactory.newConnectionFactory(vertx, downstreamProps),
                 downstreamProps);
 
         final ClientConfigProperties honoProps = new ClientConfigProperties();
@@ -111,7 +111,7 @@ public abstract class ClientTestBase {
         honoProps.setPassword(IntegrationTestSupport.HONO_PWD);
         honoClient = new HonoClientImpl(
                 vertx,
-                ConnectionFactoryBuilder.newBuilder(honoProps).vertx(vertx).build(),
+                ConnectionFactory.newConnectionFactory(vertx, honoProps),
                 honoProps);
 
         final ClientConfigProperties registryProps = new ClientConfigProperties();
@@ -121,7 +121,7 @@ public abstract class ClientTestBase {
         registryProps.setPassword(IntegrationTestSupport.HONO_PWD);
         honoDeviceRegistryClient = new HonoClientImpl(
                 vertx,
-                ConnectionFactoryBuilder.newBuilder(registryProps).vertx(vertx).build(),
+                ConnectionFactory.newConnectionFactory(vertx, registryProps),
                 registryProps);
 
         final ProtonClientOptions options = new ProtonClientOptions();

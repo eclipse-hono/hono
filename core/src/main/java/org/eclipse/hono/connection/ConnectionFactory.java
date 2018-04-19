@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2018 Bosch Software Innovations GmbH and others.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -8,12 +8,17 @@
  *
  * Contributors:
  *    Bosch Software Innovations GmbH - initial creation
+ *    Red Hat Inc
  */
 
 package org.eclipse.hono.connection;
 
+import org.eclipse.hono.config.ClientConfigProperties;
+import org.eclipse.hono.connection.impl.ConnectionFactoryImpl;
+
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
+import io.vertx.core.Vertx;
 import io.vertx.proton.ProtonClientOptions;
 import io.vertx.proton.ProtonConnection;
 
@@ -87,4 +92,19 @@ public interface ConnectionFactory {
             Handler<AsyncResult<ProtonConnection>> closeHandler,
             Handler<ProtonConnection> disconnectHandler,
             Handler<AsyncResult<ProtonConnection>> connectionResultHandler);
+
+    /**
+     * Create a new {@link ConnectionFactory} using the default implementation.
+     * <p>
+     * <strong>Note:</strong> Instances of {@link ClientConfigProperties} are not thread safe and not immutable. They
+     * must not be modified after calling this method.
+     *
+     * @param vertx The vertx instance to use. Must not be {@code null}.
+     * @param clientConfigProperties The client properties to use. Must not be {@code null}.
+     * @return A new instance of a connection factory.
+     */
+    static ConnectionFactory newConnectionFactory(final Vertx vertx,
+            final ClientConfigProperties clientConfigProperties) {
+        return new ConnectionFactoryImpl(vertx, clientConfigProperties);
+    }
 }

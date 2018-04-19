@@ -44,7 +44,6 @@ import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.TenantClient;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.connection.ConnectionFactory;
-import org.eclipse.hono.connection.ConnectionFactoryImpl.ConnectionFactoryBuilder;
 import org.eclipse.hono.util.Constants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -86,13 +85,14 @@ public class HonoClientImpl implements HonoClient {
     /**
      * Creates a new client for a set of configuration properties.
      * <p>
-     * This constructor creates a connection factory using {@link ConnectionFactoryBuilder}.
+     * This constructor creates a connection factory using
+     * {@link ConnectionFactory#newConnectionFactory(Vertx, ClientConfigProperties)}.
      *
      * @param vertx The Vert.x instance to execute the client on, if {@code null} a new Vert.x instance is used.
      * @param clientConfigProperties The configuration properties to use.
+     * @throws NullPointerException if clientConfigProperties is {@code null}
      */
     public HonoClientImpl(final Vertx vertx, final ClientConfigProperties clientConfigProperties) {
-
         this(vertx, null, clientConfigProperties);
     }
 
@@ -105,9 +105,12 @@ public class HonoClientImpl implements HonoClient {
      * @param vertx The Vert.x instance to execute the client on, if {@code null} a new Vert.x instance is used.
      * @param connectionFactory The factory to use for creating an AMQP connection to the Hono server.
      * @param clientConfigProperties The configuration properties to use.
+     * @throws NullPointerException if clientConfigProperties is {@code null}
      */
     public HonoClientImpl(final Vertx vertx, final ConnectionFactory connectionFactory,
             final ClientConfigProperties clientConfigProperties) {
+
+        Objects.requireNonNull(clientConfigProperties);
 
         if (vertx != null) {
             this.vertx = vertx;
@@ -117,8 +120,7 @@ public class HonoClientImpl implements HonoClient {
         if (connectionFactory != null) {
             this.connectionFactory = connectionFactory;
         } else {
-            this.connectionFactory = ConnectionFactoryBuilder.newBuilder(clientConfigProperties).vertx(this.vertx)
-                    .build();
+            this.connectionFactory = ConnectionFactory.newConnectionFactory(this.vertx, clientConfigProperties);
         }
         this.context = this.vertx.getOrCreateContext();
         this.clientConfigProperties = clientConfigProperties;
