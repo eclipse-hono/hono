@@ -34,6 +34,7 @@ import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.cache.CacheProvider;
 import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.client.CommandClient;
 import org.eclipse.hono.client.CredentialsClient;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageConsumer;
@@ -44,7 +45,9 @@ import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.TenantClient;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.connection.ConnectionFactory;
+import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.ResourceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -834,6 +837,42 @@ public class HonoClientImpl implements HonoClient {
 
         final String targetAddress = TenantClientImpl.getTargetAddress();
         removeActiveRequestResponseClient(targetAddress);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public Future<CommandClient> getOrCreateCommandClient(final String tenantId, final String deviceId) {
+        final Future<CommandClient> result = Future.future();
+        LOG.debug("get or create command client for [tenantId: {}, deviceId: {}]", tenantId, deviceId);
+        getOrCreateRequestResponseClient(
+                ResourceIdentifier.from(CommandConstants.COMMAND_ENDPOINT, tenantId, deviceId).toString(),
+                () -> newCommandClient(tenantId, deviceId),
+                attempt -> {
+                    if (attempt.succeeded()) {
+                        LOG.debug("Command client created successfully for [tenantId: {}, deviceId: {}]", tenantId, deviceId);
+                        result.complete((CommandClient) attempt.result());
+                    } else {
+                        LOG.debug("Command client created failed for [tenantId: {}, deviceId: {}] : {}", tenantId, deviceId, attempt.cause().getMessage());
+                        result.fail(attempt.cause());
+                    }
+                });
+        return result;
+    }
+
+    private Future<RequestResponseClient> newCommandClient(final String tenantId, final String deviceId) {
+        return checkConnected().compose(connected -> {
+            final Future<CommandClient> result = Future.future();
+            CommandClientImpl.create(tenantId, deviceId,
+                    context,
+                    clientConfigProperties,
+                    connection,
+                    this::removeActiveRequestResponseClient,
+                    this::removeActiveRequestResponseClient,
+                    result.completer());
+            return result.map(client -> (RequestResponseClient) client);
+        });
     }
 
     /**

@@ -24,6 +24,7 @@ import java.time.Duration;
 import java.util.Collections;
 import java.util.Map;
 
+import io.vertx.core.buffer.Buffer;
 import org.apache.qpid.proton.amqp.messaging.AmqpValue;
 import org.apache.qpid.proton.amqp.messaging.Rejected;
 import org.apache.qpid.proton.amqp.transport.Target;
@@ -142,7 +143,7 @@ public class AbstractRequestResponseClientTest  {
         // WHEN sending a request message with some headers and payload
         final JsonObject payload = new JsonObject().put("key", "value");
         final Map<String, Object> props = Collections.singletonMap("test-key", "test-value");
-        client.createAndSendRequest("get", props, payload, s -> {});
+        client.createAndSendRequest("get", props, payload.toBuffer(), s -> {});
 
         // THEN the message is sent and the message being sent contains the headers as application properties
         final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
@@ -151,7 +152,7 @@ public class AbstractRequestResponseClientTest  {
         assertThat(messageCaptor.getValue().getBody(), is(notNullValue()));
         assertThat(messageCaptor.getValue().getBody(), instanceOf(AmqpValue.class));
         final AmqpValue body = (AmqpValue) messageCaptor.getValue().getBody();
-        assertThat(body.getValue(), is(payload.encode()));
+        assertThat(body.getValue(), is(payload.toBuffer().getBytes()));
         assertThat(messageCaptor.getValue().getApplicationProperties(), is(notNullValue()));
         assertThat(messageCaptor.getValue().getApplicationProperties().getValue().get("test-key"), is("test-value"));
         // and a timer has been set to time out the request after 200 ms
@@ -174,7 +175,7 @@ public class AbstractRequestResponseClientTest  {
         // WHEN sending a request message with some headers and payload
         final Async sendFailure = ctx.async();
         final JsonObject payload = new JsonObject().put("key", "value");
-        client.createAndSendRequest("get", null, payload, ctx.asyncAssertFailure(t -> {
+        client.createAndSendRequest("get", null, payload.toBuffer(), ctx.asyncAssertFailure(t -> {
             sendFailure.complete();
         }));
         // and the peer rejects the message
@@ -202,9 +203,9 @@ public class AbstractRequestResponseClientTest  {
 
         // GIVEN a request message that has been sent to a peer
         final Async responseReceived = ctx.async();
-        client.createAndSendRequest("request", null, (JsonObject) null, ctx.asyncAssertSuccess(s -> {
+        client.createAndSendRequest("request", null, (Buffer) null, ctx.asyncAssertSuccess(s -> {
             ctx.assertEquals(200, s.getStatus());
-            ctx.assertEquals("payload", s.getPayload());
+            ctx.assertEquals("payload", s.getPayload().toString());
             responseReceived.complete();
         }));
 
@@ -243,7 +244,7 @@ public class AbstractRequestResponseClientTest  {
             return null;
         }).when(vertx).setTimer(anyLong(), any(Handler.class));
         final Async requestFailure = ctx.async();
-        client.createAndSendRequest("request", null, (JsonObject) null, ctx.asyncAssertFailure(t -> {
+        client.createAndSendRequest("request", null, (Buffer) null, ctx.asyncAssertFailure(t -> {
             ctx.assertTrue(ServerErrorException.class.isInstance(t));
             requestFailure.complete();
         }));
@@ -313,7 +314,7 @@ public class AbstractRequestResponseClientTest  {
         client.setResponseCache(cache);
 
         // WHEN sending a request
-        client.createAndSendRequest("get", (JsonObject) null, ctx.asyncAssertSuccess(result -> {
+        client.createAndSendRequest("get", (Buffer) null, ctx.asyncAssertSuccess(result -> {
             // THEN the response has been put to the cache
             verify(cache).put(eq("cacheKey"), any(SimpleRequestResponseResult.class),
                     eq(Duration.ofSeconds(RequestResponseClientConfigProperties.DEFAULT_RESPONSE_CACHE_TIMEOUT)));
@@ -341,7 +342,7 @@ public class AbstractRequestResponseClientTest  {
         client.setResponseCache(cache);
 
         // WHEN sending a request
-        client.createAndSendRequest("get", (JsonObject) null, ctx.asyncAssertSuccess(result -> {
+        client.createAndSendRequest("get", (Buffer) null, ctx.asyncAssertSuccess(result -> {
             // THEN the response has been put to the cache
             verify(cache).put(eq("cacheKey"), any(SimpleRequestResponseResult.class), eq(Duration.ofSeconds(35)));
         }), "cacheKey");
@@ -369,7 +370,7 @@ public class AbstractRequestResponseClientTest  {
         client.setResponseCache(cache);
 
         // WHEN sending a request
-        client.createAndSendRequest("get", (JsonObject) null, ctx.asyncAssertSuccess(result -> {
+        client.createAndSendRequest("get", (Buffer) null, ctx.asyncAssertSuccess(result -> {
             // THEN the response is not put to the cache
             verify(cache, never()).put(eq("cacheKey"), any(SimpleRequestResponseResult.class), any(Duration.class));
         }), "cacheKey");
@@ -399,7 +400,7 @@ public class AbstractRequestResponseClientTest  {
         // WHEN getting a 404 response to a request which contains
         // no cache directive
         final Async invocation = ctx.async();
-        client.createAndSendRequest("get", (JsonObject) null, ctx.asyncAssertSuccess(result -> invocation.complete()), "cacheKey");
+        client.createAndSendRequest("get", (Buffer) null, ctx.asyncAssertSuccess(result -> invocation.complete()), "cacheKey");
 
         final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
         verify(sender).send(messageCaptor.capture(), any(Handler.class));
@@ -429,7 +430,7 @@ public class AbstractRequestResponseClientTest  {
             }
 
             @Override
-            protected SimpleRequestResponseResult getResult(final int status, final String payload, final CacheDirective cacheDirective) {
+            protected SimpleRequestResponseResult getResult(final int status, final Buffer payload, final CacheDirective cacheDirective) {
                 return SimpleRequestResponseResult.from(status, payload, cacheDirective);
             }
         };

@@ -16,6 +16,7 @@ instance. It also makes more use of ConfigMaps and service key/cert management.
 ### API Changes
 
 * The Tenant API's *get Tenant Information* operation has been changed to expect search criteria in the request message's payload instead of the application-properties. This change has been made in order to support other search criteria than just the tenant identifier. In particular, the *get Tenant Information* operation can now be used to find a tenant based on the subject DN of a trusted certificate authority that has been configured for the tenant. See [get Tenant Information]({{< relref "api/Tenant-API.md#get-tenant-information" >}}) for details.
+* The result type of `org.eclipse.hono.util.MessageHelper.getPayload(Message msg)` has been changed from `String` to the more generic `io.vertx.core.buffer.Buffer` to be able to handle e.g. binary data. 
 
 * The default way how `HonoClient` instances are being created has changed.
 As the default implemention `HonoClientImpl` was located in an internal
