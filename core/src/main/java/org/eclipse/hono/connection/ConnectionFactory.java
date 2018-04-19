@@ -24,41 +24,40 @@ public interface ConnectionFactory {
 
     /**
      * Gets the name being indicated as the <em>container-id</em> in the client's AMQP <em>Open</em> frame.
-     * 
+     *
      * @return The name or {@code null} if no name has been set.
      */
     String getName();
 
     /**
      * Gets the host name of the server that this factory creates connections to.
-     * 
+     *
      * @return The host name or literal IP address.
      */
     String getHost();
 
     /**
      * Gets the port of the server that this factory creates connections to.
-     * 
+     *
      * @return The port number.
      */
     int getPort();
 
     /**
-     * Gets the character sequence that the server uses for separating path components
-     * of target addresses.
-     * 
+     * Gets the character sequence that the server uses for separating path components of target addresses.
+     *
      * @return The path separator.
      */
     String getPathSeparator();
 
     /**
      * Connects to a server.
-     * 
+     *
      * @param options The client options to use for connecting. If {@code null} default options will be used.
-     * @param closeHandler The handler to invoke when an AMQP <em>Close</em> frame is received from the server
-     *                     (may be {@code null}).
-     * @param disconnectHandler The handler to invoke when the connection to the server is lost unexpectedly
-     *                     (may be {@code null}).
+     * @param closeHandler The handler to invoke when an AMQP <em>Close</em> frame is received from the server (may be
+     *            {@code null}).
+     * @param disconnectHandler The handler to invoke when the connection to the server is lost unexpectedly (may be
+     *            {@code null}).
      * @param connectionResultHandler The callback to invoke with the outcome of the connection attempt.
      * @throws NullPointerException if the result handler is {@code null}.
      */
@@ -70,14 +69,14 @@ public interface ConnectionFactory {
 
     /**
      * Connects to a server.
-     * 
+     *
      * @param options The client options to use for connecting. If {@code null} default options will be used.
      * @param username The username to use for authenticating to the server using SASL PLAIN.
      * @param password The password to use for authenticating to the server using SASL PLAIN.
-     * @param closeHandler The handler to invoke when an AMQP <em>Close</em> frame is received from the server
-     *                     (may be {@code null}).
-     * @param disconnectHandler The handler to invoke when the connection to the server is lost unexpectedly
-     *                     (may be {@code null}).
+     * @param closeHandler The handler to invoke when an AMQP <em>Close</em> frame is received from the server (may be
+     *            {@code null}).
+     * @param disconnectHandler The handler to invoke when the connection to the server is lost unexpectedly (may be
+     *            {@code null}).
      * @param connectionResultHandler The callback to invoke with the outcome of the connection attempt.
      * @throws NullPointerException if the result handler is {@code null}.
      */
