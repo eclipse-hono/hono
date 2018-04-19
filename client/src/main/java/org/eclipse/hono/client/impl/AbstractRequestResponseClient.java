@@ -206,7 +206,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      * @param cacheDirective Restrictions regarding the caching of the payload (may be {@code null}).
      * @return The result object.
      */
-    protected abstract R getResult(final int status, final String payload, final CacheDirective cacheDirective);
+    protected abstract R getResult(int status, String payload, CacheDirective cacheDirective);
 
     /**
      * Creates the sender and receiver links to the peer for sending requests
@@ -478,7 +478,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      * @param resultHandler The handler to notify about the outcome of the request.
      * @param cacheKey The key to use for caching the response (if the service allows caching).
      */
-    private final void sendRequest(final Message request, final Handler<AsyncResult<R>> resultHandler, final Object cacheKey) {
+    private void sendRequest(final Message request, final Handler<AsyncResult<R>> resultHandler, final Object cacheKey) {
 
         context.runOnContext(req -> {
             if (sender.sendQueueFull()) {

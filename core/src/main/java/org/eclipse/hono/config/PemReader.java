@@ -89,7 +89,7 @@ public final class PemReader {
     public static List<Entry> readAll(final Path path) throws IOException {
         requireNonNull(path);
 
-        try (final Reader reader = newBufferedReader(path, StandardCharsets.US_ASCII)) {
+        try (Reader reader = newBufferedReader(path, StandardCharsets.US_ASCII)) {
             return readAll(reader);
         }
     }

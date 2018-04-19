@@ -542,7 +542,7 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
      * @param msg The message to send.
      * @param delivery The handle for settling the message with the client.
      */
-    protected abstract void forwardMessage(final ProtonSender sender, final Message msg, final ProtonDelivery delivery);
+    protected abstract void forwardMessage(ProtonSender sender, Message msg, ProtonDelivery delivery);
 
     /**
      * Gets the Quality-of-Service type used for the link with the downstream container.

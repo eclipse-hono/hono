@@ -476,15 +476,15 @@ public class HonoClientImplTest {
         private CountDownLatch expectedFailingConnectionAttempts;
         private ProtonConnection connectionToCreate;
 
-        public DisconnectHandlerProvidingConnectionFactory(final ProtonConnection conToCreate) {
+        DisconnectHandlerProvidingConnectionFactory(final ProtonConnection conToCreate) {
             this(conToCreate, 1);
         }
 
-        public DisconnectHandlerProvidingConnectionFactory(final ProtonConnection conToCreate, final int expectedSucceedingConnectionAttempts) {
+        DisconnectHandlerProvidingConnectionFactory(final ProtonConnection conToCreate, final int expectedSucceedingConnectionAttempts) {
             this(conToCreate, expectedSucceedingConnectionAttempts, 0);
         }
 
-        public DisconnectHandlerProvidingConnectionFactory(final ProtonConnection conToCreate, final int expectedSucceedingConnectionAttempts,
+        DisconnectHandlerProvidingConnectionFactory(final ProtonConnection conToCreate, final int expectedSucceedingConnectionAttempts,
                 final int expectedFailingConnectionAttempts) {
             this.connectionToCreate = conToCreate;
             this.expectedSucceedingConnectionAttempts = new CountDownLatch(expectedSucceedingConnectionAttempts);

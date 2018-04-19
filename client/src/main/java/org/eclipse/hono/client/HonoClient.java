@@ -303,5 +303,5 @@ public interface HonoClient {
      *         capabilities that the server has offered in its AMQP <em>open</em>
      *         frame, {@code false} otherwise.
      */
-    boolean supportsCapability(final Symbol capability);
+    boolean supportsCapability(Symbol capability);
 }

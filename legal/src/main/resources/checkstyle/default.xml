@@ -33,6 +33,10 @@
 
     <module name="UnusedImports" />
 
+    <!-- style -->
+
+    <module name="RedundantModifier"/>
+
     <!-- possible issues -->
 
     <module name="HideUtilityClassConstructor"/>

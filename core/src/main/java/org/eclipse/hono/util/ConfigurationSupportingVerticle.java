@@ -49,7 +49,7 @@ public abstract class ConfigurationSupportingVerticle<T> extends AbstractVerticl
      * @param configuration The configuration properties.
      * @throws NullPointerException if configuration is {@code null}.
      */
-    public abstract void setConfig(final T configuration);
+    public abstract void setConfig(T configuration);
 
     /**
      * Gets the properties that this <em>Verticle</em> has been configured with.

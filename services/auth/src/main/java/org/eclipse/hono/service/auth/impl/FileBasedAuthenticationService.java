@@ -76,7 +76,7 @@ public final class FileBasedAuthenticationService extends AbstractHonoAuthentica
      */
     @Autowired
     @Qualifier("signing")
-    public final void setTokenFactory(final AuthTokenHelper tokenFactory) {
+    public void setTokenFactory(final AuthTokenHelper tokenFactory) {
         this.tokenFactory = Objects.requireNonNull(tokenFactory);
     }
 

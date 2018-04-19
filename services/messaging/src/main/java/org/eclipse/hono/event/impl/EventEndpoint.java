@@ -64,7 +64,7 @@ public final class EventEndpoint extends MessageForwardingEndpoint<HonoMessaging
      */
     @Autowired
     @Qualifier("event")
-    public final void setEventAdapter(final DownstreamAdapter adapter) {
+    public void setEventAdapter(final DownstreamAdapter adapter) {
         setDownstreamAdapter(adapter);
     }
 

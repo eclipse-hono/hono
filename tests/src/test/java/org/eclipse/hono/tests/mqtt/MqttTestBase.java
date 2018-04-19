@@ -134,11 +134,11 @@ public abstract class MqttTestBase {
      *                           adapter.
      */
     protected abstract void send(
-            final String tenantId,
-            final String deviceId,
-            final Buffer payload,
-            final boolean useShortTopicName,
-            final Handler<AsyncResult<Integer>> publishSentHandler);
+            String tenantId,
+            String deviceId,
+            Buffer payload,
+            boolean useShortTopicName,
+            Handler<AsyncResult<Integer>> publishSentHandler);
 
     /**
      * Creates a test specific message consumer.
@@ -147,7 +147,7 @@ public abstract class MqttTestBase {
      * @param messageConsumer The handler to invoke for every message received.
      * @return A future succeeding with the created consumer.
      */
-    protected abstract Future<MessageConsumer> createConsumer(final String tenantId, final Consumer<Message> messageConsumer);
+    protected abstract Future<MessageConsumer> createConsumer(String tenantId, Consumer<Message> messageConsumer);
 
     /**
      * Verifies that a number of messages published to Hono's MQTT adapter

@@ -39,7 +39,7 @@ public final class HonoClientUnitTestHelper {
      * @return The mocked context.
      */
     @SuppressWarnings("unchecked")
-    public static final Context mockContext(final Vertx vertx) {
+    public static Context mockContext(final Vertx vertx) {
 
         final Context context = mock(Context.class);
 
@@ -57,7 +57,7 @@ public final class HonoClientUnitTestHelper {
      *
      * @return The mocked sender.
      */
-    public static final ProtonSender mockProtonSender() {
+    public static ProtonSender mockProtonSender() {
 
         final ProtonSender sender = mock(ProtonSender.class);
         when(sender.isOpen()).thenReturn(Boolean.TRUE);
@@ -70,7 +70,7 @@ public final class HonoClientUnitTestHelper {
      *
      * @return The mocked receiver.
      */
-    public static final ProtonReceiver mockProtonReceiver() {
+    public static ProtonReceiver mockProtonReceiver() {
 
         final ProtonReceiver receiver = mock(ProtonReceiver.class);
         when(receiver.isOpen()).thenReturn(Boolean.TRUE);

@@ -138,11 +138,11 @@ public abstract class HttpTestBase {
      *         Otherwise the future will fail with a {@link ServiceInvocationException}.
      */
     protected abstract Future<MultiMap> send(
-            final String origin,
-            final String tenantId,
-            final String deviceId,
-            final String password,
-            final Buffer payload);
+            String origin,
+            String tenantId,
+            String deviceId,
+            String password,
+            Buffer payload);
 
     /**
      * Creates a test specific message consumer.
@@ -151,7 +151,7 @@ public abstract class HttpTestBase {
      * @param messageConsumer The handler to invoke for every message received.
      * @return A future succeeding with the created consumer.
      */
-    protected abstract Future<MessageConsumer> createConsumer(final String tenantId, final Consumer<Message> messageConsumer);
+    protected abstract Future<MessageConsumer> createConsumer(String tenantId, Consumer<Message> messageConsumer);
 
     /**
      * Verifies that a number of messages uploaded to Hono's HTTP adapter can be successfully

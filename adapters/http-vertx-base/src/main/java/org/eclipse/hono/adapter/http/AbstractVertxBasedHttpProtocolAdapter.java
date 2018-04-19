@@ -211,7 +211,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
      * 
      * @param router The router to add the custom routes to.
      */
-    protected abstract void addRoutes(final Router router);
+    protected abstract void addRoutes(Router router);
 
     /**
      * Gets the options to use for creating the TLS secured http server.

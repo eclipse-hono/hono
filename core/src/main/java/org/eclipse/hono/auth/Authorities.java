@@ -29,7 +29,7 @@ public interface Authorities {
      * @param intent The intended activity on the resource
      * @return {@code true} if the activity is allowed.
      */
-    boolean isAuthorized(ResourceIdentifier resourceId, final Activity intent);
+    boolean isAuthorized(ResourceIdentifier resourceId, Activity intent);
 
     /**
      * Checks if these authorities include claims allowing execution of an operation of a resource.

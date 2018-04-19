@@ -284,7 +284,7 @@ public abstract class AbstractAdapterConfig {
      * @param config The configuration to use as base for this cache.
      * @return A new cache provider or {@code null} if no cache should be used.
      */
-    private static final CacheProvider newGuavaCache(final RequestResponseClientConfigProperties config) {
+    private static CacheProvider newGuavaCache(final RequestResponseClientConfigProperties config) {
         final int minCacheSize = config.getResponseCacheMinSize();
         final long maxCacheSize = config.getResponseCacheMaxSize();
 

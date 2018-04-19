@@ -170,7 +170,7 @@ public abstract class EventBusService<C> extends ConfigurationSupportingVerticle
      *         indicating the cause of the problem in its error code.
      * @throws NullPointerException If the request message is {@code null}.
      */
-    protected abstract Future<EventBusMessage> processRequest(final EventBusMessage request);
+    protected abstract Future<EventBusMessage> processRequest(EventBusMessage request);
 
     /**
      * Gets a property value of a given type from a JSON object.

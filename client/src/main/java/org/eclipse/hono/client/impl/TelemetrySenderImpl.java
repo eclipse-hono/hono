@@ -114,7 +114,7 @@ public final class TelemetrySenderImpl extends AbstractSender {
      * {@inheritDoc}
      */
     @Override
-    public final Future<ProtonDelivery> sendAndWaitForOutcome(final Message rawMessage) {
+    public Future<ProtonDelivery> sendAndWaitForOutcome(final Message rawMessage) {
 
         Objects.requireNonNull(rawMessage);
 

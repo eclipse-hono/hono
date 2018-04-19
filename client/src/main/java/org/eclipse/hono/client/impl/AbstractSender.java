@@ -273,7 +273,7 @@ abstract class AbstractSender extends AbstractHonoClient implements MessageSende
      *         message could not be sent.
      * @throws NullPointerException if the message is {@code null}.
      */
-    protected abstract Future<ProtonDelivery> sendMessage(final Message message);
+    protected abstract Future<ProtonDelivery> sendMessage(Message message);
 
     /**
      * Gets the value of the <em>to</em> property to be used for messages produced by this sender.
@@ -281,7 +281,7 @@ abstract class AbstractSender extends AbstractHonoClient implements MessageSende
      * @param deviceId The identifier of the device that the message's content originates from.
      * @return The address.
      */
-    protected abstract String getTo(final String deviceId);
+    protected abstract String getTo(String deviceId);
 
     private void addProperties(final Message msg, final String deviceId, final String contentType, final String registrationAssertion) {
         msg.setContentType(contentType);

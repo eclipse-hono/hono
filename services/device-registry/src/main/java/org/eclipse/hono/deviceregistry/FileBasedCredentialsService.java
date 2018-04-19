@@ -233,7 +233,7 @@ public final class FileBasedCredentialsService extends BaseCredentialsService<Fi
      * The result object will include a <em>no-cache</em> directive.
      */
     @Override
-    public final void get(
+    public void get(
             final String tenantId,
             final String type,
             final String authId,
@@ -534,7 +534,7 @@ public final class FileBasedCredentialsService extends BaseCredentialsService<Fi
     /**
      * Removes all credentials from the registry.
      */
-    public final void clear() {
+    public void clear() {
         dirty = true;
         credentials.clear();
     }

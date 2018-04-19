@@ -56,7 +56,7 @@ public final class AmqpErrorException extends RuntimeException {
      * 
      * @return The error.
      */
-    public final Symbol getError() {
+    public Symbol getError() {
         return error;
     }
 
@@ -65,7 +65,7 @@ public final class AmqpErrorException extends RuntimeException {
      * 
      * @return The condition.
      */
-    public final ErrorCondition asErrorCondition() {
+    public ErrorCondition asErrorCondition() {
         return ProtonHelper.condition(error.toString(), getMessage());
     }
 }

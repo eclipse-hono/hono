@@ -57,7 +57,7 @@ public final class KeyLoader {
     @FunctionalInterface
     private interface PemProcessor<R> {
 
-        public R process(List<PemReader.Entry> pems) throws Exception;
+        R process(List<PemReader.Entry> pems) throws Exception;
     }
 
     private final PrivateKey privateKey;

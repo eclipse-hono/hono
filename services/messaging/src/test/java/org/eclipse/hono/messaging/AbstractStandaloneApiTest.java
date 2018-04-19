@@ -128,7 +128,7 @@ public abstract class AbstractStandaloneApiTest {
      * @param tenantId The tenant.
      * @return The sender.
      */
-    protected abstract Future<MessageSender> getSender(final String tenantId);
+    protected abstract Future<MessageSender> getSender(String tenantId);
 
     /**
      * Gets a message sender for a device.
@@ -137,7 +137,7 @@ public abstract class AbstractStandaloneApiTest {
      * @param deviceId The identifier of the device.
      * @return The sender.
      */
-    protected abstract Future<MessageSender> getSender(final String tenantId, final String deviceId);
+    protected abstract Future<MessageSender> getSender(String tenantId, String deviceId);
 
     /**
      * Gets an assertion for a device.

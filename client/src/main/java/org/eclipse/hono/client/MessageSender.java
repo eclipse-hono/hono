@@ -37,7 +37,7 @@ public interface MessageSender {
      * 
      * @return The endpoint name.
      */
-    public String getEndpoint();
+    String getEndpoint();
 
     /**
      * Gets the number of messages this sender can send based on its current number of credits.

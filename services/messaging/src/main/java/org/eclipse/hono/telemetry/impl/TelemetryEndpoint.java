@@ -62,7 +62,7 @@ public final class TelemetryEndpoint extends MessageForwardingEndpoint<HonoMessa
      */
     @Autowired
     @Qualifier("telemetry")
-    public final void setTelemetryAdapter(final DownstreamAdapter adapter) {
+    public void setTelemetryAdapter(final DownstreamAdapter adapter) {
         setDownstreamAdapter(adapter);
     }
 

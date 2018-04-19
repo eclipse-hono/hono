@@ -125,5 +125,5 @@ public abstract class AbstractAmqpEndpoint<T> extends AbstractEndpoint implement
      * @param message The message to check.
      * @return {@code true} if the message passes all checks and can be forwarded downstream.
      */
-    protected abstract boolean passesFormalVerification(final ResourceIdentifier targetAddress, final Message message);
+    protected abstract boolean passesFormalVerification(ResourceIdentifier targetAddress, Message message);
 }

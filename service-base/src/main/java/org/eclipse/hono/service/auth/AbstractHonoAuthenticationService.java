@@ -130,8 +130,8 @@ public abstract class AbstractHonoAuthenticationService<T> extends BaseAuthentic
      * @param authenticationResultHandler The handler to invoke with the authentication result. On successful authentication,
      *                                    the result contains the authenticated user.
      */
-    public abstract void verifyPlain(final String authzid, final String authcid, final String password,
-            final Handler<AsyncResult<HonoUser>> authenticationResultHandler);
+    public abstract void verifyPlain(String authzid, String authcid, String password,
+            Handler<AsyncResult<HonoUser>> authenticationResultHandler);
 
     /**
      * Verifies a Subject DN that has been provided by a client in a SASL EXTERNAL exchange.
@@ -143,7 +143,7 @@ public abstract class AbstractHonoAuthenticationService<T> extends BaseAuthentic
      * @param authenticationResultHandler The handler to invoke with the authentication result. On successful authentication,
      *                                    the result contains the authenticated user.
      */
-    public abstract void verifyExternal(final String authzid, final String subjectDn, final Handler<AsyncResult<HonoUser>> authenticationResultHandler);
+    public abstract void verifyExternal(String authzid, String subjectDn, Handler<AsyncResult<HonoUser>> authenticationResultHandler);
 
     @Override
     public String toString() {

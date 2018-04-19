@@ -152,7 +152,7 @@ public final class MessageDiscardingDownstreamAdapter implements DownstreamAdapt
         private UpstreamReceiver client;
         private boolean suspended;
 
-        public LinkStatus(final UpstreamReceiver client) {
+        LinkStatus(final UpstreamReceiver client) {
             this.client = client;
         }
 

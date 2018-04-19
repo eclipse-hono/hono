@@ -69,5 +69,5 @@ public abstract class AbstractDeviceCredentials implements DeviceCredentials {
      * @param candidateSecret The secret to match against.
      * @return {@code true} if the credentials match.
      */
-    public abstract boolean matchesCredentials(final JsonObject candidateSecret);
+    public abstract boolean matchesCredentials(JsonObject candidateSecret);
 }

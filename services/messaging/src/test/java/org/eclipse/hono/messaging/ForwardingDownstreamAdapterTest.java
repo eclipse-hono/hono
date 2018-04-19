@@ -411,11 +411,11 @@ public class ForwardingDownstreamAdapterTest {
         private CountDownLatch expectedConnectionAttempts;
         private ProtonConnection connectionToCreate;
 
-        public HandlerCapturingConnectionFactory(final ProtonConnection conToCreate) {
+        HandlerCapturingConnectionFactory(final ProtonConnection conToCreate) {
             this(conToCreate, 1);
         }
 
-        public HandlerCapturingConnectionFactory(final ProtonConnection conToCreate, final int expectedConnectionAttempts) {
+        HandlerCapturingConnectionFactory(final ProtonConnection conToCreate, final int expectedConnectionAttempts) {
             this.connectionToCreate = conToCreate;
             this.expectedConnectionAttempts = new CountDownLatch(expectedConnectionAttempts);
         }

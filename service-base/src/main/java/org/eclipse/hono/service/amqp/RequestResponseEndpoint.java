@@ -74,7 +74,7 @@ public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties>
      * @throws DecodeException if the message's payload does not contain a valid JSON string.
      * @throws NullPointerException if message is {@code null}.
      */
-    public abstract void processRequest(final Message request, final ResourceIdentifier targetAddress, final HonoUser clientPrincipal);
+    public abstract void processRequest(Message request, ResourceIdentifier targetAddress, HonoUser clientPrincipal);
 
     /**
      * Creates an AMQP message for a service response.
@@ -83,7 +83,7 @@ public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties>
      * @return The AMQP message.
      * @throws NullPointerException If response is {@code null}.
      */
-    protected abstract Message getAmqpReply(final EventBusMessage response);
+    protected abstract Message getAmqpReply(EventBusMessage response);
 
     /**
      * Gets the number of message credits this endpoint grants as a receiver.

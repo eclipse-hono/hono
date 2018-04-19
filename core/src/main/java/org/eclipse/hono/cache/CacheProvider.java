@@ -31,5 +31,5 @@ public interface CacheProvider {
      * 
      * @throws NullPointerException if the cache name is {@code null}.
      */
-    public <K, V> ExpiringValueCache<K, V> getCache(String cacheName);
+    <K, V> ExpiringValueCache<K, V> getCache(String cacheName);
 }

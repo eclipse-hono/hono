@@ -591,7 +591,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
      *         The future will succeed if the message has been successfully uploaded.
      *         Otherwise, the future will fail with a {@link ServiceInvocationException}.
      */
-    protected abstract Future<Void> onPublishedMessage(final MqttContext ctx);
+    protected abstract Future<Void> onPublishedMessage(MqttContext ctx);
 
     /**
      * Invoked before the message is sent to the downstream peer.

@@ -221,7 +221,7 @@ public abstract class ClientTestBase {
      * @param tenantId     The tenant to create the sender for.
      * @return A future succeeding with the created sender.
      */
-    abstract Future<MessageSender> createProducer(final String tenantId);
+    abstract Future<MessageSender> createProducer(String tenantId);
 
     /**
      * Creates a test specific message consumer.
@@ -230,7 +230,7 @@ public abstract class ClientTestBase {
      * @param messageConsumer The handler to invoke for every message received.
      * @return A future succeeding with the created consumer.
      */
-    abstract Future<MessageConsumer> createConsumer(final String tenantId, final Consumer<Message> messageConsumer);
+    abstract Future<MessageConsumer> createConsumer(String tenantId, Consumer<Message> messageConsumer);
 
     /**
      * Verifies that a number of messages uploaded to Hono's Telemetry or Event API can be successfully

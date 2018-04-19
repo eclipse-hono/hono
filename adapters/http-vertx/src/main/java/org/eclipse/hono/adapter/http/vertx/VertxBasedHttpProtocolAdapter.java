@@ -55,7 +55,7 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
      * @param provider The provider to use.
      * @throws NullPointerException if provider is {@code null}.
      */
-    public final void setUsernamePasswordAuthProvider(final HonoClientBasedAuthProvider provider) {
+    public void setUsernamePasswordAuthProvider(final HonoClientBasedAuthProvider provider) {
         this.usernamePasswordAuthProvider = Objects.requireNonNull(provider);
     }
 
@@ -70,7 +70,7 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
     }
 
     @Override
-    protected final void addRoutes(final Router router) {
+    protected void addRoutes(final Router router) {
 
         if (getConfig().isAuthenticationRequired()) {
 
