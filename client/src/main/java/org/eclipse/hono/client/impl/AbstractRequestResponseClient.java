@@ -21,6 +21,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
+import io.vertx.core.buffer.Buffer;
 import org.apache.qpid.proton.amqp.messaging.Accepted;
 import org.apache.qpid.proton.amqp.messaging.AmqpValue;
 import org.apache.qpid.proton.amqp.messaging.Rejected;
@@ -44,7 +45,6 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
-import io.vertx.core.json.JsonObject;
 import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonDelivery;
 import io.vertx.proton.ProtonHelper;
@@ -107,6 +107,26 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
             this.targetAddress = String.format("%s/%s", getName(), tenantId);
             this.replyToAddress = String.format("%s/%s/%s", getName(), tenantId, UUID.randomUUID());
         }
+        this.tenantId = tenantId;
+    }
+
+    /**
+     * Creates a request-response client.
+     * <p>
+     * The client will be ready to use after invoking {@link #createLinks(ProtonConnection)} or
+     * {@link #createLinks(ProtonConnection, Handler, Handler)} only.
+     *
+     * @param context The vert.x context to run message exchanges with the peer on.
+     * @param config The configuration properties to use.
+     * @param tenantId The identifier of the tenant that the client is scoped to. May be {@code null}.
+     * @param deviceId The device id to which a specific client should be scoped.
+     * @throws NullPointerException if any of context or configuration are {@code null}.
+     */
+    AbstractRequestResponseClient(final Context context, final ClientConfigProperties config, final String tenantId, final String deviceId) {
+        super(context, config);
+        this.requestTimeoutMillis = config.getRequestTimeout();
+        this.targetAddress = String.format("%s/%s/%s", getName(), tenantId, deviceId);
+        this.replyToAddress = String.format("%s/%s/%s/%s", getName(), tenantId, deviceId, UUID.randomUUID());
         this.tenantId = tenantId;
     }
 
@@ -202,11 +222,11 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      * Creates a result object from the status and payload of a response received from the endpoint.
      *
      * @param status The status of the response.
-     * @param payload The String representation of the response's JSON payload (may be {@code null}).
+     * @param payload The representation of the payload (may be {@code null}).
      * @param cacheDirective Restrictions regarding the caching of the payload (may be {@code null}).
      * @return The result object.
      */
-    protected abstract R getResult(int status, String payload, CacheDirective cacheDirective);
+    protected abstract R getResult(int status, Buffer payload, CacheDirective cacheDirective);
 
     /**
      * Creates the sender and receiver links to the peer for sending requests
@@ -232,7 +252,8 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      *         have been created.
      * @throws NullPointerException if connection is {@code null}.
      */
-    protected final Future<Void> createLinks(final ProtonConnection con, final Handler<String> senderCloseHook, final Handler<String> receiverCloseHook) {
+    protected final Future<Void> createLinks(final ProtonConnection con, final Handler<String> senderCloseHook,
+            final Handler<String> receiverCloseHook) {
 
         Objects.requireNonNull(con);
 
@@ -335,10 +356,8 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
         if (status == null) {
             return null;
         } else {
-            final String payload = MessageHelper.getPayload(message);
             final CacheDirective cacheDirective = CacheDirective.from(MessageHelper.getCacheDirective(message));
-
-            return getResult(status, payload, cacheDirective);
+            return getResult(status, MessageHelper.getPayload(message), cacheDirective);
         }
     }
 
@@ -371,7 +390,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
     /**
      * Creates a request message for a payload and sends it to the peer.
      * <p>
-     * This method simply invokes {@link #createAndSendRequest(String, Map, JsonObject, Handler)}
+     * This method simply invokes {@link #createAndSendRequest(String, Map, Buffer, Handler)}
      * with {@code null} for the properties parameter.
      * 
      * @param action The operation that the request is supposed to trigger/invoke.
@@ -381,7 +400,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      */
     protected final void createAndSendRequest(
             final String action,
-            final JsonObject payload,
+            final Buffer payload,
             final Handler<AsyncResult<R>> resultHandler) {
         createAndSendRequest(action, null, payload, resultHandler);
     }
@@ -389,7 +408,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
     /**
      * Creates a request message for a payload and sends it to the peer.
      * <p>
-     * This method simply invokes {@link #createAndSendRequest(String, Map, JsonObject, Handler)}
+     * This method simply invokes {@link #createAndSendRequest(String, Map, Buffer, Handler)}
      * with {@code null} for the properties parameter.
      * 
      * @param action The operation that the request is supposed to trigger/invoke.
@@ -400,7 +419,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      */
     protected final void createAndSendRequest(
             final String action,
-            final JsonObject payload,
+            final Buffer payload,
             final Handler<AsyncResult<R>> resultHandler,
             final Object cacheKey) {
         createAndSendRequest(action, null, payload, resultHandler, cacheKey);
@@ -420,7 +439,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      * @throws IllegalArgumentException if the properties contain any non-primitive typed values.
      * @see AbstractHonoClient#setApplicationProperties(Message, Map)
      */
-    protected final void createAndSendRequest(final String action, final Map<String, Object> properties, final JsonObject payload,
+    protected final void createAndSendRequest(final String action, final Map<String, Object> properties, final Buffer payload,
                                       final Handler<AsyncResult<R>> resultHandler) {
         createAndSendRequest(action, properties, payload, resultHandler, null);
     }
@@ -447,7 +466,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
     protected final void createAndSendRequest(
             final String action,
             final Map<String, Object> properties,
-            final JsonObject payload,
+            final Buffer payload,
             final Handler<AsyncResult<R>> resultHandler,
             final Object cacheKey) {
 
@@ -458,7 +477,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
             final Message request = createMessage(action, properties);
             if (payload != null) {
                 request.setContentType(RequestResponseApiConstants.CONTENT_TYPE_APPLICATION_JSON);
-                request.setBody(new AmqpValue(payload.encode()));
+                request.setBody(new AmqpValue(payload.getBytes()));
             }
             sendRequest(request, resultHandler, cacheKey);
         } else {

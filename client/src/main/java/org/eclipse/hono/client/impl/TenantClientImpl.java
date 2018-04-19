@@ -18,6 +18,7 @@ import java.net.HttpURLConnection;
 import java.util.Map;
 import java.util.UUID;
 
+import io.vertx.core.buffer.Buffer;
 import javax.security.auth.x500.X500Principal;
 
 import org.eclipse.hono.cache.CacheProvider;
@@ -93,13 +94,13 @@ public class TenantClientImpl extends AbstractRequestResponseClient<TenantResult
     }
 
     @Override
-    protected final TenantResult<TenantObject> getResult(final int status, final String payload, final CacheDirective cacheDirective) {
+    protected final TenantResult<TenantObject> getResult(final int status, final Buffer payload, final CacheDirective cacheDirective) {
 
         if (payload == null) {
             return TenantResult.from(status, (TenantObject) null, cacheDirective);
         } else {
             try {
-                return TenantResult.from(status, OBJECT_MAPPER.readValue(payload, TenantObject.class), cacheDirective);
+                return TenantResult.from(status, OBJECT_MAPPER.readValue(payload.getBytes(), TenantObject.class), cacheDirective);
             } catch (final IOException e) {
                 LOG.warn("received malformed payload from Tenant service", e);
                 return TenantResult.from(HttpURLConnection.HTTP_INTERNAL_ERROR);
@@ -166,7 +167,7 @@ public class TenantClientImpl extends AbstractRequestResponseClient<TenantResult
         return getResponseFromCache(key).recover(t -> {
             final Future<TenantResult<TenantObject>> tenantResult = Future.future();
             final JsonObject payload = new JsonObject().put(TenantConstants.FIELD_PAYLOAD_TENANT_ID, tenantId);
-            createAndSendRequest(TenantConstants.TenantAction.get.toString(), customizeRequestApplicationProperties(), payload,
+            createAndSendRequest(TenantConstants.TenantAction.get.toString(), customizeRequestApplicationProperties(), payload.toBuffer(),
                     tenantResult.completer(), key);
             return tenantResult;
         }).map(tenantResult -> {
@@ -190,7 +191,7 @@ public class TenantClientImpl extends AbstractRequestResponseClient<TenantResult
         return getResponseFromCache(key).recover(t -> {
             final Future<TenantResult<TenantObject>> tenantResult = Future.future();
             final JsonObject payload = new JsonObject().put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, subjectDn.getName(X500Principal.RFC2253));
-            createAndSendRequest(TenantConstants.TenantAction.get.toString(), customizeRequestApplicationProperties(), payload, tenantResult.completer(), key);
+            createAndSendRequest(TenantConstants.TenantAction.get.toString(), customizeRequestApplicationProperties(), payload.toBuffer(), tenantResult.completer(), key);
             return tenantResult;
         }).map(tenantResult -> {
             switch(tenantResult.getStatus()) {

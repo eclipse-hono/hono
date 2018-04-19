@@ -20,6 +20,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 
+import io.vertx.core.buffer.Buffer;
 import org.eclipse.hono.cache.CacheProvider;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.StatusCodeMapper;
@@ -101,7 +102,7 @@ public class RegistrationClientImpl extends AbstractRequestResponseClient<Regist
     }
 
     @Override
-    protected final RegistrationResult getResult(final int status, final String payload, final CacheDirective cacheDirective) {
+    protected final RegistrationResult getResult(final int status, final Buffer payload, final CacheDirective cacheDirective) {
 
         if (payload == null) {
             return RegistrationResult.from(status);
@@ -175,7 +176,7 @@ public class RegistrationClientImpl extends AbstractRequestResponseClient<Regist
         createAndSendRequest(
                 RegistrationConstants.ACTION_REGISTER,
                 createDeviceIdProperties(deviceId),
-                data,
+                data != null ? data.toBuffer() : null,
                 regResultTracker.completer());
         return regResultTracker.map(response -> {
             switch(response.getStatus()) {
@@ -201,7 +202,7 @@ public class RegistrationClientImpl extends AbstractRequestResponseClient<Regist
         createAndSendRequest(
                 RegistrationConstants.ACTION_UPDATE,
                 createDeviceIdProperties(deviceId),
-                data,
+                data != null ? data.toBuffer() : null,
                 regResultTracker.completer());
         return regResultTracker.map(response -> {
             switch(response.getStatus()) {
