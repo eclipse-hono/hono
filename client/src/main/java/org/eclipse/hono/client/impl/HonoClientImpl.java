@@ -93,14 +93,7 @@ public class HonoClientImpl implements HonoClient {
      */
     public HonoClientImpl(final Vertx vertx, final ClientConfigProperties clientConfigProperties) {
 
-        if (vertx != null) {
-            this.vertx = vertx;
-        } else {
-            this.vertx = Vertx.vertx();
-        }
-        this.context = vertx.getOrCreateContext();
-        this.clientConfigProperties = clientConfigProperties;
-        this.connectionFactory = ConnectionFactoryBuilder.newBuilder(clientConfigProperties).vertx(vertx).build();
+        this(vertx, null, clientConfigProperties);
     }
 
     /**
@@ -120,8 +113,12 @@ public class HonoClientImpl implements HonoClient {
         } else {
             this.vertx = Vertx.vertx();
         }
-        this.context = vertx.getOrCreateContext();
-        this.connectionFactory = connectionFactory;
+        if (connectionFactory != null) {
+            this.connectionFactory = connectionFactory;
+        } else {
+            this.connectionFactory = ConnectionFactoryBuilder.newBuilder(clientConfigProperties).vertx(this.vertx).build();
+        }
+        this.context = this.vertx.getOrCreateContext();
         this.clientConfigProperties = clientConfigProperties;
     }
 
