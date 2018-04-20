@@ -14,8 +14,11 @@
 package org.eclipse.hono.tests;
 
 import java.net.HttpURLConnection;
+import java.security.cert.X509Certificate;
 import java.util.Objects;
 import java.util.Optional;
+
+import javax.security.auth.x500.X500Principal;
 
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.util.CredentialsConstants;
@@ -23,6 +26,8 @@ import org.eclipse.hono.util.CredentialsObject;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
@@ -35,6 +40,8 @@ import io.vertx.core.json.JsonObject;
  *
  */
 public final class DeviceRegistryHttpClient {
+
+    private static final Logger LOG = LoggerFactory.getLogger(DeviceRegistryHttpClient.class);
 
     private static final String CONTENT_TYPE_APPLICATION_JSON = "application/json";
     private static final String URI_ADD_TENANT = "/" + TenantConstants.TENANT_ENDPOINT;
@@ -600,4 +607,31 @@ public final class DeviceRegistryHttpClient {
                 return addCredentials(tenant.getTenantId(), JsonObject.mapFrom(credentialsSpec));
             });
     }
+
+    /**
+     * Creates a tenant and adds a device to it with a given client certificate.
+     * <p>
+     * The device will be registered with a set of <em>x509-cert</em> credentials
+     * using the client certificate's subject DN as authentication identifier.
+     * 
+     * @param tenant The tenant to create.
+     * @param deviceId The identifier of the device to add to the tenant.
+     * @param deviceCert The device's client certificate.
+     * @return A future indicating the outcome of the operation.
+     */
+    public Future<Void> addDeviceForTenant(final TenantObject tenant, final String deviceId, final X509Certificate deviceCert) {
+
+        return addTenant(JsonObject.mapFrom(tenant))
+            .compose(ok -> registerDevice(tenant.getTenantId(), deviceId))
+            .compose(ok -> {
+                final CredentialsObject credentialsSpec =
+                        CredentialsObject.fromClientCertificate(deviceId, deviceCert, null, null);
+                return addCredentials(tenant.getTenantId(), JsonObject.mapFrom(credentialsSpec));
+            }).map(ok -> {
+                LOG.debug("registered device with client certificate [tenant-id: {}, device-id: {}, auth-id: {}]",
+                        tenant.getTenantId(), deviceId, deviceCert.getSubjectX500Principal().getName(X500Principal.RFC2253));
+                return null;
+            });
+    }
+
 }

@@ -13,13 +13,19 @@
 
 package org.eclipse.hono.tests.http;
 
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.nio.charset.StandardCharsets;
+import java.security.cert.CertificateFactory;
+import java.security.cert.X509Certificate;
 import java.util.Base64;
+import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.MessageConsumer;
@@ -32,6 +38,7 @@ import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantObject;
 import org.junit.After;
 import org.junit.AfterClass;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
@@ -43,8 +50,11 @@ import io.vertx.core.Future;
 import io.vertx.core.MultiMap;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
+import io.vertx.core.http.HttpClientOptions;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.json.JsonObject;
+import io.vertx.core.net.PemTrustOptions;
+import io.vertx.core.net.SelfSignedCertificate;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 
@@ -57,21 +67,21 @@ public abstract class HttpTestBase {
     /**
      * The CORS <em>origin</em> address to use for sending messages.
      */
-    protected static final String ORIGIN_URI = "http://hono.eclipse.org";
+    private static final String ORIGIN_URI = "http://hono.eclipse.org";
     private static final String ORIGIN_WILDCARD = "*";
-
+    private static final Logger LOGGER = LoggerFactory.getLogger(HttpTestBase.class);
     private static final Vertx VERTX = Vertx.vertx();
     private static final long  TEST_TIMEOUT = 15000; // ms
 
     /**
-     * A client for connecting to Hono Messaging.
-     */
-    protected static CrudHttpClient httpClient;
-    /**
-     * A helper accessing the AMQP 1.0 Messaging Network and
+     * A helper for accessing the AMQP 1.0 Messaging Network and
      * for managing tenants/devices/credentials.
      */
     protected static IntegrationTestSupport helper;
+    /**
+     * The default options to use for creating HTTP clients.
+     */
+    private static HttpClientOptions defaultOptions;
 
     /**
      * Time out each test after five seconds.
@@ -79,10 +89,16 @@ public abstract class HttpTestBase {
     @Rule
     public final Timeout timeout = Timeout.millis(TEST_TIMEOUT);
 
+    private SelfSignedCertificate deviceCert;
     /**
-     * A logger to be used by subclasses.
+     * A client for connecting to the HTTP adapter.
      */
-    protected final Logger LOGGER = LoggerFactory.getLogger(getClass());
+    private CrudHttpClient httpClient;
+    /**
+     * A client for connecting to the HTTP adapter using a client certificate
+     * for authentication.
+     */
+    private CrudHttpClient httpClientWithClientCert;
 
     /**
      * Sets up clients.
@@ -95,10 +111,47 @@ public abstract class HttpTestBase {
         helper = new IntegrationTestSupport(VERTX);
         helper.init(ctx);
 
-        httpClient = new CrudHttpClient(
-                VERTX,
+        LOGGER.debug("using HTTP adapter [host: {}, http port: {}, https port: {}]",
                 IntegrationTestSupport.HTTP_HOST,
-                IntegrationTestSupport.HTTP_PORT);
+                IntegrationTestSupport.HTTP_PORT,
+                IntegrationTestSupport.HTTPS_PORT);
+
+        defaultOptions = new HttpClientOptions()
+           .setDefaultHost(IntegrationTestSupport.HTTP_HOST)
+           .setDefaultPort(IntegrationTestSupport.HTTPS_PORT)
+           .setTrustOptions(new PemTrustOptions().addCertPath(IntegrationTestSupport.TRUST_STORE_PATH))
+           .setSsl(true);
+    }
+
+    private static Future<Buffer> loadFile(final String path) {
+
+        final Future<Buffer> result = Future.future();
+        VERTX.fileSystem().readFile(path, result.completer());
+        return result;
+    }
+
+    private static Future<X509Certificate> getCertificate(final String path) {
+
+        return loadFile(path).map(buffer -> {
+            try (InputStream is = new ByteArrayInputStream(buffer.getBytes())) {
+                final CertificateFactory factory = CertificateFactory.getInstance("X.509");
+                return (X509Certificate) factory.generateCertificate(is);
+            } catch (Exception e) {
+                throw new IllegalArgumentException("file cannot be parsed into X.509 certificate");
+            }
+        });
+    }
+
+    /**
+     * Sets up the fixture.
+     */
+    @Before
+    public void setUp() {
+
+        deviceCert = SelfSignedCertificate.create(UUID.randomUUID().toString());
+        httpClient = new CrudHttpClient(VERTX, new HttpClientOptions(defaultOptions));
+        httpClientWithClientCert = new CrudHttpClient(VERTX, new HttpClientOptions(defaultOptions)
+                .setKeyCertOptions(deviceCert.keyCertOptions()));
     }
 
     /**
@@ -111,6 +164,9 @@ public abstract class HttpTestBase {
     public void deleteObjects(final TestContext ctx) {
 
         helper.deleteObjects(ctx);
+        if (deviceCert != null) {
+            deviceCert.delete();
+        }
     }
 
     /**
@@ -125,24 +181,11 @@ public abstract class HttpTestBase {
     }
 
     /**
-     * Sends a message on behalf of a device to the HTTP adapter.
+     * Gets the (relative) URI of the endpoint to send requests to.
      * 
-     * @param origin The value of the <em>Origin</em> header to include in the request.
-     * @param tenantId The tenant that the device belongs to.
-     * @param deviceId The identifier of the device.
-     * @param password The password to use for authenticating to the HTTP adapter.
-     * @param payload The message to send.
-     * @return A future indicating the outcome of the operation.
-     *         The future will succeed with the response headers if the message has been
-     *         accepted by the HTTP adapter.
-     *         Otherwise the future will fail with a {@link ServiceInvocationException}.
+     * @return The URI.
      */
-    protected abstract Future<MultiMap> send(
-            String origin,
-            String tenantId,
-            String deviceId,
-            String password,
-            Buffer payload);
+    protected abstract String getEndpointUri();
 
     /**
      * Creates a test specific message consumer.
@@ -154,50 +197,104 @@ public abstract class HttpTestBase {
     protected abstract Future<MessageConsumer> createConsumer(String tenantId, Consumer<Message> messageConsumer);
 
     /**
-     * Verifies that a number of messages uploaded to Hono's HTTP adapter can be successfully
+     * Verifies that a number of messages uploaded to Hono's HTTP adapter
+     * using HTTP Basic auth can be successfully consumed via the AMQP Messaging Network.
+     * 
+     * @param ctx The test context.
+     * @throws InterruptedException if the test fails.
+     */
+    @Test
+    public void testUploadMessagesUsingBasicAuth(final TestContext ctx) throws InterruptedException {
+
+        final Async setup = ctx.async();
+        final String tenantId = helper.getRandomTenantId();
+        final String deviceId = helper.getRandomDeviceId(tenantId);
+        final String password = "secret";
+        final TenantObject tenant = TenantObject.from(tenantId, true);
+        final MultiMap requestHeaders = MultiMap.caseInsensitiveMultiMap()
+                .add(HttpHeaders.CONTENT_TYPE, "binary/octet-stream")
+                .add(HttpHeaders.AUTHORIZATION, getBasicAuth(tenantId, deviceId, password))
+                .add(HttpHeaders.ORIGIN, ORIGIN_URI);
+
+        helper.registry.addDeviceForTenant(tenant, deviceId, password).setHandler(ctx.asyncAssertSuccess(ok -> setup.complete()));
+        setup.await();
+
+        testUploadMessages(ctx, tenantId, count -> {
+            return httpClient.create(
+                    getEndpointUri(),
+                    Buffer.buffer("hello " + count),
+                    requestHeaders,
+                    statusCode -> statusCode == HttpURLConnection.HTTP_ACCEPTED);
+        });
+    }
+
+    /**
+     * Verifies that a number of messages uploaded to Hono's HTTP adapter
+     * using client certificate based authentication can be successfully
      * consumed via the AMQP Messaging Network.
      * 
      * @param ctx The test context.
      * @throws InterruptedException if the test fails.
      */
     @Test
-    public void testUploadMessages(final TestContext ctx) throws InterruptedException {
+    public void testUploadMessagesUsingClientCertificate(final TestContext ctx) throws InterruptedException {
 
-        final int messagesToSend = 100;
-        final CountDownLatch received = new CountDownLatch(messagesToSend);
         final Async setup = ctx.async();
         final String tenantId = helper.getRandomTenantId();
         final String deviceId = helper.getRandomDeviceId(tenantId);
-        final String password = "secret";
-        final TenantObject tenant = TenantObject.from(tenantId, true);
+        final MultiMap requestHeaders = MultiMap.caseInsensitiveMultiMap()
+                .add(HttpHeaders.CONTENT_TYPE, "binary/octet-stream")
+                .add(HttpHeaders.ORIGIN, ORIGIN_URI);
 
-        helper.registry.addDeviceForTenant(tenant, deviceId, password)
-//        helper.registry.addTenant(JsonObject.mapFrom(tenant))
-//            .compose(ok -> helper.registry.registerDevice(tenantId, deviceId))
-            .compose(ok -> createConsumer(tenantId, msg -> {
-                LOGGER.trace("received {}", msg);
-                assertMessageProperties(ctx, msg);
-                assertAdditionalMessageProperties(ctx, msg);
-                received.countDown();
-                if (received.getCount() % 20 == 0) {
-                    LOGGER.info("messages received: {}", messagesToSend - received.getCount());
-                }
-            })).setHandler(ctx.asyncAssertSuccess(ok -> setup.complete()));
+        getCertificate(deviceCert.certificatePath()).compose(cert -> {
+            final TenantObject tenant = TenantObject.from(tenantId, true);
+            tenant.setTrustAnchor(cert.getPublicKey(), cert.getSubjectX500Principal());
+            return helper.registry.addDeviceForTenant(tenant, deviceId, cert);
+        }).setHandler(ctx.asyncAssertSuccess(ok -> setup.complete()));
 
         setup.await();
 
+        testUploadMessages(ctx, tenantId, count -> {
+            return httpClientWithClientCert.create(
+                    getEndpointUri(),
+                    Buffer.buffer("hello " + count),
+                    requestHeaders,
+                    statusCode -> statusCode == HttpURLConnection.HTTP_ACCEPTED);
+        });
+    }
+
+    private void testUploadMessages(
+            final TestContext ctx,
+            final String tenantId,
+            final Function<Integer, Future<MultiMap>> requestSender) throws InterruptedException {
+
+        final int messagesToSend = 60;
+        final CountDownLatch received = new CountDownLatch(messagesToSend);
+        final Async setup = ctx.async();
+
+        createConsumer(tenantId, msg -> {
+            LOGGER.trace("received {}", msg);
+            assertMessageProperties(ctx, msg);
+            assertAdditionalMessageProperties(ctx, msg);
+            received.countDown();
+            if (received.getCount() % 20 == 0) {
+                LOGGER.info("messages received: {}", messagesToSend - received.getCount());
+            }
+        }).setHandler(ctx.asyncAssertSuccess(ok -> setup.complete()));
+
+        setup.await();
         final long start = System.currentTimeMillis();
         final AtomicInteger messageCount = new AtomicInteger(0);
 
         while (messageCount.get() < messagesToSend) {
 
             final Async sending = ctx.async();
-            send(ORIGIN_URI, tenantId, deviceId, password, Buffer.buffer("hello " + messageCount.getAndIncrement()))
-            .compose(this::assertHttpResponse).setHandler(attempt -> {
+            requestSender.apply(messageCount.getAndIncrement()).compose(this::assertHttpResponse).setHandler(attempt -> {
                 if (attempt.succeeded()) {
                     LOGGER.debug("sent message {}", messageCount.get());
                 } else {
                     LOGGER.debug("failed to send message {}: {}", messageCount.get(), attempt.cause().getMessage());
+                    ctx.fail(attempt.cause());
                 }
                 sending.complete();
             });
@@ -232,22 +329,26 @@ public abstract class HttpTestBase {
         final String tenantId = helper.getRandomTenantId();
         final String deviceId = helper.getRandomDeviceId(tenantId);
         final String password = "secret";
+        final MultiMap requestHeaders = MultiMap.caseInsensitiveMultiMap()
+                .add(HttpHeaders.CONTENT_TYPE, "binary/octet-stream")
+                .add(HttpHeaders.AUTHORIZATION, getBasicAuth(tenantId, deviceId, password));
+
         final JsonObject adapterDetailsHttp = new JsonObject()
                 .put(TenantConstants.FIELD_ADAPTERS_TYPE, Constants.PROTOCOL_ADAPTER_TYPE_HTTP)
                 .put(TenantConstants.FIELD_ENABLED, Boolean.FALSE);
         final TenantObject tenant = TenantObject.from(tenantId, true);
         tenant.addAdapterConfiguration(adapterDetailsHttp);
 
-        final Async setup = ctx.async();
-        helper.registry.addDeviceForTenant(tenant, deviceId, password)
-//        helper.registry.addTenant(JsonObject.mapFrom(tenant))
-//            .compose(ok -> helper.registry.registerDevice(tenantId, deviceId))
-            .setHandler(ctx.asyncAssertSuccess(ok -> setup.complete()));
-        setup.await();
-
-        // WHEN a device that belongs to the tenant uploads a message
-        send(ORIGIN_URI, tenantId, deviceId, password, Buffer.buffer("hello")).setHandler(ctx.asyncAssertFailure(t -> {
+        helper.registry.addDeviceForTenant(tenant, deviceId, password).compose(ok -> {
+            // WHEN a device that belongs to the tenant uploads a message
+            return httpClient.create(
+                    getEndpointUri(),
+                    Buffer.buffer("hello"),
+                    requestHeaders,
+                    statusCode -> statusCode == HttpURLConnection.HTTP_OK);
+        }).setHandler(ctx.asyncAssertFailure(t -> {
             // THEN the message gets rejected by the HTTP adapter
+            LOGGER.info("could not publish message for disabled tenant [{}]", tenantId);
             ctx.assertEquals(HttpURLConnection.HTTP_FORBIDDEN, ((ServiceInvocationException) t).getErrorCode());
         }));
     }
@@ -279,15 +380,9 @@ public abstract class HttpTestBase {
         final boolean hasValidOrigin = allowedOrigin != null
                 && (allowedOrigin.equals(ORIGIN_WILDCARD) || allowedOrigin.equals(ORIGIN_URI));
 
-        final String allowedHeaders = responseHeaders.get(HttpHeaders.ACCESS_CONTROL_ALLOW_HEADERS);
-        final boolean containsAllowedHeaders = allowedHeaders != null
-                && allowedHeaders.contains(HttpHeaders.AUTHORIZATION)
-                && allowedHeaders.contains(HttpHeaders.CONTENT_TYPE);
 
         if (!hasValidOrigin) {
             result.fail(new IllegalArgumentException("response contains invalid allowed origin: " + allowedOrigin));
-        } else if (!containsAllowedHeaders) {
-            result.fail(new IllegalArgumentException("response contains invalid allowed headers: " + allowedHeaders));
         } else {
             result.complete();;
         }
@@ -302,7 +397,7 @@ public abstract class HttpTestBase {
      * @param password The device's password.
      * @return The header value.
      */
-    public static String getBasicAuth(final String tenant, final String deviceId, final String password) {
+    private static String getBasicAuth(final String tenant, final String deviceId, final String password) {
 
         final StringBuilder result = new StringBuilder("Basic ");
         final String username = IntegrationTestSupport.getUsername(deviceId, tenant);

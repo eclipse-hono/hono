@@ -46,6 +46,7 @@ public final class IntegrationTestSupport {
     public static final int    DEFAULT_DEVICEREGISTRY_AMQP_PORT = 25672;
     public static final int    DEFAULT_DEVICEREGISTRY_HTTP_PORT = 28080;
     public static final int    DEFAULT_HTTP_PORT = 8080;
+    public static final int    DEFAULT_HTTPS_PORT = 8443;
     public static final int    DEFAULT_MQTT_PORT = 1883;
 
     public static final String PROPERTY_AUTH_HOST = "auth.host";
@@ -63,6 +64,7 @@ public final class IntegrationTestSupport {
     public static final String PROPERTY_DOWNSTREAM_PASSWORD = "downstream.password";
     public static final String PROPERTY_HTTP_HOST = "http.host";
     public static final String PROPERTY_HTTP_PORT = "http.port";
+    public static final String PROPERTY_HTTPS_PORT = "https.port";
     public static final String PROPERTY_MQTT_HOST = "mqtt.host";
     public static final String PROPERTY_MQTT_PORT = "mqtt.port";
     public static final String PROPERTY_TENANT = "tenant";
@@ -88,11 +90,14 @@ public final class IntegrationTestSupport {
 
     public static final String HTTP_HOST = System.getProperty(PROPERTY_HTTP_HOST, DEFAULT_HOST);
     public static final int    HTTP_PORT = Integer.getInteger(PROPERTY_HTTP_PORT, DEFAULT_HTTP_PORT);
+    public static final int    HTTPS_PORT = Integer.getInteger(PROPERTY_HTTPS_PORT, DEFAULT_HTTPS_PORT);
     public static final String MQTT_HOST = System.getProperty(PROPERTY_MQTT_HOST, DEFAULT_HOST);
     public static final int    MQTT_PORT = Integer.getInteger(PROPERTY_MQTT_PORT, DEFAULT_MQTT_PORT);
 
     public static final String PATH_SEPARATOR = System.getProperty("hono.pathSeparator", "/");
     public static final int    MSG_COUNT = Integer.getInteger("msg.count", 1000);
+
+    public static final String TRUST_STORE_PATH = System.getProperty("trust-store.path");
 
     /**
      * The name of the tenant for which only the MQTT adapter is enabled.
