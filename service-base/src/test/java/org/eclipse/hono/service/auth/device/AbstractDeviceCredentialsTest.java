@@ -35,7 +35,7 @@ public class AbstractDeviceCredentialsTest {
     @Test
     public void testValidateFailsIfCredentialsAreDisabled() {
 
-        final AbstractDeviceCredentials creds = getDeviceCredentials("type", "identity", true);
+        final AbstractDeviceCredentials creds = getDeviceCredentials("type", "tenant", "identity", true);
         final CredentialsObject credentialsOnRecord = getCredentialsObject("type", "identity", "device", false)
                 .addSecret(CredentialsObject.emptySecret(Instant.now().minusSeconds(120), null));
         assertFalse(creds.validate(credentialsOnRecord));
@@ -48,7 +48,7 @@ public class AbstractDeviceCredentialsTest {
     @Test
     public void testValidateFailsIfNoSecretsAreValidYet() {
 
-        final AbstractDeviceCredentials creds = getDeviceCredentials("type", "identity", true);
+        final AbstractDeviceCredentials creds = getDeviceCredentials("type", "tenant", "identity", true);
         final CredentialsObject credentialsOnRecord = getCredentialsObject("type", "identity", "device", true)
                 .addSecret(CredentialsObject.emptySecret(Instant.now().plusSeconds(120), null));
         assertFalse(creds.validate(credentialsOnRecord));
@@ -61,7 +61,7 @@ public class AbstractDeviceCredentialsTest {
     @Test
     public void testValidateFailsIfNoSecretsAreValidAnymore() {
 
-        final AbstractDeviceCredentials creds = getDeviceCredentials("type", "identity", true);
+        final AbstractDeviceCredentials creds = getDeviceCredentials("type", "tenant", "identity", true);
         final CredentialsObject credentialsOnRecord = getCredentialsObject("type", "identity", "device", true)
                 .addSecret(CredentialsObject.emptySecret(null, Instant.now().minusSeconds(120)));
         assertFalse(creds.validate(credentialsOnRecord));
@@ -74,28 +74,18 @@ public class AbstractDeviceCredentialsTest {
     @Test
     public void testValidateSucceedsIfAnyValidSecretMatches() {
 
-        final AbstractDeviceCredentials creds = getDeviceCredentials("type", "identity", true);
+        final AbstractDeviceCredentials creds = getDeviceCredentials("type", "tenant", "identity", true);
         final CredentialsObject credentialsOnRecord = getCredentialsObject("type", "identity", "device", true)
                 .addSecret(CredentialsObject.emptySecret(Instant.now().minusSeconds(120), Instant.now().plusSeconds(120)));
         assertTrue(creds.validate(credentialsOnRecord));
     }
 
-    private static AbstractDeviceCredentials getDeviceCredentials(final String type, final String authId, final boolean match) {
-        return new AbstractDeviceCredentials() {
+    private static AbstractDeviceCredentials getDeviceCredentials(final String type, final String tenantId, final String authId, final boolean match) {
+        return new AbstractDeviceCredentials(tenantId, authId) {
 
             @Override
             public String getType() {
                 return type;
-            }
-
-            @Override
-            public String getTenantId() {
-                return "tenant";
-            }
-
-            @Override
-            public String getAuthId() {
-                return authId;
             }
 
             @Override

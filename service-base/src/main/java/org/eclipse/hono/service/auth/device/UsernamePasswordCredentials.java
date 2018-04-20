@@ -16,6 +16,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.Base64;
+import java.util.Objects;
 
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
@@ -42,9 +43,11 @@ public class UsernamePasswordCredentials extends AbstractDeviceCredentials {
 
     private static final Logger LOG  = LoggerFactory.getLogger(UsernamePasswordCredentials.class);
 
-    private String authId;
     private String password;
-    private String tenantId;
+
+    private UsernamePasswordCredentials(final String tenantId, final String authId) {
+        super(tenantId, authId);
+    }
 
     /**
      * Creates a new instance for a set of credentials.
@@ -53,24 +56,19 @@ public class UsernamePasswordCredentials extends AbstractDeviceCredentials {
      * @param password The password provided by the device.
      * @param singleTenant If {@code true}, the <em>tenantId</em> is set to {@link Constants#DEFAULT_TENANT},
      *                     otherwise it is parsed from the username.
-     * @return The instance of the created object. Will be null if the userName is null, or the
-     *             username does not comply to the structure userName@tenantId.
+     * @return The credentials or {@code null} if single tenant is {@code false} and
+     *         the username does not contain a tenant ID.
+     * @throws NullPointerException if any of the parameters are {@code null}.
      */
     public static final UsernamePasswordCredentials create(final String username, final String password,
             final boolean singleTenant) {
 
-        if (username == null) {
-            LOG.trace("username must not be null");
-            return null;
-        } else if (password == null) {
-            LOG.trace("password must not be null");
-            return null;
-        }
+        Objects.requireNonNull(username);
+        Objects.requireNonNull(password);
 
-        UsernamePasswordCredentials credentials = new UsernamePasswordCredentials();
+        UsernamePasswordCredentials credentials;
         if (singleTenant) {
-            credentials.authId = username;
-            credentials.tenantId = Constants.DEFAULT_TENANT;
+            credentials = new UsernamePasswordCredentials(Constants.DEFAULT_TENANT, username);
         } else {
             // multi tenantId -> <userId>@<tenantId>
             String[] userComponents = username.split("@", 2);
@@ -78,8 +76,7 @@ public class UsernamePasswordCredentials extends AbstractDeviceCredentials {
                 LOG.trace("username does not comply with expected pattern [<authId>@<tenantId>]", username);
                 return null;
             } else {
-                credentials.authId = userComponents[0];
-                credentials.tenantId = userComponents[1];
+                credentials = new UsernamePasswordCredentials(userComponents[1], userComponents[0]);
             }
         }
         credentials.password = password;
@@ -97,38 +94,12 @@ public class UsernamePasswordCredentials extends AbstractDeviceCredentials {
     }
 
     /**
-     * Gets the identity that the device wants to authenticate as.
-     * <p>
-     * This is either the value of the username property provided by the device (single tenant),
-     * or the <em>auth ID</em> part parsed from the username property (multi tenant).
-     * 
-     * @return The identity.
-     */
-    @Override
-    public final String getAuthId() {
-        return authId;
-    }
-
-    /**
      * Gets the password to use for verifying the identity.
      * 
      * @return The password.
      */
     public final String getPassword() {
         return password;
-    }
-
-    /**
-     * Gets the tenant that the device claims to belong to.
-     * <p>
-     * This is either the {@link Constants#DEFAULT_TENANT} (single tenant) or the <em>tenant ID</em> part
-     * parsed from the username property (multi tenant).
-     * 
-     * @return The tenant.
-     */
-    @Override
-    public final String getTenantId() {
-        return tenantId;
     }
 
     /**

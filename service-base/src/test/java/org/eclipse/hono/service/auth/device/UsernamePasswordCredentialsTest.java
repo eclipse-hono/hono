@@ -59,16 +59,6 @@ public class UsernamePasswordCredentialsTest {
     }
 
     /**
-     * Verifies that if username is null, the created object for multi tenant mode is null.
-     */
-    @Test
-    public void testTenantFromUserMultiTenantNullUsername() {
-
-        UsernamePasswordCredentials mqttUserNamePassword = UsernamePasswordCredentials.create(null, TEST_PASSWORD, false);
-        assertNull(mqttUserNamePassword);
-    }
-
-    /**
      * Verifies that if username does not comply to the structure authId@tenantId, the created object for multi tenant mode is null.
      */
     @Test

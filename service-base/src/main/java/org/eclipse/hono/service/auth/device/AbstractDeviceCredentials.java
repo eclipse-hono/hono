@@ -26,6 +26,36 @@ import io.vertx.core.json.JsonObject;
  */
 public abstract class AbstractDeviceCredentials implements DeviceCredentials {
 
+    private final String tenantId;
+    private final String authId;
+
+    /**
+     * Creates credentials for a tenant and authentication identifier.
+     * 
+     * @param tenantId The tenant that the device belongs to.
+     * @param authId The identifier that the device uses for authentication.
+     */
+    protected AbstractDeviceCredentials(final String tenantId, final String authId) {
+        this.tenantId = tenantId;
+        this.authId = authId;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public final String getAuthId() {
+        return authId;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public final String getTenantId() {
+        return tenantId;
+    }
+
     @Override
     public final boolean validate(final CredentialsObject credentialsOnRecord) {
 

@@ -569,8 +569,12 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
      *         can not be processed.
      */
     protected DeviceCredentials getCredentials(final MqttAuth authInfo) {
-        return UsernamePasswordCredentials.create(authInfo.userName(), authInfo.password(),
-                getConfig().isSingleTenant());
+        if (authInfo.userName() == null || authInfo.password() == null) {
+            return null;
+        } else {
+            return UsernamePasswordCredentials.create(authInfo.userName(), authInfo.password(),
+                    getConfig().isSingleTenant());
+        }
     }
 
     /**

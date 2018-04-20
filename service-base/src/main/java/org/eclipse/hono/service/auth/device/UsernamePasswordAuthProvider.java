@@ -35,7 +35,7 @@ public final class UsernamePasswordAuthProvider extends CredentialsApiAuthProvid
      * 
      * @param credentialsServiceClient The client.
      * @param config The configuration.
-     * @throws NullPointerException if any of the params is {@code null}.
+     * @throws NullPointerException if any of the parameters are {@code null}.
      */
     @Autowired
     public UsernamePasswordAuthProvider(final HonoClient credentialsServiceClient, final ServiceConfigProperties config) {
@@ -57,9 +57,18 @@ public final class UsernamePasswordAuthProvider extends CredentialsApiAuthProvid
      */
     @Override
     protected DeviceCredentials getCredentials(final JsonObject authInfo) {
-        String username = authInfo.getString("username");
-        String password = authInfo.getString("password");
-        return UsernamePasswordCredentials.create(username, password, config.isSingleTenant());
+
+        try {
+            final String username = authInfo.getString("username");
+            final String password = authInfo.getString("password");
+            if (username == null || password == null) {
+                return null;
+            } else {
+                return UsernamePasswordCredentials.create(username, password, config.isSingleTenant());
+            }
+        } catch (ClassCastException e) {
+            return null;
+        }
     }
 
 }
