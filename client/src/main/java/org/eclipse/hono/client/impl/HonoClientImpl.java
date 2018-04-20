@@ -778,7 +778,17 @@ public class HonoClientImpl implements HonoClient {
         return result;
     }
 
-    private Future<RequestResponseClient> newTenantClient() {
+    /**
+     * Creates a new instance of {@link TenantClient}.
+     * <p>
+     * Custom implementation of {@link TenantClient} can be instantiated by overriding this method.
+     * Custom extension of {@link HonoClientImpl} must invoke
+     * {@link #removeTenantClient(String)} to cleanup when finished with the client.
+     *
+     * @return a future containing an instance of {@link TenantClient}
+     * @see TenantClient
+     */
+    protected Future<RequestResponseClient> newTenantClient() {
 
         return checkConnected().compose(connected -> {
 
@@ -795,11 +805,22 @@ public class HonoClientImpl implements HonoClient {
         });
     }
 
+    private void removeTenantClient(final String tenantId) {
+        // the tenantId is not relevant for this client, so ignore it
+        removeTenantClient();
+    }
+
     /**
      *
-     * @param tenantId The tenantId (not used for this client).
+     * Removes a tenant client from the list of active clients.
+     * <p>
+     * Once a client has been removed, the next invocation
+     * of the corresponding <em>getOrCreateTenantClient</em>
+     * method will result in a new client being created
+     * (and added to the list of active clients).
+     *
      */
-    private void removeTenantClient(final String tenantId) {
+    protected void removeTenantClient() {
 
         final String targetAddress = TenantClientImpl.getTargetAddress();
         removeActiveRequestResponseClient(targetAddress);
