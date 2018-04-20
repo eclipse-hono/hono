@@ -783,7 +783,7 @@ public class HonoClientImpl implements HonoClient {
      * <p>
      * Custom implementation of {@link TenantClient} can be instantiated by overriding this method.
      * Custom extension of {@link HonoClientImpl} must invoke
-     * {@link #removeTenantClient(String)} to cleanup when finished with the client.
+     * {@link #removeTenantClient()} to cleanup when finished with the client.
      *
      * @return a future containing an instance of {@link TenantClient}
      * @see TenantClient
