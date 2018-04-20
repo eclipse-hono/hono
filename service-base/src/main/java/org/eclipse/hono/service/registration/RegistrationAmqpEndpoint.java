@@ -64,7 +64,7 @@ public class RegistrationAmqpEndpoint extends RequestResponseEndpoint<ServiceCon
     }
 
     @Override
-    protected boolean passesFormalVerification(ResourceIdentifier linkTarget, Message msg) {
+    protected boolean passesFormalVerification(final ResourceIdentifier linkTarget, final Message msg) {
         return RegistrationMessageFilter.verify(linkTarget, msg);
     }
 

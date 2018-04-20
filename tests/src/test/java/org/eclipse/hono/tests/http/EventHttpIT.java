@@ -54,7 +54,7 @@ public class EventHttpIT extends HttpTestBase {
     }
 
     @Override
-    protected Future<MessageConsumer> createConsumer(String tenantId, Consumer<Message> messageConsumer) {
+    protected Future<MessageConsumer> createConsumer(final String tenantId, final Consumer<Message> messageConsumer) {
 
         return helper.downstreamClient.createEventConsumer(tenantId, messageConsumer, remoteClose -> {});
     }

@@ -68,7 +68,7 @@ public final class FileBasedRegistrationService extends BaseRegistrationService<
     }
 
     @Override
-    protected void doStart(Future<Void> startFuture) {
+    protected void doStart(final Future<Void> startFuture) {
 
         if (running) {
             startFuture.complete();

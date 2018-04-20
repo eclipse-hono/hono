@@ -26,7 +26,7 @@ public final class TriTuple<A, B, C> {
     private final B two;
     private final C three;
 
-    private TriTuple(final A one, B two, C three) {
+    private TriTuple(final A one, final B two, final C three) {
 
         if (one == null && two == null && three == null) {
             throw new IllegalArgumentException("at least one argument must be non-null");
@@ -91,7 +91,7 @@ public final class TriTuple<A, B, C> {
      */
     @SuppressWarnings("rawtypes")
     @Override
-    public boolean equals(Object obj) {
+    public boolean equals(final Object obj) {
         if (this == obj) {
             return true;
         }

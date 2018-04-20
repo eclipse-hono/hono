@@ -72,7 +72,7 @@ public final class TelemetryEndpoint extends MessageForwardingEndpoint<HonoMessa
     }
 
     @Override
-    protected boolean passesFormalVerification(ResourceIdentifier targetAddress, Message message) {
+    protected boolean passesFormalVerification(final ResourceIdentifier targetAddress, final Message message) {
 
         return HonoMessagingMessageFilter.verify(targetAddress, message);
     }

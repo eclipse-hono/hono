@@ -173,7 +173,8 @@ public abstract class MqttTestBase {
         doTestUploadMessages(ctx, true);
     }
 
-    private void doTestUploadMessages(final TestContext ctx, boolean useShortTopicName) throws InterruptedException {
+    private void doTestUploadMessages(final TestContext ctx, final boolean useShortTopicName)
+            throws InterruptedException {
 
         final int messagesToSend = 200;
         final CountDownLatch received = new CountDownLatch(messagesToSend);

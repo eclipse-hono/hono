@@ -60,7 +60,7 @@ public abstract class AbstractServiceBase<T extends ServiceConfigProperties> ext
      * @param stopFuture Will be completed if all of the invoked methods return a succeeded Future.
      */
     @Override
-    public final void stop(Future<Void> stopFuture) {
+    public final void stop(final Future<Void> stopFuture) {
         stopInternal().setHandler(stopFuture.completer());
     }
 

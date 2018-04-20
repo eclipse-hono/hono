@@ -90,7 +90,7 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
         }
     }
 
-    private void addTelemetryApiRoutes(final Router router, Handler<RoutingContext> basicAuthHandler) {
+    private void addTelemetryApiRoutes(final Router router, final Handler<RoutingContext> basicAuthHandler) {
 
         // support CORS headers for PUTing telemetry
         router.routeWithRegex("\\/telemetry\\/[^\\/]+\\/.*").handler(CorsHandler.create(getConfig().getCorsAllowedOrigin())
@@ -125,7 +125,7 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
                 .handler(ctx -> uploadTelemetryMessage(ctx, getTenantParam(ctx), getDeviceIdParam(ctx)));
     }
 
-    private void addEventApiRoutes(final Router router, Handler<RoutingContext> basicAuthHandler) {
+    private void addEventApiRoutes(final Router router, final Handler<RoutingContext> basicAuthHandler) {
 
         // support CORS headers for PUTing events
         router.routeWithRegex("\\/event\\/[^\\/]+\\/.*").handler(CorsHandler.create(getConfig().getCorsAllowedOrigin())

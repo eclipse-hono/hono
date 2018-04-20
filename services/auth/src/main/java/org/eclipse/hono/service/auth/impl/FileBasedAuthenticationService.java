@@ -217,7 +217,7 @@ public final class FileBasedAuthenticationService extends AbstractHonoAuthentica
 
     @Override
     public void verifyPlain(final String authzid, final String username, final String password,
-            Handler<AsyncResult<HonoUser>> authenticationResultHandler) {
+            final Handler<AsyncResult<HonoUser>> authenticationResultHandler) {
 
         if (username == null || username.isEmpty()) {
             authenticationResultHandler.handle(Future.failedFuture("missing username"));

@@ -99,7 +99,7 @@ public class AbstractDeviceCredentialsTest {
             }
 
             @Override
-            public boolean matchesCredentials(JsonObject candidateSecret) {
+            public boolean matchesCredentials(final JsonObject candidateSecret) {
                 return match;
             }
         };

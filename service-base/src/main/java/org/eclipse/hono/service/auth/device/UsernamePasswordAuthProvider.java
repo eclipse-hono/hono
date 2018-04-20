@@ -56,7 +56,7 @@ public final class UsernamePasswordAuthProvider extends CredentialsApiAuthProvid
      * @throws NullPointerException if the auth info is {@code null}.
      */
     @Override
-    protected DeviceCredentials getCredentials(JsonObject authInfo) {
+    protected DeviceCredentials getCredentials(final JsonObject authInfo) {
         String username = authInfo.getString("username");
         String password = authInfo.getString("password");
         return UsernamePasswordCredentials.create(username, password, config.isSingleTenant());

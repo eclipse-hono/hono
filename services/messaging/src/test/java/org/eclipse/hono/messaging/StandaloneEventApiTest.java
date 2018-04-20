@@ -118,7 +118,7 @@ public class StandaloneEventApiTest extends AbstractStandaloneApiTest {
     }
 
     @Override
-    protected Future<MessageSender> getSender(String tenantId, String deviceId) {
+    protected Future<MessageSender> getSender(final String tenantId, final String deviceId) {
         return client.getOrCreateEventSender(tenantId, deviceId);
     }
 

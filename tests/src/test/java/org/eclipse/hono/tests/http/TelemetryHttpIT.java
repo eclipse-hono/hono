@@ -54,7 +54,7 @@ public class TelemetryHttpIT extends HttpTestBase {
     }
 
     @Override
-    protected Future<MessageConsumer> createConsumer(String tenantId, Consumer<Message> messageConsumer) {
+    protected Future<MessageConsumer> createConsumer(final String tenantId, final Consumer<Message> messageConsumer) {
 
         return helper.downstreamClient.createTelemetryConsumer(tenantId, messageConsumer, remoteClose -> {});
     }

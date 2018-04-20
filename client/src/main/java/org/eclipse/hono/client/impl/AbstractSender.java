@@ -229,16 +229,18 @@ abstract class AbstractSender extends AbstractHonoClient implements MessageSende
     }
 
     @Override
-    public final Future<ProtonDelivery> send(String deviceId, Map<String, ?> properties, String payload, String contentType,
-            String registrationAssertion, Handler<Void> capacityAvailableHandler) {
+    public final Future<ProtonDelivery> send(final String deviceId, final Map<String, ?> properties,
+            final String payload, final String contentType, final String registrationAssertion,
+            final Handler<Void> capacityAvailableHandler) {
         Objects.requireNonNull(payload);
         final Charset charset = getCharsetForContentType(Objects.requireNonNull(contentType));
         return send(deviceId, properties, payload.getBytes(charset), contentType, registrationAssertion, capacityAvailableHandler);
     }
 
     @Override
-    public final Future<ProtonDelivery> send(String deviceId, Map<String, ?> properties, byte[] payload, String contentType,
-            String registrationAssertion, Handler<Void> capacityAvailableHandler) {
+    public final Future<ProtonDelivery> send(final String deviceId, final Map<String, ?> properties,
+            final byte[] payload, final String contentType, final String registrationAssertion,
+            final Handler<Void> capacityAvailableHandler) {
 
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(payload);

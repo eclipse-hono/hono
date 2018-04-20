@@ -59,7 +59,7 @@ public abstract class HonoAuthHandler implements AuthHandler {
      * 
      * @param authProvider The provider to use for verifying credentials.
      */
-    public HonoAuthHandler(AuthProvider authProvider) {
+    public HonoAuthHandler(final AuthProvider authProvider) {
       this(authProvider, "");
     }
 
@@ -69,25 +69,25 @@ public abstract class HonoAuthHandler implements AuthHandler {
      * @param authProvider The provider to use for verifying credentials.
      * @param realm The security realm name.
      */
-    public HonoAuthHandler(AuthProvider authProvider, String realm) {
+    public HonoAuthHandler(final AuthProvider authProvider, final String realm) {
       this.authProvider = authProvider;
       this.realm = realm;
     }
 
     @Override
-    public AuthHandler addAuthority(String authority) {
+    public AuthHandler addAuthority(final String authority) {
       authorities.add(authority);
       return this;
     }
 
     @Override
-    public AuthHandler addAuthorities(Set<String> authorities) {
+    public AuthHandler addAuthorities(final Set<String> authorities) {
       this.authorities.addAll(authorities);
       return this;
     }
 
     @Override
-    public void authorize(User user, Handler<AsyncResult<Void>> handler) {
+    public void authorize(final User user, final Handler<AsyncResult<Void>> handler) {
       int requiredcount = authorities.size();
       if (requiredcount > 0) {
         if (user == null) {
@@ -125,12 +125,12 @@ public abstract class HonoAuthHandler implements AuthHandler {
       }
     }
 
-    protected String authenticateHeader(RoutingContext context) {
+    protected String authenticateHeader(final RoutingContext context) {
       return null;
     }
 
     @Override
-    public void handle(RoutingContext ctx) {
+    public void handle(final RoutingContext ctx) {
 
       if (handlePreflight(ctx)) {
         return;
@@ -196,7 +196,7 @@ public abstract class HonoAuthHandler implements AuthHandler {
      * @param ctx The routing context.
      * @param exception The cause of failure to process the request.
      */
-    protected void processException(RoutingContext ctx, Throwable exception) {
+    protected void processException(final RoutingContext ctx, final Throwable exception) {
 
       if (exception != null) {
 
@@ -237,7 +237,7 @@ public abstract class HonoAuthHandler implements AuthHandler {
       ctx.fail(exception);
     }
 
-    private void authorizeUser(RoutingContext ctx, User user) {
+    private void authorizeUser(final RoutingContext ctx, final User user) {
       authorize(user, authZ -> {
         if (authZ.failed()) {
           processException(ctx, authZ.cause());
@@ -248,7 +248,7 @@ public abstract class HonoAuthHandler implements AuthHandler {
       });
     }
 
-    private boolean handlePreflight(RoutingContext ctx) {
+    private boolean handlePreflight(final RoutingContext ctx) {
       final HttpServerRequest request = ctx.request();
       // See: https://www.w3.org/TR/cors/#cross-origin-request-with-preflight-0
       // Preflight requests should not be subject to security due to the reason UAs will remove the Authorization header
@@ -270,7 +270,7 @@ public abstract class HonoAuthHandler implements AuthHandler {
       return false;
     }
 
-    private AuthProvider getAuthProvider(RoutingContext ctx) {
+    private AuthProvider getAuthProvider(final RoutingContext ctx) {
       try {
         AuthProvider provider = ctx.get(AUTH_PROVIDER_CONTEXT_KEY);
         if (provider != null) {

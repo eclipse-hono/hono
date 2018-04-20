@@ -159,7 +159,7 @@ public class TenantAmqpEndpoint extends RequestResponseEndpoint<ServiceConfigPro
      * @return {@code true} if the address contains two segments.
      */
     @Override
-    protected boolean isValidReplyToAddress(ResourceIdentifier replyToAddress) {
+    protected boolean isValidReplyToAddress(final ResourceIdentifier replyToAddress) {
 
         if (replyToAddress == null) {
             return false;

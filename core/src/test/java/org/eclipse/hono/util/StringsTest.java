@@ -30,7 +30,7 @@ public class StringsTest {
 
         private String value;
 
-        Mock(String value) {
+        Mock(final String value) {
             this.value = value;
         }
 

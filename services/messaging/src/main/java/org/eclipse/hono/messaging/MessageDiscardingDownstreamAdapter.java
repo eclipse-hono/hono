@@ -88,17 +88,17 @@ public final class MessageDiscardingDownstreamAdapter implements DownstreamAdapt
     }
 
     @Override
-    public void start(Future<Void> startFuture) {
+    public void start(final Future<Void> startFuture) {
         startFuture.complete();
     }
 
     @Override
-    public void stop(Future<Void> stopFuture) {
+    public void stop(final Future<Void> stopFuture) {
         stopFuture.complete();
     }
 
     @Override
-    public void onClientAttach(UpstreamReceiver client, Handler<AsyncResult<Void>> resultHandler) {
+    public void onClientAttach(final UpstreamReceiver client, final Handler<AsyncResult<Void>> resultHandler) {
         client.replenish(DEFAULT_CREDIT);
         resultHandler.handle(Future.succeededFuture());
     }

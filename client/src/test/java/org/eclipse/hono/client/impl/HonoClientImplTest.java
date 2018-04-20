@@ -556,7 +556,7 @@ public class HonoClientImplTest {
             expectedSucceedingConnectionAttempts = new CountDownLatch(attempts);
         }
 
-        public boolean await(long timeout, TimeUnit unit) {
+        public boolean await(final long timeout, final TimeUnit unit) {
             try {
                 return expectedSucceedingConnectionAttempts.await(timeout, unit);
             } catch (InterruptedException e) {

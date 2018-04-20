@@ -249,8 +249,8 @@ public abstract class BaseRegistrationService<T> extends EventBusService<T> impl
      * Subclasses should override this method in order to provide a reasonable implementation.
      */
     @Override
-    public void addDevice(String tenantId, String deviceId, JsonObject otherKeys,
-            Handler<AsyncResult<RegistrationResult>> resultHandler) {
+    public void addDevice(final String tenantId, final String deviceId, final JsonObject otherKeys,
+            final Handler<AsyncResult<RegistrationResult>> resultHandler) {
         handleUnimplementedOperation(resultHandler);
     }
 
@@ -261,7 +261,8 @@ public abstract class BaseRegistrationService<T> extends EventBusService<T> impl
      * Subclasses should override this method in order to provide a reasonable implementation.
      */
     @Override
-    public void getDevice(String tenantId, String deviceId, Handler<AsyncResult<RegistrationResult>> resultHandler) {
+    public void getDevice(final String tenantId, final String deviceId,
+            final Handler<AsyncResult<RegistrationResult>> resultHandler) {
         handleUnimplementedOperation(resultHandler);
     }
 
@@ -272,8 +273,8 @@ public abstract class BaseRegistrationService<T> extends EventBusService<T> impl
      * Subclasses should override this method in order to provide a reasonable implementation.
      */
     @Override
-    public void updateDevice(String tenantId, String deviceId, JsonObject otherKeys,
-            Handler<AsyncResult<RegistrationResult>> resultHandler) {
+    public void updateDevice(final String tenantId, final String deviceId, final JsonObject otherKeys,
+            final Handler<AsyncResult<RegistrationResult>> resultHandler) {
         handleUnimplementedOperation(resultHandler);
     }
 
@@ -284,7 +285,8 @@ public abstract class BaseRegistrationService<T> extends EventBusService<T> impl
      * Subclasses should override this method in order to provide a reasonable implementation.
      */
     @Override
-    public void removeDevice(String tenantId, String deviceId, Handler<AsyncResult<RegistrationResult>> resultHandler) {
+    public void removeDevice(final String tenantId, final String deviceId,
+            final Handler<AsyncResult<RegistrationResult>> resultHandler) {
         handleUnimplementedOperation(resultHandler);
     }
 

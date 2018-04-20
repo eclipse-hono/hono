@@ -38,7 +38,7 @@ public class SpringCacheProvider implements CacheProvider {
     }
 
     @Override
-    public <K, V> ExpiringValueCache<K, V> getCache(String cacheName) {
+    public <K, V> ExpiringValueCache<K, V> getCache(final String cacheName) {
         requireNonNull(cacheName);
         final Cache cache = this.manager.getCache(cacheName);
         if (cache == null) {

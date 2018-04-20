@@ -246,7 +246,8 @@ public final class DeviceRegistryHttpClient {
      *         Otherwise the future will fail with a {@link ServiceInvocationException}.
      * @throws NullPointerException if the tenant is {@code null}.
      */
-    public Future<Void> registerDevice(final String tenantId, final String deviceId, final JsonObject data, int expectedStatus) {
+    public Future<Void> registerDevice(final String tenantId, final String deviceId, final JsonObject data,
+            final int expectedStatus) {
         return registerDevice(tenantId, deviceId, data, CONTENT_TYPE_APPLICATION_JSON, expectedStatus);
     }
 
@@ -271,7 +272,7 @@ public final class DeviceRegistryHttpClient {
             final String deviceId,
             final JsonObject data,
             final String contentType,
-            int expectedStatus) {
+            final int expectedStatus) {
 
         Objects.requireNonNull(tenantId);
         final JsonObject requestJson = Optional.ofNullable(data).map(json -> json.copy()).orElse(null);

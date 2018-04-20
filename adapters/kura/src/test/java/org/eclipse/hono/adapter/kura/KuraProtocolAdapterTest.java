@@ -197,7 +197,7 @@ public class KuraProtocolAdapterTest {
         assertThat(context.contentType(), is(config.getDataMsgContentType()));
     }
 
-    private void assertAddress(final ResourceIdentifier address, final String endpoint, String tenantId, final String deviceId) {
+    private void assertAddress(final ResourceIdentifier address, final String endpoint, final String tenantId, final String deviceId) {
         assertThat(address.getEndpoint(), is(endpoint));
         assertThat(address.getTenantId(), is(tenantId));
         assertThat(address.getResourceId(), is(deviceId));

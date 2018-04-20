@@ -259,13 +259,13 @@ public class BaseCredentialsServiceTest {
         return new BaseCredentialsService<ServiceConfigProperties>() {
 
             @Override
-            public void add(String tenantId, JsonObject credentialsObject,
-                    Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
+            public void add(final String tenantId, final JsonObject credentialsObject,
+                    final Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
                 resultHandler.handle(Future.succeededFuture(CredentialsResult.from(HttpURLConnection.HTTP_CREATED)));
             }
 
             @Override
-            public void setConfig(ServiceConfigProperties configuration) {
+            public void setConfig(final ServiceConfigProperties configuration) {
             }
         };
     }

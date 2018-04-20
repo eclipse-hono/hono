@@ -24,7 +24,7 @@ public enum EndpointType {
      * @return The enum literal of the endpoint type. Returns {@link #UNKNOWN} if it cannot find the endpoint type.
      *         Never returns {@code null}.
      */
-    public static EndpointType fromString(String name) {
+    public static EndpointType fromString(final String name) {
         switch (name) {
         case TelemetryConstants.TELEMETRY_ENDPOINT:
         case TelemetryConstants.TELEMETRY_ENDPOINT_SHORT:

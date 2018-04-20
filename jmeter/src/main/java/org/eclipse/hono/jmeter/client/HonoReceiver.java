@@ -174,7 +174,7 @@ public class HonoReceiver extends AbstractClient {
         result.setIdleTime(0);
     }
 
-    private void verifySenderTimeAndSetSamplingTime(final Long senderTime, long sampleReceivedTime) {
+    private void verifySenderTimeAndSetSamplingTime(final Long senderTime, final long sampleReceivedTime) {
         if (senderTime != null) {
             if (sampleStart == 0) { // set sample start only once when the first message is received.
                 sampleStart = senderTime;

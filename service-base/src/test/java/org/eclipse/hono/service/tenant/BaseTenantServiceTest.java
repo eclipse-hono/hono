@@ -216,7 +216,8 @@ public class BaseTenantServiceTest {
             }
 
             @Override
-            public void get(final X500Principal subjectDn, Handler<AsyncResult<TenantResult<JsonObject>>> resultHandler) {
+            public void get(final X500Principal subjectDn,
+                    final Handler<AsyncResult<TenantResult<JsonObject>>> resultHandler) {
 
                 TenantObject tenant = TenantObject.from(subjectDn.getName(X500Principal.RFC2253), true);
                 tenant.setProperty("operation", "getByCa");

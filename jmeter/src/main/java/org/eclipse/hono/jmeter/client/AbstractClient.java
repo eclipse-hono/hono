@@ -39,7 +39,7 @@ public abstract class AbstractClient {
         return Vertx.vertx(options);
     }
 
-    final ProtonClientOptions getClientOptions(int reconnectAttempts) {
+    final ProtonClientOptions getClientOptions(final int reconnectAttempts) {
         return new ProtonClientOptions().setConnectTimeout(DEFAULT_CONNECT_TIMEOUT_MILLIS)
                 .setReconnectAttempts(reconnectAttempts);
     }

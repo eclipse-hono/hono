@@ -61,7 +61,7 @@ public final class CacheDirective {
      * @param directive The directive to parse.
      * @return The cache directive or {@code null} if the directive cannot be parsed.
      */
-    public static CacheDirective from(String directive) {
+    public static CacheDirective from(final String directive) {
 
         if (directive == null) {
             return null;

@@ -63,7 +63,7 @@ public final class HealthCheckServer implements Lifecycle {
      * @throws NullPointerException if vertx is {@code null}.
      * @throws NullPointerException if config is {@code null}.
      */
-    public HealthCheckServer(Vertx vertx, ApplicationConfigProperties config) {
+    public HealthCheckServer(final Vertx vertx, final ApplicationConfigProperties config) {
         this.vertx = Objects.requireNonNull(vertx);
         this.config = Objects.requireNonNull(config);
 

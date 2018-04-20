@@ -731,7 +731,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
      * @param handler The health check handler to register the checks with.
      */
     @Override
-    public void registerLivenessChecks(HealthCheckHandler handler) {
+    public void registerLivenessChecks(final HealthCheckHandler handler) {
         for (AmqpEndpoint ep : endpoints()) {
             ep.registerLivenessChecks(handler);
         }

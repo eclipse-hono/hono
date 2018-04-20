@@ -62,7 +62,7 @@ public class SpringBasedExpiringValueCache<K, V> implements ExpiringValueCache<K
     }
 
     @Override
-    public void put(K key, V value, Duration maxAge) {
+    public void put(final K key, final V value, final Duration maxAge) {
 
         Objects.requireNonNull(key);
         Objects.requireNonNull(value);

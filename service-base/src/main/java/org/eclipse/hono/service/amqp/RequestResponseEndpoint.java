@@ -180,7 +180,7 @@ public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties>
      * @param message The message.
      */
     protected final void handleMessage(final ProtonConnection con, final ProtonReceiver receiver,
-            final ResourceIdentifier targetAddress, ProtonDelivery delivery, Message message) {
+            final ResourceIdentifier targetAddress, final ProtonDelivery delivery, final Message message) {
 
         final Future<Void> formalCheck = Future.future();
         if (passesFormalVerification(targetAddress, message)) {

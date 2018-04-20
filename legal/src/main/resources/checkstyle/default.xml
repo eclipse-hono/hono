@@ -42,6 +42,7 @@
     <module name="HideUtilityClassConstructor"/>
     <module name="OneStatementPerLine" />
     <module name="StringLiteralEquality" />
+    <module name="FinalParameters"/>
 
     <!-- whitespaces, linebreaks -->
 

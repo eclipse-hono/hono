@@ -552,7 +552,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         when(credentialsServiceClient.isConnected()).thenReturn(Future.succeededFuture());
     }
 
-    private MqttEndpoint getMqttEndpointAuthenticated(String username, String password) {
+    private MqttEndpoint getMqttEndpointAuthenticated(final String username, final String password) {
         final MqttEndpoint endpoint = mock(MqttEndpoint.class);
         when(endpoint.auth()).thenReturn(new MqttAuth(username, password));
         return endpoint;

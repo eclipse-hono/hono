@@ -62,7 +62,7 @@ public class HonoMessagingConfigProperties extends ServiceConfigProperties {
      * 
      * @param maxSessionWindowSize The maximum session window size.
      */
-    public final void setMaxSessionWindow(int maxSessionWindowSize) {
+    public final void setMaxSessionWindow(final int maxSessionWindowSize) {
         this.maxSessionWindow = maxSessionWindowSize;
     }
 
@@ -92,7 +92,7 @@ public class HonoMessagingConfigProperties extends ServiceConfigProperties {
      * @param assertionRequired {@code true} if messages that do not contain a valid
      *                          assertion should be rejected.
      */
-    public final void setAssertionValidationRequired(boolean assertionRequired) {
+    public final void setAssertionValidationRequired(final boolean assertionRequired) {
         this.assertionValidationRequired = assertionRequired;
     }
 }

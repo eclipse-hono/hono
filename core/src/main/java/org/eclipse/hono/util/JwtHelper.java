@@ -192,7 +192,7 @@ public abstract class JwtHelper {
 
                 @SuppressWarnings("rawtypes")
                 @Override
-                public Key resolveSigningKey(JwsHeader header, Claims claims) {
+                public Key resolveSigningKey(final JwsHeader header, final Claims claims) {
                     Date exp = claims.getExpiration();
                     if (exp != null) {
                         result.set(exp);

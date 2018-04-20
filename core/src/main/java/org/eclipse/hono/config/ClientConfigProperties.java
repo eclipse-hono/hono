@@ -242,7 +242,7 @@ public class ClientConfigProperties extends AbstractConfig {
      * 
      * @param amqpHostname The host name to set.
      */
-    public final void setAmqpHostname(String amqpHostname) {
+    public final void setAmqpHostname(final String amqpHostname) {
         this.amqpHostname = amqpHostname;
     }
 
@@ -367,7 +367,7 @@ public class ClientConfigProperties extends AbstractConfig {
      * 
      * @param hostnameVerificationRequired {@code true} if the host name should be matched.
      */
-    public final void setHostnameVerificationRequired(boolean hostnameVerificationRequired) {
+    public final void setHostnameVerificationRequired(final boolean hostnameVerificationRequired) {
         this.hostnameVerificationRequired = hostnameVerificationRequired;
     }
 
@@ -400,7 +400,7 @@ public class ClientConfigProperties extends AbstractConfig {
      * 
      * @param enabled {@code true} if the server identity should be verified.
      */
-    public final void setTlsEnabled(boolean enabled) {
+    public final void setTlsEnabled(final boolean enabled) {
         this.tlsEnabled = enabled;
     }
 }

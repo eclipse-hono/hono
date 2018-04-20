@@ -49,7 +49,7 @@ public class HonoBasicAuthHandler extends HonoAuthHandler {
     }
 
     @Override
-    public void parseCredentials(RoutingContext context, Handler<AsyncResult<JsonObject>> handler) {
+    public void parseCredentials(final RoutingContext context, final Handler<AsyncResult<JsonObject>> handler) {
 
       parseAuthorization(context, false, parseAuthorization -> {
         if (parseAuthorization.failed()) {
@@ -83,11 +83,12 @@ public class HonoBasicAuthHandler extends HonoAuthHandler {
     }
 
     @Override
-    protected String authenticateHeader(RoutingContext context) {
+    protected String authenticateHeader(final RoutingContext context) {
       return "Basic realm=\"" + realm + "\"";
     }
 
-    protected final void parseAuthorization(RoutingContext ctx, boolean optional, Handler<AsyncResult<String>> handler) {
+    protected final void parseAuthorization(final RoutingContext ctx, final boolean optional,
+            final Handler<AsyncResult<String>> handler) {
 
         final HttpServerRequest request = ctx.request();
         final String authorization = request.headers().get(HttpHeaders.AUTHORIZATION);

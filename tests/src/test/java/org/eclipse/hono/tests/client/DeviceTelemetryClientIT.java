@@ -42,7 +42,7 @@ public class DeviceTelemetryClientIT extends ClientTestBase {
     }
 
     @Override
-    protected void assertAdditionalMessageProperties(TestContext ctx, Message msg) {
+    protected void assertAdditionalMessageProperties(final TestContext ctx, final Message msg) {
         ctx.assertNotNull(MessageHelper.getTenantIdAnnotation(msg));
         ctx.assertNotNull(MessageHelper.getDeviceIdAnnotation(msg));
     }

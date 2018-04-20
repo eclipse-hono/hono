@@ -93,7 +93,7 @@ public class Application extends AbstractApplication {
     }
 
     @Override
-    protected final Future<Void> deployRequiredVerticles(int maxInstances) {
+    protected final Future<Void> deployRequiredVerticles(final int maxInstances) {
 
         final Future<Void> result = Future.future();
         CompositeFuture.all(

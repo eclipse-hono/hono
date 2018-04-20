@@ -152,7 +152,7 @@ public final class EventSenderImpl extends AbstractSender {
      * @throws NullPointerException if the message is {@code null}.
      */
     @Override
-    public Future<ProtonDelivery> sendAndWaitForOutcome(Message message) {
+    public Future<ProtonDelivery> sendAndWaitForOutcome(final Message message) {
 
         return sendMessageAndWaitForOutcome(message);
     }
