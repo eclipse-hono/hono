@@ -13,7 +13,6 @@
 
 package org.eclipse.hono.tests.http;
 
-import java.net.HttpURLConnection;
 import java.util.function.Consumer;
 
 import org.apache.qpid.proton.message.Message;
@@ -22,9 +21,6 @@ import org.eclipse.hono.util.TelemetryConstants;
 import org.junit.runner.RunWith;
 
 import io.vertx.core.Future;
-import io.vertx.core.MultiMap;
-import io.vertx.core.buffer.Buffer;
-import io.vertx.core.http.HttpHeaders;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 
 
@@ -35,22 +31,11 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
 @RunWith(VertxUnitRunner.class)
 public class TelemetryHttpIT extends HttpTestBase {
 
-    @Override
-    protected Future<MultiMap> send(
-            final String origin,
-            final String tenantId,
-            final String deviceId,
-            final String password,
-            final Buffer payload) {
+    private static final String URI = String.format("/%s", TelemetryConstants.TELEMETRY_ENDPOINT);
 
-        return httpClient.create(
-                String.format("/%s", TelemetryConstants.TELEMETRY_ENDPOINT),
-                payload,
-                MultiMap.caseInsensitiveMultiMap()
-                    .add(HttpHeaders.CONTENT_TYPE, "binary/octet-stream")
-                    .add(HttpHeaders.AUTHORIZATION, getBasicAuth(tenantId, deviceId, password))
-                    .add(HttpHeaders.ORIGIN, origin),
-                statusCode -> statusCode == HttpURLConnection.HTTP_ACCEPTED);
+    @Override
+    protected String getEndpointUri() {
+        return URI;
     }
 
     @Override
