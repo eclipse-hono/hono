@@ -27,6 +27,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 
 import javax.net.ssl.X509TrustManager;
+import javax.security.auth.x500.X500Principal;
 
 import org.eclipse.hono.client.HonoClient;
 import org.slf4j.Logger;
@@ -49,6 +50,7 @@ public class TenantApiBasedX509TrustManager implements X509TrustManager {
      * Creates a trust manager for a Tenant service client.
      * 
      * @param client The client.
+     * @throws NullPointerException if client is {@code null}.
      */
     public TenantApiBasedX509TrustManager(final HonoClient client) {
         this.client = Objects.requireNonNull(client);
@@ -72,13 +74,20 @@ public class TenantApiBasedX509TrustManager implements X509TrustManager {
         final X509Certificate deviceCertificate = chain[0];
         final CompletableFuture<Void> tenantRequest = new CompletableFuture<>();
 
+        LOG.debug("validating client certificate [issuer: {}]", deviceCertificate.getIssuerX500Principal().getName(X500Principal.RFC2253));
+
         client.isConnected().compose(ok -> client.getOrCreateTenantClient())
             .compose(tenantClient -> tenantClient.get(deviceCertificate.getIssuerX500Principal()))
             .compose(tenant -> {
                 if (!tenant.isEnabled()) {
-                    return Future.failedFuture(new GeneralSecurityException("tenant is disabled"));
-                } else if (tenant.getTrustAnchor() == null) {
-                    return Future.failedFuture(new GeneralSecurityException("no trust anchor configured for tenant"));
+                    // we let the protocol adapter reject the device
+                    // in order to provide a more consistent behavior
+                    // by returning an error (forbidden) at the application level
+                    LOG.debug("device belongs to disabled tenant");
+                }
+                if (tenant.getTrustAnchor() == null) {
+                    return Future.failedFuture(new IllegalStateException(
+                            String.format("no trust anchor configured for tenant [%s]", tenant.getTenantId())));
                 } else {
                     return checkCertPath(deviceCertificate, tenant.getTrustAnchor());
                 }
@@ -93,6 +102,7 @@ public class TenantApiBasedX509TrustManager implements X509TrustManager {
         try {
             tenantRequest.join();
         } catch (CompletionException e) {
+            LOG.debug("validation of device certificate failed: {}", e.getCause().getMessage());
             throw new CertificateException("validation of device certificate failed", e.getCause());
         }
     }
