@@ -36,7 +36,17 @@ public final class CredentialsConstants extends RequestResponseApiConstants {
 
     public static final String CREDENTIALS_ENDPOINT              = "credentials";
 
+    /**
+     * The type name that indicates an X.509 client certificate secret.
+     */
+    public static final String SECRETS_TYPE_X509_CERT            = "x509-cert";
+    /**
+     * The type name that indicates a hashed password secret.
+     */
     public static final String SECRETS_TYPE_HASHED_PASSWORD      = "hashed-password";
+    /**
+     * The type name that indicates a pre-shared key secret.
+     */
     public static final String SECRETS_TYPE_PRESHARED_KEY        = "psk";
     public static final String SPECIFIER_WILDCARD                = "*";
 

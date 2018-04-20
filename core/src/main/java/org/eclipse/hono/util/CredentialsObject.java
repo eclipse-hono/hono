@@ -14,6 +14,7 @@ package org.eclipse.hono.util;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.security.cert.X509Certificate;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -24,6 +25,8 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+
+import javax.security.auth.x500.X500Principal;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
@@ -121,7 +124,7 @@ public final class CredentialsObject {
     }
 
     /**
-     * Gets the authentication identifier used with these credentials.
+     * Gets the authentication identifier that these credentials are used for.
      * 
      * @return The identifier or {@code null} if not set.
      */
@@ -130,7 +133,7 @@ public final class CredentialsObject {
     }
 
     /**
-     * Sets the authentication identifier used with these credentials.
+     * Sets the authentication identifier that these these credentials are used for.
      * 
      * @param authId The identifier.
      * @return This credentials object for method chaining.
@@ -380,12 +383,15 @@ public final class CredentialsObject {
     }
 
     /**
-     * Creates a credentials object for a device and auth ID.
+     * Creates a credentials object for a device based on a username
+     * and password.
      * <p>
      * The credentials created are of type <em>hashed-password</em>.
+     * The {@linkplain #setAuthId(String) authentication identifier} will be set to
+     * the given username.
      * 
      * @param deviceId The device identifier.
-     * @param authId The authentication identifier.
+     * @param username The username.
      * @param password The password.
      * @param hashAlgorithm The algorithm to use for creating the password hash.
      * @param notBefore The point in time from which on the credentials are valid.
@@ -400,7 +406,7 @@ public final class CredentialsObject {
      */
     public static CredentialsObject fromHashedPassword(
             final String deviceId,
-            final String authId,
+            final String username,
             final String password,
             final String hashAlgorithm,
             final Instant notBefore,
@@ -409,7 +415,7 @@ public final class CredentialsObject {
 
         Objects.requireNonNull(password);
 
-        final CredentialsObject result = new CredentialsObject(deviceId, authId, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD);
+        final CredentialsObject result = new CredentialsObject(deviceId, username, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD);
         result.addSecret(hashedPasswordSecret(password, hashAlgorithm, notBefore, notAfter, salt));
         return result;
     }
@@ -459,9 +465,7 @@ public final class CredentialsObject {
     /**
      * Creates a credentials object for a device and auth ID.
      * <p>
-     * The credentials created are of type <em>psk</em> and
-     * have a validity period of <em>2017-05-01T14:00:00+01:00</em> to
-     * <em>2037-06-01T14:00:00+01:00</em>.
+     * The credentials created are of type <em>psk</em>.
      * 
      * @param deviceId The device identifier.
      * @param authId The authentication identifier.
@@ -485,6 +489,64 @@ public final class CredentialsObject {
         final CredentialsObject result = new CredentialsObject(deviceId, authId, CredentialsConstants.SECRETS_TYPE_PRESHARED_KEY);
         final JsonObject secret = emptySecret(notBefore, notAfter);
         secret.put(CredentialsConstants.FIELD_SECRETS_KEY, Base64.getEncoder().encodeToString(key));
+        result.addSecret(secret);
+        return result;
+    }
+
+    /**
+     * Creates a credentials object for a device based on a client certificate.
+     * <p>
+     * The credentials created are of type <em>x509-cert</em>. The
+     * {@linkplain #setAuthId(String) authentication identifier} will be set to
+     * the certificate's subject DN using the serialization format defined
+     * by <a href="https://tools.ietf.org/html/rfc2253#section-2">RFC 2253, Section 2</a>.
+     * 
+     * @param deviceId The device identifier.
+     * @param certificate The device's client certificate.
+     * @param notBefore The point in time from which on the credentials are valid.
+     * @param notAfter The point in time until the credentials are valid.
+     * @return The credentials.
+     * @throws NullPointerException if device ID or certificate are {@code null}.
+     * @throws IllegalArgumentException if the <em>not-before</em> instant does not lie
+     *                                  before the <em>not after</em> instant.
+     */
+    public static CredentialsObject fromClientCertificate(
+            final String deviceId,
+            final X509Certificate certificate,
+            final Instant notBefore,
+            final Instant notAfter) {
+
+        Objects.requireNonNull(certificate);
+        return fromSubjectDn(deviceId, certificate.getSubjectX500Principal(), notBefore, notAfter);
+    }
+
+    /**
+     * Creates a credentials object for a device based on a subject DN.
+     * <p>
+     * The credentials created are of type <em>x509-cert</em>. The
+     * {@linkplain #setAuthId(String) authentication identifier} will be set to
+     * the subject DN using the serialization format defined by
+     * <a href="https://tools.ietf.org/html/rfc2253#section-2">RFC 2253, Section 2</a>.
+     * 
+     * @param deviceId The device identifier.
+     * @param subjectDn The subject DN.
+     * @param notBefore The point in time from which on the credentials are valid.
+     * @param notAfter The point in time until the credentials are valid.
+     * @return The credentials.
+     * @throws NullPointerException if device ID or subject DN are {@code null}.
+     * @throws IllegalArgumentException if the <em>not-before</em> instant does not lie
+     *                                  before the <em>not after</em> instant.
+     */
+    public static CredentialsObject fromSubjectDn(
+            final String deviceId,
+            final X500Principal subjectDn,
+            final Instant notBefore,
+            final Instant notAfter) {
+
+        Objects.requireNonNull(subjectDn);
+        final String authId = subjectDn.getName(X500Principal.RFC2253);
+        final CredentialsObject result = new CredentialsObject(deviceId, authId, CredentialsConstants.SECRETS_TYPE_X509_CERT);
+        final JsonObject secret = emptySecret(notBefore, notAfter);
         result.addSecret(secret);
         return result;
     }
