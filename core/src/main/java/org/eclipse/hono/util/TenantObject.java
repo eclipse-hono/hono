@@ -185,7 +185,7 @@ public final class TenantObject {
         Objects.requireNonNull(subjectDn);
 
         final JsonObject trustedCa = new JsonObject();
-        trustedCa.put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, subjectDn.getName(X500Principal.CANONICAL));
+        trustedCa.put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, subjectDn.getName(X500Principal.RFC2253));
         trustedCa.put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, publicKey.getEncoded());
         setProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, trustedCa);
         return this;
