@@ -15,6 +15,7 @@ package org.eclipse.hono.client.impl;
 
 import java.io.IOException;
 import java.net.HttpURLConnection;
+import java.util.Map;
 import java.util.UUID;
 
 import javax.security.auth.x500.X500Principal;
@@ -165,7 +166,7 @@ public class TenantClientImpl extends AbstractRequestResponseClient<TenantResult
         return getResponseFromCache(key).recover(t -> {
             final Future<TenantResult<TenantObject>> tenantResult = Future.future();
             final JsonObject payload = new JsonObject().put(TenantConstants.FIELD_PAYLOAD_TENANT_ID, tenantId);
-            createAndSendRequest(TenantConstants.TenantAction.get.toString(), null, payload,
+            createAndSendRequest(TenantConstants.TenantAction.get.toString(), customizeRequestApplicationProperties(), payload,
                     tenantResult.completer(), key);
             return tenantResult;
         }).map(tenantResult -> {
@@ -189,7 +190,7 @@ public class TenantClientImpl extends AbstractRequestResponseClient<TenantResult
         return getResponseFromCache(key).recover(t -> {
             final Future<TenantResult<TenantObject>> tenantResult = Future.future();
             final JsonObject payload = new JsonObject().put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, subjectDn.getName(X500Principal.RFC2253));
-            createAndSendRequest(TenantConstants.TenantAction.get.toString(), null, payload, tenantResult.completer(), key);
+            createAndSendRequest(TenantConstants.TenantAction.get.toString(), customizeRequestApplicationProperties(), payload, tenantResult.completer(), key);
             return tenantResult;
         }).map(tenantResult -> {
             switch(tenantResult.getStatus()) {
@@ -199,5 +200,13 @@ public class TenantClientImpl extends AbstractRequestResponseClient<TenantResult
                     throw StatusCodeMapper.from(tenantResult);
             }
         });
+    }
+
+    /**
+     * Customize AMQP application properties of the request by overwriting this method.
+     * @return The map that holds the properties to include in the AMQP 1.0 message, or null (if nothing is customized).
+     */
+    protected Map<String, Object> customizeRequestApplicationProperties() {
+        return null;
     }
 }
