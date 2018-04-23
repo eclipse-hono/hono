@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2017 Bosch Software Innovations GmbH.
+ * Copyright (c) 2017, 2018 Bosch Software Innovations GmbH and others.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -8,6 +8,7 @@
  *
  * Contributors:
  *    Bosch Software Innovations GmbH - initial creation
+ *    Red Hat Inc
  */
 package org.eclipse.hono.service;
 
@@ -32,6 +33,8 @@ public class AbstractServiceBaseTest {
 
     private static final int PORT_NR          = 4711;
     private static final int INSECURE_PORT_NR = 4712;
+
+    private static final String PREFIX_KEY_PATH = "target/certs/";
 
     private Vertx vertx;
     private EventBus eventBus;
@@ -88,7 +91,7 @@ public class AbstractServiceBaseTest {
 
         // GIVEN a configuration with a key store set
         ServiceConfigProperties configProperties = new ServiceConfigProperties();
-        configProperties.setKeyStorePath("/etc/hono/certs/honoKeyStore.p12");
+        configProperties.setKeyStorePath(PREFIX_KEY_PATH + "/honoKeyStore.p12");
 
         // WHEN using this configuration to determine the server's port configuration
         // secure port config: no port set -> secure IANA port selected
@@ -111,7 +114,7 @@ public class AbstractServiceBaseTest {
 
         // GIVEN a configuration with a key store and a secure port being set
         ServiceConfigProperties configProperties = new ServiceConfigProperties();
-        configProperties.setKeyStorePath("/etc/hono/certs/honoKeyStore.p12");
+        configProperties.setKeyStorePath(PREFIX_KEY_PATH + "/honoKeyStore.p12");
         configProperties.setPort(8989);
 
         // WHEN using this configuration to determine the server's port configuration
@@ -200,7 +203,7 @@ public class AbstractServiceBaseTest {
         // GIVEN a default configuration with insecure port being enabled and a key store being set.
         ServiceConfigProperties configProperties = new ServiceConfigProperties();
         configProperties.setInsecurePortEnabled(true);
-        configProperties.setKeyStorePath("/etc/hono/certs/honoKeyStore.p12");
+        configProperties.setKeyStorePath(PREFIX_KEY_PATH + "/honoKeyStore.p12");
 
         // WHEN using this configuration to determine the server's port configuration
         AbstractServiceBase<ServiceConfigProperties> server = createServer(configProperties);
@@ -226,7 +229,7 @@ public class AbstractServiceBaseTest {
         // being set to the same value.
         ServiceConfigProperties configProperties = new ServiceConfigProperties();
         configProperties.setInsecurePortEnabled(true);
-        configProperties.setKeyStorePath("/etc/hono/certs/honoKeyStore.p12");
+        configProperties.setKeyStorePath(PREFIX_KEY_PATH + "/honoKeyStore.p12");
         configProperties.setInsecurePort(8888);
         configProperties.setPort(8888);
 
