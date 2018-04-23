@@ -67,6 +67,30 @@ public interface HonoClient {
     Future<HonoClient> connect();
 
     /**
+     * Disconnects the connection to the Hono server. Upon terminating the connection to the server,
+     * this method does not automatically try to reconnect to the server again. To connect to the server,
+     * an explicit call to {@code HonoClient#connect()} should be made. Unlike {@code HonoClient#shutdown()},
+     * which does not allow to connect back to the server, this method allows to connect back to the server.
+     *
+     * Disconnecting from the Hono server is necessary when, for instance, the open frame of the connection contains
+     * permission information from an authorization service. If after connecting to the server the permissions
+     * from the service have changed, then it will be necessary to drop the connection and connect back to the server
+     * to retrieve the updated permissions.
+     *
+     */
+    void disconnect();
+
+    /**
+     * Similar to {@code HonoClient#disconnect()} but takes a handler to notify the caller about the result
+     * of the disconnect operation. The caller can use the handler to determine if the operation succeeded or failed.
+     *
+     * @param completionHandler The completion handler to notify about the success or failure of the operation. A failure could occur
+     * if this method is called in the middle of a disconnect operation.
+     * @throws NullPointerException if the completionHandler is {@code null}.
+     */
+    void disconnect(Handler<AsyncResult<Void>> completionHandler);
+
+    /**
      * Connects to the Hono server using given options.
      * <p>
      * The number of times that the client tries to (re-)connect to the peer is determined by the
