@@ -39,7 +39,7 @@ import org.mockito.Mockito;
 @RunWith(VertxUnitRunner.class)
 public class ConnectionFactoryImplTest {
 
-    private Vertx vertx = Vertx.vertx();
+    private final Vertx vertx = Vertx.vertx();
     private ClientConfigProperties props;
 
     /**
@@ -103,7 +103,7 @@ public class ConnectionFactoryImplTest {
         factory.connect(new ProtonClientOptions(), null, null, resultHandler);
 
         // THEN the disconnect handler gets called which calls the given result handler with a failure
-        final ArgumentCaptor<Handler> disconnectHandlerCaptor = ArgumentCaptor.forClass(Handler.class);
+        final ArgumentCaptor<Handler<ProtonConnection>> disconnectHandlerCaptor = ArgumentCaptor.forClass(Handler.class);
         verify(protonConnectionMock).disconnectHandler(disconnectHandlerCaptor.capture());
         disconnectHandlerCaptor.getValue().handle(protonConnectionMock);
         // as we call handler ourselves handling is synchronous here
