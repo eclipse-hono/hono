@@ -96,4 +96,36 @@ public class AbstractConfigTest {
         Assert.assertNull(options);
     }
 
+    /**
+     * Specify a non existing keystore.
+     */
+    @Test(expected=IllegalArgumentException.class)
+    public void testMissingFile1() {
+        cfg.setKeyStorePath(PREFIX_KEY_PATH + "does-not-exist");
+        cfg.setKeyStorePassword("honokeys");
+
+        cfg.getKeyCertOptions();
+    }
+
+    /**
+     * Specify a non existing key file.
+     */
+    @Test(expected=IllegalArgumentException.class)
+    public void testMissingFile2() {
+        cfg.setKeyPath(PREFIX_KEY_PATH + "does-not-exist");
+        cfg.setCertPath(PREFIX_KEY_PATH + "hono-messaging-cert.pem");
+
+        cfg.getKeyCertOptions();
+    }
+
+    /**
+     * Specify a non existing cert file.
+     */
+    @Test(expected=IllegalArgumentException.class)
+    public void testMissingFile3() {
+        cfg.setKeyPath(PREFIX_KEY_PATH + "hono-messaging-cert.pem");
+        cfg.setCertPath(PREFIX_KEY_PATH + "does-not-exist");
+
+        cfg.getKeyCertOptions();
+    }
 }

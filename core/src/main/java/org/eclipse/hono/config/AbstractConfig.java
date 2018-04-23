@@ -13,6 +13,8 @@
 
 package org.eclipse.hono.config;
 
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.Objects;
 
 import org.eclipse.hono.util.Constants;
@@ -207,13 +209,24 @@ public abstract class AbstractConfig {
      * Gets the key &amp; certificate options derived from the key store properties.
      * 
      * @return The options or {@code null} if key store path or key path and cert path are not set or not supported.
+     * @throws IllegalArgumentException In the case any of the configured files is not present in the file system.
      */
     public KeyCertOptions getKeyCertOptions() {
 
-        if (keyPath != null && certPath != null) {
+        if (this.keyPath != null && this.certPath != null) {
 
-            final FileFormat format = FileFormat.orDetect(keyFormat, keyPath);
-            final FileFormat certFormat = FileFormat.orDetect(keyFormat, certPath);
+            if (!Files.exists(Paths.get(this.keyPath))) {
+                throw new IllegalArgumentException(
+                        String.format("Configured key file does not exist: %s", this.keyPath));
+            }
+
+            if (!Files.exists(Paths.get(this.certPath))) {
+                throw new IllegalArgumentException(
+                        String.format("Configured certificate file does not exist: %s", this.certPath));
+            }
+
+            final FileFormat format = FileFormat.orDetect(this.keyFormat, this.keyPath);
+            final FileFormat certFormat = FileFormat.orDetect(this.keyFormat, this.certPath);
 
             // consistency checks
 
@@ -236,26 +249,31 @@ public abstract class AbstractConfig {
 
             switch (format) {
             case PEM:
-                LOG.debug("using key [{}] and certificate [{}] for identity", keyPath, certPath);
-                return new PemKeyCertOptions().setKeyPath(keyPath).setCertPath(certPath);
+                LOG.debug("using key [{}] and certificate [{}] for identity", this.keyPath, this.certPath);
+                return new PemKeyCertOptions().setKeyPath(this.keyPath).setCertPath(this.certPath);
             default:
                 LOG.warn("unsupported key & cert format: {}", format);
                 return null;
             }
 
-        } else if (keyStorePath != null) {
+        } else if (this.keyStorePath != null) {
 
-            final FileFormat format = FileFormat.orDetect(keyFormat, keyStorePath);
+            if (!Files.exists(Paths.get(this.keyStorePath))) {
+                throw new IllegalArgumentException(
+                        String.format("Configured keystore file does not exist: %s", this.keyStorePath));
+            }
+
+            final FileFormat format = FileFormat.orDetect(this.keyFormat, this.keyStorePath);
 
             // construct result
 
             switch (format) {
             case PKCS12:
-                LOG.debug("using key & certificate from PKCS12 key store [{}] for identity", keyStorePath);
-                return new PfxOptions().setPath(keyStorePath).setPassword(getKeyStorePassword());
+                LOG.debug("using key & certificate from PKCS12 key store [{}] for identity", this.keyStorePath);
+                return new PfxOptions().setPath(this.keyStorePath).setPassword(getKeyStorePassword());
             case JKS:
-                LOG.debug("using key & certificate from JKS key store [{}] for server identity", keyStorePath);
-                return new JksOptions().setPath(keyStorePath).setPassword(getKeyStorePassword());
+                LOG.debug("using key & certificate from JKS key store [{}] for server identity", this.keyStorePath);
+                return new JksOptions().setPath(this.keyStorePath).setPassword(getKeyStorePassword());
             default:
                 LOG.warn("unsupported key store format: {}", format);
                 return null;
