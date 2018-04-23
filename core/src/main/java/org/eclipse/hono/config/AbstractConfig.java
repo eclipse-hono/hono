@@ -127,14 +127,20 @@ public abstract class AbstractConfig {
      * Gets the trust options derived from the trust store properties.
      * 
      * @return The trust options or {@code null} if trust store path is not set or not supported.
+     * @throws IllegalArgumentException In the case the configured trust store is not present in the file system.
      */
     public final TrustOptions getTrustOptions() {
 
-        if (trustStorePath == null) {
+        if (this.trustStorePath == null) {
             return null;
         }
 
-        final FileFormat format = FileFormat.orDetect(trustStoreFormat, trustStorePath);
+        if (!Files.exists(Paths.get(this.trustStorePath))) {
+            throw new IllegalArgumentException(
+                    String.format("Configured trust store file does not exist: %s", this.trustStorePath));
+        }
+
+        final FileFormat format = FileFormat.orDetect(this.trustStoreFormat, this.trustStorePath);
 
         if (format == null) {
             LOG.debug("unsupported trust store format");
@@ -143,15 +149,15 @@ public abstract class AbstractConfig {
 
         switch (format) {
         case PEM:
-            LOG.debug("using certificates from file [{}] as trust anchor", trustStorePath);
-            return new PemTrustOptions().addCertPath(trustStorePath);
+            LOG.debug("using certificates from file [{}] as trust anchor", this.trustStorePath);
+            return new PemTrustOptions().addCertPath(this.trustStorePath);
         case PKCS12:
-            LOG.debug("using certificates from PKCS12 key store [{}] as trust anchor", trustStorePath);
+            LOG.debug("using certificates from PKCS12 key store [{}] as trust anchor", this.trustStorePath);
             return new PfxOptions()
                     .setPath(getTrustStorePath())
                     .setPassword(getTrustStorePassword());
         case JKS:
-            LOG.debug("using certificates from JKS key store [{}] as trust anchor", trustStorePath);
+            LOG.debug("using certificates from JKS key store [{}] as trust anchor", this.trustStorePath);
             return new JksOptions()
                     .setPath(getTrustStorePath())
                     .setPassword(getTrustStorePassword());

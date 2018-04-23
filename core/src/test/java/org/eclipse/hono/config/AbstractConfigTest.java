@@ -128,4 +128,13 @@ public class AbstractConfigTest {
 
         cfg.getKeyCertOptions();
     }
+
+    /**
+     * Specify a non existing trust store file.
+     */
+    @Test(expected=IllegalArgumentException.class)
+    public void testMissingFile4() {
+        cfg.setTrustStorePath(PREFIX_KEY_PATH + "doest-not-exist");
+        cfg.getTrustOptions();
+    }
 }
