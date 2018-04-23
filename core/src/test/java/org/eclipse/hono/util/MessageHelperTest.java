@@ -78,4 +78,5 @@ public class MessageHelperTest {
         MessageHelper.addJmsVendorProperties(msg);
         assertNull(msg.getApplicationProperties());
     }
+
 }

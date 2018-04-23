@@ -56,6 +56,15 @@ public final class MessageHelper {
      */
     public static final String APP_PROPERTY_DEVICE_ID              = "device_id";
     /**
+     * The name of the AMQP 1.0 message application property containing the time until disconnect of the device that is available
+     * for receiving an upstream message for the given number of seconds (short for <em>Time Til Disconnect</em>).
+     */
+    public static final String APP_PROPERTY_DEVICE_TTD              = "ttd";
+    /**
+     * Devices that are always ready to receive an upstream message can use this as value for {@link #APP_PROPERTY_DEVICE_TTD} to indicate it in messages.
+     */
+    public static final int TTD_VALUE_ALWAYS_READY = -1;
+    /**
      * The name of the AMQP 1.0 message application property containing the id of the gateway
      * that wants to report data on behalf of another device.
      */
@@ -396,6 +405,31 @@ public final class MessageHelper {
     }
 
     /**
+     * Adds the <em>time until disconnect</em> property to an AMQP 1.0 message.
+     * <p>
+     * The value is put to the message's <em>application-properties</em> under key
+     * {@link #APP_PROPERTY_DEVICE_TTD}.
+     *
+     * @param msg The message to add the property to.
+     * @param timeUntilDisconnect The value of the property.
+     * @throws NullPointerException if timeUntilDisconnect is {@code null}.
+
+     */
+    public static void addTimeUntilDisconnect(final Message msg, final Integer timeUntilDisconnect) {
+        addProperty(msg, APP_PROPERTY_DEVICE_TTD, timeUntilDisconnect);
+    }
+
+    /**
+     * Gets the value of a message's {@link #APP_PROPERTY_DEVICE_TTD} application property.
+     *
+     * @param msg The message to get the property from.
+     * @return The property value or {@code null} if not set.
+     */
+    public static Integer getTimeUntilDisconnect(final Message msg) {
+        return getApplicationProperty(msg.getApplicationProperties(), APP_PROPERTY_DEVICE_TTD, Integer.class);
+    }
+
+    /**
      * Adds a property to an AMQP 1.0 message.
      * <p>
      * The property is added to the message's <em>application-properties</em>.
@@ -527,6 +561,61 @@ public final class MessageHelper {
         if (msg.getCreationTime() == 0) {
             msg.setCreationTime(Instant.now().toEpochMilli());
         }
+    }
+
+    /**
+     * Verify if a message is signalling that the
+     * device for which it was received should be ready to receive a command.
+     * This is evaluated at the point in time this method is invoked.
+     *
+     * @param msg Message that is evaluated.
+     * @return Boolean {@code true} if the message signals that the device now should be ready to receive a command, {@code false}
+     * otherwise.
+     * @throws NullPointerException If msg is {@code null}.
+     */
+    public static Boolean isDeviceCurrentlyReadyForCommands(final Message msg) {
+
+        return Optional.ofNullable(MessageHelper.getTimeUntilDisconnect(msg)).map(ttd -> {
+            if (ttd == MessageHelper.TTD_VALUE_ALWAYS_READY) {
+                return Boolean.TRUE;
+            } else if (ttd == 0) {
+                return Boolean.FALSE;
+            } else {
+                final Instant creationTime = Instant.ofEpochMilli(msg.getCreationTime());
+                return Instant.now().isBefore(creationTime.plusSeconds(ttd));
+            }
+        }).orElse(Boolean.FALSE);
+    }
+
+    /**
+     * Provide an instance of {@link TimeUntilDisconnectNotification} if a message indicates that the device sending it
+     * is currently ready to receive an upstream message.
+     * <p>
+     * If this is not the case, the returned {@link Optional} will be empty.
+     *
+     * @param msg Message that is evaluated.
+     * @return Optional containing an instance of the class {@link TimeUntilDisconnectNotification} if the device is considered
+     * being ready to receive an upstream message or is empty otherwise.
+     * @throws NullPointerException If msg is {@code null}.
+     */
+    public static Optional<TimeUntilDisconnectNotification> fromMessage(final Message msg) {
+
+        if (isDeviceCurrentlyReadyForCommands(msg)) {
+            final String tenantId = MessageHelper.getTenantIdAnnotation(msg);
+            final String deviceId = MessageHelper.getDeviceId(msg);
+
+            if (tenantId != null && deviceId != null) {
+                final Integer ttd = MessageHelper.getTimeUntilDisconnect(msg);
+                final Instant creationTime = Instant.ofEpochMilli(msg.getCreationTime());
+                final Instant deviceCommandReadyUntil = creationTime.plusSeconds(ttd);
+
+                final TimeUntilDisconnectNotification notification =
+                        new TimeUntilDisconnectNotification(tenantId, deviceId, deviceCommandReadyUntil);
+                return Optional.of(notification);
+            }
+        }
+
+        return Optional.empty();
     }
 
 }
