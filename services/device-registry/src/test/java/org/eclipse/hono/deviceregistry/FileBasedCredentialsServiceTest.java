@@ -27,6 +27,7 @@ import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsObject;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.rules.Timeout;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 
@@ -50,6 +51,11 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
  */
 @RunWith(VertxUnitRunner.class)
 public class FileBasedCredentialsServiceTest {
+
+    /**
+     * Time out each test case after 5 seconds.
+     */
+    public Timeout timeout = Timeout.seconds(5);
 
     private static final String FILE_NAME = "/credentials.json";
 
@@ -111,7 +117,7 @@ public class FileBasedCredentialsServiceTest {
         svc.doStart(startupTracker);
 
         // THEN the file gets created
-        startup.await(2000);
+        startup.await();
         verify(fileSystem).createFile(eq(FILE_NAME), any(Handler.class));
     }
 
@@ -144,7 +150,7 @@ public class FileBasedCredentialsServiceTest {
         svc.doStart(startupTracker);
 
         // THEN startup has failed
-        startup.await(2000);
+        startup.await();
     }
 
     /**
@@ -178,7 +184,7 @@ public class FileBasedCredentialsServiceTest {
         svc.doStart(startupTracker);
 
         // THEN startup succeeds
-        startup.await(2000);
+        startup.await();
     }
 
     /**
@@ -209,7 +215,7 @@ public class FileBasedCredentialsServiceTest {
         svc.doStart(startFuture);
 
         // THEN the credentials from the file are loaded
-        startup.await(2000);
+        startup.await();
         assertRegistered(svc, Constants.DEFAULT_TENANT, "sensor1", CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, ctx);
     }
 
@@ -247,7 +253,7 @@ public class FileBasedCredentialsServiceTest {
                     ctx.assertEquals(HttpURLConnection.HTTP_CREATED, s.getStatus());
                     add.countDown();
                 }));
-        add.await(2000);
+        add.await();
 
         // WHEN saving the registry content to the file and clearing the registry
         final Async write = ctx.async();
@@ -259,7 +265,7 @@ public class FileBasedCredentialsServiceTest {
         }).when(fileSystem).writeFile(eq(FILE_NAME), any(Buffer.class), any(Handler.class));
 
         svc.saveToFile();
-        write.await(2000);
+        write.await();
         ArgumentCaptor<Buffer> buffer = ArgumentCaptor.forClass(Buffer.class);
         verify(fileSystem).writeFile(eq(FILE_NAME), buffer.capture(), any(Handler.class));
         svc.clear();
@@ -274,7 +280,7 @@ public class FileBasedCredentialsServiceTest {
             return null;
         }).when(fileSystem).readFile(eq(FILE_NAME), any(Handler.class));
         svc.loadCredentials();
-        read.await(2000);
+        read.await();
         assertRegistered(svc, Constants.DEFAULT_TENANT, "sensor1", CredentialsConstants.SECRETS_TYPE_PRESHARED_KEY, ctx);
         assertRegistered(svc, "OTHER_TENANT", "bumlux", CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, ctx);
 
@@ -300,7 +306,7 @@ public class FileBasedCredentialsServiceTest {
             assertThat(s.getStatus(), is(HttpURLConnection.HTTP_CONFLICT));
             add.complete();
         }));
-        add.await(2000);
+        add.await();
     }
 
     /**
@@ -316,7 +322,7 @@ public class FileBasedCredentialsServiceTest {
                     assertThat(s.getStatus(), is(HttpURLConnection.HTTP_NOT_FOUND));
                     get.complete();
                 }));
-        get.await(2000);
+        get.await();
     }
 
     /**
@@ -336,7 +342,7 @@ public class FileBasedCredentialsServiceTest {
                     assertThat(s.getPayload().getString(CredentialsConstants.FIELD_TYPE), is("myType"));
                     get.complete();
                 }));
-        get.await(2000);
+        get.await();
     }
 
     /**
@@ -401,7 +407,7 @@ public class FileBasedCredentialsServiceTest {
             assertNotRegistered(svc, "tenant", "myId", "myType", ctx);
             remove.complete();
         }));
-        remove.await(2000);
+        remove.await();
     }
 
     /**
@@ -425,7 +431,7 @@ public class FileBasedCredentialsServiceTest {
             assertRegistered(svc, "tenant", "thirdId", "myType", ctx);
             remove.complete();
         }));
-        remove.await(2000);
+        remove.await();
     }
 
     /**
@@ -449,7 +455,7 @@ public class FileBasedCredentialsServiceTest {
         }));
 
         // THEN the update fails
-        updateFailure.await(2000);
+        updateFailure.await();
     }
 
     /**
@@ -473,25 +479,37 @@ public class FileBasedCredentialsServiceTest {
         }));
 
         // THEN the removal fails
-        removeFailure.await(2000);
+        removeFailure.await();
     }
 
-    private static void assertRegistered(final CredentialsService svc, final String tenant, final String authId, final String type, final TestContext ctx) {
-        Async registration = ctx.async();
+    private static void assertRegistered(
+            final CredentialsService svc,
+            final String tenant,
+            final String authId,
+            final String type,
+            final TestContext ctx) {
+
+        final Async registration = ctx.async();
         svc.get(tenant, type, authId, ctx.asyncAssertSuccess(t -> {
             assertThat(t.getStatus(), is(HttpURLConnection.HTTP_OK));
             registration.complete();
         }));
-        registration.await(300);
+        registration.await();
     }
 
-    private static void assertNotRegistered(final CredentialsService svc, final String tenant, final String authId, final String type, final TestContext ctx) {
-        Async registration = ctx.async();
+    private static void assertNotRegistered(
+            final CredentialsService svc,
+            final String tenant,
+            final String authId,
+            final String type,
+            final TestContext ctx) {
+
+        final Async registration = ctx.async();
         svc.get(tenant, type, authId, ctx.asyncAssertSuccess(t -> {
             assertThat(t.getStatus(), is(HttpURLConnection.HTTP_NOT_FOUND));
             registration.complete();
         }));
-        registration.await(300);
+        registration.await();
     }
 
     private static void register(
@@ -514,7 +532,7 @@ public class FileBasedCredentialsServiceTest {
             final JsonArray secrets,
             final TestContext ctx) {
 
-        JsonObject data = new JsonObject()
+        final JsonObject data = new JsonObject()
                 .put(CredentialsConstants.FIELD_PAYLOAD_DEVICE_ID, deviceId)
                 .put(CredentialsConstants.FIELD_AUTH_ID, authId)
                 .put(CredentialsConstants.FIELD_TYPE, type)
@@ -524,12 +542,11 @@ public class FileBasedCredentialsServiceTest {
             data.mergeIn(clientContext);
         }
 
-
-        Async registration = ctx.async();
-        svc.add(tenant, data, ctx.asyncAssertSuccess(s -> {
+        final Async registration = ctx.async();
+        svc.add("tenant", data, ctx.asyncAssertSuccess(s -> {
             assertThat(s.getStatus(), is(HttpURLConnection.HTTP_CREATED));
             registration.complete();
         }));
-        registration.await(300);
+        registration.await();
     }
 }
