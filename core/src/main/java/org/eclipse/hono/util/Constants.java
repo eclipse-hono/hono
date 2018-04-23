@@ -178,6 +178,11 @@ public final class Constants {
         }
     };
 
+    /**
+     * The header name defined for setting the <em>time to deliver</em> for device command readiness notification events.
+     */
+    public static final String HEADER_TIME_TIL_DISCONNECT = "hono-ttd";
+
     private Constants() {
     }
 

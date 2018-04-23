@@ -27,6 +27,7 @@ import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.auth.device.Device;
+import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.junit.Before;
@@ -37,6 +38,7 @@ import org.junit.runner.RunWith;
 
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
@@ -337,4 +339,92 @@ public class AbstractProtocolAdapterBaseTest {
         }
         return result;
     }
+
+    /**
+     * Verifies that the helper approves empty notification without payload.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testEmptyNotificationWithoutPayload(final TestContext ctx) {
+        // GIVEN an adapter
+        adapter = newProtocolAdapter(properties, null);
+
+        // WHEN an empty event with an empty payload is approved, no error message must be returned
+        final Buffer payload = null;
+        final String contentType = EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION;
+
+        ctx.assertTrue(adapter.isPayloadOfIndicatedType(payload, contentType));
+    }
+
+    /**
+     * Verifies that any empty notification with a payload is an error.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testEmptyNotificationWithPayload(final TestContext ctx) {
+        // GIVEN an adapter
+        adapter = newProtocolAdapter(properties, null);
+
+        // WHEN an empty event with a non empty payload is approved, an error message must be returned
+        final Buffer payload = Buffer.buffer("test");
+        final String contentType = EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION;
+
+        ctx.assertFalse(adapter.isPayloadOfIndicatedType(payload, contentType));
+    }
+
+    /**
+     * Verifies that any general message with a payload is approved.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testNonEmptyGeneralMessage(final TestContext ctx) {
+        // GIVEN an adapter
+        adapter = newProtocolAdapter(properties, null);
+
+        // WHEN an non empty event with a non empty payload is approved, no error message must be returned
+        final Buffer payload = Buffer.buffer("test");
+        final String arbitraryContentType = "bum/lux";
+
+        // arbitrary content-type needs non empty payload
+        ctx.assertTrue(adapter.isPayloadOfIndicatedType(payload, arbitraryContentType));
+    }
+
+    /**
+     * Verifies that any non empty message without a content type is approved.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testNonEmptyMessageWithoutContentType(final TestContext ctx) {
+        // GIVEN an adapter
+        adapter = newProtocolAdapter(properties, null);
+
+        // WHEN an event without content type and a non empty payload is approved, no error message must be returned
+        final Buffer payload = Buffer.buffer("test");
+
+        // arbitrary content-type needs non empty payload
+        ctx.assertTrue(adapter.isPayloadOfIndicatedType(payload, null));
+    }
+
+    /**
+     * Verifies that any empty general message is an error.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testEmptyGeneralMessage(final TestContext ctx) {
+        // GIVEN an adapter
+        adapter = newProtocolAdapter(properties, null);
+
+        // WHEN an event with content type and an empty payload is approved, an error message must be returned
+        final Buffer payload = null;
+        final String arbitraryContentType = "bum/lux";
+
+        // arbitrary content-type needs non empty payload
+        ctx.assertFalse(adapter.isPayloadOfIndicatedType(payload, arbitraryContentType));
+    }
+
 }

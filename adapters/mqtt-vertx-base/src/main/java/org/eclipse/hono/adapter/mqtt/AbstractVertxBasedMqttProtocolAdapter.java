@@ -538,9 +538,9 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
     private Future<Void> uploadMessage(final MqttContext ctx, final String tenant, final String deviceId,
             final Buffer payload, final Future<MessageSender> senderTracker, final String endpointName) {
 
-        if (payload.length() == 0) {
-            return Future.failedFuture(
-                    new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "payload must not be empty"));
+        if (!isPayloadOfIndicatedType(payload, ctx.contentType())) {
+            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
+                    String.format("Content-Type %s does not match with the payload", ctx.contentType())));
         } else {
 
             final Future<JsonObject> tokenTracker = getRegistrationAssertion(tenant, deviceId,
@@ -558,8 +558,8 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
                             ctx.message().topicName(),
                             ctx.contentType(),
                             payload,
-                            tokenTracker.result());
-
+                            tokenTracker.result(),
+                            null);
                     customizeDownstreamMessage(downstreamMessage, ctx);
 
                     if (ctx.message().qosLevel() == MqttQoS.AT_LEAST_ONCE) {

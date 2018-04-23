@@ -14,19 +14,22 @@
 package org.eclipse.hono.vertx.example.base;
 
 import java.util.concurrent.CountDownLatch;
+import java.util.function.Consumer;
 
 import org.apache.qpid.proton.amqp.messaging.Data;
-import org.apache.qpid.proton.amqp.messaging.Section;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.impl.HonoClientImpl;
 import org.eclipse.hono.config.ClientConfigProperties;
+import org.eclipse.hono.util.MessageTap;
 import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.util.TimeUntilDisconnectNotification;
 
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.proton.ProtonClientOptions;
+
 
 /**
  * Example base class for consuming data from Hono.
@@ -36,7 +39,7 @@ import io.vertx.proton.ProtonClientOptions;
  * any input on it's console (which finishes it and closes vertx).
  * <p>
  * By default, this class consumes telemetry data. This can be changed to event data by setting
- * {@link HonoConsumerBase#setEventMode(boolean)} to true.
+ * {@link HonoConsumerBase#setMode(MODE)} to {@link MODE#EVENT}.
  */
 public class HonoConsumerBase {
     public static final String HONO_CLIENT_USER = "consumer@HONO";
@@ -45,7 +48,17 @@ public class HonoConsumerBase {
     private final Vertx vertx = Vertx.vertx();
     private final HonoClient honoClient;
 
-    private boolean eventMode = false;
+    /**
+     * Enum to define from which source messages are consumed.
+     * <p>
+     * Instead of using a {@code Boolean} this enum allows for more modes in future extensions (e.g. to receive messages
+     * from both channels).
+     */
+    public enum MODE {
+        TELEMETRY, EVENT
+    }
+
+    private MODE mode = MODE.TELEMETRY;
 
     /**
      * The consumer needs one connection to the AMQP 1.0 messaging network from which it can consume data.
@@ -87,12 +100,22 @@ public class HonoConsumerBase {
         });
 
         honoClient.connect(new ProtonClientOptions()).compose(connectedClient -> {
-            if (eventMode) {
+            switch (mode) {
+            case EVENT:
+                // create the eventHandler by using the helper functionality for demultiplexing messages to callbacks
+                final Consumer<Message> eventHandler = MessageTap.getConsumer(
+                        this::handleEventMessage, this::handleCommandReadinessNotification);
                 return connectedClient.createEventConsumer(HonoExampleConstants.TENANT_ID,
-                        this::handleMessage, closeHook -> System.err.println("remotely detached consumer link"));
-            } else {
+                        eventHandler,
+                        closeHook -> System.err.println("remotely detached consumer link"));
+            case TELEMETRY:
+                // create the telemetryHandler by using the helper functionality for demultiplexing messages to callbacks
+                final Consumer<Message> telemetryHandler = MessageTap.getConsumer(
+                        this::handleTelemetryMessage, this::handleCommandReadinessNotification);
                 return connectedClient.createTelemetryConsumer(HonoExampleConstants.TENANT_ID,
-                        this::handleMessage, closeHook -> System.err.println("remotely detached consumer link"));
+                        telemetryHandler, closeHook -> System.err.println("remotely detached consumer link"));
+            default:
+                return null;
             }
         }).setHandler(consumerFuture.completer());
 
@@ -104,49 +127,70 @@ public class HonoConsumerBase {
         vertx.close();
     }
 
-    /**
-     * Handler method for a Message from Hono that was received as telemetry or event data.
-     * <p>
-     * The payload, the content-type and the application properties will be printed to stdout.
-     * @param msg The message that was received.
-     */
-    private void handleMessage(final Message msg) {
-        final Section body = msg.getBody();
-        if (!(body instanceof Data)) {
-            return;
-        }
-
+    private void printMessage(final String tenantId, final Message msg, final String messageType) {
         final String content = ((Data) msg.getBody()).getValue().toString();
-        final String deviceId = MessageHelper.getDeviceIdAnnotation(msg);
-        final String tenantId = MessageHelper.getTenantIdAnnotation(msg);
+        final String deviceId = MessageHelper.getDeviceId(msg);
 
-        final StringBuilder sb = new StringBuilder("received message [tenant: ").append(tenantId).
+        final StringBuilder sb = new StringBuilder("received ").
+                append(messageType).
+                append(" [tenant: ").append(tenantId).
                 append(", device: ").append(deviceId).
                 append(", content-type: ").append(msg.getContentType()).
                 append(" ]: ").append(content);
-
-        if (msg.getApplicationProperties() != null) {
-            sb.append(" with application properties: ").append(msg.getApplicationProperties().getValue());
-        }
 
         System.out.println(sb.toString());
     }
 
     /**
-     * Gets if event data or telemetry data is consumed.
+     * Handler method for a <em>device ready for command</em> notification (by an explicit event or contained implicit in
+     * another message).
      *
-     * @return True if only event data is consumed, false if only telemetry data is consumed.
+     * @param timeUntilDisconnectNotification The notification containing the tenantId, deviceId and the Instant (that
+     *                                         defines until when this notification is valid). See {@link TimeUntilDisconnectNotification}.
      */
-    public boolean isEventMode() {
-        return eventMode;
+    private void handleCommandReadinessNotification(final TimeUntilDisconnectNotification timeUntilDisconnectNotification) {
+
+        System.out.println(String.format("Device is ready to receive a command : <%s>.", timeUntilDisconnectNotification.toString()));
+        // fill in specific code to e.g. try to send a command here
+    }
+
+    /**
+     * Handler method for a Message from Hono that was received as telemetry data.
+     * <p>
+     * The tenant, the device, the payload, the content-type, the creation-time and the application properties will be printed to stdout.
+     *
+     * @param msg The message that was received.
+     */
+    private void handleTelemetryMessage(final Message msg) {
+        printMessage(HonoExampleConstants.TENANT_ID, msg, "telemetry");
+    }
+
+    /**
+     * Handler method for a Message from Hono that was received as event data.
+     * <p>
+     * The tenant, the device, the payload, the content-type, the creation-time and the application properties will be printed to stdout.
+     *
+     * @param msg The message that was received.
+     */
+    private void handleEventMessage(final Message msg) {
+        printMessage(HonoExampleConstants.TENANT_ID, msg, "event");
+    }
+
+    /**
+     * Gets the {@link MODE} of this consumer: event data or telemetry data.
+     *
+     * @return The mode of this consumer.
+     */
+    public MODE getMode() {
+        return mode;
     }
 
     /**
      * Sets the consumer to consume event data or telemetry data.
      *
-     * @param value The new value for the event mode.
+     * @param value The new {@link MODE} value.
      */
-    public void setEventMode(final boolean value) {
-        this.eventMode = value;
+    public void setMode(final MODE value) {
+        this.mode = value;
     }
 }

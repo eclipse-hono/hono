@@ -35,4 +35,10 @@ public final class EventConstants {
 
     private EventConstants() {
     }
+
+    /**
+     * The content type that is defined for empty events without any payload.
+     */
+    public static final String CONTENT_TYPE_EMPTY_NOTIFICATION = "application/vnd.eclipse-hono-empty-notification";
+
 }

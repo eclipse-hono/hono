@@ -32,6 +32,7 @@ import org.eclipse.hono.service.auth.device.Device;
 import org.eclipse.hono.service.monitoring.ConnectionEventProducer;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
+import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.Strings;
@@ -647,6 +648,8 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * @param payload The message payload.
      * @param registrationInfo The device's registration information as retrieved by the <em>Device Registration</em>
      *            service's <em>assert Device Registration</em> operation.
+     * @param timeUntilDisconnect The time to deliver in seconds to indicate that a device is ready to receive an upstream message.
+     *                      Maybe {@code null}.
      * @return The message.
      * @throws NullPointerException if address, device ID or registration info are {@code null}.
      */
@@ -656,7 +659,8 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
             final String publishAddress,
             final String contentType,
             final Buffer payload,
-            final JsonObject registrationInfo) {
+            final JsonObject registrationInfo,
+            final Integer timeUntilDisconnect) {
 
         Objects.requireNonNull(address);
         Objects.requireNonNull(deviceId);
@@ -674,6 +678,9 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         if (payload != null) {
             msg.setBody(new Data(new Binary(payload.getBytes())));
         }
+        if (timeUntilDisconnect != null) {
+            MessageHelper.addTimeUntilDisconnect(msg, timeUntilDisconnect);
+        }
 
         MessageHelper.setCreationTime(msg);
 
@@ -683,7 +690,6 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
 
     /**
      * Trigger the creation of a <em>connected</em> event.
-     * 
      * @param remoteId The remote ID.
      * @param authenticatedDevice The (optional) authenticated device.
      * @return A failed future if an event producer is set but the event
@@ -714,6 +720,21 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
             return this.connectionEventProducer.disconnected(remoteId, getTypeName(), authenticatedDevice, null);
         } else {
             return Future.succeededFuture();
+        }
+    }
+
+    /**
+     * Check if the payload a protocol adapter received matches the indicated Content-Type.
+     *
+     * @param contentType The Content-Type of the payload, as received by the protocol adapter.
+     * @param payload The payload received by the protocol adapter.
+     * @return {@code true} if the payload matches the Content-Type, {@code false} otherwise.
+     */
+    protected boolean isPayloadOfIndicatedType(final Buffer payload, final String contentType) {
+        if (payload == null || payload.length() == 0) {
+            return (EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION.equals(contentType));
+        } else {
+            return (!EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION.equals(contentType));
         }
     }
 }

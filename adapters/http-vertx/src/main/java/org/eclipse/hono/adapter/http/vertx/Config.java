@@ -39,7 +39,7 @@ public class Config extends AbstractAdapterConfig {
      */
     @Bean(name = BEAN_NAME_VERTX_BASED_HTTP_PROTOCOL_ADAPTER)
     @Scope("prototype")
-    public VertxBasedHttpProtocolAdapter vertxBasedHttpProtocolAdapter(){
+    public VertxBasedHttpProtocolAdapter vertxBasedHttpProtocolAdapter() {
         return new VertxBasedHttpProtocolAdapter();
     }
 
@@ -71,7 +71,7 @@ public class Config extends AbstractAdapterConfig {
      */
     @Bean
     @ConfigurationProperties(prefix = "hono.app")
-    public ApplicationConfigProperties applicationConfigProperties(){
+    public ApplicationConfigProperties applicationConfigProperties() {
         return new ApplicationConfigProperties();
     }
 

@@ -16,6 +16,7 @@ import java.net.HttpURLConnection;
 import java.util.Objects;
 import java.util.Optional;
 
+import io.vertx.core.http.HttpHeaders;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.MessageSender;
@@ -33,7 +34,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.buffer.Buffer;
-import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.http.HttpServerOptions;
 import io.vertx.core.json.JsonObject;
@@ -482,60 +482,64 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
     private void doUploadMessage(final RoutingContext ctx, final String tenant, final String deviceId,
             final Buffer payload, final String contentType, final Future<MessageSender> senderTracker, final String endpointName) {
 
-        final Integer qosHeader = getQoSLevel(ctx.request().getHeader(Constants.HEADER_QOS_LEVEL));
-        if (contentType == null) {
-            HttpUtils.badRequest(ctx, String.format("%s header is missing", HttpHeaders.CONTENT_TYPE));
-        } else if (payload == null || payload.length() == 0) {
-            HttpUtils.badRequest(ctx, "missing body");
-        } else if (qosHeader != null && qosHeader == HEADER_QOS_INVALID) {
-            HttpUtils.badRequest(ctx, "Bad QoS Header Value");
+        if (!isPayloadOfIndicatedType(payload, contentType)) {
+            HttpUtils.badRequest(ctx, String.format("Content-Type %s does not match with the payload", contentType));
         } else {
+            final Integer qosHeader = getQoSLevel(ctx.request().getHeader(Constants.HEADER_QOS_LEVEL));
+            if (contentType == null) {
+                HttpUtils.badRequest(ctx, String.format("%s header is missing", HttpHeaders.CONTENT_TYPE));
+            } else if (qosHeader != null && qosHeader == HEADER_QOS_INVALID) {
+                HttpUtils.badRequest(ctx, "Bad QoS Header Value");
+            } else {
 
-            final Device authenticatedDevice = getAuthenticatedDevice(ctx);
-            final Future<JsonObject> tokenTracker = getRegistrationAssertion(tenant, deviceId, authenticatedDevice);
-            final Future<TenantObject> tenantConfigTracker = getTenantConfiguration(tenant);
+                final Device authenticatedDevice = getAuthenticatedDevice(ctx);
+                final Future<JsonObject> tokenTracker = getRegistrationAssertion(tenant, deviceId, authenticatedDevice);
+                final Future<TenantObject> tenantConfigTracker = getTenantConfiguration(tenant);
 
-            CompositeFuture.all(tokenTracker, tenantConfigTracker, senderTracker).compose(ok -> {
+                CompositeFuture.all(tokenTracker, tenantConfigTracker, senderTracker).compose(ok -> {
 
-                if (tenantConfigTracker.result().isAdapterEnabled(getTypeName())) {
-                    final MessageSender sender = senderTracker.result();
-                    final Message downstreamMessage = newMessage(
-                            String.format("%s/%s", endpointName, tenant),
-                            deviceId,
-                            ctx.request().uri(),
-                            contentType,
-                            payload,
-                            tokenTracker.result());
-                    customizeDownstreamMessage(downstreamMessage, ctx);
-                    if (qosHeader == null) {
-                        return sender.send(downstreamMessage);
+                    if (tenantConfigTracker.result().isAdapterEnabled(getTypeName())) {
+                        final MessageSender sender = senderTracker.result();
+                        final Message downstreamMessage = newMessage(
+                                String.format("%s/%s", endpointName, tenant),
+                                deviceId,
+                                ctx.request().uri(),
+                                contentType,
+                                payload,
+                                tokenTracker.result(),
+                                HttpUtils.getTimeTilDisconnect(ctx));
+                        customizeDownstreamMessage(downstreamMessage, ctx);
+                        if (qosHeader == null) {
+                            return sender.send(downstreamMessage);
+                        } else {
+                            return sender.sendAndWaitForOutcome(downstreamMessage);
+                        }
                     } else {
-                        return sender.sendAndWaitForOutcome(downstreamMessage);
+                        // this adapter is not enabled for the tenant
+                        return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_FORBIDDEN));
                     }
-                } else {
-                    // this adapter is not enabled for the tenant
-                    return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_FORBIDDEN));
-                }
-            }).compose(delivery -> {
-                LOG.trace("successfully processed message for device [tenantId: {}, deviceId: {}, endpoint: {}]",
-                        tenant, deviceId, endpointName);
-                metrics.incrementProcessedHttpMessages(endpointName, tenant);
-                ctx.response().setStatusCode(HttpURLConnection.HTTP_ACCEPTED).end();
-                return Future.succeededFuture();
-            }).recover(t -> {
-                if (ClientErrorException.class.isInstance(t)) {
-                    ClientErrorException e = (ClientErrorException) t;
-                    LOG.debug("cannot process message for device [tenantId: {}, deviceId: {}, endpoint: {}]: {} - {}",
-                            tenant, deviceId, endpointName, e.getErrorCode(), e.getMessage());
-                    ctx.fail(e.getErrorCode());
-                } else {
-                    LOG.debug("cannot process message for device [tenantId: {}, deviceId: {}, endpoint: {}]: {}",
-                            tenant, deviceId, endpointName, t.getMessage());
-                    metrics.incrementUndeliverableHttpMessages(endpointName, tenant);
-                    HttpUtils.serviceUnavailable(ctx, 2);
-                }
-                return Future.failedFuture(t);
-            });
+                }).compose(delivery -> {
+                    LOG.trace("successfully processed message for device [tenantId: {}, deviceId: {}, endpoint: {}]",
+                            tenant, deviceId, endpointName);
+                    metrics.incrementProcessedHttpMessages(endpointName, tenant);
+                    ctx.response().setStatusCode(HttpURLConnection.HTTP_ACCEPTED).end();
+                    return Future.succeededFuture();
+                }).recover(t -> {
+                    if (ClientErrorException.class.isInstance(t)) {
+                        ClientErrorException e = (ClientErrorException) t;
+                        LOG.debug(
+                                "cannot process message for device [tenantId: {}, deviceId: {}, endpoint: {}]: {} - {}",
+                                tenant, deviceId, endpointName, e.getErrorCode(), e.getMessage());
+                        ctx.fail(e.getErrorCode());
+                    } else {
+                        LOG.debug("cannot process message for device [tenantId: {}, deviceId: {}, endpoint: {}]: {}",
+                                tenant, deviceId, endpointName, t.getMessage());
+                        metrics.incrementUndeliverableHttpMessages(endpointName, tenant);
+                        HttpUtils.serviceUnavailable(ctx, 2);
+                    }
+                    return Future.failedFuture(t);
+                });
+            }
         }
     }
 
