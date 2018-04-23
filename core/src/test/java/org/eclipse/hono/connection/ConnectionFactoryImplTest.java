@@ -39,6 +39,8 @@ import org.mockito.Mockito;
 @RunWith(VertxUnitRunner.class)
 public class ConnectionFactoryImplTest {
 
+    private static final String PREFIX_KEY_PATH = "target/certs/";
+
     private final Vertx vertx = Vertx.vertx();
     private ClientConfigProperties props;
 
@@ -197,7 +199,7 @@ public class ConnectionFactoryImplTest {
         // GIVEN a factory configured to use a specific trust store
         final ClientConfigProperties config = new ClientConfigProperties();
         config.setHost("remote.host");
-        config.setTrustStorePath("/tmp/trusted-ca.p12");
+        config.setTrustStorePath(PREFIX_KEY_PATH + "trusted-certs.pem");
         final ProtonClient client = mock(ProtonClient.class);
         final ConnectionFactoryImpl factory = new ConnectionFactoryImpl(vertx, config);
         factory.setProtonClient(client);
