@@ -23,7 +23,11 @@
     <property name="optional" value="false" />
   </module>
 
+  <module name="SuppressWarningsFilter" />
+
   <module name="TreeWalker">
+
+    <module name="SuppressWarningsHolder" />
 
     <!-- imports -->
 
