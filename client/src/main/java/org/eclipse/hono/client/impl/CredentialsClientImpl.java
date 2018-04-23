@@ -134,7 +134,7 @@ public class CredentialsClientImpl extends AbstractRequestResponseClient<Credent
      * on the service represented by the <em>sender</em> and <em>receiver</em> links.
      */
     @Override
-    public Future<CredentialsObject> get(String type, String authId) {
+    public Future<CredentialsObject> get(final String type, final String authId) {
         return get(type, authId, new JsonObject());
     }
 
