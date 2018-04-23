@@ -59,7 +59,7 @@ public class HonoClientImplTest {
      * Global timeout for each test case.
      */
     @Rule
-    public Timeout timeout = Timeout.seconds(5);
+    public Timeout timeout = Timeout.seconds(2);
 
     private static Vertx vertx;
 
@@ -479,6 +479,32 @@ public class HonoClientImplTest {
                 }));
     }
 
+    /**
+     * Verifies that if a client disconnects from the server, then an attempt to connect again will be succcessful.
+     *
+     * @param ctx The test execution context.
+     */
+    @Test
+    public void testConnectSucceedsAfterDisconnect(final TestContext ctx) {
+
+        // If a client disconnects from the server
+        final Async disconnectTracker = ctx.async();
+        client.disconnect(ctx.asyncAssertSuccess(succeeds -> {
+            // client successfully disconnected from remote AMQP container.
+            disconnectTracker.complete();
+        }));
+        disconnectTracker.await();
+
+        // AND tries to reconnect again
+        final Async connectionTracker = ctx.async();
+        client.connect(new ProtonClientOptions()).setHandler(
+                ctx.asyncAssertSuccess(success -> {
+                    connectionTracker.complete();
+                }));
+
+        // THEN the connection succeeds
+        connectionTracker.await();
+    }
     /**
      * Verifies that the client does not try to re-connect to a server instance if the client was shutdown.
      * 

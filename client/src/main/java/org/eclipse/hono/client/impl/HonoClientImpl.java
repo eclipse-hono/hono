@@ -73,6 +73,7 @@ public class HonoClientImpl implements HonoClient {
     private final List<Handler<Void>> creationRequests = new ArrayList<>();
     private final AtomicBoolean connecting = new AtomicBoolean(false);
     private final AtomicBoolean shuttingDown = new AtomicBoolean(false);
+    private final AtomicBoolean disconnecting = new AtomicBoolean(false);
     private final ConnectionFactory connectionFactory;
     protected final ClientConfigProperties clientConfigProperties;
     private final Vertx vertx;
@@ -953,38 +954,78 @@ public class HonoClientImpl implements HonoClient {
      */
     @Override
     public final void shutdown(final Handler<AsyncResult<Void>> completionHandler) {
-
+        Objects.requireNonNull(completionHandler);
         if (shuttingDown.compareAndSet(Boolean.FALSE, Boolean.TRUE)) {
-            context.runOnContext(shutDown -> {
-                if (isConnectedInternal()) {
-                    shutdownConnection(completionHandler);
-                } else {
-                    LOG.info("connection to server [{}:{}] already closed", connectionFactory.getHost(),
-                            connectionFactory.getPort());
-                    completionHandler.handle(Future.succeededFuture());
-                }
+            context.runOnContext(shutDownResult -> {
+                closeConnection(completionHandler);
             });
         } else {
-            completionHandler.handle(Future.failedFuture(new IllegalStateException("already shutting down")));
+            completionHandler.handle(Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_CONFLICT, "already in the middle of a shutdown operation")));
         }
     }
 
-    private void shutdownConnection(final Handler<AsyncResult<Void>> completionHandler) {
-
-        LOG.info("closing connection to server [{}:{}]...", connectionFactory.getHost(), connectionFactory.getPort());
-        connection.disconnectHandler(null); // make sure we are not trying to re-connect
-        connection.closeHandler(closedCon -> {
-            if (closedCon.succeeded()) {
-                LOG.info("closed connection to server [{}:{}]", connectionFactory.getHost(),
-                        connectionFactory.getPort());
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public final void disconnect() {
+        final CountDownLatch countDown = new CountDownLatch(1);
+        disconnect(disconnectResult -> {
+            if (disconnectResult.succeeded()) {
+                LOG.info("successfully disconnected from the server [{}:{}]", connectionFactory.getHost(), connectionFactory.getPort());
+                countDown.countDown();
             } else {
-                LOG.info("closed connection to server [{}:{}]", connectionFactory.getHost(),
-                        connectionFactory.getPort(), closedCon.cause());
+                LOG.error("could not disconnect from the server [{}:{}]", connectionFactory.getHost(), connectionFactory.getPort());
             }
-            connection.disconnect();
-            if (completionHandler != null) {
-                completionHandler.handle(Future.succeededFuture());
+        });
+        try {
+            if (!countDown.await(5, TimeUnit.SECONDS)) {
+                LOG.error("Disconnecting from the server [{}:{}] timed out after 5 seconds", connectionFactory.getHost(), connectionFactory.getPort());
             }
-        }).close();
+        } catch (final InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
     }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public final void disconnect(final Handler<AsyncResult<Void>> completionHandler) {
+        Objects.requireNonNull(completionHandler);
+        if (disconnecting.compareAndSet(Boolean.FALSE, Boolean.TRUE)) {
+            context.runOnContext(disconnectResult -> {
+                closeConnection(completionHandler);
+            });
+        } else {
+            completionHandler.handle(Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_CONFLICT, "already in the middle of a disconnect operation")));
+        }
+    }
+
+    //-----------------------------------< private methods >---
+
+    private void closeConnection(final Handler<AsyncResult<Void>> completionHandler) {
+        if (isConnectedInternal()) {
+            LOG.info("closing connection to server [{}:{}]...", connectionFactory.getHost(), connectionFactory.getPort());
+            connection.disconnectHandler(null); // make sure we are not trying to re-connect
+            connection.closeHandler(closedCon -> {
+                if (closedCon.succeeded()) {
+                    LOG.info("closed connection to server [{}:{}]", connectionFactory.getHost(),
+                            connectionFactory.getPort());
+                } else {
+                    LOG.info("closed connection to server [{}:{}]", connectionFactory.getHost(),
+                            connectionFactory.getPort(), closedCon.cause());
+                }
+                connection.disconnect();
+                disconnecting.compareAndSet(Boolean.TRUE, Boolean.FALSE);
+
+                completionHandler.handle(Future.succeededFuture());
+            }).close();
+        } else {
+            LOG.info("connection to server [{}:{}] already closed", connectionFactory.getHost(), connectionFactory.getPort());
+            disconnecting.compareAndSet(Boolean.TRUE, Boolean.FALSE);
+            completionHandler.handle(Future.succeededFuture());
+        }
+    }
+
 }
