@@ -18,6 +18,18 @@
       <artifactId>vertx-unit</artifactId>
       <scope>test</scope>
     </dependency>
+    <!-- dependency>
+        <groupId>io.netty</groupId>
+        <artifactId>netty-tcnative-boringssl-static</artifactId>
+        <classifier>linux-x86_64</classifier>
+        <version>2.0.8.Final</version>
+    </dependency-->
+    <dependency>
+        <groupId>io.netty</groupId>
+        <artifactId>netty-tcnative</artifactId>
+        <classifier>linux-x86_64</classifier>
+        <version>2.0.8.Final</version>
+    </dependency>
   </dependencies>
 
   <build>
@@ -59,14 +71,14 @@
                       <port>5671</port>
                       <port>5672</port>
                     </ports>
-                    <entryPoint>
+                    <cmd>
                       <exec>
                         <arg>java</arg>
                         <arg>-Dvertx.cacheDirBase=/tmp</arg>
                         <arg>-jar</arg>
                         <arg>/opt/hono/${project.artifactId}-${project.version}-${classifier.spring.boot.artifact}.jar</arg>
                       </exec>
-                    </entryPoint>
+                    </cmd>
                     <assembly>
                       <mode>dir</mode>
                       <basedir>/</basedir>

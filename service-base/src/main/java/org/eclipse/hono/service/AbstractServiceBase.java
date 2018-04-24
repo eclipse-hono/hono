@@ -7,10 +7,12 @@ import org.eclipse.hono.util.Constants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.netty.handler.ssl.OpenSsl;
 import io.vertx.core.Future;
 import io.vertx.core.http.ClientAuth;
 import io.vertx.core.net.KeyCertOptions;
 import io.vertx.core.net.NetServerOptions;
+import io.vertx.core.net.OpenSSLEngineOptions;
 import io.vertx.core.net.TrustOptions;
 import io.vertx.ext.healthchecks.HealthCheckHandler;
 
@@ -350,6 +352,12 @@ public abstract class AbstractServiceBase<T extends ServiceConfigProperties> ext
 
         if (keyCertOptions != null) {
             serverOptions.setSsl(true).setKeyCertOptions(keyCertOptions);
+            if (OpenSsl.isAvailable()) {
+                // we're on Linux, try to use openssl
+                LOG.info("using OpenSSL instead of JDK's SSL stack, using library path [{}]",
+                        System.getProperty("java.library.path"));
+                serverOptions.setSslEngineOptions(new OpenSSLEngineOptions());
+            }
         }
         if (serverOptions.isSsl()) {
             serverOptions.getEnabledSecureTransportProtocols()
