@@ -229,7 +229,8 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
     protected HttpServerOptions getHttpServerOptions() {
 
         HttpServerOptions options = new HttpServerOptions();
-        options.setHost(getConfig().getBindAddress()).setPort(getConfig().getPort(getPortDefaultValue())).setMaxChunkSize(4096);
+        options.setHost(getConfig().getBindAddress()).setPort(getConfig().getPort(getPortDefaultValue()))
+            .setMaxChunkSize(4096);
         addTlsKeyCertOptions(options);
         addTlsTrustOptions(options);
         return options;

@@ -217,6 +217,12 @@ public final class ConnectionFactoryImpl implements ConnectionFactory {
             } else {
                 clientOptions.setHostnameVerificationAlgorithm("");
             }
+            clientOptions.getEnabledSecureTransportProtocols()
+                .forEach(protocol -> clientOptions.removeEnabledSecureTransportProtocol(protocol));
+            config.getSecureProtocols().forEach(protocol -> {
+                logger.debug("enabling secure protocol [{}]", protocol);
+                clientOptions.addEnabledSecureTransportProtocol(protocol);
+            });
         }
     }
 

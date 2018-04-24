@@ -15,6 +15,8 @@ package org.eclipse.hono.config;
 
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.Collections;
+import java.util.List;
 import java.util.Objects;
 
 import org.eclipse.hono.util.Constants;
@@ -49,6 +51,7 @@ public abstract class AbstractConfig {
     private String keyPath;
     private FileFormat trustStoreFormat;
     private FileFormat keyFormat;
+    private List<String> secureProtocols = Collections.singletonList("TLSv1.2");
 
     /**
      * Checks if a given port number is valid.
@@ -378,6 +381,37 @@ public abstract class AbstractConfig {
      */
     public final FileFormat getKeyFormat() {
         return keyFormat;
+    }
+
+    /**
+     * Gets the secure protocols that are enabled for TLS connections.
+     * <p>
+     * By default, only <em>TLSv1.2</em> is enabled. Please refer to the
+     * <a href="https://vertx.io/docs/vertx-core/java/#ssl">vert.x
+     * documentation</a> for a list of supported values.
+     * 
+     * @return The enabled protocols.
+     */
+    public final List<String> getSecureProtocols() {
+        return Collections.unmodifiableList(secureProtocols);
+    }
+
+    /**
+     * Sets the secure protocols that are enabled for TLS connections.
+     * <p>
+     * By default, only <em>TLSv1.2</em> is enabled. Please refer to the
+     * <a href="https://vertx.io/docs/vertx-core/java/#ssl">vert.x
+     * documentation</a> for a list of supported values.
+     * <p>
+     * Note that setting this property to an empty list effectively
+     * disables TLS altogether.
+     * 
+     * @param enabledProtocols The protocols.
+     * @throws NullPointerException if protocols is {@code null}.
+     */
+    public final void setSecureProtocols(final List<String> enabledProtocols) {
+        Objects.requireNonNull(enabledProtocols);
+        this.secureProtocols = enabledProtocols;
     }
 
     private static String fromChars(final char[] chars) {

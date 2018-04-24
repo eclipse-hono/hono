@@ -336,6 +336,9 @@ public abstract class AbstractServiceBase<T extends ServiceConfigProperties> ext
      * <p>
      * If <em>config</em> contains key &amp; certificate configuration it is added to
      * the given server options and the <em>ssl</em> flag is set to {@code true}.
+     * <p>
+     * If the server option' ssl flag is set, then the protocols from the <em>disabledTlsVersions</em>
+     * configuration property are removed from the options (and thus disabled).
      * 
      * @param serverOptions The options to add configuration to.
      */
@@ -345,6 +348,14 @@ public abstract class AbstractServiceBase<T extends ServiceConfigProperties> ext
 
         if (keyCertOptions != null) {
             serverOptions.setSsl(true).setKeyCertOptions(keyCertOptions);
+        }
+        if (serverOptions.isSsl()) {
+            serverOptions.getEnabledSecureTransportProtocols()
+                .forEach(protocol -> serverOptions.removeEnabledSecureTransportProtocol(protocol));
+            getConfig().getSecureProtocols().forEach(protocol -> {
+                LOG.info("enabling secure protocol [{}]", protocol);
+                serverOptions.addEnabledSecureTransportProtocol(protocol);
+            });
         }
     }
 }

@@ -15,6 +15,8 @@ package org.eclipse.hono.service;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.EventBus;
+import io.vertx.core.net.NetServerOptions;
+
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.util.Constants;
 import org.junit.Before;
@@ -24,6 +26,8 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+
+import java.util.Arrays;
 
 /**
  * Unit tests for Hono Server Base class.
@@ -49,7 +53,7 @@ public class AbstractServiceBaseTest {
         when(vertx.eventBus()).thenReturn(eventBus);
     }
 
-    private AbstractServiceBase<ServiceConfigProperties> createServer(final ServiceConfigProperties config) {
+    private AbstractServiceBase<ServiceConfigProperties> createService(final ServiceConfigProperties config) {
 
         AbstractServiceBase<ServiceConfigProperties> server = new AbstractServiceBase<ServiceConfigProperties>() {
 
@@ -90,13 +94,13 @@ public class AbstractServiceBaseTest {
     public void checkSecurePortAutoSelect() {
 
         // GIVEN a configuration with a key store set
-        ServiceConfigProperties configProperties = new ServiceConfigProperties();
+        final ServiceConfigProperties configProperties = new ServiceConfigProperties();
         configProperties.setKeyStorePath(PREFIX_KEY_PATH + "/honoKeyStore.p12");
 
         // WHEN using this configuration to determine the server's port configuration
         // secure port config: no port set -> secure IANA port selected
-        AbstractServiceBase<ServiceConfigProperties> server = createServer(configProperties);
-        Future<Void> portConfigurationTracker = server.checkPortConfiguration();
+        final AbstractServiceBase<ServiceConfigProperties> server = createService(configProperties);
+        final Future<Void> portConfigurationTracker = server.checkPortConfiguration();
 
         // THEN the default secure port is selected and no insecure port will be opened
         assertTrue(portConfigurationTracker.succeeded());
@@ -113,14 +117,14 @@ public class AbstractServiceBaseTest {
     public void checkSecurePortExplicitlySet() {
 
         // GIVEN a configuration with a key store and a secure port being set
-        ServiceConfigProperties configProperties = new ServiceConfigProperties();
+        final ServiceConfigProperties configProperties = new ServiceConfigProperties();
         configProperties.setKeyStorePath(PREFIX_KEY_PATH + "/honoKeyStore.p12");
         configProperties.setPort(8989);
 
         // WHEN using this configuration to determine the server's port configuration
         // secure port config: explicit port set -> port used
-        AbstractServiceBase<ServiceConfigProperties> server = createServer(configProperties);
-        Future<Void> portConfigurationTracker = server.checkPortConfiguration();
+        final AbstractServiceBase<ServiceConfigProperties> server = createService(configProperties);
+        final Future<Void> portConfigurationTracker = server.checkPortConfiguration();
 
         // THEN the configured port is used and no insecure port will be opened
         assertTrue(portConfigurationTracker.succeeded());
@@ -137,11 +141,11 @@ public class AbstractServiceBaseTest {
     public void checkNoPortsSet() {
 
         // GIVEN a default configuration with no key store being set
-        ServiceConfigProperties configProperties = new ServiceConfigProperties();
+        final ServiceConfigProperties configProperties = new ServiceConfigProperties();
 
         // WHEN using this configuration to determine the server's port configuration
-        AbstractServiceBase<ServiceConfigProperties> server = createServer(configProperties);
-        Future<Void> portConfigurationTracker = server.checkPortConfiguration();
+        final AbstractServiceBase<ServiceConfigProperties> server = createService(configProperties);
+        final Future<Void> portConfigurationTracker = server.checkPortConfiguration();
 
         // THEN the port configuration fails
         assertTrue(portConfigurationTracker.failed());
@@ -155,12 +159,12 @@ public class AbstractServiceBaseTest {
     public void checkInsecureOnlyPort() {
 
         // GIVEN a default configuration with insecure port being enabled but no key store being set
-        ServiceConfigProperties configProperties = new ServiceConfigProperties();
+        final ServiceConfigProperties configProperties = new ServiceConfigProperties();
         configProperties.setInsecurePortEnabled(true);
 
         // WHEN using this configuration to determine the server's port configuration
-        AbstractServiceBase<ServiceConfigProperties> server = createServer(configProperties);
-        Future<Void> portConfigurationTracker = server.checkPortConfiguration();
+        final AbstractServiceBase<ServiceConfigProperties> server = createService(configProperties);
+        final Future<Void> portConfigurationTracker = server.checkPortConfiguration();
 
         // THEN the server will bind to the default insecure port only
         assertTrue(portConfigurationTracker.succeeded());
@@ -177,13 +181,13 @@ public class AbstractServiceBaseTest {
     public void checkInsecureOnlyPortExplicitlySet() {
 
         // GIVEN a default configuration with insecure port being set to a specific port.
-        ServiceConfigProperties configProperties = new ServiceConfigProperties();
+        final ServiceConfigProperties configProperties = new ServiceConfigProperties();
         configProperties.setInsecurePortEnabled(true);
         configProperties.setInsecurePort(8888);
 
         // WHEN using this configuration to determine the server's port configuration
-        AbstractServiceBase<ServiceConfigProperties> server = createServer(configProperties);
-        Future<Void> portConfigurationTracker = server.checkPortConfiguration();
+        final AbstractServiceBase<ServiceConfigProperties> server = createService(configProperties);
+        final Future<Void> portConfigurationTracker = server.checkPortConfiguration();
 
         // THEN the server will bind to the configured insecure port only
         assertTrue(portConfigurationTracker.succeeded());
@@ -201,13 +205,13 @@ public class AbstractServiceBaseTest {
     public void checkBothPortsOpen() {
 
         // GIVEN a default configuration with insecure port being enabled and a key store being set.
-        ServiceConfigProperties configProperties = new ServiceConfigProperties();
+        final ServiceConfigProperties configProperties = new ServiceConfigProperties();
         configProperties.setInsecurePortEnabled(true);
         configProperties.setKeyStorePath(PREFIX_KEY_PATH + "/honoKeyStore.p12");
 
         // WHEN using this configuration to determine the server's port configuration
-        AbstractServiceBase<ServiceConfigProperties> server = createServer(configProperties);
-        Future<Void> portConfigurationTracker = server.checkPortConfiguration();
+        final AbstractServiceBase<ServiceConfigProperties> server = createService(configProperties);
+        final Future<Void> portConfigurationTracker = server.checkPortConfiguration();
 
         // THEN the server will bind to both the default insecure and secure ports
         assertTrue(portConfigurationTracker.succeeded());
@@ -227,17 +231,63 @@ public class AbstractServiceBaseTest {
 
         // GIVEN a default configuration with both the insecure port and the secure port
         // being set to the same value.
-        ServiceConfigProperties configProperties = new ServiceConfigProperties();
+        final ServiceConfigProperties configProperties = new ServiceConfigProperties();
         configProperties.setInsecurePortEnabled(true);
         configProperties.setKeyStorePath(PREFIX_KEY_PATH + "/honoKeyStore.p12");
         configProperties.setInsecurePort(8888);
         configProperties.setPort(8888);
 
         // WHEN using this configuration to determine the server's port configuration
-        AbstractServiceBase<ServiceConfigProperties> server = createServer(configProperties);
-        Future<Void> portConfigurationTracker = server.checkPortConfiguration();
+        final AbstractServiceBase<ServiceConfigProperties> server = createService(configProperties);
+        final Future<Void> portConfigurationTracker = server.checkPortConfiguration();
 
         // THEN port configuration fails
         assertTrue(portConfigurationTracker.failed());
+    }
+
+    /**
+     * Verifies that only TLSv1.2 is enabled by default.
+     * 
+     */
+    @Test
+    public void testAddTlsKeyCertOptionsDisablesAllProtocolVersionsButTls12() {
+
+        // GIVEN a default configuration for TLS
+        final ServiceConfigProperties config = new ServiceConfigProperties();
+        config.setKeyStorePath(PREFIX_KEY_PATH + "/honoKeyStore.p12");
+
+        // WHEN configuring a service using the configuration
+        final AbstractServiceBase<ServiceConfigProperties> service = createService(config);
+        final NetServerOptions options = new NetServerOptions();
+        service.addTlsKeyCertOptions(options);
+
+        // THEN SSL is enabled and only TLSv1.2 is enabled
+        assertTrue(options.isSsl());
+        assertTrue(options.getEnabledSecureTransportProtocols().contains("TLSv1.2"));
+        assertTrue(options.getEnabledSecureTransportProtocols().size() == 1);
+    }
+
+    /**
+     * Verifies that only the configured TLS protocols are enabled.
+     * 
+     */
+    @Test
+    public void testAddTlsKeyCertOptionsDisablesTlsProtocolVersions() {
+
+        // GIVEN a configuration with only TLS 1 and TLS 1.1 enabled
+        final ServiceConfigProperties config = new ServiceConfigProperties();
+        config.setKeyStorePath(PREFIX_KEY_PATH + "/honoKeyStore.p12");
+        config.setSecureProtocols(Arrays.asList("TLSv1", "TLSv1.1"));
+
+        // WHEN configuring a service using the configuration
+        final AbstractServiceBase<ServiceConfigProperties> service = createService(config);
+        final NetServerOptions options = new NetServerOptions();
+        service.addTlsKeyCertOptions(options);
+
+        // THEN SSL is enabled and only TLSv1 and TLSv1.1 are supported
+        assertTrue(options.isSsl());
+        assertTrue(options.getEnabledSecureTransportProtocols().size() == 2);
+        assertTrue(options.getEnabledSecureTransportProtocols().contains("TLSv1"));
+        assertTrue(options.getEnabledSecureTransportProtocols().contains("TLSv1.1"));
     }
 }

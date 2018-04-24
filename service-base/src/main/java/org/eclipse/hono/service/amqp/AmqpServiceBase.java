@@ -347,7 +347,6 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
      */
     protected ProtonServerOptions createServerOptions() {
         ProtonServerOptions options = createInsecureServerOptions();
-
         addTlsKeyCertOptions(options);
         addTlsTrustOptions(options);
         return options;

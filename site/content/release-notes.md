@@ -4,6 +4,10 @@ title = "Release Notes"
 
 ## 0.6 (not yet released)
 
+### New Features
+
+* Protocol adapters, services and HonoClient now support TLS 1.2 only by default when using TLS to secure communication. However, additional protocols can be enabled by means of setting environment variables as described in the admin guides.
+
 ### API Changes
 
 * The Tenant API's *get Tenant Information* operation has been changed to expect search criteria in the request message's payload instead of the application-properties. This change has been made in order to support other search criteria than just the tenant identifier. In particular, the *get Tenant Information* operation can now be used to find a tenant based on the subject DN of a trusted certificate authority that has been configured for the tenant. See [get Tenant Information]({{< relref "api/Tenant-API.md#get-tenant-information" >}}) for details.
