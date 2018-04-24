@@ -34,6 +34,21 @@ the version of your OpenShift cluster. This guide was tested with
 OpenShift 3.7.2. It should work with older or newer versions as well, but that
 is untested.
 
+{{% warning title="Curl on Mac OS X" %}}
+The `curl` binary on Mac OS X suffers from an issue with TLS SNI. Also see: https://github.com/curl/curl/issues/1533
+
+As the use of SNI is required for Kubernetes/OpenShift when it comes to routing
+requests to services, it is not possible to use the provided version of
+`curl` on Mac OS X. You can install a working `curl` version using:
+
+    brew install curl --with-openssl
+
+Or upgrade your existing installation using:
+
+    brew reinstall curl --with-openssl
+
+{{% /warning %}}
+
 ### Assumptions
 
 This tutorial makes the following assumptions about your environment, if those
@@ -193,7 +208,7 @@ branch is also the current development and may be unstable at times.
 If you experience any problems, starting with release 0.6.0 of Hono, it is
 recommended to switch to the release branch (e.g. `0.6.x`) instead of using
 the default master branch. However this documentation is only published from
-the master branch, so there may be incosistencies between the repository
+the master branch, so there may be inconsistencies between the repository
 content and the documentation. In this case you can read through `index.md`
 file, checked out from the branch you cloned. The file is located in the 
 directory `hono-site/content/deployment/openshift_s2i`.
