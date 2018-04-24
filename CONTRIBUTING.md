@@ -95,3 +95,10 @@ You should, of course, adapt this header to use the specific mechanism for comme
 ````
 
 when adding an XML file.
+
+**Important**
+
+Please do not forget to add your name/organization to the `/legal/legal/NOTICE.md` file's *Copyright Holders* section. If this is not the first contribution you make then simply update the time period contained in the copyright entry to use year of your first contribution as the lower boundary and the current year as the upper boundary, e.g.
+
+`Copyright 2017, 2018 ACME Corporation`
+
