@@ -56,6 +56,9 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
 
     private static final Logger LOG = LoggerFactory.getLogger(AbstractVertxBasedHttpProtocolAdapter.class);
 
+    private static final int AT_LEAST_ONCE = 1;
+    private static final int HEADER_QOS_INVALID = -1;
+
     private HttpServer         server;
     private HttpServer         insecureServer;
     private HttpAdapterMetrics metrics;
@@ -478,10 +481,13 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
     private void doUploadMessage(final RoutingContext ctx, final String tenant, final String deviceId,
             final Buffer payload, final String contentType, final Future<MessageSender> senderTracker, final String endpointName) {
 
+        final Integer qosHeader = getQoSLevel(ctx.request().getHeader(Constants.HEADER_QOS_LEVEL));
         if (contentType == null) {
             HttpUtils.badRequest(ctx, String.format("%s header is missing", HttpHeaders.CONTENT_TYPE));
         } else if (payload == null || payload.length() == 0) {
             HttpUtils.badRequest(ctx, "missing body");
+        } else if (qosHeader != null && qosHeader == HEADER_QOS_INVALID) {
+            HttpUtils.badRequest(ctx, "Bad QoS Header Value");
         } else {
 
             final Device authenticatedDevice = getAuthenticatedDevice(ctx);
@@ -491,6 +497,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
             CompositeFuture.all(tokenTracker, tenantConfigTracker, senderTracker).compose(ok -> {
 
                 if (tenantConfigTracker.result().isAdapterEnabled(getTypeName())) {
+                    final MessageSender sender = senderTracker.result();
                     final Message downstreamMessage = newMessage(
                             String.format("%s/%s", endpointName, tenant),
                             deviceId,
@@ -499,7 +506,11 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                             payload,
                             tokenTracker.result());
                     customizeDownstreamMessage(downstreamMessage, ctx);
-                    return senderTracker.result().send(downstreamMessage);
+                    if (qosHeader == null) {
+                        return sender.send(downstreamMessage);
+                    } else {
+                        return sender.sendAndWaitForOutcome(downstreamMessage);
+                    }
                 } else {
                     // this adapter is not enabled for the tenant
                     return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_FORBIDDEN));
@@ -524,6 +535,18 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                 }
                 return Future.failedFuture(t);
             });
+        }
+    }
+
+    private static Integer getQoSLevel(final String qosValue) {
+        try {
+            if (qosValue == null) {
+                return null;
+            } else {
+                return Integer.parseInt(qosValue) != AT_LEAST_ONCE ? HEADER_QOS_INVALID : AT_LEAST_ONCE;
+            }
+        } catch (NumberFormatException e) {
+            return HEADER_QOS_INVALID;
         }
     }
 }
