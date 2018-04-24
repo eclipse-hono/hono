@@ -37,6 +37,16 @@ http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [Maven Central](http://search.maven.org/remotecontent?filepath=commons-logging/commons-logging/1.2/commons-logging-1.2-sources.jar).
 
+### Google Guava ${guava.version}
+
+This product includes software developed by the [Guava project](https://github.com/google/guava).
+
+Your use of *Guava* is subject to the terms and conditions of the Apache Software License 2.0.
+A copy of the license is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and is also available at
+http://www.apache.org/licenses/LICENSE-2.0.html.
+
+The source code is available from [Maven Central](http://search.maven.org/remotecontent?filepath=com/google/guava/guava/${guava.version}/guava-${guava.version}-sources.jar).
+
 ### Jackson ${jackson.version}
 
 This product includes software developed by [FasterXML, LLC](http://fasterxml.com/).
