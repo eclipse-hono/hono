@@ -328,7 +328,7 @@ In order to connect the external consumer to EnMasse, we need to use a
 proper SSL certificate. We can extract one from the OpenShift using the
 following command:
 
-    oc extract secret/external-certs-messaging --to=target/keys -n enmasse
+    oc extract secret/external-certs-messaging --to=target/config/hono-demo-certs-jar -n enmasse
 
 This will create two files `tls.crt` and `tls.key` in the directory
 `target/keys`.
@@ -340,7 +340,7 @@ guide, data produced by devices is usually consumed by downstream applications
 which connect directly to the router network service. You can start the client
 from the `example` folder as follows:
 
-    mvn spring-boot:run -Drun.arguments=--hono.client.host=$(oc get -n enmasse route messaging --template='{{.spec.host}}'),--hono.client.port=443,--hono.client.trustStorePath=target/keys/tls.crt
+    mvn spring-boot:run -Drun.arguments=--hono.client.host=$(oc get -n enmasse route messaging --template='{{.spec.host}}'),--hono.client.port=443,--hono.client.trustStorePath=target/config/hono-demo-certs-jar/tls.crt
 
 ### Register device
 
