@@ -206,10 +206,7 @@ public abstract class MessageForwardingEndpoint<T extends HonoMessagingConfigPro
 
     final void forwardMessage(final UpstreamReceiver link, final ProtonDelivery delivery, final Message msg) {
 
-        final ResourceIdentifier messageAddress = ResourceIdentifier.fromString(getAnnotation(msg, MessageHelper.APP_PROPERTY_RESOURCE, String.class));
-        final String token = MessageHelper.getAndRemoveRegistrationAssertion(msg);
-
-        if (assertRegistration(token, messageAddress)) {
+        if (assertRegistration(msg)) {
             downstreamAdapter.processMessage(link, delivery, msg);
         } else {
             logger.debug("failed to validate device registration status");
@@ -217,14 +214,18 @@ public abstract class MessageForwardingEndpoint<T extends HonoMessagingConfigPro
         }
     }
 
-    private boolean assertRegistration(final String token, final ResourceIdentifier resource) {
+    private boolean assertRegistration(final Message msg) {
 
         if (config.isAssertionValidationRequired()) {
+
+            final ResourceIdentifier address = ResourceIdentifier.fromString(getAnnotation(msg, MessageHelper.APP_PROPERTY_RESOURCE, String.class));
+            final String token = MessageHelper.getAndRemoveRegistrationAssertion(msg);
+
             if (token == null) {
                 logger.debug("registration assertion validation failed due to missing token");
                 return false;
             } else {
-                return registrationAssertionValidator.isValid(token, resource.getTenantId(), resource.getResourceId());
+                return registrationAssertionValidator.isValid(token, address.getTenantId(), address.getResourceId());
             }
         } else {
             // validation has been disabled explicitly

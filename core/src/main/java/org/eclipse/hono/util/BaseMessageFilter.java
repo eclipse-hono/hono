@@ -23,6 +23,9 @@ public class BaseMessageFilter {
 
     private static final Logger LOG = LoggerFactory.getLogger(BaseMessageFilter.class);
 
+    /**
+     * Empty default constructor.
+     */
     protected BaseMessageFilter () {
     }
 

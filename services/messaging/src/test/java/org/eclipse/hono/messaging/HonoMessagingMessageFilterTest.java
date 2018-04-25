@@ -71,22 +71,6 @@ public class HonoMessagingMessageFilterTest {
     }
 
     /**
-     * Verifies that the filter rejects messages lacking a registration assertion
-     * property.
-     */
-    @Test
-    public void testVerifyDetectsMissingRegistrationAssertion() {
-        // GIVEN a valid telemetry message without registration assertion
-        final Message msg = givenAMessageHavingProperties(MY_DEVICE, MY_TENANT, null, CONTENT_TYPE_OCTET_STREAM, new byte[]{ 0x00 });
-
-        // WHEN receiving the message via a link with matching tenant
-        final ResourceIdentifier linkTarget = getResourceIdentifier(MY_TENANT);
-
-        // THEN message validation fails
-        assertFalse(HonoMessagingMessageFilter.verify(linkTarget, msg));
-    }
-
-    /**
      * Verifies that the filter rejects messages lacking a content type.
      */
     @Test
