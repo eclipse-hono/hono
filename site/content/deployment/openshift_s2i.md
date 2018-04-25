@@ -34,12 +34,16 @@ the version of your OpenShift cluster. This guide was tested with
 OpenShift 3.7.2. It should work with older or newer versions as well, but that
 is untested.
 
-{{% warning title="Curl on Mac OS X" %}}
-The `curl` binary on Mac OS X suffers from an issue with TLS SNI. Also see: https://github.com/curl/curl/issues/1533
+{{% warning title="Mac OS X 10.13+" %}}
+The `curl` binary on Mac OS X before 10.13 suffers from an issue with TLS SNI.
+Also see: https://github.com/curl/curl/issues/1533
 
 As the use of SNI is required for Kubernetes/OpenShift when it comes to routing
 requests to services, it is not possible to use the provided version of
-`curl` on Mac OS X. You can install a working `curl` version using:
+`curl` on Mac OS X before 10.13.
+
+You can install a working `curl` version using in those Mac OS X released with
+the following commands:
 
     brew install curl --with-openssl
 
@@ -63,8 +67,8 @@ the following instructions:
 ### Linux like environment
 
 The deployment guide assumes that you have a Linux like environment with things
-like `bash`, `curl`, `git`, … Mac OS X works as well, Windows with some Unix
-tooling should also be possible.
+like `bash`, `curl`, `git`, … Mac OS X 10.13+ works as well, Windows with
+some kind of Unix tooling should also be possible.
 
 ### OpenShift Origin client tools
 
