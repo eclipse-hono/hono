@@ -208,9 +208,8 @@ public abstract class BaseTenantService<T> extends EventBusService<T> implements
             final Future<TenantResult<JsonObject>> removeResult = Future.future();
             remove(tenantId, removeResult.completer());
             return removeResult.map(tr -> {
-                return EventBusMessage.forStatusCode(tr.getStatus())
+                return request.getResponse(tr.getStatus())
                         .setJsonPayload(tr.getPayload())
-                        .setTenant(tenantId)
                         .setCacheDirective(tr.getCacheDirective());
             });
         }
