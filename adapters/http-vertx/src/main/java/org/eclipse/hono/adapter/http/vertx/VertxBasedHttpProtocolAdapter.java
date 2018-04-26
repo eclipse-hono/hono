@@ -147,6 +147,9 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
             // route for posting events using tenant and device ID determined as part of
             // device authentication
             router.route(HttpMethod.POST, "/event").handler(this::handlePostEvent);
+
+            // require Basic auth for PUTing event
+            router.route(HttpMethod.PUT, "/event/*").handler(basicAuthHandler);
             // route for asserting that authenticated device's tenant matches tenant from path variables
             router.route(HttpMethod.PUT, String.format("/event/:%s/:%s", PARAM_TENANT, PARAM_DEVICE_ID))
                 .handler(this::assertTenant);
