@@ -7,6 +7,11 @@ title = "Release Notes"
 ### New Features
 
 * Protocol adapters, services and HonoClient now support TLS 1.2 only by default when using TLS to secure communication. However, additional protocols can be enabled by means of setting environment variables as described in the admin guides.
+* The deployment examples for OpenShift got overhauled. the two provided
+examples are not both based on EnMasse and follow a similar architecture. The
+newly added *source-to-image*" based approach doesn't require a local
+development setup but does created new images directly in the OpenShift
+instance. It also makes more use of ConfigMaps and service key/cert management.
 
 ### API Changes
 
