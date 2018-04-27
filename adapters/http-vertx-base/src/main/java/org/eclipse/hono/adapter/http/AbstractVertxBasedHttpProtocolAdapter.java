@@ -15,16 +15,24 @@ package org.eclipse.hono.adapter.http;
 import java.net.HttpURLConnection;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.BiConsumer;
 
+import io.vertx.core.Handler;
 import io.vertx.core.http.HttpHeaders;
+import io.vertx.proton.ProtonDelivery;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
 import org.eclipse.hono.service.auth.device.Device;
 import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
+import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.TelemetryConstants;
 import org.eclipse.hono.util.TenantObject;
 import org.slf4j.Logger;
@@ -42,7 +50,7 @@ import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
 
 /**
- * Base class for a Vert.x based Hono protocol adapter that uses the HTTP protocol. 
+ * Base class for a Vert.x based Hono protocol adapter that uses the HTTP protocol.
  * It provides access to the Telemetry and Event API.
  * 
  * @param <T> The type of configuration properties used by this service.
@@ -496,6 +504,10 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                 final Future<JsonObject> tokenTracker = getRegistrationAssertion(tenant, deviceId, authenticatedDevice);
                 final Future<TenantObject> tenantConfigTracker = getTenantConfiguration(tenant);
 
+                final AtomicBoolean downstreamMessageSent = new AtomicBoolean(false);
+                final AtomicReference<Optional<Handler<Void>>> cancelTimerHandler = new AtomicReference(Optional.empty());
+                final AtomicReference<MessageConsumer> messageConsumerRef = new AtomicReference<>();
+
                 CompositeFuture.all(tokenTracker, tenantConfigTracker, senderTracker).compose(ok -> {
 
                     if (tenantConfigTracker.result().isAdapterEnabled(getTypeName())) {
@@ -509,11 +521,22 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                                 tokenTracker.result(),
                                 HttpUtils.getTimeTilDisconnect(ctx));
                         customizeDownstreamMessage(downstreamMessage, ctx);
-                        if (qosHeader == null) {
-                            return sender.send(downstreamMessage);
-                        } else {
-                            return sender.sendAndWaitForOutcome(downstreamMessage);
-                        }
+
+                        return openCommandReceiverLink(ctx, tenant, deviceId, downstreamMessageSent, messageConsumerRef).compose(timerId -> {
+                            if (timerId.isPresent()) {
+                                // if a timer was created, prepare the encapsulated cancel code as handler here
+                                cancelTimerHandler.set(
+                                        Optional.of(v -> {
+                                            cancelResponseTimer(timerId.get());
+                                        }));
+                            }
+
+                            if (qosHeader == null) {
+                                return sender.send(downstreamMessage);
+                            } else {
+                                return sender.sendAndWaitForOutcome(downstreamMessage);
+                            }
+                        });
                     } else {
                         // this adapter is not enabled for the tenant
                         return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_FORBIDDEN));
@@ -522,9 +545,19 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                     LOG.trace("successfully processed message for device [tenantId: {}, deviceId: {}, endpoint: {}]",
                             tenant, deviceId, endpointName);
                     metrics.incrementProcessedHttpMessages(endpointName, tenant);
-                    ctx.response().setStatusCode(HttpURLConnection.HTTP_ACCEPTED).end();
+                    ctx.response().setStatusCode(HttpURLConnection.HTTP_ACCEPTED);
+                    downstreamMessageSent.set(true);
+
+                    // if no command timer was created, the request now can be responded
+                    if (!cancelTimerHandler.get().isPresent()) {
+                        ctx.response().end();
+                    }
+
                     return Future.succeededFuture();
                 }).recover(t -> {
+                    cancelResponseTimer(cancelTimerHandler);
+                    closeCommandReceiverLink(messageConsumerRef);
+
                     if (ClientErrorException.class.isInstance(t)) {
                         ClientErrorException e = (ClientErrorException) t;
                         LOG.debug(
@@ -541,6 +574,133 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                 });
             }
         }
+    }
+
+    private void cancelResponseTimer(final AtomicReference<Optional<Handler<Void>>> cancelTimerHandlerRef) {
+        if (cancelTimerHandlerRef.get().isPresent()) {
+            final Handler cancelTimerHandler = cancelTimerHandlerRef.get().get();
+            cancelTimerHandler.handle(null);
+        }
+    }
+
+    private void cancelResponseTimer(final long responseTimerId) {
+        if (responseTimerId != Long.MIN_VALUE) {
+            getVertx().cancelTimer(responseTimerId);
+        }
+    }
+
+    private void closeCommandReceiverLink(final AtomicReference<MessageConsumer> messageConsumerRef) {
+        Optional.ofNullable(messageConsumerRef.get()).map(messageConsumer -> {
+            messageConsumer.close(v2 -> {
+            });
+            return null;
+        });
+    }
+
+    /**
+     * Create a consumer for a command message that can be used by the command and control consumer.
+     *
+     * @param ctx The routing context of the HTTP request.
+     * @param tenant The tenant of the device for that a command may be received.
+     * @param deviceId The id of the device for that a command may be received.
+     * @param commandReceivedHandler A handler that is invoked after a command message was received.
+     * @return The BiConsumer to pass to the command and control consumer.
+     */
+    private BiConsumer<ProtonDelivery, Message> createCommandMessageConsumer(final RoutingContext ctx,
+            final String tenant, final String deviceId, final Handler<Void> commandReceivedHandler) {
+        return (delivery, commandMessage) -> {
+
+            final Optional<String> commandSubject = Optional.ofNullable(commandMessage.getProperties().getSubject());
+            final Optional<String> commandRequestId = validateAndGenerateCommandRequestId(tenant, deviceId,
+                    commandMessage);
+
+            if (commandSubject.isPresent() && commandRequestId.isPresent()) {
+
+                ctx.response().putHeader(Constants.HEADER_COMMAND, commandSubject.get().toString());
+                ctx.response().putHeader(Constants.HEADER_COMMAND_REQUEST_ID, commandRequestId.get());
+
+                HttpUtils.setResponseBody(ctx.response(), MessageHelper.getPayload(commandMessage));
+
+                commandReceivedHandler.handle(null);
+
+            } else {
+                LOG.info("Received command with invalid reply-to endpoint - ignoring.");
+            }
+        };
+
+    }
+
+    /**
+     * Opens a command receiver link for a device by creating a command and control consumer.
+     *
+     * @param ctx The routing context of the HTTP request.
+     * @param tenant The tenant of the device for that a command may be received.
+     * @param deviceId The id of the device for that a command may be received.
+     * @param downstreamMessageSent An AtomicBoolean indicating if the (piggy backed) downstream message of the device
+     *                              was sent already.
+     * @param messageConsumerRef An AtomicReference to the {@link MessageConsumer} that is set for further usage
+     *                           by the caller of this method.
+     * @return Optional An optional timerId if there was a
+     */
+    private Future<Optional<Long>> openCommandReceiverLink(final RoutingContext ctx, final String tenant,
+            final String deviceId, final AtomicBoolean downstreamMessageSent, final AtomicReference<MessageConsumer> messageConsumerRef) {
+
+        final Future<Optional<Long>> resultWithTimerId = Future.future();
+
+        final Integer timeToDelayResponse = Optional.ofNullable(HttpUtils.getTimeTilDisconnect(ctx)).orElse(-1);
+
+        if (timeToDelayResponse > 0) {
+            final AtomicLong timerId = new AtomicLong();
+
+            // create a handler for being invoked if a command was received
+            final Handler<Void> commandReceivedHandler = v -> {
+                if (downstreamMessageSent.get()) {
+                    cancelResponseTimer(timerId.get());
+                    closeCommandReceiverLink(messageConsumerRef);
+                    if (!ctx.response().closed()) {
+                        ctx.response().end();
+                    }
+                }
+            };
+
+            // create the commandMessageConsumer that handles an incoming command message
+            final BiConsumer<ProtonDelivery, Message> commandMessageConsumer = createCommandMessageConsumer(ctx, tenant,
+                    deviceId, commandReceivedHandler);
+
+            createCommandConsumer(tenant, deviceId, commandMessageConsumer,
+                    v -> {
+                        // TODO: reopen if receiver link was closed from AMQP 1.0 network
+                        LOG.debug("Command consumer was closed by AMQP 1.0 network");
+                    }).map(messageConsumer -> {
+                        // remember message consumer for later usage
+                        messageConsumerRef.set(messageConsumer);
+
+                        // create a timer that is invoked if no command was received until timeToDelayResponse is expired
+                        timerId.set(getVertx().setTimer(timeToDelayResponse * 1000L,
+                                delay -> {
+                                    closeCommandReceiverLink(messageConsumerRef);
+                                    // if the downstream message was sent already, finish the request now
+                                    if (downstreamMessageSent.get()) {
+                                        ctx.response().end();
+                                    }
+                                }));
+                        // responseTimerId.set(timerId.longValue());
+                        resultWithTimerId.complete(Optional.of(timerId.longValue()));
+
+                        // let only one command reach the adapter (may change in the future)
+                        messageConsumer.flow(1);
+
+                        return messageConsumer;
+                    }).recover(t -> {
+                        resultWithTimerId.fail(t);
+                        return null;
+                    });
+
+        } else {
+            resultWithTimerId.complete(Optional.empty());
+        }
+
+        return resultWithTimerId;
     }
 
     private static Integer getQoSLevel(final String qosValue) {

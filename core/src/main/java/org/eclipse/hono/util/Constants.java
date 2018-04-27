@@ -201,6 +201,11 @@ public final class Constants {
      */
     static final char STRING_COMBINATION_SEPARATION_CHAR = '#';
 
+    /**
+     * The header name defined for setting the <em>subject</em> of a command that is sent to the device.
+     */
+    public static final String HEADER_COMMAND_SUBJECT = "hono-command-subject";
+
     private Constants() {
     }
 
