@@ -43,6 +43,11 @@ public final class HttpUtils {
      */
     public static final String CONTENT_TYPE_JSON_UFT8 = "application/json; charset=utf-8";
 
+    /**
+     * The <em>application/json; charset=utf-8</em> content type.
+     */
+    public static final String CONTENT_TYPE_OCTET_STREAM = "application/octet-stream";
+
     private HttpUtils() {
         // prevent instantiation
     }
@@ -204,4 +209,23 @@ public final class HttpUtils {
                     .write(buffer);
         }
     }
+
+    /**
+     * Writes a Buffer to an HTTP response body.
+     * <p>
+     * This method also sets the <em>content-type</em> and <em>content-length</em>
+     * headers of the HTTP response accordingly but does not end the response.
+     *
+     * @param response The HTTP response.
+     * @param buffer The Buffer to set as the response body (may be {@code null}).
+     * @throws NullPointerException if response is {@code null}.
+     */
+    public static void setResponseBody(final HttpServerResponse response, final Buffer buffer) {
+        Objects.requireNonNull(response);
+        if (buffer != null) {
+            response.putHeader(HttpHeaders.CONTENT_LENGTH, String.valueOf(buffer.length()))
+                    .write(buffer);
+        }
+    }
+
 }

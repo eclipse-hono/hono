@@ -34,11 +34,13 @@ import org.eclipse.hono.service.auth.TenantApiTrustOptions;
 import org.eclipse.hono.service.auth.device.Device;
 import org.eclipse.hono.service.command.CommandConnection;
 import org.eclipse.hono.service.monitoring.ConnectionEventProducer;
+import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
+import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.Strings;
 import org.eclipse.hono.util.TenantObject;
@@ -445,6 +447,37 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
             final BiConsumer<ProtonDelivery, Message> messageConsumer,
             final Handler<Void> closeHandler) {
         return commandConnection.createCommandConsumer(tenantId, deviceId, messageConsumer, closeHandler);
+    }
+
+    /**
+     * Validate that the <em>reply-to</em> and the <em>correlationId</em> of a command message are correctly built.
+     * If the validation is successful, a combined String <em>command request id</em> is returned.
+     * @param tenantId The tenant to be used for the validation.
+     * @param deviceId The device to be used for the validation.
+     * @param commandMessage The message containing a command.
+     * @return Optional An Optional with the combined String, or an empty Optional if the validation failed.
+     * @throws NullPointerException If any of the parameters are null.
+     */
+    protected final Optional<String> validateAndGenerateCommandRequestId(final String tenantId, final String deviceId, final Message commandMessage) {
+        Objects.requireNonNull(tenantId);
+        Objects.requireNonNull(deviceId);
+        Objects.requireNonNull(commandMessage);
+
+        // example of commandReplyId: control/DEFAULT_TENANT/4711/33fe70fd-5a2e-4095-83db-00101bf74a07
+        final String commandReplyId = commandMessage.getProperties().getReplyTo();
+        if (commandReplyId == null) {
+            return Optional.empty();
+        }
+        final String commandReplyResourceForValidation = ResourceIdentifier.from(CommandConstants.COMMAND_ENDPOINT, tenantId, deviceId).toString();
+        if (!commandReplyId.startsWith(commandReplyResourceForValidation)) {
+            return Optional.empty();
+        }
+
+        // use everything after the prefix as reply-to-id
+        final String replyToId = commandReplyId.substring(commandReplyResourceForValidation.length());
+        final String commandCorrelationId = Optional.ofNullable(commandMessage.getCorrelationId()).orElse(commandMessage.getMessageId()).toString();
+
+        return Optional.of(Constants.combineTwoStrings(commandCorrelationId, replyToId));
     }
 
     /**
