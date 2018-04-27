@@ -12,6 +12,18 @@ title = "Release Notes"
 
 * The Tenant API's *get Tenant Information* operation has been changed to expect search criteria in the request message's payload instead of the application-properties. This change has been made in order to support other search criteria than just the tenant identifier. In particular, the *get Tenant Information* operation can now be used to find a tenant based on the subject DN of a trusted certificate authority that has been configured for the tenant. See [get Tenant Information]({{< relref "api/Tenant-API.md#get-tenant-information" >}}) for details.
 
+* The default way how `HonoClient` instances are being created has changed.
+As the default implemention `HonoClientImpl` was located in an internal
+`impl` package, it wasn't accessible when using OSGi as this was package wasn't
+exported. The old constructor is still available. In combination with that the
+`ConnectionFactoryImpl` builder concept was removed as it didn't add anything
+on top of the `ClientConfigProperties`. The `ConnectionBuilderImpl` class
+was also moved to an `impl` package to follow the pattern of
+`HonoClientImpl`. The two new methods to created instances are are:
+`org.eclipse.hono.connection.ConnectionFactory.newConnectionFactory(Vertx, ClientConfigProperties)`
+and
+`org.eclipse.hono.client.HonoClient.newClient(Vertx, ClientConfigProperties)`.
+
 ## 0.6-M2
 
 ### API Changes
