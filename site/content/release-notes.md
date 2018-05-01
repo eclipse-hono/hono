@@ -19,6 +19,7 @@ instance. It also makes more use of ConfigMaps and service key/cert management.
   logger implementation, which simply logs to the logging system. And one
   implementation which sends out events to the *Hono Event API*.
 * The HTTP protocol adapter now supports authentication of devices based on X.509 client certificates. Each tenant can be configured with an individual trust anchor which the HTTP adapter will retrieve using the Tenant API when a device tries to authenticate with a certificate as part of a TLS handshake. The Credentials API now supports a [new credentials type]({{< relref "api/Credentials-API.md#x-509-certificate" >}}) for registering a mapping of the certificate's *subject DN* to the device identifier. Please consult the [HTTP adapter User Guide]({{< relref "user-guide/http-adapter.md#device-authentication" >}}) for details regarding usage.
+* The HTTP adapter now supports uploading telemetry messages using QoS 1 (`AT_LEAST_ONCE`). Clients must set the `QoS-Level` request header if they want the HTTP adapter to upload telemetry messages using QoS 1.
 
 ### API Changes
 
