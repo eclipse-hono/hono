@@ -196,7 +196,7 @@ If you have started the consumer as described above, you should now see the tele
 
 If you haven't started a consumer you will continue to get `503 Resource Unavailable` responses because Hono does not accept any telemetry data from devices if there aren't any consumers connected that are interested in the data. Telemetry data is *never* persisted within Hono, thus it doesn't make any sense to accept and process telemetry data if there is no consumer to deliver it to.
 
-Please refer to the [HTTP Adapter documentation]({{< relref "http-adapter.md" >}}) for additional information and examples for interacting with Hono via HTTP.
+The HTTP Adapter also supports publishing telemetry messages using QoS level `AT_LEAST_ONCE`. For information on how that works and additional examples for interacting with Hono via HTTP, please refer to the [HTTP Adapter documentation]({{< relref "http-adapter.md" >}}) .
 
 ### Uploading Event Data using the HTTP Adapter
 

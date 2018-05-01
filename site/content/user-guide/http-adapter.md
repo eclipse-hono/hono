@@ -34,11 +34,16 @@ NB: There is a subtle difference between the *device identifier* (*device-id*) a
   * (optional) `Authorization`: The device's *auth-id* and plain text password encoded according to the [Basic HTTP authentication scheme](https://tools.ietf.org/html/rfc7617). If not set, the adapter expects the device to present a client certificate as part of the TLS handshake during connection establishment.
   * (required) `Content-Type`: The type of payload contained in the body.
   * (optional) `hono-ttd`: The number of seconds the device will wait for the response.
+  * (optional) `QoS-Level`: The QoS level for publishing telemetry messages. Only QoS 1 is supported by the adapter.
 * Request Body:
   * (required) Arbitrary payload encoded according to the given content type.
 * Status Codes:
-  * 202 (Accepted): The telemetry data has been accepted for processing. Note that this does not *guarantee* successful delivery to potential consumers.
-  * 400 (Bad Request): The request cannot be processed because the content type header is missing or the request body is empty.
+  * 202 (Accepted): The telemetry data has been accepted for processing. Note that if the `QoS-Level` request header is missing, the adapter does not *guarantee* successful delivery to potential consumers.
+  However, if the QoS-Level header is set to `AT_LEAST_ONCE(1)`, then the adapter waits for the message to be delivered and accepted by a downstream peer before responding with a 202 status code to the device.
+  * 400 (Bad Request): The request cannot be processed. Possible reasons for this might be that:
+    * The content type header is missing
+    * The request body is empty
+    * The QoS header value is invalid
   * 401 (Unauthorized): The request cannot be processed because the request does not contain valid credentials.
   * 403 (Forbidden): The request cannot be processed because the device's registration status cannot be asserted. Possible reasons for this might be:
         * The given tenant is not allowed to use this protocol adapter.
@@ -58,6 +63,22 @@ Publish some JSON data for device `4711`:
     HTTP/1.1 202 Accepted
     Content-Length: 0
 
+Publish some JSON data for device `4711` using QoS level `AT_LEAST_ONCE`:
+
+    $ curl -i -X POST -u sensor1@DEFAULT_TENANT:hono-secret -H 'Content-Type: application/json' -H 'QoS-Level: 1' \
+    $ --data-binary '{"temp": 5}' http://localhost:8080/telemetry
+
+    HTTP/1.1 202 Accepted
+    Content-Length: 0
+
+Publish some JSON data for device `4711` using an invalid QoS level:
+
+    $ curl -i -X POST -u sensor1@DEFAULT_TENANT:hono-secret -H 'Content-Type: application/json' -H 'QoS-Level: 2' \
+    $ --data-binary '{"temp": 5}' http://localhost:8080/telemetry
+
+    HTTP/1.1 400 Bad QoS Header Value
+    Content-Length: 20
+
 ## Publish Telemetry Data (unauthenticated Device)
 
 * URI: `/telemetry/${tenantId}/${deviceId}`
@@ -65,11 +86,16 @@ Publish some JSON data for device `4711`:
 * Request Headers:
   * (required) `Content-Type`: The type of payload contained in the body.
   * (optional) `hono-ttd`: The number of seconds the device will wait for the response.
+  * (optional) `QoS-Level`: The QoS level for publishing telemetry messages. Only QoS 1 is supported by the adapter.
 * Request Body:
   * (required) Arbitrary payload encoded according to the given content type.
 * Status Codes:
-  * 202 (Accepted): The telemetry data has been accepted for processing. Note that this does not *guarantee* successful delivery to potential consumers.
-  * 400 (Bad Request): The request cannot be processed because the content type header is missing or the request body is empty.
+  * 202 (Accepted): The telemetry data has been accepted for processing. Note that if the `QoS-Level` request header is missing, the adapter does not *guarantee* successful delivery to potential consumers.
+  However, if the QoS-Level header is set to `AT_LEAST_ONCE(1)`, then the adapter waits for the message to be delivered and accepted by a downstream peer before responding with a 202 status code to the device.
+  * 400 (Bad Request): The request cannot be processed. Possible reasons for this might be that:
+    * The content type header is missing
+    * The request body is empty
+    * The QoS header value is invalid
   * 403 (Forbidden): The request cannot be processed because the device's registration status cannot be asserted. Possible reasons for this might be:
         * The given tenant is not allowed to use this protocol adapter.
         * The given device does not belong to the given tenant.
@@ -88,6 +114,22 @@ Publish some JSON data for device `4711`:
     HTTP/1.1 202 Accepted
     Content-Length: 0
 
+Publish some JSON data for device `4711` using QoS level `AT_LEAST_ONCE`:
+
+    $ curl -i -X PUT -H 'Content-Type: application/json' -H 'QoS-Level: 1' \
+    $ --data-binary '{"temp": 5}' http://127.0.0.1:8080/telemetry/DEFAULT_TENANT/4711
+
+    HTTP/1.1 202 Accepted
+    Content-Length: 0
+
+Publish some JSON data for device `4711` using an invalid QoS level:
+
+    $ curl -i -X PUT -H 'Content-Type: application/json' -H 'QoS-Level: 2' \
+    $ --data-binary '{"temp": 5}' http://127.0.0.1:8080/telemetry/DEFAULT_TENANT/4711
+
+    HTTP/1.1 400 Bad QoS Header Value
+    Content-Length: 20
+
 ## Publish Telemetry Data (authenticated Gateway)
 
 * URI: `/telemetry/${tenantId}/${deviceId}`
@@ -97,15 +139,21 @@ Publish some JSON data for device `4711`:
 * Request Headers:
   * (required) `Content-Type`: The type of payload contained in the body.
   * (optional) `hono-ttd`: The number of seconds the device will wait for the response.
+  * (optional) `QoS-Level`: The QoS level for publishing telemetry messages. Only QoS 1 is supported by the adapter.
 * Request Body:
   * (required) Arbitrary payload encoded according to the given content type.
 * Status Codes:
-  * 202 (Accepted): The telemetry data has been accepted for processing. Note that this does not *guarantee* successful delivery to potential consumers.
-  * 400 (Bad Request): The request cannot be processed because the content type header is missing or the request body is empty.
+  * 202 (Accepted): The telemetry data has been accepted for processing. Note that if the `QoS-Level` request header is missing, the adapter does not *guarantee* successful delivery to potential consumers.
+  However, if the QoS-Level header is set to `AT_LEAST_ONCE(1)`, then the adapter waits for the message to be delivered and accepted by a downstream peer before responding with a 202 status code to the device.
+  * 400 (Bad Request): The request cannot be processed. Possible reasons for this might be that:
+    * The content type header is missing
+    * The request body is empty
+    * The QoS header value is invalid
   * 403 (Forbidden): The request cannot be processed because the device's registration status cannot be asserted. Possible reasons for this might be:
         * The given tenant is not allowed to use this protocol adapter.
         * The given device does not belong to the given tenant.
         * The given device is disabled.
+
   * 503 (Service Unavailable): The request cannot be processed because there is no consumer of telemetry data for the given tenant connected to Hono.
 
 This resource can be used by *gateway* components to publish data *on behalf of* other devices which do not connect to a protocol adapter directly but instead are connected to the gateway, e.g. using some low-bandwidth radio based technology like [SigFox](https://www.sigfox.com) or [LoRa](https://www.lora-alliance.org/). In this case the credentials provided by the gateway during connection establishment with the protocol adapter are used to authenticate the gateway whereas the parameters from the URI are used to identify the device that the gateway publishes data for.
@@ -121,6 +169,22 @@ Publish some JSON data for device `4712` via gateway `gw-1`:
 
     HTTP/1.1 202 Accepted
     Content-Length: 0
+
+Publish some JSON data for device `4712` using QoS level `AT_LEAST_ONCE`:
+
+    $ curl -i -X PUT -u gw@DEFAULT_TENANT:gw-secret -H 'Content-Type: application/json' -H 'QoS-Level: 1' \
+    $ --data-binary '{"temp": 5}' http://127.0.0.1:8080/telemetry/DEFAULT_TENANT/4712
+
+    HTTP/1.1 202 Accepted
+    Content-Length: 0
+
+Publish some JSON data for device `4712` using an invalid QoS level:
+
+    $ curl -i -X POST -u gw@DEFAULT_TENANT:gw-secret -H 'Content-Type: application/json' -H 'QoS-Level: 2' \
+    $ --data-binary '{"temp": 5}' http://localhost:8080/telemetry/DEFAULT_TENANT/4712
+
+    HTTP/1.1 400 Bad QoS Header Value
+    Content-Length: 20
 
 **NB**: The example above assumes that a gateway device with ID `gw-1` has been registered with `hashed-password` credentials with *auth-id* `gw` and password `gw-secret`.
 
