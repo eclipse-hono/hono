@@ -8,7 +8,7 @@ execute operations on devices, e.g. updating a configuration property, installin
 <!--more-->
 
 {{% note %}}
-This API has been added in Hono 0.7. Previous versions do not support nor implement the Command % Control API.
+This API has been added in Hono 0.6. Previous versions do not support nor implement the Command & Control API.
 {{% /note %}}
 
 The Command & Control API is defined by means of AMQP 1.0 message exchanges, i.e. a client needs to connect to Hono using AMQP 1.0 in order to invoke operations of the API as described in the following sections. Throughout the remainder of this page we will simply use AMQP when referring to AMQP 1.0.
