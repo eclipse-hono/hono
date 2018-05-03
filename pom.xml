@@ -279,7 +279,7 @@
           <artifactId>maven-javadoc-plugin</artifactId>
           <version>2.10.4</version>
           <configuration>
-            <doclint>all,-accessibility</doclint>
+            <additionalparam>-Xdoclint:all -Xdoclint:-accessibility</additionalparam>
           </configuration>
         </plugin>
         <plugin>
