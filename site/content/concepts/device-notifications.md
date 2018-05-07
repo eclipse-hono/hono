@@ -1,5 +1,5 @@
 +++
-title = "Device notifications (from 0.6 on)"
+title = "Device notifications"
 weight = 415
 +++
 
@@ -7,12 +7,9 @@ weight = 415
  **Device notifications** - is described in detail here.
  
  
-
-{{% warning %}}
-This concept is currently part of active development and discussion.
-The content here summarizes the current discussion and is being prototyped.
-Please join our mailing list or consult the IRC channel in case you have any questions or want to participate.
-{{% /warning %}}
+{{% note %}}
+This concept has been added in Hono 0.6. Previous versions of the adapter do not support it.
+{{% /note %}}
 
 <!--more-->
 

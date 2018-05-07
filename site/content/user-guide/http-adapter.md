@@ -207,6 +207,10 @@ Note that of the standard AMQP 1.0 message properties only the *content-type* ca
 
 The adapter lets devices specify the number of seconds they will wait for a response by setting a header or a query parameter.
 
+{{% note %}}
+This feature has been added in Hono 0.6. Previous versions of the adapter do not support it.
+{{% /note %}}
+
 ### Use a specific HTTP header 
 
 The optional header `hono-ttd` can be set for any downstream message.
