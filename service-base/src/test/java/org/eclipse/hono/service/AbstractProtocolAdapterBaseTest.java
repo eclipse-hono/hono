@@ -27,6 +27,7 @@ import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.auth.device.Device;
+import org.eclipse.hono.service.command.CommandConnection;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
@@ -67,6 +68,7 @@ public class AbstractProtocolAdapterBaseTest {
     private HonoClient registrationService;
     private HonoClient credentialsService;
     private HonoClient messagingService;
+    private CommandConnection commandConnection;
 
     /**
      * Sets up the fixture.
@@ -90,12 +92,16 @@ public class AbstractProtocolAdapterBaseTest {
         messagingService = mock(HonoClient.class);
         when(messagingService.connect(any(Handler.class))).thenReturn(Future.succeededFuture(messagingService));
 
+        commandConnection = mock(CommandConnection.class);
+        when(commandConnection.connect(any(Handler.class))).thenReturn(Future.succeededFuture(commandConnection));
+
         properties = new ProtocolAdapterProperties();
         adapter = newProtocolAdapter(properties);
         adapter.setTenantServiceClient(tenantService);
         adapter.setRegistrationServiceClient(registrationService);
         adapter.setCredentialsServiceClient(credentialsService);
         adapter.setHonoMessagingClient(messagingService);
+        adapter.setCommandConnection(commandConnection);
     }
 
     /**
@@ -134,6 +140,7 @@ public class AbstractProtocolAdapterBaseTest {
         adapter.setHonoMessagingClient(messagingService);
         adapter.setRegistrationServiceClient(registrationService);
         adapter.setTenantServiceClient(tenantService);
+        adapter.setCommandConnection(commandConnection);
 
         // WHEN starting the adapter
         adapter.startInternal().setHandler(ctx.asyncAssertSuccess(ok -> {
@@ -142,6 +149,7 @@ public class AbstractProtocolAdapterBaseTest {
             verify(registrationService).connect(any(Handler.class));
             verify(messagingService).connect(any(Handler.class));
             verify(credentialsService).connect(any(Handler.class));
+            verify(commandConnection).connect(any(Handler.class));
             verify(startupHandler).handle(null);
         }));
     }

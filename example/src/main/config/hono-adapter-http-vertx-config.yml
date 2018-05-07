@@ -33,6 +33,14 @@ hono:
     port: 5671
     credentialsPath: ${secret.path}/http-adapter.credentials
     trustStorePath: ${secret.path}/trusted-certs.pem
+  command:
+    name: 'Hono HTTP Adapter'
+    amqpHostname: hono-http-internal
+    host: hono-dispatch-router.hono
+    port: 5673
+    keyPath: ${secret.path}/http-adapter-key.pem
+    certPath: ${secret.path}/http-adapter-cert.pem
+    trustStorePath: ${secret.path}/trusted-certs.pem
   metric:
     reporter:
       graphite:

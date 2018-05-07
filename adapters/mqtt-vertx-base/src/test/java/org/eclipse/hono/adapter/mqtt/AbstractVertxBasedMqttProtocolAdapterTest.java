@@ -34,6 +34,7 @@ import org.eclipse.hono.service.auth.device.Device;
 import org.eclipse.hono.service.auth.device.DeviceCredentials;
 import org.eclipse.hono.service.auth.device.HonoClientBasedAuthProvider;
 import org.eclipse.hono.service.auth.device.UsernamePasswordCredentials;
+import org.eclipse.hono.service.command.CommandConnection;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.ResourceIdentifier;
@@ -92,6 +93,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
     private HonoClientBasedAuthProvider usernamePasswordAuthProvider;
     private ProtocolAdapterProperties config;
     private MqttAdapterMetrics metrics;
+    private CommandConnection commandConnection;
 
     /**
      * Creates clients for the needed micro services and sets the configuration to enable the insecure port.
@@ -130,6 +132,9 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
                 .thenReturn(Future.succeededFuture(deviceRegistrationServiceClient));
         when(deviceRegistrationServiceClient.getOrCreateRegistrationClient(anyString()))
                 .thenReturn(Future.succeededFuture(regClient));
+
+        commandConnection = mock(CommandConnection.class);
+        when(commandConnection.connect(any(Handler.class))).thenReturn(Future.succeededFuture(commandConnection));
 
         usernamePasswordAuthProvider = mock(HonoClientBasedAuthProvider.class);
     }
@@ -602,6 +607,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         adapter.setHonoMessagingClient(messagingClient);
         adapter.setRegistrationServiceClient(deviceRegistrationServiceClient);
         adapter.setCredentialsServiceClient(credentialsServiceClient);
+        adapter.setCommandConnection(commandConnection);
         adapter.setUsernamePasswordAuthProvider(usernamePasswordAuthProvider);
 
         if (server != null) {

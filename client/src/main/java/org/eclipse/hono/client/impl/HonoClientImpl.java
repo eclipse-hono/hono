@@ -74,13 +74,13 @@ public class HonoClientImpl implements HonoClient {
     private final AtomicBoolean connecting = new AtomicBoolean(false);
     private final AtomicBoolean shuttingDown = new AtomicBoolean(false);
     private final ConnectionFactory connectionFactory;
-    private final ClientConfigProperties clientConfigProperties;
+    protected final ClientConfigProperties clientConfigProperties;
     private final Vertx vertx;
     private final Object connectionLock = new Object();
-    private final Context context;
+    protected final Context context;
 
     private ProtonClientOptions clientOptions;
-    private ProtonConnection connection;
+    protected ProtonConnection connection;
     private CacheProvider cacheProvider;
     private AtomicInteger reconnectAttempts = new AtomicInteger(0);
     private List<Symbol> offeredCapabilities = Collections.emptyList();
@@ -483,7 +483,7 @@ public class HonoClientImpl implements HonoClient {
         });
     }
 
-    Future<MessageSender> getOrCreateSender(
+    protected Future<MessageSender> getOrCreateSender(
             final String key,
             final Supplier<Future<MessageSender>> newSenderSupplier) {
 
@@ -599,7 +599,7 @@ public class HonoClientImpl implements HonoClient {
         });
     }
 
-    Future<MessageConsumer> createConsumer(
+    protected Future<MessageConsumer> createConsumer(
             final String tenantId,
             final Supplier<Future<MessageConsumer>> newConsumerSupplier) {
 

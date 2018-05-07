@@ -29,6 +29,7 @@ import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.TenantClient;
 import org.eclipse.hono.service.auth.device.Device;
 import org.eclipse.hono.service.auth.device.HonoClientBasedAuthProvider;
+import org.eclipse.hono.service.command.CommandConnection;
 import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.util.Constants;
 import org.junit.AfterClass;
@@ -71,6 +72,8 @@ public class VertxBasedHttpProtocolAdapterTest {
     private static HonoClientBasedAuthProvider usernamePasswordAuthProvider;
     private static HttpProtocolAdapterProperties config;
     private static VertxBasedHttpProtocolAdapter httpAdapter;
+    private static CommandConnection commandConnection;
+
 
     private static Vertx vertx;
 
@@ -103,6 +106,9 @@ public class VertxBasedHttpProtocolAdapterTest {
         registrationServiceClient = mock(HonoClient.class);
         when(registrationServiceClient.connect(any(Handler.class))).thenReturn(Future.succeededFuture(registrationServiceClient));
 
+        commandConnection = mock(CommandConnection.class);
+        when(commandConnection.connect(any(Handler.class))).thenReturn(Future.succeededFuture(commandConnection));
+
         usernamePasswordAuthProvider = mock(HonoClientBasedAuthProvider.class);
 
         config = new HttpProtocolAdapterProperties();
@@ -116,6 +122,7 @@ public class VertxBasedHttpProtocolAdapterTest {
         httpAdapter.setRegistrationServiceClient(registrationServiceClient);
         httpAdapter.setCredentialsServiceClient(credentialsServiceClient);
         httpAdapter.setUsernamePasswordAuthProvider(usernamePasswordAuthProvider);
+        httpAdapter.setCommandConnection(commandConnection);
 
         vertx.deployVerticle(httpAdapter, ctx.asyncAssertSuccess());
     }
