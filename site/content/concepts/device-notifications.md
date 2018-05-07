@@ -8,7 +8,7 @@ weight = 415
  
  
 {{% note %}}
-This concept has been added in Hono 0.6. Previous versions of the adapter do not support it.
+This concept has been added in Hono 0.6. Previous versions of Hono do not support it.
 {{% /note %}}
 
 <!--more-->
