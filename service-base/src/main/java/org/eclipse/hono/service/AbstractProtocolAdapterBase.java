@@ -183,7 +183,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * @param connectionEventProducer The instance which will handle the production of connection events. Depending on
      *            the setup this could be a simple log message or an event using the Hono Event API.
      */
-    @Autowired
+    @Autowired(required = false)
     public void setConnectionEventProducer(final ConnectionEventProducer connectionEventProducer) {
         this.connectionEventProducer = connectionEventProducer;
     }
@@ -682,11 +682,12 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     }
 
     /**
-     * Trigger the creation of a "connected" event.
+     * Trigger the creation of a <em>connected</em> event.
      * 
      * @param remoteId The remote ID.
      * @param authenticatedDevice The (optional) authenticated device.
-     * 
+     * @return A failed future if an event producer is set but the event
+     *         could not be published. Otherwise, a succeeded event.
      * @see ConnectionEventProducer
      * @see ConnectionEventProducer#connected(String, String, Device, JsonObject)
      */
@@ -699,11 +700,12 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     }
 
     /**
-     * Trigger the creation of a "disconnected" event.
+     * Trigger the creation of a <em>disconnected</em> event.
      * 
      * @param remoteId The remote ID.
      * @param authenticatedDevice The (optional) authenticated device.
-     * 
+     * @return A failed future if an event producer is set but the event
+     *         could not be published. Otherwise, a succeeded event.
      * @see ConnectionEventProducer
      * @see ConnectionEventProducer#disconnected(String, String, Device, JsonObject)
      */
