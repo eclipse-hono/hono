@@ -6,5 +6,5 @@ Business Application->AMQP 1.0 Network: attach("receiver","control-reply/${tenan
 
 Business Application->AMQP 1.0 Network: transfer("control/${tenant_id}/${device_id}", command)
 activate Business Application
-AMQP 1.0 Network->Business Application: transfer("control-reply/${tenant_id}/${device_id}", command-reply)
+AMQP 1.0 Network->Business Application: transfer("control/${tenant_id}/${device_id}/${reply-to}", command-reply)
 deactivate Business Application
