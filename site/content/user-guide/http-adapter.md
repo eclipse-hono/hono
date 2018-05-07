@@ -29,11 +29,9 @@ There is a subtle difference between the *device identifier* (*device-id*) and t
   * 400 (Bad Request): The request cannot be processed because the content type header is missing or the request body is empty.
   * 401 (Unauthorized): The request cannot be processed because the request does not contain valid credentials.
   * 403 (Forbidden): The request cannot be processed because the device's registration status cannot be asserted. Possible reasons for this might be:
-
-      The given tenant is not allowed to use this protocol adapter.  
-      The given device does not belong to the given tenant.  
-      The given device is disabled.  
-
+        * The given tenant is not allowed to use this protocol adapter.
+        * The given device does not belong to the given tenant.
+        * The given device is disabled.
   * 503 (Service Unavailable): The request cannot be processed because there is no consumer of telemetry data for the given tenant connected to Hono.
 
 This is the preferred way for devices to publish telemetry data. It is available only if the protocol adapter is configured to require devices to authenticate (which is the default).
@@ -61,11 +59,9 @@ Publish some JSON data for device `4711`:
   * 202 (Accepted): The telemetry data has been accepted for processing. Note that this does not *guarantee* successful delivery to potential consumers.
   * 400 (Bad Request): The request cannot be processed because the content type header is missing or the request body is empty.
   * 403 (Forbidden): The request cannot be processed because the device's registration status cannot be asserted. Possible reasons for this might be:
-
-      The given tenant is not allowed to use this protocol adapter.  
-      The given device does not belong to the given tenant.  
-      The given device is disabled.  
-
+        * The given tenant is not allowed to use this protocol adapter.
+        * The given device does not belong to the given tenant.
+        * The given device is disabled.
   * 503 (Service Unavailable): The request cannot be processed because there is no consumer of telemetry data for the given tenant connected to Hono.
 
 This resource MUST be used by devices that have not authenticated to the protocol adapter. Note that this requires the `HONO_HTTP_AUTHENTICATION_REQUIRED` configuration property to be explicitly set to `false`.
@@ -94,11 +90,9 @@ Publish some JSON data for device `4711`:
   * 202 (Accepted): The telemetry data has been accepted for processing. Note that this does not *guarantee* successful delivery to potential consumers.
   * 400 (Bad Request): The request cannot be processed because the content type header is missing or the request body is empty.
   * 403 (Forbidden): The request cannot be processed because the device's registration status cannot be asserted. Possible reasons for this might be:
-
-      The given tenant is not allowed to use this protocol adapter.  
-      The given device does not belong to the given tenant.  
-      The given device is disabled.  
-
+        * The given tenant is not allowed to use this protocol adapter.
+        * The given device does not belong to the given tenant.
+        * The given device is disabled.
   * 503 (Service Unavailable): The request cannot be processed because there is no consumer of telemetry data for the given tenant connected to Hono.
 
 This resource can be used by *gateway* components to publish data *on behalf of* other devices which do not connect to a protocol adapter directly but instead are connected to the gateway, e.g. using some low-bandwidth radio based technology like [SigFox](https://www.sigfox.com) or [LoRa](https://www.lora-alliance.org/). In this case the credentials provided by the gateway during connection establishment with the protocol adapter are used to authenticate the gateway whereas the parameters from the URI are used to identify the device that the gateway publishes data for.
@@ -132,11 +126,9 @@ Publish some JSON data for device `4712` via gateway `gw-1`:
   * 400 (Bad Request): The request cannot be processed because the content type header is missing or the request body is empty.
   * 401 (Unauthorized): The request cannot be processed because the request does not contain valid credentials.
   * 403 (Forbidden): The request cannot be processed because the device's registration status cannot be asserted. Possible reasons for this might be:
-
-      The given tenant is not allowed to use this protocol adapter.  
-      The given device does not belong to the given tenant.  
-      The given device is disabled.  
-
+        * The given tenant is not allowed to use this protocol adapter.
+        * The given device does not belong to the given tenant.
+        * The given device is disabled.
   * 503 (Service Unavailable): The request cannot be processed because there is no consumer of events for the given tenant connected to Hono.
 
 This is the preferred way for devices to publish events. It is available only if the protocol adapter is configured to require devices to authenticate (which is the default).
@@ -164,11 +156,9 @@ Publish some JSON data for device `4711`:
   * 202 (Accepted): The event has been accepted and put to a persistent store for delivery to consumers.
   * 400 (Bad Request): The request cannot be processed because the content type header is missing or the request body is empty.
   * 403 (Forbidden): The request cannot be processed because the device's registration status cannot be asserted. Possible reasons for this might be:
-
-      The given tenant is not allowed to use this protocol adapter.  
-      The given device does not belong to the given tenant.  
-      The given device is disabled.  
-
+        * The given tenant is not allowed to use this protocol adapter.
+        * The given device does not belong to the given tenant.
+        * The given device is disabled.
   * 503 (Service Unavailable): The request cannot be processed because there is no consumer of events for the given tenant connected to Hono.
 
 This resource MUST be used by devices that have not authenticated to the protocol adapter. Note that this requires the `HONO_HTTP_AUTHENTICATION_REQUIRED` configuration property to be explicitly set to `false`.
@@ -197,11 +187,9 @@ Publish some JSON data for device `4711`:
   * 202 (Accepted): The event has been accepted and put to a persistent store for delivery to consumers.
   * 400 (Bad Request): The request cannot be processed because the content type header is missing or the request body is empty.
   * 403 (Forbidden): The request cannot be processed because the device's registration status cannot be asserted. Possible reasons for this might be:
-
-      The given tenant is not allowed to use this protocol adapter.  
-      The given device does not belong to the given tenant.  
-      The given device is disabled.  
-
+        * The given tenant is not allowed to use this protocol adapter.
+        * The given device does not belong to the given tenant.
+        * The given device is disabled.
   * 503 (Service Unavailable): The request cannot be processed because there is no consumer of telemetry data for the given tenant connected to Hono.
 
 This resource can be used by *gateway* components to publish data *on behalf of* other devices which do not connect to a protocol adapter directly but instead are connected to the gateway, e.g. using some low-bandwidth radio based technology like [SigFox](https://www.sigfox.com) or [LoRa](https://www.lora-alliance.org/). In this case the credentials provided by the gateway during connection establishment with the protocol adapter are used to authenticate the gateway whereas the parameters from the URI are used to identify the device that the gateway publishes data for.
