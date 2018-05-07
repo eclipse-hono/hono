@@ -23,6 +23,7 @@ import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.TenantClient;
+import org.eclipse.hono.service.command.CommandConnection;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantObject;
@@ -69,6 +70,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
     private RegistrationClient            regClient;
     private TenantClient                  tenantClient;
     private HttpProtocolAdapterProperties config;
+    private CommandConnection             commandConnection;
 
     /**
      * Sets up common fixture.
@@ -102,6 +104,9 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         registrationServiceClient = mock(HonoClient.class);
         when(registrationServiceClient.connect(any(Handler.class))).thenReturn(Future.succeededFuture(registrationServiceClient));
         when(registrationServiceClient.getOrCreateRegistrationClient(anyString())).thenReturn(Future.succeededFuture(regClient));
+
+        commandConnection = mock(CommandConnection.class);
+        when(commandConnection.connect(any(Handler.class))).thenReturn(Future.succeededFuture(commandConnection));
     }
 
     /**
@@ -362,6 +367,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         adapter.setHonoMessagingClient(messagingClient);
         adapter.setRegistrationServiceClient(registrationServiceClient);
         adapter.setCredentialsServiceClient(credentialsServiceClient);
+        adapter.setCommandConnection(commandConnection);
         adapter.setMetrics(mock(HttpAdapterMetrics.class));
 
         return adapter;
