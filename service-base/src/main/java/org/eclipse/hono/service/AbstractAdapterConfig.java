@@ -19,7 +19,10 @@ import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.client.impl.HonoClientImpl;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.service.cache.SpringCacheProvider;
+import org.eclipse.hono.service.command.CommandConnection;
+import org.eclipse.hono.service.command.CommandConnectionImpl;
 import org.eclipse.hono.service.metric.MetricConfig;
+import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.RegistrationConstants;
@@ -157,7 +160,7 @@ public abstract class AbstractAdapterConfig {
     @Qualifier(RegistrationConstants.REGISTRATION_ENDPOINT)
     @Scope("prototype")
     public HonoClient registrationServiceClient() {
-        final HonoClientImpl result = 
+        final HonoClientImpl result =
                 new HonoClientImpl(vertx(), registrationServiceClientConfig());
 
         final CacheProvider cacheProvider = registrationCacheProvider();
@@ -170,7 +173,7 @@ public abstract class AbstractAdapterConfig {
 
     /**
      * Exposes the provider for caches as a Spring bean.
-     * 
+     *
      * @return The provider instance.
      */
     @Bean
@@ -276,6 +279,29 @@ public abstract class AbstractAdapterConfig {
     @Scope("prototype")
     public CacheProvider tenantCacheProvider() {
         return newGuavaCache(tenantServiceClientConfig());
+    }
+
+    /**
+     * Exposes configuration properties for Command and Control.
+     *
+     * @return The Properties.
+     */
+    @Qualifier(CommandConstants.COMMAND_ENDPOINT)
+    @ConfigurationProperties(prefix = "hono.command")
+    @Bean
+    public ClientConfigProperties commandConnectionClientConfig() {
+        return new ClientConfigProperties();
+    }
+
+    /**
+     * Exposes the Command and Control connection.
+     *
+     * @return The Connection.
+     */
+    @Bean
+    @Scope("prototype")
+    public CommandConnection commandConnection() {
+        return new CommandConnectionImpl(vertx(), commandConnectionClientConfig());
     }
 
     /**

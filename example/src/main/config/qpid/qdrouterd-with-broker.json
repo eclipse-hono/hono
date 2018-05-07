@@ -90,7 +90,8 @@
           "users": "consumer@HONO",
           "remoteHosts": "*",
           "maxSessions": 10,
-          "sources": "telemetry/*, event/*"
+          "sources": "telemetry/*, event/*, control/*",
+          "targets": "control/*"
         },
         "DEFAULT_TENANT": {
           "users": "user1@HONO",
@@ -116,6 +117,34 @@
           "targets": "telemetry/*, event/*"
         }
       }
+  }],
+
+  ["vhost", {
+    "id": "hono-mqtt-internal",
+    "maxConnections": 30,
+    "groups": {
+      "Hono": {
+        "users": "Eclipse IoT;Hono;mqtt-adapter",
+        "remoteHosts": "*",
+        "allowUserIdProxy": true,
+        "sources": "control/*",
+        "targets": "control/*"
+      }
+    }
+  }],
+
+  ["vhost", {
+    "id": "hono-http-internal",
+    "maxConnections": 30,
+    "groups": {
+      "Hono": {
+        "users": "Eclipse IoT;Hono;http-adapter",
+        "remoteHosts": "*",
+        "allowUserIdProxy": true,
+        "sources": "control/*",
+        "targets": "control/*"
+      }
+    }
   }],
 
   ["log", {

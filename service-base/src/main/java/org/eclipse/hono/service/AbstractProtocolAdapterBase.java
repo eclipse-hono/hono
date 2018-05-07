@@ -15,6 +15,7 @@ package org.eclipse.hono.service;
 import java.net.HttpURLConnection;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Consumer;
 
 import org.apache.qpid.proton.amqp.Binary;
 import org.apache.qpid.proton.amqp.messaging.Data;
@@ -29,14 +30,17 @@ import org.eclipse.hono.config.AbstractConfig;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.auth.TenantApiTrustOptions;
 import org.eclipse.hono.service.auth.device.Device;
+import org.eclipse.hono.service.command.Command;
+import org.eclipse.hono.service.command.CommandAdapter;
+import org.eclipse.hono.service.command.CommandConnection;
 import org.eclipse.hono.service.monitoring.ConnectionEventProducer;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
-import org.eclipse.hono.util.Strings;
 import org.eclipse.hono.util.TenantConstants;
+import org.eclipse.hono.util.Strings;
 import org.eclipse.hono.util.TenantObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -70,6 +74,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     private HonoClient registrationClient;
     private HonoClient tenantClient;
     private HonoClient credentialsServiceClient;
+    private CommandConnection commandConnection;
 
     private ConnectionEventProducer connectionEventProducer;
 
@@ -215,6 +220,16 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      */
     protected abstract String getTypeName();
 
+    /**
+     * Sets the client to use for connecting to the AMQP 1.0 network to receive commands.
+     *
+     * @param commandConnection The command connection.
+     */
+    @Autowired
+    public final void setCommandConnection(final CommandConnection commandConnection) {
+        this.commandConnection = commandConnection;
+    }
+
     @Override
     protected final Future<Void> startInternal() {
 
@@ -230,11 +245,14 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
             result.fail(new IllegalStateException("Device Registration service client must be set"));
         } else if (credentialsServiceClient == null) {
             result.fail(new IllegalStateException("Credentials service client must be set"));
+        } else if (commandConnection == null) {
+            result.fail(new IllegalStateException("Command and Control service client must be set"));
         } else {
             connectToService(tenantClient, "Tenant service");
             connectToService(messagingClient, "Messaging");
             connectToService(registrationClient, "Device Registration service");
             connectToService(credentialsServiceClient, "Credentials service");
+            connectToService(commandConnection, "Command and Control service");
             doStart(result);
         }
         return result;
@@ -410,6 +428,23 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         return CompositeFuture.all(tenantCheck, messagingCheck, registrationCheck, credentialsCheck).compose(ok -> {
             return Future.succeededFuture();
         });
+    }
+
+    /**
+     * Create a command receiver for a specific device.
+     *
+     * @param tenantId The tenant of the command receiver.
+     * @param deviceId The device of the command receiver.
+     * @param messageConsumer Handler will be called for each command to the device.
+     * @param closeHandler Called on close.
+     * @return Result of the receiver creation.
+     */
+    protected Future<CommandAdapter> createCommandConsumer(
+            final String tenantId,
+            final String deviceId,
+            final Consumer<Command> messageConsumer,
+            final Handler<Void> closeHandler) {
+        return commandConnection.createCommandConsumer(tenantId, deviceId, messageConsumer, closeHandler);
     }
 
     /**
