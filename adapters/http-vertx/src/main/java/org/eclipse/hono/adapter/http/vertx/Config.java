@@ -17,6 +17,8 @@ import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.config.ApplicationConfigProperties;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.service.AbstractAdapterConfig;
+import org.eclipse.hono.service.monitoring.ConnectionEventProducer;
+import org.eclipse.hono.service.monitoring.LoggingConnectionEventProducer;
 import org.springframework.beans.factory.config.ObjectFactoryCreatingFactoryBean;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -97,4 +99,17 @@ public class Config extends AbstractAdapterConfig {
         factory.setTargetBeanName(BEAN_NAME_VERTX_BASED_HTTP_PROTOCOL_ADAPTER);
         return factory;
     }
+
+    /**
+     * Exposes the connection event producer implementation.
+     * <p>
+     * This defaults to a {@link LoggingConnectionEventProducer} which logs to the default level.
+     *
+     * @return The connection event producer.
+     */
+    @Bean
+    public ConnectionEventProducer connectionEventProducer() {
+        return new LoggingConnectionEventProducer();
+    }
+
 }
