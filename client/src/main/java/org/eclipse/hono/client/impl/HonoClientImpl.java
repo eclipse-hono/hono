@@ -844,6 +844,8 @@ public class HonoClientImpl implements HonoClient {
      */
     @Override
     public Future<CommandClient> getOrCreateCommandClient(final String tenantId, final String deviceId) {
+        Objects.requireNonNull(tenantId);
+        Objects.requireNonNull(deviceId);
         final Future<CommandClient> result = Future.future();
         LOG.debug("get or create command client for [tenantId: {}, deviceId: {}]", tenantId, deviceId);
         getOrCreateRequestResponseClient(
