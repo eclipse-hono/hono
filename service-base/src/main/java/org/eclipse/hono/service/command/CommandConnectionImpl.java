@@ -57,7 +57,7 @@ public class CommandConnectionImpl extends HonoClientImpl implements CommandConn
      * {@inheritDoc}
      */
     public Future<Void> createCommandResponder(final String tenantId, final String deviceId,
-                                                           final Handler<Command> commandHandler) {
+            final Handler<Command> commandHandler) {
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(commandHandler);
@@ -65,11 +65,14 @@ public class CommandConnectionImpl extends HonoClientImpl implements CommandConn
         LOG.debug("create a command receiver for [tenant: {}, device-id: {}]", tenantId, deviceId);
         Future<Void> result = Future.future();
         connect().setHandler(h -> {
-            if(h.succeeded()) {
-                getConnection().createReceiver(ResourceIdentifier.from(CommandConstants.COMMAND_ENDPOINT, tenantId, deviceId).toString()) // TODO
+            if (h.succeeded()) {
+                getConnection()
+                        .createReceiver(ResourceIdentifier.from(CommandConstants.COMMAND_ENDPOINT, tenantId, deviceId)
+                                .toString()) // TODO
                         .openHandler(oh -> {
                             if (oh.succeeded()) {
-                                LOG.debug("command receiver successfully opened for [tenant: {}, device-id: {}]", tenantId, deviceId);
+                                LOG.debug("command receiver successfully opened for [tenant: {}, device-id: {}]",
+                                        tenantId, deviceId);
                                 ProtonReceiver protonReceiver = oh.result();
                                 CommandResponder responder = new CommandResponder(protonReceiver);
                                 protonReceiver.handler((delivery, message) -> {
@@ -78,12 +81,12 @@ public class CommandConnectionImpl extends HonoClientImpl implements CommandConn
                                 });
                                 result.complete();
                             } else {
-                                LOG.debug("command receiver failed opening for [tenant: {}, device-id: {}] : {}", tenantId, deviceId, oh.cause().getMessage());
+                                LOG.debug("command receiver failed opening for [tenant: {}, device-id: {}] : {}",
+                                        tenantId, deviceId, oh.cause().getMessage());
                                 result.fail(oh.cause());
                             }
                         }).open();
-            }
-            else {
+            } else {
                 result.fail(h.cause());
             }
         });
@@ -93,8 +96,9 @@ public class CommandConnectionImpl extends HonoClientImpl implements CommandConn
     /**
      * {@inheritDoc}
      */
-    public Future<Void> sendCommandResponse(final Command command, final Buffer data, final Map<String, Object> properties,
-                                            final Handler<ProtonDelivery> update) {
+    public Future<Void> sendCommandResponse(final Command command, final Buffer data,
+            final Map<String, Object> properties,
+            final Handler<ProtonDelivery> update) {
         Objects.requireNonNull(command);
         LOG.debug("create a command responder (sender link) for [replyAddress: {}]", command.getReplyAddress());
         Future<Void> result = Future.future();
@@ -105,12 +109,14 @@ public class CommandConnectionImpl extends HonoClientImpl implements CommandConn
                     getConnection().createSender(command.getReplyAddress())
                             .openHandler(oh -> {
                                 if (oh.succeeded()) {
-                                    LOG.debug("command reply sender opened successful for [replyAddress: {}]", command.getReplyAddress());
+                                    LOG.debug("command reply sender opened successful for [replyAddress: {}]",
+                                            command.getReplyAddress());
                                     command.getResponder().setSender(oh.result());
                                     command.sendResponse(data, properties, update);
                                     result.complete();
                                 } else {
-                                    LOG.debug("command reply failed opening for [replyAddress: {}] : {}", command.getReplyAddress(), oh.cause());
+                                    LOG.debug("command reply failed opening for [replyAddress: {}] : {}",
+                                            command.getReplyAddress(), oh.cause());
                                 }
                             }).open();
                 });

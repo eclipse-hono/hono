@@ -44,7 +44,7 @@ class CommandResponder {
     }
 
     void close() {
-        if(protonReceiver.isOpen()) {
+        if (protonReceiver.isOpen()) {
             protonReceiver.close();
         }
         if (protonSender != null && protonSender.isOpen()) {

@@ -22,7 +22,7 @@ import org.eclipse.hono.client.HonoClient;
 import java.util.Map;
 
 /**
- * A connection between an Adapter and the AMQP 1.0 network to receive commands and send a response.
+ * A bidirectional connection between an Adapter and the AMQP 1.0 network to receive commands and send a response.
  */
 public interface CommandConnection extends HonoClient {
 
@@ -36,7 +36,7 @@ public interface CommandConnection extends HonoClient {
      * @throws NullPointerException if tenantId, deviceId or commandHandler is {@code null};
      */
     Future<Void> createCommandResponder(String tenantId, String deviceId,
-                                               Handler<Command> commandHandler);
+            Handler<Command> commandHandler);
 
     /**
      * Sends a result back to the sender, based on a received command message.
@@ -49,5 +49,5 @@ public interface CommandConnection extends HonoClient {
      * @throws NullPointerException if command is {@code null};
      */
     Future<Void> sendCommandResponse(Command command, Buffer data, Map<String, Object> properties,
-                                     Handler<ProtonDelivery> update);
+            Handler<ProtonDelivery> update);
 }

@@ -39,8 +39,6 @@ import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.Strings;
 import org.eclipse.hono.util.TenantObject;
-import org.eclipse.hono.util.TenantConstants;
-import org.eclipse.hono.util.TenantObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 
@@ -223,7 +221,6 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * Sets the client to use for connecting to the AMQP 1.0 network to receive commands.
      *
      * @param commandConnection The command connection.
-     * @throws NullPointerException if the client is {@code null}.
      */
     @Autowired
     public final void setCommandConnection(final CommandConnection commandConnection) {

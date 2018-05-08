@@ -47,26 +47,25 @@ public class Command {
         this.replyAddress = message.getReplyTo();
         this.messageData = MessageHelper.getPayload(message);
         this.contentType = message.getContentType();
-        ApplicationProperties applicationProperties = message.getApplicationProperties();
+        final ApplicationProperties applicationProperties = message.getApplicationProperties();
         if (applicationProperties != null) {
             this.applicationProperties = applicationProperties.getValue();
         }
     }
 
     void sendResponse(final Buffer data, final Map<String, Object> properties, final Handler<ProtonDelivery> update) {
-        Message message = ProtonHelper.message();
+        final Message message = ProtonHelper.message();
         message.setCorrelationId(correlationId);
-        if(data!=null) {
+        if (data != null) {
             message.setBody(new Data(new Binary(data.getBytes())));
         }
         if (properties != null) {
             message.setApplicationProperties(new ApplicationProperties(properties));
         }
         MessageHelper.addProperty(message, MessageHelper.APP_PROPERTY_STATUS, HttpURLConnection.HTTP_OK);
-        if(update!=null) {
+        if (update != null) {
             responder.getSender().send(message, update);
-        }
-        else {
+        } else {
             responder.getSender().send(message);
         }
     }
