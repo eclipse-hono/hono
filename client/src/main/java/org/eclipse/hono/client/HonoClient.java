@@ -263,7 +263,7 @@ public interface HonoClient {
      *         fail if the client cannot be created, e.g. because the underlying connection
      *         is not established or if a concurrent request to create a client for the same
      *         tenant and device is already being executed.
-     * @throws NullPointerException if the tenant is {@code null}.
+     * @throws NullPointerException if the tenantId is {@code null}.
      */
     Future<CommandClient> getOrCreateCommandClient(String tenantId, String deviceId);
 

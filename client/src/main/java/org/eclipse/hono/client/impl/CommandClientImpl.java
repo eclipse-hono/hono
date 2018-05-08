@@ -1,3 +1,16 @@
+/**
+ * Copyright (c) 2018 Contributors to the Eclipse Foundation
+ *
+ * See the NOTICE file(s) distributed with this work for additional
+ * information regarding copyright ownership.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License 1.0 which is available at
+ * https://www.eclipse.org/legal/epl-v10.html
+ *
+ * SPDX-License-Identifier: EPL-1.0
+ */
+
 package org.eclipse.hono.client.impl;
 
 import java.util.Objects;
@@ -71,8 +84,8 @@ public class CommandClientImpl extends AbstractRequestResponseClient<BufferResul
     /**
      * Creates a new command client for a tenant and device.
      *
-     * @param tenantId The vert.x context to run all interactions with the server on.
-     * @param deviceId The device id.
+     * @param tenantId The tenant to create the client for.
+     * @param deviceId The device to create the client for.
      * @param context The vert.x context to run all interactions with the server on.
      * @param clientConfig The configuration properties to use.
      * @param con The AMQP connection to the server.
