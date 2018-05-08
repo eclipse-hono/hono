@@ -29,13 +29,15 @@ import org.eclipse.hono.config.AbstractConfig;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.auth.TenantApiTrustOptions;
 import org.eclipse.hono.service.auth.device.Device;
+import org.eclipse.hono.service.command.Command;
+import org.eclipse.hono.service.command.CommandConnection;
 import org.eclipse.hono.service.monitoring.ConnectionEventProducer;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
-import org.eclipse.hono.util.Strings;
 import org.eclipse.hono.util.TenantConstants;
+import org.eclipse.hono.util.Strings;
 import org.eclipse.hono.util.TenantObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -69,6 +71,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     private HonoClient registrationClient;
     private HonoClient tenantClient;
     private HonoClient credentialsServiceClient;
+    private CommandConnection commandConnection;
 
     private ConnectionEventProducer connectionEventProducer;
 
@@ -179,7 +182,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
 
     /**
      * Sets the producer for connections events.
-     * 
+     *
      * @param connectionEventProducer The instance which will handle the production of connection events. Depending on
      *            the setup this could be a simple log message or an event using the Hono Event API.
      */
@@ -190,7 +193,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
 
     /**
      * Gets the producer of connection events.
-     * 
+     *
      * @return The implementation for producing connection events. Maybe {@code null}.
      */
     public ConnectionEventProducer getConnectionEventProducer() {
@@ -214,6 +217,16 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      */
     protected abstract String getTypeName();
 
+    /**
+     * Sets the client to use for connecting to the AMQP 1.0 network to receive commands.
+     *
+     * @param commandConnection The command connection.
+     */
+    @Autowired
+    public final void setCommandConnection(final CommandConnection commandConnection) {
+        this.commandConnection = commandConnection;
+    }
+
     @Override
     protected final Future<Void> startInternal() {
 
@@ -229,11 +242,14 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
             result.fail(new IllegalStateException("Device Registration service client must be set"));
         } else if (credentialsServiceClient == null) {
             result.fail(new IllegalStateException("Credentials service client must be set"));
+        } else if (commandConnection == null) {
+            result.fail(new IllegalStateException("Command and Control service client must be set"));
         } else {
             connectToService(tenantClient, "Tenant service");
             connectToService(messagingClient, "Messaging");
             connectToService(registrationClient, "Device Registration service");
             connectToService(credentialsServiceClient, "Credentials service");
+            connectToService(commandConnection, "Command and Control service");
             doStart(result);
         }
         return result;
@@ -409,6 +425,19 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         return CompositeFuture.all(tenantCheck, messagingCheck, registrationCheck, credentialsCheck).compose(ok -> {
             return Future.succeededFuture();
         });
+    }
+
+    /**
+     * Create a command receiver for a specific device.
+     *
+     * @param tenantId The tenant of the command receiver.
+     * @param deviceId The device of the command receiver.
+     * @param commandHandler Handler will be called for each command to the device.
+     * @return Result of the receiver creation.
+     */
+    protected Future<Void> createCommandReceiver(final String tenantId, final String deviceId,
+                                                           final Handler<Command> commandHandler) {
+        return commandConnection.createCommandResponder(tenantId, deviceId, commandHandler);
     }
 
     /**
@@ -683,7 +712,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
 
     /**
      * Trigger the creation of a <em>connected</em> event.
-     * 
+     *
      * @param remoteId The remote ID.
      * @param authenticatedDevice The (optional) authenticated device.
      * @return A failed future if an event producer is set but the event
@@ -701,7 +730,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
 
     /**
      * Trigger the creation of a <em>disconnected</em> event.
-     * 
+     *
      * @param remoteId The remote ID.
      * @param authenticatedDevice The (optional) authenticated device.
      * @return A failed future if an event producer is set but the event
