@@ -454,6 +454,52 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      * @param action The operation that the request is supposed to trigger/invoke.
      * @param properties The headers to include in the request message as AMQP application properties.
      * @param payload The payload to include in the request message as a an AMQP Value section.
+     * @param contentType The content type of the payload.
+     * @param resultHandler The handler to notify about the outcome of the request. The handler is failed with
+     *                      a {@link ServerErrorException} if the request cannot be sent to the remote service,
+     *                      e.g. because there is no connection to the service or there are no credits available
+     *                      for sending the request or the request timed out.
+     * @param cacheKey The key to use for caching the response (if the service allows caching).
+     * @throws NullPointerException if action or result handler are {@code null}.
+     * @throws IllegalArgumentException if the properties contain any non-primitive typed values.
+     * @see AbstractHonoClient#setApplicationProperties(Message, Map)
+     */
+    protected final void createAndSendRequest(
+            final String action,
+            final Map<String, Object> properties,
+            final Buffer payload,
+            final String contentType,
+            final Handler<AsyncResult<R>> resultHandler,
+            final Object cacheKey) {
+
+        Objects.requireNonNull(action);
+        Objects.requireNonNull(resultHandler);
+
+        if (isOpen()) {
+            final Message request = createMessage(action, properties);
+            if (payload != null) {
+                if(contentType != null) {
+                    request.setContentType(contentType);
+                }
+                request.setBody(new AmqpValue(payload.getBytes()));
+            }
+            sendRequest(request, resultHandler, cacheKey);
+        } else {
+            resultHandler.handle(Future.failedFuture(new ServerErrorException(
+                    HttpURLConnection.HTTP_UNAVAILABLE, "sender and/or receiver link is not open")));
+        }
+    }
+
+    /**
+     * Creates a request message for a payload with content-type JSON and headers and sends it to the peer.
+     * <p>
+     * This method first checks if the sender has any credit left. If not, the result handler is failed immediately.
+     * Otherwise, the request message is sent and a timer is started which fails the result handler,
+     * if no response is received within <em>requestTimeout</em> milliseconds.
+     *
+     * @param action The operation that the request is supposed to trigger/invoke.
+     * @param properties The headers to include in the request message as AMQP application properties.
+     * @param payload The payload to include in the request message as a an AMQP Value section.
      * @param resultHandler The handler to notify about the outcome of the request. The handler is failed with
      *                      a {@link ServerErrorException} if the request cannot be sent to the remote service,
      *                      e.g. because there is no connection to the service or there are no credits available
@@ -470,20 +516,8 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
             final Handler<AsyncResult<R>> resultHandler,
             final Object cacheKey) {
 
-        Objects.requireNonNull(action);
-        Objects.requireNonNull(resultHandler);
-
-        if (isOpen()) {
-            final Message request = createMessage(action, properties);
-            if (payload != null) {
-                request.setContentType(RequestResponseApiConstants.CONTENT_TYPE_APPLICATION_JSON);
-                request.setBody(new AmqpValue(payload.getBytes()));
-            }
-            sendRequest(request, resultHandler, cacheKey);
-        } else {
-            resultHandler.handle(Future.failedFuture(new ServerErrorException(
-                    HttpURLConnection.HTTP_UNAVAILABLE, "sender and/or receiver link is not open")));
-        }
+        createAndSendRequest(action, properties, payload, RequestResponseApiConstants.CONTENT_TYPE_APPLICATION_JSON,
+                resultHandler, cacheKey);
     }
 
     /**
