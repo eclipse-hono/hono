@@ -589,10 +589,9 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
             </configuration>
             <executions>
               <execution>
-                <id>run-integration-tests</id>
-                <phase>integration-test</phase>
                 <goals>
                   <goal>integration-test</goal>
+                  <goal>verify</goal>
                 </goals>
               </execution>
             </executions>
