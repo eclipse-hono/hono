@@ -287,14 +287,7 @@ public class HonoClientImpl implements HonoClient {
                         conAttempt -> {
                             connecting.compareAndSet(true, false);
                             if (conAttempt.failed()) {
-                                if (conAttempt.cause() instanceof SecurityException) {
-                                    // SASL handshake has failed
-                                    connectionHandler.handle(Future.failedFuture(
-                                            new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED,
-                                                    "failed to authenticate with server")));
-                                } else {
-                                    reconnect(conAttempt.cause(), connectionHandler, disconnectHandler);
-                                }
+                                reconnect(conAttempt.cause(), connectionHandler, disconnectHandler);
                             } else {
                                 // make sure we try to re-connect as often as we tried to connect initially
                                 reconnectAttempts = new AtomicInteger(0);
@@ -397,6 +390,10 @@ public class HonoClientImpl implements HonoClient {
             if (connectionFailureCause == null) {
                 connectionHandler.handle(Future.failedFuture(
                         new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "failed to connect")));
+            } else if (connectionFailureCause instanceof SecurityException) {
+                // SASL handshake failed continuously, maybe due to wrong credentials?
+                connectionHandler.handle(Future.failedFuture(
+                        new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED, "failed to authenticate with server")));
             } else {
                 connectionHandler.handle(Future.failedFuture(
                         new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "failed to connect",

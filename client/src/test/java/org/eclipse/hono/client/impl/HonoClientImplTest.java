@@ -26,6 +26,7 @@ import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.RequestResponseClient;
 import org.eclipse.hono.client.ServerErrorException;
+import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.connection.ConnectionFactory;
 import org.eclipse.hono.util.Constants;
@@ -122,6 +123,44 @@ public class HonoClientImplTest {
         client.connect(options).setHandler(ctx.asyncAssertFailure(t -> {
             // THEN the connection attempt fails
             ctx.assertEquals(HttpURLConnection.HTTP_UNAVAILABLE, ((ServerErrorException) t).getErrorCode());
+        }));
+    }
+
+    /**
+     * Verifies that the client fails with a ClientErrorException with status code 403
+     * if it cannot authenticate to the server.
+     * 
+     * @param ctx The vert.x test client.
+     */
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testConnectFailsWithClientErrorForSecurityException(final TestContext ctx) {
+
+        // GIVEN a client that is configured to connect
+        // to a peer using invalid credentials
+        props.setHost(InetAddress.getLoopbackAddress().getHostAddress());
+        props.setPort(45000);
+        props.setUsername("username");
+        props.setPassword("wrongpassword");
+        final ConnectionFactory factory = mock(ConnectionFactory.class);
+        doAnswer(invocation -> {
+            final Handler<AsyncResult<ProtonConnection>> resultHandler = invocation.getArgument(3);
+            resultHandler.handle(Future.failedFuture(new SecurityException("invalid credentials")));
+            return null;
+        }).when(factory).connect(any(ProtonClientOptions.class), any(Handler.class), any(Handler.class), any(Handler.class));
+        when(factory.getHost()).thenReturn(InetAddress.getLoopbackAddress().getHostAddress());
+        when(factory.getPort()).thenReturn(45000);
+        client = new HonoClientImpl(vertx, factory, props);
+        final ProtonClientOptions options = new ProtonClientOptions()
+                .setConnectTimeout(50)
+                .setReconnectAttempts(3)
+                .setReconnectInterval(50);
+
+        // WHEN the client tries to connect
+        client.connect(options).setHandler(ctx.asyncAssertFailure(t -> {
+            // THEN the connection attempt fails after 4 overall attempts
+            ctx.assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED, ((ServiceInvocationException) t).getErrorCode());
+            verify(factory, times(4)).connect(any(ProtonClientOptions.class), any(Handler.class), any(Handler.class), any(Handler.class));
         }));
     }
 
