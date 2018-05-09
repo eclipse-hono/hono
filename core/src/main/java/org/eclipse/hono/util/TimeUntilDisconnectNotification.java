@@ -14,6 +14,9 @@
 package org.eclipse.hono.util;
 
 import java.time.Instant;
+import java.util.Optional;
+
+import org.apache.qpid.proton.message.Message;
 
 /**
  * Contains all information about a device that is indicating being ready to receive an upstream message.
@@ -59,4 +62,36 @@ public final class TimeUntilDisconnectNotification {
                 ", readyUntil=" + readyUntil +
                 '}';
     }
+
+    /**
+     * Provide an instance of {@link TimeUntilDisconnectNotification} if a message indicates that the device sending it
+     * is currently connected to a protocol adapter.
+     * <p>
+     * If this is not the case, the returned {@link Optional} will be empty.
+     *
+     * @param msg Message that is evaluated.
+     * @return Optional containing an instance of the class {@link TimeUntilDisconnectNotification} if the device is considered
+     * being ready to receive an upstream message or is empty otherwise.
+     * @throws NullPointerException If msg is {@code null}.
+     */
+    public static Optional<TimeUntilDisconnectNotification> fromMessage(final Message msg) {
+
+        if (MessageHelper.isDeviceCurrentlyConnected(msg)) {
+            final String tenantId = MessageHelper.getTenantIdAnnotation(msg);
+            final String deviceId = MessageHelper.getDeviceId(msg);
+
+            if (tenantId != null && deviceId != null) {
+                final Integer ttd = MessageHelper.getTimeUntilDisconnect(msg);
+                final Instant creationTime = Instant.ofEpochMilli(msg.getCreationTime());
+                final Instant deviceCommandReadyUntil = creationTime.plusSeconds(ttd);
+
+                final TimeUntilDisconnectNotification notification =
+                        new TimeUntilDisconnectNotification(tenantId, deviceId, deviceCommandReadyUntil);
+                return Optional.of(notification);
+            }
+        }
+
+        return Optional.empty();
+    }
+
 }
