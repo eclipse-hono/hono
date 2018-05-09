@@ -679,7 +679,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
             msg.setBody(new Data(new Binary(payload.getBytes())));
         }
         if (timeUntilDisconnect != null) {
-            MessageHelper.addTimeUntilDisconnect(msg, timeUntilDisconnect);
+            MessageHelper.addTimeUntilDisconnect(msg, timeUntilDisconnect.intValue());
         }
 
         MessageHelper.setCreationTime(msg);

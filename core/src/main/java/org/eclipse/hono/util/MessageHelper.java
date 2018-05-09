@@ -412,10 +412,8 @@ public final class MessageHelper {
      *
      * @param msg The message to add the property to.
      * @param timeUntilDisconnect The value of the property.
-     * @throws NullPointerException if timeUntilDisconnect is {@code null}.
-
      */
-    public static void addTimeUntilDisconnect(final Message msg, final Integer timeUntilDisconnect) {
+    public static void addTimeUntilDisconnect(final Message msg, final int timeUntilDisconnect) {
         addProperty(msg, APP_PROPERTY_DEVICE_TTD, timeUntilDisconnect);
     }
 
@@ -564,16 +562,17 @@ public final class MessageHelper {
     }
 
     /**
-     * Verify if a message is signalling that the
-     * device for which it was received should be ready to receive a command.
+     * Verify if a device is currently connected to a protocol adapter.
      * This is evaluated at the point in time this method is invoked.
+     * <p>
+     * This could be used as a trigger condition for an attempt to send a command upstream to the device.
      *
      * @param msg Message that is evaluated.
      * @return Boolean {@code true} if the message signals that the device now should be ready to receive a command, {@code false}
      * otherwise.
      * @throws NullPointerException If msg is {@code null}.
      */
-    public static Boolean isDeviceCurrentlyReadyForCommands(final Message msg) {
+    public static Boolean isDeviceCurrentlyConnected(final Message msg) {
 
         return Optional.ofNullable(MessageHelper.getTimeUntilDisconnect(msg)).map(ttd -> {
             if (ttd == MessageHelper.TTD_VALUE_ALWAYS_READY) {
@@ -585,37 +584,6 @@ public final class MessageHelper {
                 return Instant.now().isBefore(creationTime.plusSeconds(ttd));
             }
         }).orElse(Boolean.FALSE);
-    }
-
-    /**
-     * Provide an instance of {@link TimeUntilDisconnectNotification} if a message indicates that the device sending it
-     * is currently ready to receive an upstream message.
-     * <p>
-     * If this is not the case, the returned {@link Optional} will be empty.
-     *
-     * @param msg Message that is evaluated.
-     * @return Optional containing an instance of the class {@link TimeUntilDisconnectNotification} if the device is considered
-     * being ready to receive an upstream message or is empty otherwise.
-     * @throws NullPointerException If msg is {@code null}.
-     */
-    public static Optional<TimeUntilDisconnectNotification> fromMessage(final Message msg) {
-
-        if (isDeviceCurrentlyReadyForCommands(msg)) {
-            final String tenantId = MessageHelper.getTenantIdAnnotation(msg);
-            final String deviceId = MessageHelper.getDeviceId(msg);
-
-            if (tenantId != null && deviceId != null) {
-                final Integer ttd = MessageHelper.getTimeUntilDisconnect(msg);
-                final Instant creationTime = Instant.ofEpochMilli(msg.getCreationTime());
-                final Instant deviceCommandReadyUntil = creationTime.plusSeconds(ttd);
-
-                final TimeUntilDisconnectNotification notification =
-                        new TimeUntilDisconnectNotification(tenantId, deviceId, deviceCommandReadyUntil);
-                return Optional.of(notification);
-            }
-        }
-
-        return Optional.empty();
     }
 
 }
