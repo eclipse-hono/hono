@@ -114,25 +114,41 @@ public class UsernamePasswordCredentials extends AbstractDeviceCredentials {
     @Override
     public boolean matchesCredentials(final JsonObject candidateSecret) {
 
-        String pwdHash = candidateSecret.getString(CredentialsConstants.FIELD_SECRETS_PWD_HASH);
-        if (pwdHash == null) {
+        try {
+            String pwdHash = candidateSecret.getString(CredentialsConstants.FIELD_SECRETS_PWD_HASH);
+            if (pwdHash == null) {
+                LOG.debug("candidate hashed-password secret does not contain a pwd hash");
+                return false;
+            }
+
+            byte[] hashedPasswordOnRecord = Base64.getDecoder().decode(pwdHash);
+
+            byte[] salt = null;
+            final String encodedSalt = candidateSecret.getString(CredentialsConstants.FIELD_SECRETS_SALT);
+            // the salt is optional so decodedSalt may stay null if salt was not found
+            if (encodedSalt != null) {
+                salt = Base64.getDecoder().decode(encodedSalt);
+            }
+
+            String hashFunction = candidateSecret.getString(
+                    CredentialsConstants.FIELD_SECRETS_HASH_FUNCTION,
+                    CredentialsConstants.DEFAULT_HASH_FUNCTION);
+
+            return checkPassword(hashFunction, salt, hashedPasswordOnRecord);
+
+        } catch (IllegalArgumentException e) {
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("cannot decode malformed Base64 encoded property", e);
+            }
+            return false;
+        } catch (ClassCastException e) {
+            // one or more of the properties are not of expected type
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("cannot process malformed candidate hashed-password secret returned by Credentials service [{}]",
+                        candidateSecret.encodePrettily());
+            }
             return false;
         }
-
-        byte[] hashedPasswordOnRecord = Base64.getDecoder().decode(pwdHash);
-
-        byte[] salt = null;
-        final String encodedSalt = candidateSecret.getString(CredentialsConstants.FIELD_SECRETS_SALT);
-        // the salt is optional so decodedSalt may stay null if salt was not found
-        if (encodedSalt != null) {
-            salt = Base64.getDecoder().decode(encodedSalt);
-        }
-
-        String hashFunction = candidateSecret.getString(
-                CredentialsConstants.FIELD_SECRETS_HASH_FUNCTION,
-                CredentialsConstants.DEFAULT_HASH_FUNCTION);
-
-        return checkPassword(hashFunction, salt, hashedPasswordOnRecord);
     }
 
     private boolean checkPassword(final String hashFunction, final byte[] salt, final byte[] hashedPasswordOnRecord) {

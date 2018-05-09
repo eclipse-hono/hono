@@ -140,6 +140,45 @@ public class UsernamePasswordCredentialsTest {
         assertFalse(credentials.matchesCredentials(candidateSecret));
     }
 
+    /**
+     * Verifies that credentials are rejected if the password hash on record contains
+     * illegal Base64 characters.
+     */
+    @Test
+    public void testMatchesCredentialsFailsForMalformedPwdHash() {
+
+        // GIVEN a candidate secret that contains illegal characters in the password hash
+        final JsonObject candidateSecret = new JsonObject()
+                .put(CredentialsConstants.FIELD_TYPE, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD)
+                .put(CredentialsConstants.FIELD_SECRETS_PWD_HASH, "!NOT_BASE64!");
+
+        // WHEN a device provides credentials
+        final UsernamePasswordCredentials credentials = UsernamePasswordCredentials.create(TEST_USER_OTHER_TENANT, "password", false);
+
+        // THEN verification of the credentials fails but doesn't throw an exception
+        assertFalse(credentials.matchesCredentials(candidateSecret));
+    }
+
+    /**
+     * Verifies that credentials are rejected if the password salt on record contains
+     * illegal Base64 characters.
+     */
+    @Test
+    public void testMatchesCredentialsFailsForMalformedSalt() {
+
+        // GIVEN a candidate secret that contains illegal characters in the password salt
+        final JsonObject candidateSecret = new JsonObject()
+                .put(CredentialsConstants.FIELD_TYPE, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD)
+                .put(CredentialsConstants.FIELD_SECRETS_PWD_HASH, "secret".getBytes(StandardCharsets.UTF_8))
+                .put(CredentialsConstants.FIELD_SECRETS_SALT, "!NOT_BASE64!");
+
+        // WHEN a device provides credentials
+        final UsernamePasswordCredentials credentials = UsernamePasswordCredentials.create(TEST_USER_OTHER_TENANT, "password", false);
+
+        // THEN verification of the credentials fails but doesn't throw an exception
+        assertFalse(credentials.matchesCredentials(candidateSecret));
+    }
+
     private String getHashedPassword(final String hashFunction, final byte[] salt, final String password) throws NoSuchAlgorithmException {
         return Base64.getEncoder().encodeToString(
                 CredentialsObject.getHashedPassword(hashFunction, salt, password));
