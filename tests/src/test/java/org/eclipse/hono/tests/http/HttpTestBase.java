@@ -111,7 +111,7 @@ public abstract class HttpTestBase {
         helper = new IntegrationTestSupport(VERTX);
         helper.init(ctx);
 
-        LOGGER.debug("using HTTP adapter [host: {}, http port: {}, https port: {}]",
+        LOGGER.info("using HTTP adapter [host: {}, http port: {}, https port: {}]",
                 IntegrationTestSupport.HTTP_HOST,
                 IntegrationTestSupport.HTTP_PORT,
                 IntegrationTestSupport.HTTPS_PORT);
@@ -120,6 +120,7 @@ public abstract class HttpTestBase {
            .setDefaultHost(IntegrationTestSupport.HTTP_HOST)
            .setDefaultPort(IntegrationTestSupport.HTTPS_PORT)
            .setTrustOptions(new PemTrustOptions().addCertPath(IntegrationTestSupport.TRUST_STORE_PATH))
+           .setVerifyHost(false)
            .setSsl(true);
     }
 
