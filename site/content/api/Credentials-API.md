@@ -423,7 +423,6 @@ Example:
 | :--------------- | :-------: | :--------- | :---------- |
 | *type*           | *yes*     | *string*   | The credential type name, always `x509-cert`. |
 | *auth-id*        | *yes*     | *string*   | The subject DN of the client certificate in the format defined by [RFC 2253](https://www.ietf.org/rfc/rfc2253.txt). |
-| *subject-dn*     | *yes*     | *string*   | MUST be the same as the *auth-id* value. |
 
-**NB** The example above does not contain any of the `not-before`, `not-after` and `enabled` properties. The `not-before` and `not-after` properties should be omitted if the validity period is the same as the period indicated by the client certificate's corresponding properties.
+**NB** The example above does not contain any of the `not-before`, `not-after` and `enabled` properties. The `not-before` and `not-after` properties should be omitted if the validity period is the same as the period indicated by the client certificate's corresponding properties. It is still necessary to provide a (empty) JSON object in the *secrets* array, though.
 
