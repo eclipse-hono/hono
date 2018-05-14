@@ -13,12 +13,6 @@
 
 package org.eclipse.hono.service.command;
 
-import io.vertx.core.Future;
-import io.vertx.core.Vertx;
-import io.vertx.ext.unit.Async;
-import io.vertx.ext.unit.TestContext;
-import io.vertx.ext.unit.junit.VertxUnitRunner;
-import io.vertx.proton.ProtonClientOptions;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.service.credentials.BaseCredentialsService;
 import org.junit.AfterClass;
@@ -27,6 +21,10 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.rules.Timeout;
 import org.junit.runner.RunWith;
+
+import io.vertx.core.Vertx;
+import io.vertx.ext.unit.TestContext;
+import io.vertx.ext.unit.junit.VertxUnitRunner;
 
 /**
  * Tests verifying behavior of {@link BaseCredentialsService}.
