@@ -71,7 +71,8 @@ public abstract class HttpTestBase {
     private static final String ORIGIN_WILDCARD = "*";
     private static final Logger LOGGER = LoggerFactory.getLogger(HttpTestBase.class);
     private static final Vertx VERTX = Vertx.vertx();
-    private static final long  TEST_TIMEOUT = 15000; // ms
+    private static final long  TEST_TIMEOUT = 5000; // ms
+    private static final int MESSAGES_TO_SEND = 60;
 
     /**
      * A helper for accessing the AMQP 1.0 Messaging Network and
@@ -269,8 +270,7 @@ public abstract class HttpTestBase {
             final String tenantId,
             final Function<Integer, Future<MultiMap>> requestSender) throws InterruptedException {
 
-        final int messagesToSend = 60;
-        final CountDownLatch received = new CountDownLatch(messagesToSend);
+        final CountDownLatch received = new CountDownLatch(MESSAGES_TO_SEND);
         final Async setup = ctx.async();
 
         createConsumer(tenantId, msg -> {
@@ -279,7 +279,7 @@ public abstract class HttpTestBase {
             assertAdditionalMessageProperties(ctx, msg);
             received.countDown();
             if (received.getCount() % 20 == 0) {
-                LOGGER.info("messages received: {}", messagesToSend - received.getCount());
+                LOGGER.info("messages received: {}", MESSAGES_TO_SEND - received.getCount());
             }
         }).setHandler(ctx.asyncAssertSuccess(ok -> setup.complete()));
 
@@ -287,15 +287,14 @@ public abstract class HttpTestBase {
         final long start = System.currentTimeMillis();
         final AtomicInteger messageCount = new AtomicInteger(0);
 
-        while (messageCount.get() < messagesToSend) {
+        while (messageCount.get() < MESSAGES_TO_SEND) {
 
             final Async sending = ctx.async();
             requestSender.apply(messageCount.getAndIncrement()).compose(this::assertHttpResponse).setHandler(attempt -> {
                 if (attempt.succeeded()) {
                     LOGGER.debug("sent message {}", messageCount.get());
                 } else {
-                    LOGGER.debug("failed to send message {}: {}", messageCount.get(), attempt.cause().getMessage());
-                    ctx.fail(attempt.cause());
+                    LOGGER.info("failed to send message {}: {}", messageCount.get(), attempt.cause().getMessage());
                 }
                 sending.complete();
             });
@@ -306,14 +305,14 @@ public abstract class HttpTestBase {
             sending.await();
         }
 
-        long timeToWait = Math.max(TEST_TIMEOUT - 1000, Math.round(messagesToSend * 1.2));
+        long timeToWait = Math.max(TEST_TIMEOUT - 1000, Math.round(MESSAGES_TO_SEND * 20));
         if (!received.await(timeToWait, TimeUnit.MILLISECONDS)) {
             LOGGER.info("sent {} and received {} messages after {} milliseconds",
-                    messageCount, messagesToSend - received.getCount(), System.currentTimeMillis() - start);
+                    messageCount, MESSAGES_TO_SEND - received.getCount(), System.currentTimeMillis() - start);
             ctx.fail("did not receive all messages sent");
         } else {
             LOGGER.info("sent {} and received {} messages after {} milliseconds",
-                    messageCount, messagesToSend - received.getCount(), System.currentTimeMillis() - start);
+                    messageCount, MESSAGES_TO_SEND - received.getCount(), System.currentTimeMillis() - start);
         }
     }
 
