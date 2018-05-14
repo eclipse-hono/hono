@@ -42,6 +42,7 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TestName;
 import org.junit.rules.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -66,7 +67,7 @@ public abstract class HttpTestBase {
 
     private static final String ORIGIN_WILDCARD = "*";
     private static final Vertx VERTX = Vertx.vertx();
-    private static final long  TEST_TIMEOUT = 5000; // ms
+    private static final long  TEST_TIMEOUT = 10000; // ms
     private static final int MESSAGES_TO_SEND = 60;
 
     /**
@@ -88,6 +89,11 @@ public abstract class HttpTestBase {
      */
     @Rule
     public final Timeout timeout = Timeout.millis(TEST_TIMEOUT);
+    /**
+     * Provide test name to unit tests.
+     */
+    @Rule
+    public final TestName testName = new TestName();
 
     /**
      * A client for connecting to the HTTP adapter.
@@ -146,6 +152,7 @@ public abstract class HttpTestBase {
     @Before
     public void setUp() {
 
+        LOGGER.info("running {}", testName.getMethodName());
         LOGGER.info("using HTTP adapter [host: {}, http port: {}, https port: {}]",
                 IntegrationTestSupport.HTTP_HOST,
                 IntegrationTestSupport.HTTP_PORT,
@@ -391,10 +398,10 @@ public abstract class HttpTestBase {
                 && (allowedOrigin.equals(ORIGIN_WILDCARD) || allowedOrigin.equals(ORIGIN_URI));
 
 
-        if (!hasValidOrigin) {
-            result.fail(new IllegalArgumentException("response contains invalid allowed origin: " + allowedOrigin));
-        } else {
+        if (hasValidOrigin) {
             result.complete();;
+        } else {
+            result.fail(new IllegalArgumentException("response contains invalid allowed origin: " + allowedOrigin));
         }
         return result;
     }
