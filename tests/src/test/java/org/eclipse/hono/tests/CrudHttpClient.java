@@ -19,6 +19,7 @@ import java.util.function.Predicate;
 
 import org.eclipse.hono.client.ServiceInvocationException;
 
+import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.MultiMap;
 import io.vertx.core.Vertx;
@@ -39,7 +40,8 @@ public final class CrudHttpClient {
     private static final String CONTENT_TYPE_JSON = "application/json";
 
     private final HttpClient client;
-    private HttpClientOptions options;
+    private final Context context;
+    private final HttpClientOptions options;
 
     /**
      * Creates a new client for a host and port.
@@ -63,6 +65,7 @@ public final class CrudHttpClient {
     public CrudHttpClient(final Vertx vertx, final HttpClientOptions options) {
         this.options = Objects.requireNonNull(options);
         this.client = vertx.createHttpClient(options);
+        this.context = vertx.getOrCreateContext();
     }
 
     private RequestOptions getRequestOptions() {
@@ -111,19 +114,21 @@ public final class CrudHttpClient {
 
         final Future<MultiMap> result = Future.future();
 
-        final HttpClientRequest req = client.options(requestOptions)
-            .handler(response -> {
-                if (successPredicate.test(response.statusCode())) {
-                    result.complete(response.headers());
-                } else {
-                    result.fail(new ServiceInvocationException(response.statusCode()));
-                }
-            }).exceptionHandler(result::fail);
+        context.runOnContext(go -> {
+            final HttpClientRequest req = client.options(requestOptions)
+                    .handler(response -> {
+                        if (successPredicate.test(response.statusCode())) {
+                            result.complete(response.headers());
+                        } else {
+                            result.fail(new ServiceInvocationException(response.statusCode()));
+                        }
+                    }).exceptionHandler(result::fail);
 
-        if (requestHeaders != null) {
-            req.headers().addAll(requestHeaders);
-        }
-        req.end();
+                if (requestHeaders != null) {
+                    req.headers().addAll(requestHeaders);
+                }
+                req.end();
+        });
         return result;
     }
 
@@ -223,23 +228,25 @@ public final class CrudHttpClient {
 
         final Future<MultiMap> result = Future.future();
 
-        final HttpClientRequest req = client.post(requestOptions)
-            .handler(response -> {
-                if (successPredicate.test(response.statusCode())) {
-                    result.complete(response.headers());
-                } else {
-                    result.fail(new ServiceInvocationException(response.statusCode()));
-                }
-            }).exceptionHandler(result::fail);
+        context.runOnContext(go -> {
+            final HttpClientRequest req = client.post(requestOptions)
+                    .handler(response -> {
+                        if (successPredicate.test(response.statusCode())) {
+                            result.complete(response.headers());
+                        } else {
+                            result.fail(new ServiceInvocationException(response.statusCode()));
+                        }
+                    }).exceptionHandler(result::fail);
 
-        if (requestHeaders != null) {
-            req.headers().addAll(requestHeaders);
-        }
-        if (body == null) {
-            req.end();
-        } else {
-            req.end(body);
-        }
+                if (requestHeaders != null) {
+                    req.headers().addAll(requestHeaders);
+                }
+                if (body == null) {
+                    req.end();
+                } else {
+                    req.end(body);
+                }
+        });
         return result;
     }
 
@@ -338,23 +345,25 @@ public final class CrudHttpClient {
 
         final Future<MultiMap> result = Future.future();
 
-        final HttpClientRequest req = client.put(requestOptions)
-            .handler(response -> {
-                if (successPredicate.test(response.statusCode())) {
-                    result.complete(response.headers());
-                } else {
-                    result.fail(new ServiceInvocationException(response.statusCode()));
-                }
-            }).exceptionHandler(result::fail);
+        context.runOnContext(go -> {
+            final HttpClientRequest req = client.put(requestOptions)
+                    .handler(response -> {
+                        if (successPredicate.test(response.statusCode())) {
+                            result.complete(response.headers());
+                        } else {
+                            result.fail(new ServiceInvocationException(response.statusCode()));
+                        }
+                    }).exceptionHandler(result::fail);
 
-        if (requestHeaders != null) {
-            req.headers().addAll(requestHeaders);
-        }
-        if (body == null) {
-            req.end();
-        } else {
-            req.end(body);
-        }
+                if (requestHeaders != null) {
+                    req.headers().addAll(requestHeaders);
+                }
+                if (body == null) {
+                    req.end();
+                } else {
+                    req.end(body);
+                }
+        });
         return result;
     }
 
@@ -433,7 +442,8 @@ public final class CrudHttpClient {
 
         final Future<Void> result = Future.future();
 
-        client.delete(requestOptions)
+        context.runOnContext(go -> {
+            client.delete(requestOptions)
             .handler(response -> {
                 if (successPredicate.test(response.statusCode())) {
                     result.complete();
@@ -441,6 +451,7 @@ public final class CrudHttpClient {
                     result.fail(new ServiceInvocationException(response.statusCode()));
                 }
             }).exceptionHandler(result::fail).end();
+        });
 
         return result;
     }
