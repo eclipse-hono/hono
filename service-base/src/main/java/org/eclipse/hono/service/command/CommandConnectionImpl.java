@@ -69,7 +69,7 @@ public class CommandConnectionImpl extends HonoClientImpl implements CommandConn
                     (delivery, message) -> {
                         messageConsumer.accept(new Command(result.result(), message));
                     }, closeHook -> {
-                        result.result().close();
+                        result.result().close(c->{});
                         closeHandler.handle(null);
                     }, result.completer());
             return result.succeeded() ? Future.succeededFuture(result.result()) : Future.failedFuture(result.cause());

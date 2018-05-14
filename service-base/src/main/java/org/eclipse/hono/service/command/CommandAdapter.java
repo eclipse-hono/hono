@@ -46,10 +46,9 @@ public class CommandAdapter extends AbstractHonoClient implements MessageConsume
             final ProtonConnection con,
             final String targetAddress) {
         final Future<ProtonSender> result = Future.future();
-        if(sender!=null && sender.isOpen()) {
+        if (sender != null && sender.isOpen()) {
             result.complete(sender);
-        }
-        else {
+        } else {
             AbstractHonoClient.createSender(context, config, con, targetAddress, ProtonQoS.AT_LEAST_ONCE, null)
                     .setHandler(h -> {
                         if (h.succeeded()) {
@@ -63,7 +62,8 @@ public class CommandAdapter extends AbstractHonoClient implements MessageConsume
         return result;
     }
 
-    final Future<ProtonDelivery> sendResponse(final ProtonConnection con, final String targetAddress, final Message message) {
+    final Future<ProtonDelivery> sendResponse(final ProtonConnection con, final String targetAddress,
+            final Message message) {
         final Future<ProtonDelivery> result = Future.future();
         getOrCreateCommandSender(con, targetAddress)
                 .setHandler(h -> {
@@ -76,10 +76,6 @@ public class CommandAdapter extends AbstractHonoClient implements MessageConsume
                     }
                 });
         return result;
-    }
-    
-    final void close() {
-        closeLinks(h->{});
     }
 
     @Override
