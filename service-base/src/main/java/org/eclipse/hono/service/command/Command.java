@@ -50,7 +50,7 @@ public class Command {
      * 
      * @return The command adapter
      */
-    CommandAdapter getCommandAdapter() {
+    final CommandAdapter getCommandAdapter() {
         return commandAdapter;
     }
 
@@ -59,7 +59,7 @@ public class Command {
      *
      * @return The replyTo address.
      */
-    String getReplyTo() {
+    final String getReplyTo() {
         return message.getReplyTo();
     }
 
