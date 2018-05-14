@@ -22,6 +22,7 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.proton.ProtonDelivery;
+import org.eclipse.hono.client.MessageConsumer;
 
 /**
  * A bidirectional connection between an Adapter and the AMQP 1.0 network to receive commands and send a response.
@@ -34,10 +35,10 @@ public interface CommandConnection extends HonoClient {
      * @param deviceId The device for which the receiver will be created.
      * @param messageConsumer The message handler for the received commands.
      * @param closeHandler The close handler for the receiver.
-     * @return A CommandAdapter with the receiver, on which the sender for responses will be created.
+     * @return A future, with a MessageConsumer.
      * @throws NullPointerException if tenantId, deviceId or messageConsumer is {@code null};
      */
-    Future<CommandAdapter> createCommandConsumer(
+    Future<MessageConsumer> createCommandConsumer(
             String tenantId,
             String deviceId,
             Consumer<Command> messageConsumer,

@@ -13,11 +13,15 @@
 
 package org.eclipse.hono.service.command;
 
+import io.vertx.core.Future;
 import io.vertx.core.Vertx;
+import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
+import io.vertx.proton.ProtonClientOptions;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.service.credentials.BaseCredentialsService;
+import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -47,6 +51,18 @@ public class CommandConnectionTest {
     }
 
     /**
+     * Cleans up after test execution.
+     *
+     * @param ctx The helper to use for running async tests.
+     */
+    @AfterClass
+    public static void shutdown(final TestContext ctx) {
+        if (vertx != null) {
+            vertx.close(ctx.asyncAssertSuccess());
+        }
+    }
+
+    /**
      * Sets up the fixture.
      */
     @Before
@@ -56,10 +72,10 @@ public class CommandConnectionTest {
 
     /**
      * Tests the command responder.
+     *
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testCreateCommandResponder(final TestContext ctx) {
-        // TODO
+    public void testCreateCommandConsumer(final TestContext ctx) {
     }
 }
