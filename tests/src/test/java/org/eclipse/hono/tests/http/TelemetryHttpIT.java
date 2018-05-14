@@ -13,14 +13,23 @@
 
 package org.eclipse.hono.tests.http;
 
+import java.net.HttpURLConnection;
 import java.util.function.Consumer;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.MessageConsumer;
+import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.TelemetryConstants;
+import org.eclipse.hono.util.TenantObject;
+import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import io.vertx.core.Future;
+import io.vertx.core.MultiMap;
+import io.vertx.core.buffer.Buffer;
+import io.vertx.core.http.HttpHeaders;
+import io.vertx.ext.unit.Async;
+import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 
 
@@ -43,4 +52,38 @@ public class TelemetryHttpIT extends HttpTestBase {
 
         return helper.downstreamClient.createTelemetryConsumer(tenantId, messageConsumer, remoteClose -> {});
     }
+
+    /**
+     * Verifies that a number of telemetry messages uploaded to Hono's HTTP adapter
+     * using QoS 1 can be successfully consumed via the AMQP Messaging Network.
+     * 
+     * @param ctx The test context.
+     * @throws InterruptedException if the test fails.
+     */
+    @Test
+    public void testUploadUsingQoS1(final TestContext ctx) throws InterruptedException {
+
+        final Async setup = ctx.async();
+        final String tenantId = helper.getRandomTenantId();
+        final String deviceId = helper.getRandomDeviceId(tenantId);
+        final String password = "secret";
+        final TenantObject tenant = TenantObject.from(tenantId, true);
+        final MultiMap requestHeaders = MultiMap.caseInsensitiveMultiMap()
+                .add(HttpHeaders.CONTENT_TYPE, "binary/octet-stream")
+                .add(HttpHeaders.AUTHORIZATION, getBasicAuth(tenantId, deviceId, password))
+                .add(HttpHeaders.ORIGIN, ORIGIN_URI)
+                .add(Constants.HEADER_QOS_LEVEL, "1");
+
+        helper.registry.addDeviceForTenant(tenant, deviceId, password).setHandler(ctx.asyncAssertSuccess(ok -> setup.complete()));
+        setup.await();
+
+        testUploadMessages(ctx, tenantId, count -> {
+            return httpClient.create(
+                    getEndpointUri(),
+                    Buffer.buffer("hello " + count),
+                    requestHeaders,
+                    statusCode -> statusCode == HttpURLConnection.HTTP_ACCEPTED);
+        });
+    }
 }
+

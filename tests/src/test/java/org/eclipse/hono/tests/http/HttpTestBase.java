@@ -64,16 +64,15 @@ import io.vertx.ext.unit.TestContext;
  */
 public abstract class HttpTestBase {
 
-    /**
-     * The CORS <em>origin</em> address to use for sending messages.
-     */
-    private static final String ORIGIN_URI = "http://hono.eclipse.org";
     private static final String ORIGIN_WILDCARD = "*";
-    private static final Logger LOGGER = LoggerFactory.getLogger(HttpTestBase.class);
     private static final Vertx VERTX = Vertx.vertx();
     private static final long  TEST_TIMEOUT = 5000; // ms
     private static final int MESSAGES_TO_SEND = 60;
 
+    /**
+     * The CORS <em>origin</em> address to use for sending messages.
+     */
+    protected static final String ORIGIN_URI = "http://hono.eclipse.org";
     /**
      * A helper for accessing the AMQP 1.0 Messaging Network and
      * for managing tenants/devices/credentials.
@@ -90,16 +89,18 @@ public abstract class HttpTestBase {
     @Rule
     public final Timeout timeout = Timeout.millis(TEST_TIMEOUT);
 
-    private SelfSignedCertificate deviceCert;
     /**
      * A client for connecting to the HTTP adapter.
      */
-    private CrudHttpClient httpClient;
+    protected CrudHttpClient httpClient;
     /**
      * A client for connecting to the HTTP adapter using a client certificate
      * for authentication.
      */
-    private CrudHttpClient httpClientWithClientCert;
+    protected CrudHttpClient httpClientWithClientCert;
+
+    private final Logger LOGGER = LoggerFactory.getLogger(getClass());
+    private SelfSignedCertificate deviceCert;
 
     /**
      * Sets up clients.
@@ -111,11 +112,6 @@ public abstract class HttpTestBase {
 
         helper = new IntegrationTestSupport(VERTX);
         helper.init(ctx);
-
-        LOGGER.info("using HTTP adapter [host: {}, http port: {}, https port: {}]",
-                IntegrationTestSupport.HTTP_HOST,
-                IntegrationTestSupport.HTTP_PORT,
-                IntegrationTestSupport.HTTPS_PORT);
 
         defaultOptions = new HttpClientOptions()
            .setDefaultHost(IntegrationTestSupport.HTTP_HOST)
@@ -149,6 +145,11 @@ public abstract class HttpTestBase {
      */
     @Before
     public void setUp() {
+
+        LOGGER.info("using HTTP adapter [host: {}, http port: {}, https port: {}]",
+                IntegrationTestSupport.HTTP_HOST,
+                IntegrationTestSupport.HTTP_PORT,
+                IntegrationTestSupport.HTTPS_PORT);
 
         deviceCert = SelfSignedCertificate.create(UUID.randomUUID().toString());
         httpClient = new CrudHttpClient(VERTX, new HttpClientOptions(defaultOptions));
@@ -265,7 +266,16 @@ public abstract class HttpTestBase {
         });
     }
 
-    private void testUploadMessages(
+    /**
+     * Uploads messages to the HTTP endpoint.
+     * 
+     * @param ctx The test context to run on.
+     * @param tenantId The tenant that the device belongs to.
+     * @param requestSender The test device that will publish the data.
+     * @throws InterruptedException if the test is interrupted before it
+     *              has finished.
+     */
+    protected void testUploadMessages(
             final TestContext ctx,
             final String tenantId,
             final Function<Integer, Future<MultiMap>> requestSender) throws InterruptedException {
@@ -397,7 +407,7 @@ public abstract class HttpTestBase {
      * @param password The device's password.
      * @return The header value.
      */
-    private static String getBasicAuth(final String tenant, final String deviceId, final String password) {
+    protected static String getBasicAuth(final String tenant, final String deviceId, final String password) {
 
         final StringBuilder result = new StringBuilder("Basic ");
         final String username = IntegrationTestSupport.getUsername(deviceId, tenant);
