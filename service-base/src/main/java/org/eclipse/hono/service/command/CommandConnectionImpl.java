@@ -17,6 +17,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.function.Consumer;
 
+import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.impl.HonoClientImpl;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.connection.ConnectionFactory;
@@ -53,7 +54,7 @@ public class CommandConnectionImpl extends HonoClientImpl implements CommandConn
     /**
      * {@inheritDoc}
      */
-    public Future<CommandAdapter> createCommandConsumer(
+    public final Future<MessageConsumer> createCommandConsumer(
             final String tenantId,
             final String deviceId,
             final Consumer<Command> messageConsumer,
@@ -71,35 +72,22 @@ public class CommandConnectionImpl extends HonoClientImpl implements CommandConn
                         result.result().close();
                         closeHandler.handle(null);
                     }, result.completer());
-            return result;
+            return result.succeeded() ? Future.succeededFuture(result.result()) : Future.failedFuture(result.cause());
         });
     }
 
     /**
      * {@inheritDoc}
      */
-    public Future<ProtonDelivery> sendCommandResponse(
+    public final Future<ProtonDelivery> sendCommandResponse(
             final Command commandToResponse,
             final Buffer data,
             final Map<String, Object> properties,
             final int status) {
 
         Objects.requireNonNull(commandToResponse);
-        return checkConnected().compose(connected -> {
-            final Future<ProtonDelivery> result = Future.future();
-            final CommandAdapter commandAdapter = commandToResponse.getCommandAdapter();
-            commandAdapter.createCommandSender(connection, commandToResponse.getMessage().getReplyTo())
-                    .setHandler(h -> {
-                        if (h.succeeded()) {
-                            commandAdapter.sendResponse(
-                                    commandToResponse.createResponseMessage(data, properties, status),
-                                    result::complete);
-                        } else {
-                            result.fail(h.cause());
-                        }
-                    });
-            return result;
-        });
+        return checkConnected().compose(connected -> commandToResponse.getCommandAdapter().sendResponse(connection,
+                commandToResponse.getReplyTo(), commandToResponse.createResponseMessage(data, properties, status)));
     }
 
 }

@@ -22,6 +22,7 @@ import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.HonoClient;
+import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.ServiceInvocationException;
@@ -31,7 +32,6 @@ import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.auth.TenantApiTrustOptions;
 import org.eclipse.hono.service.auth.device.Device;
 import org.eclipse.hono.service.command.Command;
-import org.eclipse.hono.service.command.CommandAdapter;
 import org.eclipse.hono.service.command.CommandConnection;
 import org.eclipse.hono.service.monitoring.ConnectionEventProducer;
 import org.eclipse.hono.util.Constants;
@@ -431,7 +431,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     }
 
     /**
-     * Create a command receiver for a specific device.
+     * Create a command consumer for a specific device.
      *
      * @param tenantId The tenant of the command receiver.
      * @param deviceId The device of the command receiver.
@@ -439,7 +439,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * @param closeHandler Called on close.
      * @return Result of the receiver creation.
      */
-    protected Future<CommandAdapter> createCommandConsumer(
+    protected Future<MessageConsumer> createCommandConsumer(
             final String tenantId,
             final String deviceId,
             final Consumer<Command> messageConsumer,

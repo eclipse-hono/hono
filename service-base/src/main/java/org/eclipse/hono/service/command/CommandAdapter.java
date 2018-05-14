@@ -1,6 +1,7 @@
 package org.eclipse.hono.service.command;
 
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.impl.AbstractHonoClient;
 import org.eclipse.hono.client.impl.RegistrationClientImpl;
 import org.eclipse.hono.config.ClientConfigProperties;
@@ -23,7 +24,7 @@ import io.vertx.proton.ProtonSender;
 /**
  * Receiver and sender pair to get commands and send a response.
  */
-public class CommandAdapter extends AbstractHonoClient {
+public class CommandAdapter extends AbstractHonoClient implements MessageConsumer {
 
     private static final Logger LOG = LoggerFactory.getLogger(RegistrationClientImpl.class);
 
@@ -35,36 +36,60 @@ public class CommandAdapter extends AbstractHonoClient {
      * @param protonReceiver The receiver for commands.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    protected CommandAdapter(final Context context, final ClientConfigProperties config,
+    private CommandAdapter(final Context context, final ClientConfigProperties config,
             final ProtonReceiver protonReceiver) {
         super(context, config);
         this.receiver = protonReceiver;
     }
 
-    Future<ProtonSender> createCommandSender(
+    private Future<ProtonSender> getOrCreateCommandSender(
             final ProtonConnection con,
             final String targetAddress) {
         final Future<ProtonSender> result = Future.future();
-        AbstractHonoClient.createSender(context, config, con, targetAddress, ProtonQoS.AT_LEAST_ONCE, null)
+        if(sender!=null && sender.isOpen()) {
+            result.complete(sender);
+        }
+        else {
+            AbstractHonoClient.createSender(context, config, con, targetAddress, ProtonQoS.AT_LEAST_ONCE, null)
+                    .setHandler(h -> {
+                        if (h.succeeded()) {
+                            sender = h.result();
+                            result.complete(sender);
+                        } else {
+                            result.fail(h.cause());
+                        }
+                    });
+        }
+        return result;
+    }
+
+    final Future<ProtonDelivery> sendResponse(final ProtonConnection con, final String targetAddress, final Message message) {
+        final Future<ProtonDelivery> result = Future.future();
+        getOrCreateCommandSender(con, targetAddress)
                 .setHandler(h -> {
                     if (h.succeeded()) {
-                        sender = h.result();
-                        result.complete(sender);
+                        context.runOnContext(a -> {
+                            sender.send(message, result::complete);
+                        });
                     } else {
                         result.fail(h.cause());
                     }
                 });
         return result;
     }
-
-    void sendResponse(final Message message, final Handler<ProtonDelivery> onUpdated) {
-        context.runOnContext(a -> {
-            sender.send(message, onUpdated);
-        });
-    }
-
+    
     final void close() {
         closeLinks(h->{});
+    }
+
+    @Override
+    public void flow(final int credits) throws IllegalStateException {
+        receiver.flow(credits);
+    }
+
+    @Override
+    public void close(final Handler<AsyncResult<Void>> closeHandler) {
+        closeLinks(closeHandler);
     }
 
     /**
