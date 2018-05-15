@@ -183,6 +183,18 @@ public final class Constants {
      */
     public static final String HEADER_TIME_TIL_DISCONNECT = "hono-ttd";
 
+    /**
+     * The header name defined for setting the <em>reply id</em> for device responses to a command.
+     * The <em>reply id</em> is the last part of a command endpoint that conforms to the pattern
+     * &lt;control&gt;/&lt;tenant&gt;/&lt;device&gt;/&lt;reply id&gt;.
+     */
+    public static final String HEADER_COMMAND_REPLY_ID = "hono-command-reply-id";
+
+    /**
+     * The header name defined for setting the <em>correlation id</em> for device responses to a command.
+     */
+    public static final String HEADER_COMMAND_CORRELATION_ID = "hono-command-correlation-id";
+
     private Constants() {
     }
 
