@@ -251,6 +251,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
      * Create a future indicating a rejected connection.
      * 
      * @param returnCode The error code to return.
+     * @param <T> The type of the returned future.
      * @return A future indicating a rejected connection.
      */
     protected static <T> Future<T> rejected(final MqttConnectReturnCode returnCode) {
