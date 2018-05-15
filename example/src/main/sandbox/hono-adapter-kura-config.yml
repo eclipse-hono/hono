@@ -14,30 +14,26 @@ hono:
     name: 'Hono Kura Adapter'
     host: ${hono.messaging.host}
     port: 5671
-    username: ${hono.adapter.kura.username}
-    password: ${hono.adapter.kura.password}
-    trustStorePath: ${hono.trustStore.path}
+    credentialsPath: /run/secrets/kura-adapter.credentials
+    trustStorePath: /run/secrets/trusted-certs.pem
   registration:
     name: 'Hono Kura Adapter'
     host: ${hono.registration.host}
     port: 5671
-    username: ${hono.adapter.kura.username}
-    password: ${hono.adapter.kura.password}
-    trustStorePath: ${hono.trustStore.path}
+    credentialsPath: /run/secrets/kura-adapter.credentials
+    trustStorePath: /run/secrets/trusted-certs.pem
   credentials:
     name: 'Hono Kura Adapter'
     host: ${hono.registration.host}
     port: 5671
-    username: ${hono.adapter.kura.username}
-    password: ${hono.adapter.kura.password}
-    trustStorePath: ${hono.trustStore.path}
+    credentialsPath: /run/secrets/kura-adapter.credentials
+    trustStorePath: /run/secrets/trusted-certs.pem
   tenant:
     name: 'Hono Kura Adapter'
     host: ${hono.registration.host}
     port: 5671
-    username: ${hono.adapter.kura.username}
-    password: ${hono.adapter.kura.password}
-    trustStorePath: ${hono.trustStore.path}
+    credentialsPath: /run/secrets/kura-adapter.credentials
+    trustStorePath: /run/secrets/trusted-certs.pem
   metric:
     reporter:
       graphite:

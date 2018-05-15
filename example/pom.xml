@@ -248,6 +248,32 @@ Also contains scripts for deploying a Hono instance to a Docker Swarm, a Kuberne
               </filters>
             </configuration>
           </execution>
+          <execution>
+            <id>create_sandbox_config_files</id>
+            <phase>process-resources</phase>
+            <goals>
+              <goal>copy-resources</goal>
+            </goals>
+            <configuration>
+              <outputDirectory>${project.build.directory}</outputDirectory>
+              <resources>
+                <resource>
+                  <directory>${project.basedir}/src/main/config/qpid</directory>
+                  <include>qdrouter-sasl.conf</include>
+                  <targetPath>sandbox/qpid</targetPath>
+                  <filtering>true</filtering>
+                </resource>
+                <resource>
+                  <directory>${project.basedir}/src/main/sasldb</directory>
+                  <targetPath>sandbox/qpid</targetPath>
+                  <filtering>false</filtering>
+                </resource>
+              </resources>
+              <filters>
+                <filter>${project.basedir}/src/main/docker-config.properties</filter>
+              </filters>
+            </configuration>
+          </execution>
         </executions>
       </plugin>
       <plugin>

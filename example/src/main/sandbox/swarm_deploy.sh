@@ -26,7 +26,7 @@ docker secret create -l project=$NS trusted-certs.pem $CERTS/trusted-certs.pem
 
 echo
 echo Deploying Influx DB and Grafana ...
-docker secret create -l project=$NS influxdb.conf $CONFIG/influxdb.conf
+docker secret create -l project=$NS influxdb.conf $SCRIPTPATH/../deploy/influxdb.conf
 docker service create $CREATE_OPTIONS --name influxdb \
   --secret influxdb.conf \
   influxdb:${influxdb.version} -config /run/secrets/influxdb.conf
@@ -36,11 +36,11 @@ echo ... done
 echo
 echo Deploying Artemis broker ...
 docker secret create -l $NS artemis-broker.xml $SCRIPTPATH/artemis/artemis-broker.xml
-docker secret create -l $NS artemis-bootstrap.xml $CONFIG/hono-artemis-jar/etc/artemis-bootstrap.xml
-docker secret create -l $NS artemis-users.properties $CONFIG/hono-artemis-jar/etc/artemis-users.properties
-docker secret create -l $NS artemis-roles.properties $CONFIG/hono-artemis-jar/etc/artemis-roles.properties
-docker secret create -l $NS login.config $CONFIG/hono-artemis-jar/etc/login.config
-docker secret create -l $NS logging.properties $CONFIG/hono-artemis-jar/etc/logging.properties
+docker secret create -l $NS artemis-bootstrap.xml $SCRIPTPATH/artemis/artemis-bootstrap.xml
+docker secret create -l $NS artemis-users.properties $SCRIPTPATH/artemis/artemis-users.properties
+docker secret create -l $NS artemis-roles.properties $SCRIPTPATH/artemis/artemis-roles.properties
+docker secret create -l $NS login.config $SCRIPTPATH/artemis/login.config
+docker secret create -l $NS logging.properties $SCRIPTPATH/artemis/logging.properties
 docker secret create -l $NS artemis.profile $SCRIPTPATH/artemis/artemis.profile
 docker secret create -l $NS artemisKeyStore.p12 $CERTS/artemisKeyStore.p12
 docker secret create -l $NS trustStore.jks $CERTS/trustStore.jks
@@ -63,9 +63,9 @@ echo
 echo Deploying Qpid Dispatch Router ...
 docker secret create -l project=$NS qdrouter-key.pem $CERTS/qdrouter-key.pem
 docker secret create -l project=$NS qdrouter-cert.pem $CERTS/qdrouter-cert.pem
-docker secret create -l project=$NS qdrouterd.json $SCRIPTPATH/sandbox-qdrouterd.json
-docker secret create -l project=$NS qdrouter-sasl.conf $CONFIG/hono-dispatch-router-jar/sasl/qdrouter-sasl.conf
-docker secret create -l project=$NS qdrouterd.sasldb $CONFIG/hono-dispatch-router-jar/sasl/qdrouterd.sasldb
+docker secret create -l project=$NS qdrouterd.json $SCRIPTPATH/qpid/sandbox-qdrouterd.json
+docker secret create -l project=$NS qdrouter-sasl.conf $SCRIPTPATH/qpid/qdrouter-sasl.conf
+docker secret create -l project=$NS qdrouterd.sasldb $SCRIPTPATH/qpid/qdrouterd.sasldb
 docker service create $CREATE_OPTIONS --name hono-dispatch-router -p 15671:5671 -p 15672:5672 \
   --secret qdrouter-key.pem \
   --secret qdrouter-cert.pem \
@@ -153,11 +153,13 @@ echo
 echo Deploying HTTP adapter ...
 docker secret create -l project=$NS http-adapter-key.pem $CERTS/http-adapter-key.pem
 docker secret create -l project=$NS http-adapter-cert.pem $CERTS/http-adapter-cert.pem
+docker secret create -l project=$NS http-adapter.credentials $SCRIPTPATH/../deploy/http-adapter.credentials
 docker secret create -l project=$NS hono-adapter-http-vertx-config.yml $SCRIPTPATH/hono-adapter-http-vertx-config.yml
 docker service create $CREATE_OPTIONS --name hono-adapter-http-vertx -p 8080:8080 -p 8443:8443 \
   --secret http-adapter-key.pem \
   --secret http-adapter-cert.pem \
   --secret trusted-certs.pem \
+  --secret http-adapter.credentials \
   --secret hono-adapter-http-vertx-config.yml \
   --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-adapter-http-vertx-config.yml \
   --env SPRING_PROFILES_ACTIVE=prod \
@@ -170,11 +172,13 @@ echo
 echo Deploying MQTT adapter ...
 docker secret create -l project=$NS mqtt-adapter-key.pem $CERTS/mqtt-adapter-key.pem
 docker secret create -l project=$NS mqtt-adapter-cert.pem $CERTS/mqtt-adapter-cert.pem
+docker secret create -l project=$NS mqtt-adapter.credentials $SCRIPTPATH/../deploy/mqtt-adapter.credentials
 docker secret create -l project=$NS hono-adapter-mqtt-vertx-config.yml $SCRIPTPATH/hono-adapter-mqtt-vertx-config.yml
 docker service create $CREATE_OPTIONS --name hono-adapter-mqtt-vertx -p 1883:1883 -p 8883:8883 \
   --secret mqtt-adapter-key.pem \
   --secret mqtt-adapter-cert.pem \
   --secret trusted-certs.pem \
+  --secret mqtt-adapter.credentials \
   --secret hono-adapter-mqtt-vertx-config.yml \
   --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-adapter-mqtt-vertx-config.yml \
   --env SPRING_PROFILES_ACTIVE=prod \
@@ -187,11 +191,13 @@ echo
 echo Deploying Kura adapter ...
 docker secret create -l project=$NS kura-adapter-key.pem $CERTS/kura-adapter-key.pem
 docker secret create -l project=$NS kura-adapter-cert.pem $CERTS/kura-adapter-cert.pem
+docker secret create -l project=$NS kura-adapter.credentials $SCRIPTPATH/../deploy/kura-adapter.credentials
 docker secret create -l project=$NS hono-adapter-kura-config.yml $SCRIPTPATH/hono-adapter-kura-config.yml
 docker service create $CREATE_OPTIONS --name hono-adapter-kura -p 1884:1883 -p 8884:8883 \
   --secret kura-adapter-key.pem \
   --secret kura-adapter-cert.pem \
   --secret trusted-certs.pem \
+  --secret kura-adapter.credentials \
   --secret hono-adapter-kura-config.yml \
   --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-adapter-kura-config.yml \
   --env SPRING_PROFILES_ACTIVE=prod \
