@@ -6,7 +6,6 @@ import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.impl.AbstractConsumer;
 import org.eclipse.hono.client.impl.AbstractHonoClient;
-import org.eclipse.hono.client.impl.RegistrationClientImpl;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.ResourceIdentifier;

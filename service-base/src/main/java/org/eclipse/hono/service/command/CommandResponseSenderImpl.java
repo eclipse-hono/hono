@@ -30,7 +30,7 @@ import io.vertx.proton.ProtonSender;
 public class CommandResponseSenderImpl extends AbstractSender implements CommandResponseSender {
 
     CommandResponseSenderImpl(final ClientConfigProperties config, final ProtonSender sender, final String tenantId,
-                              final String targetAddress, final Context context) {
+            final String targetAddress, final Context context) {
         super(config, sender, tenantId, targetAddress, context);
     }
 
@@ -71,9 +71,10 @@ public class CommandResponseSenderImpl extends AbstractSender implements Command
             final int status) {
         LOG.debug("send back a command response [tenant: {}, device: {}, replyId: {}, correlationId: {}, status: {}]",
                 tenantId, deviceId, replyId, correlationId, status);
-        return sendAndWaitForOutcome(createResponseMessage(tenantId,deviceId,replyId,correlationId,payload,properties,status));
+        return sendAndWaitForOutcome(
+                createResponseMessage(tenantId, deviceId, replyId, correlationId, payload, properties, status));
     }
-    
+
     private static Message createResponseMessage(
             final String tenantId,
             final String deviceId,
