@@ -22,9 +22,16 @@ import org.eclipse.hono.config.ClientConfigProperties;
 /**
  * Abstract client for consuming messages from a Hono server.
  */
-abstract class AbstractConsumer extends AbstractHonoClient implements MessageConsumer {
+public abstract class AbstractConsumer extends AbstractHonoClient implements MessageConsumer {
 
-    AbstractConsumer(final Context context, final ClientConfigProperties config, final ProtonReceiver receiver) {
+    /**
+     * Creates an abstract message consumer.
+     *
+     * @param context The vert.x context to run all interactions with the server on.
+     * @param config The configuration properties to use.
+     * @param receiver The proton receiver link.
+     */
+    public AbstractConsumer(final Context context, final ClientConfigProperties config, final ProtonReceiver receiver) {
         super(context, config);
         this.receiver = receiver;
     }

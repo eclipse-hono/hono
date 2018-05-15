@@ -13,11 +13,12 @@
 
 package org.eclipse.hono.service.command;
 
-import java.util.Map;
 import java.util.Objects;
-import java.util.function.Consumer;
+import java.util.function.BiConsumer;
 
+import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.MessageConsumer;
+import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.impl.HonoClientImpl;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.connection.ConnectionFactory;
@@ -27,7 +28,6 @@ import org.slf4j.LoggerFactory;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
-import io.vertx.core.buffer.Buffer;
 import io.vertx.proton.ProtonDelivery;
 
 /**
@@ -57,37 +57,65 @@ public class CommandConnectionImpl extends HonoClientImpl implements CommandConn
     public final Future<MessageConsumer> createCommandConsumer(
             final String tenantId,
             final String deviceId,
-            final Consumer<Command> messageConsumer,
+            final BiConsumer<ProtonDelivery, Message> messageConsumer,
             final Handler<Void> closeHandler) {
 
-        Objects.requireNonNull(tenantId);
-        Objects.requireNonNull(deviceId);
-        Objects.requireNonNull(messageConsumer);
+        return createConsumer(
+                tenantId,
+                () -> newCommandConsumer(tenantId, deviceId, messageConsumer, closeHandler));
+    }
+
+    private Future<MessageConsumer> newCommandConsumer(
+            final String tenantId,
+            final String deviceId,
+            final BiConsumer<ProtonDelivery, Message> messageConsumer,
+            final Handler<Void> closeHandler) {
+
         return checkConnected().compose(con -> {
-            final Future<CommandAdapter> result = Future.future();
-            CommandAdapter.create(context, clientConfigProperties, connection, tenantId, deviceId,
-                    (delivery, message) -> {
-                        messageConsumer.accept(new Command(result.result(), message));
-                    }, closeHook -> {
-                        result.result().close(c->{});
-                        closeHandler.handle(null);
-                    }, result.completer());
-            return result.succeeded() ? Future.succeededFuture(result.result()) : Future.failedFuture(result.cause());
+            final Future<MessageConsumer> result = Future.future();
+            CommandConsumer.create(context, clientConfigProperties, connection, tenantId, deviceId,
+                    messageConsumer, closeHook -> closeHandler.handle(null), result.completer());
+            return result;
         });
     }
 
     /**
      * {@inheritDoc}
      */
-    public final Future<ProtonDelivery> sendCommandResponse(
-            final Command commandToResponse,
-            final Buffer data,
-            final Map<String, Object> properties,
-            final int status) {
+    public Future<CommandResponseSender> getOrCreateCommandResponseSender(
+            final String tenantId,
+            final String deviceId,
+            final String replyId) {
 
-        Objects.requireNonNull(commandToResponse);
-        return checkConnected().compose(connected -> commandToResponse.getCommandAdapter().sendResponse(connection,
-                commandToResponse.getReplyTo(), commandToResponse.createResponseMessage(data, properties, status)));
+        Objects.requireNonNull(tenantId);
+        final Future<CommandResponseSender> result = Future.future();
+        getOrCreateSender(
+                CommandResponseSenderImpl.getTargetAddress(tenantId, deviceId, replyId),
+                () -> createCommandResponseSender(tenantId, deviceId, replyId)).setHandler(h->{
+                    if(h.succeeded()) {
+                        result.complete((CommandResponseSender) h.result());
+                    }
+                    else {
+                        result.fail(h.cause());
+                    }
+        });
+        return result;
+    }
+
+    private Future<MessageSender> createCommandResponseSender(
+            final String tenantId,
+            final String deviceId,
+            final String replyId) {
+
+        return checkConnected().compose(connected -> {
+            final Future<MessageSender> result = Future.future();
+            CommandResponseSenderImpl.create(context, clientConfigProperties, connection, tenantId, deviceId, replyId,
+                    onSenderClosed -> {
+                        activeSenders.remove(CommandResponseSenderImpl.getTargetAddress(tenantId, deviceId, replyId));
+                    },
+                    result.completer());
+            return result;
+        });
     }
 
 }

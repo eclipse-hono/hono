@@ -67,7 +67,7 @@ public class HonoClientImpl implements HonoClient {
 
     private static final Logger LOG = LoggerFactory.getLogger(HonoClientImpl.class);
 
-    private final Map<String, MessageSender> activeSenders = new HashMap<>();
+    protected final Map<String, MessageSender> activeSenders = new HashMap<>();
     private final Map<String, RequestResponseClient> activeRequestResponseClients = new HashMap<>();
     private final Map<String, Boolean> creationLocks = new HashMap<>();
     private final List<Handler<Void>> creationRequests = new ArrayList<>();

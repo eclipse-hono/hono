@@ -51,7 +51,7 @@ import io.vertx.proton.ProtonSender;
 /**
  * A Vertx-Proton based client for publishing messages to a Hono server.
  */
-abstract class AbstractSender extends AbstractHonoClient implements MessageSender {
+abstract public class AbstractSender extends AbstractHonoClient implements MessageSender {
 
     /**
      * A counter to be used for creating message IDs.
@@ -71,7 +71,7 @@ abstract class AbstractSender extends AbstractHonoClient implements MessageSende
     private Handler<Void> drainHandler;
     private boolean registrationAssertionRequired;
 
-    AbstractSender(
+    protected AbstractSender(
             final ClientConfigProperties config,
             final ProtonSender sender,
             final String tenantId,

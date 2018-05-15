@@ -15,8 +15,9 @@ package org.eclipse.hono.service;
 import java.net.HttpURLConnection;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.function.Consumer;
+import java.util.function.BiConsumer;
 
+import io.vertx.proton.ProtonDelivery;
 import org.apache.qpid.proton.amqp.Binary;
 import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.message.Message;
@@ -31,7 +32,6 @@ import org.eclipse.hono.config.AbstractConfig;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.auth.TenantApiTrustOptions;
 import org.eclipse.hono.service.auth.device.Device;
-import org.eclipse.hono.service.command.Command;
 import org.eclipse.hono.service.command.CommandConnection;
 import org.eclipse.hono.service.monitoring.ConnectionEventProducer;
 import org.eclipse.hono.util.Constants;
@@ -439,10 +439,10 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * @param closeHandler Called on close.
      * @return Result of the receiver creation.
      */
-    protected Future<MessageConsumer> createCommandConsumer(
+    public final Future<MessageConsumer> createCommandConsumer(
             final String tenantId,
             final String deviceId,
-            final Consumer<Command> messageConsumer,
+            final BiConsumer<ProtonDelivery, Message> messageConsumer,
             final Handler<Void> closeHandler) {
         return commandConnection.createCommandConsumer(tenantId, deviceId, messageConsumer, closeHandler);
     }

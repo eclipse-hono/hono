@@ -13,16 +13,15 @@
 
 package org.eclipse.hono.service.command;
 
-import java.util.Map;
-import java.util.function.Consumer;
+import java.util.function.BiConsumer;
 
+import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.HonoClient;
+import org.eclipse.hono.client.MessageConsumer;
 
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
-import io.vertx.core.buffer.Buffer;
 import io.vertx.proton.ProtonDelivery;
-import org.eclipse.hono.client.MessageConsumer;
 
 /**
  * A bidirectional connection between an Adapter and the AMQP 1.0 network to receive commands and send a response.
@@ -30,7 +29,8 @@ import org.eclipse.hono.client.MessageConsumer;
 public interface CommandConnection extends HonoClient {
 
     /**
-     * Creates a receiver link in the CommandAdapter and a message handler for Commands.
+     * Creates a receiver link in the CommandConsumer and a message handler for Commands.
+     * 
      * @param tenantId The tenant to consume commands from.
      * @param deviceId The device for which the receiver will be created.
      * @param messageConsumer The message handler for the received commands.
@@ -38,25 +38,18 @@ public interface CommandConnection extends HonoClient {
      * @return A future, with a MessageConsumer.
      * @throws NullPointerException if tenantId, deviceId or messageConsumer is {@code null};
      */
-    Future<MessageConsumer> createCommandConsumer(
-            String tenantId,
-            String deviceId,
-            Consumer<Command> messageConsumer,
+    Future<MessageConsumer> createCommandConsumer(String tenantId, String deviceId,
+            BiConsumer<ProtonDelivery, Message> messageConsumer,
             Handler<Void> closeHandler);
 
     /**
      * Send back a response for a command to the business application.
-     * @param commandToResponse The original command, which should be responded.
-     * @param data The data to send back or {@code null}.
-     * @param properties The properties to send back or {@code null}.
-     * @param status The status code of the command execution.
+     * 
+     * @param tenantId The data to send back or {@code null}.
+     * @param deviceId The data to send back or {@code null}.
+     * @param replyId The data to send back or {@code null}.
      * @return A ProtonDelivery indicating the success
      * @throws NullPointerException if commandToResponse is {@code null};
      */
-    Future<ProtonDelivery> sendCommandResponse(
-            Command commandToResponse,
-            Buffer data,
-            Map<String, Object> properties,
-            int status);
-
+    Future<CommandResponseSender> getOrCreateCommandResponseSender(String tenantId, String deviceId, String replyId);
 }
