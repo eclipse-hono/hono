@@ -13,9 +13,12 @@
 
 package org.eclipse.hono.vertx.example.base;
 
+import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.function.Consumer;
 
+import io.vertx.core.buffer.Buffer;
+import io.vertx.core.json.JsonObject;
 import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.HonoClient;
@@ -144,14 +147,39 @@ public class HonoConsumerBase {
     /**
      * Handler method for a <em>device ready for command</em> notification (by an explicit event or contained implicit in
      * another message).
+     * <p>
+     * The code creates a simple command in JSON
      *
-     * @param timeUntilDisconnectNotification The notification containing the tenantId, deviceId and the Instant (that
-     *                                         defines until when this notification is valid). See {@link TimeUntilDisconnectNotification}.
+     * @param notification The notification containing the tenantId, deviceId and the Instant (that
+     *                     defines until when this notification is valid). See {@link TimeUntilDisconnectNotification}.
      */
-    private void handleCommandReadinessNotification(final TimeUntilDisconnectNotification timeUntilDisconnectNotification) {
+    private void handleCommandReadinessNotification(final TimeUntilDisconnectNotification notification) {
 
-        System.out.println(String.format("Device is ready to receive a command : <%s>.", timeUntilDisconnectNotification.toString()));
-        // fill in specific code to e.g. try to send a command here
+        System.out.println(String.format("Device is ready to receive a command : <%s>.", notification.toString()));
+
+        final String tenantId = notification.getTenantId();
+        final String deviceId = notification.getDeviceId();
+
+        honoClient.getOrCreateCommandClient(tenantId, deviceId).map(commandClient -> {
+            // generate a correlationId for the application in the payload
+            final UUID correlationIdForPayload = UUID.randomUUID();
+            final JsonObject jsonCmd = new JsonObject().put("brightness", (int)(Math.random() * 100)).
+                    put("correlationId", correlationIdForPayload.toString());
+            final Buffer commandBuffer = Buffer.buffer(jsonCmd.encodePrettily());
+
+            // send the command upstream to the device
+            commandClient.sendCommand("setBrightness", commandBuffer).map(result -> {
+                System.out.println("Successfully sent command and received response");
+                return result;
+            }).otherwise(t -> {
+                System.out.println(String.format("Could not send command or did not receive a response : %s", t.getMessage()));
+                return (Buffer) null;
+            });
+            return commandClient;
+        }).otherwise(t -> {
+            System.err.println(String.format("Could not create command client : %s", t.getMessage()));
+            return null;
+        });
     }
 
     /**
