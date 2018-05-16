@@ -72,7 +72,7 @@ public class CommandConsumer extends AbstractConsumer implements MessageConsumer
                         receiverCloseHook)
                 .setHandler(s -> {
                     if (s.succeeded()) {
-                        LOG.debug("successfully command adapter for [{}, {}]", tenantId, deviceId);
+                        LOG.debug("successfully created command adapter for [{}, {}]", tenantId, deviceId);
                         creationHandler
                                 .handle(Future.succeededFuture(new CommandConsumer(context, clientConfig, s.result())));
                     } else {
