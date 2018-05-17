@@ -8,11 +8,11 @@ activate HTTP Adapter
 HTTP Adapter->Application: 2. connected notification (ttd=30)
 activate Application
 Application->HTTP Adapter: 3. transfer("control/TENANT/4711","light","ON")
-HTTP Adapter->Device: 4. event response("light","ON")
+HTTP Adapter->Device: 4. event response("light","ON",${reqId})
 deactivate HTTP Adapter
 note over Device
-Next event sends the response of the command in HTTP header
+Command response in next operation
 end note over
-Device->HTTP Adapter: 5. send command response
+Device->HTTP Adapter: 5. /control/res("hono-cmd=light","ON",${reqId})
 HTTP Adapter->Application: 6. transfer("control/TENANT/4711/${replyId}",200,"lumen=100")
 deactivate Application
