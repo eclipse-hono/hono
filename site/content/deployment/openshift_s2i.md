@@ -200,7 +200,7 @@ deployment guide, you will need to clone the Hono repository to your local
 machine. You can do this with the following command:
 
     git clone https://github.com/eclipse/hono.git
-    
+
 Or if you want to check out a specific branch (e.g. `0.6.x`):
 
     git clone -b 0.6.x https://github.com/eclipse/hono.git
@@ -226,8 +226,8 @@ Start by creating a new project using:
 
 Then download and unpack EnMasse:
 
-    curl -LO https://github.com/EnMasseProject/enmasse/releases/download/0.17.2/enmasse-0.17.2.tgz
-    tar xzf enmasse-0.17.2.tgz
+    curl -LO https://github.com/EnMasseProject/enmasse/releases/download/0.19.0/enmasse-0.19.0.tgz
+    tar xzf enmasse-0.19.0.tgz
 
 {{% note title="Newer versions" %}}
 Newer versions of EnMasse might work as well, or might require some changes to
@@ -235,7 +235,7 @@ the deployment guide. Unless you explicitly want to try out a different version
 it is recommended to stick to the version mentioned in this tutorial.
 {{% /note %}}
 
-    ./enmasse-0.17.2/deploy-openshift.sh -n enmasse
+    ./enmasse-0.19.0/deploy-openshift.sh -n enmasse
 
 Wait for the admin console to completely start up. You can check this with
 the following command:
