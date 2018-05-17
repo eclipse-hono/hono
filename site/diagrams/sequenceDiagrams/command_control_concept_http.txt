@@ -3,7 +3,7 @@ participant HTTP Adapter
 participant AMQP 1.0 Network
 participant Application
 
-Device->HTTP Adapter: 1. send event (ttd=30)
+Device->HTTP Adapter: 1. send event (hono-ttd=30)
 activate HTTP Adapter
 HTTP Adapter->Application: 2. connected notification (ttd=30)
 activate Application
@@ -13,6 +13,6 @@ deactivate HTTP Adapter
 note over Device
 Next event sends the response of the command in HTTP header
 end note over
-Device->HTTP Adapter: 5. send event
+Device->HTTP Adapter: 5. send command response
 HTTP Adapter->Application: 6. transfer("control/TENANT/4711/${replyId}",200,"lumen=100")
 deactivate Application
