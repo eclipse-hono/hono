@@ -25,7 +25,7 @@ public class CommandConstants {
     }
 
     /**
-     * The name of the Command and Control API. endpoint.
+     * The name of the Command and Control API endpoint.
      */
     public static final String COMMAND_ENDPOINT = "control";
 
