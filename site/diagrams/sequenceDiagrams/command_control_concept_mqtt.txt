@@ -1,0 +1,18 @@
+participant Device
+participant MQTT Adapter
+participant AMQP 1.0 Network
+participant Application
+
+Device->MQTT Adapter: 1. send event
+note over Device
+content-type=application/vnd.eclipse-hono-empty-notification
+-> MQTT Adapter will convert this in tdd=-1 (infinitely)
+end note over
+activate MQTT Adapter
+MQTT Adapter->Application: 2. connected notification (ttd=-1)
+activate Application
+Application->MQTT Adapter: 3. transfer("control/TENANT/4711","light","ON")
+MQTT Adapter->Device: 4. "control/light/${reqId}":"ON"
+Device->MQTT Adapter: 5. "control/res/200/${reqId}":"lumen=100"
+MQTT Adapter->Application: 6. transfer("control/TENANT/4711/${replyId}",200,"lumen=100")
+deactivate Application
