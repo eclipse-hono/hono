@@ -10,8 +10,8 @@
   ["sslProfile", {
     "name": "external",
     "certDb": "/run/secrets/trusted-certs.pem",
-    "certFile": "/run/secrets/qdrouter-cert.pem",
-    "keyFile": "/run/secrets/qdrouter-key.pem"
+    "certFile": "/run/secrets/hono.eclipse.org-cert.pem",
+    "keyFile": "/run/secrets/hono.eclipse.org-key.pem"
   }],
 
   ["sslProfile", {

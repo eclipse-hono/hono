@@ -10,6 +10,11 @@
 # Contributors:
 #    Bosch Software Innovations GmbH - initial creation
 
+# This script deploys Hono to the Eclipse Foundation's sandbox at hono.eclipse.org
+# Some of the services require a valid certificate and private key to be
+# created as secrets hono.eclipse.org-cert.pem and hono.eclipse.org-key.pem
+# respectively.
+
 # Absolute path this script is in
 SCRIPTPATH="$(cd "$(dirname "$0")" && pwd -P)"
 CONFIG=$SCRIPTPATH/../config
@@ -69,6 +74,8 @@ docker secret create -l project=$NS qdrouterd.sasldb $SCRIPTPATH/qpid/qdrouterd.
 docker service create $CREATE_OPTIONS --name hono-dispatch-router -p 15671:5671 -p 15672:5672 \
   --secret qdrouter-key.pem \
   --secret qdrouter-cert.pem \
+  --secret hono.eclipse.org-key.pem \
+  --secret hono.eclipse.org-cert.pem \
   --secret trusted-certs.pem \
   --secret qdrouterd.json \
   --secret qdrouter-sasl.conf \
@@ -120,6 +127,8 @@ docker secret create -l project=$NS hono-service-device-registry-config.yml $SCR
 docker service create $CREATE_OPTIONS --name hono-service-device-registry -p 25671:5671 -p 28080:8080 -p 28443:8443 \
   --secret device-registry-key.pem \
   --secret device-registry-cert.pem \
+  --secret hono.eclipse.org-key.pem \
+  --secret hono.eclipse.org-cert.pem \
   --secret auth-server-cert.pem \
   --secret trusted-certs.pem \
   --secret hono-service-device-registry-config.yml \
@@ -151,13 +160,11 @@ echo ... done
 
 echo
 echo Deploying HTTP adapter ...
-docker secret create -l project=$NS http-adapter-key.pem $CERTS/http-adapter-key.pem
-docker secret create -l project=$NS http-adapter-cert.pem $CERTS/http-adapter-cert.pem
 docker secret create -l project=$NS http-adapter.credentials $SCRIPTPATH/../deploy/http-adapter.credentials
 docker secret create -l project=$NS hono-adapter-http-vertx-config.yml $SCRIPTPATH/hono-adapter-http-vertx-config.yml
 docker service create $CREATE_OPTIONS --name hono-adapter-http-vertx -p 8080:8080 -p 8443:8443 \
-  --secret http-adapter-key.pem \
-  --secret http-adapter-cert.pem \
+  --secret hono.eclipse.org-key.pem \
+  --secret hono.eclipse.org-cert.pem \
   --secret trusted-certs.pem \
   --secret http-adapter.credentials \
   --secret hono-adapter-http-vertx-config.yml \
@@ -170,13 +177,11 @@ echo ... done
 
 echo
 echo Deploying MQTT adapter ...
-docker secret create -l project=$NS mqtt-adapter-key.pem $CERTS/mqtt-adapter-key.pem
-docker secret create -l project=$NS mqtt-adapter-cert.pem $CERTS/mqtt-adapter-cert.pem
 docker secret create -l project=$NS mqtt-adapter.credentials $SCRIPTPATH/../deploy/mqtt-adapter.credentials
 docker secret create -l project=$NS hono-adapter-mqtt-vertx-config.yml $SCRIPTPATH/hono-adapter-mqtt-vertx-config.yml
 docker service create $CREATE_OPTIONS --name hono-adapter-mqtt-vertx -p 1883:1883 -p 8883:8883 \
-  --secret mqtt-adapter-key.pem \
-  --secret mqtt-adapter-cert.pem \
+  --secret hono.eclipse.org-key.pem \
+  --secret hono.eclipse.org-cert.pem \
   --secret trusted-certs.pem \
   --secret mqtt-adapter.credentials \
   --secret hono-adapter-mqtt-vertx-config.yml \
@@ -189,13 +194,11 @@ echo ... done
 
 echo
 echo Deploying Kura adapter ...
-docker secret create -l project=$NS kura-adapter-key.pem $CERTS/kura-adapter-key.pem
-docker secret create -l project=$NS kura-adapter-cert.pem $CERTS/kura-adapter-cert.pem
 docker secret create -l project=$NS kura-adapter.credentials $SCRIPTPATH/../deploy/kura-adapter.credentials
 docker secret create -l project=$NS hono-adapter-kura-config.yml $SCRIPTPATH/hono-adapter-kura-config.yml
 docker service create $CREATE_OPTIONS --name hono-adapter-kura -p 1884:1883 -p 8884:8883 \
-  --secret kura-adapter-key.pem \
-  --secret kura-adapter-cert.pem \
+  --secret hono.eclipse.org-key.pem \
+  --secret hono.eclipse.org-cert.pem \
   --secret trusted-certs.pem \
   --secret kura-adapter.credentials \
   --secret hono-adapter-kura-config.yml \
@@ -209,8 +212,11 @@ echo ... done
 echo
 echo "Deploying NGINX for redirecting to Hono web site"
 docker config create -l project=$NS site.conf $SCRIPTPATH/nginx.conf
+# we bind mount the directory that is used by Certbot to
+# get/update the Let's Encrypt certificate
 docker service create --detach=false --name hono-nginx -p 80:80 \
-   --config source=site.conf,target=/etc/nginx/conf.d/site.conf,mode=0440 \
+  --config source=site.conf,target=/etc/nginx/conf.d/site.conf,mode=0440 \
+  --mount type=bind,source=/var/www/certbot,target=/var/www/letsencrypt \
   nginx:1.13
 echo ... done
 

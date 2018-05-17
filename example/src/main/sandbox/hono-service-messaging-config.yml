@@ -1,8 +1,6 @@
 hono:
   app:
     maxInstances: 1
-    healthCheckBindAddress: 0.0.0.0
-    healthCheckPort: 8088
   auth:
     host: ${hono.auth.host}
     port: 5671
