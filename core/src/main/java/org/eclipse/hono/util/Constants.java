@@ -14,6 +14,7 @@ package org.eclipse.hono.util;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 
 import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.engine.Record;
@@ -184,16 +185,21 @@ public final class Constants {
     public static final String HEADER_TIME_TIL_DISCONNECT = "hono-ttd";
 
     /**
-     * The header name defined for setting the <em>reply id</em> for device responses to a command.
-     * The <em>reply id</em> is the last part of a command endpoint that conforms to the pattern
-     * &lt;control&gt;/&lt;tenant&gt;/&lt;device&gt;/&lt;reply id&gt;.
+     * The header name defined for setting the <em>request id</em> for device responses to a command.
+     * This id is sent to the device and has to be used in replies to the command to correlate the original command with
+     * the response.
      */
-    public static final String HEADER_COMMAND_REPLY_ID = "hono-command-reply-id";
+    public static final String HEADER_COMMAND_REQUEST_ID = "hono-cmd-req-id";
 
     /**
-     * The header name defined for setting the <em>correlation id</em> for device responses to a command.
+     * The header name defined for setting the <em>command</em> that is sent to the device.
      */
-    public static final String HEADER_COMMAND_CORRELATION_ID = "hono-command-correlation-id";
+    public static final String HEADER_COMMAND = "hono-command";
+
+    /**
+     * The character used to separate parts in a String that represents two Strings (see {@link #combineTwoStrings(String, String)}).
+     */
+    static final char STRING_COMBINATION_SEPARATION_CHAR = '#';
 
     private Constants() {
     }
@@ -303,5 +309,54 @@ public final class Constants {
      */
     public static boolean isDefaultTenant(final String tenantId) {
         return DEFAULT_TENANT.equals(tenantId);
+    }
+
+    /**
+     * Combine two Strings into one so that they can later be <em>decombined</em> into the previous two Strings again
+     * (see {@link #splitTwoStrings(String)}.
+     *
+     * @param s1 First String to be combined with the second into one String.
+     *           If the String is {@code null}, it will be converted to an empty String first.
+     * @param s2 Second String to be combined with the first into one String.
+     *           If the String is {@code null}, it will be converted to an empty String first.
+     * @return The combined String.
+     */
+    public static String combineTwoStrings(final String s1, final String s2) {
+        final String stringOne = Optional.ofNullable(s1).orElse("");
+        final String stringTwo = Optional.ofNullable(s2).orElse("");
+        final StringBuffer buf = new StringBuffer(stringOne.length() + stringTwo.length() + 4);
+        buf.append(stringOne.length()).append(STRING_COMBINATION_SEPARATION_CHAR).append(stringOne).append(stringTwo);
+        return buf.toString();
+    }
+
+    /**
+     * Split a String (that was typically created by invoking {@link #combineTwoStrings(String, String)} previously)
+     * into two separate Strings again.
+     *
+     * @param combinedString The combined String that is to be split into two separate Strings again.
+     * @return A String array with two elements that contains the two Strings, or {@code null} if the passed combinedString
+     *         is not valid.
+     */
+    public static String[] splitTwoStrings(final String combinedString) {
+        if (combinedString == null) {
+            return null;
+        } else {
+            final int separatorIndex = combinedString.indexOf(STRING_COMBINATION_SEPARATION_CHAR);
+            if (separatorIndex == -1) {
+                return null;
+            } else {
+                try {
+                    final int lengthStringOne = Integer.parseInt(combinedString.substring(0, separatorIndex));
+                    final String[] twoStrings = new String[2];
+                    twoStrings[0] = combinedString.substring(separatorIndex + 1, separatorIndex + 1 + lengthStringOne);
+                    twoStrings[1] = combinedString.substring(separatorIndex + lengthStringOne + 1, combinedString.length());
+                    return twoStrings;
+                } catch (final NumberFormatException ne) {
+                    return null;
+                } catch (ArrayIndexOutOfBoundsException ae) {
+                    return null;
+                }
+            }
+        }
     }
 }
