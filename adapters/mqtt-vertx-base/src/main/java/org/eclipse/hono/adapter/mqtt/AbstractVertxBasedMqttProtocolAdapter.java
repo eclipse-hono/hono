@@ -554,8 +554,8 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
 
                     final MessageSender sender = senderTracker.result();
                     final Message downstreamMessage = newMessage(
-                            String.format("%s/%s", endpointName, tenant),
-                            deviceId,
+                            ResourceIdentifier.from(endpointName, tenant, deviceId),
+                            sender.isRegistrationAssertionRequired(),
                             ctx.message().topicName(),
                             ctx.contentType(),
                             payload,

@@ -2,7 +2,7 @@
   ["router", {
     "id": "Hono.Example.Router",
     "mode": "standalone",
-    "workerThreads": 4,
+    "workerThreads": 3,
     "saslConfigName": "qdrouter-sasl",
     "saslConfigPath": "/etc/hono/"
   }],
@@ -43,6 +43,7 @@
     "requireSsl": true,
     "host": "0.0.0.0",
     "port": 5673,
+    "maxSessionFrames": 100,
     "authenticatePeer": true,
     "saslMechanisms": "EXTERNAL"
   }],
@@ -106,11 +107,9 @@
       "maxConnections": 6,
       "groups": {
         "Hono": {
-          "users": "Eclipse IoT;Hono;hono-messaging",
+          "users": "Eclipse IoT;Hono;hono-messaging,Eclipse IoT;Hono;http-adapter,Eclipse IoT;Hono;mqtt-adapter",
           "remoteHosts": "*",
           "maxSessions": 2,
-          "maxFrameSize": 16384,
-          "maxSessionWindow": 6553600,
           "maxMessageSize": 131072,
           "allowUserIdProxy": true,
           "targets": "telemetry/*, event/*"

@@ -34,6 +34,7 @@ import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.TelemetryConstants;
 import org.eclipse.hono.util.TenantObject;
 import org.slf4j.Logger;
@@ -514,8 +515,8 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                     if (tenantConfigTracker.result().isAdapterEnabled(getTypeName())) {
                         final MessageSender sender = senderTracker.result();
                         final Message downstreamMessage = newMessage(
-                                String.format("%s/%s", endpointName, tenant),
-                                deviceId,
+                                ResourceIdentifier.from(endpointName, tenant, deviceId),
+                                sender.isRegistrationAssertionRequired(),
                                 ctx.request().uri(),
                                 contentType,
                                 payload,

@@ -64,13 +64,30 @@ abstract public class AbstractSender extends AbstractHonoClient implements Messa
      * A logger to be shared with subclasses.
      */
     protected final Logger LOG = LoggerFactory.getLogger(getClass());
-
+    /**
+     * The identifier of the tenant that the devices belong to which have published the messages
+     * that this sender is used to send downstream.
+     */
     protected final String tenantId;
+    /**
+     * The target address that this sender sends messages to.
+     */
     protected final String targetAddress;
 
     private Handler<Void> drainHandler;
     private boolean registrationAssertionRequired;
 
+    /**
+     * Creates a new sender.
+     * 
+     * @param config The configuration properties to use.
+     * @param sender The sender link to send messages over.
+     * @param tenantId The identifier of the tenant that the
+     *           devices belong to which have published the messages
+     *           that this sender is used to send downstream.
+     * @param targetAddress The target address to send the messages to.
+     * @param context The vert.x context to use for sending the messages.
+     */
     protected AbstractSender(
             final ClientConfigProperties config,
             final ProtonSender sender,

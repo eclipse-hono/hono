@@ -217,7 +217,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * type name.
      * <p>
      * The name returned by this method is added to a downstream message by the
-     * {@link #addProperties(Message, JsonObject)} method.
+     * {@link #addProperties(Message, JsonObject, boolean)} method.
      * 
      * @return The adapter's name.
      */
@@ -640,10 +640,27 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     /**
      * Adds message properties based on a device's registration information.
      * <p>
+     * This methods simply invokes {@link #addProperties(Message, JsonObject, boolean)} with
+     * with {@code true} as the value for the regAssertionRequired parameter.
+     * 
+     * @param message The message to set the properties on.
+     * @param registrationInfo The values to set.
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     */
+    protected final void addProperties(
+            final Message message,
+            final JsonObject registrationInfo) {
+
+        addProperties(message, registrationInfo, true);
+    }
+
+    /**
+     * Adds message properties based on a device's registration information.
+     * <p>
      * Sets the following properties on the message:
      * <ul>
      * <li>Adds the registration assertion found in the {@link RegistrationConstants#FIELD_ASSERTION} property of the
-     * given registration information.</li>
+     * given registration information (if required by downstream peer).</li>
      * <li>Adds {@linkplain #getTypeName() the adapter's name} to the message in application property
      * {@link MessageHelper#APP_PROPERTY_ORIG_ADAPTER}</li>
      * <li>Augments the message with missing (application) properties corresponding to the
@@ -654,12 +671,19 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * 
      * @param message The message to set the properties on.
      * @param registrationInfo The values to set.
+     * @param regAssertionRequired {@code true} if the downstream peer requires the registration assertion to
+     *            be included in the message.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    protected final void addProperties(final Message message, final JsonObject registrationInfo) {
+    protected final void addProperties(
+            final Message message,
+            final JsonObject registrationInfo,
+            final boolean regAssertionRequired) {
 
-        final String registrationAssertion = registrationInfo.getString(RegistrationConstants.FIELD_ASSERTION);
-        MessageHelper.addRegistrationAssertion(message, registrationAssertion);
+        if (regAssertionRequired) {
+            final String registrationAssertion = registrationInfo.getString(RegistrationConstants.FIELD_ASSERTION);
+            MessageHelper.addRegistrationAssertion(message, registrationAssertion);
+        }
         MessageHelper.addProperty(message, MessageHelper.APP_PROPERTY_ORIG_ADAPTER, getTypeName());
         if (getConfig().isDefaultsEnabled()) {
             final JsonObject defaults = registrationInfo.getJsonObject(RegistrationConstants.FIELD_DEFAULTS);
@@ -744,18 +768,19 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * Subclasses are encouraged to use this method for creating {@code Message} instances to be sent downstream in
      * order to have the following properties set on the message automatically:
      * <ul>
-     * <li><em>to</em> will be set to address</li>
-     * <li>application property <em>device_id</em> will be set to device ID</li>
-     * <li>application property <em>orig_address</em> will be set to publish address</li>
+     * <li><em>to</em> will be set to the address consisting of the target's endpoint and tenant</li>
      * <li><em>content-type</em> will be set to content type</li>
-     * <li><em>creation-time</em> will be set to the current number of milliseconds from the epoch of
-     * 1970-01-01T00:00:00Z.
-     * <li>additional properties set by {@link #addProperties(Message, JsonObject)}</li>
+     * <li><em>creation-time</em> will be set to the current number of milliseconds since 1970-01-01T00:00:00Z</li>
+     * <li>application property <em>device_id</em> will be set to the target's resourceId property</li>
+     * <li>application property <em>orig_address</em> will be set to the given publish address</li>
+     * <li>application property <em>ttd</em> will be set to the given time til disconnect</li>
+     * <li>additional properties set by {@link #addProperties(Message, JsonObject, boolean)}</li>
      * </ul>
-     * This method also sets the message's payload.
+     * This method also sets the message's payload as an AMQP <em>Data</em> section.
      * 
-     * @param address The receiver of the message.
-     * @param deviceId The identifier of the device that the message originates from.
+     * @param target The resource that the message is targeted at.
+     * @param regAssertionRequired {@code true} if the downstream peer requires the registration assertion to
+     *            be included in the message.
      * @param publishAddress The address that the message has been published to originally by the device. (may be
      *            {@code null}).
      *            <p>
@@ -765,27 +790,32 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * @param payload The message payload.
      * @param registrationInfo The device's registration information as retrieved by the <em>Device Registration</em>
      *            service's <em>assert Device Registration</em> operation.
-     * @param timeUntilDisconnect The time to deliver in seconds to indicate that a device is ready to receive an upstream message.
-     *                      Maybe {@code null}.
+     * @param timeUntilDisconnect The number of milliseconds until the device that has published the message
+     *            will disconnect from the protocol adapter (may be {@code null}).
      * @return The message.
-     * @throws NullPointerException if address, device ID or registration info are {@code null}.
+     * @throws NullPointerException if target or registration info are {@code null}.
      */
     protected final Message newMessage(
-            final String address,
-            final String deviceId,
+            final ResourceIdentifier target,
+            final boolean regAssertionRequired,
             final String publishAddress,
             final String contentType,
             final Buffer payload,
             final JsonObject registrationInfo,
             final Integer timeUntilDisconnect) {
 
-        Objects.requireNonNull(address);
-        Objects.requireNonNull(deviceId);
+        Objects.requireNonNull(target);
         Objects.requireNonNull(registrationInfo);
 
         final Message msg = ProtonHelper.message();
-        msg.setAddress(address);
-        MessageHelper.addDeviceId(msg, deviceId);
+        msg.setAddress(target.getBasePath());
+        MessageHelper.addDeviceId(msg, target.getResourceId());
+        if (!regAssertionRequired) {
+            // this adapter is not connected to Hono Messaging
+            // so we need to add the annotations for tenant and
+            // device ID
+            MessageHelper.annotate(msg, target);
+        }
         if (publishAddress != null) {
             MessageHelper.addProperty(msg, MessageHelper.APP_PROPERTY_ORIG_ADDRESS, publishAddress);
         }
@@ -796,12 +826,12 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
             msg.setBody(new Data(new Binary(payload.getBytes())));
         }
         if (timeUntilDisconnect != null) {
-            MessageHelper.addTimeUntilDisconnect(msg, timeUntilDisconnect.intValue());
+            MessageHelper.addTimeUntilDisconnect(msg, timeUntilDisconnect);
         }
 
         MessageHelper.setCreationTime(msg);
 
-        addProperties(msg, registrationInfo);
+        addProperties(msg, registrationInfo, regAssertionRequired);
         return msg;
     }
 

@@ -14,7 +14,7 @@
 package org.eclipse.hono.service;
 
 import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertThat;
+import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
@@ -163,6 +163,18 @@ public class AbstractProtocolAdapterBaseTest {
         final Message message = ProtonHelper.message();
         adapter.addProperties(message, newRegistrationAssertionResult("token"));
         assertThat(MessageHelper.getRegistrationAssertion(message), is("token"));
+    }
+
+    /**
+     * Verifies that the registration assertion is not set on a downstream message
+     * if the downstream peer does not require it.
+     */
+    @Test
+    public void testAddPropertiesOmitsRegistrationAssertion() {
+
+        final Message message = ProtonHelper.message();
+        adapter.addProperties(message, newRegistrationAssertionResult("token"), false);
+        assertNull(MessageHelper.getRegistrationAssertion(message));
     }
 
     /**

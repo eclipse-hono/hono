@@ -10,10 +10,12 @@ hono:
     certPath: /etc/hono/certs/mqtt-adapter-cert.pem
   messaging:
     name: 'Hono MQTT Adapter'
-    host: hono-service-messaging.hono
-    port: 5672
-    username: mqtt-adapter@HONO
-    password: mqtt-secret
+    host: hono-dispatch-router.hono
+    port: 5673
+    amqpHostname: hono-internal
+    keyPath: /etc/hono/certs/mqtt-adapter-key.pem
+    certPath: /etc/hono/certs/mqtt-adapter-cert.pem
+    trustStorePath: /etc/hono/certs/trusted-certs.pem
   registration:
     name: 'Hono MQTT Adapter'
     host: hono-service-device-registry.hono

@@ -9,25 +9,27 @@ hono:
     keyPath: /etc/hono/certs/http-adapter-key.pem
     certPath: /etc/hono/certs/http-adapter-cert.pem
   messaging:
-    name: 'Hono REST Adapter'
-    host: hono-service-messaging.hono
-    port: 5672
-    username: http-adapter@HONO
-    password: http-secret
+    name: 'Hono HTTP Adapter'
+    host: hono-dispatch-router.hono
+    port: 5673
+    amqpHostname: hono-internal
+    keyPath: /etc/hono/certs/http-adapter-key.pem
+    certPath: /etc/hono/certs/http-adapter-cert.pem
+    trustStorePath: /etc/hono/certs/trusted-certs.pem
   registration:
-    name: 'Hono REST Adapter'
+    name: 'Hono HTTP Adapter'
     host: hono-service-device-registry.hono
     port: 5672
     username: http-adapter@HONO
     password: http-secret
   credentials:
-    name: 'Hono REST Adapter'
+    name: 'Hono HTTP Adapter'
     host: hono-service-device-registry.hono
     port: 5672
     username: http-adapter@HONO
     password: http-secret
   tenant:
-    name: 'Hono REST Adapter'
+    name: 'Hono HTTP Adapter'
     host: hono-service-device-registry.hono
     port: 5672
     username: http-adapter@HONO
