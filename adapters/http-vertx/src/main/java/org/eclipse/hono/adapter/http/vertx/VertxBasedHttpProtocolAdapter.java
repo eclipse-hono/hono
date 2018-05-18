@@ -130,14 +130,14 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
                     .allowedHeader(HttpHeaders.AUTHORIZATION.toString())
                     .allowedHeader(HttpHeaders.CONTENT_TYPE.toString()));
 
-            // require Basic auth for POSTing telemetry
+            // require auth for POSTing telemetry
             router.route(HttpMethod.POST, "/telemetry").handler(authHandler);
 
             // route for posting telemetry data using tenant and device ID determined as part of
             // device authentication
             router.route(HttpMethod.POST, "/telemetry").handler(this::handlePostTelemetry);
 
-            // require Basic auth for PUTing telemetry
+            // require auth for PUTing telemetry
             router.route(HttpMethod.PUT, "/telemetry/*").handler(authHandler);
             // assert that authenticated device's tenant matches tenant from path variables
             router.route(HttpMethod.PUT, String.format("/telemetry/:%s/:%s", PARAM_TENANT, PARAM_DEVICE_ID))
@@ -165,14 +165,14 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
                     .allowedHeader(HttpHeaders.AUTHORIZATION.toString())
                     .allowedHeader(HttpHeaders.CONTENT_TYPE.toString()));
 
-            // require Basic auth for POSTing telemetry
+            // require auth for POSTing events
             router.route(HttpMethod.POST, "/event").handler(authHandler);
 
             // route for posting events using tenant and device ID determined as part of
             // device authentication
             router.route(HttpMethod.POST, "/event").handler(this::handlePostEvent);
 
-            // require Basic auth for PUTing event
+            // require auth for PUTing events
             router.route(HttpMethod.PUT, "/event/*").handler(authHandler);
             // route for asserting that authenticated device's tenant matches tenant from path variables
             router.route(HttpMethod.PUT, String.format("/event/:%s/:%s", PARAM_TENANT, PARAM_DEVICE_ID))
