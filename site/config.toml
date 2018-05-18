@@ -22,7 +22,7 @@ pluralizeListTitles = "false"
 	repo_url = "https://github.com/eclipse/hono"
 
   # CI Server
-  hipp_url = "https://hudson.eclipse.org/hono"
+  hipp_url = "https://ci.eclipse.org/hono"
 
 	permalink = "#"
 
