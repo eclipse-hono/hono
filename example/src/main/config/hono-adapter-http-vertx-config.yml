@@ -11,9 +11,11 @@ hono:
     certPath: ${secret.path}/http-adapter-cert.pem
   messaging:
     name: 'Hono HTTP Adapter'
-    host: ${hono.messaging.host}
-    port: 5671
-    credentialsPath: ${secret.path}/http-adapter.credentials
+    amqpHostname: hono-internal
+    host: hono-dispatch-router.hono
+    port: 5673
+    keyPath: ${secret.path}/http-adapter-key.pem
+    certPath: ${secret.path}/http-adapter-cert.pem
     trustStorePath: ${secret.path}/trusted-certs.pem
   registration:
     name: 'Hono HTTP Adapter'

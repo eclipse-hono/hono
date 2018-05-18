@@ -57,12 +57,12 @@ The second command creates and starts up Docker Swarm *services* for all compone
 * Hono Instance
   * An *HTTP Adapter* instance that exposes Hono's Telemetry and Event APIs as URI resources.
   * A *MQTT Adapter* instance that exposes Hono's Telemetry and Event APIs as an MQTT topic hierarchy.
-  * A *Kura Adapter* instance that exposes Hono's Telemetry and Event APIs as an Eclipse Kura&trade; compatible MQTT topic hierarchy.
-  * A *Hono Messaging* instance that protocol adapters connect to in order to forward data from devices.
-  * A *Device Registry* instance that manages device data and issues device registration assertions to protocol adapters.
+  * A *Kura Adapter* instance that exposes Hono's Telemetry and Event APIs as an Eclipse Kura&trade; compatible MQTT topic hierarchy. Note that the Kura adapter is special insofar as it serves as an example of a *custom* protocol adapter. Hono can be extended with custom protocol adapters in order to add support for interacting with devices using a custom communication protocol that is not supported by Hono's standard protocol adapters out of the box.
+  * A *Device Registry* instance that manages registration information and issues device registration assertions to protocol adapters.
+  * A *Hono Messaging* instance that custom protocol adapters are required to connect to in order to validate a device's registration status before published data is forwarded downstream. Hono's standard protocol adapters connect to the AMQP Network directly (without going through Hono Messaging) because they validate the devices' registration status themselves.
   * An *Auth Server* instance that authenticates Hono components and issues tokens asserting identity and authorities.
 * AMQP Network
-  * A *Dispatch Router* instance that downstream clients connect to in order to consume telemetry data and events from devices.
+  * A *Dispatch Router* instance that downstream applications connect to in order to consume telemetry data and events from devices.
   * An *Artemis* instance serving as the persistence store for events.
 * Monitoring Infrastructure
   * An *InfluxDB* instance for storing metrics data from the Hono Messaging component.

@@ -104,10 +104,10 @@
 
   ["vhost", {
       "id": "hono-internal",
-      "maxConnections": 6,
+      "maxConnections": 9,
       "groups": {
         "Hono": {
-          "users": "Eclipse IoT;Hono;hono-messaging",
+          "users": "Eclipse IoT;Hono;hono-messaging, Eclipse IoT;Hono;http-adapter, Eclipse IoT;Hono;mqtt-adapter, Eclipse IoT;Hono;kura-adapter",
           "remoteHosts": "*",
           "maxSessions": 2,
           "maxFrameSize": 16384,
