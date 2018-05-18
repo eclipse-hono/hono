@@ -80,8 +80,9 @@
       <acceptors>
 
          <!-- AMQP Acceptor.  Listens on default AMQP port for AMQP traffic.-->
-         <!--<acceptor name="amqp">tcp://0.0.0.0:5672?protocols=AMQP</acceptor>-->
-         <acceptor name="amqps">tcp://0.0.0.0:5671?protocols=AMQP;sslEnabled=true;keyStorePath=file:/run/secrets/artemisKeyStore.p12;keyStorePassword=artemiskeys;needClientAuth=true;trustStorePath=file:/run/secrets/trustStore.jks;trustStorePassword=honotrust</acceptor>
+         <!--  Use non-TLS port for Sandbox because traffic in Docker Swarm is encrypted by default -->
+         <acceptor name="amqp">tcp://0.0.0.0:5672?protocols=AMQP;needClientAuth=true</acceptor>
+         <!-- acceptor name="amqps">tcp://0.0.0.0:5671?protocols=AMQP;sslEnabled=true;keyStorePath=file:/run/secrets/artemisKeyStore.p12;keyStorePassword=artemiskeys;needClientAuth=true;trustStorePath=file:/run/secrets/trustStore.jks;trustStorePassword=honotrust</acceptor-->
 
       </acceptors>
 

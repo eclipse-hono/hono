@@ -11,28 +11,29 @@ hono:
     maxPayloadSize: 8096
   messaging:
     name: 'Hono HTTP Adapter'
-    host: ${hono.messaging.host}
-    port: 5671
-    credentialsPath: /run/secrets/http-adapter.credentials
-    trustStorePath: /run/secrets/trusted-certs.pem
+    host: hono-dispatch-router.hono
+    port: 5673
+    amqpHostname: hono-internal
   registration:
     name: 'Hono HTTP Adapter'
     host: ${hono.registration.host}
-    port: 5671
+    port: 5672
     credentialsPath: /run/secrets/http-adapter.credentials
-    trustStorePath: /run/secrets/trusted-certs.pem
   credentials:
     name: 'Hono HTTP Adapter'
     host: ${hono.registration.host}
-    port: 5671
+    port: 5672
     credentialsPath: /run/secrets/http-adapter.credentials
-    trustStorePath: /run/secrets/trusted-certs.pem
   tenant:
     name: 'Hono HTTP Adapter'
     host: ${hono.registration.host}
-    port: 5671
+    port: 5672
     credentialsPath: /run/secrets/http-adapter.credentials
-    trustStorePath: /run/secrets/trusted-certs.pem
+  command:
+    name: 'Hono HTTP Adapter'
+    host: hono-dispatch-router.hono
+    port: 5673
+    amqpHostname: hono-internal
   metric:
     reporter:
       graphite:

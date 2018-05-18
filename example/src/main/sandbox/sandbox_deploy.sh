@@ -47,8 +47,6 @@ docker secret create -l $NS artemis-roles.properties $SCRIPTPATH/artemis/artemis
 docker secret create -l $NS login.config $SCRIPTPATH/artemis/login.config
 docker secret create -l $NS logging.properties $SCRIPTPATH/artemis/logging.properties
 docker secret create -l $NS artemis.profile $SCRIPTPATH/artemis/artemis.profile
-docker secret create -l $NS artemisKeyStore.p12 $CERTS/artemisKeyStore.p12
-docker secret create -l $NS trustStore.jks $CERTS/trustStore.jks
 docker service create $CREATE_OPTIONS --name hono-artemis \
   --env ARTEMIS_CONFIGURATION=/run/secrets \
   --secret artemis-broker.xml \
@@ -58,22 +56,16 @@ docker service create $CREATE_OPTIONS --name hono-artemis \
   --secret login.config \
   --secret logging.properties \
   --secret artemis.profile \
-  --secret artemisKeyStore.p12 \
-  --secret trustStore.jks \
   --entrypoint "/opt/artemis/bin/artemis run xml:/run/secrets/artemis-bootstrap.xml" \
   ${artemis.image.name}
 echo ... done
 
 echo
 echo Deploying Qpid Dispatch Router ...
-docker secret create -l project=$NS qdrouter-key.pem $CERTS/qdrouter-key.pem
-docker secret create -l project=$NS qdrouter-cert.pem $CERTS/qdrouter-cert.pem
 docker secret create -l project=$NS qdrouterd.json $SCRIPTPATH/qpid/sandbox-qdrouterd.json
 docker secret create -l project=$NS qdrouter-sasl.conf $SCRIPTPATH/qpid/qdrouter-sasl.conf
 docker secret create -l project=$NS qdrouterd.sasldb $SCRIPTPATH/qpid/qdrouterd.sasldb
 docker service create $CREATE_OPTIONS --name hono-dispatch-router -p 15671:5671 -p 15672:5672 \
-  --secret qdrouter-key.pem \
-  --secret qdrouter-cert.pem \
   --secret hono.eclipse.org-key.pem \
   --secret hono.eclipse.org-cert.pem \
   --secret trusted-certs.pem \
@@ -134,29 +126,34 @@ docker service create $CREATE_OPTIONS --name hono-service-device-registry -p 256
   --secret hono-service-device-registry-config.yml \
   --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-service-device-registry-config.yml \
   --env LOGGING_CONFIG=classpath:logback-spring.xml \
-  --env SPRING_PROFILES_ACTIVE=prod \
+  --env SPRING_PROFILES_ACTIVE=dev \
   --env _JAVA_OPTIONS=-Xmx64m \
   --mount type=volume,source=device-registry,target=/var/lib/hono/device-registry \
   ${docker.image.org-name}/hono-service-device-registry:${project.version}
 echo ... done
 
-echo
-echo Deploying Hono Messaging ...
-docker secret create -l project=$NS hono-messaging-key.pem $CERTS/hono-messaging-key.pem
-docker secret create -l project=$NS hono-messaging-cert.pem $CERTS/hono-messaging-cert.pem
-docker secret create -l project=$NS hono-service-messaging-config.yml $SCRIPTPATH/hono-service-messaging-config.yml
-docker service create $CREATE_OPTIONS --name hono-service-messaging \
-  --secret hono-messaging-key.pem \
-  --secret hono-messaging-cert.pem \
-  --secret auth-server-cert.pem \
-  --secret trusted-certs.pem \
-  --secret hono-service-messaging-config.yml \
-  --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-service-messaging-config.yml \
-  --env LOGGING_CONFIG=classpath:logback-spring.xml \
-  --env SPRING_PROFILES_ACTIVE=prod \
-  --env _JAVA_OPTIONS=-Xmx196m \
-  ${docker.image.org-name}/hono-service-messaging:${project.version}
-echo ... done
+# For the time being, we do not deploy Hono Messaging anymore because
+# all protocol adapters connect to Dispatch Router directly.
+# However, once we support custom adapters with the sandbox, we might
+# want to deploy Hono Messaging again.
+
+#echo
+#echo Deploying Hono Messaging ...
+#docker secret create -l project=$NS hono-messaging-key.pem $CERTS/hono-messaging-key.pem
+#docker secret create -l project=$NS hono-messaging-cert.pem $CERTS/hono-messaging-cert.pem
+#docker secret create -l project=$NS hono-service-messaging-config.yml $SCRIPTPATH/hono-service-messaging-config.yml
+#docker service create $CREATE_OPTIONS --name hono-service-messaging \
+#  --secret hono-messaging-key.pem \
+#  --secret hono-messaging-cert.pem \
+#  --secret auth-server-cert.pem \
+#  --secret trusted-certs.pem \
+#  --secret hono-service-messaging-config.yml \
+#  --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-service-messaging-config.yml \
+#  --env LOGGING_CONFIG=classpath:logback-spring.xml \
+#  --env SPRING_PROFILES_ACTIVE=prod \
+#  --env _JAVA_OPTIONS=-Xmx196m \
+#  ${docker.image.org-name}/hono-service-messaging:${project.version}
+#echo ... done
 
 echo
 echo Deploying HTTP adapter ...
@@ -165,11 +162,10 @@ docker secret create -l project=$NS hono-adapter-http-vertx-config.yml $SCRIPTPA
 docker service create $CREATE_OPTIONS --name hono-adapter-http-vertx -p 8080:8080 -p 8443:8443 \
   --secret hono.eclipse.org-key.pem \
   --secret hono.eclipse.org-cert.pem \
-  --secret trusted-certs.pem \
   --secret http-adapter.credentials \
   --secret hono-adapter-http-vertx-config.yml \
   --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-adapter-http-vertx-config.yml \
-  --env SPRING_PROFILES_ACTIVE=prod \
+  --env SPRING_PROFILES_ACTIVE=trace \
   --env LOGGING_CONFIG=classpath:logback-spring.xml \
   --env _JAVA_OPTIONS=-Xmx128m \
   ${docker.image.org-name}/hono-adapter-http-vertx:${project.version}
@@ -182,11 +178,10 @@ docker secret create -l project=$NS hono-adapter-mqtt-vertx-config.yml $SCRIPTPA
 docker service create $CREATE_OPTIONS --name hono-adapter-mqtt-vertx -p 1883:1883 -p 8883:8883 \
   --secret hono.eclipse.org-key.pem \
   --secret hono.eclipse.org-cert.pem \
-  --secret trusted-certs.pem \
   --secret mqtt-adapter.credentials \
   --secret hono-adapter-mqtt-vertx-config.yml \
   --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-adapter-mqtt-vertx-config.yml \
-  --env SPRING_PROFILES_ACTIVE=prod \
+  --env SPRING_PROFILES_ACTIVE=dev \
   --env LOGGING_CONFIG=classpath:logback-spring.xml \
   --env _JAVA_OPTIONS=-Xmx128m \
   ${docker.image.org-name}/hono-adapter-mqtt-vertx:${project.version}
@@ -199,7 +194,6 @@ docker secret create -l project=$NS hono-adapter-kura-config.yml $SCRIPTPATH/hon
 docker service create $CREATE_OPTIONS --name hono-adapter-kura -p 1884:1883 -p 8884:8883 \
   --secret hono.eclipse.org-key.pem \
   --secret hono.eclipse.org-cert.pem \
-  --secret trusted-certs.pem \
   --secret kura-adapter.credentials \
   --secret hono-adapter-kura-config.yml \
   --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-adapter-kura-config.yml \

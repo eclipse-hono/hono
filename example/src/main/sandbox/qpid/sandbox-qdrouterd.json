@@ -14,19 +14,13 @@
     "keyFile": "/run/secrets/hono.eclipse.org-key.pem"
   }],
 
-  ["sslProfile", {
-    "name": "internal",
-    "certDb": "/run/secrets/trusted-certs.pem",
-    "certFile": "/run/secrets/qdrouter-cert.pem",
-    "keyFile": "/run/secrets/qdrouter-key.pem",
-    "uidFormat": "oun"
-  }],
-
   ["listener", {
     "sslProfile": "external",
     "requireSsl": true,
     "host": "0.0.0.0",
     "port": 5671,
+    "initialHandshakeTimeoutSeconds": 3,
+    "maxSessionFrames": 100,
     "authenticatePeer": true,
     "saslMechanisms": "PLAIN"
   }],
@@ -34,24 +28,25 @@
   ["listener", {
     "host": "0.0.0.0",
     "port": 5672,
+    "initialHandshakeTimeoutSeconds": 3,
+    "maxSessionFrames": 100,
     "authenticatePeer": true,
     "saslMechanisms": "PLAIN"
   }],
 
   ["listener", {
-    "sslProfile": "internal",
-    "requireSsl": true,
     "host": "0.0.0.0",
     "port": 5673,
-    "authenticatePeer": true,
-    "saslMechanisms": "EXTERNAL"
+    "initialHandshakeTimeoutSeconds": 3,
+    "maxSessionFrames": 100,
+    "authenticatePeer": false,
+    "logMessage": "none"
   }],
 
   ["connector", {
-    "sslProfile": "external",
     "name": "broker",
     "host": "hono-artemis.hono",
-    "port": 5671,
+    "port": 5672,
     "role": "route-container",
     "saslUsername": "artemis",
     "saslPassword": "artemis"
@@ -85,24 +80,23 @@
           "users": "consumer@HONO",
           "remoteHosts": "*",
           "maxSessions": 10,
-          "sources": "telemetry/*, event/*"
+          "allowUserIdProxy": true,
+          "sources": "telemetry/*, event/*",
+          "targets": "control/*"
         }
       }
   }],
 
   ["vhost", {
       "id": "hono-internal",
-      "maxConnections": 4,
+      "maxConnections": 20,
+      "allowUnknownUser": true,
       "groups": {
-        "Hono": {
-          "users": "Eclipse IoT;Hono;hono-messaging",
+        "$default": {
           "remoteHosts": "*",
-          "maxSessions": 2,
-          "maxFrameSize": 4096,
-          "maxSessionWindow": 819200,
-          "maxMessageSize": 8092,
           "allowUserIdProxy": true,
-          "targets": "telemetry/*, event/*"
+          "targets": "telemetry/*, event/*",
+          "sources": "control/*"
         }
       }
   }],

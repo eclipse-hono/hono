@@ -13,8 +13,10 @@ hono:
   registry:
     amqp:
       bindAddress: 0.0.0.0
-      keyPath: /run/secrets/device-registry-key.pem
-      certPath: /run/secrets/device-registry-cert.pem
+      keyPath: /run/secrets/hono.eclipse.org-key.pem
+      certPath: /run/secrets/hono.eclipse.org-cert.pem
+      insecurePortBindAddress: 0.0.0.0
+      insecurePortEnabled: true
     rest:
       bindAddress: 0.0.0.0
       keyPath: /run/secrets/hono.eclipse.org-key.pem

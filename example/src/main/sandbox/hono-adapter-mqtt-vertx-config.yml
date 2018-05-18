@@ -11,28 +11,29 @@ hono:
     maxPayloadSize: 8096
   messaging:
     name: 'Hono MQTT Adapter'
-    host: ${hono.messaging.host}
-    port: 5671
-    credentialsPath: /run/secrets/mqtt-adapter.credentials
-    trustStorePath: /run/secrets/trusted-certs.pem
+    host: hono-dispatch-router.hono
+    port: 5673
+    amqpHostname: hono-internal
   registration:
     name: 'Hono MQTT Adapter'
     host: ${hono.registration.host}
-    port: 5671
+    port: 5672
     credentialsPath: /run/secrets/mqtt-adapter.credentials
-    trustStorePath: /run/secrets/trusted-certs.pem
   credentials:
     name: 'Hono MQTT Adapter'
     host: ${hono.registration.host}
-    port: 5671
+    port: 5672
     credentialsPath: /run/secrets/mqtt-adapter.credentials
-    trustStorePath: /run/secrets/trusted-certs.pem
   tenant:
     name: 'Hono MQTT Adapter'
     host: ${hono.registration.host}
-    port: 5671
+    port: 5672
     credentialsPath: /run/secrets/mqtt-adapter.credentials
-    trustStorePath: /run/secrets/trusted-certs.pem
+  command:
+    name: 'Hono MQTT Adapter'
+    host: hono-dispatch-router.hono
+    port: 5673
+    amqpHostname: hono-internal
   metric:
     reporter:
       graphite:
