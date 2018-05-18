@@ -1,5 +1,5 @@
 .copyright {
-  margin-top: 5em;
+  margin-top: 3em;
   margin-bottom: 1em;
   overflow: auto;
 }
@@ -15,7 +15,10 @@
 .copyright div.logo {
   float: right;
   width: 20%;
-  padding-bottom: 2%;
+}
+
+.copyright p.notice {
+	margin-top: 27px;
 }
 
 .copyright .quickLinks a {
