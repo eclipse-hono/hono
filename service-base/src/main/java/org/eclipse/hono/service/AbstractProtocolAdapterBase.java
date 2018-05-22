@@ -464,7 +464,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         Objects.requireNonNull(commandMessage);
 
         // example of commandReplyId: control/DEFAULT_TENANT/4711/33fe70fd-5a2e-4095-83db-00101bf74a07
-        final String commandReplyId = commandMessage.getProperties().getReplyTo();
+        final String commandReplyId = commandMessage.getReplyTo();
         if (commandReplyId == null) {
             return Optional.empty();
         }

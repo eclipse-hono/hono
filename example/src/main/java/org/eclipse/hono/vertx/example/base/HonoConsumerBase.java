@@ -161,10 +161,7 @@ public class HonoConsumerBase {
         final String deviceId = notification.getDeviceId();
 
         honoClient.getOrCreateCommandClient(tenantId, deviceId).map(commandClient -> {
-            // generate a correlationId for the application in the payload
-            final UUID correlationIdForPayload = UUID.randomUUID();
-            final JsonObject jsonCmd = new JsonObject().put("brightness", (int)(Math.random() * 100)).
-                    put("correlationId", correlationIdForPayload.toString());
+            final JsonObject jsonCmd = new JsonObject().put("brightness", (int)(Math.random() * 100));
             final Buffer commandBuffer = Buffer.buffer(jsonCmd.encodePrettily());
 
             // send the command upstream to the device
