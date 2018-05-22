@@ -1,18 +1,21 @@
 participant Device
 participant HTTP Adapter
-participant AMQP 1.0 Network
 participant Application
 
-Device->HTTP Adapter: 1. send event (hono-ttd=30)
+Device->HTTP Adapter: 1. HTTP request ("POST", "/event", "hono-ttd=30")
 activate HTTP Adapter
-HTTP Adapter->Application: 2. connected notification (ttd=30)
+HTTP Adapter->Application: 2. transfer("event/TENANT","4711","ttd=30")
 activate Application
 Application->HTTP Adapter: 3. transfer("control/TENANT/4711","light","ON")
-HTTP Adapter->Device: 4. event response("light","ON",${reqId})
+HTTP Adapter->Device: 4. HTTP response ("200", "hono-cmd=light, hono-cmd-req-id=${reqId})", "ON")
 deactivate HTTP Adapter
 note over Device
 Command response in next operation
 end note over
-Device->HTTP Adapter: 5. /control/res("hono-cmd=light","ON",${reqId})
-HTTP Adapter->Application: 6. transfer("control/TENANT/4711/${replyId}",200,"lumen=100")
+Device->HTTP Adapter: 5. HTTP request("POST", "/control/res/${reqId}/200", "lumen=100")
+activate HTTP Adapter
+HTTP Adapter->Application: 6. transfer("control/TENANT/4711/${replyId}","status=200","lumen=100")
+Application->HTTP Adapter: disposition("accepted")
 deactivate Application
+HTTP Adapter->Device: 7. HTTP response ("204")
+deactivate HTTP Adapter

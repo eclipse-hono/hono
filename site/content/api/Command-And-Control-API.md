@@ -57,7 +57,7 @@ The following table provides an overview of the properties set on a Command's re
 | *correlation-id* | yes | *properties* | *message-id* | MUST contain the correlation ID used to match the command message with the response message containing the result of execution on the device. |
 | *status* | yes | *application-properties* | *integer* | MUST indicate the status of the execution. See table below for possible values. |
 
-The status property must contain a valid HTTP status code:
+The status property must contain a valid HTTP status code: <a name="status"></a>
 
 | Code | Description |
 | :--- | :---------- |
