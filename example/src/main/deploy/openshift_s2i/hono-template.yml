@@ -312,6 +312,9 @@ objects:
           - containerPort: 2003
             name: graphite
             protocol: TCP
+          resources:
+            limits:
+              memory: 2Gi
           volumeMounts:
           - mountPath: /var/lib/influxdb
             name: influxdb-storage
