@@ -4,7 +4,8 @@ weight = 385
 +++
 
 To illustrate how Eclipse Hono&trade; can be integrated with Java code, a simple program is provided that consumes telemetry or event data 
-from the default tenant from a device. 
+from the default tenant from a device. It also includes support for sending a command to a device and receiving a response to it.
+
 It shall serve as a blueprint to integrate your existing java source code with Hono. 
 
 The code is found in the [example](https://github.com/eclipse/hono/tree/master/example) module in the package [org.eclipse.hono.vertx.example](https://github.com/eclipse/hono/tree/master/example/src/main/java/org/eclipse/hono/vertx/example).
@@ -46,6 +47,15 @@ All received event data are printed to the console.
 Please note that consumers do not connect with Hono directly, but rather with an AMQP router network. 
 In the standard setup of Hono this is the [qdrouter](https://qpid.apache.org/components/dispatch-router/index.html) from the Apache Qpid project.
 In production scenarios this might be a large setup of AMQP routers, brokers, etc.
+
+### Command and Control
+
+By using a helper class provided by Hono, a callback in the application code is invoked when a downstream message was received
+that signals the device will stay connected to the protocol adapter for some time (see [Device notifications]({{< relref "concepts/device-notifications.md" >}}) for details).
+
+Inside this callback an arbitrary simple command is sent down to the device and the response is written to `System.out`.
+
+Note that for Hono 0.6 this only works for the HTTP protocol adapter.
 
 ### Encryption of communication 
   
