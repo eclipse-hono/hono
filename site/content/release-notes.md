@@ -7,10 +7,10 @@ title = "Release Notes"
 ### New Features
 
 * Protocol adapters, services and HonoClient now support TLS 1.2 only by default when using TLS to secure communication. However, additional protocols can be enabled by means of setting environment variables as described in the admin guides.
-* The deployment examples for OpenShift got overhauled. the two provided
+* The deployment examples for OpenShift got overhauled. The two provided
 examples are not both based on EnMasse and follow a similar architecture. The
 newly added *source-to-image*" based approach doesn't require a local
-development setup but does created new images directly in the OpenShift
+development setup but created new images directly in the OpenShift
 instance. It also makes more use of ConfigMaps and service key/cert management.
 * Protocol adapters do have the ability to send out connection events. Those
   events are best-effort events, indicating when a connection has been
@@ -20,6 +20,7 @@ instance. It also makes more use of ConfigMaps and service key/cert management.
   implementation which sends out events to the *Hono Event API*.
 * The HTTP protocol adapter now supports authentication of devices based on X.509 client certificates. Each tenant can be configured with an individual trust anchor which the HTTP adapter will retrieve using the Tenant API when a device tries to authenticate with a certificate as part of a TLS handshake. The Credentials API now supports a [new credentials type]({{< relref "api/Credentials-API.md#x-509-certificate" >}}) for registering a mapping of the certificate's *subject DN* to the device identifier. Please consult the [HTTP adapter User Guide]({{< relref "user-guide/http-adapter.md#device-authentication" >}}) for details regarding usage.
 * The HTTP adapter now supports uploading telemetry messages using QoS 1 (`AT_LEAST_ONCE`). Clients must set the `QoS-Level` request header if they want the HTTP adapter to upload telemetry messages using QoS 1.
+* The concept of *Device notifications* was added. This enables devices to signal that they are ready to receive an upstream message by specifying a `time til disconnect` parameter with any downstream message. Please see [Device notifications]({{< relref "concepts/device-notifications.md" >}}) for details. 
 
 ### API Changes
 
