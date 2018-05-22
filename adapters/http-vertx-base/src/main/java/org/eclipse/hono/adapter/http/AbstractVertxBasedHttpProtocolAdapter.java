@@ -616,7 +616,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
 
             if (commandSubject.isPresent() && commandRequestId.isPresent()) {
 
-                ctx.response().putHeader(Constants.HEADER_COMMAND, commandSubject.get().toString());
+                ctx.response().putHeader(Constants.HEADER_COMMAND, commandSubject.get());
                 ctx.response().putHeader(Constants.HEADER_COMMAND_REQUEST_ID, commandRequestId.get());
 
                 HttpUtils.setResponseBody(ctx.response(), MessageHelper.getPayload(commandMessage));
@@ -640,7 +640,8 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
      *                              was sent already.
      * @param messageConsumerRef An AtomicReference to the {@link MessageConsumer} that is set for further usage
      *                           by the caller of this method.
-     * @return Optional An optional timerId if there was a
+     * @return Optional An optional timerId if there was a timer started to automatically close the receiver link after
+     * the time to disconnect expired.
      */
     private Future<Optional<Long>> openCommandReceiverLink(final RoutingContext ctx, final String tenant,
             final String deviceId, final AtomicBoolean downstreamMessageSent, final AtomicReference<MessageConsumer> messageConsumerRef) {
@@ -684,7 +685,6 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                                         ctx.response().end();
                                     }
                                 }));
-                        // responseTimerId.set(timerId.longValue());
                         resultWithTimerId.complete(Optional.of(timerId.longValue()));
 
                         // let only one command reach the adapter (may change in the future)
