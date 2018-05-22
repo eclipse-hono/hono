@@ -57,12 +57,12 @@ public class CommandConnectionImpl extends HonoClientImpl implements CommandConn
     public final Future<MessageConsumer> createCommandConsumer(
             final String tenantId,
             final String deviceId,
-            final BiConsumer<ProtonDelivery, Message> messageConsumer,
+            final BiConsumer<ProtonDelivery, Message> commandConsumer,
             final Handler<Void> closeHandler) {
 
         return createConsumer(
                 tenantId,
-                () -> newCommandConsumer(tenantId, deviceId, messageConsumer, closeHandler));
+                () -> newCommandConsumer(tenantId, deviceId, commandConsumer, closeHandler));
     }
 
     private Future<MessageConsumer> newCommandConsumer(

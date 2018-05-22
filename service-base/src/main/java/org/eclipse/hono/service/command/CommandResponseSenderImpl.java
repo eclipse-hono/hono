@@ -103,19 +103,17 @@ public class CommandResponseSenderImpl extends AbstractSender implements Command
     }
 
     /**
-     * Creates a new sender for publishing events to a Hono server.
+     * Creates a new sender to send responses for commands back to the business application.
      *
      * @param context The vertx context to run all interactions with the server on.
      * @param clientConfig The configuration properties to use.
      * @param con The connection to the AMQP network.
      * @param tenantId The tenant that the command response will be send for and the device belongs to.
-     * @param deviceId The device that sends the command.
+     * @param deviceId The device that sends the command response.
      * @param replyId The reply id as the unique postfix of the replyTo address.
-     * @param closeHook The handler to invoke when the Hono server closes the sender. The sender's target address is
-     *            provided as an argument to the handler.
+     * @param closeHook A handler to invoke if the peer closes the link unexpectedly.
      * @param creationHandler The handler to invoke with the result of the creation attempt.
-     * @throws NullPointerException if any of context, connection, tenant or handler is {@code null}.
-     * @throws IllegalArgumentException if waitForInitialCredits is {@code < 1}.
+     * @throws NullPointerException if any of context, clientConfig, con, tenantId, deviceId or replyId  is {@code null}.
      */
     public static void create(
             final Context context,
@@ -128,9 +126,11 @@ public class CommandResponseSenderImpl extends AbstractSender implements Command
             final Handler<AsyncResult<MessageSender>> creationHandler) {
 
         Objects.requireNonNull(context);
+        Objects.requireNonNull(clientConfig);
         Objects.requireNonNull(con);
         Objects.requireNonNull(tenantId);
-        Objects.requireNonNull(creationHandler);
+        Objects.requireNonNull(deviceId);
+        Objects.requireNonNull(replyId);
 
         final String targetAddress = CommandResponseSenderImpl.getTargetAddress(tenantId, deviceId, replyId);
         createSender(context, clientConfig, con, targetAddress, ProtonQoS.AT_LEAST_ONCE, closeHook).compose(sender -> {

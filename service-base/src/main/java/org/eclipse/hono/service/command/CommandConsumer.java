@@ -1,5 +1,6 @@
 package org.eclipse.hono.service.command;
 
+import java.util.Objects;
 import java.util.function.BiConsumer;
 
 import org.apache.qpid.proton.message.Message;
@@ -28,31 +29,23 @@ public class CommandConsumer extends AbstractConsumer implements MessageConsumer
 
     private static final Logger LOG = LoggerFactory.getLogger(CommandConsumer.class);
 
-    /**
-     * Creates a client for a vert.x context.
-     *
-     * @param context The context to run all interactions with the server on.
-     * @param config The configuration properties to use.
-     * @param protonReceiver The receiver for commands.
-     * @throws NullPointerException if any of the parameters is {@code null}.
-     */
     private CommandConsumer(final Context context, final ClientConfigProperties config,
             final ProtonReceiver protonReceiver) {
         super(context, config, protonReceiver);
     }
 
     /**
-     * Creates a new command adapter.
+     * Creates a new command consumer.
      *
      * @param context The vert.x context to run all interactions with the server on.
      * @param clientConfig The configuration properties to use.
      * @param con The AMQP connection to the server.
-     * @param tenantId The tenant.
-     * @param deviceId The device.
-     * @param messageConsumer Message consumer.
+     * @param tenantId The tenant to consume commands from.
+     * @param deviceId The device for wich the commands should be consumed.
+     * @param messageConsumer The consumer to invoke with each command received.
      * @param receiverCloseHook A handler to invoke if the peer closes the receiver link unexpectedly.
      * @param creationHandler The handler to invoke with the outcome of the creation attempt.
-     * @throws NullPointerException if any of the parameters other than cache manager is {@code null}.
+     * @throws NullPointerException if any of the parameters is {@code null}.
      */
     public static final void create(
             final Context context,
@@ -64,7 +57,16 @@ public class CommandConsumer extends AbstractConsumer implements MessageConsumer
             final Handler<String> receiverCloseHook,
             final Handler<AsyncResult<MessageConsumer>> creationHandler) {
 
-        LOG.debug("creating new command adapter for [{}, {}]", tenantId, deviceId);
+        Objects.requireNonNull(context);
+        Objects.requireNonNull(clientConfig);
+        Objects.requireNonNull(con);
+        Objects.requireNonNull(tenantId);
+        Objects.requireNonNull(deviceId);
+        Objects.requireNonNull(messageConsumer);
+        Objects.requireNonNull(receiverCloseHook);
+        Objects.requireNonNull(creationHandler);
+
+        LOG.debug("creating new command consumer for [{}, {}]", tenantId, deviceId);
 
         final String address = ResourceIdentifier.from(CommandConstants.COMMAND_ENDPOINT, tenantId, deviceId).toString();
         AbstractHonoClient
@@ -72,11 +74,11 @@ public class CommandConsumer extends AbstractConsumer implements MessageConsumer
                         receiverCloseHook)
                 .setHandler(s -> {
                     if (s.succeeded()) {
-                        LOG.debug("successfully created command adapter for [{}, {}]", tenantId, deviceId);
+                        LOG.debug("successfully created command consumer for [{}, {}]", tenantId, deviceId);
                         creationHandler
                                 .handle(Future.succeededFuture(new CommandConsumer(context, clientConfig, s.result())));
                     } else {
-                        LOG.debug("failed to create command adapter for [{}, {}]", tenantId, deviceId, s.cause());
+                        LOG.debug("failed to create command consumer for [{}, {}]", tenantId, deviceId, s.cause());
                         creationHandler.handle(Future.failedFuture(s.cause()));
                     }
                 });

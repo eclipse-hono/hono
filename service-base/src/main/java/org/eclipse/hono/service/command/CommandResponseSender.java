@@ -13,7 +13,7 @@ import java.util.Map;
 public interface CommandResponseSender extends MessageSender {
 
     /**
-     * Creates the response message.
+     * Sends a response message to a command back to the business application.
      *
      * @param tenantId The tenant that the command response will be send for and the device belongs to.
      * @param deviceId The device that sends the command.
@@ -22,7 +22,7 @@ public interface CommandResponseSender extends MessageSender {
      * @param payload The payload or {@code null}.
      * @param properties The properties or {@code null}.
      * @param status The status of the command, which was send to the device.
-     * @return The response message to be send back to the command sender.
+     * @return A future indicating the outcome of the operation.
      * @throws NullPointerException if any of tenantId, deviceId, replyId or correlationId is {@code null}.
      */
     Future<ProtonDelivery> sendCommandResponse(

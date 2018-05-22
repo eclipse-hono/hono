@@ -29,27 +29,30 @@ import io.vertx.proton.ProtonDelivery;
 public interface CommandConnection extends HonoClient {
 
     /**
-     * Creates a receiver link in the CommandConsumer and a message handler for Commands.
+     *
+     * Creates a new consumer of commands for a tenants device.
      * 
      * @param tenantId The tenant to consume commands from.
-     * @param deviceId The device for which the receiver will be created.
-     * @param messageConsumer The message handler for the received commands.
-     * @param closeHandler The close handler for the receiver.
-     * @return A future, with a MessageConsumer.
-     * @throws NullPointerException if tenantId, deviceId or messageConsumer is {@code null};
+     * @param deviceId The device for which the consumer will be created.
+     * @param commandConsumer The handler to invoke with every command received.
+     * @param closeHandler The handler invoked when the peer detaches the link.
+     * @return A future that will complete with the consumer once the link has been established. The future will fail if
+     *         the link cannot be established, e.g. because this client is not connected.
+     * @throws NullPointerException if tenantId, deviceId or messageConsumer is {@code null}.
      */
     Future<MessageConsumer> createCommandConsumer(String tenantId, String deviceId,
-            BiConsumer<ProtonDelivery, Message> messageConsumer,
+            BiConsumer<ProtonDelivery, Message> commandConsumer,
             Handler<Void> closeHandler);
 
     /**
-     * Send back a response for a command to the business application.
+     * Gets a sender for sending command responses back to the business application.
      * 
-     * @param tenantId The data to send back or {@code null}.
-     * @param deviceId The data to send back or {@code null}.
-     * @param replyId The data to send back or {@code null}.
-     * @return A ProtonDelivery indicating the success
-     * @throws NullPointerException if commandToResponse is {@code null};
+     * @param tenantId The ID of the tenant to send the command responses for.
+     * @param deviceId The ID of the device to send the command responses for.
+     * @param replyId The ID used to build the reply address as {@code control/tenantId/deviceId/replyId}.
+     * @return A future that will complete with the sender once the link has been established. The future will fail if
+     *         the link cannot be established, e.g. because this client is not connected.
+     * @throws NullPointerException if tenantId, deviceId or replyId is {@code null}.
      */
     Future<CommandResponseSender> getOrCreateCommandResponseSender(String tenantId, String deviceId, String replyId);
 }
