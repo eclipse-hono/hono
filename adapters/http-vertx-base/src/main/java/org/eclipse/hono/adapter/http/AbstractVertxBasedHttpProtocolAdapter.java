@@ -29,6 +29,7 @@ import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
 import org.eclipse.hono.service.auth.device.Device;
+import org.eclipse.hono.service.command.CommandResponseSender;
 import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
@@ -607,7 +608,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
      * @return The BiConsumer to pass to the command and control consumer.
      */
     private BiConsumer<ProtonDelivery, Message> createCommandMessageConsumer(final RoutingContext ctx,
-            final String tenant, final String deviceId, final Handler<Void> commandReceivedHandler) {
+            final String tenant, final String deviceId, final Handler<Message> commandReceivedHandler) {
         return (delivery, commandMessage) -> {
 
             final Optional<String> commandSubject = Optional.ofNullable(commandMessage.getProperties().getSubject());
@@ -621,7 +622,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
 
                 HttpUtils.setResponseBody(ctx.response(), MessageHelper.getPayload(commandMessage));
 
-                commandReceivedHandler.handle(null);
+                commandReceivedHandler.handle(commandMessage);
 
             } else {
                 LOG.info("Received command with invalid reply-to endpoint - ignoring.");
@@ -654,7 +655,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
             final AtomicLong timerId = new AtomicLong();
 
             // create a handler for being invoked if a command was received
-            final Handler<Void> commandReceivedHandler = v -> {
+            final Handler<Message> commandReceivedHandler = commandMessage -> {
                 if (downstreamMessageSent.get()) {
                     cancelResponseTimer(timerId.get());
                     closeCommandReceiverLink(messageConsumerRef);
@@ -662,6 +663,24 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                         ctx.response().end();
                     }
                 }
+                final String replyId = getReplyToIdFromCommand(tenant, deviceId, commandMessage).get();
+
+                // send answer to caller via sender link
+                final Future<CommandResponseSender> responseSender = createCommandResponseSender(tenant, deviceId, replyId);
+                responseSender.map(commandResponseSender ->
+                    commandResponseSender.sendCommandResponse(tenant, deviceId, replyId, getCorrelationIdFromMessage(commandMessage),
+                            null, null, HttpURLConnection.HTTP_OK)
+                ).map(protonDeliveryFuture -> {
+                    LOG.debug("Command acknowledged to sender.");
+                    responseSender.result().close(v -> {});
+                    return null;
+                }).otherwise(t -> {
+                    LOG.debug("Could not acknowledge command to sender", t);
+                    if (responseSender.succeeded()) {
+                        responseSender.result().close(v -> {});
+                    }
+                    return null;
+                });
             };
 
             // create the commandMessageConsumer that handles an incoming command message

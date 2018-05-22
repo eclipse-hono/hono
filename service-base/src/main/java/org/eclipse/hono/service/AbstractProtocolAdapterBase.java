@@ -33,6 +33,7 @@ import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.auth.TenantApiTrustOptions;
 import org.eclipse.hono.service.auth.device.Device;
 import org.eclipse.hono.service.command.CommandConnection;
+import org.eclipse.hono.service.command.CommandResponseSender;
 import org.eclipse.hono.service.monitoring.ConnectionEventProducer;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
@@ -450,6 +451,21 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     }
 
     /**
+     * Create a command response sender for a specific device.
+     *
+     * @param tenantId The tenant of the command receiver.
+     * @param deviceId The device of the command receiver.
+     * @param replyId The replyId to from the command to use for the response.
+     * @return Result of the response sender creation.
+     */
+    public final Future<CommandResponseSender> createCommandResponseSender(
+            final String tenantId,
+            final String deviceId,
+            final String replyId) {
+        return commandConnection.getOrCreateCommandResponseSender(tenantId, deviceId, replyId);
+    }
+
+    /**
      * Validate that the <em>reply-to</em> and the <em>correlationId</em> of a command message are correctly built.
      * If the validation is successful, a combined String <em>command request id</em> is returned.
      * @param tenantId The tenant to be used for the validation.
@@ -463,6 +479,27 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(commandMessage);
 
+        // use everything after the prefix as reply-to-id
+        final Optional<String> replyToId = getReplyToIdFromCommand(tenantId, deviceId, commandMessage);
+        if (replyToId.isPresent()) {
+            return Optional.of(Constants.combineTwoStrings(getCorrelationIdFromMessage(commandMessage), replyToId.get()));
+        } else {
+            return Optional.empty();
+        }
+    }
+
+    /**
+     * Get the <em>reply-to-id</em> of a command message (being the last part of an endpoint).
+     *
+     * @param tenantId The tenant to be used for the validation.
+     * @param deviceId The device to be used for the validation.
+     * @param commandMessage The message containing a command.
+     * @return Optional An Optional with the contained reply-to-id, or an empty Optional if no reply-to-id could be determined.
+     * @throws NullPointerException If commandMessage is {@code null}.
+     * @throws IllegalArgumentException If tenantId or deviceId are {@code null}.
+     */
+    protected final Optional<String> getReplyToIdFromCommand(final String tenantId, final String deviceId, final Message commandMessage) {
+
         // example of commandReplyId: control/DEFAULT_TENANT/4711/33fe70fd-5a2e-4095-83db-00101bf74a07
         final String commandReplyId = commandMessage.getReplyTo();
         if (commandReplyId == null) {
@@ -473,11 +510,23 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
             return Optional.empty();
         }
 
-        // use everything after the prefix as reply-to-id
-        final String replyToId = commandReplyId.substring(commandReplyResourceForValidation.length());
-        final String commandCorrelationId = Optional.ofNullable(commandMessage.getCorrelationId()).orElse(commandMessage.getMessageId()).toString();
+        if (commandReplyId.length() == commandReplyResourceForValidation.length()) {
+            return Optional.empty();
+        } else {
+            // use everything after the prefix as reply-to-id
+            return Optional.of(commandReplyId.substring(commandReplyResourceForValidation.length() + 1));
+        }
+    }
 
-        return Optional.of(Constants.combineTwoStrings(commandCorrelationId, replyToId));
+    /**
+     * Get the correlationId from a message. If the correlationId is not explicitly set, the messageId is returned instead.
+     *
+     * @param message The message to determine the correlationId for.
+     * @return String The correlationId.
+     * @throws NullPointerException If the message is {@code null}.
+     */
+    protected final String getCorrelationIdFromMessage(final Message message) {
+        return Optional.ofNullable(message.getCorrelationId()).orElse(message.getMessageId()).toString();
     }
 
     /**
