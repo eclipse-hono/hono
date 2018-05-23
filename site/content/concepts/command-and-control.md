@@ -9,6 +9,9 @@ Since Hono 0.6 *Business applications* can send commands to devices following th
 
 This concept refers to the first implementation of Command and Control in Hono 0.6. With new versions this will be extended and documentation parts will be also transferred to the User Guide sections (e.g. HTTP Adapter and MQTT Adapter).
 
+You can try the implementation directly by following the [Command and Control Userguide]({{< relref "user-guide/command-and-control.md" >}}).
+
+
 ## Command & Control over HTTP Adapter
 
 The following sequence diagram gives an overview of a device connected via HTTP, which gets a command from the business application as soon as it gets online. The application and the adapter connect to the AMQP Network, which forwards the transfer - for clarity this is not shown in the diagram. 
