@@ -120,7 +120,7 @@ $ curl -X POST -i -u sensor1@DEFAULT_TENANT:hono-secret -H 'Content-Type: applic
 Other than using the *HTTP Adapter*, it's possible to upload telemetry data using the *MQTT Adapter* as well:
 
 ~~~sh
-mosquitto_pub -h $(minikube ip) -p 31883 -u 'sensor1@DEFAULT_TENANT' -P hono-secret -t telemetry -m '{"temp": 5}'
+$ mosquitto_pub -h $(minikube ip) -p 31883 -u 'sensor1@DEFAULT_TENANT' -P hono-secret -t telemetry -m '{"temp": 5}'
 ~~~
 
 The username and password used above for device `4711` are part of the example configuration that comes with Hono. See [Device Identity]({{< relref "concepts/device-identity.md" >}}) for an explanation of how devices are identified in Hono and how device identity is related to authentication.

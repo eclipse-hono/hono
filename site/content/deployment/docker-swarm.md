@@ -206,3 +206,24 @@ The example given of using a custom permissions file can be easily adapted to ot
 ## Further Reading
 
 Alex Ellis has blogged about [Docker Secrets in Action](http://blog.alexellis.io/swarm-secrets-in-action/) which provides an excellent introduction to Docker Secrets and how they can be used.
+
+## Troubleshooting
+
+If during deployment to docker swarm there are error messages about a wrong API version 1.23, this might come from a previous deployment to `minikube` (Kubernetes).
+Please check in this case the following command:
+
+    $ docker secret ls
+    
+If the output is 
+
+    docker secret ls requires API version 1.25, but the Docker daemon API version is 1.23
+
+then try to unset the environment variable `DOCKER_API_VERSION` by 
+
+    $ unset DOCKER_API_VERSION
+    
+Afterwards `docker secret ls` should work without error and you can retry the deployment.
+    
+     
+
+     
