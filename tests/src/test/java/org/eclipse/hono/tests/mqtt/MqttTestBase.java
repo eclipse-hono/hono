@@ -28,6 +28,7 @@ import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.TenantObject;
 import org.junit.After;
 import org.junit.AfterClass;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
@@ -104,6 +105,7 @@ public abstract class MqttTestBase {
     /**
      * Sets up the fixture.
      */
+    @Before
     public void setUp() {
         LOGGER.info("running {}", testName.getMethodName());
     }
