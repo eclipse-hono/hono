@@ -70,6 +70,18 @@ Every time the `curl` message is repeated, the response will be differing regard
 The `brightness` is set to a random value inside the application between `0` and `100`, while the `hono-cmd-req-id` is
 set to a unique id that can be used by the device to send a response to exactly this command later on. 
 To correlate such a respond coming from the device is currently in the responsibility of the application itself.
+
+{{% note %}}
+If you are using `docker-machine` or `minikube` for your Hono installation, and do not explicitly synchronize the clock of it with the
+ machine your (example) application is running, it may happen that the `hono-ttd` parameter is considered to be already
+ expired by the application. This would be the case if the application machine's clock is already in the future compared 
+ to the clock the HTTP protocol adapter sees.
+ The result is that the application does not invoke the internal callback to send a command.
+ 
+ Please ensure that the clock the application and the HTTP protocol adapter see are synchronized (you may want to search the
+ internet for several solutions to this problem). 
+{{% /note %}}
+
     
 ## Summary
 
