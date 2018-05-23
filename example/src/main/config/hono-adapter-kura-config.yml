@@ -33,14 +33,6 @@ hono:
     port: 5671
     credentialsPath: ${secret.path}/kura-adapter.credentials
     trustStorePath: ${secret.path}/trusted-certs.pem
-  command:
-    name: 'Hono Kura Adapter'
-    amqpHostname: hono-http-internal
-    host: hono-dispatch-router.hono
-    port: 5673
-    keyPath: ${secret.path}/kura-adapter-key.pem
-    certPath: ${secret.path}/kura-adapter-cert.pem
-    trustStorePath: ${secret.path}/trusted-certs.pem
   metric:
     reporter:
       graphite:
