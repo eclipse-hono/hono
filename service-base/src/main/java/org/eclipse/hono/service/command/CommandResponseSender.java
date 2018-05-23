@@ -15,9 +15,6 @@ public interface CommandResponseSender extends MessageSender {
     /**
      * Sends a response message to a command back to the business application.
      *
-     * @param tenantId The tenant that the command response will be send for and the device belongs to.
-     * @param deviceId The device that sends the command.
-     * @param replyId The reply id as the unique postfix of the replyTo address.
      * @param correlationId The correlation id of the command.
      * @param payload The payload or {@code null}.
      * @param properties The properties or {@code null}.
@@ -26,9 +23,6 @@ public interface CommandResponseSender extends MessageSender {
      * @throws NullPointerException if any of tenantId, deviceId, replyId or correlationId is {@code null}.
      */
     Future<ProtonDelivery> sendCommandResponse(
-            String tenantId,
-            String deviceId,
-            String replyId,
             String correlationId,
             Buffer payload,
             Map<String, Object> properties,

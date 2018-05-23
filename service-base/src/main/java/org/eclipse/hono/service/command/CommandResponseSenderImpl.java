@@ -62,35 +62,26 @@ public class CommandResponseSenderImpl extends AbstractSender implements Command
      * {@inheritDoc}
      */
     public Future<ProtonDelivery> sendCommandResponse(
-            final String tenantId,
-            final String deviceId,
-            final String replyId,
             final String correlationId,
             final Buffer payload,
             final Map<String, Object> properties,
             final int status) {
-        LOG.debug("send back a command response [tenant: {}, device: {}, replyId: {}, correlationId: {}, status: {}]",
-                tenantId, deviceId, replyId, correlationId, status);
-        return sendAndWaitForOutcome(
-                createResponseMessage(tenantId, deviceId, replyId, correlationId, payload, properties, status));
+        LOG.debug("send back a command response [correlationId: {}, status: {}]", correlationId, status);
+        return sendAndWaitForOutcome(createResponseMessage(targetAddress, correlationId, payload, properties, status));
     }
 
     private static Message createResponseMessage(
-            final String tenantId,
-            final String deviceId,
-            final String replyId,
+            final String targetAddress,
             final String correlationId,
             final Buffer payload,
             final Map<String, Object> properties,
             final int status) {
 
-        Objects.requireNonNull(tenantId);
-        Objects.requireNonNull(deviceId);
-        Objects.requireNonNull(replyId);
+        Objects.requireNonNull(targetAddress);
         Objects.requireNonNull(correlationId);
         final Message msg = ProtonHelper.message();
         msg.setCorrelationId(correlationId);
-        msg.setAddress(CommandResponseSenderImpl.getTargetAddress(tenantId, deviceId, replyId));
+        msg.setAddress(targetAddress);
         if (payload != null) {
             msg.setBody(new Data(new Binary(payload.getBytes())));
         }

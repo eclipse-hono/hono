@@ -669,7 +669,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                 // send answer to caller via sender link
                 final Future<CommandResponseSender> responseSender = createCommandResponseSender(tenant, deviceId, replyId);
                 responseSender.map(commandResponseSender ->
-                    commandResponseSender.sendCommandResponse(tenant, deviceId, replyId, getCorrelationIdFromMessage(commandMessage),
+                    commandResponseSender.sendCommandResponse(getCorrelationIdFromMessage(commandMessage),
                             null, null, HttpURLConnection.HTTP_OK)
                 ).map(protonDeliveryFuture -> {
                     LOG.debug("Command acknowledged to sender.");
