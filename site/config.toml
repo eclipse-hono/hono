@@ -28,7 +28,6 @@ pluralizeListTitles = "false"
 
 	# Custom assets
 	custom_css = ["css/hono.css", "//www.eclipse.org/eclipse.org-common/themes/solstice/public/stylesheets/vendor/cookieconsent/cookieconsent.min.css"]
-	custom_js  = ["//www.eclipse.org/eclipse.org-common/themes/solstice/public/javascript/vendor/cookieconsent/default.min.js"]
 
 	# Syntax highlighting theme
 	highlight_css  = ""
