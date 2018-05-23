@@ -14,7 +14,7 @@ You can try the implementation directly by following the [Command and Control Us
 
 ## Command & Control over HTTP Adapter
 
-The following sequence diagram gives an overview of a device connected via HTTP, which gets a command from the business application as soon as it gets online. The application and the adapter connect to the AMQP Network, which forwards the transfer - for clarity this is not shown in the diagram. 
+The following sequence diagram gives an overview of a device connecting via HTTP, which gets a command from the business application as soon as it gets online. The application and the adapter connect to the AMQP Network, which forwards the transfer - for clarity this is not shown in the diagram. 
  
 ![Command & Control over HTTP Adapter](../command_control_concept_http.png) 
 
