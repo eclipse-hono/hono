@@ -23,9 +23,9 @@ import io.vertx.proton.ProtonQoS;
 import io.vertx.proton.ProtonReceiver;
 
 /**
- * Receiver and sender pair to get commands and send a response.
+ * A wrapper around an AMQP receiver link for consuming commands.
  */
-public class CommandConsumer extends AbstractConsumer implements MessageConsumer {
+public class CommandConsumer extends AbstractConsumer {
 
     private static final Logger LOG = LoggerFactory.getLogger(CommandConsumer.class);
 
@@ -41,7 +41,7 @@ public class CommandConsumer extends AbstractConsumer implements MessageConsumer
      * @param clientConfig The configuration properties to use.
      * @param con The AMQP connection to the server.
      * @param tenantId The tenant to consume commands from.
-     * @param deviceId The device for wich the commands should be consumed.
+     * @param deviceId The device for which the commands should be consumed.
      * @param messageConsumer The consumer to invoke with each command received.
      * @param receiverCloseHook A handler to invoke if the peer closes the receiver link unexpectedly.
      * @param creationHandler The handler to invoke with the outcome of the creation attempt.
