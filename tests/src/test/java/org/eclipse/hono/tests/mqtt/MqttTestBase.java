@@ -31,6 +31,7 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TestName;
 import org.junit.rules.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -57,7 +58,7 @@ public abstract class MqttTestBase {
      */
     protected static final Vertx VERTX = Vertx.vertx();
 
-    private static final int   TEST_TIMEOUT = 9000; // milliseconds
+    private static final int TEST_TIMEOUT = 9000; // milliseconds
 
     /**
      * A client for publishing messages to the MQTT protocol adapter.
@@ -74,6 +75,11 @@ public abstract class MqttTestBase {
      */
     @Rule
     public final Timeout timeout = Timeout.millis(TEST_TIMEOUT);
+    /**
+     * Provide test name to unit tests.
+     */
+    @Rule
+    public final TestName testName = new TestName();
 
     /**
      * A logger to be used by subclasses.
@@ -93,6 +99,13 @@ public abstract class MqttTestBase {
         helper = new IntegrationTestSupport(VERTX);
         helper.init(ctx);
 
+    }
+
+    /**
+     * Sets up the fixture.
+     */
+    public void setUp() {
+        LOGGER.info("running {}", testName.getMethodName());
     }
 
     /**
@@ -222,15 +235,17 @@ public abstract class MqttTestBase {
         while (messageCount.get() < messagesToSend) {
 
             sendResult.set(ctx.async());
-            synchronized (pendingMessages) {
-                send(tenantId, deviceId, Buffer.buffer("hello " + messageCount.getAndIncrement()), useShortTopicName, sendAttempt -> {
-                    if (sendAttempt.failed()) {
-                        LOGGER.debug("error sending message {}", messageCount.get(), sendAttempt.cause());
-                    } else {
-                        pendingMessages.add(sendAttempt.result());
-                    }
-                });
-            }
+            VERTX.runOnContext(go -> {
+                synchronized (pendingMessages) {
+                    send(tenantId, deviceId, Buffer.buffer("hello " + messageCount.getAndIncrement()), useShortTopicName, sendAttempt -> {
+                        if (sendAttempt.failed()) {
+                            LOGGER.debug("error sending message {}", messageCount.get(), sendAttempt.cause());
+                        } else {
+                            pendingMessages.add(sendAttempt.result());
+                        }
+                    });
+                }
+            });
 
             if (messageCount.get() % 40 == 0) {
                 LOGGER.info("messages sent: " + messageCount.get());
