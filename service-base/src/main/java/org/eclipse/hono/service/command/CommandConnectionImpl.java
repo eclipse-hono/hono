@@ -22,8 +22,6 @@ import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.impl.HonoClientImpl;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.connection.ConnectionFactory;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -34,8 +32,6 @@ import io.vertx.proton.ProtonDelivery;
  * Implements a connection between an Adapter and the AMQP 1.0 network to receive commands and send a response.
  */
 public class CommandConnectionImpl extends HonoClientImpl implements CommandConnection {
-
-    protected final Logger LOG = LoggerFactory.getLogger(getClass());
 
     /**
      * Creates a new client for a set of configuration properties.
