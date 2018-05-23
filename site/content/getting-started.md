@@ -20,7 +20,7 @@ In order to enable *Swarm Mode* on your *Docker Engine* run the following comman
 Please refer to the [Docker Swarm Mode documentation](https://docs.docker.com/engine/swarm/swarm-mode/) for details.
 
 {{% warning %}}
-You will need at least Docker Engine version 1.13.1 in order to run the example in this guide. By the time of writing, the latest released version of Docker was 17.12.0.
+You will need at least Docker Engine version 1.13.1 in order to run the example in this guide. By the time of writing, the latest released version of Docker was 18.05.0.
 {{% /warning %}}
 
 ### Compiling
@@ -52,14 +52,12 @@ To deploy and start Hono simply run the following from the `example/target/deplo
 The first command makes the generated scripts executable. This needs to be done once after each build.
 The second command creates and starts up Docker Swarm *services* for all components that together comprise a Hono instance, in particular the following services are started:
 
-{{< figure src="../Hono_instance.svg" title="Hono instance containers">}}
+{{< figure src="../Hono_instance.svg" title="Hono Instance Containers">}}
 
 * Hono Instance
   * An *HTTP Adapter* instance that exposes Hono's Telemetry and Event APIs as URI resources.
   * A *MQTT Adapter* instance that exposes Hono's Telemetry and Event APIs as an MQTT topic hierarchy.
-  * A *Kura Adapter* instance that exposes Hono's Telemetry and Event APIs as an Eclipse Kura&trade; compatible MQTT topic hierarchy. Note that the Kura adapter is special insofar as it serves as an example of a *custom* protocol adapter. Hono can be extended with custom protocol adapters in order to add support for interacting with devices using a custom communication protocol that is not supported by Hono's standard protocol adapters out of the box.
   * A *Device Registry* instance that manages registration information and issues device registration assertions to protocol adapters.
-  * A *Hono Messaging* instance that custom protocol adapters are required to connect to in order to validate a device's registration status before published data is forwarded downstream. Hono's standard protocol adapters connect to the AMQP Network directly (without going through Hono Messaging) because they validate the devices' registration status themselves.
   * An *Auth Server* instance that authenticates Hono components and issues tokens asserting identity and authorities.
 * AMQP Network
   * A *Dispatch Router* instance that downstream applications connect to in order to consume telemetry data and events from devices.
@@ -73,6 +71,13 @@ You can list all services by executing
 ~~~sh
 ~/hono/example/target/deploy/docker$ docker service ls
 ~~~
+
+You may notice that the list also includes two additional services called `hono-adapter-kura` `hono-service-messaging` which are not represented in the diagram above. Together, they serve as a an example of how Hono can be extended with *custom* protocol adapters in order to add support for interacting with devices using a custom communication protocol that is not supported by Hono's standard protocol adapters out of the box. The following diagram shows how these services are integrated with Hono:
+
+{{< figure src="../Hono_instance_custom_adapter.svg" title="Custom Protocol Adapter">}}
+
+* The *Kura Adapter* exposes Hono's Telemetry and Event APIs as an Eclipse Kura&trade; compatible MQTT topic hierarchy.
+* The *Hono Messaging* service, to which custom protocol adapters are required to connect in order to validate a device's registration status before published data is forwarded downstream. Note that Hono's standard protocol adapters connect to the AMQP Network directly (i.e. without going through Hono Messaging) because they can be trusted to validate a device's registration status on behalf of Hono Messaging themselves.
 
 ## Starting a Consumer
 

@@ -26,6 +26,10 @@ instance. It also makes more use of ConfigMaps and service key/cert management.
   The response then may contain a command sent by the application. Please refer to the [Command and Control example]({{< relref "user-guide/command-and-control.md" >}})
   and the [Command and Control Concepts]({{< relref "concepts/command-and-control.md" >}}) to find more details.
 
+### Fixes & Enhancements
+
+* Hono's standard protocol adapters can now be connected directly to the AMQP Network, i.e. without going through Hono Messaging. For Hono's standard adapters Hono Messaging does not provide any additional value because the devices' registration status is already being validated by the protocol adapters. Omitting Hono Messaging should therefore reduce message processing latency for standard adapters. However, custom protocol adapters still need to be connected to Hono Messaging. The Getting started guide, the Sandbox and the deployment scripts have been changed accordingly. Note that it is still possible to connect all adapters to Hono Messaging, though.
+
 ### API Changes
 
 * The Tenant API's *get Tenant Information* operation has been changed to expect search criteria in the request message's payload instead of the application-properties. This change has been made in order to support other search criteria than just the tenant identifier. In particular, the *get Tenant Information* operation can now be used to find a tenant based on the subject DN of a trusted certificate authority that has been configured for the tenant. See [get Tenant Information]({{< relref "api/Tenant-API.md#get-tenant-information" >}}) for details.
