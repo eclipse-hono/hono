@@ -18,6 +18,12 @@ All services are exposed via the same ports as used in the guide.
 * **Play fair!** The sandbox's computing resources are (quite) limited. The number of devices that can be registered per tenant is therefore limited to 100.
 * We will update the sandbox to a recent Hono nightly build frequently and without further notice.
 * The sandbox exposes its API endpoints on both a TLS secured as well as an unsecured port. The secure ports use a Let's Encrypt certificate so you should not need to configure a specific trust store on your client in order to interact with them. Please note that when using the unsecured ports, the information you exchange with the sandbox might be exposed to eavesdroppers. We therefore **strongly suggest** that you use the secure ports only, if possible!
+  When using the [Hono client]({{< relref "/admin-guide/hono-client-configuration.md" >}}) to access the sandbox' Telemetry and/or Event APIs, make sure to not set a trust store explicitly but instead set the *tlsEnabled* property to `true`. The example below can be used to consume telemetry messages from the sandbox:
+
+    ```
+    $> java -jar target/hono-example-0.6-exec.jar --hono.client.host=hono.eclipse.org --hono.client.port=15671 --hono.client.tlsEnabled=true --hono.client.username=consumer@HONO --hono.client.password=verysecret --spring.profiles.active=receiver
+    ```
+  Note that  only the *receiver* profile is activated but not the *ssl* profile.
 * In order to minimize the risk of collisions of device identities and credentials and to reduce the risk of others *guessing* your identifiers, you are advised to use **non-trivial, hard-to-guess** tenant and device identifiers (e.g. a UUID).
 * The Apache Artemis instance we use for brokering events is configured with a maximum queue size of 1MB, i.e. you can only buffer up to 1 MB of events (per tenant) without having any consumer connected that actually processes the events. Once that limit is reached, no more events will be accepted by the protocol adapters for the corresponding tenant. In addition to that, events that are not consumed will automatically be removed from the queue(s) after five minutes.
 * The Grafana dashboard is not publicly available.
