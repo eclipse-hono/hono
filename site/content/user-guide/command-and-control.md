@@ -12,7 +12,10 @@ In the following it is shown how a command is sent to a device by using Hono's e
 
 
 {{% note %}}
-Note that in Hono 0.6 Command and Control is only supported by the HTTP protocol adapter.
+This feature is available now as a first fully working version but is considered to possibly have some unknown issues that may not make it
+fully production ready yet.
+
+Note that in Hono 0.6 it is only supported by the HTTP protocol adapter.
 {{% /note %}}
 
 Refer to [Command and Control API]({{< relref "api/Command-And-Control-API.md" >}}) and [Command and Control Concepts]({{< relref "concepts/command-and-control.md" >}}) for detailed explanations and specifications.

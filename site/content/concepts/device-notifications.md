@@ -7,11 +7,11 @@ weight = 190
  **Device notifications** - is described in detail here.
  
  
+<!--more-->
+
 {{% note %}}
 This concept has been added in Hono 0.6. Previous versions of Hono do not support it.
 {{% /note %}}
-
-<!--more-->
 
 For implementing specific behaviour *Business applications* need to know if
 a device is currently ready to receive an upstream message.

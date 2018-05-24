@@ -9,6 +9,11 @@ Since Hono 0.6 *Business applications* can send commands to devices following th
 
 This concept refers to the first implementation of Command and Control in Hono 0.6. With new versions this will be extended and documentation parts will be also transferred to the User Guide sections (e.g. HTTP Adapter and MQTT Adapter).
 
+{{% note %}}
+This feature is available now as a first fully working version but is considered to possibly have some unknown issues that may not make it
+fully production ready yet.
+{{% /note %}}
+
 You can try the implementation directly by following the [Command and Control Userguide]({{< relref "user-guide/command-and-control.md" >}}).
 
 
