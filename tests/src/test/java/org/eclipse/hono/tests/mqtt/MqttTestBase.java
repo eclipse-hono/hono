@@ -119,11 +119,17 @@ public abstract class MqttTestBase {
     @After
     public void postTest(final TestContext ctx) {
 
-        if (mqttClient != null) {
-            mqttClient.disconnect();
+        Future<Void> disconnectHandler = Future.future();
+        if (mqttClient == null) {
+            disconnectHandler.complete();
+        } else {
+            mqttClient.disconnect(disconnectHandler.completer());
         }
-        pendingMessages.clear();
-        helper.deleteObjects(ctx);
+        disconnectHandler.setHandler(tidyUp -> {
+            LOGGER.info("connection to MQTT adapter closed");
+            pendingMessages.clear();
+            helper.deleteObjects(ctx);
+        });
     }
 
     /**
