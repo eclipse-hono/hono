@@ -223,7 +223,7 @@ public abstract class MqttTestBase {
                 mqttClient = MqttClient.create(VERTX, options);
                 mqttClient.connect(IntegrationTestSupport.MQTT_PORT, IntegrationTestSupport.MQTT_HOST, result.completer());
                 return result;
-            }).setHandler(ctx.asyncAssertSuccess(ok -> setup.complete()));
+            }).setHandler(ctx.asyncAssertSuccess(ok -> VERTX.setTimer(500, go -> setup.complete())));
 
         setup.await();
 
