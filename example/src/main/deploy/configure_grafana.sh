@@ -15,19 +15,20 @@
 SCRIPTPATH="$(cd "$(dirname "$0")" && pwd -P)"
 HOST=${1:-localhost}
 PORT=${2:-3000}
+PROTO=${3:-http}
 
 while true; do echo "Waiting for Grafana service at ${HOST}:${PORT} to come up...";
-curl http://${HOST}:${PORT} --connect-timeout 1 -o /dev/null >/dev/null 2>/dev/null && break; sleep 5;
+curl ${PROTO}://${HOST}:${PORT} --connect-timeout 1 -o /dev/null >/dev/null 2>/dev/null && break; sleep 5;
 done;
 
 echo .. Grafana is up, set its datasource and dashboard
 
 # add the data source to grafana
 curl -X POST -i -H 'Content-Type: application/json' --data-binary @$SCRIPTPATH/grafana_datasource.json \
-  http://admin:admin@${HOST}:${PORT}/api/datasources
+  ${PROTO}://admin:admin@${HOST}:${PORT}/api/datasources
 
 # add the dashboard to grafana
 # to use a changed dashboard (grafana_dashboard.json) from Grafana make a HTTP call to
 # http://<host>:<port>/api/dashboards/db/hono and change the dashboard id in the resulting JSON to null
 curl -X POST -i -H 'Content-Type: application/json' --data-binary @$SCRIPTPATH/grafana_dashboard.json \
-  http://admin:admin@${HOST}:${PORT}/api/dashboards/db
+  ${PROTO}://admin:admin@${HOST}:${PORT}/api/dashboards/db
