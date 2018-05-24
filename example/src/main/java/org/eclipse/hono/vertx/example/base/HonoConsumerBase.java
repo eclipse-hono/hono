@@ -21,6 +21,7 @@ import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
 import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.client.CommandClient;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.impl.HonoClientImpl;
@@ -163,21 +164,29 @@ public class HonoConsumerBase {
         honoClient.getOrCreateCommandClient(tenantId, deviceId).map(commandClient -> {
             final JsonObject jsonCmd = new JsonObject().put("brightness", (int)(Math.random() * 100));
             final Buffer commandBuffer = Buffer.buffer(jsonCmd.encodePrettily());
-            commandClient.setRequestTimeout(60*1000);
 
             // send the command upstream to the device
-            commandClient.sendCommand("setBrightness", commandBuffer).map(result -> {
-                System.out.println(String.format("Successfully sent command and received response: %s",
-                        Optional.ofNullable(result).orElse(Buffer.buffer()).toString()));
-                return result;
-            }).otherwise(t -> {
-                System.out.println(String.format("Could not send command or did not receive a response : %s", t.getMessage()));
-                return (Buffer) null;
-            });
+            sendCommandToAdapter(commandClient, commandBuffer);
             return commandClient;
         }).otherwise(t -> {
             System.err.println(String.format("Could not create command client : %s", t.getMessage()));
             return null;
+        });
+    }
+
+    private void sendCommandToAdapter(final CommandClient commandClient, final Buffer commandBuffer) {
+        commandClient.sendCommand("setBrightness", commandBuffer).map(result -> {
+            System.out.println(String.format("Successfully sent command and received response: %s",
+                    Optional.ofNullable(result).orElse(Buffer.buffer()).toString()));
+            commandClient.close(v -> {
+            });
+            return result;
+        }).otherwise(t -> {
+            System.out.println(
+                    String.format("Could not send command or did not receive a response : %s", t.getMessage()));
+            commandClient.close(v -> {
+            });
+            return (Buffer) null;
         });
     }
 
