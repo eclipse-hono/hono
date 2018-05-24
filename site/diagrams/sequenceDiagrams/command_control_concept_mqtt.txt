@@ -8,7 +8,7 @@ content-type=application/vnd.eclipse-hono-empty-notification
 -> MQTT Adapter will convert this in tdd=-1 (infinitely)
 end note over
 activate MQTT Adapter
-MQTT Adapter->Application: 2. transfer("event/TENANT","4711","ttd=30")
+MQTT Adapter->Application: 2. transfer("event/TENANT","4711","ttd=-1")
 activate Application
 Application->MQTT Adapter: 3. transfer("control/TENANT/4711","light","ON")
 MQTT Adapter->Device: 4. "control/light/${reqId}":"ON"
