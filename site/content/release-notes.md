@@ -2,7 +2,7 @@
 title = "Release Notes"
 +++
 
-## 0.6 (not yet released)
+## 0.6
 
 ### New Features
 
