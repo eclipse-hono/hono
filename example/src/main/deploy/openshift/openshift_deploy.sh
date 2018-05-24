@@ -81,7 +81,7 @@ oc create secret generic hono-adapter-http-vertx-conf \
   --from-file=$CERTS/http-adapter-cert.pem \
   --from-file=$CERTS/trusted-certs.pem \
   --from-file=$SCRIPTPATH/../http-adapter.credentials \
-  --from-file=application.yml=$SCRIPTPATH/hono-adapter-http-vertx-config.yml
+  --from-file=application.yml=$SCRIPTPATH/hono-adapter-http-vertx-config-enmasse.yml
 oc create -f $CONFIG/hono-adapter-http-vertx-jar/META-INF/fabric8/openshift.yml
 echo ... done
 
@@ -91,7 +91,7 @@ oc create secret generic hono-adapter-mqtt-vertx-conf \
   --from-file=$CERTS/mqtt-adapter-cert.pem \
   --from-file=$CERTS/trusted-certs.pem \
   --from-file=$SCRIPTPATH/../mqtt-adapter.credentials \
-  --from-file=application.yml=$SCRIPTPATH/hono-adapter-mqtt-vertx-config.yml
+  --from-file=application.yml=$SCRIPTPATH/hono-adapter-mqtt-vertx-config-enmasse.yml
 oc create -f $CONFIG/hono-adapter-mqtt-vertx-jar/META-INF/fabric8/openshift.yml
 echo ... done
 

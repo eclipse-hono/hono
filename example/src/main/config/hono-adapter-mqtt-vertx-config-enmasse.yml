@@ -11,12 +11,8 @@ hono:
     certPath: ${secret.path}/mqtt-adapter-cert.pem
   messaging:
     name: 'Hono MQTT Adapter'
-    amqpHostname: hono-internal
-    host: hono-dispatch-router.hono
-    port: 5673
-    keyPath: ${secret.path}/mqtt-adapter-key.pem
-    certPath: ${secret.path}/mqtt-adapter-cert.pem
-    trustStorePath: ${secret.path}/trusted-certs.pem
+    host: messaging.hono
+    port: 5672
   registration:
     name: 'Hono MQTT Adapter'
     host: ${hono.registration.host}

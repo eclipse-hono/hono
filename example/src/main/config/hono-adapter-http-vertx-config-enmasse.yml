@@ -3,38 +3,38 @@ hono:
     maxInstances: 1
     healthCheckPort: 8088
     healthCheckBindAddress: 0.0.0.0
-  mqtt:
+  http:
     bindAddress: 0.0.0.0
     insecurePortBindAddress: 0.0.0.0
     insecurePortEnabled: true
-    keyPath: ${secret.path}/mqtt-adapter-key.pem
-    certPath: ${secret.path}/mqtt-adapter-cert.pem
+    keyPath: ${secret.path}/http-adapter-key.pem
+    certPath: ${secret.path}/http-adapter-cert.pem
   messaging:
-    name: 'Hono MQTT Adapter'
-    amqpHostname: hono-internal
-    host: hono-dispatch-router.hono
-    port: 5673
-    keyPath: ${secret.path}/mqtt-adapter-key.pem
-    certPath: ${secret.path}/mqtt-adapter-cert.pem
-    trustStorePath: ${secret.path}/trusted-certs.pem
+    name: 'Hono HTTP Adapter'
+    host: messaging.hono
+    port: 5672
   registration:
-    name: 'Hono MQTT Adapter'
+    name: 'Hono HTTP Adapter'
     host: ${hono.registration.host}
     port: 5671
-    credentialsPath: ${secret.path}/mqtt-adapter.credentials
+    credentialsPath: ${secret.path}/http-adapter.credentials
     trustStorePath: ${secret.path}/trusted-certs.pem
   credentials:
-    name: 'Hono MQTT Adapter'
+    name: 'Hono HTTP Adapter'
     host: ${hono.registration.host}
     port: 5671
-    credentialsPath: ${secret.path}/mqtt-adapter.credentials
+    credentialsPath: ${secret.path}/http-adapter.credentials
     trustStorePath: ${secret.path}/trusted-certs.pem
   tenant:
-    name: 'Hono MQTT Adapter'
+    name: 'Hono HTTP Adapter'
     host: ${hono.registration.host}
     port: 5671
-    credentialsPath: ${secret.path}/mqtt-adapter.credentials
+    credentialsPath: ${secret.path}/http-adapter.credentials
     trustStorePath: ${secret.path}/trusted-certs.pem
+  command:
+    name: 'Hono HTTP Adapter'
+    host: messaging.hono
+    port: 5672
   metric:
     reporter:
       graphite:
@@ -46,4 +46,3 @@ endpoints:
   enabled: false
   metrics:
     enabled: true
-
