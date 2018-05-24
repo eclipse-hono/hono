@@ -56,7 +56,7 @@ The HTTP Adapter will then send this response back to the Business Application (
 
 IMPORTANT: **Not implemented in Hono 0.6 and just a DRAFT**
 
-When the (authenticated) device connects to the MQTT Adapter and wants to get commands, it subscribes to 
+When the (authenticated) device is connected to the MQTT Adapter it receives commands on the topic:  
 
 * `control/req/${command}/${hono-cmd-req-id}`
 
@@ -67,7 +67,7 @@ The response of the command will be send by the device to
 
 If the device is not authenticated:
 
-* `control/req/${tenant-id}/${device-id}/${command}/${hono-cmd-req-id}` (request subscription topic)
+* `control/req/${tenant-id}/${device-id}/${command}/${hono-cmd-req-id}` (request topic)
 * `control/res/${tenant-id}/${device-id}/${hono-cmd-req-id}/${status}` (response topic) 
 
 
