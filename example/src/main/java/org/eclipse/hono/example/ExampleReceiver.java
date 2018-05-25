@@ -31,6 +31,10 @@ import io.vertx.proton.ProtonConnection;
 /**
  * Example of a event/telemetry receiver that connects to the Hono Server, waits for incoming messages and logs the message
  * payload if anything is received.
+ * <p>
+ * Note that this example intentionally does not support Command and Control and rather is the most simple version
+ * of a receiver for downstream data. Please refer to the documentation of Command and Control for the example that supports
+ * it (found in the User Guide section).
  */
 @Component
 @Profile("receiver")
