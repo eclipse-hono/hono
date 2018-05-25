@@ -106,6 +106,29 @@ public final class EventSenderImpl extends AbstractSender {
     }
 
     /**
+     * Sends an AMQP 1.0 message to the peer that this client is configured for
+     * and waits for the outcome of the transfer.
+     * <p>
+     * This method simply invokes {@link #send(Message)} because events are
+     * always sent with at least once delivery semantics.
+     * 
+     * @param message The message to send.
+     * @return A future indicating the outcome of the operation.
+     *         <p>
+     *         The future will succeed if the message has been accepted (and settled)
+     *         by the peer.
+     *         <p>
+     *         The future will be failed with a {@link ServiceInvocationException} if the
+     *         message could not be sent or has not been accepted by the peer.
+     * @throws NullPointerException if the message is {@code null}.
+     */
+    @Override
+    public Future<ProtonDelivery> sendAndWaitForOutcome(final Message message) {
+
+        return send(message);
+    }
+
+    /**
      * Sets the <em>durable</em> message property to {@code true}.
      */
     @Override
@@ -131,28 +154,6 @@ public final class EventSenderImpl extends AbstractSender {
      */
     @Override
     protected Future<ProtonDelivery> sendMessage(final Message message) {
-
-        return sendMessageAndWaitForOutcome(message);
-    }
-
-    /**
-     * Sends an AMQP 1.0 message to the peer this client is configured for
-     * and waits for the outcome of the transfer.
-     * <p>
-     * This method simply invokes {@link #sendMessageAndWaitForOutcome(Message)}.
-     * 
-     * @param message The message to send.
-     * @return A future indicating the outcome of the operation.
-     *         <p>
-     *         The future will succeed if the message has been accepted (and settled)
-     *         by the peer.
-     *         <p>
-     *         The future will be failed with a {@link ServiceInvocationException} if the
-     *         message could not be sent or has not been accepted by the peer.
-     * @throws NullPointerException if the message is {@code null}.
-     */
-    @Override
-    public Future<ProtonDelivery> sendAndWaitForOutcome(final Message message) {
 
         return sendMessageAndWaitForOutcome(message);
     }

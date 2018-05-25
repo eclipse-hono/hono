@@ -11,9 +11,8 @@
  */
 package org.eclipse.hono.client.impl;
 
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 import java.util.concurrent.atomic.AtomicReference;
@@ -33,6 +32,7 @@ import io.vertx.core.Vertx;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.proton.ProtonDelivery;
+import io.vertx.proton.ProtonHelper;
 import io.vertx.proton.ProtonSender;
 
 /**
@@ -92,5 +92,25 @@ public class TelemetrySenderImplTest {
         assertTrue(result.succeeded());
         // and the message has been sent
         verify(sender).send(any(Message.class), eq(handlerRef.get()));
+    }
+
+    /**
+     * Verifies that the sender fails if no credit is available.
+     */
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testSendAndWaitForOutcomeFailsOnLackOfCredit() {
+
+        // GIVEN a sender that has credit
+        when(sender.sendQueueFull()).thenReturn(Boolean.TRUE);
+        MessageSender messageSender = new TelemetrySenderImpl(config, sender, "tenant", "telemetry/tenant", context);
+
+        // WHEN trying to send a message
+        final Message event = ProtonHelper.message("telemetry/tenant", "hello");
+        final Future<ProtonDelivery> result = messageSender.sendAndWaitForOutcome(event);
+
+        // THEN the message is not sent
+        assertFalse(result.succeeded());
+        verify(sender, never()).send(any(Message.class), any(Handler.class));
     }
 }

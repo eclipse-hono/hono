@@ -13,8 +13,7 @@ package org.eclipse.hono.client.impl;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.eq;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 import java.util.concurrent.atomic.AtomicReference;
@@ -36,6 +35,7 @@ import io.vertx.core.Handler;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.proton.ProtonDelivery;
+import io.vertx.proton.ProtonHelper;
 
 /**
  * Tests verifying behavior of {@link EventSenderImpl}.
@@ -133,4 +133,25 @@ public class EventSenderImplTest {
 
         assertFalse(result.succeeded());
     }
+
+    /**
+     * Verifies that the sender fails if no credit is available.
+     */
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testSendAndWaitForOutcomeFailsOnLackOfCredit() {
+
+        // GIVEN a sender that has credit
+        when(sender.sendQueueFull()).thenReturn(Boolean.TRUE);
+        MessageSender messageSender = new EventSenderImpl(config, sender, "tenant", "event/tenant", context);
+
+        // WHEN trying to send a message
+        final Message event = ProtonHelper.message("event/tenant", "hello");
+        final Future<ProtonDelivery> result = messageSender.sendAndWaitForOutcome(event);
+
+        // THEN the message is not sent
+        assertFalse(result.succeeded());
+        verify(sender, never()).send(any(Message.class), any(Handler.class));
+    }
+
 }
