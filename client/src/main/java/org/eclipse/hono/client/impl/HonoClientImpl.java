@@ -831,7 +831,6 @@ public class HonoClientImpl implements HonoClient {
      *
      */
     protected void removeTenantClient() {
-
         final String targetAddress = TenantClientImpl.getTargetAddress();
         removeActiveRequestResponseClient(targetAddress);
     }
