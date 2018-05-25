@@ -16,7 +16,6 @@ import java.net.HttpURLConnection;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
 
@@ -506,9 +505,22 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                 final Future<JsonObject> tokenTracker = getRegistrationAssertion(tenant, deviceId, authenticatedDevice);
                 final Future<TenantObject> tenantConfigTracker = getTenantConfiguration(tenant);
 
+                // AtomicBoolean to control if the downstream message was sent successfully
                 final AtomicBoolean downstreamMessageSent = new AtomicBoolean(false);
-                final AtomicReference<Optional<Handler<Void>>> cancelTimerHandler = new AtomicReference(Optional.empty());
-                final AtomicReference<MessageConsumer> messageConsumerRef = new AtomicReference<>();
+                // AtomicReference to a Handler to be called to close an open command receiver link.
+                final AtomicReference<Handler<Void>> closeLinkAndTimerHandlerRef = new AtomicReference();
+
+                // Handler to be called with a received command. If the timer expired, null is provided as command.
+                final Handler<Message> commandReceivedHandler = commandMessage -> {
+                    // reset the closeHandler reference, since it is not valid anymore at this time.
+                    closeLinkAndTimerHandlerRef.set(null);
+                    if (downstreamMessageSent.get()) {
+                        // finish the request, since the response is now complete (command was added)
+                        if (!ctx.response().closed()) {
+                            ctx.response().end();
+                        }
+                    }
+                };
 
                 CompositeFuture.all(tokenTracker, tenantConfigTracker, senderTracker).compose(ok -> {
 
@@ -524,14 +536,9 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                                 HttpUtils.getTimeTilDisconnect(ctx));
                         customizeDownstreamMessage(downstreamMessage, ctx);
 
-                        return openCommandReceiverLink(ctx, tenant, deviceId, downstreamMessageSent, messageConsumerRef).compose(timerId -> {
-                            if (timerId.isPresent()) {
-                                // if a timer was created, prepare the encapsulated cancel code as handler here
-                                cancelTimerHandler.set(
-                                        Optional.of(v -> {
-                                            cancelResponseTimer(timerId.get());
-                                        }));
-                            }
+                        // first open the command receiver link (if needed)
+                        return openCommandReceiverLink(ctx, tenant, deviceId, commandReceivedHandler).compose(closeLinkAndTimerHandler -> {
+                            closeLinkAndTimerHandlerRef.set(closeLinkAndTimerHandler);
 
                             if (qosHeader == null) {
                                 return sender.send(downstreamMessage);
@@ -551,14 +558,13 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                     downstreamMessageSent.set(true);
 
                     // if no command timer was created, the request now can be responded
-                    if (!cancelTimerHandler.get().isPresent()) {
+                    if (closeLinkAndTimerHandlerRef.get() == null) {
                         ctx.response().end();
                     }
 
                     return Future.succeededFuture();
                 }).recover(t -> {
-                    cancelResponseTimer(cancelTimerHandler);
-                    closeCommandReceiverLink(messageConsumerRef);
+                    cancelResponseTimer(closeLinkAndTimerHandlerRef);
 
                     if (ClientErrorException.class.isInstance(t)) {
                         ClientErrorException e = (ClientErrorException) t;
@@ -578,17 +584,11 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
         }
     }
 
-    private void cancelResponseTimer(final AtomicReference<Optional<Handler<Void>>> cancelTimerHandlerRef) {
-        if (cancelTimerHandlerRef.get().isPresent()) {
-            final Handler cancelTimerHandler = cancelTimerHandlerRef.get().get();
+    private void cancelResponseTimer(final AtomicReference<Handler<Void>> cancelTimerHandlerRef) {
+        Optional.ofNullable(cancelTimerHandlerRef.get()).map(cancelTimerHandler -> {
             cancelTimerHandler.handle(null);
-        }
-    }
-
-    private void cancelResponseTimer(final long responseTimerId) {
-        if (responseTimerId != Long.MIN_VALUE) {
-            getVertx().cancelTimer(responseTimerId);
-        }
+            return null;
+        });
     }
 
     private void closeCommandReceiverLink(final AtomicReference<MessageConsumer> messageConsumerRef) {
@@ -638,32 +638,36 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
      * @param ctx The routing context of the HTTP request.
      * @param tenant The tenant of the device for that a command may be received.
      * @param deviceId The id of the device for that a command may be received.
-     * @param downstreamMessageSent An AtomicBoolean indicating if the (piggy backed) downstream message of the device
-     *                              was sent already.
-     * @param messageConsumerRef An AtomicReference to the {@link MessageConsumer} that is set for further usage
-     *                           by the caller of this method.
-     * @return Optional An optional timerId if there was a timer started to automatically close the receiver link after
-     * the time to disconnect expired.
+     * @param commandReceivedHandler Handler to be called after a command was received or the timer expired.
+     *                               The link was closed at this time already.
+     *                               If the timer expired, the passed command message is null, otherwise the received command message is passed.
+     *
+     * @return Optional An optional handler that cancels a timer that might have been started to close the receiver link again.
      */
-    private Future<Optional<Long>> openCommandReceiverLink(final RoutingContext ctx, final String tenant,
-            final String deviceId, final AtomicBoolean downstreamMessageSent, final AtomicReference<MessageConsumer> messageConsumerRef) {
+    private Future<Handler<Void>> openCommandReceiverLink(final RoutingContext ctx, final String tenant,
+            final String deviceId,  final Handler<Message> commandReceivedHandler) {
 
-        final Future<Optional<Long>> resultWithTimerId = Future.future();
+        final Future<Handler<Void>> resultWithLinkCloseHandler = Future.future();
+
+        final AtomicReference<MessageConsumer> messageConsumerRef = new AtomicReference<>(null);
 
         final Integer timeToDelayResponse = Optional.ofNullable(HttpUtils.getTimeTilDisconnect(ctx)).orElse(-1);
 
         if (timeToDelayResponse > 0) {
-            final AtomicLong timerId = new AtomicLong();
-
             // create a handler for being invoked if a command was received
-            final Handler<Message> commandReceivedHandler = commandMessage -> {
-                if (downstreamMessageSent.get()) {
-                    cancelResponseTimer(timerId.get());
-                    closeCommandReceiverLink(messageConsumerRef);
-                    if (!ctx.response().closed()) {
-                        ctx.response().end();
-                    }
-                }
+            final Handler<Message> commandHandler = commandMessage -> {
+                // if a link close handler was set, invoke it
+                Optional.ofNullable(resultWithLinkCloseHandler.result()).map(linkCloseHandler -> {
+                    linkCloseHandler.handle(null);
+                    return null;
+                });
+
+                // if desired, now invoke the passed commandReceivedHandler and pass the message
+                Optional.ofNullable(commandReceivedHandler).map(h -> {
+                    h.handle(commandMessage);
+                    return null;
+                });
+
                 final String replyId = getReplyToIdFromCommand(tenant, deviceId, commandMessage).get();
 
                 // send answer to caller via sender link
@@ -677,16 +681,17 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                     return null;
                 }).otherwise(t -> {
                     LOG.debug("Could not acknowledge command to sender", t);
-                    if (responseSender.succeeded()) {
-                        responseSender.result().close(v -> {});
-                    }
+                    Optional.ofNullable(responseSender.result()).map(r -> {
+                        r.close(v -> {});
+                        return null;
+                    });
                     return null;
                 });
             };
 
             // create the commandMessageConsumer that handles an incoming command message
             final BiConsumer<ProtonDelivery, Message> commandMessageConsumer = createCommandMessageConsumer(ctx, tenant,
-                    deviceId, commandReceivedHandler);
+                    deviceId, commandHandler);
 
             createCommandConsumer(tenant, deviceId, commandMessageConsumer,
                     v -> {
@@ -697,30 +702,35 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                         messageConsumerRef.set(messageConsumer);
 
                         // create a timer that is invoked if no command was received until timeToDelayResponse is expired
-                        timerId.set(getVertx().setTimer(timeToDelayResponse * 1000L,
+                        final long timerId = getVertx().setTimer(timeToDelayResponse * 1000L,
                                 delay -> {
                                     closeCommandReceiverLink(messageConsumerRef);
-                                    // if the downstream message was sent already, finish the request now
-                                    if (downstreamMessageSent.get()) {
-                                        ctx.response().end();
-                                    }
-                                }));
-                        resultWithTimerId.complete(Optional.of(timerId.longValue()));
+                                    // command finished, invoke handler
+                                    Optional.ofNullable(commandReceivedHandler).map(h -> {
+                                        h.handle(null);
+                                        return null;
+                                    });
+                                });
+                        // define the cancel code as closure
+                        resultWithLinkCloseHandler.complete(v -> {
+                            getVertx().cancelTimer(timerId);
+                            closeCommandReceiverLink(messageConsumerRef);
+                        });
 
                         // let only one command reach the adapter (may change in the future)
                         messageConsumer.flow(1);
 
                         return messageConsumer;
                     }).recover(t -> {
-                        resultWithTimerId.fail(t);
+                        resultWithLinkCloseHandler.fail(t);
                         return null;
                     });
 
         } else {
-            resultWithTimerId.complete(Optional.empty());
+            resultWithLinkCloseHandler.complete();
         }
 
-        return resultWithTimerId;
+        return resultWithLinkCloseHandler;
     }
 
     private static Integer getQoSLevel(final String qosValue) {
