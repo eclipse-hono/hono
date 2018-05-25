@@ -17,7 +17,7 @@
 
   <groupId>org.eclipse.hono</groupId>
   <artifactId>hono-parent</artifactId>
-  <version>0.7-M1-SNAPSHOT</version>
+  <version>${revision}</version>
   <packaging>pom</packaging>
 
   <name>Hono</name>
@@ -144,6 +144,9 @@
   </developers>
 
   <properties>
+    <!-- default when no revision property is passed in from the commandline -->
+    <revision>0.7-M1-SNAPSHOT</revision>
+
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
