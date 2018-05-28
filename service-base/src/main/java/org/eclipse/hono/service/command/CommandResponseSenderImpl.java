@@ -51,7 +51,7 @@ public class CommandResponseSenderImpl extends AbstractSender implements Command
 
     @Override
     public Future<ProtonDelivery> sendAndWaitForOutcome(final Message message) {
-        return sendMessageAndWaitForOutcome(message);
+        return send(message);
     }
 
     static final String getTargetAddress(final String tenantId, final String deviceId, final String replyId) {
