@@ -37,4 +37,13 @@ public class HttpAdapterMetrics extends Metrics {
         counterService.increment(getPrefix() + MESSAGES + mergeAsMetric(resourceId, tenantId) + UNDELIVERABLE);
     }
 
+    void incrementProcessedHttpPayload(final String resourceId, final String tenantId, final long payloadSize) {
+        if (payloadSize < 0) {
+            // A negative size would mess up the metrics
+            return;
+        }
+        counterService
+                .increment(METER_PREFIX + getPrefix() + PAYLOAD + mergeAsMetric(resourceId, tenantId) + PROCESSED);
+    }
+
 }

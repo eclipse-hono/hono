@@ -623,6 +623,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                             LOG.trace("successfully processed [{}] message for device [tenantId: {}, deviceId: {}]",
                                     endpointName, tenant, deviceId);
                             metrics.incrementProcessedHttpMessages(endpointName, tenant);
+                            metrics.incrementProcessedHttpPayload(endpointName, tenant, messagePayloadSize(ctx));
                             currentSpan.finish();
                         });
                         ctx.response().exceptionHandler(t -> {
@@ -656,6 +657,22 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                 });
             }
         }
+    }
+
+    /**
+     * Measure the size of the payload for using in the metrics system.
+     * <p>
+     * This implementation simply counts the bytes of the HTTP payload buffer and ignores all other attributes of the
+     * HTTP request.
+     * 
+     * @param ctx The payload to measure. May be {@code null}.
+     * @return The number of bytes of the payload or zero if any input is {@code null}.
+     */
+    protected long messagePayloadSize(final RoutingContext ctx) {
+        if (ctx == null || ctx.getBody() == null) {
+            return 0L;
+        }
+        return ctx.getBody().length();
     }
 
     /**

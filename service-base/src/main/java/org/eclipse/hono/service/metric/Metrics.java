@@ -43,6 +43,8 @@ abstract public class Metrics {
     protected static final String CONNECTIONS = ".connections.";
     protected static final String UNAUTHENTICATED_CONNECTIONS = ".unauthenticatedConnections.";
 
+    protected static final String PAYLOAD = ".payload.";
+
     protected GaugeService gaugeService = NullGaugeService.getInstance();
     protected CounterService counterService = NullCounterService.getInstance();
 

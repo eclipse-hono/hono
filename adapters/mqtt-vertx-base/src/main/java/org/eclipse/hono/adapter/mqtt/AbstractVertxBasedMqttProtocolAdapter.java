@@ -826,6 +826,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
             LOG.trace("successfully processed message [topic: {}, QoS: {}] for device [tenantId: {}, deviceId: {}]",
                     ctx.message().topicName(), ctx.message().qosLevel(), tenant, deviceId);
             metrics.incrementProcessedMqttMessages(endpointName, tenant);
+            metrics.incrementProcessedMqttPayload(endpointName, tenant, messagePayloadSize(ctx.message()));
             onMessageSent(ctx);
             // check that the remote MQTT client is still connected before sending PUBACK
             if (ctx.deviceEndpoint().isConnected() && ctx.message().qosLevel() == MqttQoS.AT_LEAST_ONCE) {
@@ -851,6 +852,22 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
             currentSpan.finish();
             return Future.failedFuture(t);
         });
+    }
+
+    /**
+     * Measure the size of the payload for using in the metrics system.
+     * <p>
+     * This implementation simply counts the bytes of the MQTT payload buffer and ignores all other attributes of the
+     * message.
+     * 
+     * @param message The message to measure the payload size. May be {@code null}.
+     * @return The number of bytes of the payload or zero if any input is {@code null}.
+     */
+    protected long messagePayloadSize(final MqttPublishMessage message) {
+        if (message == null || message.payload() == null) {
+            return 0L;
+        }
+        return message.payload().length();
     }
 
     /**
