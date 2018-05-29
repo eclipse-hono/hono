@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2017, 2018 Bosch Software Innovations GmbH.
+ * Copyright (c) 2017, 2018 Bosch Software Innovations GmbH and others.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -8,6 +8,7 @@
  *
  * Contributors:
  *    Bosch Software Innovations GmbH - initial creation
+ *    Red Hat Inc
  */
 
 package org.eclipse.hono.adapter.http.vertx;
@@ -188,7 +189,6 @@ public class VertxBasedHttpProtocolAdapterTest {
      * 
      * @param ctx The vert.x test context.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public final void testPostTelemetrySucceedsForValidCredentials(final TestContext ctx) {
 
@@ -219,7 +219,6 @@ public class VertxBasedHttpProtocolAdapterTest {
      *
      * @param ctx The vert.x test context.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public final void testPutTelemetrySucceedsForValidCredentials(final TestContext ctx) {
 
@@ -298,7 +297,6 @@ public class VertxBasedHttpProtocolAdapterTest {
      *
      * @param ctx The vert.x test context.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public final void testPutEventSucceedsForValidCredentials(final TestContext ctx) {
 
@@ -330,6 +328,7 @@ public class VertxBasedHttpProtocolAdapterTest {
         return result.toString();
     }
 
+    @SuppressWarnings("unchecked")
     private static void mockSuccessfulAuthentication(final String tenantId, final String deviceId) {
         doAnswer(invocation -> {
             final Handler<AsyncResult<User>> resultHandler = invocation.getArgument(1);
