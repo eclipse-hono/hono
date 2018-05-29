@@ -19,12 +19,14 @@ import org.springframework.boot.actuate.metrics.CounterService;
  */
 public final class NullCounterService implements CounterService {
 
-    private NullCounterService() {}
+    private NullCounterService() {
+    }
 
     /**
      * A no-op metrics counter service.
      */
     private static class NullCounterServiceSingleton {
+
         private static final NullCounterService INSTANCE = new NullCounterService();
     }
 
@@ -33,7 +35,7 @@ public final class NullCounterService implements CounterService {
      * 
      * @return The instance.
      */
-    public static NullCounterService getInstance(){
+    public static NullCounterService getInstance() {
         return NullCounterServiceSingleton.INSTANCE;
     }
 
