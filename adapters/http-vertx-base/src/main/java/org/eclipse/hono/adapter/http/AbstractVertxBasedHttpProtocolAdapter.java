@@ -509,11 +509,20 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                 final AtomicBoolean downstreamMessageSent = new AtomicBoolean(false);
                 // AtomicReference to a Handler to be called to close an open command receiver link.
                 final AtomicReference<Handler<Void>> closeLinkAndTimerHandlerRef = new AtomicReference();
+                final AtomicBoolean statusCodeSetByCommand = new AtomicBoolean(false);
 
                 // Handler to be called with a received command. If the timer expired, null is provided as command.
                 final Handler<Message> commandReceivedHandler = commandMessage -> {
                     // reset the closeHandler reference, since it is not valid anymore at this time.
                     closeLinkAndTimerHandlerRef.set(null);
+
+                    if (statusCodeSetByCommand.get()) {
+                        ctx.response().setStatusCode(
+                                Optional.ofNullable(commandMessage).
+                                map(m -> HttpURLConnection.HTTP_OK).
+                                orElse(HttpURLConnection.HTTP_NO_CONTENT));
+                    }
+
                     if (downstreamMessageSent.get()) {
                         // finish the request, since the response is now complete (command was added)
                         if (!ctx.response().closed()) {
@@ -539,12 +548,11 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                         // first open the command receiver link (if needed)
                         return openCommandReceiverLink(ctx, tenant, deviceId, commandReceivedHandler).compose(closeLinkAndTimerHandler -> {
                             closeLinkAndTimerHandlerRef.set(closeLinkAndTimerHandler);
+                            statusCodeSetByCommand.set(Optional.ofNullable(closeLinkAndTimerHandler).map(h -> true).orElse(false));
 
-                            if (qosHeader == null) {
-                                return sender.send(downstreamMessage);
-                            } else {
-                                return sender.sendAndWaitForOutcome(downstreamMessage);
-                            }
+                            return Optional.ofNullable(qosHeader).
+                                    map(q -> sender.sendAndWaitForOutcome(downstreamMessage)).
+                                    orElse(sender.send(downstreamMessage));
                         });
                     } else {
                         // this adapter is not enabled for the tenant
@@ -554,11 +562,11 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                     LOG.trace("successfully processed message for device [tenantId: {}, deviceId: {}, endpoint: {}]",
                             tenant, deviceId, endpointName);
                     metrics.incrementProcessedHttpMessages(endpointName, tenant);
-                    ctx.response().setStatusCode(HttpURLConnection.HTTP_ACCEPTED);
                     downstreamMessageSent.set(true);
 
                     // if no command timer was created, the request now can be responded
-                    if (closeLinkAndTimerHandlerRef.get() == null) {
+                    if (!statusCodeSetByCommand.get()) {
+                        ctx.response().setStatusCode(HttpURLConnection.HTTP_NO_CONTENT);
                         ctx.response().end();
                     }
 
