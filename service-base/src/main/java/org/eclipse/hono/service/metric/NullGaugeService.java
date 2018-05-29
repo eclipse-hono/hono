@@ -19,12 +19,14 @@ import org.springframework.boot.actuate.metrics.GaugeService;
  */
 public final class NullGaugeService implements GaugeService {
 
-    private NullGaugeService() {}
+    private NullGaugeService() {
+    }
 
     /**
      * A no-op gauge metrics service.
      */
     private static class NullGaugeServiceSingleton {
+
         private static final NullGaugeService INSTANCE = new NullGaugeService();
     }
 
@@ -33,7 +35,7 @@ public final class NullGaugeService implements GaugeService {
      * 
      * @return The instance.
      */
-    public static NullGaugeService getInstance(){
+    public static NullGaugeService getInstance() {
         return NullGaugeService.NullGaugeServiceSingleton.INSTANCE;
     }
 

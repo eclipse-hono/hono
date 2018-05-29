@@ -43,7 +43,7 @@ import io.vertx.ext.dropwizard.DropwizardMetricsOptions;
 @Configuration
 public class MetricConfig {
 
-    private static final String HONO    = "hono";
+    private static final String HONO = "hono";
     private static final String UNKNOWN = "unknown";
 
     private static final Logger LOG = LoggerFactory.getLogger(MetricConfig.class);
@@ -155,7 +155,8 @@ public class MetricConfig {
                 processedPrefix = UNKNOWN;
             }
         }
-        LOG.info("metrics - graphite reporter activated: {}:{}  prefix: {}  period: {}", host, port, processedPrefix, period);
+        LOG.info("metrics - graphite reporter activated: {}:{}  prefix: {}  period: {}", host, port, processedPrefix,
+                period);
         final GraphiteReporter reporter = GraphiteReporter.forRegistry(metricRegistry)
                 .convertRatesTo(TimeUnit.SECONDS)
                 .convertDurationsTo(TimeUnit.MILLISECONDS)
