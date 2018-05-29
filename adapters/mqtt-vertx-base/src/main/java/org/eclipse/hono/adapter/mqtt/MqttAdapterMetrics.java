@@ -52,4 +52,13 @@ public class MqttAdapterMetrics extends Metrics {
     void decrementUnauthenticatedMqttConnections() {
         counterService.decrement(getPrefix() + UNAUTHENTICATED_CONNECTIONS);
     }
+
+    void incrementProcessedMqttPayload(final String resourceId, final String tenantId, final long payloadSize) {
+        if (payloadSize < 0) {
+            // A negative size would mess up the metrics
+            return;
+        }
+        counterService
+                .increment(METER_PREFIX + getPrefix() + PAYLOAD + mergeAsMetric(resourceId, tenantId) + PROCESSED);
+    }
 }

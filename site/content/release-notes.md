@@ -21,6 +21,8 @@ title = "Release Notes"
 * The Auth Server can now be used to authenticate clients connecting to the Apache Qpid Dispatch Router which is used in the example deployment. For this purpose the Auth Server is configured as a *remote auth server* implementing [Dispatch Router's *Auth Service Plugin* mechanism](https://qpid.apache.org/releases/qpid-dispatch-1.1.0/man/qdrouterd.conf.html#_authserviceplugin). Using this mechanism it is now possible to manage all identities and authorities using the Auth Server's configuration file.
 * The HTTP protocol adapter now supports devices uploading a response to a command that has been sent to the device before. Please refer to the [HTTP adapter User Guide]({{< relref "user-guide/http-adapter.md#sending-a-response-to-a-previously-received-command" >}}) for details.
 * Hono's service components can now be configured to use OpenSSL instead of the JVM's default SSL engine. The [admin guide]({{< relref "admin-guide/secure_communication.md#using-openssl" >}}) describes how to do this.
+* In addition to number of successful MQTT and HTTP messages now also the
+  payload size of the message bodys is being recorded in the metrics system.
 
 ### Fixes & Enhancements
 
