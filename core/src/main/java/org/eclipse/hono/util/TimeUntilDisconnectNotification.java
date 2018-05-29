@@ -14,6 +14,7 @@
 package org.eclipse.hono.util;
 
 import java.time.Instant;
+import java.util.Objects;
 import java.util.Optional;
 
 import org.apache.qpid.proton.message.Message;
@@ -35,8 +36,11 @@ public final class TimeUntilDisconnectNotification {
      * @param tenantId The identifier of the tenant of the device the notification is constructed for.
      * @param deviceId The id of the device the notification is constructed for.
      * @param readyUntil The Instant that determines until when this notification is valid.
+     * @throws NullPointerException If readyUntil is null.
      */
     public TimeUntilDisconnectNotification(final String tenantId, final String deviceId, final Instant readyUntil) {
+        Objects.requireNonNull(readyUntil);
+
         this.tenantId = tenantId;
         this.deviceId = deviceId;
         this.readyUntil = readyUntil;
@@ -94,4 +98,13 @@ public final class TimeUntilDisconnectNotification {
         return Optional.empty();
     }
 
+    /**
+     * Get the time in milliseconds left from the current time until this notification expires.
+     *
+     * @return The number of milliseconds until this notification expires, or 0 if the notification is already expired.
+     */
+    public long getMillisecondsUntilExpiry() {
+        final long milliseconds = getReadyUntil().toEpochMilli() - Instant.now().toEpochMilli();
+        return (milliseconds > 0 ? milliseconds : 0);
+    }
 }

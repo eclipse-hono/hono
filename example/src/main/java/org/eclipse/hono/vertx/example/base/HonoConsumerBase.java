@@ -164,6 +164,8 @@ public class HonoConsumerBase {
         honoClient.getOrCreateCommandClient(tenantId, deviceId).map(commandClient -> {
             final JsonObject jsonCmd = new JsonObject().put("brightness", (int)(Math.random() * 100));
             final Buffer commandBuffer = Buffer.buffer(jsonCmd.encodePrettily());
+            // let the commandClient timeout when the notification expires
+            commandClient.setRequestTimeout(notification.getMillisecondsUntilExpiry());
 
             // send the command upstream to the device
             sendCommandToAdapter(commandClient, commandBuffer);
