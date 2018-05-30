@@ -33,6 +33,7 @@ public class ServiceConfigProperties extends AbstractConfig {
     private boolean waitForDownstreamConnection = false;
     private String bindAddress = LOOPBACK_DEVICE_ADDRESS;
     private int port = Constants.PORT_UNCONFIGURED;
+    private boolean nativeTlsRequired = false;
     private boolean insecurePortEnabled = false;
     private String insecurePortBindAddress = LOOPBACK_DEVICE_ADDRESS;
     private int insecurePort = Constants.PORT_UNCONFIGURED;
@@ -101,9 +102,41 @@ public class ServiceConfigProperties extends AbstractConfig {
     }
 
     /**
+     * Checks if this server requires the usage of a native TLS implementation.
+     * Native TLS implementations offer in general a better performance but may not be available on all platforms.
+     * If {@code true}, the server will require the usage of a native TLS implementation.
+     * Server will not start if native implementation is not available on the current system.
+     * If {@code false}, the adapter will try to use a native TLS implementation. If no native implementation is available the
+     * default Java platform independent TLS implementation will be used.
+     * <p>
+     * The default value of this property is {@code false}.
+     *
+     * @return {@code true} if the server requires native TLS implementation.
+     */
+    public final boolean isNativeTlsRequired() {
+        return nativeTlsRequired;
+    }
+
+    /**
+     * Sets if this server should require the usage of a native TLS implementation.
+     * Native TLS implementations offer in general a better performance but may not be available on all platforms.
+     * If {@code true}, the server will require the usage of a native TLS implementation.
+     * Server will not start if native implementation is not available on the current system.
+     * If {@code false}, the adapter will try to use a native TLS implementation. If no native implementation is available the
+     * default Java platform independent TLS implementation will be used.
+     * <p>
+     * The default value of this property is {@code false}.
+     *
+     * @param nativeTlsRequired {@code true} if the server requires the usage of a native TLS implementation.
+     */
+    public final void setNativeTlsRequired(final boolean nativeTlsRequired) {
+        this.nativeTlsRequired = nativeTlsRequired;
+    }
+
+    /**
      * Checks if this server is configured to listen on an insecure port (i.e. without TLS) at all.
-     * If false, it is guaranteed by the server that no opened port is insecure.
-     * If true, it enables the definition of an insecure port (as the only port <u>or</u> additionally to the secure port).
+     * If {@code false}, it is guaranteed by the server that no opened port is insecure.
+     * If {@code true}, it enables the definition of an insecure port (as the only port <u>or</u> additionally to the secure port).
      *
      * @return {@code true} if the server guarantees that no opened port is insecure.
      */
@@ -113,8 +146,8 @@ public class ServiceConfigProperties extends AbstractConfig {
 
     /**
      * Sets if this server should support insecure AMQP 1.0 ports (i.e. without TLS) at all.
-     * If false, it is guaranteed by the server that no opened port is insecure.
-     * If true, it enables the definition of an insecure port (as the only port <u>or</u> additionally to the secure port).
+     * If {@code false}, it is guaranteed by the server that no opened port is insecure.
+     * If {@code true}, it enables the definition of an insecure port (as the only port <u>or</u> additionally to the secure port).
      *
      * @param insecurePortEnabled {@code true} if the server shall guarantee that no opened port is insecure.
      */
