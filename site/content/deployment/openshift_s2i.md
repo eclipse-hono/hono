@@ -293,12 +293,19 @@ Start by creating a new project using:
 
 Then deploy the Grafana instance using:
 
-    oc process -f ../openshift/grafana-template.yml \
+    oc create configmap grafana-dashboards --from-file=../dashboards
+    oc process -f grafana-template.yml \
       -p ADMIN_PASSWORD=admin | oc create -f -
 
-After the Grafana instance is up and running, deploy the default resources:
+If you are using a specific branch or GitHub repository you need to provide
+this information via the template parameters:
 
-    ../configure_grafana.sh "$(oc get route grafana -o jsonpath='{.spec.host}')" 80
+    oc process -f grafana-template.yml \
+      -p GIT_REPOSITORY=https://github.com/eclipse/hono \
+      -p GIT_BRANCH=0.6.x \
+      -p ADMIN_PASSWORD=admin | oc create -f -
+      
+      oc process -f grafana-template.yml -p GIT_REPOSITORY=https://github.com/eclipse/hono -p GIT_BRANCH=0.6.x -p ADMIN_PASSWORD=admin | oc create -f -
 
 ## Configuring the installation
 

@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# Copyright (c) 2017 Bosch Software Innovations GmbH and others.
+# Copyright (c) 2017, 2018 Bosch Software Innovations GmbH and others.
 #
 # All rights reserved. This program and the accompanying materials
 # are made available under the terms of the Eclipse Public License v1.0
@@ -9,6 +9,7 @@
 #
 # Contributors:
 #    Bosch Software Innovations GmbH - initial creation
+#    Red Hat Inc
 
 # Absolute path this script is in
 SCRIPTPATH="$(cd "$(dirname "$0")" && pwd -P)"
@@ -35,7 +36,8 @@ docker service create $CREATE_OPTIONS --name influxdb -p 8086:8086 \
   influxdb:${influxdb.version} -config /run/secrets/influxdb.conf
 docker service create $CREATE_OPTIONS --name grafana -p 3000:3000 \
   --limit-memory 64m \
-  grafana/grafana:${grafana.version}
+  --mount "type=bind,source=$SCRIPTPATH/../dashboards,target=/var/lib/grafana-external/dashboards" \
+  "${docker.image.org-name}/hono-grafana:${project.version}"
 echo ... done
 
 echo
@@ -207,12 +209,6 @@ docker service create $CREATE_OPTIONS --name hono-adapter-kura -p 1884:1883 -p 8
   --env SPRING_PROFILES_ACTIVE=prod \
   --env LOGGING_CONFIG=classpath:logback-spring.xml \
   ${docker.image.org-name}/hono-adapter-kura:${project.version}
-echo ... done
-
-echo
-echo Configuring Grafana ...
-chmod +x $SCRIPTPATH/../configure_grafana.sh
-$SCRIPTPATH/../configure_grafana.sh ${DOCKER_IP}
 echo ... done
 
 echo ECLIPSE HONO DEPLOYED TO DOCKER SWARM

@@ -31,7 +31,6 @@ Also contains scripts for deploying a Hono instance to a Docker Swarm, a Kuberne
   <url>https://www.eclipse.org/hono</url>
 
   <properties>
-    <docker.skip.build>true</docker.skip.build>
     <hono.messaging.host>hono-service-messaging.hono</hono.messaging.host>
     <hono.registration.host>hono-service-device-registry.hono</hono.registration.host>
     <hono.auth.host>hono-service-auth.hono</hono.auth.host>
@@ -303,5 +302,45 @@ Also contains scripts for deploying a Hono instance to a Docker Swarm, a Kuberne
       </plugin>
     </plugins>
   </build>
+
+  <profiles>
+    <profile>
+      <id>build-docker-image</id>
+      <activation>
+        <property>
+          <name>docker.host</name>
+        </property>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>io.fabric8</groupId>
+            <artifactId>fabric8-maven-plugin</artifactId>
+            <configuration>
+              <images>
+                <image>
+                  <name>${docker.image.org-name}/hono-grafana:%v</name>
+                  <build>
+                    <dockerFileDir>${project.basedir}/src/main/deploy/grafana</dockerFileDir>
+                    <env>
+                      <GRAFANA_VERSION>${grafana.version}</GRAFANA_VERSION>
+                    </env>
+                  </build>
+                </image>
+              </images>
+            </configuration>
+            <executions>
+              <execution>
+                <id>create_resources</id>
+                <configuration>
+                  <skip>true</skip>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 
 </project>
