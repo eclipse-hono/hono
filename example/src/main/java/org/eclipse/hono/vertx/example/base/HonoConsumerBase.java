@@ -19,6 +19,7 @@ import java.util.function.Consumer;
 
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
+import io.vertx.proton.ProtonConnection;
 import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.CommandClient;
@@ -32,7 +33,6 @@ import org.eclipse.hono.util.TimeUntilDisconnectNotification;
 
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
-import io.vertx.proton.ProtonClientOptions;
 
 
 /**
@@ -48,6 +48,8 @@ import io.vertx.proton.ProtonClientOptions;
 public class HonoConsumerBase {
     public static final String HONO_CLIENT_USER = "consumer@HONO";
     public static final String HONO_CLIENT_PASSWORD = "verysecret";
+    protected final int DEFAULT_CONNECT_TIMEOUT_MILLIS = 1000;
+
 
     private final Vertx vertx = Vertx.vertx();
     private final HonoClient honoClient;
@@ -103,25 +105,9 @@ public class HonoConsumerBase {
             latch.countDown();
         });
 
-        honoClient.connect(new ProtonClientOptions()).compose(connectedClient -> {
-            switch (mode) {
-            case EVENT:
-                // create the eventHandler by using the helper functionality for demultiplexing messages to callbacks
-                final Consumer<Message> eventHandler = MessageTap.getConsumer(
-                        this::handleEventMessage, this::handleCommandReadinessNotification);
-                return connectedClient.createEventConsumer(HonoExampleConstants.TENANT_ID,
-                        eventHandler,
-                        closeHook -> System.err.println("remotely detached consumer link"));
-            case TELEMETRY:
-                // create the telemetryHandler by using the helper functionality for demultiplexing messages to callbacks
-                final Consumer<Message> telemetryHandler = MessageTap.getConsumer(
-                        this::handleTelemetryMessage, this::handleCommandReadinessNotification);
-                return connectedClient.createTelemetryConsumer(HonoExampleConstants.TENANT_ID,
-                        telemetryHandler, closeHook -> System.err.println("remotely detached consumer link"));
-            default:
-                return null;
-            }
-        }).setHandler(consumerFuture.completer());
+        honoClient.connect(this::onDisconnect).
+                compose(connectedClient -> createConsumer()).
+                setHandler(consumerFuture.completer());
 
         latch.await();
 
@@ -129,6 +115,57 @@ public class HonoConsumerBase {
             System.in.read();
         }
         vertx.close();
+    }
+
+    /**
+     * Create the message consumer that handles the downstream messages and invokes the notification callback
+     * {@link #handleCommandReadinessNotification(TimeUntilDisconnectNotification)} if the message indicates that it
+     * stays connected for a specified time. Supported are telemetry or event MessageConsumer.
+     *
+     * @return Future A succeeded future that contains the MessageConsumer if the creation was successful, a failed
+     *         Future otherwise.
+     */
+    private Future<MessageConsumer> createConsumer() {
+        switch (mode) {
+            case EVENT:
+                // create the eventHandler by using the helper functionality for demultiplexing messages to callbacks
+                final Consumer<Message> eventHandler = MessageTap.getConsumer(
+                        this::handleEventMessage, this::handleCommandReadinessNotification);
+                return honoClient.createEventConsumer(HonoExampleConstants.TENANT_ID,
+                        eventHandler,
+                        closeHook -> System.err.println("remotely detached consumer link"));
+            case TELEMETRY:
+                // create the telemetryHandler by using the helper functionality for demultiplexing messages to callbacks
+                final Consumer<Message> telemetryHandler = MessageTap.getConsumer(
+                        this::handleTelemetryMessage, this::handleCommandReadinessNotification);
+                return honoClient.createTelemetryConsumer(HonoExampleConstants.TENANT_ID,
+                        telemetryHandler, closeHook -> System.err.println("remotely detached consumer link"));
+            default:
+                return Future.failedFuture("No valid mode set for consumer.");
+        }
+    }
+
+    /**
+     * Method to act as a disconnect handler. If called, it tries to reconnect to Hono by creating the MessageConsumer
+     * again and continue to wait for incoming downstream messages.
+     * <p>
+     * The reconnection attempt is delayed by {@link #DEFAULT_CONNECT_TIMEOUT_MILLIS} milliseconds and set this method
+     * as disconnect handler again (for potential future disconnect handling).
+     *
+     * @param con The ProtonConnection for that the connection was lost.
+     */
+    private void onDisconnect(final ProtonConnection con) {
+
+        // give Vert.x some time to clean up NetClient
+        vertx.setTimer(DEFAULT_CONNECT_TIMEOUT_MILLIS, reconnect -> {
+            System.out.println("attempting to re-connect to Hono ...");
+            honoClient.connect(this::onDisconnect).
+                    compose(connectedClient -> createConsumer()).
+                    map(messageConsumer -> {
+                        System.out.println("Reconnected to Hono.");
+                        return null;
+                    });
+        });
     }
 
     private void printMessage(final String tenantId, final Message msg, final String messageType) {
