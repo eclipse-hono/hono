@@ -33,6 +33,7 @@ public class ServiceConfigProperties extends AbstractConfig {
     private boolean waitForDownstreamConnection = false;
     private String bindAddress = LOOPBACK_DEVICE_ADDRESS;
     private int port = Constants.PORT_UNCONFIGURED;
+    private boolean nativeTlsRequired = false;
     private boolean insecurePortEnabled = false;
     private String insecurePortBindAddress = LOOPBACK_DEVICE_ADDRESS;
     private int insecurePort = Constants.PORT_UNCONFIGURED;
@@ -98,6 +99,34 @@ public class ServiceConfigProperties extends AbstractConfig {
         } else {
             throw new IllegalArgumentException("invalid port number");
         }
+    }
+
+    /**
+     * Checks if this server requires the usage of a native TLS implementation.
+     * Native TLS implementations offer in general a better performance but may not be available on all platforms.
+     * If true, the server will require the usage of a native TLS implementation.
+     * Server will not start if native implementation is not available on the current system.
+     * If false, the adapter will try to use a native TLS implementation. If no native implementation is available the
+     * default Java platform independent TLS implementation will be used.
+     *
+     * @return {@code true} if the server requires native TLS implementation.
+     */
+    public final boolean isNativeTlsRequired() {
+        return nativeTlsRequired;
+    }
+
+    /**
+     * Sets if this server should require the usage of a native TLS implementation.
+     * Native TLS implementations offer in general a better performance but may not be available on all platforms.
+     * If true, the server will require the usage of a native TLS implementation.
+     * Server will not start if native implementation is not available on the current system.
+     * If false, the adapter will try to use a native TLS implementation. If no native implementation is available the
+     * default Java platform independent TLS implementation will be used.
+     *
+     * @param nativeTlsRequired {@code true} if the server requires the usage of a native TLS implementation.
+     */
+    public final void setNativeTlsRequired(final boolean nativeTlsRequired) {
+        this.nativeTlsRequired = nativeTlsRequired;
     }
 
     /**

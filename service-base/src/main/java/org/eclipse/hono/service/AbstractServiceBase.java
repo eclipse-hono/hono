@@ -371,7 +371,7 @@ public abstract class AbstractServiceBase<T extends ServiceConfigProperties> ext
      * <p>
      * Finally, if a working instance of Netty's <em>tcnative</em> library is found, then
      * it is used instead of the JDK's default SSL engine.
-     * 
+     *
      * @param serverOptions The options to add configuration to.
      */
     protected final void addTlsKeyCertOptions(final NetServerOptions serverOptions) {
@@ -386,7 +386,8 @@ public abstract class AbstractServiceBase<T extends ServiceConfigProperties> ext
 
             final boolean isOpenSslAvailable = OpenSsl.isAvailable();
             final boolean supportsKeyManagerFactory =  OpenSsl.supportsKeyManagerFactory();
-            final boolean useOpenSsl = isOpenSslAvailable && supportsKeyManagerFactory;
+            final boolean useOpenSsl =
+                    getConfig().isNativeTlsRequired() || (isOpenSslAvailable && supportsKeyManagerFactory);
 
             LOG.debug("OpenSSL [available: {}, supports KeyManagerFactory: {}]",
                     isOpenSslAvailable, supportsKeyManagerFactory);
