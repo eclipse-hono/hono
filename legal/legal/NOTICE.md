@@ -132,6 +132,36 @@ is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [Maven Central](http://search.maven.org/#search%7Cga%7C1%7Cg%3A%22io.netty%22%20AND%20v%3A%22${netty.version}%22).
 
+### OpenTracing API for Java ${opentracing.version}
+
+This product includes software developed by the [OpenTracing project](http://opentracing.io/).
+
+Your use of *OpenTracing API for Java* is subject to the terms and conditions of the Apache Software License 2.0.
+A copy of the license is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and is also available at
+http://www.apache.org/licenses/LICENSE-2.0.html.
+
+The source code is available from [Maven Central](http://search.maven.org/#search%7Cga%7C1%7Cg%3A%22io.opentracing%22%20AND%20v%3A%22${opentracing.version}%22).
+
+### OpenTracing Java Tracer Resolver ${opentracing-resolver.version}
+
+This product includes software developed by the [OpenTracing Java Tracer Resolver project](https://github.com/opentracing-contrib/java-tracerresolver).
+
+Your use of *OpenTracing Java Tracer Resolver* is subject to the terms and conditions of the Apache Software License 2.0.
+A copy of the Apache Software License 2.0 is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and
+is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
+
+The source code is available from [Maven Central](http://search.maven.org/remotecontent?filepath=io/opentracing/contrib/opentracing-tracerresolver/${opentracing-resolver.version}/opentracing-tracerresolver-${opentracing-resolver.version}-sources.jar).
+
+### OpenTracing Vert.x Web Instrumentation ${opentracing-vertx-web.version}
+
+This product includes software developed by the [OpenTracing Vert.x Web Instrumentation project](https://github.com/opentracing-contrib/java-vertx-web).
+
+Your use of *OpenTracing Vert.x Web Instrumentation* is subject to the terms and conditions of the Apache Software License 2.0.
+A copy of the Apache Software License 2.0 is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and
+is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
+
+The source code is available from [Maven Central](http://search.maven.org/remotecontent?filepath=io/opentracing/contrib/opentracing-vertx-web/${opentracing-vertx-web.version}/opentracing-vertx-web-${opentracing-vertx-web.version}-sources.jar).
+
 ### Proton-j ${proton.version}
 
 This product includes software developed by the [Apache Software Foundation](http://www.apache.org/).

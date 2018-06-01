@@ -15,6 +15,7 @@ package org.eclipse.hono.adapter.mqtt;
 
 import java.net.HttpURLConnection;
 import java.util.Objects;
+import java.util.Optional;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ClientErrorException;
@@ -28,9 +29,11 @@ import org.eclipse.hono.service.auth.device.DeviceCredentials;
 import org.eclipse.hono.service.auth.device.HonoClientBasedAuthProvider;
 import org.eclipse.hono.service.auth.device.UsernamePasswordAuthProvider;
 import org.eclipse.hono.service.auth.device.UsernamePasswordCredentials;
+import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EndpointType;
 import org.eclipse.hono.util.EventConstants;
+import org.eclipse.hono.util.ExecutionContext;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.TelemetryConstants;
 import org.eclipse.hono.util.TenantObject;
@@ -40,6 +43,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import io.netty.handler.codec.mqtt.MqttConnectReturnCode;
 import io.netty.handler.codec.mqtt.MqttQoS;
+import io.opentracing.Span;
+import io.opentracing.tag.Tags;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
@@ -59,6 +64,11 @@ import io.vertx.mqtt.MqttServerOptions;
  */
 public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAdapterProperties>
         extends AbstractProtocolAdapterBase<T> {
+
+    /**
+     * The name of the property that holds the current span.
+     */
+    public static final String KEY_CURRENT_SPAN = MqttContext.class.getName() + ".serverSpan";
 
     private static final int IANA_MQTT_PORT = 1883;
     private static final int IANA_SECURE_MQTT_PORT = 8883;
@@ -363,7 +373,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
             LOG.debug("connection to unauthenticated device [clientId: {}] closed", endpoint.clientIdentifier());
             metrics.decrementUnauthenticatedMqttConnections();
         });
-        endpoint.publishHandler(message -> onPublishedMessage(new MqttContext(message, endpoint)));
+        endpoint.publishHandler(message -> handlePublishedMessage(new MqttContext(message, endpoint)));
 
         LOG.debug("unauthenticated device [clientId: {}] connected", endpoint.clientIdentifier());
         metrics.incrementUnauthenticatedMqttConnections();
@@ -439,7 +449,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
             metrics.decrementMqttConnections(authenticatedDevice.getTenantId());
         });
 
-        endpoint.publishHandler(message -> onPublishedMessage(new MqttContext(message, endpoint, authenticatedDevice)));
+        endpoint.publishHandler(message -> handlePublishedMessage(new MqttContext(message, endpoint, authenticatedDevice)));
         metrics.incrementMqttConnections(authenticatedDevice.getTenantId());
     }
 
@@ -451,6 +461,27 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
             LOG.debug("providently opened downstream links [credit telemetry: {}, credit event: {}] for tenant [{}]",
                     telemetrySender.result().getCredit(), eventSender.result().getCredit(), tenantId);
             return null;
+        });
+    }
+
+    private void handlePublishedMessage(final MqttContext context) {
+        // there is is no way to extract a SpanContext from an MQTT 3.1 message
+        // so we start a new one for every message
+        final Span span = tracer.buildSpan("upload message")
+            .ignoreActiveSpan()
+            .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_SERVER)
+            .withTag(Tags.MESSAGE_BUS_DESTINATION.getKey(), context.message().topicName())
+            .withTag(TracingHelper.TAG_QOS.getKey(), context.message().qosLevel().toString())
+            .withTag(Tags.COMPONENT.getKey(), getTypeName())
+            .start();
+        context.put(KEY_CURRENT_SPAN, span);
+        onPublishedMessage(context).setHandler(processing -> {
+            if (processing.succeeded()) {
+                span.setTag(Tags.HTTP_STATUS.getKey(), HttpURLConnection.HTTP_ACCEPTED);
+            } else {
+                TracingHelper.logError(span, processing.cause());
+            }
+            span.finish();
         });
     }
 
@@ -559,8 +590,14 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
 
         if (!isPayloadOfIndicatedType(payload, ctx.contentType())) {
             return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
-                    String.format("Content-Type %s does not match with the payload", ctx.contentType())));
+                    String.format("Content-Type %s does not match with payload", ctx.contentType())));
         } else {
+
+            Optional.ofNullable(getCurrentSpan(ctx)).map(span -> {
+                span.setOperationName("upload " + endpointName);
+                TracingHelper.TAG_AUTHENTICATED.set(span, ctx.authenticatedDevice() != null);
+                return span.context();
+            }).orElse(null);
 
             final Future<JsonObject> tokenTracker = getRegistrationAssertion(tenant, deviceId,
                     ctx.authenticatedDevice());
@@ -588,7 +625,8 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
                     }
                 } else {
                     // this adapter is not enabled for the tenant
-                    return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_FORBIDDEN));
+                    return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_FORBIDDEN,
+                            "adapter is not enabled for tenant"));
                 }
 
             }).compose(delivery -> {
@@ -634,6 +672,35 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
             endpoint.close();
         } else {
             LOG.trace("client has already closed connection");
+        }
+    }
+
+    /**
+     * Gets the current span from an execution context.
+     * 
+     * @param ctx The context.
+     * @return The span or {@code null} if the context does not
+     *         contain a span.
+     */
+    protected final Span getCurrentSpan(final ExecutionContext ctx) {
+        if (ctx == null) {
+            return null;
+        } else {
+            return ctx.get(KEY_CURRENT_SPAN);
+        }
+    }
+
+    /**
+     * Sets the current span on an execution context.
+     * 
+     * @param ctx The context.
+     * @param span The current span.
+     */
+    protected final void setCurrentSpan(final ExecutionContext ctx, final Span span) {
+
+        Objects.requireNonNull(ctx);
+        if (span != null) {
+            ctx.put(KEY_CURRENT_SPAN, span);
         }
     }
 
