@@ -1,13 +1,18 @@
 package org.eclipse.hono.service;
 
+import java.util.Objects;
+
 import org.eclipse.hono.config.AbstractConfig;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.util.ConfigurationSupportingVerticle;
 import org.eclipse.hono.util.Constants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import io.netty.handler.ssl.OpenSsl;
+import io.opentracing.Tracer;
+import io.opentracing.noop.NoopTracerFactory;
 import io.vertx.core.Future;
 import io.vertx.core.http.ClientAuth;
 import io.vertx.core.net.KeyCertOptions;
@@ -27,6 +32,26 @@ public abstract class AbstractServiceBase<T extends ServiceConfigProperties> ext
      * A logger to be shared with subclasses.
      */
     protected final Logger LOG = LoggerFactory.getLogger(getClass());
+
+    /**
+     * The OpenTracing {@code Tracer} for tracking processing of requests.
+     */
+    protected Tracer tracer = NoopTracerFactory.create();
+
+    /**
+     * Sets the OpenTracing {@code Tracer} to use for tracking the processing
+     * of messages published by devices across Hono's components.
+     * <p>
+     * If not set explicitly, the {@code NoopTracer} from Opentracing will
+     * be used.
+     * 
+     * @param opentracingTracer The tracer.
+     */
+    @Autowired(required = false)
+    public final void setTracer(final Tracer opentracingTracer) {
+        LOG.info("using OpenTracing Tracer implementation [{}]", opentracingTracer.getClass().getName());
+        this.tracer = Objects.requireNonNull(opentracingTracer);
+    }
 
     /**
      * Starts up this component.

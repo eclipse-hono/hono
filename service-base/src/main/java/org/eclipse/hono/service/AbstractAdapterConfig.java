@@ -13,6 +13,8 @@
 
 package org.eclipse.hono.service;
 
+import java.util.Optional;
+
 import org.eclipse.hono.cache.CacheProvider;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
@@ -37,6 +39,9 @@ import org.springframework.context.annotation.Scope;
 
 import com.google.common.cache.CacheBuilder;
 
+import io.opentracing.Tracer;
+import io.opentracing.contrib.tracerresolver.TracerResolver;
+import io.opentracing.noop.NoopTracerFactory;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
 import io.vertx.core.dns.AddressResolverOptions;
@@ -48,6 +53,22 @@ import io.vertx.core.metrics.MetricsOptions;
 public abstract class AbstractAdapterConfig {
 
     private MetricsOptions metricsOptions;
+
+    /**
+     * Exposes an OpenTracing {@code Tracer} as a Spring Bean.
+     * <p>
+     * The Tracer will be resolved by means of a Java service lookup.
+     * If no tracer can be resolved this way, the {@code NoopTracer} is
+     * returned.
+     * 
+     * @return The tracer.
+     */
+    @Bean
+    public Tracer getTracer() {
+
+        return Optional.ofNullable(TracerResolver.resolveTracer())
+                .orElse(NoopTracerFactory.create());
+    }
 
     /**
      * Vert.x metrics options, if configured.

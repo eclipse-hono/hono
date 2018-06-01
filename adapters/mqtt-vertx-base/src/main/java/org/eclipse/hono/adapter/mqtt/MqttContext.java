@@ -16,6 +16,7 @@ package org.eclipse.hono.adapter.mqtt;
 import java.util.Objects;
 
 import org.eclipse.hono.service.auth.device.Device;
+import org.eclipse.hono.util.ExecutionContext;
 
 import io.vertx.mqtt.MqttEndpoint;
 import io.vertx.mqtt.messages.MqttPublishMessage;
@@ -25,7 +26,7 @@ import io.vertx.mqtt.messages.MqttPublishMessage;
  * processing of an MQTT message published by a device.
  *
  */
-public final class MqttContext {
+public final class MqttContext extends ExecutionContext {
 
     private final MqttPublishMessage message;
     private final MqttEndpoint deviceEndpoint;

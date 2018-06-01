@@ -67,6 +67,10 @@
       <version>${jackson.version}</version>
     </dependency>
     <dependency>
+     <groupId>io.opentracing</groupId>
+     <artifactId>opentracing-api</artifactId>
+    </dependency>
+    <dependency>
       <groupId>org.eclipse.hono</groupId>
       <artifactId>hono-demo-certs</artifactId>
       <scope>test</scope>
@@ -120,6 +124,17 @@
             <Include-Resource>
               META-INF=${project.build.outputDirectory}/META-INF
             </Include-Resource>
+            <!--
+              The OpenTracing API artifact is not a bundle, so we inline
+              and export its packages.
+            -->
+            <Export-Package>
+              io.opentracing*;version=${opentracing.version},
+              {local-packages}
+            </Export-Package>
+            <Embed-Dependency>
+              opentracing-api;inline=true
+            </Embed-Dependency>
           </instructions>
         </configuration>
       </plugin>

@@ -15,8 +15,15 @@ package org.eclipse.hono.adapter.mqtt;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.net.HttpURLConnection;
 import java.util.concurrent.TimeUnit;
@@ -51,6 +58,7 @@ import org.mockito.ArgumentCaptor;
 
 import io.netty.handler.codec.mqtt.MqttConnectReturnCode;
 import io.netty.handler.codec.mqtt.MqttQoS;
+import io.opentracing.Span;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
@@ -147,6 +155,12 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
     @AfterClass
     public static void shutDown() {
         vertx.close();
+    }
+
+    private static MqttContext newMqttContext(final MqttPublishMessage message, final MqttEndpoint endpoint) {
+        final MqttContext result = new MqttContext(message, endpoint);
+        result.put(AbstractVertxBasedMqttProtocolAdapter.KEY_CURRENT_SPAN, mock(Span.class));
+        return result;
     }
 
     /**
@@ -364,7 +378,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         when(messagingClient.getOrCreateTelemetrySender(anyString())).thenReturn(Future.succeededFuture(sender));
 
         adapter.uploadTelemetryMessage(
-                new MqttContext(mock(MqttPublishMessage.class), mock(MqttEndpoint.class)),
+                newMqttContext(mock(MqttPublishMessage.class), mock(MqttEndpoint.class)),
                 "my-tenant",
                 "unknown",
                 Buffer.buffer("test")).setHandler(ctx.asyncAssertFailure(t -> {
@@ -400,7 +414,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
 
         // WHEN a device of "my-tenant" publishes a telemetry message
         adapter.uploadTelemetryMessage(
-                new MqttContext(mock(MqttPublishMessage.class), mock(MqttEndpoint.class)),
+                newMqttContext(mock(MqttPublishMessage.class), mock(MqttEndpoint.class)),
                 "my-tenant",
                 "the-device",
                 Buffer.buffer("test")).setHandler(ctx.asyncAssertFailure(t -> {
@@ -465,7 +479,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         when(messageFromDevice.qosLevel()).thenReturn(MqttQoS.AT_LEAST_ONCE);
         when(messageFromDevice.messageId()).thenReturn(5555555);
         when(messageFromDevice.payload()).thenReturn(payload);
-        final MqttContext context = new MqttContext(messageFromDevice, endpoint);
+        final MqttContext context = newMqttContext(messageFromDevice, endpoint);
         upload.accept(adapter, context);
 
         // THEN the device does not receive a PUBACK
@@ -498,7 +512,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         final MqttPublishMessage messageFromDevice = mock(MqttPublishMessage.class);
         when(messageFromDevice.qosLevel()).thenReturn(MqttQoS.AT_LEAST_ONCE);
         when(messageFromDevice.messageId()).thenReturn(5555555);
-        final MqttContext context = new MqttContext(messageFromDevice, endpoint);
+        final MqttContext context = newMqttContext(messageFromDevice, endpoint);
 
         adapter.uploadEventMessage(context, "my-tenant", "4712", payload).setHandler(ctx.asyncAssertFailure());
 
@@ -533,7 +547,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         when(messageFromDevice.qosLevel()).thenReturn(MqttQoS.AT_LEAST_ONCE);
         when(messageFromDevice.messageId()).thenReturn(5555555);
         when(messageFromDevice.payload()).thenReturn(payload);
-        final MqttContext context = new MqttContext(messageFromDevice, endpoint);
+        final MqttContext context = newMqttContext(messageFromDevice, endpoint);
 
         ResourceIdentifier resourceId = ResourceIdentifier.from("telemetry", "my-tenant", "4712");
         adapter.uploadMessage(context, resourceId, payload).setHandler(ctx.asyncAssertSuccess());

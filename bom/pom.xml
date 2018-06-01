@@ -45,6 +45,9 @@
     <mockito.version>2.10.0</mockito.version>
     <netty.version>4.1.19.Final</netty.version>
     <objenesis.version>2.6</objenesis.version>
+    <opentracing.version>0.31.0</opentracing.version>
+    <opentracing-resolver.version>0.1.4</opentracing-resolver.version>
+    <opentracing-vertx-web.version>0.1.0</opentracing-vertx-web.version>
     <proton.version>0.25.0</proton.version>
     <qpid-jms.version>0.29.0</qpid-jms.version>
     <slf4j.version>1.7.24</slf4j.version>
@@ -316,6 +319,26 @@
             <artifactId>jackson-databind</artifactId>
           </exclusion>
         </exclusions-->
+      </dependency>
+      <dependency>
+        <groupId>io.opentracing</groupId>
+        <artifactId>opentracing-api</artifactId>
+        <version>${opentracing.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.opentracing</groupId>
+        <artifactId>opentracing-noop</artifactId>
+        <version>${opentracing.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.opentracing.contrib</groupId>
+        <artifactId>opentracing-vertx-web</artifactId>
+        <version>${opentracing-vertx-web.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.opentracing.contrib</groupId>
+        <artifactId>opentracing-tracerresolver</artifactId>
+        <version>${opentracing-resolver.version}</version>
       </dependency>
     </dependencies>
   </dependencyManagement>

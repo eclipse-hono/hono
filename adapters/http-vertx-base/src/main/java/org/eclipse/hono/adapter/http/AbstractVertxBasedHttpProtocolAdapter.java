@@ -13,15 +13,16 @@
 package org.eclipse.hono.adapter.http;
 
 import java.net.HttpURLConnection;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
 
-import io.vertx.core.Handler;
-import io.vertx.core.http.HttpHeaders;
-import io.vertx.proton.ProtonDelivery;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.MessageConsumer;
@@ -30,6 +31,7 @@ import org.eclipse.hono.service.AbstractProtocolAdapterBase;
 import org.eclipse.hono.service.auth.device.Device;
 import org.eclipse.hono.service.command.CommandResponseSender;
 import org.eclipse.hono.service.http.HttpUtils;
+import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
@@ -41,15 +43,22 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import io.opentracing.Span;
+import io.opentracing.contrib.vertx.ext.web.TracingHandler;
+import io.opentracing.contrib.vertx.ext.web.WebSpanDecorator;
+import io.opentracing.tag.Tags;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
+import io.vertx.core.Handler;
 import io.vertx.core.buffer.Buffer;
+import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.http.HttpServerOptions;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
+import io.vertx.proton.ProtonDelivery;
 
 /**
  * Base class for a Vert.x based Hono protocol adapter that uses the HTTP protocol.
@@ -167,6 +176,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                     return Future.failedFuture("no router configured");
                 } else {
                     addRoutes(router);
+                    addTracingHandler(router);
                     return CompositeFuture.all(bindSecureHttpServer(router), bindInsecureHttpServer(router));
                 }
             }).compose(s -> {
@@ -178,6 +188,51 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                     startFuture.fail(e);
                 }
             }, startFuture);
+    }
+
+    /**
+     * Adds a handler for adding an OpenTracing Span to the routing context.
+     * 
+     * @param router The router.
+     */
+    private void addTracingHandler(final Router router) {
+        final Map<String, String> customTags = new HashMap<>();
+        customTags.put(Tags.COMPONENT.getKey(), getTypeName());
+        addCustomTags(customTags);
+        final List<WebSpanDecorator> decorators = new ArrayList<>();
+        decorators.add(new ComponentMetaDataDecorator(customTags));
+        addCustomSpanDecorators(decorators);
+        final TracingHandler tracingHandler = new TracingHandler(tracer, decorators);
+        router.route().order(-1).handler(tracingHandler).failureHandler(tracingHandler);
+    }
+
+    /**
+     * Adds meta data about this adapter to be included in OpenTracing
+     * spans that are used for tracing requests handled by this adapter.
+     * <p>
+     * This method is empty by default.
+     * 
+     * @param customTags The existing custom tags to add to. The map will already
+     *                 include this adapter's {@linkplain #getTypeName() type name}
+     *                 under key {@link Tags#COMPONENT}.
+     */
+    protected void addCustomTags(final Map<String, String> customTags) {
+        // empty by default
+    }
+
+    /**
+     * Adds decorators to apply to the active OpenTracing span on certain
+     * stages of processing requests handled by this adapter.
+     * <p>
+     * This method is empty by default.
+     * 
+     * @param decorators The decorators to add to. The list will already
+     *                 include a {@linkplain ComponentMetaDataDecorator decorator} for
+     *                 adding standard tags and component specific tags which can be customized by
+     *                 means of overriding {@link #addCustomTags(Map)}.
+     */
+    protected void addCustomSpanDecorators(final List<WebSpanDecorator> decorators) {
+        // empty by default
     }
 
     /**
@@ -507,6 +562,13 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
             } else {
 
                 final Device authenticatedDevice = getAuthenticatedDevice(ctx);
+                Optional.ofNullable((Span) ctx.get(TracingHandler.CURRENT_SPAN)).map(span -> {
+                    span.setOperationName("upload " + endpointName);
+                    TracingHelper.TAG_TLS.set(span, ctx.request().isSSL());
+                    TracingHelper.TAG_AUTHENTICATED.set(span, authenticatedDevice != null);
+                    return span.context();
+                }).orElse(null);
+
                 final Future<JsonObject> tokenTracker = getRegistrationAssertion(tenant, deviceId, authenticatedDevice);
                 final Future<TenantObject> tenantConfigTracker = getTenantConfiguration(tenant);
 
@@ -553,7 +615,8 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                         });
                     } else {
                         // this adapter is not enabled for the tenant
-                        return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_FORBIDDEN));
+                        return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_FORBIDDEN,
+                                "adapter is not enabled for tenant"));
                     }
                 }).compose(delivery -> {
                     LOG.trace("successfully processed message for device [tenantId: {}, deviceId: {}, endpoint: {}]",
