@@ -1,14 +1,17 @@
-/**
- * Copyright (c) 2018 Contributors to the Eclipse Foundation
+/*
+ * Copyright 2014 Red Hat, Inc. and others.
  *
- * See the NOTICE file(s) distributed with this work for additional
- * information regarding copyright ownership.
+ *  All rights reserved. This program and the accompanying materials
+ *  are made available under the terms of the Eclipse Public License v1.0
+ *  and Apache License v2.0 which accompanies this distribution.
  *
- * This program and the accompanying materials are made available under the
- * terms of the Eclipse Public License 1.0 which is available at
- * https://www.eclipse.org/legal/epl-v10.html
+ *  The Eclipse Public License is available at
+ *  http://www.eclipse.org/legal/epl-v10.html
  *
- * SPDX-License-Identifier: EPL-1.0
+ *  The Apache License v2.0 is available at
+ *  http://www.opensource.org/licenses/apache2.0.php
+ *
+ *  You may elect to redistribute this code under either of these licenses.
  */
 
 package org.eclipse.hono.service.auth.device;
@@ -33,7 +36,6 @@ import io.vertx.ext.web.handler.impl.HttpStatusException;
  * <p>
  * This class is a copy of {@code io.vertx.ext.web.handler.impl.ChainAuthHandlerImpl}.
  */
-@SuppressWarnings("checkstyle:FinalParameters")
 public class HonoChainAuthHandler extends HonoAuthHandler implements ChainAuthHandler {
 
     private final List<AuthHandler> handlers = new ArrayList<>();
@@ -46,13 +48,13 @@ public class HonoChainAuthHandler extends HonoAuthHandler implements ChainAuthHa
     }
 
     @Override
-    public ChainAuthHandler append(AuthHandler other) {
+    public ChainAuthHandler append(final AuthHandler other) {
       handlers.add(other);
       return this;
     }
 
     @Override
-    public boolean remove(AuthHandler other) {
+    public boolean remove(final AuthHandler other) {
       return handlers.remove(other);
     }
 
@@ -62,7 +64,7 @@ public class HonoChainAuthHandler extends HonoAuthHandler implements ChainAuthHa
     }
 
     @Override
-    public AuthHandler addAuthority(String authority) {
+    public AuthHandler addAuthority(final String authority) {
       for (AuthHandler h : handlers) {
         h.addAuthority(authority);
       }
@@ -70,7 +72,7 @@ public class HonoChainAuthHandler extends HonoAuthHandler implements ChainAuthHa
     }
 
     @Override
-    public AuthHandler addAuthorities(Set<String> authorities) {
+    public AuthHandler addAuthorities(final Set<String> authorities) {
       for (AuthHandler h : handlers) {
         h.addAuthorities(authorities);
       }
@@ -78,12 +80,17 @@ public class HonoChainAuthHandler extends HonoAuthHandler implements ChainAuthHa
     }
 
     @Override
-    public void parseCredentials(RoutingContext context, Handler<AsyncResult<JsonObject>> handler) {
+    public void parseCredentials(final RoutingContext context, final Handler<AsyncResult<JsonObject>> handler) {
       // iterate all possible authN
       iterate(0, context, null, handler);
     }
 
-    private void iterate(final int idx, final RoutingContext ctx, HttpStatusException lastException, Handler<AsyncResult<JsonObject>> handler) {
+    private void iterate(
+            final int idx,
+            final RoutingContext ctx,
+            final HttpStatusException lastException,
+            final Handler<AsyncResult<JsonObject>> handler) {
+
       // stop condition
       if (idx >= handlers.size()) {
         // no more providers, means that we failed to find a provider capable of performing this operation
