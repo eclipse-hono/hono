@@ -9,6 +9,7 @@
  * Contributors:
  *    Bosch Software Innovations GmbH - initial creation
  *    Red Hat Inc
+ *    Bosch Software Innovations GmbH - add Open Tracing support
  */
 
 package org.eclipse.hono.client.impl;
@@ -19,6 +20,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 
 import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
@@ -28,9 +30,16 @@ import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.config.ClientConfigProperties;
+import org.eclipse.hono.tracing.TracingHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.opentracing.References;
+import io.opentracing.Span;
+import io.opentracing.SpanContext;
+import io.opentracing.Tracer;
+import io.opentracing.noop.NoopTracerFactory;
+import io.opentracing.tag.Tags;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
@@ -77,6 +86,11 @@ public abstract class AbstractHonoClient {
      * The capabilities offered by the peer.
      */
     protected List<Symbol> offeredCapabilities = Collections.emptyList();
+    /**
+     * The <em>OpenTracing</em> tracer to use for tracking request processing
+     * across process boundaries.
+     */
+    protected Tracer tracer;
 
     /**
      * Creates a client for a vert.x context.
@@ -86,8 +100,93 @@ public abstract class AbstractHonoClient {
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
     protected AbstractHonoClient(final Context context, final ClientConfigProperties config) {
+        this(context, config, null);
+    }
+
+    /**
+     * Creates a client for a vert.x context.
+     * 
+     * @param context The context to run all interactions with the server on.
+     * @param config The configuration properties to use.
+     * @param tracer The tracer to use for tracking request processing
+     *               across process boundaries.
+     * @throws NullPointerException if context or config are {@code null}.
+     */
+    protected AbstractHonoClient(final Context context, final ClientConfigProperties config, final Tracer tracer) {
         this.context = Objects.requireNonNull(context);
         this.config = Objects.requireNonNull(config);
+        this.tracer = Optional.ofNullable(tracer).orElse(NoopTracerFactory.create());
+    }
+
+    /**
+     * Marks an <em>OpenTracing</em> span as erroneous and logs an exception.
+     * <p>
+     * This method does <em>not</em> finish the span.
+     * 
+     * @param span The span to mark.
+     * @param error The exception that has occurred. If the exception is a
+     *              {@link ServiceInvocationException} then a {@link Tags#HTTP_STATUS}
+     *              tag is added containing the exception's error code property value.
+     * @throws NullPointerException if error is {@code null}.
+     */
+    protected final void logError(final Span span, final Throwable error) {
+        if (span != null) {
+            if (ServiceInvocationException.class.isInstance(error)) {
+                final ServiceInvocationException e = (ServiceInvocationException) error;
+                Tags.HTTP_STATUS.set(span, e.getErrorCode());
+            }
+            TracingHelper.logError(span, error);
+        }
+    }
+
+    /**
+     * Creates a new <em>OpenTracing</em> span for tracing the execution of a service invocation.
+     * <p>
+     * The returned span will already contain the following tags:
+     * <ul>
+     * <li>{@link Tags#COMPONENT} - set to <em>hono-client</em></li>
+     * <li>{@link Tags#PEER_HOSTNAME} - set to {@link ClientConfigProperties#getHost()}</li>
+     * <li>{@link Tags#PEER_PORT} - set to {@link ClientConfigProperties#getPort()}</li>
+     * </ul>
+     * 
+     * @param parent The existing span. If not {@code null} then the new span will have a
+     *                     {@link References#CHILD_OF} reference to the existing span.
+     * @param operationName The operation name that the span should be created for.
+     * @return The new span.
+     */
+    protected final Span newChildSpan(final SpanContext parent, final String operationName) {
+
+        return newSpan(parent, References.CHILD_OF, operationName);
+    }
+
+    /**
+     * Creates a new <em>OpenTracing</em> span for tracing the execution of a service invocation.
+     * <p>
+     * The returned span will already contain the following tags:
+     * <ul>
+     * <li>{@link Tags#COMPONENT} - set to <em>hono-client</em></li>
+     * <li>{@link Tags#PEER_HOSTNAME} - set to {@link ClientConfigProperties#getHost()}</li>
+     * <li>{@link Tags#PEER_PORT} - set to {@link ClientConfigProperties#getPort()}</li>
+     * </ul>
+     * 
+     * @param parent The existing span. If not {@code null} then the new span will have a
+     *                     {@link References#FOLLOWS_FROM} reference to the existing span.
+     * @param operationName The operation name that the span should be created for.
+     * @return The new span.
+     */
+    protected final Span newFollowingSpan(final SpanContext parent, final String operationName) {
+
+        return newSpan(parent, References.FOLLOWS_FROM, operationName);
+    }
+
+    private Span newSpan(final SpanContext parent, final String referenceType, final String operationName) {
+
+        return tracer.buildSpan(operationName)
+                    .addReference(referenceType, parent)
+                    .withTag(Tags.COMPONENT.getKey(), "hono-client")
+                    .withTag(Tags.PEER_HOSTNAME.getKey(), config.getHost())
+                    .withTag(Tags.PEER_PORT.getKey(), config.getPort())
+                    .start();
     }
 
     /**

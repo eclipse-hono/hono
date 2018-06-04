@@ -42,7 +42,7 @@ public abstract class AbstractServiceBase<T extends ServiceConfigProperties> ext
      * Sets the OpenTracing {@code Tracer} to use for tracking the processing
      * of messages published by devices across Hono's components.
      * <p>
-     * If not set explicitly, the {@code NoopTracer} from Opentracing will
+     * If not set explicitly, the {@code NoopTracer} from OpenTracing will
      * be used.
      * 
      * @param opentracingTracer The tracer.

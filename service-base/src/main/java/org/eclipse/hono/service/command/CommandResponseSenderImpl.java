@@ -13,6 +13,10 @@ import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.MessageHelper;
 
+import io.opentracing.Span;
+import io.opentracing.SpanContext;
+import io.opentracing.Tracer;
+import io.opentracing.tag.Tags;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
@@ -31,12 +35,24 @@ public class CommandResponseSenderImpl extends AbstractSender implements Command
 
     CommandResponseSenderImpl(final ClientConfigProperties config, final ProtonSender sender, final String tenantId,
             final String targetAddress, final Context context) {
-        super(config, sender, tenantId, targetAddress, context);
+
+        this(config, sender, tenantId, targetAddress, context, null);
+    }
+
+    CommandResponseSenderImpl(
+            final ClientConfigProperties config,
+            final ProtonSender sender,
+            final String tenantId,
+            final String targetAddress,
+            final Context context,
+            final Tracer tracer) {
+
+        super(config, sender, tenantId, targetAddress, context, tracer);
     }
 
     @Override
-    protected Future<ProtonDelivery> sendMessage(final Message message) {
-        return sendMessageAndWaitForOutcome(message);
+    protected Future<ProtonDelivery> sendMessage(final Message message, final Span currentSpan) {
+        return sendMessageAndWaitForOutcome(message, currentSpan);
     }
 
     @Override
@@ -52,6 +68,11 @@ public class CommandResponseSenderImpl extends AbstractSender implements Command
     @Override
     public Future<ProtonDelivery> sendAndWaitForOutcome(final Message message) {
         return send(message);
+    }
+
+    @Override
+    public Future<ProtonDelivery> sendAndWaitForOutcome(final Message message, final SpanContext context) {
+        return send(message, context);
     }
 
     static final String getTargetAddress(final String tenantId, final String deviceId, final String replyId) {
@@ -133,5 +154,17 @@ public class CommandResponseSenderImpl extends AbstractSender implements Command
             return Future.<MessageSender> succeededFuture(
                     new CommandResponseSenderImpl(clientConfig, sender, tenantId, targetAddress, context));
         }).setHandler(creationHandler);
+    }
+
+    @Override
+    protected Span startSpan(final SpanContext parent, final Message rawMessage) {
+
+        if (tracer == null) {
+            return null;
+        } else {
+            final Span span = newFollowingSpan(parent, "send command response");
+            Tags.SPAN_KIND.set(span, Tags.SPAN_KIND_PRODUCER);
+            return span;
+        }
     }
 }
