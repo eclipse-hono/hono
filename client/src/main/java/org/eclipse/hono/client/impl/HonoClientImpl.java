@@ -51,6 +51,7 @@ import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import io.opentracing.Tracer;
 import io.opentracing.noop.NoopTracerFactory;
@@ -170,6 +171,7 @@ public class HonoClientImpl implements HonoClient {
      * 
      * @param opentracingTracer The tracer.
      */
+    @Autowired(required = false)
     public final void setTracer(final Tracer opentracingTracer) {
         LOG.info("using OpenTracing implementation [{}]", opentracingTracer.getClass().getName());
         this.tracer = Objects.requireNonNull(opentracingTracer);
