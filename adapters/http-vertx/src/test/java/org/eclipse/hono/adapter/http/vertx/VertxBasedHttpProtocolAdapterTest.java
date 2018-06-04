@@ -54,6 +54,7 @@ import org.junit.runner.RunWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.opentracing.SpanContext;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -212,13 +213,14 @@ public class VertxBasedHttpProtocolAdapterTest {
                 thenReturn(Future.succeededFuture(commandConsumer));
 
         telemetrySender = mock(MessageSender.class);
-        when(telemetrySender.send(any(Message.class))).thenReturn(Future.succeededFuture(mock(ProtonDelivery.class)));
-        when(telemetrySender.sendAndWaitForOutcome(any(Message.class))).thenReturn(Future.succeededFuture(mock(ProtonDelivery.class)));
+        when(telemetrySender.send(any(Message.class), (SpanContext) any())).thenReturn(Future.succeededFuture(mock(ProtonDelivery.class)));
+        when(telemetrySender.sendAndWaitForOutcome(any(Message.class), (SpanContext) any())).thenReturn(
+                Future.succeededFuture(mock(ProtonDelivery.class)));
         when(messagingClient.getOrCreateTelemetrySender(anyString())).thenReturn(Future.succeededFuture(telemetrySender));
         when(messagingClient.getOrCreateTelemetrySender(anyString(), anyString())).thenReturn(Future.succeededFuture(telemetrySender));
 
         eventSender = mock(MessageSender.class);
-        when(eventSender.send(any(Message.class))).thenReturn(Future.succeededFuture(mock(ProtonDelivery.class)));
+        when(eventSender.send(any(Message.class), (SpanContext) any())).thenReturn(Future.succeededFuture(mock(ProtonDelivery.class)));
         when(messagingClient.getOrCreateEventSender(anyString())).thenReturn(Future.succeededFuture(eventSender));
         when(messagingClient.getOrCreateEventSender(anyString(), anyString())).thenReturn(Future.succeededFuture(eventSender));
 
@@ -425,7 +427,7 @@ public class VertxBasedHttpProtocolAdapterTest {
                 .putHeader(HttpHeaders.ORIGIN, "hono.eclipse.org")
                 .handler(response -> {
                     ctx.assertEquals(HttpURLConnection.HTTP_ACCEPTED, response.statusCode());
-                    verify(telemetrySender).send(any(Message.class));
+                    verify(telemetrySender).send(any(Message.class), any(SpanContext.class));
                     async.complete();
                 }).exceptionHandler(ctx::fail).end(new JsonObject().encode());
     }
@@ -449,7 +451,7 @@ public class VertxBasedHttpProtocolAdapterTest {
                 .putHeader(HttpHeaders.ORIGIN, "hono.eclipse.org")
                 .handler(response -> {
                     ctx.assertEquals(HttpURLConnection.HTTP_ACCEPTED, response.statusCode());
-                    verify(eventSender).send(any(Message.class));
+                    verify(eventSender).send(any(Message.class), any(SpanContext.class));
                     async.complete();
                 }).exceptionHandler(ctx::fail).end(new JsonObject().encode());
     }

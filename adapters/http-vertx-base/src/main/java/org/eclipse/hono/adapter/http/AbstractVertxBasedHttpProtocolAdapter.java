@@ -44,6 +44,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import io.opentracing.Span;
+import io.opentracing.SpanContext;
 import io.opentracing.contrib.vertx.ext.web.TracingHandler;
 import io.opentracing.contrib.vertx.ext.web.WebSpanDecorator;
 import io.opentracing.tag.Tags;
@@ -562,7 +563,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
             } else {
 
                 final Device authenticatedDevice = getAuthenticatedDevice(ctx);
-                Optional.ofNullable((Span) ctx.get(TracingHandler.CURRENT_SPAN)).map(span -> {
+                final SpanContext currentSpan = Optional.ofNullable((Span) ctx.get(TracingHandler.CURRENT_SPAN)).map(span -> {
                     span.setOperationName("upload " + endpointName);
                     TracingHelper.TAG_TLS.set(span, ctx.request().isSSL());
                     TracingHelper.TAG_AUTHENTICATED.set(span, authenticatedDevice != null);
@@ -608,9 +609,9 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                             closeLinkAndTimerHandlerRef.set(closeLinkAndTimerHandler);
 
                             if (qosHeader == null) {
-                                return sender.send(downstreamMessage);
+                                return sender.send(downstreamMessage, currentSpan);
                             } else {
-                                return sender.sendAndWaitForOutcome(downstreamMessage);
+                                return sender.sendAndWaitForOutcome(downstreamMessage, currentSpan);
                             }
                         });
                     } else {
