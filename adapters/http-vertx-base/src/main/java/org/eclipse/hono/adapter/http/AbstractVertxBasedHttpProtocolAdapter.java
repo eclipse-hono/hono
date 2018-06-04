@@ -508,7 +508,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                 // AtomicBoolean to control if the downstream message was sent successfully
                 final AtomicBoolean downstreamMessageSent = new AtomicBoolean(false);
                 // AtomicReference to a Handler to be called to close an open command receiver link.
-                final AtomicReference<Handler<Void>> closeLinkAndTimerHandlerRef = new AtomicReference();
+                final AtomicReference<Handler<Void>> closeLinkAndTimerHandlerRef = new AtomicReference<>();
 
                 // Handler to be called with a received command. If the timer expired, null is provided as command.
                 final Handler<Message> commandReceivedHandler = commandMessage -> {
