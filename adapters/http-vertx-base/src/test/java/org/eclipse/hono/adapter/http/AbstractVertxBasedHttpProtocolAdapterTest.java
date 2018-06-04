@@ -33,6 +33,7 @@ import org.junit.Test;
 import org.junit.rules.Timeout;
 import org.junit.runner.RunWith;
 
+import io.opentracing.SpanContext;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -379,7 +380,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
     private void givenAnEventSenderForOutcome(final Future<ProtonDelivery> outcome) {
 
         final MessageSender sender = mock(MessageSender.class);
-        when(sender.send(any(Message.class))).thenReturn(outcome);
+        when(sender.send(any(Message.class), (SpanContext) any())).thenReturn(outcome);
 
         when(messagingClient.getOrCreateEventSender(anyString())).thenReturn(Future.succeededFuture(sender));
     }
@@ -387,7 +388,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
     private void givenATelemetrySenderForOutcome(final Future<ProtonDelivery> outcome) {
 
         final MessageSender sender = mock(MessageSender.class);
-        when(sender.send(any(Message.class))).thenReturn(outcome);
+        when(sender.send(any(Message.class), (SpanContext) any())).thenReturn(outcome);
 
         when(messagingClient.getOrCreateTelemetrySender(anyString())).thenReturn(Future.succeededFuture(sender));
     }

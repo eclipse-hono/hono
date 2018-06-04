@@ -59,6 +59,7 @@ import org.mockito.ArgumentCaptor;
 import io.netty.handler.codec.mqtt.MqttConnectReturnCode;
 import io.netty.handler.codec.mqtt.MqttQoS;
 import io.opentracing.Span;
+import io.opentracing.SpanContext;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
@@ -159,7 +160,9 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
 
     private static MqttContext newMqttContext(final MqttPublishMessage message, final MqttEndpoint endpoint) {
         final MqttContext result = new MqttContext(message, endpoint);
-        result.put(AbstractVertxBasedMqttProtocolAdapter.KEY_CURRENT_SPAN, mock(Span.class));
+        final Span currentSpan = mock(Span.class);
+        when(currentSpan.context()).thenReturn(mock(SpanContext.class));
+        result.put(AbstractVertxBasedMqttProtocolAdapter.KEY_CURRENT_SPAN, currentSpan);
         return result;
     }
 
@@ -639,8 +642,8 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
 
         final MessageSender sender = mock(MessageSender.class);
         when(sender.getEndpoint()).thenReturn(EventConstants.EVENT_ENDPOINT);
-        when(sender.send(any(Message.class))).thenReturn(outcome);
-        when(sender.sendAndWaitForOutcome(any(Message.class))).thenReturn(outcome);
+        when(sender.send(any(Message.class), (SpanContext) any())).thenReturn(outcome);
+        when(sender.sendAndWaitForOutcome(any(Message.class), (SpanContext) any())).thenReturn(outcome);
 
         when(messagingClient.getOrCreateEventSender(anyString())).thenReturn(Future.succeededFuture(sender));
     }
@@ -649,8 +652,8 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
 
         final MessageSender sender = mock(MessageSender.class);
         when(sender.getEndpoint()).thenReturn(TelemetryConstants.TELEMETRY_ENDPOINT);
-        when(sender.send(any(Message.class))).thenReturn(Future.succeededFuture(mock(ProtonDelivery.class)));
-        when(sender.sendAndWaitForOutcome(any(Message.class))).thenThrow(new UnsupportedOperationException());
+        when(sender.send(any(Message.class), (SpanContext) any())).thenReturn(Future.succeededFuture(mock(ProtonDelivery.class)));
+        when(sender.sendAndWaitForOutcome(any(Message.class), (SpanContext) any())).thenThrow(new UnsupportedOperationException());
 
         when(messagingClient.getOrCreateTelemetrySender(anyString())).thenReturn(Future.succeededFuture(sender));
     }
@@ -659,8 +662,8 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
 
         final MessageSender sender = mock(MessageSender.class);
         when(sender.getEndpoint()).thenReturn(TelemetryConstants.TELEMETRY_ENDPOINT);
-        when(sender.send(any(Message.class))).thenThrow(new UnsupportedOperationException());
-        when(sender.sendAndWaitForOutcome(any(Message.class))).thenReturn(outcome);
+        when(sender.send(any(Message.class), (SpanContext) any())).thenThrow(new UnsupportedOperationException());
+        when(sender.sendAndWaitForOutcome(any(Message.class), (SpanContext) any())).thenReturn(outcome);
 
         when(messagingClient.getOrCreateTelemetrySender(anyString())).thenReturn(Future.succeededFuture(sender));
     }

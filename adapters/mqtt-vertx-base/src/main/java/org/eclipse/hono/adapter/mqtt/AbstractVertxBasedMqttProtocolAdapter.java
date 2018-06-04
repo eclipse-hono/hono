@@ -44,6 +44,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import io.netty.handler.codec.mqtt.MqttConnectReturnCode;
 import io.netty.handler.codec.mqtt.MqttQoS;
 import io.opentracing.Span;
+import io.opentracing.SpanContext;
 import io.opentracing.tag.Tags;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.CompositeFuture;
@@ -593,7 +594,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
                     String.format("Content-Type %s does not match with payload", ctx.contentType())));
         } else {
 
-            Optional.ofNullable(getCurrentSpan(ctx)).map(span -> {
+            final SpanContext currentSpan = Optional.ofNullable(getCurrentSpan(ctx)).map(span -> {
                 span.setOperationName("upload " + endpointName);
                 TracingHelper.TAG_AUTHENTICATED.set(span, ctx.authenticatedDevice() != null);
                 return span.context();
@@ -619,9 +620,9 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
                     customizeDownstreamMessage(downstreamMessage, ctx);
 
                     if (ctx.message().qosLevel() == MqttQoS.AT_LEAST_ONCE) {
-                        return sender.sendAndWaitForOutcome(downstreamMessage);
+                        return sender.sendAndWaitForOutcome(downstreamMessage, currentSpan);
                     } else {
-                        return sender.send(downstreamMessage);
+                        return sender.send(downstreamMessage, currentSpan);
                     }
                 } else {
                     // this adapter is not enabled for the tenant
