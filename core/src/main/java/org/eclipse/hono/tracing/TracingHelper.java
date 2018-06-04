@@ -21,6 +21,7 @@ import java.util.Objects;
 import io.opentracing.Span;
 import io.opentracing.log.Fields;
 import io.opentracing.tag.BooleanTag;
+import io.opentracing.tag.IntTag;
 import io.opentracing.tag.StringTag;
 import io.opentracing.tag.Tags;
 
@@ -36,10 +37,23 @@ public final class TracingHelper {
      */
     public static final BooleanTag TAG_AUTHENTICATED = new BooleanTag("authenticated");
     /**
+     * An OpenTracing tag that contains the number of available credits for a sender link.
+     */
+    public static final IntTag TAG_CREDIT = new IntTag("message_bus.credit");
+    /**
+     * An OpenTracing tag that contains the identifier of a (request) message.
+     */
+    public static final StringTag TAG_MESSAGE_ID = new StringTag("message_bus.message_id");
+    /**
      * An OpenTracing tag that contains the QoS that a device has used for publishing
      * a message.
      */
     public static final StringTag TAG_QOS = new StringTag("qos");
+    /**
+     * An OpenTracing tag that indicates the remote delivery state of an AMQP 1.0
+     * message transfer.
+     */
+    public static final StringTag TAG_REMOTE_STATE = new StringTag("message_bus.remote_state");
     /**
      * An OpenTracing tag indicating if a client's connection is secured using TLS.
      */

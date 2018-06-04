@@ -26,6 +26,8 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 
+import io.opentracing.Span;
+import io.opentracing.SpanContext;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -128,7 +130,8 @@ public class AbstractSenderTest {
                 protonSender,
                 tenantId,
                 targetAddress,
-                context) {
+                context,
+                null) {
 
             @Override
             public String getEndpoint() {
@@ -136,7 +139,7 @@ public class AbstractSenderTest {
             }
 
             @Override
-            protected Future<ProtonDelivery> sendMessage(final Message message) {
+            protected Future<ProtonDelivery> sendMessage(final Message message, final Span currentSpan) {
                 protonSender.send(message);
                 return Future.succeededFuture(mock(ProtonDelivery.class));
             }
@@ -151,8 +154,19 @@ public class AbstractSenderTest {
             }
 
             @Override
+            public Future<ProtonDelivery> sendAndWaitForOutcome(final Message message, final SpanContext context) {
+                protonSender.send(message);
+                return null;
+            }
+
+            @Override
             protected String getTo(final String deviceId) {
                 return null;
+            }
+
+            @Override
+            protected Span startSpan(final SpanContext context, final Message rawMessage) {
+                return mock(Span.class);
             }
         };
     }

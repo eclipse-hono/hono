@@ -78,6 +78,10 @@
       <artifactId>vertx-codegen</artifactId>
       <classifier>processor</classifier>
     </dependency>
+    <dependency>
+      <groupId>io.opentracing</groupId>
+      <artifactId>opentracing-noop</artifactId>
+    </dependency>
   </dependencies>
 
   <build>
@@ -100,6 +104,17 @@
             <Include-Resource>
               META-INF=${project.build.outputDirectory}/META-INF
             </Include-Resource>
+            <!--
+              The OpenTracing Noop artifact is not a bundle, so we inline
+              and export its packages.
+            -->
+            <Export-Package>
+              io.opentracing.noop;version=${opentracing.version},
+              {local-packages}
+            </Export-Package>
+            <Embed-Dependency>
+              opentracing-noop;inline=true,
+            </Embed-Dependency>
           </instructions>
         </configuration>
       </plugin>

@@ -52,6 +52,9 @@ import org.eclipse.hono.util.ResourceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.opentracing.Tracer;
+import io.opentracing.noop.NoopTracerFactory;
+
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
@@ -101,6 +104,7 @@ public class HonoClientImpl implements HonoClient {
     private CacheProvider cacheProvider;
     private AtomicInteger connectAttempts;
     private List<Symbol> offeredCapabilities = Collections.emptyList();
+    private Tracer tracer = NoopTracerFactory.create();
 
     /**
      * Creates a new client for a set of configuration properties.
@@ -155,6 +159,20 @@ public class HonoClientImpl implements HonoClient {
      */
     public final void setCacheProvider(final CacheProvider cacheProvider) {
         this.cacheProvider = Objects.requireNonNull(cacheProvider);
+    }
+
+    /**
+     * Sets the OpenTracing {@code Tracer} to use for tracing messages
+     * published by devices across Hono's components.
+     * <p>
+     * If not set explicitly, the {@code NoopTracer} from OpenTracing will
+     * be used.
+     * 
+     * @param opentracingTracer The tracer.
+     */
+    public final void setTracer(final Tracer opentracingTracer) {
+        LOG.info("using OpenTracing implementation [{}]", opentracingTracer.getClass().getName());
+        this.tracer = Objects.requireNonNull(opentracingTracer);
     }
 
     /**
@@ -468,7 +486,7 @@ public class HonoClientImpl implements HonoClient {
                     onSenderClosed -> {
                         activeSenders.remove(TelemetrySenderImpl.getTargetAddress(tenantId, deviceId));
                     },
-                    result.completer());
+                    result.completer(), tracer);
             return result;
         });
     }
@@ -505,7 +523,7 @@ public class HonoClientImpl implements HonoClient {
                     onSenderClosed -> {
                         activeSenders.remove(EventSenderImpl.getTargetAddress(tenantId, deviceId));
                     },
-                    result.completer());
+                    result.completer(), tracer);
             return result;
         });
     }

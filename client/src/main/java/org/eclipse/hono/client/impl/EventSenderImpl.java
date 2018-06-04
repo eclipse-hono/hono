@@ -9,7 +9,7 @@
  * Contributors:
  *    Bosch Software Innovations GmbH - initial creation
  *    Red Hat Inc
- *
+ *    Bosch Software Innovations GmbH - add Open Tracing support
  */
 
 package org.eclipse.hono.client.impl;
@@ -22,6 +22,10 @@ import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.util.EventConstants;
 
+import io.opentracing.Span;
+import io.opentracing.SpanContext;
+import io.opentracing.Tracer;
+import io.opentracing.tag.Tags;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
@@ -38,7 +42,12 @@ public final class EventSenderImpl extends AbstractSender {
 
     EventSenderImpl(final ClientConfigProperties config, final ProtonSender sender, final String tenantId,
             final String targetAddress, final Context context) {
-        super(config, sender, tenantId, targetAddress, context);
+        this(config, sender, tenantId, targetAddress, context, null);
+    }
+
+    EventSenderImpl(final ClientConfigProperties config, final ProtonSender sender, final String tenantId,
+            final String targetAddress, final Context context, final Tracer tracer) {
+        super(config, sender, tenantId, targetAddress, context, tracer);
     }
 
     /**
@@ -81,8 +90,9 @@ public final class EventSenderImpl extends AbstractSender {
      * @param closeHook The handler to invoke when the Hono server closes the sender. The sender's
      *                  target address is provided as an argument to the handler.
      * @param creationHandler The handler to invoke with the result of the creation attempt.
+     * @param tracer The <em>OpenTracing</em> {@code Tracer} to keep track of the messages sent
+     *               by the sender returned.
      * @throws NullPointerException if any of context, connection, tenant or handler is {@code null}.
-     * @throws IllegalArgumentException if waitForInitialCredits is {@code < 1}.
      */
     public static void create(
             final Context context,
@@ -91,7 +101,8 @@ public final class EventSenderImpl extends AbstractSender {
             final String tenantId,
             final String deviceId,
             final Handler<String> closeHook,
-            final Handler<AsyncResult<MessageSender>> creationHandler) {
+            final Handler<AsyncResult<MessageSender>> creationHandler,
+            final Tracer tracer) {
 
         Objects.requireNonNull(context);
         Objects.requireNonNull(con);
@@ -101,31 +112,32 @@ public final class EventSenderImpl extends AbstractSender {
         final String targetAddress = getTargetAddress(tenantId, deviceId);
         createSender(context, clientConfig, con, targetAddress, ProtonQoS.AT_LEAST_ONCE, closeHook).compose(sender -> {
             return Future.<MessageSender> succeededFuture(
-                    new EventSenderImpl(clientConfig, sender, tenantId, targetAddress, context));
+                    new EventSenderImpl(clientConfig, sender, tenantId, targetAddress, context, tracer));
         }).setHandler(creationHandler);
     }
 
     /**
-     * Sends an AMQP 1.0 message to the peer that this client is configured for
-     * and waits for the outcome of the transfer.
+     * {@inheritDoc}
      * <p>
      * This method simply invokes {@link #send(Message)} because events are
      * always sent with at least once delivery semantics.
-     * 
-     * @param message The message to send.
-     * @return A future indicating the outcome of the operation.
-     *         <p>
-     *         The future will succeed if the message has been accepted (and settled)
-     *         by the peer.
-     *         <p>
-     *         The future will be failed with a {@link ServiceInvocationException} if the
-     *         message could not be sent or has not been accepted by the peer.
-     * @throws NullPointerException if the message is {@code null}.
      */
     @Override
     public Future<ProtonDelivery> sendAndWaitForOutcome(final Message message) {
 
         return send(message);
+    }
+
+    /**
+     * {@inheritDoc}
+     * <p>
+     * This method simply invokes {@link #send(Message, SpanContext)} because events are
+     * always sent with at least once delivery semantics.
+     */
+    @Override
+    public Future<ProtonDelivery> sendAndWaitForOutcome(final Message message, final SpanContext parent) {
+
+        return send(message, parent);
     }
 
     /**
@@ -140,9 +152,12 @@ public final class EventSenderImpl extends AbstractSender {
      * Sends an AMQP 1.0 message to the peer this client is configured for
      * and waits for the outcome of the transfer.
      * <p>
-     * This method simply invokes {@link #sendMessageAndWaitForOutcome(Message)}.
+     * This method simply invokes {@link #sendMessageAndWaitForOutcome(Message, Span)}.
      * 
      * @param message The message to send.
+     * @param currentSpan The <em>OpenTracing</em> span used to trace the sending of the message.
+     *              The span will be finished by this method and will contain an error log if
+     *              the message has not been accepted by the peer.
      * @return A future indicating the outcome of the operation.
      *         <p>
      *         The future will succeed if the message has been accepted (and settled)
@@ -150,11 +165,23 @@ public final class EventSenderImpl extends AbstractSender {
      *         <p>
      *         The future will be failed with a {@link ServiceInvocationException} if the
      *         message could not be sent or has not been accepted by the peer.
-     * @throws NullPointerException if the message is {@code null}.
+     * @throws NullPointerException if any of the parameters are {@code null}.
      */
     @Override
-    protected Future<ProtonDelivery> sendMessage(final Message message) {
+    protected Future<ProtonDelivery> sendMessage(final Message message, final Span currentSpan) {
 
-        return sendMessageAndWaitForOutcome(message);
+        return sendMessageAndWaitForOutcome(message, currentSpan);
+    }
+
+    @Override
+    protected Span startSpan(final SpanContext parent, final Message rawMessage) {
+
+        if (tracer == null) {
+            throw new IllegalStateException("no tracer configured");
+        } else {
+            final Span span = newChildSpan(parent, "forward Event");
+            Tags.SPAN_KIND.set(span, Tags.SPAN_KIND_PRODUCER);
+            return span;
+        }
     }
 }

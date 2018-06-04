@@ -8,7 +8,7 @@
  *
  * Contributors:
  *    Bosch Software Innovations GmbH - initial creation
- *
+ *    Bosch Software Innovations GmbH - add Open Tracing support
  */
 
 package org.eclipse.hono.client;
@@ -17,6 +17,7 @@ import java.util.Map;
 
 import org.apache.qpid.proton.message.Message;
 
+import io.opentracing.SpanContext;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -136,6 +137,34 @@ public interface MessageSender {
     Future<ProtonDelivery> send(Message message);
 
     /**
+     * Sends an AMQP 1.0 message to the endpoint configured for this client.
+     * <p>
+     * This default implementation simply returns the result of {@link #send(Message)}.
+     * 
+     * @param message The message to send.
+     * @param context The currently active OpenTracing span. An implementation
+     *         should use this as the parent for any span it creates for tracing
+     *         the execution of this operation.
+     * @return A future indicating the outcome of the operation.
+     *         <p>
+     *         The future will be succeeded if the message has been sent to the endpoint.
+     *         The delivery contained in the future represents the delivery state at the time
+     *         the future has been succeeded, i.e. for telemetry data it will be locally
+     *         <em>unsettled</em> without any outcome yet. For events it will be locally
+     *         and remotely <em>settled</em> and will contain the <em>accepted</em> outcome.
+     *         <p>
+     *         The future will be failed with a {@link ServerErrorException} if the message
+     *         could not be sent due to a lack of credit.
+     *         If an event is sent which cannot be processed by the peer the future will
+     *         be failed with either a {@code ServerErrorException} or a {@link ClientErrorException}
+     *         depending on the reason for the failure to process the message.
+     * @throws NullPointerException if message is {@code null}.
+     */
+    default Future<ProtonDelivery> send(Message message, SpanContext context) {
+        return send(message);
+    }
+
+    /**
      * Sends an AMQP 1.0 message to the peer and waits for the disposition indicating
      * the outcome of the transfer.
      * 
@@ -153,6 +182,32 @@ public interface MessageSender {
      * @throws NullPointerException if the message is {@code null}.
      */
     Future<ProtonDelivery> sendAndWaitForOutcome(Message message);
+
+    /**
+     * Sends an AMQP 1.0 message to the peer and waits for the disposition indicating
+     * the outcome of the transfer.
+     * <p>
+     * This default implementation simply returns the result of {@link #sendAndWaitForOutcome(Message)}.
+     * 
+     * @param message The message to send.
+     * @param context The currently active OpenTracing span. An implementation
+     *         should use this as the parent for any span it creates for tracing
+     *         the execution of this operation.
+     * @return A future indicating the outcome of the operation.
+     *         <p>
+     *         The future will be succeeded if the message has been accepted (and settled)
+     *         by the peer.
+     *         <p>
+     *         The future will be failed with a {@link ServerErrorException} if the message
+     *         could not be sent due to a lack of credit.
+     *         If an event is sent which cannot be processed by the peer the future will
+     *         be failed with either a {@code ServerErrorException} or a {@link ClientErrorException}
+     *         depending on the reason for the failure to process the message.
+     * @throws NullPointerException if message is {@code null}.
+     */
+    default Future<ProtonDelivery> sendAndWaitForOutcome(Message message, SpanContext context) {
+        return sendAndWaitForOutcome(message);
+    }
 
     /**
      * Sends a message for a given device to the endpoint configured for this client.
