@@ -6,7 +6,6 @@ weight = 407
 The *Tenant API* is used to make Hono aware of the tenants that are available in an installation. 
 A tenant is a logical entity, which groups together a set of devices and consists of meta information which should be used by other Hono components. 
 The tenant meta information is used for example to determine if a given tenant is allowed to use a certain protocol adapter or if devices are required to use authentication.
-
 <!--more-->
 
 {{% note %}}
