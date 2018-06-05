@@ -26,7 +26,7 @@ public class ServerErrorExceptionTest {
      */
     @Test
     public void testCodeAndMessage() {
-        ServerErrorException t = new ServerErrorException(500, "Foo Bar");
+        final ServerErrorException t = new ServerErrorException(500, "Foo Bar");
 
         Assertions.assertThat(t)
                 .hasMessage("Foo Bar");
@@ -41,7 +41,7 @@ public class ServerErrorExceptionTest {
      */
     @Test
     public void testCodeAndNoMessage() {
-        ServerErrorException t = new ServerErrorException(500);
+        final ServerErrorException t = new ServerErrorException(500);
 
         Assertions.assertThat(t)
                 .hasMessage("Error Code: 500");
@@ -56,7 +56,7 @@ public class ServerErrorExceptionTest {
      */
     @Test
     public void testCodeCauseAndNoMessage() {
-        ServerErrorException t = new ServerErrorException(500, new RuntimeException("Bar Foo"));
+        final ServerErrorException t = new ServerErrorException(500, new RuntimeException("Bar Foo"));
 
         Assertions.assertThat(t)
                 .hasMessage("Error Code: 500")
@@ -72,7 +72,7 @@ public class ServerErrorExceptionTest {
      */
     @Test
     public void testCodeCauseAndMessage() {
-        ServerErrorException t = new ServerErrorException(500, "Foo Bar", new RuntimeException("Bar Foo"));
+        final ServerErrorException t = new ServerErrorException(500, "Foo Bar", new RuntimeException("Bar Foo"));
 
         Assertions.assertThat(t)
                 .hasMessage("Foo Bar")

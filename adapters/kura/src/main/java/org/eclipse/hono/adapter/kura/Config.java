@@ -93,7 +93,7 @@ public class Config extends AbstractAdapterConfig {
      */
     @Bean
     public ObjectFactoryCreatingFactoryBean serviceFactory() {
-        ObjectFactoryCreatingFactoryBean factory = new ObjectFactoryCreatingFactoryBean();
+        final ObjectFactoryCreatingFactoryBean factory = new ObjectFactoryCreatingFactoryBean();
         factory.setTargetBeanName(BEAN_NAME_KURA_PROTOCOL_ADAPTER);
         return factory;
     }

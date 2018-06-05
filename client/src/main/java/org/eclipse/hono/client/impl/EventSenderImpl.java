@@ -51,7 +51,7 @@ public final class EventSenderImpl extends AbstractSender {
      * @throws NullPointerException if tenant is {@code null}.
      */
     public static String getTargetAddress(final String tenantId, final String deviceId) {
-        StringBuilder address = new StringBuilder(EventConstants.EVENT_ENDPOINT).append("/").append(tenantId);
+        final StringBuilder address = new StringBuilder(EventConstants.EVENT_ENDPOINT).append("/").append(tenantId);
         if (deviceId != null && deviceId.length() > 0) {
             address.append("/").append(deviceId);
         }

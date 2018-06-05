@@ -42,7 +42,7 @@ public abstract class CredentialsApiAuthProvider implements HonoClientBasedAuthP
      * A logger to be used by subclasses.
      */
     protected final Logger log = LoggerFactory.getLogger(getClass());
-    private HonoClient credentialsServiceClient;
+    private final HonoClient credentialsServiceClient;
 
     /**
      * Creates a new authentication provider for a credentials service client.
@@ -94,7 +94,7 @@ public abstract class CredentialsApiAuthProvider implements HonoClientBasedAuthP
 
         Objects.requireNonNull(deviceCredentials);
         Objects.requireNonNull(resultHandler);
-        Future<Device> validationResult = Future.future();
+        final Future<Device> validationResult = Future.future();
         validationResult.setHandler(resultHandler);
 
         getCredentialsForDevice(deviceCredentials).recover(t -> {

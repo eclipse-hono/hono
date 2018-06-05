@@ -55,7 +55,7 @@ public final class TelemetrySenderImpl extends AbstractSender {
      * @throws NullPointerException if tenant is {@code null}.
      */
     public static String getTargetAddress(final String tenantId, final String deviceId) {
-        StringBuilder targetAddress = new StringBuilder(TelemetryConstants.TELEMETRY_ENDPOINT)
+        final StringBuilder targetAddress = new StringBuilder(TelemetryConstants.TELEMETRY_ENDPOINT)
                 .append("/").append(Objects.requireNonNull(tenantId));
         if (deviceId != null && deviceId.length() > 0) {
             targetAddress.append("/").append(deviceId);
@@ -159,7 +159,7 @@ public final class TelemetrySenderImpl extends AbstractSender {
                 if (Accepted.class.isInstance(deliveryUpdated.getRemoteState())) {
                     LOG.trace("message [message ID: {}] accepted by peer", messageId);
                 } else if (Rejected.class.isInstance(deliveryUpdated.getRemoteState())) {
-                    Rejected remoteState = (Rejected) deliveryUpdated.getRemoteState();
+                    final Rejected remoteState = (Rejected) deliveryUpdated.getRemoteState();
                     if (remoteState.getError() == null) {
                         LOG.debug("message [message ID: {}] rejected by peer", messageId);
                     } else {

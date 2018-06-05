@@ -140,7 +140,7 @@ public abstract class HttpTestBase {
             try (InputStream is = new ByteArrayInputStream(buffer.getBytes())) {
                 final CertificateFactory factory = CertificateFactory.getInstance("X.509");
                 return (X509Certificate) factory.generateCertificate(is);
-            } catch (Exception e) {
+            } catch (final Exception e) {
                 throw new IllegalArgumentException("file cannot be parsed into X.509 certificate");
             }
         });
@@ -322,7 +322,7 @@ public abstract class HttpTestBase {
             sending.await();
         }
 
-        long timeToWait = Math.max(TEST_TIMEOUT - 1000, Math.round(MESSAGES_TO_SEND * 20));
+        final long timeToWait = Math.max(TEST_TIMEOUT - 1000, Math.round(MESSAGES_TO_SEND * 20));
         if (!received.await(timeToWait, TimeUnit.MILLISECONDS)) {
             LOGGER.info("sent {} and received {} messages after {} milliseconds",
                     messageCount, MESSAGES_TO_SEND - received.getCount(), System.currentTimeMillis() - start);

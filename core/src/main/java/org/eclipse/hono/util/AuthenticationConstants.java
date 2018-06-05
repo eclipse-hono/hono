@@ -123,7 +123,7 @@ public final class AuthenticationConstants
      * @return The common name or {@code null} if the subject does not contain a CN.
      */
     public static String getCommonName(final String subject) {
-        Matcher matcher = PATTERN_CN.matcher(subject);
+        final Matcher matcher = PATTERN_CN.matcher(subject);
         if (matcher.matches()) {
             return matcher.group(1); // return CN field value
         } else {

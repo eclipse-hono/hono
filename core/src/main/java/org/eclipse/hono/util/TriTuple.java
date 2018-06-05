@@ -80,9 +80,9 @@ public final class TriTuple<A, B, C> {
     public int hashCode() {
         final int prime = 31;
         int result = 1;
-        result = prime * result + ((one == null) ? 0 : one.hashCode());
-        result = prime * result + ((three == null) ? 0 : three.hashCode());
-        result = prime * result + ((two == null) ? 0 : two.hashCode());
+        result = prime * result + (one == null ? 0 : one.hashCode());
+        result = prime * result + (three == null ? 0 : three.hashCode());
+        result = prime * result + (two == null ? 0 : two.hashCode());
         return result;
     }
 
@@ -101,7 +101,7 @@ public final class TriTuple<A, B, C> {
         if (getClass() != obj.getClass()) {
             return false;
         }
-        TriTuple other = (TriTuple) obj;
+        final TriTuple other = (TriTuple) obj;
         if (one == null) {
             if (other.one != null) {
                 return false;

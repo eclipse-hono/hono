@@ -49,7 +49,7 @@ public final class AuthoritiesImpl implements Authorities {
      */
     public static Authorities from(final Claims claims) {
         Objects.requireNonNull(claims);
-        AuthoritiesImpl result = new AuthoritiesImpl();
+        final AuthoritiesImpl result = new AuthoritiesImpl();
         claims.forEach((key, value) -> {
             if ((key.startsWith("o:") || key.startsWith("r:")) && value instanceof String) {
                 LOG.trace("adding claim [key: {}, value: {}]", key, value);
@@ -121,8 +121,8 @@ public final class AuthoritiesImpl implements Authorities {
      * @return This instance for command chaining.
      */
     public AuthoritiesImpl addResource(final String endpoint, final String tenant, final Activity... activities) {
-        StringBuilder b = new StringBuilder();
-        for (Activity a : activities) {
+        final StringBuilder b = new StringBuilder();
+        for (final Activity a : activities) {
             b.append(a.getCode());
         }
         authorities.put(getResourceKey(endpoint, tenant), b.toString());
@@ -139,7 +139,7 @@ public final class AuthoritiesImpl implements Authorities {
         authoritiesToAdd.asMap().entrySet().stream()
             .filter(entry -> entry.getValue() instanceof String)
             .forEach(entry -> {
-                String value = (String) entry.getValue();
+                final String value = (String) entry.getValue();
                 LOG.trace("adding authority [key: {}, activities: {}]", entry.getKey(), value);
                 authorities.put(entry.getKey(), value);
             });
@@ -189,14 +189,14 @@ public final class AuthoritiesImpl implements Authorities {
 
     @Override
     public Map<String, Object> asMap() {
-        Map<String, Object> result = new HashMap<>();
+        final Map<String, Object> result = new HashMap<>();
         result.putAll(authorities);
         return result;
     }
 
     boolean isAuthorized(final String key, final Activity intent) {
         boolean result = false;
-        String grantedActivities = authorities.get(key);
+        final String grantedActivities = authorities.get(key);
         if (grantedActivities == null) {
             LOG.trace("no claim for key [{}]", key);
         } else {

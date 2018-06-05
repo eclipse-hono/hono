@@ -146,7 +146,7 @@ class RegistrationTestSupport {
 
                 final Integer status = getIntProperty(response, MessageHelper.APP_PROPERTY_STATUS);
                 LOGGER.debug("received response [type: {}, status: {}] for request [correlation ID: {}]", response.getClass().getName(), status, correlationId);
-                int httpStatus = status;
+                final int httpStatus = status;
                 if (status == null || httpStatus <= 0) {
                     throw new IllegalStateException(
                             "Response to " + getMessageID(response) + " contained no valid status: " + httpStatus);
@@ -157,7 +157,7 @@ class RegistrationTestSupport {
                 }
                 try {
                     if (response.isBodyAssignableTo(String.class)) {
-                        String body = response.getBody(String.class);
+                        final String body = response.getBody(String.class);
                         if (body != null) {
                             LOGGER.debug("extracting response body");
                             return RegistrationResult.from(httpStatus, new JsonObject(body));

@@ -111,7 +111,7 @@ public class HonoReceiverSampler extends HonoSampler implements TestBean, Thread
 
     @Override
     public SampleResult sample(final Entry entry) {
-        SampleResult res = new SampleResult();
+        final SampleResult res = new SampleResult();
         res.setResponseOK();
         res.setDataType(SampleResult.TEXT);
         res.setSampleLabel(getName());
@@ -126,7 +126,7 @@ public class HonoReceiverSampler extends HonoSampler implements TestBean, Thread
             honoReceiver = new HonoReceiver(this);
             honoReceiver.start().join();
             addSemaphore();
-        } catch (CompletionException e) {
+        } catch (final CompletionException e) {
             LOGGER.error("error starting receiver: {}/{} ({)}", getEndpoint(), getTenant(),
                     Thread.currentThread().getName(), e.getCause());
         }
@@ -137,7 +137,7 @@ public class HonoReceiverSampler extends HonoSampler implements TestBean, Thread
         if (honoReceiver != null) {
             try {
                 honoReceiver.close().join();
-            } catch (CompletionException e) {
+            } catch (final CompletionException e) {
                 LOGGER.error("error during shut down of receiver", e);
             }
         }

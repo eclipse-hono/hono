@@ -464,7 +464,7 @@ public class CredentialsHttpIT {
         final Future<Integer> result = Future.future();
         @SuppressWarnings("rawtypes")
         final List<Future> addTrackers = new ArrayList<>();
-        for (JsonObject creds : credentialsList) {
+        for (final JsonObject creds : credentialsList) {
             addTrackers.add(registry.addCredentials(TENANT, creds));
         }
 
@@ -483,7 +483,7 @@ public class CredentialsHttpIT {
 
         // the response must contain all of the payload of the add request, so test that now
         context.assertTrue(responseBody.containsKey(CredentialsConstants.FIELD_CREDENTIALS_TOTAL));
-        Integer totalCredentialsFound = responseBody.getInteger(CredentialsConstants.FIELD_CREDENTIALS_TOTAL);
+        final Integer totalCredentialsFound = responseBody.getInteger(CredentialsConstants.FIELD_CREDENTIALS_TOTAL);
         context.assertEquals(totalCredentialsFound, credentialsList.size());
         context.assertTrue(responseBody.containsKey(CredentialsConstants.CREDENTIALS_ENDPOINT));
         final JsonArray credentials = responseBody.getJsonArray(CredentialsConstants.CREDENTIALS_ENDPOINT);

@@ -88,7 +88,7 @@ public final class FileBasedAuthenticationService extends AbstractHonoAuthentica
             try {
                 loadPermissions();
                 startFuture.complete();
-            } catch (IOException e) {
+            } catch (final IOException e) {
                 log.error("cannot load permissions from resource {}", getConfig().getPermissionsPath(), e);
                 startFuture.fail(e);
             }
@@ -107,7 +107,7 @@ public final class FileBasedAuthenticationService extends AbstractHonoAuthentica
         }
         if (getConfig().getPermissionsPath().isReadable()) {
             log.info("loading permissions from resource {}", getConfig().getPermissionsPath().getURI().toString());
-            StringBuilder json = new StringBuilder();
+            final StringBuilder json = new StringBuilder();
             load(getConfig().getPermissionsPath(), json);
             parsePermissions(new JsonObject(json.toString()));
         } else {
@@ -117,7 +117,7 @@ public final class FileBasedAuthenticationService extends AbstractHonoAuthentica
 
     private void load(final Resource source, final StringBuilder target) throws IOException {
 
-        char[] buffer = new char[4096];
+        final char[] buffer = new char[4096];
         int bytesRead = 0;
         try (Reader reader = new InputStreamReader(source.getInputStream(), UTF_8)) {
             while ((bytesRead = reader.read(buffer)) > 0) {
@@ -154,7 +154,7 @@ public final class FileBasedAuthenticationService extends AbstractHonoAuthentica
     }
 
     private JsonObject getUser(final String authenticationId, final String mechanism) {
-        JsonObject result = users.get(authenticationId);
+        final JsonObject result = users.get(authenticationId);
         if (result != null && mechanism.equals(result.getString(FIELD_MECHANISM))) {
             return result;
         } else {
@@ -163,10 +163,10 @@ public final class FileBasedAuthenticationService extends AbstractHonoAuthentica
     }
 
     private Authorities getAuthorities(final JsonObject user) {
-        AuthoritiesImpl result = new AuthoritiesImpl();
+        final AuthoritiesImpl result = new AuthoritiesImpl();
         user.getJsonArray(FIELD_AUTHORITIES).forEach(obj -> {
             final String authority = (String) obj;
-            Authorities roleAuthorities = roles.get(authority);
+            final Authorities roleAuthorities = roles.get(authority);
             if (roleAuthorities != null) {
                 result.addAll(roleAuthorities);
             }
@@ -176,7 +176,7 @@ public final class FileBasedAuthenticationService extends AbstractHonoAuthentica
 
     private Authorities toAuthorities(final JsonArray authorities) {
 
-        AuthoritiesImpl result = new AuthoritiesImpl();
+        final AuthoritiesImpl result = new AuthoritiesImpl();
         Objects.requireNonNull(authorities).stream()
           .filter(obj -> obj instanceof JsonObject)
           .forEach(obj -> {
@@ -185,16 +185,16 @@ public final class FileBasedAuthenticationService extends AbstractHonoAuthentica
               final String resource = authSpec.getString(FIELD_RESOURCE);
               final String operation = authSpec.getString(FIELD_OPERATION);
               if (resource != null) {
-                  List<Activity> activityList = new ArrayList<>();
+                  final List<Activity> activityList = new ArrayList<>();
                   activities.forEach(s -> {
-                      Activity act = Activity.valueOf((String) s);
+                      final Activity act = Activity.valueOf((String) s);
                       if (act != null) {
                           activityList.add(act);
                       }
                   });
                   result.addResource(resource, activityList.toArray(new Activity[activityList.size()]));
               } else if (operation != null) {
-                  String[] parts = operation.split(":", 2);
+                  final String[] parts = operation.split(":", 2);
                   if (parts.length == 2) {
                       result.addOperation(parts[0], parts[1]);
                   } else {
@@ -224,7 +224,7 @@ public final class FileBasedAuthenticationService extends AbstractHonoAuthentica
         } else if (password == null || password.isEmpty()) {
             authenticationResultHandler.handle(Future.failedFuture("missing password"));
         } else {
-            JsonObject user = getUser(username, AuthenticationConstants.MECHANISM_PLAIN);
+            final JsonObject user = getUser(username, AuthenticationConstants.MECHANISM_PLAIN);
             if (user == null) {
                 log.debug("no such user [{}]", username);
                 authenticationResultHandler.handle(Future.failedFuture("unauthorized"));
@@ -243,11 +243,11 @@ public final class FileBasedAuthenticationService extends AbstractHonoAuthentica
         if (subjectDn == null || subjectDn.isEmpty()) {
             authenticationResultHandler.handle(Future.failedFuture("missing subject DN"));
         } else {
-            String commonName = AuthenticationConstants.getCommonName(subjectDn);
+            final String commonName = AuthenticationConstants.getCommonName(subjectDn);
             if (commonName == null) {
                 authenticationResultHandler.handle(Future.failedFuture("could not determine authorization ID for subject DN"));
             } else {
-                JsonObject user = getUser(commonName, AuthenticationConstants.MECHANISM_EXTERNAL);
+                final JsonObject user = getUser(commonName, AuthenticationConstants.MECHANISM_EXTERNAL);
                 if (user == null) {
                     authenticationResultHandler.handle(Future.failedFuture("unauthorized"));
                 } else {
@@ -262,7 +262,7 @@ public final class FileBasedAuthenticationService extends AbstractHonoAuthentica
         JsonObject effectiveUser = user;
         String effectiveAuthorizationId = authenticationId;
         if (authorizationId != null && !authorizationId.isEmpty() && isAuthorizedToImpersonate(user)) {
-            JsonObject impersonatedUser = users.get(authorizationId);
+            final JsonObject impersonatedUser = users.get(authorizationId);
             if (impersonatedUser != null) {
                 effectiveUser = impersonatedUser;
                 effectiveAuthorizationId = authorizationId;
@@ -275,7 +275,7 @@ public final class FileBasedAuthenticationService extends AbstractHonoAuthentica
         final String grantedAuthorizationId = effectiveAuthorizationId;
         final Instant tokenExpirationTime = Instant.now().plus(tokenFactory.getTokenLifetime());
         final String token = tokenFactory.createToken(grantedAuthorizationId, grantedAuthorities);
-        HonoUser honoUser = new HonoUser() {
+        final HonoUser honoUser = new HonoUser() {
 
             @Override
             public String getName() {

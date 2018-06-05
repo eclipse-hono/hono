@@ -89,7 +89,7 @@ public class HonoReceiverSamplerUI extends HonoSamplerUI {
 
     @Override
     public TestElement createTestElement() {
-        HonoReceiverSampler sampler = new HonoReceiverSampler();
+        final HonoReceiverSampler sampler = new HonoReceiverSampler();
         modifyTestElement(sampler);
         return sampler;
     }

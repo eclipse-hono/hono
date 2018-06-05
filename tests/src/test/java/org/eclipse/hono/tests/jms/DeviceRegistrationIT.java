@@ -110,7 +110,7 @@ public class DeviceRegistrationIT {
      */
     @Test
     public void testRegisterDeviceSucceeds() throws Exception {
-        String deviceId = getRandomDeviceId();
+        final String deviceId = getRandomDeviceId();
         registration.register(deviceId, HTTP_CREATED).get(DEFAULT_TEST_TIMEOUT, TimeUnit.MILLISECONDS);
         registration.retrieve(deviceId, HTTP_OK).get(DEFAULT_TEST_TIMEOUT, TimeUnit.MILLISECONDS);
         assertThat("Did not receive responses to all requests", registration.getCorrelationHelperSize(), is(0));
@@ -123,7 +123,7 @@ public class DeviceRegistrationIT {
      */
     @Test
     public void testDuplicateRegistrationFailsWithConflict() throws Exception {
-        String deviceId = getRandomDeviceId();
+        final String deviceId = getRandomDeviceId();
         registration.register(deviceId, HTTP_CREATED).get(DEFAULT_TEST_TIMEOUT, TimeUnit.MILLISECONDS);
         registration.register(deviceId, HTTP_CONFLICT).get(DEFAULT_TEST_TIMEOUT, TimeUnit.MILLISECONDS);
         assertThat("Did not receive responses to all requests", registration.getCorrelationHelperSize(), is(0));
@@ -136,9 +136,9 @@ public class DeviceRegistrationIT {
      */
     @Test
     public void testAssertRegistrationSucceeds() throws Exception {
-        String deviceId = getRandomDeviceId();
+        final String deviceId = getRandomDeviceId();
         registration.register(deviceId, HTTP_CREATED).get(DEFAULT_TEST_TIMEOUT, TimeUnit.MILLISECONDS);
-        RegistrationResult result = registration.assertRegistration(deviceId, HTTP_OK).get(DEFAULT_TEST_TIMEOUT, TimeUnit.MILLISECONDS);
+        final RegistrationResult result = registration.assertRegistration(deviceId, HTTP_OK).get(DEFAULT_TEST_TIMEOUT, TimeUnit.MILLISECONDS);
         assertTrue(result.getPayload().containsKey(RegistrationConstants.FIELD_ASSERTION));
         assertThat("Did not receive responses to all requests", registration.getCorrelationHelperSize(), is(0));
     }
@@ -151,7 +151,7 @@ public class DeviceRegistrationIT {
     @Test
     public void testDeregisterDeviceSucceeds() throws Exception {
 
-        String deviceId = getRandomDeviceId();
+        final String deviceId = getRandomDeviceId();
         registration.register(deviceId, HTTP_CREATED).get(DEFAULT_TEST_TIMEOUT, TimeUnit.MILLISECONDS);
         registration.retrieve(deviceId, HTTP_OK).get(DEFAULT_TEST_TIMEOUT, TimeUnit.MILLISECONDS);
         registration.deregister(deviceId, HTTP_NO_CONTENT).get(DEFAULT_TEST_TIMEOUT, TimeUnit.MILLISECONDS);
@@ -212,7 +212,7 @@ public class DeviceRegistrationIT {
         try {
             registration.createConsumerWithoutListener(invalidSource);
             fail("Should have failed to create consumer");
-        } catch (JMSException e) {
+        } catch (final JMSException e) {
             // THEN the attempt fails
         }
     }

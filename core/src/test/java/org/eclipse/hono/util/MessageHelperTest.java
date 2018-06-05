@@ -34,7 +34,7 @@ public class MessageHelperTest {
     @Test
     public void testAddJmsVendorPropertiesAddsContentType() {
 
-        Message msg = ProtonHelper.message();
+        final Message msg = ProtonHelper.message();
         msg.setContentType("application/json");
         MessageHelper.addJmsVendorProperties(msg);
         assertThat(msg.getApplicationProperties().getValue().get(MessageHelper.JMS_VENDOR_PROPERTY_CONTENT_TYPE), is("application/json"));
@@ -47,7 +47,7 @@ public class MessageHelperTest {
     @Test
     public void testAddJmsVendorPropertiesAddsContentEncoding() {
 
-        Message msg = ProtonHelper.message();
+        final Message msg = ProtonHelper.message();
         msg.setContentEncoding("gzip");
         MessageHelper.addJmsVendorProperties(msg);
         assertThat(msg.getApplicationProperties().getValue().get(MessageHelper.JMS_VENDOR_PROPERTY_CONTENT_ENCODING), is("gzip"));
@@ -60,7 +60,7 @@ public class MessageHelperTest {
     @Test
     public void testAddJmsVendorPropertiesRejectsEmptyContentType() {
 
-        Message msg = ProtonHelper.message();
+        final Message msg = ProtonHelper.message();
         msg.setContentType("");
         MessageHelper.addJmsVendorProperties(msg);
         assertNull(msg.getApplicationProperties());
@@ -73,7 +73,7 @@ public class MessageHelperTest {
     @Test
     public void testAddJmsVendorPropertiesRejectsEmptyContentEncoding() {
 
-        Message msg = ProtonHelper.message();
+        final Message msg = ProtonHelper.message();
         msg.setContentEncoding("");
         MessageHelper.addJmsVendorProperties(msg);
         assertNull(msg.getApplicationProperties());

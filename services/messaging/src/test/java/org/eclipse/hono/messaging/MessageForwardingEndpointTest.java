@@ -52,7 +52,7 @@ import io.vertx.proton.ProtonReceiver;
 public class MessageForwardingEndpointTest {
 
     private static final String SECRET = "hfguisdauifsuifhwebfjkhsdfuigsdafigsdaozfgaDSBCMBGQ";
-    private Vertx vertx = Vertx.vertx();
+    private final Vertx vertx = Vertx.vertx();
     private RegistrationAssertionHelper tokenValidator;
     private HonoMessagingConfigProperties config;
 
@@ -174,7 +174,7 @@ public class MessageForwardingEndpointTest {
     public void testOnLinkAttachClosesLinkIfClientWantsToUseUnsupportedDeliveryMode() {
 
         // GIVEN an endpoint
-        MessageForwardingEndpoint<HonoMessagingConfigProperties> endpoint = getEndpoint();
+        final MessageForwardingEndpoint<HonoMessagingConfigProperties> endpoint = getEndpoint();
 
         // WHEN a client tries to attach using an unsupported delivery mode
         final ProtonConnection connection = mock(ProtonConnection.class);

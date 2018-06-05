@@ -58,7 +58,7 @@ public final class FileBasedCredentialsService extends BaseCredentialsService<Fi
     public static final String FIELD_TENANT = "tenant";
 
     // <tenantId, <authId, credentialsData[]>>
-    private Map<String, Map<String, JsonArray>> credentials = new HashMap<>();
+    private final Map<String, Map<String, JsonArray>> credentials = new HashMap<>();
     private boolean running = false;
     private boolean dirty = false;
 
@@ -137,19 +137,19 @@ public final class FileBasedCredentialsService extends BaseCredentialsService<Fi
     }
 
     private Future<Void> addAll(final Buffer credentials) {
-        Future<Void> result = Future.future();
+        final Future<Void> result = Future.future();
         try {
             int credentialsCount = 0;
             final JsonArray allObjects = credentials.toJsonArray();
             log.debug("trying to load credentials for {} tenants", allObjects.size());
-            for (Object obj : allObjects) {
+            for (final Object obj : allObjects) {
                 if (JsonObject.class.isInstance(obj)) {
                     credentialsCount += addCredentialsForTenant((JsonObject) obj);
                 }
             }
             log.info("successfully loaded {} credentials from file [{}]", credentialsCount, getConfig().getFilename());
             result.complete();
-        } catch (DecodeException e) {
+        } catch (final DecodeException e) {
             log.warn("cannot read malformed JSON from credentials file [{}]", getConfig().getFilename());
             result.fail(e);
         }
@@ -160,7 +160,7 @@ public final class FileBasedCredentialsService extends BaseCredentialsService<Fi
         int count = 0;
         final String tenantId = tenant.getString(FIELD_TENANT);
         final Map<String, JsonArray> credentialsMap = new HashMap<>();
-        for (Object credentialsObj : tenant.getJsonArray(ARRAY_CREDENTIALS)) {
+        for (final Object credentialsObj : tenant.getJsonArray(ARRAY_CREDENTIALS)) {
             final JsonObject credentials = (JsonObject) credentialsObj;
             final JsonArray authIdCredentials;
             if (credentialsMap.containsKey(credentials.getString(CredentialsConstants.FIELD_AUTH_ID))) {
@@ -197,9 +197,9 @@ public final class FileBasedCredentialsService extends BaseCredentialsService<Fi
             return checkFileExists(true).compose(s -> {
                 final AtomicInteger idCount = new AtomicInteger();
                 final JsonArray tenants = new JsonArray();
-                for (Entry<String, Map<String, JsonArray>> entry : credentials.entrySet()) {
+                for (final Entry<String, Map<String, JsonArray>> entry : credentials.entrySet()) {
                     final JsonArray credentialsArray = new JsonArray();
-                    for (JsonArray singleAuthIdCredentials : entry.getValue().values()) {
+                    for (final JsonArray singleAuthIdCredentials : entry.getValue().values()) {
                         credentialsArray.addAll(singleAuthIdCredentials.copy());
                         idCount.incrementAndGet();
                     }
@@ -283,7 +283,7 @@ public final class FileBasedCredentialsService extends BaseCredentialsService<Fi
         } else {
             final JsonArray matchingCredentials = new JsonArray();
             // iterate over all credentials per auth-id in order to find credentials matching the given device
-            for (JsonArray credentialsForAuthId : credentialsForTenant.values()) {
+            for (final JsonArray credentialsForAuthId : credentialsForTenant.values()) {
                 findCredentialsForDevice(credentialsForAuthId, deviceId, matchingCredentials);
             }
             if (matchingCredentials.isEmpty()) {
@@ -300,7 +300,7 @@ public final class FileBasedCredentialsService extends BaseCredentialsService<Fi
 
     private void findCredentialsForDevice(final JsonArray credentials, final String deviceId, final JsonArray result) {
 
-        for (Object obj : credentials) {
+        for (final Object obj : credentials) {
             if (obj instanceof JsonObject) {
                 final JsonObject currentCredentials = (JsonObject) obj;
                 if (deviceId.equals(getTypesafeValueForField(currentCredentials, CredentialsConstants.FIELD_PAYLOAD_DEVICE_ID))) {
@@ -330,12 +330,12 @@ public final class FileBasedCredentialsService extends BaseCredentialsService<Fi
         if (credentialsForTenant != null) {
             final JsonArray authIdCredentials = credentialsForTenant.get(authId);
             if (authIdCredentials != null) {
-                for (Object authIdCredentialEntry : authIdCredentials) {
+                for (final Object authIdCredentialEntry : authIdCredentials) {
                     final JsonObject authIdCredential = (JsonObject) authIdCredentialEntry;
                     // return the first matching type entry for this authId
                     if (type.equals(authIdCredential.getString(CredentialsConstants.FIELD_TYPE))) {
                         if (clientContext != null) {
-                            AtomicBoolean match = new AtomicBoolean(true);
+                            final AtomicBoolean match = new AtomicBoolean(true);
                             clientContext.forEach(field -> {
                                 if (authIdCredential.containsKey(field.getKey())) {
                                     if (!authIdCredential.getString(field.getKey()).equals(field.getValue())) {
@@ -363,14 +363,14 @@ public final class FileBasedCredentialsService extends BaseCredentialsService<Fi
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(credentials);
         Objects.requireNonNull(resultHandler);
-        CredentialsResult<JsonObject> credentialsResult = addCredentialsResult(tenantId, credentials);
+        final CredentialsResult<JsonObject> credentialsResult = addCredentialsResult(tenantId, credentials);
         resultHandler.handle(Future.succeededFuture(credentialsResult));
     }
 
     private CredentialsResult<JsonObject> addCredentialsResult(final String tenantId, final JsonObject credentialsToAdd) {
 
-        String authId = credentialsToAdd.getString(CredentialsConstants.FIELD_AUTH_ID);
-        String type = credentialsToAdd.getString(CredentialsConstants.FIELD_TYPE);
+        final String authId = credentialsToAdd.getString(CredentialsConstants.FIELD_AUTH_ID);
+        final String type = credentialsToAdd.getString(CredentialsConstants.FIELD_TYPE);
         log.debug("adding credentials for device [tenant-id: {}, auth-id: {}, type: {}]", tenantId, authId, type);
 
         final Map<String, JsonArray> credentialsForTenant = getCredentialsForTenant(tenantId);
@@ -378,7 +378,7 @@ public final class FileBasedCredentialsService extends BaseCredentialsService<Fi
         final JsonArray authIdCredentials = getAuthIdCredentials(authId, credentialsForTenant);
 
         // check if credentials already exist with the type and auth-id from the payload
-        for (Object credentialsObj: authIdCredentials) {
+        for (final Object credentialsObj: authIdCredentials) {
             final JsonObject credentials = (JsonObject) credentialsObj;
             if (credentials.getString(CredentialsConstants.FIELD_TYPE).equals(type)) {
                 return CredentialsResult.from(HttpURLConnection.HTTP_CONFLICT);
@@ -483,7 +483,7 @@ public final class FileBasedCredentialsService extends BaseCredentialsService<Fi
 
                 // delete based on type (no authId provided) - this might consume more time on large data sets and is thus
                 // handled explicitly
-                for (JsonArray credentialsForAuthId : credentialsForTenant.values()) {
+                for (final JsonArray credentialsForAuthId : credentialsForTenant.values()) {
                     if (removeCredentialsFromCredentialsArray(deviceId, CredentialsConstants.SPECIFIER_WILDCARD, credentialsForAuthId)) {
                         removedAnyElement = true;
                     }

@@ -55,7 +55,7 @@ public class AbstractServiceBaseTest {
 
     private AbstractServiceBase<ServiceConfigProperties> createService(final ServiceConfigProperties config) {
 
-        AbstractServiceBase<ServiceConfigProperties> server = new AbstractServiceBase<ServiceConfigProperties>() {
+        final AbstractServiceBase<ServiceConfigProperties> server = new AbstractServiceBase<ServiceConfigProperties>() {
 
             @Override
             public void setConfig(final ServiceConfigProperties configuration) {

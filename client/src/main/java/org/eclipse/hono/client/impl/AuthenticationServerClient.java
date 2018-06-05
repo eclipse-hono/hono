@@ -86,7 +86,7 @@ public final class AuthenticationServerClient {
     public void verifyPlain(final String authzid, final String authcid, final String password,
             final Handler<AsyncResult<HonoUser>> authenticationResultHandler) {
 
-        ProtonClientOptions options = new ProtonClientOptions();
+        final ProtonClientOptions options = new ProtonClientOptions();
         options.setReconnectAttempts(3).setReconnectInterval(50);
         options.addEnabledSaslMechanism(AuthenticationConstants.MECHANISM_PLAIN);
         factory.connect(options, authcid, password, null, null, conAttempt -> {
@@ -102,7 +102,7 @@ public final class AuthenticationServerClient {
                     } else {
                         authenticationResultHandler.handle(Future.failedFuture(s.cause()));
                     }
-                    ProtonConnection con = conAttempt.result();
+                    final ProtonConnection con = conAttempt.result();
                     if (con != null) {
                         LOG.debug("closing connection to Authentication service");
                         con.close();
@@ -124,16 +124,16 @@ public final class AuthenticationServerClient {
 
         final ProtonMessageHandler messageHandler = (delivery, message) -> {
 
-            String type = MessageHelper.getApplicationProperty(
+            final String type = MessageHelper.getApplicationProperty(
                     message.getApplicationProperties(),
                     AuthenticationConstants.APPLICATION_PROPERTY_TYPE,
                     String.class);
 
             if (AuthenticationConstants.TYPE_AMQP_JWT.equals(type)) {
-                Section body = message.getBody();
+                final Section body = message.getBody();
                 if (body instanceof AmqpValue) {
                     final String token = ((AmqpValue) body).getValue().toString();
-                    HonoUser user = new HonoUserAdapter() {
+                    final HonoUser user = new HonoUserAdapter() {
                         @Override
                         public String getToken() {
                             return token;
@@ -157,7 +157,7 @@ public final class AuthenticationServerClient {
     }
 
     private static Future<ProtonReceiver> openReceiver(final ProtonConnection openConnection, final ProtonMessageHandler messageHandler) {
-        Future<ProtonReceiver> result = Future.future();
+        final Future<ProtonReceiver> result = Future.future();
         openConnection.createReceiver(AuthenticationConstants.ENDPOINT_NAME_AUTHENTICATION).openHandler(result.completer()).handler(messageHandler).open();
         return result;
     }

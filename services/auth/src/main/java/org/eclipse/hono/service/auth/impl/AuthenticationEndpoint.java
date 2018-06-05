@@ -59,10 +59,10 @@ public class AuthenticationEndpoint extends AbstractAmqpEndpoint<AuthenticationS
     public final void onLinkAttach(final ProtonConnection con, final ProtonSender sender, final ResourceIdentifier targetResource) {
 
         if (ProtonQoS.AT_LEAST_ONCE.equals(sender.getRemoteQoS())) {
-            HonoUser user = Constants.getClientPrincipal(con);
+            final HonoUser user = Constants.getClientPrincipal(con);
             sender.setQoS(ProtonQoS.AT_LEAST_ONCE).open();
             logger.debug("transferring token to client...");
-            Message tokenMsg = ProtonHelper.message(user.getToken());
+            final Message tokenMsg = ProtonHelper.message(user.getToken());
             MessageHelper.addProperty(tokenMsg, AuthenticationConstants.APPLICATION_PROPERTY_TYPE, AuthenticationConstants.TYPE_AMQP_JWT);
             sender.send(tokenMsg, disposition -> {
                 if (disposition.remotelySettled()) {

@@ -55,7 +55,7 @@ public class Application extends AbstractApplication {
     @Override
     protected Future<Void> deployRequiredVerticles(final int maxInstances) {
 
-        Future<Void> result = Future.future();
+        final Future<Void> result = Future.future();
         if (authenticationService == null) {
             result.fail("no authentication service implementation configured");
         } else {

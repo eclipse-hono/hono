@@ -305,7 +305,7 @@ public class DeviceRegistrationHttpIT {
             final JsonObject expectedData) {
 
         ctx.assertEquals(expectedDeviceId, response.getString(RegistrationConstants.FIELD_PAYLOAD_DEVICE_ID));
-        JsonObject registeredData = response.getJsonObject(RegistrationConstants.FIELD_DATA);
+        final JsonObject registeredData = response.getJsonObject(RegistrationConstants.FIELD_DATA);
         registeredData.forEach(entry -> {
             ctx.assertEquals(expectedData.getValue(entry.getKey()), entry.getValue());
         });

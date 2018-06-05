@@ -45,7 +45,7 @@ public final class HonoClientUnitTestHelper {
 
         when(context.owner()).thenReturn(vertx);
         doAnswer(invocation -> {
-            Handler<Void> handler = invocation.getArgument(0);
+            final Handler<Void> handler = invocation.getArgument(0);
             handler.handle(null);
             return null;
         }).when(context).runOnContext(any(Handler.class));

@@ -110,13 +110,13 @@ public final class HonoSaslAuthenticatorFactory implements ProtonSaslAuthenticat
             final DeliveryOptions options = new DeliveryOptions().setSendTimeout(AUTH_REQUEST_TIMEOUT_MILLIS);
             vertx.eventBus().send(AuthenticationConstants.EVENT_BUS_ADDRESS_AUTHENTICATION_IN, authRequest, options, reply -> {
                 if (reply.succeeded()) {
-                    JsonObject result = (JsonObject) reply.result().body();
-                    String token = result.getString(AuthenticationConstants.FIELD_TOKEN);
+                    final JsonObject result = (JsonObject) reply.result().body();
+                    final String token = result.getString(AuthenticationConstants.FIELD_TOKEN);
                     log.debug("received token [length: {}] in response to authentication request", token.length());
                     try {
-                        Jws<Claims> expandedToken = tokenValidator.expand(result.getString(AuthenticationConstants.FIELD_TOKEN));
+                        final Jws<Claims> expandedToken = tokenValidator.expand(result.getString(AuthenticationConstants.FIELD_TOKEN));
                         authenticationResultHandler.handle(Future.succeededFuture(new HonoUserImpl(expandedToken, token)));
-                    } catch (JwtException e) {
+                    } catch (final JwtException e) {
                         authenticationResultHandler.handle(Future.failedFuture(e));
                     }
                 } else {
@@ -134,9 +134,9 @@ public final class HonoSaslAuthenticatorFactory implements ProtonSaslAuthenticat
     public static final class HonoUserImpl implements HonoUser {
 
         private static Duration expirationLeeway = Duration.ofMinutes(2);
-        private String token;
-        private Jws<Claims> expandedToken;
-        private Authorities authorities;
+        private final String token;
+        private final Jws<Claims> expandedToken;
+        private final Authorities authorities;
 
         private HonoUserImpl(final Jws<Claims> expandedToken, final String token) {
             Objects.requireNonNull(expandedToken);

@@ -26,7 +26,7 @@ public class HonoTelemetrySender extends HonoSenderBase {
     public static void main(final String[] args) {
 
         System.out.println("Starting downstream telemetry sender...");
-        HonoTelemetrySender honoDownstreamSender = new HonoTelemetrySender();
+        final HonoTelemetrySender honoDownstreamSender = new HonoTelemetrySender();
         honoDownstreamSender.sendData();
         System.out.println("Finishing downstream telemetry sender.");
     }

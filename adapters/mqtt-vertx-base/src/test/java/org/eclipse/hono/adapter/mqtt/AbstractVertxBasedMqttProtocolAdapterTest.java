@@ -296,7 +296,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         final AbstractVertxBasedMqttProtocolAdapter<ProtocolAdapterProperties> adapter = getAdapter(server);
         forceClientMocksToConnected();
         doAnswer(invocation -> {
-            Handler<AsyncResult<Device>> resultHandler = invocation.getArgument(1);
+            final Handler<AsyncResult<Device>> resultHandler = invocation.getArgument(1);
             resultHandler.handle(Future.succeededFuture(new Device("DEFAULT_TENANT", "4711")));
             return null;
         }).when(usernamePasswordAuthProvider).authenticate(any(DeviceCredentials.class), any(Handler.class));
@@ -574,7 +574,8 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         when(server.actualPort()).thenReturn(0, 1883);
         when(server.endpointHandler(any(Handler.class))).thenReturn(server);
         when(server.listen(any(Handler.class))).then(invocation -> {
-            Handler<AsyncResult<MqttServer>> handler = (Handler<AsyncResult<MqttServer>>) invocation.getArgument(0);
+            final Handler<AsyncResult<MqttServer>> handler = (Handler<AsyncResult<MqttServer>>) invocation
+                    .getArgument(0);
             if (startupShouldFail) {
                 handler.handle(Future.failedFuture("MQTT server intentionally failed to start"));
             } else {
@@ -703,12 +704,12 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
 
         forceClientMocksToConnected();
         doAnswer(invocation -> {
-            Handler<AsyncResult<Device>> resultHandler = invocation.getArgument(1);
+            final Handler<AsyncResult<Device>> resultHandler = invocation.getArgument(1);
             resultHandler.handle(Future.succeededFuture(new Device("DEFAULT_TENANT", "4711")));
             return null;
         }).when(usernamePasswordAuthProvider).authenticate(any(DeviceCredentials.class), any(Handler.class));
 
-        AtomicReference<Handler<Void>> closeHandlerRef = new AtomicReference<>();
+        final AtomicReference<Handler<Void>> closeHandlerRef = new AtomicReference<>();
 
         final MqttEndpoint endpoint = getMqttEndpointAuthenticated();
         doAnswer(invocation -> {
@@ -742,7 +743,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
 
         forceClientMocksToConnected();
 
-        AtomicReference<Handler<Void>> closeHandlerRef = new AtomicReference<>();
+        final AtomicReference<Handler<Void>> closeHandlerRef = new AtomicReference<>();
 
         final MqttEndpoint endpoint = mock(MqttEndpoint.class);
         doAnswer(invocation -> {

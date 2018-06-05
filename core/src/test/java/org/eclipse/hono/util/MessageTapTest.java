@@ -44,7 +44,7 @@ public class MessageTapTest {
 
         final AtomicBoolean consumerCalled = new AtomicBoolean(false);
 
-        Consumer<Message> messageConsumer = MessageTap.getConsumer(
+        final Consumer<Message> messageConsumer = MessageTap.getConsumer(
                 message -> consumerCalled.set(true),
                 n -> {});
         messageConsumer.accept(msg);
@@ -65,7 +65,7 @@ public class MessageTapTest {
         final AtomicBoolean messageConsumerCalled = new AtomicBoolean(false);
         final AtomicBoolean notificationConsumerCalled = new AtomicBoolean(false);
 
-        Consumer<Message> messageConsumer = MessageTap.getConsumer(
+        final Consumer<Message> messageConsumer = MessageTap.getConsumer(
                 m -> messageConsumerCalled.set(true),
                 message -> notificationConsumerCalled.set(true)
         );

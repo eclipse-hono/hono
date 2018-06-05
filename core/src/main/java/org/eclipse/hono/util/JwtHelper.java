@@ -148,7 +148,7 @@ public abstract class JwtHelper {
      * @return {@code true} if the token is expired according to the current system time (including allowed skew).
      */
     public static final boolean isExpired(final String token, final int allowedClockSkewSeconds) {
-        Instant now = Instant.now().minus(Duration.ofSeconds(allowedClockSkewSeconds));
+        final Instant now = Instant.now().minus(Duration.ofSeconds(allowedClockSkewSeconds));
         return isExpired(token, now);
     }
 
@@ -166,7 +166,7 @@ public abstract class JwtHelper {
         if (token == null) {
             throw new NullPointerException("token must not be null");
         } else {
-            Date exp = getExpiration(token);
+            final Date exp = getExpiration(token);
             return exp.before(Date.from(now));
         }
     }
@@ -193,14 +193,14 @@ public abstract class JwtHelper {
                 @SuppressWarnings("rawtypes")
                 @Override
                 public Key resolveSigningKey(final JwsHeader header, final Claims claims) {
-                    Date exp = claims.getExpiration();
+                    final Date exp = claims.getExpiration();
                     if (exp != null) {
                         result.set(exp);
                     }
                     return DUMMY_KEY;
                 }
             }).parse(token);
-        } catch (JwtException e) {
+        } catch (final JwtException e) {
             // expected since we do not know the signing key
         }
 
@@ -235,7 +235,7 @@ public abstract class JwtHelper {
             final T result = instanceSupplier.get();
             result.tokenLifetime = Duration.ofSeconds(config.getTokenExpiration());
             if (config.getSharedSecret() != null) {
-                byte[] secret = getBytes(config.getSharedSecret());
+                final byte[] secret = getBytes(config.getSharedSecret());
                 result.setSharedSecret(secret);
                 LOG.info("using shared secret [{} bytes] for signing tokens", secret.length);
             } else if (config.getKeyPath() != null) {
@@ -256,9 +256,9 @@ public abstract class JwtHelper {
             throw new IllegalArgumentException(
                     "configuration does not specify any key material for validating tokens");
         } else {
-            T result = instanceSupplier.get();
+            final T result = instanceSupplier.get();
             if (config.getSharedSecret() != null) {
-                byte[] secret = getBytes(config.getSharedSecret());
+                final byte[] secret = getBytes(config.getSharedSecret());
                 result.setSharedSecret(secret);
                 LOG.info("using shared secret [{} bytes] for validating tokens", secret.length);
             } else if (config.getCertPath() != null) {

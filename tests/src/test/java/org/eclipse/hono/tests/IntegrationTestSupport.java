@@ -236,7 +236,7 @@ public final class IntegrationTestSupport {
         if (jsonObject == null) {
             return false;
         }
-        AtomicBoolean containResult = new AtomicBoolean(true);
+        final AtomicBoolean containResult = new AtomicBoolean(true);
 
         jsonObjectToBeContained.forEach(entry -> {
             if (!jsonObject.containsKey(entry.getKey())) {
@@ -260,15 +260,15 @@ public final class IntegrationTestSupport {
                         containResult.set(false);
                     } else {
                         // compare two JsonArrays
-                        JsonArray biggerArray = (JsonArray) jsonObject.getValue(entry.getKey());
-                        JsonArray smallerArray = (JsonArray) entry.getValue();
+                        final JsonArray biggerArray = (JsonArray) jsonObject.getValue(entry.getKey());
+                        final JsonArray smallerArray = (JsonArray) entry.getValue();
 
                         if (!testJsonArrayToBeContained(biggerArray, smallerArray)) {
                             containResult.set(false);
                         }
                     }
                 } else {
-                    if (!(entry.getValue().equals(jsonObject.getValue(entry.getKey())))) {
+                    if (!entry.getValue().equals(jsonObject.getValue(entry.getKey()))) {
                         containResult.set(false);
                     }
                 }
@@ -297,14 +297,14 @@ public final class IntegrationTestSupport {
      * @return The result of the containment test.
      */
     public static boolean testJsonArrayToBeContained(final JsonArray containingArray, final JsonArray containedArray) {
-        for (Object containedElem: containedArray) {
+        for (final Object containedElem: containedArray) {
             // currently only support contained JsonObjects
             if (!(containedElem instanceof JsonObject)) {
                 return false;
             }
 
             boolean containingElemFound = false;
-            for (Object elemOfBiggerArray: containingArray) {
+            for (final Object elemOfBiggerArray: containingArray) {
                 if (!(elemOfBiggerArray instanceof JsonObject)) {
                     return false;
                 }

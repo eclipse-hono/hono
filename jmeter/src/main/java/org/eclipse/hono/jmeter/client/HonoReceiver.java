@@ -179,7 +179,7 @@ public class HonoReceiver extends AbstractClient {
             if (sampleStart == 0) { // set sample start only once when the first message is received.
                 sampleStart = senderTime;
             }
-            long sampleDeliveryTime = sampleReceivedTime - senderTime;
+            final long sampleDeliveryTime = sampleReceivedTime - senderTime;
             LOGGER.debug("Message delivered in : {}", sampleDeliveryTime);
             totalSampleDeliveryTime += sampleDeliveryTime;
         } else {
@@ -192,7 +192,7 @@ public class HonoReceiver extends AbstractClient {
         try {
             final JsonObject jsonObject = Buffer.buffer(payload).toJsonObject();
             return jsonObject.getLong(sampler.getSenderTimeVariableName(), null);
-        } catch (DecodeException e) {
+        } catch (final DecodeException e) {
             LOGGER.warn("Could not parse the received message", e);
             return null;
         }

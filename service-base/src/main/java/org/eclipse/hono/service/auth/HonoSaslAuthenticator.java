@@ -85,7 +85,7 @@ public final class HonoSaslAuthenticator implements ProtonSaslAuthenticator {
             try {
                 peerCertificateChain = socket.peerCertificateChain();
                 LOG.debug("found valid client certificate DN [{}]", peerCertificateChain[0].getSubjectDN());
-            } catch (SSLPeerUnverifiedException e) {
+            } catch (final SSLPeerUnverifiedException e) {
                 LOG.debug("could not extract client certificate chain, maybe TLS based client auth is not required");
             }
         }
@@ -94,22 +94,22 @@ public final class HonoSaslAuthenticator implements ProtonSaslAuthenticator {
     @Override
     public void process(final Handler<Boolean> completionHandler) {
 
-        String[] remoteMechanisms = sasl.getRemoteMechanisms();
+        final String[] remoteMechanisms = sasl.getRemoteMechanisms();
 
         if (remoteMechanisms.length == 0) {
             LOG.debug("client provided an empty list of SASL mechanisms [hostname: {}, state: {}]",
                     sasl.getHostname(), sasl.getState().name());
             completionHandler.handle(false);
         } else {
-            String chosenMechanism = remoteMechanisms[0];
+            final String chosenMechanism = remoteMechanisms[0];
             LOG.debug("client wants to authenticate using SASL [mechanism: {}, host: {}, state: {}]",
                     chosenMechanism, sasl.getHostname(), sasl.getState().name());
 
-            Future<HonoUser> authTracker = Future.future();
+            final Future<HonoUser> authTracker = Future.future();
             authTracker.setHandler(s -> {
                 if (s.succeeded()) {
 
-                    HonoUser user = s.result();
+                    final HonoUser user = s.result();
                     LOG.debug("authentication of client [authorization ID: {}] succeeded", user.getName());
                     Constants.setClientPrincipal(protonConnection, user);
                     succeeded = true;
@@ -124,7 +124,7 @@ public final class HonoSaslAuthenticator implements ProtonSaslAuthenticator {
                 completionHandler.handle(Boolean.TRUE);
             });
 
-            byte[] saslResponse = new byte[sasl.pending()];
+            final byte[] saslResponse = new byte[sasl.pending()];
             sasl.recv(saslResponse, 0, saslResponse.length);
 
             verify(chosenMechanism, saslResponse, authTracker.completer());
@@ -138,7 +138,7 @@ public final class HonoSaslAuthenticator implements ProtonSaslAuthenticator {
 
     private void verify(final String mechanism, final byte[] saslResponse, final Handler<AsyncResult<HonoUser>> authResultHandler) {
 
-        JsonObject authRequest = AuthenticationConstants.getAuthenticationRequest(mechanism, saslResponse);
+        final JsonObject authRequest = AuthenticationConstants.getAuthenticationRequest(mechanism, saslResponse);
         if (peerCertificateChain != null) {
             authRequest.put(AuthenticationConstants.FIELD_SUBJECT_DN, peerCertificateChain[0].getSubjectDN().getName());
         }

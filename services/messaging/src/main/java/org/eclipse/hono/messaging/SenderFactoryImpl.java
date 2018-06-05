@@ -105,8 +105,8 @@ public class SenderFactoryImpl implements SenderFactory {
             final Handler<ProtonSender> sendQueueDrainHandler,
             final Handler<String> closeHook) {
 
-        Future<ProtonSender> result = Future.future();
-        ProtonSender sender = session.createSender(getTenantOnlyTargetAddress(address));
+        final Future<ProtonSender> result = Future.future();
+        final ProtonSender sender = session.createSender(getTenantOnlyTargetAddress(address));
         sender.setQoS(qos);
         sender.setAutoSettle(true);
         sender.sendQueueDrainHandler(sendQueueDrainHandler);
@@ -155,7 +155,7 @@ public class SenderFactoryImpl implements SenderFactory {
     }
 
     private String getTenantOnlyTargetAddress(final ResourceIdentifier id) {
-        String pathSeparator = config == null ? Constants.DEFAULT_PATH_SEPARATOR : config.getPathSeparator();
+        final String pathSeparator = config == null ? Constants.DEFAULT_PATH_SEPARATOR : config.getPathSeparator();
         return String.format("%s%s%s", id.getEndpoint(), pathSeparator, id.getTenantId());
     }
 }

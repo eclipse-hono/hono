@@ -90,7 +90,7 @@ public class AbstractRequestResponseClientTest  {
         receiver = HonoClientUnitTestHelper.mockProtonReceiver();
         sender = HonoClientUnitTestHelper.mockProtonSender();
 
-        Target target = mock(Target.class);
+        final Target target = mock(Target.class);
         when(target.getAddress()).thenReturn("peer/tenant");
 
         when(sender.getCredit()).thenReturn(10);
@@ -239,7 +239,7 @@ public class AbstractRequestResponseClientTest  {
         doAnswer(invocation -> {
             // do not wait 200ms before running the timeout task but instead
             // run it immediately
-            Handler<Long> task = invocation.getArgument(1);
+            final Handler<Long> task = invocation.getArgument(1);
             task.handle(1L);
             return null;
         }).when(vertx).setTimer(anyLong(), any(Handler.class));
@@ -266,7 +266,7 @@ public class AbstractRequestResponseClientTest  {
         when(sender.isOpen()).thenReturn(Boolean.FALSE);
 
         // WHEN sending a request
-        Async requestFailure = ctx.async();
+        final Async requestFailure = ctx.async();
         client.createAndSendRequest("get", null, ctx.asyncAssertFailure(t -> {
             ctx.assertTrue(ServerErrorException.class.isInstance(t));
             requestFailure.complete();
@@ -289,7 +289,7 @@ public class AbstractRequestResponseClientTest  {
         when(receiver.isOpen()).thenReturn(Boolean.FALSE);
 
         // WHEN sending a request
-        Async requestFailure = ctx.async();
+        final Async requestFailure = ctx.async();
         client.createAndSendRequest("get", null, ctx.asyncAssertFailure(t -> {
             ctx.assertTrue(ServerErrorException.class.isInstance(t));
             requestFailure.complete();

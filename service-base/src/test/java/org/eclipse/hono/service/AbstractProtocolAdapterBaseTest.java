@@ -351,7 +351,7 @@ public class AbstractProtocolAdapterBaseTest {
 
     private static JsonObject newRegistrationAssertionResult(final String token, final String defaultContentType) {
 
-        JsonObject result = new JsonObject()
+        final JsonObject result = new JsonObject()
                 .put(RegistrationConstants.FIELD_ASSERTION, token);
         if (defaultContentType != null) {
             result.put(RegistrationConstants.FIELD_DEFAULTS, new JsonObject()

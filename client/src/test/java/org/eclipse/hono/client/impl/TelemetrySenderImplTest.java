@@ -73,7 +73,7 @@ public class TelemetrySenderImplTest {
 
         // GIVEN a sender that has credit
         when(sender.sendQueueFull()).thenReturn(Boolean.FALSE);
-        MessageSender messageSender = new TelemetrySenderImpl(config, sender, "tenant", "telemetry/tenant", context);
+        final MessageSender messageSender = new TelemetrySenderImpl(config, sender, "tenant", "telemetry/tenant", context);
         final AtomicReference<Handler<ProtonDelivery>> handlerRef = new AtomicReference<>();
         doAnswer(invocation -> {
             handlerRef.set(invocation.getArgument(1));
@@ -83,7 +83,7 @@ public class TelemetrySenderImplTest {
         // WHEN trying to send a message
         final Future<ProtonDelivery> result = messageSender.send("device", "some payload", "application/text", "token");
         // which gets rejected by the peer
-        ProtonDelivery rejected = mock(ProtonDelivery.class);
+        final ProtonDelivery rejected = mock(ProtonDelivery.class);
         when(rejected.remotelySettled()).thenReturn(Boolean.TRUE);
         when(rejected.getRemoteState()).thenReturn(new Rejected());
         handlerRef.get().handle(rejected);
@@ -103,7 +103,7 @@ public class TelemetrySenderImplTest {
 
         // GIVEN a sender that has credit
         when(sender.sendQueueFull()).thenReturn(Boolean.TRUE);
-        MessageSender messageSender = new TelemetrySenderImpl(config, sender, "tenant", "telemetry/tenant", context);
+        final MessageSender messageSender = new TelemetrySenderImpl(config, sender, "tenant", "telemetry/tenant", context);
 
         // WHEN trying to send a message
         final Message event = ProtonHelper.message("telemetry/tenant", "hello");

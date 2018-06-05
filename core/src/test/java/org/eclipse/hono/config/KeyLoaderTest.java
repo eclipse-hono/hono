@@ -57,7 +57,7 @@ public class KeyLoaderTest {
     @Test
     public void testLoaderSucceedsForExistingKeyAndCertFiles() {
 
-        KeyLoader loader = KeyLoader.fromFiles(vertx, PREFIX_KEY_PATH + "hono-messaging-key.pem",
+        final KeyLoader loader = KeyLoader.fromFiles(vertx, PREFIX_KEY_PATH + "hono-messaging-key.pem",
                 PREFIX_KEY_PATH + "hono-messaging-cert.pem");
         assertNotNull(loader.getPrivateKey());
         assertNotNull(loader.getPublicKey());
@@ -70,7 +70,7 @@ public class KeyLoaderTest {
     @Test
     public void testLoaderSucceedsForExistingKeyFile() {
 
-        KeyLoader loader = KeyLoader.fromFiles(vertx, PREFIX_KEY_PATH + "hono-messaging-key.pem", null);
+        final KeyLoader loader = KeyLoader.fromFiles(vertx, PREFIX_KEY_PATH + "hono-messaging-key.pem", null);
         assertNotNull(loader.getPrivateKey());
         assertNull(loader.getPublicKey());
     }
@@ -82,7 +82,7 @@ public class KeyLoaderTest {
     @Test
     public void testLoaderSucceedsForExistingCertFile() {
 
-        KeyLoader loader = KeyLoader.fromFiles(vertx, null, PREFIX_KEY_PATH + "hono-messaging-cert.pem");
+        final KeyLoader loader = KeyLoader.fromFiles(vertx, null, PREFIX_KEY_PATH + "hono-messaging-cert.pem");
         assertNull(loader.getPrivateKey());
         assertNotNull(loader.getPublicKey());
     }

@@ -57,7 +57,7 @@ public final class FileBasedRegistrationService extends BaseRegistrationService<
     public static final String FIELD_TENANT = "tenant";
 
     // <tenantId, <deviceId, registrationData>>
-    private Map<String, Map<String, JsonObject>> identities = new HashMap<>();
+    private final Map<String, Map<String, JsonObject>> identities = new HashMap<>();
     private boolean running = false;
     private boolean dirty = false;
 
@@ -106,7 +106,7 @@ public final class FileBasedRegistrationService extends BaseRegistrationService<
         if (getConfig().getFilename() == null) {
             return Future.succeededFuture();
         } else {
-            Future<Buffer> readResult = Future.future();
+            final Future<Buffer> readResult = Future.future();
             vertx.fileSystem().readFile(getConfig().getFilename(), readResult.completer());
             return readResult.compose(buffer -> {
                 return addAll(buffer);
@@ -119,7 +119,7 @@ public final class FileBasedRegistrationService extends BaseRegistrationService<
 
     private Future<Void> checkFileExists(final boolean createIfMissing) {
 
-        Future<Void> result = Future.future();
+        final Future<Void> result = Future.future();
         if (getConfig().getFilename() == null) {
             result.fail("no filename set");
         } else if (vertx.fileSystem().existsBlocking(getConfig().getFilename())) {
@@ -135,18 +135,18 @@ public final class FileBasedRegistrationService extends BaseRegistrationService<
 
     private Future<Void> addAll(final Buffer deviceIdentities) {
 
-        Future<Void> result = Future.future();
+        final Future<Void> result = Future.future();
         try {
             int deviceCount = 0;
-            JsonArray allObjects = deviceIdentities.toJsonArray();
-            for (Object obj : allObjects) {
+            final JsonArray allObjects = deviceIdentities.toJsonArray();
+            for (final Object obj : allObjects) {
                 if (JsonObject.class.isInstance(obj)) {
                     deviceCount += addDevicesForTenant((JsonObject) obj);
                 }
             }
             log.info("successfully loaded {} device identities from file [{}]", deviceCount, getConfig().getFilename());
             result.complete();
-        } catch (DecodeException e) {
+        } catch (final DecodeException e) {
             log.warn("cannot read malformed JSON from device identity file [{}]", getConfig().getFilename());
             result.fail(e);
         }
@@ -159,10 +159,10 @@ public final class FileBasedRegistrationService extends BaseRegistrationService<
         if (tenantId != null) {
             log.debug("loading devices for tenant [{}]", tenantId);
             final Map<String, JsonObject> deviceMap = new HashMap<>();
-            for (Object deviceObj : tenant.getJsonArray(ARRAY_DEVICES)) {
+            for (final Object deviceObj : tenant.getJsonArray(ARRAY_DEVICES)) {
                 if (JsonObject.class.isInstance(deviceObj)) {
-                    JsonObject device = (JsonObject) deviceObj;
-                    String deviceId = device.getString(FIELD_PAYLOAD_DEVICE_ID);
+                    final JsonObject device = (JsonObject) deviceObj;
+                    final String deviceId = device.getString(FIELD_PAYLOAD_DEVICE_ID);
                     if (deviceId != null) {
                         log.trace("loading device [{}]", deviceId);
                         final JsonObject data = device.getJsonObject(FIELD_DATA,
@@ -199,9 +199,9 @@ public final class FileBasedRegistrationService extends BaseRegistrationService<
             return checkFileExists(true).compose(s -> {
                 final AtomicInteger idCount = new AtomicInteger();
                 final JsonArray tenants = new JsonArray();
-                for (Entry<String, Map<String, JsonObject>> entry : identities.entrySet()) {
+                for (final Entry<String, Map<String, JsonObject>> entry : identities.entrySet()) {
                     final JsonArray devices = new JsonArray();
-                    for (Entry<String, JsonObject> deviceEntry : entry.getValue().entrySet()) {
+                    for (final Entry<String, JsonObject> deviceEntry : entry.getValue().entrySet()) {
                         devices.add(
                                 new JsonObject()
                                         .put(FIELD_PAYLOAD_DEVICE_ID, deviceEntry.getKey())
@@ -214,7 +214,7 @@ public final class FileBasedRegistrationService extends BaseRegistrationService<
                                     .put(ARRAY_DEVICES, devices));
                 }
 
-                Future<Void> writeHandler = Future.future();
+                final Future<Void> writeHandler = Future.future();
                 vertx.fileSystem().writeFile(getConfig().getFilename(), Buffer.factory.buffer(tenants.encodePrettily()), writeHandler.completer());
                 return writeHandler.map(ok -> {
                     dirty = false;
@@ -240,7 +240,7 @@ public final class FileBasedRegistrationService extends BaseRegistrationService<
     }
 
     RegistrationResult getDevice(final String tenantId, final String deviceId) {
-        JsonObject data = getRegistrationData(tenantId, deviceId);
+        final JsonObject data = getRegistrationData(tenantId, deviceId);
         if (data != null) {
             return RegistrationResult.from(HTTP_OK, getResultPayload(deviceId, data));
         } else {
@@ -309,8 +309,8 @@ public final class FileBasedRegistrationService extends BaseRegistrationService<
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
 
-        JsonObject obj = data != null ? data : new JsonObject().put(FIELD_ENABLED, Boolean.TRUE);
-        Map<String, JsonObject> devices = getDevicesForTenant(tenantId);
+        final JsonObject obj = data != null ? data : new JsonObject().put(FIELD_ENABLED, Boolean.TRUE);
+        final Map<String, JsonObject> devices = getDevicesForTenant(tenantId);
         if (devices.size() < getConfig().getMaxDevicesPerTenant()) {
             if (devices.putIfAbsent(deviceId, obj) == null) {
                 dirty = true;
@@ -339,7 +339,7 @@ public final class FileBasedRegistrationService extends BaseRegistrationService<
         Objects.requireNonNull(deviceId);
 
         if (getConfig().isModificationEnabled()) {
-            JsonObject obj = data != null ? data : new JsonObject().put(FIELD_ENABLED, Boolean.TRUE);
+            final JsonObject obj = data != null ? data : new JsonObject().put(FIELD_ENABLED, Boolean.TRUE);
             final Map<String, JsonObject> devices = identities.get(tenantId);
             if (devices != null && devices.containsKey(deviceId)) {
                 devices.put(deviceId, obj);

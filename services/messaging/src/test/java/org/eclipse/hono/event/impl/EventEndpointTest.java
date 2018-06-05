@@ -62,14 +62,14 @@ public class EventEndpointTest {
     @Test
     public void testOnLinkAttachDisconnectsClientsUsingWrongQos() {
 
-        ProtonConnection con = mock(ProtonConnection.class);
-        ProtonReceiver receiver = mock(ProtonReceiver.class);
+        final ProtonConnection con = mock(ProtonConnection.class);
+        final ProtonReceiver receiver = mock(ProtonReceiver.class);
         when(receiver.getRemoteQoS()).thenReturn(ProtonQoS.AT_MOST_ONCE);
-        ResourceIdentifier targetAddress = ResourceIdentifier.from("event", "tenant", null);
+        final ResourceIdentifier targetAddress = ResourceIdentifier.from("event", "tenant", null);
 
         endpoint.onLinkAttach(con, receiver, targetAddress);
 
-        ArgumentCaptor<ErrorCondition> errorCondition = ArgumentCaptor.forClass(ErrorCondition.class);
+        final ArgumentCaptor<ErrorCondition> errorCondition = ArgumentCaptor.forClass(ErrorCondition.class);
         verify(receiver).setCondition(errorCondition.capture());
         assertThat(errorCondition.getValue(), is(ErrorConditions.ERROR_UNSUPPORTED_DELIVERY_MODE));
         verify(receiver).close();

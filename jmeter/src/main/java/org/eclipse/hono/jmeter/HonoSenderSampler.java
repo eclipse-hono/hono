@@ -141,7 +141,7 @@ public class HonoSenderSampler extends HonoSampler implements ThreadListener {
         final String portString = getRegistryPort();
         try {
             return Integer.parseInt(portString);
-        } catch (NumberFormatException e) {
+        } catch (final NumberFormatException e) {
             return 0;
         }
     }
@@ -169,7 +169,7 @@ public class HonoSenderSampler extends HonoSampler implements ThreadListener {
         final String value = getPropertyAsString(WAIT_FOR_RECEIVERS);
         try {
             return Integer.parseInt(value);
-        } catch (NumberFormatException e) {
+        } catch (final NumberFormatException e) {
             return 0;
         }
     }
@@ -197,7 +197,7 @@ public class HonoSenderSampler extends HonoSampler implements ThreadListener {
         final String value = getPropertyAsString(WAIT_FOR_RECEIVERS_TIMEOUT);
         try {
             return Integer.parseInt(value);
-        } catch (NumberFormatException e) {
+        } catch (final NumberFormatException e) {
             return 0;
         }
     }
@@ -296,7 +296,7 @@ public class HonoSenderSampler extends HonoSampler implements ThreadListener {
     @Override
     public SampleResult sample(final Entry entry) {
 
-        SampleResult res = new SampleResult();
+        final SampleResult res = new SampleResult();
         res.setDataType(SampleResult.TEXT);
         res.setResponseOK();
         res.setResponseCodeOK();
@@ -309,17 +309,17 @@ public class HonoSenderSampler extends HonoSampler implements ThreadListener {
     public void threadStarted() {
 
         int activeReceivers = getSemaphores();
-        int waitOn = getWaitForReceiversAsInt();
-        int waitOnTimeout = getWaitForReceiversTimeoutAsInt();
+        final int waitOn = getWaitForReceiversAsInt();
+        final int waitOnTimeout = getWaitForReceiversTimeoutAsInt();
 
         honoSender = new HonoSender(this);
 
         if (activeReceivers < waitOn) {
-            int endCounter = waitOnTimeout / 100;
+            final int endCounter = waitOnTimeout / 100;
             for (int i = 0; i < endCounter && activeReceivers < waitOn; i++) {
                 try {
                     Thread.sleep(100);
-                } catch (InterruptedException e) {
+                } catch (final InterruptedException e) {
                     LOGGER.error("wait on receiver", e);
                 }
                 activeReceivers = getSemaphores();
@@ -330,7 +330,7 @@ public class HonoSenderSampler extends HonoSampler implements ThreadListener {
 
         try {
             honoSender.start().join();
-        } catch (CompletionException e) {
+        } catch (final CompletionException e) {
             LOGGER.error("error initializing sender: {}/{} ({})", getEndpoint(), getTenant(),
                     Thread.currentThread().getName(), e);
         }
@@ -341,7 +341,7 @@ public class HonoSenderSampler extends HonoSampler implements ThreadListener {
         if (honoSender != null) {
             try {
                 honoSender.close().join();
-            } catch (CompletionException e) {
+            } catch (final CompletionException e) {
                 LOGGER.error("error during shut down of sender", e);
             }
         }

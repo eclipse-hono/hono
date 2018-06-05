@@ -91,17 +91,17 @@ public abstract class HonoAuthHandler implements AuthHandler {
 
     @Override
     public void authorize(final User user, final Handler<AsyncResult<Void>> handler) {
-      int requiredcount = authorities.size();
+      final int requiredcount = authorities.size();
       if (requiredcount > 0) {
         if (user == null) {
           handler.handle(Future.failedFuture(FORBIDDEN));
           return;
         }
 
-        AtomicInteger count = new AtomicInteger();
-        AtomicBoolean sentFailure = new AtomicBoolean();
+        final AtomicInteger count = new AtomicInteger();
+        final AtomicBoolean sentFailure = new AtomicBoolean();
 
-        Handler<AsyncResult<Boolean>> authHandler = res -> {
+        final Handler<AsyncResult<Boolean>> authHandler = res -> {
           if (res.succeeded()) {
             if (res.result()) {
               if (count.incrementAndGet() == requiredcount) {
@@ -117,7 +117,7 @@ public abstract class HonoAuthHandler implements AuthHandler {
             handler.handle(Future.failedFuture(res.cause()));
           }
         };
-        for (String authority : authorities) {
+        for (final String authority : authorities) {
           if (!sentFailure.get()) {
             user.isAuthorized(authority, authHandler);
           }
@@ -139,7 +139,7 @@ public abstract class HonoAuthHandler implements AuthHandler {
         return;
       }
 
-      User user = ctx.user();
+      final User user = ctx.user();
       if (user != null) {
         // proceed to AuthZ
         authorizeUser(ctx, user);
@@ -152,10 +152,10 @@ public abstract class HonoAuthHandler implements AuthHandler {
           return;
         }
         // check if the user has been set
-        User updatedUser = ctx.user();
+        final User updatedUser = ctx.user();
 
         if (updatedUser != null) {
-          Session session = ctx.session();
+          final Session session = ctx.session();
           if (session != null) {
             // the user has upgraded from unauthenticated to authenticated
             // session should be upgraded as recommended by owasp
@@ -169,9 +169,9 @@ public abstract class HonoAuthHandler implements AuthHandler {
         // proceed to authN
         getAuthProvider(ctx).authenticate(res.result(), authN -> {
           if (authN.succeeded()) {
-            User authenticated = authN.result();
+            final User authenticated = authN.result();
             ctx.setUser(authenticated);
-            Session session = ctx.session();
+            final Session session = ctx.session();
             if (session != null) {
               // the user has upgraded from unauthenticated to authenticated
               // session should be upgraded as recommended by owasp
@@ -180,7 +180,7 @@ public abstract class HonoAuthHandler implements AuthHandler {
             // proceed to AuthZ
             authorizeUser(ctx, authenticated);
           } else {
-            String header = authenticateHeader(ctx);
+            final String header = authenticateHeader(ctx);
             if (header != null) {
               ctx.response()
                 .putHeader("WWW-Authenticate", header);
@@ -204,8 +204,8 @@ public abstract class HonoAuthHandler implements AuthHandler {
       if (exception != null) {
 
         if (exception instanceof HttpStatusException || exception instanceof ServiceInvocationException) {
-          int statusCode;
-          String payload;
+          final int statusCode;
+          final String payload;
           if (exception instanceof HttpStatusException) {
               statusCode = ((HttpStatusException) exception).getStatusCode();
               payload = ((HttpStatusException) exception).getPayload();
@@ -222,7 +222,7 @@ public abstract class HonoAuthHandler implements AuthHandler {
                 .end("Redirecting to " + payload + ".");
               return;
             case 401:
-              String header = authenticateHeader(ctx);
+              final String header = authenticateHeader(ctx);
               if (header != null) {
                 ctx.response()
                   .putHeader("WWW-Authenticate", header);
@@ -260,7 +260,7 @@ public abstract class HonoAuthHandler implements AuthHandler {
         final String accessControlRequestHeader = ctx.request().getHeader(HttpHeaders.ACCESS_CONTROL_REQUEST_HEADERS);
         if (accessControlRequestHeader != null) {
           // lookup for the Authorization header
-          for (String ctrlReq : accessControlRequestHeader.split(",")) {
+          for (final String ctrlReq : accessControlRequestHeader.split(",")) {
             if (ctrlReq.equalsIgnoreCase("Authorization")) {
               // this request has auth in access control, so we can allow preflighs without authentication
               ctx.next();
@@ -275,12 +275,12 @@ public abstract class HonoAuthHandler implements AuthHandler {
 
     private AuthProvider getAuthProvider(final RoutingContext ctx) {
       try {
-        AuthProvider provider = ctx.get(AUTH_PROVIDER_CONTEXT_KEY);
+        final AuthProvider provider = ctx.get(AUTH_PROVIDER_CONTEXT_KEY);
         if (provider != null) {
           // we're overruling the configured one for this request
           return provider;
         }
-      } catch (RuntimeException e) {
+      } catch (final RuntimeException e) {
         // bad type, ignore and return default
       }
 

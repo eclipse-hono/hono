@@ -41,7 +41,7 @@ public class AppConfiguration {
      */
     @Bean
     public Vertx vertx() {
-        VertxOptions options = new VertxOptions()
+        final VertxOptions options = new VertxOptions()
                 .setWarningExceptionTime(1500000000)
                 .setAddressResolverOptions(new AddressResolverOptions()
                         .setCacheNegativeTimeToLive(0) // discard failed DNS lookup results immediately
@@ -59,7 +59,7 @@ public class AppConfiguration {
     @ConfigurationProperties(prefix = "hono.client")
     @Bean
     public ClientConfigProperties honoClientConfig() {
-        ClientConfigProperties config = new ClientConfigProperties();
+        final ClientConfigProperties config = new ClientConfigProperties();
         return config;
     }
 

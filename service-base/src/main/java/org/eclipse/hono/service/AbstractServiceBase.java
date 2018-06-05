@@ -84,6 +84,7 @@ public abstract class AbstractServiceBase<T extends ServiceConfigProperties> ext
      * 
      * @param handler The handler to register the checks with.
      */
+    @Override
     public void registerReadinessChecks(final HealthCheckHandler handler) {
         // empty default implementation
     }
@@ -96,6 +97,7 @@ public abstract class AbstractServiceBase<T extends ServiceConfigProperties> ext
      * 
      * @param handler The handler to register the checks with.
      */
+    @Override
     public void registerLivenessChecks(final HealthCheckHandler handler) {
         // empty default implementation
     }
@@ -183,7 +185,7 @@ public abstract class AbstractServiceBase<T extends ServiceConfigProperties> ext
      */
     protected final Future<Void> checkPortConfiguration() {
 
-        Future<Void> result = Future.future();
+        final Future<Void> result = Future.future();
 
         if (getConfig().getKeyCertOptions() == null) {
             if (getConfig().getPort() >= 0) {
@@ -219,7 +221,7 @@ public abstract class AbstractServiceBase<T extends ServiceConfigProperties> ext
      */
     protected final int determineSecurePort() {
 
-        int port = getConfig().getPort(getPortDefaultValue());
+        final int port = getConfig().getPort(getPortDefaultValue());
 
         if (port == getPortDefaultValue()) {
             LOG.info("Server uses secure standard port {}", port);
@@ -239,7 +241,7 @@ public abstract class AbstractServiceBase<T extends ServiceConfigProperties> ext
      */
     protected final int determineInsecurePort() {
 
-        int insecurePort = getConfig().getInsecurePort(getInsecurePortDefaultValue());
+        final int insecurePort = getConfig().getInsecurePort(getInsecurePortDefaultValue());
 
         if (insecurePort == 0) {
             LOG.info("Server found insecure port number configured for ephemeral port selection (port chosen automatically).");

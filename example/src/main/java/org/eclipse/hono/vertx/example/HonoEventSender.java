@@ -26,7 +26,7 @@ public class HonoEventSender extends HonoSenderBase {
     public static void main(final String[] args) {
 
         System.out.println("Starting downstream event sender...");
-        HonoEventSender honoDownstreamSender = new HonoEventSender();
+        final HonoEventSender honoDownstreamSender = new HonoEventSender();
         honoDownstreamSender.setEventMode(true);
         honoDownstreamSender.sendData();
         System.out.println("Finishing downstream event sender.");

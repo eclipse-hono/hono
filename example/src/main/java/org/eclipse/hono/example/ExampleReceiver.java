@@ -50,7 +50,7 @@ public class ExampleReceiver extends AbstractExampleClient {
             .compose(connectedClient -> createConsumer(connectedClient))
             .setHandler(startup -> {
                 if (startup.succeeded()) {
-                    String consumerType = activeProfiles.contains(PROFILE_EVENT) ? PROFILE_EVENT : PROFILE_TELEMETRY;
+                    final String consumerType = activeProfiles.contains(PROFILE_EVENT) ? PROFILE_EVENT : PROFILE_TELEMETRY;
                     LOG.info("Receiver [tenant: {}, type: {}] created successfully, hit ctrl-c to exit", tenantId, consumerType);
                 } else {
                     LOG.error("Error occurred during initialization of receiver: {}", startup.cause().getMessage());
@@ -61,7 +61,7 @@ public class ExampleReceiver extends AbstractExampleClient {
     }
 
     private Future<MessageConsumer> createConsumer(final HonoClient connectedClient) {
-        Handler<Void> closeHandler = closeHook -> {
+        final Handler<Void> closeHandler = closeHook -> {
             LOG.info("close handler of consumer is called");
             vertx.setTimer(DEFAULT_CONNECT_TIMEOUT_MILLIS, reconnect -> {
                 LOG.info("attempting to re-open the consumer link ...");

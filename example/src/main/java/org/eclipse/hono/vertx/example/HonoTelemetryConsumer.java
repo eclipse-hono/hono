@@ -26,7 +26,7 @@ public class HonoTelemetryConsumer extends HonoConsumerBase {
     public static void main(final String[] args) throws Exception {
 
         System.out.println("Starting telemetry consumer...");
-        HonoTelemetryConsumer honoDownstreamEventConsumer = new HonoTelemetryConsumer();
+        final HonoTelemetryConsumer honoDownstreamEventConsumer = new HonoTelemetryConsumer();
         honoDownstreamEventConsumer.consumeData();
         System.out.println("Finishing telemetry consumer.");
     }

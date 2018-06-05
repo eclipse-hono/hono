@@ -52,7 +52,7 @@ public class ApplicationConfig {
      */
     @Bean
     public Vertx vertx() {
-        VertxOptions options = new VertxOptions()
+        final VertxOptions options = new VertxOptions()
                 .setWarningExceptionTime(1500000000)
                 .setAddressResolverOptions(new AddressResolverOptions()
                         .setCacheNegativeTimeToLive(0) // discard failed DNS lookup results immediately
@@ -81,7 +81,7 @@ public class ApplicationConfig {
     @Bean
     @ConfigurationProperties(prefix = "hono.registry.amqp")
     public ServiceConfigProperties amqpProperties() {
-        ServiceConfigProperties props = new ServiceConfigProperties();
+        final ServiceConfigProperties props = new ServiceConfigProperties();
         return props;
     }
 
@@ -138,7 +138,7 @@ public class ApplicationConfig {
      */
     @Bean
     public ObjectFactoryCreatingFactoryBean deviceRegistryAmqpServerFactory() {
-        ObjectFactoryCreatingFactoryBean factory = new ObjectFactoryCreatingFactoryBean();
+        final ObjectFactoryCreatingFactoryBean factory = new ObjectFactoryCreatingFactoryBean();
         factory.setTargetBeanName(BEAN_NAME_DEVICE_REGISTRY_AMQP_SERVER);
         return factory;
     }
@@ -152,7 +152,7 @@ public class ApplicationConfig {
     @Bean
     @ConfigurationProperties(prefix = "hono.registry.rest")
     public ServiceConfigProperties restProperties() {
-        ServiceConfigProperties props = new ServiceConfigProperties();
+        final ServiceConfigProperties props = new ServiceConfigProperties();
         return props;
     }
 
@@ -209,7 +209,7 @@ public class ApplicationConfig {
      */
     @Bean
     public ObjectFactoryCreatingFactoryBean deviceRegistryRestServerFactory() {
-        ObjectFactoryCreatingFactoryBean factory = new ObjectFactoryCreatingFactoryBean();
+        final ObjectFactoryCreatingFactoryBean factory = new ObjectFactoryCreatingFactoryBean();
         factory.setTargetBeanName(BEAN_NAME_DEVICE_REGISTRY_REST_SERVER);
         return factory;
     }
@@ -258,8 +258,8 @@ public class ApplicationConfig {
     @Bean
     @Qualifier("signing")
     public RegistrationAssertionHelper registrationAssertionFactory() {
-        ServiceConfigProperties amqpProps = amqpProperties();
-        FileBasedRegistrationConfigProperties serviceProps = serviceProperties();
+        final ServiceConfigProperties amqpProps = amqpProperties();
+        final FileBasedRegistrationConfigProperties serviceProps = serviceProperties();
         if (!serviceProps.getSigning().isAppropriateForCreating() && amqpProps.getKeyPath() != null) {
             // fall back to TLS configuration
             serviceProps.getSigning().setKeyPath(amqpProps.getKeyPath());

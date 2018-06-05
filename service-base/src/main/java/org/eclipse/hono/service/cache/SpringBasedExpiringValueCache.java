@@ -78,6 +78,7 @@ public class SpringBasedExpiringValueCache<K, V> implements ExpiringValueCache<K
             return null;
         } else {
             @SuppressWarnings("unchecked")
+            final
             ExpiringValue<V> value = cache.get(key, ExpiringValue.class);
             if (value == null) {
                 LOG.trace("cache miss [key: {}]", key);

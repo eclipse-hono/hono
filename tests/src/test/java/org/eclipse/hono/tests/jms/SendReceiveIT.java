@@ -160,7 +160,7 @@ public class SendReceiveIT {
             }
         });
 
-        long timeToWait = Math.max(DEFAULT_TEST_TIMEOUT, Math.round(IntegrationTestSupport.MSG_COUNT * 1.2));
+        final long timeToWait = Math.max(DEFAULT_TEST_TIMEOUT, Math.round(IntegrationTestSupport.MSG_COUNT * 1.2));
 
         // wait for messages to arrive
         assertTrue("did not receive all " + IntegrationTestSupport.MSG_COUNT + " messages", latch.await(timeToWait, TimeUnit.MILLISECONDS));
@@ -201,7 +201,7 @@ public class SendReceiveIT {
 
     private String getRegistrationAssertion(final String deviceId) throws Exception {
 
-        RegistrationResult result = getRegistrationClient().assertRegistration(deviceId, HTTP_OK).get(DEFAULT_TEST_TIMEOUT, TimeUnit.MILLISECONDS);
+        final RegistrationResult result = getRegistrationClient().assertRegistration(deviceId, HTTP_OK).get(DEFAULT_TEST_TIMEOUT, TimeUnit.MILLISECONDS);
         return result.getPayload().getString(RegistrationConstants.FIELD_ASSERTION);
     }
 

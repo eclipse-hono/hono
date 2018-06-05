@@ -135,7 +135,7 @@ public class CredentialsAmqpIT {
     @Test
     public void testGetCredentialsExistingClientContext(final TestContext ctx) {
 
-        JsonObject clientContext = new JsonObject()
+        final JsonObject clientContext = new JsonObject()
                 .put("client-id", "gateway-one");
 
         credentialsClient
@@ -154,7 +154,7 @@ public class CredentialsAmqpIT {
     @Test
     public void testGetCredentialsNotMatchingClientContext(final TestContext ctx) {
 
-        JsonObject clientContext = new JsonObject()
+        final JsonObject clientContext = new JsonObject()
                 .put("client-id", "gateway-two");
 
         credentialsClient
@@ -174,7 +174,7 @@ public class CredentialsAmqpIT {
     @Test
     public void testGetCredentialsNotExistingClientContext(final TestContext ctx) {
 
-        JsonObject clientContext = new JsonObject()
+        final JsonObject clientContext = new JsonObject()
                 .put("client-id", "gateway-one");
 
         credentialsClient
@@ -301,7 +301,7 @@ public class CredentialsAmqpIT {
             final byte[] hashedPassword = CredentialsObject.getHashedPassword("sha-512", CREDENTIALS_PASSWORD_SALT, CREDENTIALS_USER_PASSWORD);
             // check if the password is the hashed version of "hono-secret"
             assertThat(hashedPassword, is(decodedPassword));
-        } catch (NoSuchAlgorithmException e) {
+        } catch (final NoSuchAlgorithmException e) {
             fail(e.getMessage());
         }
     }
@@ -312,16 +312,16 @@ public class CredentialsAmqpIT {
         final JsonObject firstSecret = pickFirstSecretFromPayload(payload);
         assertNotNull(firstSecret);
 
-        LocalDateTime now = LocalDateTime.now();
+        final LocalDateTime now = LocalDateTime.now();
 
         assertTrue(firstSecret.containsKey(CredentialsConstants.FIELD_SECRETS_NOT_BEFORE));
-        String notBefore = firstSecret.getString(CredentialsConstants.FIELD_SECRETS_NOT_BEFORE);
-        LocalDateTime notBeforeLocalDate = LocalDateTime.parse(notBefore, DateTimeFormatter.ISO_OFFSET_DATE_TIME);
+        final String notBefore = firstSecret.getString(CredentialsConstants.FIELD_SECRETS_NOT_BEFORE);
+        final LocalDateTime notBeforeLocalDate = LocalDateTime.parse(notBefore, DateTimeFormatter.ISO_OFFSET_DATE_TIME);
         assertTrue(now.compareTo(notBeforeLocalDate) >= 0);
 
         assertTrue(firstSecret.containsKey(CredentialsConstants.FIELD_SECRETS_NOT_AFTER));
-        String notAfter = firstSecret.getString(CredentialsConstants.FIELD_SECRETS_NOT_AFTER);
-        LocalDateTime notAfterLocalDate = LocalDateTime.parse(notAfter, DateTimeFormatter.ISO_OFFSET_DATE_TIME);
+        final String notAfter = firstSecret.getString(CredentialsConstants.FIELD_SECRETS_NOT_AFTER);
+        final LocalDateTime notAfterLocalDate = LocalDateTime.parse(notAfter, DateTimeFormatter.ISO_OFFSET_DATE_TIME);
         assertTrue(now.compareTo(notAfterLocalDate) <= 0);
     }
 
@@ -342,6 +342,6 @@ public class CredentialsAmqpIT {
         assertNotNull(payload.getDeviceId());
         assertEquals(payload.getDeviceId(), DEFAULT_DEVICE_ID);
 
-        return (payload.isEnabled());
+        return payload.isEnabled();
     }
 }

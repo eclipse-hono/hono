@@ -158,14 +158,14 @@ public abstract class AbstractStandaloneApiTest {
     @Test
     public void testMessageUploadSucceedsForRegisteredDevice(final TestContext ctx) {
 
-        int count = 30;
+        final int count = 30;
         final Async messagesReceived = ctx.async(count);
         downstreamAdapter.setMessageConsumer(msg -> {
             messagesReceived.countDown();
             LOG.debug("received message [id: {}]", msg.getMessageId());
         });
 
-        String registrationAssertion = getAssertion(Constants.DEFAULT_TENANT, DEVICE_1);
+        final String registrationAssertion = getAssertion(Constants.DEFAULT_TENANT, DEVICE_1);
         LOG.debug("got registration assertion for device [{}]: {}", DEVICE_1, registrationAssertion);
 
         final AtomicReference<MessageSender> senderRef = new AtomicReference<>();
@@ -178,7 +178,7 @@ public abstract class AbstractStandaloneApiTest {
         senderCreation.await();
 
         IntStream.range(0, count).forEach(i -> {
-            Async waitForCredit = ctx.async();
+            final Async waitForCredit = ctx.async();
             LOG.trace("sending message {}", i);
             senderRef.get().send(DEVICE_1, "payload" + i, "text/plain; charset=utf-8", registrationAssertion, done -> waitForCredit.complete());
             waitForCredit.await();

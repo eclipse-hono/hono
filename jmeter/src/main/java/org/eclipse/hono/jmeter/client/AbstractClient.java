@@ -29,7 +29,7 @@ public abstract class AbstractClient {
     }
 
     final Vertx vertx() {
-        VertxOptions options = new VertxOptions()
+        final VertxOptions options = new VertxOptions()
                 .setWarningExceptionTime(1500000000)
                 .setAddressResolverOptions(new AddressResolverOptions()
                         .setCacheNegativeTimeToLive(0) // discard failed DNS lookup results immediately
