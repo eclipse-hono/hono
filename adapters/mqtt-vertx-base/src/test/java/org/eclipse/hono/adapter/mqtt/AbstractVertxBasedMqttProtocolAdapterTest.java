@@ -126,7 +126,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
 
         regClient = mock(RegistrationClient.class);
         final JsonObject result = new JsonObject().put(RegistrationConstants.FIELD_ASSERTION, "token");
-        when(regClient.assertRegistration(anyString(), any())).thenReturn(Future.succeededFuture(result));
+        when(regClient.assertRegistration(anyString(), (String) any(), (SpanContext) any())).thenReturn(Future.succeededFuture(result));
 
         tenantClient = mock(TenantClient.class);
         when(tenantClient.get(anyString(), (SpanContext) any())).thenAnswer(invocation -> {
@@ -383,7 +383,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         givenAQoS0TelemetrySender();
 
         // WHEN an unknown device publishes a telemetry message
-        when(regClient.assertRegistration(eq("unknown"), any())).thenReturn(
+        when(regClient.assertRegistration(eq("unknown"), any(), any())).thenReturn(
                 Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND)));
         final MessageSender sender = mock(MessageSender.class);
         when(messagingClient.getOrCreateTelemetrySender(anyString())).thenReturn(Future.succeededFuture(sender));

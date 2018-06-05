@@ -616,7 +616,9 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      *         <p>
      *         Otherwise the future will contain the assertion.
      * @throws NullPointerException if tenant ID or device ID are {@code null}.
+     * @deprecated Use {@link #getRegistrationAssertion(String, String, Device, SpanContext)} instead.
      */
+    @Deprecated
     protected final Future<JsonObject> getRegistrationAssertion(final String tenantId, final String deviceId,
             final Device authenticatedDevice) {
 
@@ -628,6 +630,44 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         return gatewayId
                 .compose(gwId -> getRegistrationClient(tenantId))
                 .compose(client -> client.assertRegistration(deviceId, gatewayId.result()));
+    }
+
+    /**
+     * Gets an assertion for a device's registration status.
+     * <p>
+     * The returned JSON object contains the assertion for the device
+     * under property {@link RegistrationConstants#FIELD_ASSERTION}.
+     * <p>
+     * In addition to the assertion the returned object may include <em>default</em>
+     * values for properties to set on messages published by the device under
+     * property {@link RegistrationConstants#FIELD_DEFAULTS}.
+     * 
+     * @param tenantId The tenant that the device belongs to.
+     * @param deviceId The device to get the assertion for.
+     * @param authenticatedDevice The device that has authenticated to this protocol adapter.
+     *            <p>
+     *            If not {@code null} then the authenticated device is compared to the given tenant and device ID. If
+     *            they differ in the device identifier, then the authenticated device is considered to be a gateway
+     *            acting on behalf of the device.
+     * @param context The currently active OpenTracing span that is used to
+     *                trace the retrieval of the assertion.
+     * @return The assertion.
+     * @throws NullPointerException if any of tenant or device ID are {@code null}.
+     */
+    protected final Future<JsonObject> getRegistrationAssertion(
+            final String tenantId,
+            final String deviceId,
+            final Device authenticatedDevice,
+            final SpanContext context) {
+
+        Objects.requireNonNull(tenantId);
+        Objects.requireNonNull(deviceId);
+
+        final Future<String> gatewayId = getGatewayId(tenantId, deviceId, authenticatedDevice);
+
+        return gatewayId
+                .compose(gwId -> getRegistrationClient(tenantId))
+                .compose(client -> client.assertRegistration(deviceId, gatewayId.result(), context));
     }
 
     private Future<String> getGatewayId(final String tenantId, final String deviceId,
@@ -663,7 +703,9 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      *         <p>
      *         Otherwise the future will contain the configuration information.
      * @throws NullPointerException if tenant ID is {@code null}.
+     * @deprecated Use {@link #getTenantConfiguration(String, SpanContext)} instead.
      */
+    @Deprecated
     protected final Future<TenantObject> getTenantConfiguration(final String tenantId) {
         Objects.requireNonNull(tenantId);
         return getTenantClient().compose(client -> client.get(tenantId));

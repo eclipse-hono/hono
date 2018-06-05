@@ -19,13 +19,14 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 
-import io.vertx.core.buffer.Buffer;
 import org.eclipse.hono.cache.CacheProvider;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.config.ClientConfigProperties;
+import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
@@ -34,10 +35,14 @@ import org.eclipse.hono.util.TriTuple;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.opentracing.Span;
+import io.opentracing.SpanContext;
+import io.opentracing.Tracer;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonObject;
 import io.vertx.proton.ProtonConnection;
@@ -60,8 +65,12 @@ public class RegistrationClientImpl extends AbstractRequestResponseClient<Regist
      * @param tenantId The identifier of the tenant for which the client should be created.
      */
     protected RegistrationClientImpl(final Context context, final ClientConfigProperties config, final String tenantId) {
+        this(context, config, null, tenantId);
+    }
 
-        super(context, config, tenantId);
+    private RegistrationClientImpl(final Context context, final ClientConfigProperties config, final Tracer tracer, final String tenantId) {
+
+        super(context, config, tracer, tenantId);
     }
 
     /**
@@ -124,17 +133,20 @@ public class RegistrationClientImpl extends AbstractRequestResponseClient<Regist
      * @param clientConfig The configuration properties to use.
      * @param cacheProvider A factory for cache instances for registration results. If {@code null}
      *                     the client will not cache any results from the Device Registration service.
+     * @param tracer The tracer to use for tracking request processing
+     *               across process boundaries.
      * @param con The AMQP connection to the server.
      * @param tenantId The tenant to consumer events for.
      * @param senderCloseHook A handler to invoke if the peer closes the sender link unexpectedly.
      * @param receiverCloseHook A handler to invoke if the peer closes the receiver link unexpectedly.
      * @param creationHandler The handler to invoke with the outcome of the creation attempt.
-     * @throws NullPointerException if any of the parameters other than cache manager is {@code null}.
+     * @throws NullPointerException if any of the parameters other than cache provider is {@code null}.
      */
     public static final void create(
             final Context context,
             final ClientConfigProperties clientConfig,
             final CacheProvider cacheProvider,
+            final Tracer tracer,
             final ProtonConnection con,
             final String tenantId,
             final Handler<String> senderCloseHook,
@@ -142,7 +154,7 @@ public class RegistrationClientImpl extends AbstractRequestResponseClient<Regist
             final Handler<AsyncResult<RegistrationClient>> creationHandler) {
 
         LOG.debug("creating new registration client for [{}]", tenantId);
-        final RegistrationClientImpl client = new RegistrationClientImpl(context, clientConfig, tenantId);
+        final RegistrationClientImpl client = new RegistrationClientImpl(context, clientConfig, tracer, tenantId);
         if (cacheProvider != null) {
             client.setResponseCache(cacheProvider.getCache(RegistrationClientImpl.getTargetAddress(tenantId)));
         }
@@ -287,18 +299,49 @@ public class RegistrationClientImpl extends AbstractRequestResponseClient<Regist
     @Override
     public final Future<JsonObject> assertRegistration(final String deviceId, final String gatewayId) {
 
+        return assertRegistration(deviceId, gatewayId, null);
+    }
+
+    /**
+     * Invokes the <em>Assert Device Registration</em> operation of Hono's
+     * <a href="https://www.eclipse.org/hono/api/Device-Registration-API">Device Registration API</a>
+     * on the service represented by the <em>sender</em> and <em>receiver</em> links.
+     * <p>
+     * This method delegates to {@link #assertRegistration(String, String)} with {@code null}
+     * as the <em>gatewayId</em>.
+     */
+    @Override
+    public final Future<JsonObject> assertRegistration(
+            final String deviceId,
+            final String gatewayId,
+            final SpanContext parent) {
+
         Objects.requireNonNull(deviceId);
 
         final TriTuple<String, String, String> key = TriTuple.of(RegistrationConstants.ACTION_ASSERT, deviceId, gatewayId);
+        final Span span = newChildSpan(parent, "assert Device Registration");
+        span.setTag(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId);
+        span.setTag(MessageHelper.APP_PROPERTY_GATEWAY_ID, gatewayId);
+        final AtomicBoolean cacheHit = new AtomicBoolean(true);
         return getResponseFromCache(key).recover(t -> {
+            cacheHit.set(false);
             final Future<RegistrationResult> regResult = Future.future();
             final Map<String, Object> properties = createDeviceIdProperties(deviceId);
             if (gatewayId != null) {
                 properties.put(MessageHelper.APP_PROPERTY_GATEWAY_ID, gatewayId);
             }
-            createAndSendRequest(RegistrationConstants.ACTION_ASSERT, properties, null, regResult.completer(), key);
+            createAndSendRequest(
+                    RegistrationConstants.ACTION_ASSERT,
+                    properties,
+                    null,
+                    RegistrationConstants.CONTENT_TYPE_APPLICATION_JSON,
+                    regResult.completer(),
+                    key,
+                    span);
             return regResult;
         }).map(result -> {
+            TracingHelper.TAG_CACHE_HIT.set(span, cacheHit.get());
+            span.finish();
             switch(result.getStatus()) {
             case HttpURLConnection.HTTP_OK:
                 return result.getPayload();

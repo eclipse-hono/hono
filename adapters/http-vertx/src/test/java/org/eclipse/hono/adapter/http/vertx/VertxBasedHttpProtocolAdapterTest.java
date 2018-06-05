@@ -199,7 +199,7 @@ public class VertxBasedHttpProtocolAdapterTest {
         LOG.info("running test case [{}]", testName.getMethodName());
 
         final RegistrationClient regClient = mock(RegistrationClient.class);
-        when(regClient.assertRegistration(anyString(), any())).thenReturn(Future.succeededFuture(new JsonObject()));
+        when(regClient.assertRegistration(anyString(), any(), (SpanContext) any())).thenReturn(Future.succeededFuture(new JsonObject()));
         when(registrationServiceClient.getOrCreateRegistrationClient(anyString())).thenReturn(Future.succeededFuture(regClient));
 
         final TenantClient tenantClient = mock(TenantClient.class);

@@ -13,6 +13,7 @@
 
 package org.eclipse.hono.client;
 
+import io.opentracing.SpanContext;
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 
@@ -66,6 +67,40 @@ public interface RegistrationClient extends RequestResponseClient {
      * @see RequestResponseClient#setRequestTimeout(long)
      */
     Future<JsonObject> assertRegistration(String deviceId, String gatewayId);
+
+    /**
+     * Asserts that a device is registered and <em>enabled</em>.
+     * <p>
+     * This default implementation simply returns the result of {@link #assertRegistration(String, String)}.
+     * 
+     * @param deviceId The ID of the device to get the assertion for.
+     * @param gatewayId The gateway that wants to act on behalf of the device.
+     *                  <p>
+     *                  If not {@code null}, the service will verify that the gateway
+     *                  is enabled and authorized to <em>act on behalf of</em> the
+     *                  given device before asserting the device's registration status.
+     * @param context The currently active OpenTracing span. An implementation
+     *         should use this as the parent for any span it creates for tracing
+     *         the execution of this operation.
+     * @return A future indicating the result of the operation.
+     *         <p>
+     *         The future will succeed if a response with status 200 has been received from the
+     *         registration service. The JSON object will then contain values as defined in
+     *         <a href="https://www.eclipse.org/hono/api/device-registration-api/#assert-device-registration">
+     *         Assert Device Registration</a>.
+     *         <p>
+     *         Otherwise, the future will fail with a {@link ServiceInvocationException} containing
+     *         the (error) status code returned by the service.
+     * @throws NullPointerException if device ID is {@code null}.
+     * @see RequestResponseClient#setRequestTimeout(long)
+     */
+    default Future<JsonObject> assertRegistration(
+            final String deviceId,
+            final String gatewayId,
+            final SpanContext context) {
+
+        return assertRegistration(deviceId, gatewayId);
+    }
 
     /**
      * Gets registration information for a device.

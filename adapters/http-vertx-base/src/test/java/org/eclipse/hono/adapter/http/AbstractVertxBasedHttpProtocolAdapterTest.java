@@ -110,7 +110,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
 
         regClient = mock(RegistrationClient.class);
         final JsonObject result = new JsonObject().put(RegistrationConstants.FIELD_ASSERTION, "token");
-        when(regClient.assertRegistration(anyString(), any())).thenReturn(Future.succeededFuture(result));
+        when(regClient.assertRegistration(anyString(), any(), (SpanContext) any())).thenReturn(Future.succeededFuture(result));
 
         tenantClient = mock(TenantClient.class);
         when(tenantClient.get(anyString(), (SpanContext) any())).thenAnswer(invocation -> {

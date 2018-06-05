@@ -570,7 +570,11 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                         .start();
 
                 final Future<Void> responseReady = Future.future();
-                final Future<JsonObject> tokenTracker = getRegistrationAssertion(tenant, deviceId, authenticatedDevice);
+                final Future<JsonObject> tokenTracker = getRegistrationAssertion(
+                        tenant,
+                        deviceId,
+                        authenticatedDevice,
+                        currentSpan.context());
                 final Future<TenantObject> tenantConfigTracker = getTenantConfiguration(tenant, currentSpan.context());
                 final Future<Integer> ttdTracker = tenantConfigTracker.compose(tenantObj -> {
                     final Integer ttdParam = HttpUtils.getTimeTilDisconnect(ctx);
