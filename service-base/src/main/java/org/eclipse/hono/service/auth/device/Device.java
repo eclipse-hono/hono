@@ -37,7 +37,7 @@ import io.vertx.ext.auth.User;
 public class Device implements User {
 
     private final JsonObject principal;
-    private Set<Object> authorities = new HashSet<>();
+    private final Set<Object> authorities = new HashSet<>();
 
     /**
      * Creates a new device for a token.
@@ -51,11 +51,11 @@ public class Device implements User {
     public Device(final Jws<Claims> token) {
         this(Objects.requireNonNull(token).getBody().get("ten", String.class), token.getBody().getSubject());
         try {
-            Set<?> aut = token.getBody().get("aut", Set.class);
+            final Set<?> aut = token.getBody().get("aut", Set.class);
             if (aut != null) {
                 authorities.addAll(aut);
             }
-        } catch (RequiredTypeException e) {
+        } catch (final RequiredTypeException e) {
             // token contains no authorities claim
         }
     }
@@ -92,7 +92,7 @@ public class Device implements User {
      */
     @Override
     public User isAuthorized(final String authority, final Handler<AsyncResult<Boolean>> resultHandler) {
-        for (Object item : authorities) {
+        for (final Object item : authorities) {
             if (authority.equals(item)) {
                 resultHandler.handle(Future.succeededFuture(Boolean.TRUE));
                 return this;

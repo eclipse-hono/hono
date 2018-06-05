@@ -75,7 +75,7 @@ public class HonoAuthHandlerImplTest {
         // fails with a 503 error code during authentication
         final int EXPECTED_ERROR_CODE = 503;
         doAnswer(invocation -> {
-            Handler handler = invocation.getArgument(1);
+            final Handler handler = invocation.getArgument(1);
             handler.handle(Future.failedFuture(new ServerErrorException(EXPECTED_ERROR_CODE)));
             return null;
         }).when(authProvider).authenticate(any(JsonObject.class), any(Handler.class));

@@ -108,12 +108,12 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
 
     @Override
     protected final int getActualPort() {
-        return (server != null ? server.actualPort() : Constants.PORT_UNCONFIGURED);
+        return server != null ? server.actualPort() : Constants.PORT_UNCONFIGURED;
     }
 
     @Override
     protected final int getActualInsecurePort() {
-        return (insecureServer != null ? insecureServer.actualPort() : Constants.PORT_UNCONFIGURED);
+        return insecureServer != null ? insecureServer.actualPort() : Constants.PORT_UNCONFIGURED;
     }
 
     /**
@@ -171,7 +171,7 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
     }
 
     private void addEndpointRoutes(final Router router) {
-        for (HttpEndpoint ep : endpoints) {
+        for (final HttpEndpoint ep : endpoints) {
             ep.addRoutes(router);
         }
     }
@@ -203,7 +203,7 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
      */
     protected HttpServerOptions getHttpServerOptions() {
 
-        HttpServerOptions options = new HttpServerOptions();
+        final HttpServerOptions options = new HttpServerOptions();
         options.setHost(getConfig().getBindAddress()).setPort(getConfig().getPort(getPortDefaultValue()))
                 .setMaxChunkSize(4096);
         addTlsKeyCertOptions(options);
@@ -223,7 +223,7 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
      */
     protected HttpServerOptions getInsecureHttpServerOptions() {
 
-        HttpServerOptions options = new HttpServerOptions();
+        final HttpServerOptions options = new HttpServerOptions();
         options.setHost(getConfig().getInsecurePortBindAddress())
                 .setPort(getConfig().getInsecurePort(getInsecurePortDefaultValue())).setMaxChunkSize(4096);
         return options;
@@ -232,7 +232,7 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
     private Future<HttpServer> bindSecureHttpServer(final Router router) {
 
         if (isSecurePortEnabled()) {
-            Future<HttpServer> result = Future.future();
+            final Future<HttpServer> result = Future.future();
             final String bindAddress = server == null ? getConfig().getBindAddress() : "?";
             if (server == null) {
                 server = vertx.createHttpServer(getHttpServerOptions());
@@ -260,7 +260,7 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
     private Future<HttpServer> bindInsecureHttpServer(final Router router) {
 
         if (isInsecurePortEnabled()) {
-            Future<HttpServer> result = Future.future();
+            final Future<HttpServer> result = Future.future();
             final String bindAddress = insecureServer == null ? getConfig().getInsecurePortBindAddress() : "?";
             if (insecureServer == null) {
                 insecureServer = vertx.createHttpServer(getInsecureHttpServerOptions());
@@ -295,8 +295,9 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
             addEndpointRoutes(router);
             addCustomRoutes(router);
             @SuppressWarnings("rawtypes")
+            final
             List<Future> endpointFutures = new ArrayList<>(endpoints.size());
-            for (HttpEndpoint ep : endpoints) {
+            for (final HttpEndpoint ep : endpoints) {
                 LOG.info("starting endpoint [name: {}, class: {}]", ep.getName(), ep.getClass().getName());
                 endpointFutures.add(ep.start());
             }
@@ -315,8 +316,9 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
 
         final Future<Void> stopFuture = Future.future();
         @SuppressWarnings("rawtypes")
+        final
         List<Future> endpointFutures = new ArrayList<>(endpoints.size());
-        for (HttpEndpoint ep : endpoints) {
+        for (final HttpEndpoint ep : endpoints) {
             LOG.info("stopping endpoint [name: {}, class: {}]", ep.getName(), ep.getClass().getName());
             endpointFutures.add(ep.stop());
         }
@@ -343,7 +345,7 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
     }
 
     private Future<Void> stopServer() {
-        Future<Void> serverStopTracker = Future.future();
+        final Future<Void> serverStopTracker = Future.future();
         if (server != null) {
             LOG.info("stopping secure HTTP server [{}:{}]", getBindAddress(), getActualPort());
             server.close(serverStopTracker.completer());
@@ -354,7 +356,7 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
     }
 
     private Future<Void> stopInsecureServer() {
-        Future<Void> insecureServerStopTracker = Future.future();
+        final Future<Void> insecureServerStopTracker = Future.future();
         if (insecureServer != null) {
             LOG.info("stopping insecure HTTP server [{}:{}]", getInsecurePortBindAddress(), getActualInsecurePort());
             insecureServer.close(insecureServerStopTracker.completer());
@@ -395,7 +397,7 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
      */
     @Override
     public void registerReadinessChecks(final HealthCheckHandler handler) {
-        for (HttpEndpoint ep : endpoints) {
+        for (final HttpEndpoint ep : endpoints) {
             ep.registerReadinessChecks(handler);
         }
     }
@@ -409,7 +411,7 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
      */
     @Override
     public void registerLivenessChecks(final HealthCheckHandler handler) {
-        for (HttpEndpoint ep : endpoints) {
+        for (final HttpEndpoint ep : endpoints) {
             ep.registerLivenessChecks(handler);
         }
     }

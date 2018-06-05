@@ -263,7 +263,7 @@ public final class MessageHelper {
      */
     public static boolean getXOptAppCorrelationId(final Message msg) {
         Objects.requireNonNull(msg);
-        Boolean value = getAnnotation(msg, ANNOTATION_X_OPT_APP_CORRELATION_ID, Boolean.class);
+        final Boolean value = getAnnotation(msg, ANNOTATION_X_OPT_APP_CORRELATION_ID, Boolean.class);
         return value == null ? false : value;
     }
 
@@ -282,7 +282,7 @@ public final class MessageHelper {
         if (props == null) {
             return null;
         } else {
-            Object value = props.getValue().get(name);
+            final Object value = props.getValue().get(name);
             if (type.isInstance(value)) {
                 return (T) value;
             } else {
@@ -323,10 +323,10 @@ public final class MessageHelper {
         }
 
         if (msg.getBody() instanceof Data) {
-            Data body = (Data) msg.getBody();
+            final Data body = (Data) msg.getBody();
             return Buffer.buffer(body.getValue().getArray());
         } else if (msg.getBody() instanceof AmqpValue) {
-            AmqpValue body = (AmqpValue) msg.getBody();
+            final AmqpValue body = (AmqpValue) msg.getBody();
             if (body.getValue() instanceof byte[]) {
                 return Buffer.buffer((byte[])body.getValue());
             }
@@ -537,11 +537,11 @@ public final class MessageHelper {
      */
     @SuppressWarnings("unchecked")
     public static <T> T getAnnotation(final Message msg, final String key, final Class<T> type) {
-        MessageAnnotations annotations = msg.getMessageAnnotations();
+        final MessageAnnotations annotations = msg.getMessageAnnotations();
         if (annotations == null) {
             return null;
         } else {
-            Object value = annotations.getValue().get(Symbol.getSymbol(key));
+            final Object value = annotations.getValue().get(Symbol.getSymbol(key));
             if (type.isInstance(value)) {
                 return (T) value;
             } else {

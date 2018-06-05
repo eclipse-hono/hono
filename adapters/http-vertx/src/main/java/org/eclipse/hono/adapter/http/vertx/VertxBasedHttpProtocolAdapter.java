@@ -199,7 +199,7 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
     void handlePostTelemetry(final RoutingContext ctx) {
 
         if (Device.class.isInstance(ctx.user())) {
-            Device device = (Device) ctx.user();
+            final Device device = (Device) ctx.user();
             uploadTelemetryMessage(ctx, device.getTenantId(), device.getDeviceId());
         } else {
             handle401(ctx);
@@ -209,7 +209,7 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
     void handlePostEvent(final RoutingContext ctx) {
 
         if (Device.class.isInstance(ctx.user())) {
-            Device device = (Device) ctx.user();
+            final Device device = (Device) ctx.user();
             uploadEventMessage(ctx, device.getTenantId(), device.getDeviceId());
         } else {
             handle401(ctx);
@@ -219,7 +219,7 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
     void assertTenant(final RoutingContext ctx) {
 
         if (Device.class.isInstance(ctx.user())) {
-            Device device = (Device) ctx.user();
+            final Device device = (Device) ctx.user();
             if (device.getTenantId().equals(getTenantParam(ctx))) {
                 ctx.next();
             } else {

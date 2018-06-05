@@ -52,11 +52,11 @@ public class FileBasedAuthenticationServiceTest {
     @BeforeClass
     public static void loadPermissions() throws IOException {
 
-        AuthTokenHelper tokenFactory = mock(AuthTokenHelper.class);
+        final AuthTokenHelper tokenFactory = mock(AuthTokenHelper.class);
         when(tokenFactory.createToken(anyString(), any(Authorities.class))).thenReturn(TOKEN);
         when(tokenFactory.getTokenLifetime()).thenReturn(TOKEN_LIFETIME);
 
-        AuthenticationServerConfigProperties props = new AuthenticationServerConfigProperties();
+        final AuthenticationServerConfigProperties props = new AuthenticationServerConfigProperties();
         props.setPermissionsPath(new ClassPathResource("authentication-service-test-permissions.json"));
 
         authService = new FileBasedAuthenticationService();

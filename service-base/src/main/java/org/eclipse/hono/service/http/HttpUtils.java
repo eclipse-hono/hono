@@ -97,7 +97,7 @@ public final class HttpUtils {
      */
     public static void serviceUnavailable(final RoutingContext ctx, final int retryAfterSeconds, final String detail) {
 
-        Map<CharSequence, CharSequence> headers = new HashMap<>(1);
+        final Map<CharSequence, CharSequence> headers = new HashMap<>(1);
         headers.put(HttpHeaders.RETRY_AFTER, String.valueOf(retryAfterSeconds));
         failWithStatus(ctx, HttpURLConnection.HTTP_UNAVAILABLE, headers, detail);
     }
@@ -113,7 +113,7 @@ public final class HttpUtils {
 
         Objects.requireNonNull(ctx);
         Objects.requireNonNull(authenticateHeaderValue);
-        Map<CharSequence, CharSequence> headers = new HashMap<>();
+        final Map<CharSequence, CharSequence> headers = new HashMap<>();
         headers.put("WWW-Authenticate", authenticateHeaderValue);
         failWithStatus(ctx, HttpURLConnection.HTTP_UNAUTHORIZED, headers, null);
     }
@@ -135,7 +135,7 @@ public final class HttpUtils {
 
         Objects.requireNonNull(ctx);
         if (headers != null) {
-            for (Entry<CharSequence, CharSequence> header : headers.entrySet()) {
+            for (final Entry<CharSequence, CharSequence> header : headers.entrySet()) {
                 ctx.response().putHeader(header.getKey(), header.getValue());
             }
         }
@@ -183,7 +183,7 @@ public final class HttpUtils {
             if (timeTilDisconnectHeader.isPresent()) {
                 return Integer.parseInt(timeTilDisconnectHeader.get());
             }
-        } catch (NumberFormatException e) {
+        } catch (final NumberFormatException e) {
         }
 
         return null;

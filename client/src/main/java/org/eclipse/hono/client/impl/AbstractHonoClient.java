@@ -295,7 +295,7 @@ public abstract class AbstractHonoClient {
             receiver.handler((delivery, message) -> {
                 messageHandler.handle(delivery, message);
                 if (LOG.isTraceEnabled()) {
-                    int remainingCredits = receiver.getCredit() - receiver.getQueued();
+                    final int remainingCredits = receiver.getCredit() - receiver.getQueued();
                     LOG.trace("handling message [remotely settled: {}, queued messages: {}, remaining credit: {}]",
                             delivery.remotelySettled(), receiver.getQueued(), remainingCredits);
                 }

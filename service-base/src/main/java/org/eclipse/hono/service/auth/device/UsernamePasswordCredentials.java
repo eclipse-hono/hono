@@ -66,12 +66,12 @@ public class UsernamePasswordCredentials extends AbstractDeviceCredentials {
         Objects.requireNonNull(username);
         Objects.requireNonNull(password);
 
-        UsernamePasswordCredentials credentials;
+        final UsernamePasswordCredentials credentials;
         if (singleTenant) {
             credentials = new UsernamePasswordCredentials(Constants.DEFAULT_TENANT, username);
         } else {
             // multi tenantId -> <userId>@<tenantId>
-            String[] userComponents = username.split("@", 2);
+            final String[] userComponents = username.split("@", 2);
             if (userComponents.length != 2) {
                 LOG.trace("username does not comply with expected pattern [<authId>@<tenantId>]", username);
                 return null;
@@ -115,13 +115,13 @@ public class UsernamePasswordCredentials extends AbstractDeviceCredentials {
     public boolean matchesCredentials(final JsonObject candidateSecret) {
 
         try {
-            String pwdHash = candidateSecret.getString(CredentialsConstants.FIELD_SECRETS_PWD_HASH);
+            final String pwdHash = candidateSecret.getString(CredentialsConstants.FIELD_SECRETS_PWD_HASH);
             if (pwdHash == null) {
                 LOG.debug("candidate hashed-password secret does not contain a pwd hash");
                 return false;
             }
 
-            byte[] hashedPasswordOnRecord = Base64.getDecoder().decode(pwdHash);
+            final byte[] hashedPasswordOnRecord = Base64.getDecoder().decode(pwdHash);
 
             byte[] salt = null;
             final String encodedSalt = candidateSecret.getString(CredentialsConstants.FIELD_SECRETS_SALT);
@@ -130,18 +130,18 @@ public class UsernamePasswordCredentials extends AbstractDeviceCredentials {
                 salt = Base64.getDecoder().decode(encodedSalt);
             }
 
-            String hashFunction = candidateSecret.getString(
+            final String hashFunction = candidateSecret.getString(
                     CredentialsConstants.FIELD_SECRETS_HASH_FUNCTION,
                     CredentialsConstants.DEFAULT_HASH_FUNCTION);
 
             return checkPassword(hashFunction, salt, hashedPasswordOnRecord);
 
-        } catch (IllegalArgumentException e) {
+        } catch (final IllegalArgumentException e) {
             if (LOG.isDebugEnabled()) {
                 LOG.debug("cannot decode malformed Base64 encoded property", e);
             }
             return false;
-        } catch (ClassCastException e) {
+        } catch (final ClassCastException e) {
             // one or more of the properties are not of expected type
             if (LOG.isDebugEnabled()) {
                 LOG.debug("cannot process malformed candidate hashed-password secret returned by Credentials service [{}]",
@@ -153,11 +153,11 @@ public class UsernamePasswordCredentials extends AbstractDeviceCredentials {
 
     private boolean checkPassword(final String hashFunction, final byte[] salt, final byte[] hashedPasswordOnRecord) {
         try {
-            MessageDigest messageDigest = MessageDigest.getInstance(hashFunction);
+            final MessageDigest messageDigest = MessageDigest.getInstance(hashFunction);
             if (salt != null) {
                 messageDigest.update(salt);
             }
-            byte[] hashedPassword = messageDigest.digest(getPassword().getBytes(StandardCharsets.UTF_8));
+            final byte[] hashedPassword = messageDigest.digest(getPassword().getBytes(StandardCharsets.UTF_8));
             return Arrays.equals(hashedPassword, hashedPasswordOnRecord);
         } catch (final NoSuchAlgorithmException e) {
             return false;

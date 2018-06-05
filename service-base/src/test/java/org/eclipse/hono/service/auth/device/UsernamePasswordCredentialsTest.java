@@ -40,7 +40,7 @@ public class UsernamePasswordCredentialsTest {
     @Test
     public void testTenantFromUserMultiTenant() {
 
-        UsernamePasswordCredentials mqttUsernamePassword = UsernamePasswordCredentials.create(TEST_USER_OTHER_TENANT, TEST_PASSWORD, false);
+        final UsernamePasswordCredentials mqttUsernamePassword = UsernamePasswordCredentials.create(TEST_USER_OTHER_TENANT, TEST_PASSWORD, false);
 
         assertEquals(mqttUsernamePassword.getType(), CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD);
         assertEquals(mqttUsernamePassword.getTenantId(), TEST_OTHER_TENANT);
@@ -54,7 +54,7 @@ public class UsernamePasswordCredentialsTest {
     @Test
     public void testTenantFromUserMultiTenantWrongUsername() {
 
-        UsernamePasswordCredentials mqttUserNamePassword = UsernamePasswordCredentials.create(TEST_USER, TEST_PASSWORD, false);
+        final UsernamePasswordCredentials mqttUserNamePassword = UsernamePasswordCredentials.create(TEST_USER, TEST_PASSWORD, false);
         assertNull(mqttUserNamePassword);
     }
 
@@ -64,7 +64,7 @@ public class UsernamePasswordCredentialsTest {
     @Test
     public void testTenantFromUserMultiTenantWrongUsernameStructure() {
 
-        UsernamePasswordCredentials mqttUserNamePassword = UsernamePasswordCredentials.create("user/tenant", TEST_PASSWORD, false);
+        final UsernamePasswordCredentials mqttUserNamePassword = UsernamePasswordCredentials.create("user/tenant", TEST_PASSWORD, false);
         assertNull(mqttUserNamePassword);
     }
 
@@ -74,7 +74,7 @@ public class UsernamePasswordCredentialsTest {
     @Test
     public void testTenantFromUserSingleTenant() {
 
-        UsernamePasswordCredentials mqttUsernamePassword = UsernamePasswordCredentials.create(TEST_USER, TEST_PASSWORD, true);
+        final UsernamePasswordCredentials mqttUsernamePassword = UsernamePasswordCredentials.create(TEST_USER, TEST_PASSWORD, true);
 
         assertEquals(mqttUsernamePassword.getType(), CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD);
         assertEquals(mqttUsernamePassword.getTenantId(), Constants.DEFAULT_TENANT);

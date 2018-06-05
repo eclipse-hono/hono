@@ -219,7 +219,7 @@ public final class Constants {
     public static HonoUser getClientPrincipal(final Record record) {
 
         if (record != null) {
-            HonoUser client = record.get(KEY_CLIENT_PRINCIPAL, HonoUser.class);
+            final HonoUser client = record.get(KEY_CLIENT_PRINCIPAL, HonoUser.class);
             return client != null ? client : PRINCIPAL_ANONYMOUS;
         } else {
             return PRINCIPAL_ANONYMOUS;
@@ -235,7 +235,7 @@ public final class Constants {
      * @throws NullPointerException if the connection is {@code null}.
      */
     public static HonoUser getClientPrincipal(final ProtonConnection con) {
-        Record attachments = Objects.requireNonNull(con).attachments();
+        final Record attachments = Objects.requireNonNull(con).attachments();
         return getClientPrincipal(attachments);
     }
 
@@ -248,7 +248,7 @@ public final class Constants {
      */
     public static void setClientPrincipal(final ProtonConnection con, final HonoUser principal) {
         Objects.requireNonNull(principal);
-        Record attachments = Objects.requireNonNull(con).attachments();
+        final Record attachments = Objects.requireNonNull(con).attachments();
         attachments.set(KEY_CLIENT_PRINCIPAL, HonoUser.class, principal);
     }
 
@@ -358,7 +358,7 @@ public final class Constants {
                     return twoStrings;
                 } catch (final NumberFormatException ne) {
                     return null;
-                } catch (ArrayIndexOutOfBoundsException ae) {
+                } catch (final ArrayIndexOutOfBoundsException ae) {
                     return null;
                 }
             }

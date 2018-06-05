@@ -57,7 +57,7 @@ public final class HonoMessaging extends AmqpServiceBase<HonoMessagingConfigProp
 
     private void logStartupMessage() {
         if (LOG.isWarnEnabled()) {
-            StringBuilder b = new StringBuilder()
+            final StringBuilder b = new StringBuilder()
                     .append("Hono Messaging does not yet support limiting the incoming message size ")
                     .append("via the maxPayloadSize property");
             LOG.warn(b.toString());
@@ -67,7 +67,7 @@ public final class HonoMessaging extends AmqpServiceBase<HonoMessagingConfigProp
     @Override
     protected void publishConnectionClosedEvent(final ProtonConnection con) {
 
-        String conId = con.attachments().get(Constants.KEY_CONNECTION_ID, String.class);
+        final String conId = con.attachments().get(Constants.KEY_CONNECTION_ID, String.class);
         if (conId != null) {
             vertx.eventBus().publish(
                     Constants.EVENT_BUS_ADDRESS_CONNECTION_CLOSED,

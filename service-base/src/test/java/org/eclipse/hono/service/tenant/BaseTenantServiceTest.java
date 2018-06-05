@@ -210,7 +210,7 @@ public class BaseTenantServiceTest {
             @Override
             public void get(final String tenantId, final Handler<AsyncResult<TenantResult<JsonObject>>> resultHandler) {
 
-                TenantObject tenant = TenantObject.from(tenantId, true);
+                final TenantObject tenant = TenantObject.from(tenantId, true);
                 tenant.setProperty("operation", "getById");
                 resultHandler.handle(Future.succeededFuture(TenantResult.from(HttpURLConnection.HTTP_OK, JsonObject.mapFrom(tenant))));
             }
@@ -219,7 +219,7 @@ public class BaseTenantServiceTest {
             public void get(final X500Principal subjectDn,
                     final Handler<AsyncResult<TenantResult<JsonObject>>> resultHandler) {
 
-                TenantObject tenant = TenantObject.from(subjectDn.getName(X500Principal.RFC2253), true);
+                final TenantObject tenant = TenantObject.from(subjectDn.getName(X500Principal.RFC2253), true);
                 tenant.setProperty("operation", "getByCa");
                 resultHandler.handle(Future.succeededFuture(TenantResult.from(HttpURLConnection.HTTP_OK, JsonObject.mapFrom(tenant))));
             }

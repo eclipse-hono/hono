@@ -70,7 +70,7 @@ public class DelegatingAuthenticationServiceConfig {
     @Bean
     @Qualifier(AuthenticationConstants.QUALIFIER_AUTHENTICATION)
     public AuthTokenHelper tokenValidator(final Vertx vertx) {
-        AuthenticationServerClientConfigProperties authClientProps = authenticationServiceClientProperties();
+        final AuthenticationServerClientConfigProperties authClientProps = authenticationServiceClientProperties();
         if (!authClientProps.getValidation().isAppropriateForValidating() && authClientProps.getCertPath() != null) {
             // fall back to TLS configuration
             authClientProps.getValidation().setCertPath(authClientProps.getCertPath());

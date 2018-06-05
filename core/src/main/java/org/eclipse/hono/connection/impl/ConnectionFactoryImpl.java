@@ -154,7 +154,7 @@ public final class ConnectionFactoryImpl implements ConnectionFactory {
             // at this point the SASL exchange has completed successfully
             logger.debug("connected to AMQP 1.0 container [{}://{}:{}], opening connection ...",
                     clientOptions.isSsl() ? "amqps" : "amqp", config.getHost(), config.getPort());
-            ProtonConnection downstreamConnection = conAttempt.result();
+            final ProtonConnection downstreamConnection = conAttempt.result();
             downstreamConnection
                     .setContainer(String.format("%s-%s", config.getName(), UUID.randomUUID()))
                     .setHostname(config.getAmqpHostname())
@@ -205,7 +205,7 @@ public final class ConnectionFactoryImpl implements ConnectionFactory {
         }
 
         if (clientOptions.getTrustOptions() == null) {
-            TrustOptions trustOptions = config.getTrustOptions();
+            final TrustOptions trustOptions = config.getTrustOptions();
             if (trustOptions != null) {
                 clientOptions.setSsl(true).setTrustOptions(trustOptions);
             }
@@ -229,7 +229,7 @@ public final class ConnectionFactoryImpl implements ConnectionFactory {
     private void addTlsKeyCertOptions(final ProtonClientOptions clientOptions) {
 
         if (clientOptions.getKeyCertOptions() == null) {
-            KeyCertOptions keyCertOptions = config.getKeyCertOptions();
+            final KeyCertOptions keyCertOptions = config.getKeyCertOptions();
             if (keyCertOptions != null) {
                 clientOptions.setSsl(true).setKeyCertOptions(keyCertOptions);
                 clientOptions.addEnabledSaslMechanism(ProtonSaslExternalImpl.MECH_NAME);

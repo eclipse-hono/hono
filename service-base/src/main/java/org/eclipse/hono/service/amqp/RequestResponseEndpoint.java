@@ -198,7 +198,7 @@ public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties>
                     processRequest(message, targetAddress, clientPrincipal);
                     ProtonHelper.accepted(delivery, true);
                     return Future.succeededFuture();
-                } catch (DecodeException e) {
+                } catch (final DecodeException e) {
                     return Future.failedFuture(new AmqpErrorException(AmqpError.DECODE_ERROR, "malformed payload"));
                 }
             } else {
@@ -208,7 +208,7 @@ public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties>
         }).otherwise(t -> {
 
             if (t instanceof AmqpErrorException) {
-                AmqpErrorException cause = (AmqpErrorException) t;
+                final AmqpErrorException cause = (AmqpErrorException) t;
                 MessageHelper.rejected(delivery, cause.asErrorCondition());
             } else {
                 logger.debug("error processing request [resource: {}, op: {}]: {}", targetAddress, message.getSubject(), t.getMessage());

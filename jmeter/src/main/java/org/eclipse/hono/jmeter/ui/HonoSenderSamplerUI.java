@@ -99,7 +99,7 @@ public class HonoSenderSamplerUI extends HonoSamplerUI {
 
     @Override
     public TestElement createTestElement() {
-        HonoSenderSampler sampler = new HonoSenderSampler();
+        final HonoSenderSampler sampler = new HonoSenderSampler();
         modifyTestElement(sampler);
         return sampler;
     }

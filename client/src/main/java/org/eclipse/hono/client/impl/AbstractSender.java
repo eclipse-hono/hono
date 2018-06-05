@@ -367,7 +367,7 @@ abstract public class AbstractSender extends AbstractHonoClient implements Messa
                     LOG.trace("message [ID: {}] accepted by peer", messageId);
                     result.complete(deliveryUpdated);
                 } else if (Rejected.class.isInstance(deliveryUpdated.getRemoteState())) {
-                    Rejected rejected = (Rejected) deliveryUpdated.getRemoteState();
+                    final Rejected rejected = (Rejected) deliveryUpdated.getRemoteState();
                     if (rejected.getError() == null) {
                         LOG.debug("message [message ID: {}] rejected by peer", messageId);
                         result.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));

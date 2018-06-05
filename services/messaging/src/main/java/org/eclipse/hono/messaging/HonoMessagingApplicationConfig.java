@@ -60,7 +60,7 @@ public class HonoMessagingApplicationConfig {
      */
     @Bean
     public Vertx vertx() {
-        VertxOptions options = new VertxOptions()
+        final VertxOptions options = new VertxOptions()
                 .setWarningExceptionTime(1500000000)
                 .setAddressResolverOptions(new AddressResolverOptions()
                         .setCacheNegativeTimeToLive(0) // discard failed DNS lookup results immediately
@@ -90,7 +90,7 @@ public class HonoMessagingApplicationConfig {
      */
     @Bean
     public ObjectFactoryCreatingFactoryBean honoServerFactory() {
-        ObjectFactoryCreatingFactoryBean factory = new ObjectFactoryCreatingFactoryBean();
+        final ObjectFactoryCreatingFactoryBean factory = new ObjectFactoryCreatingFactoryBean();
         factory.setTargetBeanName(BEAN_NAME_HONO_MESSAGING);
         return factory;
     }
@@ -104,7 +104,7 @@ public class HonoMessagingApplicationConfig {
     @Bean
     @ConfigurationProperties(prefix = "hono.downstream")
     public DownstreamClientConfigProperties downstreamConnectionProperties() {
-        DownstreamClientConfigProperties props = new DownstreamClientConfigProperties();
+        final DownstreamClientConfigProperties props = new DownstreamClientConfigProperties();
         if (props.getAmqpHostname() == null) {
             props.setAmqpHostname("hono-internal");
         }
@@ -154,7 +154,7 @@ public class HonoMessagingApplicationConfig {
     @Bean
     @Qualifier("validation")
     public RegistrationAssertionHelper registrationAssertionValidator() {
-        HonoMessagingConfigProperties serviceProps = honoMessagingProperties();
+        final HonoMessagingConfigProperties serviceProps = honoMessagingProperties();
         if (!serviceProps.getValidation().isAppropriateForValidating() && serviceProps.getCertPath() != null) {
             // fall back to TLS configuration
             serviceProps.getValidation().setCertPath(serviceProps.getCertPath());

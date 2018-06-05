@@ -188,11 +188,11 @@ public abstract class ClientTestBase {
             final Future<Void> regClientTracker = Future.future();
             registrationClient.close(regClientTracker.completer());
             regClientTracker.compose(r -> {
-                Future<Void> senderTracker = Future.future();
+                final Future<Void> senderTracker = Future.future();
                 sender.close(senderTracker.completer());
                 return senderTracker;
             }).compose(r -> {
-                Future<Void> honoClientShutdownTracker = Future.future();
+                final Future<Void> honoClientShutdownTracker = Future.future();
                 honoClient.shutdown(honoClientShutdownTracker.completer());
                 return honoClientShutdownTracker;
             }).compose(r -> {
@@ -202,7 +202,7 @@ public abstract class ClientTestBase {
             honoTracker.complete();
         }
 
-        Future<Void> receiverTracker = Future.future();
+        final Future<Void> receiverTracker = Future.future();
         if (consumer != null) {
             consumer.close(receiverTracker.completer());
         } else {
@@ -268,7 +268,7 @@ public abstract class ClientTestBase {
 
         setup.await(1000);
 
-        long start = System.currentTimeMillis();
+        final long start = System.currentTimeMillis();
         final AtomicInteger messagesSent = new AtomicInteger();
 
         while (messagesSent.get() < IntegrationTestSupport.MSG_COUNT) {
@@ -287,7 +287,7 @@ public abstract class ClientTestBase {
             sending.await();
         }
 
-        long timeToWait = Math.max(DEFAULT_TEST_TIMEOUT, Math.round(IntegrationTestSupport.MSG_COUNT * 1.2));
+        final long timeToWait = Math.max(DEFAULT_TEST_TIMEOUT, Math.round(IntegrationTestSupport.MSG_COUNT * 1.2));
         if (!received.await(timeToWait, TimeUnit.MILLISECONDS)) {
             LOGGER.info("sent {} and received {} messages after {} milliseconds",
                     messagesSent.get(), IntegrationTestSupport.MSG_COUNT - received.getCount(), System.currentTimeMillis() - start);

@@ -231,19 +231,19 @@ public final class KeyLoader {
         PrivateKey privateKey = null;
         PublicKey publicKey = null;
 
-        Buffer buffer = vertx.fileSystem().readFileBlocking(path);
+        final Buffer buffer = vertx.fileSystem().readFileBlocking(path);
         try (InputStream is = new ByteArrayInputStream(buffer.getBytes())) {
-            KeyStore store = KeyStore.getInstance(type);
+            final KeyStore store = KeyStore.getInstance(type);
             store.load(is, password);
             LOG.debug("loading keys from key store containing {} entries", store.size());
-            for (Enumeration<String> e = store.aliases(); e.hasMoreElements();) {
-                String alias = e.nextElement();
+            for (final Enumeration<String> e = store.aliases(); e.hasMoreElements();) {
+                final String alias = e.nextElement();
                 LOG.info("current alias: {}", alias);
                 if (store.isKeyEntry(alias)) {
                     LOG.debug("loading private key [{}]", alias);
                     privateKey = (PrivateKey) store.getKey(alias, password);
                     LOG.debug("loading public key [{}]", alias);
-                    Certificate[] chain = store.getCertificateChain(alias);
+                    final Certificate[] chain = store.getCertificateChain(alias);
                     publicKey = chain[0].getPublicKey();
 
                     return new KeyLoader(privateKey, publicKey);

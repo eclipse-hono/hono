@@ -55,9 +55,9 @@ public class HonoMessagingApplication extends AbstractApplication {
     @Override
     protected Future<Void> deployRequiredVerticles(final int maxInstances) {
 
-        Future<Void> result = Future.future();
+        final Future<Void> result = Future.future();
 
-        Future<String> authFuture = deployAuthenticationService();// we only need 1 authentication service
+        final Future<String> authFuture = deployAuthenticationService();// we only need 1 authentication service
         authFuture.setHandler(ar -> {
             if (ar.succeeded()) {
                 result.complete();
@@ -69,7 +69,7 @@ public class HonoMessagingApplication extends AbstractApplication {
     }
 
     private Future<String> deployAuthenticationService() {
-        Future<String> result = Future.future();
+        final Future<String> result = Future.future();
         if (!Verticle.class.isInstance(authenticationService)) {
             result.fail("authentication service is not a verticle");
         } else {

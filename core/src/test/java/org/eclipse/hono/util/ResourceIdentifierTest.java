@@ -28,7 +28,7 @@ public class ResourceIdentifierTest {
      */
     @Test
     public void testFromStringAllowsMissingDeviceId() {
-        ResourceIdentifier resourceId = ResourceIdentifier.fromString("telemetry/myTenant");
+        final ResourceIdentifier resourceId = ResourceIdentifier.fromString("telemetry/myTenant");
         assertNotNull(resourceId);
         assertThat(resourceId.getEndpoint(), is("telemetry"));
         assertThat(resourceId.getTenantId(), is("myTenant"));
@@ -42,7 +42,7 @@ public class ResourceIdentifierTest {
      */
     @Test
     public void testFromStringAssumingDefaultTenantAllowsMissingDeviceId() {
-        ResourceIdentifier resourceId = ResourceIdentifier.fromStringAssumingDefaultTenant("telemetry");
+        final ResourceIdentifier resourceId = ResourceIdentifier.fromStringAssumingDefaultTenant("telemetry");
         assertNotNull(resourceId);
         assertThat(resourceId.getEndpoint(), is("telemetry"));
         assertThat(resourceId.getTenantId(), is(Constants.DEFAULT_TENANT));
@@ -56,7 +56,7 @@ public class ResourceIdentifierTest {
      */
     @Test
     public void testFromStringWithExtendedPath() {
-        ResourceIdentifier resourceId = ResourceIdentifier.fromString("telemetry/myTenant/deviceId/what/ever");
+        final ResourceIdentifier resourceId = ResourceIdentifier.fromString("telemetry/myTenant/deviceId/what/ever");
         assertNotNull(resourceId);
         assertThat(resourceId.getEndpoint(), is("telemetry"));
         assertThat(resourceId.getTenantId(), is("myTenant"));
@@ -72,7 +72,7 @@ public class ResourceIdentifierTest {
      */
     @Test
     public void testFromStringSupportsSingleSegment() {
-        ResourceIdentifier resourceId = ResourceIdentifier.fromString("cbs");
+        final ResourceIdentifier resourceId = ResourceIdentifier.fromString("cbs");
         assertThat(resourceId.getEndpoint(), is("cbs"));
         assertNull(resourceId.getTenantId());
         assertNull(resourceId.getResourceId());
@@ -83,7 +83,7 @@ public class ResourceIdentifierTest {
      */
     @Test
     public void testFromPathSupportsSingleSegment() {
-        ResourceIdentifier resourceId = ResourceIdentifier.fromPath(new String[]{ "cbs" });
+        final ResourceIdentifier resourceId = ResourceIdentifier.fromPath(new String[]{ "cbs" });
         assertThat(resourceId.getEndpoint(), is("cbs"));
         assertNull(resourceId.getTenantId());
         assertNull(resourceId.getResourceId());
@@ -94,7 +94,7 @@ public class ResourceIdentifierTest {
      */
     @Test
     public void testFromSupportsSingleSegment() {
-        ResourceIdentifier resourceId = ResourceIdentifier.from("cbs", null, null);
+        final ResourceIdentifier resourceId = ResourceIdentifier.from("cbs", null, null);
         assertThat(resourceId.getEndpoint(), is("cbs"));
         assertNull(resourceId.getTenantId());
         assertNull(resourceId.getResourceId());
@@ -105,7 +105,7 @@ public class ResourceIdentifierTest {
      */
     @Test
     public void testFromIndividualParameters() {
-        ResourceIdentifier resourceId = ResourceIdentifier.from("telemetry", "myTenant", "myDevice");
+        final ResourceIdentifier resourceId = ResourceIdentifier.from("telemetry", "myTenant", "myDevice");
         assertNotNull(resourceId);
         assertThat(resourceId.getEndpoint(), is("telemetry"));
         assertThat(resourceId.getTenantId(), is("myTenant"));
@@ -119,7 +119,7 @@ public class ResourceIdentifierTest {
      */
     @Test
     public void testFromAllowsMissingDeviceId() {
-        ResourceIdentifier resourceId = ResourceIdentifier.from("telemetry", "myTenant", null);
+        final ResourceIdentifier resourceId = ResourceIdentifier.from("telemetry", "myTenant", null);
         assertNotNull(resourceId);
         assertThat(resourceId.getEndpoint(), is("telemetry"));
         assertThat(resourceId.getTenantId(), is("myTenant"));
@@ -163,7 +163,7 @@ public class ResourceIdentifierTest {
      */
     @Test
     public void testFromPathIgnoresTrailingNulls() {
-        ResourceIdentifier id = ResourceIdentifier.fromPath(new String[]{"first", "second", null, null});
+        final ResourceIdentifier id = ResourceIdentifier.fromPath(new String[]{"first", "second", null, null});
         assertThat(id.toPath().length, is(2));
         assertThat(id.toPath()[0], is("first"));
         assertThat(id.toPath()[1], is("second"));

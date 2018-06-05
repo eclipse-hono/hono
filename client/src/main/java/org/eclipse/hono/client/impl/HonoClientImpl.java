@@ -473,7 +473,7 @@ public class HonoClientImpl implements HonoClient {
             final String deviceId) {
 
         return checkConnected().compose(connected -> {
-            Future<MessageSender> result = Future.future();
+            final Future<MessageSender> result = Future.future();
             EventSenderImpl.create(context, clientConfigProperties, connection, tenantId, deviceId,
                     onSenderClosed -> {
                         activeSenders.remove(EventSenderImpl.getTargetAddress(tenantId, deviceId));
@@ -511,7 +511,7 @@ public class HonoClientImpl implements HonoClient {
                     creationLocks.remove(key);
                     creationRequests.remove(connectionFailureHandler);
                     if (creationAttempt.succeeded()) {
-                        MessageSender newSender = creationAttempt.result();
+                        final MessageSender newSender = creationAttempt.result();
                         LOG.debug("successfully created new message sender for {}", key);
                         activeSenders.put(key, newSender);
                         result.tryComplete(newSender);

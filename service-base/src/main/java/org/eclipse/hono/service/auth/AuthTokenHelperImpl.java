@@ -88,7 +88,7 @@ public class AuthTokenHelperImpl extends JwtHelper implements AuthTokenHelper {
     @Override
     public String createToken(final String authorizationId, final Authorities authorities) {
 
-        JwtBuilder builder = Jwts.builder()
+        final JwtBuilder builder = Jwts.builder()
                 .signWith(algorithm, key)
                 .setIssuer("Hono")
                 .setSubject(Objects.requireNonNull(authorizationId))

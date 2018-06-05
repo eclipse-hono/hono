@@ -38,7 +38,7 @@ public class JwtHelperTest {
     @Test
     public void testIsExpired() {
 
-        String token = Jwts.builder()
+        final String token = Jwts.builder()
                             .signWith(SignatureAlgorithm.HS256, secret)
                             .setExpiration(Date.from(Instant.now().minus(Duration.ofSeconds(10))))
                             .compact();

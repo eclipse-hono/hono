@@ -55,7 +55,7 @@ public class ForwardingDownstreamAdapterTest {
 
     private static final Vertx vertx = Vertx.vertx();
 
-    private ResourceIdentifier          targetAddress = ResourceIdentifier.from(TelemetryConstants.TELEMETRY_ENDPOINT, "myTenant", null);
+    private final ResourceIdentifier          targetAddress = ResourceIdentifier.from(TelemetryConstants.TELEMETRY_ENDPOINT, "myTenant", null);
     private ForwardingDownstreamAdapter adapter;
     private ConnectionFactory           connectionFactory;
     private Record                      attachments;
@@ -67,7 +67,7 @@ public class ForwardingDownstreamAdapterTest {
     @Before
     public void setup() {
         attachments = mock(Record.class);
-        ProtonSession session = mock(ProtonSession.class);
+        final ProtonSession session = mock(ProtonSession.class);
         con = mock(ProtonConnection.class);
         when(con.getRemoteContainer()).thenReturn("downstream");
         when(con.createSession()).thenReturn(session);
@@ -145,7 +145,7 @@ public class ForwardingDownstreamAdapterTest {
 
         // WHEN a client wants to attach to Hono for uploading telemetry data
         // THEN assert that no sender can be created
-        Async clientAttachFailure = ctx.async();
+        final Async clientAttachFailure = ctx.async();
         adapter.onClientAttach(client, s -> {
             if (s.failed()) {
                 clientAttachFailure.complete();
@@ -191,7 +191,7 @@ public class ForwardingDownstreamAdapterTest {
         // expect the connection factory to be invoked twice
         // first on initial connection
         // second on re-connect attempt
-        HandlerCapturingConnectionFactory factory = new HandlerCapturingConnectionFactory(con, 2);
+        final HandlerCapturingConnectionFactory factory = new HandlerCapturingConnectionFactory(con, 2);
 
         // GIVEN an adapter connected to a downstream container
         givenADownstreamAdapter();
@@ -219,7 +219,7 @@ public class ForwardingDownstreamAdapterTest {
         // expect the connection factory to be invoked twice
         // first on initial connection
         // second on re-connect attempt
-        HandlerCapturingConnectionFactory factory = new HandlerCapturingConnectionFactory(con, 2);
+        final HandlerCapturingConnectionFactory factory = new HandlerCapturingConnectionFactory(con, 2);
 
         // GIVEN an adapter connected to a downstream container
         givenADownstreamAdapter();
@@ -249,7 +249,7 @@ public class ForwardingDownstreamAdapterTest {
         // expect the connection factory to be invoked twice
         // first on initial connection
         // second on re-connect attempt
-        HandlerCapturingConnectionFactory factory = new HandlerCapturingConnectionFactory(con, 2);
+        final HandlerCapturingConnectionFactory factory = new HandlerCapturingConnectionFactory(con, 2);
 
         // GIVEN an adapter connected to a downstream container
         givenADownstreamAdapter(downstreamSender);
@@ -328,7 +328,7 @@ public class ForwardingDownstreamAdapterTest {
         when(client.getTargetAddress()).thenReturn(targetAddress.toString());
         final HandlerCapturingConnectionFactory factory = new HandlerCapturingConnectionFactory(con);
         final SenderFactory senderFactory = (con, address, qos, drainHandler, closeHook) -> {
-            Future<ProtonSender> result = Future.future();
+            final Future<ProtonSender> result = Future.future();
             return result;
         };
         final Async disconnected = ctx.async();
@@ -408,8 +408,8 @@ public class ForwardingDownstreamAdapterTest {
 
         private Handler<ProtonConnection> disconnectHandler;
         private Handler<AsyncResult<ProtonConnection>> closeHandler;
-        private CountDownLatch expectedConnectionAttempts;
-        private ProtonConnection connectionToCreate;
+        private final CountDownLatch expectedConnectionAttempts;
+        private final ProtonConnection connectionToCreate;
 
         HandlerCapturingConnectionFactory(final ProtonConnection conToCreate) {
             this(conToCreate, 1);
@@ -481,7 +481,7 @@ public class ForwardingDownstreamAdapterTest {
         public boolean await(final long timeout, final TimeUnit unit) {
             try {
                 return expectedConnectionAttempts.await(timeout, unit);
-            } catch (InterruptedException e) {
+            } catch (final InterruptedException e) {
                 Thread.currentThread().interrupt();
                 return false;
             }

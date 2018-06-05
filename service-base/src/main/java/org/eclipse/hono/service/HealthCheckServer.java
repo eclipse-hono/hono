@@ -51,8 +51,8 @@ public final class HealthCheckServer implements Lifecycle {
     private HealthCheckHandler readinessHandler;
     private HealthCheckHandler livenessHandler;
 
-    private Vertx vertx;
-    private ApplicationConfigProperties config;
+    private final Vertx vertx;
+    private final ApplicationConfigProperties config;
     private Router router;
 
     /**
@@ -107,9 +107,9 @@ public final class HealthCheckServer implements Lifecycle {
     @Override
     public Future<Void> start() {
 
-        Future<Void> result = Future.future();
+        final Future<Void> result = Future.future();
         if (router != null) {
-            HttpServerOptions options = new HttpServerOptions()
+            final HttpServerOptions options = new HttpServerOptions()
                     .setPort(config.getHealthCheckPort())
                     .setHost(config.getHealthCheckBindAddress());
             server = vertx.createHttpServer(options);
@@ -148,7 +148,7 @@ public final class HealthCheckServer implements Lifecycle {
     @Override
     public Future<Void> stop() {
 
-        Future<Void> result = Future.future();
+        final Future<Void> result = Future.future();
         if (server != null) {
             LOG.info("closing health check HTTP server [{}:{}]", config.getHealthCheckBindAddress(), server.actualPort());
             server.close(result.completer());

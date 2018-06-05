@@ -75,7 +75,7 @@ public class EventSenderImplTest {
 
         // GIVEN a sender that has credit
         when(sender.sendQueueFull()).thenReturn(Boolean.FALSE);
-        MessageSender messageSender = new EventSenderImpl(config, sender, "tenant", "telemetry/tenant", context);
+        final MessageSender messageSender = new EventSenderImpl(config, sender, "tenant", "telemetry/tenant", context);
         final AtomicReference<Handler<ProtonDelivery>> handlerRef = new AtomicReference<>();
         doAnswer(invocation -> {
             handlerRef.set(invocation.getArgument(1));
@@ -91,7 +91,7 @@ public class EventSenderImplTest {
         assertFalse(result.isComplete());
 
         // until it gets accepted by the peer
-        ProtonDelivery accepted = mock(ProtonDelivery.class);
+        final ProtonDelivery accepted = mock(ProtonDelivery.class);
         when(accepted.remotelySettled()).thenReturn(Boolean.TRUE);
         when(accepted.getRemoteState()).thenReturn(new Accepted());
         handlerRef.get().handle(accepted);
@@ -110,7 +110,7 @@ public class EventSenderImplTest {
 
         // GIVEN a sender that has credit
         when(sender.sendQueueFull()).thenReturn(Boolean.FALSE);
-        MessageSender messageSender = new EventSenderImpl(config, sender, "tenant", "telemetry/tenant", context);
+        final MessageSender messageSender = new EventSenderImpl(config, sender, "tenant", "telemetry/tenant", context);
         final AtomicReference<Handler<ProtonDelivery>> handlerRef = new AtomicReference<>();
         doAnswer(invocation -> {
             handlerRef.set(invocation.getArgument(1));
@@ -126,7 +126,7 @@ public class EventSenderImplTest {
         assertFalse(result.isComplete());
 
         // and the result fails once the peer rejects the message
-        ProtonDelivery rejected = mock(ProtonDelivery.class);
+        final ProtonDelivery rejected = mock(ProtonDelivery.class);
         when(rejected.remotelySettled()).thenReturn(Boolean.TRUE);
         when(rejected.getRemoteState()).thenReturn(new Rejected());
         handlerRef.get().handle(rejected);
@@ -143,7 +143,7 @@ public class EventSenderImplTest {
 
         // GIVEN a sender that has credit
         when(sender.sendQueueFull()).thenReturn(Boolean.TRUE);
-        MessageSender messageSender = new EventSenderImpl(config, sender, "tenant", "event/tenant", context);
+        final MessageSender messageSender = new EventSenderImpl(config, sender, "tenant", "event/tenant", context);
 
         // WHEN trying to send a message
         final Message event = ProtonHelper.message("event/tenant", "hello");

@@ -193,7 +193,7 @@ public class RegistrationClientImplTest {
         client.assertRegistration("device", "gateway");
 
         // THEN the message being sent contains the device ID and the gateway ID
-        ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
+        final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
         verify(sender).send(messageCaptor.capture(), any(Handler.class));
         final Message sentMessage = messageCaptor.getValue();
         assertThat(MessageHelper.getDeviceId(sentMessage), is("device"));

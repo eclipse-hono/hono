@@ -25,7 +25,7 @@ import java.util.Objects;
  * <p>
  * Within the <em>telemetry</em> and <em>registration</em> endpoints the remaining two
  * segments have the following semantics:
- * <ol>
+ * <ol> 
  * <li>the <em>tenant ID</em></li>
  * <li>an (optional) <em>device ID</em></li>
  * </ol>
@@ -40,8 +40,8 @@ public final class ResourceIdentifier {
     private String basePath;
 
     private ResourceIdentifier(final String resource, final boolean assumeDefaultTenant) {
-        String[] path = resource.split("\\/");
-        List<String> pathSegments = new ArrayList<>(Arrays.asList(path));
+        final String[] path = resource.split("\\/");
+        final List<String> pathSegments = new ArrayList<>(Arrays.asList(path));
         if (assumeDefaultTenant) {
             pathSegments.add(1, Constants.DEFAULT_TENANT);
         }
@@ -57,9 +57,9 @@ public final class ResourceIdentifier {
     }
 
     private void setResourcePath(final String[] path) {
-        List<String> pathSegments = new ArrayList<>();
+        final List<String> pathSegments = new ArrayList<>();
         boolean pathContainsNullSegment = false;
-        for (String segment : path) {
+        for (final String segment : path) {
             if (segment == null) {
                 pathContainsNullSegment = true;
             } else if (pathContainsNullSegment) {
@@ -239,10 +239,12 @@ public final class ResourceIdentifier {
 
     @Override
     public boolean equals(final Object o) {
-        if (this == o)
+        if (this == o) {
             return true;
-        if (o == null || getClass() != o.getClass())
+        }
+        if (o == null || getClass() != o.getClass()) {
             return false;
+        }
 
         final ResourceIdentifier that = (ResourceIdentifier) o;
         return resourcePath != null ? Arrays.equals(resourcePath, that.resourcePath) : that.resourcePath == null;

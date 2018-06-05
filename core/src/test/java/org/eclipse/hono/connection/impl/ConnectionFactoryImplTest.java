@@ -66,12 +66,12 @@ public class ConnectionFactoryImplTest {
     public void testConnectInvokesHandlerOnfailureToConnect(final TestContext ctx) {
 
         // GIVEN a factory configured to connect to a non-existing server
-        ConnectionFactoryImpl factory = new ConnectionFactoryImpl(vertx, props);
+        final ConnectionFactoryImpl factory = new ConnectionFactoryImpl(vertx, props);
 
         // WHEN trying to connect to the server
         final Async handlerInvocation = ctx.async();
 
-        ProtonClientOptions options = new ProtonClientOptions().setConnectTimeout(100);
+        final ProtonClientOptions options = new ProtonClientOptions().setConnectTimeout(100);
         factory.connect(options, null, null, ctx.asyncAssertFailure(t -> {
             handlerInvocation.complete();
         }));
@@ -94,7 +94,7 @@ public class ConnectionFactoryImplTest {
         final ProtonClient protonClientMock = mock(ProtonClient.class);
         final ProtonConnection protonConnectionMock = mock(ProtonConnection.class, Mockito.RETURNS_SELF);
         doAnswer(invocation -> {
-            Handler<AsyncResult<ProtonConnection>> resultHandler = invocation.getArgument(5);
+            final Handler<AsyncResult<ProtonConnection>> resultHandler = invocation.getArgument(5);
             resultHandler.handle(Future.succeededFuture(protonConnectionMock));
             return null;
         }).when(protonClientMock).connect(any(ProtonClientOptions.class), any(), anyInt(), any(), any(), any(Handler.class));
@@ -134,7 +134,7 @@ public class ConnectionFactoryImplTest {
 
         // THEN the factory does not enable the SASL_PLAIN mechanism when establishing
         // the connection
-        ArgumentCaptor<ProtonClientOptions> optionsCaptor = ArgumentCaptor.forClass(ProtonClientOptions.class);
+        final ArgumentCaptor<ProtonClientOptions> optionsCaptor = ArgumentCaptor.forClass(ProtonClientOptions.class);
         verify(client).connect(optionsCaptor.capture(), anyString(), anyInt(), eq(""), eq(""), any(Handler.class));
         assertFalse(optionsCaptor.getValue().getEnabledSaslMechanisms().contains("PLAIN"));
     }
@@ -159,7 +159,7 @@ public class ConnectionFactoryImplTest {
         factory.connect(options, "user", "pw", null, null, c -> {});
 
         // THEN the factory uses SASL_PLAIN when establishing the connection
-        ArgumentCaptor<ProtonClientOptions> optionsCaptor = ArgumentCaptor.forClass(ProtonClientOptions.class);
+        final ArgumentCaptor<ProtonClientOptions> optionsCaptor = ArgumentCaptor.forClass(ProtonClientOptions.class);
         verify(client).connect(optionsCaptor.capture(), anyString(), anyInt(), eq("user"), eq("pw"), any(Handler.class));
         assertTrue(optionsCaptor.getValue().getEnabledSaslMechanisms().contains("PLAIN"));
     }

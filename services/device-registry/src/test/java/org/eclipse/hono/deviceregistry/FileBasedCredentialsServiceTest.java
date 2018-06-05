@@ -71,7 +71,7 @@ public class FileBasedCredentialsServiceTest {
     @Before
     public void setUp() {
         fileSystem = mock(FileSystem.class);
-        Context ctx = mock(Context.class);
+        final Context ctx = mock(Context.class);
         eventBus = mock(EventBus.class);
         vertx = mock(Vertx.class);
         when(vertx.eventBus()).thenReturn(eventBus);
@@ -98,19 +98,19 @@ public class FileBasedCredentialsServiceTest {
         props.setFilename(FILE_NAME);
         when(fileSystem.existsBlocking(FILE_NAME)).thenReturn(Boolean.FALSE);
         doAnswer(invocation -> {
-            Handler handler = invocation.getArgument(1);
+            final Handler handler = invocation.getArgument(1);
             handler.handle(Future.succeededFuture());
             return null;
         }).when(fileSystem).createFile(eq(props.getFilename()), any(Handler.class));
         doAnswer(invocation -> {
-            Handler handler = invocation.getArgument(1);
+            final Handler handler = invocation.getArgument(1);
             handler.handle(Future.failedFuture("malformed file"));
             return null;
         }).when(fileSystem).readFile(eq(props.getFilename()), any(Handler.class));
 
         // WHEN starting the service
-        Async startup = ctx.async();
-        Future<Void> startupTracker = Future.future();
+        final Async startup = ctx.async();
+        final Future<Void> startupTracker = Future.future();
         startupTracker.setHandler(ctx.asyncAssertSuccess(started -> {
             startup.complete();
         }));
@@ -138,12 +138,12 @@ public class FileBasedCredentialsServiceTest {
 
         // WHEN starting the service but the file cannot be created
         doAnswer(invocation -> {
-            Handler handler = invocation.getArgument(1);
+            final Handler handler = invocation.getArgument(1);
             handler.handle(Future.failedFuture("no access"));
             return null;
         }).when(fileSystem).createFile(eq(props.getFilename()), any(Handler.class));
-        Async startup = ctx.async();
-        Future<Void> startupTracker = Future.future();
+        final Async startup = ctx.async();
+        final Future<Void> startupTracker = Future.future();
         startupTracker.setHandler(ctx.asyncAssertFailure(started -> {
             startup.complete();
         }));
@@ -170,14 +170,14 @@ public class FileBasedCredentialsServiceTest {
         doAnswer(invocation -> {
             final Buffer data = mock(Buffer.class);
             when(data.getBytes()).thenReturn("NO JSON".getBytes(StandardCharsets.UTF_8));
-            Handler handler = invocation.getArgument(1);
+            final Handler handler = invocation.getArgument(1);
             handler.handle(Future.succeededFuture(data));
             return null;
         }).when(fileSystem).readFile(eq(props.getFilename()), any(Handler.class));
 
         // WHEN starting the service
-        Async startup = ctx.async();
-        Future<Void> startupTracker = Future.future();
+        final Async startup = ctx.async();
+        final Future<Void> startupTracker = Future.future();
         startupTracker.setHandler(ctx.asyncAssertSuccess(started -> {
             startup.complete();
         }));
@@ -201,14 +201,14 @@ public class FileBasedCredentialsServiceTest {
         when(fileSystem.existsBlocking(props.getFilename())).thenReturn(Boolean.TRUE);
         doAnswer(invocation -> {
             final Buffer data = DeviceRegistryTestUtils.readFile(FILE_NAME);
-            Handler handler = invocation.getArgument(1);
+            final Handler handler = invocation.getArgument(1);
             handler.handle(Future.succeededFuture(data));
             return null;
         }).when(fileSystem).readFile(eq(props.getFilename()), any(Handler.class));
 
         // WHEN the service is started
-        Async startup = ctx.async();
-        Future<Void> startFuture = Future.future();
+        final Async startup = ctx.async();
+        final Future<Void> startFuture = Future.future();
         startFuture.setHandler(ctx.asyncAssertSuccess(s -> {
             startup.complete();
         }));
@@ -258,7 +258,7 @@ public class FileBasedCredentialsServiceTest {
         // WHEN saving the registry content to the file and clearing the registry
         final Async write = ctx.async();
         doAnswer(invocation -> {
-            Handler handler = invocation.getArgument(2);
+            final Handler handler = invocation.getArgument(2);
             handler.handle(Future.succeededFuture());
             write.complete();
             return null;
@@ -266,7 +266,7 @@ public class FileBasedCredentialsServiceTest {
 
         svc.saveToFile();
         write.await();
-        ArgumentCaptor<Buffer> buffer = ArgumentCaptor.forClass(Buffer.class);
+        final ArgumentCaptor<Buffer> buffer = ArgumentCaptor.forClass(Buffer.class);
         verify(fileSystem).writeFile(eq(FILE_NAME), buffer.capture(), any(Handler.class));
         svc.clear();
         assertNotRegistered(svc, Constants.DEFAULT_PATH_SEPARATOR, "sensor1", CredentialsConstants.SECRETS_TYPE_PRESHARED_KEY, ctx);
@@ -274,7 +274,7 @@ public class FileBasedCredentialsServiceTest {
         // THEN the credentials can be loaded back in from the file
         final Async read = ctx.async();
         doAnswer(invocation -> {
-            Handler handler = invocation.getArgument(1);
+            final Handler handler = invocation.getArgument(1);
             handler.handle(Future.succeededFuture(buffer.getValue()));
             read.complete();
             return null;
@@ -352,7 +352,7 @@ public class FileBasedCredentialsServiceTest {
      */
     @Test
     public void testGetCredentialsSucceedsForProperClientContext(final TestContext ctx) {
-        JsonObject clientContext = new JsonObject()
+        final JsonObject clientContext = new JsonObject()
             .put("client-id", "gateway-one");
 
         register(svc, "tenant", "device", "myId", "myType", clientContext, new JsonArray(), ctx);
@@ -375,12 +375,12 @@ public class FileBasedCredentialsServiceTest {
      */
     @Test
     public void testGetCredentialsFailsForWrongClientContext(final TestContext ctx) {
-        JsonObject clientContext = new JsonObject()
+        final JsonObject clientContext = new JsonObject()
             .put("client-id", "gateway-one");
 
         register(svc, "tenant", "device", "myId", "myType", clientContext, new JsonArray(), ctx);
 
-        JsonObject testContext = new JsonObject()
+        final JsonObject testContext = new JsonObject()
             .put("client-id", "gateway-two");
 
         final Async get = ctx.async();
@@ -448,7 +448,7 @@ public class FileBasedCredentialsServiceTest {
         register(svc, "tenant", "device", "myId", "myType", ctx);
 
         // WHEN trying to update the credentials
-        Async updateFailure = ctx.async();
+        final Async updateFailure = ctx.async();
         svc.update("tenant", new JsonObject(), ctx.asyncAssertSuccess(s -> {
             ctx.assertEquals(HttpURLConnection.HTTP_FORBIDDEN, s.getStatus());
             updateFailure.complete();
@@ -472,7 +472,7 @@ public class FileBasedCredentialsServiceTest {
         register(svc, "tenant", "device", "myId", "myType", ctx);
 
         // WHEN trying to remove the credentials
-        Async removeFailure = ctx.async();
+        final Async removeFailure = ctx.async();
         svc.update("tenant", new JsonObject(), ctx.asyncAssertSuccess(s -> {
             ctx.assertEquals(HttpURLConnection.HTTP_FORBIDDEN, s.getStatus());
             removeFailure.complete();

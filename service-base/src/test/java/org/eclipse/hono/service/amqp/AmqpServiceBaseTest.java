@@ -177,7 +177,7 @@ public class AmqpServiceBaseTest {
     }
 
     private static Target getTarget(final ResourceIdentifier targetAddress) {
-        Target result = mock(Target.class);
+        final Target result = mock(Target.class);
         when(result.getAddress()).thenReturn(targetAddress.toString());
         return result;
     }

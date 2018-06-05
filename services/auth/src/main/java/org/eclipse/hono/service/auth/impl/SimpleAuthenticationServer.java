@@ -70,7 +70,7 @@ public final class SimpleAuthenticationServer extends AmqpServiceBase<ServiceCon
                 LOG.debug("no endpoint registered for node [{}]", targetResource);
                 con.setCondition(ProtonHelper.condition(AmqpError.NOT_FOUND, "no such node")).close();
             } else {
-                HonoUser user = Constants.getClientPrincipal(con);
+                final HonoUser user = Constants.getClientPrincipal(con);
                 if (Constants.SUBJECT_ANONYMOUS.equals(user.getName())) {
                     con.setCondition(ProtonHelper.condition(AmqpError.UNAUTHORIZED_ACCESS, "client must authenticate using SASL")).close();
                 } else {

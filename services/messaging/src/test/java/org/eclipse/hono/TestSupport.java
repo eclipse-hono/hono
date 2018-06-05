@@ -71,10 +71,10 @@ public final class TestSupport {
     public static <T> void expectReplyForMessage(final EventBus bus, final String address, final Object msg, final T reply) {
         when(bus.send(eq(address), eq(msg), any(Handler.class)))
             .then(invocation -> {
-                io.vertx.core.eventbus.Message<T> response = mock(io.vertx.core.eventbus.Message.class);
+                final io.vertx.core.eventbus.Message<T> response = mock(io.vertx.core.eventbus.Message.class);
                 when(response.body()).thenReturn(reply);
-                Future<io.vertx.core.eventbus.Message<T>> future = Future.succeededFuture(response);
-                Handler<AsyncResult<io.vertx.core.eventbus.Message<T>>> handler =
+                final Future<io.vertx.core.eventbus.Message<T>> future = Future.succeededFuture(response);
+                final Handler<AsyncResult<io.vertx.core.eventbus.Message<T>>> handler =
                         (Handler<AsyncResult<io.vertx.core.eventbus.Message<T>>>) invocation.getArguments()[2];
                 handler.handle(future);
                 return bus;
@@ -163,7 +163,7 @@ public final class TestSupport {
      */
     public static UpstreamReceiver newClient(final String linkId, final String connectionId) {
 
-        UpstreamReceiver client = mock(UpstreamReceiver.class);
+        final UpstreamReceiver client = mock(UpstreamReceiver.class);
         when(client.getLinkId()).thenReturn(linkId);
         when(client.getConnectionId()).thenReturn(connectionId);
         when(client.getTargetAddress()).thenReturn(DEFAULT_ADDRESS);
@@ -192,8 +192,8 @@ public final class TestSupport {
     public static ProtonSender newMockSender(final boolean drainFlag) {
         @SuppressWarnings("rawtypes")
         final ArgumentCaptor<Handler> drainHandlerCaptor = ArgumentCaptor.forClass(Handler.class);
-        Record attachments = mock(Record.class);
-        ProtonSender sender = mock(ProtonSender.class);
+        final Record attachments = mock(Record.class);
+        final ProtonSender sender = mock(ProtonSender.class);
         when(sender.attachments()).thenReturn(attachments);
         when(sender.isOpen()).thenReturn(Boolean.TRUE);
         when(sender.getCredit()).thenReturn(DEFAULT_CREDITS);
@@ -206,7 +206,7 @@ public final class TestSupport {
         when(sender.sendQueueDrainHandler(drainHandlerCaptor.capture())).then(invocation -> {
             return sender;
         });
-        Target target = new Target();
+        final Target target = new Target();
         target.setAddress(DEFAULT_ADDRESS);
         when(sender.getTarget()).thenReturn(target);
         return sender;

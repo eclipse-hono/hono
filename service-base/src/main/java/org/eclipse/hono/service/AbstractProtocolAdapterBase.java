@@ -337,6 +337,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * 
      * @return The trust options.
      */
+    @Override
     protected TrustOptions getServerTrustOptions() {
 
         return Optional.ofNullable(getConfig().getTrustOptions())
@@ -879,9 +880,9 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      */
     protected boolean isPayloadOfIndicatedType(final Buffer payload, final String contentType) {
         if (payload == null || payload.length() == 0) {
-            return (EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION.equals(contentType));
+            return EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION.equals(contentType);
         } else {
-            return (!EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION.equals(contentType));
+            return !EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION.equals(contentType);
         }
     }
 }

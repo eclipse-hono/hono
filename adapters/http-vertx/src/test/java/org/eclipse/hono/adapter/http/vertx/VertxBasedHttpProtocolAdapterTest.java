@@ -169,7 +169,7 @@ public class VertxBasedHttpProtocolAdapterTest {
         final String authHeader = getBasicAuth("testuser@DEFAULT_TENANT", "password123");
 
         doAnswer(invocation -> {
-            Handler<AsyncResult<User>> resultHandler = invocation.getArgument(1);
+            final Handler<AsyncResult<User>> resultHandler = invocation.getArgument(1);
             resultHandler.handle(Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED, "bad credentials")));
             return null;
         }).when(usernamePasswordAuthProvider).authenticate(any(JsonObject.class), any(Handler.class));

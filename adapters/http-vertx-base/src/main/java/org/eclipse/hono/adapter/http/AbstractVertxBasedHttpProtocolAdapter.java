@@ -100,12 +100,12 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
 
     @Override
     protected final int getActualPort() {
-        return (server != null ? server.actualPort() : Constants.PORT_UNCONFIGURED);
+        return server != null ? server.actualPort() : Constants.PORT_UNCONFIGURED;
     }
 
     @Override
     protected final int getActualInsecurePort() {
-        return (insecureServer != null ? insecureServer.actualPort() : Constants.PORT_UNCONFIGURED);
+        return insecureServer != null ? insecureServer.actualPort() : Constants.PORT_UNCONFIGURED;
     }
 
     /**
@@ -156,7 +156,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
         checkPortConfiguration()
             .compose(s -> preStartup())
             .compose(s -> {
-                Router router = createRouter();
+                final Router router = createRouter();
                 if (router == null) {
                     return Future.failedFuture("no router configured");
                 } else {
@@ -237,7 +237,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
      */
     protected HttpServerOptions getHttpServerOptions() {
 
-        HttpServerOptions options = new HttpServerOptions();
+        final HttpServerOptions options = new HttpServerOptions();
         options.setHost(getConfig().getBindAddress()).setPort(getConfig().getPort(getPortDefaultValue()))
             .setMaxChunkSize(4096);
         addTlsKeyCertOptions(options);
@@ -257,7 +257,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
      */
     protected HttpServerOptions getInsecureHttpServerOptions() {
 
-        HttpServerOptions options = new HttpServerOptions();
+        final HttpServerOptions options = new HttpServerOptions();
         options.setHost(getConfig().getInsecurePortBindAddress()).setPort(getConfig().getInsecurePort(getInsecurePortDefaultValue())).setMaxChunkSize(4096);
         return options;
     }
@@ -295,7 +295,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
     private Future<HttpServer> bindSecureHttpServer(final Router router) {
 
         if (isSecurePortEnabled()) {
-            Future<HttpServer> result = Future.future();
+            final Future<HttpServer> result = Future.future();
             final String bindAddress = server == null ? getConfig().getBindAddress() : "?";
             if (server == null) {
                 server = vertx.createHttpServer(getHttpServerOptions());
@@ -318,7 +318,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
     private Future<HttpServer> bindInsecureHttpServer(final Router router) {
 
         if (isInsecurePortEnabled()) {
-            Future<HttpServer> result = Future.future();
+            final Future<HttpServer> result = Future.future();
             final String bindAddress = insecureServer == null ? getConfig().getInsecurePortBindAddress() : "?";
             if (insecureServer == null) {
                 insecureServer = vertx.createHttpServer(getInsecureHttpServerOptions());
@@ -347,14 +347,14 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
             LOG.error("error in preShutdown", e);
         }
 
-        Future<Void> serverStopTracker = Future.future();
+        final Future<Void> serverStopTracker = Future.future();
         if (server != null) {
             server.close(serverStopTracker.completer());
         } else {
             serverStopTracker.complete();
         }
 
-        Future<Void> insecureServerStopTracker = Future.future();
+        final Future<Void> insecureServerStopTracker = Future.future();
         if (insecureServer != null) {
             insecureServer.close(insecureServerStopTracker.completer());
         } else {
@@ -567,7 +567,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                     cancelResponseTimer(closeLinkAndTimerHandlerRef);
 
                     if (ClientErrorException.class.isInstance(t)) {
-                        ClientErrorException e = (ClientErrorException) t;
+                        final ClientErrorException e = (ClientErrorException) t;
                         LOG.debug(
                                 "cannot process message for device [tenantId: {}, deviceId: {}, endpoint: {}]: {} - {}",
                                 tenant, deviceId, endpointName, e.getErrorCode(), e.getMessage());

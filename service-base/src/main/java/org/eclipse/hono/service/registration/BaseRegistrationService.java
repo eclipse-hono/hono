@@ -339,8 +339,8 @@ public abstract class BaseRegistrationService<T> extends EventBusService<T> impl
         Objects.requireNonNull(gatewayId);
         Objects.requireNonNull(resultHandler);
 
-        Future<RegistrationResult> deviceInfoTracker = Future.future();
-        Future<RegistrationResult> gatewayInfoTracker = Future.future();
+        final Future<RegistrationResult> deviceInfoTracker = Future.future();
+        final Future<RegistrationResult> gatewayInfoTracker = Future.future();
 
         getDevice(tenantId, deviceId, deviceInfoTracker.completer());
         getDevice(tenantId, gatewayId, gatewayInfoTracker.completer());

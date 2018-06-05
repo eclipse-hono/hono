@@ -147,7 +147,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
     private Future<Void> bindSecureMqttServer() {
 
         if (isSecurePortEnabled()) {
-            MqttServerOptions options = new MqttServerOptions();
+            final MqttServerOptions options = new MqttServerOptions();
             options
                     .setHost(getConfig().getBindAddress())
                     .setPort(determineSecurePort())
@@ -169,7 +169,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
     private Future<Void> bindInsecureMqttServer() {
 
         if (isInsecurePortEnabled()) {
-            MqttServerOptions options = new MqttServerOptions();
+            final MqttServerOptions options = new MqttServerOptions();
             options
                     .setHost(getConfig().getInsecurePortBindAddress())
                     .setPort(determineInsecurePort())
@@ -229,14 +229,14 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
     @Override
     public void doStop(final Future<Void> stopFuture) {
 
-        Future<Void> serverTracker = Future.future();
+        final Future<Void> serverTracker = Future.future();
         if (this.server != null) {
             this.server.close(serverTracker.completer());
         } else {
             serverTracker.complete();
         }
 
-        Future<Void> insecureServerTracker = Future.future();
+        final Future<Void> insecureServerTracker = Future.future();
         if (this.insecureServer != null) {
             this.insecureServer.close(insecureServerTracker.completer());
         } else {
@@ -588,7 +588,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
             }).recover(t -> {
 
                 if (ClientErrorException.class.isInstance(t)) {
-                    ClientErrorException e = (ClientErrorException) t;
+                    final ClientErrorException e = (ClientErrorException) t;
                     LOG.debug("cannot process message for device [tenantId: {}, deviceId: {}, endpoint: {}]: {} - {}",
                             tenant, deviceId, endpointName, e.getErrorCode(), e.getMessage());
                 } else {

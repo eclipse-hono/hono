@@ -73,7 +73,7 @@ public class StandaloneEventApiTest extends AbstractStandaloneApiTest {
         server.setConfig(configProperties);
         server.addEndpoint(eventEndpoint);
 
-        Future<String> serverTracker = Future.future();
+        final Future<String> serverTracker = Future.future();
         vertx.deployVerticle(server, serverTracker.completer());
 
         serverTracker.compose(s -> {

@@ -160,7 +160,7 @@ public class ForwardingTelemetryDownstreamAdapterTest {
         when(upstreamDelivery.remotelySettled()).thenReturn(Boolean.FALSE);
 
         // GIVEN an adapter with a connection to a downstream container
-        ProtonSender sender = TestSupport.newMockSender(false);
+        final ProtonSender sender = TestSupport.newMockSender(false);
         when(sender.sendQueueFull()).thenReturn(true);
         final ForwardingEventDownstreamAdapter adapter = new ForwardingEventDownstreamAdapter(vertx, newMockSenderFactory(sender));
         adapter.setMetrics(mock(MessagingMetrics.class));

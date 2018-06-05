@@ -26,7 +26,7 @@ public class HonoEventConsumer extends HonoConsumerBase {
     public static void main(final String[] args) throws Exception {
 
         System.out.println("Starting event consumer...");
-        HonoEventConsumer honoDownstreamEventConsumer = new HonoEventConsumer();
+        final HonoEventConsumer honoDownstreamEventConsumer = new HonoEventConsumer();
         honoDownstreamEventConsumer.setMode(MODE.EVENT);
         honoDownstreamEventConsumer.consumeData();
         System.out.println("Finishing event consumer.");

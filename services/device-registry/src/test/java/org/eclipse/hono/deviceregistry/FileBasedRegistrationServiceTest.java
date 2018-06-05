@@ -72,7 +72,7 @@ public class FileBasedRegistrationServiceTest {
     @Before
     public void setUp() {
         fileSystem = mock(FileSystem.class);
-        Context ctx = mock(Context.class);
+        final Context ctx = mock(Context.class);
         eventBus = mock(EventBus.class);
         vertx = mock(Vertx.class);
         when(vertx.eventBus()).thenReturn(eventBus);
@@ -98,20 +98,20 @@ public class FileBasedRegistrationServiceTest {
         // GIVEN a registration service configured with a non-existing file
         props.setSaveToFile(true);
         doAnswer(invocation -> {
-            Handler handler = invocation.getArgument(2);
+            final Handler handler = invocation.getArgument(2);
             handler.handle(Future.succeededFuture());
             return null;
         }).when(fileSystem).writeFile(eq(props.getFilename()), any(Buffer.class), any(Handler.class));
         when(fileSystem.existsBlocking(props.getFilename())).thenReturn(Boolean.FALSE);
         doAnswer(invocation -> {
-            Handler handler = invocation.getArgument(1);
+            final Handler handler = invocation.getArgument(1);
             handler.handle(Future.succeededFuture());
             return null;
         }).when(fileSystem).createFile(eq(props.getFilename()), any(Handler.class));
 
         // WHEN persisting a dirty registry
         registrationService.addDevice(TENANT, DEVICE, null);
-        Async saving = ctx.async();
+        final Async saving = ctx.async();
         registrationService.saveToFile().setHandler(ctx.asyncAssertSuccess(s -> {
             saving.complete();
         }));
@@ -135,19 +135,19 @@ public class FileBasedRegistrationServiceTest {
         props.setSaveToFile(true);
         when(fileSystem.existsBlocking(props.getFilename())).thenReturn(Boolean.FALSE);
         doAnswer(invocation -> {
-            Handler handler = invocation.getArgument(1);
+            final Handler handler = invocation.getArgument(1);
             handler.handle(Future.succeededFuture());
             return null;
         }).when(fileSystem).createFile(eq(props.getFilename()), any(Handler.class));
         doAnswer(invocation -> {
-            Handler handler = invocation.getArgument(1);
+            final Handler handler = invocation.getArgument(1);
             handler.handle(Future.failedFuture("malformed file"));
             return null;
         }).when(fileSystem).readFile(eq(props.getFilename()), any(Handler.class));
 
         // WHEN starting the service
-        Async startup = ctx.async();
-        Future<Void> startupTracker = Future.future();
+        final Async startup = ctx.async();
+        final Future<Void> startupTracker = Future.future();
         startupTracker.setHandler(ctx.asyncAssertSuccess(started -> {
             startup.complete();
         }));
@@ -174,12 +174,12 @@ public class FileBasedRegistrationServiceTest {
 
         // WHEN starting the service but the file cannot be created
         doAnswer(invocation -> {
-            Handler handler = invocation.getArgument(1);
+            final Handler handler = invocation.getArgument(1);
             handler.handle(Future.failedFuture("no access"));
             return null;
         }).when(fileSystem).createFile(eq(props.getFilename()), any(Handler.class));
-        Async startup = ctx.async();
-        Future<Void> startupTracker = Future.future();
+        final Async startup = ctx.async();
+        final Future<Void> startupTracker = Future.future();
         startupTracker.setHandler(ctx.asyncAssertFailure(started -> {
             startup.complete();
         }));
@@ -205,14 +205,14 @@ public class FileBasedRegistrationServiceTest {
         doAnswer(invocation -> {
             final Buffer data = mock(Buffer.class);
             when(data.getBytes()).thenReturn("NO JSON".getBytes(StandardCharsets.UTF_8));
-            Handler handler = invocation.getArgument(1);
+            final Handler handler = invocation.getArgument(1);
             handler.handle(Future.succeededFuture(data));
             return null;
         }).when(fileSystem).readFile(eq(props.getFilename()), any(Handler.class));
 
         // WHEN starting the service
-        Async startup = ctx.async();
-        Future<Void> startupTracker = Future.future();
+        final Async startup = ctx.async();
+        final Future<Void> startupTracker = Future.future();
         startupTracker.setHandler(ctx.asyncAssertSuccess(started -> {
             startup.complete();
         }));
@@ -235,14 +235,14 @@ public class FileBasedRegistrationServiceTest {
         when(fileSystem.existsBlocking(props.getFilename())).thenReturn(Boolean.TRUE);
         doAnswer(invocation -> {
             final Buffer data = DeviceRegistryTestUtils.readFile(FILE_NAME);
-            Handler handler = invocation.getArgument(1);
+            final Handler handler = invocation.getArgument(1);
             handler.handle(Future.succeededFuture(data));
             return null;
         }).when(fileSystem).readFile(eq(props.getFilename()), any(Handler.class));
 
         // WHEN the service is started
-        Async startup = ctx.async();
-        Future<Void> startFuture = Future.future();
+        final Async startup = ctx.async();
+        final Future<Void> startFuture = Future.future();
         startFuture.setHandler(ctx.asyncAssertSuccess(s -> {
             startup.complete();
         }));
@@ -270,7 +270,7 @@ public class FileBasedRegistrationServiceTest {
         registrationService.addDevice(TENANT, DEVICE, null);
 
         // WHEN registering an additional device for the tenant
-        RegistrationResult result = registrationService.addDevice(TENANT, "newDevice", null);
+        final RegistrationResult result = registrationService.addDevice(TENANT, "newDevice", null);
 
         // THEN the result contains a FORBIDDEN status code and the device has not been added to the registry
         assertThat(result.getStatus(), is(HttpURLConnection.HTTP_FORBIDDEN));
@@ -289,7 +289,7 @@ public class FileBasedRegistrationServiceTest {
         registrationService.addDevice(TENANT, DEVICE, null);
 
         // WHEN trying to update the device
-        RegistrationResult result = registrationService.updateDevice(TENANT, DEVICE, new JsonObject().put("updated", true));
+        final RegistrationResult result = registrationService.updateDevice(TENANT, DEVICE, new JsonObject().put("updated", true));
 
         // THEN the result contains a FORBIDDEN status code and the device has not been updated
         assertThat(result.getStatus(), is(HttpURLConnection.HTTP_FORBIDDEN));
@@ -308,7 +308,7 @@ public class FileBasedRegistrationServiceTest {
         registrationService.addDevice(TENANT, DEVICE, null);
 
         // WHEN trying to remove the device
-        RegistrationResult result = registrationService.removeDevice(TENANT, DEVICE);
+        final RegistrationResult result = registrationService.removeDevice(TENANT, DEVICE);
 
         // THEN the result contains a FORBIDDEN status code and the device has not been removed
         assertThat(result.getStatus(), is(HttpURLConnection.HTTP_FORBIDDEN));
@@ -434,13 +434,13 @@ public class FileBasedRegistrationServiceTest {
         props.setSaveToFile(false);
         when(fileSystem.existsBlocking(props.getFilename())).thenReturn(Boolean.TRUE);
         doAnswer(invocation -> {
-            Handler handler = invocation.getArgument(1);
+            final Handler handler = invocation.getArgument(1);
             handler.handle(Future.failedFuture("malformed file"));
             return null;
         }).when(fileSystem).readFile(eq(props.getFilename()), any(Handler.class));
 
-        Async startup = ctx.async();
-        Future<Void> startupTracker = Future.future();
+        final Async startup = ctx.async();
+        final Future<Void> startupTracker = Future.future();
         startupTracker.setHandler(ctx.asyncAssertSuccess(done -> {
             startup.complete();
         }));
@@ -464,12 +464,12 @@ public class FileBasedRegistrationServiceTest {
         props.setSaveToFile(false);
         when(fileSystem.existsBlocking(props.getFilename())).thenReturn(Boolean.TRUE);
         doAnswer(invocation -> {
-            Handler handler = invocation.getArgument(1);
+            final Handler handler = invocation.getArgument(1);
             handler.handle(Future.failedFuture("malformed data"));
             return null;
         }).when(fileSystem).readFile(eq(props.getFilename()), any(Handler.class));
-        Async startup = ctx.async();
-        Future<Void> startupTracker = Future.future();
+        final Async startup = ctx.async();
+        final Future<Void> startupTracker = Future.future();
         startupTracker.setHandler(ctx.asyncAssertSuccess(started -> {
             startup.complete();
         }));
@@ -479,8 +479,8 @@ public class FileBasedRegistrationServiceTest {
         // WHEN adding a device
         registrationService.addDevice(TENANT, DEVICE, new JsonObject());
         // and shutting down the service
-        Async shutdown = ctx.async();
-        Future<Void> shutdownTracker = Future.future();
+        final Async shutdown = ctx.async();
+        final Future<Void> shutdownTracker = Future.future();
         shutdownTracker.setHandler(ctx.asyncAssertSuccess(done -> {
             shutdown.complete();
         }));

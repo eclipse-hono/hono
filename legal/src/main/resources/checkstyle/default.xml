@@ -39,6 +39,7 @@
 
     <!-- style -->
 
+    <module name="FinalLocalVariable"/>
     <module name="RedundantModifier"/>
 
     <!-- possible issues -->

@@ -64,7 +64,7 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
     private boolean           running                     = false;
     private boolean           retryOnFailedConnectAttempt = true;
     private ProtonConnection  downstreamConnection;
-    private SenderFactory     senderFactory;
+    private final SenderFactory     senderFactory;
     private ConnectionFactory downstreamConnectionFactory;
 
     /**
@@ -256,7 +256,7 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
             // all links to downstream host will now be stale and unusable
             logger.warn("lost connection to downstream container [{}], closing upstream receivers ...", con.getRemoteContainer());
 
-            for (UpstreamReceiver client : activeSenders.keySet()) {
+            for (final UpstreamReceiver client : activeSenders.keySet()) {
                 closeReceiver(client);
             }
             receiversPerConnection.clear();
@@ -266,7 +266,7 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
             downstreamConnection.disconnect();
             metrics.decrementDownStreamConnections();
 
-            for (Iterator<Handler<AsyncResult<Void>>> iter = clientAttachHandlers.iterator(); iter.hasNext(); ) {
+            for (final Iterator<Handler<AsyncResult<Void>>> iter = clientAttachHandlers.iterator(); iter.hasNext(); ) {
                 iter.next().handle(Future.failedFuture("connection to downstream container failed"));
                 iter.remove();
             }
@@ -307,7 +307,7 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
         Objects.requireNonNull(client);
         Objects.requireNonNull(resultHandler);
 
-        ProtonSender sender = activeSenders.get(client);
+        final ProtonSender sender = activeSenders.get(client);
         if (sender != null && sender.isOpen()) {
             logger.info("reusing existing downstream sender [con: {}, link: {}]", client.getConnectionId(), client.getLinkId());
             resultHandler.handle(Future.succeededFuture());
@@ -316,7 +316,7 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
             // register the result handler to be failed if the connection to the downstream container fails during
             // the attempt to create a downstream sender
             clientAttachHandlers.add(resultHandler);
-            Future<Void> tracker = Future.future();
+            final Future<Void> tracker = Future.future();
             tracker.setHandler(attempt -> {
                 if (attempt.succeeded()) {
                     logger.info("created downstream sender [con: {}, link: {}]", client.getConnectionId(), client.getLinkId());
@@ -361,7 +361,7 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
                 }
             });
         } else {
-            int downstreamCredit = getAvailableDownstreamCredit(replenishedSender);
+            final int downstreamCredit = getAvailableDownstreamCredit(replenishedSender);
             client.replenish(downstreamCredit);
             metrics.submitDownstreamLinkCredits(client.getTargetAddress(), downstreamCredit);
         }
@@ -411,7 +411,7 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
      * @param link The upstream client.
      */
     public final void removeSender(final UpstreamReceiver link) {
-        List<UpstreamReceiver> senders = receiversPerConnection.get(link.getConnectionId());
+        final List<UpstreamReceiver> senders = receiversPerConnection.get(link.getConnectionId());
         if (senders != null) {
             senders.remove(link);
         }
@@ -437,10 +437,10 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
             throw new IllegalStateException("adapter must be started first");
         }
 
-        List<UpstreamReceiver> upstreamReceivers = receiversPerConnection.remove(Objects.requireNonNull(connectionId));
+        final List<UpstreamReceiver> upstreamReceivers = receiversPerConnection.remove(Objects.requireNonNull(connectionId));
         if (upstreamReceivers != null && !upstreamReceivers.isEmpty()) {
             logger.info("closing {} downstream senders for connection [id: {}]", upstreamReceivers.size(), connectionId);
-            for (UpstreamReceiver link : upstreamReceivers) {
+            for (final UpstreamReceiver link : upstreamReceivers) {
                 closeSender(link);
                 metrics.decrementUpstreamLinks(link.getTargetAddress());
             }
@@ -448,7 +448,7 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
     }
 
     private void closeSender(final UpstreamReceiver link) {
-        ProtonSender sender = activeSenders.remove(link);
+        final ProtonSender sender = activeSenders.remove(link);
         if (sender != null && sender.isOpen()) {
             logger.info("closing downstream sender [con: {}, link: {}]", link.getConnectionId(), link.getLinkId());
             metrics.decrementDownstreamSenders(link.getTargetAddress());
@@ -467,7 +467,7 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
         Objects.requireNonNull(client);
         Objects.requireNonNull(msg);
         Objects.requireNonNull(upstreamDelivery);
-        ProtonSender sender = activeSenders.get(client);
+        final ProtonSender sender = activeSenders.get(client);
         if (sender == null) {
             logger.info("no downstream sender for link [{}] available, discarding message and closing link with client", client.getLinkId());
             client.close(ErrorConditions.ERROR_NO_DOWNSTREAM_CONSUMER);

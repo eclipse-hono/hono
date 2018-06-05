@@ -46,7 +46,7 @@ public abstract class AbstractEndpoint implements Endpoint {
 
     @Override
     public final Future<Void> start() {
-        Future<Void> result = Future.future();
+        final Future<Void> result = Future.future();
         if (vertx == null) {
             result.fail(new IllegalStateException("Vert.x instance must be set"));
         } else {
@@ -69,7 +69,7 @@ public abstract class AbstractEndpoint implements Endpoint {
 
     @Override
     public final Future<Void> stop() {
-        Future<Void> result = Future.future();
+        final Future<Void> result = Future.future();
         doStop(result);
         return result;
     }

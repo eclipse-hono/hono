@@ -78,7 +78,7 @@ public class FileBasedTenantServiceTest {
     @Before
     public void setUp() {
         fileSystem = mock(FileSystem.class);
-        Context ctx = mock(Context.class);
+        final Context ctx = mock(Context.class);
         eventBus = mock(EventBus.class);
         vertx = mock(Vertx.class);
         when(vertx.eventBus()).thenReturn(eventBus);

@@ -33,11 +33,11 @@ public class AuthoritiesImplTest {
     @Test
     public void testFromClaims() {
 
-        Claims claims = Jwts.claims();
+        final Claims claims = Jwts.claims();
         claims.put("r:telemetry/*", "W");
         claims.put("r:registration/DEFAULT_TENANT", "RW");
         claims.put("o:credentials/*:get", "E");
-        Authorities auth = AuthoritiesImpl.from(claims);
+        final Authorities auth = AuthoritiesImpl.from(claims);
         assertTrue(auth.isAuthorized(ResourceIdentifier.fromString("telemetry/tenantA"), Activity.WRITE));
         assertTrue(auth.isAuthorized(ResourceIdentifier.fromString("registration/DEFAULT_TENANT"), Activity.READ));
         assertFalse(auth.isAuthorized(ResourceIdentifier.fromString("registration/tenantA"), Activity.READ));
@@ -51,7 +51,7 @@ public class AuthoritiesImplTest {
     @Test
     public void testIsAuthorizedConsidersWildCards() {
 
-        AuthoritiesImpl authorities = new AuthoritiesImpl()
+        final AuthoritiesImpl authorities = new AuthoritiesImpl()
                 .addOperation("endpoint", "*", "*");
         assertFalse(authorities.isAuthorized(ResourceIdentifier.fromString("other-endpoint/tenant"), "get"));
         assertTrue(authorities.isAuthorized(ResourceIdentifier.fromString("endpoint/tenant"), "get"));

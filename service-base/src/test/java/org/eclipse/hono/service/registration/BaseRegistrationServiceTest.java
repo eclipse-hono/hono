@@ -79,8 +79,8 @@ public class BaseRegistrationServiceTest {
         final BaseRegistrationService<ServiceConfigProperties> registrationService = newRegistrationService();
 
         // WHEN starting the service
-        Async startupFailure = ctx.async();
-        Future<Void> startFuture = Future.future();
+        final Async startupFailure = ctx.async();
+        final Future<Void> startFuture = Future.future();
         startFuture.setHandler(ctx.asyncAssertFailure(t -> startupFailure.complete()));
         registrationService.doStart(startFuture);
 
@@ -97,19 +97,19 @@ public class BaseRegistrationServiceTest {
     public void testAssertDeviceRegistrationReturnsToken(final TestContext ctx) {
 
         // GIVEN a registry that contains an enabled device with a default content type set
-        BaseRegistrationService<ServiceConfigProperties> registrationService = newRegistrationService();
+        final BaseRegistrationService<ServiceConfigProperties> registrationService = newRegistrationService();
         registrationService.setRegistrationAssertionFactory(RegistrationAssertionHelperImpl.forSigning(vertx, props));
 
         // WHEN trying to assert the device's registration status
         registrationService.assertRegistration(Constants.DEFAULT_TENANT, "4711", ctx.asyncAssertSuccess(result -> {
             ctx.assertEquals(result.getStatus(), HttpURLConnection.HTTP_OK);
-            JsonObject payload = result.getPayload();
+            final JsonObject payload = result.getPayload();
             ctx.assertNotNull(payload);
             // THEN the response contains a JWT token asserting the device's registration status
-            String compactJws = payload.getString(RegistrationConstants.FIELD_ASSERTION);
+            final String compactJws = payload.getString(RegistrationConstants.FIELD_ASSERTION);
             ctx.assertNotNull(compactJws);
             // and contains the registered default content type
-            JsonObject defaults = payload.getJsonObject(RegistrationConstants.FIELD_DEFAULTS);
+            final JsonObject defaults = payload.getJsonObject(RegistrationConstants.FIELD_DEFAULTS);
             ctx.assertNotNull(defaults);
             ctx.assertEquals("application/default", defaults.getString(MessageHelper.SYS_PROPERTY_CONTENT_TYPE));
         }));
@@ -124,7 +124,7 @@ public class BaseRegistrationServiceTest {
     public void testAssertDeviceRegistrationFailsForDisabledDevice(final TestContext ctx) {
 
         // GIVEN a registry that contains a disabled device
-        BaseRegistrationService<ServiceConfigProperties> registrationService = newRegistrationService();
+        final BaseRegistrationService<ServiceConfigProperties> registrationService = newRegistrationService();
         registrationService.setRegistrationAssertionFactory(RegistrationAssertionHelperImpl.forSigning(vertx, props));
 
         // WHEN trying to assert the device's registration status
@@ -144,7 +144,7 @@ public class BaseRegistrationServiceTest {
     public void testAssertDeviceRegistrationFailsForNonExistingDevice(final TestContext ctx) {
 
         // GIVEN a registry that does not contain any devices
-        BaseRegistrationService<ServiceConfigProperties> registrationService = newRegistrationService();
+        final BaseRegistrationService<ServiceConfigProperties> registrationService = newRegistrationService();
         registrationService.setRegistrationAssertionFactory(RegistrationAssertionHelperImpl.forSigning(vertx, props));
 
         // WHEN trying to assert a device's registration status
@@ -165,7 +165,7 @@ public class BaseRegistrationServiceTest {
 
         // GIVEN a registry that contains an enabled device that is configured to
         // be connected to an enabled gateway
-        BaseRegistrationService<ServiceConfigProperties> registrationService = newRegistrationService();
+        final BaseRegistrationService<ServiceConfigProperties> registrationService = newRegistrationService();
         registrationService.setRegistrationAssertionFactory(RegistrationAssertionHelperImpl.forSigning(vertx, props));
 
         // WHEN trying to assert the device's registration status for a gateway
@@ -188,7 +188,7 @@ public class BaseRegistrationServiceTest {
     public void testAssertDeviceRegistrationFailsForNonExistingGateway(final TestContext ctx) {
 
         // GIVEN a registry that contains an enabled device but no gateway
-        BaseRegistrationService<ServiceConfigProperties> registrationService = newRegistrationService();
+        final BaseRegistrationService<ServiceConfigProperties> registrationService = newRegistrationService();
         registrationService.setRegistrationAssertionFactory(RegistrationAssertionHelperImpl.forSigning(vertx, props));
 
         // WHEN trying to assert the device's registration status for a gateway
@@ -211,7 +211,7 @@ public class BaseRegistrationServiceTest {
         // GIVEN a registry that contains an enabled device
         // and a gateway that the device is configured for but
         // which is disabled
-        BaseRegistrationService<ServiceConfigProperties> registrationService = newRegistrationService();
+        final BaseRegistrationService<ServiceConfigProperties> registrationService = newRegistrationService();
         registrationService.setRegistrationAssertionFactory(RegistrationAssertionHelperImpl.forSigning(vertx, props));
 
         // WHEN trying to assert the device's registration status for a gateway
@@ -235,7 +235,7 @@ public class BaseRegistrationServiceTest {
         // GIVEN a registry that contains an enabled device and two gateways:
         // 1. the gateway that the device is configured for.
         // 2. another gateway
-        BaseRegistrationService<ServiceConfigProperties> registrationService = newRegistrationService();
+        final BaseRegistrationService<ServiceConfigProperties> registrationService = newRegistrationService();
         registrationService.setRegistrationAssertionFactory(RegistrationAssertionHelperImpl.forSigning(vertx, props));
 
         // WHEN trying to assert the device's registration status for the wrong gateway

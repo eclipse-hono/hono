@@ -124,7 +124,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
 
         // WHEN starting the adapter
         final Async startup = ctx.async();
-        Future<Void> startupTracker = Future.future();
+        final Future<Void> startupTracker = Future.future();
         startupTracker.setHandler(ctx.asyncAssertSuccess(s -> {
             startup.complete();
         }));
@@ -146,14 +146,15 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
     public void testStartInvokesOnStartupSuccess(final TestContext ctx) {
 
         // GIVEN an adapter with a client provided http server
-        HttpServer server = getHttpServer(false);
-        Async onStartupSuccess = ctx.async();
+        final HttpServer server = getHttpServer(false);
+        final Async onStartupSuccess = ctx.async();
 
-        AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> adapter = getAdapter(server, s -> onStartupSuccess.complete());
+        final AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> adapter = getAdapter(server,
+                s -> onStartupSuccess.complete());
 
         // WHEN starting the adapter
-        Async startup = ctx.async();
-        Future<Void> startupTracker = Future.future();
+        final Async startup = ctx.async();
+        final Future<Void> startupTracker = Future.future();
         startupTracker.setHandler(ctx.asyncAssertSuccess(s -> {
             startup.complete();
         }));
@@ -174,11 +175,12 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
     public void testStartDoesNotInvokeOnStartupSuccessIfStartupFails(final TestContext ctx) {
 
         // GIVEN an adapter with a client provided http server that fails to bind to a socket when started
-        HttpServer server = getHttpServer(true);
-        AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> adapter = getAdapter(server, s -> ctx.fail("should not invoke onStartupSuccess"));
+        final HttpServer server = getHttpServer(true);
+        final AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> adapter = getAdapter(server,
+                s -> ctx.fail("should not invoke onStartupSuccess"));
 
         // WHEN starting the adapter
-        Future<Void> startupTracker = Future.future();
+        final Future<Void> startupTracker = Future.future();
         startupTracker.setHandler(ctx.asyncAssertFailure());
         adapter.start(startupTracker);
 
@@ -228,8 +230,8 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         final Future<ProtonDelivery> outcome = Future.future();
         givenAnEventSenderForOutcome(outcome);
 
-        HttpServer server = getHttpServer(false);
-        AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> adapter = getAdapter(server, null);
+        final HttpServer server = getHttpServer(false);
+        final AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> adapter = getAdapter(server, null);
 
         // WHEN a device publishes an event
         final Buffer payload = Buffer.buffer("some payload");
@@ -258,8 +260,8 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         final Future<ProtonDelivery> outcome = Future.future();
         givenAnEventSenderForOutcome(outcome);
 
-        HttpServer server = getHttpServer(false);
-        AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> adapter = getAdapter(server, null);
+        final HttpServer server = getHttpServer(false);
+        final AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> adapter = getAdapter(server, null);
 
         // WHEN a device publishes an event that is not accepted by the peer
         final Buffer payload = Buffer.buffer("some payload");
@@ -283,8 +285,8 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         final Future<ProtonDelivery> outcome = Future.succeededFuture(mock(ProtonDelivery.class));
         givenATelemetrySenderForOutcome(outcome);
 
-        HttpServer server = getHttpServer(false);
-        AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> adapter = getAdapter(server, null);
+        final HttpServer server = getHttpServer(false);
+        final AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> adapter = getAdapter(server, null);
 
         // WHEN a device publishes a telemetry message
         final Buffer payload = Buffer.buffer("some payload");
@@ -316,11 +318,12 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
     @SuppressWarnings("unchecked")
     private HttpServer getHttpServer(final boolean startupShouldFail) {
 
-        HttpServer server = mock(HttpServer.class);
+        final HttpServer server = mock(HttpServer.class);
         when(server.actualPort()).thenReturn(0, 8080);
         when(server.requestHandler(any(Handler.class))).thenReturn(server);
         when(server.listen(any(Handler.class))).then(invocation -> {
-            Handler<AsyncResult<HttpServer>> handler = (Handler<AsyncResult<HttpServer>>) invocation.getArgument(0);
+            final Handler<AsyncResult<HttpServer>> handler = (Handler<AsyncResult<HttpServer>>) invocation
+                    .getArgument(0);
             if (startupShouldFail) {
                 handler.handle(Future.failedFuture("http server intentionally failed to start"));
             } else {

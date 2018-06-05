@@ -109,7 +109,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
     @Autowired(required = false)
     public final void addEndpoints(final List<AmqpEndpoint> definedEndpoints) {
         Objects.requireNonNull(definedEndpoints);
-        for (AmqpEndpoint ep : definedEndpoints) {
+        for (final AmqpEndpoint ep : definedEndpoints) {
             addEndpoint(ep);
         }
     }
@@ -240,8 +240,9 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
     private Future<Void> startEndpoints() {
 
         @SuppressWarnings("rawtypes")
+        final
         List<Future> endpointFutures = new ArrayList<>(endpoints.size());
-        for (AmqpEndpoint ep : endpoints.values()) {
+        for (final AmqpEndpoint ep : endpoints.values()) {
             LOG.info("starting endpoint [name: {}, class: {}]", ep.getName(), ep.getClass().getName());
             endpointFutures.add(ep.start());
         }
@@ -259,8 +260,9 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
     private Future<Void> stopEndpoints() {
 
         @SuppressWarnings("rawtypes")
+        final
         List<Future> endpointFutures = new ArrayList<>(endpoints.size());
-        for (AmqpEndpoint ep : endpoints.values()) {
+        for (final AmqpEndpoint ep : endpoints.values()) {
             LOG.info("stopping endpoint [name: {}, class: {}]", ep.getName(), ep.getClass().getName());
             endpointFutures.add(ep.stop());
         }
@@ -278,7 +280,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
     private Future<Void> startInsecureServer() {
 
         if (isInsecurePortEnabled()) {
-            int insecurePort = determineInsecurePort();
+            final int insecurePort = determineInsecurePort();
             final Future<Void> result = Future.future();
             final ProtonServerOptions options = createInsecureServerOptions();
             insecureServer = createProtonServer(options)
@@ -307,7 +309,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
     private Future<Void> startSecureServer() {
 
         if (isSecurePortEnabled()) {
-            int securePort = determineSecurePort();
+            final int securePort = determineSecurePort();
             final Future<Void> result = Future.future();
             final ProtonServerOptions options = createServerOptions();
             server = createProtonServer(options)
@@ -346,7 +348,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
      * @return The options.
      */
     protected ProtonServerOptions createServerOptions() {
-        ProtonServerOptions options = createInsecureServerOptions();
+        final ProtonServerOptions options = createInsecureServerOptions();
         addTlsKeyCertOptions(options);
         addTlsTrustOptions(options);
         return options;
@@ -361,7 +363,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
      */
     protected ProtonServerOptions createInsecureServerOptions() {
 
-        ProtonServerOptions options = new ProtonServerOptions();
+        final ProtonServerOptions options = new ProtonServerOptions();
         options.setHeartbeat(60000); // // close idle connections after two minutes of inactivity
         options.setReceiveBufferSize(16 * 1024); // 16kb
         options.setSendBufferSize(16 * 1024); // 16kb
@@ -379,7 +381,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
 
     private Future<Void> stopServer() {
 
-        Future<Void> secureTracker = Future.future();
+        final Future<Void> secureTracker = Future.future();
 
         if (server != null) {
             LOG.info("stopping secure AMQP server [{}:{}]", getBindAddress(), getActualPort());
@@ -392,7 +394,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
 
     private Future<Void> stopInsecureServer() {
 
-        Future<Void> insecureTracker = Future.future();
+        final Future<Void> insecureTracker = Future.future();
 
         if (insecureServer != null) {
             LOG.info("stopping insecure AMQP server [{}:{}]", getInsecurePortBindAddress(), getActualInsecurePort());
@@ -405,12 +407,12 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
 
     @Override
     protected final int getActualPort() {
-        return (server != null ? server.actualPort() : Constants.PORT_UNCONFIGURED);
+        return server != null ? server.actualPort() : Constants.PORT_UNCONFIGURED;
     }
 
     @Override
     protected final int getActualInsecurePort() {
-        return (insecureServer != null ? insecureServer.actualPort() : Constants.PORT_UNCONFIGURED);
+        return insecureServer != null ? insecureServer.actualPort() : Constants.PORT_UNCONFIGURED;
     }
 
     /**
@@ -714,7 +716,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
     @Override
     public void registerReadinessChecks(final HealthCheckHandler handler) {
 
-        for (AmqpEndpoint ep : endpoints()) {
+        for (final AmqpEndpoint ep : endpoints()) {
             ep.registerReadinessChecks(handler);
         }
     }
@@ -731,7 +733,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
      */
     @Override
     public void registerLivenessChecks(final HealthCheckHandler handler) {
-        for (AmqpEndpoint ep : endpoints()) {
+        for (final AmqpEndpoint ep : endpoints()) {
             ep.registerLivenessChecks(handler);
         }
     }

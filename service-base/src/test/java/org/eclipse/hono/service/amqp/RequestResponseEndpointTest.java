@@ -85,7 +85,7 @@ public class RequestResponseEndpointTest {
     @Test
     public void testOnLinkAttachClosesReceiverUsingAtMostOnceQoS() {
 
-        RequestResponseEndpoint<ServiceConfigProperties> endpoint = getEndpoint(true);
+        final RequestResponseEndpoint<ServiceConfigProperties> endpoint = getEndpoint(true);
         when(receiver.getRemoteQoS()).thenReturn(ProtonQoS.AT_MOST_ONCE);
         endpoint.onLinkAttach(connection, receiver, resource);
 
@@ -98,7 +98,7 @@ public class RequestResponseEndpointTest {
     @Test
     public void testOnLinkAttachOpensReceiver() {
 
-        RequestResponseEndpoint<ServiceConfigProperties> endpoint = getEndpoint(true);
+        final RequestResponseEndpoint<ServiceConfigProperties> endpoint = getEndpoint(true);
         when(receiver.getRemoteQoS()).thenReturn(ProtonQoS.AT_LEAST_ONCE);
         endpoint.onLinkAttach(connection, receiver, resource);
 
@@ -128,16 +128,16 @@ public class RequestResponseEndpointTest {
     @Test
     public void testHandleMessageRejectsMalformedMessage() {
 
-        Message msg = ProtonHelper.message();
-        ProtonConnection con = mock(ProtonConnection.class);
-        ProtonDelivery delivery = mock(ProtonDelivery.class);
-        RequestResponseEndpoint<ServiceConfigProperties> endpoint = getEndpoint(false);
+        final Message msg = ProtonHelper.message();
+        final ProtonConnection con = mock(ProtonConnection.class);
+        final ProtonDelivery delivery = mock(ProtonDelivery.class);
+        final RequestResponseEndpoint<ServiceConfigProperties> endpoint = getEndpoint(false);
 
         // WHEN a malformed message is received
         endpoint.handleMessage(con, receiver, resource, delivery, msg);
 
         // THEN the link is closed and the message is rejected
-        ArgumentCaptor<DeliveryState> deliveryState = ArgumentCaptor.forClass(DeliveryState.class);
+        final ArgumentCaptor<DeliveryState> deliveryState = ArgumentCaptor.forClass(DeliveryState.class);
         verify(delivery).disposition(deliveryState.capture(), booleanThat(is(Boolean.TRUE)));
         assertThat(deliveryState.getValue(), instanceOf(Rejected.class));
         verify(receiver, never()).close();
@@ -150,21 +150,21 @@ public class RequestResponseEndpointTest {
     @Test
     public void testHandleMessageRejectsUnauthorizedRequests() {
 
-        Message msg = ProtonHelper.message();
+        final Message msg = ProtonHelper.message();
         msg.setSubject("unauthorized");
-        ProtonConnection con = mock(ProtonConnection.class);
-        ProtonDelivery delivery = mock(ProtonDelivery.class);
-        AuthorizationService authService = mock(AuthorizationService.class);
+        final ProtonConnection con = mock(ProtonConnection.class);
+        final ProtonDelivery delivery = mock(ProtonDelivery.class);
+        final AuthorizationService authService = mock(AuthorizationService.class);
         when(authService.isAuthorized(any(HonoUser.class), any(ResourceIdentifier.class), anyString())).thenReturn(Future.succeededFuture(Boolean.FALSE));
-        Future<Void> processingTracker = Future.future();
-        RequestResponseEndpoint<ServiceConfigProperties> endpoint = getEndpoint(true, processingTracker);
+        final Future<Void> processingTracker = Future.future();
+        final RequestResponseEndpoint<ServiceConfigProperties> endpoint = getEndpoint(true, processingTracker);
         endpoint.setAuthorizationService(authService);
 
         // WHEN a request for an operation is received that the client is not authorized to invoke
         endpoint.handleMessage(con, receiver, resource, delivery, msg);
 
         // THEN the the message is rejected
-        ArgumentCaptor<DeliveryState> deliveryState = ArgumentCaptor.forClass(DeliveryState.class);
+        final ArgumentCaptor<DeliveryState> deliveryState = ArgumentCaptor.forClass(DeliveryState.class);
         verify(delivery).disposition(deliveryState.capture(), booleanThat(is(Boolean.TRUE)));
         assertThat(deliveryState.getValue(), instanceOf(Rejected.class));
         verify(receiver, never()).close();
@@ -179,22 +179,22 @@ public class RequestResponseEndpointTest {
     @Test
     public void testHandleMessageProcessesAuthorizedRequests() {
 
-        Message msg = ProtonHelper.message();
+        final Message msg = ProtonHelper.message();
         msg.setSubject("get");
-        ProtonConnection con = mock(ProtonConnection.class);
-        ProtonDelivery delivery = mock(ProtonDelivery.class);
-        AuthorizationService authService = mock(AuthorizationService.class);
+        final ProtonConnection con = mock(ProtonConnection.class);
+        final ProtonDelivery delivery = mock(ProtonDelivery.class);
+        final AuthorizationService authService = mock(AuthorizationService.class);
         when(authService.isAuthorized(any(HonoUser.class), any(ResourceIdentifier.class), anyString())).thenReturn(Future.succeededFuture(Boolean.TRUE));
 
-        Future<Void> processingTracker = Future.future();
-        RequestResponseEndpoint<ServiceConfigProperties> endpoint = getEndpoint(true, processingTracker);
+        final Future<Void> processingTracker = Future.future();
+        final RequestResponseEndpoint<ServiceConfigProperties> endpoint = getEndpoint(true, processingTracker);
         endpoint.setAuthorizationService(authService);
 
         // WHEN a request for an operation is received that the client is authorized to invoke
         endpoint.handleMessage(con, receiver, resource, delivery, msg);
 
         // THEN then the message gets processed
-        ArgumentCaptor<DeliveryState> deliveryState = ArgumentCaptor.forClass(DeliveryState.class);
+        final ArgumentCaptor<DeliveryState> deliveryState = ArgumentCaptor.forClass(DeliveryState.class);
         verify(delivery).disposition(deliveryState.capture(), booleanThat(is(Boolean.TRUE)));
         assertThat(deliveryState.getValue(), instanceOf(Accepted.class));
         verify(receiver, never()).close();

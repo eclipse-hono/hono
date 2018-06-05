@@ -76,21 +76,21 @@ public class ForwardingEventDownstreamAdapterTest {
 
         // GIVEN an adapter with a connection to a downstream container
         final Async msgSent = ctx.async();
-        ProtonSender sender = newMockSender(false);
+        final ProtonSender sender = newMockSender(false);
         when(sender.send(any(Message.class), any(Handler.class))).then(invocation -> {
             msgSent.complete();
             final Handler handler = invocation.getArgument(1);
             handler.handle(downstreamDelivery);
             return null;
         });
-        ForwardingEventDownstreamAdapter adapter = new ForwardingEventDownstreamAdapter(vertx, newMockSenderFactory(sender));
+        final ForwardingEventDownstreamAdapter adapter = new ForwardingEventDownstreamAdapter(vertx, newMockSenderFactory(sender));
         adapter.setMetrics(mock(MessagingMetrics.class));
         adapter.setDownstreamConnectionFactory(newMockConnectionFactory(false));
         adapter.start(Future.future());
         adapter.addSender(client, sender);
 
         // WHEN processing an event
-        Message msg = ProtonHelper.message(EVENT_MSG_CONTENT);
+        final Message msg = ProtonHelper.message(EVENT_MSG_CONTENT);
         MessageHelper.addDeviceId(msg, DEVICE_ID);
         adapter.processMessage(client, delivery, msg);
 
@@ -114,16 +114,16 @@ public class ForwardingEventDownstreamAdapterTest {
         when(delivery.remotelySettled()).thenReturn(Boolean.FALSE);
 
         // GIVEN an adapter with a connection to a downstream container
-        ProtonSender sender = newMockSender(false);
+        final ProtonSender sender = newMockSender(false);
         when(sender.sendQueueFull()).thenReturn(true);
-        ForwardingEventDownstreamAdapter adapter = new ForwardingEventDownstreamAdapter(vertx, newMockSenderFactory(sender));
+        final ForwardingEventDownstreamAdapter adapter = new ForwardingEventDownstreamAdapter(vertx, newMockSenderFactory(sender));
         adapter.setMetrics(mock(MessagingMetrics.class));
         adapter.setDownstreamConnectionFactory(newMockConnectionFactory(false));
         adapter.start(Future.future());
         adapter.addSender(client, sender);
 
         // WHEN processing an event
-        Message msg = ProtonHelper.message(EVENT_MSG_CONTENT);
+        final Message msg = ProtonHelper.message(EVENT_MSG_CONTENT);
         MessageHelper.addDeviceId(msg, DEVICE_ID);
         adapter.processMessage(client, delivery, msg);
 

@@ -87,19 +87,19 @@ public class HonoHttpDevice {
         /**
          * The payload of the message, defined as JsonObject. Maybe {@code null}.
          */
-        private JsonObject payload;
+        private final JsonObject payload;
         /**
          * The Content-Type that is set for the message.
          */
-        private String contentType;
+        private final String contentType;
         /**
          * The <em>time-to-deliver</em> of the message, which is defined as application property of the AMQP 1.0 message.
          */
-        private Integer ttd;
+        private final Integer ttd;
         /**
          * Property to define if the message shall be sent as event or as telemetry message.
          */
-        private Boolean isEvent;
+        private final Boolean isEvent;
 
         MessageTypes(final JsonObject payload, final String contentType, final Integer ttd, final Boolean isEvent) {
             this.payload = payload;
@@ -137,7 +137,7 @@ public class HonoHttpDevice {
     private final Vertx vertx = Vertx.vertx();
 
     public static void main(final String[] args) {
-        HonoHttpDevice httpDevice = new HonoHttpDevice();
+        final HonoHttpDevice httpDevice = new HonoHttpDevice();
         httpDevice.sendData();
     }
 
@@ -197,16 +197,16 @@ public class HonoHttpDevice {
 
             System.out.println(String.format("Sending message type %s", messageType.toString()));
 
-            CompletableFuture<MultiMap> responseFuture = sendMessage(messageType.payload, headerMap, messageType.isEvent);
+            final CompletableFuture<MultiMap> responseFuture = sendMessage(messageType.payload, headerMap, messageType.isEvent);
             try {
                 final MultiMap resultMap = responseFuture.get();
                 System.out.println(String.format("Got %d response keys.", resultMap.size()));
                 resultMap.entries().stream().forEach(entry -> {
                     System.out.println(String.format("  %s:%s", entry.getKey(), entry.getValue()));
                 });
-            } catch (InterruptedException e) {
+            } catch (final InterruptedException e) {
                 e.printStackTrace();
-            } catch (ExecutionException e) {
+            } catch (final ExecutionException e) {
                 e.printStackTrace();
             }
         });

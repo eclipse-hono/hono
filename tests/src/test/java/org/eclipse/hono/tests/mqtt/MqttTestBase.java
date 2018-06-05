@@ -119,7 +119,7 @@ public abstract class MqttTestBase {
     @After
     public void postTest(final TestContext ctx) {
 
-        Future<Void> disconnectHandler = Future.future();
+        final Future<Void> disconnectHandler = Future.future();
         if (mqttClient == null) {
             disconnectHandler.complete();
         } else {
@@ -261,7 +261,7 @@ public abstract class MqttTestBase {
             sendResult.get().await();
         }
 
-        long timeToWait = Math.max(TEST_TIMEOUT - 1000, Math.round(messagesToSend * 1.2));
+        final long timeToWait = Math.max(TEST_TIMEOUT - 1000, Math.round(messagesToSend * 1.2));
         if (!received.await(timeToWait, TimeUnit.MILLISECONDS)) {
             LOGGER.info("sent {} and received {} messages after {} milliseconds",
                     messageCount, messagesToSend - received.getCount(), System.currentTimeMillis() - start);

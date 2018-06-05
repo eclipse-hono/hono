@@ -26,7 +26,7 @@ import io.vertx.core.Vertx;
  */
 public class RegistrationAssertionHelperImplTest {
 
-    private Vertx vertx = Vertx.vertx();
+    private final Vertx vertx = Vertx.vertx();
 
     /**
      * Verifies that the helper asserts a minimum length of 32 bytes for shared secrets.
@@ -34,7 +34,7 @@ public class RegistrationAssertionHelperImplTest {
     @Test(expected = IllegalArgumentException.class)
     public void testForSigningRejectsShortSecret() {
 
-        String shortSecret = "01234567890123456"; // not 32 bytes long
+        final String shortSecret = "01234567890123456"; // not 32 bytes long
         RegistrationAssertionHelperImpl.forSharedSecret(shortSecret, 10);
     }
 
@@ -44,14 +44,14 @@ public class RegistrationAssertionHelperImplTest {
     @Test
     public void testForSigningWorksWithRsaSignatures() {
 
-        SignatureSupportingConfigProperties props = new SignatureSupportingConfigProperties();
+        final SignatureSupportingConfigProperties props = new SignatureSupportingConfigProperties();
         props.setKeyPath("target/certs/hono-messaging-key.pem");
         props.setCertPath("target/certs/hono-messaging-cert.pem");
 
-        RegistrationAssertionHelper factory = RegistrationAssertionHelperImpl.forSigning(vertx, props);
-        String assertion = factory.getAssertion("tenant", "device");
+        final RegistrationAssertionHelper factory = RegistrationAssertionHelperImpl.forSigning(vertx, props);
+        final String assertion = factory.getAssertion("tenant", "device");
         assertNotNull(assertion);
-        RegistrationAssertionHelper validator = RegistrationAssertionHelperImpl.forValidating(vertx, props);
+        final RegistrationAssertionHelper validator = RegistrationAssertionHelperImpl.forValidating(vertx, props);
         assertTrue(validator.isValid(assertion, "tenant", "device"));
 
     }

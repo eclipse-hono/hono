@@ -66,16 +66,16 @@ public abstract class AbstractHonoAuthenticationService<T> extends BaseAuthentic
 
         if (AuthenticationConstants.MECHANISM_PLAIN.equals(mechanism)) {
 
-            byte[] saslResponse = authRequest.getBinary(AuthenticationConstants.FIELD_SASL_RESPONSE, new byte[0]);
+            final byte[] saslResponse = authRequest.getBinary(AuthenticationConstants.FIELD_SASL_RESPONSE, new byte[0]);
 
             try {
-                String[] fields = readFields(saslResponse);
-                String authzid = fields[0];
-                String authcid = fields[1];
-                String pwd = fields[2];
+                final String[] fields = readFields(saslResponse);
+                final String authzid = fields[0];
+                final String authcid = fields[1];
+                final String pwd = fields[2];
                 log.debug("processing PLAIN authentication request [authzid: {}, authcid: {}, pwd: *****]", authzid, authcid);
                 verifyPlain(authzid, authcid, pwd, resultHandler);
-            } catch (CredentialException e) {
+            } catch (final CredentialException e) {
                 // response did not contain expected values
                 resultHandler.handle(Future.failedFuture(e));
             }
@@ -93,11 +93,11 @@ public abstract class AbstractHonoAuthenticationService<T> extends BaseAuthentic
     }
 
     private String[] readFields(final byte[] buffer) throws CredentialException {
-        List<String> fields = new ArrayList<>();
+        final List<String> fields = new ArrayList<>();
         int pos = 0;
         Buffer b = Buffer.buffer();
         while (pos < buffer.length) {
-            byte val = buffer[pos];
+            final byte val = buffer[pos];
             if (val == 0x00) {
                 fields.add(b.toString(StandardCharsets.UTF_8));
                 b = Buffer.buffer();

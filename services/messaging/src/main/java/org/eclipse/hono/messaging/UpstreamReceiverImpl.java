@@ -35,8 +35,8 @@ public class UpstreamReceiverImpl implements UpstreamReceiver {
 
     private static final Logger LOG = LoggerFactory.getLogger(UpstreamReceiverImpl.class);
     private final AtomicBoolean drainFlag = new AtomicBoolean(false);
-    private ProtonReceiver link;
-    private String id;
+    private final ProtonReceiver link;
+    private final String id;
 
     UpstreamReceiverImpl(final String linkId, final ProtonReceiver receiver) {
         this.id = Objects.requireNonNull(linkId);
@@ -48,9 +48,9 @@ public class UpstreamReceiverImpl implements UpstreamReceiver {
     @Override
     public void replenish(final int downstreamCredit) {
 
-        int remainingCredit = link.getCredit() - link.getQueued();
+        final int remainingCredit = link.getCredit() - link.getQueued();
         if (downstreamCredit > remainingCredit) {
-            int credit = downstreamCredit - remainingCredit;
+            final int credit = downstreamCredit - remainingCredit;
             LOG.trace("replenishing client [{}] having {} credits with {} credits", id, remainingCredit, credit);
             link.flow(credit);
         } else {
@@ -100,7 +100,7 @@ public class UpstreamReceiverImpl implements UpstreamReceiver {
     public int hashCode() {
         final int prime = 31;
         int result = 1;
-        result = prime * result + ((id == null) ? 0 : id.hashCode());
+        result = prime * result + (id == null ? 0 : id.hashCode());
         return result;
     }
 
@@ -115,7 +115,7 @@ public class UpstreamReceiverImpl implements UpstreamReceiver {
         if (getClass() != obj.getClass()) {
             return false;
         }
-        UpstreamReceiverImpl other = (UpstreamReceiverImpl) obj;
+        final UpstreamReceiverImpl other = (UpstreamReceiverImpl) obj;
         if (id == null) {
             if (other.id != null) {
                 return false;
