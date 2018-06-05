@@ -249,8 +249,7 @@ Verify that the "AVAILABLE" column shows "1":
 
 Next you will need to configure EnMasse to provide the required resources:
 
-    curl -X POST --insecure -T addresses.json" -H "content-type: application/json" https://$(oc -n enmasse get route restapi -o jsonpath='{.spec.host}')/apis/enmasse.io/v1alpha1/namespaces/enmasse/addressspaces/default/addresses
-    
+    curl -X POST --insecure -T addresses.json -H "content-type: application/json" https://$(oc -n enmasse get route restapi -o jsonpath='{.spec.host}')/apis/enmasse.io/v1alpha1/namespaces/enmasse/addressspaces/default/addresses
 
 ## Setting up Hono
 
