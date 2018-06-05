@@ -15,7 +15,7 @@ package org.eclipse.hono.service;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.*;
-import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 import java.net.HttpURLConnection;
@@ -244,9 +244,14 @@ public class AbstractProtocolAdapterBaseTest {
         // GIVEN an adapter connected to a registration service
         final JsonObject assertionResult = newRegistrationAssertionResult("token");
         when(registrationClient.assertRegistration(eq("device"), any())).thenReturn(Future.succeededFuture(assertionResult));
+        when(registrationClient.assertRegistration(eq("device"), any(), any())).thenReturn(Future.succeededFuture(assertionResult));
 
         // WHEN an assertion for the device is retrieved
         adapter.getRegistrationAssertion("tenant", "device", null).setHandler(ctx.asyncAssertSuccess(result -> {
+            // THEN the result contains the registration assertion
+            ctx.assertEquals(assertionResult, result);
+        }));
+        adapter.getRegistrationAssertion("tenant", "device", null, null).setHandler(ctx.asyncAssertSuccess(result -> {
             // THEN the result contains the registration assertion
             ctx.assertEquals(assertionResult, result);
         }));
@@ -264,9 +269,15 @@ public class AbstractProtocolAdapterBaseTest {
         // GIVEN an adapter connected to a registration service
         when(registrationClient.assertRegistration(eq("non-existent"), any())).thenReturn(
                 Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND)));
+        when(registrationClient.assertRegistration(eq("non-existent"), any(), any())).thenReturn(
+                Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND)));
 
         // WHEN an assertion for a non-existing device is retrieved
         adapter.getRegistrationAssertion("tenant", "non-existent", null).setHandler(ctx.asyncAssertFailure(t -> {
+            // THEN the request fails with a 404
+            ctx.assertEquals(HttpURLConnection.HTTP_NOT_FOUND, ((ServiceInvocationException) t).getErrorCode());
+        }));
+        adapter.getRegistrationAssertion("tenant", "non-existent", null, null).setHandler(ctx.asyncAssertFailure(t -> {
             // THEN the request fails with a 404
             ctx.assertEquals(HttpURLConnection.HTTP_NOT_FOUND, ((ServiceInvocationException) t).getErrorCode());
         }));

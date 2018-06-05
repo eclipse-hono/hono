@@ -613,7 +613,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
 
         if (!isPayloadOfIndicatedType(payload, ctx.contentType())) {
             return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
-                    String.format("Content-Type %s does not match with payload", ctx.contentType())));
+                    String.format("Content-Type %s does not match payload", ctx.contentType())));
         } else {
 
             final Span currentSpan = tracer.buildSpan("upload " + endpointName)
@@ -627,7 +627,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
                     .start();
 
             final Future<JsonObject> tokenTracker = getRegistrationAssertion(tenant, deviceId,
-                    ctx.authenticatedDevice());
+                    ctx.authenticatedDevice(), currentSpan.context());
             final Future<TenantObject> tenantConfigTracker = getTenantConfiguration(tenant, currentSpan.context());
 
             return CompositeFuture.all(tokenTracker, tenantConfigTracker, senderTracker).compose(ok -> {
