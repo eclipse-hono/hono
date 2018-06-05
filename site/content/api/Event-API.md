@@ -100,7 +100,47 @@ The relevant properties are listed again in the following table:
 | Name           | Mandatory        | Location                 | Type      | Description |
 | :------------- | :--------------: | :----------------------- | :-------- | :---------- |
 | *content-type* | yes              | *properties*             | *symbol*  | Must be set to *application/vnd.eclipse-hono-empty-notification* |
-| *ttd*          | no               | *application-properties* | *int*     | 'time til disconnect' : see [*Telemetry API*]({{< relref "Telemetry-API.md" >}}). | 
+| *ttd*          | no               | *application-properties* | *int*     | 'time till disconnect' : see [*Telemetry API*]({{< relref "Telemetry-API.md" >}}). | 
 
 NB: An empty notification can be used to indicate to a *Business Application* that a device is currently ready to receive an upstream message by setting the *ttd* property. The application receiving the notification can verify if the notification is not expired and then may decide to send an upstream message to the device.
- 
+
+## Connection Events
+
+The internal connect/disconnect events will be translated into Hono Events with
+a well known message format and type. And it will be injected into the normal
+event message stream.
+
+{{% note title="Authenticated devices only" %}}
+As the *Event* API requires a tenant in order to allow sending events, an
+authenticated device is required. Internal events for unauthenticated devices
+will be dropped by this implementation and not be delivered via the *Event* API.
+{{% /note %}}
+
+The following table provides an overview of the message structure:
+
+| Name           | Mandatory | Location                 | Type      | Description |
+| :------------- | :-------: | :----------------------- | :-------- | :---------- |
+| *content-type* | yes       | *properties*             | *symbol*  | Must be set to  *application/vnd.eclipse-hono-dc-notification+json* |
+| *device_id*    | yes       | *application-properties* | *string*  | The ID of the authenticated device |
+
+The payload is a JSON object with the following fields:
+
+| Name        | Mandatory | Type      | Description |
+| :---------- | :-------: | :-------- | :---------- |
+| *cause*     | yes       | *string*  | The cause of the connection event. Must be either *connected* or *disconnected*. |
+| *remote-id* | yes       | *string*  | The ID of the remote endpoint which connected (e.g. a remote address, port, client id, ...). This is specific to the protocol adapter. |
+| *source*    | yes       | *string*  | The name of the protocol adapter. e.g. *hono-mqtt*. |
+| *data*      | no        | *object*  | An arbitrary JSON object which may contain additional information from the protocol adapter. |
+
+Below is an example for a connection event:
+
+~~~json
+{
+  "cause": "connect",
+  "remote-id": "mqtt-client-id-1",
+  "source": "hono-mqtt",
+  "data": {
+    "foo": "bar"
+  }
+}
+~~~
