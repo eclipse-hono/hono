@@ -34,6 +34,7 @@ import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EndpointType;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.ExecutionContext;
+import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.TelemetryConstants;
 import org.eclipse.hono.util.TenantObject;
@@ -303,23 +304,30 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
      */
     final void handleEndpointConnection(final MqttEndpoint endpoint) {
 
-        LOG.debug("connection request from client [clientId: {}]", endpoint.clientIdentifier());
+        LOG.debug("connection request from client [client-id: {}]", endpoint.clientIdentifier());
+        final Span span = tracer.buildSpan("connect")
+                .ignoreActiveSpan()
+                .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_SERVER)
+                .withTag(Tags.COMPONENT.getKey(), getTypeName())
+                .withTag(TracingHelper.TAG_CLIENT_ID.getKey(), endpoint.clientIdentifier())
+                .start();
 
         isConnected()
-                .compose(v -> handleConnectionRequest(endpoint))
-                .setHandler(result -> handleConnectionRequestResult(endpoint, result));
+                .compose(v -> handleConnectionRequest(endpoint, span))
+                .setHandler(result -> handleConnectionRequestResult(endpoint, span, result));
 
     }
 
-    private Future<Device> handleConnectionRequest(final MqttEndpoint endpoint) {
+    private Future<Device> handleConnectionRequest(final MqttEndpoint endpoint, final Span currentSpan) {
         if (getConfig().isAuthenticationRequired()) {
-            return handleEndpointConnectionWithAuthentication(endpoint);
+            return handleEndpointConnectionWithAuthentication(endpoint, currentSpan);
         } else {
             return handleEndpointConnectionWithoutAuthentication(endpoint);
         }
     }
 
     private void handleConnectionRequestResult(final MqttEndpoint endpoint,
+            final Span currentSpan,
             final AsyncResult<Device> authenticationAttempt) {
 
         // This method is invoked from the vert.x context of one of the
@@ -332,10 +340,18 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
         context.runOnContext(go -> {
             if (authenticationAttempt.succeeded()) {
 
-                sendConnectedEvent(endpoint.clientIdentifier(), authenticationAttempt.result())
+                final Device authenticatedDevice = authenticationAttempt.result();
+                TracingHelper.TAG_AUTHENTICATED.set(currentSpan, authenticatedDevice != null);
+
+                sendConnectedEvent(endpoint.clientIdentifier(), authenticatedDevice)
                         .setHandler(sendAttempt -> {
                             if (sendAttempt.succeeded()) {
                                 endpoint.accept(false);
+                                if (authenticatedDevice != null) {
+                                    currentSpan.setTag(MessageHelper.APP_PROPERTY_TENANT_ID, authenticationAttempt.result().getTenantId());
+                                    currentSpan.setTag(MessageHelper.APP_PROPERTY_DEVICE_ID, authenticationAttempt.result().getDeviceId());
+                                }
+                                currentSpan.log("connection accepted");
                             } else {
                                 LOG.warn(
                                         "connection request from client [clientId: {}] rejected due to connection event "
@@ -344,10 +360,13 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
                                         MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE,
                                         sendAttempt.cause());
                                 endpoint.reject(MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE);
+                                TracingHelper.logError(currentSpan, sendAttempt.cause());
                             }
                         });
 
             } else {
+
+                TracingHelper.TAG_AUTHENTICATED.set(currentSpan, false);
 
                 final Throwable t = authenticationAttempt.cause();
                 if (t instanceof MqttConnectionException) {
@@ -360,8 +379,9 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
                             endpoint.clientIdentifier(), MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE);
                     endpoint.reject(MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE);
                 }
-
+                TracingHelper.logError(currentSpan, t);
             }
+            currentSpan.finish();
         });
     }
 
@@ -390,7 +410,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
         return accepted();
     }
 
-    private Future<Device> handleEndpointConnectionWithAuthentication(final MqttEndpoint endpoint) {
+    private Future<Device> handleEndpointConnectionWithAuthentication(final MqttEndpoint endpoint, final Span currentSpan) {
 
         if (endpoint.auth() == null) {
 
@@ -411,7 +431,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
 
             } else {
 
-                return getTenantConfiguration(credentials.getTenantId()).compose(tenantConfig -> {
+                return getTenantConfiguration(credentials.getTenantId(), currentSpan.context()).compose(tenantConfig -> {
                     if (tenantConfig.isAdapterEnabled(getTypeName())) {
                         LOG.debug("protocol adapter [{}] is enabled for tenant [{}]",
                                 getTypeName(), credentials.getTenantId());
@@ -427,10 +447,12 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
                     usernamePasswordAuthProvider.authenticate(credentials, result.completer());
                     return result;
                 }).compose(authenticatedDevice -> {
+                    currentSpan.log(String.format("device authenticated"));
                     LOG.debug("successfully authenticated device [tenant-id: {}, auth-id: {}, device-id: {}]",
                             authenticatedDevice.getTenantId(), credentials.getAuthId(),
                             authenticatedDevice.getDeviceId());
                     return triggerLinkCreation(authenticatedDevice.getTenantId()).map(done -> {
+                        currentSpan.log(String.format("opened downstream links"));
                         onAuthenticationSuccess(endpoint, authenticatedDevice);
                         return null;
                     }).compose(ok -> accepted(authenticatedDevice));
@@ -475,7 +497,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
     }
 
     private void handlePublishedMessage(final MqttContext context) {
-        // there is is no way to extract a SpanContext from an MQTT 3.1 message
+        // there is no way to extract a SpanContext from an MQTT 3.1 message
         // so we start a new one for every message
         final Span span = tracer.buildSpan("upload message")
             .ignoreActiveSpan()
@@ -483,6 +505,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
             .withTag(Tags.MESSAGE_BUS_DESTINATION.getKey(), context.message().topicName())
             .withTag(TracingHelper.TAG_QOS.getKey(), context.message().qosLevel().toString())
             .withTag(Tags.COMPONENT.getKey(), getTypeName())
+            .withTag(TracingHelper.TAG_CLIENT_ID.getKey(), context.deviceEndpoint().clientIdentifier())
             .start();
         context.put(KEY_CURRENT_SPAN, span);
         onPublishedMessage(context).setHandler(processing -> {
@@ -611,7 +634,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
 
             final Future<JsonObject> tokenTracker = getRegistrationAssertion(tenant, deviceId,
                     ctx.authenticatedDevice());
-            final Future<TenantObject> tenantConfigTracker = getTenantConfiguration(tenant);
+            final Future<TenantObject> tenantConfigTracker = getTenantConfiguration(tenant, currentSpan);
 
             return CompositeFuture.all(tokenTracker, tenantConfigTracker, senderTracker).compose(ok -> {
 

@@ -129,7 +129,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         when(regClient.assertRegistration(anyString(), any())).thenReturn(Future.succeededFuture(result));
 
         tenantClient = mock(TenantClient.class);
-        when(tenantClient.get(anyString())).thenAnswer(invocation -> {
+        when(tenantClient.get(anyString(), (SpanContext) any())).thenAnswer(invocation -> {
             return Future.succeededFuture(TenantObject.from(invocation.getArgument(0), true));
         });
 
@@ -255,7 +255,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         myTenantConfig.addAdapterConfiguration(new JsonObject()
                 .put(TenantConstants.FIELD_ADAPTERS_TYPE, ADAPTER_TYPE)
                 .put(TenantConstants.FIELD_ENABLED, false));
-        when(tenantClient.get("my-tenant")).thenReturn(Future.succeededFuture(myTenantConfig));
+        when(tenantClient.get(eq("my-tenant"), (SpanContext) any())).thenReturn(Future.succeededFuture(myTenantConfig));
         final AbstractVertxBasedMqttProtocolAdapter<ProtocolAdapterProperties> adapter = getAdapter(server);
         forceClientMocksToConnected();
 
@@ -417,7 +417,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         myTenantConfig.addAdapterConfiguration(new JsonObject()
                 .put(TenantConstants.FIELD_ADAPTERS_TYPE, ADAPTER_TYPE)
                 .put(TenantConstants.FIELD_ENABLED, false));
-        when(tenantClient.get("my-tenant")).thenReturn(Future.succeededFuture(myTenantConfig));
+        when(tenantClient.get(eq("my-tenant"), (SpanContext) any())).thenReturn(Future.succeededFuture(myTenantConfig));
         final AbstractVertxBasedMqttProtocolAdapter<ProtocolAdapterProperties> adapter = getAdapter(server);
         forceClientMocksToConnected();
         final MessageSender sender = mock(MessageSender.class);

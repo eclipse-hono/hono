@@ -9,6 +9,7 @@
  * Contributors:
  *    Bosch Software Innovations GmbH - initial creation
  *    Red Hat Inc
+ *    Bosch Software Innovations GmbH - add Open Tracing support
  */
 package org.eclipse.hono.service;
 
@@ -50,6 +51,7 @@ import org.eclipse.hono.util.TenantObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 
+import io.opentracing.SpanContext;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -642,10 +644,31 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * @throws NullPointerException if tenant ID is {@code null}.
      */
     protected final Future<TenantObject> getTenantConfiguration(final String tenantId) {
+        Objects.requireNonNull(tenantId);
+        return getTenantClient().compose(client -> client.get(tenantId));
+    }
+
+    /**
+     * Gets configuration information for a tenant.
+     * <p>
+     * The returned JSON object contains information as defined by Hono's
+     * <a href="https://www.eclipse.org/hono/api/tenant-api/#response-payload">Tenant API</a>.
+     * 
+     * @param tenantId The tenant to retrieve information for.
+     * @param context The currently active OpenTracing span that is used to
+     *                trace the retrieval of the tenant configuration.
+     * @return A future indicating the outcome of the operation.
+     *         <p>
+     *         The future will fail if the information cannot be retrieved. The cause will be a
+     *         {@link ServiceInvocationException} containing a corresponding error code.
+     *         <p>
+     *         Otherwise the future will contain the configuration information.
+     * @throws NullPointerException if tenant ID is {@code null}.
+     */
+    protected final Future<TenantObject> getTenantConfiguration(final String tenantId, final SpanContext context) {
 
         Objects.requireNonNull(tenantId);
-
-        return getTenantClient().compose(client -> client.get(tenantId));
+        return getTenantClient().compose(client -> client.get(tenantId, context));
     }
 
     /**

@@ -37,6 +37,22 @@ public final class TracingHelper {
      */
     public static final BooleanTag TAG_AUTHENTICATED = new BooleanTag("authenticated");
     /**
+     * An OpenTracing tag that is used to indicate if the result of an operation
+     * has been taken from a local cache.
+     */
+    public static final BooleanTag TAG_CACHE_HIT = new BooleanTag("cache_hit");
+    /**
+     * An OpenTracing tag that contains the (transport protocol specific) identifier of a
+     * client connecting to a server. This could be the MQTT <em>client identifier</em> or the
+     * AMQP 1.0 <em>container name</em>.
+     */
+    public static final StringTag TAG_CLIENT_ID = new StringTag("client_id");
+    /**
+     * An OpenTracing tag that contains the identifier used to correlate a response
+     * with a request message.
+     */
+    public static final StringTag TAG_CORRELATION_ID = new StringTag("message_bus.correlation_id");
+    /**
      * An OpenTracing tag that contains the number of available credits for a sender link.
      */
     public static final IntTag TAG_CREDIT = new IntTag("message_bus.credit");
