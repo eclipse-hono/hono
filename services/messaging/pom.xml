@@ -16,6 +16,7 @@
     <vertx.health.port>8088</vertx.health.port>
     <vertx.health.path>/liveness</vertx.health.path>
     <vertx.health.readiness.path>/readiness</vertx.health.readiness.path>
+    <prometheus.scrape.port>9779</prometheus.scrape.port>
   </properties>
 
   <dependencies>
@@ -68,6 +69,7 @@
                       <port>5671</port>
                       <port>5672</port>
                       <port>${vertx.health.port}</port>
+                      <port>${prometheus.scrape.port}</port>
                     </ports>
                     <entryPoint>
                       <exec>

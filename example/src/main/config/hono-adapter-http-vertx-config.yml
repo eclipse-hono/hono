@@ -44,11 +44,14 @@ hono:
     certPath: ${secret.path}/http-adapter-cert.pem
     trustStorePath: ${secret.path}/trusted-certs.pem
   metric:
-    reporter:
-      graphite:
-        active: true
-        host: influxdb.hono
-        port: 2003
+   jvm:
+      memory: true
+      thread: true
+      vertx: true
+   reporter:
+     prometheus:
+       active: true
+       port: 9779
 # disable spring boot actuator endpoints, enable metrics
 endpoints:
   enabled: false

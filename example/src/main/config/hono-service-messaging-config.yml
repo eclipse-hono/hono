@@ -25,8 +25,11 @@ hono:
     validation:
       sharedSecret: ${hono.regAssertion.sharedSecret}
   metric:
-    reporter:
-      graphite:
-        active: true
-        host: influxdb.hono
-        port: 2003
+   jvm:
+      memory: true
+      thread: true
+      vertx: true
+   reporter:
+     prometheus:
+       active: true
+       port: 9779

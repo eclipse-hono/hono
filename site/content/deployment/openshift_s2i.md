@@ -53,6 +53,10 @@ Or upgrade your existing installation using:
 
 {{% /warning %}}
 
+If you want to use metrics, then your OpenShift cluster needs to be setup up
+with Prometheus. For more information about deploying Prometheus also see 
+[Deploying Prometheus Using Ansible Installer](https://docs.openshift.org/latest/install_config/cluster_metrics.html#openshift-prometheus-deploy).
+
 ### Assumptions
 
 This tutorial makes the following assumptions about your environment, if those
@@ -83,6 +87,9 @@ This tutorial is targeted towards running Hono on a production-ready OpenShift
 cluster. However it still is possible and useful to run the same setup on
 a local test cluster with "minishift".
 
+Also see [Prometheus support]({{< relref "openshift.md#prometheus-support" >}})
+on how to enable Prometheus support with Minishift.
+
 Minishift is a tool that helps you run OpenShift locally by running a
 single-node OpenShift cluster inside a VM. Follow
 [this guide](https://docs.openshift.org/latest/minishift/getting-started/index.html)
@@ -92,7 +99,6 @@ The default resource limits for Minishift however are to small, so please
 ensure that you are running Minishift with the following settings:
 
     minishift start --cpus 4 --memory 16GB --disk-size 40GB
-
 
 {{% note title="Resource limits" %}}
 Once you created your Minishift cluster instance with `minishift start` the
@@ -256,10 +262,6 @@ Next you will need to configure EnMasse to provide the required resources:
 Start by creating a new project using:
 
     oc new-project hono --display-name='Eclipse Hono™'
-
-Create the InfluxDB ConfigMap from the local file:
-
-    oc create configmap influxdb-config --from-file="../influxdb.conf"
 
 Then process and execute the main Hono template:
 

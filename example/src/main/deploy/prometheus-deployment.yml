@@ -1,0 +1,81 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: Role
+metadata:
+  name: prometheus-role
+rules:
+- apiGroups: [""]
+  resources: ["services", "endpoints", "pods"]
+  verbs: ["get", "list", "watch"]
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: prometheus-sa
+---
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: prometheus-binding
+subjects:
+- kind: ServiceAccount
+  name: prometheus-sa
+  namespace: hono
+roleRef:
+  kind: Role
+  name: prometheus-role
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  labels:
+    app: hono-metrics
+    version: "${project.version}"
+    group: ${project.groupId}
+  name: prometheus
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: hono-metrics
+      role: influxdb
+      group: ${project.groupId}
+  template:
+    metadata:
+      labels:
+        app: hono-metrics
+        role: influxdb
+        version: "${project.version}"
+        group: ${project.groupId}
+    spec:
+      serviceAccountName: prometheus-sa
+      containers:
+      - name: prometheus
+        image: ${prometheus.image.name}
+        imagePullPolicy: IfNotPresent
+        command:
+        - /bin/prometheus
+        args:
+        - --config.file=/etc/prometheus/prometheus.yml
+        - --storage.tsdb.path=/prometheus
+        - --storage.tsdb.retention=24h
+        ports:
+        - containerPort: 9090
+          protocol: TCP
+        resources:
+          requests:
+            memory: 256Mi
+          limits:
+            memory: 1Gi
+        volumeMounts:
+        - mountPath: /prometheus
+          name: data
+        - mountPath: /etc/prometheus
+          name: config
+      volumes:
+      - name: config
+        configMap:
+          name: prometheus-conf
+      - name: data
+        emptyDir: {}

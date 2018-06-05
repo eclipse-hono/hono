@@ -217,6 +217,7 @@
             </images>
             <enricher>
               <includes>
+                <include>f8-prometheus</include>
                 <include>fmp-controller</include>
                 <include>fmp-image</include>
                 <include>fmp-service</include>

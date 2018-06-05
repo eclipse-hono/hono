@@ -26,15 +26,15 @@ echo DEPLOYING ECLIPSE HONO TO KUBERNETES
 kubectl create namespace $NS
 
 echo
-echo "Deploying influxDB & Grafana ..."
+echo "Deploying Prometheus & Grafana ..."
 
 kubectl create serviceaccount useroot --namespace $NS
 
-kubectl create secret generic influxdb-conf \
-  --from-file=$SCRIPTPATH/../influxdb.conf \
+kubectl create configmap prometheus-conf \
+  --from-file=$SCRIPTPATH/../prometheus.yml \
   --namespace $NS
-kubectl create -f $SCRIPTPATH/../influxdb-deployment.yml --namespace $NS
-kubectl create -f $SCRIPTPATH/../influxdb-svc.yml --namespace $NS
+kubectl create -f $SCRIPTPATH/../prometheus-deployment.yml --namespace $NS
+kubectl create -f $SCRIPTPATH/../prometheus-svc.yml --namespace $NS
 kubectl create -f $SCRIPTPATH/../grafana-deployment.yml --namespace $NS
 kubectl create -f $SCRIPTPATH/../grafana-svc.yml --namespace $NS
 echo ... done

@@ -11,3 +11,12 @@ hono:
       insecurePortEnabled: true
     svc:
       permissionsPath: file://${secret.path}/permissions.json
+  metric:
+   jvm:
+      memory: true
+      thread: true
+      vertx: true
+   reporter:
+     prometheus:
+       active: true
+       port: 9779

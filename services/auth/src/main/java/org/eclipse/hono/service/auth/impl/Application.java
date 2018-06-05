@@ -28,7 +28,7 @@ import io.vertx.core.Future;
  * a connection that has been authenticated using SASL.
  *
  */
-@ComponentScan(basePackages = "org.eclipse.hono.service.auth")
+@ComponentScan("org.eclipse.hono.service")
 @Configuration
 @EnableAutoConfiguration
 public class Application extends AbstractApplication {

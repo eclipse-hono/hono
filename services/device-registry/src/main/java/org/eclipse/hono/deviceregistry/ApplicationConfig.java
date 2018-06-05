@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2017 Bosch Software Innovations GmbH.
+ * Copyright (c) 2017 Bosch Software Innovations GmbH and others.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -8,17 +8,20 @@
  *
  * Contributors:
  *    Bosch Software Innovations GmbH - initial creation
+ *    Red Hat Inc
  */
 
 package org.eclipse.hono.deviceregistry;
 
 import io.vertx.core.VertxOptions;
 import io.vertx.core.dns.AddressResolverOptions;
+import io.vertx.core.metrics.MetricsOptions;
 
 import org.eclipse.hono.config.ApplicationConfigProperties;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.credentials.CredentialsAmqpEndpoint;
 import org.eclipse.hono.service.credentials.CredentialsHttpEndpoint;
+import org.eclipse.hono.service.metric.MetricConfig;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelper;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelperImpl;
 import org.eclipse.hono.service.registration.RegistrationHttpEndpoint;
@@ -26,6 +29,7 @@ import org.eclipse.hono.service.registration.RegistrationAmqpEndpoint;
 import org.eclipse.hono.service.tenant.TenantAmqpEndpoint;
 import org.eclipse.hono.service.tenant.TenantHttpEndpoint;
 import org.eclipse.hono.util.Constants;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.config.ObjectFactoryCreatingFactoryBean;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -45,6 +49,19 @@ public class ApplicationConfig {
     private static final String BEAN_NAME_DEVICE_REGISTRY_AMQP_SERVER = "deviceRegistryAmqpServer";
     private static final String BEAN_NAME_DEVICE_REGISTRY_REST_SERVER = "deviceRegistryRestServer";
 
+    private MetricsOptions metricsOptions;
+
+    /**
+     * Vert.x metrics options, if configured.
+     *
+     * @param metricsOptions Vert.x metrics options
+     * @see MetricConfig
+     */
+    @Autowired(required = false)
+    public void setMetricsOptions(final MetricsOptions metricsOptions) {
+        this.metricsOptions = metricsOptions;
+    }
+
     /**
      * Gets the singleton Vert.x instance to be used by Hono.
      * 
@@ -58,6 +75,9 @@ public class ApplicationConfig {
                         .setCacheNegativeTimeToLive(0) // discard failed DNS lookup results immediately
                         .setCacheMaxTimeToLive(0) // support DNS based service resolution
                         .setQueryTimeout(1000));
+        if (metricsOptions != null) {
+            options.setMetricsOptions(metricsOptions);
+        }
         return Vertx.vertx(options);
     }
 

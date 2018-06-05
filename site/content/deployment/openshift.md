@@ -61,6 +61,8 @@ single-node OpenShift cluster inside a VM. Follow
 [this guide](https://docs.openshift.org/latest/minishift/getting-started/index.html)
 for installing and having Minishift up and running.
 
+#### Creating a new instance
+
 OpenShift limits the number of pods you can start by the number of system
 resources available. Minishift will only provide a small subset of your host
 machine resources by default. However this is too limited for a Hono deployment
@@ -78,6 +80,29 @@ resource arguments (like `--cpus`) are ignored in future calls to
 need to destroy the instance using `minishift delete` before it will accept
 the new resource limits.
 {{% /note %}}
+
+#### Prometheus support
+
+You will need to enable two additional Minishift plugins for deploying
+Prometheus (also see: <https://github.com/minishift/minishift-addons/tree/master/add-ons/prometheus>).
+You will only need to do this once after you installed Minishift:
+
+~~~sh
+$ minishift addon install --defaults
+$ git clone https://github.com/minishift/minishift-addons
+$ cd minishift-addons/addons
+$ minishift addon install prometheus
+~~~
+
+By default those plugins will be disabled and need to explicitly applied to a
+Minishift instance by executing `minishift addon apply`:
+
+~~~sh
+$ minishift addon apply admin-user
+$ minishift addon apply prometheus --addon-env namespace=kube-system
+~~~
+
+#### Building with Minishift
 
 After Minishift has been started up, the following steps need to be performed:
 

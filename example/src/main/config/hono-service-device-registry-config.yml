@@ -36,4 +36,12 @@ hono:
     svc:
       filename: /var/lib/hono/device-registry/tenants.json
       saveToFile: true
-
+  metric:
+   jvm:
+      memory: true
+      thread: true
+      vertx: true
+   reporter:
+     prometheus:
+       active: true
+       port: 9779

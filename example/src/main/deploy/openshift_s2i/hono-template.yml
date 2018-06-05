@@ -40,12 +40,6 @@ parameters:
   description:     The name of the project/namespace EnMasse is deployed to.
   required:        true
   value:           enmasse
-- name:         INFLUXDB_STORAGE_SIZE
-  description:     The size of the persistent volume claim for the Influx DB.
-                   You need to ensure that a persistent volume of that size
-                   will be available for binding. 
-  required:        true
-  value:           20Gi
 
 objects:
 
@@ -223,136 +217,6 @@ objects:
         kind: ImageStreamTag
         name: fabric8-s2i-java-custom:2.2
 
-# InfluxDB
-
-- kind: ImageStream
-  apiVersion: v1
-  metadata:
-    name: influxdb
-  spec:
-    tags:
-    - from:
-        kind: DockerImage
-        name: influxdb:1.4-alpine
-      importPolicy:
-        scheduled: true
-      name: "1.4"
-      referencePolicy:
-        type: Source
-
-- kind: PersistentVolumeClaim
-  apiVersion: v1
-  metadata:
-    name: influxdb-pvc
-  spec:
-    accessModes:
-    - ReadWriteOnce
-    resources:
-      requests:
-        storage: ${INFLUXDB_STORAGE_SIZE}
-
-- kind: DeploymentConfig
-  apiVersion: v1
-  metadata:
-    name: influxdb
-    labels:
-      app: hono-metrics
-      deploymentconfig: influxdb
-  spec:
-    replicas: 1
-    selector:
-      app: hono-metrics
-      deploymentconfig: influxdb
-    strategy:
-      type: Recreate
-      recreateParams:
-        timeoutSeconds: 3600
-    triggers:
-      - type: ConfigChange
-      - type: ImageChange
-        imageChangeParams:
-          automatic: true
-          containerNames:
-            - eclipsehono-influxdb
-          from:
-            kind: ImageStreamTag
-            name: influxdb:1.4
-    template:
-      metadata:
-        labels:
-          app: hono-metrics
-          deploymentconfig: influxdb
-      spec:
-        containers:
-        - name: eclipsehono-influxdb
-          image: influxdb
-          imagePullPolicy: Always
-          args:
-          - -config
-          - /etc/config/influxdb.conf
-          readinessProbe:
-            initialDelaySeconds: 5
-            periodSeconds: 5
-            tcpSocket:
-              port: 2003
-            timeoutSeconds: 1
-          livenessProbe:
-            initialDelaySeconds: 20
-            periodSeconds: 9
-            tcpSocket:
-              port: 2003
-            timeoutSeconds: 1
-          ports:
-          - containerPort: 8086
-            name: api
-            protocol: TCP
-          - containerPort: 8083
-            name: admin
-            protocol: TCP
-          - containerPort: 2003
-            name: graphite
-            protocol: TCP
-          resources:
-            limits:
-              memory: 2Gi
-          volumeMounts:
-          - mountPath: /var/lib/influxdb
-            name: influxdb-storage
-          - mountPath: /etc/config
-            name: conf
-        volumes:
-        - name: influxdb-storage
-          persistentVolumeClaim:
-            claimName: influxdb-pvc
-        - name: conf
-          configMap:
-            name: influxdb-config
-
-- kind: Service
-  apiVersion: v1
-  metadata:
-    labels:
-      app: hono-metrics
-      deploymentconfig: influxdb
-    name: influxdb
-  spec:
-    ports:
-    - name: graphite
-      port: 2003
-      protocol: TCP
-      targetPort: 2003
-    - name: admin
-      port: 8083
-      protocol: TCP
-      targetPort: 8083
-    - name: api
-      port: 8086
-      protocol: TCP
-      targetPort: 8086
-    selector:
-      app: hono-metrics
-      deploymentconfig: influxdb
-
 # hono-adapter-mqtt-vertx
 
 - kind: ImageStream
@@ -458,10 +322,14 @@ objects:
           trustStoreFormat: PEM
           credentialsPath: /etc/secrets/credentials.properties
         metric:
-          reporter:
-            graphite:
-              active: true
-              port: 2003
+         jvm:
+            memory: true
+            thread: true
+            vertx: true
+         reporter:
+           prometheus:
+             active: true
+             port: 9779
       # disable spring boot actuator endpoints, enable metrics
       endpoints:
         enabled: false
@@ -560,8 +428,6 @@ objects:
             value: hono-service-device-registry.$(KUBERNETES_NAMESPACE).svc
           - name: HONO_TENANT_HOST
             value: hono-service-device-registry.$(KUBERNETES_NAMESPACE).svc
-          - name: HONO_METRIC_REPORTER_GRAPHITE_HOST
-            value: influxdb.$(KUBERNETES_NAMESPACE).svc
           - name: AB_JOLOKIA_USER
             value: jolokia
           - name: AB_JOLOKIA_PASSWORD_RANDOM
@@ -629,6 +495,8 @@ objects:
       deploymentconfig: hono-adapter-mqtt-vertx
     annotations:
       service.alpha.openshift.io/serving-cert-secret-name: hono-adapter-mqtt-vertx-tls
+      prometheus.io/port: "9779"
+      prometheus.io/scrape: "true"
   spec:
     ports:
       - name: mqtt
@@ -794,10 +662,14 @@ objects:
           trustStoreFormat: PEM
           credentialsPath: /etc/secrets/credentials.properties
         metric:
-          reporter:
-            graphite:
-              active: true
-              port: 2003
+         jvm:
+            memory: true
+            thread: true
+            vertx: true
+         reporter:
+           prometheus:
+             active: true
+             port: 9779
       # disable spring boot actuator endpoints, enable metrics
       endpoints:
         enabled: false
@@ -896,8 +768,6 @@ objects:
             value: hono-service-device-registry.$(KUBERNETES_NAMESPACE).svc
           - name: HONO_TENANT_HOST
             value: hono-service-device-registry.$(KUBERNETES_NAMESPACE).svc
-          - name: HONO_METRIC_REPORTER_GRAPHITE_HOST
-            value: influxdb.$(KUBERNETES_NAMESPACE).svc
           - name: AB_JOLOKIA_USER
             value: jolokia
           - name: AB_JOLOKIA_PASSWORD_RANDOM
@@ -934,6 +804,8 @@ objects:
           - containerPort: 8443
             name: pcsync-https
             protocol: TCP
+          - containerPort: 9779
+            name: prometheus
           securityContext:
             privileged: false
           volumeMounts:
@@ -965,6 +837,8 @@ objects:
       deploymentconfig: hono-adapter-http-vertx
     annotations:
       service.alpha.openshift.io/serving-cert-secret-name: hono-adapter-http-vertx-tls
+      prometheus.io/port: "9779"
+      prometheus.io/scrape: "true"
   spec:
     ports:
       - name: http
@@ -1094,6 +968,16 @@ objects:
           svc:
             filename: /var/lib/hono/device-registry/tenants.json
             saveToFile: true
+        metric:
+         jvm:
+            memory: true
+            thread: true
+            vertx: true
+         reporter:
+           prometheus:
+             active: true
+             port: 9779
+
 
     logback-spring.xml: |+
         <?xml version="1.0" encoding="UTF-8"?>
@@ -1212,8 +1096,6 @@ objects:
                 fieldPath: metadata.namespace
           - name: HONO_AUTH_HOST
             value: hono-service-auth.$(KUBERNETES_NAMESPACE).svc
-          - name: HONO_METRIC_REPORTER_GRAPHITE_HOST
-            value: influxdb.$(KUBERNETES_NAMESPACE).svc
           - name: HONO_REGISTRY_SVC_SAVE_TO_FILE
             value: "true"
           - name: HONO_REGISTRY_SVC_MAX_DEVICES_PER_TENANT
@@ -1303,6 +1185,8 @@ objects:
       deploymentconfig: hono-service-device-registry
     annotations:
       service.alpha.openshift.io/serving-cert-secret-name: hono-service-device-registry-tls
+      prometheus.io/port: "9779"
+      prometheus.io/scrape: "true"
   spec:
     ports:
     - name: amqps
@@ -1414,6 +1298,15 @@ objects:
             insecurePortBindAddress: 0.0.0.0
         svc:
           permissionsPath: file:///etc/config/permissions.json
+        metric:
+         jvm:
+            memory: true
+            thread: true
+            vertx: true
+         reporter:
+           prometheus:
+             active: true
+             port: 9779
 
     permissions.json: |+
       {
@@ -1586,8 +1479,6 @@ objects:
             value: authentication-impl
           - name: LOGGING_CONFIG
             value: file:///etc/config/logback-spring.xml
-          - name: HONO_METRIC_REPORTER_GRAPHITE_HOST
-            value: influxdb.$(KUBERNETES_NAMESPACE).svc
           - name: HONO_AUTH_SVC_SIGNING_SHARED_SECRET
             valueFrom:
               secretKeyRef:
@@ -1658,6 +1549,8 @@ objects:
       deploymentconfig: hono-service-auth
     annotations:
       service.alpha.openshift.io/serving-cert-secret-name: hono-service-auth-tls
+      prometheus.io/port: "9779"
+      prometheus.io/scrape: "true"
   spec:
     ports:
     - name: amqps
@@ -1737,10 +1630,14 @@ objects:
           keyFormat: PEM
           bindAddress: 0.0.0.0
         metric:
-          reporter:
-            graphite:
-              active: true
-              port: 2003
+         jvm:
+            memory: true
+            thread: true
+            vertx: true
+         reporter:
+           prometheus:
+             active: true
+             port: 9779
 
     logback-spring.xml: |+
         <?xml version="1.0" encoding="UTF-8"?>
@@ -1854,8 +1751,6 @@ objects:
                 key: downstream.port
           - name: HONO_AUTH_HOST
             value: hono-service-auth.$(KUBERNETES_NAMESPACE).svc
-          - name: HONO_METRIC_REPORTER_GRAPHITE_HOST
-            value: influxdb.$(KUBERNETES_NAMESPACE).svc
           - name: AB_JOLOKIA_USER
             value: jolokia
           - name: AB_JOLOKIA_PASSWORD_RANDOM
@@ -1914,6 +1809,8 @@ objects:
       deploymentconfig: hono-service-messaging
     annotations:
       service.alpha.openshift.io/serving-cert-secret-name: hono-service-messaging-tls
+      prometheus.io/port: "9779"
+      prometheus.io/scrape: "true"
   spec:
     ports:
     - name: amqps

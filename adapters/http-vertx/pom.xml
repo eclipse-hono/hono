@@ -59,6 +59,7 @@
                       <port>8080</port>
                       <port>8443</port>
                       <port>${vertx.health.port}</port>
+                      <port>${prometheus.scrape.port}</port>
                     </ports>
                     <cmd>
                       <exec>

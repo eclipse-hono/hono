@@ -16,7 +16,9 @@ import org.eclipse.hono.config.ApplicationConfigProperties;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.auth.AuthTokenHelper;
 import org.eclipse.hono.service.auth.AuthTokenHelperImpl;
+import org.eclipse.hono.service.metric.MetricConfig;
 import org.eclipse.hono.util.AuthenticationConstants;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.config.ObjectFactoryCreatingFactoryBean;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -26,6 +28,8 @@ import org.springframework.context.annotation.Configuration;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
 import io.vertx.core.dns.AddressResolverOptions;
+import io.vertx.core.metrics.MetricsOptions;
+
 import org.springframework.context.annotation.Scope;
 
 /**
@@ -36,6 +40,19 @@ import org.springframework.context.annotation.Scope;
 public class ApplicationConfig {
 
     private static final String BEAN_NAME_SIMPLE_AUTHENTICATION_SERVER = "simpleAuthenticationServer";
+
+    private MetricsOptions metricsOptions;
+
+    /**
+     * Vert.x metrics options, if configured.
+     *
+     * @param metricsOptions Vert.x metrics options
+     * @see MetricConfig
+     */
+    @Autowired(required = false)
+    public void setMetricsOptions(final MetricsOptions metricsOptions) {
+        this.metricsOptions = metricsOptions;
+    }
 
     /**
      * Gets the singleton Vert.x instance to be used by Hono.
@@ -50,6 +67,9 @@ public class ApplicationConfig {
                         .setCacheNegativeTimeToLive(0) // discard failed DNS lookup results immediately
                         .setCacheMaxTimeToLive(0) // support DNS based service resolution
                         .setQueryTimeout(1000));
+        if (metricsOptions != null) {
+            options.setMetricsOptions(metricsOptions);
+        }
         return Vertx.vertx(options);
     }
 

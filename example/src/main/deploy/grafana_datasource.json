@@ -1,8 +1,7 @@
 {
-  "name": "hono_data",
-  "type": "influxdb",
-  "database": "graphite",
-  "url": "http://influxdb.hono:8086",
+  "name": "hono_metrics",
+  "type": "prometheus",
+  "url": "http://prometheus.hono:9090",
   "access": "proxy",
   "basicAuth": false
 }

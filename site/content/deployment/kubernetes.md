@@ -17,7 +17,7 @@ for installing and having Minikube up and running.
 The other prerequisite is to have the Kubectl command line tool for interacting with the Kubernetes cluster. Follow [this guide](https://kubernetes.io/docs/tasks/tools/install-kubectl/) 
 for installing and configuring such a tool.
 
-After launching Minikube and before building the Eclipse Hono images, it's necessary to execute the following command :
+After launching Minikube and before building the Eclipse Hono images, it's necessary to execute the following command:
 
 ~~~sh
 $ eval $(minikube docker-env)

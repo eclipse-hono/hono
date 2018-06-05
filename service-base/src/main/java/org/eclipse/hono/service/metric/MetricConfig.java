@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016, 2017 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2018 Bosch Software Innovations GmbH and others.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -8,6 +8,7 @@
  *
  * Contributors:
  *    Bosch Software Innovations GmbH - initial creation
+ *    Red Hat Inc
  */
 
 package org.eclipse.hono.service.metric;
@@ -33,6 +34,7 @@ import com.codahale.metrics.graphite.GraphiteReporter;
 import com.codahale.metrics.jvm.MemoryUsageGaugeSet;
 import com.codahale.metrics.jvm.ThreadStatesGaugeSet;
 
+import io.vertx.core.Vertx;
 import io.vertx.core.metrics.MetricsOptions;
 import io.vertx.ext.dropwizard.DropwizardMetricsOptions;
 
@@ -42,7 +44,7 @@ import io.vertx.ext.dropwizard.DropwizardMetricsOptions;
 @Configuration
 public class MetricConfig {
 
-    private static final String HONO    = "hono";
+    private static final String HONO = "hono";
     private static final String UNKNOWN = "unknown";
 
     private static final Logger LOG = LoggerFactory.getLogger(MetricConfig.class);
@@ -78,7 +80,7 @@ public class MetricConfig {
     @ConditionalOnProperty(prefix = "hono.metric.jvm", name = "memory", havingValue = "true")
     public MemoryUsageGaugeSet jvmMetricsMemory() {
         LOG.info("metrics - jvm/memory activated");
-        return metricRegistry.register(prefix + ".jvm.memory", new MemoryUsageGaugeSet());
+        return metricRegistry.register(prefix(this.prefix, "jvm.memory"), new MemoryUsageGaugeSet());
     }
 
     /**
@@ -90,7 +92,7 @@ public class MetricConfig {
     @ConditionalOnProperty(prefix = "hono.metric.jvm", name = "thread", havingValue = "true")
     public ThreadStatesGaugeSet jvmMetricsThreads() {
         LOG.info("metrics - jvm/threads activated");
-        return metricRegistry.register(prefix + ".jvm.thread", new ThreadStatesGaugeSet());
+        return metricRegistry.register(prefix(this.prefix, "jvm.thread"), new ThreadStatesGaugeSet());
     }
 
     /**
@@ -104,8 +106,11 @@ public class MetricConfig {
         LOG.info("metrics - vertx activated");
         SharedMetricRegistries.add(HONO, metricRegistry);
         SharedMetricRegistries.setDefault(HONO, metricRegistry);
-        return new DropwizardMetricsOptions().setEnabled(true).setRegistryName(HONO)
-                .setBaseName(prefix + ".vertx").setJmxEnabled(true);
+        return new DropwizardMetricsOptions()
+                .setEnabled(true)
+                .setRegistryName(HONO)
+                .setBaseName(prefix(this.prefix, "vertx"))
+                .setJmxEnabled(true);
     }
 
     /**
@@ -119,7 +124,7 @@ public class MetricConfig {
     public ConsoleReporter consoleMetricReporter(
             @Value("${hono.metric.reporter.console.period:5000}") final Long period) {
         LOG.info("metrics - console reporter activated");
-        final ConsoleReporter consoleReporter = ConsoleReporter.forRegistry(metricRegistry)
+        final ConsoleReporter consoleReporter = ConsoleReporter.forRegistry(this.metricRegistry)
                 .convertRatesTo(TimeUnit.SECONDS)
                 .convertDurationsTo(TimeUnit.MILLISECONDS)
                 .filter(MetricFilter.ALL)
@@ -150,7 +155,7 @@ public class MetricConfig {
         if (processedPrefix.isEmpty()) {
             try {
                 processedPrefix = InetAddress.getLocalHost().getHostName();
-            } catch (UnknownHostException exception) {
+            } catch (final UnknownHostException exception) {
                 processedPrefix = UNKNOWN;
             }
         }
@@ -165,4 +170,36 @@ public class MetricConfig {
         return reporter;
     }
 
+    /**
+     * Gets a new instance for a Prometheus reporter.
+     * 
+     * @param vertx The vertx context used to the create the HTTP endpoint.
+     * @param port The port number to bind the endpoint to.
+     * @return The new prometheus reporter instance.
+     */
+    @Bean
+    @ConditionalOnProperty(prefix = "hono.metric.reporter.prometheus", name = "active", havingValue = "true")
+    public PrometheusMetricsReporter prometheusMetricReporter(
+            final Vertx vertx,
+            @Value("${hono.metric.reporter.prometheus.port:9779}") final int port
+            ) {
+
+        LOG.info("metrics - prometheus reporter activated");
+
+        final PrometheusMetricsReporter reporter = new PrometheusMetricsReporter(vertx, port, this.metricRegistry);
+        reporter.start();
+        return reporter;
+    }
+
+    private static String prefix(final String prefix, final String string) {
+        if (prefix == null || prefix.isEmpty()) {
+            return string;
+        }
+
+        if (string == null) {
+            return null;
+        }
+
+        return prefix + "." + string;
+    }
 }
