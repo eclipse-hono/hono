@@ -1,5 +1,5 @@
 {
-    "apiVersion": "enmasse.io/v1",
+    "apiVersion": "enmasse.io/v1alpha1",
     "kind": "AddressList",
     "items": [
       {

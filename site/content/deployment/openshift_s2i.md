@@ -226,8 +226,8 @@ Start by creating a new project using:
 
 Then download and unpack EnMasse:
 
-    curl -LO https://github.com/EnMasseProject/enmasse/releases/download/0.19.0/enmasse-0.19.0.tgz
-    tar xzf enmasse-0.19.0.tgz
+    curl -LO https://github.com/EnMasseProject/enmasse/releases/download/0.20.0/enmasse-0.20.0.tgz
+    tar xzf enmasse-0.20.0.tgz
 
 {{% note title="Newer versions" %}}
 Newer versions of EnMasse might work as well, or might require some changes to
@@ -235,7 +235,7 @@ the deployment guide. Unless you explicitly want to try out a different version
 it is recommended to stick to the version mentioned in this tutorial.
 {{% /note %}}
 
-    ./enmasse-0.19.0/deploy-openshift.sh -n enmasse
+    ./enmasse-0.20.0/deploy.sh -n enmasse
 
 Wait for the admin console to completely start up. You can check this with
 the following command:
@@ -249,7 +249,8 @@ Verify that the "AVAILABLE" column shows "1":
 
 Next you will need to configure EnMasse to provide the required resources:
 
-    curl -X PUT --insecure -T "addresses.json" -H "content-type: application/json" https://$(oc -n enmasse get route restapi -o jsonpath='{.spec.host}')/apis/enmasse.io/v1/addresses/default
+    curl -X POST --insecure -T addresses.json" -H "content-type: application/json" https://$(oc -n enmasse get route restapi -o jsonpath='{.spec.host}')/apis/enmasse.io/v1alpha1/namespaces/enmasse/addressspaces/default/addresses
+    
 
 ## Setting up Hono
 

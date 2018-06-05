@@ -28,10 +28,10 @@ echo DEPLOYING ECLIPSE HONO ON OPENSHIFT
 oc project hono
 
 echo "Waiting for EnMasse..."
-wait_for_enmasse 7 hono
+wait_for_enmasse 8 hono
 
 # create addresses
-curl -X PUT -T addresses.json -H "content-type: application/json" http://$(oc get route restapi -o jsonpath='{.spec.host}')/v1/addresses/default
+curl -X POST --insecure -T "$SCRIPTPATH/addresses.json" -H "content-type: application/json" https://$(oc get route restapi -o jsonpath='{.spec.host}')/apis/enmasse.io/v1alpha1/namespaces/hono/addressspaces/default/addresses
 
 # starting to deploy Eclipse Hono (developer user)
 echo

@@ -42,9 +42,7 @@ function wait_for_enmasse {
         fi
         num_running=`oc get pods -n ${ADDRESS_SPACE} -l app=enmasse | grep -v deploy | grep -c Running`
         if [ "$num_running" -ge "$EXPECTED_PODS" ]; then
-            waiting_containers_ready ${ADDRESS_SPACE}
-            if [ $? -gt 0 ]
-            then
+            if ! waiting_containers_ready ${ADDRESS_SPACE}; then
                 echo "All pods are up but all containers are not ready yet"
                 tput cuu1 && tput civis
             else

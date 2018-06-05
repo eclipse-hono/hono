@@ -122,12 +122,12 @@ This deployment will use EnMasse as its messaging backend. So the first thing
 we need is to run EnMasse messaging platform on OpenShift in a project
 called `hono`. For that, download the EnMasse release from the
 [download page](https://github.com/EnMasseProject/enmasse/releases).
-These instructions were tested using version `0.13.2`. Newer versions might
+These instructions were tested using version `0.20.0`. Newer versions might
 work as well, but are not tested. Extract the EnMasse release and execute
 the following command from the newly created directory:
 
 ~~~sh
-./deploy-openshift.sh -n hono -m https://$(minishift ip):8443
+./deploy.sh -n hono -m https://$(minishift ip):8443
 ~~~
 
 This should get the installation of EnMasse running. For more information on
@@ -279,7 +279,7 @@ which connect directly to the router network service. You can start the client
 from the `example` folder as follows:
 
 ~~~sh
-~hono/example$ mvn spring-boot:run -Drun.arguments=--hono.client.host=$(oc get route messaging --template='{{.spec.host}}'),--hono.client.port=443,--hono.client.trustStorePath=target/config/hono-demo-certs-jar/server-cert.pem
+~hono/example$ mvn spring-boot:run -Drun.arguments=--hono.client.host=$(oc get route messaging --template='{{.spec.host}}'),--hono.client.port=443,--hono.client.trustStorePath=target/config/hono-demo-certs-jar/tls.crt
 ~~~
 
 ### Uploading Telemetry with HTTP
