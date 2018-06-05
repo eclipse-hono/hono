@@ -86,7 +86,7 @@ See [*Telemetry API*]({{< relref "Telemetry-API.md" >}}) for definition of messa
 
 # Well-known event message types
 
-Hono defines *well-known* events that are of a specific *content-type*. In the following these events (currently one) are specified in detail.
+Hono defines *well-known* events that are of a specific *content-type*. In the following these events are specified in detail.
 
 ## Empty notification
 
@@ -106,8 +106,8 @@ NB: An empty notification can be used to indicate to a *Business Application* th
 
 ## Connection Events
 
-The internal connect/disconnect events will be translated into Hono Events with
-a well known message format and type. And it will be injected into the normal
+The internal connect/disconnect events may be translated into Hono Events with
+a well known message format and type. As such they are injected into the normal
 event message stream.
 
 {{% note title="Authenticated devices only" %}}
