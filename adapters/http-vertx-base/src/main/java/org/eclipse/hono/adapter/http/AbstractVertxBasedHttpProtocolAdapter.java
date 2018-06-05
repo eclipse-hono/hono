@@ -8,6 +8,7 @@
  *
  * Contributors:
  *    Bosch Software Innovations GmbH - initial creation
+ *    Bosch Software Innovations GmbH - add Open Tracing support
  */
 
 package org.eclipse.hono.adapter.http;
@@ -564,7 +565,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                 }).orElse(null);
 
                 final Future<JsonObject> tokenTracker = getRegistrationAssertion(tenant, deviceId, authenticatedDevice);
-                final Future<TenantObject> tenantConfigTracker = getTenantConfiguration(tenant);
+                final Future<TenantObject> tenantConfigTracker = getTenantConfiguration(tenant, currentSpan);
                 final Future<MessageConsumer> commandConsumerTracker = createCommandConsumer(tenant, deviceId, ctx, responseReady);
 
                 CompositeFuture.all(tokenTracker, tenantConfigTracker, senderTracker, commandConsumerTracker).compose(ok -> {

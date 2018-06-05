@@ -9,6 +9,7 @@
  * Contributors:
  *    Bosch Software Innovations GmbH - initial creation
  *    Red Hat Inc
+ *   Bosch Software Innovations GmbH - add Open Tracing support
  */
 package org.eclipse.hono.client.impl;
 
@@ -21,10 +22,10 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
-import io.vertx.core.buffer.Buffer;
 import org.apache.qpid.proton.amqp.messaging.Accepted;
 import org.apache.qpid.proton.amqp.messaging.AmqpValue;
 import org.apache.qpid.proton.amqp.messaging.Rejected;
+import org.apache.qpid.proton.amqp.transport.DeliveryState;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.cache.ExpiringValueCache;
 import org.eclipse.hono.client.ClientErrorException;
@@ -33,6 +34,8 @@ import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.config.ClientConfigProperties;
+import org.eclipse.hono.tracing.MessageAnnotationsInjectAdapter;
+import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RequestResponseApiConstants;
@@ -41,10 +44,15 @@ import org.eclipse.hono.util.TriTuple;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.opentracing.Span;
+import io.opentracing.Tracer;
+import io.opentracing.propagation.Format;
+import io.opentracing.tag.Tags;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.buffer.Buffer;
 import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonDelivery;
 import io.vertx.proton.ProtonHelper;
@@ -74,7 +82,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
                             HttpURLConnection.HTTP_GONE
     };
 
-    private final Map<Object, TriTuple<Handler<AsyncResult<R>>, Object, Object>> replyMap = new HashMap<>();
+    private final Map<Object, TriTuple<Handler<AsyncResult<R>>, Object, Span>> replyMap = new HashMap<>();
     private final String replyToAddress;
     private final String targetAddress;
     private final String tenantId;
@@ -98,7 +106,28 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      * @throws NullPointerException if any of context or configuration are {@code null}.
      */
     AbstractRequestResponseClient(final Context context, final ClientConfigProperties config, final String tenantId) {
-        super(context, config);
+        this(context, config, (Tracer) null, tenantId);
+    }
+
+    /**
+     * Creates a request-response client.
+     * <p>
+     * The client will be ready to use after invoking {@link #createLinks(ProtonConnection, ClientConfigProperties)} only.
+     * 
+     * @param context The vert.x context to run message exchanges with the peer on.
+     * @param config The configuration properties to use.
+     * @param tracer The tracer to use for tracking request processing
+     *               across process boundaries.
+     * @param tenantId The identifier of the tenant that the client is scoped to.
+     * @throws NullPointerException if any of the parameters other than tracer is {@code null}.
+     */
+    AbstractRequestResponseClient(
+            final Context context,
+            final ClientConfigProperties config,
+            final Tracer tracer,
+            final String tenantId) {
+
+        super(context, config, tracer);
         this.requestTimeoutMillis = config.getRequestTimeout();
         if (tenantId == null) {
             this.targetAddress = getName();
@@ -141,10 +170,39 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      * @param sender The AMQP 1.0 link to use for sending requests to the peer.
      * @param receiver The AMQP 1.0 link to use for receiving responses from the peer.
      * @throws NullPointerException if any of the parameters except tenant ID is {@code null}.
+     * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    AbstractRequestResponseClient(final Context context, final ClientConfigProperties config, final String tenantId,
-            final ProtonSender sender, final ProtonReceiver receiver) {
+    AbstractRequestResponseClient(
+            final Context context,
+            final ClientConfigProperties config,
+            final String tenantId,
+            final ProtonSender sender,
+            final ProtonReceiver receiver) {
+
         this(context, config, tenantId);
+        this.sender = Objects.requireNonNull(sender);
+        this.receiver = Objects.requireNonNull(receiver);
+    }
+
+    /**
+     * Creates a request-response client for a sender and receiver link.
+     * 
+     * @param context The vert.x context to run message exchanges with the peer on.
+     * @param config The configuration properties to use.
+     * @param tenantId The identifier of the tenant that the client is scoped to.
+     * @param sender The AMQP 1.0 link to use for sending requests to the peer.
+     * @param receiver The AMQP 1.0 link to use for receiving responses from the peer.
+     * @throws NullPointerException if any of the parameters other than tracer is {@code null}.
+     */
+    AbstractRequestResponseClient(
+            final Context context,
+            final ClientConfigProperties config,
+            final Tracer tracer,
+            final String tenantId,
+            final ProtonSender sender,
+            final ProtonReceiver receiver) {
+
+        this(context, config, tracer, tenantId);
         this.sender = Objects.requireNonNull(sender);
         this.receiver = Objects.requireNonNull(receiver);
     }
@@ -302,7 +360,8 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
         // the tuple from the reply map contains
         // 1. the handler for processing the response and
         // 2. the key to use for caching the response
-        final TriTuple<Handler<AsyncResult<R>>, Object, Object> handler = replyMap.remove(message.getCorrelationId());
+        // 3. the Opentracing span covering the execution
+        final TriTuple<Handler<AsyncResult<R>>, Object, Span> handler = replyMap.remove(message.getCorrelationId());
 
         if (handler == null) {
             LOG.debug("discarding unexpected response [reply-to: {}, correlation ID: {}]",
@@ -310,14 +369,19 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
             ProtonHelper.released(delivery, true);
         } else {
             final R response = getRequestResponseResult(message);
+            final Span span = handler.three();
             if (response == null) {
                 LOG.debug("discarding malformed response lacking status code [reply-to: {}, correlation ID: {}]",
                         replyToAddress, message.getCorrelationId());
+                TracingHelper.logError(span, "response lacks status code");
                 ProtonHelper.released(delivery, true);
             } else {
                 LOG.debug("received response [reply-to: {}, subject: {}, correlation ID: {}, status: {}]",
                         replyToAddress, message.getSubject(), message.getCorrelationId(), response.getStatus());
                 addToCache(handler.two(), response);
+                if (span != null) {
+                    Tags.HTTP_STATUS.set(span, response.getStatus());
+                }
                 handler.one().handle(Future.succeededFuture(response));
                 ProtonHelper.accepted(delivery, true);
             }
@@ -337,13 +401,17 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
 
         Objects.requireNonNull(correlationId);
         Objects.requireNonNull(result);
-        if (!result.failed()) {
+
+        if (result.succeeded()) {
             throw new IllegalArgumentException("result must be failed");
         } else {
-            final TriTuple<Handler<AsyncResult<R>>, Object, Object> handler = replyMap.remove(correlationId);
-            if (handler != null) {
+            final TriTuple<Handler<AsyncResult<R>>, Object, Span> handler = replyMap.remove(correlationId);
+            if (handler == null) {
+                // response has already been processed
+            } else {
                 LOG.debug("canceling request [target: {}, correlation ID: {}]: {}",
                         targetAddress, correlationId, result.cause().getMessage());
+                TracingHelper.logError(handler.three(), result.cause());
                 handler.one().handle(result);
             }
         }
@@ -404,7 +472,30 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
             final String action,
             final Buffer payload,
             final Handler<AsyncResult<R>> resultHandler) {
+
         createAndSendRequest(action, null, payload, resultHandler);
+    }
+
+    /**
+     * Creates a request message for a payload and sends it to the peer.
+     * <p>
+     * This method simply invokes {@link #createAndSendRequest(String, Map, Buffer, String, Handler, Object, Span)}
+     * with {@code null} for the properties, content type and cache key parameters.
+     * 
+     * @param action The operation that the request is supposed to trigger/invoke.
+     * @param payload The payload to include in the request message as a an AMQP Value section.
+     * @param resultHandler The handler to notify about the outcome of the request.
+     * @param currentSpan The <em>Opentracing</em> span used to trace the request execution.
+     * @throws NullPointerException if any of action, result handler or current span is {@code null}.
+     */
+    protected final void createAndSendRequest(
+            final String action,
+            final Buffer payload,
+            final Handler<AsyncResult<R>> resultHandler,
+            final Span currentSpan) {
+
+        Objects.requireNonNull(currentSpan);
+        createAndSendRequest(action, null, payload, null, resultHandler, null, currentSpan);
     }
 
     /**
@@ -424,6 +515,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
             final Buffer payload,
             final Handler<AsyncResult<R>> resultHandler,
             final Object cacheKey) {
+
         createAndSendRequest(action, null, payload, resultHandler, cacheKey);
     }
 
@@ -441,55 +533,13 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      * @throws IllegalArgumentException if the properties contain any non-primitive typed values.
      * @see AbstractHonoClient#setApplicationProperties(Message, Map)
      */
-    protected final void createAndSendRequest(final String action, final Map<String, Object> properties, final Buffer payload,
-                                      final Handler<AsyncResult<R>> resultHandler) {
-        createAndSendRequest(action, properties, payload, resultHandler, null);
-    }
-
-    /**
-     * Creates a request message for a payload and headers and sends it to the peer.
-     * <p>
-     * This method first checks if the sender has any credit left. If not, the result handler is failed immediately.
-     * Otherwise, the request message is sent and a timer is started which fails the result handler,
-     * if no response is received within <em>requestTimeout</em> milliseconds.
-     * 
-     * @param action The operation that the request is supposed to trigger/invoke.
-     * @param properties The headers to include in the request message as AMQP application properties.
-     * @param payload The payload to include in the request message as a an AMQP Value section.
-     * @param contentType The content type of the payload.
-     * @param resultHandler The handler to notify about the outcome of the request. The handler is failed with
-     *                      a {@link ServerErrorException} if the request cannot be sent to the remote service,
-     *                      e.g. because there is no connection to the service or there are no credits available
-     *                      for sending the request or the request timed out.
-     * @param cacheKey The key to use for caching the response (if the service allows caching).
-     * @throws NullPointerException if action or result handler are {@code null}.
-     * @throws IllegalArgumentException if the properties contain any non-primitive typed values.
-     * @see AbstractHonoClient#setApplicationProperties(Message, Map)
-     */
     protected final void createAndSendRequest(
             final String action,
             final Map<String, Object> properties,
             final Buffer payload,
-            final String contentType,
-            final Handler<AsyncResult<R>> resultHandler,
-            final Object cacheKey) {
+            final Handler<AsyncResult<R>> resultHandler) {
 
-        Objects.requireNonNull(action);
-        Objects.requireNonNull(resultHandler);
-
-        if (isOpen()) {
-            final Message request = createMessage(action, properties);
-            if (payload != null) {
-                if(contentType != null) {
-                    request.setContentType(contentType);
-                }
-                request.setBody(new AmqpValue(payload.getBytes()));
-            }
-            sendRequest(request, resultHandler, cacheKey);
-        } else {
-            resultHandler.handle(Future.failedFuture(new ServerErrorException(
-                    HttpURLConnection.HTTP_UNAVAILABLE, "sender and/or receiver link is not open")));
-        }
+        createAndSendRequest(action, properties, payload, resultHandler, null);
     }
 
     /**
@@ -523,6 +573,87 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
     }
 
     /**
+     * Creates a request message for a payload and headers and sends it to the peer.
+     * <p>
+     * This method first checks if the sender has any credit left. If not, the result handler is failed immediately.
+     * Otherwise, the request message is sent and a timer is started which fails the result handler,
+     * if no response is received within <em>requestTimeout</em> milliseconds.
+     * 
+     * @param action The operation that the request is supposed to trigger/invoke.
+     * @param properties The headers to include in the request message as AMQP application properties.
+     * @param payload The payload to include in the request message as a an AMQP Value section.
+     * @param contentType The content type of the payload.
+     * @param resultHandler The handler to notify about the outcome of the request. The handler is failed with
+     *                      a {@link ServerErrorException} if the request cannot be sent to the remote service,
+     *                      e.g. because there is no connection to the service or there are no credits available
+     *                      for sending the request or the request timed out.
+     * @param cacheKey The key to use for caching the response (if the service allows caching).
+     * @throws NullPointerException if action or result handler are {@code null}.
+     * @throws IllegalArgumentException if the properties contain any non-primitive typed values.
+     * @see AbstractHonoClient#setApplicationProperties(Message, Map)
+     */
+    protected final void createAndSendRequest(
+            final String action,
+            final Map<String, Object> properties,
+            final Buffer payload,
+            final String contentType,
+            final Handler<AsyncResult<R>> resultHandler,
+            final Object cacheKey) {
+
+        createAndSendRequest(action, properties, payload, contentType, resultHandler, cacheKey, newChildSpan(null, action));
+    }
+
+    /**
+     * Creates a request message for a payload and headers and sends it to the peer.
+     * <p>
+     * This method first checks if the sender has any credit left. If not, the result handler is failed immediately.
+     * Otherwise, the request message is sent and a timer is started which fails the result handler,
+     * if no response is received within <em>requestTimeoutMillis</em> milliseconds.
+     * 
+     * @param action The operation that the request is supposed to trigger/invoke.
+     * @param properties The headers to include in the request message as AMQP application properties.
+     * @param payload The payload to include in the request message as a an AMQP Value section.
+     * @param contentType The content type of the payload.
+     * @param resultHandler The handler to notify about the outcome of the request. The handler is failed with
+     *                      a {@link ServerErrorException} if the request cannot be sent to the remote service,
+     *                      e.g. because there is no connection to the service or there are no credits available
+     *                      for sending the request or the request timed out.
+     * @param cacheKey The key to use for caching the response (if the service allows caching).
+     * @param currentSpan The <em>Opentracing</em> span used to trace the request execution.
+     * @throws NullPointerException if any of action or result handler is {@code null}.
+     * @throws IllegalArgumentException if the properties contain any non-primitive typed values.
+     * @see AbstractHonoClient#setApplicationProperties(Message, Map)
+     */
+    protected final void createAndSendRequest(
+            final String action,
+            final Map<String, Object> properties,
+            final Buffer payload,
+            final String contentType,
+            final Handler<AsyncResult<R>> resultHandler,
+            final Object cacheKey,
+            final Span currentSpan) {
+
+        Objects.requireNonNull(action);
+        Objects.requireNonNull(resultHandler);
+        Objects.requireNonNull(currentSpan);
+
+        if (isOpen()) {
+            final Message request = createMessage(action, properties);
+            if (payload != null) {
+                if (contentType != null) {
+                    request.setContentType(contentType);
+                }
+                request.setBody(new AmqpValue(payload.getBytes()));
+            }
+            sendRequest(request, resultHandler, cacheKey, currentSpan);
+        } else {
+            TracingHelper.logError(currentSpan, "sender and/or receiver link is not open");
+            resultHandler.handle(Future.failedFuture(new ServerErrorException(
+                    HttpURLConnection.HTTP_UNAVAILABLE, "sender and/or receiver link is not open")));
+        }
+    }
+
+    /**
      * Sends a request message via this client's sender link to the peer.
      * <p>
      * This method first checks if the sender has any credit left. If not, the result handler is failed immediately.
@@ -532,38 +663,63 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      * @param request The message to send.
      * @param resultHandler The handler to notify about the outcome of the request.
      * @param cacheKey The key to use for caching the response (if the service allows caching).
+     * @param currentSpan The <em>Opentracing</em> span used to trace the request execution.
      */
-    private void sendRequest(final Message request, final Handler<AsyncResult<R>> resultHandler, final Object cacheKey) {
+    private void sendRequest(
+            final Message request,
+            final Handler<AsyncResult<R>> resultHandler,
+            final Object cacheKey,
+            final Span currentSpan) {
+
+        Tags.MESSAGE_BUS_DESTINATION.set(currentSpan, targetAddress);
+        Tags.SPAN_KIND.set(currentSpan, Tags.SPAN_KIND_CLIENT);
+        Tags.HTTP_METHOD.set(currentSpan, request.getSubject());
+        TracingHelper.TAG_QOS.set(currentSpan, ProtonQoS.AT_LEAST_ONCE.toString());
+        if (tenantId != null) {
+            currentSpan.setTag(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId);
+        }
 
         context.runOnContext(req -> {
             if (sender.sendQueueFull()) {
                 LOG.debug("cannot send request to peer, no credit left for link [target: {}]", targetAddress);
                 resultHandler.handle(Future.failedFuture(new ServerErrorException(
                         HttpURLConnection.HTTP_UNAVAILABLE, "no credit available for sending request")));
+                TracingHelper.logError(currentSpan, "no credit left for request link");
             } else {
                 final Object correlationId = Optional.ofNullable(request.getCorrelationId()).orElse(request.getMessageId());
-                final TriTuple<Handler<AsyncResult<R>>, Object, Object> handler = TriTuple.of(resultHandler, cacheKey, null);
+                if (correlationId instanceof String) {
+                    TracingHelper.TAG_CORRELATION_ID.set(currentSpan, (String) correlationId);
+                }
+                TracingHelper.TAG_CREDIT.set(currentSpan, sender.getCredit());
+                final TriTuple<Handler<AsyncResult<R>>, Object, Span> handler = TriTuple.of(resultHandler, cacheKey, currentSpan);
+                tracer.inject(currentSpan.context(), Format.Builtin.TEXT_MAP, new MessageAnnotationsInjectAdapter(request));
                 replyMap.put(correlationId, handler);
+
                 sender.send(request, deliveryUpdated -> {
-                    if (Rejected.class.isInstance(deliveryUpdated.getRemoteState())) {
-                        final Rejected rejected = (Rejected) deliveryUpdated.getRemoteState();
+                    final Future<R> failedResult = Future.future();
+                    final DeliveryState remoteState = deliveryUpdated.getRemoteState();
+                    TracingHelper.TAG_REMOTE_STATE.set(currentSpan, remoteState.getClass().getSimpleName());
+                    if (Rejected.class.isInstance(remoteState)) {
+                        final Rejected rejected = (Rejected) remoteState;
                         if (rejected.getError() != null) {
                             LOG.debug("service did not accept request [target address: {}, subject: {}, correlation ID: {}]: {}",
                                     targetAddress, request.getSubject(), correlationId, rejected.getError());
-
-                            cancelRequest(correlationId, Future.failedFuture(StatusCodeMapper.from(rejected.getError())));
+                            failedResult.fail(StatusCodeMapper.from(rejected.getError()));
+                            cancelRequest(correlationId, failedResult);
                         } else {
                             LOG.debug("service did not accept request [target address: {}, subject: {}, correlation ID: {}]",
                                     targetAddress, request.getSubject(), correlationId);
-                            cancelRequest(correlationId, Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST)));
+                            failedResult.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
+                            cancelRequest(correlationId, failedResult);
                         }
-                    } else if (Accepted.class.isInstance(deliveryUpdated.getRemoteState())) {
+                    } else if (Accepted.class.isInstance(remoteState)) {
                         LOG.trace("service has accepted request [target address: {}, subject: {}, correlation ID: {}]",
                                 targetAddress, request.getSubject(), correlationId);
                     } else {
                         LOG.debug("service did not accept request [target address: {}, subject: {}, correlation ID: {}]: {}",
-                                targetAddress, request.getSubject(), correlationId, deliveryUpdated.getRemoteState());
-                        cancelRequest(correlationId, Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE)));
+                                targetAddress, request.getSubject(), correlationId, remoteState);
+                        failedResult.fail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE));
+                        cancelRequest(correlationId, failedResult);
                     }
                 });
                 if (requestTimeoutMillis > 0) {

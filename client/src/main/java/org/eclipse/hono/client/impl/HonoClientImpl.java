@@ -857,6 +857,7 @@ public class HonoClientImpl implements HonoClient {
                     context,
                     clientConfigProperties,
                     cacheProvider,
+                    tracer,
                     connection,
                     this::removeTenantClient,
                     this::removeTenantClient,

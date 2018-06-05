@@ -32,6 +32,8 @@ import org.eclipse.hono.util.TenantObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.opentracing.SpanContext;
+import io.opentracing.contrib.vertx.ext.web.TracingHandler;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -58,6 +60,7 @@ public class X509AuthHandler extends HonoAuthHandler {
      *              the device identity.
      * @param tenantServiceClient The client to use for determining the tenant
      *              that the device belongs to.
+     * @throws NullPointerException if tenant service client is {@code null}.
      */
     public X509AuthHandler(final HonoClientBasedAuthProvider authProvider, final HonoClient tenantServiceClient) {
         super(authProvider);
@@ -74,7 +77,8 @@ public class X509AuthHandler extends HonoAuthHandler {
             try {
                 final Certificate[] clientChain = context.request().sslSession().getPeerCertificates();
                 getX509CertificateChain(clientChain).compose(x509chain -> {
-                    return getTenant(x509chain[0]).compose(tenant -> getCredentials(x509chain, tenant));
+                    final SpanContext currentSpan = TracingHandler.serverSpanContext(context);
+                    return getTenant(x509chain[0], currentSpan).compose(tenant -> getCredentials(x509chain, tenant));
                 }).setHandler(handler);
             } catch (SSLPeerUnverifiedException e) {
                 // client certificate has not been validated
@@ -85,10 +89,10 @@ public class X509AuthHandler extends HonoAuthHandler {
         }
     }
 
-    private Future<TenantObject> getTenant(final X509Certificate clientCert) {
+    private Future<TenantObject> getTenant(final X509Certificate clientCert, final SpanContext currentSpan) {
 
         return tenantServiceClient.getOrCreateTenantClient().compose(tenantClient ->
-            tenantClient.get(clientCert.getIssuerX500Principal()));
+            tenantClient.get(clientCert.getIssuerX500Principal(), currentSpan));
     }
 
     private Future<X509Certificate[]> getX509CertificateChain(final Certificate[] clientChain) {

@@ -16,9 +16,10 @@ package org.eclipse.hono.client.impl;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 
-import io.vertx.core.buffer.Buffer;
 import javax.security.auth.x500.X500Principal;
 
 import org.eclipse.hono.cache.CacheProvider;
@@ -26,7 +27,10 @@ import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.client.TenantClient;
 import org.eclipse.hono.config.ClientConfigProperties;
+import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CacheDirective;
+import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantConstants.TenantAction;
 import org.eclipse.hono.util.TenantObject;
@@ -37,10 +41,16 @@ import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import io.opentracing.Span;
+import io.opentracing.SpanContext;
+import io.opentracing.Tracer;
+import io.opentracing.noop.NoopTracerFactory;
+import io.opentracing.tag.StringTag;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
 import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonReceiver;
@@ -55,6 +65,7 @@ public class TenantClientImpl extends AbstractRequestResponseClient<TenantResult
 
     private static final Logger LOG = LoggerFactory.getLogger(TenantClientImpl.class);
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    private static final StringTag TAG_SUBJECT_DN = new StringTag("subject_dn");
 
     /**
      * Creates a tenant API client.
@@ -64,7 +75,20 @@ public class TenantClientImpl extends AbstractRequestResponseClient<TenantResult
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
     protected TenantClientImpl(final Context context, final ClientConfigProperties config) {
-        super(context, config, null);
+        this(context, config, NoopTracerFactory.create());
+    }
+
+    /**
+     * Creates a tenant API client.
+     *
+     * @param context The Vert.x context to run message exchanges with the peer on.
+     * @param config The configuration properties to use.
+     * @param tracer The tracer to use for tracking request processing
+     *               across process boundaries.
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     */
+    protected TenantClientImpl(final Context context, final ClientConfigProperties config, final Tracer tracer) {
+        super(context, config, tracer, null);
     }
 
     /**
@@ -79,7 +103,23 @@ public class TenantClientImpl extends AbstractRequestResponseClient<TenantResult
     protected TenantClientImpl(final Context context, final ClientConfigProperties config,
                            final ProtonSender sender, final ProtonReceiver receiver) {
 
-        super(context, config, null, sender, receiver);
+        this(context, config, null, sender, receiver);
+    }
+
+    /**
+     * Creates a tenant API client.
+     *
+     * @param context The Vert.x context to run message exchanges with the peer on.
+     * @param config The configuration properties to use.
+     * @param tracer The tracer to use for tracking request processing
+     *               across process boundaries.
+     * @param sender The AMQP 1.0 link to use for sending requests to the peer.
+     * @param receiver The AMQP 1.0 link to use for receiving responses from the peer.
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     */
+    protected TenantClientImpl(final Context context, final ClientConfigProperties config,
+                           final Tracer tracer, final ProtonSender sender, final ProtonReceiver receiver) {
+        super(context, config, tracer, null, sender, receiver);
     }
 
     @Override
@@ -126,6 +166,8 @@ public class TenantClientImpl extends AbstractRequestResponseClient<TenantResult
      * @param clientConfig The configuration properties to use.
      * @param cacheProvider A factory for cache instances for tenant configuration results. If {@code null}
      *                     the client will not cache any results from the Tenant service.
+     * @param tracer The tracer to use for tracking request processing
+     *               across process boundaries.
      * @param con The AMQP connection to the server.
      * @param senderCloseHook A handler to invoke if the peer closes the sender link unexpectedly.
      * @param receiverCloseHook A handler to invoke if the peer closes the receiver link unexpectedly.
@@ -136,13 +178,14 @@ public class TenantClientImpl extends AbstractRequestResponseClient<TenantResult
             final Context context,
             final ClientConfigProperties clientConfig,
             final CacheProvider cacheProvider,
+            final Tracer tracer,
             final ProtonConnection con,
             final Handler<String> senderCloseHook,
             final Handler<String> receiverCloseHook,
             final Handler<AsyncResult<TenantClient>> creationHandler) {
 
         LOG.debug("creating new tenant client");
-        final TenantClientImpl client = new TenantClientImpl(context, clientConfig);
+        final TenantClientImpl client = new TenantClientImpl(context, clientConfig, tracer);
         if (cacheProvider != null) {
             client.setResponseCache(cacheProvider.getCache(TenantClientImpl.getTargetAddress()));
         }
@@ -162,16 +205,38 @@ public class TenantClientImpl extends AbstractRequestResponseClient<TenantResult
      */
     @Override
     public final Future<TenantObject> get(final String tenantId) {
+        return get(tenantId, null);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public final Future<TenantObject> get(final String tenantId, final SpanContext parent) {
+
+        Objects.requireNonNull(tenantId);
 
         final TriTuple<TenantAction, String, Object> key = TriTuple.of(TenantAction.get, tenantId, null);
+        final Span span = newChildSpan(parent, "get Tenant configuration");
+        span.setTag(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId);
+        final AtomicBoolean cacheHit = new AtomicBoolean(true);
 
         return getResponseFromCache(key).recover(t -> {
+            cacheHit.set(false);
             final Future<TenantResult<TenantObject>> tenantResult = Future.future();
             final JsonObject payload = new JsonObject().put(TenantConstants.FIELD_PAYLOAD_TENANT_ID, tenantId);
-            createAndSendRequest(TenantConstants.TenantAction.get.toString(), customizeRequestApplicationProperties(), payload.toBuffer(),
-                    tenantResult.completer(), key);
+            createAndSendRequest(
+                    TenantConstants.TenantAction.get.toString(),
+                    customizeRequestApplicationProperties(),
+                    payload.toBuffer(),
+                    RegistrationConstants.CONTENT_TYPE_APPLICATION_JSON,
+                    tenantResult.completer(),
+                    key,
+                    span);
             return tenantResult;
         }).map(tenantResult -> {
+            TracingHelper.TAG_CACHE_HIT.set(span, cacheHit.get());
+            span.finish();
             switch(tenantResult.getStatus()) {
                 case HttpURLConnection.HTTP_OK:
                     return tenantResult.getPayload();
@@ -183,20 +248,38 @@ public class TenantClientImpl extends AbstractRequestResponseClient<TenantResult
         });
     }
 
+
     /**
      * {@inheritDoc}
      */
     @Override
     public final Future<TenantObject> get(final X500Principal subjectDn) {
+        return get(subjectDn, null);
+    }
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public final Future<TenantObject> get(final X500Principal subjectDn, final SpanContext parent) {
+
+        Objects.requireNonNull(subjectDn);
+
+        final String subjectDnRfc2253 = subjectDn.getName(X500Principal.RFC2253);
         final TriTuple<TenantAction, X500Principal, Object> key = TriTuple.of(TenantAction.get, subjectDn, null);
+        final Span span = newChildSpan(parent, "get Tenant configuration");
+        TAG_SUBJECT_DN.set(span, subjectDnRfc2253);
+        final AtomicBoolean cacheHit = new AtomicBoolean(true);
 
         return getResponseFromCache(key).recover(t -> {
+            cacheHit.set(false);
             final Future<TenantResult<TenantObject>> tenantResult = Future.future();
-            final JsonObject payload = new JsonObject().put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, subjectDn.getName(X500Principal.RFC2253));
+            final JsonObject payload = new JsonObject().put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, subjectDnRfc2253);
             createAndSendRequest(TenantConstants.TenantAction.get.toString(), customizeRequestApplicationProperties(), payload.toBuffer(), tenantResult.completer(), key);
             return tenantResult;
         }).map(tenantResult -> {
+            TracingHelper.TAG_CACHE_HIT.set(span, cacheHit.get());
+            span.finish();
             switch(tenantResult.getStatus()) {
                 case HttpURLConnection.HTTP_OK:
                     return tenantResult.getPayload();
