@@ -137,4 +137,13 @@ public class Device implements User {
     public String getDeviceId() {
         return principal.getString(CredentialsConstants.FIELD_PAYLOAD_DEVICE_ID);
     }
+
+    @Override
+    public String toString() {
+        return String.format("device [%s: %s, %s: %s]",
+                CredentialsConstants.FIELD_PAYLOAD_DEVICE_ID,
+                getDeviceId(),
+                CredentialsConstants.FIELD_PAYLOAD_TENANT_ID,
+                getTenantId());
+    }
 }
