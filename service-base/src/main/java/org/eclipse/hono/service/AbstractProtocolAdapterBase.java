@@ -359,7 +359,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         Objects.requireNonNull(serviceName);
 
         if (client == null) {
-            return Future.failedFuture(new IllegalStateException(String.format("Hono %s client not set", serviceName)));
+            return Future.failedFuture(new IllegalArgumentException(String.format("Hono %s client not set", serviceName)));
         } else {
             final Handler<ProtonConnection> disconnectHandler = getHandlerForDisconnectHonoService(client, serviceName);
 
@@ -440,7 +440,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * @param tenantId The tenant of the command receiver.
      * @param deviceId The device of the command receiver.
      * @param messageConsumer Handler will be called for each command to the device.
-     * @param closeHandler Called on close.
+     * @param closeHandler Called when the peer detaches the link.
      * @return Result of the receiver creation.
      */
     public final Future<MessageConsumer> createCommandConsumer(
