@@ -389,6 +389,7 @@ public class VertxBasedHttpProtocolAdapterTest {
      *
      * @param ctx The vert.x test context.
      */
+    @SuppressWarnings("unchecked")
     @Test
     public final void testPostTelemetryWithTtdOpensCommandReceiver(final TestContext ctx) {
 
@@ -419,6 +420,7 @@ public class VertxBasedHttpProtocolAdapterTest {
      *
      * @param ctx The vert.x test context.
      */
+    @SuppressWarnings("unchecked")
     @Test
     public final void testPostTelemetryWithTtdReopensCommandReceiverAfterLinkClose(final TestContext ctx) {
 
@@ -439,7 +441,7 @@ public class VertxBasedHttpProtocolAdapterTest {
                     final ArgumentCaptor<Handler<Void>> handlerArgumentCaptor = ArgumentCaptor.forClass(Handler.class);
                     // verify that a command receiver link was opened
                     verify(testLocalCommandConnection).createCommandConsumer(anyString(), anyString(), any(BiConsumer.class), handlerArgumentCaptor.capture());
-                    final Handler  closeHandler = handlerArgumentCaptor.getValue();
+                    final Handler<Void> closeHandler = handlerArgumentCaptor.getValue();
                     ctx.assertNotNull(closeHandler);
                     closeHandler.handle(null);
                     vertx.setTimer(DEFAULT_REOPEN_COMMAND_CONSUMER_TIMEOUT_MILLIS * 2, delay -> {
@@ -494,6 +496,7 @@ public class VertxBasedHttpProtocolAdapterTest {
         when(registrationServiceClient.getOrCreateRegistrationClient(anyString())).thenReturn(Future.succeededFuture(regClient));
     }
 
+    @SuppressWarnings("unchecked")
     private CommandConnection prepareAdapterWithOwnCommandConsumer() {
         final CommandConnection commandConnection = mock(CommandConnection.class);
         when(commandConnection.connect(any(Handler.class))).thenReturn(Future.succeededFuture(commandConnection));
