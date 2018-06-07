@@ -18,6 +18,8 @@ CONFIG=$SCRIPTPATH/../../config
 CERTS=$CONFIG/hono-demo-certs-jar
 NS=hono
 
+set -e
+
 echo DEPLOYING ECLIPSE HONO TO KUBERNETES
 
 # creating Hono namespace
