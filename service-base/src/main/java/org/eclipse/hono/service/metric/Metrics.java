@@ -16,14 +16,12 @@ package org.eclipse.hono.service.metric;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.actuate.metrics.CounterService;
 import org.springframework.boot.actuate.metrics.GaugeService;
-import org.springframework.stereotype.Component;
 
 import java.util.Objects;
 
 /**
  * Base metrics collector.
  */
-@Component
 abstract public class Metrics {
 
     /**
