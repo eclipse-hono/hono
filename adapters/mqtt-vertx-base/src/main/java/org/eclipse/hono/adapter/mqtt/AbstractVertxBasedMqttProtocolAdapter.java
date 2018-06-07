@@ -405,7 +405,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
                     LOG.debug("successfully authenticated device [tenant-id: {}, auth-id: {}, device-id: {}]",
                             authenticatedDevice.getTenantId(), credentials.getAuthId(),
                             authenticatedDevice.getDeviceId());
-                    return triggerLinkCreation(authenticatedDevice.getTenantId()).map(ok -> {
+                    return triggerLinkCreation(authenticatedDevice.getTenantId()).map(done -> {
                         onAuthenticationSuccess(endpoint, authenticatedDevice);
                         return null;
                     }).compose(ok -> accepted(authenticatedDevice));
@@ -441,16 +441,12 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
     private Future<Void> triggerLinkCreation(final String tenantId) {
 
         final Future<Void> result = Future.future();
-        CompositeFuture.all(
+        LOG.debug("providently trying to open downstream links for tenant [{}]", tenantId);
+        CompositeFuture.join(
                 getRegistrationClient(tenantId),
                 getTelemetrySender(tenantId),
                 getEventSender(tenantId)).setHandler(attempt -> {
-                    if (attempt.succeeded()) {
-                        LOG.debug("providently opened links for tenant [{}]", tenantId);
-                        result.complete();
-                    } else {
-                        result.fail(attempt.cause());
-                    }
+                    result.complete();
                 });
         return result;
     }
