@@ -126,6 +126,8 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
 
         messagingClient = mock(HonoClient.class);
         when(messagingClient.connect(any(Handler.class))).thenReturn(Future.succeededFuture(messagingClient));
+        when(messagingClient.getOrCreateEventSender(anyString())).thenReturn(Future.succeededFuture(mock(MessageSender.class)));
+        when(messagingClient.getOrCreateTelemetrySender(anyString())).thenReturn(Future.succeededFuture(mock(MessageSender.class)));
 
         deviceRegistrationServiceClient = mock(HonoClient.class);
         when(deviceRegistrationServiceClient.connect(any(Handler.class)))

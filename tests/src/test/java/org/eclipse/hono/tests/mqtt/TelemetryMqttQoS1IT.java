@@ -26,9 +26,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import io.netty.handler.codec.mqtt.MqttQoS;
-import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
-import io.vertx.core.Handler;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.TestContext;
@@ -39,28 +37,31 @@ import io.vertx.mqtt.messages.MqttConnAckMessage;
 
 
 /**
- * Integration tests for uploading telemetry data to the MQTT adapter.
+ * Integration tests for uploading telemetry data to the MQTT adapter
+ * using QoS 1.
  *
  */
 @RunWith(VertxUnitRunner.class)
-public class TelemetryMqttIT extends MqttTestBase {
+public class TelemetryMqttQoS1IT extends MqttTestBase {
 
     private static final String TOPIC_TEMPLATE = "%s/%s/%s";
 
     @Override
-    protected void send(
+    protected Future<Void> send(
             final String tenantId,
             final String deviceId,
             final Buffer payload,
-            final boolean useShortTopicName,
-            final Handler<AsyncResult<Integer>> publishSentHandler) {
+            final boolean useShortTopicName) {
 
         final String topic = String.format(
                 TOPIC_TEMPLATE,
                 useShortTopicName ? TelemetryConstants.TELEMETRY_ENDPOINT_SHORT : TelemetryConstants.TELEMETRY_ENDPOINT,
                 tenantId,
                 deviceId);
-        mqttClient.publish(topic, payload, MqttQoS.AT_LEAST_ONCE, false, false, publishSentHandler);
+        final Future<Void> result = Future.future();
+        mqttClient.publishCompletionHandler(id -> result.complete());
+        mqttClient.publish(topic, payload, MqttQoS.AT_LEAST_ONCE, false, false);
+        return result;
     }
 
     @Override

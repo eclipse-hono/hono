@@ -21,9 +21,7 @@ import org.eclipse.hono.util.EventConstants;
 import org.junit.runner.RunWith;
 
 import io.netty.handler.codec.mqtt.MqttQoS;
-import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
-import io.vertx.core.Handler;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 
@@ -38,20 +36,21 @@ public class EventMqttIT extends MqttTestBase {
     private static final String TOPIC_TEMPLATE = "%s/%s/%s";
 
     @Override
-    protected void send(
+    protected Future<Void> send(
             final String tenantId,
             final String deviceId,
             final Buffer payload,
-            final boolean useShortTopicName,
-            final Handler<AsyncResult<Integer>> publishSentHandler) {
+            final boolean useShortTopicName) {
 
         final String topic = String.format(
                 TOPIC_TEMPLATE,
                 useShortTopicName ? EventConstants.EVENT_ENDPOINT_SHORT : EventConstants.EVENT_ENDPOINT,
                 tenantId,
                 deviceId);
-
-        mqttClient.publish(topic, payload, MqttQoS.AT_LEAST_ONCE, false, false, publishSentHandler);
+        final Future<Void> result = Future.future();
+        mqttClient.publishCompletionHandler(id -> result.complete());
+        mqttClient.publish(topic, payload, MqttQoS.AT_LEAST_ONCE, false, false);
+        return result;
     }
 
     @Override

@@ -405,10 +405,12 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
                     LOG.debug("successfully authenticated device [tenant-id: {}, auth-id: {}, device-id: {}]",
                             authenticatedDevice.getTenantId(), credentials.getAuthId(),
                             authenticatedDevice.getDeviceId());
-                    onAuthenticationSuccess(endpoint, authenticatedDevice);
-                    return accepted(authenticatedDevice);
+                    return triggerLinkCreation(authenticatedDevice.getTenantId()).map(ok -> {
+                        onAuthenticationSuccess(endpoint, authenticatedDevice);
+                        return null;
+                    }).compose(ok -> accepted(authenticatedDevice));
                 }).recover(t -> {
-                    LOG.debug("cannot authenticate device [tenant-id: {}, auth-id: {}]",
+                    LOG.debug("cannot establish connection with device [tenant-id: {}, auth-id: {}]",
                             credentials.getTenantId(), credentials.getAuthId(), t);
                     if (t instanceof ServerErrorException) {
                         // one of the services we depend on might not be available (yet)
@@ -434,6 +436,23 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
 
         endpoint.publishHandler(message -> onPublishedMessage(new MqttContext(message, endpoint, authenticatedDevice)));
         metrics.incrementMqttConnections(authenticatedDevice.getTenantId());
+    }
+
+    private Future<Void> triggerLinkCreation(final String tenantId) {
+
+        final Future<Void> result = Future.future();
+        CompositeFuture.all(
+                getRegistrationClient(tenantId),
+                getTelemetrySender(tenantId),
+                getEventSender(tenantId)).setHandler(attempt -> {
+                    if (attempt.succeeded()) {
+                        LOG.debug("providently opened links for tenant [{}]", tenantId);
+                        result.complete();
+                    } else {
+                        result.fail(attempt.cause());
+                    }
+                });
+        return result;
     }
 
     /**

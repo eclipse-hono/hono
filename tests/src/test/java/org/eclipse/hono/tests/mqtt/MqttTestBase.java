@@ -18,7 +18,7 @@ import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 
 import org.apache.qpid.proton.message.Message;
@@ -37,9 +37,7 @@ import org.junit.rules.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
-import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.ext.unit.Async;
@@ -58,8 +56,15 @@ public abstract class MqttTestBase {
      * The vert.xt instance to run on.
      */
     protected static final Vertx VERTX = Vertx.vertx();
-
-    private static final int TEST_TIMEOUT = 9000; // milliseconds
+    /**
+     * The maximum number of milliseconds a test case may run before it
+     * is considered to have failed.
+     */
+    protected static final int TEST_TIMEOUT = 9000; // milliseconds
+    /**
+     * The number of messages to send as part of the test cases.
+     */
+    protected static final int MESSAGES_TO_SEND = 200;
 
     /**
      * A client for publishing messages to the MQTT protocol adapter.
@@ -150,16 +155,42 @@ public abstract class MqttTestBase {
      * @param deviceId The identifier of the device.
      * @param payload The message to send.
      * @param useShortTopicName Whether to use short or standard topic names
-     * @param publishSentHandler The handler to invoke with the packet ID of the
-     *                           PUBLISH packet that has been sent to the MQTT
-     *                           adapter.
+     * @return A future indicating the outcome of the attempt to publish the
+     *         message. The future will succeed if the message has been
+     *         published successfully.
      */
-    protected abstract void send(
+    protected abstract Future<Void> send(
             String tenantId,
             String deviceId,
             Buffer payload,
-            boolean useShortTopicName,
-            Handler<AsyncResult<Integer>> publishSentHandler);
+            boolean useShortTopicName);
+
+    /**
+     * Asserts that the ration between messages that have been received and messages
+     * being sent is acceptable for the particular QoS used for publishing messages.
+     * <p>
+     * This default implementation asserts that received = sent.
+     * 
+     * @param received The number of messages that have been received.
+     * @param sent The number of messages that have been sent.
+     * @param ctx The test context that will be failed if the ratio is not acceptable.
+     */
+    protected void assertMessageReceivedRatio(final long received, final long sent, final TestContext ctx) {
+        if (received < sent) {
+            ctx.fail(String.format("did not receive expected number of messages [expected: %d, received: %d]",
+                    sent, received));
+        }
+    }
+
+    /**
+     * Gets the number of milliseconds that the message sending test cases
+     * should wait for messages being received by the consumer.
+     * 
+     * @return The number of milliseconds.
+     */
+    protected long getTimeToWait() {
+        return MESSAGES_TO_SEND * 20;
+    }
 
     /**
      * Creates a test specific message consumer.
@@ -197,8 +228,9 @@ public abstract class MqttTestBase {
     private void doTestUploadMessages(final TestContext ctx, final boolean useShortTopicName)
             throws InterruptedException {
 
-        final int messagesToSend = 200;
-        final CountDownLatch received = new CountDownLatch(messagesToSend);
+        final CountDownLatch received = new CountDownLatch(MESSAGES_TO_SEND);
+        final AtomicInteger messageCount = new AtomicInteger(0);
+        final AtomicLong lastReceivedTimestamp = new AtomicLong();
         final Async setup = ctx.async();
         final String tenantId = helper.getRandomTenantId();
         final String deviceId = helper.getRandomDeviceId(tenantId);
@@ -211,65 +243,49 @@ public abstract class MqttTestBase {
                 assertMessageProperties(ctx, msg);
                 assertAdditionalMessageProperties(ctx, msg);
                 received.countDown();
+                lastReceivedTimestamp.set(System.currentTimeMillis());
                 if (received.getCount() % 40 == 0) {
-                    LOGGER.info("messages received: {}", messagesToSend - received.getCount());
+                    LOGGER.info("messages received: {}", MESSAGES_TO_SEND - received.getCount());
                 }
             })).compose(ok -> {
                 final Future<MqttConnAckMessage> result = Future.future();
-                final MqttClientOptions options = new MqttClientOptions()
-                        .setMaxInflightQueue(200)
-                        .setUsername(IntegrationTestSupport.getUsername(deviceId, tenantId))
-                        .setPassword(password);
-                mqttClient = MqttClient.create(VERTX, options);
-                mqttClient.connect(IntegrationTestSupport.MQTT_PORT, IntegrationTestSupport.MQTT_HOST, result.completer());
+                VERTX.runOnContext(connect -> {
+                    final MqttClientOptions options = new MqttClientOptions()
+                            .setUsername(IntegrationTestSupport.getUsername(deviceId, tenantId))
+                            .setPassword(password);
+                    mqttClient = MqttClient.create(VERTX, options);
+                    mqttClient.connect(IntegrationTestSupport.MQTT_PORT, IntegrationTestSupport.MQTT_HOST, result.completer());
+                });
                 return result;
-            }).setHandler(ctx.asyncAssertSuccess(ok -> VERTX.setTimer(500, go -> setup.complete())));
+            }).setHandler(ctx.asyncAssertSuccess(ok -> setup.complete()));
 
         setup.await();
 
         final long start = System.currentTimeMillis();
-        final AtomicInteger messageCount = new AtomicInteger(0);
-        final AtomicReference<Async> sendResult = new AtomicReference<>();
-        mqttClient.publishCompletionHandler(packetId -> {
-            synchronized (pendingMessages) {
-                if (pendingMessages.remove(packetId)) {
-                    sendResult.get().complete();
-                } else {
-                    LOGGER.info("received PUBACK for unexpected message [id: {}]", packetId);
-                }
-            }
-        });
+        while (messageCount.get() < MESSAGES_TO_SEND) {
 
-        while (messageCount.get() < messagesToSend) {
-
-            sendResult.set(ctx.async());
+            final Async messageSent = ctx.async();
             VERTX.runOnContext(go -> {
-                synchronized (pendingMessages) {
-                    send(tenantId, deviceId, Buffer.buffer("hello " + messageCount.getAndIncrement()), useShortTopicName, sendAttempt -> {
-                        if (sendAttempt.failed()) {
-                            LOGGER.debug("error sending message {}", messageCount.get(), sendAttempt.cause());
-                        } else {
-                            pendingMessages.add(sendAttempt.result());
-                        }
-                    });
-                }
+                final Buffer msg = Buffer.buffer("hello " + messageCount.getAndIncrement());
+                send(tenantId, deviceId, msg, useShortTopicName).setHandler(sendAttempt -> {
+                    if (sendAttempt.failed()) {
+                        LOGGER.debug("error sending message {}", messageCount.get(), sendAttempt.cause());
+                    }
+                    if (messageCount.get() % 40 == 0) {
+                        LOGGER.info("messages sent: " + messageCount.get());
+                    }
+                    messageSent.complete();
+                });
             });
 
-            if (messageCount.get() % 40 == 0) {
-                LOGGER.info("messages sent: " + messageCount.get());
-            }
-            sendResult.get().await();
+            messageSent.await();
         }
 
-        final long timeToWait = Math.max(TEST_TIMEOUT - 1000, Math.round(messagesToSend * 1.2));
-        if (!received.await(timeToWait, TimeUnit.MILLISECONDS)) {
-            LOGGER.info("sent {} and received {} messages after {} milliseconds",
-                    messageCount, messagesToSend - received.getCount(), System.currentTimeMillis() - start);
-            ctx.fail("did not receive all messages sent");
-        } else {
-            LOGGER.info("sent {} and received {} messages after {} milliseconds",
-                    messageCount, messagesToSend - received.getCount(), System.currentTimeMillis() - start);
-        }
+        received.await(getTimeToWait(), TimeUnit.MILLISECONDS);
+        final long messagesReceived = MESSAGES_TO_SEND - received.getCount();
+        LOGGER.info("sent {} and received {} messages in {} milliseconds",
+                messageCount.get(), messagesReceived, lastReceivedTimestamp.get() - start);
+        assertMessageReceivedRatio(messagesReceived, messageCount.get(), ctx);
     }
 
     private void assertMessageProperties(final TestContext ctx, final Message msg) {
