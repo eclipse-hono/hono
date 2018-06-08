@@ -69,6 +69,7 @@
     <dependency>
       <groupId>org.eclipse.hono</groupId>
       <artifactId>hono-demo-certs</artifactId>
+      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>io.vertx</groupId>
@@ -84,15 +85,6 @@
   <build>
     <plugins>
       <plugin>
-        <groupId>org.apache.felix</groupId>
-        <artifactId>maven-bundle-plugin</artifactId>
-        <extensions>true</extensions>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-checkstyle-plugin</artifactId>
-      </plugin>
-      <plugin>
         <!-- 
           Copy legal documents from "legal" module to "target/classes" folder
           so that we make sure to include legal docs in all modules.
@@ -103,7 +95,7 @@
           <execution>
             <!--
               Execution and configuration for copying certificates from related module
-              to "target/classes" folder so that we can include them in the image.
+              to "target/classes" folder so that we can use them in test cases.
              -->
             <id>copy_demo_certs</id>
             <phase>generate-resources</phase>
@@ -117,6 +109,23 @@
             </configuration>
           </execution>
         </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.felix</groupId>
+        <artifactId>maven-bundle-plugin</artifactId>
+        <extensions>true</extensions>
+        <configuration>
+          <instructions>
+            <!-- make sure that we include the legal docs in the bundle -->
+            <Include-Resource>
+              META-INF=${project.build.outputDirectory}/META-INF
+            </Include-Resource>
+          </instructions>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-checkstyle-plugin</artifactId>
       </plugin>
     </plugins>
   </build>
