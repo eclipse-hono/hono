@@ -19,6 +19,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 import java.net.HttpURLConnection;
+import java.util.Optional;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ClientErrorException;
@@ -445,6 +446,73 @@ public class AbstractProtocolAdapterBaseTest {
 
         // arbitrary content-type needs non empty payload
         ctx.assertFalse(adapter.isPayloadOfIndicatedType(payload, arbitraryContentType));
+    }
+
+    /**
+     * Verifies that from a correct command message the replyId can be constructed.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testReplyToCanBeExtractedFromCommandMessage(final TestContext ctx) {
+
+        // GIVEN an adapter
+        adapter = newProtocolAdapter(properties, null);
+
+        // WHEN a correct command message is used to construct a replyTo addresse for an adapter, then the address must be constructed without error
+        final Message commandMessage = mock(Message.class);
+        when(commandMessage.getReplyTo()).thenReturn("control/DEFAULT_TENANT/4711/replyId");
+
+        final Optional<String> replyIdOpt = adapter.getReplyToIdFromCommand("DEFAULT_TENANT", "4711", commandMessage);
+        ctx.assertNotNull(replyIdOpt);
+        ctx.assertTrue(replyIdOpt.isPresent());
+    }
+
+    /**
+     * Verifies that from an incorrect command message the replyId cannot be constructed (is not present in the returned
+     * Optional).
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testReplyToIsNotPresentForIncorrectCommandMessage(final TestContext ctx) {
+
+        // GIVEN an adapter
+        adapter = newProtocolAdapter(properties, null);
+
+        // WHEN a command message without replyTo field is used to construct a replyTo addresse for an adapter,
+        // then no replyId is returned
+        final Message commandMessage = mock(Message.class);
+        when(commandMessage.getReplyTo()).thenReturn("invalid");
+
+        final Optional<String> replyIdOpt = adapter.getReplyToIdFromCommand("DEFAULT_TENANT", "4711", commandMessage);
+        ctx.assertNotNull(replyIdOpt);
+        ctx.assertFalse(replyIdOpt.isPresent());
+    }
+
+    /**
+     * Verifies that from an incorrect command message the replyId cannot be constructed (is not present in the returned
+     * Optional).
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testCommandRequestIdIsGeneratedForCorrectCommandMessage(final TestContext ctx) {
+
+        // GIVEN an adapter
+        adapter = newProtocolAdapter(properties, null);
+
+        // WHEN a correct command message is used, a command request id is constructed and returned.
+        final Message commandMessage = mock(Message.class);
+        when(commandMessage.getReplyTo()).thenReturn("control/DEFAULT_TENANT/4711/replyId");
+        when(commandMessage.getCorrelationId()).thenReturn("correlationId");
+
+        final Optional<String> commandRequestIdOpt = adapter.validateAndGenerateCommandRequestId("DEFAULT_TENANT", "4711", commandMessage);
+        ctx.assertNotNull(commandRequestIdOpt);
+        ctx.assertTrue(commandRequestIdOpt.isPresent());
+        ctx.assertNotNull(commandRequestIdOpt.get());
+        ctx.assertTrue(commandRequestIdOpt.get().contains("correlationId"));
+        ctx.assertTrue(commandRequestIdOpt.get().contains("replyId"));
     }
 
 }
