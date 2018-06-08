@@ -631,7 +631,8 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                 commandReceivedHandler.handle(commandMessage);
 
             } else {
-                LOG.info("Received command with invalid reply-to endpoint - ignoring.");
+                LOG.info("Received command with invalid reply-to endpoint for device [tenantId: {}, deviceId: {}] - ignoring.",
+                        tenant, deviceId);
             }
         };
 
@@ -673,25 +674,34 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                     return null;
                 });
 
-                final String replyId = getReplyToIdFromCommand(tenant, deviceId, commandMessage).get();
-
-                // send answer to caller via sender link
-                final Future<CommandResponseSender> responseSender = createCommandResponseSender(tenant, deviceId, replyId);
-                responseSender.map(commandResponseSender ->
-                    commandResponseSender.sendCommandResponse(getCorrelationIdFromMessage(commandMessage),
-                            null, null, HttpURLConnection.HTTP_OK)
-                ).map(protonDeliveryFuture -> {
-                    LOG.debug("Command acknowledged to sender.");
-                    responseSender.result().close(v -> {});
-                    return null;
-                }).otherwise(t -> {
-                    LOG.debug("Could not acknowledge command to sender", t);
-                    Optional.ofNullable(responseSender.result()).map(r -> {
-                        r.close(v -> {});
-                        return null;
+                final Optional<String> replyIdOpt = getReplyToIdFromCommand(tenant, deviceId, commandMessage);
+                if (!replyIdOpt.isPresent()) {
+                    // from Java 9 on: switch to opt.ifPresentOrElse
+                    LOG.debug("Received command without valid replyId for device [tenantId: {}, deviceId: {}] - no reply will be sent to the application",
+                            tenant, deviceId);
+                } else {
+                    replyIdOpt.map(replyId -> {
+                        // send answer to caller via sender link
+                        final Future<CommandResponseSender> responseSender = createCommandResponseSender(tenant, deviceId, replyId);
+                        responseSender.map(commandResponseSender ->
+                                commandResponseSender.sendCommandResponse(getCorrelationIdFromMessage(commandMessage),
+                                        null, null, HttpURLConnection.HTTP_OK)
+                        ).map(protonDeliveryFuture -> {
+                            LOG.debug("Command acknowledged to sender.");
+                            responseSender.result().close(v -> {});
+                            return null;
+                        }).otherwise(t -> {
+                            LOG.debug("Could not acknowledge command to sender", t);
+                            Optional.ofNullable(responseSender.result()).map(r -> {
+                                r.close(v -> {});
+                                return null;
+                            });
+                            return null;
+                        });
+                        return replyId;
                     });
-                    return null;
-                });
+
+                }
             };
 
             // create the commandMessageConsumer that handles an incoming command message
