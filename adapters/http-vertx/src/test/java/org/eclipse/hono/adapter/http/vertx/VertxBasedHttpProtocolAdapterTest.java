@@ -70,10 +70,11 @@ import org.mockito.ArgumentCaptor;
 public class VertxBasedHttpProtocolAdapterTest {
 
     /**
-     * Time out all tests after 5 seconds.
+     * Time out all tests after 10 seconds (some timer based functionality need a slightly higher timeout in
+     * slow environments).
      */
     @Rule
-    public Timeout timeout = Timeout.seconds(5);
+    public Timeout timeout = Timeout.seconds(10);
 
     private static final String HOST = "localhost";
 
