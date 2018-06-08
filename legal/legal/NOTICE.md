@@ -56,7 +56,7 @@ Your use of *Jackson* is subject to the terms and conditions of the Apache Softw
 A copy of the license is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and is also available at
 http://www.apache.org/licenses/LICENSE-2.0.html.
 
-The source code is available from [Maven Central](http://search.maven.org/#search|ga|1|g:"com.fasterxml.jackson.core"%20AND%20v:"${jackson.version}"%20AND%20l:"sources").
+The source code is available from [Maven Central](http://search.maven.org/#search%7Cga%7C1%7Cg%3A%22com.fasterxml.jackson.core%22%20AND%20v%3A%22${jackson.version}%22).
 
 ### JCL-over-SLF4J ${slf4j.version}
 
@@ -117,7 +117,7 @@ whose terms and conditions apply.
 A copy of the Apache Software License 2.0 is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and
 is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
 
-The source code is available from [Maven Central](http://search.maven.org/#search|ga|1|g:"io.dropwizard.metrics"%20AND%20v:"${dropwizard-metrics.version}"%20AND%20l:"sources").
+The source code is available from [Maven Central](http://search.maven.org/#search%7Cga%7C1%7Cg%3A%22io.dropwizard.metrics%22%20AND%20v%3A%22${dropwizard-metrics.version}%22).
 
 ### Netty ${netty.version}
 
@@ -130,7 +130,7 @@ whose terms and conditions apply.
 A copy of the Apache Software License 2.0 is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and
 is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
 
-The source code is available from [Maven Central](http://search.maven.org/#search|ga|1|g:"io.netty"%20AND%20v:"${netty.version}"%20AND%20l:"sources").
+The source code is available from [Maven Central](http://search.maven.org/#search%7Cga%7C1%7Cg%3A%22io.netty%22%20AND%20v%3A%22${netty.version}%22).
 
 ### Proton-j ${proton.version}
 
@@ -170,7 +170,7 @@ Your use of the *Spring Framework* is subject to the terms and conditions of the
 and others as indicated by [NOTICE.Spring.txt](NOTICE.Spring.txt).
 A copy of the licenses is contained in the file [LICENSE.Spring.txt](LICENSE.Spring.txt).
 
-The source code is available from [Maven Central](http://search.maven.org/#search|ga|1|g:"org.springframework"%20AND%20v:"${spring.version}"%20AND%20l:"sources").
+The source code is available from [Maven Central](http://search.maven.org/#search%7Cga%7C1%7Cg%3A%22org.springframework%22%20AND%20v%3A%22${spring.version}%22).
 
 ### Spring Boot ${spring-boot.version}
 
@@ -180,7 +180,7 @@ Your use of *Spring Boot* is subject to the terms and conditions of the Apache S
 A copy of the Apache Software License 2.0 is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and
 is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
 
-The source code is available from [Maven Central](http://search.maven.org/#search|ga|1|g:"org.springframework.boot"%20AND%20v:"${spring-boot.version}"%20AND%20l:"sources").
+The source code is available from [Maven Central](http://search.maven.org/#search%7Cga%7C1%7Cg%3A%22org.springframework.boot%22%20AND%20v%3A%22${spring-boot.version}%22).
 
 ### vert.x Auth Common ${vertx.version}
 
