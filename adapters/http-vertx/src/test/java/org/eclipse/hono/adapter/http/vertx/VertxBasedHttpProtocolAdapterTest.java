@@ -68,7 +68,7 @@ public class VertxBasedHttpProtocolAdapterTest {
      * slow environments).
      */
     @Rule
-    public Timeout timeout = Timeout.seconds(10);
+    public Timeout timeout = Timeout.seconds(20);
 
     private static final String HOST = "localhost";
 
