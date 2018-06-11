@@ -358,7 +358,7 @@ public final class Constants {
                     return twoStrings;
                 } catch (final NumberFormatException ne) {
                     return null;
-                } catch (final ArrayIndexOutOfBoundsException ae) {
+                } catch (final StringIndexOutOfBoundsException se) {
                     return null;
                 }
             }

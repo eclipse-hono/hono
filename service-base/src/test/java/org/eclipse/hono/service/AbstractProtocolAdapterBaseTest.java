@@ -32,6 +32,7 @@ import org.eclipse.hono.service.command.CommandConnection;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
+import org.eclipse.hono.util.ResourceIdentifier;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -503,16 +504,118 @@ public class AbstractProtocolAdapterBaseTest {
         adapter = newProtocolAdapter(properties, null);
 
         // WHEN a correct command message is used, a command request id is constructed and returned.
-        final Message commandMessage = mock(Message.class);
-        when(commandMessage.getReplyTo()).thenReturn("control/DEFAULT_TENANT/4711/replyId");
-        when(commandMessage.getCorrelationId()).thenReturn("correlationId");
+        final Optional<String> commandRequestIdOpt = generateCommandRequestIdForMessage("DEFAULT_TENANT", "4711",
+                "replyId", "correlationId");
 
-        final Optional<String> commandRequestIdOpt = adapter.validateAndGenerateCommandRequestId("DEFAULT_TENANT", "4711", commandMessage);
         ctx.assertNotNull(commandRequestIdOpt);
         ctx.assertTrue(commandRequestIdOpt.isPresent());
         ctx.assertNotNull(commandRequestIdOpt.get());
         ctx.assertTrue(commandRequestIdOpt.get().contains("correlationId"));
         ctx.assertTrue(commandRequestIdOpt.get().contains("replyId"));
+    }
+
+    private Optional<String> generateCommandRequestIdForMessage(final String tenant, final String deviceId,
+                                                                final String replyId, final String correlationId) {
+        final Message commandMessage = mock(Message.class);
+        final ResourceIdentifier resource = ResourceIdentifier.from("control", tenant,
+                new StringBuilder(deviceId).append("/").append(replyId).toString());
+        when(commandMessage.getReplyTo()).thenReturn(resource.toString());
+        when(commandMessage.getCorrelationId()).thenReturn(correlationId);
+
+        return adapter.validateAndGenerateCommandRequestId(tenant, deviceId, commandMessage);
+    }
+
+    /**
+     * Verifies that from a constructed command-request-id the correlationId and replyId can be reconstructed.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testCorrelationIdAndReplyToCanBeRetrievedFromCommandRequestIdAgain(final TestContext ctx) {
+
+        // GIVEN an adapter
+        adapter = newProtocolAdapter(properties, null);
+
+        // WHEN a correct command request id is used, it can be split to the correlationId and replyId again.
+        final Optional<String> commandRequestIdOpt = generateCommandRequestIdForMessage("DEFAULT_TENANT", "4711",
+                "replyId", "correlationId");
+
+        ctx.assertNotNull(commandRequestIdOpt);
+        ctx.assertTrue(commandRequestIdOpt.isPresent());
+
+        final Optional<String[]> corrIdAndReplyToArrayOpt = adapter.getCorrelationIdAndReplyToFromCommandRequestId(commandRequestIdOpt.get());
+
+        ctx.assertNotNull(corrIdAndReplyToArrayOpt);
+        ctx.assertTrue(corrIdAndReplyToArrayOpt.isPresent());
+        ctx.assertEquals(corrIdAndReplyToArrayOpt.get().length, 2);
+        ctx.assertEquals(corrIdAndReplyToArrayOpt.get()[0], "correlationId");
+        ctx.assertEquals(corrIdAndReplyToArrayOpt.get()[1], "replyId");
+    }
+
+    /**
+     * Verifies that from an incorrect command message the replyId and correlationId cannot be constructed (are not present in the returned
+     * Optional).
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testCorrelationIdAndReplyToCannotBeRetrievedFromInvalidCommandRequestId(final TestContext ctx) {
+
+        // GIVEN an adapter
+        adapter = newProtocolAdapter(properties, null);
+
+        // WHEN an incorrect command request id is used, an empty Optional is returned.
+        final Optional<String[]> corrIdAndReplyToArrayOpt = adapter.getCorrelationIdAndReplyToFromCommandRequestId("invalidCommandRequestId");
+
+        ctx.assertNotNull(corrIdAndReplyToArrayOpt);
+        ctx.assertFalse(corrIdAndReplyToArrayOpt.isPresent());
+    }
+
+    /**
+     * Verifies that from an incorrect command message that has a longer run-length than the subsequent characters,
+     * the replyId and correlationId cannot be constructed (are not present in the returned Optional).
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testCorrelationIdAndReplyToCannotBeRetrievedFromTooShortCommandRequestId(final TestContext ctx) {
+
+        // GIVEN an adapter
+        adapter = newProtocolAdapter(properties, null);
+
+        final Optional<String> commandRequestIdOpt = generateCommandRequestIdForMessage("DEFAULT_TENANT", "4711",
+                "replyId", "correlationId");
+
+        ctx.assertNotNull(commandRequestIdOpt);
+        ctx.assertTrue(commandRequestIdOpt.isPresent());
+
+        // now shorten the run length by using the correlationId string length + 2 from the 3 chars of the run-length '13#'
+        final String shortenedCommandRequestId = commandRequestIdOpt.get().substring(0,"correlationId".length() + 2);
+
+        // WHEN a command message with too large run-length is used, an empty Optional is returned.
+        final Optional<String[]> corrIdAndReplyToArrayOptShortened = adapter.getCorrelationIdAndReplyToFromCommandRequestId(shortenedCommandRequestId);
+
+        ctx.assertNotNull(corrIdAndReplyToArrayOptShortened);
+        ctx.assertFalse(corrIdAndReplyToArrayOptShortened.isPresent());
+    }
+
+    /**
+     * Verifies that from an incorrect command message that has a non parseable run-length,
+     * the replyId and correlationId cannot be reconstructed (are not present in the returned Optional).
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testCorrelationIdAndReplyToCannotBeRetrievedFromInvalidRunLengthCommandRequestId(final TestContext ctx) {
+
+        // GIVEN an adapter
+        adapter = newProtocolAdapter(properties, null);
+
+        // WHEN a command message with invalid run-length is used, an empty Optional is returned.
+        final Optional<String[]> corrIdAndReplyToArrayOptShortened = adapter.getCorrelationIdAndReplyToFromCommandRequestId("ab#corr");
+
+        ctx.assertNotNull(corrIdAndReplyToArrayOptShortened);
+        ctx.assertFalse(corrIdAndReplyToArrayOptShortened.isPresent());
     }
 
 }

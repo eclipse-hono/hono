@@ -490,6 +490,19 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     }
 
     /**
+     * Get the <em>correlationId</em> and the <em>reply-to-id</em> of a command-request-id.
+     *
+     * @param commandRequestId The command-request-id (typically sent by a device in a response message to a command).
+     * @return Optional An Optional with a two element array that contains the correlationId as first element and the replyTo
+     *         address as second element. If the command-request-id is not valid, an empty Optional is returned.
+     * @throws NullPointerException If commandRequestId is null.
+     */
+    protected final Optional<String[]> getCorrelationIdAndReplyToFromCommandRequestId(final String commandRequestId) {
+        Objects.requireNonNull(commandRequestId);
+        return Optional.ofNullable(Constants.splitTwoStrings(commandRequestId));
+    }
+
+    /**
      * Get the <em>reply-to-id</em> of a command message (being the last part of an endpoint).
      *
      * @param tenantId The tenant to be used for the validation.
