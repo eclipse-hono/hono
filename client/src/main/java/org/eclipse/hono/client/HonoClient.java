@@ -39,7 +39,21 @@ import io.vertx.proton.ProtonDelivery;
  * processed by the handler passed in to the factory method.
  * <p>
  * Before any of the factory methods can be invoked successfully, the client needs to connect to Hono. This is done by
- * invoking any of the client's <em>connect</em> methods.
+ * invoking one of the client's <em>connect</em> methods.
+ * <p>
+ * An AMQP connection is established in multiple stages:
+ * <ol>
+ * <li>The client establishes a TCP connection to the peer. For this to succeed, the peer must have registered a
+ * socket listener on the IP address and port that the client is configured to use.</li>
+ * <li>The client performs a SASL handshake with the peer if required by the peer. The client needs to be
+ * configured with correct credentials in order for this stage to succeed.</li>
+ * <li>Finally, the client and the peer need to agree on AMQP 1.0 specific connection parameters like capabilities
+ * and session window size.</li>
+ * </ol>
+ * Some of the <em>connect</em> methods accept a {@code ProtonClientOptions} type parameter. Note that these options
+ * only influence the client's behavior when establishing the TCP connection with the peer. The overall behavior of
+ * the client regarding the establishment of the AMQP connection must be configured using the
+ * {@link ClientConfigProperties} passed in to the <em>newClient</em> method.
  */
 public interface HonoClient {
 
@@ -52,10 +66,91 @@ public interface HonoClient {
     Future<Void> isConnected();
 
     /**
+     * Connects to the Hono server using default TCP client options.
+     * <p>
+     * With the default options a client will try three times to establish a TCP connection to the peer
+     * before giving up. Each attempt will be canceled after 200ms and the client will wait 500ms
+     * before making the next attempt. Note that each connection attempt is made using the same IP
+     * address that has been resolved when the method was initially invoked.
+     * <p>
+     * Once a TCP connection is established, the client performs a SASL handshake (if requested by the
+     * peer) using the credentials set in the {@link ClientConfigProperties}. Finally, the client
+     * opens the AMQP connection to the peer, based on the negotiated parameters.
+     * <p>
+     * The number of times that the client should try to establish the AMQP connection with the peer
+     * can be configured by means of the <em>connectAttempts</em> property of the 
+     * {@code ClientConfigProperties} passed in to the {@link #newClient(Vertx, ClientConfigProperties)}
+     * method.
+     * <p>
+     * When an established connection to the peer fails, the client will automatically try to re-connect
+     * to the peer using the same options and behavior as used for establishing the initial connection.
+     *
+     * @return A future that will be completed with the connected client once the connection has been established.
+     *         The future will fail with a {@link ServiceInvocationException} if the connection cannot be
+     *         established, e.g. because
+     *         <ul>
+     *         <li>authentication of the client failed, or</li>
+     *         <li>one of the client's <em>shutdown</em> methods has been invoked before the connection could be
+     *         established.</li>
+     *         <li>the maximum number of (unsuccessful) connection attempts have been made.</li>
+     *         </ul>
+     */
+    Future<HonoClient> connect();
+
+    /**
+     * Connects to the Hono server using given TCP client options.
+     * <p>
+     * The client will try to establish a TCP connection to the peer based on the values of the
+     * <em>connectTimeout</em>, <em>reconnectAttempts</em> and <em>reconnectInterval</em> properties
+     * of the given options. Note that each connection attempt is made using the same IP
+     * address that has been resolved when the method was initially invoked.
+     * <p>
+     * Once a TCP connection is established, the client performs a SASL handshake (if requested by the
+     * peer) using the credentials set in the {@link ClientConfigProperties}. Finally, the client
+     * opens the AMQP connection to the peer, based on the negotiated parameters.
+     * <p>
+     * The number of times that the client should try to establish the AMQP connection with the peer
+     * can be configured by means of the <em>connectAttempts</em> property of the 
+     * {@code ClientConfigProperties} passed in to the {@link #newClient(Vertx, ClientConfigProperties)}
+     * method.
+     * <p>
+     * When an established connection to the peer fails, the client will automatically try to re-connect
+     * to the peer using the same options and behavior as used for establishing the initial connection.
+     *
+     * @param options The options to use. If {@code null} a set of default properties will be used.
+     * @return A future that will succeed with the connected client once the connection has been established. The future
+     *         will fail with a {@link ServiceInvocationException} if the connection cannot be established, e.g. because
+     *         <ul>
+     *         <li>authentication of the client failed, or</li>
+     *         <li>one of the client's <em>shutdown</em> methods has been invoked before the connection could be
+     *         established, or</li>
+     *         <li>the maximum number of (unsuccessful) connection attempts have been made.</li>
+     *         </ul>
+     * @throws NullPointerException if the options are {@code null}.
+     */
+    Future<HonoClient> connect(ProtonClientOptions options);
+
+    /**
      * Connects to the Hono server using default options.
      * <p>
-     * Using the default options, the client will try to (re-)connect to the peer an unlimited number of times.
+     * With the default options a client will try three times to establish a TCP connection to the peer
+     * before giving up. Each attempt will be canceled after 200ms and the client will wait 500ms
+     * before making the next attempt. Note that each connection attempt is made using the same IP
+     * address that has been resolved when the method was initially invoked.
+     * <p>
+     * Once a TCP connection is established, the client performs a SASL handshake (if requested by the
+     * peer) using the credentials set in the {@link ClientConfigProperties}. Finally, the client
+     * opens the AMQP connection to the peer, based on the negotiated parameters.
+     * <p>
+     * The number of times that the client should try to establish the AMQP connection with the peer
+     * can be configured by means of the <em>connectAttempts</em> property of the 
+     * {@code ClientConfigProperties} passed in to the {@link #newClient(Vertx, ClientConfigProperties)}
+     * method.
+     * <p>
+     * When an established connection to the peer fails, the given disconnect handler will be invoked.
+     * Note that the client will <em>not</em> automatically try to re-connect to the peer in this case.
      *
+     * @param disconnectHandler A handler to notify about connection loss.
      * @return A future that will succeed with the connected client once the connection has been established. The future
      *         will fail with a {@link ServiceInvocationException} if the connection cannot be established, e.g. because
      *         <ul>
@@ -63,8 +158,46 @@ public interface HonoClient {
      *         <li>one of the client's <em>shutdown</em> methods has been invoked before the connection could be
      *         established.</li>
      *         </ul>
+     * @throws NullPointerException if the disconnect handler is {@code null}.
      */
-    Future<HonoClient> connect();
+    Future<HonoClient> connect(Handler<ProtonConnection> disconnectHandler);
+
+    /**
+     * Connects to the Hono server using given options.
+     * <p>
+     * The client will try to establish a TCP connection to the peer based on the values of the
+     * <em>connectTimeout</em>, <em>reconnectAttempts</em> and <em>reconnectInterval</em> properties
+     * of the given options. Note that each connection attempt is made using the same IP
+     * address that has been resolved when the method was initially invoked.
+     * <p>
+     * Once a TCP connection is established, the client performs a SASL handshake (if requested by the
+     * peer) using the credentials set in the {@link ClientConfigProperties}. Finally, the client
+     * opens the AMQP connection to the peer, based on the negotiated parameters.
+     * <p>
+     * The number of times that the client should try to establish the AMQP connection with the peer
+     * can be configured by means of the <em>connectAttempts</em> property of the 
+     * {@code ClientConfigProperties} passed in to the {@link #newClient(Vertx, ClientConfigProperties)}
+     * method.
+     * <p>
+     * When an established connection to the peer fails, the given disconnect handler will be invoked.
+     * Note that the client will <em>not</em> automatically try to re-connect to the peer in this case.
+     * If the disconnect handler is {@code null}, the client will automatically try to re-connect
+     * to the peer using the same options and behavior as used for establishing the initial connection.
+     *
+     * @param options The options to use. If {@code null} the default properties will be used.
+     * @param disconnectHandler A handler to notify about connection loss (may be {@code null}).
+     * @return A future that will succeed with the connected client once the connection has been established. The future
+     *         will fail with a {@link ServiceInvocationException} if the connection cannot be established, e.g. because
+     *         <ul>
+     *         <li>authentication of the client failed, or</li>
+     *         <li>one of the client's <em>shutdown</em> methods has been invoked before the connection could be
+     *         established, or</li>
+     *         <li>the maximum number of (unsuccessful) (re-)connection attempts have been made.</li>
+     *         </ul>
+     */
+    Future<HonoClient> connect(
+            ProtonClientOptions options,
+            Handler<ProtonConnection> disconnectHandler);
 
     /**
      * Disconnects the connection to the Hono server. Upon terminating the connection to the server,
@@ -89,72 +222,6 @@ public interface HonoClient {
      * @throws NullPointerException if the completionHandler is {@code null}.
      */
     void disconnect(Handler<AsyncResult<Void>> completionHandler);
-
-    /**
-     * Connects to the Hono server using given options.
-     * <p>
-     * The number of times that the client tries to (re-)connect to the peer is determined by the
-     * <em>reconnectAttempts</em> property of the given options. If set to -1 then the client will try to (re-)connect
-     * an unlimited number of times.
-     *
-     * @param options The options to use. If {@code null} a set of default properties will be used.
-     * @return A future that will succeed with the connected client once the connection has been established. The future
-     *         will fail with a {@link ServiceInvocationException} if the connection cannot be established, e.g. because
-     *         <ul>
-     *         <li>authentication of the client failed, or</li>
-     *         <li>one of the client's <em>shutdown</em> methods has been invoked before the connection could be
-     *         established, or</li>
-     *         <li>the maximum number of (unsuccessful) (re-)connection attempts have been made.</li>
-     *         </ul>
-     * @throws NullPointerException if the options are {@code null}.
-     */
-    Future<HonoClient> connect(ProtonClientOptions options);
-
-    /**
-     * Connects to the Hono server using default options.
-     * <p>
-     * Using the default options, the client will try to <em>initially</em> connect to the peer an unlimited number of
-     * times. When an established connection to the server fails, the disconnect handler will be invoked. The client
-     * will <em>not</em> automatically try to re-connect to the server in this case.
-     *
-     * @param disconnectHandler A handler to notify about connection loss.
-     * @return A future that will succeed with the connected client once the connection has been established. The future
-     *         will fail with a {@link ServiceInvocationException} if the connection cannot be established, e.g. because
-     *         <ul>
-     *         <li>authentication of the client failed, or</li>
-     *         <li>one of the client's <em>shutdown</em> methods has been invoked before the connection could be
-     *         established.</li>
-     *         </ul>
-     * @throws NullPointerException if the disconnect handler is {@code null}.
-     */
-    Future<HonoClient> connect(Handler<ProtonConnection> disconnectHandler);
-
-    /**
-     * Connects to the Hono server using given options.
-     * <p>
-     * The number of times that the client tries to <em>initially</em> connect to the peer is determined by the
-     * <em>reconnectAttempts</em> property of the given options. If set to -1 then the client will try to connect an
-     * unlimited number of times.
-     * <p>
-     * When an established connection to the server fails, the disconnect handler will be invoked (if not {@code null})
-     * and the client will <em>not</em> automatically try to re-connect to the server in this case. If the disconnect
-     * handler is {@code null}, the client will try to re-connect to the server using the same number of attempts as for
-     * the initial connection.
-     *
-     * @param options The options to use. If {@code null} a set of default properties will be used.
-     * @param disconnectHandler A handler to notify about connection loss (may be {@code null}).
-     * @return A future that will succeed with the connected client once the connection has been established. The future
-     *         will fail with a {@link ServiceInvocationException} if the connection cannot be established, e.g. because
-     *         <ul>
-     *         <li>authentication of the client failed, or</li>
-     *         <li>one of the client's <em>shutdown</em> methods has been invoked before the connection could be
-     *         established, or</li>
-     *         <li>the maximum number of (unsuccessful) (re-)connection attempts have been made.</li>
-     *         </ul>
-     */
-    Future<HonoClient> connect(
-            ProtonClientOptions options,
-            Handler<ProtonConnection> disconnectHandler);
 
     /**
      * Gets a client for sending telemetry messages to a Hono server.

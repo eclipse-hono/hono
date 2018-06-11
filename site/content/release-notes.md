@@ -2,6 +2,12 @@
 title = "Release Notes"
 +++
 
+## 0.7-M1 (not released yet)
+
+### Fixes & Enhancements
+
+* `HonoClientImpl`'s strategy for attempting to establish a connection with a peer has been enhanced. The client's *connect* methods by default will only try three times to establish a TCP connection with the peer before giving up. Based on the value of the new *reconnectAttempts* property of `ClientConfigProperties`, the client will then either re-try to connect to the peer (including a fresh DNS lookup of the peer's host name) or fail the overall connection attempt. This way, the client will not get stuck in an endless loop if the peer's IP address has changed or the peer has crashed while the client tries to connect to it.
+
 ## 0.6
 
 ### New Features

@@ -50,6 +50,7 @@ public class ClientConfigProperties extends AbstractConfig {
     private long requestTimeoutMillis = DEFAULT_REQUEST_TIMEOUT;
     private boolean hostnameVerificationRequired = true;
     private boolean tlsEnabled = false;
+    private int reconnectAttempts = -1;
 
     /**
      * Gets the name or literal IP address of the host that the client is configured to connect to.
@@ -402,5 +403,38 @@ public class ClientConfigProperties extends AbstractConfig {
      */
     public final void setTlsEnabled(final boolean enabled) {
         this.tlsEnabled = enabled;
+    }
+
+    /**
+     * Gets the number of attempts (in addition to the original connection attempt)
+     * that the client should make in order to establish an AMQP connection with
+     * the peer before giving up.
+     * <p>
+     * The default value of this property is -1 which means that the client
+     * will try forever.
+     * 
+     * @return The number of attempts.
+     */
+    public int getReconnectAttempts() {
+        return reconnectAttempts;
+    }
+
+    /**
+     * Sets the number of attempts (in addition to the original connection attempt)
+     * that the client should make in order to establish an AMQP connection with
+     * the peer before giving up.
+     * <p>
+     * The default value of this property is -1 which means that the client
+     * will try forever.
+     * 
+     * @param attempts The number of attempts to make.
+     * @throws IllegalArgumentException if attempts is &lt; -1.
+     */
+    public void setReconnectAttempts(final int attempts) {
+        if (attempts < -1) {
+            throw new IllegalArgumentException("attempts must be >= -1");
+        } else {
+            this.reconnectAttempts = attempts;
+        }
     }
 }

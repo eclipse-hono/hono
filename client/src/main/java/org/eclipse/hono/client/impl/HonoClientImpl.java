@@ -99,7 +99,7 @@ public class HonoClientImpl implements HonoClient {
 
     private ProtonClientOptions clientOptions;
     private CacheProvider cacheProvider;
-    private AtomicInteger reconnectAttempts = new AtomicInteger(0);
+    private AtomicInteger connectAttempts;
     private List<Symbol> offeredCapabilities = Collections.emptyList();
 
     /**
@@ -144,6 +144,7 @@ public class HonoClientImpl implements HonoClient {
         }
         this.context = this.vertx.getOrCreateContext();
         this.clientConfigProperties = clientConfigProperties;
+        this.connectAttempts = new AtomicInteger(0);
     }
 
     /**
@@ -288,15 +289,18 @@ public class HonoClientImpl implements HonoClient {
             } else if (connecting.compareAndSet(false, true)) {
 
                 if (options == null) {
-                    // by default, try to re-connect forever
+                    // by default, try to establish the TCP connection
+                    // three times before giving up
                     clientOptions = new ProtonClientOptions()
                             .setConnectTimeout(200)
-                            .setReconnectAttempts(-1)
+                            .setReconnectAttempts(3)
                             .setReconnectInterval(Constants.DEFAULT_RECONNECT_INTERVAL_MILLIS);
                 } else {
                     clientOptions = options;
                 }
 
+                LOG.debug("starting attempt [#{}] to connect to server [{}:{}]",
+                        connectAttempts.get() + 1, connectionFactory.getHost(), connectionFactory.getPort());
                 connectionFactory.connect(
                         clientOptions,
                         remoteClose -> onRemoteClose(remoteClose, disconnectHandler),
@@ -306,8 +310,6 @@ public class HonoClientImpl implements HonoClient {
                             if (conAttempt.failed()) {
                                 reconnect(conAttempt.cause(), connectionHandler, disconnectHandler);
                             } else {
-                                // make sure we try to re-connect as often as we tried to connect initially
-                                reconnectAttempts = new AtomicInteger(0);
                                 final ProtonConnection newConnection = conAttempt.result();
                                 if (shuttingDown.get()) {
                                     // if client was shut down in the meantime, we need to immediately
@@ -315,6 +317,8 @@ public class HonoClientImpl implements HonoClient {
                                     newConnection.closeHandler(null);
                                     newConnection.disconnectHandler(null);
                                     newConnection.close();
+                                    // make sure we try to re-connect as often as we tried to connect initially
+                                    connectAttempts = new AtomicInteger(0);
                                     connectionHandler.handle(Future.failedFuture(
                                             new ClientErrorException(HttpURLConnection.HTTP_CONFLICT,
                                                     "client is already shut down")));
@@ -364,19 +368,25 @@ public class HonoClientImpl implements HonoClient {
         }
 
         final ProtonConnection failedConnection = this.connection;
+        clearState();
+
+        if (connectionLossHandler != null) {
+            connectionLossHandler.handle(failedConnection);
+        } else {
+            reconnect(attempt -> {}, null);
+        }
+    }
+
+    private void clearState() {
+
         setConnection(null);
         offeredCapabilities = Collections.emptyList();
 
         activeSenders.clear();
         activeRequestResponseClients.clear();
         failAllCreationRequests();
-
-        if (connectionLossHandler != null) {
-            connectionLossHandler.handle(failedConnection);
-        } else {
-            reconnect(attempt -> {
-            }, null);
-        }
+        // make sure we make configured number of attempts to re-connect
+        connectAttempts = new AtomicInteger(0);
     }
 
     private void failAllCreationRequests() {
@@ -400,10 +410,10 @@ public class HonoClientImpl implements HonoClient {
         if (shuttingDown.get()) {
             // no need to try to re-connect
             connectionHandler.handle(Future.failedFuture(new IllegalStateException("client is shut down")));
-        } else if (clientOptions.getReconnectAttempts() - reconnectAttempts.get() == 0) {
-            reconnectAttempts = new AtomicInteger(0);
+        } else if (clientConfigProperties.getReconnectAttempts() - connectAttempts.getAndIncrement() == 0) {
             LOG.debug("max number of attempts [{}] to re-connect to peer [{}:{}] have been made, giving up",
-                    clientOptions.getReconnectAttempts(), connectionFactory.getHost(), connectionFactory.getPort());
+                    clientConfigProperties.getReconnectAttempts(), connectionFactory.getHost(), connectionFactory.getPort());
+            connectAttempts = new AtomicInteger(0);
             if (connectionFailureCause == null) {
                 connectionHandler.handle(Future.failedFuture(
                         new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "failed to connect")));
@@ -417,12 +427,9 @@ public class HonoClientImpl implements HonoClient {
                                 connectionFailureCause)));
             }
         } else {
-            LOG.trace("scheduling attempt to re-connect ...");
-            reconnectAttempts.getAndIncrement();
+            LOG.trace("scheduling new attempt to connect ...");
             // give Vert.x some time to clean up NetClient
             vertx.setTimer(clientOptions.getReconnectInterval(), tid -> {
-                LOG.debug("starting attempt [#{}] to re-connect to server [{}:{}]",
-                        reconnectAttempts.get(), connectionFactory.getHost(), connectionFactory.getPort());
                 connect(clientOptions, connectionHandler, disconnectHandler);
             });
         }
@@ -1036,38 +1043,38 @@ public class HonoClientImpl implements HonoClient {
     public final void disconnect(final Handler<AsyncResult<Void>> completionHandler) {
         Objects.requireNonNull(completionHandler);
         if (disconnecting.compareAndSet(Boolean.FALSE, Boolean.TRUE)) {
-            context.runOnContext(disconnectResult -> {
-                closeConnection(completionHandler);
-            });
+            closeConnection(completionHandler);
         } else {
-            completionHandler.handle(Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_CONFLICT, "already in the middle of a disconnect operation")));
+            completionHandler.handle(Future.failedFuture(
+                    new ClientErrorException(HttpURLConnection.HTTP_CONFLICT, "already disconnecting")));
         }
     }
 
     //-----------------------------------< private methods >---
 
     private void closeConnection(final Handler<AsyncResult<Void>> completionHandler) {
-        if (isConnectedInternal()) {
-            LOG.info("closing connection to server [{}:{}]...", connectionFactory.getHost(), connectionFactory.getPort());
-            connection.disconnectHandler(null); // make sure we are not trying to re-connect
-            connection.closeHandler(closedCon -> {
-                if (closedCon.succeeded()) {
-                    LOG.info("closed connection to server [{}:{}]", connectionFactory.getHost(),
-                            connectionFactory.getPort());
-                } else {
-                    LOG.info("closed connection to server [{}:{}]", connectionFactory.getHost(),
-                            connectionFactory.getPort(), closedCon.cause());
-                }
-                connection.disconnect();
-                disconnecting.compareAndSet(Boolean.TRUE, Boolean.FALSE);
-
-                completionHandler.handle(Future.succeededFuture());
-            }).close();
-        } else {
-            LOG.info("connection to server [{}:{}] already closed", connectionFactory.getHost(), connectionFactory.getPort());
+        context.runOnContext(close -> {
+            if (isConnectedInternal()) {
+                LOG.info("closing connection to server [{}:{}]...", connectionFactory.getHost(), connectionFactory.getPort());
+                final ProtonConnection connectionToClose = connection;
+                connectionToClose.disconnectHandler(null); // make sure we are not trying to re-connect
+                connectionToClose.closeHandler(closedCon -> {
+                    if (closedCon.succeeded()) {
+                        LOG.info("closed connection to server [{}:{}]", connectionFactory.getHost(),
+                                connectionFactory.getPort());
+                    } else {
+                        LOG.info("closed connection to server [{}:{}]", connectionFactory.getHost(),
+                                connectionFactory.getPort(), closedCon.cause());
+                    }
+                    connectionToClose.disconnect();
+                });
+                connectionToClose.close();
+                clearState();
+            } else {
+                LOG.info("connection to server [{}:{}] already closed", connectionFactory.getHost(), connectionFactory.getPort());
+            }
             disconnecting.compareAndSet(Boolean.TRUE, Boolean.FALSE);
             completionHandler.handle(Future.succeededFuture());
-        }
+        });
     }
-
 }
