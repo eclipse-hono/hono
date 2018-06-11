@@ -60,6 +60,11 @@
       <artifactId>jjwt</artifactId>
     </dependency>
     <dependency>
+      <!-- required as a (missing) transient dependency for JJWT -->
+      <groupId>javax.xml.bind</groupId>
+      <artifactId>jaxb-api</artifactId>
+    </dependency>
+    <dependency>
       <groupId>com.fasterxml.jackson.core</groupId>
       <artifactId>jackson-databind</artifactId>
       <version>${jackson.version}</version>
