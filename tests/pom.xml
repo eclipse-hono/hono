@@ -632,7 +632,6 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                 <!-- javax.net.debug>ssl:handshake</javax.net.debug-->
               </systemProperties>
               <failIfNoSpecifiedTests>false</failIfNoSpecifiedTests>
-              <test>*IT</test>
             </configuration>
             <executions>
               <execution>
