@@ -582,6 +582,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                 <mqtt.host>${mqtt.ip}</mqtt.host>
                 <mqtt.port>${mqtt.port}</mqtt.port>
                 <trust-store.path>${project.build.directory}/certs/trusted-certs.pem</trust-store.path>
+                <test.env>${test.env}</test.env>
                 <!-- javax.net.debug>ssl:handshake</javax.net.debug-->
               </systemProperties>
               <failIfNoSpecifiedTests>false</failIfNoSpecifiedTests>
