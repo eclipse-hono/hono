@@ -29,6 +29,7 @@ import io.netty.handler.codec.mqtt.MqttQoS;
 import io.vertx.core.Future;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
+import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.mqtt.MqttClient;
@@ -70,7 +71,7 @@ public class TelemetryMqttQoS0IT extends MqttTestBase {
     @Override
     protected void assertMessageReceivedRatio(final long received, final long sent, final TestContext ctx) {
 
-        long expectedPercentage = 100;
+        int expectedPercentage = 100;
         if (isTestEnvironment()) {
             LOGGER.info("running on CI test environment, allowing for 100 percent of messages to be lost ...");
             expectedPercentage = 0;
@@ -78,7 +79,7 @@ public class TelemetryMqttQoS0IT extends MqttTestBase {
             LOGGER.info("running on default environment, requiring 90 percent of messages to be received ...");
             expectedPercentage = 90;
         }
-        final long expected = Math.round(sent * expectedPercentage / 100);
+        final int expected = Math.round(sent * expectedPercentage / 100);
         if (received < expected) {
             // fail if less than 90% of sent messages have been received
             ctx.fail(String.format("did not receive expected number of messages [expected: %d, received: %d]",
@@ -89,7 +90,7 @@ public class TelemetryMqttQoS0IT extends MqttTestBase {
     @Override
     protected long getTimeToWait() {
         if (isTestEnvironment()) {
-            return MESSAGES_TO_SEND * 60;
+            return MESSAGES_TO_SEND * 100;
         } else {
             return MESSAGES_TO_SEND * 10;
         }
@@ -111,6 +112,7 @@ public class TelemetryMqttQoS0IT extends MqttTestBase {
     public void testConnectFailsForDisabledTenant(final TestContext ctx) {
 
         // GIVEN a tenant for which the HTTP adapter is disabled
+        final Async rejected = ctx.async();
         final String tenantId = helper.getRandomTenantId();
         final String deviceId = helper.getRandomDeviceId(tenantId);
         final String password = "secret";
@@ -132,6 +134,9 @@ public class TelemetryMqttQoS0IT extends MqttTestBase {
                 return result;
             }).setHandler(ctx.asyncAssertFailure(t -> {
                 // THEN the connection attempt gets rejected
+                rejected.complete();
             }));
+
+        rejected.await(TEST_TIMEOUT);
     }
 }

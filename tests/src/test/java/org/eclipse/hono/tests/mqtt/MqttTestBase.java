@@ -33,7 +33,6 @@ import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestName;
-import org.junit.rules.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -60,7 +59,7 @@ public abstract class MqttTestBase {
      * The maximum number of milliseconds a test case may run before it
      * is considered to have failed.
      */
-    protected static final int TEST_TIMEOUT = 9000; // milliseconds
+    protected static final int TEST_TIMEOUT = 2000; // milliseconds
     /**
      * The number of messages to send as part of the test cases.
      */
@@ -76,11 +75,6 @@ public abstract class MqttTestBase {
      */
     protected static IntegrationTestSupport helper;
 
-    /**
-     * Time out each test after 9 seconds.
-     */
-    @Rule
-    public final Timeout timeout = Timeout.millis(TEST_TIMEOUT);
     /**
      * Provide test name to unit tests.
      */
@@ -189,7 +183,7 @@ public abstract class MqttTestBase {
      * @return The number of milliseconds.
      */
     protected long getTimeToWait() {
-        return MESSAGES_TO_SEND * 20;
+        return Math.max(TEST_TIMEOUT, MESSAGES_TO_SEND * 20);
     }
 
     /**
