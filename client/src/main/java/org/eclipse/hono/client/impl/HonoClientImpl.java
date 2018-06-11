@@ -42,6 +42,7 @@ import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.RequestResponseClient;
 import org.eclipse.hono.client.ServerErrorException;
+import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.TenantClient;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.connection.ConnectionFactory;
@@ -67,7 +68,25 @@ public class HonoClientImpl implements HonoClient {
 
     private static final Logger LOG = LoggerFactory.getLogger(HonoClientImpl.class);
 
+    /**
+     * The configuration properties for this client.
+     */
+    protected final ClientConfigProperties clientConfigProperties;
+    /**
+     * The vert.x Context to use for interacting with the peer.
+     */
+    protected final Context context;
+    /**
+     * The senders that can be used to send telemetry and or event messages.
+     * The target address is used as the key, e.g. <em>telemetry/DEFAULT_TENANT</em>.
+     */
     protected final Map<String, MessageSender> activeSenders = new HashMap<>();
+
+    /**
+     * The AMQP connection to the peer.
+     */
+    protected ProtonConnection connection;
+
     private final Map<String, RequestResponseClient> activeRequestResponseClients = new HashMap<>();
     private final Map<String, Boolean> creationLocks = new HashMap<>();
     private final List<Handler<Void>> creationRequests = new ArrayList<>();
@@ -75,13 +94,10 @@ public class HonoClientImpl implements HonoClient {
     private final AtomicBoolean shuttingDown = new AtomicBoolean(false);
     private final AtomicBoolean disconnecting = new AtomicBoolean(false);
     private final ConnectionFactory connectionFactory;
-    protected final ClientConfigProperties clientConfigProperties;
     private final Vertx vertx;
     private final Object connectionLock = new Object();
-    protected final Context context;
 
     private ProtonClientOptions clientOptions;
-    protected ProtonConnection connection;
     private CacheProvider cacheProvider;
     private AtomicInteger reconnectAttempts = new AtomicInteger(0);
     private List<Symbol> offeredCapabilities = Collections.emptyList();
@@ -484,6 +500,21 @@ public class HonoClientImpl implements HonoClient {
         });
     }
 
+    /**
+     * Gets an existing or creates a new message sender.
+     * <p>
+     * This method will first try to look up an already existing
+     * sender using the given key. If no sender exists yet, a new
+     * instance is created using the given factory and put to the cache.
+     * 
+     * @param key The key to cache the sender under.
+     * @param newSenderSupplier The factory to use for creating a
+     *        new sender (if necessary).
+     * @return A future indicating the outcome. The future will be
+     *         completed with the sender or failed with a
+     *         {@link ServiceInvocationException} if no sender could be
+     *         created using the factory.
+     */
     protected Future<MessageSender> getOrCreateSender(
             final String key,
             final Supplier<Future<MessageSender>> newSenderSupplier) {
@@ -600,6 +631,17 @@ public class HonoClientImpl implements HonoClient {
         });
     }
 
+    /**
+     * Creates a new message consumer for a tenant.
+     * 
+     * @param tenantId The tenant to create the consumer for.
+     * @param newConsumerSupplier The factory to use for creating a new
+     *        consumer.
+     * @return A future indicating the outcome of the operation. The future
+     *         will be succeeded with the created consumer or will be
+     *         failed with a {@link ServiceInvocationException}
+     *         if the consumer cannot be created.
+     */
     protected Future<MessageConsumer> createConsumer(
             final String tenantId,
             final Supplier<Future<MessageConsumer>> newConsumerSupplier) {
@@ -608,7 +650,7 @@ public class HonoClientImpl implements HonoClient {
         context.runOnContext(get -> {
 
             // register a handler to be notified if the underlying connection to the server fails
-            // so that we can fail the result handler passed in
+            // so that we can fail the returned future
             final Handler<Void> connectionFailureHandler = connectionLost -> {
                 result.tryFail(
                         new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "connection to server lost"));
