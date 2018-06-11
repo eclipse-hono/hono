@@ -21,3 +21,12 @@ Please don't be disappointed if you do not immediately get an answer to your inq
 ## Mailing List
 
 An excellent way to get the latest news and announcements around Hono is to [join the mailing list](https://dev.eclipse.org/mailman/listinfo/hono-dev). This is the place where we announce new releases and discuss architectural issues of greater impact.
+
+## Project Call
+
+There is a bi-weekly community call which is open to everyone interested in
+the development of Hono. You can join by using the following link:
+<https://bluejeans.com/494114785>
+
+You can also import the calendar file [project-call.ics](../project-call.ics "Project Call") 
+which contains more information about joining by computer of by telephone. 
