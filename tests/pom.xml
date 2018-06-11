@@ -25,6 +25,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
     <maven.source.skip>true</maven.source.skip>
     <maven.install.skip>true</maven.install.skip>
     <gpg.skip>true</gpg.skip>
+    <service.startup.timeout>90000</service.startup.timeout>
   </properties>
 
   <dependencies>
@@ -176,6 +177,13 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <prefix>AUTH</prefix>
                       <color>cyan</color>
                     </log>
+                    <wait>
+                      <time>${service.startup.timeout}</time>
+                      <tcp>
+                        <mode>mapped</mode>
+                        <ports><port>5672</port></ports>
+                      </tcp>
+                    </wait>
                   </run>
                 </image>
                 <!-- ##### Device Registration service ##### -->
@@ -214,6 +222,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     <ports>
                       <port>+deviceregistry.ip:deviceregistry.amqp.port:5672</port>
                       <port>+deviceregistry.ip:deviceregistry.http.port:8080</port>
+                      <port>+deviceregistry.ip:deviceregistry.health.port:8088</port>
                     </ports>
                     <network>
                       <mode>custom</mode>
@@ -229,6 +238,14 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <prefix>REGISTRY</prefix>
                       <color>yellow</color>
                     </log>
+                    <wait>
+                      <time>${service.startup.timeout}</time>
+                      <http>
+                        <method>GET</method>
+                        <url>http://${deviceregistry.ip}:${deviceregistry.health.port}/readiness</url>
+                        <status>200..299</status>
+                      </http>
+                    </wait>
                   </run>
                 </image>
                 <!-- ##### ActiveMQ Artemis message broker ##### -->
@@ -284,6 +301,13 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <prefix>ARTEMIS</prefix>
                       <color>magenta</color>
                     </log>
+                    <wait>
+                      <time>${service.startup.timeout}</time>
+                      <tcp>
+                        <mode>mapped</mode>
+                        <ports><port>5671</port></ports>
+                      </tcp>
+                    </wait>
                     <!--
                     <env>
                        <PN_TRACE_FRM>1</PN_TRACE_FRM>
@@ -347,6 +371,13 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <prefix>QPID</prefix>
                       <color>blue</color>
                     </log>
+                    <wait>
+                      <time>${service.startup.timeout}</time>
+                      <tcp>
+                        <mode>mapped</mode>
+                        <ports><port>5672</port></ports>
+                      </tcp>
+                    </wait>
                     <!--
                     <env>
                        <PN_TRACE_FRM>1</PN_TRACE_FRM>
@@ -389,6 +420,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                   <run>
                     <ports>
                       <port>+hono.ip:hono.amqp.port:5672</port>
+                      <port>+hono.ip:hono.health.port:8088</port>
                     </ports>
                     <network>
                       <mode>custom</mode>
@@ -406,8 +438,12 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <color>green</color>
                     </log>
                     <wait>
-                      <log>^.*(Started \w*Application in).*$</log>
-                      <time>60000</time>
+                      <time>${service.startup.timeout}</time>
+                      <http>
+                        <method>GET</method>
+                        <url>http://${hono.ip}:${hono.health.port}/readiness</url>
+                        <status>200..299</status>
+                      </http>
                     </wait>
                   </run>
                 </image>
@@ -446,6 +482,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     <ports>
                       <port>+http.ip:http.port:8080</port>
                       <port>https.port:8443</port>
+                      <port>+http.ip:http.health.port:8088</port>
                     </ports>
                     <network>
                       <mode>custom</mode>
@@ -462,8 +499,12 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <prefix>HTTP</prefix>
                     </log>
                     <wait>
-                      <log>^.*(Started \w*Application in).*$</log>
-                      <time>60000</time>
+                      <time>${service.startup.timeout}</time>
+                      <http>
+                        <method>GET</method>
+                        <url>http://${http.ip}:${http.health.port}/readiness</url>
+                        <status>200..299</status>
+                      </http>
                     </wait>
                   </run>
                 </image>
@@ -501,6 +542,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                   <run>
                     <ports>
                       <port>+mqtt.ip:mqtt.port:1883</port>
+                      <port>+mqtt.ip:mqtt.health.port:8088</port>
                     </ports>
                     <network>
                       <mode>custom</mode>
@@ -517,8 +559,12 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <prefix>MQTT</prefix>
                     </log>
                     <wait>
-                      <log>^.*(Started \w*Application in).*$</log>
-                      <time>60000</time>
+                      <time>${service.startup.timeout}</time>
+                      <http>
+                        <method>GET</method>
+                        <url>http://${mqtt.ip}:${mqtt.health.port}/readiness</url>
+                        <status>200..299</status>
+                      </http>
                     </wait>
                   </run>
                 </image>

@@ -1,6 +1,8 @@
 hono:
   app:
     maxInstances: 1
+    healthCheckBindAddress: 0.0.0.0
+    healthCheckPort: 8088
     startupTimeout: 90
   auth:
     host: hono-service-auth.hono
