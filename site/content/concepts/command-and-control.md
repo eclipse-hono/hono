@@ -19,23 +19,26 @@ You can try the implementation directly by following the [Command and Control Us
 
 ## Command & Control over HTTP Adapter
 
-The following sequence diagram gives an overview of a device connecting via HTTP, which gets a command from the business application as soon as it gets online. The application and the adapter connect to the AMQP Network, which forwards the transfer - for clarity this is not shown in the diagram. 
+The following sequence diagram gives an overview of a device connecting via HTTP, which gets a command from the business application in the response to a downstream message - being an arbitrary event in this example. The application and the adapter connect to the AMQP Network, which forwards the transfer - for clarity this is not shown in the diagram. 
  
 ![Command & Control over HTTP Adapter](../command_control_concept_http.png) 
 
-With the `hono-ttd`-[notification]({{< relref "device-notifications.md" >}}) in (1) the device indicates it will stay connected for max. 30 seconds. This notification will be consumed by the application (2) and it now tries to send a command (3) to the device at the given address `control/TENANT/4711` (If the device is not connected, the adapter has not established a link for it and the application would get no credits so send the command).
+With the `hono-ttd` request parameter in (1) the device indicates it will stay connected for max. 30 seconds. In the shown example this means that it can handle the response to the HTTP request for up to 30 seconds before considering the request being expired. 
+
+Internally the application is notified that there is a time interval of 30 seconds to send a command (see [Device notifications]({{< relref "device-notifications.md" >}}) for details).  This notification will be consumed by the application (2) and it now tries to send a command (3) to the device at the given address `control/TENANT/4711`.
+If the device is not connected or the time interval is expired already, there is no such link open and the application would get no credits so send the command.
 
 The HTTP Adapter gets the command and writes it in the response of the devices `send event` (4), if the request was successful (status 2xx). The HTTP Adapter sets the following response headers and optionally a payload.
 
-| Response Header              | Description         |
-| :---------------------       |  :----------------- |
-| `hono-cmd`               | The command, which should be executed by the device. It could need further data from the payload. |
-| `hono-cmd-req-id`      | Id, which is needed in the command response to correlate the response to the request.       |
+| Response Header         | Description         |
+| :---------------------  |  :----------------- |
+| `hono-cmd`              | The command, which should be executed by the device. It could need further data from the payload. |
+| `hono-cmd-req-id`       | Id, which is needed in the command response to correlate the response to the request.       |
 
- The `hono-cmd` is the command, which need to be known by the device. The device can handle it and may also use the payload. The `hono-cmd-req-id` is needed for the command response to correlate it. It will be send back from the device to the adapter in a following operation (5). 
+ The `hono-cmd` is the command, which needs to be known by the device. The device can handle it and may also use the payload. The `hono-cmd-req-id` is needed for the command response to correlate it. It has to be sent back from the device to the adapter in a following operation (5). 
  
 {{% note %}}
-This is, what is implemented in Hono 0.6. At the moment the Application does not get a response back from the device as shown in (5), (6) and (7). Instead the adapter sends a response after sending the command to the device.  
+This is, what is implemented in Hono 0.6. At the moment the Application does not get a response back from the device as shown in (5), (6) and (7). Instead the adapter sends a successful response without payload after sending the command to the device.  
 {{% /note %}}
 
 The device needs to respond to the command (5), to inform the business application about the success. It typically follows the way described in [HTTP Adapter]({{< relref "user-guide/http-adapter.md" >}}) for telemetry and events with the following changes:
@@ -55,7 +58,8 @@ For authenticated and unauthenticated devices:
 * Request Body:
   * (optional) Arbitrary payload as response data.
 
-The HTTP Adapter will then send this response back to the Business Application (6). 
+The HTTP Adapter will then send this response back to the Business Application (6). If the application has not kept the
+link open, the request for the device response will be responded with `503 Service unavailable`. 
 
 ## Command & Control over MQTT Adapter
 
