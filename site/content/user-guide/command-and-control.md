@@ -39,24 +39,32 @@ and sent by Hono.
 
 After the application has been successfully connected to
 the AMQP 1.0 network, it is time to send an appropriate downstream message to the HTTP protocol adapter that is responded 
-with a command.  
+with a command. 
+
+Note that it is the responsibility of the application to send a command - to illustrate how this is done,
+the example application sends a command `setBrightness` when it receives a downstream message that has a valid 
+*time until disconnect* parameter set. Refer to the usage of the helper class `MessageTap` in the example code as a blueprint for
+writing your own application.
 
 ## Sending a downstream message and receive a command in the response
 
-Publish some JSON data for device `4711` and set the *time until disconnect* parameter `hono-ttd`:
+To simulate an HTTP device, we use the standard tool `curl` to publish some JSON data for the device `4711`.
+To signal that the device can handle a command in the response to the downstream message, it additionally specifies the number of seconds
+it can wait for the response by supplying the *time until disconnect* request parameter `hono-ttd`:
 
     $ curl -i -X POST -u sensor1@DEFAULT_TENANT:hono-secret -H 'Content-Type: application/json' \
     $ --data-binary '{"temp": 5}' http://127.0.0.1:8080/telemetry?hono-ttd=5
 
-Watch the application that receives the message, on it's `stdout` you will find a line like
+
+Watch the example application that receives the message - on it's `stdout` you will find a line like
 
     Device is ready to receive a command : <TimeUntilDisconnectNotification{tenantId='DEFAULT_TENANT', deviceId='4711', readyUntil=2018-05-22T12:11:35.055Z}>
 
 and some lines below
     
-    14:11:30.059 [vert.x-eventloop-thread-0] DEBUG o.e.hono.client.impl.HonoClientImpl - Command client created successfully for [tenantId: DEFAULT_TENANT, deviceId: 4711]
+    [vert.x-eventloop-thread-0] DEBUG o.e.hono.client.impl.HonoClientImpl - Command client created successfully for [tenantId: DEFAULT_TENANT, deviceId: 4711]
 
-The `curl` command (which simulates an HTTP device in this example) is responded like the following:
+The response to the `curl` command contains the command from the example application and looks like the following:
 
     HTTP/1.1 202 Accepted
     hono-command: setBrightness
