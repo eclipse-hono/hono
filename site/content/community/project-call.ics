@@ -27,18 +27,13 @@ DTEND;TZID=Europe/Berlin:20180301T160000
 RRULE:FREQ=WEEKLY;WKST=SU;INTERVAL=2;BYDAY=TH
 DTSTAMP:20180611T074931Z
 CREATED:20180611T074833Z
-DESCRIPTION:To join the meeting on a computer or mobile phone : <a href="ht
- tps://www.google.com/url?q=https%3A%2F%2Fbluejeans.com%2F494114785%2F5612%3
- Fsrc%3DcalendarLink&amp\;sa=D&amp\;ust=1528804417704000&amp\;usg=AFQjCNEiK2
- -wA23Cy0g4ZiH3UIb-_6hfNw" target="_blank">https://bluejeans.com/494114785</
- a><br><br>Here are the details for the meeting you scheduled:<br><br>Just w
- ant to dial in on your phone?<br><br>1.) Dial one of the following numbers:
- <br>&nbsp\;&nbsp\;&nbsp\;&nbsp\;&nbsp\;408-915-6466 (US)<br><br>&nbsp\;&nbs
- p\;&nbsp\;&nbsp\;See all numbers: <a href="https://www.google.com/url?q=htt
- ps%3A%2F%2Fwww.redhat.com%2Fen%2Fconference-numbers&amp\;sa=D&amp\;ust=1528
- 804417704000&amp\;usg=AFQjCNE1VBXoWI8JDhMS_L_4rRFwlh7EVQ" target="_blank">h
- ttps://www.redhat.com/en/conference-numbers</a><br>2.) Enter Meeting ID: 49
- 4114785
+DESCRIPTION:To join the meeting on a computer or mobile phone :\n\n   
+ https://bluejeans.com/494114785\n\nHere are the details for the meeting 
+ you scheduled:\n\nJust want to dial in on your phone?\n\n1.) Dial one of 
+ the following numbers:<br>&nbsp\;&nbsp\;&nbsp\;&nbsp\;&nbsp\;408-915-6466 
+ (US)\n     See all numbers: https:
+ //www.redhat.com/en/conference-numbers\n2.) Enter Meeting ID: 
+ 494114785\n
 LAST-MODIFIED:20180611T074833Z
 LOCATION:https://bluejeans.com/494114785
 SEQUENCE:0
