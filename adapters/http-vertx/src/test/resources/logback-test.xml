@@ -17,6 +17,7 @@
   <logger name="org.eclipse.hono.auth" level="TRACE"/>
   <logger name="org.eclipse.hono.config" level="INFO"/>
   <logger name="org.eclipse.hono.connection" level="TRACE"/>
+  <logger name="org.eclipse.hono.service" level="TRACE"/>
   <logger name="org.eclipse.hono.util" level="INFO"/>
 
 </configuration>
