@@ -161,6 +161,11 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
         checkPortConfiguration()
             .compose(s -> preStartup())
             .compose(s -> {
+                if (metrics == null) {
+                    // use default implementation
+                    // which simply discards all reported metrics
+                    metrics = new HttpAdapterMetrics();
+                }
                 final Router router = createRouter();
                 if (router == null) {
                     return Future.failedFuture("no router configured");
@@ -168,8 +173,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                     addRoutes(router);
                     return CompositeFuture.all(bindSecureHttpServer(router), bindInsecureHttpServer(router));
                 }
-            })
-            .compose(s -> {
+            }).compose(s -> {
                 try {
                     onStartupSuccess();
                     startFuture.complete();

@@ -27,7 +27,6 @@ import java.util.Base64;
 import java.util.function.BiConsumer;
 
 import org.apache.qpid.proton.message.Message;
-import org.eclipse.hono.adapter.http.HttpAdapterMetrics;
 import org.eclipse.hono.adapter.http.HttpProtocolAdapterProperties;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.HonoClient;
@@ -169,7 +168,6 @@ public class VertxBasedHttpProtocolAdapterTest {
         httpAdapter.setRegistrationServiceClient(registrationServiceClient);
         httpAdapter.setCommandConnection(commandConnection);
         httpAdapter.setUsernamePasswordAuthProvider(usernamePasswordAuthProvider);
-        httpAdapter.setMetrics(mock(HttpAdapterMetrics.class));
 
         vertx.deployVerticle(httpAdapter, ctx.asyncAssertSuccess(id -> {
             deploymentId = id;

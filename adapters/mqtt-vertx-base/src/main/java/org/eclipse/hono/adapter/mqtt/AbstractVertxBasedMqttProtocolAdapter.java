@@ -215,15 +215,20 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
             LOG.warn("authentication of devices turned off");
         }
         checkPortConfiguration()
-                .compose(v -> bindSecureMqttServer())
-                .compose(s -> bindInsecureMqttServer())
-                .compose(t -> {
-                    if (usernamePasswordAuthProvider == null) {
-                        usernamePasswordAuthProvider = new UsernamePasswordAuthProvider(getCredentialsServiceClient(),
-                                getConfig());
-                    }
-                    startFuture.complete();
-                }, startFuture);
+            .compose(ok -> {
+                if (metrics == null) {
+                    // use default implementation
+                    // which simply discards all reported metrics
+                    metrics = new MqttAdapterMetrics();
+                }
+                return CompositeFuture.all(bindSecureMqttServer(), bindInsecureMqttServer());
+            }).compose(t -> {
+                if (usernamePasswordAuthProvider == null) {
+                    usernamePasswordAuthProvider = new UsernamePasswordAuthProvider(getCredentialsServiceClient(),
+                            getConfig());
+                }
+                startFuture.complete();
+            }, startFuture);
     }
 
     @Override
