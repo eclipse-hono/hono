@@ -15,6 +15,10 @@
     <appender-ref ref="STDOUT" />
   </root>
 
+  <springProfile name="trace">
+    <logger name="org.eclipse.hono.adapter" level="TRACE"/>
+  </springProfile>
+
   <springProfile name="dev">
     <logger name="org.eclipse.hono.adapter" level="DEBUG"/>
     <logger name="org.eclipse.hono.client" level="DEBUG"/>
