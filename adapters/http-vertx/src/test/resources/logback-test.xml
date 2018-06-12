@@ -13,10 +13,10 @@
     <appender-ref ref="STDOUT" />
   </root>
 
-  <logger name="org.eclipse.hono.adapter" level="INFO"/>
-  <logger name="org.eclipse.hono.auth" level="INFO"/>
+  <logger name="org.eclipse.hono.adapter" level="TRACE"/>
+  <logger name="org.eclipse.hono.auth" level="TRACE"/>
   <logger name="org.eclipse.hono.config" level="INFO"/>
-  <logger name="org.eclipse.hono.connection" level="INFO"/>
+  <logger name="org.eclipse.hono.connection" level="TRACE"/>
   <logger name="org.eclipse.hono.util" level="INFO"/>
 
 </configuration>
