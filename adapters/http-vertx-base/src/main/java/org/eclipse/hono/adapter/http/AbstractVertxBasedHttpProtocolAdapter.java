@@ -734,8 +734,9 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
 
                         return messageConsumer;
                     }).recover(t -> {
+                        closeCommandReceiverLink(messageConsumerRef);
                         resultWithLinkCloseHandler.fail(t);
-                        return null;
+                        return Future.failedFuture(t);
                     });
 
         } else {
