@@ -898,4 +898,22 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
             return !EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION.equals(contentType);
         }
     }
+
+    /**
+     * This method may be set as the close handler of the {@link org.eclipse.hono.service.command.CommandConsumer}.
+     * <p>
+     * The implementation only logs that the link was closed and does not try to reopen it. Any other functionality must be
+     * implemented by overwriting the method in a subclass.
+     *
+     * @param tenant The tenant of the device for that a command may be received.
+     * @param deviceId The id of the device for that a command may be received.
+     * @param commandMessageConsumer The Handler that will be called for each command to the device.
+     */
+    protected void onCloseCommandConsumer(final String tenant, final String deviceId,
+                                        final BiConsumer<ProtonDelivery, Message> commandMessageConsumer
+                                        ) {
+        LOG.debug("Command consumer was closed for [tenantId: {}, deviceId: {}] - no command will be received for this request anymore.",
+                tenant, deviceId);
+    }
+
 }

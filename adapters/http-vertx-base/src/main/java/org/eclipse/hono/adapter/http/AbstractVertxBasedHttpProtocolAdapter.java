@@ -709,7 +709,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                     deviceId, commandHandler);
 
             createCommandConsumer(tenant, deviceId, commandMessageConsumer, v ->
-                    this.onCloseCommandConsumer(tenant, deviceId, commandMessageConsumer, messageConsumerRef)
+                    onCloseCommandConsumer(tenant, deviceId, commandMessageConsumer)
             ).map(messageConsumer -> {
                         // remember message consumer for later usage
                         messageConsumerRef.set(messageConsumer);
@@ -746,36 +746,6 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
         return resultWithLinkCloseHandler;
     }
 
-    /**
-     * Recreate the command consumer for receiving commands.
-     * <p>
-     * Intended to be invoked when the close handler of the {@link org.eclipse.hono.service.command.CommandConsumer} was called.
-     *
-     * @param tenant The tenant of the device for that a command may be received.
-     * @param deviceId The id of the device for that a command may be received.
-     * @param commandMessageConsumer The Handler that will be called for each command to the device.
-     * @param messageConsumerRef The reference that will be set to the new message consumer that is returned for the recreated link.
-     */
-    private void onCloseCommandConsumer(final String tenant, final String deviceId,
-                                    final BiConsumer<ProtonDelivery, Message> commandMessageConsumer,
-                                    final AtomicReference<MessageConsumer> messageConsumerRef) {
-
-        LOG.debug("Command consumer was closed.");
-
-        vertx.setTimer(DEFAULT_REOPEN_COMMAND_CONSUMER_TIMEOUT_MILLIS, reconnect -> {
-            LOG.debug("Attempting to recreate command consumer ...");
-            createCommandConsumer(tenant, deviceId, commandMessageConsumer, v -> {
-                this.onCloseCommandConsumer(tenant, deviceId, commandMessageConsumer, messageConsumerRef);
-            }).map(messageConsumer -> {
-                // remember message consumer for later usage
-                messageConsumerRef.set(messageConsumer);
-                // let only one command reach the adapter (may change in the future)
-                messageConsumer.flow(1);
-                LOG.debug("Recreated command consumer.");
-                return null;
-            });
-        });
-    }
 
     private static Integer getQoSLevel(final String qosValue) {
         try {
