@@ -74,6 +74,7 @@
     <dependency>
       <groupId>org.eclipse.hono</groupId>
       <artifactId>hono-demo-certs</artifactId>
+      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>io.vertx</groupId>
@@ -129,7 +130,7 @@
               to "target/classes" folder so that we can include them in the image.
              -->
             <id>copy_demo_certs</id>
-            <phase>generate-resources</phase>
+            <phase>generate-test-resources</phase>
             <goals>
               <goal>unpack-dependencies</goal>
             </goals>
