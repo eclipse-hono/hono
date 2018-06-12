@@ -26,13 +26,6 @@
   padding-right: 2em;
 }
 
-div.honologo {
-  max-width: 50%;
-  display: block;
-  margin-left: auto;
-  margin-right: auto;
-}
-
 div.home {
   display: block;
   max-width: 80%;
@@ -41,12 +34,17 @@ div.home {
   padding-bottom: 5%;
 }
 
+div.home img {
+  padding-top: 2%;
+  padding-bottom: 2%;
+}
+
 .punchline {
   color: orange;
   text-align: center;
   font-size: 2em;
   font-variant: small-caps;
-  padding-bottom: 5%;
+  padding-bottom: 1%;
 }
 
 .banner div.drawerlogo {
