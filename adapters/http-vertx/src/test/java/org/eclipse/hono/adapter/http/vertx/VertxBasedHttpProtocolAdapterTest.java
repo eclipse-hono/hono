@@ -91,6 +91,8 @@ public class VertxBasedHttpProtocolAdapterTest {
     private static HonoClient tenantServiceClient;
     private static HonoClient credentialsServiceClient;
     private static HonoClient messagingClient;
+    private static MessageSender telemetrySender;
+    private static MessageSender eventSender;
     private static HonoClient registrationServiceClient;
     private static HonoClientBasedAuthProvider usernamePasswordAuthProvider;
     private static HttpProtocolAdapterProperties config;
@@ -201,13 +203,16 @@ public class VertxBasedHttpProtocolAdapterTest {
         when(commandConnection.createCommandConsumer(anyString(), anyString(), any(BiConsumer.class), any(Handler.class))).
                 thenReturn(Future.succeededFuture(commandConsumer));
 
-        final MessageSender telemetrySender = mock(MessageSender.class);
+        telemetrySender = mock(MessageSender.class);
         when(telemetrySender.send(any(Message.class))).thenReturn(Future.succeededFuture(mock(ProtonDelivery.class)));
+        when(telemetrySender.sendAndWaitForOutcome(any(Message.class))).thenReturn(Future.succeededFuture(mock(ProtonDelivery.class)));
         when(messagingClient.getOrCreateTelemetrySender(anyString())).thenReturn(Future.succeededFuture(telemetrySender));
+        when(messagingClient.getOrCreateTelemetrySender(anyString(), anyString())).thenReturn(Future.succeededFuture(telemetrySender));
 
-        final MessageSender eventSender = mock(MessageSender.class);
+        eventSender = mock(MessageSender.class);
         when(eventSender.send(any(Message.class))).thenReturn(Future.succeededFuture(mock(ProtonDelivery.class)));
         when(messagingClient.getOrCreateEventSender(anyString())).thenReturn(Future.succeededFuture(eventSender));
+        when(messagingClient.getOrCreateEventSender(anyString(), anyString())).thenReturn(Future.succeededFuture(eventSender));
 
         doAnswer(invocation -> {
             final Handler<AsyncResult<User>> resultHandler = invocation.getArgument(1);
@@ -233,7 +238,7 @@ public class VertxBasedHttpProtocolAdapterTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public final void testPostTelemetryFailsForMissingBasicAuthHeader(final TestContext ctx) {
+    public void testPostTelemetryFailsForMissingBasicAuthHeader(final TestContext ctx) {
 
         final Async async = ctx.async();
 
@@ -253,7 +258,7 @@ public class VertxBasedHttpProtocolAdapterTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public final void testPostTelemetryFailsForInvalidCredentials(final TestContext ctx) {
+    public void testPostTelemetryFailsForInvalidCredentials(final TestContext ctx) {
 
         final Async async = ctx.async();
         final String authHeader = getBasicAuth("testuser@DEFAULT_TENANT", "password123");
@@ -275,20 +280,19 @@ public class VertxBasedHttpProtocolAdapterTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public final void testPostTelemetrySucceedsForValidCredentials(final TestContext ctx) {
+    public void testPostTelemetrySucceedsForValidCredentials(final TestContext ctx) {
 
         final Async async = ctx.async();
         final String authHeader = getBasicAuth("testuser@DEFAULT_TENANT", "password123");
 
         mockSuccessfulAuthentication("DEFAULT_TENANT", "device_1");
-        mockRegistrationAssertionFailsWith(HttpURLConnection.HTTP_NOT_FOUND);
 
         httpClient.post("/telemetry")
                 .putHeader(HttpHeaders.CONTENT_TYPE, HttpUtils.CONTENT_TYPE_JSON)
                 .putHeader(HttpHeaders.AUTHORIZATION, authHeader)
                 .putHeader(HttpHeaders.ORIGIN, "hono.eclipse.org")
                 .handler(response -> {
-                    ctx.assertEquals(HttpURLConnection.HTTP_NOT_FOUND, response.statusCode());
+                    ctx.assertEquals(HttpURLConnection.HTTP_ACCEPTED, response.statusCode());
                     ctx.assertEquals("*", response.getHeader(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN));
                     async.complete();
                 }).exceptionHandler(ctx::fail).end(new JsonObject().encode());
@@ -302,20 +306,19 @@ public class VertxBasedHttpProtocolAdapterTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public final void testPutTelemetrySucceedsForValidCredentials(final TestContext ctx) {
+    public void testPutTelemetrySucceedsForValidCredentials(final TestContext ctx) {
 
         final Async async = ctx.async();
         final String authHeader = getBasicAuth("testuser@DEFAULT_TENANT", "password123");
 
         mockSuccessfulAuthentication("DEFAULT_TENANT", "device_1");
-        mockRegistrationAssertionFailsWith(HttpURLConnection.HTTP_NOT_FOUND);
 
         httpClient.put( "/telemetry/DEFAULT_TENANT/device_1")
                 .putHeader(HttpHeaders.CONTENT_TYPE, HttpUtils.CONTENT_TYPE_JSON)
                 .putHeader(HttpHeaders.AUTHORIZATION, authHeader)
                 .putHeader(HttpHeaders.ORIGIN, "hono.eclipse.org")
                 .handler(response -> {
-                    ctx.assertEquals(HttpURLConnection.HTTP_NOT_FOUND, response.statusCode());
+                    ctx.assertEquals(HttpURLConnection.HTTP_ACCEPTED, response.statusCode());
                     ctx.assertEquals("*", response.getHeader(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN));
                     async.complete();
                 }).exceptionHandler(ctx::fail).end(new JsonObject().encodePrettily());
@@ -328,7 +331,7 @@ public class VertxBasedHttpProtocolAdapterTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public final void testPostTelemetryFailsForNotSupportedQoSLevel(final TestContext ctx) {
+    public void testPostTelemetryFailsForNotSupportedQoSLevel(final TestContext ctx) {
         final Async async = ctx.async();
         final String authHeader = getBasicAuth("testuser@DEFAULT_TENANT", "password123");
 
@@ -347,24 +350,23 @@ public class VertxBasedHttpProtocolAdapterTest {
 
     /**
      * Verifies that a request (with valid credentials) to upload telemetry data with
-     * 'QoS-Level: 1' using POST succeeds with a 404 (Not Found) status code.
+     * 'QoS-Level: 1' using POST succeeds with a 202.
      * 
      * @param ctx The vert.x test context.
      */
     @Test
-    public final void testPostTelemetrySucceedsForSupportedQoSLevel(final TestContext ctx) {
+    public void testPostTelemetrySucceedsForSupportedQoSLevel(final TestContext ctx) {
         final Async async = ctx.async();
         final String authHeader = getBasicAuth("testuser@DEFAULT_TENANT", "password123");
 
         mockSuccessfulAuthentication("DEFAULT_TENANT", "device_1");
-        mockRegistrationAssertionFailsWith(HttpURLConnection.HTTP_NOT_FOUND);
 
         httpClient.post("/telemetry")
                 .putHeader(HttpHeaders.CONTENT_TYPE, HttpUtils.CONTENT_TYPE_JSON)
                 .putHeader(HttpHeaders.AUTHORIZATION, authHeader)
                 .putHeader(Constants.HEADER_QOS_LEVEL, String.valueOf(1))
                 .handler(response -> {
-                    ctx.assertEquals(HttpURLConnection.HTTP_NOT_FOUND, response.statusCode());
+                    ctx.assertEquals(HttpURLConnection.HTTP_ACCEPTED, response.statusCode());
                     async.complete();
                 }).exceptionHandler(ctx::fail).end(new JsonObject().encode());
 
@@ -378,20 +380,19 @@ public class VertxBasedHttpProtocolAdapterTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public final void testPutEventSucceedsForValidCredentials(final TestContext ctx) {
+    public void testPutEventSucceedsForValidCredentials(final TestContext ctx) {
 
         final Async async = ctx.async();
         final String authHeader = getBasicAuth("testuser@DEFAULT_TENANT", "password123");
 
         mockSuccessfulAuthentication("DEFAULT_TENANT", "device_1");
-        mockRegistrationAssertionFailsWith(HttpURLConnection.HTTP_NOT_FOUND);
 
         httpClient.put("/event/DEFAULT_TENANT/device_1")
                 .putHeader(HttpHeaders.CONTENT_TYPE, HttpUtils.CONTENT_TYPE_JSON)
                 .putHeader(HttpHeaders.AUTHORIZATION, authHeader)
                 .putHeader(HttpHeaders.ORIGIN, "hono.eclipse.org")
                 .handler(response -> {
-                    ctx.assertEquals(HttpURLConnection.HTTP_NOT_FOUND, response.statusCode());
+                    ctx.assertEquals(HttpURLConnection.HTTP_ACCEPTED, response.statusCode());
                     ctx.assertEquals("*", response.getHeader(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN));
                     async.complete();
                 }).exceptionHandler(ctx::fail).end(new JsonObject().encode());
@@ -403,7 +404,7 @@ public class VertxBasedHttpProtocolAdapterTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public final void testPostTelemetrySendsMessageDownstream(final TestContext ctx) {
+    public void testPostTelemetrySendsMessageDownstream(final TestContext ctx) {
 
         final Async async = ctx.async();
         final String authHeader = getBasicAuth("testuser@DEFAULT_TENANT", "password123");
@@ -416,6 +417,7 @@ public class VertxBasedHttpProtocolAdapterTest {
                 .putHeader(HttpHeaders.ORIGIN, "hono.eclipse.org")
                 .handler(response -> {
                     ctx.assertEquals(HttpURLConnection.HTTP_ACCEPTED, response.statusCode());
+                    verify(telemetrySender).send(any(Message.class));
                     async.complete();
                 }).exceptionHandler(ctx::fail).end(new JsonObject().encode());
     }
@@ -426,7 +428,7 @@ public class VertxBasedHttpProtocolAdapterTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public final void testPostEventSendsMessageDownstream(final TestContext ctx) {
+    public void testPostEventSendsMessageDownstream(final TestContext ctx) {
 
         final Async async = ctx.async();
         final String authHeader = getBasicAuth("testuser@DEFAULT_TENANT", "password123");
@@ -439,6 +441,7 @@ public class VertxBasedHttpProtocolAdapterTest {
                 .putHeader(HttpHeaders.ORIGIN, "hono.eclipse.org")
                 .handler(response -> {
                     ctx.assertEquals(HttpURLConnection.HTTP_ACCEPTED, response.statusCode());
+                    verify(eventSender).send(any(Message.class));
                     async.complete();
                 }).exceptionHandler(ctx::fail).end(new JsonObject().encode());
     }
@@ -451,7 +454,7 @@ public class VertxBasedHttpProtocolAdapterTest {
      */
     @SuppressWarnings("unchecked")
     @Test
-    public final void testPostTelemetryWithTtdOpensCommandReceiver(final TestContext ctx) {
+    public void testPostTelemetryWithTtdOpensCommandReceiver(final TestContext ctx) {
 
         final Async async = ctx.async();
         final String authHeader = getBasicAuth("testuser@DEFAULT_TENANT", "password123");
@@ -486,12 +489,6 @@ public class VertxBasedHttpProtocolAdapterTest {
             resultHandler.handle(Future.succeededFuture(new Device(tenantId, deviceId)));
             return null;
         }).when(usernamePasswordAuthProvider).authenticate(any(JsonObject.class), any(Handler.class));
-    }
-
-    private static void mockRegistrationAssertionFailsWith(final int statusCode) {
-        final RegistrationClient regClient = mock(RegistrationClient.class);
-        when(regClient.assertRegistration(anyString(), any())).thenReturn(Future.failedFuture(new ClientErrorException(statusCode)));
-        when(registrationServiceClient.getOrCreateRegistrationClient(anyString())).thenReturn(Future.succeededFuture(regClient));
     }
 }
 
