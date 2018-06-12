@@ -40,6 +40,7 @@ hono:
     amqpHostname: hono-http-internal
     host: hono-dispatch-router.hono
     port: 5673
+    initialCredits: 0
     keyPath: ${secret.path}/http-adapter-key.pem
     certPath: ${secret.path}/http-adapter-cert.pem
     trustStorePath: ${secret.path}/trusted-certs.pem
