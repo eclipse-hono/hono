@@ -56,6 +56,8 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
+import io.vertx.core.http.HttpClient;
+import io.vertx.core.http.HttpClientOptions;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.auth.User;
@@ -84,7 +86,7 @@ public class VertxBasedHttpProtocolAdapterTest {
     public TestName testName = new TestName();
 
     private static final Logger LOG = LoggerFactory.getLogger(VertxBasedHttpProtocolAdapterTest.class);
-    private static final String HOST = "localhost";
+    private static final String HOST = "127.0.0.1";
 
     private static HonoClient tenantServiceClient;
     private static HonoClient credentialsServiceClient;
@@ -96,6 +98,7 @@ public class VertxBasedHttpProtocolAdapterTest {
     private static CommandConnection commandConnection;
     private static Vertx vertx;
     private static String deploymentId;
+    private static HttpClient httpClient;
 
     /**
      * Prepare the adapter by configuring it.
@@ -153,6 +156,7 @@ public class VertxBasedHttpProtocolAdapterTest {
 
         config = new HttpProtocolAdapterProperties();
         config.setInsecurePort(0);
+        config.setInsecurePortBindAddress(HOST);
         config.setAuthenticationRequired(true);
 
         httpAdapter = new VertxBasedHttpProtocolAdapter();
@@ -167,6 +171,10 @@ public class VertxBasedHttpProtocolAdapterTest {
 
         vertx.deployVerticle(httpAdapter, ctx.asyncAssertSuccess(id -> {
             deploymentId = id;
+            final HttpClientOptions options = new HttpClientOptions()
+                    .setDefaultHost(HOST)
+                    .setDefaultPort(httpAdapter.getInsecurePort());
+            httpClient = vertx.createHttpClient(options);
         }));
     }
 
@@ -229,7 +237,7 @@ public class VertxBasedHttpProtocolAdapterTest {
 
         final Async async = ctx.async();
 
-        vertx.createHttpClient().post(httpAdapter.getInsecurePort(), HOST, "/telemetry")
+        httpClient.post("/telemetry")
                 .putHeader(HttpHeaders.CONTENT_TYPE, HttpUtils.CONTENT_TYPE_JSON)
                 .handler(response -> {
                     ctx.assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED, response.statusCode());
@@ -250,7 +258,7 @@ public class VertxBasedHttpProtocolAdapterTest {
         final Async async = ctx.async();
         final String authHeader = getBasicAuth("testuser@DEFAULT_TENANT", "password123");
 
-        vertx.createHttpClient().post(httpAdapter.getInsecurePort(), HOST, "/telemetry")
+        httpClient.post("/telemetry")
                 .putHeader(HttpHeaders.CONTENT_TYPE, HttpUtils.CONTENT_TYPE_JSON)
                 .putHeader(HttpHeaders.AUTHORIZATION, authHeader)
                 .handler(response -> {
@@ -275,7 +283,7 @@ public class VertxBasedHttpProtocolAdapterTest {
         mockSuccessfulAuthentication("DEFAULT_TENANT", "device_1");
         mockRegistrationAssertionFailsWith(HttpURLConnection.HTTP_NOT_FOUND);
 
-        vertx.createHttpClient().post(httpAdapter.getInsecurePort(), HOST, "/telemetry")
+        httpClient.post("/telemetry")
                 .putHeader(HttpHeaders.CONTENT_TYPE, HttpUtils.CONTENT_TYPE_JSON)
                 .putHeader(HttpHeaders.AUTHORIZATION, authHeader)
                 .putHeader(HttpHeaders.ORIGIN, "hono.eclipse.org")
@@ -302,7 +310,7 @@ public class VertxBasedHttpProtocolAdapterTest {
         mockSuccessfulAuthentication("DEFAULT_TENANT", "device_1");
         mockRegistrationAssertionFailsWith(HttpURLConnection.HTTP_NOT_FOUND);
 
-        vertx.createHttpClient().put(httpAdapter.getInsecurePort(), HOST, "/telemetry/DEFAULT_TENANT/device_1")
+        httpClient.put( "/telemetry/DEFAULT_TENANT/device_1")
                 .putHeader(HttpHeaders.CONTENT_TYPE, HttpUtils.CONTENT_TYPE_JSON)
                 .putHeader(HttpHeaders.AUTHORIZATION, authHeader)
                 .putHeader(HttpHeaders.ORIGIN, "hono.eclipse.org")
@@ -326,7 +334,7 @@ public class VertxBasedHttpProtocolAdapterTest {
 
         mockSuccessfulAuthentication("DEFAULT_TENANT", "device_1");
 
-        vertx.createHttpClient().post(httpAdapter.getInsecurePort(), HOST, "/telemetry")
+        httpClient.post("/telemetry")
                 .putHeader(HttpHeaders.CONTENT_TYPE, HttpUtils.CONTENT_TYPE_JSON)
                 .putHeader(HttpHeaders.AUTHORIZATION, authHeader)
                 .putHeader(Constants.HEADER_QOS_LEVEL, String.valueOf(2))
@@ -351,7 +359,7 @@ public class VertxBasedHttpProtocolAdapterTest {
         mockSuccessfulAuthentication("DEFAULT_TENANT", "device_1");
         mockRegistrationAssertionFailsWith(HttpURLConnection.HTTP_NOT_FOUND);
 
-        vertx.createHttpClient().post(httpAdapter.getInsecurePort(), HOST, "/telemetry")
+        httpClient.post("/telemetry")
                 .putHeader(HttpHeaders.CONTENT_TYPE, HttpUtils.CONTENT_TYPE_JSON)
                 .putHeader(HttpHeaders.AUTHORIZATION, authHeader)
                 .putHeader(Constants.HEADER_QOS_LEVEL, String.valueOf(1))
@@ -378,7 +386,7 @@ public class VertxBasedHttpProtocolAdapterTest {
         mockSuccessfulAuthentication("DEFAULT_TENANT", "device_1");
         mockRegistrationAssertionFailsWith(HttpURLConnection.HTTP_NOT_FOUND);
 
-        vertx.createHttpClient().put(httpAdapter.getInsecurePort(), HOST, "/event/DEFAULT_TENANT/device_1")
+        httpClient.put("/event/DEFAULT_TENANT/device_1")
                 .putHeader(HttpHeaders.CONTENT_TYPE, HttpUtils.CONTENT_TYPE_JSON)
                 .putHeader(HttpHeaders.AUTHORIZATION, authHeader)
                 .putHeader(HttpHeaders.ORIGIN, "hono.eclipse.org")
@@ -402,7 +410,7 @@ public class VertxBasedHttpProtocolAdapterTest {
 
         mockSuccessfulAuthentication("DEFAULT_TENANT", "device_1");
 
-        vertx.createHttpClient().post(httpAdapter.getInsecurePort(), HOST, "/telemetry")
+        httpClient.post("/telemetry")
                 .putHeader(HttpHeaders.CONTENT_TYPE, HttpUtils.CONTENT_TYPE_JSON)
                 .putHeader(HttpHeaders.AUTHORIZATION, authHeader)
                 .putHeader(HttpHeaders.ORIGIN, "hono.eclipse.org")
@@ -425,7 +433,7 @@ public class VertxBasedHttpProtocolAdapterTest {
 
         mockSuccessfulAuthentication("DEFAULT_TENANT", "device_1");
 
-        vertx.createHttpClient().post(httpAdapter.getInsecurePort(), HOST, "/event")
+        httpClient.post("/event")
                 .putHeader(HttpHeaders.CONTENT_TYPE, HttpUtils.CONTENT_TYPE_JSON)
                 .putHeader(HttpHeaders.AUTHORIZATION, authHeader)
                 .putHeader(HttpHeaders.ORIGIN, "hono.eclipse.org")
@@ -450,7 +458,7 @@ public class VertxBasedHttpProtocolAdapterTest {
 
         mockSuccessfulAuthentication("DEFAULT_TENANT", "device_1");
 
-        vertx.createHttpClient().post(httpAdapter.getInsecurePort(), HOST, "/telemetry?hono-ttd=1")
+        httpClient.post("/telemetry?hono-ttd=1")
                 .putHeader(HttpHeaders.CONTENT_TYPE, HttpUtils.CONTENT_TYPE_JSON)
                 .putHeader(HttpHeaders.AUTHORIZATION, authHeader)
                 .putHeader(HttpHeaders.ORIGIN, "hono.eclipse.org")
