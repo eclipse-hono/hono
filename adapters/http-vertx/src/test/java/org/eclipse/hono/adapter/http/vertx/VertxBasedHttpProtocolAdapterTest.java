@@ -13,6 +13,9 @@
 
 package org.eclipse.hono.adapter.http.vertx;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 import java.net.HttpURLConnection;
@@ -20,9 +23,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.function.BiConsumer;
 
-import io.vertx.proton.ProtonDelivery;
 import org.apache.qpid.proton.message.Message;
-import org.eclipse.hono.adapter.http.AbstractVertxBasedHttpProtocolAdapter;
 import org.eclipse.hono.adapter.http.HttpAdapterMetrics;
 import org.eclipse.hono.adapter.http.HttpProtocolAdapterProperties;
 import org.eclipse.hono.client.ClientErrorException;
@@ -30,6 +31,7 @@ import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.RegistrationClient;
+import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.TenantClient;
 import org.eclipse.hono.service.auth.device.Device;
 import org.eclipse.hono.service.auth.device.HonoClientBasedAuthProvider;
@@ -37,8 +39,8 @@ import org.eclipse.hono.service.command.CommandConnection;
 import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.TenantObject;
-import org.junit.After;
-import org.junit.Before;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
@@ -54,7 +56,7 @@ import io.vertx.ext.auth.User;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
-import org.mockito.ArgumentCaptor;
+import io.vertx.proton.ProtonDelivery;
 
 /**
  * Verifies behavior of {@link VertxBasedHttpProtocolAdapter}.
@@ -68,7 +70,7 @@ public class VertxBasedHttpProtocolAdapterTest {
      * slow environments).
      */
     @Rule
-    public Timeout timeout = Timeout.seconds(20);
+    public Timeout timeout = Timeout.seconds(10);
 
     private static final String HOST = "localhost";
 
@@ -80,36 +82,60 @@ public class VertxBasedHttpProtocolAdapterTest {
     private static HttpProtocolAdapterProperties config;
     private static VertxBasedHttpProtocolAdapter httpAdapter;
     private static CommandConnection commandConnection;
-
-
     private static Vertx vertx;
+    private static String deploymentId;
 
     /**
      * Prepare the adapter by configuring it.
-     * Since several test cases change the behaviour of specific mocked clients, all is created from scratch (and not
+     * Since several test cases change the behavior of specific mocked clients, all is created from scratch (and not
      * in a setup method that is invoked once in the class).
      *
      * @param ctx The vert.x test context.
      */
     @SuppressWarnings("unchecked")
-    @Before
-    public final void prepareTest(final TestContext ctx) {
+    @BeforeClass
+    public static void prepareTest(final TestContext ctx) {
         vertx = Vertx.vertx();
 
         tenantServiceClient = mock(HonoClient.class);
         when(tenantServiceClient.connect(any(Handler.class))).thenReturn(Future.succeededFuture(tenantServiceClient));
+        doAnswer(invocation -> {
+            final Handler<AsyncResult<Void>> shutdownHandler = invocation.getArgument(0);
+            shutdownHandler.handle(Future.succeededFuture());
+            return null;
+        }).when(tenantServiceClient).shutdown(any(Handler.class));
 
         credentialsServiceClient = mock(HonoClient.class);
         when(credentialsServiceClient.connect(any(Handler.class))).thenReturn(Future.succeededFuture(credentialsServiceClient));
+        doAnswer(invocation -> {
+            final Handler<AsyncResult<Void>> shutdownHandler = invocation.getArgument(0);
+            shutdownHandler.handle(Future.succeededFuture());
+            return null;
+        }).when(credentialsServiceClient).shutdown(any(Handler.class));
 
         messagingClient = mock(HonoClient.class);
         when(messagingClient.connect(any(Handler.class))).thenReturn(Future.succeededFuture(messagingClient));
+        doAnswer(invocation -> {
+            final Handler<AsyncResult<Void>> shutdownHandler = invocation.getArgument(0);
+            shutdownHandler.handle(Future.succeededFuture());
+            return null;
+        }).when(messagingClient).shutdown(any(Handler.class));
 
         registrationServiceClient = mock(HonoClient.class);
         when(registrationServiceClient.connect(any(Handler.class))).thenReturn(Future.succeededFuture(registrationServiceClient));
+        doAnswer(invocation -> {
+            final Handler<AsyncResult<Void>> shutdownHandler = invocation.getArgument(0);
+            shutdownHandler.handle(Future.succeededFuture());
+            return null;
+        }).when(registrationServiceClient).shutdown(any(Handler.class));
 
         commandConnection = mock(CommandConnection.class);
         when(commandConnection.connect(any(Handler.class))).thenReturn(Future.succeededFuture(commandConnection));
+        doAnswer(invocation -> {
+            final Handler<AsyncResult<Void>> shutdownHandler = invocation.getArgument(0);
+            shutdownHandler.handle(Future.succeededFuture());
+            return null;
+        }).when(commandConnection).shutdown(any(Handler.class));
 
         usernamePasswordAuthProvider = mock(HonoClientBasedAuthProvider.class);
 
@@ -120,24 +146,27 @@ public class VertxBasedHttpProtocolAdapterTest {
         httpAdapter = new VertxBasedHttpProtocolAdapter();
         httpAdapter.setConfig(config);
         httpAdapter.setTenantServiceClient(tenantServiceClient);
+        httpAdapter.setCredentialsServiceClient(credentialsServiceClient);
         httpAdapter.setHonoMessagingClient(messagingClient);
         httpAdapter.setRegistrationServiceClient(registrationServiceClient);
-        httpAdapter.setCredentialsServiceClient(credentialsServiceClient);
-        httpAdapter.setUsernamePasswordAuthProvider(usernamePasswordAuthProvider);
         httpAdapter.setCommandConnection(commandConnection);
+        httpAdapter.setUsernamePasswordAuthProvider(usernamePasswordAuthProvider);
         httpAdapter.setMetrics(mock(HttpAdapterMetrics.class));
 
-        vertx.deployVerticle(httpAdapter, ctx.asyncAssertSuccess());
+        vertx.deployVerticle(httpAdapter, ctx.asyncAssertSuccess(id -> {
+            deploymentId = id;
+        }));
     }
 
     /**
      * Shuts down the server.
+     * 
+     * @param ctx The vert.x test context.
      */
-    @After
-    public final void finishTest() {
-        vertx.close();
+    @AfterClass
+    public static void finishTest(final TestContext ctx) {
+        vertx.undeploy(deploymentId, ctx.asyncAssertSuccess(ok -> vertx.close()));
     }
-
 
     /**
      * Verifies that a request to upload telemetry data using POST fails
@@ -164,18 +193,13 @@ public class VertxBasedHttpProtocolAdapterTest {
      * 
      * @param ctx The vert.x test context.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public final void testPostTelemetryFailsForInvalidCredentials(final TestContext ctx) {
 
         final Async async = ctx.async();
         final String authHeader = getBasicAuth("testuser@DEFAULT_TENANT", "password123");
 
-        doAnswer(invocation -> {
-            final Handler<AsyncResult<User>> resultHandler = invocation.getArgument(1);
-            resultHandler.handle(Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED, "bad credentials")));
-            return null;
-        }).when(usernamePasswordAuthProvider).authenticate(any(JsonObject.class), any(Handler.class));
+        mockUnsuccessfulAuthentication(new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED, "bad credentials"));
 
         vertx.createHttpClient().post(httpAdapter.getInsecurePort(), HOST, "/telemetry")
                 .putHeader(HttpHeaders.CONTENT_TYPE, HttpUtils.CONTENT_TYPE_JSON)
@@ -396,45 +420,6 @@ public class VertxBasedHttpProtocolAdapterTest {
                 }).exceptionHandler(ctx::fail).end(new JsonObject().encodePrettily());
     }
 
-    /**
-     * Verifies that a POST request to the telemetry URI with an explicit time-til-disconnect request parameter
-     * (resulting in a command receiver link being opened by the adapter) has a close handler attached that
-     * reopens the command receiver link (if invoked) again.
-     *
-     * @param ctx The vert.x test context.
-     */
-    @SuppressWarnings("unchecked")
-    @Test
-    public final void testPostTelemetryWithTtdReopensCommandReceiverAfterLinkClose(final TestContext ctx) {
-
-        final Async async = ctx.async();
-        final String authHeader = getBasicAuth("testuser@DEFAULT_TENANT", "password123");
-
-        mockSuccessfulAuthentication("DEFAULT_TENANT", "device_1");
-        mockServiceLinks("DEFAULT_TENANT");
-
-        vertx.createHttpClient().post(httpAdapter.getInsecurePort(), HOST, "/telemetry?hono-ttd=1")
-                .putHeader(HttpHeaders.CONTENT_TYPE, HttpUtils.CONTENT_TYPE_JSON)
-                .putHeader(HttpHeaders.AUTHORIZATION, authHeader)
-                .putHeader(HttpHeaders.ORIGIN, "hono.eclipse.org")
-                .handler(response -> {
-                    ctx.assertEquals(HttpURLConnection.HTTP_ACCEPTED, response.statusCode());
-                    final ArgumentCaptor<Handler<Void>> handlerArgumentCaptor = ArgumentCaptor.forClass(Handler.class);
-                    // verify that a command receiver link was opened
-                    verify(commandConnection).createCommandConsumer(eq("DEFAULT_TENANT"), eq("device_1"), any(BiConsumer.class),
-                            handlerArgumentCaptor.capture());
-                    final Handler<Void> closeHandler = handlerArgumentCaptor.getValue();
-                    ctx.assertNotNull(closeHandler);
-                    closeHandler.handle(null);
-                    vertx.setTimer(AbstractVertxBasedHttpProtocolAdapter.DEFAULT_REOPEN_COMMAND_CONSUMER_TIMEOUT_MILLIS * 2, delay -> {
-                        // after the reopen timeout, verify that a command receiver link was opened again (resulting in two times)
-                        verify(commandConnection, times(2)).createCommandConsumer(eq("DEFAULT_TENANT"), eq("device_1"),
-                                any(BiConsumer.class), handlerArgumentCaptor.capture());
-                        async.complete();
-                    });
-                }).exceptionHandler(ctx::fail).end(new JsonObject().encodePrettily());
-    }
-
     private static String getBasicAuth(final String user, final String password) {
 
         final StringBuilder result = new StringBuilder("Basic ");
@@ -472,6 +457,15 @@ public class VertxBasedHttpProtocolAdapterTest {
         doAnswer(invocation -> {
             final Handler<AsyncResult<User>> resultHandler = invocation.getArgument(1);
             resultHandler.handle(Future.succeededFuture(new Device(tenantId, deviceId)));
+            return null;
+        }).when(usernamePasswordAuthProvider).authenticate(any(JsonObject.class), any(Handler.class));
+    }
+
+    @SuppressWarnings("unchecked")
+    private static void mockUnsuccessfulAuthentication(final ServiceInvocationException error) {
+        doAnswer(invocation -> {
+            final Handler<AsyncResult<User>> resultHandler = invocation.getArgument(1);
+            resultHandler.handle(Future.failedFuture(error));
             return null;
         }).when(usernamePasswordAuthProvider).authenticate(any(JsonObject.class), any(Handler.class));
     }
