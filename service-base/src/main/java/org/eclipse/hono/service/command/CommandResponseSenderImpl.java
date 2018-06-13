@@ -63,16 +63,18 @@ public class CommandResponseSenderImpl extends AbstractSender implements Command
      */
     public Future<ProtonDelivery> sendCommandResponse(
             final String correlationId,
+            final String contentType,
             final Buffer payload,
             final Map<String, Object> properties,
             final int status) {
         LOG.debug("send back a command response [correlationId: {}, status: {}]", correlationId, status);
-        return sendAndWaitForOutcome(createResponseMessage(targetAddress, correlationId, payload, properties, status));
+        return sendAndWaitForOutcome(createResponseMessage(targetAddress, correlationId, contentType, payload, properties, status));
     }
 
     private static Message createResponseMessage(
             final String targetAddress,
             final String correlationId,
+            final String contentType,
             final Buffer payload,
             final Map<String, Object> properties,
             final int status) {
@@ -82,6 +84,9 @@ public class CommandResponseSenderImpl extends AbstractSender implements Command
         final Message msg = ProtonHelper.message();
         msg.setCorrelationId(correlationId);
         msg.setAddress(targetAddress);
+        if (contentType != null) {
+            msg.setContentType(contentType);
+        }
         if (payload != null) {
             msg.setBody(new Data(new Binary(payload.getBytes())));
         }

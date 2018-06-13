@@ -215,8 +215,8 @@ public class HonoConsumerBase {
 
     private void sendCommandToAdapter(final CommandClient commandClient, final Buffer commandBuffer) {
         commandClient.sendCommand("setBrightness", commandBuffer).map(result -> {
-            System.out.println(String.format("Successfully sent command and received response: %s",
-                    Optional.ofNullable(result).orElse(Buffer.buffer()).toString()));
+            System.out.println(String.format("Successfully sent command [%s] and received response: [%s]",
+                    commandBuffer.toString(), Optional.ofNullable(result).orElse(Buffer.buffer()).toString()));
             commandClient.close(v -> {
             });
             return result;

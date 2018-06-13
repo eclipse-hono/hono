@@ -16,6 +16,7 @@ public interface CommandResponseSender extends MessageSender {
      * Sends a response message to a command back to the business application.
      *
      * @param correlationId The correlation id of the command.
+     * @param contentType The content type describing the response message's payload (may be {@code null}).
      * @param payload The payload or {@code null}.
      * @param properties The properties or {@code null}.
      * @param status The status of the command, which was send to the device.
@@ -24,6 +25,7 @@ public interface CommandResponseSender extends MessageSender {
      */
     Future<ProtonDelivery> sendCommandResponse(
             String correlationId,
+            String contentType,
             Buffer payload,
             Map<String, Object> properties,
             int status);

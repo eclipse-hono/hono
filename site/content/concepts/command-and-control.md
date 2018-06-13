@@ -45,6 +45,8 @@ The device needs to respond to the command (5), to inform the business applicati
 
 Authenticated Device:
 
+TODO: param instead of url part!!!
+
 * URI: `/control/res/${reqId}/${status}` 
 * Method: `POST`
 

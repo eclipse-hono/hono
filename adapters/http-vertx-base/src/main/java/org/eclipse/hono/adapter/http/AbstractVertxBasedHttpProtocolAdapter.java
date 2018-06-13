@@ -30,6 +30,7 @@ import org.eclipse.hono.service.AbstractProtocolAdapterBase;
 import org.eclipse.hono.service.auth.device.Device;
 import org.eclipse.hono.service.command.CommandResponseSender;
 import org.eclipse.hono.service.http.HttpUtils;
+import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
@@ -53,7 +54,7 @@ import io.vertx.ext.web.handler.BodyHandler;
 /**
  * Base class for a Vert.x based Hono protocol adapter that uses the HTTP protocol.
  * It provides access to the Telemetry and Event API.
- * 
+ *
  * @param <T> The type of configuration properties used by this service.
  */
 public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtocolAdapterProperties> extends AbstractProtocolAdapterBase<T> {
@@ -114,7 +115,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
      * If no server is set using this method, then a server instance is created during
      * startup of this adapter based on the <em>config</em> properties and the server options
      * returned by {@link #getHttpServerOptions()}.
-     * 
+     *
      * @param server The http server.
      * @throws NullPointerException if server is {@code null}.
      * @throws IllegalArgumentException if the server is already started and listening on an address/port.
@@ -135,7 +136,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
      * If no server is set using this method, then a server instance is created during
      * startup of this adapter based on the <em>config</em> properties and the server options
      * returned by {@link #getInsecureHttpServerOptions()}.
-     * 
+     *
      * @param server The http server.
      * @throws NullPointerException if server is {@code null}.
      * @throws IllegalArgumentException if the server is already started and listening on an address/port.
@@ -183,7 +184,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
      * Invoked before the http server is started.
      * <p>
      * May be overridden by sub-classes to provide additional startup handling.
-     * 
+     *
      * @return A future indicating the outcome of the operation. The start up process fails if the returned future fails.
      */
     protected Future<Void> preStartup() {
@@ -207,7 +208,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
      * <ol>
      * <li>A default route limiting the body size of requests to the maximum payload size set in the <em>config</em> properties.</li>
      * </ol>
-     * 
+     *
      * @return The newly created router (never {@code null}).
      */
     protected Router createRouter() {
@@ -224,7 +225,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
      * <p>
      * This method is invoked right before the http server is started with the value returned by
      * {@link AbstractVertxBasedHttpProtocolAdapter#createRouter()}.
-     * 
+     *
      * @param router The router to add the custom routes to.
      */
     protected abstract void addRoutes(Router router);
@@ -236,7 +237,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
      * <p>
      * This method returns default options with the host and port being set to the corresponding values
      * from the <em>config</em> properties and using a maximum chunk size of 4096 bytes.
-     * 
+     *
      * @return The http server options.
      */
     protected HttpServerOptions getHttpServerOptions() {
@@ -256,7 +257,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
      * <p>
      * This method returns default options with the host and port being set to the corresponding values
      * from the <em>config</em> properties and using a maximum chunk size of 4096 bytes.
-     * 
+     *
      * @return The http server options.
      */
     protected HttpServerOptions getInsecureHttpServerOptions() {
@@ -271,7 +272,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
      * <p>
      * Subclasses may override this method in order to customize the message
      * before it is sent, e.g. adding custom properties.
-     * 
+     *
      * @param downstreamMessage The message that will be sent downstream.
      * @param ctx The routing context.
      */
@@ -281,7 +282,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
 
     /**
      * Gets the authenticated device identity from the routing context.
-     * 
+     *
      * @param ctx The routing context.
      * @return The device or {@code null} if the device has not been authenticated.
      */
@@ -381,7 +382,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
     /**
      * Invoked after the Adapter has been shutdown successfully.
      * May be overridden by sub-classes to provide further shutdown handling.
-     * 
+     *
      * @return A future that has to be completed when this operation is finished.
      */
     protected Future<Void> postShutdown() {
@@ -419,7 +420,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
      * <li>400 (Bad Request) - if the message payload is {@code null} or empty or if the content type is {@code null}.</li>
      * <li>503 (Service Unavailable) - if the message could not be sent to the Hono server, e.g. due to lack of connection or credit.</li>
      * </ul>
-     * 
+     *
      * @param ctx The context to retrieve cookies and the HTTP response from.
      * @param tenant The tenant of the device that has produced the data.
      * @param deviceId The id of the device that has produced the data.
@@ -471,7 +472,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
      * <li>400 (Bad Request) - if the message payload is {@code null} or empty or if the content type is {@code null}.</li>
      * <li>503 (Service Unavailable) - if the message could not be sent to the Hono server, e.g. due to lack of connection or credit.</li>
      * </ul>
-     * 
+     *
      * @param ctx The context to retrieve cookies and the HTTP response from.
      * @param tenant The tenant of the device that has produced the data.
      * @param deviceId The id of the device that has produced the data.
@@ -678,28 +679,6 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                     // from Java 9 on: switch to opt.ifPresentOrElse
                     LOG.debug("Received command without valid replyId for device [tenantId: {}, deviceId: {}] - no reply will be sent to the application",
                             tenant, deviceId);
-                } else {
-                    replyIdOpt.map(replyId -> {
-                        // send answer to caller via sender link
-                        final Future<CommandResponseSender> responseSender = createCommandResponseSender(tenant, deviceId, replyId);
-                        responseSender.compose(commandResponseSender ->
-                                commandResponseSender.sendCommandResponse(getCorrelationIdFromMessage(commandMessage),
-                                        null, null, HttpURLConnection.HTTP_OK)
-                        ).map(delivery -> {
-                            LOG.debug("acknowledged command [message-id: {}]", commandMessage.getMessageId());
-                            responseSender.result().close(v -> {});
-                            return null;
-                        }).otherwise(t -> {
-                            LOG.debug("could not acknowledge command [message-id: {}]", commandMessage.getMessageId(), t);
-                            return Optional.ofNullable(responseSender.result()).map(r -> {
-                                r.close(v -> {});
-                                return null;
-                            }).orElse(null);
-                        });
-
-                        return replyId;
-                    });
-
                 }
             };
 
@@ -744,6 +723,77 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
 
         return resultWithLinkCloseHandler;
     }
+
+    /**
+     * Uploads a command response message to the Hono server.
+     *
+     * @param ctx The routing context of the HTTP request.
+     * @param tenant The tenant of the device from that a command response was received.
+     * @param deviceId The id of the device from that a command response was received.
+     * @param commandRequestId The id of the command that is responded.
+     * @param commandRequestStatus The status of the command that is responded by the device.
+     * @throws NullPointerException if ctx, tenant or deviceId is {@code null}.
+     * @throws IllegalArgumentException if the commandRequestId cannot be processed since it is invalid, or if the commandRequestStatus
+     *          does not contain a valid status code.
+     */
+    public final void uploadCommandResponseMessage(final RoutingContext ctx, final String tenant, final String deviceId,
+                                                   final String commandRequestId, final Integer commandRequestStatus) {
+        Objects.requireNonNull(ctx);
+        Objects.requireNonNull(tenant);
+        Objects.requireNonNull(deviceId);
+
+        final Buffer payload = ctx.getBody();
+        final String contentType = HttpUtils.getContentType(ctx);
+
+        LOG.debug("uploadCommandResponseMessage: [tenantId: {}, deviceId: {}, commandRequestId: {}, commandRequestStatus: {}]",
+                tenant, deviceId, commandRequestId, commandRequestStatus);
+
+        CommandConstants.validateCommandResponseStatusCode(commandRequestStatus).map(statusCode ->
+                getCorrelationIdAndReplyToFromCommandRequestId(commandRequestId).map(commandRequestIdParts -> {
+                    final String correlationId = commandRequestIdParts[0];
+                    final String replyId = commandRequestIdParts[1];
+
+                    // send answer to caller via sender link
+                    final Future<CommandResponseSender> responseSender = createCommandResponseSender(tenant, deviceId, replyId);
+
+                    responseSender.compose(commandResponseSender ->
+                            commandResponseSender.sendCommandResponse(correlationId, contentType, payload, null, statusCode)
+                    ).map(delivery -> {
+                        if (delivery.remotelySettled()) {
+                            LOG.debug("Command response [command-request-id: {}] acknowledged to sender.", commandRequestId);
+                            ctx.response().setStatusCode(HttpURLConnection.HTTP_ACCEPTED);
+                        } else {
+                            LOG.debug("Command response [command-request-id: {}] failed - not remotely settled by sender.", commandRequestId);
+                            ctx.response().setStatusCode(HttpURLConnection.HTTP_UNAVAILABLE);
+                        }
+                        responseSender.result().close(v -> {
+                        });
+                        ctx.response().end();
+                        return delivery;
+                    }).otherwise(t -> {
+                        LOG.debug("Command response [command-request-id: {}] failed", commandRequestId, t);
+                        Optional.ofNullable(responseSender.result()).map(r -> {
+                            r.close(v -> {
+                            });
+                            return r;
+                        });
+                        ctx.response().setStatusCode(HttpURLConnection.HTTP_UNAVAILABLE);
+                        ctx.response().end();
+                        return null;
+                    });
+
+                    return commandRequestIdParts;
+                }).orElseGet(() -> {
+                    HttpUtils.badRequest(ctx, String.format("Cannot process command response message - command-request-id %s invalid", commandRequestId));
+                    return null;
+                })
+        ).orElseGet(() -> {
+            HttpUtils.badRequest(ctx, String.format("Cannot process command response message - status code %s invalid", commandRequestStatus));
+            return null;
+        });
+
+    }
+
 
 
     private static Integer getQoSLevel(final String qosValue) {

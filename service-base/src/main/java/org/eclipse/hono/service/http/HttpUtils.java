@@ -190,6 +190,35 @@ public final class HttpUtils {
     }
 
     /**
+     * Gets the value of the {@link org.eclipse.hono.util.Constants#HEADER_COMMAND_RESPONSE_STATUS} HTTP header for a request.
+     * If no such header can be found, the query is searched for containing a query parameter with the same key.
+     *
+     * @param ctx The routing context containing the HTTP request.
+     * @return An Optional containing the command response status or an empty Optional if
+     * <ul>
+     *     <li>the request doesn't contain a {@link org.eclipse.hono.util.Constants#HEADER_COMMAND_RESPONSE_STATUS} header or query parameter.</li>
+     *     <li>the contained value cannot be parsed as an Integer</li>
+     * </ul>
+     * @throws NullPointerException if context is {@code null}.
+     */
+    public static Optional<Integer> getCommandResponseStatus(final RoutingContext ctx) {
+        Objects.requireNonNull(ctx);
+
+        try {
+            return Optional.ofNullable(ctx.request().getHeader(Constants.HEADER_COMMAND_RESPONSE_STATUS)).map(cmdResponseStatusHeader ->
+                    Optional.of(Integer.parseInt(cmdResponseStatusHeader))
+            ).orElse(Optional.ofNullable(ctx.request().getParam(Constants.HEADER_COMMAND_RESPONSE_STATUS)).map(cmdResponseStatusParam ->
+                    Optional.of(Integer.parseInt(cmdResponseStatusParam))
+            ).orElse(
+                    Optional.empty()
+            ));
+        } catch (final NumberFormatException e) {
+            return Optional.empty();
+        }
+
+    }
+
+    /**
      * Writes a JSON object to an HTTP response body.
      * <p>
      * This method also sets the <em>content-type</em> and <em>content-length</em>
