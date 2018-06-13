@@ -7,6 +7,7 @@ spring:
 hono:
   client:
     host: localhost
+    reconnectAttempts: 5
 
 tenant:
   id: DEFAULT_TENANT

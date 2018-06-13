@@ -40,13 +40,15 @@ import io.vertx.proton.ProtonConnection;
 @Profile("receiver")
 public class ExampleReceiver extends AbstractExampleClient {
 
+    private final int DEFAULT_CONNECT_TIMEOUT_MILLIS = 1000;
+
     private static final String PROFILE_TELEMETRY = "telemetry";
     private static final String PROFILE_EVENT = "event";
 
     @PostConstruct
     private void start() {
 
-        client.connect(getClientOptions(), this::onDisconnect)
+        client.connect(this::onDisconnect)
             .compose(connectedClient -> createConsumer(connectedClient))
             .setHandler(startup -> {
                 if (startup.succeeded()) {
@@ -81,7 +83,7 @@ public class ExampleReceiver extends AbstractExampleClient {
         // give Vert.x some time to clean up NetClient
         vertx.setTimer(DEFAULT_CONNECT_TIMEOUT_MILLIS, reconnect -> {
             LOG.info("attempting to re-connect to Hono ...");
-            client.connect(getClientOptions(), this::onDisconnect).compose(connectedClient -> createConsumer(connectedClient));
+            client.connect(this::onDisconnect).compose(connectedClient -> createConsumer(connectedClient));
         });
     }
 
