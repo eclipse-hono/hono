@@ -36,7 +36,7 @@
     <grafana.version>4.2.0</grafana.version>
     <guava.version>19.0</guava.version>
     <influxdb.version>1.2.4-alpine</influxdb.version>
-    <jackson.version>2.9.0</jackson.version>
+    <jackson.version>2.9.5</jackson.version>
     <java-base-image.name>openjdk:8u171-jre-slim</java-base-image.name>
     <jjwt.version>0.7.0</jjwt.version>
     <jmeter.version>3.3</jmeter.version>
@@ -52,7 +52,7 @@
     <spring.version>4.3.18.RELEASE</spring.version>
     <spring-boot.version>1.5.13.RELEASE</spring-boot.version>
     <truth.version>0.28</truth.version>
-    <vertx.version>3.5.1</vertx.version>
+    <vertx.version>3.5.2</vertx.version>
   </properties>
 
   <dependencyManagement>
@@ -72,7 +72,7 @@
         <groupId>io.vertx</groupId>
         <artifactId>vertx-core</artifactId>
         <version>${vertx.version}</version>
-        <exclusions>
+        <!-- exclusions>
           <exclusion>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-core</artifactId>
@@ -85,7 +85,7 @@
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
           </exclusion>
-        </exclusions>
+        </exclusions-->
       </dependency>
       <dependency>
         <groupId>io.vertx</groupId>
@@ -194,12 +194,12 @@
         <artifactId>vertx-unit</artifactId>
         <version>${vertx.version}</version>
         <scope>test</scope>
-        <exclusions>
+        <!-- exclusions>
           <exclusion>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
           </exclusion>
-        </exclusions>
+        </exclusions-->
       </dependency>
       <dependency>
         <groupId>org.mockito</groupId>
@@ -302,7 +302,7 @@
         <version>${vertx.version}</version>
         <classifier>processor</classifier>
         <scope>test</scope>
-        <exclusions>
+        <!-- exclusions>
           <exclusion>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-core</artifactId>
@@ -315,7 +315,7 @@
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
           </exclusion>
-        </exclusions>
+        </exclusions-->
       </dependency>
     </dependencies>
   </dependencyManagement>
