@@ -63,11 +63,6 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
      */
     protected static final String DEFAULT_UPLOADS_DIRECTORY = "/tmp";
 
-    /**
-     * Time to wait after a command receiver link was closed before it is tried to be reopened again.
-     */
-    public static final int DEFAULT_REOPEN_COMMAND_CONSUMER_TIMEOUT_MILLIS = 1000;
-
     private static final Logger LOG = LoggerFactory.getLogger(AbstractVertxBasedHttpProtocolAdapter.class);
 
     private static final int AT_LEAST_ONCE = 1;
