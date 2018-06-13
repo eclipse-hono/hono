@@ -427,7 +427,10 @@ public class HonoClientImpl implements HonoClient {
                                 connectionFailureCause)));
             }
         } else {
-            LOG.trace("scheduling new attempt to connect ...");
+            if (connectionFailureCause != null) {
+                LOG.debug("connection attempt failed", connectionFailureCause);
+            }
+            LOG.trace("scheduling new connection attempt in {}ms ...", clientOptions.getReconnectInterval());
             // give Vert.x some time to clean up NetClient
             vertx.setTimer(clientOptions.getReconnectInterval(), tid -> {
                 connect(clientOptions, connectionHandler, disconnectHandler);
