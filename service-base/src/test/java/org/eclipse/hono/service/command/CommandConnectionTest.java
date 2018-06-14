@@ -13,7 +13,6 @@
 
 package org.eclipse.hono.service.command;
 
-import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.service.credentials.BaseCredentialsService;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -65,7 +64,7 @@ public class CommandConnectionTest {
      */
     @Before
     public void setUp() {
-        commandConnection = new CommandConnectionImpl(vertx, new ClientConfigProperties());
+        commandConnection = new CommandConnectionImpl(vertx, new CommandConfigProperties());
     }
 
     /**

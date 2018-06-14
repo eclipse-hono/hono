@@ -43,7 +43,7 @@ public class CommandConnectionImpl extends HonoClientImpl implements CommandConn
      * @param clientConfigProperties The configuration properties to use.
      * @throws NullPointerException if clientConfigProperties is {@code null}
      */
-    public CommandConnectionImpl(final Vertx vertx, final ClientConfigProperties clientConfigProperties) {
+    public CommandConnectionImpl(final Vertx vertx, final CommandConfigProperties clientConfigProperties) {
         super(vertx, clientConfigProperties);
     }
 
