@@ -49,7 +49,7 @@
     <qpid-jms.version>0.29.0</qpid-jms.version>
     <slf4j.version>1.7.24</slf4j.version>
     <snakeyaml.version>1.17</snakeyaml.version>
-    <spring.version>4.3.12.RELEASE</spring.version>
+    <spring.version>4.3.18.RELEASE</spring.version>
     <spring-boot.version>1.5.8.RELEASE</spring-boot.version>
     <truth.version>0.28</truth.version>
     <vertx.version>3.5.1</vertx.version>
