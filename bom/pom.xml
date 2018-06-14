@@ -50,7 +50,7 @@
     <slf4j.version>1.7.24</slf4j.version>
     <snakeyaml.version>1.17</snakeyaml.version>
     <spring.version>4.3.18.RELEASE</spring.version>
-    <spring-boot.version>1.5.8.RELEASE</spring-boot.version>
+    <spring-boot.version>1.5.13.RELEASE</spring-boot.version>
     <truth.version>0.28</truth.version>
     <vertx.version>3.5.1</vertx.version>
   </properties>
@@ -117,12 +117,6 @@
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-actuator</artifactId>
         <version>${spring-boot.version}</version>
-        <exclusions>
-          <exclusion>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-databind</artifactId>
-          </exclusion>
-        </exclusions>
       </dependency>
       <dependency>
         <groupId>io.dropwizard.metrics</groupId>
