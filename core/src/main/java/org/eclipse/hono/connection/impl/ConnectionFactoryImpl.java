@@ -23,11 +23,13 @@ import org.eclipse.hono.util.Strings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.netty.handler.ssl.OpenSsl;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.net.KeyCertOptions;
+import io.vertx.core.net.OpenSSLEngineOptions;
 import io.vertx.core.net.TrustOptions;
 import io.vertx.proton.ProtonClient;
 import io.vertx.proton.ProtonClientOptions;
@@ -212,6 +214,20 @@ public final class ConnectionFactoryImpl implements ConnectionFactory {
         }
 
         if (clientOptions.isSsl()) {
+
+            final boolean isOpenSslAvailable = OpenSsl.isAvailable();
+            final boolean supportsKeyManagerFactory =  OpenSsl.supportsKeyManagerFactory();
+            final boolean supportsHostnameValidation = OpenSsl.supportsHostnameValidation();
+
+            logger.debug("OpenSSL available: {}, supports KeyManagerFactory: {}, supports Hostname validation: {}",
+                    isOpenSslAvailable, supportsKeyManagerFactory, supportsHostnameValidation);
+            if (OpenSsl.isAvailable() && OpenSsl.supportsKeyManagerFactory()) {
+                if (supportsHostnameValidation || !config.isHostnameVerificationRequired()) {
+                    logger.info("using OpenSSL instead of JDK's SSL stack [library path: {}]",
+                            System.getProperty("java.library.path"));
+                    clientOptions.setSslEngineOptions(new OpenSSLEngineOptions());
+                }
+            }
             if (config.isHostnameVerificationRequired()) {
                 clientOptions.setHostnameVerificationAlgorithm("HTTPS");
             } else {
