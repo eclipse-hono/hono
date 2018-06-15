@@ -62,6 +62,8 @@
                     <entryPoint>
                       <exec>
                         <arg>java</arg>
+                        <arg>-XX:+UnlockExperimentalVMOptions</arg>
+                        <arg>-XX:+UseCGroupMemoryLimitForHeap</arg>
                         <arg>-Dvertx.cacheDirBase=/tmp</arg>
                         <arg>-jar</arg>
                         <arg>/opt/hono/${project.artifactId}-${project.version}-${classifier.spring.boot.artifact}.jar</arg>

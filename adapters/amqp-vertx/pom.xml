@@ -1,4 +1,6 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>org.eclipse.hono</groupId>
@@ -30,47 +32,49 @@
       </activation>
       <build>
         <plugins>
-	  <plugin>
-	    <groupId>io.fabric8</groupId>
-	    <artifactId>fabric8-maven-plugin</artifactId>
-	    <configuration>
-		<images>
-		  <image>
-		    <build>
-			<from>${java-base-image.name}</from>
-			<ports>
-			  <port>4040</port>
-			  <port>${vertx.health.port}</port>
-			</ports>
-			<cmd>
-			  <exec>
-			    <arg>java</arg>
-			    <arg>-Dvertx.cacheDirBase=/tmp</arg>
-			    <arg>-jar</arg>
-			    <arg>/opt/hono/${project.artifactId}-${project.version}-${classifier.spring.boot.artifact}.jar</arg>
-			  </exec>
-			</cmd>
-			<assembly>
-			  <mode>dir</mode>
-			  <basedir>/</basedir>
-			  <inline>
-			    <fileSets>
-				<fileSet>
-				  <directory>${project.build.directory}</directory>
-				  <outputDirectory>opt/hono</outputDirectory>
-				  <includes>
-				    <include>${project.artifactId}-${project.version}-${classifier.spring.boot.artifact}.jar</include>
-				  </includes>
-				</fileSet>
-			    </fileSets>
-			  </inline>
-			</assembly>
-		    </build>
-		  </image>
-		</images>
-	    </configuration>
-	  </plugin>
-	</plugins>
+          <plugin>
+            <groupId>io.fabric8</groupId>
+            <artifactId>fabric8-maven-plugin</artifactId>
+            <configuration>
+              <images>
+                <image>
+                  <build>
+                    <from>${java-base-image.name}</from>
+                    <ports>
+                      <port>4040</port>
+                      <port>${vertx.health.port}</port>
+                    </ports>
+                    <cmd>
+                      <exec>
+                        <arg>java</arg>
+                        <arg>-XX:+UnlockExperimentalVMOptions</arg>
+                        <arg>-XX:+UseCGroupMemoryLimitForHeap</arg>
+                        <arg>-Dvertx.cacheDirBase=/tmp</arg>
+                        <arg>-jar</arg>
+                        <arg>/opt/hono/${project.artifactId}-${project.version}-${classifier.spring.boot.artifact}.jar</arg>
+                      </exec>
+                    </cmd>
+                    <assembly>
+                      <mode>dir</mode>
+                      <basedir>/</basedir>
+                      <inline>
+                        <fileSets>
+                          <fileSet>
+                            <directory>${project.build.directory}</directory>
+                            <outputDirectory>opt/hono</outputDirectory>
+                            <includes>
+                              <include>${project.artifactId}-${project.version}-${classifier.spring.boot.artifact}.jar</include>
+                            </includes>
+                          </fileSet>
+                        </fileSets>
+                      </inline>
+                    </assembly>
+                  </build>
+                </image>
+              </images>
+            </configuration>
+          </plugin>
+        </plugins>
       </build>
     </profile>
   </profiles>

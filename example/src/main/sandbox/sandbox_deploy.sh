@@ -34,8 +34,11 @@ echo Deploying Influx DB and Grafana ...
 docker secret create -l project=$NS influxdb.conf $SCRIPTPATH/../deploy/influxdb.conf
 docker service create $CREATE_OPTIONS --name influxdb \
   --secret influxdb.conf \
+  --limit-memory 128m \
   influxdb:${influxdb.version} -config /run/secrets/influxdb.conf
-docker service create $CREATE_OPTIONS --name grafana -p 3001:3000 grafana/grafana:${grafana.version}
+docker service create $CREATE_OPTIONS --name grafana -p 3001:3000 \
+  --limit-memory 64m \
+  grafana/grafana:${grafana.version}
 echo ... done
 
 echo
@@ -56,6 +59,7 @@ docker service create $CREATE_OPTIONS --name hono-artemis \
   --secret login.config \
   --secret logging.properties \
   --secret artemis.profile \
+  --limit-memory 512m \
   --entrypoint "/opt/artemis/bin/artemis run xml:/run/secrets/artemis-bootstrap.xml" \
   ${artemis.image.name}
 echo ... done
@@ -72,6 +76,7 @@ docker service create $CREATE_OPTIONS --name hono-dispatch-router -p 15671:5671 
   --secret qdrouterd.json \
   --secret qdrouter-sasl.conf \
   --secret qdrouterd.sasldb \
+  --limit-memory 256m \
   ${dispatch-router.image.name} /sbin/qdrouterd -c /run/secrets/qdrouterd.json
 echo ... done
 
@@ -87,10 +92,10 @@ docker service create $CREATE_OPTIONS --name hono-service-auth \
   --secret trusted-certs.pem \
   --secret sandbox-permissions.json \
   --secret hono-service-auth-config.yml \
+  --limit-memory 128m \
   --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-service-auth-config.yml \
   --env SPRING_PROFILES_ACTIVE=authentication-impl,prod \
   --env LOGGING_CONFIG=classpath:logback-spring.xml \
-  --env _JAVA_OPTIONS=-Xmx32m \
   ${docker.image.org-name}/hono-service-auth:${project.version}
 echo ... done
 
@@ -124,10 +129,10 @@ docker service create $CREATE_OPTIONS --name hono-service-device-registry -p 256
   --secret auth-server-cert.pem \
   --secret trusted-certs.pem \
   --secret hono-service-device-registry-config.yml \
+  --limit-memory 160m \
   --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-service-device-registry-config.yml \
   --env LOGGING_CONFIG=classpath:logback-spring.xml \
   --env SPRING_PROFILES_ACTIVE=dev \
-  --env _JAVA_OPTIONS=-Xmx64m \
   --mount type=volume,source=device-registry,target=/var/lib/hono/device-registry \
   ${docker.image.org-name}/hono-service-device-registry:${project.version}
 echo ... done
@@ -164,10 +169,10 @@ docker service create $CREATE_OPTIONS --name hono-adapter-http-vertx -p 8080:808
   --secret hono.eclipse.org-cert.pem \
   --secret http-adapter.credentials \
   --secret hono-adapter-http-vertx-config.yml \
+  --limit-memory 384m \
   --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-adapter-http-vertx-config.yml \
   --env SPRING_PROFILES_ACTIVE=trace \
   --env LOGGING_CONFIG=classpath:logback-spring.xml \
-  --env _JAVA_OPTIONS=-Xmx128m \
   ${docker.image.org-name}/hono-adapter-http-vertx:${project.version}
 echo ... done
 
@@ -180,10 +185,10 @@ docker service create $CREATE_OPTIONS --name hono-adapter-mqtt-vertx -p 1883:188
   --secret hono.eclipse.org-cert.pem \
   --secret mqtt-adapter.credentials \
   --secret hono-adapter-mqtt-vertx-config.yml \
+  --limit-memory 384m \
   --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-adapter-mqtt-vertx-config.yml \
   --env SPRING_PROFILES_ACTIVE=dev \
   --env LOGGING_CONFIG=classpath:logback-spring.xml \
-  --env _JAVA_OPTIONS=-Xmx128m \
   ${docker.image.org-name}/hono-adapter-mqtt-vertx:${project.version}
 echo ... done
 
@@ -196,10 +201,10 @@ docker service create $CREATE_OPTIONS --name hono-adapter-kura -p 1884:1883 -p 8
   --secret hono.eclipse.org-cert.pem \
   --secret kura-adapter.credentials \
   --secret hono-adapter-kura-config.yml \
+  --limit-memory 384m \
   --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-adapter-kura-config.yml \
   --env SPRING_PROFILES_ACTIVE=prod \
   --env LOGGING_CONFIG=classpath:logback-spring.xml \
-  --env _JAVA_OPTIONS=-Xmx128m \
   ${docker.image.org-name}/hono-adapter-kura:${project.version}
 echo ... done
 
@@ -209,6 +214,7 @@ docker config create -l project=$NS site.conf $SCRIPTPATH/nginx.conf
 # we bind mount the directory that is used by Certbot to
 # get/update the Let's Encrypt certificate
 docker service create --detach=false --name hono-nginx -p 80:80 \
+  --limit-memory 32m \
   --config source=site.conf,target=/etc/nginx/conf.d/site.conf,mode=0440 \
   --mount type=bind,source=/var/www/certbot,target=/var/www/letsencrypt \
   nginx:1.13
