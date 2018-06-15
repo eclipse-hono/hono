@@ -589,8 +589,8 @@ public class AbstractProtocolAdapterBaseTest {
         ctx.assertNotNull(commandRequestIdOpt);
         ctx.assertTrue(commandRequestIdOpt.isPresent());
 
-        // now shorten the run length by using the correlationId string length + 2 from the 3 chars of the run-length '13#'
-        final String shortenedCommandRequestId = commandRequestIdOpt.get().substring(0,"correlationId".length() + 2);
+        // now shorten the run length by using the correlationId string length + 1 from the 2 chars of the run-length '0D'
+        final String shortenedCommandRequestId = commandRequestIdOpt.get().substring(0,"correlationId".length() + 1);
 
         // WHEN a command message with too large run-length is used, an empty Optional is returned.
         final Optional<String[]> corrIdAndReplyToArrayOptShortened = adapter.getCorrelationIdAndReplyToFromCommandRequestId(shortenedCommandRequestId);
@@ -612,7 +612,7 @@ public class AbstractProtocolAdapterBaseTest {
         adapter = newProtocolAdapter(properties, null);
 
         // WHEN a command message with invalid run-length is used, an empty Optional is returned.
-        final Optional<String[]> corrIdAndReplyToArrayOptShortened = adapter.getCorrelationIdAndReplyToFromCommandRequestId("ab#corr");
+        final Optional<String[]> corrIdAndReplyToArrayOptShortened = adapter.getCorrelationIdAndReplyToFromCommandRequestId("ZZcorr");
 
         ctx.assertNotNull(corrIdAndReplyToArrayOptShortened);
         ctx.assertFalse(corrIdAndReplyToArrayOptShortened.isPresent());

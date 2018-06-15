@@ -207,9 +207,9 @@ public final class Constants {
     public static final String HEADER_COMMAND = "hono-command";
 
     /**
-     * The character used to separate parts in a String that represents two Strings (see {@link #combineTwoStrings(String, String)}).
+     * The header name defined for setting the <em>status code</em> of a device respond to a command that was previously received by the device.
      */
-    static final char STRING_COMBINATION_SEPARATION_CHAR = '#';
+    public static final String HEADER_COMMAND_RESPONSE_STATUS = "hono-cmd-status";
 
     /**
      * The header name defined for setting the <em>subject</em> of a command that is sent to the device.
@@ -340,7 +340,7 @@ public final class Constants {
         final String stringOne = Optional.ofNullable(s1).orElse("");
         final String stringTwo = Optional.ofNullable(s2).orElse("");
         final StringBuffer buf = new StringBuffer(stringOne.length() + stringTwo.length() + 4);
-        buf.append(stringOne.length()).append(STRING_COMBINATION_SEPARATION_CHAR).append(stringOne).append(stringTwo);
+        buf.append(String.format("%02x", stringOne.length())).append(stringOne).append(stringTwo);
         return buf.toString();
     }
 
@@ -355,22 +355,19 @@ public final class Constants {
     public static String[] splitTwoStrings(final String combinedString) {
         if (combinedString == null) {
             return null;
+        } else if (combinedString.length() < 2) {
+            return null;
         } else {
-            final int separatorIndex = combinedString.indexOf(STRING_COMBINATION_SEPARATION_CHAR);
-            if (separatorIndex == -1) {
+            try {
+                final int lengthStringOne = Integer.parseInt(combinedString.substring(0, 2), 16);
+                final String[] twoStrings = new String[2];
+                twoStrings[0] = combinedString.substring(2, 2 + lengthStringOne);
+                twoStrings[1] = combinedString.substring(2 + lengthStringOne, combinedString.length());
+                return twoStrings;
+            } catch (final NumberFormatException ne) {
                 return null;
-            } else {
-                try {
-                    final int lengthStringOne = Integer.parseInt(combinedString.substring(0, separatorIndex));
-                    final String[] twoStrings = new String[2];
-                    twoStrings[0] = combinedString.substring(separatorIndex + 1, separatorIndex + 1 + lengthStringOne);
-                    twoStrings[1] = combinedString.substring(separatorIndex + lengthStringOne + 1, combinedString.length());
-                    return twoStrings;
-                } catch (final NumberFormatException ne) {
-                    return null;
-                } catch (final StringIndexOutOfBoundsException se) {
-                    return null;
-                }
+            } catch (final StringIndexOutOfBoundsException se) {
+                return null;
             }
         }
     }

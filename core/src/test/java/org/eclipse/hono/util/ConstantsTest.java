@@ -33,8 +33,8 @@ public class ConstantsTest {
 
         final String simpleCombine = Constants.combineTwoStrings("abc", "def");
         assertNotNull(simpleCombine);
-        assertTrue(simpleCombine.length() > 6);
-        assertTrue(simpleCombine.contains(String.valueOf(Constants.STRING_COMBINATION_SEPARATION_CHAR)));
+        assertTrue(simpleCombine.length() == 8);
+        assertTrue(simpleCombine.startsWith("03"));
     }
 
     /**
@@ -45,8 +45,7 @@ public class ConstantsTest {
 
         final String nullCombine = Constants.combineTwoStrings(null, null);
         assertNotNull(nullCombine);
-        assertTrue(nullCombine.length() > 0);
-        assertEquals("0" + String.valueOf(Constants.STRING_COMBINATION_SEPARATION_CHAR), nullCombine);
+        assertEquals("00", nullCombine);
     }
 
     /**
@@ -110,22 +109,22 @@ public class ConstantsTest {
     }
 
     /**
-     * Verifies that a String that does not conform a separation character at the beginning.
+     * Verifies that a String that does not contain a hex number as first two chars at the beginning.
      */
     @Test
-    public void testDecombineIncorrectStringReturnsNullForNoSeparationCharContained() {
+    public void testDecombineIncorrectStringReturnsNullForInvalidNumberAtBeginning() {
 
-        final String[] decombinedStrings = Constants.splitTwoStrings("illegal invalid content");
+        final String[] decombinedStrings = Constants.splitTwoStrings("Z13illegal# invalid content");
         assertTrue(decombinedStrings == null);
     }
 
     /**
-     * Verifies that a String that does not conform a number before the separation character at the beginning.
+     * Verifies that a String that does not contain a hex number as first two chars at the beginning.
      */
     @Test
-    public void testDecombineIncorrectStringReturnsNullForInvalidNumberBeforeSeparationChar() {
+    public void testDecombineIncorrectStringReturnsNullForTooBigNumberAtBeginning() {
 
-        final String[] decombinedStrings = Constants.splitTwoStrings("123illegal# invalid content");
+        final String[] decombinedStrings = Constants.splitTwoStrings("FFstringsContainedAreNotLongEnough");
         assertTrue(decombinedStrings == null);
     }
 
