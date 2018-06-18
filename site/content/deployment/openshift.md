@@ -68,7 +68,7 @@ and so the following start command has to be used in order to provide enough
 resources to the Minishift instance:
 
 ~~~sh
-$ minishift start --cpus 4 --memory 8GB
+$ minishift start --cpus 4 --memory 8GB --disk-size 40GB
 ~~~
 
 {{% note title="Resource limits" %}}

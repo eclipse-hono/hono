@@ -240,17 +240,16 @@ it is recommended to stick to the version mentioned in this tutorial.
 Wait for the admin console to completely start up. You can check this with
 the following command:
 
-    oc get deploy/address-controller
+    oc get deploy/api-server
 
 Verify that the "AVAILABLE" column shows "1":
 
-    NAME                 DESIRED   CURRENT   UP-TO-DATE   AVAILABLE   AGE
-    address-controller   1         1         1            1           51s
+    NAME         DESIRED   CURRENT   UP-TO-DATE   AVAILABLE   AGE
+    api-server   1         1         1            1           1m
 
 Next you will need to configure EnMasse to provide the required resources:
 
-    curl -X POST --insecure -T addresses.json" -H "content-type: application/json" https://$(oc -n enmasse get route restapi -o jsonpath='{.spec.host}')/apis/enmasse.io/v1alpha1/namespaces/enmasse/addressspaces/default/addresses
-    
+    curl -X POST --insecure -T addresses.json -H "content-type: application/json" https://$(oc -n enmasse get route restapi -o jsonpath='{.spec.host}')/apis/enmasse.io/v1alpha1/namespaces/enmasse/addressspaces/default/addresses
 
 ## Setting up Hono
 
