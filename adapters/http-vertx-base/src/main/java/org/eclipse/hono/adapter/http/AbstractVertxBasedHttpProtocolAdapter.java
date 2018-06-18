@@ -682,21 +682,21 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                     replyIdOpt.map(replyId -> {
                         // send answer to caller via sender link
                         final Future<CommandResponseSender> responseSender = createCommandResponseSender(tenant, deviceId, replyId);
-                        responseSender.map(commandResponseSender ->
+                        responseSender.compose(commandResponseSender ->
                                 commandResponseSender.sendCommandResponse(getCorrelationIdFromMessage(commandMessage),
                                         null, null, HttpURLConnection.HTTP_OK)
-                        ).map(protonDeliveryFuture -> {
-                            LOG.debug("Command acknowledged to sender.");
+                        ).map(delivery -> {
+                            LOG.debug("acknowledged command [message-id: {}]", commandMessage.getMessageId());
                             responseSender.result().close(v -> {});
                             return null;
                         }).otherwise(t -> {
-                            LOG.debug("Could not acknowledge command to sender", t);
-                            Optional.ofNullable(responseSender.result()).map(r -> {
+                            LOG.debug("could not acknowledge command [message-id: {}]", commandMessage.getMessageId(), t);
+                            return Optional.ofNullable(responseSender.result()).map(r -> {
                                 r.close(v -> {});
                                 return null;
-                            });
-                            return null;
+                            }).orElse(null);
                         });
+
                         return replyId;
                     });
 
