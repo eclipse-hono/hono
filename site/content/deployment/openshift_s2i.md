@@ -93,7 +93,6 @@ ensure that you are running Minishift with the following settings:
 
     minishift start --cpus 4 --memory 16GB --disk-size 40GB
 
-
 {{% note title="Resource limits" %}}
 Once you created your Minishift cluster instance with `minishift start` the
 resource arguments (like `--cpus`) are ignored in future calls to
@@ -293,7 +292,8 @@ Start by creating a new project using:
 
 Then deploy the Grafana instance using:
 
-    oc create configmap grafana-dashboards --from-file=../dashboards
+    oc create configmap grafana-datasources --from-file=../grafana/datasources
+    oc create configmap grafana-dashboards --from-file=../grafana/dashboards
     oc process -f grafana-template.yml \
       -p ADMIN_PASSWORD=admin | oc create -f -
 
@@ -304,8 +304,8 @@ this information via the template parameters:
       -p GIT_REPOSITORY=https://github.com/eclipse/hono \
       -p GIT_BRANCH=0.6.x \
       -p ADMIN_PASSWORD=admin | oc create -f -
-      
-      oc process -f grafana-template.yml -p GIT_REPOSITORY=https://github.com/eclipse/hono -p GIT_BRANCH=0.6.x -p ADMIN_PASSWORD=admin | oc create -f -
+
+    oc process -f grafana-template.yml -p GIT_REPOSITORY=https://github.com/eclipse/hono -p GIT_BRANCH=0.6.x -p ADMIN_PASSWORD=admin | oc create -f -
 
 ## Configuring the installation
 

@@ -87,7 +87,7 @@ objects:
         uri: ${GIT_REPOSITORY}
         ref: ${GIT_BRANCH}
       type: Git
-      contextDir: example/src/main/deploy/openshift_s2i/grafana
+      contextDir: example/src/main/deploy/grafana
     strategy:
       type: Docker
       dockerStrategy:
@@ -156,6 +156,8 @@ objects:
             name: data
           - mountPath: /var/lib/grafana-external/dashboards
             name: dashboards
+          - mountPath: /etc/grafana/provisioning/datasources
+            name: datasources
         dnsPolicy: ClusterFirst
         restartPolicy: Always
         schedulerName: default-scheduler
@@ -167,6 +169,9 @@ objects:
         - name: dashboards
           configMap:
             name: grafana-dashboards
+        - name: datasources
+          configMap:
+            name: grafana-datasources
     test: false
     triggers:
     - type: ImageChange

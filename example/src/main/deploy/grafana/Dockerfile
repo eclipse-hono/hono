@@ -1,16 +1,14 @@
 FROM centos:7
 
-RUN yum -y update
-
 ENV \
     GRAFANA_VERSION=5.1.3 \
     CONF_FILE=/etc/grafana/grafana.ini \
     DATA_DIR=/var/lib/grafana \
     LOG_DIR=/var/log/grafana \
-    PLUGINS_DIR=/var/lib/grafana/plugins \
-    PROVISIONING_CFG_DIR=/etc/grafana/provisioning
+    PLUGINS_DIR=/var/lib/grafana/plugins
 
-RUN yum -y install https://s3-us-west-2.amazonaws.com/grafana-releases/release/grafana-"$GRAFANA_VERSION"-1.x86_64.rpm \
+RUN yum -y update \
+    && yum -y install https://s3-us-west-2.amazonaws.com/grafana-releases/release/grafana-"$GRAFANA_VERSION"-1.x86_64.rpm \
     && yum clean all
 
 EXPOSE 3000
@@ -29,21 +27,18 @@ RUN \
 
 USER 1000
 
-# Provision data source
-
-COPY hono-metrics-influxdb.yml $PROVISIONING_CFG_DIR/datasources
-
 # Create dashboard provisioner
 
-COPY hono-dashboards.yml $PROVISIONING_CFG_DIR/dashboards
+COPY dashboard-provisioner.yml /etc/grafana/provisioning/dashboards
 
 WORKDIR /usr/share/grafana
+
 ENTRYPOINT \
         /usr/sbin/grafana-server \
         --config=$CONF_FILE \
         cfg:default.paths.data=$DATA_DIR \
         cfg:default.paths.logs=$LOG_DIR \
         cfg:default.paths.plugins=$PLUGINS_DIR \
-        cfg:default.paths.provisioning=$PROVISIONING_CFG_DIR \
+        cfg:default.paths.provisioning=/etc/grafana/provisioning \
         cfg:analytics.reporting_enabled=false \
         cfg:analytics.check_for_updates=false
