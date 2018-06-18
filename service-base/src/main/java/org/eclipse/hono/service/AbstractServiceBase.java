@@ -7,10 +7,12 @@ import org.eclipse.hono.util.Constants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.netty.handler.ssl.OpenSsl;
 import io.vertx.core.Future;
 import io.vertx.core.http.ClientAuth;
 import io.vertx.core.net.KeyCertOptions;
 import io.vertx.core.net.NetServerOptions;
+import io.vertx.core.net.OpenSSLEngineOptions;
 import io.vertx.core.net.TrustOptions;
 import io.vertx.ext.healthchecks.HealthCheckHandler;
 
@@ -341,6 +343,9 @@ public abstract class AbstractServiceBase<T extends ServiceConfigProperties> ext
      * <p>
      * If the server option' ssl flag is set, then the protocols from the <em>disabledTlsVersions</em>
      * configuration property are removed from the options (and thus disabled).
+     * <p>
+     * Finally, if a working instance of Netty's <em>tcnative</em> library is found, then
+     * it is used instead of the JDK's default SSL engine.
      * 
      * @param serverOptions The options to add configuration to.
      */
@@ -351,7 +356,24 @@ public abstract class AbstractServiceBase<T extends ServiceConfigProperties> ext
         if (keyCertOptions != null) {
             serverOptions.setSsl(true).setKeyCertOptions(keyCertOptions);
         }
+
         if (serverOptions.isSsl()) {
+
+            final boolean isOpenSslAvailable = OpenSsl.isAvailable();
+            final boolean supportsKeyManagerFactory =  OpenSsl.supportsKeyManagerFactory();
+            final boolean useOpenSsl = isOpenSslAvailable && supportsKeyManagerFactory;
+
+            LOG.debug("OpenSSL [available: {}, supports KeyManagerFactory: {}]",
+                    isOpenSslAvailable, supportsKeyManagerFactory);
+
+            if (useOpenSsl) {
+                LOG.info("using OpenSSL [version: {}] instead of JDK's default SSL engine",
+                        OpenSsl.versionString());
+                serverOptions.setSslEngineOptions(new OpenSSLEngineOptions());
+            } else {
+                LOG.info("using JDK's default SSL engine");
+            }
+
             serverOptions.getEnabledSecureTransportProtocols()
                 .forEach(protocol -> serverOptions.removeEnabledSecureTransportProtocol(protocol));
             getConfig().getSecureProtocols().forEach(protocol -> {
