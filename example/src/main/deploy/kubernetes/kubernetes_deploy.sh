@@ -11,6 +11,8 @@
 #    Red Hat - initial creation
 #    Bosch Software Innovations GmbH
 
+set -e
+
 # Absolute path this script is in
 SCRIPTPATH="$(cd "$(dirname "$0")" && pwd -P)"
 HONO_HOME=$SCRIPTPATH/../../../..

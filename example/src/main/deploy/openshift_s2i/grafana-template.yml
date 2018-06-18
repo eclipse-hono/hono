@@ -7,10 +7,16 @@ metadata:
 
 parameters:
 
-- name:           GIT_URI
+- name:           GIT_REPOSITORY
   displayName:      Git repository URI
   description:      location of the grafana git repo
-  value:            https://github.com/OpenShiftDemos/grafana-openshift
+  value:            https://github.com/eclipse/hono
+  required:         true
+- name:           GIT_BRANCH
+  displayName:      Git branch
+  description:      The git branch to build
+  value:            master
+  required:         true
 - name:           ADMIN_PASSWORD
   displayName:      Initial admin password
   description:      The password which will initially be set for the admin user
@@ -20,17 +26,13 @@ parameters:
 - name:           GRAFANA_VERSION
   displayName:      Grafana version
   description:      The version of Grafana to use
-  value:            4.6.2
+  value:            5.1.3
+  required:         true
 - name:           VOLUME_SIZE
   displayName:      Volume Size
   description:      Size of persistent volume used for Grafana datastore
   required:         true
   value:            1Gi
-- name:           DATA_DIR
-  displayName:      Data directory
-  description:      Path to Grafana data directory
-  required:         true
-  value:            /usr/share/grafana/data
 
 objects:
 
@@ -82,8 +84,10 @@ objects:
     - type: ConfigChange
     source:
       git:
-        uri: ${GIT_URI}
+        uri: ${GIT_REPOSITORY}
+        ref: ${GIT_BRANCH}
       type: Git
+      contextDir: example/src/main/deploy/grafana
     strategy:
       type: Docker
       dockerStrategy:
@@ -93,16 +97,6 @@ objects:
         from:
           kind: ImageStreamTag
           name: centos:7
-
-- kind: ConfigMap
-  apiVersion: v1
-  metadata:
-    name: grafana-config
-  data:
-    custom.ini: |+
-      [analytics]
-      reporting_enabled=false
-      check_for_updates=false
 
 - apiVersion: v1
   kind: DeploymentConfig
@@ -131,14 +125,6 @@ objects:
         - name: grafana
           image: grafana
           env:
-          - name: GF_INSTALL_PLUGINS
-            value: hawkular-datasource
-          - name: DATAD
-            value: ${DATA_DIR}
-          - name: PLGND
-            value: ${DATA_DIR}/plugins
-          - name: CONF_FILE
-            value: /etc/config/custom.ini
           - name: GF_SECURITY_ADMIN_PASSWORD
             value: ${ADMIN_PASSWORD}
           imagePullPolicy: Always
@@ -166,10 +152,12 @@ objects:
             successThreshold: 1
             timeoutSeconds: 1
           volumeMounts:
-          - mountPath: ${DATA_DIR}
+          - mountPath: /var/lib/grafana
             name: data
-          - mountPath: /etc/config
-            name: conf
+          - mountPath: /var/lib/grafana-external/dashboards
+            name: dashboards
+          - mountPath: /etc/grafana/provisioning/datasources
+            name: datasources
         dnsPolicy: ClusterFirst
         restartPolicy: Always
         schedulerName: default-scheduler
@@ -178,9 +166,12 @@ objects:
         - name: data
           persistentVolumeClaim:
             claimName: grafana-pvc
-        - name: conf
+        - name: dashboards
           configMap:
-            name: grafana-config
+            name: grafana-dashboards
+        - name: datasources
+          configMap:
+            name: grafana-datasources
     test: false
     triggers:
     - type: ImageChange

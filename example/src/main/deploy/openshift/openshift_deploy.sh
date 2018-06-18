@@ -17,6 +17,7 @@ CONFIG=$SCRIPTPATH/../../config
 CERTS=$CONFIG/hono-demo-certs-jar
 HONO_HOME=$SCRIPTPATH/../../../..
 OPENSHIFT_MASTER=${1:-"https://$(minishift ip):8443"}
+: ${PROJECT:=hono}
 
 set -e
 
@@ -25,10 +26,10 @@ source $SCRIPTPATH/common.sh
 echo DEPLOYING ECLIPSE HONO ON OPENSHIFT
 
 # use hono project
-oc project hono
+oc project "$PROJECT"
 
 echo "Waiting for EnMasse..."
-wait_for_enmasse 8 hono
+wait_for_enmasse 8 "$PROJECT"
 
 # create addresses
 curl -X POST --insecure -T "$SCRIPTPATH/addresses.json" -H "content-type: application/json" https://$(oc get route restapi -o jsonpath='{.spec.host}')/apis/enmasse.io/v1alpha1/namespaces/hono/addressspaces/default/addresses
@@ -40,7 +41,10 @@ echo "Deploying influxDB & Grafana ..."
 oc create secret generic influxdb-conf --from-file=$SCRIPTPATH/../influxdb.conf
 oc create -f $SCRIPTPATH/../influxdb-deployment.yml
 oc create -f $SCRIPTPATH/../influxdb-svc.yml
-oc process -f $SCRIPTPATH/grafana-template.yml -p ADMIN_PASSWORD=admin | oc create -f -
+oc create configmap grafana-dashboards --from-file="$SCRIPTPATH/../dashboards"
+oc create -f $SCRIPTPATH/../grafana-deployment.yml
+oc create -f $SCRIPTPATH/../grafana-svc.yml
+oc expose svc/grafana
 echo ... done
 
 echo "Deploying Authentication Server ..."
@@ -103,14 +107,6 @@ oc create secret generic hono-adapter-kura-conf \
   --from-file=$SCRIPTPATH/../kura-adapter.credentials \
   --from-file=application.yml=$SCRIPTPATH/hono-adapter-kura-config.yml
 oc create -f $CONFIG/hono-adapter-kura-jar/META-INF/fabric8/openshift.yml
-echo ... done
-
-echo
-echo "Configuring Grafana with data source & dashboard ..."
-
-chmod +x $SCRIPTPATH/../configure_grafana.sh
-
-$SCRIPTPATH/../configure_grafana.sh "$(oc get route grafana --template='{{.spec.host}}')" 80
 echo ... done
 
 echo ECLIPSE HONO DEPLOYED ON OPENSHIFT
