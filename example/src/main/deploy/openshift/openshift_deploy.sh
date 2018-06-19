@@ -50,7 +50,7 @@ oc create secret generic hono-service-auth-conf \
   --from-file=$CERTS/trusted-certs.pem \
   --from-file=permissions.json=$SCRIPTPATH/../example-permissions.json \
   --from-file=application.yml=$SCRIPTPATH/hono-service-auth-config.yml
-oc create -f $CONFIG/hono-service-auth-jar/META-INF/fabric8/openshift.yml
+oc create -f $RESOURCES/hono-service-auth
 echo ... done
 
 echo "Deploying Device Registry ..."

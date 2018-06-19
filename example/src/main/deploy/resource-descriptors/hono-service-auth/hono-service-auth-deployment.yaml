@@ -1,0 +1,66 @@
+---
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  labels:
+    app: hono-service-auth
+    version: "${project.version}"
+    group: ${project.groupId}
+  name: hono-service-auth
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: hono-service-auth
+      group: ${project.groupId}
+  template:
+    metadata:
+      labels:
+        app: hono-service-auth
+        version: "${project.version}"
+        group: ${project.groupId}
+    spec:
+      containers:
+      - image: eclipse/hono-service-auth:${project.version}
+        imagePullPolicy: IfNotPresent
+        name: eclipse-hono-service-auth
+        ports:
+        - containerPort: 5671
+          protocol: TCP
+        - containerPort: 5672
+          protocol: TCP
+        securityContext:
+          privileged: false
+        env:
+        - name: SPRING_CONFIG_LOCATION
+          value: file:///etc/hono/
+        - name: SPRING_PROFILES_ACTIVE
+          value: authentication-impl,dev
+        - name: LOGGING_CONFIG
+          value: classpath:logback-spring.xml
+        - name: _JAVA_OPTIONS
+          value: -Xmx32m
+        - name: KUBERNETES_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        volumeMounts:
+        - mountPath: /etc/hono
+          name: conf
+          readOnly: true
+        livenessProbe:
+          initialDelaySeconds: 25
+          periodSeconds: 9
+          tcpSocket:
+            port: 5672
+          timeoutSeconds: 1
+        readinessProbe:
+          initialDelaySeconds: 15
+          periodSeconds: 5
+          tcpSocket:
+            port: 5672
+          timeoutSeconds: 1
+      volumes:
+      - name: conf
+        secret:
+          secretName: hono-service-auth-conf

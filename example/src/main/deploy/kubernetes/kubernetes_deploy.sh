@@ -74,7 +74,7 @@ kubectl create secret generic hono-service-auth-conf \
   --from-file=permissions.json=$SCRIPTPATH/../example-permissions.json \
   --from-file=application.yml=$SCRIPTPATH/hono-service-auth-config.yml \
   --namespace $NS
-kubectl create -f $CONFIG/hono-service-auth-jar/META-INF/fabric8/kubernetes.yml --namespace $NS
+kubectl create -f $RESOURCES/hono-service-auth --namespace $NS
 echo ... done
 
 echo
