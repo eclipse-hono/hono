@@ -82,7 +82,7 @@ oc create secret generic hono-adapter-http-vertx-conf \
   --from-file=$CERTS/trusted-certs.pem \
   --from-file=$SCRIPTPATH/../http-adapter.credentials \
   --from-file=application.yml=$SCRIPTPATH/hono-adapter-http-vertx-config-enmasse.yml
-oc create -f $CONFIG/hono-adapter-http-vertx-jar/META-INF/fabric8/openshift.yml
+oc create -f $RESOURCES/hono-adapter-http
 echo ... done
 
 echo "Deploying MQTT adapter ..."

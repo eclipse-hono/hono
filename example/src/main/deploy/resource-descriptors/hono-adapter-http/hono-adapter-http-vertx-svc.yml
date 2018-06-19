@@ -1,0 +1,25 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: hono-adapter-http-vertx
+    version: "${project.version}"
+    group: ${project.groupId}
+  name: hono-adapter-http-vertx
+spec:
+  ports:
+  - name: http
+    nodePort: 30080
+    port: 8080
+    protocol: TCP
+    targetPort: 8080
+  - name: https
+    nodePort: 30443
+    port: 8443
+    protocol: TCP
+    targetPort: 8443
+  selector:
+    app: hono-adapter-http-vertx
+    group: ${project.groupId}
+  type: NodePort

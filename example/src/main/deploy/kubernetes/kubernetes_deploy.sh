@@ -112,7 +112,7 @@ kubectl create secret generic hono-adapter-http-vertx-conf \
   --from-file=$SCRIPTPATH/../http-adapter.credentials \
   --from-file=application.yml=$SCRIPTPATH/hono-adapter-http-vertx-config.yml \
   --namespace $NS
-kubectl create -f $CONFIG/hono-adapter-http-vertx-jar/META-INF/fabric8/kubernetes.yml --namespace $NS
+kubectl create -f $RESOURCES/hono-adapter-http --namespace $NS
 echo ... done
 
 echo

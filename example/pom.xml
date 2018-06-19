@@ -85,11 +85,6 @@ Also contains scripts for deploying a Hono instance to a Docker Swarm, a Kuberne
       <artifactId>hono-service-messaging</artifactId>
       <version>${project.version}</version>
     </dependency>
-    <dependency>
-      <groupId>org.eclipse.hono</groupId>
-      <artifactId>hono-adapter-http-vertx</artifactId>
-      <version>${project.version}</version>
-    </dependency>
   </dependencies>
 
   <build>
@@ -140,8 +135,7 @@ Also contains scripts for deploying a Hono instance to a Docker Swarm, a Kuberne
                 hono-demo-certs,
                 hono-service-auth,
                 hono-service-messaging,
-                hono-service-device-registry,
-                hono-adapter-http-vertx
+                hono-service-device-registry
               </includeArtifactIds>
               <outputDirectory>${project.build.directory}/config</outputDirectory>
               <includes>
