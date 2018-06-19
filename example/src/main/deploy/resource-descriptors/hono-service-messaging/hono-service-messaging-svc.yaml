@@ -1,0 +1,20 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: hono-service-messaging
+    version: "${project.version}"
+    group: ${project.groupId}
+  name: hono-service-messaging
+spec:
+  ports:
+  - name: amqps
+    nodePort: 32671
+    port: 5671
+    protocol: TCP
+    targetPort: 5671
+  selector:
+    app: hono-service-messaging
+    group: ${project.groupId}
+  type: NodePort

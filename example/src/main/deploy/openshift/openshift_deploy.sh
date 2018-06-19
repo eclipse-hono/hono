@@ -72,7 +72,7 @@ oc create secret generic hono-service-messaging-conf \
   --from-file=$CERTS/auth-server-cert.pem \
   --from-file=$CERTS/trusted-certs.pem \
   --from-file=application.yml=$SCRIPTPATH/hono-service-messaging-config-enmasse.yml
-oc create -f $CONFIG/hono-service-messaging-jar/META-INF/fabric8/openshift.yml
+oc create -f $RESOURCES/hono-service-messaging
 echo ... done
 
 echo "Deploying HTTP adapter ..."

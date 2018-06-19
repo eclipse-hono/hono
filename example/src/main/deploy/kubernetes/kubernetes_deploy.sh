@@ -100,7 +100,7 @@ kubectl create secret generic hono-service-messaging-conf \
   --from-file=$CERTS/trusted-certs.pem \
   --from-file=application.yml=$SCRIPTPATH/hono-service-messaging-config.yml \
   --namespace $NS
-kubectl create -f $CONFIG/hono-service-messaging-jar/META-INF/fabric8/kubernetes.yml --namespace $NS
+kubectl create -f $RESOURCES/hono-service-messaging --namespace $NS
 echo ... done
 
 echo

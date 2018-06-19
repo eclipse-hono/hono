@@ -14,8 +14,6 @@
 
   <properties>
     <vertx.health.port>8088</vertx.health.port>
-    <vertx.health.path>/liveness</vertx.health.path>
-    <vertx.health.readiness.path>/readiness</vertx.health.readiness.path>
   </properties>
 
   <dependencies>
@@ -58,7 +56,7 @@
         <plugins>
           <plugin>
             <groupId>io.fabric8</groupId>
-            <artifactId>fabric8-maven-plugin</artifactId>
+            <artifactId>docker-maven-plugin</artifactId>
             <configuration>
               <images>
                 <image>
