@@ -124,7 +124,7 @@ kubectl create secret generic hono-adapter-mqtt-vertx-conf \
   --from-file=$SCRIPTPATH/../mqtt-adapter.credentials \
   --from-file=application.yml=$SCRIPTPATH/hono-adapter-mqtt-vertx-config.yml \
   --namespace $NS
-kubectl create -f $CONFIG/hono-adapter-mqtt-vertx-jar/META-INF/fabric8/kubernetes.yml --namespace $NS
+kubectl create -f $RESOURCES/hono-adapter-mqtt --namespace $NS
 echo ... done
 
 echo

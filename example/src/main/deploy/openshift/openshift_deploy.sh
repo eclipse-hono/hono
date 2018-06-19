@@ -92,7 +92,7 @@ oc create secret generic hono-adapter-mqtt-vertx-conf \
   --from-file=$CERTS/trusted-certs.pem \
   --from-file=$SCRIPTPATH/../mqtt-adapter.credentials \
   --from-file=application.yml=$SCRIPTPATH/hono-adapter-mqtt-vertx-config-enmasse.yml
-oc create -f $CONFIG/hono-adapter-mqtt-vertx-jar/META-INF/fabric8/openshift.yml
+oc create -f $RESOURCES/hono-adapter-mqtt
 echo ... done
 
 echo "Deploying Kura adapter ..."
