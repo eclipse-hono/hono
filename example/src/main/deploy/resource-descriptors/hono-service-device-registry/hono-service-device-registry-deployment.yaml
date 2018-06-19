@@ -1,0 +1,88 @@
+---
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  labels:
+    app: hono-service-device-registry
+    version: "${project.version}"
+    group: ${project.groupId}
+  name: hono-service-device-registry
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: hono-service-device-registry
+      group: ${project.groupId}
+  template:
+    metadata:
+      labels:
+        app: hono-service-device-registry
+        version: "${project.version}"
+        group: ${project.groupId}
+    spec:
+      containers:
+      - image: eclipse/hono-service-device-registry:${project.version}
+        imagePullPolicy: IfNotPresent
+        name: eclipse-hono-service-device-registry
+        ports:
+        - containerPort: 8080
+          protocol: TCP
+        - containerPort: 8443
+          protocol: TCP
+        - containerPort: 5671
+          protocol: TCP
+        - containerPort: 5672
+          protocol: TCP
+        env:
+        - name: SPRING_CONFIG_LOCATION
+          value: file:///etc/hono/
+        - name: SPRING_PROFILES_ACTIVE
+          value: dev
+        - name: LOGGING_CONFIG
+          value: classpath:logback-spring.xml
+        - name: _JAVA_OPTIONS
+          value: -Xmx64m
+        - name: KUBERNETES_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        securityContext:
+          privileged: false
+        volumeMounts:
+        - mountPath: /var/lib/hono/device-registry
+          name: registry
+        - mountPath: /etc/hono
+          name: conf
+          readOnly: true
+        livenessProbe:
+          httpGet:
+            path: /liveness
+            port: 8088
+            scheme: HTTP
+          initialDelaySeconds: 180
+        readinessProbe:
+          httpGet:
+            path: /readiness
+            port: 8088
+            scheme: HTTP
+          initialDelaySeconds: 10
+      initContainers:
+      - command:
+        - sh
+        - -c
+        - cp -u /tmp/hono/example-credentials.json /var/lib/hono/device-registry/credentials.json;
+          cp -u /tmp/hono/example-tenants.json /var/lib/hono/device-registry/tenants.json
+        image: busybox
+        name: copy-example-data
+        volumeMounts:
+        - mountPath: /tmp/hono
+          name: conf
+        - mountPath: /var/lib/hono/device-registry
+          name: registry
+      volumes:
+      - name: registry
+        persistentVolumeClaim:
+          claimName: registry
+      - name: conf
+        secret:
+          secretName: hono-service-device-registry-conf

@@ -88,7 +88,7 @@ kubectl create secret generic hono-service-device-registry-conf \
   --from-file=$SCRIPTPATH/../example-tenants.json \
   --from-file=application.yml=$SCRIPTPATH/hono-service-device-registry-config.yml \
   --namespace $NS
-kubectl create -f $CONFIG/hono-service-device-registry-jar/META-INF/fabric8/kubernetes.yml --namespace $NS
+kubectl create -f $RESOURCES/hono-service-device-registry --namespace $NS
 echo ... done
 
 echo

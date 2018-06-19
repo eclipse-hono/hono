@@ -62,7 +62,7 @@ oc create secret generic hono-service-device-registry-conf \
   --from-file=$SCRIPTPATH/../example-credentials.json \
   --from-file=$SCRIPTPATH/../example-tenants.json \
   --from-file=application.yml=$SCRIPTPATH/hono-service-device-registry-config.yml
-oc create -f $CONFIG/hono-service-device-registry-jar/META-INF/fabric8/openshift.yml
+oc create -f $RESOURCES/hono-service-device-registry
 echo ... done
 
 echo "Deploying Hono Messaging ..."

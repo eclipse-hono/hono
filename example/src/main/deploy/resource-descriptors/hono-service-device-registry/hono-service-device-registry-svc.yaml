@@ -1,0 +1,30 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: hono-service-device-registry
+    version: "${project.version}"
+    group: ${project.groupId}
+  name: hono-service-device-registry
+spec:
+  ports:
+  - name: amqps
+    nodePort: 31671
+    port: 5671
+    protocol: TCP
+    targetPort: 5671
+  - name: http
+    nodePort: 31080
+    port: 8080
+    protocol: TCP
+    targetPort: 8080
+  - name: https
+    nodePort: 31443
+    port: 8443
+    protocol: TCP
+    targetPort: 8443
+  selector:
+    app: hono-service-device-registry
+    group: ${project.groupId}
+  type: NodePort
