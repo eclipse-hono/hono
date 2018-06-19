@@ -14,7 +14,6 @@ package org.eclipse.hono.util;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 
 import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.engine.Record;
@@ -324,51 +323,5 @@ public final class Constants {
      */
     public static boolean isDefaultTenant(final String tenantId) {
         return DEFAULT_TENANT.equals(tenantId);
-    }
-
-    /**
-     * Combine two Strings into one so that they can later be <em>decombined</em> into the previous two Strings again
-     * (see {@link #splitTwoStrings(String)}.
-     *
-     * @param s1 First String to be combined with the second into one String.
-     *           If the String is {@code null}, it will be converted to an empty String first.
-     * @param s2 Second String to be combined with the first into one String.
-     *           If the String is {@code null}, it will be converted to an empty String first.
-     * @return The combined String.
-     */
-    public static String combineTwoStrings(final String s1, final String s2) {
-        final String stringOne = Optional.ofNullable(s1).orElse("");
-        final String stringTwo = Optional.ofNullable(s2).orElse("");
-        final StringBuffer buf = new StringBuffer(stringOne.length() + stringTwo.length() + 4);
-        buf.append(String.format("%02x", stringOne.length())).append(stringOne).append(stringTwo);
-        return buf.toString();
-    }
-
-    /**
-     * Split a String (that was typically created by invoking {@link #combineTwoStrings(String, String)} previously)
-     * into two separate Strings again.
-     *
-     * @param combinedString The combined String that is to be split into two separate Strings again.
-     * @return A String array with two elements that contains the two Strings, or {@code null} if the passed combinedString
-     *         is not valid.
-     */
-    public static String[] splitTwoStrings(final String combinedString) {
-        if (combinedString == null) {
-            return null;
-        } else if (combinedString.length() < 2) {
-            return null;
-        } else {
-            try {
-                final int lengthStringOne = Integer.parseInt(combinedString.substring(0, 2), 16);
-                final String[] twoStrings = new String[2];
-                twoStrings[0] = combinedString.substring(2, 2 + lengthStringOne);
-                twoStrings[1] = combinedString.substring(2 + lengthStringOne, combinedString.length());
-                return twoStrings;
-            } catch (final NumberFormatException ne) {
-                return null;
-            } catch (final StringIndexOutOfBoundsException se) {
-                return null;
-            }
-        }
     }
 }
