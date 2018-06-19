@@ -210,56 +210,6 @@
           </configuration>
         </plugin>
         <plugin>
-          <groupId>io.fabric8</groupId>
-          <artifactId>fabric8-maven-plugin</artifactId>
-          <version>3.5.34</version>
-          <configuration>
-            <mode>kubernetes</mode>
-            <profile>raw</profile>
-            <verbose>true</verbose>
-            <images>
-              <image>
-                <name>${docker.image.org-name}/%a:%v</name>
-                <build>
-                  <maintainer>The Eclipse Hono project</maintainer>
-                  <tags>
-                    <tag>latest</tag>
-                  </tags>
-                </build>
-              </image>
-            </images>
-            <enricher>
-              <includes>
-                <include>fmp-controller</include>
-                <include>fmp-image</include>
-                <include>fmp-service</include>
-                <include>fmp-project</include>
-                <include>vertx-health-check</include>
-              </includes>
-            </enricher>
-          </configuration>
-          <executions>
-            <execution>
-              <id>create_resources</id>
-              <!-- 
-                create Kubernetes/OpenShift descriptors before the artifact is packaged so
-                that the descriptors are included in the artifact
-               -->
-              <phase>prepare-package</phase>
-              <goals>
-                <goal>resource</goal>
-              </goals>
-            </execution>
-            <execution>
-              <id>build_images</id>
-              <phase>package</phase>
-              <goals>
-                <goal>build</goal>
-              </goals>
-            </execution>
-          </executions>
-        </plugin>
-        <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-compiler-plugin</artifactId>
           <version>3.7.0</version>
