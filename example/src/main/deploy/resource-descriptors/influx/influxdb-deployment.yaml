@@ -34,6 +34,9 @@ spec:
         image: influxdb:${influxdb.version}
         imagePullPolicy: IfNotPresent
         name: influxdb
+        resources:
+          limits:
+            memory: "256Mi"
         ports:
         - containerPort: 8086
           name: api

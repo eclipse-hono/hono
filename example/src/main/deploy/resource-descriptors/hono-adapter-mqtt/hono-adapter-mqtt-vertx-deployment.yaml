@@ -40,8 +40,6 @@ spec:
           value: dev
         - name: LOGGING_CONFIG
           value: classpath:logback-spring.xml
-        - name: _JAVA_OPTIONS
-          value: -Xmx128m
         - name: KUBERNETES_NAMESPACE
           valueFrom:
             fieldRef:
@@ -50,6 +48,9 @@ spec:
         - mountPath: /etc/hono
           name: conf
           readOnly: true
+        resources:
+          limits:
+            memory: "256Mi"
         livenessProbe:
           httpGet:
             path: /liveness

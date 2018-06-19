@@ -35,6 +35,9 @@ spec:
               fieldPath: metadata.namespace
         image: grafana/grafana:${grafana.version}
         imagePullPolicy: IfNotPresent
+        resources:
+          limits:
+            memory: "64Mi"
         livenessProbe:
           httpGet:
             port: 3000

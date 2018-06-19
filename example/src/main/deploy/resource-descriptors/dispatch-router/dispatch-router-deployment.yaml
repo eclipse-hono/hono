@@ -34,6 +34,9 @@ spec:
               fieldPath: metadata.namespace
         image: ${dispatch-router.image.name}
         imagePullPolicy: IfNotPresent
+        resources:
+          limits:
+            memory: "512Mi"
         livenessProbe:
           initialDelaySeconds: 180
           periodSeconds: 9

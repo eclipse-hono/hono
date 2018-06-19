@@ -36,6 +36,11 @@ spec:
               fieldPath: metadata.namespace
         image: ${artemis.image.name}
         imagePullPolicy: IfNotPresent
+        resources:
+          limits:
+            memory: "512Mi"
+          requests:
+            memory: "256Mi"
         livenessProbe:
           initialDelaySeconds: 20
           periodSeconds: 9
