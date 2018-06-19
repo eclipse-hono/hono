@@ -15,6 +15,7 @@
 SCRIPTPATH="$(cd "$(dirname "$0")" && pwd -P)"
 HONO_HOME=$SCRIPTPATH/../../../..
 CONFIG=$SCRIPTPATH/../../config
+RESOURCES=$SCRIPTPATH/../resource-descriptors
 CERTS=$CONFIG/hono-demo-certs-jar
 NS=hono
 
@@ -31,10 +32,8 @@ kubectl create serviceaccount useroot --namespace $NS
 kubectl create secret generic influxdb-conf \
   --from-file=$SCRIPTPATH/../influxdb.conf \
   --namespace $NS
-kubectl create -f $SCRIPTPATH/../influxdb-deployment.yml --namespace $NS
-kubectl create -f $SCRIPTPATH/../influxdb-svc.yml --namespace $NS
-kubectl create -f $SCRIPTPATH/../grafana-deployment.yml --namespace $NS
-kubectl create -f $SCRIPTPATH/../grafana-svc.yml --namespace $NS
+kubectl create -f $RESOURCES/influx --namespace $NS
+kubectl create -f $RESOURCES/grafana --namespace $NS
 echo ... done
 
 echo
@@ -50,8 +49,7 @@ kubectl create secret generic hono-artemis-conf \
   --from-file=$CERTS/artemisKeyStore.p12 \
   --from-file=$CERTS/trustStore.jks \
   --namespace $NS
-kubectl create -f $SCRIPTPATH/../artemis-deployment.yml --namespace $NS
-kubectl create -f $SCRIPTPATH/../artemis-svc.yml --namespace $NS
+kubectl create -f $RESOURCES/artemis --namespace $NS
 echo ... done
 
 echo
@@ -64,9 +62,7 @@ kubectl create secret generic hono-dispatch-router-conf \
   --from-file=$SCRIPTPATH/qpid/qdrouter-sasl.conf \
   --from-file=$SCRIPTPATH/qpid/qdrouterd.sasldb \
   --namespace $NS
-kubectl create -f $SCRIPTPATH/../dispatch-router-deployment.yml --namespace $NS
-kubectl create -f $SCRIPTPATH/../dispatch-router-svc.yml --namespace $NS
-kubectl create -f $SCRIPTPATH/../dispatch-router-ext-svc.yml --namespace $NS
+kubectl create -f $RESOURCES/dispatch-router --namespace $NS
 echo ... done
 
 echo
@@ -140,7 +136,7 @@ kubectl create secret generic hono-adapter-kura-conf \
   --from-file=$SCRIPTPATH/../kura-adapter.credentials \
   --from-file=application.yml=$SCRIPTPATH/hono-adapter-kura-config.yml \
   --namespace $NS
-kubectl create -f $CONFIG/hono-adapter-kura-jar/META-INF/fabric8/kubernetes.yml --namespace $NS
+kubectl create -f $RESOURCES/hono-adapter-kura --namespace $NS
 echo ... done
 
 echo

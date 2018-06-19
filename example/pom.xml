@@ -95,11 +95,6 @@ Also contains scripts for deploying a Hono instance to a Docker Swarm, a Kuberne
       <artifactId>hono-adapter-http-vertx</artifactId>
       <version>${project.version}</version>
     </dependency>
-    <dependency>
-      <groupId>org.eclipse.hono</groupId>
-      <artifactId>hono-adapter-kura</artifactId>
-      <version>${project.version}</version>
-    </dependency>
   </dependencies>
 
   <build>
@@ -152,8 +147,7 @@ Also contains scripts for deploying a Hono instance to a Docker Swarm, a Kuberne
                 hono-service-messaging,
                 hono-service-device-registry,
                 hono-adapter-http-vertx,
-                hono-adapter-mqtt-vertx,
-                hono-adapter-kura
+                hono-adapter-mqtt-vertx
               </includeArtifactIds>
               <outputDirectory>${project.build.directory}/config</outputDirectory>
               <includes>

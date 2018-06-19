@@ -1,0 +1,68 @@
+---
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  labels:
+    app: hono-adapter-kura
+    version: "${project.version}"
+    group: ${project.groupId}
+  name: hono-adapter-kura
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: hono-adapter-kura
+      group: ${project.groupId}
+  template:
+    metadata:
+      labels:
+        app: hono-adapter-kura
+        version: "${project.version}"
+        group: ${project.groupId}
+    spec:
+      containers:
+      - image: eclipse/hono-adapter-kura:${project.version}
+        imagePullPolicy: IfNotPresent
+        name: eclipse-hono-adapter-kura
+        ports:
+        - containerPort: 8088
+          protocol: TCP
+        - containerPort: 8883
+          protocol: TCP
+        - containerPort: 1883
+          protocol: TCP
+        securityContext:
+          privileged: false
+        env:
+        - name: SPRING_CONFIG_LOCATION
+          value: file:///etc/hono/
+        - name: SPRING_PROFILES_ACTIVE
+          value: dev
+        - name: LOGGING_CONFIG
+          value: classpath:logback-spring.xml
+        - name: _JAVA_OPTIONS
+          value: -Xmx128m
+        - name: KUBERNETES_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        volumeMounts:
+        - mountPath: /etc/hono
+          name: conf
+          readOnly: true
+        readinessProbe:
+          httpGet:
+            path: /readiness
+            port: 8088
+            scheme: HTTP
+          initialDelaySeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /liveness
+            port: 8088
+            scheme: HTTP
+          initialDelaySeconds: 180
+      volumes:
+      - name: conf
+        secret:
+          secretName: hono-adapter-kura-conf

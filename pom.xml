@@ -194,7 +194,20 @@
         <plugin>
           <groupId>io.fabric8</groupId>
           <artifactId>docker-maven-plugin</artifactId>
-          <version>0.24.0</version>
+          <version>0.26.0</version>
+          <configuration>
+            <images>
+              <image>
+                <name>${docker.image.org-name}/%a:%v</name>
+                <build>
+                  <maintainer>The Eclipse Hono project</maintainer>
+                  <tags>
+                    <tag>latest</tag>
+                  </tags>
+                </build>
+              </image>
+            </images>
+          </configuration>
         </plugin>
         <plugin>
           <groupId>io.fabric8</groupId>

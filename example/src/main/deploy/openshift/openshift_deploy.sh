@@ -15,6 +15,7 @@
 SCRIPTPATH="$(cd "$(dirname "$0")" && pwd -P)"
 CONFIG=$SCRIPTPATH/../../config
 CERTS=$CONFIG/hono-demo-certs-jar
+RESOURCES=$SCRIPTPATH/../resource-descriptors
 HONO_HOME=$SCRIPTPATH/../../../..
 OPENSHIFT_MASTER=${1:-"https://$(minishift ip):8443"}
 
@@ -38,8 +39,7 @@ echo
 echo "Deploying influxDB & Grafana ..."
 
 oc create secret generic influxdb-conf --from-file=$SCRIPTPATH/../influxdb.conf
-oc create -f $SCRIPTPATH/../influxdb-deployment.yml
-oc create -f $SCRIPTPATH/../influxdb-svc.yml
+oc create -f create -f $RESOURCES/influx
 oc process -f $SCRIPTPATH/grafana-template.yml -p ADMIN_PASSWORD=admin | oc create -f -
 echo ... done
 
@@ -102,7 +102,7 @@ oc create secret generic hono-adapter-kura-conf \
   --from-file=$CERTS/trusted-certs.pem \
   --from-file=$SCRIPTPATH/../kura-adapter.credentials \
   --from-file=application.yml=$SCRIPTPATH/hono-adapter-kura-config.yml
-oc create -f $CONFIG/hono-adapter-kura-jar/META-INF/fabric8/openshift.yml
+oc create -f $RESOURCES/hono-adapter-kura
 echo ... done
 
 echo

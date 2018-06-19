@@ -120,6 +120,20 @@
   }],
 
   ["vhost", {
+    "id": "hono-kura-internal",
+    "maxConnections": 30,
+    "groups": {
+      "Hono": {
+        "users": "Eclipse IoT;Hono;kura-adapter",
+        "remoteHosts": "*",
+        "allowUserIdProxy": true,
+        "sources": "control/*",
+        "targets": "control/*"
+      }
+    }
+  }],
+
+  ["vhost", {
     "id": "hono-mqtt-internal",
     "maxConnections": 30,
     "groups": {
