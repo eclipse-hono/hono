@@ -41,6 +41,7 @@ import org.eclipse.hono.service.auth.device.HonoClientBasedAuthProvider;
 import org.eclipse.hono.service.command.CommandConnection;
 import org.eclipse.hono.service.command.CommandResponseSender;
 import org.eclipse.hono.service.http.HttpUtils;
+import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.TenantObject;
 import org.junit.AfterClass;
@@ -457,29 +458,43 @@ public class VertxBasedHttpProtocolAdapterTest {
     }
 
     /**
-     * Verifies that a POST request to the telemetry URI with an explicit time-til-disconnect request parameter
-     * results in a command receiver link being opened by the adapter.
+     * Verifies that the adapter includes a command for the device in the response to
+     * a POST request which contains a time-til-disconnect.
      *
      * @param ctx The vert.x test context.
      */
     @SuppressWarnings("unchecked")
     @Test
-    public void testPostTelemetryWithTtdOpensCommandReceiver(final TestContext ctx) {
+    public void testPostTelemetryWithTtdSucceedsWithCommandInResponse(final TestContext ctx) {
 
         final Async async = ctx.async();
         final String authHeader = getBasicAuth("testuser@DEFAULT_TENANT", "password123");
 
+        // GIVEN an device for which a command is pending
         mockSuccessfulAuthentication("DEFAULT_TENANT", "device_1");
+        final Message pendingCommand = newMockMessage("DEFAULT_TENANT", "device_1", "doThis");
+        final MessageConsumer commandConsumer = mock(MessageConsumer.class);
+        when(commandConnection.getOrCreateCommandConsumer(anyString(), anyString(), any(BiConsumer.class), any(Handler.class))).
+                thenAnswer(invocation -> {
+                    final BiConsumer<ProtonDelivery, Message> consumer = invocation.getArgument(2);
+                    consumer.accept(mock(ProtonDelivery.class), pendingCommand);
+                    return Future.succeededFuture(commandConsumer);
+                });
 
-        httpClient.post("/telemetry?hono-ttd=1")
+        // WHEN the device posts a telemetry message including a TTD
+        httpClient.post("/telemetry?hono-ttd=3")
                 .putHeader(HttpHeaders.CONTENT_TYPE, HttpUtils.CONTENT_TYPE_JSON)
                 .putHeader(HttpHeaders.AUTHORIZATION, authHeader)
                 .putHeader(HttpHeaders.ORIGIN, "hono.eclipse.org")
                 .handler(response -> {
-                    ctx.assertEquals(HttpURLConnection.HTTP_ACCEPTED, response.statusCode());
-                    // verify that a command receiver link was opened
+                    // THEN the response contains the pending command
+                    ctx.assertEquals(HttpURLConnection.HTTP_OK, response.statusCode());
+                    ctx.assertEquals("doThis", response.getHeader(Constants.HEADER_COMMAND));
+                    ctx.assertNotNull(response.getHeader(Constants.HEADER_COMMAND_REQUEST_ID));
                     verify(commandConnection).getOrCreateCommandConsumer(eq("DEFAULT_TENANT"), eq("device_1"),
                             any(BiConsumer.class), any(Handler.class));
+                    // and the command consumer has been closed again
+                    verify(commandConsumer).close(any(Handler.class));
                     async.complete();
                 }).exceptionHandler(ctx::fail).end(new JsonObject().encode());
     }
@@ -619,6 +634,15 @@ public class VertxBasedHttpProtocolAdapterTest {
         result.append(Base64.getEncoder().encodeToString(new StringBuilder(user).append(":").append(password)
                 .toString().getBytes(StandardCharsets.UTF_8)));
         return result.toString();
+    }
+
+    private static Message newMockMessage(final String tenantId, final String deviceId, final String name) {
+        final Message msg = mock(Message.class);
+        when(msg.getSubject()).thenReturn(name);
+        when(msg.getCorrelationId()).thenReturn("the-correlation-id");
+        when(msg.getReplyTo()).thenReturn(String.format("%s/%s/%s/%s", CommandConstants.COMMAND_ENDPOINT,
+                tenantId, deviceId, "the-reply-to-id"));
+        return msg;
     }
 
     @SuppressWarnings("unchecked")

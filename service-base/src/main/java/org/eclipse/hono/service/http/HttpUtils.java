@@ -277,8 +277,9 @@ public final class HttpUtils {
     public static void setResponseBody(final HttpServerResponse response, final JsonObject body) {
         Objects.requireNonNull(response);
         if (body != null) {
+            final Buffer buffer = body.toBuffer();
             response.putHeader(HttpHeaders.CONTENT_TYPE, CONTENT_TYPE_JSON_UFT8);
-            setResponseBody(response, body.toBuffer());
+            setResponseBody(response, buffer);
         }
     }
 

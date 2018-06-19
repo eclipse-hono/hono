@@ -18,7 +18,9 @@ import java.util.Optional;
 import java.util.function.BiConsumer;
 
 import org.apache.qpid.proton.amqp.Binary;
+import org.apache.qpid.proton.amqp.messaging.Accepted;
 import org.apache.qpid.proton.amqp.messaging.Data;
+import org.apache.qpid.proton.amqp.messaging.Rejected;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.HonoClient;
@@ -31,10 +33,11 @@ import org.eclipse.hono.config.AbstractConfig;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.auth.TenantApiTrustOptions;
 import org.eclipse.hono.service.auth.device.Device;
+import org.eclipse.hono.service.command.Command;
 import org.eclipse.hono.service.command.CommandConnection;
+import org.eclipse.hono.service.command.CommandResponse;
 import org.eclipse.hono.service.command.CommandResponseSender;
 import org.eclipse.hono.service.monitoring.ConnectionEventProducer;
-import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.EventConstants;
@@ -227,10 +230,11 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * Sets the client to use for connecting to the AMQP 1.0 network to receive commands.
      *
      * @param commandConnection The command connection.
+     * @throws NullPointerException if the connection is {@code null}.
      */
     @Autowired
     public final void setCommandConnection(final CommandConnection commandConnection) {
-        this.commandConnection = commandConnection;
+        this.commandConnection = Objects.requireNonNull(commandConnection);
     }
 
     /**
@@ -461,6 +465,42 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     }
 
     /**
+     * Creates a consumer for command messages that an application may send to
+     * a particular device.
+     * <p>
+     * The consumer checks if the received message contains all required information
+     * and if so, creates a {@link Command} instance from it and hands it over to
+     * the command handler.
+     * 
+     * @param tenant The tenant of the device to which the commands are to be sent.
+     * @param deviceId The identifier of the device to which the commands are to be sent.
+     * @param commandHandler A handler to notify about a valid command message that has
+     *        been received from an application.
+     * @return The created consumer.
+     */
+    protected final BiConsumer<ProtonDelivery, Message> createCommandMessageConsumer(
+            final String tenant,
+            final String deviceId,
+            final Handler<Command> commandHandler) {
+
+        return (delivery, commandMessage) -> {
+
+            final Command command = Command.from(delivery, commandMessage, tenant, deviceId);
+            if (command == null) {
+                LOG.debug("ignoring malformed command for device [tenant-id: {}, device-id: {}]", tenant, deviceId);
+                final Rejected rejected = new Rejected();
+                rejected.setError(ProtonHelper.condition(Constants.AMQP_BAD_REQUEST, "malformed command"));
+                delivery.disposition(rejected, true);
+            } else {
+                LOG.trace("trying to send command [subject: {}, request-id: {}] to device [tenant-id: {}, device-id: {}]",
+                        command.getName(), command.getRequestId(), tenant, deviceId);
+                delivery.disposition(new Accepted(), true);
+                commandHandler.handle(command);
+            }
+        };
+    }
+
+    /**
      * Create a command response sender for a specific device.
      *
      * @param tenantId The tenant of the command receiver.
@@ -476,80 +516,28 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     }
 
     /**
-     * Validate that the <em>reply-to</em> and the <em>correlationId</em> of a command message are correctly built.
-     * If the validation is successful, a combined String <em>command request id</em> is returned.
-     * @param tenantId The tenant to be used for the validation.
-     * @param deviceId The device to be used for the validation.
-     * @param commandMessage The message containing a command.
-     * @return Optional An Optional with the combined String, or an empty Optional if the validation failed.
-     * @throws NullPointerException If any of the parameters are null.
+     * Forwards a response message that has been sent by a device in reply to a
+     * command to the sender of the command.
+     * 
+     * @param tenantId The tenant that the device belongs to.
+     * @param deviceId The identifier of the device.
+     * @param response The response message.
+     * @return A future indicating the outcome of the attempt to send
+     *         the message.
+     * @throws NullPointerException if any of the parameters are {@code null}.
      */
-    protected final Optional<String> validateAndGenerateCommandRequestId(final String tenantId, final String deviceId, final Message commandMessage) {
+    protected Future<ProtonDelivery> sendCommandResponse(
+            final String tenantId,
+            final String deviceId,
+            final CommandResponse response) {
+
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
-        Objects.requireNonNull(commandMessage);
+        Objects.requireNonNull(response);
 
-        // use everything after the prefix as reply-to-id
-        final Optional<String> replyToId = getReplyToIdFromCommand(tenantId, deviceId, commandMessage);
-        if (replyToId.isPresent()) {
-            return Optional.of(Constants.combineTwoStrings(getCorrelationIdFromMessage(commandMessage), replyToId.get()));
-        } else {
-            return Optional.empty();
-        }
-    }
-
-    /**
-     * Get the <em>correlationId</em> and the <em>reply-to-id</em> of a command-request-id.
-     *
-     * @param commandRequestId The command-request-id (typically sent by a device in a response message to a command).
-     * @return Optional An Optional with a two element array that contains the correlationId as first element and the replyTo
-     *         address as second element. If the command-request-id is not valid, an empty Optional is returned.
-     * @throws NullPointerException If commandRequestId is null.
-     */
-    protected final Optional<String[]> getCorrelationIdAndReplyToFromCommandRequestId(final String commandRequestId) {
-        Objects.requireNonNull(commandRequestId);
-        return Optional.ofNullable(Constants.splitTwoStrings(commandRequestId));
-    }
-
-    /**
-     * Get the <em>reply-to-id</em> of a command message (being the last part of an endpoint).
-     *
-     * @param tenantId The tenant to be used for the validation.
-     * @param deviceId The device to be used for the validation.
-     * @param commandMessage The message containing a command.
-     * @return Optional An Optional with the contained reply-to-id, or an empty Optional if no reply-to-id could be determined.
-     * @throws NullPointerException If commandMessage is {@code null}.
-     * @throws IllegalArgumentException If tenantId or deviceId are {@code null}.
-     */
-    protected final Optional<String> getReplyToIdFromCommand(final String tenantId, final String deviceId, final Message commandMessage) {
-
-        // example of commandReplyId: control/DEFAULT_TENANT/4711/33fe70fd-5a2e-4095-83db-00101bf74a07
-        final String commandReplyId = commandMessage.getReplyTo();
-        if (commandReplyId == null) {
-            return Optional.empty();
-        }
-        final String commandReplyResourceForValidation = ResourceIdentifier.from(CommandConstants.COMMAND_ENDPOINT, tenantId, deviceId).toString();
-        if (!commandReplyId.startsWith(commandReplyResourceForValidation)) {
-            return Optional.empty();
-        }
-
-        if (commandReplyId.length() == commandReplyResourceForValidation.length()) {
-            return Optional.empty();
-        } else {
-            // use everything after the prefix as reply-to-id
-            return Optional.of(commandReplyId.substring(commandReplyResourceForValidation.length() + 1));
-        }
-    }
-
-    /**
-     * Get the correlationId from a message. If the correlationId is not explicitly set, the messageId is returned instead.
-     *
-     * @param message The message to determine the correlationId for.
-     * @return String The correlationId.
-     * @throws NullPointerException If the message is {@code null}.
-     */
-    protected final String getCorrelationIdFromMessage(final Message message) {
-        return Optional.ofNullable(message.getCorrelationId()).orElse(message.getMessageId()).toString();
+        return createCommandResponseSender(tenantId, deviceId, response.getReplyToId())
+                .compose(sender -> sender.sendCommandResponse(response.getCorrelationId(),
+                        null, response.getPayload(), null, response.getStatus()));
     }
 
     /**

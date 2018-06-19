@@ -19,9 +19,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.BiConsumer;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ClientErrorException;
@@ -29,14 +26,14 @@ import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
 import org.eclipse.hono.service.auth.device.Device;
+import org.eclipse.hono.service.command.Command;
+import org.eclipse.hono.service.command.CommandResponse;
 import org.eclipse.hono.service.command.CommandResponseSender;
 import org.eclipse.hono.service.http.DefaultFailureHandler;
 import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.tracing.TracingHelper;
-import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
-import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.TelemetryConstants;
 import org.eclipse.hono.util.TenantObject;
@@ -51,15 +48,14 @@ import io.opentracing.contrib.vertx.ext.web.WebSpanDecorator;
 import io.opentracing.tag.Tags;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
-import io.vertx.core.Handler;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.http.HttpServerOptions;
+import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
-import io.vertx.proton.ProtonDelivery;
 
 /**
  * Base class for a Vert.x based Hono protocol adapter that uses the HTTP protocol.
@@ -556,7 +552,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
             if (qosHeader != null && qosHeader == HEADER_QOS_INVALID) {
                 HttpUtils.badRequest(ctx, "unsupported QoS-Level header value");
             } else {
-
+                final Future<Void> responseReady = Future.future();
                 final Device authenticatedDevice = getAuthenticatedDevice(ctx);
                 final SpanContext currentSpan = Optional.ofNullable((Span) ctx.get(TracingHandler.CURRENT_SPAN)).map(span -> {
                     span.setOperationName("upload " + endpointName);
@@ -567,25 +563,9 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
 
                 final Future<JsonObject> tokenTracker = getRegistrationAssertion(tenant, deviceId, authenticatedDevice);
                 final Future<TenantObject> tenantConfigTracker = getTenantConfiguration(tenant);
+                final Future<MessageConsumer> commandConsumerTracker = createCommandConsumer(tenant, deviceId, ctx, responseReady);
 
-                // AtomicBoolean to control if the downstream message was sent successfully
-                final AtomicBoolean downstreamMessageSent = new AtomicBoolean(false);
-                // AtomicReference to a Handler to be called to close an open command receiver link.
-                final AtomicReference<Handler<Void>> closeLinkAndTimerHandlerRef = new AtomicReference<>();
-
-                // Handler to be called with a received command. If the timer expired, null is provided as command.
-                final Handler<Message> commandReceivedHandler = commandMessage -> {
-                    // reset the closeHandler reference, since it is not valid anymore at this time.
-                    closeLinkAndTimerHandlerRef.set(null);
-                    if (downstreamMessageSent.get()) {
-                        // finish the request, since the response is now complete (command was added)
-                        if (!ctx.response().closed()) {
-                            ctx.response().end();
-                        }
-                    }
-                };
-
-                CompositeFuture.all(tokenTracker, tenantConfigTracker, senderTracker).compose(ok -> {
+                CompositeFuture.all(tokenTracker, tenantConfigTracker, senderTracker, commandConsumerTracker).compose(ok -> {
 
                     if (tenantConfigTracker.result().isAdapterEnabled(getTypeName())) {
                         final MessageSender sender = senderTracker.result();
@@ -599,41 +579,52 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                                 HttpUtils.getTimeTilDisconnect(ctx));
                         customizeDownstreamMessage(downstreamMessage, ctx);
 
-                        // first open the command receiver link (if needed)
-                        return openCommandReceiverLink(ctx, tenant, deviceId, commandReceivedHandler).compose(closeLinkAndTimerHandler -> {
-                            closeLinkAndTimerHandlerRef.set(closeLinkAndTimerHandler);
-
-                            if (qosHeader == null) {
-                                return sender.send(downstreamMessage, currentSpan);
-                            } else {
-                                return sender.sendAndWaitForOutcome(downstreamMessage, currentSpan);
-                            }
-                        });
+                        if (qosHeader == null) {
+                            return CompositeFuture.all(sender.send(downstreamMessage, currentSpan), responseReady);
+                        } else {
+                            return CompositeFuture.all(sender.sendAndWaitForOutcome(downstreamMessage, currentSpan), responseReady);
+                        }
                     } else {
                         // this adapter is not enabled for the tenant
                         return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_FORBIDDEN,
                                 "adapter is not enabled for tenant"));
                     }
                 }).compose(delivery -> {
-                    LOG.trace("successfully processed message for device [tenantId: {}, deviceId: {}, endpoint: {}]",
-                            tenant, deviceId, endpointName);
-                    metrics.incrementProcessedHttpMessages(endpointName, tenant);
-                    ctx.response().setStatusCode(HttpURLConnection.HTTP_ACCEPTED);
-                    downstreamMessageSent.set(true);
 
-                    // if no command timer was created, the request now can be responded
-                    if (closeLinkAndTimerHandlerRef.get() == null) {
-                        ctx.response().end();
-                    }
+                    final Command command = Command.get(ctx);
+                    setResponsePayload(ctx.response(), command);
+                    ctx.response().bodyEndHandler(ok -> {
+                        LOG.trace("successfully processed [{}] message for device [tenantId: {}, deviceId: {}]",
+                                endpointName, tenant, deviceId);
+                        metrics.incrementProcessedHttpMessages(endpointName, tenant);
+                        if (command != null) {
+                            final CommandResponse response = CommandResponse.from(command.getRequestId(), null, HttpURLConnection.HTTP_OK);
+                            sendCommandResponse(tenant, deviceId, response);
+                        }
+                    });
+                    ctx.response().exceptionHandler(t -> {
+                        LOG.debug("failed to send http response for [{}] message from device [tenantId: {}, deviceId: {}]",
+                                endpointName, tenant, deviceId, t);
+                        if (command != null) {
+                            final CommandResponse response = CommandResponse.from(command.getRequestId(),
+                                    null, HttpURLConnection.HTTP_UNAVAILABLE);
+                            sendCommandResponse(tenant, deviceId, response);
+                        }
+                    });
+                    ctx.response().end();
 
                     return Future.succeededFuture();
 
                 }).recover(t -> {
 
-                    LOG.debug("cannot process message for device [tenantId: {}, deviceId: {}, endpoint: {}]",
-                            tenant, deviceId, endpointName, t);
-
-                    cancelResponseTimer(closeLinkAndTimerHandlerRef);
+                    LOG.debug("cannot process [{}] message from device [tenantId: {}, deviceId: {}]",
+                            endpointName, tenant, deviceId, t);
+                    final Command command = Command.get(ctx);
+                    if (command != null) {
+                        final CommandResponse response = CommandResponse.from(command.getRequestId(),null,
+                                HttpURLConnection.HTTP_UNAVAILABLE);
+                        sendCommandResponse(tenant, deviceId, response);
+                    }
 
                     if (ClientErrorException.class.isInstance(t)) {
                         final ClientErrorException e = (ClientErrorException) t;
@@ -643,136 +634,87 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                         HttpUtils.serviceUnavailable(ctx, 2, "temporarily unavailable");
                     }
                     return Future.failedFuture(t);
+                }).setHandler(done -> {
+                    if (commandConsumerTracker.succeeded()) {
+                        final MessageConsumer consumer = commandConsumerTracker.result();
+                        if (consumer != null) {
+                            LOG.trace("closing command consumer for device [tenantId: {}, deviceId: {}]", tenant, deviceId);
+                            consumer.close(dontCare -> {});
+                        }
+                    }
                 });
             }
         }
     }
 
-    private void cancelResponseTimer(final AtomicReference<Handler<Void>> cancelTimerHandlerRef) {
-        Optional.ofNullable(cancelTimerHandlerRef.get()).map(cancelTimerHandler -> {
-            cancelTimerHandler.handle(null);
-            return null;
-        });
-    }
 
-    /**
-     * Create a consumer for a command message that can be used by the command and control consumer.
-     *
-     * @param ctx The routing context of the HTTP request.
-     * @param tenant The tenant of the device for that a command may be received.
-     * @param deviceId The id of the device for that a command may be received.
-     * @param commandReceivedHandler A handler that is invoked after a command message was received.
-     * @return The BiConsumer to pass to the command and control consumer.
-     */
-    private BiConsumer<ProtonDelivery, Message> createCommandMessageConsumer(final RoutingContext ctx,
-            final String tenant, final String deviceId, final Handler<Message> commandReceivedHandler) {
-        return (delivery, commandMessage) -> {
-
-            final Optional<String> commandSubject = Optional.ofNullable(commandMessage.getProperties().getSubject());
-            final Optional<String> commandRequestId = validateAndGenerateCommandRequestId(tenant, deviceId,
-                    commandMessage);
-
-            if (commandSubject.isPresent() && commandRequestId.isPresent()) {
-
-                ctx.response().putHeader(Constants.HEADER_COMMAND, commandSubject.get());
-                ctx.response().putHeader(Constants.HEADER_COMMAND_REQUEST_ID, commandRequestId.get());
-
-                HttpUtils.setResponseBody(ctx.response(), MessageHelper.getPayload(commandMessage));
-
-                commandReceivedHandler.handle(commandMessage);
-
-            } else {
-                LOG.info("Received command with invalid reply-to endpoint for device [tenantId: {}, deviceId: {}] - ignoring.",
-                        tenant, deviceId);
-            }
-        };
-
-    }
-
-    /**
-     * Opens a command receiver link for a device by creating a command and control consumer.
-     *
-     * @param ctx The routing context of the HTTP request.
-     * @param tenant The tenant of the device for that a command may be received.
-     * @param deviceId The id of the device for that a command may be received.
-     * @param commandReceivedHandler Handler to be called after a command was received or the timer expired.
-     *                               The link was closed at this time already.
-     *                               If the timer expired, the passed command message is null, otherwise the received command message is passed.
-     *
-     * @return Optional An optional handler that cancels a timer that might have been started to close the receiver link again.
-     */
-    private Future<Handler<Void>> openCommandReceiverLink(final RoutingContext ctx, final String tenant,
-            final String deviceId,  final Handler<Message> commandReceivedHandler) {
-
-        final Future<Handler<Void>> resultWithLinkCloseHandler = Future.future();
-
-        final AtomicReference<MessageConsumer> messageConsumerRef = new AtomicReference<>(null);
-
-        final Integer timeToDelayResponse = Optional.ofNullable(HttpUtils.getTimeTilDisconnect(ctx)).orElse(-1);
-
-        if (timeToDelayResponse > 0) {
-            // create a handler for being invoked if a command was received
-            final Handler<Message> commandHandler = commandMessage -> {
-                // if a link close handler was set, invoke it
-                Optional.ofNullable(resultWithLinkCloseHandler.result()).map(linkCloseHandler -> {
-                    linkCloseHandler.handle(null);
-                    return null;
-                });
-
-                // if desired, now invoke the passed commandReceivedHandler and pass the message
-                Optional.ofNullable(commandReceivedHandler).map(h -> {
-                    h.handle(commandMessage);
-                    return null;
-                });
-
-                final Optional<String> replyIdOpt = getReplyToIdFromCommand(tenant, deviceId, commandMessage);
-                if (!replyIdOpt.isPresent()) {
-                    // from Java 9 on: switch to opt.ifPresentOrElse
-                    LOG.debug("Received command without valid replyId for device [tenantId: {}, deviceId: {}] - no reply will be sent to the application",
-                            tenant, deviceId);
-                }
-            };
-
-            // create the commandMessageConsumer that handles an incoming command message
-            final BiConsumer<ProtonDelivery, Message> commandMessageConsumer = createCommandMessageConsumer(ctx, tenant,
-                    deviceId, commandHandler);
-
-            createCommandConsumer(tenant, deviceId, commandMessageConsumer, v ->
-                    onCloseCommandConsumer(tenant, deviceId, commandMessageConsumer)
-            ).map(messageConsumer -> {
-                        // remember message consumer for later usage
-                        messageConsumerRef.set(messageConsumer);
-                        // let only one command reach the adapter (may change in the future)
-                        messageConsumer.flow(1);
-
-                        // create a timer that is invoked if no command was received until timeToDelayResponse is expired
-                        final long timerId = getVertx().setTimer(timeToDelayResponse * 1000L,
-                                delay -> {
-                                    getCommandConnection().closeCommandConsumer(tenant, deviceId);
-                                    // command finished, invoke handler
-                                    Optional.ofNullable(commandReceivedHandler).map(h -> {
-                                        h.handle(null);
-                                        return null;
-                                    });
-                                });
-                        // define the cancel code as closure
-                        resultWithLinkCloseHandler.complete(v -> {
-                            getVertx().cancelTimer(timerId);
-                            getCommandConnection().closeCommandConsumer(tenant, deviceId);
-                        });
-
-                        return messageConsumer;
-                    }).recover(t -> {
-                        getCommandConnection().closeCommandConsumer(tenant, deviceId);
-                        resultWithLinkCloseHandler.fail(t);
-                        return Future.failedFuture(t);
-                    });
-
+    private void setResponsePayload(final HttpServerResponse response, final Command command) {
+        if (command == null) {
+            response.setStatusCode(HttpURLConnection.HTTP_ACCEPTED);
         } else {
-            resultWithLinkCloseHandler.complete();
-        }
+            LOG.trace("adding command [name: {}, request-id: {}] to response for device [tenant-id: {}, device-id: {}]",
+                    command.getName(), command.getRequestId(), command.getTenant(), command.getDeviceId());
+            response.setStatusCode(HttpURLConnection.HTTP_OK);
+            response.putHeader(Constants.HEADER_COMMAND, command.getName());
+            response.putHeader(Constants.HEADER_COMMAND_REQUEST_ID, command.getRequestId());
 
-        return resultWithLinkCloseHandler;
+            HttpUtils.setResponseBody(response, command.getPayload());
+        }
+    }
+
+    /**
+     * Creates a consumer for command messages to be sent to a device.
+     * 
+     * @param tenantId The tenant that the device belongs to.
+     * @param deviceId The identifier of the device.
+     * @param ctx The device's currently executing HTTP request.
+     * @param responseReady A future to complete once one of the following conditions are met:
+     *              <ul>
+     *              <li>the request did not include a <em>hono-ttd</em> parameter or</li>
+     *              <li>a command has been received and the response ready future has not yet been
+     *              completed or</li>
+     *              <li>the ttd has expired</li>
+     *              </ul>
+     * @return A future indicating the outcome.
+     *         The future will be completed with the created message consumer or it will
+     *         be failed with a {@code ServiceInvocationException} if the consumer
+     *         could not be created.
+     */
+    protected final Future<MessageConsumer> createCommandConsumer(
+            final String tenantId,
+            final String deviceId,
+            final RoutingContext ctx,
+            final Future<Void> responseReady) {
+
+        final long ttdMillis = Optional.ofNullable(HttpUtils.getTimeTilDisconnect(ctx)).map(ttd -> ttd * 1000L).orElse(0L);
+        if (ttdMillis <= 0) {
+            // no need to wait for a command
+            responseReady.tryComplete();
+            return Future.succeededFuture();
+        } else {
+            return getCommandConnection().getOrCreateCommandConsumer(
+                    tenantId,
+                    deviceId,
+                    createCommandMessageConsumer(tenantId, deviceId, receivedCommand -> {
+                        if (responseReady.isComplete()) {
+                            // the timer has already fired, release the command
+                            receivedCommand.release();
+                        } else {
+                            // put command to routing context and notify
+                            receivedCommand.put(ctx);
+                            responseReady.tryComplete();
+                        }
+                    }),
+                    remoteDetach -> {
+                        LOG.debug("peer closed command receiver link [tenant-id: {}, device-id: {}]", tenantId, deviceId);
+                    }).map(consumer -> {
+                        consumer.flow(1);
+                        ctx.vertx().setTimer(ttdMillis, ttdExpired -> {
+                            responseReady.tryComplete();
+                        });
+                        return consumer;
+                    });
+        }
     }
 
     /**
@@ -799,47 +741,40 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
         LOG.debug("uploadCommandResponseMessage: [tenantId: {}, deviceId: {}, commandRequestId: {}, commandRequestStatus: {}]",
                 tenant, deviceId, commandRequestId, commandRequestStatus);
 
-        CommandConstants.validateCommandResponseStatusCode(commandRequestStatus).map(statusCode ->
-                getCorrelationIdAndReplyToFromCommandRequestId(commandRequestId).map(commandRequestIdParts -> {
-                    final String correlationId = commandRequestIdParts[0];
-                    final String replyId = commandRequestIdParts[1];
+        Optional.ofNullable(CommandResponse.from(commandRequestId, payload, commandRequestStatus)).map(commandResponse -> {
+            // send answer to caller via sender link
+            final Future<CommandResponseSender> responseSender = createCommandResponseSender(tenant, deviceId, commandResponse.getReplyToId());
 
-                    // send answer to caller via sender link
-                    final Future<CommandResponseSender> responseSender = createCommandResponseSender(tenant, deviceId, replyId);
-
-                    responseSender.compose(commandResponseSender ->
-                            commandResponseSender.sendCommandResponse(correlationId, contentType, payload, null, statusCode)
-                    ).map(delivery -> {
-                        if (delivery.remotelySettled()) {
-                            LOG.debug("command response [command-request-id: {}] acknowledged to sender.", commandRequestId);
-                            ctx.response().setStatusCode(HttpURLConnection.HTTP_ACCEPTED);
-                        } else {
-                            LOG.debug("command response [command-request-id: {}] failed - not remotely settled by sender.", commandRequestId);
-                            ctx.response().setStatusCode(HttpURLConnection.HTTP_UNAVAILABLE);
-                        }
-                        responseSender.result().close(v -> {
-                        });
-                        ctx.response().end();
-                        return delivery;
-                    }).otherwise(t -> {
-                        LOG.debug("command response [command-request-id: {}] failed", commandRequestId, t);
-                        Optional.ofNullable(responseSender.result()).map(r -> {
-                            r.close(v -> {
-                            });
-                            return r;
-                        });
-                        ctx.response().setStatusCode(HttpURLConnection.HTTP_UNAVAILABLE);
-                        ctx.response().end();
-                        return null;
+            responseSender.compose(commandResponseSender ->
+                    commandResponseSender.sendCommandResponse(commandResponse.getCorrelationId(), contentType, payload, null, commandRequestStatus)
+            ).map(delivery -> {
+                if (delivery.remotelySettled()) {
+                    LOG.debug("Command response [command-request-id: {}] acknowledged to sender.", commandRequestId);
+                    ctx.response().setStatusCode(HttpURLConnection.HTTP_ACCEPTED);
+                } else {
+                    LOG.debug("Command response [command-request-id: {}] failed - not remotely settled by sender.", commandRequestId);
+                    ctx.response().setStatusCode(HttpURLConnection.HTTP_UNAVAILABLE);
+                }
+                responseSender.result().close(v -> {
+                });
+                ctx.response().end();
+                return delivery;
+            }).otherwise(t -> {
+                LOG.debug("Command response [command-request-id: {}] failed", commandRequestId, t);
+                Optional.ofNullable(responseSender.result()).map(r -> {
+                    r.close(v -> {
                     });
+                    return r;
+                });
+                ctx.response().setStatusCode(HttpURLConnection.HTTP_UNAVAILABLE);
+                ctx.response().end();
+                return null;
+            });
 
-                    return commandRequestIdParts;
-                }).orElseGet(() -> {
-                    HttpUtils.badRequest(ctx, String.format("command-request-id [%s] invalid", commandRequestId));
-                    return null;
-                })
-        ).orElseGet(() -> {
-            HttpUtils.badRequest(ctx, String.format("status code [%s] invalid", commandRequestStatus));
+            return commandResponse;
+        }).orElseGet(() -> {
+            HttpUtils.badRequest(ctx, String.format("Cannot process command response message - command-request-id %s or status %s invalid",
+                    commandRequestId, commandRequestStatus));
             return null;
         });
     }
