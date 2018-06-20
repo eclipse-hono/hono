@@ -92,8 +92,8 @@ docker service create $CREATE_OPTIONS --name hono-service-auth \
   --secret trusted-certs.pem \
   --secret sandbox-permissions.json \
   --secret hono-service-auth-config.yml \
-  --limit-memory 128m \
-  --env _JAVA_OPTIONS=-Xmx80m \
+  --limit-memory 196m \
+  --env _JAVA_OPTIONS=-Xmx150m \
   --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-service-auth-config.yml \
   --env SPRING_PROFILES_ACTIVE=authentication-impl,prod \
   --env LOGGING_CONFIG=classpath:logback-spring.xml \
@@ -130,8 +130,8 @@ docker service create $CREATE_OPTIONS --name hono-service-device-registry -p 256
   --secret auth-server-cert.pem \
   --secret trusted-certs.pem \
   --secret hono-service-device-registry-config.yml \
-  --limit-memory 160m \
-  --env _JAVA_OPTIONS=-Xmx112m \
+  --limit-memory 256m \
+  --env _JAVA_OPTIONS=-Xmx180m \
   --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-service-device-registry-config.yml \
   --env LOGGING_CONFIG=classpath:logback-spring.xml \
   --env SPRING_PROFILES_ACTIVE=dev \

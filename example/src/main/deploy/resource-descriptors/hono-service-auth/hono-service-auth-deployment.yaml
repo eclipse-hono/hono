@@ -39,7 +39,7 @@ spec:
         - name: LOGGING_CONFIG
           value: classpath:logback-spring.xml
         - name: _JAVA_OPTIONS
-          value: -Xmx80m
+          value: -Xmx150m
         - name: KUBERNETES_NAMESPACE
           valueFrom:
             fieldRef:
@@ -50,7 +50,7 @@ spec:
           readOnly: true
         resources:
           limits:
-            memory: "128Mi"
+            memory: "196Mi"
         livenessProbe:
           initialDelaySeconds: 25
           periodSeconds: 9
