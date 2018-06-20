@@ -162,7 +162,7 @@
     <!-- 
       Build images defined in modules with packaging type "pom".
      -->
-    <fabric8.skip.build.pom>false</fabric8.skip.build.pom>
+    <docker.skip.build.pom>false</docker.skip.build.pom>
 
     <!-- 
       The organization name to use for our Docker image names.
@@ -173,11 +173,9 @@
   <modules>
     <module>adapters</module>
     <module>bom</module>
-    
     <module>core</module>
     <module>client</module>
     <module>demo-certs</module>
-    
     <module>example</module>
     <module>jmeter</module>
     <module>legal</module>
@@ -470,7 +468,7 @@
                       </pluginExecution>
                       <pluginExecution>
                         <!--
-                         Disable unpack-dependecies goal in order to prevent the m2eclipse
+                         Disable unpack-dependencies goal in order to prevent the m2eclipse
                          error "Artifact has not been packaged yet..."
                          -->
                         <pluginExecutionFilter>
