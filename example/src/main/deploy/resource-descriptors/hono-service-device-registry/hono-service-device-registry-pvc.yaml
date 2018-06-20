@@ -4,9 +4,8 @@ kind: PersistentVolumeClaim
 metadata:
   labels:
     app: hono-service-device-registry
-    provider: fabric8
-    version: 0.7-M1-SNAPSHOT
-    group: org.eclipse.hono
+    version: "${project.version}"
+    group: ${project.groupId}
   name: registry
 spec:
   accessModes:
