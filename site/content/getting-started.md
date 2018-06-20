@@ -243,7 +243,7 @@ In order to start up the instance again:
 ~/hono/example/target/deploy/docker$ ./swarm_deploy.sh
 ~~~
 
-## View metrics
+## Viewing Metrics
 
 Open the [Grafana dashboard](http://localhost:3000/dashboard/db/hono?orgId=1) in a browser using `admin/admin` as login credentials.
 
@@ -251,6 +251,6 @@ Open the [Grafana dashboard](http://localhost:3000/dashboard/db/hono?orgId=1) in
 If you do not run Docker on localhost, replace *localhost* in the link with the correct name or IP address of the Docker host that the Grafana container is running on.
 {{% /warning %}}
 
-## Using command and control
+## Using Command & Control
 
-Since Hono 0.6 the first implementation of Command and Control is available. A fully working example can be found in the [Command and Control Userguide]({{< relref "user-guide/command-and-control.md" >}}).
+Since Hono 0.6 the first implementation of Command & Control is available. A fully working example can be found in the [Command & Control Userguide]({{< relref "user-guide/command-and-control.md" >}}).
