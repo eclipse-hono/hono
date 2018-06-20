@@ -511,7 +511,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                 <!-- ##### MQTT adapter ##### -->
                 <image>
                   <name>${docker.image.org-name}/hono-adapter-mqtt-test</name>
-                  <alias>http-adapter</alias>
+                  <alias>mqtt-adapter</alias>
                   <build>
                     <from>${docker.image.org-name}/hono-adapter-mqtt-vertx:${project.version}</from>
                     <assembly>
