@@ -193,6 +193,15 @@
           <groupId>io.fabric8</groupId>
           <artifactId>docker-maven-plugin</artifactId>
           <version>0.26.0</version>
+          <executions>
+            <execution>
+              <id>build_images</id>
+              <phase>package</phase>
+              <goals>
+                <goal>build</goal>
+              </goals>
+            </execution>
+          </executions>
           <configuration>
             <images>
               <image>
