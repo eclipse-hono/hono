@@ -40,6 +40,8 @@ spec:
           value: dev
         - name: LOGGING_CONFIG
           value: classpath:logback-spring.xml
+        - name: _JAVA_OPTIONS
+          value: -Xmx112m
         - name: KUBERNETES_NAMESPACE
           valueFrom:
             fieldRef:

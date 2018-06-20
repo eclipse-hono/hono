@@ -10,8 +10,8 @@ ARTEMIS_INSTANCE_URI='file:/opt/artemis/'
 #ARTEMIS_CLUSTER_PROPS="-Dactivemq.remoting.default.port=61617 -Dactivemq.remoting.amqp.port=5673 -Dactivemq.remoting.stomp.port=61614 -Dactivemq.remoting.hornetq.port=5446"
 
 
-# Java Opts
-JAVA_ARGS=" -XX:+UnlockExperimentalVMOptions -XX:+UseCGroupMemoryLimitForHeap -XX:+PrintClassHistogram -XX:+UseG1GC -XX:+AggressiveOpts -XX:+UseFastAccessorMethods -Xms128M"
+# Java Opts (set max heap to ~70% of available memory)
+JAVA_ARGS=" -XX:+UnlockExperimentalVMOptions -XX:+UseCGroupMemoryLimitForHeap -XX:+PrintClassHistogram -XX:+UseG1GC -XX:+AggressiveOpts -XX:+UseFastAccessorMethods -Xms128M -Xmx360M"
 
 #
 # There might be options that you only want to enable on specific commands, like setting a JMX port
