@@ -2,7 +2,7 @@
 title = "Release Notes"
 +++
 
-## 0.7-M1 (not released yet)
+## 0.7-M1
 
 ### Fixes & Enhancements
 

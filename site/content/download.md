@@ -37,13 +37,20 @@ $ java -jar hono-example-0.6-exec.jar --hono.client.host=hono.eclipse.org --hono
 
 Please refer to the [Admin Guide]({{< relref "admin-guide/hono-client-configuration.md" >}}) for details regarding the command line options that the client supports.
 
+### Latest Milestone
+
+The newest features and bugfixes are available in *milestones* that are published every 4 -6 weeks. Please note that these milestones represent the latest *state of development* which also means that APIs or features may change from one milestone to the other.
+
+Installation works in the same way as for the latest stable release.
+
+* [Eclipse Hono 0.7-M1 Archive](https://www.eclipse.org/downloads/download.php?file=/hono/eclipse-hono-example-0.7-M1.tar.gz)
+* [Eclipse Hono 0.7-M1 Command Line Client](https://www.eclipse.org/downloads/download.php?file=/hono/hono-example-0.7-M1-exec.jar)
+
 ### Older Versions
 
 These artifacts are available for reference only. Please always use the latest version since this is the one we can provide the best support for.
 
-* [Eclipse Hono 0.6-M2 Archive](https://www.eclipse.org/downloads/download.php?file=/hono/eclipse-hono-example-0.6-M2.tar.gz)
-* [Eclipse Hono 0.6-M1 Archive](https://www.eclipse.org/downloads/download.php?file=/hono/eclipse-hono-example-0.6-M1.tar.gz)
-* [Eclipse Hono 0.5-M10 Archive](https://www.eclipse.org/downloads/download.php?file=/hono/eclipse-hono-example-0.5-M10.tar.gz)
+* [Eclipse Hono 0.5 Archive](https://www.eclipse.org/downloads/download.php?file=/hono/eclipse-hono-example-0.5.tar.gz)
 
 ## Source Code
 
