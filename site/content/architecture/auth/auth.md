@@ -17,7 +17,7 @@ This page describes how authentication and authorization of devices, consumers (
 
 The following diagram provides an overview of the components involved in use cases requiring authentication and authorization.
 
-{{< figure src="../Hono-Auth-Overview-Today.jpg" >}}
+{{< figure src="../Hono-Auth-Overview-Today.jpg">}}
 
 ### Device Auth
 
@@ -25,7 +25,7 @@ Both the HTTP adapter as well as the MQTT adapter require devices to authenticat
 
 ### System Component Auth
 
-Client components opening an AMQP connection to a server component are authenticated using SASL PLAIN as specified in [RFC 4422](https://tools.ietf.org/html/rfc4422). The server component takes the authentication information provided by the client component and opens a connection to the *Auth Server*, using the credentials provided by the client in its SASL PLAIN exchange with the *Auth Server*. On successful authentication the *Auth Server* issues a JSON Web Token (JWT) asserting the client's identity and its granted authorities to the server component. The server component *attaches* this token to the AMQP connection with the client and from then on uses it to make authorization decisions regarding the client's requests. See [Authentication API]({{< relref "api/Authentication-API.md" >}}) for details regarding the authentication process and the format of the tokens issued by the *Auth Server*.
+Client components opening an AMQP connection to a server component are authenticated using SASL PLAIN as specified in [RFC 4422](https://tools.ietf.org/html/rfc4422). The server component takes the authentication information provided by the client component and opens a connection to the *Auth Server*, using the credentials provided by the client in its SASL PLAIN exchange with the server component. On successful authentication the *Auth Server* issues a JSON Web Token (JWT) asserting the client's identity and its granted authorities to the server component. The server component then *attaches* this token to its AMQP connection with the client and from then on uses it to make authorization decisions regarding the client's requests. See [Authentication API]({{< relref "api/Authentication-API.md" >}}) for details regarding the authentication process and the format of the tokens issued by the *Auth Server*.
 
 Based on the components shown above, the following sequence diagram shows how the *MQTT Adapter* connects to the *Device Registry* and gets authenticated transparently using the *Auth Server*.
 
@@ -37,17 +37,17 @@ Service implementations may additionally authorize individual (request) messages
 
 ### Consumer Auth
 
-*Business Applications* connect to the AMQP 1.0 Messaging Network (represented by the *Dispatch Router* in the diagram above) in order to consume telemetry data and events. Authentication of consumers is done as part of establishing the AMQP connection using SASL PLAIN as specified in [RFC 4422](https://tools.ietf.org/html/rfc4422).
+*Business Applications* connect to the AMQP 1.0 Messaging Network in order to consume telemetry data and events. It is therefore the responsibility of the AMQP Network to properly authenticate and authorize the application.
 
-Consumers are authorized whenever they open a new AMQP link to the *Dispatch Router* for reading from a source address or writing to a target address.
+The Apache Qpid Dispatch Router which is used in Hono's example deployment can be configured to authenticate consumers using arbitrary SASL mechanisms. Access to addresses for receiving messages can be restricted to certain identities.
 
 ### Management of Identities and Authorities
 
 The identities and corresponding authorities that the *Auth Server* uses for verifying credentials and issuing tokens are defined in a configuration file (`services/auth/src/main/resources/permissions.json`) read in during start-up of the *Auth Server*.
 
-The identities and authorities allowed to access the *Dispatch Router* component are set in a configuration file (`dispatchrouter/qpid/qdrouter-with-broker.json`) read in during startup of the component. The default configuration file authorizes the `consumer@HONO` user to consume both telemetry data as well as events of any tenant. The default password for this user is `verysecret`. 
+The identities and authorities allowed to access the *Dispatch Router* component used in the example deployment are set in a configuration file (`example/src/main/config/qpid/qdrouter-with-broker.json`) which is read in during startup of the component. The default configuration file authorizes the `consumer@HONO` user to consume both telemetry data as well as events of any tenant. The default password for this user is `verysecret`.
 
-Please refer to the [Dispatch Router configuration guide](http://qpid.apache.org/releases/qpid-dispatch-0.8.0/man/qdrouterd.conf.html) and the [Policy documentation](https://github.com/apache/qpid-dispatch/blob/0.8.x/doc/book/policy.adoc) for details regarding configuration of *Dispatch Router* security.
+Please refer to the [Dispatch Router configuration guide](http://qpid.apache.org/releases/qpid-dispatch-1.0.1/man/qdrouterd.conf.html) and the [Policy documentation](https://github.com/apache/qpid-dispatch/blob/1.0.x/doc/book/policy.adoc) for details regarding configuration of *Dispatch Router* security.
 
 In a next step we will integrate the *Dispatch Router* with the token based authentication scheme used by the other Hono components in order to provide for seamless identity and authority management across the whole system.
 
