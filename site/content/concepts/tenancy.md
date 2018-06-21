@@ -1,5 +1,5 @@
 +++
-title = "Multitenancy"
+title = "Multi-Tenancy"
 weight = 188
 +++
 
@@ -7,17 +7,14 @@ Hono is designed to structure the set of all internally managed data and data st
 This includes the registration data and credentials of devices, internal users that are used for authentication, 
 and the *Business Applications* that are part of such subsets as well.
 
-This way of *strict* isolation is generally known as multitenancy, where a **tenant** is the term for such a subset.
+This way of *strict* isolation is generally known as multi-tenancy, where a **tenant** is the term for such a subset.
 Such an isolation is essential for enabling a scalable distributed architecture to handle independent subsets as if each subset had its
 own installation (which would be much harder to maintain and would not benefit from runtime cost sharing).
 
-## Hono's multitenancy concept
-
-Hono's multitenancy concept is based on handling tenants as own *entities*. All functionality of Hono is 
+Hono's multi-tenancy concept is based on handling tenants as own *entities*. All functionality of Hono is 
 provided in the context of a previously created tenant - except the creation of a tenant itself. 
 
-
-In the following the different aspects of multitenancy in Hono are addressed and a full overview of the concept is given.
+In the following the different aspects of multi-tenancy in Hono are addressed and a full overview of the concept is given.
 
 ## The Tenant API
 
@@ -54,9 +51,9 @@ only a subset of Hono's functionality. This feature is foreseen to be especially
 Please refer to the [Tenant API]({{< relref "Tenant-API.md" >}}) to find out which protocol adapter properties are
 configurable on a tenant level. The number of such properties may grow during further development of Hono.
 
-## AMQP 1.0 endpoints
+## AMQP 1.0 Endpoints
 
-The AMQP 1.0 endpoints for all APIs of Hono are scoped to a tenant, by using the scheme `<api>/TENANT/...`.
+The AMQP 1.0 endpoints for all APIs of Hono are scoped to a tenant, by using the scheme `<api-name>/TENANT/...`.
 
 *Examples*:
 
@@ -70,7 +67,7 @@ This separates the AMQP endpoints from each other on a tenant level.
 The only exception to this is the [Tenant API]({{< relref "Tenant-API.md" >}}), which does not follow this scheme since it
 is addressing the tenants themselves.   
 
-## Devices and tenants
+## Devices and Tenants
 
 All devices of Hono belong to exactly one tenant, so any data is sent in the context of the
 tenant a device belongs to.
@@ -85,7 +82,7 @@ The following diagram shows the relation between tenants, devices and their cred
 {{< figure src="../Tenants_Devices_Credentials.png" title="Tenants, Devices and Credentials">}}
 
 
-## Downstream data flow for tenants
+## Tenant based Flow Control
 
 An important detail in Hono's architecture is that data sent downstream is transported via the tenant
 scoped AMQP 1.0 links from the protocol adapters to the AMQP 1.0 network.
@@ -95,7 +92,7 @@ independently from other tenants regarding the back pressure mechanism that AMQP
 
 This enables a *Business application* to limit the rate at which it consumes AMQP 1.0 messages per tenant.
  
-## Microservice authorization for tenants
+## Authorization at Tenant Level
 
 Hono's components authenticate each other by means of the [Authentication API]({{< relref "Authentication-API.md" >}}).
 
@@ -110,7 +107,7 @@ authorized to only a subset of Hono's full functionality.
 
 This is done by not including the event endpoint in the authorization token for these tenants.
 
-## Business applications and tenants
+## Business Applications and Tenants
 
 The northbound *Business applications* are always connecting to the AMQP 1.0 endpoints of Hono.
  
@@ -118,7 +115,7 @@ By means of the authentication and authorization setup and the fact that the end
 *Business application* is only acting in the context of one tenant.
 
 
-## Separation of tenants
+## Separation of Tenants
 
 Tenants are separated from each other in all of Hono's components. 
 
@@ -130,7 +127,7 @@ Here is a summary of how this is implemented:
 - the downstream data flow is isolated for every tenant
 - *Business applications* need to authenticate to the AMQP 1.0 network and are by that mechanism scoped to their tenant
  
-## Notes on a production ready setup
+## Hints for Production
 
 To be flexible for the different needs of production setups, Hono tries to make as few assumptions about the combination
 of the different APIs as possible.

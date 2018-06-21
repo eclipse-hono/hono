@@ -8,11 +8,9 @@ This page describes how devices are represented and identified throughout Hono a
 
 The main purpose of Hono is to provide a uniform API for applications to interact with devices, regardless of the particular communication protocol the devices natively use. In order to do so, Hono uses a unique *logical* identifier to refer to each device individually.
 
-## Device Identity
-
 Hono does not make any assumptions about the format of a device identifier (or *device-id* for short). It basically is a string which is defined at the time a device is registered. Once registered, the device can be referred to by this identifier when using Hono's APIs until the device is unregistered. 
 
-### Tenant
+## Tenant
 
 Hono supports the logical partitioning of devices into groups called *tenants*. Each tenant has a unique identifier, a string called the *tenant-id*, and can be used to provide a logical grouping of devices belonging e.g. to the same application scope or organizational unit. Each device can thus be uniquely identified by the tuple (*tenant-id*, *device-id*). This tuple is broadly used throughout Hono's APIs when addressing a particular device.
 
