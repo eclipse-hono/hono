@@ -60,8 +60,8 @@ The second command creates and starts up Docker Swarm *services* for all compone
   * A *Device Registry* instance that manages registration information and issues device registration assertions to protocol adapters.
   * An *Auth Server* instance that authenticates Hono components and issues tokens asserting identity and authorities.
 * AMQP Network
-  * A *Dispatch Router* instance that downstream applications connect to in order to consume telemetry data and events from devices.
-  * An *Artemis* instance serving as the persistence store for events.
+  * An *Apache Qpid Dispatch Router* instance that downstream applications connect to in order to consume telemetry data and events from devices.
+  * An *Apache ActiveMQ Artemis* instance serving as the persistence store for events.
 * Monitoring Infrastructure
   * An *InfluxDB* instance for storing metrics data from the Hono Messaging component.
   * A *Grafana* instance providing a dash board visualizing the collected metrics data.
@@ -72,12 +72,12 @@ You can list all services by executing
 ~/hono/example/target/deploy/docker$ docker service ls
 ~~~
 
-You may notice that the list also includes two additional services called `hono-adapter-kura` `hono-service-messaging` which are not represented in the diagram above. Together, they serve as a an example of how Hono can be extended with *custom* protocol adapters in order to add support for interacting with devices using a custom communication protocol that is not supported by Hono's standard protocol adapters out of the box. The following diagram shows how these services are integrated with Hono:
+You may notice that the list also includes two additional services called `hono-adapter-kura` and `hono-service-messaging` which are not represented in the diagram above. Together, they serve as a an example of how Hono can be extended with *custom* protocol adapters in order to add support for interacting with devices using a custom communication protocol that is not supported by Hono's standard protocol adapters out of the box. The following diagram shows how such a custom protocol adapter is integrated with Hono:
 
 {{< figure src="../Hono_instance_custom_adapter.svg" title="Custom Protocol Adapter">}}
 
 * The *Kura Adapter* exposes Hono's Telemetry and Event APIs as an Eclipse Kura&trade; compatible MQTT topic hierarchy.
-* The *Hono Messaging* service, to which custom protocol adapters are required to connect in order to validate a device's registration status before published data is forwarded downstream. Note that Hono's standard protocol adapters connect to the AMQP Network directly (i.e. without going through Hono Messaging) because they can be trusted to validate a device's registration status on behalf of Hono Messaging themselves.
+* *Hono Messaging* is a service for validating a device's registration status. Custom protocol adapters must connect to this service in order to forward the data published by devices to downstream consumers. Note that Hono's standard protocol adapters connect to the AMQP Network directly (i.e. without going through Hono Messaging) because they can be trusted to validate a device's registration status themselves before sending data downstream.
 
 ## Starting a Consumer
 
@@ -218,12 +218,11 @@ or (using HTTPie):
 $ http --auth sensor1@DEFAULT_TENANT:hono-secret POST http://localhost:8080/event alarm=fire
 ~~~
 
-## Adding another tenant
+## Adding Tenants
 
-In the above examples, we have always used the `DEFAULT_TENANT`, which is preconfigured in the example setup.
+In the above examples, we have always used the `DEFAULT_TENANT`, which is pre-configured in the example setup.
 
-You can add more tenants to Hono by using the HTTP Tenant endpoints of the device registry that are described [here]({{< relref "user-guide/device-registry.md#managing-tenants" >}}).
-Each tenant you create can have its own configuration, e.g. which protocol adapters are enabled.
+You can add more tenants to Hono by using the [Tenant related HTTP endpoints]({{< relref "user-guide/device-registry.md#managing-tenants" >}}) of the Device Registry. Each tenant you create can have its own configuration, e.g. which protocol adapters are enabled.
 
 ## Stopping Hono
 
@@ -253,4 +252,4 @@ If you do not run Docker on localhost, replace *localhost* in the link with the 
 
 ## Using Command & Control
 
-Since Hono 0.6 the first implementation of Command & Control is available. A fully working example can be found in the [Command & Control Userguide]({{< relref "user-guide/command-and-control.md" >}}).
+Since Hono 0.6 the first implementation of Command & Control is available. Please refer to the [Command & Control user guide]({{< relref "user-guide/command-and-control.md" >}}) for a walk-through example.
