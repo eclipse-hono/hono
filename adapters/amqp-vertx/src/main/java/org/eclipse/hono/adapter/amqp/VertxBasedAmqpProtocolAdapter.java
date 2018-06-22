@@ -252,7 +252,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
 
         CompositeFuture.all(tenantConfigFuture, tokenFuture, senderFuture).compose(ok -> {
             final TenantObject tenantObject = tenantConfigFuture.result();
-            if (tenantObject.isAdapterEnabled(context.getTenantId())) {
+            if (tenantObject.isAdapterEnabled(getTypeName())) {
                 final MessageSender sender = senderFuture.result();
                 final Message downstreamMessage = newMessage(context.getResourceIdentifier(),
                         sender.isRegistrationAssertionRequired(),

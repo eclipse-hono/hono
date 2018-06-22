@@ -2,23 +2,30 @@ package org.eclipse.hono.adapter.amqp;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.isA;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.concurrent.TimeUnit;
 
 import org.apache.qpid.proton.amqp.messaging.AmqpValue;
+import org.apache.qpid.proton.amqp.messaging.Rejected;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.RegistrationClient;
+import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.TenantClient;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.command.CommandConnection;
+import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.ResourceIdentifier;
-import org.eclipse.hono.util.TenantConstants;
+import org.eclipse.hono.util.TelemetryConstants;
 import org.eclipse.hono.util.TenantObject;
 import org.junit.Before;
 import org.junit.Rule;
@@ -46,6 +53,16 @@ public class VertxBasedAmqpProtocolAdapterTest {
 
     @Rule
     public Timeout globalTimeout = new Timeout(2, TimeUnit.SECONDS);
+
+    /**
+     * A tenant identifier used for testing.
+     */
+    private static final String TEST_TENANT_ID = Constants.DEFAULT_TENANT;
+
+    /**
+     * A device used for testing.
+     */
+    private static final String TEST_DEVICE = "test-device";
 
     private HonoClient tenantServiceClient;
     private HonoClient credentialsServiceClient;
@@ -158,13 +175,13 @@ public class VertxBasedAmqpProtocolAdapterTest {
         final MessageSender telemetrySender = givenATelemetrySenderForAnyTenant();
 
         // which is enabled for a tenant
-        givenAConfiguredTenant("some-tenant", true);
+        givenAConfiguredTenant(TEST_TENANT_ID, true);
 
         // IF a device sends a 'fire and forget' telemetry message
         final ProtonDelivery delivery = mock(ProtonDelivery.class);
         when(delivery.remotelySettled()).thenReturn(true);
 
-        final ResourceIdentifier resource = ResourceIdentifier.from("telemetry", "some-tenant", "the-device");
+        final ResourceIdentifier resource = ResourceIdentifier.from(TelemetryConstants.TELEMETRY_ENDPOINT, TEST_TENANT_ID, TEST_DEVICE);
         adapter.uploadMessage(new AmqpContext(delivery, getFakeMessage(), resource));
 
         // THEN the adapter sends the message and does not wait for response from the peer.
@@ -184,25 +201,53 @@ public class VertxBasedAmqpProtocolAdapterTest {
         final MessageSender telemetrySender = givenATelemetrySenderForAnyTenant();
 
         // which is enabled for a tenant
-        givenAConfiguredTenant("enabled-tenant", true);
+        givenAConfiguredTenant(TEST_TENANT_ID, true);
 
         // IF a device send telemetry data (with un-settled delivery)
         final ProtonDelivery delivery = mock(ProtonDelivery.class);
         when(delivery.remotelySettled()).thenReturn(false);
-        final ResourceIdentifier resource = ResourceIdentifier.from("telemetry", "enabled-tenant", "the-device");
+        final ResourceIdentifier resource = ResourceIdentifier.from(TelemetryConstants.TELEMETRY_ENDPOINT, TEST_TENANT_ID, TEST_DEVICE);
         adapter.uploadMessage(new AmqpContext(delivery, getFakeMessage(), resource));
 
         // THEN the sender sends the message and waits for the outcome from the downstream peer
         verify(telemetrySender).sendAndWaitForOutcome(any(Message.class));
     }
 
+    /**
+     * Verifies that a request to upload a telemetry message from a device that belongs to a tenant for which the AMQP
+     * adapter is disabled fails and that the device is notified when the message cannot be processed (un-settled
+     * delivery).
+     * 
+     */
+    @Test
+    public void testUploadTelemetryMessageFailsForDisabledTenant() {
+        // GIVEN an adapter configured to use a user-define server.
+        final VertxBasedAmqpProtocolAdapter adapter = givenAnAmqpAdapter();
+        final MessageSender telemetrySender = givenATelemetrySenderForAnyTenant();
+
+        // AND given a tenant which is ENABLED but DISABLED for the AMQP Adapter
+        givenAConfiguredTenant(TEST_TENANT_ID, Boolean.FALSE);
+
+        // WHEN a device uploads telemetry data to the adapter (and wants to be notified of failure)
+        final ProtonDelivery delivery = mock(ProtonDelivery.class);
+        when(delivery.remotelySettled()).thenReturn(false);
+        final ResourceIdentifier resource = ResourceIdentifier.from(TelemetryConstants.TELEMETRY_ENDPOINT, TEST_TENANT_ID, TEST_DEVICE);
+        final AmqpContext context = spy(new AmqpContext(delivery, getFakeMessage(), resource));
+        adapter.uploadMessage(context);
+
+        // THEN the adapter does not send the message (regardless of the delivery mode).
+        verify(telemetrySender, never()).send(any(Message.class));
+        verify(telemetrySender, never()).sendAndWaitForOutcome(any(Message.class));
+
+        // AND notifies the device by sending back a REJECTED disposition
+        verify(context).handleFailure(any(ServiceInvocationException.class));
+        verify(delivery).disposition(isA(Rejected.class), eq(true));
+    }
+
     private void givenAConfiguredTenant(final String tenantId, final boolean enabled) {
-        final TenantObject tenantConfig = TenantObject.from(tenantId, enabled);
-        if (!enabled) {
-            tenantConfig.addAdapterConfiguration(new JsonObject()
-                    .put(TenantConstants.FIELD_ADAPTERS_TYPE, "amqp")
-                    .put(TenantConstants.FIELD_ENABLED, enabled));
-        }
+        final TenantObject tenantConfig = TenantObject.from(tenantId, Boolean.TRUE);
+        tenantConfig
+                .addAdapterConfiguration(TenantObject.newAdapterConfig(Constants.PROTOCOL_ADAPTER_TYPE_AMQP, enabled));
         when(tenantClient.get(tenantId)).thenReturn(Future.succeededFuture(tenantConfig));
     }
 
@@ -259,7 +304,8 @@ public class VertxBasedAmqpProtocolAdapterTest {
         when(server.actualPort()).thenReturn(0, 4040);
         when(server.connectHandler(any(Handler.class))).thenReturn(server);
         when(server.listen(any(Handler.class))).then(invocation -> {
-            final Handler<AsyncResult<ProtonServer>> handler = (Handler<AsyncResult<ProtonServer>>) invocation.getArgument(0);
+            final Handler<AsyncResult<ProtonServer>> handler = (Handler<AsyncResult<ProtonServer>>) invocation
+                    .getArgument(0);
             handler.handle(Future.succeededFuture(server));
             return server;
         });
