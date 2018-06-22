@@ -14,10 +14,10 @@ rm $SAMPLE_LOG
 
 $JMETER_HOME/bin/jmeter -n -f \
 -l $SAMPLE_LOG -j $TEST_LOG \
--t $SCRIPTPATH/jmeter/amqp_messaging_throughput_test.jmx \
+-t $SCRIPTPATH/amqp_messaging_throughput_test.jmx \
 -Jplugin_dependency_paths=$HONO_HOME/jmeter/target/plugin \
 -Jjmeterengine.stopfail.system.exit=true \
 -JdefaultTrustStorePath=$TRUST_STORE_PATH \
--Lorg.eclipse.hono.client.impl=WARN -Lorg.eclipse.hono.jmeter=INFO
--JdeviceCount=4 \
+-Lorg.eclipse.hono.client.impl=WARN -Lorg.eclipse.hono.jmeter=INFO \
+-JdeviceCount=4
 
