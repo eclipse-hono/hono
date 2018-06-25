@@ -70,15 +70,11 @@ echo Deploying Qpid Dispatch Router ...
 docker secret create -l project=$NS qdrouter-key.pem $CERTS/qdrouter-key.pem
 docker secret create -l project=$NS qdrouter-cert.pem $CERTS/qdrouter-cert.pem
 docker secret create -l project=$NS qdrouterd.json $SCRIPTPATH/qpid/qdrouterd-with-broker.json
-docker secret create -l project=$NS qdrouter-sasl.conf $SCRIPTPATH/qpid/qdrouter-sasl.conf
-docker secret create -l project=$NS qdrouterd.sasldb $SCRIPTPATH/qpid/qdrouterd.sasldb
 docker service create $CREATE_OPTIONS --name hono-dispatch-router -p 15671:5671 -p 15672:5672 \
   --secret qdrouter-key.pem \
   --secret qdrouter-cert.pem \
   --secret trusted-certs.pem \
   --secret qdrouterd.json \
-  --secret qdrouter-sasl.conf \
-  --secret qdrouterd.sasldb \
   --limit-memory 512m \
   ${dispatch-router.image.name} /sbin/qdrouterd -c /run/secrets/qdrouterd.json
 echo ... done

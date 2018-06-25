@@ -2,9 +2,13 @@
   ["router", {
     "id": "Hono.Sandbox.Router",
     "mode": "standalone",
-    "workerThreads": 3,
-    "saslConfigName": "qdrouter-sasl",
-    "saslConfigPath": "/run/secrets/"
+    "workerThreads": 3
+  }],
+
+  ["authServicePlugin", {
+    "name": "Hono Auth",
+    "host": "hono-service-auth.hono",
+    "port": 5672
   }],
 
   ["sslProfile", {
@@ -22,7 +26,8 @@
     "initialHandshakeTimeoutSeconds": 3,
     "maxSessionFrames": 100,
     "authenticatePeer": true,
-    "saslMechanisms": "PLAIN"
+    "saslMechanisms": "PLAIN",
+    "saslPlugin": "Hono Auth"
   }],
 
   ["listener", {
@@ -31,7 +36,8 @@
     "initialHandshakeTimeoutSeconds": 3,
     "maxSessionFrames": 100,
     "authenticatePeer": true,
-    "saslMechanisms": "PLAIN"
+    "saslMechanisms": "PLAIN",
+    "saslPlugin": "Hono Auth"
   }],
 
   ["listener", {
@@ -75,14 +81,11 @@
       "maxConnections": 200,
       "maxConnectionsPerUser": 200,
       "maxConnectionsPerHost": 50,
+      "allowUnknownUser": true,
       "groups": {
-        "consumers": {
-          "users": "consumer@HONO",
-          "remoteHosts": "*",
+        "$default": {
           "maxSessions": 10,
-          "allowUserIdProxy": true,
-          "sources": "telemetry/*, event/*",
-          "targets": "control/*"
+          "remoteHosts": "*"
         }
       }
   }],

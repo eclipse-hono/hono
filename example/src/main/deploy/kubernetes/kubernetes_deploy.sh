@@ -59,8 +59,6 @@ kubectl create secret generic hono-dispatch-router-conf \
   --from-file=$CERTS/qdrouter-cert.pem \
   --from-file=$CERTS/trusted-certs.pem \
   --from-file=$SCRIPTPATH/qpid/qdrouterd-with-broker.json \
-  --from-file=$SCRIPTPATH/qpid/qdrouter-sasl.conf \
-  --from-file=$SCRIPTPATH/qpid/qdrouterd.sasldb \
   --namespace $NS
 kubectl create -f $RESOURCES/dispatch-router --namespace $NS
 echo ... done

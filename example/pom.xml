@@ -150,11 +150,6 @@ Also contains scripts for deploying a Hono instance to a Docker Swarm, a Kuberne
                   <targetPath>deploy/docker</targetPath>
                   <filtering>true</filtering>
                 </resource>
-                <resource>
-                  <directory>${project.basedir}/src/main/sasldb</directory>
-                  <targetPath>deploy/docker/qpid</targetPath>
-                  <filtering>false</filtering>
-                </resource>
               </resources>
               <filters>
                 <filter>${project.basedir}/src/main/docker-config.properties</filter>
@@ -175,11 +170,6 @@ Also contains scripts for deploying a Hono instance to a Docker Swarm, a Kuberne
                   <targetPath>deploy/kubernetes</targetPath>
                   <filtering>true</filtering>
                 </resource>
-                <resource>
-                  <directory>${project.basedir}/src/main/sasldb</directory>
-                  <targetPath>deploy/kubernetes/qpid</targetPath>
-                  <filtering>false</filtering>
-                </resource>
               </resources>
               <filters>
                 <filter>${project.basedir}/src/main/kubernetes-config.properties</filter>
@@ -199,11 +189,6 @@ Also contains scripts for deploying a Hono instance to a Docker Swarm, a Kuberne
                   <directory>${project.basedir}/src/main/config</directory>
                   <targetPath>deploy/openshift</targetPath>
                   <filtering>true</filtering>
-                </resource>
-                <resource>
-                  <directory>${project.basedir}/src/main/sasldb</directory>
-                  <targetPath>deploy/openshift/qpid</targetPath>
-                  <filtering>false</filtering>
                 </resource>
               </resources>
               <filters>

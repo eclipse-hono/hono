@@ -31,25 +31,21 @@ Based on the components shown above, the following sequence diagram shows how th
 
 {{< figure src="../MQTT-Adapter-authentication-today.png" width="80%" >}}
 
-Client components are authorized whenever they open a new AMQP link on an existing connection to the server. When a client tries to open a receiver link, the server checks if teh client is authorized to *read* from the source address the client has specified in its AMQP *attach* frame. Analogously, when a client tries to open a sender link, the server checks if the client is authorized to *write* to the target address from the client's *attach* frame.
+Client components are authorized whenever they open a new AMQP link on an existing connection to the server. When a client tries to open a receiver link, the server checks if the client is authorized to *read* from the source address the client has specified in its AMQP *attach* frame. Analogously, when a client tries to open a sender link, the server checks if the client is authorized to *write* to the target address from the client's *attach* frame.
 
 Service implementations may additionally authorize individual (request) messages received from the client, e.g. based on the message's *subject* property which is used by Hono's AMQP 1.0 based APIs to indicate the operation to invoke. In such a case the server checks if the client is authorized to *execute* the operation indicated by the message *subject* on the link's target address.
 
-### Consumer Auth
+### Application Auth
 
-*Business Applications* connect to the AMQP 1.0 Messaging Network in order to consume telemetry data and events. It is therefore the responsibility of the AMQP Network to properly authenticate and authorize the application.
+*Business Applications* connect to the AMQP 1.0 Messaging Network in order to consume telemetry data and events and send commands to devices. It is therefore the responsibility of the AMQP Network to properly authenticate and authorize the application.
 
-The Apache Qpid Dispatch Router which is used in Hono's example deployment can be configured to authenticate consumers using arbitrary SASL mechanisms. Access to addresses for receiving messages can be restricted to certain identities.
+The Apache Qpid Dispatch Router which is used in Hono's example deployment can be configured to authenticate consumers using arbitrary SASL mechanisms. Access to addresses for receiving messages can be restricted to certain identities. The Dispatch Router instance which is used in the example deployment is configured to delegate authentication of clients to the *Auth Server* by means of its *Auth Service Plugin* mechanism. This mechanism works in a very similar way as decribed above for the authentication of system components. The main difference is that the clients' authorities are not transferred by means of a JSON Web Token but instead are carried in a property of the Auth Server's AMQP *open* frame.
 
 ### Management of Identities and Authorities
 
-The identities and corresponding authorities that the *Auth Server* uses for verifying credentials and issuing tokens are defined in a configuration file (`services/auth/src/main/resources/permissions.json`) read in during start-up of the *Auth Server*.
+The identities and corresponding authorities that the *Auth Server* uses for verifying credentials and issuing tokens are defined in a configuration file (`services/auth/src/main/resources/permissions.json`) read in during start-up of the *Auth Server*. These authorities are used for authenticating and authorizing system components as well as *Business Applications*.
 
-The identities and authorities allowed to access the *Dispatch Router* component used in the example deployment are set in a configuration file (`example/src/main/config/qpid/qdrouter-with-broker.json`) which is read in during startup of the component. The default configuration file authorizes the `consumer@HONO` user to consume both telemetry data as well as events of any tenant. The default password for this user is `verysecret`.
-
-Please refer to the [Dispatch Router configuration guide](http://qpid.apache.org/releases/qpid-dispatch-1.0.1/man/qdrouterd.conf.html) and the [Policy documentation](https://github.com/apache/qpid-dispatch/blob/1.0.x/doc/book/policy.adoc) for details regarding configuration of *Dispatch Router* security.
-
-In a next step we will integrate the *Dispatch Router* with the token based authentication scheme used by the other Hono components in order to provide for seamless identity and authority management across the whole system.
+Please refer to the [Dispatch Router configuration guide](https://qpid.apache.org/releases/qpid-dispatch-1.1.0/man/qdrouterd.conf.html) and the [Policy documentation](https://github.com/apache/qpid-dispatch/blob/1.1.x/doc/book/policy.adoc) for details regarding configuration of *Dispatch Router* security.
 
 ## Future Approach
 

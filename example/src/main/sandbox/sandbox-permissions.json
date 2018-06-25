@@ -44,7 +44,7 @@
         "activities": [ "EXECUTE" ]
       }
     ],
-    "consumer": [
+    "application": [
       {
         "resource": "telemetry/*",
         "activities": [ "READ" ]
@@ -52,6 +52,10 @@
       {
         "resource": "event/*",
         "activities": [ "READ" ]
+      },
+      {
+        "resource": "control/*",
+        "activities": [ "READ", "WRITE" ]
       }
     ]
   },
@@ -78,6 +82,11 @@
     "device-registry": {
       "mechanism": "EXTERNAL",
       "authorities": []
+    },
+    "consumer@HONO": {
+      "mechanism": "PLAIN",
+      "password": "verysecret",
+      "authorities": [ "application" ]
     }
   }
 }

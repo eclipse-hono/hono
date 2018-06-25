@@ -2,9 +2,14 @@
   ["router", {
     "id": "Hono.Example.Router",
     "mode": "standalone",
-    "workerThreads": 4,
-    "saslConfigName": "qdrouter-sasl",
-    "saslConfigPath": "${secret.path}/"
+    "workerThreads": 3
+  }],
+
+  ["authServicePlugin", {
+    "name": "Hono Auth",
+    "host": "hono-service-auth.hono",
+    "port": 5671,
+    "sslProfile": "internal"
   }],
 
   ["sslProfile", {
@@ -28,14 +33,16 @@
     "host": "0.0.0.0",
     "port": 5671,
     "authenticatePeer": true,
-    "saslMechanisms": "PLAIN"
+    "saslMechanisms": "PLAIN",
+    "saslPlugin": "Hono Auth"
   }],
 
   ["listener", {
     "host": "0.0.0.0",
     "port": 5672,
     "authenticatePeer": true,
-    "saslMechanisms": "PLAIN"
+    "saslMechanisms": "PLAIN",
+    "saslPlugin": "Hono Auth"
   }],
 
   ["listener", {
@@ -85,19 +92,11 @@
       "maxConnections": 500,
       "maxConnectionsPerUser": 20,
       "maxConnectionsPerHost": 10,
+      "allowUnknownUser": true,
       "groups": {
-        "consumers": {
-          "users": "consumer@HONO",
+        "$default": {
           "remoteHosts": "*",
-          "maxSessions": 10,
-          "sources": "telemetry/*, event/*, control/*",
-          "targets": "control/*"
-        },
-        "DEFAULT_TENANT": {
-          "users": "user1@HONO",
-          "remoteHosts": "*",
-          "maxSessions": 10,
-          "sources": "telemetry/DEFAULT_TENANT, event/DEFAULT_TENANT"
+          "maxSessions": 10
         }
       }
   }],

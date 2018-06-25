@@ -65,9 +65,7 @@ docker service rm hono-dispatch-router
 docker secret rm \
   qdrouter-key.pem \
   qdrouter-cert.pem \
-  qdrouterd.json \
-  qdrouter-sasl.conf \
-  qdrouterd.sasldb
+  qdrouterd.json
 
 docker service rm hono-artemis
 docker secret rm \
