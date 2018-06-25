@@ -16,6 +16,7 @@ package org.eclipse.hono.adapter.http.vertx;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -26,6 +27,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.function.BiConsumer;
 
+import com.sun.javafx.binding.StringFormatter;
+import io.vertx.core.buffer.Buffer;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.adapter.http.HttpProtocolAdapterProperties;
 import org.eclipse.hono.client.ClientErrorException;
@@ -37,6 +40,7 @@ import org.eclipse.hono.client.TenantClient;
 import org.eclipse.hono.service.auth.device.Device;
 import org.eclipse.hono.service.auth.device.HonoClientBasedAuthProvider;
 import org.eclipse.hono.service.command.CommandConnection;
+import org.eclipse.hono.service.command.CommandResponseSender;
 import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.TenantObject;
@@ -97,9 +101,12 @@ public class VertxBasedHttpProtocolAdapterTest {
     private static HttpProtocolAdapterProperties config;
     private static VertxBasedHttpProtocolAdapter httpAdapter;
     private static CommandConnection commandConnection;
+    private static CommandResponseSender commandResponseSender;
     private static Vertx vertx;
     private static String deploymentId;
     private static HttpClient httpClient;
+
+    private static final String syntacticallyCorrectCmdRequestId = "2fcmd-client-c925910f-ea2a-455c-a3f9-a339171f335474f48a55-c60d-4b99-8950-a2fbb9e8f1b6";
 
     /**
      * Prepare the adapter by configuring it.
@@ -152,6 +159,10 @@ public class VertxBasedHttpProtocolAdapterTest {
             shutdownHandler.handle(Future.succeededFuture());
             return null;
         }).when(commandConnection).shutdown(any(Handler.class));
+
+        commandResponseSender = mock(CommandResponseSender.class);
+        when(commandConnection.getOrCreateCommandResponseSender(anyString(), anyString(), anyString())).thenReturn(
+                Future.succeededFuture(commandResponseSender));
 
         usernamePasswordAuthProvider = mock(HonoClientBasedAuthProvider.class);
 
@@ -468,6 +479,135 @@ public class VertxBasedHttpProtocolAdapterTest {
                     // verify that a command receiver link was opened
                     verify(commandConnection).createCommandConsumer(eq("DEFAULT_TENANT"), eq("device_1"),
                             any(BiConsumer.class), any(Handler.class));
+                    async.complete();
+                }).exceptionHandler(ctx::fail).end(new JsonObject().encode());
+    }
+
+    /**
+     * Verifies that a POST request to the command reply URI with a misconstructed command-request-id results in a
+     * {@link HttpURLConnection#HTTP_BAD_REQUEST}.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testPostCmdResponseForInvalidCommandRequestIdResultsIn400(final TestContext ctx) {
+
+        final Async async = ctx.async();
+        final String authHeader = getBasicAuth("testuser@DEFAULT_TENANT", "password123");
+
+        mockSuccessfulAuthentication("DEFAULT_TENANT", "device_1");
+
+        httpClient.post(StringFormatter.format("/control/res/%s?hono-cmd-status=200", "wrongCommandRequestId").getValue())
+                .putHeader(HttpHeaders.CONTENT_TYPE, HttpUtils.CONTENT_TYPE_JSON)
+                .putHeader(HttpHeaders.AUTHORIZATION, authHeader)
+                .putHeader(HttpHeaders.ORIGIN, "hono.eclipse.org")
+                .handler(response -> {
+                    ctx.assertEquals(HttpURLConnection.HTTP_BAD_REQUEST, response.statusCode());
+                    async.complete();
+                }).exceptionHandler(ctx::fail).end(new JsonObject().encode());
+    }
+
+    /**
+     * Verifies that a POST request to the command reply URI with an invalid command status results in a
+     * {@link HttpURLConnection#HTTP_BAD_REQUEST}.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testPostCmdResponseForInvalidCommandStatusIdResultsIn400(final TestContext ctx) {
+
+        final Async async = ctx.async();
+        final String authHeader = getBasicAuth("testuser@DEFAULT_TENANT", "password123");
+
+        mockSuccessfulAuthentication("DEFAULT_TENANT", "device_1");
+
+        httpClient.post(StringFormatter.format("/control/res/%s?hono-cmd-status=600", syntacticallyCorrectCmdRequestId).getValue())
+                .putHeader(HttpHeaders.CONTENT_TYPE, HttpUtils.CONTENT_TYPE_JSON)
+                .putHeader(HttpHeaders.AUTHORIZATION, authHeader)
+                .putHeader(HttpHeaders.ORIGIN, "hono.eclipse.org")
+                .handler(response -> {
+                    ctx.assertEquals(HttpURLConnection.HTTP_BAD_REQUEST, response.statusCode());
+                    async.complete();
+                }).exceptionHandler(ctx::fail).end(new JsonObject().encode());
+    }
+
+    /**
+     * Verifies that a POST request to the command reply URI without a command status results in a
+     * {@link HttpURLConnection#HTTP_BAD_REQUEST}.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testPostCmdResponseForMissingCommandStatusIdResultsIn400(final TestContext ctx) {
+
+        final Async async = ctx.async();
+        final String authHeader = getBasicAuth("testuser@DEFAULT_TENANT", "password123");
+
+        mockSuccessfulAuthentication("DEFAULT_TENANT", "device_1");
+
+        httpClient.post(StringFormatter.format("/control/res/%s", syntacticallyCorrectCmdRequestId).getValue())
+                .putHeader(HttpHeaders.CONTENT_TYPE, HttpUtils.CONTENT_TYPE_JSON)
+                .putHeader(HttpHeaders.AUTHORIZATION, authHeader)
+                .putHeader(HttpHeaders.ORIGIN, "hono.eclipse.org")
+                .handler(response -> {
+                    ctx.assertEquals(HttpURLConnection.HTTP_BAD_REQUEST, response.statusCode());
+                    async.complete();
+                }).exceptionHandler(ctx::fail).end(new JsonObject().encode());
+    }
+
+    /**
+     * Verifies that a POST request to the command reply URI for that the delivery to the associated link in the application
+     * fails results in a {@link HttpURLConnection#HTTP_UNAVAILABLE}.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testPostCmdResponseForNotExistingCommandResponseLinkResultsIn503(final TestContext ctx) {
+
+        final Async async = ctx.async();
+        final String authHeader = getBasicAuth("testuser@DEFAULT_TENANT", "password123");
+
+        mockSuccessfulAuthentication("DEFAULT_TENANT", "device_1");
+
+        when(commandResponseSender.sendCommandResponse(anyString(), anyString(), any(Buffer.class), isNull(), any(Integer.class))).
+                thenReturn(Future.failedFuture("error"));
+
+        httpClient.post(StringFormatter.format("/control/res/%s?hono-cmd-status=200", syntacticallyCorrectCmdRequestId).getValue())
+                .putHeader(HttpHeaders.CONTENT_TYPE, HttpUtils.CONTENT_TYPE_JSON)
+                .putHeader(HttpHeaders.AUTHORIZATION, authHeader)
+                .putHeader(HttpHeaders.ORIGIN, "hono.eclipse.org")
+                .handler(response -> {
+                    ctx.assertEquals(HttpURLConnection.HTTP_UNAVAILABLE, response.statusCode());
+                    async.complete();
+                }).exceptionHandler(ctx::fail).end(new JsonObject().encode());
+    }
+
+    /**
+     * Verifies that a POST request to the command reply URI for that the delivery to the associated link is being remotely settled
+     * results in a {@link HttpURLConnection#HTTP_ACCEPTED}.
+
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testPostCmdResponseForExistingCommandResponseLinkResultsInAccepted(final TestContext ctx) {
+
+        final Async async = ctx.async();
+        final String authHeader = getBasicAuth("testuser@DEFAULT_TENANT", "password123");
+        final ProtonDelivery remotelySettledDelivery = mock(ProtonDelivery.class);
+        when(remotelySettledDelivery.remotelySettled()).thenReturn(Boolean.TRUE);
+
+        mockSuccessfulAuthentication("DEFAULT_TENANT", "device_1");
+
+        when(commandResponseSender.sendCommandResponse(anyString(), anyString(), any(Buffer.class), isNull(), any(Integer.class))).
+                thenReturn(Future.succeededFuture(remotelySettledDelivery));
+
+        httpClient.post(StringFormatter.format("/control/res/%s?hono-cmd-status=200", syntacticallyCorrectCmdRequestId).getValue())
+                .putHeader(HttpHeaders.CONTENT_TYPE, HttpUtils.CONTENT_TYPE_JSON)
+                .putHeader(HttpHeaders.AUTHORIZATION, authHeader)
+                .putHeader(HttpHeaders.ORIGIN, "hono.eclipse.org")
+                .handler(response -> {
+                    // if the delivery was remotely settled, it is to be considered as being successful
+                    ctx.assertEquals(HttpURLConnection.HTTP_ACCEPTED, response.statusCode());
                     async.complete();
                 }).exceptionHandler(ctx::fail).end(new JsonObject().encode());
     }
