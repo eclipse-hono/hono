@@ -41,9 +41,9 @@ NB: There is a subtle difference between the *device identifier* (*device-id*) a
   * 202 (Accepted): The telemetry data has been accepted for processing. Note that if the `QoS-Level` request header is missing, the adapter does not *guarantee* successful delivery to potential consumers.
   However, if the QoS-Level header is set to `AT_LEAST_ONCE(1)`, then the adapter waits for the message to be delivered and accepted by a downstream peer before responding with a 202 status code to the device.
   * 400 (Bad Request): The request cannot be processed. Possible reasons for this might be that:
-    * The content type header is missing
-    * The request body is empty
-    * The QoS header value is invalid
+        * The content type header is missing.
+        * The request body is empty.
+        * The QoS header value is invalid.
   * 401 (Unauthorized): The request cannot be processed because the request does not contain valid credentials.
   * 403 (Forbidden): The request cannot be processed because the device's registration status cannot be asserted. Possible reasons for this might be:
         * The given tenant is not allowed to use this protocol adapter.
@@ -93,9 +93,9 @@ Publish some JSON data for device `4711` using an invalid QoS level:
   * 202 (Accepted): The telemetry data has been accepted for processing. Note that if the `QoS-Level` request header is missing, the adapter does not *guarantee* successful delivery to potential consumers.
   However, if the QoS-Level header is set to `AT_LEAST_ONCE(1)`, then the adapter waits for the message to be delivered and accepted by a downstream peer before responding with a 202 status code to the device.
   * 400 (Bad Request): The request cannot be processed. Possible reasons for this might be that:
-    * The content type header is missing
-    * The request body is empty
-    * The QoS header value is invalid
+        * The content type header is missing.
+        * The request body is empty.
+        * The QoS header value is invalid.
   * 403 (Forbidden): The request cannot be processed because the device's registration status cannot be asserted. Possible reasons for this might be:
         * The given tenant is not allowed to use this protocol adapter.
         * The given device does not belong to the given tenant.
@@ -146,9 +146,9 @@ Publish some JSON data for device `4711` using an invalid QoS level:
   * 202 (Accepted): The telemetry data has been accepted for processing. Note that if the `QoS-Level` request header is missing, the adapter does not *guarantee* successful delivery to potential consumers.
   However, if the QoS-Level header is set to `AT_LEAST_ONCE(1)`, then the adapter waits for the message to be delivered and accepted by a downstream peer before responding with a 202 status code to the device.
   * 400 (Bad Request): The request cannot be processed. Possible reasons for this might be that:
-    * The content type header is missing
-    * The request body is empty
-    * The QoS header value is invalid
+        * The content type header is missing
+        * The request body is empty
+        * The QoS header value is invalid
   * 403 (Forbidden): The request cannot be processed because the device's registration status cannot be asserted. Possible reasons for this might be:
         * The given tenant is not allowed to use this protocol adapter.
         * The given device does not belong to the given tenant.
