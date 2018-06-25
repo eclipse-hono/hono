@@ -44,11 +44,13 @@ public abstract class AbstractConfig {
 
     private String trustStorePath;
     private char[] trustStorePassword;
+    private TrustOptions trustOptions;
     private String pathSeparator = Constants.DEFAULT_PATH_SEPARATOR;
     private String keyStorePath;
     private char[] keyStorePassword;
     private String certPath;
     private String keyPath;
+    private KeyCertOptions keyCertOptions;
     private FileFormat trustStoreFormat;
     private FileFormat keyFormat;
     private List<String> secureProtocols = Collections.singletonList("TLSv1.2");
@@ -134,6 +136,10 @@ public abstract class AbstractConfig {
      */
     public final TrustOptions getTrustOptions() {
 
+        if (trustOptions != null) {
+            return trustOptions;
+        }
+
         if (this.trustStorePath == null) {
             return null;
         }
@@ -153,21 +159,25 @@ public abstract class AbstractConfig {
         switch (format) {
         case PEM:
             LOG.debug("using certificates from file [{}] as trust anchor", this.trustStorePath);
-            return new PemTrustOptions().addCertPath(this.trustStorePath);
+            trustOptions = new PemTrustOptions().addCertPath(this.trustStorePath);
+            break;
         case PKCS12:
             LOG.debug("using certificates from PKCS12 key store [{}] as trust anchor", this.trustStorePath);
-            return new PfxOptions()
+            trustOptions = new PfxOptions()
                     .setPath(getTrustStorePath())
                     .setPassword(getTrustStorePassword());
+            break;
         case JKS:
             LOG.debug("using certificates from JKS key store [{}] as trust anchor", this.trustStorePath);
-            return new JksOptions()
+            trustOptions = new JksOptions()
                     .setPath(getTrustStorePath())
                     .setPassword(getTrustStorePassword());
+            break;
         default:
             LOG.debug("unsupported trust store format: {}", format);
             return null;
         }
+        return trustOptions;
     }
 
     /**
@@ -222,6 +232,10 @@ public abstract class AbstractConfig {
      */
     public KeyCertOptions getKeyCertOptions() {
 
+        if (keyCertOptions != null) {
+            return keyCertOptions;
+        }
+
         if (this.keyPath != null && this.certPath != null) {
 
             if (!Files.exists(Paths.get(this.keyPath))) {
@@ -259,7 +273,8 @@ public abstract class AbstractConfig {
             switch (format) {
             case PEM:
                 LOG.debug("using key [{}] and certificate [{}] for identity", this.keyPath, this.certPath);
-                return new PemKeyCertOptions().setKeyPath(this.keyPath).setCertPath(this.certPath);
+                keyCertOptions = new PemKeyCertOptions().setKeyPath(this.keyPath).setCertPath(this.certPath);
+                break;
             default:
                 LOG.warn("unsupported key & cert format: {}", format);
                 return null;
@@ -279,10 +294,12 @@ public abstract class AbstractConfig {
             switch (format) {
             case PKCS12:
                 LOG.debug("using key & certificate from PKCS12 key store [{}] for identity", this.keyStorePath);
-                return new PfxOptions().setPath(this.keyStorePath).setPassword(getKeyStorePassword());
+                keyCertOptions = new PfxOptions().setPath(this.keyStorePath).setPassword(getKeyStorePassword());
+                break;
             case JKS:
                 LOG.debug("using key & certificate from JKS key store [{}] for server identity", this.keyStorePath);
-                return new JksOptions().setPath(this.keyStorePath).setPassword(getKeyStorePassword());
+                keyCertOptions = new JksOptions().setPath(this.keyStorePath).setPassword(getKeyStorePassword());
+                break;
             default:
                 LOG.warn("unsupported key store format: {}", format);
                 return null;
@@ -297,6 +314,7 @@ public abstract class AbstractConfig {
 
         }
 
+        return keyCertOptions;
     }
 
     /**
