@@ -64,7 +64,13 @@ public class TelemetryMqttQoS0IT extends MqttTestBase {
                 tenantId,
                 deviceId);
         final Future<Void> result = Future.future();
-        mqttClient.publish(topic, payload, MqttQoS.AT_MOST_ONCE, false, false, id -> result.complete());
+        mqttClient.publish(topic, payload, MqttQoS.AT_MOST_ONCE, false, false, sendAttempt -> {
+            if (sendAttempt.succeeded()) {
+                result.complete();
+            } else {
+                result.fail(sendAttempt.cause());
+            }
+        });
         return result;
     }
 
