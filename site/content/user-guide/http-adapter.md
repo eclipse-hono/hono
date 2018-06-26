@@ -331,6 +331,128 @@ Example:
     HTTP/1.1 202 Accepted
     Content-Length: 0
 
+## Sending a response to a previously received command
+
+{{% note %}}
+This feature has been added in Hono 0.7. Previous versions of the adapter do not support it.
+{{% /note %}}
+
+
+### Sending a response (authenticated Device)
+
+* URI: `/control/res/${commandRequestId}` or `/control/res/${commandRequestId}?hono-cmd-status=${status}`
+* Method: `POST`
+* Request Headers:
+  * (optional) `Authorization`: The device's *auth-id* and plain text password encoded according to the [Basic HTTP authentication scheme](https://tools.ietf.org/html/rfc7617). If not set, the adapter expects the device to present a client certificate as part of the TLS handshake during connection establishment.
+  * (optional) `hono-cmd-status`: The status of the command execution. If not set, the adapter expects that the URI contains it
+    as request parameter at the end.
+* Request Body:
+  * (optional) Arbitrary payload. The type of the payload should be determined by the command that was sent to the device previously
+    and is unknown to Hono.
+* Status Codes:
+  * 202 (Accepted): The response has been accepted and was successfully delivered to the application.
+  * 400 (Bad Request): The request cannot be processed because the command status is missing.
+  * 401 (Unauthorized): The request cannot be processed because the request does not contain valid credentials.  
+  * 403 (Forbidden): The request cannot be processed because the device's registration status cannot be asserted. Possible reasons for this might be:
+        * The given tenant is not allowed to use this protocol adapter.
+        * The given device is disabled.
+  * 503 (Service Unavailable): The request cannot be processed because there is no application listening for a reply to 
+    this `commandRequestId`. One possible reason can be that the response is sent later as the timeout the application has set for waiting
+    for it.
+
+This is the preferred way for devices to respond to commands. It is available only if the protocol adapter is configured to require devices to authenticate (which is the default).
+
+**Example**
+
+Send a response to a previously received command with the command-request-id `2fcmd-client-bed7bdad-facc-4f72-9b8b-da6e5be8db32dd09ffe2-fa96-4eb1-975f-1e4adb7d191c` for device `4711`:
+
+    $ curl -i -X POST -u sensor1@DEFAULT_TENANT:hono-secret \
+    $ --data-binary '{"brightness-changed": true}' \
+    $ http://127.0.0.1:8080/control/res/2fcmd-client-bed7bdad-facc-4f72-9b8b-da6e5be8db32dd09ffe2-fa96-4eb1-975f-1e4adb7d191c?hono-cmd-status=200
+
+    HTTP/1.1 202 Accepted
+    Content-Length: 0
+
+ 
+
+## Sending a response (unauthenticated Device)
+
+* URI: `/control/res/${tenantId}/${deviceId}/${commandRequestId}` or `/control/res/${tenantId}/${deviceId}/${commandRequestId}?hono-cmd-status=${status}`
+* Method: `PUT`
+* Request Headers:
+  * (optional) `hono-cmd-status`: The status of the command execution. If not set, the adapter expects that the URI contains it
+    as request parameter at the end.
+* Request Body:
+  * (optional) Arbitrary payload. The type of the payload should be determined by the command that was sent to the device previously
+    and is unknown to Hono.
+* Status Codes:
+  * 202 (Accepted): The event has been accepted and put to a persistent store for delivery to consumers.
+  * 400 (Bad Request): The request cannot be processed because the command status is missing.
+  * 403 (Forbidden): The request cannot be processed because the device's registration status cannot be asserted. Possible reasons for this might be:
+        * The given tenant is not allowed to use this protocol adapter.
+        * The given device does not belong to the given tenant.
+        * The given device is disabled.
+  * 503 (Service Unavailable): The request cannot be processed because there is no application listening for a reply to 
+    this `commandRequestId`. One possible reason can be that the response is sent later as the timeout the application has set to wait
+    for it.
+
+This resource MUST be used by devices that have not authenticated to the protocol adapter. Note that this requires the `HONO_HTTP_AUTHENTICATION_REQUIRED` configuration property to be explicitly set to `false`.
+
+
+**Examples**
+
+Send a response to a previously received command with the command-request-id `2fcmd-client-bed7bdad-facc-4f72-9b8b-da6e5be8db32dd09ffe2-fa96-4eb1-975f-1e4adb7d191c` for the unauthenticated device `4711`:
+
+    $ curl -i -X PUT --data-binary '{"brightness-changed": true}' \
+    $ http://127.0.0.1:8080/control/res/DEFAULT_TENANT/4711/2fcmd-client-bed7bdad-facc-4f72-9b8b-da6e5be8db32dd09ffe2-fa96-4eb1-975f-1e4adb7d191c?hono-cmd-status=200
+
+    HTTP/1.1 202 Accepted
+    Content-Length: 0
+
+
+## Sending a response (authenticated Gateway)
+
+* URI: `/control/res/${tenantId}/${deviceId}/${commandRequestId}` or `/control/res/${tenantId}/${deviceId}/${commandRequestId}?hono-cmd-status=${status}`
+* Method: `PUT`
+* Request Headers:
+  * (optional) `Authorization`: The gateway's *auth-id* and plain text password encoded according to the [Basic HTTP authentication scheme](https://tools.ietf.org/html/rfc7617). If not set, the adapter expects the gateway to present a client certificate as part of the TLS handshake during connection establishment.
+  * (optional) `hono-cmd-status`: The status of the command execution. If not set, the adapter expects that the URI contains it
+    as request parameter at the end.
+* Request Body:
+  * (optional) Arbitrary payload. The type of the payload should be determined by the command that was sent to the device previously
+    and is unknown to Hono.
+* Status Codes:
+  * 202 (Accepted): The event has been accepted and put to a persistent store for delivery to consumers.
+  * 400 (Bad Request): The request cannot be processed because the command status is missing.
+  * 403 (Forbidden): The request cannot be processed because the device's registration status cannot be asserted. Possible reasons for this might be:
+        * The given tenant is not allowed to use this protocol adapter.
+        * The given device does not belong to the given tenant.
+        * The given device is disabled.
+  * 503 (Service Unavailable): The request cannot be processed because there is no application listening for a reply to 
+    this `commandRequestId`. One possible reason can be that the response is sent later as the timeout the application has set to wait
+    for it.
+
+This resource can be used by *gateway* components to send the response to a command *on behalf of* other devices which do not connect to a protocol adapter directly but instead are connected to the gateway, e.g. using some low-bandwidth radio based technology like [SigFox](https://www.sigfox.com) or [LoRa](https://www.lora-alliance.org/). In this case the credentials provided by the gateway during connection establishment with the protocol adapter are used to authenticate the gateway whereas the parameters from the URI are used to identify the device that the gateway publishes data for.
+
+The protocol adapter checks the gateway's authority to send responses to a command on behalf of the device implicitly by means of retrieving a *registration assertion* for the device from the [configured Device Registration service]({{< relref "#device-registration-service-connection-configuration" >}}).
+
+**Examples**
+
+Publish some JSON data for device `4712` via gateway `gw-1`:
+
+Send a response to a previously received command with the command-request-id `2fcmd-client-bed7bdad-facc-4f72-9b8b-da6e5be8db32dd09ffe2-fa96-4eb1-975f-1e4adb7d191c` for the unauthenticated device `4711`
+ via gateway `gw-1`:
+
+    $ curl -i -X PUT -u gw@DEFAULT_TENANT:gw-secret --data-binary '{"brightness-changed": true}' \
+    $ http://127.0.0.1:8080/control/res/DEFAULT_TENANT/4712/2fcmd-client-bed7bdad-facc-4f72-9b8b-da6e5be8db32dd09ffe2-fa96-4eb1-975f-1e4adb7d191c?hono-cmd-status=200
+
+    HTTP/1.1 202 Accepted
+    Content-Length: 0
+
+
+**NB**: The example above assumes that a gateway device with ID `gw-1` has been registered with `hashed-password` credentials with *auth-id* `gw` and password `gw-secret`.
+
+
 
 
 ## Tenant specific Configuration

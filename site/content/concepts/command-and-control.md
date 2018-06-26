@@ -41,27 +41,17 @@ The HTTP Adapter gets the command and writes it in the response of the devices `
 This is, what is implemented in Hono 0.6. At the moment the Application does not get a response back from the device as shown in (5), (6) and (7). Instead the adapter sends a successful response without payload after sending the command to the device.  
 {{% /note %}}
 
-The device needs to respond to the command (5), to inform the business application about the success. It typically follows the way described in [HTTP Adapter]({{< relref "user-guide/http-adapter.md" >}}) for telemetry and events with the following changes:
+The device needs to respond to the command (5), to inform the business application about the success. For this purpose 
+specific URIs are definded in [HTTP Adapter]({{< relref "user-guide/http-adapter.md#sending-a-response-to-a-previously-received-command" >}}).
 
-Authenticated Device:
+The URI contains the `hono-cmd-req-id` and a status that contains the outcome of the command.
 
-TODO: param instead of url part!!!
-
-* URI: `/control/res/${reqId}/${status}` 
-* Method: `POST`
-
-Unauthenticated Device:
-
-* URI: `/control/res/${tenantId}/${deviceId}/${reqId}/${status}` 
-* Method: `PUT`
-
-For authenticated and unauthenticated devices:
-
-* Request Body:
-  * (optional) Arbitrary payload as response data.
-
-The HTTP Adapter will then send this response back to the Business Application (6). If the application has not kept the
-link open, the request for the device response will be responded with `503 Service unavailable`. 
+The HTTP Adapter will send the payload of the response back to the Business Application (6) by using the receiver link
+that was opened by the application. If the response reached the application, the response request will be replied with
+`202 Accepted`. If the application has not kept the
+link open, the response request will be replied with `503 Service unavailable`. 
+If the `command-request-id` or the `hono-cmd-status` value is invalid, the response request will be 
+replied with `400 Bad request`.
 
 ## Command & Control over MQTT Adapter
 
