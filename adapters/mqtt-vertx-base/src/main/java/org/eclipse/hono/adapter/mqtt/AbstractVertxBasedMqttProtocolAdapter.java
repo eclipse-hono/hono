@@ -445,15 +445,13 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
 
     private Future<Void> triggerLinkCreation(final String tenantId) {
 
-        final Future<Void> result = Future.future();
-        LOG.debug("providently trying to open downstream links for tenant [{}]", tenantId);
-        CompositeFuture.join(
-                getRegistrationClient(tenantId),
-                getTelemetrySender(tenantId),
-                getEventSender(tenantId)).setHandler(attempt -> {
-                    result.complete();
-                });
-        return result;
+        final Future<MessageSender> telemetrySender = getTelemetrySender(tenantId);
+        final Future<MessageSender> eventSender = getEventSender(tenantId);
+        return CompositeFuture.all(getRegistrationClient(tenantId), telemetrySender, eventSender).map(ok -> {
+            LOG.debug("providently opened downstream links [credit telemetry: {}, credit event: {}] for tenant [{}]",
+                    telemetrySender.result().getCredit(), eventSender.result().getCredit(), tenantId);
+            return null;
+        });
     }
 
     /**
