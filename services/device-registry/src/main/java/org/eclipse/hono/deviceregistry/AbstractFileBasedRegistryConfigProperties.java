@@ -16,13 +16,13 @@ package org.eclipse.hono.deviceregistry;
 /**
  * Common configuration properties for file based implementations of the APIs of Hono's device registry as own server.
  * <p>
- * This class is intended to be used as base class fpr property classes that configure a specific file based API implementation.
+ * This class is intended to be used as base class for property classes that configure a specific file based API implementation.
  */
-public abstract class AbstractFileBasedRegistryConfigProperties {
+abstract class AbstractFileBasedRegistryConfigProperties {
 
-    protected String filename = getDefaultFileName();
-    protected boolean saveToFile = false;
-    protected boolean modificationEnabled = true;
+    private String filename = getDefaultFileName();
+    private boolean saveToFile = false;
+    private boolean modificationEnabled = true;
 
     /**
      * Gets the path to the file that the registry should be persisted to periodically.
