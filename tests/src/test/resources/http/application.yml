@@ -36,6 +36,14 @@ hono:
     port: 5672
     username: http-adapter@HONO
     password: http-secret
+  command:
+    name: 'Hono HTTP Adapter'
+    host: hono-dispatch-router.hono
+    port: 5673
+    amqpHostname: hono-internal
+    keyPath: /etc/hono/certs/http-adapter-key.pem
+    certPath: /etc/hono/certs/http-adapter-cert.pem
+    trustStorePath: /etc/hono/certs/trusted-certs.pem
   metric:
     reporter:
       graphite:

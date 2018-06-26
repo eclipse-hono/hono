@@ -36,6 +36,14 @@ hono:
     port: 5672
     username: mqtt-adapter@HONO
     password: mqtt-secret
+  command:
+    name: 'Hono MQTT Adapter'
+    host: hono-dispatch-router.hono
+    port: 5673
+    amqpHostname: hono-internal
+    keyPath: /etc/hono/certs/mqtt-adapter-key.pem
+    certPath: /etc/hono/certs/mqtt-adapter-cert.pem
+    trustStorePath: /etc/hono/certs/trusted-certs.pem
   metric:
     reporter:
       graphite:

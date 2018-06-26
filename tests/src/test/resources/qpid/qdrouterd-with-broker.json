@@ -102,7 +102,7 @@
 
   ["vhost", {
       "hostname": "hono-internal",
-      "maxConnections": 6,
+      "maxConnections": 20,
       "groups": {
         "Hono": {
           "users": "Eclipse IoT;Hono;hono-messaging,Eclipse IoT;Hono;http-adapter,Eclipse IoT;Hono;mqtt-adapter",
@@ -110,7 +110,8 @@
           "maxSessions": 2,
           "maxMessageSize": 131072,
           "allowUserIdProxy": true,
-          "targets": "telemetry/*, event/*"
+          "targets": "telemetry/*, event/*, control/*",
+          "sources": "control/*"
         }
       }
   }],
