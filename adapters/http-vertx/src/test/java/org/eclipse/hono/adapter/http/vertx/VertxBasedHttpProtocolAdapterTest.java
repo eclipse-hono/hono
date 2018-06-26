@@ -27,7 +27,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.function.BiConsumer;
 
-import com.sun.javafx.binding.StringFormatter;
 import io.vertx.core.buffer.Buffer;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.adapter.http.HttpProtocolAdapterProperties;
@@ -497,7 +496,7 @@ public class VertxBasedHttpProtocolAdapterTest {
 
         mockSuccessfulAuthentication("DEFAULT_TENANT", "device_1");
 
-        httpClient.post(StringFormatter.format("/control/res/%s?hono-cmd-status=200", "wrongCommandRequestId").getValue())
+        httpClient.post(String.format("/control/res/%s?hono-cmd-status=200", "wrongCommandRequestId"))
                 .putHeader(HttpHeaders.CONTENT_TYPE, HttpUtils.CONTENT_TYPE_JSON)
                 .putHeader(HttpHeaders.AUTHORIZATION, authHeader)
                 .putHeader(HttpHeaders.ORIGIN, "hono.eclipse.org")
@@ -521,7 +520,7 @@ public class VertxBasedHttpProtocolAdapterTest {
 
         mockSuccessfulAuthentication("DEFAULT_TENANT", "device_1");
 
-        httpClient.post(StringFormatter.format("/control/res/%s?hono-cmd-status=600", syntacticallyCorrectCmdRequestId).getValue())
+        httpClient.post(String.format("/control/res/%s?hono-cmd-status=600", syntacticallyCorrectCmdRequestId))
                 .putHeader(HttpHeaders.CONTENT_TYPE, HttpUtils.CONTENT_TYPE_JSON)
                 .putHeader(HttpHeaders.AUTHORIZATION, authHeader)
                 .putHeader(HttpHeaders.ORIGIN, "hono.eclipse.org")
@@ -545,7 +544,7 @@ public class VertxBasedHttpProtocolAdapterTest {
 
         mockSuccessfulAuthentication("DEFAULT_TENANT", "device_1");
 
-        httpClient.post(StringFormatter.format("/control/res/%s", syntacticallyCorrectCmdRequestId).getValue())
+        httpClient.post(String.format("/control/res/%s", syntacticallyCorrectCmdRequestId))
                 .putHeader(HttpHeaders.CONTENT_TYPE, HttpUtils.CONTENT_TYPE_JSON)
                 .putHeader(HttpHeaders.AUTHORIZATION, authHeader)
                 .putHeader(HttpHeaders.ORIGIN, "hono.eclipse.org")
@@ -572,7 +571,7 @@ public class VertxBasedHttpProtocolAdapterTest {
         when(commandResponseSender.sendCommandResponse(anyString(), anyString(), any(Buffer.class), isNull(), any(Integer.class))).
                 thenReturn(Future.failedFuture("error"));
 
-        httpClient.post(StringFormatter.format("/control/res/%s?hono-cmd-status=200", syntacticallyCorrectCmdRequestId).getValue())
+        httpClient.post(String.format("/control/res/%s?hono-cmd-status=200", syntacticallyCorrectCmdRequestId))
                 .putHeader(HttpHeaders.CONTENT_TYPE, HttpUtils.CONTENT_TYPE_JSON)
                 .putHeader(HttpHeaders.AUTHORIZATION, authHeader)
                 .putHeader(HttpHeaders.ORIGIN, "hono.eclipse.org")
@@ -601,7 +600,7 @@ public class VertxBasedHttpProtocolAdapterTest {
         when(commandResponseSender.sendCommandResponse(anyString(), anyString(), any(Buffer.class), isNull(), any(Integer.class))).
                 thenReturn(Future.succeededFuture(remotelySettledDelivery));
 
-        httpClient.post(StringFormatter.format("/control/res/%s?hono-cmd-status=200", syntacticallyCorrectCmdRequestId).getValue())
+        httpClient.post(String.format("/control/res/%s?hono-cmd-status=200", syntacticallyCorrectCmdRequestId))
                 .putHeader(HttpHeaders.CONTENT_TYPE, HttpUtils.CONTENT_TYPE_JSON)
                 .putHeader(HttpHeaders.AUTHORIZATION, authHeader)
                 .putHeader(HttpHeaders.ORIGIN, "hono.eclipse.org")
