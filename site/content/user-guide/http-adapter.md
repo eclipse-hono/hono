@@ -47,7 +47,6 @@ NB: There is a subtle difference between the *device identifier* (*device-id*) a
   * 401 (Unauthorized): The request cannot be processed because the request does not contain valid credentials.
   * 403 (Forbidden): The request cannot be processed because the device's registration status cannot be asserted. Possible reasons for this might be:
         * The given tenant is not allowed to use this protocol adapter.
-        * The given device does not belong to the given tenant.
         * The given device is disabled.
   * 503 (Service Unavailable): The request cannot be processed because there is no consumer of telemetry data for the given tenant connected to Hono.
 
@@ -204,7 +203,6 @@ Publish some JSON data for device `4712` using an invalid QoS level:
   * 401 (Unauthorized): The request cannot be processed because the request does not contain valid credentials.
   * 403 (Forbidden): The request cannot be processed because the device's registration status cannot be asserted. Possible reasons for this might be:
         * The given tenant is not allowed to use this protocol adapter.
-        * The given device does not belong to the given tenant.
         * The given device is disabled.
   * 503 (Service Unavailable): The request cannot be processed because there is no consumer of events for the given tenant connected to Hono.
 
@@ -305,6 +303,9 @@ The adapter lets devices specify the number of seconds they will wait for a resp
 {{% note %}}
 This feature has been added in Hono 0.6. Previous versions of the adapter do not support it.
 {{% /note %}}
+
+The parameter is available for all variants `authenticated`, `unauthenticated` and `authenticated gateway`. For simplification
+only the `authenticated` URI is used below.
 
 ### Use a specific HTTP header
 
