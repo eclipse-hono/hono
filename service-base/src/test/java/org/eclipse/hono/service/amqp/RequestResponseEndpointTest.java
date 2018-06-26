@@ -208,7 +208,7 @@ public class RequestResponseEndpointTest {
 
     private RequestResponseEndpoint<ServiceConfigProperties> getEndpoint(final boolean passesFormalVerification, final Future<Void> processingTracker) {
 
-        return new RequestResponseEndpoint<ServiceConfigProperties>(vertx) {
+        final RequestResponseEndpoint<ServiceConfigProperties> endpoint = new RequestResponseEndpoint<ServiceConfigProperties>(vertx) {
 
             @Override
             public String getName() {
@@ -230,5 +230,7 @@ public class RequestResponseEndpointTest {
                 return passesFormalVerification;
             }
         };
+        endpoint.setConfiguration(new ServiceConfigProperties());
+        return endpoint;
     }
 }

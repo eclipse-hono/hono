@@ -8,6 +8,10 @@ title = "Release Notes"
 
 * The Auth Server can now be used to authenticate clients connecting to the Apache Qpid Dispatch Router which is used in the example deployment. For this purpose the Auth Server is configured as a *remote auth server* implementing [Dispatch Router's *Auth Service Plugin* mechanism](https://qpid.apache.org/releases/qpid-dispatch-1.1.0/man/qdrouterd.conf.html#_authserviceplugin). Using this mechanism it is now possible to manage all identities and authorities using the Auth Server's configuration file.
 
+### Fixes & Enhancements
+
+* The Device Registry's AMQP endpoints can now be configured with the number of credits they should flow to clients connecting to the endpoints. The default value is 100. See [Device Registry admin guide]({{< relref "admin-guide/device-registry-config.md#service-configuration" >}}) for details.
+
 ## 0.7-M1
 
 ### Fixes & Enhancements

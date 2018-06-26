@@ -50,9 +50,6 @@ import io.vertx.proton.ProtonSender;
  */
 public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties> extends AbstractAmqpEndpoint<T> {
 
-    private static final int REQUEST_RESPONSE_ENDPOINT_DEFAULT_CREDITS = 20;
-
-    private int receiverLinkCredit = REQUEST_RESPONSE_ENDPOINT_DEFAULT_CREDITS;
     private AuthorizationService authorizationService = new ClaimsBasedAuthorizationService();
 
     /**
@@ -86,29 +83,6 @@ public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties>
     protected abstract Message getAmqpReply(EventBusMessage response);
 
     /**
-     * Gets the number of message credits this endpoint grants as a receiver.
-     *
-     * @return The number of credits granted.
-     */
-    public final int getReceiverLinkCredit() {
-        return receiverLinkCredit;
-    }
-
-    /**
-     * Sets the number of message credits this endpoint grants as a receiver.
-     * They are replenished automatically after messages are processed.
-
-     * @param receiverLinkCredit The number of credits to grant.
-     * @throws IllegalArgumentException if the credit is &lt;= 0.
-     */
-    public final void setReceiverLinkCredit(final int receiverLinkCredit) {
-        if (receiverLinkCredit <= 0) {
-            throw new IllegalArgumentException("receiver link credit must be at least 1");
-        }
-        this.receiverLinkCredit = receiverLinkCredit;
-    }
-
-    /**
      * Gets the object to use for making authorization decisions.
      * 
      * @return The service.
@@ -132,8 +106,8 @@ public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties>
     /**
      * Configure and check the receiver link of the endpoint.
      * The remote link of the receiver must not demand the AT_MOST_ONCE QoS (not supported).
-     * The receiver link itself is configured with the AT_LEAST_ONCE QoS and grants the configured credits ({@link #setReceiverLinkCredit(int)})
-     * with autoAcknowledge.
+     * The receiver link itself is configured with the AT_LEAST_ONCE QoS and grants the configured credits
+     * ({@link ServiceConfigProperties#getReceiverLinkCredit()}) with autoAcknowledge.
      * <p>
      * Handling of received messages is delegated to {@link #handleMessage(ProtonConnection, ProtonReceiver, ResourceIdentifier, ProtonDelivery, Message)}.
      *
@@ -153,7 +127,7 @@ public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties>
             receiver
                     .setQoS(ProtonQoS.AT_LEAST_ONCE)
                     .setAutoAccept(true) // settle received messages if the handler succeeds
-                    .setPrefetch(receiverLinkCredit)
+                    .setPrefetch(config.getReceiverLinkCredit())
                     .handler((delivery, message) -> {
                         handleMessage(con, receiver, targetAddress, delivery, message);
                     }).closeHandler(clientDetached -> onLinkDetach(receiver))

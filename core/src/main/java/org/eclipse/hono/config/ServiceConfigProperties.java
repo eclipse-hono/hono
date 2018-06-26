@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016, 2017 Bosch Software Innovations GmbH.
+ * Copyright (c) 2016, 2018 Bosch Software Innovations GmbH.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -26,6 +26,7 @@ public class ServiceConfigProperties extends AbstractConfig {
 
 
     private static final int MIN_PAYLOAD_SIZE  = 128; // bytes
+    private static final int DEFAULT_RECEIVER_LINK_CREDITS = 100;
 
     private boolean singleTenant = false;
     private boolean networkDebugLogging = false;
@@ -36,6 +37,7 @@ public class ServiceConfigProperties extends AbstractConfig {
     private String insecurePortBindAddress = LOOPBACK_DEVICE_ADDRESS;
     private int insecurePort = Constants.PORT_UNCONFIGURED;
     private int maxPayloadSize = 2048;
+    private int receiverLinkCredit = DEFAULT_RECEIVER_LINK_CREDITS;
 
     /**
      * Gets the host name or literal IP address of the network interface that this server's secure port is
@@ -290,4 +292,30 @@ public class ServiceConfigProperties extends AbstractConfig {
         return this;
     }
 
+    /**
+     * Gets the number of AMQP message credits this service flows to a client
+     * when the client opens a sender link to this service.
+     *
+     * @return The number of credits.
+     */
+    public final int getReceiverLinkCredit() {
+        return receiverLinkCredit;
+    }
+
+    /**
+     * Sets the number of AMQP message credits this service flows to a client
+     * when the client opens a sender link to this service.
+     * <p>
+     * The credits are replenished automatically with each message being processed
+     * successfully by this service.
+
+     * @param receiverLinkCredit The number of credits.
+     * @throws IllegalArgumentException if the credit is &lt;= 0.
+     */
+    public final void setReceiverLinkCredit(final int receiverLinkCredit) {
+        if (receiverLinkCredit <= 0) {
+            throw new IllegalArgumentException("receiver link credit must be at least 1");
+        }
+        this.receiverLinkCredit = receiverLinkCredit;
+    }
 }
