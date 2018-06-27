@@ -79,7 +79,13 @@ docker secret rm \
   artemisKeyStore.p12 \
   trustStore.jks
 
-docker service rm grafana influxdb
+docker service rm grafana
+docker config rm \
+  filesystem-provisioner.yaml \
+  grafana_dashboard.json \
+  influxdb.yaml
+
+docker service rm influxdb
 docker secret rm influxdb.conf
 
 docker secret rm trusted-certs.pem

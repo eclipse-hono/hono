@@ -33,7 +33,7 @@
     <assertj-core.version>3.2.0</assertj-core.version>
     <dispatch-router.image.name>enmasseproject/qdrouterd-base:1.1.0</dispatch-router.image.name>
     <dropwizard-metrics.version>3.2.2</dropwizard-metrics.version>
-    <grafana.version>4.2.0</grafana.version>
+    <grafana.version>5.1.4</grafana.version>
     <guava.version>19.0</guava.version>
     <influxdb.version>1.2.4-alpine</influxdb.version>
     <jackson.version>2.9.5</jackson.version>

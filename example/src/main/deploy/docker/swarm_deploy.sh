@@ -17,7 +17,6 @@ CONFIG=$SCRIPTPATH/../../config
 CERTS=$CONFIG/hono-demo-certs-jar
 NS=hono
 CREATE_OPTIONS="-l project=$NS --network $NS --detach=false"
-DOCKER_IP=$(docker node inspect self --format '{{ .Status.Addr }}')
 
 echo DEPLOYING ECLIPSE HONO TO DOCKER SWARM
 
@@ -33,7 +32,14 @@ docker service create $CREATE_OPTIONS --name influxdb -p 8086:8086 \
   --secret influxdb.conf \
   --limit-memory 256m \
   influxdb:${influxdb.version} -config /run/secrets/influxdb.conf
+
+docker config create -l project=$NS filesystem-provisioner.yaml $SCRIPTPATH/grafana/provisioning/dashboards/filesystem-provisioner.yaml
+docker config create -l project=$NS grafana_dashboard.json $SCRIPTPATH/grafana/dashboard-definitions/grafana_dashboard.json
+docker config create -l project=$NS influxdb.yaml $SCRIPTPATH/grafana/provisioning/datasources/influxdb.yaml
 docker service create $CREATE_OPTIONS --name grafana -p 3000:3000 \
+  --config source=filesystem-provisioner.yaml,target=/etc/grafana/provisioning/dashboards/filesystem-provisioner.yaml \
+  --config source=grafana_dashboard.json,target=/etc/grafana/dashboard-definitions/grafana_dashboard.json \
+  --config source=influxdb.yaml,target=/etc/grafana/provisioning/datasources/influxdb.yaml \
   --limit-memory 64m \
   grafana/grafana:${grafana.version}
 echo ... done
@@ -209,12 +215,6 @@ docker service create $CREATE_OPTIONS --name hono-adapter-kura -p 1884:1883 -p 8
   --env SPRING_PROFILES_ACTIVE=prod \
   --env LOGGING_CONFIG=classpath:logback-spring.xml \
   ${docker.image.org-name}/hono-adapter-kura:${project.version}
-echo ... done
-
-echo
-echo Configuring Grafana ...
-chmod +x $SCRIPTPATH/../configure_grafana.sh
-$SCRIPTPATH/../configure_grafana.sh ${DOCKER_IP}
 echo ... done
 
 echo ECLIPSE HONO DEPLOYED TO DOCKER SWARM
