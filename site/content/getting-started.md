@@ -41,12 +41,12 @@ The first build might take several minutes because Docker will need to download 
 
 ## Starting Hono
 
-As part of the build process, a set of scripts for deploying and undeploying Hono to/from a Docker Swarm is generated in the `example/target/deploy/docker` folder.
-To deploy and start Hono simply run the following from the `example/target/deploy/docker` directory
+As part of the build process, a set of scripts for deploying and undeploying Hono to/from a Docker Swarm is generated in the `deploy/target/deploy/docker` folder.
+To deploy and start Hono simply run the following from the `deploy/target/deploy/docker` directory
 
 ~~~sh
-~/hono/example/target/deploy/docker$ chmod +x swarm_*.sh
-~/hono/example/target/deploy/docker$ ./swarm_deploy.sh
+~/hono/deploy/target/deploy/docker$ chmod +x swarm_*.sh
+~/hono/deploy/target/deploy/docker$ ./swarm_deploy.sh
 ~~~
 
 The first command makes the generated scripts executable. This needs to be done once after each build.
@@ -69,7 +69,7 @@ The second command creates and starts up Docker Swarm *services* for all compone
 You can list all services by executing
 
 ~~~sh
-~/hono/example/target/deploy/docker$ docker service ls
+~/hono/deploy/target/deploy/docker$ docker service ls
 ~~~
 
 You may notice that the list also includes two additional services called `hono-adapter-kura` and `hono-service-messaging` which are not represented in the diagram above. Together, they serve as a an example of how Hono can be extended with *custom* protocol adapters in order to add support for interacting with devices using a custom communication protocol that is not supported by Hono's standard protocol adapters out of the box. The following diagram shows how such a custom protocol adapter is integrated with Hono:
@@ -231,7 +231,7 @@ You can add more tenants to Hono by using the [Tenant management HTTP endpoints]
 The Hono instance's Docker services can be stopped and removed using the following command:
 
 ~~~sh
-~/hono/example/target/deploy/docker$ ./swarm_undeploy.sh
+~/hono/deploy/target/deploy/docker$ ./swarm_undeploy.sh
 ~~~
 
 Please refer to the [Docker Swarm documentation](https://docs.docker.com/engine/swarm/services/) for details regarding the management of individual services.
@@ -241,7 +241,7 @@ Please refer to the [Docker Swarm documentation](https://docs.docker.com/engine/
 In order to start up the instance again:
 
 ~~~sh
-~/hono/example/target/deploy/docker$ ./swarm_deploy.sh
+~/hono/deploy/target/deploy/docker$ ./swarm_deploy.sh
 ~~~
 
 ## Viewing Metrics

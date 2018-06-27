@@ -86,7 +86,7 @@ objects:
         uri: ${GIT_REPOSITORY}
         ref: ${GIT_BRANCH}
       type: Git
-      contextDir: example/src/main/deploy/openshift_s2i/containers/grafana
+      contextDir: deploy/src/main/deploy/openshift_s2i/containers/grafana
     strategy:
       type: Docker
       dockerStrategy:

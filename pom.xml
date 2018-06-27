@@ -176,6 +176,7 @@
     <module>core</module>
     <module>client</module>
     <module>demo-certs</module>
+    <module>deploy</module>
     <module>example</module>
     <module>jmeter</module>
     <module>legal</module>

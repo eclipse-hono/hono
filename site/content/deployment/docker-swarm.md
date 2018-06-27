@@ -14,11 +14,11 @@ The only requirement for this guide is a working cluster of Docker Engine nodes 
 
 ## Deployment
 
-It is very easy to deploy the containers comprising a Hono instance to an existing Docker Swarm based on a script. The remainder of this guide will use the example deploy script created in the `example/target/deploy/docker` folder during the build process for that purpose. Once the build has finished, the process of deploying Hono to a cloud based, multi-node cluster is similar to the way described in the [Getting started guide]({{< relref "getting-started.md" >}}):
+It is very easy to deploy the containers comprising a Hono instance to an existing Docker Swarm based on a script. The remainder of this guide will use the example deploy script created in the `deploy/target/deploy/docker` folder during the build process for that purpose. Once the build has finished, the process of deploying Hono to a cloud based, multi-node cluster is similar to the way described in the [Getting started guide]({{< relref "getting-started.md" >}}):
 
 ~~~sh
-~/hono/example$ export DOCKER_HOST=tcp://my-swarm.my-domain.com:2375
-~/hono/example$ target/deploy/docker/swarm_deploy.sh
+~/hono/deploy$ export DOCKER_HOST=tcp://my-swarm.my-domain.com:2375
+~/hono/deploy$ target/deploy/docker/swarm_deploy.sh
 ~~~
 
 Make sure to replace `my-swarm.my-domain.com:2375` with the host name or IP address and port of one of the Docker Swarm managers of the cluster to deploy to. When deploying to a swarm running on cloud infrastructure, direct access to the swarm manager(s) might not be possible, e.g. because the swarm runs on a private network behind a firewall. In such cases an `ssh` tunnel can usually be established with one of the swarm managers, providing a local TCP socket which can be used to transparently communicate with the Docker daemon running on the (remote) swarm manager. The Docker documentation contains details on how to set up and use such an `ssh` tunnel to [deploy an application to Docker for AWS](https://docs.docker.com/docker-for-aws/deploy/).
@@ -35,7 +35,7 @@ You will need at least Docker version 17.03.1 (corresponding to 1.13.1 in Docker
 
 ### Docker Secrets
 
-The `example/target/deploy/docker/swarm_deploy.sh` script defines infrastructure and services that comprise a full Hono *stack*.
+The `deploy/target/deploy/docker/swarm_deploy.sh` script defines infrastructure and services that comprise a full Hono *stack*.
 
 Among others, the file contains the following service definition for the Auth Server:
 
@@ -108,7 +108,7 @@ The `swarm_deploy.sh` script already creates and uses Docker secrets for providi
 
 ### Modifying the Deploy Script
 
-1. Open the default `~/hono/example/src/main/deploy/docker/swarm_deploy.sh` file in a text editor and add a `docker secret create` command for `my-permissions.json` to the already existing ones for the Auth Service. Make sure to specify the correct path to the `my-permissions.json` file you have created.
+1. Open the default `~/hono/deploy/src/main/deploy/docker/swarm_deploy.sh` file in a text editor and add a `docker secret create` command for `my-permissions.json` to the already existing ones for the Auth Service. Make sure to specify the correct path to the `my-permissions.json` file you have created.
 
        ~~~sh
        ...
@@ -142,7 +142,7 @@ The `swarm_deploy.sh` script already creates and uses Docker secrets for providi
 
 1. Save the file.
 
-1. Open the `~/hono/example/src/main/config/hono-service-auth-config.yml` file in a text editor and add the *hono.auth.svc.permissionsPath* property pointing to the custom property file:
+1. Open the `~/hono/deploy/src/main/config/hono-service-auth-config.yml` file in a text editor and add the *hono.auth.svc.permissionsPath* property pointing to the custom property file:
 
        ~~~json
        hono:
@@ -167,7 +167,7 @@ The `swarm_deploy.sh` script already creates and uses Docker secrets for providi
 1. Build the deploy script.
 
        ~~~sh
-       ~/hono/example$ mvn install
+       ~/hono/deploy$ mvn install
        ~~~
 
 
@@ -177,8 +177,8 @@ Now that the deploy script has been updated, it is time to deploy and start up t
 Make sure to replace `my-swarm.my-domain.com` with the host name or IP address of one of the Docker Swarm managers you want to deploy the stack to.
 
 ~~~sh
-~/hono/example$ export DOCKER_HOST=tcp://my-swarm.my-domain.com:2375
-~/hono/example$ target/deploy/docker/swarm_deploy.sh
+~/hono/deploy$ export DOCKER_HOST=tcp://my-swarm.my-domain.com:2375
+~/hono/deploy$ target/deploy/docker/swarm_deploy.sh
 ~~~
 
 The log output of the *Auth Server* should contain a line similar to this:

@@ -62,7 +62,7 @@ the following instructions:
 * The admin URL of your OpenShift cluster is: `https://my-cluster:8443`
 * The name of your OpenShift user is `developer`
 * All scripts and paths are relative to the folder
-  `example/src/main/deploy/openshift_s2i`
+  `deploy/src/main/deploy/openshift_s2i`
 
 ### Linux like environment
 

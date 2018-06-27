@@ -136,17 +136,17 @@ In addition to the standard client configuration properties, following propertie
 ## Device Identities File Format
 
 The Device Registry supports persisting the device identities and their registration information to a JSON file in the local file system.
-The *Getting started Guide* includes an example configuration which illustrates the file format used. The configuration file's location is `/example/src/main/config/example-device-identities.json`.
+The *Getting started Guide* includes an example configuration which illustrates the file format used. The configuration file's location is `/deploy/src/main/deploy/example-device-identities.json`.
 
 ## Credentials File Format
 
 The Device Registry supports persisting the devices' credentials to a JSON file in the local file system.
-The *Getting started Guide* includes an example configuration which illustrates the file format used. The configuration file's location is `/example/src/main/config/example-credentials.json`.
+The *Getting started Guide* includes an example configuration which illustrates the file format used. The configuration file's location is `/deploy/src/main/deploy/example-credentials.json`.
 
 ## Tenants File Format
 
 The Device Registry supports persisting tenants to a JSON file in the local file system.
-The configuration file's location is `/example/src/main/config/example-tenants.json`.
+The configuration file's location is `/deploy/src/main/deploy/example-tenants.json`.
 
 ## Configuring Gateway Devices
 
@@ -161,7 +161,7 @@ The Device Registry will then do the following:
 
 Only if all conditions are met, the Device Registry returns an assertion of the device's registration status. The protocol adapter can then forward the published data to Hono Messaging in the same way as for any device that connects directly to the adapter.
 
-The example configuration file (located at `/example/src/main/config/example-device-identities.json`) includes a device and a corresponding gateway configured in this way.
+The example configuration file (located at `/deploy/src/main/deploy/example-device-identities.json`) includes a device and a corresponding gateway configured in this way.
 
 ## Run as a Docker Swarm Service
 
@@ -220,7 +220,7 @@ Using the example from above, the following environment variable definition need
 
 ## Run using the Docker Swarm Deployment Script
 
-In most cases it is much easier to start all of Hono's components in one shot using the Docker Swarm deployment script provided in the `example/target/deploy/docker` folder.
+In most cases it is much easier to start all of Hono's components in one shot using the Docker Swarm deployment script provided in the `deploy/target/deploy/docker` folder.
 
 ## Run the Spring Boot Application
 
