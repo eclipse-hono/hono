@@ -22,7 +22,6 @@ spec:
         version: "${project.version}"
         group: ${project.groupId}
     spec:
-      serviceAccountName: useroot
       containers:
       - env:
         - name: GF_PATHS_DATA
@@ -58,8 +57,24 @@ spec:
           name: grafana-logs
         - mountPath: /var/lib/grafana
           name: grafana-data
+        - mountPath: /etc/grafana/provisioning/datasources
+          name: grafana-provisioning-datasources
+        - mountPath: /etc/grafana/provisioning/dashboards
+          name: grafana-provisioning-dashboards
+        - mountPath: /etc/grafana/dashboard-definitions
+          name: grafana-dashboard-defs
       volumes:
-      - emptyDir: {}
-        name: grafana-logs
-      - emptyDir: {}
-        name: grafana-data
+      - name: grafana-logs
+        emptyDir: {}
+      - name: grafana-data
+        emptyDir: {}
+      - name: grafana-provisioning-datasources
+        configMap:
+          name: grafana-provisioning-datasources
+      - name: grafana-provisioning-dashboards
+        configMap:
+          name: grafana-provisioning-dashboards
+      - name: grafana-dashboard-defs
+        configMap:
+          name: grafana-dashboard-defs
+

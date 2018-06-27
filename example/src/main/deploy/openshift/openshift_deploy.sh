@@ -39,8 +39,12 @@ echo
 echo "Deploying influxDB & Grafana ..."
 
 oc create secret generic influxdb-conf --from-file=$SCRIPTPATH/../influxdb.conf
-oc create -f create -f $RESOURCES/influx
-oc process -f $SCRIPTPATH/grafana-template.yml -p ADMIN_PASSWORD=admin | oc create -f -
+oc create -f $RESOURCES/influx
+
+oc create configmap grafana-provisioning-datasources --from-file=$SCRIPTPATH/grafana/provisioning/datasources
+oc create configmap grafana-provisioning-dashboards --from-file=$SCRIPTPATH/grafana/provisioning/dashboards
+oc create configmap grafana-dashboard-defs --from-file=$SCRIPTPATH/grafana/dashboard-definitions
+oc create -f $RESOURCES/grafana
 echo ... done
 
 echo "Deploying Authentication Server ..."
@@ -103,14 +107,6 @@ oc create secret generic hono-adapter-kura-conf \
   --from-file=$SCRIPTPATH/../kura-adapter.credentials \
   --from-file=application.yml=$SCRIPTPATH/hono-adapter-kura-config.yml
 oc create -f $RESOURCES/hono-adapter-kura
-echo ... done
-
-echo
-echo "Configuring Grafana with data source & dashboard ..."
-
-chmod +x $SCRIPTPATH/../configure_grafana.sh
-
-$SCRIPTPATH/../configure_grafana.sh "$(oc get route grafana --template='{{.spec.host}}')" 80
 echo ... done
 
 echo ECLIPSE HONO DEPLOYED ON OPENSHIFT

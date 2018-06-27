@@ -27,12 +27,19 @@ kubectl create namespace $NS
 echo
 echo "Deploying influxDB & Grafana ..."
 
-kubectl create serviceaccount useroot --namespace $NS
-
 kubectl create secret generic influxdb-conf \
   --from-file=$SCRIPTPATH/../influxdb.conf \
   --namespace $NS
 kubectl create -f $RESOURCES/influx --namespace $NS
+kubectl create configmap grafana-provisioning-datasources \
+  --from-file=$SCRIPTPATH/grafana/provisioning/datasources \
+  --namespace $NS
+kubectl create configmap grafana-provisioning-dashboards \
+  --from-file=$SCRIPTPATH/grafana/provisioning/dashboards \
+  --namespace $NS
+kubectl create configmap grafana-dashboard-defs \
+--from-file=$SCRIPTPATH/grafana/dashboard-definitions \
+  --namespace $NS
 kubectl create -f $RESOURCES/grafana --namespace $NS
 echo ... done
 
@@ -137,16 +144,16 @@ kubectl create secret generic hono-adapter-kura-conf \
 kubectl create -f $RESOURCES/hono-adapter-kura --namespace $NS
 echo ... done
 
-echo
-echo "Configuring Grafana with data source & dashboard ..."
-
-chmod +x $SCRIPTPATH/../configure_grafana.sh
-HOST=$(kubectl get nodes --output=jsonpath='{range .items[*]}{.status.addresses[?(@.type=="InternalIP")].address} {.spec.podCIDR} {"\n"}{end}')
-GRAFANA_PORT='NaN'
-until [ "$GRAFANA_PORT" -eq "$GRAFANA_PORT" ] 2>/dev/null; do
-  GRAFANA_PORT=$(kubectl get service grafana -n hono --output='jsonpath={.spec.ports[0].nodePort}'); sleep 1;
-done
-$SCRIPTPATH/../configure_grafana.sh $HOST $GRAFANA_PORT
-echo ... done
+#echo
+#echo "Configuring Grafana with data source & dashboard ..."
+#
+#chmod +x $SCRIPTPATH/../configure_grafana.sh
+#HOST=$(kubectl get nodes --output=jsonpath='{range .items[*]}{.status.addresses[?(@.type=="InternalIP")].address} {.spec.podCIDR} {"\n"}{end}')
+#GRAFANA_PORT='NaN'
+#until [ "$GRAFANA_PORT" -eq "$GRAFANA_PORT" ] 2>/dev/null; do
+#  GRAFANA_PORT=$(kubectl get service grafana -n hono --output='jsonpath={.spec.ports[0].nodePort}'); sleep 1;
+#done
+#$SCRIPTPATH/../configure_grafana.sh $HOST $GRAFANA_PORT
+#echo ... done
 
 echo ECLIPSE HONO DEPLOYED TO KUBERNETES
