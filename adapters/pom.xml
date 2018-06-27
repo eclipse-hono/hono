@@ -27,12 +27,12 @@
   <packaging>pom</packaging>
 
   <modules>
+    <module>amqp-vertx</module>
     <module>http-vertx-base</module>
     <module>http-vertx</module>
     <module>mqtt-vertx</module>
     <module>mqtt-vertx-base</module>
     <module>kura</module>
-    <module>amqp-vertx</module>
   </modules>
 
   <name>Hono Protocol Adapters</name>
