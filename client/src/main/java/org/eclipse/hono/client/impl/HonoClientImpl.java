@@ -397,7 +397,10 @@ public class HonoClientImpl implements HonoClient {
         }
     }
 
-    private void clearState() {
+    /**
+     * Reset all connection and link based state.
+     */
+    protected void clearState() {
 
         setConnection(null);
         offeredCapabilities = Collections.emptyList();

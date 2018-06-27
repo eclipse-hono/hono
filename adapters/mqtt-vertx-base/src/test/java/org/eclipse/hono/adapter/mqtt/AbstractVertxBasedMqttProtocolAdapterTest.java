@@ -90,7 +90,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
      * Global timeout for all test cases.
      */
     @Rule
-    public Timeout globalTimeout = new Timeout(2, TimeUnit.SECONDS);
+    public Timeout globalTimeout = new Timeout(5, TimeUnit.SECONDS);
 
     private HonoClient tenantServiceClient;
     private HonoClient credentialsServiceClient;
@@ -550,19 +550,19 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         final MqttContext context = newMqttContext(messageFromDevice, endpoint);
 
         ResourceIdentifier resourceId = ResourceIdentifier.from("telemetry", "my-tenant", "4712");
-        adapter.uploadMessage(context, resourceId, payload).setHandler(ctx.asyncAssertSuccess());
+        adapter.uploadMessage(context, resourceId, messageFromDevice).setHandler(ctx.asyncAssertSuccess());
 
         resourceId = ResourceIdentifier.from("event", "my-tenant", "4712");
-        adapter.uploadMessage(context, resourceId, payload).setHandler(ctx.asyncAssertSuccess());
+        adapter.uploadMessage(context, resourceId, messageFromDevice).setHandler(ctx.asyncAssertSuccess());
 
         resourceId = ResourceIdentifier.from("t", "my-tenant", "4712");
-        adapter.uploadMessage(context, resourceId, payload).setHandler(ctx.asyncAssertSuccess());
+        adapter.uploadMessage(context, resourceId, messageFromDevice).setHandler(ctx.asyncAssertSuccess());
 
         resourceId = ResourceIdentifier.from("e", "my-tenant", "4712");
-        adapter.uploadMessage(context, resourceId, payload).setHandler(ctx.asyncAssertSuccess());
+        adapter.uploadMessage(context, resourceId, messageFromDevice).setHandler(ctx.asyncAssertSuccess());
 
         resourceId = ResourceIdentifier.from("unknown", "my-tenant", "4712");
-        adapter.uploadMessage(context, resourceId, payload).setHandler(ctx.asyncAssertFailure());
+        adapter.uploadMessage(context, resourceId, messageFromDevice).setHandler(ctx.asyncAssertFailure());
 
     }
 
@@ -576,6 +576,8 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
     private MqttEndpoint getMqttEndpointAuthenticated(final String username, final String password) {
         final MqttEndpoint endpoint = mock(MqttEndpoint.class);
         when(endpoint.auth()).thenReturn(new MqttAuth(username, password));
+        when(endpoint.subscribeHandler(any(Handler.class))).thenReturn(endpoint);
+        when(endpoint.unsubscribeHandler(any(Handler.class))).thenReturn(endpoint);
         return endpoint;
     }
 

@@ -53,7 +53,7 @@ public final class KuraProtocolAdapter extends AbstractVertxBasedMqttProtocolAda
                 .recover(t -> {
                     LOG.debug("discarding message [topic: {}] from device: {}", ctx.message().topicName(), t.getMessage());
                     return Future.failedFuture(t);
-                }).compose(address -> uploadMessage(ctx, address, ctx.message().payload()));
+                }).compose(address -> uploadMessage(ctx, address, ctx.message()));
     }
 
     Future<ResourceIdentifier> mapTopic(final MqttContext ctx) {

@@ -14,7 +14,7 @@ package org.eclipse.hono.util;
  * Utility used to determine type of the endpoint.
  */
 public enum EndpointType {
-    TELEMETRY, EVENT, UNKNOWN;
+    TELEMETRY, EVENT, CONTROL, UNKNOWN;
 
     /**
      * Gets the endpoint type from a string value.
@@ -32,6 +32,9 @@ public enum EndpointType {
         case EventConstants.EVENT_ENDPOINT:
         case EventConstants.EVENT_ENDPOINT_SHORT:
             return EVENT;
+        case CommandConstants.COMMAND_ENDPOINT:
+        case CommandConstants.COMMAND_ENDPOINT_SHORT:
+            return CONTROL;
         default:
             return UNKNOWN;
         }
