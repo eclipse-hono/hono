@@ -75,20 +75,6 @@
         <groupId>io.vertx</groupId>
         <artifactId>vertx-core</artifactId>
         <version>${vertx.version}</version>
-        <!-- exclusions>
-          <exclusion>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-core</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-annotations</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-databind</artifactId>
-          </exclusion>
-        </exclusions-->
       </dependency>
       <dependency>
         <groupId>io.vertx</groupId>
@@ -197,12 +183,6 @@
         <artifactId>vertx-unit</artifactId>
         <version>${vertx.version}</version>
         <scope>test</scope>
-        <!-- exclusions>
-          <exclusion>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-databind</artifactId>
-          </exclusion>
-        </exclusions-->
       </dependency>
       <dependency>
         <groupId>org.mockito</groupId>
@@ -305,20 +285,6 @@
         <version>${vertx.version}</version>
         <classifier>processor</classifier>
         <scope>test</scope>
-        <!-- exclusions>
-          <exclusion>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-core</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-annotations</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-databind</artifactId>
-          </exclusion>
-        </exclusions-->
       </dependency>
       <dependency>
         <groupId>io.opentracing</groupId>
