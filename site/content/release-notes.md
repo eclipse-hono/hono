@@ -2,6 +2,12 @@
 title = "Release Notes"
 +++
 
+## 0.7 (not released yet)
+
+### Fixes & Enhancements
+* Hono deployment scripts are now available under `deploy` folder. Deployment scripts which were previously available under `example` folder were moved to `deploy`.
+
+
 ## 0.7-M2
 
 ### New Features

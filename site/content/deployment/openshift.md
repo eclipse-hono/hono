@@ -147,10 +147,10 @@ project should look something like this:
 ## Script based Deployment
 
 Now we are ready to deploy Hono. From the
-`example/target/deploy/openshift` directory, run:
+`deploy/target/deploy/openshift` directory, run:
 
 ~~~sh
-~hono/example/target/deploy/openshift$ bash ./openshift_deploy.sh
+~hono/deploy/target/deploy/openshift$ bash ./openshift_deploy.sh
 ~~~
 
 This should start all necessary Hono components, configured to connect to the
@@ -161,7 +161,7 @@ to deploy Hono to some other OpenShift cluster, you must specify the address
 of the cluster as an argument, like:
 
 ~~~sh
-~hono/example/target/deploy/openshift$ bash ./openshift_deploy.sh https://192.168.64.3:8443
+~hono/deploy/target/deploy/openshift$ bash ./openshift_deploy.sh https://192.168.64.3:8443
 ~~~
 
 In order to see the deployed components, you can launch OpenShift's web UI
@@ -187,7 +187,7 @@ The screenshots below show Hono's components deployed to OpenShift:
 There also is a script for shutting down and undeploying Hono:
 
 ~~~sh
-~hono/example/target/deploy/openshift$ bash ./openshift_undeploy.sh
+~hono/deploy/target/deploy/openshift$ bash ./openshift_undeploy.sh
 ~~~
 
 {{% note title="Be patient" %}}
@@ -203,7 +203,7 @@ proper SSL certificate. We can extract one from the OpenShift using the
 following command (from the `example` directory):
 
 ~~~sh
-~hono/example$ oc extract secret/external-certs-messaging --to=target/config/hono-demo-certs-jar/ -n hono
+~hono/deploy$ oc extract secret/external-certs-messaging --to=target/config/hono-demo-certs-jar/ -n hono
 ~~~
 
 This will create two new files with the key and certificate which we will

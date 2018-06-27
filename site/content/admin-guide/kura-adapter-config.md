@@ -185,7 +185,7 @@ Using the example from above, the following environment variable definition need
 
 ## Run using the Docker Swarm Deployment Script
 
-In most cases it is much easier to start all of Hono's components in one shot using the Docker Swarm deployment script provided in the `example/target/deploy/docker` folder.
+In most cases it is much easier to start all of Hono's components in one shot using the Docker Swarm deployment script provided in the `deploy/target/deploy/docker` folder.
 
 ## Run the Spring Boot Application
 

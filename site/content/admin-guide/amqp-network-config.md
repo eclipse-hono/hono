@@ -14,7 +14,7 @@ The north bound API is used by applications to consume telemetry data and events
 
 The Dispatch Router is part of the [Apache Qpid project](https://qpid.apache.org). Hono uses Dispatch Router by means of the [EnMasse project's Dispatch Router Docker image](https://hub.docker.com/r/enmasseproject/qdrouterd-base/) created from the Qpid project source code.
 
-The Dispatch Router can be configured by means of configuration files. Hono includes an example configuration in the `example/src/main/config/qpid` folder which is used by the example deployment scripts. Please refer to the [Dispatch Router documentation](https://qpid.apache.org/components/dispatch-router/index.html) for details regarding the configuration file format and options.
+The Dispatch Router can be configured by means of configuration files. Hono includes an example configuration in the `deploy/src/main/config/qpid` folder which is used by the example deployment scripts. Please refer to the [Dispatch Router documentation](https://qpid.apache.org/components/dispatch-router/index.html) for details regarding the configuration file format and options.
 
 ## Run Dispatch Router as a Docker Swarm Service
 
@@ -24,7 +24,7 @@ The Dispatch Router can be run as a Docker container from the command line. The 
 ~/hono$ docker secret create qdrouter-key.pem demo-certs/certs/qdrouter-key.pem
 ~/hono$ docker secret create qdrouter-cert.pem demo-certs/certs/qdrouter-cert.pem
 ~/hono$ docker secret create trusted-certs.pem demo-certs/certs/trusted-certs.pem
-~/hono$ docker secret create qdrouterd.json example/src/main/config/qpid/qdrouterd-with-broker.json
+~/hono$ docker secret create qdrouterd.json deploy/src/main/config/qpid/qdrouterd-with-broker.json
 ~/hono$ docker service create --detach --name hono-dispatch-router --network hono-net -p 15671:5671 -p 15672:5672 -p 15673:5673 \
 >  --secret qdrouter-key.pem \
 >  --secret qdrouter-cert.pem \
@@ -43,4 +43,4 @@ There are several things noteworthy about the above command to start the Dispatc
 
 ## Run Dispatch Router using the Docker Swarm Deployment Script
 
-In most cases it is much easier to start all of Hono's components in one shot using the Docker Swarm deployment script provided in the `example/target/deploy/docker` folder.
+In most cases it is much easier to start all of Hono's components in one shot using the Docker Swarm deployment script provided in the `deploy/target/deploy/docker` folder.

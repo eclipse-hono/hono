@@ -26,8 +26,7 @@
   <artifactId>hono-example</artifactId>
 
   <name>Hono Examples</name>
-  <description>A collection of example code for sending and receiving telemetry data using HonoClient.
-Also contains scripts for deploying a Hono instance to a Docker Swarm, a Kubernetes or an Openshift cluster using example configuration properties.</description>
+  <description>A collection of example code for sending and receiving telemetry data using HonoClient.</description>
   <url>https://www.eclipse.org/hono</url>
 
   <properties>
@@ -72,32 +71,13 @@ Also contains scripts for deploying a Hono instance to a Docker Swarm, a Kuberne
   </dependencies>
 
   <build>
-    <resources>
-      <resource>
-        <directory>${project.basedir}/src/main/resources</directory>
-        <includes>
-          <include>**/*</include>
-        </includes>
-        <filtering>true</filtering>
-      </resource>
-      <resource>
-        <directory>${project.basedir}/src/main/deploy</directory>
-        <targetPath>${project.build.directory}/deploy</targetPath>
-        <filtering>true</filtering>
-      </resource>
-      <resource>
-        <directory>${project.basedir}/src/main/sandbox</directory>
-        <targetPath>${project.build.directory}/sandbox</targetPath>
-        <filtering>true</filtering>
-      </resource>
-    </resources>
     <plugins>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-checkstyle-plugin</artifactId>
       </plugin>
       <plugin>
-        <!-- 
+        <!--
           Copy legal documents from "legal" module to "target/classes" folder
           so that we make sure to include legal docs in all modules.
          -->
@@ -133,114 +113,8 @@ Also contains scripts for deploying a Hono instance to a Docker Swarm, a Kuberne
         </executions>
       </plugin>
       <plugin>
-        <artifactId>maven-resources-plugin</artifactId>
-        <executions>
-          <execution>
-            <id>create_docker_config_files</id>
-            <phase>process-resources</phase>
-            <goals>
-              <goal>copy-resources</goal>
-            </goals>
-            <configuration>
-              <outputDirectory>${project.build.directory}</outputDirectory>
-              <resources>
-                <resource>
-                  <directory>${project.basedir}/src/main/config</directory>
-                  <targetPath>deploy/docker</targetPath>
-                  <filtering>true</filtering>
-                </resource>
-              </resources>
-              <filters>
-                <filter>${project.basedir}/src/main/docker-config.properties</filter>
-              </filters>
-            </configuration>
-          </execution>
-          <execution>
-            <id>create_kubernetes_config_files</id>
-            <phase>process-resources</phase>
-            <goals>
-              <goal>copy-resources</goal>
-            </goals>
-            <configuration>
-              <outputDirectory>${project.build.directory}</outputDirectory>
-              <resources>
-                <resource>
-                  <directory>${project.basedir}/src/main/config</directory>
-                  <targetPath>deploy/kubernetes</targetPath>
-                  <filtering>true</filtering>
-                </resource>
-              </resources>
-              <filters>
-                <filter>${project.basedir}/src/main/kubernetes-config.properties</filter>
-              </filters>
-            </configuration>
-          </execution>
-          <execution>
-            <id>create_openshift_config_files</id>
-            <phase>process-resources</phase>
-            <goals>
-              <goal>copy-resources</goal>
-            </goals>
-            <configuration>
-              <outputDirectory>${project.build.directory}</outputDirectory>
-              <resources>
-                <resource>
-                  <directory>${project.basedir}/src/main/config</directory>
-                  <targetPath>deploy/openshift</targetPath>
-                  <filtering>true</filtering>
-                </resource>
-              </resources>
-              <filters>
-                <filter>${project.basedir}/src/main/kubernetes-config.properties</filter>
-              </filters>
-            </configuration>
-          </execution>
-          <execution>
-            <id>create_sandbox_config_files</id>
-            <phase>process-resources</phase>
-            <goals>
-              <goal>copy-resources</goal>
-            </goals>
-            <configuration>
-              <outputDirectory>${project.build.directory}</outputDirectory>
-              <resources>
-                <resource>
-                  <directory>${project.basedir}/src/main/config/grafana</directory>
-                  <targetPath>sandbox/grafana</targetPath>
-                  <filtering>true</filtering>
-                </resource>
-              </resources>
-              <filters>
-                <filter>${project.basedir}/src/main/docker-config.properties</filter>
-              </filters>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-maven-plugin</artifactId>
-      </plugin>
-      <plugin>
-        <artifactId>maven-assembly-plugin</artifactId>
-        <executions>
-          <execution>
-            <id>eclipse-hono</id>
-            <phase>package</phase>
-            <goals>
-                <goal>single</goal>
-            </goals>
-            <configuration>
-              <attach>false</attach>
-              <descriptors>
-                <descriptor>src/main/assembly/hono.xml</descriptor>
-              </descriptors>
-              <tarLongFileMode>posix</tarLongFileMode>
-              <finalName>eclipse-hono-example-${project.version}</finalName>
-              <appendAssemblyId>false</appendAssemblyId>
-            </configuration>
-          </execution>
-        </executions>
       </plugin>
     </plugins>
   </build>

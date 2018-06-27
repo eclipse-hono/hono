@@ -213,7 +213,7 @@ objects:
     strategy: 
       type: Docker
       dockerStrategy:
-        dockerfilePath: example/src/main/deploy/openshift_s2i/containers/custom-base/Dockerfile
+        dockerfilePath: deploy/src/main/deploy/openshift_s2i/containers/custom-base/Dockerfile
         from:
           kind: ImageStreamTag
           name: fabric8-s2i-java:2.2

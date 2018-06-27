@@ -35,11 +35,11 @@ such daemon will be used and the final images will be available inside the Minik
 In order to deploy Eclipse Hono on Kubernetes, a bunch of steps are needed as explained in the next chapter. If you want to avoid to do them manually, a _one click_ deployment
 script is available in the repository.
 After having the Kubernetes cluster up and running and the `kubectl` command line tool in the PATH, the deployment can be done by running the following bash script
-(from the `example/target/deploy/kubernetes` directory)
+(from the `deploy/target/deploy/kubernetes` directory)
 
 ~~~sh
-~hono/example/target/deploy/kubernetes$ chmod +x *.sh
-~hono/example/target/deploy/kubernetes$ ./kubernetes_deploy.sh
+~hono/deploy/target/deploy/kubernetes$ chmod +x *.sh
+~hono/deploy/target/deploy/kubernetes$ ./kubernetes_deploy.sh
 ~~~
 
 In order to see the deployed components, you can launch Kubernetes' web UI in a browser by issuing:
@@ -58,7 +58,7 @@ In the following pictures an Eclipse Hono deployment on Kubernetes is running wi
 There also is a script for shutting down and undeploying Hono:
 
 ~~~sh
-~hono/example/target/deploy/kubernetes$ ./kubernetes_undeploy.sh
+~hono/deploy/target/deploy/kubernetes$ ./kubernetes_undeploy.sh
 ~~~
 
 ## Deploying individual Components
