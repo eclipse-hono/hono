@@ -37,7 +37,7 @@ public class CommandResponseTest {
     public void testFromResponseSucceeds() {
         final CommandResponse resp = CommandResponse.from(
                 encode(CORRELATION_ID, REPLY_TO_ID),
-                null,
+                null, null,
                 HttpURLConnection.HTTP_OK);
         assertNotNull(resp);
         assertThat(resp.getCorrelationId(), is(CORRELATION_ID));
@@ -52,8 +52,8 @@ public class CommandResponseTest {
     public void testFromFailsForMalformedRequestId() {
 
         assertNull(CommandResponse.from(
-                "ZZ" + encode(CORRELATION_ID, REPLY_TO_ID),
-                null,
+                "ZZanyString",
+                null, null,
                 HttpURLConnection.HTTP_OK));
     }
 
@@ -68,8 +68,8 @@ public class CommandResponseTest {
     public void testDecombineIncorrectStringReturnsNullForTooBigNumberAtBeginning() {
 
         assertNull(CommandResponse.from(
-                "FFthisIsLessThan256Characters",
-                null,
+                "FFthisIsLessThan255Characters",
+                null, null,
                 HttpURLConnection.HTTP_OK));
     }
 

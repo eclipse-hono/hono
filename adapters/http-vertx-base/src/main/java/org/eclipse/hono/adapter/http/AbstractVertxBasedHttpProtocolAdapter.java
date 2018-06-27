@@ -597,17 +597,13 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                         LOG.trace("successfully processed [{}] message for device [tenantId: {}, deviceId: {}]",
                                 endpointName, tenant, deviceId);
                         metrics.incrementProcessedHttpMessages(endpointName, tenant);
-                        if (command != null) {
-                            final CommandResponse response = CommandResponse.from(command.getRequestId(), null, HttpURLConnection.HTTP_OK);
-                            sendCommandResponse(tenant, deviceId, response);
-                        }
                     });
                     ctx.response().exceptionHandler(t -> {
                         LOG.debug("failed to send http response for [{}] message from device [tenantId: {}, deviceId: {}]",
                                 endpointName, tenant, deviceId, t);
                         if (command != null) {
                             final CommandResponse response = CommandResponse.from(command.getRequestId(),
-                                    null, HttpURLConnection.HTTP_UNAVAILABLE);
+                                    null,null, HttpURLConnection.HTTP_UNAVAILABLE);
                             sendCommandResponse(tenant, deviceId, response);
                         }
                     });
@@ -621,7 +617,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                             endpointName, tenant, deviceId, t);
                     final Command command = Command.get(ctx);
                     if (command != null) {
-                        final CommandResponse response = CommandResponse.from(command.getRequestId(),null,
+                        final CommandResponse response = CommandResponse.from(command.getRequestId(), null,null,
                                 HttpURLConnection.HTTP_UNAVAILABLE);
                         sendCommandResponse(tenant, deviceId, response);
                     }
@@ -696,21 +692,32 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                     tenantId,
                     deviceId,
                     createCommandMessageConsumer(tenantId, deviceId, receivedCommand -> {
-                        if (responseReady.isComplete()) {
-                            // the timer has already fired, release the command
-                            receivedCommand.release();
-                        } else {
-                            // put command to routing context and notify
-                            receivedCommand.put(ctx);
-                            responseReady.tryComplete();
-                        }
+                        getCommandConnection().closeCommandConsumer(tenantId, deviceId).setHandler(v -> {
+                            if (responseReady.isComplete()) {
+                                // the timer has already fired, release the command
+                                receivedCommand.release();
+                            } else {
+                                // put command to routing context and notify
+                                receivedCommand.put(ctx);
+                                responseReady.tryComplete();
+                            }
+                            if (v.failed()) {
+                                LOG.warn("Close command consumer failed", v.cause());
+                            }
+                        });
                     }),
                     remoteDetach -> {
                         LOG.debug("peer closed command receiver link [tenant-id: {}, device-id: {}]", tenantId, deviceId);
+                        // command consumer is closed by closeHandler, no explicit close necessary here
                     }).map(consumer -> {
                         consumer.flow(1);
                         ctx.vertx().setTimer(ttdMillis, ttdExpired -> {
                             responseReady.tryComplete();
+                            getCommandConnection().closeCommandConsumer(tenantId, deviceId).setHandler(v -> {
+                                if (v.failed()) {
+                                    LOG.warn("Close command consumer failed", v.cause());
+                                }
+                            });
                         });
                         return consumer;
                     });
@@ -741,7 +748,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
         LOG.debug("uploadCommandResponseMessage: [tenantId: {}, deviceId: {}, commandRequestId: {}, commandRequestStatus: {}]",
                 tenant, deviceId, commandRequestId, commandRequestStatus);
 
-        Optional.ofNullable(CommandResponse.from(commandRequestId, payload, commandRequestStatus)).map(commandResponse -> {
+        Optional.ofNullable(CommandResponse.from(commandRequestId, payload, contentType, commandRequestStatus)).map(commandResponse -> {
             // send answer to caller via sender link
             final Future<CommandResponseSender> responseSender = createCommandResponseSender(tenant, deviceId, commandResponse.getReplyToId());
 

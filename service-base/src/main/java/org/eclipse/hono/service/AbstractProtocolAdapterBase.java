@@ -537,7 +537,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
 
         return createCommandResponseSender(tenantId, deviceId, response.getReplyToId())
                 .compose(sender -> sender.sendCommandResponse(response.getCorrelationId(),
-                        null, response.getPayload(), null, response.getStatus()));
+                        response.getContentType(), response.getPayload(), null, response.getStatus()));
     }
 
     /**

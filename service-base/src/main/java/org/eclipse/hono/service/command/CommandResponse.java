@@ -13,6 +13,9 @@
 
 package org.eclipse.hono.service.command;
 
+import java.net.HttpURLConnection;
+import java.util.function.Predicate;
+
 import io.vertx.core.buffer.Buffer;
 
 /**
@@ -23,33 +26,41 @@ import io.vertx.core.buffer.Buffer;
 public final class CommandResponse {
 
     private final Buffer payload;
+    private final String contentType;
     private final int status;
     private final String replyTo;
     private final String correlationId;
 
-    private CommandResponse(final Buffer payload, final int status, final String correlationId, final String replyTo) {
+    private CommandResponse(final Buffer payload, final String contentType, final int status, final String correlationId, final String replyTo) {
         this.payload = payload;
+        this.contentType = contentType;
         this.status = status;
         this.replyTo = replyTo;
         this.correlationId = correlationId;
     }
+
+    private static final Predicate<Integer> responseStatusCodeValidator = statusCode ->
+            (statusCode >= 200 && statusCode < 300) ||
+                    (statusCode >= 400 && statusCode < 500) ||
+                    (statusCode == HttpURLConnection.HTTP_UNAVAILABLE);
 
     /**
      * Creates a response for a request ID.
      * 
      * @param requestId The request ID of the command that this is the response for.
      * @param payload The payload of the response.
+     * @param contentType The contentType of the response. Maybe {@code null} since it is not required.
      * @param status The HTTP status code indicating the outcome of the command.
      * @return The response or {@code null} if the request ID could not be parsed, the status is {@code null} or if the
      *         status code is &lt; 200 or &gt;= 600.
      */
-    public static CommandResponse from(final String requestId, final Buffer payload, final Integer status) {
+    public static CommandResponse from(final String requestId, final Buffer payload, final String contentType, final Integer status) {
 
         if (requestId == null) {
             return null;
         } else if (status == null) {
             return null;
-        } else if (status < 200 || status >= 600) {
+        } else if (!responseStatusCodeValidator.test(status)) {
             return null;
         } else if (requestId.length() < 2) {
             return null;
@@ -58,6 +69,7 @@ public final class CommandResponse {
                 final int lengthStringOne = Integer.parseInt(requestId.substring(0, 2), 16);
                 return new CommandResponse(
                         payload,
+                        contentType,
                         status,
                         requestId.substring(2, 2 + lengthStringOne), // correlation ID
                         requestId.substring(2 + lengthStringOne)); // reply-to ID
@@ -92,6 +104,15 @@ public final class CommandResponse {
      */
     public Buffer getPayload() {
         return payload;
+    }
+
+    /**
+     * Gets the contentType of the response message.
+     *
+     * @return The contentType or {@code null} if the contentType was not set for the response.
+     */
+    public String getContentType() {
+        return contentType;
     }
 
     /**

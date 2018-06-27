@@ -480,6 +480,8 @@ public class VertxBasedHttpProtocolAdapterTest {
                     consumer.accept(mock(ProtonDelivery.class), pendingCommand);
                     return Future.succeededFuture(commandConsumer);
                 });
+        when(commandConnection.closeCommandConsumer(anyString(), anyString())).
+                thenAnswer(invocation -> Future.succeededFuture());
 
         // WHEN the device posts a telemetry message including a TTD
         httpClient.post("/telemetry?hono-ttd=3")
