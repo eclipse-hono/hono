@@ -2,8 +2,8 @@ package org.eclipse.hono.adapter.amqp;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
@@ -21,6 +21,7 @@ import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.TenantClient;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
+import org.eclipse.hono.service.auth.device.Device;
 import org.eclipse.hono.service.command.CommandConnection;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.RegistrationConstants;
@@ -182,7 +183,8 @@ public class VertxBasedAmqpProtocolAdapterTest {
         when(delivery.remotelySettled()).thenReturn(true);
 
         final ResourceIdentifier resource = ResourceIdentifier.from(TelemetryConstants.TELEMETRY_ENDPOINT, TEST_TENANT_ID, TEST_DEVICE);
-        adapter.uploadMessage(new AmqpContext(delivery, getFakeMessage(), resource));
+        final Device authenticatedDevice = getAuthenticatedDevice();
+        adapter.uploadMessage(new AmqpContext(delivery, getFakeMessage(), resource, authenticatedDevice));
 
         // THEN the adapter sends the message and does not wait for response from the peer.
         verify(telemetrySender).send(any(Message.class));
@@ -207,7 +209,9 @@ public class VertxBasedAmqpProtocolAdapterTest {
         final ProtonDelivery delivery = mock(ProtonDelivery.class);
         when(delivery.remotelySettled()).thenReturn(false);
         final ResourceIdentifier resource = ResourceIdentifier.from(TelemetryConstants.TELEMETRY_ENDPOINT, TEST_TENANT_ID, TEST_DEVICE);
-        adapter.uploadMessage(new AmqpContext(delivery, getFakeMessage(), resource));
+
+        final Device authenticatedDevice = null;
+        adapter.uploadMessage(new AmqpContext(delivery, getFakeMessage(), resource, authenticatedDevice));
 
         // THEN the sender sends the message and waits for the outcome from the downstream peer
         verify(telemetrySender).sendAndWaitForOutcome(any(Message.class));
@@ -232,7 +236,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
         final ProtonDelivery delivery = mock(ProtonDelivery.class);
         when(delivery.remotelySettled()).thenReturn(false);
         final ResourceIdentifier resource = ResourceIdentifier.from(TelemetryConstants.TELEMETRY_ENDPOINT, TEST_TENANT_ID, TEST_DEVICE);
-        final AmqpContext context = spy(new AmqpContext(delivery, getFakeMessage(), resource));
+        final AmqpContext context = spy(new AmqpContext(delivery, getFakeMessage(), resource, null));
         adapter.uploadMessage(context);
 
         // THEN the adapter does not send the message (regardless of the delivery mode).
@@ -262,6 +266,10 @@ public class VertxBasedAmqpProtocolAdapterTest {
         final MessageSender sender = mock(MessageSender.class);
         when(messagingServiceClient.getOrCreateTelemetrySender(anyString())).thenReturn(Future.succeededFuture(sender));
         return sender;
+    }
+
+    private Device getAuthenticatedDevice() {
+        return new Device(TEST_TENANT_ID, TEST_DEVICE);
     }
 
     /**

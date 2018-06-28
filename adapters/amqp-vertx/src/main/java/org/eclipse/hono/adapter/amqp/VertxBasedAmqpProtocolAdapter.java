@@ -2,6 +2,7 @@ package org.eclipse.hono.adapter.amqp;
 
 import java.net.HttpURLConnection;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.qpid.proton.amqp.transport.AmqpError;
 import org.apache.qpid.proton.message.Message;
@@ -10,6 +11,9 @@ import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
+import org.eclipse.hono.service.auth.device.Device;
+import org.eclipse.hono.service.auth.device.HonoClientBasedAuthProvider;
+import org.eclipse.hono.service.auth.device.UsernamePasswordAuthProvider;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EndpointType;
 import org.eclipse.hono.util.EventConstants;
@@ -30,6 +34,7 @@ import io.vertx.proton.ProtonReceiver;
 import io.vertx.proton.ProtonServer;
 import io.vertx.proton.ProtonServerOptions;
 import io.vertx.proton.ProtonSession;
+import io.vertx.proton.sasl.ProtonSaslAuthenticatorFactory;
 
 /**
  * A Vert.x based Hono protocol adapter for publishing messages to Hono's Telemetry and Event APIs using AMQP.
@@ -42,14 +47,31 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
     private static final int DEFAULT_MAX_SESSION_WINDOW = 100 * DEFAULT_MAX_FRAME_SIZE;
 
     /**
-     * The default insecure port that this adapter binds to.
+     * The default insecure port that this adapter binds to for unencrypted connections.
      */
     private static final int DEFAULT_INSECURE_PORT = 4040;
+
+    /**
+     * The default secure port that this adapter binds to for TLS encrypted secure connections.
+     */
+    private static final int DEFAULT_SECURE_PORT = 4041;
+
+    /**
+     * The AMQP server instance that maps to a secure port.
+     */
+    private ProtonServer secureServer;
 
     /**
      * The AMQP server instance that listens for incoming request from an insecure port.
      */
     private ProtonServer insecureServer;
+
+    private AtomicBoolean secureListening = new AtomicBoolean(false);
+
+    /**
+     * This adapter's custom SASL authenticator factory for handling the authentication process for devices.
+     */
+    private ProtonSaslAuthenticatorFactory authenticatorFactory;
 
     // -----------------------------------------< AbstractProtocolAdapterBase >---
     /**
@@ -65,26 +87,26 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
      */
     @Override
     protected void doStart(final Future<Void> startFuture) {
-        final ProtonServerOptions options = new ProtonServerOptions();
-        options.setHost(getConfig().getInsecurePortBindAddress());
-        options.setPort(determineInsecurePort());
-        // options.setHeartbeat(6000); // set local-idle-timeout expiry
-        // TODO: communicate max-frame size
-        options.setMaxFrameSize(DEFAULT_MAX_FRAME_SIZE);
         checkPortConfiguration()
-                .compose(check -> {
-                    // TODO: check that adapter is connected to all its services.
-                    return bindServer(insecureServer, options);
-                }).compose(server -> {
-                    insecureServer = server;
+                .compose(success -> {
+                    if (authenticatorFactory == null && getConfig().isAuthenticationRequired()) {
+                        final HonoClientBasedAuthProvider usernamePasswordAuthProvider = new UsernamePasswordAuthProvider(getCredentialsServiceClient(), getConfig());
+                        authenticatorFactory = new AmqpAdapterSaslAuthenticatorFactory(usernamePasswordAuthProvider, getConfig());
+                    }
+                    return Future.succeededFuture();
+                }).compose(succcess -> {
+                    return CompositeFuture.all(bindSecureServer(), bindInsecureServer());
+                }).compose(success -> {
                     startFuture.complete();
                 }, startFuture);
 
     }
 
+
     @Override
     protected void doStop(final Future<Void> stopFuture) {
-        stopInsecureServer().compose(stopped -> stopFuture.complete(), stopFuture);
+        CompositeFuture.all(stopSecureServer(), stopInsecureServer())
+        .compose(ok -> stopFuture.complete(), stopFuture);
     }
 
     private Future<Void> stopInsecureServer() {
@@ -98,24 +120,91 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         return result;
     }
 
-    private Future<ProtonServer> bindServer(final ProtonServer server, final ProtonServerOptions options) {
-        final Future<ProtonServer> result = Future.future();
-        final ProtonServer createdServer = (server == null) ? ProtonServer.create(this.vertx, options) : server;
+    private Future<Void> stopSecureServer() {
+        final Future<Void> result = Future.future();
+        if (secureServer != null) {
 
-        createdServer.connectHandler(this::connectionRequestHandler).listen(res -> {
-            if (res.succeeded()) {
-                LOG.info("AMQP server running on [{}:{}]", getConfig().getInsecurePortBindAddress(),
-                        getConfig().getInsecurePort());
-                result.complete(res.result());
-            } else {
-                result.fail(res.cause());
-            }
-        });
+            LOG.info("Shutting down secure server");
+            secureListening.compareAndSet(Boolean.TRUE, Boolean.FALSE);
+            secureServer.close(result.completer());
+
+        } else {
+            result.complete();
+        }
         return result;
     }
 
+    private Future<Void> bindInsecureServer() {
+        if (isInsecurePortEnabled()) {
+            final ProtonServerOptions options =
+                    new ProtonServerOptions()
+                    .setHost(getConfig().getInsecurePortBindAddress())
+                    .setPort(determineInsecurePort());
+
+            final Future<Void> result = Future.future();
+            insecureServer = createServer(insecureServer, options);
+            insecureServer.connectHandler(this::connectionRequestHandler).listen(ar -> {
+                if (ar.succeeded()) {
+                    LOG.info("insecure amqp server listening on [{}:{}]", getConfig().getInsecurePortBindAddress(), getActualInsecurePort());
+                    result.complete();
+                } else {
+                    result.fail(ar.cause());
+                }
+            });
+            return result;
+        } else {
+            return Future.succeededFuture();
+        }
+    }
+
+    private Future<Void> bindSecureServer() {
+        if (isSecurePortEnabled()) {
+            final ProtonServerOptions options =
+                    new ProtonServerOptions()
+                    .setHost(getConfig().getBindAddress())
+                    .setPort(determineSecurePort())
+                    .setMaxFrameSize(DEFAULT_MAX_FRAME_SIZE);
+            addTlsKeyCertOptions(options);
+            addTlsTrustOptions(options);
+
+            final Future<Void> result = Future.future();
+            secureServer = createServer(secureServer, options);
+            secureServer.connectHandler(this::connectionRequestHandler).listen(ar -> {
+                if (ar.succeeded()) {
+                    secureListening.getAndSet(Boolean.TRUE);
+                    LOG.info("secure amqp server listening on {}:{}", getConfig().getBindAddress(), getActualPort());
+                    result.complete();
+                } else {
+                    LOG.error("cannot bind to secure port", ar.cause());
+                    result.fail(ar.cause());
+                }
+            });
+            return result;
+        } else {
+            return Future.succeededFuture();
+        }
+    }
+
+    private ProtonServer createServer(final ProtonServer server, final ProtonServerOptions options) {
+        final ProtonServer createdServer = (server != null) ? server : ProtonServer.create(this.vertx, options);
+        if (getConfig().isAuthenticationRequired()) {
+            createdServer.saslAuthenticatorFactory(authenticatorFactory);
+        } else {
+            // use proton's default authenticator -> SASL ANONYMOUS
+            createdServer.saslAuthenticatorFactory(null);
+        }
+        return createdServer;
+    }
+
     private void connectionRequestHandler(final ProtonConnection connRequest) {
-        LOG.info("Received connection request from client");
+
+        LOG.debug("Received connection request from client");
+
+        if (secureListening.get()) {
+            connRequest.setContainer(String.format("%s-%s:%d", "secure-server", getBindAddress(), getActualPort()));
+        } else {
+            connRequest.setContainer(String.format("%s-%s:%d", "insecure-server", getInsecurePortBindAddress(), getActualInsecurePort()));
+        }
         connRequest.disconnectHandler(conn -> {
             LOG.error("Connection disconnected " + conn.getCondition().getDescription());
         });
@@ -159,6 +248,20 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
     }
 
     /**
+     * Sets the SASL authenticator factory to use for handling the authentication process of devices.
+     * <p>
+     * If not explicitly set using this method (and the adapter is enable for device authentication) a 
+     * {@code AmqpAdapterSaslAuthenticatorFactory}, configured to use an auth provider based on a username
+     * and password, will be created during startup.
+     * 
+     * @param authFactory The SASL authenticator factory.
+     * @throws NullPointerException if the authFactory is {@code null}.
+     */
+    protected void setSaslAuthenticatorFactory(final ProtonSaslAuthenticatorFactory authFactory) {
+        this.authenticatorFactory = Objects.requireNonNull(authFactory, "authFactory must not be null");
+    }
+
+    /**
      * This method is called when an AMQP BEGIN frame is received from a remote client. This method sets the incoming
      * capacity in its BEGIN Frame to be communicated to the remote peer
      *
@@ -199,7 +302,8 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                 LOG.debug("Established receiver link at [address: {}]",
                         receiver.getRemoteTarget().getAddress());
                 receiver.handler((delivery, message) -> {
-                    uploadMessage(new AmqpContext(delivery, message, resource));
+                    final Device authenticatedDevice = conn.attachments().get(AmqpAdapterConstants.KEY_CLIENT_DEVICE, Device.class);
+                    uploadMessage(new AmqpContext(delivery, message, resource, authenticatedDevice));
                 });
                 HonoProtonHelper.setCloseHandler(receiver, remoteDetach -> onLinkDetach(receiver));
                 receiver.open();
@@ -216,7 +320,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             formalCheck.complete();
         } else {
             formalCheck.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
-                    String.format("Content-Type: %s does not match payload", contentType)));
+                    String.format("Content-Type: [%s] does not match payload", contentType)));
         }
         formalCheck.compose(ok -> {
             switch (EndpointType.fromString(context.getEndpoint())) {
@@ -245,7 +349,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             final String endpointName) {
 
         final Future<JsonObject> tokenFuture = getRegistrationAssertion(context.getTenantId(), context.getDeviceId(),
-                null);
+                context.getAuthenticatedDevice());
         final Future<TenantObject> tenantConfigFuture = getTenantConfiguration(context.getTenantId());
 
         CompositeFuture.all(tenantConfigFuture, tokenFuture, senderFuture).compose(ok -> {
@@ -352,7 +456,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
      */
     @Override
     public int getPortDefaultValue() {
-        return Constants.PORT_AMQPS;
+        return DEFAULT_SECURE_PORT;
     }
 
     /**
@@ -368,8 +472,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
      */
     @Override
     protected int getActualPort() {
-        // TODO not-yet-implemented
-        return 0;
+        return secureServer != null ? secureServer.actualPort() : Constants.PORT_UNCONFIGURED;
     }
 
     /**
