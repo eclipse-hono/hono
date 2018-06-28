@@ -49,17 +49,18 @@ import io.vertx.proton.ProtonDelivery;
  */
 public class HonoSender extends AbstractClient {
 
-    private static final int    MAX_RECONNECT_ATTEMPTS = 3;
+    private static final int MAX_RECONNECT_ATTEMPTS = 3;
     private static final Logger LOGGER = LoggerFactory.getLogger(HonoSender.class);
+    private static final int SAMPLE_SEND_TIMEOUT = 1; // seconds
 
-    private final AtomicBoolean     running = new AtomicBoolean(false);
+    private final AtomicBoolean running = new AtomicBoolean(false);
     private final HonoSenderSampler sampler;
-    private final HonoClient        honoClient;
-    private final byte[]            payload;
+    private final HonoClient honoClient;
+    private final byte[] payload;
 
     private HonoClient registrationHonoClient;
-    private String     assertion;
-    private Instant    assertionExpiration;
+    private String assertion;
+    private Instant assertionExpiration;
 
     /**
      * Creates a new sender for configuration properties.
@@ -215,10 +216,10 @@ public class HonoSender extends AbstractClient {
         // start sample
         sampleResult.sampleStart();
         final Future<MessageSender> senderFuture = getSender(endpoint, tenant);
-        senderFuture.compose(ok -> getRegistrationAssertion(tenant, deviceId)).map(token -> {
-
-            final Future<ProtonDelivery> deliveryTracker = Future.future();
-            final Future<Void> creditTracker = Future.future();
+        final Future<String> regAssertionFuture = senderFuture.compose(ok -> getRegistrationAssertion(tenant, deviceId));
+        final Future<ProtonDelivery> deliveryTracker = Future.future();
+        final Future<Void> creditTracker = Future.future();
+        regAssertionFuture.map(token -> {
 
             final Map<String, Long> properties = new HashMap<>();
             if (sampler.isSetSenderTime()) {
@@ -267,7 +268,7 @@ public class HonoSender extends AbstractClient {
         });
 
         try {
-            tracker.get(1, TimeUnit.SECONDS);
+            tracker.get(SAMPLE_SEND_TIMEOUT, TimeUnit.SECONDS);
             LOGGER.debug("{}: sent message for device [{}]", sampler.getThreadName(), deviceId);
         } catch (InterruptedException | CancellationException | ExecutionException | TimeoutException e) {
             sampleResult.setSuccessful(false);
@@ -276,9 +277,18 @@ public class HonoSender extends AbstractClient {
                 sampleResult.setResponseMessage(sie.getMessage());
                 sampleResult.setResponseCode(String.valueOf(sie.getErrorCode()));
             } else {
-                sampleResult.setResponseMessage(e.getCause() != null ? e.getCause().getMessage() : e.getClass().getSimpleName());
+                String uncompletedFutureHint = "";
+                if (e.getCause() instanceof TimeoutException) {
+                    uncompletedFutureHint = !senderFuture.isComplete() ? " - timeout waiting for sender link"
+                            : !regAssertionFuture.isComplete() ? "- timeout waiting for registration assertion"
+                                    : !creditTracker.isComplete() ? " - timeout waiting for credits"
+                                            : !deliveryTracker.isComplete() ? " - timeout waiting for message delivery"
+                                                    : "";
+                }
+                sampleResult.setResponseMessage((e.getCause() != null ? e.getCause().getMessage() : e.getClass().getSimpleName()) + uncompletedFutureHint);
                 sampleResult.setResponseCode(String.valueOf(HttpURLConnection.HTTP_INTERNAL_ERROR));
             }
+            LOGGER.debug("{}: error sending message for device [{}]: {}", sampler.getThreadName(), deviceId, sampleResult.getResponseMessage());
             if (e instanceof InterruptedException) {
                 Thread.currentThread().interrupt();
             }
