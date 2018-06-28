@@ -88,6 +88,7 @@ public final class Constants {
      * attachments.
      */
     public static final String KEY_CLIENT_PRINCIPAL = "CLIENT_PRINCIPAL";
+
     /**
      * The key that the (surrogate) ID of a connection is stored under in a {@code ProtonConnection}'s
      * and/or {@code ProtonLink}'s attachments.

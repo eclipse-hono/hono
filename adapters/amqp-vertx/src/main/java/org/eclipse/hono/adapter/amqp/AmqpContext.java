@@ -8,6 +8,7 @@ import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.service.auth.device.Device;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
@@ -25,11 +26,13 @@ public class AmqpContext {
     private final ProtonDelivery delivery;
     private final Message message;
     private final ResourceIdentifier resource;
+    private final Device authenticatedDevice;
 
-    AmqpContext(final ProtonDelivery delivery, final Message message, final ResourceIdentifier resource) {
+    AmqpContext(final ProtonDelivery delivery, final Message message, final ResourceIdentifier resource, final Device authenticatedDevice) {
         this.delivery = delivery;
         this.message = message;
         this.resource = resource;
+        this.authenticatedDevice = authenticatedDevice;
     }
 
     /**
@@ -95,6 +98,14 @@ public class AmqpContext {
         return resource;
     }
 
+    /**
+     * Gets the authenticated device created after a successful SASL authentication.
+     *
+     * @return The authenticated device or {@code null} for an unauthenticated device.
+     */
+    Device getAuthenticatedDevice() {
+        return authenticatedDevice;
+    }
     /**
      * Sets an AMQP 1.0 message delivery state to either RELEASED in the case of a <em>ServerErrorException</em> or REJECTED in the
      * case of a <em>ClientErrorException</em>. In the REJECTED case, the supplied exception will provide

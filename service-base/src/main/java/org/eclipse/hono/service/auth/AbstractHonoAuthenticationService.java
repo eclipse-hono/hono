@@ -12,8 +12,6 @@
 package org.eclipse.hono.service.auth;
 
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Objects;
 
 import javax.security.auth.login.CredentialException;
@@ -26,7 +24,6 @@ import org.slf4j.LoggerFactory;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
-import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
 
 /**
@@ -69,7 +66,7 @@ public abstract class AbstractHonoAuthenticationService<T> extends BaseAuthentic
             final byte[] saslResponse = authRequest.getBinary(AuthenticationConstants.FIELD_SASL_RESPONSE, new byte[0]);
 
             try {
-                final String[] fields = readFields(saslResponse);
+                final String[] fields = AuthenticationConstants.parseSaslResponse(saslResponse);
                 final String authzid = fields[0];
                 final String authcid = fields[1];
                 final String pwd = fields[2];
@@ -89,33 +86,6 @@ public abstract class AbstractHonoAuthenticationService<T> extends BaseAuthentic
 
         } else {
             resultHandler.handle(Future.failedFuture("unsupported SASL mechanism"));
-        }
-    }
-
-    private String[] readFields(final byte[] buffer) throws CredentialException {
-        final List<String> fields = new ArrayList<>();
-        int pos = 0;
-        Buffer b = Buffer.buffer();
-        while (pos < buffer.length) {
-            final byte val = buffer[pos];
-            if (val == 0x00) {
-                fields.add(b.toString(StandardCharsets.UTF_8));
-                b = Buffer.buffer();
-            } else {
-                b.appendByte(val);
-            }
-            pos++;
-        }
-        fields.add(b.toString(StandardCharsets.UTF_8));
-
-        if (fields.size() != 3) {
-            throw new CredentialException("client provided malformed PLAIN response");
-        } else if (fields.get(1) == null || fields.get(1).length() == 0) {
-            throw new CredentialException("PLAIN response must contain an authentication ID");
-        } else if(fields.get(2) == null || fields.get(2).length() == 0) {
-            throw new CredentialException("PLAIN response must contain a password");
-        } else {
-            return fields.toArray(new String[3]);
         }
     }
 

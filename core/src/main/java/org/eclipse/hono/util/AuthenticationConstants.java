@@ -11,10 +11,16 @@
  */
 package org.eclipse.hono.util;
 
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import javax.security.auth.login.CredentialException;
+
+import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
 
 /**
@@ -128,6 +134,44 @@ public final class AuthenticationConstants
             return matcher.group(1); // return CN field value
         } else {
             return null;
+        }
+    }
+
+    /**
+     * Parses the SASL response and extracts the authzid, authcid and pwd from the response.
+     * <p>
+     * <a href="https://tools.ietf.org/html/rfc4616">The specification for the SASL PLAIN mechanism</a> mandates the format
+     * of the credentials to be of the form: {@code [authzid] UTF8NUL authcid UTF8NUL passwd}.
+     * 
+     * @param saslResponse The SASL response to parse.
+     * @return A String array containing the elements in the SASL response.
+     * 
+     * @throws CredentialException If one the elements (authzid, authcid and pwd) is missing from the SASL response.
+     */
+    public static String[] parseSaslResponse(final byte[] saslResponse) throws CredentialException {
+        final List<String> fields = new ArrayList<>();
+        int pos = 0;
+        Buffer b = Buffer.buffer();
+        while (pos < saslResponse.length) {
+            final byte val = saslResponse[pos];
+            if (val == 0x00) {
+                fields.add(b.toString(StandardCharsets.UTF_8));
+                b = Buffer.buffer();
+            } else {
+                b.appendByte(val);
+            }
+            pos++;
+        }
+        fields.add(b.toString(StandardCharsets.UTF_8));
+
+        if (fields.size() != 3) {
+            throw new CredentialException("client provided malformed PLAIN response");
+        } else if (fields.get(1) == null || fields.get(1).length() == 0) {
+            throw new CredentialException("PLAIN response must contain an authentication ID");
+        } else if(fields.get(2) == null || fields.get(2).length() == 0) {
+            throw new CredentialException("PLAIN response must contain a password");
+        } else {
+            return fields.toArray(new String[3]);
         }
     }
 }
