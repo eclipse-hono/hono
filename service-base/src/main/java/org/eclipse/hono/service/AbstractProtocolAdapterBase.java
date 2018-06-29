@@ -885,11 +885,13 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     }
 
     /**
-     * Check if the payload a protocol adapter received matches the indicated Content-Type.
+     * Checks if the payload conveyed in the body of a request is consistent with the indicated content type.
      *
-     * @param contentType The Content-Type of the payload, as received by the protocol adapter.
-     * @param payload The payload received by the protocol adapter.
-     * @return {@code true} if the payload matches the Content-Type, {@code false} otherwise.
+     * @param contentType The indicated content type.
+     * @param payload The payload from the request body.
+     * @return {@code true} if the payload is empty and the content type is
+     *         {@link EventConstants#CONTENT_TYPE_EMPTY_NOTIFICATION} or else
+     *         if the content type is not {@link EventConstants#CONTENT_TYPE_EMPTY_NOTIFICATION}.
      */
     protected boolean isPayloadOfIndicatedType(final Buffer payload, final String contentType) {
         if (payload == null || payload.length() == 0) {
