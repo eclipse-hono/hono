@@ -22,6 +22,7 @@ import org.eclipse.hono.tracing.TracingHelper;
 
 import io.opentracing.Span;
 import io.opentracing.contrib.vertx.ext.web.WebSpanDecorator;
+import io.opentracing.log.Fields;
 import io.opentracing.tag.Tags;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.http.HttpServerResponse;
@@ -66,7 +67,7 @@ public class ComponentMetaDataDecorator extends WebSpanDecorator.StandardTags {
     @Override
     public void onReroute(final HttpServerRequest request, final Span span) {
         final Map<String, String> logs = new HashMap<>(3);
-        logs.put(TracingHelper.LOG_FIELD_EVENT, "reroute");
+        logs.put(Fields.EVENT, "reroute");
         logs.put(Tags.HTTP_URL.getKey(), request.absoluteURI());
         logs.put(Tags.HTTP_METHOD.getKey(), request.method().toString());
         span.log(logs);

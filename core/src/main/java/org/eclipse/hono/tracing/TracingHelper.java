@@ -19,6 +19,7 @@ import java.util.Map;
 import java.util.Objects;
 
 import io.opentracing.Span;
+import io.opentracing.log.Fields;
 import io.opentracing.tag.BooleanTag;
 import io.opentracing.tag.StringTag;
 import io.opentracing.tag.Tags;
@@ -29,19 +30,6 @@ import io.opentracing.tag.Tags;
  *
  */
 public final class TracingHelper {
-
-    /**
-     * The name of the field to use for adding an exception to an OpenTracing span's log.
-     */
-    public static final String LOG_FIELD_ERROR_OBJECT = "error.object";
-    /**
-     * The name of the field to use for adding an event to an OpenTracing span's log.
-     */
-    public static final String LOG_FIELD_EVENT = "event";
-    /**
-     * The name of the field to use for adding an explanatory message to an OpenTracing span's log.
-     */
-    public static final String LOG_FIELD_MESSAGE = "message";
 
     /**
      * An OpenTracing tag indicating if a client (device) has been authenticated.
@@ -84,9 +72,9 @@ public final class TracingHelper {
      */
     public static Map<String, Object> getErrorLogItems(final Throwable error) {
         final Map<String, Object> log = new HashMap<>(2);
-        log.put(LOG_FIELD_EVENT, Tags.ERROR.getKey());
+        log.put(Fields.EVENT, Tags.ERROR.getKey());
         if (error != null) {
-            log.put(LOG_FIELD_ERROR_OBJECT, error);
+            log.put(Fields.ERROR_OBJECT, error);
         }
         return log;
     }
@@ -103,7 +91,7 @@ public final class TracingHelper {
     public static void logError(final Span span, final String message) {
         if (span != null) {
             Objects.requireNonNull(message);
-            logError(span, Collections.singletonMap(LOG_FIELD_MESSAGE, message));
+            logError(span, Collections.singletonMap(Fields.MESSAGE, message));
         }
     }
 
@@ -115,16 +103,18 @@ public final class TracingHelper {
      * @param span The span to finish.
      * @param items The items to log on the span. Note that this method will
      *               also log an item using {@code event} as key and {@code error}
-     *               as the value.
+     *               as the value if the items do not contain such an entry already.
      */
     public static void logError(final Span span, final Map<String, ?> items) {
         if (span != null) {
             Tags.ERROR.set(span, Boolean.TRUE);
             if (items != null) {
                 span.log(items);
-                span.log(Tags.ERROR.getKey());
+                final Object event = items.get(Fields.EVENT);
+                if (event == null || !Tags.ERROR.getKey().equals(event)) {
+                    span.log(Tags.ERROR.getKey());
+                }
             }
         }
     }
-
 }
