@@ -227,10 +227,10 @@ public abstract class HonoAuthHandler implements AuthHandler {
                 ctx.response()
                   .putHeader("WWW-Authenticate", header);
               }
-              ctx.fail(401);
+              ctx.fail(exception);
               return;
             default:
-              ctx.fail(statusCode);
+              ctx.fail(exception);
               return;
           }
         }

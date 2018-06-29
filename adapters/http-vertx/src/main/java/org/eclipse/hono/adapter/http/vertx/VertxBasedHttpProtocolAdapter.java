@@ -20,6 +20,7 @@ import org.eclipse.hono.adapter.http.AbstractVertxBasedHttpProtocolAdapter;
 import org.eclipse.hono.adapter.http.HonoBasicAuthHandler;
 import org.eclipse.hono.adapter.http.HttpProtocolAdapterProperties;
 import org.eclipse.hono.adapter.http.X509AuthHandler;
+import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.service.auth.device.Device;
 import org.eclipse.hono.service.auth.device.HonoChainAuthHandler;
 import org.eclipse.hono.service.auth.device.HonoClientBasedAuthProvider;
@@ -206,24 +207,26 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
             // require auth for POSTing command response messages
             router.route(HttpMethod.POST, "/control/res/*").handler(authHandler);
 
-            // route for posting command response messages using tenant and device ID determined as part of
+            // route for POSTing command response messages using tenant and device ID determined as part of
             // device authentication
-            router.route(HttpMethod.POST, String.format("/control/res/:%s",
-                    PARAM_COMMAND_REQUEST_ID)).handler(this::handlePostCommandResponse);
+            router.route(HttpMethod.POST, String.format("/control/res/:%s", PARAM_COMMAND_REQUEST_ID))
+                .handler(this::handlePostCommandResponse);
 
             // require auth for PUTing command response message
             router.route(HttpMethod.PUT, "/control/res/*").handler(authHandler);
             // assert that authenticated device's tenant matches tenant from path variables
-            router.route(HttpMethod.PUT, String.format("/control/res/:%s/:%s/:%s",
-                    PARAM_TENANT, PARAM_DEVICE_ID, PARAM_COMMAND_REQUEST_ID))
-                    .handler(this::assertTenant);
+            router.route(
+                    HttpMethod.PUT,
+                    String.format("/control/res/:%s/:%s/:%s", PARAM_TENANT, PARAM_DEVICE_ID, PARAM_COMMAND_REQUEST_ID))
+               .handler(this::assertTenant);
         }
 
         // route for uploading command response message
-        router.route(HttpMethod.PUT, String.format("/control/res/:%s/:%s/:%s",
-                PARAM_TENANT, PARAM_DEVICE_ID, PARAM_COMMAND_REQUEST_ID))
-                .handler(ctx -> uploadCommandResponseMessage(ctx, getTenantParam(ctx), getDeviceIdParam(ctx),
-                        getCommandRequestIdParam(ctx), getCommandRequestStatusParam(ctx)));
+        router.route(
+                HttpMethod.PUT,
+                String.format("/control/res/:%s/:%s/:%s", PARAM_TENANT, PARAM_DEVICE_ID, PARAM_COMMAND_REQUEST_ID))
+            .handler(ctx -> uploadCommandResponseMessage(ctx, getTenantParam(ctx), getDeviceIdParam(ctx),
+                    getCommandRequestIdParam(ctx), getCommandRequestStatusParam(ctx)));
     }
 
 
@@ -286,7 +289,8 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
             if (device.getTenantId().equals(getTenantParam(ctx))) {
                 ctx.next();
             } else {
-                ctx.fail(HttpURLConnection.HTTP_FORBIDDEN);
+                ctx.fail(new ClientErrorException(HttpURLConnection.HTTP_FORBIDDEN,
+                        "not authorized to upload data for device from other tenant"));
             }
         } else {
             handle401(ctx);

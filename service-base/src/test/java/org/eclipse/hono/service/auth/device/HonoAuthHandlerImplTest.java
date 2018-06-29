@@ -17,10 +17,12 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
+import java.net.HttpURLConnection;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 
 import org.eclipse.hono.client.ServerErrorException;
+import org.eclipse.hono.client.ServiceInvocationException;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -73,10 +75,10 @@ public class HonoAuthHandlerImplTest {
 
         // GIVEN an auth handler configured with an auth provider that
         // fails with a 503 error code during authentication
-        final int EXPECTED_ERROR_CODE = 503;
+        final ServiceInvocationException error = new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE);
         doAnswer(invocation -> {
             final Handler handler = invocation.getArgument(1);
-            handler.handle(Future.failedFuture(new ServerErrorException(EXPECTED_ERROR_CODE)));
+            handler.handle(Future.failedFuture(error));
             return null;
         }).when(authProvider).authenticate(any(JsonObject.class), any(Handler.class));
 
@@ -96,7 +98,7 @@ public class HonoAuthHandlerImplTest {
         authHandler.handle(ctx);
 
         // THEN the request context is failed with the 503 error code
-        verify(ctx).fail(EXPECTED_ERROR_CODE);
+        verify(ctx).fail(error);
     }
 
 }

@@ -24,6 +24,10 @@ import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.RoutingContext;
+
+import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.client.ServerErrorException;
+import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.util.Constants;
 
 /**
@@ -36,16 +40,18 @@ public final class HttpUtils {
      * The <em>application/json</em> content type.
      */
     public static final String CONTENT_TYPE_JSON = "application/json";
-
     /**
      * The <em>application/json; charset=utf-8</em> content type.
      */
     public static final String CONTENT_TYPE_JSON_UFT8 = "application/json; charset=utf-8";
-
     /**
      * The <em>application/json; charset=utf-8</em> content type.
      */
     public static final String CONTENT_TYPE_OCTET_STREAM = "application/octet-stream";
+    /**
+     * The <em>text/plain; charset=utf-8</em> content type.
+     */
+    public static final String CONTENT_TYPE_TEXT_UFT8 = "text/plain; charset=utf-8";
 
     private HttpUtils() {
         // prevent instantiation
@@ -59,7 +65,10 @@ public final class HttpUtils {
      * @throws NullPointerException if routing context is {@code null}.
      */
     public static void badRequest(final RoutingContext ctx, final String msg) {
-        failWithStatus(ctx, HttpURLConnection.HTTP_BAD_REQUEST, null, msg);
+        failWithHeaders(
+                ctx,
+                new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, msg),
+                null);
     }
 
     /**
@@ -70,7 +79,10 @@ public final class HttpUtils {
      * @throws NullPointerException if routing context is {@code null}.
      */
     public static void internalServerError(final RoutingContext ctx, final String msg) {
-        failWithStatus(ctx, HttpURLConnection.HTTP_INTERNAL_ERROR, null, msg);
+        failWithHeaders(
+                ctx, 
+                new ServerErrorException(HttpURLConnection.HTTP_INTERNAL_ERROR, msg),
+                null);
     }
 
     /**
@@ -98,7 +110,10 @@ public final class HttpUtils {
 
         final Map<CharSequence, CharSequence> headers = new HashMap<>(1);
         headers.put(HttpHeaders.RETRY_AFTER, String.valueOf(retryAfterSeconds));
-        failWithStatus(ctx, HttpURLConnection.HTTP_UNAVAILABLE, headers, detail);
+        failWithHeaders(
+                ctx,
+                new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, detail),
+                headers);
     }
 
     /**
@@ -114,7 +129,10 @@ public final class HttpUtils {
         Objects.requireNonNull(authenticateHeaderValue);
         final Map<CharSequence, CharSequence> headers = new HashMap<>();
         headers.put("WWW-Authenticate", authenticateHeaderValue);
-        failWithStatus(ctx, HttpURLConnection.HTTP_UNAUTHORIZED, headers, null);
+        failWithHeaders(
+                ctx,
+                new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED),
+                headers);
     }
 
     /**
@@ -125,6 +143,7 @@ public final class HttpUtils {
      * @param headers HTTP headers to set on the response (may be {@code null}).
      * @param detail The message to write to the response's body (may be {@code null}).
      * @throws NullPointerException if routing context is {@code null}.
+     * @deprecated Use {@link #failWithHeaders(RoutingContext, ServiceInvocationException, Map)} instead.
      */
     public static void failWithStatus(
             final RoutingContext ctx,
@@ -132,16 +151,44 @@ public final class HttpUtils {
             final Map<CharSequence, CharSequence> headers,
             final String detail) {
 
+        failWithHeaders(ctx, new ServiceInvocationException(status, detail), headers);
+    }
+
+    /**
+     * Fails a request with a given error.
+     *
+     * @param ctx The request context to fail.
+     * @param error The reason for the failure.
+     * @throws NullPointerException if request context or error are {@code null}.
+     */
+    public static void fail(
+            final RoutingContext ctx,
+            final ServiceInvocationException error) {
+
+        failWithHeaders(ctx, error, null);
+    }
+
+    /**
+     * Fails a request with a given error.
+     *
+     * @param ctx The request context to fail.
+     * @param error The reason for the failure.
+     * @param headers HTTP headers to set on the response (may be {@code null}).
+     * @throws NullPointerException if request context or error are {@code null}.
+     */
+    public static void failWithHeaders(
+            final RoutingContext ctx,
+            final ServiceInvocationException error,
+            final Map<CharSequence, CharSequence> headers) {
+
         Objects.requireNonNull(ctx);
+        Objects.requireNonNull(error);
         if (headers != null) {
             for (final Entry<CharSequence, CharSequence> header : headers.entrySet()) {
                 ctx.response().putHeader(header.getKey(), header.getValue());
             }
         }
-        if (detail != null) {
-            ctx.response().setStatusMessage(detail);
-        }
-        ctx.fail(status);
+        ctx.fail(error);
     }
 
     /**

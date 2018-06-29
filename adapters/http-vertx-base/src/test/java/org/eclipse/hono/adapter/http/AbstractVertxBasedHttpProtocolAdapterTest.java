@@ -12,6 +12,9 @@
 
 package org.eclipse.hono.adapter.http;
 
+import static org.hamcrest.CoreMatchers.instanceOf;
+import static org.hamcrest.CoreMatchers.is;
+import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
@@ -32,6 +35,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
 import org.junit.runner.RunWith;
+import org.mockito.ArgumentCaptor;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
@@ -214,7 +218,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         adapter.uploadTelemetryMessage(ctx, "my-tenant", "the-device", payload, "application/text");
 
         // THEN the device gets a 403
-        verify(ctx).fail(HttpURLConnection.HTTP_FORBIDDEN);
+        assertContextFailedWithClientError(ctx, HttpURLConnection.HTTP_FORBIDDEN);
         // and the message has not been forwarded downstream
         verify(sender, never()).send(any(Message.class));
     }
@@ -271,7 +275,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         outcome.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "malformed message"));
 
         // THEN the device gets a 400
-        verify(ctx).fail(HttpURLConnection.HTTP_BAD_REQUEST);
+        assertContextFailedWithClientError(ctx, HttpURLConnection.HTTP_BAD_REQUEST);
     }
 
     /**
@@ -392,4 +396,10 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         when(messagingClient.getOrCreateTelemetrySender(anyString())).thenReturn(Future.succeededFuture(sender));
     }
 
+    private static void assertContextFailedWithClientError(final RoutingContext ctx, final int statusCode) {
+        final ArgumentCaptor<Throwable> exceptionCaptor = ArgumentCaptor.forClass(Throwable.class);
+        verify(ctx).fail(exceptionCaptor.capture());
+        assertThat(exceptionCaptor.getValue(), instanceOf(ClientErrorException.class));
+        assertThat(((ClientErrorException) exceptionCaptor.getValue()).getErrorCode(), is(statusCode));
+    }
 }

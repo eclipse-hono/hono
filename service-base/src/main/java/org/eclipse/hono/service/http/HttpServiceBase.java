@@ -164,8 +164,9 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
 
         final Router router = Router.router(vertx);
         LOG.info("limiting size of inbound request body to {} bytes", getConfig().getMaxPayloadSize());
-        router.route().handler(BodyHandler.create().setBodyLimit(getConfig().getMaxPayloadSize())
-                .setUploadsDirectory(DEFAULT_UPLOADS_DIRECTORY));
+        router.route()
+            .handler(BodyHandler.create().setBodyLimit(getConfig().getMaxPayloadSize()).setUploadsDirectory(DEFAULT_UPLOADS_DIRECTORY))
+            .failureHandler(new DefaultFailureHandler());
 
         return router;
     }
