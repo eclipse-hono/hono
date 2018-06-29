@@ -30,6 +30,7 @@ import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
 import org.eclipse.hono.service.auth.device.Device;
 import org.eclipse.hono.service.command.CommandResponseSender;
+import org.eclipse.hono.service.http.DefaultFailureHandler;
 import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CommandConstants;
@@ -52,7 +53,6 @@ import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.buffer.Buffer;
-import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.http.HttpServerOptions;
 import io.vertx.core.json.JsonObject;
@@ -177,7 +177,9 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                     return Future.failedFuture("no router configured");
                 } else {
                     addRoutes(router);
-                    addTracingHandler(router);
+                    addTracingHandler(router, -5);
+                    // add default handler for failed routes
+                    router.route().order(-1).failureHandler(new DefaultFailureHandler());
                     return CompositeFuture.all(bindSecureHttpServer(router), bindInsecureHttpServer(router));
                 }
             }).compose(s -> {
@@ -194,9 +196,10 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
     /**
      * Adds a handler for adding an OpenTracing Span to the routing context.
      * 
-     * @param router The router.
+     * @param router The router to add the handler to.
+     * @param position The position to add the tracing handler at.
      */
-    private void addTracingHandler(final Router router) {
+    private void addTracingHandler(final Router router, final int position) {
         final Map<String, String> customTags = new HashMap<>();
         customTags.put(Tags.COMPONENT.getKey(), getTypeName());
         addCustomTags(customTags);
@@ -204,7 +207,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
         decorators.add(new ComponentMetaDataDecorator(customTags));
         addCustomSpanDecorators(decorators);
         final TracingHandler tracingHandler = new TracingHandler(tracer, decorators);
-        router.route().order(-1).handler(tracingHandler).failureHandler(tracingHandler);
+        router.route().order(position).handler(tracingHandler).failureHandler(tracingHandler);
     }
 
     /**
@@ -446,7 +449,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
     }
 
     /**
-     * Uploads the body of an HTTP request as a telemetry message to the Hono server.
+     * Uploads the body of an HTTP request as a telemetry message to Hono.
      * <p>
      * This method simply invokes {@link #uploadTelemetryMessage(RoutingContext, String, String, Buffer, String)}
      * with objects retrieved from the routing context.
@@ -467,15 +470,12 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
     }
 
     /**
-     * Uploads a telemetry message to the Hono server.
+     * Uploads a telemetry message to Hono.
      * <p>
-     * Depending on the outcome of the attempt to upload the message to Hono, the HTTP response's code is
-     * set as follows:
-     * <ul>
-     * <li>202 (Accepted) - if the telemetry message has been sent to the Hono server.</li>
-     * <li>400 (Bad Request) - if the message payload is {@code null} or empty or if the content type is {@code null}.</li>
-     * <li>503 (Service Unavailable) - if the message could not be sent to the Hono server, e.g. due to lack of connection or credit.</li>
-     * </ul>
+     * This method always sends a response to the device. The status code will be set
+     * as specified in the
+     * <a href="https://www.eclipse.org/hono/user-guide/http-adapter/#publish-telemetry-data-authenticated-device">
+     * HTTP adapter User Guide</a>.
      *
      * @param ctx The context to retrieve cookies and the HTTP response from.
      * @param tenant The tenant of the device that has produced the data.
@@ -498,7 +498,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
     }
 
     /**
-     * Uploads the body of an HTTP request as an event message to the Hono server.
+     * Uploads the body of an HTTP request as an event message to Hono.
      * <p>
      * This method simply invokes {@link #uploadEventMessage(RoutingContext, String, String, Buffer, String)}
      * with objects retrieved from the routing context.
@@ -519,15 +519,12 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
     }
 
     /**
-     * Uploads an event message to the Hono server.
+     * Uploads an event message to Hono.
      * <p>
-     * Depending on the outcome of the attempt to upload the message to Hono, the HTTP response's code is
-     * set as follows:
-     * <ul>
-     * <li>202 (Accepted) - if the telemetry message has been sent to the Hono server.</li>
-     * <li>400 (Bad Request) - if the message payload is {@code null} or empty or if the content type is {@code null}.</li>
-     * <li>503 (Service Unavailable) - if the message could not be sent to the Hono server, e.g. due to lack of connection or credit.</li>
-     * </ul>
+     * This method always sends a response to the device. The status code will be set
+     * as specified in the
+     * <a href="https://www.eclipse.org/hono/user-guide/http-adapter/#publish-an-event-authenticated-device">
+     * HTTP adapter User Guide</a>.
      *
      * @param ctx The context to retrieve cookies and the HTTP response from.
      * @param tenant The tenant of the device that has produced the data.
@@ -553,13 +550,11 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
             final Buffer payload, final String contentType, final Future<MessageSender> senderTracker, final String endpointName) {
 
         if (!isPayloadOfIndicatedType(payload, contentType)) {
-            HttpUtils.badRequest(ctx, String.format("Content-Type %s does not match with the payload", contentType));
+            HttpUtils.badRequest(ctx, String.format("content type [%s] does not match payload", contentType));
         } else {
             final Integer qosHeader = getQoSLevel(ctx.request().getHeader(Constants.HEADER_QOS_LEVEL));
-            if (contentType == null) {
-                HttpUtils.badRequest(ctx, String.format("%s header is missing", HttpHeaders.CONTENT_TYPE));
-            } else if (qosHeader != null && qosHeader == HEADER_QOS_INVALID) {
-                HttpUtils.badRequest(ctx, "Bad QoS Header Value");
+            if (qosHeader != null && qosHeader == HEADER_QOS_INVALID) {
+                HttpUtils.badRequest(ctx, "unsupported QoS-Level header value");
             } else {
 
                 final Device authenticatedDevice = getAuthenticatedDevice(ctx);
@@ -642,10 +637,10 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
 
                     if (ClientErrorException.class.isInstance(t)) {
                         final ClientErrorException e = (ClientErrorException) t;
-                        ctx.fail(e.getErrorCode());
+                        ctx.fail(e);
                     } else {
                         metrics.incrementUndeliverableHttpMessages(endpointName, tenant);
-                        HttpUtils.serviceUnavailable(ctx, 2);
+                        HttpUtils.serviceUnavailable(ctx, 2, "temporarily unavailable");
                     }
                     return Future.failedFuture(t);
                 });
@@ -816,10 +811,10 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                             commandResponseSender.sendCommandResponse(correlationId, contentType, payload, null, statusCode)
                     ).map(delivery -> {
                         if (delivery.remotelySettled()) {
-                            LOG.debug("Command response [command-request-id: {}] acknowledged to sender.", commandRequestId);
+                            LOG.debug("command response [command-request-id: {}] acknowledged to sender.", commandRequestId);
                             ctx.response().setStatusCode(HttpURLConnection.HTTP_ACCEPTED);
                         } else {
-                            LOG.debug("Command response [command-request-id: {}] failed - not remotely settled by sender.", commandRequestId);
+                            LOG.debug("command response [command-request-id: {}] failed - not remotely settled by sender.", commandRequestId);
                             ctx.response().setStatusCode(HttpURLConnection.HTTP_UNAVAILABLE);
                         }
                         responseSender.result().close(v -> {
@@ -827,7 +822,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                         ctx.response().end();
                         return delivery;
                     }).otherwise(t -> {
-                        LOG.debug("Command response [command-request-id: {}] failed", commandRequestId, t);
+                        LOG.debug("command response [command-request-id: {}] failed", commandRequestId, t);
                         Optional.ofNullable(responseSender.result()).map(r -> {
                             r.close(v -> {
                             });
@@ -840,17 +835,14 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
 
                     return commandRequestIdParts;
                 }).orElseGet(() -> {
-                    HttpUtils.badRequest(ctx, String.format("Cannot process command response message - command-request-id %s invalid", commandRequestId));
+                    HttpUtils.badRequest(ctx, String.format("command-request-id [%s] invalid", commandRequestId));
                     return null;
                 })
         ).orElseGet(() -> {
-            HttpUtils.badRequest(ctx, String.format("Cannot process command response message - status code %s invalid", commandRequestStatus));
+            HttpUtils.badRequest(ctx, String.format("status code [%s] invalid", commandRequestStatus));
             return null;
         });
-
     }
-
-
 
     private static Integer getQoSLevel(final String qosValue) {
         try {
