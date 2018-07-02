@@ -224,7 +224,7 @@ public abstract class AbstractHonoClient {
      * Closes this client's sender and receiver links to Hono.
      * 
      * @param closeHandler the handler to be notified about the outcome.
-     * @param freeLinkResources if true, link resources will be freed after the links are closed
+     * @param freeLinkResources if true, link resources will be freed after the links are closed.
      * @throws NullPointerException if the given handler is {@code null}.
      */
     protected final void closeLinks(final Handler<AsyncResult<Void>> closeHandler, final boolean freeLinkResources) {
