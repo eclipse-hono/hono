@@ -22,6 +22,7 @@ import io.vertx.core.buffer.Buffer;
 import javax.security.auth.x500.X500Principal;
 
 import org.eclipse.hono.cache.CacheProvider;
+import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.client.TenantClient;
 import org.eclipse.hono.config.ClientConfigProperties;
@@ -174,6 +175,8 @@ public class TenantClientImpl extends AbstractRequestResponseClient<TenantResult
             switch(tenantResult.getStatus()) {
                 case HttpURLConnection.HTTP_OK:
                     return tenantResult.getPayload();
+                case HttpURLConnection.HTTP_NOT_FOUND:
+                    throw new ClientErrorException(tenantResult.getStatus(), "no such tenant");
                 default:
                     throw StatusCodeMapper.from(tenantResult);
             }
@@ -197,6 +200,8 @@ public class TenantClientImpl extends AbstractRequestResponseClient<TenantResult
             switch(tenantResult.getStatus()) {
                 case HttpURLConnection.HTTP_OK:
                     return tenantResult.getPayload();
+                case HttpURLConnection.HTTP_NOT_FOUND:
+                    throw new ClientErrorException(tenantResult.getStatus(), "no such tenant");
                 default:
                     throw StatusCodeMapper.from(tenantResult);
             }

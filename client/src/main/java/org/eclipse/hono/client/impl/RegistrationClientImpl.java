@@ -22,6 +22,7 @@ import java.util.UUID;
 
 import io.vertx.core.buffer.Buffer;
 import org.eclipse.hono.cache.CacheProvider;
+import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.config.ClientConfigProperties;
@@ -301,6 +302,12 @@ public class RegistrationClientImpl extends AbstractRequestResponseClient<Regist
             switch(result.getStatus()) {
             case HttpURLConnection.HTTP_OK:
                 return result.getPayload();
+            case HttpURLConnection.HTTP_NOT_FOUND:
+                throw new ClientErrorException(result.getStatus(), "device unknown or disabled");
+            case HttpURLConnection.HTTP_FORBIDDEN:
+                throw new ClientErrorException(
+                        result.getStatus(),
+                        "gateway unknown, disabled or not authorized to act on behalf of device");
             default:
                 throw StatusCodeMapper.from(result);
             }

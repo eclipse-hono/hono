@@ -18,6 +18,8 @@ import java.util.Objects;
 import java.util.UUID;
 
 import io.vertx.core.buffer.Buffer;
+
+import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.CredentialsClient;
 import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.config.ClientConfigProperties;
@@ -161,6 +163,8 @@ public class CredentialsClientImpl extends AbstractRequestResponseClient<Credent
             switch(response.getStatus()) {
             case HttpURLConnection.HTTP_OK:
                 return response.getPayload();
+            case HttpURLConnection.HTTP_NOT_FOUND:
+                throw new ClientErrorException(response.getStatus(), "no such credentials");
             default:
                 throw StatusCodeMapper.from(response);
             }
