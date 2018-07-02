@@ -32,6 +32,7 @@ import org.eclipse.hono.service.AbstractServiceBase;
 import org.eclipse.hono.service.auth.AuthorizationService;
 import org.eclipse.hono.service.auth.ClaimsBasedAuthorizationService;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.LinkHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -501,6 +502,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
                     con.getRemoteContainer());
             receiver.setCondition(ProtonHelper.condition(AmqpError.NOT_ALLOWED, "anonymous relay not supported"));
             receiver.close();
+            LinkHelper.freeLinkResources(receiver);
         } else {
             LOG.debug("client [container: {}] wants to open a link [address: {}] for sending messages",
                     con.getRemoteContainer(), receiver.getRemoteTarget());
@@ -520,6 +522,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
                             LOG.debug("subject [{}] is not authorized to WRITE to [{}]", user.getName(), targetResource);
                             receiver.setCondition(ProtonHelper.condition(AmqpError.UNAUTHORIZED_ACCESS.toString(), "unauthorized"));
                             receiver.close();
+                            LinkHelper.freeLinkResources(receiver);
                         }
                     });
                 }
@@ -527,6 +530,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
                 LOG.debug("client has provided invalid resource identifier as target address", e);
                 receiver.setCondition(ProtonHelper.condition(AmqpError.NOT_FOUND, "no such address"));
                 receiver.close();
+                LinkHelper.freeLinkResources(receiver);
             }
         }
     }
@@ -557,6 +561,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
                         LOG.debug("subject [{}] is not authorized to READ from [{}]", user.getName(), targetResource);
                         sender.setCondition(ProtonHelper.condition(AmqpError.UNAUTHORIZED_ACCESS.toString(), "unauthorized"));
                         sender.close();
+                        LinkHelper.freeLinkResources(sender);
                     }
                 });
             }
@@ -564,6 +569,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
             LOG.debug("client has provided invalid resource identifier as target address", e);
             sender.setCondition(ProtonHelper.condition(AmqpError.NOT_FOUND, "no such address"));
             sender.close();
+            LinkHelper.freeLinkResources(sender);
         }
     }
 

@@ -25,6 +25,7 @@ import org.eclipse.hono.service.auth.ClaimsBasedAuthorizationService;
 import org.eclipse.hono.util.AmqpErrorException;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventBusMessage;
+import org.eclipse.hono.util.LinkHelper;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -121,6 +122,7 @@ public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties>
             logger.debug("client wants to use unsupported AT MOST ONCE delivery mode for endpoint [{}], closing link ...", getName());
             receiver.setCondition(ProtonHelper.condition(AmqpError.PRECONDITION_FAILED.toString(), "endpoint requires AT_LEAST_ONCE QoS"));
             receiver.close();
+            LinkHelper.freeLinkResources(receiver);
         } else {
 
             logger.debug("establishing link for receiving messages from client [{}]", receiver.getName());
@@ -284,6 +286,7 @@ public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties>
                 if (senderClosed.succeeded()) {
                     senderClosed.result().close();
                 }
+                LinkHelper.freeLinkResources(sender);
             });
             sender.open();
         } else {
@@ -291,6 +294,7 @@ public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties>
             sender.setCondition(ProtonHelper.condition(AmqpError.INVALID_FIELD,
                     String.format("reply-to address must have the following format %s/<tenant>/<reply-address>", getName())));
             sender.close();
+            LinkHelper.freeLinkResources(sender);
         }
     }
 

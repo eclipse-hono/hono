@@ -17,6 +17,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.LinkHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -79,6 +80,7 @@ public class UpstreamReceiverImpl implements UpstreamReceiver {
             link.setCondition(error);
         }
         link.close();
+        LinkHelper.freeLinkResources(link);
     }
 
     @Override

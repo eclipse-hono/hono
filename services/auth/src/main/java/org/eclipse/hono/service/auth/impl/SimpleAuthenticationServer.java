@@ -28,6 +28,7 @@ import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.amqp.AmqpEndpoint;
 import org.eclipse.hono.service.amqp.AmqpServiceBase;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.LinkHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -153,6 +154,7 @@ public final class SimpleAuthenticationServer extends AmqpServiceBase<ServiceCon
     @Override
     protected void handleReceiverOpen(final ProtonConnection con, final ProtonReceiver receiver) {
         receiver.setCondition(ProtonHelper.condition(AmqpError.NOT_ALLOWED, "cannot write to node")).close();
+        LinkHelper.freeLinkResources(receiver);
     }
 
     /**

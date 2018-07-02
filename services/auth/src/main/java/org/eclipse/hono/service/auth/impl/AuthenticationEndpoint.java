@@ -18,6 +18,7 @@ import org.eclipse.hono.auth.HonoUser;
 import org.eclipse.hono.service.amqp.AbstractAmqpEndpoint;
 import org.eclipse.hono.util.AuthenticationConstants;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.LinkHelper;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -71,6 +72,7 @@ public class AuthenticationEndpoint extends AbstractAmqpEndpoint<AuthenticationS
                     logger.debug("failed to transfer auth token to client");
                 }
                 sender.close();
+                LinkHelper.freeLinkResources(sender);
             });
         } else {
             onLinkDetach(sender, ProtonHelper.condition(AmqpError.INVALID_FIELD, "supports AT_LEAST_ONCE delivery mode only"));

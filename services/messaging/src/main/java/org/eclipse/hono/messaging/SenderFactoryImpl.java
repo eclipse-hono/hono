@@ -16,6 +16,7 @@ package org.eclipse.hono.messaging;
 import java.util.Objects;
 
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.LinkHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -133,6 +134,7 @@ public class SenderFactoryImpl implements SenderFactory {
                         connection.getRemoteContainer(), closed.cause().getMessage());
             }
             sender.close();
+            LinkHelper.freeLinkResources(sender);
             if (closeHook != null) {
                 closeHook.handle(address.getResourceId());
             }
