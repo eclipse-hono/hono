@@ -55,7 +55,7 @@ public final class LinkHelper {
                     throw new IllegalArgumentException("unknown ProtonLink class: " + protonLink.getClass());
                 }
                 link.free();
-                LOG.debug("freed link resources");
+                LOG.trace("freed link resources");
             } catch (final Exception e) {
                 LOG.error("error freeing link resources", e);
             }
