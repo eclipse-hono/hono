@@ -13,7 +13,6 @@
 package org.eclipse.hono.service.http;
 
 import java.net.HttpURLConnection;
-import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -231,11 +230,8 @@ public final class HttpUtils {
     public static void setResponseBody(final HttpServerResponse response, final JsonObject body) {
         Objects.requireNonNull(response);
         if (body != null) {
-            final Buffer buffer = Buffer.buffer();
-            buffer.appendBytes(body.encodePrettily().getBytes(StandardCharsets.UTF_8));
-            response.putHeader(HttpHeaders.CONTENT_TYPE, CONTENT_TYPE_JSON_UFT8)
-                    .putHeader(HttpHeaders.CONTENT_LENGTH, String.valueOf(buffer.length()))
-                    .write(buffer);
+            response.putHeader(HttpHeaders.CONTENT_TYPE, CONTENT_TYPE_JSON_UFT8);
+            setResponseBody(response, body.toBuffer());
         }
     }
 
