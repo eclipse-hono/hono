@@ -31,6 +31,7 @@ import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.tracing.TracingHelper;
+import org.eclipse.hono.util.LinkHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -210,11 +211,23 @@ public abstract class AbstractHonoClient {
 
     /**
      * Closes this client's sender and receiver links to Hono.
-     * 
+     * Link resources will be freed after the links are closed.
+     *
      * @param closeHandler the handler to be notified about the outcome.
      * @throws NullPointerException if the given handler is {@code null}.
      */
     protected final void closeLinks(final Handler<AsyncResult<Void>> closeHandler) {
+        closeLinks(closeHandler, true);
+    }
+
+    /**
+     * Closes this client's sender and receiver links to Hono.
+     * 
+     * @param closeHandler the handler to be notified about the outcome.
+     * @param freeLinkResources if true, link resources will be freed after the links are closed.
+     * @throws NullPointerException if the given handler is {@code null}.
+     */
+    protected final void closeLinks(final Handler<AsyncResult<Void>> closeHandler, final boolean freeLinkResources) {
 
         Objects.requireNonNull(closeHandler);
 
@@ -233,9 +246,15 @@ public abstract class AbstractHonoClient {
                 receiver.closeHandler(closeAttempt -> {
                     LOG.debug("closed message consumer for [{}]", receiver.getSource().getAddress());
                     receiverCloseHandler.complete(receiver);
+                    if (freeLinkResources) {
+                        LinkHelper.freeLinkResources(receiver);
+                    }
                 }).close();
             } else {
                 receiverCloseHandler.complete();
+                if (receiver != null && freeLinkResources) {
+                    LinkHelper.freeLinkResources(receiver);
+                }
             }
         }, receiverCloseHandler);
 
@@ -245,9 +264,15 @@ public abstract class AbstractHonoClient {
                 sender.closeHandler(closeAttempt -> {
                     LOG.debug("closed message sender for [{}]", sender.getTarget().getAddress());
                     senderCloseHandler.complete(sender);
+                    if (freeLinkResources) {
+                        LinkHelper.freeLinkResources(sender);
+                    }
                 }).close();
             } else {
                 senderCloseHandler.complete();
+                if (sender != null && freeLinkResources) {
+                    LinkHelper.freeLinkResources(sender);
+                }
             }
         });
     }
