@@ -12,19 +12,14 @@
  *******************************************************************************/
 package org.eclipse.hono.service.auth.device;
 
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.util.Arrays;
-import java.util.Base64;
-import java.util.Objects;
-
+import io.vertx.core.json.JsonObject;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
+import org.eclipse.hono.util.EncodedPassword;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.vertx.core.json.JsonObject;
+import java.util.Objects;
 
 /**
  * Helper class to parse username/password credentials provided by devices during authentication into
@@ -107,36 +102,16 @@ public class UsernamePasswordCredentials extends AbstractDeviceCredentials {
      * Matches the credentials against a given secret.
      * <p>
      * The secret is expected to be of type <em>hashed-password</em> as defined by
-     * <a href="https://www.eclipse.org/hono/api/Credentials-API/">Hono's Credentials API</a>.
+     * <a href="https://www.eclipse.org/hono/api/credentials-api/#hashed-password">Hono's Credentials API</a>.
      * 
      * @param candidateSecret The secret to match against.
      * @return {@code true} if the credentials match the secret.
      */
     @Override
     public boolean matchesCredentials(final JsonObject candidateSecret) {
-
         try {
-            final String pwdHash = candidateSecret.getString(CredentialsConstants.FIELD_SECRETS_PWD_HASH);
-            if (pwdHash == null) {
-                LOG.debug("candidate hashed-password secret does not contain a pwd hash");
-                return false;
-            }
-
-            final byte[] hashedPasswordOnRecord = Base64.getDecoder().decode(pwdHash);
-
-            byte[] salt = null;
-            final String encodedSalt = candidateSecret.getString(CredentialsConstants.FIELD_SECRETS_SALT);
-            // the salt is optional so decodedSalt may stay null if salt was not found
-            if (encodedSalt != null) {
-                salt = Base64.getDecoder().decode(encodedSalt);
-            }
-
-            final String hashFunction = candidateSecret.getString(
-                    CredentialsConstants.FIELD_SECRETS_HASH_FUNCTION,
-                    CredentialsConstants.DEFAULT_HASH_FUNCTION);
-
-            return checkPassword(hashFunction, salt, hashedPasswordOnRecord);
-
+            final EncodedPassword encodedPassword = EncodedPassword.fromHonoSecret(candidateSecret);
+            return encodedPassword.matches(getPassword());
         } catch (final IllegalArgumentException e) {
             if (LOG.isDebugEnabled()) {
                 LOG.debug("cannot decode malformed Base64 encoded property", e);
@@ -152,16 +127,4 @@ public class UsernamePasswordCredentials extends AbstractDeviceCredentials {
         }
     }
 
-    private boolean checkPassword(final String hashFunction, final byte[] salt, final byte[] hashedPasswordOnRecord) {
-        try {
-            final MessageDigest messageDigest = MessageDigest.getInstance(hashFunction);
-            if (salt != null) {
-                messageDigest.update(salt);
-            }
-            final byte[] hashedPassword = messageDigest.digest(getPassword().getBytes(StandardCharsets.UTF_8));
-            return Arrays.equals(hashedPassword, hashedPasswordOnRecord);
-        } catch (final NoSuchAlgorithmException e) {
-            return false;
-        }
-    }
 }

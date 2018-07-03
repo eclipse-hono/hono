@@ -12,9 +12,6 @@
  *******************************************************************************/
 package org.eclipse.hono.util;
 
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.security.cert.X509Certificate;
 import java.time.Instant;
 import java.time.OffsetDateTime;
@@ -361,26 +358,15 @@ public final class CredentialsObject {
     }
 
     /**
-     * Creates a salted hash for a password.
-     * <p>
-     * Gets the password's UTF-8 bytes, prepends them with the salt (if not {@code null}
-     * and returns the output of the hash function applied to the byte array.
+     * Uses {@link ClearTextPassword#encode(String, byte[], String)} to return salted hash for a password.
      * 
      * @param hashFunction The hash function to use.
      * @param salt The salt to prepend the password bytes with.
      * @param password The password to hash.
-     * @return The hashed password.
-     * @throws NoSuchAlgorithmException if the given hash function is not supported on
-     *           the JVM.
+     * @return The hashed password as a Base64 formatted String.
      */
-    public static byte[] getHashedPassword(final String hashFunction, final byte[] salt, final String password) throws NoSuchAlgorithmException {
-
-        final MessageDigest digest = MessageDigest.getInstance(hashFunction);
-        if (salt != null) {
-            digest.update(salt);
-        }
-        digest.update(password.getBytes(StandardCharsets.UTF_8));
-        return digest.digest();
+    public static String getHashedPassword(final String hashFunction, final byte[] salt, final String password) {
+        return ClearTextPassword.encode(hashFunction, salt, password);
     }
 
     /**
@@ -445,21 +431,17 @@ public final class CredentialsObject {
         Objects.requireNonNull(password);
         Objects.requireNonNull(hashAlgorithm);
 
-        try {
-            final JsonObject secret = emptySecret(notBefore, notAfter);
-            secret.put(CredentialsConstants.FIELD_SECRETS_HASH_FUNCTION, hashAlgorithm);
-            if (salt != null) {
-                secret.put(
-                        CredentialsConstants.FIELD_SECRETS_SALT,
-                        Base64.getEncoder().encodeToString(salt));
-            }
+        final JsonObject secret = emptySecret(notBefore, notAfter);
+        secret.put(CredentialsConstants.FIELD_SECRETS_HASH_FUNCTION, hashAlgorithm);
+        if (salt != null) {
             secret.put(
-                    CredentialsConstants.FIELD_SECRETS_PWD_HASH,
-                    Base64.getEncoder().encodeToString(getHashedPassword(hashAlgorithm, salt, password)));
-            return secret;
-        } catch (final NoSuchAlgorithmException e) {
-            throw new IllegalArgumentException("unsupported hash algorithm");
+                    CredentialsConstants.FIELD_SECRETS_SALT,
+                    Base64.getEncoder().encodeToString(salt));
         }
+        secret.put(
+                CredentialsConstants.FIELD_SECRETS_PWD_HASH,
+                getHashedPassword(hashAlgorithm, salt, password));
+        return secret;
 
     }
 
