@@ -25,6 +25,7 @@ import java.util.concurrent.TimeUnit;
 import org.eclipse.hono.client.CredentialsClient;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsObject;
@@ -73,7 +74,8 @@ public class CredentialsAmqpIT {
     @BeforeClass
     public static void prepareDeviceRegistry(final TestContext ctx) {
 
-        client = DeviceRegistryAmqpTestSupport.prepareDeviceRegistryClient(vertx);
+        client = DeviceRegistryAmqpTestSupport.prepareDeviceRegistryClient(vertx,
+                IntegrationTestSupport.HONO_USER, IntegrationTestSupport.HONO_PWD);
 
         client.connect(new ProtonClientOptions())
             .compose(c -> c.getOrCreateCredentialsClient(Constants.DEFAULT_TENANT))

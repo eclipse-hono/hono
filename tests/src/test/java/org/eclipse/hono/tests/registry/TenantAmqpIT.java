@@ -21,6 +21,7 @@ import javax.security.auth.x500.X500Principal;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.TenantClient;
+import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.TenantConstants;
 import org.junit.AfterClass;
@@ -61,7 +62,8 @@ public class TenantAmqpIT {
     @BeforeClass
     public static void prepareDeviceRegistry(final TestContext ctx) {
 
-        client = DeviceRegistryAmqpTestSupport.prepareDeviceRegistryClient(vertx);
+        client = DeviceRegistryAmqpTestSupport.prepareDeviceRegistryClient(vertx,
+                IntegrationTestSupport.HONO_USER, IntegrationTestSupport.HONO_PWD);
 
         client.connect(new ProtonClientOptions())
             .compose(c -> c.getOrCreateTenantClient())

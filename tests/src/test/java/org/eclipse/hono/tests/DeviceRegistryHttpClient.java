@@ -284,6 +284,8 @@ public final class DeviceRegistryHttpClient {
         Objects.requireNonNull(tenantId);
         final JsonObject requestJson = Optional.ofNullable(data).map(json -> json.copy()).orElse(null);
         if (deviceId != null && requestJson != null) {
+            // we only add the device ID if the client provided a JSON object
+            // so that we can also test the case where the client POSTs an empty body
             requestJson.put(RegistrationConstants.FIELD_PAYLOAD_DEVICE_ID, deviceId);
         }
         final String uri = String.format("/%s/%s", RegistrationConstants.REGISTRATION_ENDPOINT, tenantId);

@@ -27,24 +27,27 @@ import org.eclipse.hono.tests.IntegrationTestSupport;
  */
 public final class DeviceRegistryAmqpTestSupport {
 
-    private DeviceRegistryAmqpTestSupport() {}
+    private DeviceRegistryAmqpTestSupport() {
+        // prevent instantiation
+    }
 
     /**
      * Build a HonoClient to access the device registry service.
      *
      * @param vertx The Vert.x instance to execute the client on, if {@code null} a new Vert.x instance is used.
+     * @param username The username to use for authenticating to the Device Registry.
+     * @param password The password to use for authenticating to the Device Registry.
      * @return The client that is configured for accessing the device registry.
      */
-    protected static HonoClient prepareDeviceRegistryClient(final Vertx vertx) {
+    protected static HonoClient prepareDeviceRegistryClient(final Vertx vertx, final String username, final String password) {
 
         final ClientConfigProperties clientProps = new ClientConfigProperties();
         clientProps.setName("test");
         clientProps.setHost(IntegrationTestSupport.HONO_DEVICEREGISTRY_HOST);
         clientProps.setPort(IntegrationTestSupport.HONO_DEVICEREGISTRY_AMQP_PORT);
-        clientProps.setUsername(IntegrationTestSupport.HONO_USER);
-        clientProps.setPassword(IntegrationTestSupport.HONO_PWD);
+        clientProps.setUsername(username);
+        clientProps.setPassword(password);
         return new HonoClientImpl(vertx, clientProps);
-
     }
 
     /**
@@ -72,5 +75,4 @@ public final class DeviceRegistryAmqpTestSupport {
             return vertxTracker;
         }).setHandler(ctx.asyncAssertSuccess());
     }
-
 }

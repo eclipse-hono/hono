@@ -132,15 +132,14 @@ public final class IntegrationTestSupport {
 
     /**
      * Connects to the AMQP 1.0 Messaging Network.
+     * <p>
+     * Also creates an HTTP client for accessing the Device Registry.
      * 
      * @param ctx The vert.x test context.
      */
     public void init(final TestContext ctx) {
 
-        registry = new DeviceRegistryHttpClient(
-                vertx,
-                IntegrationTestSupport.HONO_DEVICEREGISTRY_HOST,
-                IntegrationTestSupport.HONO_DEVICEREGISTRY_HTTP_PORT);
+        initRegistryClient(ctx);
 
         final ClientConfigProperties downstreamProps = new ClientConfigProperties();
         downstreamProps.setHost(IntegrationTestSupport.DOWNSTREAM_HOST);
@@ -150,6 +149,19 @@ public final class IntegrationTestSupport {
         downstreamClient = new HonoClientImpl(vertx, downstreamProps);
 
         downstreamClient.connect().setHandler(ctx.asyncAssertSuccess());
+    }
+
+    /**
+     * Creates an HTTP client for accessing the Device Registry.
+     * 
+     * @param ctx The vert.x test context.
+     */
+    public void initRegistryClient(final TestContext ctx) {
+
+        registry = new DeviceRegistryHttpClient(
+                vertx,
+                IntegrationTestSupport.HONO_DEVICEREGISTRY_HOST,
+                IntegrationTestSupport.HONO_DEVICEREGISTRY_HTTP_PORT);
     }
 
     /**
