@@ -17,7 +17,6 @@ import static org.junit.Assert.*;
 
 import java.net.HttpURLConnection;
 import java.nio.charset.StandardCharsets;
-import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Base64;
@@ -300,13 +299,9 @@ public class CredentialsAmqpIT {
         assertNotNull(pwdHash);
         final byte[] decodedPassword = Base64.getDecoder().decode(pwdHash);
 
-        try {
-            final byte[] hashedPassword = CredentialsObject.getHashedPassword("sha-512", CREDENTIALS_PASSWORD_SALT, CREDENTIALS_USER_PASSWORD);
-            // check if the password is the hashed version of "hono-secret"
-            assertThat(hashedPassword, is(decodedPassword));
-        } catch (final NoSuchAlgorithmException e) {
-            fail(e.getMessage());
-        }
+        final byte[] hashedPassword = Base64.getDecoder().decode(CredentialsObject.getHashedPassword("sha-512", CREDENTIALS_PASSWORD_SALT, CREDENTIALS_USER_PASSWORD));
+        // check if the password is the hashed version of "hono-secret"
+        assertThat(hashedPassword, is(decodedPassword));
     }
 
     private void checkPayloadGetCredentialsReturnsFirstSecretWithCurrentlyActiveTimeInterval(final CredentialsObject payload) {

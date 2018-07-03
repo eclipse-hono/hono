@@ -87,6 +87,10 @@
       <artifactId>mockito-core</artifactId>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>org.springframework.security</groupId>
+      <artifactId>spring-security-crypto</artifactId>
+    </dependency>
   </dependencies>
 
   <build>
@@ -133,10 +137,12 @@
             -->
             <Export-Package>
               io.opentracing*;version=${opentracing.version},
+              org.springframework.security.crypto*;version=${spring-security-crypto.version},
               {local-packages}
             </Export-Package>
             <Embed-Dependency>
-              opentracing-api;inline=true
+              opentracing-api;inline=true,
+              spring-security-crypto;inline=true
             </Embed-Dependency>
           </instructions>
         </configuration>

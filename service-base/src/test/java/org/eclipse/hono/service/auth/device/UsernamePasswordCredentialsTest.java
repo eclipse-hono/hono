@@ -15,8 +15,6 @@ package org.eclipse.hono.service.auth.device;
 import static org.junit.Assert.*;
 
 import java.nio.charset.StandardCharsets;
-import java.security.NoSuchAlgorithmException;
-import java.util.Base64;
 
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
@@ -86,11 +84,9 @@ public class UsernamePasswordCredentialsTest {
     /**
      * Verifies that credentials can be successfully verified using the default hash function
      * (sha-256) if the secret on record does not explicitly specify a hash function.
-     * 
-     * @throws NoSuchAlgorithmException if the JVM does not support the default hash function (sha-256).
      */
     @Test
-    public void testMatchesCredentialsUsesDefaultHashFunction() throws NoSuchAlgorithmException {
+    public void testMatchesCredentialsUsesDefaultHashFunction() {
 
         // GIVEN a secret on record that does not explicitly define a hash function
         final String hashedPassword = getHashedPassword(CredentialsConstants.DEFAULT_HASH_FUNCTION, null, TEST_PASSWORD);
@@ -106,11 +102,9 @@ public class UsernamePasswordCredentialsTest {
     /**
      * Verifies that credentials can be successfully verified using the hash function
      * specified for the secret.
-     * 
-     * @throws NoSuchAlgorithmException if the JVM does not support sha-512.
      */
     @Test
-    public void testMatchesCredentialsSucceedsForMatchingPassword() throws NoSuchAlgorithmException {
+    public void testMatchesCredentialsSucceedsForMatchingPassword() {
 
         // GIVEN a secret on record that uses sha-512 as the hash function
         final byte[] salt = "TheSalt".getBytes(StandardCharsets.UTF_8);
@@ -124,12 +118,29 @@ public class UsernamePasswordCredentialsTest {
     }
 
     /**
-     * Verifies that credentials are rejected if they do not match the secret on record.
-     * 
-     * @throws NoSuchAlgorithmException if the JVM does not support sha-512.
+     * Verifies that credentials support Bcrypt hash function.
      */
     @Test
-    public void testMatchesCredentialsFailsForNonMatchingPassword() throws NoSuchAlgorithmException {
+    public void testMatchesCredentialsSucceedsForMatchingBCryptPassword() {
+
+        // GIVEN a secret on record that uses bcrypt as the hash function
+        final JsonObject candidateSecret = CredentialsObject.emptySecret(null, null);
+        candidateSecret.put(CredentialsConstants.FIELD_SECRETS_PWD_HASH, "$2a$12$BjLeC/gqcnEyk.XNo2qorul.a/v4HDuOUlfmojdSZXRSFTjymPdVm");
+        candidateSecret.put(CredentialsConstants.FIELD_SECRETS_HASH_FUNCTION, "bcrypt");
+
+
+        // WHEN a device provides matching credentials
+        final UsernamePasswordCredentials credentials = UsernamePasswordCredentials.create(TEST_USER_OTHER_TENANT, "kapua-password", false);
+
+        // THEN verification of the credentials succeeds
+        assertTrue(credentials.matchesCredentials(candidateSecret));
+    }
+
+    /**
+     * Verifies that credentials are rejected if they do not match the secret on record.
+     */
+    @Test
+    public void testMatchesCredentialsFailsForNonMatchingPassword() {
 
         // GIVEN a secret on record that uses sha-512 as the hash function
         final JsonObject candidateSecret = CredentialsObject.hashedPasswordSecret(TEST_PASSWORD, "sha-512", null, null, null);
@@ -180,8 +191,7 @@ public class UsernamePasswordCredentialsTest {
         assertFalse(credentials.matchesCredentials(candidateSecret));
     }
 
-    private String getHashedPassword(final String hashFunction, final byte[] salt, final String password) throws NoSuchAlgorithmException {
-        return Base64.getEncoder().encodeToString(
-                CredentialsObject.getHashedPassword(hashFunction, salt, password));
+    private String getHashedPassword(final String hashFunction, final byte[] salt, final String password) {
+        return CredentialsObject.getHashedPassword(hashFunction, salt, password);
     }
 }
