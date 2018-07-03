@@ -88,21 +88,6 @@ public abstract class AbstractAmqpEndpoint<T> extends AbstractEndpoint implement
         client.close();
     }
 
-    /**
-     * Closes the link to a proton based receiver client.
-     *
-     * @param client The client to detach.
-     * @param error The error condition to convey to the client when closing the link.
-     */
-    protected void onLinkDetach(final ProtonReceiver client, final ErrorCondition error) {
-        if (error == null) {
-            logger.debug("closing proton receiver for client [{}]", client.getName());
-        } else {
-            logger.debug("closing proton receiver for client [{}]: {}", client.getName(), error.getDescription());
-        }
-        client.close();
-    }
-
     @Override
     public void onLinkAttach(final ProtonConnection con, final ProtonReceiver receiver, final ResourceIdentifier targetResource) {
         logger.info("Endpoint [{}] does not support data upload, closing link.", getName());
