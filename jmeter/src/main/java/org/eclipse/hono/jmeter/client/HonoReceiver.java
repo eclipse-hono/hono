@@ -48,6 +48,7 @@ public class HonoReceiver extends AbstractClient {
 
     private long sampleStart;
     private int  messageCount;
+    private int  errorCount;
     private long totalSampleDeliveryTime;
     private long bytesReceived;
 
@@ -142,8 +143,9 @@ public class HonoReceiver extends AbstractClient {
         synchronized (lock) {
             long elapsed = 0;
             result.setResponseCodeOK();
-            result.setSuccessful(true);
+            result.setSuccessful(errorCount == 0);
             result.setSampleCount(messageCount);
+            result.setErrorCount(errorCount); // NOTE: This method does nothing in JMeter 3.3/4.0
             result.setBytes(bytesReceived);
             if (sampler.isUseSenderTime() && messageCount > 0) {
                 elapsed = totalSampleDeliveryTime / messageCount;
@@ -156,8 +158,11 @@ public class HonoReceiver extends AbstractClient {
             } else {
                 noMessagesReceived(result);
             }
-            LOGGER.info("{}: received batch of {} messages in {} milliseconds", sampler.getThreadName(), messageCount,
-                    elapsed);
+            if (errorCount == 0) {
+                LOGGER.info("{}: received batch of {} messages in {}ms", sampler.getThreadName(), messageCount, elapsed);
+            } else {
+                LOGGER.info("{}: received batch of {} messages with {} errors in {}ms", sampler.getThreadName(), messageCount, errorCount, elapsed);
+            }
             result.setResponseMessage(
                     String.format("messages received: %d, bytes received: %d, time elapsed: %d",
                             messageCount, bytesReceived, elapsed));
@@ -165,6 +170,7 @@ public class HonoReceiver extends AbstractClient {
             totalSampleDeliveryTime = 0;
             bytesReceived = 0;
             messageCount = 0;
+            errorCount = 0;
             sampleStart = 0;
         }
     }
@@ -174,67 +180,74 @@ public class HonoReceiver extends AbstractClient {
         result.setIdleTime(0);
     }
 
-    private void verifySenderTimeAndSetSamplingTime(final Long senderTime, final long sampleReceivedTime) {
-        if (senderTime != null) {
-            if (sampleStart == 0) { // set sample start only once when the first message is received.
-                sampleStart = senderTime;
+    private void messageReceived(final Message message) {
+        synchronized (lock) {
+            final long sampleReceivedTime = System.currentTimeMillis();
+            messageCount++;
+
+            if (!(message.getBody() instanceof Data)) {
+                errorCount++;
+                LOGGER.warn("got message with non-Data body section; increasing errorCount in batch to {}; current batch size: {}",
+                        errorCount, messageCount);
+                return;
             }
-            final long sampleDeliveryTime = sampleReceivedTime - senderTime;
-            LOGGER.debug("Message delivered in : {}", sampleDeliveryTime);
-            totalSampleDeliveryTime += sampleDeliveryTime;
-        } else {
-            throw new IllegalArgumentException("No Timestamp variable found in message");
+            final byte[] messageBody = ((Data) message.getBody()).getValue().getArray();
+            bytesReceived += messageBody.length;
+            final Long senderTime = getSenderTime(message, messageBody);
+            if (sampler.isUseSenderTime() && senderTime == null) {
+                errorCount++;
+                LOGGER.warn("got message without sender time information; increasing errorCount in batch to {}; current batch size: {}",
+                        errorCount, messageCount);
+                return;
+            }
+
+            if (sampler.isUseSenderTime()) {
+                if (sampleStart == 0) { // set sample start only once when the first message is received.
+                    sampleStart = senderTime;
+                }
+                final long sampleDeliveryTime = sampleReceivedTime - senderTime;
+                totalSampleDeliveryTime += sampleDeliveryTime;
+                LOGGER.trace("received message; current batch size: {}; reception timestamp: {}; delivery time: {}ms",
+                        messageCount, sampleReceivedTime, sampleDeliveryTime);
+            } else {
+                if (sampleStart == 0) {
+                    sampleStart = sampleReceivedTime;
+                }
+                LOGGER.trace("received message; current batch size: {}; reception timestamp: {}", messageCount, sampleReceivedTime);
+            }
         }
     }
 
-    private Long getSenderTimeFromJsonPayload(final byte[] payload) {
+    private Long getSenderTime(final Message message, final byte[] messageBody) {
+        if (!sampler.isUseSenderTime()) {
+            return null;
+        }
+        return sampler.isSenderTimeInPayload() ? getSenderTimeFromJsonPayload(messageBody)
+                : getSenderTimeFromMessageProperties(message);
+    }
 
+    private Long getSenderTimeFromJsonPayload(final byte[] payload) {
         try {
             final JsonObject jsonObject = Buffer.buffer(payload).toJsonObject();
-            return jsonObject.getLong(sampler.getSenderTimeVariableName(), null);
+            final Long senderTime = jsonObject.getLong(sampler.getSenderTimeVariableName(), null);
+            if (senderTime == null) {
+                LOGGER.warn("could not get sender time from JSON payload: entry with key '"
+                        + sampler.getSenderTimeVariableName() + "' not found or empty");
+            }
+            return senderTime;
         } catch (final DecodeException e) {
-            LOGGER.warn("Could not parse the received message", e);
+            LOGGER.error("could not parse the received message as JSON", e);
             return null;
         }
     }
 
     private Long getSenderTimeFromMessageProperties(final Message message) {
-
-        return MessageHelper.getApplicationProperty(
-                message.getApplicationProperties(),
-                TIME_STAMP_VARIABLE,
+        final Long senderTime = MessageHelper.getApplicationProperty(message.getApplicationProperties(), TIME_STAMP_VARIABLE,
                 Long.class);
-    }
-
-    private void messageReceived(final Message message) {
-
-        if (message.getBody() instanceof Data) {
-
-            final long sampleReceivedTime = System.currentTimeMillis();
-            final byte[] messageBody = ((Data) message.getBody()).getValue().getArray();
-            synchronized (lock) {
-                messageCount++;
-                LOGGER.trace("Received message. count : {}", messageCount);
-                bytesReceived += messageBody.length;
-
-                if (sampler.isUseSenderTime()) {
-                    LOGGER.debug("Message received time : {}", sampleReceivedTime);
-                    if (sampler.isSenderTimeInPayload()) {
-                        verifySenderTimeAndSetSamplingTime(
-                                getSenderTimeFromJsonPayload(messageBody),
-                                sampleReceivedTime);
-                    } else {
-                        verifySenderTimeAndSetSamplingTime(
-                                getSenderTimeFromMessageProperties(message),
-                                sampleReceivedTime);
-                    }
-                } else if (sampleStart == 0) {
-                    sampleStart = System.currentTimeMillis();
-                }
-            }
-        } else {
-            LOGGER.trace("discarding message with non-Data body section");
+        if (senderTime == null) {
+            LOGGER.warn("could not get sender time from 'timeStamp' message application property");
         }
+        return senderTime;
     }
 
     /**
