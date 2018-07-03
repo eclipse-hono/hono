@@ -108,7 +108,7 @@ public abstract class CredentialsApiAuthProvider implements HonoClientBasedAuthP
             if (deviceCredentials.validate(credentialsOnRecord)) {
                 return new Device(deviceCredentials.getTenantId(), credentialsOnRecord.getDeviceId());
             } else {
-                 throw new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED, "invalid credentials");
+                 throw new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED, "bad credentials");
             }
         }).setHandler(resultHandler);
     }
