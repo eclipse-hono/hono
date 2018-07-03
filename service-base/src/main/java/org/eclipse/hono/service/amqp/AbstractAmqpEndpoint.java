@@ -18,6 +18,7 @@ import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.service.AbstractEndpoint;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.LinkHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -108,6 +109,7 @@ public abstract class AbstractAmqpEndpoint<T> extends AbstractEndpoint implement
         logger.info("Endpoint [{}] does not support data upload, closing link.", getName());
         receiver.setCondition(ProtonHelper.condition(AmqpError.NOT_IMPLEMENTED, "resource cannot be written to"));
         receiver.close();
+        LinkHelper.freeLinkResources(receiver);
     }
 
     @Override
@@ -115,6 +117,7 @@ public abstract class AbstractAmqpEndpoint<T> extends AbstractEndpoint implement
         logger.info("Endpoint [{}] does not support data retrieval, closing link.", getName());
         sender.setCondition(ProtonHelper.condition(AmqpError.NOT_IMPLEMENTED, "resource cannot be read from"));
         sender.close();
+        LinkHelper.freeLinkResources(sender);
     }
 
     /**

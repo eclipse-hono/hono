@@ -26,6 +26,7 @@ import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.service.amqp.AbstractAmqpEndpoint;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelper;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.LinkHelper;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -145,6 +146,7 @@ public abstract class MessageForwardingEndpoint<T extends HonoMessagingConfigPro
                     con.getRemoteContainer(), receiver.getRemoteQoS(), getName(), getEndpointQos());
             receiver.setCondition(ErrorConditions.ERROR_UNSUPPORTED_DELIVERY_MODE);
             receiver.close();
+            LinkHelper.freeLinkResources(receiver);
         } else {
             receiver.setQoS(receiver.getRemoteQoS());
             receiver.setTarget(receiver.getRemoteTarget());
@@ -160,6 +162,7 @@ public abstract class MessageForwardingEndpoint<T extends HonoMessagingConfigPro
                         // client has closed link -> inform TelemetryAdapter about client detach
                         onLinkDetach(link);
                         downstreamAdapter.onClientDetach(link);
+                        LinkHelper.freeLinkResources(receiver);
                         metrics.decrementUpstreamLinks(targetAddress.toString());
                     });
                     receiver.handler((delivery, message) -> {
