@@ -588,7 +588,10 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
      * @param connection The connection.
      */
     protected void setRemoteConnectionOpenHandler(final ProtonConnection connection) {
-        connection.sessionOpenHandler(remoteOpenSession -> handleSessionOpen(connection, remoteOpenSession));
+        connection.sessionOpenHandler(session -> {
+            HonoProtonHelper.setDefaultCloseHandler(session);
+            handleSessionOpen(connection, session);
+        });
         connection.receiverOpenHandler(receiver -> {
             HonoProtonHelper.setDefaultCloseHandler(receiver);
             handleReceiverOpen(connection, receiver);
@@ -664,9 +667,6 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
      */
     protected void handleSessionOpen(final ProtonConnection con, final ProtonSession session) {
         LOG.debug("opening new session with client [container: {}]", con.getRemoteContainer());
-        session.closeHandler(sessionResult -> {
-            session.close();
-        });
         session.open();
     }
 

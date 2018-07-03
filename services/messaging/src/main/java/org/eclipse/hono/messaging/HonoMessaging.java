@@ -80,11 +80,9 @@ public final class HonoMessaging extends AmqpServiceBase<HonoMessagingConfigProp
      */
     @Override
     protected void handleSessionOpen(final ProtonConnection con, final ProtonSession session) {
-        LOG.info("opening new session with client [name: {}, session window size: {}]", con.getRemoteContainer(), getConfig().getMaxSessionWindow());
+        LOG.info("opening new session with client [name: {}, session window size: {}]",
+                con.getRemoteContainer(), getConfig().getMaxSessionWindow());
         session.setIncomingCapacity(getConfig().getMaxSessionWindow());
-        session.closeHandler(sessionResult -> {
-            session.close();
-        });
         session.open();
     }
 }

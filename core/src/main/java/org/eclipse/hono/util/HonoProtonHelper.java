@@ -12,16 +12,21 @@
  */
 package org.eclipse.hono.util;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.Objects;
 
 import org.apache.qpid.proton.engine.Link;
+import org.apache.qpid.proton.engine.Session;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
 import io.vertx.proton.ProtonLink;
+import io.vertx.proton.ProtonSession;
 import io.vertx.proton.impl.ProtonReceiverImpl;
 import io.vertx.proton.impl.ProtonSenderImpl;
+import io.vertx.proton.impl.ProtonSessionImpl;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,6 +39,7 @@ public final class HonoProtonHelper {
 
     private static Method getReceiverMethod;
     private static Method getSenderMethod;
+    private static Field sessionField;
 
     static {
         try {
@@ -41,8 +47,12 @@ public final class HonoProtonHelper {
             getReceiverMethod.setAccessible(true);
             getSenderMethod = ProtonSenderImpl.class.getDeclaredMethod("sender");
             getSenderMethod.setAccessible(true);
+            sessionField = ProtonSessionImpl.class.getDeclaredField("session");
+            sessionField.setAccessible(true);
         } catch (final NoSuchMethodException | SecurityException e) {
             LOG.error("cannot get accessors for Proton Link objects using reflection", e);
+        } catch (final NoSuchFieldException e) {
+            LOG.error("cannot get field for Proton Session object using reflection", e);
         }
     }
 
@@ -131,6 +141,24 @@ public final class HonoProtonHelper {
     }
 
     /**
+     * Sets a default handler on a session that is invoked when an AMQP <em>end</em> frame
+     * is received from the peer.
+     * <p>
+     * The default handler sends an <em>end</em> frame and then frees up the resources
+     * maintained for the session by invoking {@link #freeSessionResources(ProtonSession)}.
+     * 
+     * @param session The session to set the handler on.
+     * @throws NullPointerException if session is {@code null}.
+     */
+    public static void setDefaultCloseHandler(final ProtonSession session) {
+
+        session.closeHandler(remoteClose -> {
+            session.close();
+            freeSessionResources(session);
+        });
+    }
+
+    /**
      * Frees resources concerning the given link.
      * <p>
      * This method uses reflection to get at the link's underlying Proton {@code Link}
@@ -166,4 +194,37 @@ public final class HonoProtonHelper {
             }
         }
     }
+
+    /**
+     * Frees up resources held by a session.
+     * <p>
+     * This method uses reflection to get at the session's underlying Proton {@code Session}
+     * instance and invoke its <em>free</em> method. In vert.x 3.5.3 the
+     * {@code ProtonSession} class will expose this method publicly so the implementation
+     * of this method can then be changed accordingly.
+     * 
+     * @param protonSession The session to free resources for.
+     * @see <a href="https://github.com/vert-x3/vertx-proton/issues/82">vertx-proton#83</a>
+     */
+    public static void freeSessionResources(final ProtonSession protonSession) {
+        if (protonSession != null) {
+            if (sessionField == null) {
+                throw new IllegalStateException("no access to Proton Session object");
+            } else {
+                try {
+                    if (protonSession instanceof ProtonSessionImpl) {
+                        final Session session = (Session) sessionField.get(protonSession);
+                        session.free();
+                        ((ProtonSessionImpl ) protonSession).getConnectionImpl().flush();
+                        LOG.trace("freed up resources of session");
+                    } else {
+                        LOG.debug("cannot free up resources for non-ProtonSessionImpl instance");
+                    }
+                } catch (final Exception e) {
+                    LOG.error("error freeing session resources", e);
+                }
+            }
+        }
+    }
+
 }

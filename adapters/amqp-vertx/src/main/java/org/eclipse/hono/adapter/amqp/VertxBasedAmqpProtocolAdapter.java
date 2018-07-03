@@ -166,10 +166,8 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
     private void handleSessionOpen(final ProtonConnection conn, final ProtonSession session) {
         LOG.debug("opening new session with client [container: {}]", conn.getRemoteContainer());
         session.setIncomingCapacity(DEFAULT_MAX_SESSION_WINDOW);
-        session.closeHandler(remoteSessionClose -> {
-            LOG.debug("Client closes session with this server");
-            session.close();
-        }).open();
+        HonoProtonHelper.setDefaultCloseHandler(session);
+        session.open();
     }
 
     /**
