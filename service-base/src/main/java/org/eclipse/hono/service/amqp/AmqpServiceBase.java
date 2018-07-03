@@ -32,6 +32,7 @@ import org.eclipse.hono.service.AbstractServiceBase;
 import org.eclipse.hono.service.auth.AuthorizationService;
 import org.eclipse.hono.service.auth.ClaimsBasedAuthorizationService;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.HonoProtonHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -588,8 +589,14 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
      */
     protected void setRemoteConnectionOpenHandler(final ProtonConnection connection) {
         connection.sessionOpenHandler(remoteOpenSession -> handleSessionOpen(connection, remoteOpenSession));
-        connection.receiverOpenHandler(remoteOpenReceiver -> handleReceiverOpen(connection, remoteOpenReceiver));
-        connection.senderOpenHandler(remoteOpenSender -> handleSenderOpen(connection, remoteOpenSender));
+        connection.receiverOpenHandler(receiver -> {
+            HonoProtonHelper.setDefaultCloseHandler(receiver);
+            handleReceiverOpen(connection, receiver);
+        });
+        connection.senderOpenHandler(sender -> {
+            HonoProtonHelper.setDefaultCloseHandler(sender);
+            handleSenderOpen(connection, sender);
+        });
         connection.disconnectHandler(this::handleRemoteDisconnect);
         connection.closeHandler(remoteClose -> handleRemoteConnectionClose(connection, remoteClose));
         connection.openHandler(remoteOpen -> {

@@ -152,7 +152,8 @@ public final class SimpleAuthenticationServer extends AmqpServiceBase<ServiceCon
 
     @Override
     protected void handleReceiverOpen(final ProtonConnection con, final ProtonReceiver receiver) {
-        receiver.setCondition(ProtonHelper.condition(AmqpError.NOT_ALLOWED, "cannot write to node")).close();
+        receiver.setCondition(ProtonHelper.condition(AmqpError.NOT_ALLOWED, "cannot write to node"));
+        receiver.close();
     }
 
     /**

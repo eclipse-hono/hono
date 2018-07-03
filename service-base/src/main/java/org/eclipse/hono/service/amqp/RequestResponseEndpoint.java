@@ -25,6 +25,7 @@ import org.eclipse.hono.service.auth.ClaimsBasedAuthorizationService;
 import org.eclipse.hono.util.AmqpErrorException;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventBusMessage;
+import org.eclipse.hono.util.HonoProtonHelper;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -124,14 +125,14 @@ public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties>
         } else {
 
             logger.debug("establishing link for receiving messages from client [{}]", receiver.getName());
-            receiver
-                    .setQoS(ProtonQoS.AT_LEAST_ONCE)
-                    .setAutoAccept(true) // settle received messages if the handler succeeds
-                    .setPrefetch(config.getReceiverLinkCredit())
-                    .handler((delivery, message) -> {
-                        handleMessage(con, receiver, targetAddress, delivery, message);
-                    }).closeHandler(clientDetached -> onLinkDetach(receiver))
-                    .open();
+            receiver.setQoS(ProtonQoS.AT_LEAST_ONCE);
+            receiver.setAutoAccept(true); // settle received messages if the handler succeeds
+            receiver.setPrefetch(config.getReceiverLinkCredit());
+            receiver.handler((delivery, message) -> {
+                handleMessage(con, receiver, targetAddress, delivery, message);
+            });
+            HonoProtonHelper.setCloseHandler(receiver, clientDetached -> onLinkDetach(receiver));
+            receiver.open();
         }
     }
 
@@ -260,25 +261,24 @@ public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties>
                     logger.trace("forwarding reply to client [{}]: {}", sender.getName(), message.body().encodePrettily());
                 }
                 final EventBusMessage response = EventBusMessage.fromJson(message.body());
-                filterResponse(Constants.getClientPrincipal(con), response)
-                    .recover(t -> {
-                        final int status = Optional.of(t).map(cause -> {
-                            if (cause instanceof ServiceInvocationException) {
-                                return ((ServiceInvocationException) cause).getErrorCode();
-                            } else {
-                                return null;
-                            }
-                        }).orElse(HttpURLConnection.HTTP_INTERNAL_ERROR);
-                        return Future.succeededFuture(response.getResponse(status));
-                    }).map(filteredResponse -> {
-                        final Message amqpReply = getAmqpReply(filteredResponse);
-                        sender.send(amqpReply);
-                        return null;
-                    });
+                filterResponse(Constants.getClientPrincipal(con), response).recover(t -> {
+                    final int status = Optional.of(t).map(cause -> {
+                        if (cause instanceof ServiceInvocationException) {
+                            return ((ServiceInvocationException) cause).getErrorCode();
+                        } else {
+                            return null;
+                        }
+                    }).orElse(HttpURLConnection.HTTP_INTERNAL_ERROR);
+                    return Future.succeededFuture(response.getResponse(status));
+                }).map(filteredResponse -> {
+                    final Message amqpReply = getAmqpReply(filteredResponse);
+                    sender.send(amqpReply);
+                    return null;
+                });
             });
 
             sender.setQoS(ProtonQoS.AT_LEAST_ONCE);
-            sender.closeHandler(senderClosed -> {
+            HonoProtonHelper.setCloseHandler(sender, senderClosed -> {
                 logger.debug("client [{}] closed sender link, removing associated event bus consumer [{}]", sender.getName(), replyConsumer.address());
                 replyConsumer.unregister();
                 if (senderClosed.succeeded()) {

@@ -16,6 +16,7 @@ package org.eclipse.hono.messaging;
 import java.util.Objects;
 
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.HonoProtonHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -124,7 +125,7 @@ public class SenderFactoryImpl implements SenderFactory {
                 result.fail(openAttempt.cause());
             }
         });
-        sender.closeHandler(closed -> {
+        HonoProtonHelper.setCloseHandler(sender, closed -> {
             if (closed.succeeded()) {
                 LOG.debug("sender [{}] for container [{}] closed", address,
                         connection.getRemoteContainer());
@@ -137,7 +138,7 @@ public class SenderFactoryImpl implements SenderFactory {
                 closeHook.handle(address.getResourceId());
             }
         });
-        sender.detachHandler(detached -> {
+        HonoProtonHelper.setDetachHandler(sender, detached -> {
             if (detached.succeeded()) {
                 LOG.debug("sender [{}] detached (with closed=false) by peer [{}]", address,
                         connection.getRemoteContainer());

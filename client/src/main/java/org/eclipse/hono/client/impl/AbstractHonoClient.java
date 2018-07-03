@@ -31,7 +31,7 @@ import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.tracing.TracingHelper;
-import org.eclipse.hono.util.LinkHelper;
+import org.eclipse.hono.util.HonoProtonHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,6 +46,7 @@ import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.proton.ProtonConnection;
+import io.vertx.proton.ProtonLink;
 import io.vertx.proton.ProtonMessageHandler;
 import io.vertx.proton.ProtonQoS;
 import io.vertx.proton.ProtonReceiver;
@@ -217,61 +218,50 @@ public abstract class AbstractHonoClient {
      * @throws NullPointerException if the given handler is {@code null}.
      */
     protected final void closeLinks(final Handler<AsyncResult<Void>> closeHandler) {
-        closeLinks(closeHandler, true);
-    }
-
-    /**
-     * Closes this client's sender and receiver links to Hono.
-     * 
-     * @param closeHandler the handler to be notified about the outcome.
-     * @param freeLinkResources if true, link resources will be freed after the links are closed.
-     * @throws NullPointerException if the given handler is {@code null}.
-     */
-    protected final void closeLinks(final Handler<AsyncResult<Void>> closeHandler, final boolean freeLinkResources) {
 
         Objects.requireNonNull(closeHandler);
 
-        final Future<ProtonSender> senderCloseHandler = Future.future();
-        final Future<ProtonReceiver> receiverCloseHandler = Future.future();
-        receiverCloseHandler.setHandler(closeAttempt -> {
-            if (closeAttempt.succeeded()) {
-                closeHandler.handle(Future.succeededFuture());
-            } else {
-                closeHandler.handle(Future.failedFuture(closeAttempt.cause()));
-            }
-        });
-
+        final Future<Void> senderCloseHandler = Future.future();
         senderCloseHandler.compose(closedSender -> {
-            if (receiver != null && receiver.isOpen()) {
-                receiver.closeHandler(closeAttempt -> {
-                    LOG.debug("closed message consumer for [{}]", receiver.getSource().getAddress());
-                    receiverCloseHandler.complete(receiver);
-                    if (freeLinkResources) {
-                        LinkHelper.freeLinkResources(receiver);
-                    }
-                }).close();
+
+            final Future<Void> receiverCloseHandler = Future.future();
+
+            if (receiver == null) {
+                receiverCloseHandler.handle(Future.succeededFuture());
             } else {
-                receiverCloseHandler.complete();
-                if (receiver != null && freeLinkResources) {
-                    LinkHelper.freeLinkResources(receiver);
+                final Handler<AsyncResult<ProtonReceiver>> wrappedHandler = HonoProtonHelper.setCloseHandler(receiver, closeAttempt -> {
+                    LOG.debug("closed message consumer for [{}]", receiver.getSource().getAddress());
+                    receiverCloseHandler.complete();
+                });
+                if (receiver.isOpen()) {
+                    // wait for peer's detach frame to trigger the handler
+                    receiver.close();
+                } else {
+                    // trigger handler manually to make sure that
+                    // resources are freed up
+                    wrappedHandler.handle(Future.succeededFuture());
                 }
             }
-        }, receiverCloseHandler);
+            return receiverCloseHandler;
 
-        context.runOnContext(close -> {
+        }).setHandler(closeHandler);
 
-            if (sender != null && sender.isOpen()) {
-                sender.closeHandler(closeAttempt -> {
-                    LOG.debug("closed message sender for [{}]", sender.getTarget().getAddress());
-                    senderCloseHandler.complete(sender);
-                    if (freeLinkResources) {
-                        LinkHelper.freeLinkResources(sender);
-                    }
-                }).close();
-            } else {
+        context.runOnContext(go -> {
+
+            if (sender == null) {
                 senderCloseHandler.complete();
-                if (sender != null && freeLinkResources) {
-                    LinkHelper.freeLinkResources(sender);
+            } else {
+                final Handler<AsyncResult<ProtonSender>> wrappedHandler = HonoProtonHelper.setCloseHandler(sender, closeAttempt -> {
+                    LOG.debug("closed message sender for [{}]", sender.getTarget().getAddress());
+                    senderCloseHandler.complete();
+                });
+                if (sender.isOpen()) {
+                    // wait for peer's detach frame to trigger the handler
+                    sender.close();
+                } else {
+                    // trigger handler manually to make sure that
+                    // resources are freed up
+                    wrappedHandler.handle(Future.succeededFuture());
                 }
             }
         });
@@ -368,8 +358,8 @@ public abstract class AbstractHonoClient {
                     }
                 }
             });
-            sender.detachHandler(remoteDetached -> onRemoteDetach(sender, con.getRemoteContainer(), false, closeHook));
-            sender.closeHandler(remoteClosed -> onRemoteDetach(sender, con.getRemoteContainer(), true, closeHook));
+            HonoProtonHelper.setDetachHandler(sender, remoteDetached -> onRemoteDetach(sender, con.getRemoteContainer(), false, closeHook));
+            HonoProtonHelper.setCloseHandler(sender, remoteClosed -> onRemoteDetach(sender, con.getRemoteContainer(), true, closeHook));
             sender.open();
         });
 
@@ -440,52 +430,34 @@ public abstract class AbstractHonoClient {
                     }
                 }
             });
-            receiver.detachHandler(remoteDetached -> onRemoteDetach(receiver, con.getRemoteContainer(), false, closeHook));
-            receiver.closeHandler(remoteClosed -> onRemoteDetach(receiver, con.getRemoteContainer(), true, closeHook));
+            HonoProtonHelper.setDetachHandler(receiver, remoteDetached -> onRemoteDetach(receiver, con.getRemoteContainer(), false, closeHook));
+            HonoProtonHelper.setCloseHandler(receiver, remoteClosed -> onRemoteDetach(receiver, con.getRemoteContainer(), true, closeHook));
             receiver.open();
         });
         return result;
     }
 
     private static void onRemoteDetach(
-            final ProtonSender sender,
+            final ProtonLink<?> link,
             final String remoteContainer,
             final boolean closed,
             final Handler<String> closeHook) {
 
-        final ErrorCondition error = sender.getRemoteCondition();
+        final ErrorCondition error = link.getRemoteCondition();
+        final String type = link instanceof ProtonSender ? "sender" : "receiver";
+        final String address = link instanceof ProtonSender ? link.getTarget().getAddress() :
+            link.getSource().getAddress();
         if (error == null) {
-            LOG.debug("sender [{}] detached (with closed={}) by peer [{}]",
-                    sender.getTarget().getAddress(), closed, remoteContainer);
+            LOG.debug("{} [{}] detached (with closed={}) by peer [{}]",
+                    type, address, closed, remoteContainer);
         } else {
-            LOG.debug("sender [{}] detached (with closed={}) by peer [{}]: {} - {}",
-                    sender.getTarget().getAddress(), closed, remoteContainer, error.getCondition(), error.getDescription());
+            LOG.debug("{} [{}] detached (with closed={}) by peer [{}]: {} - {}",
+                    type, address, closed, remoteContainer, error.getCondition(), error.getDescription());
         }
-        sender.close();
-        final boolean linkEstablished = sender.attachments().get(KEY_LINK_ESTABLISHED, Boolean.class);
+        link.close();
+        final boolean linkEstablished = link.attachments().get(KEY_LINK_ESTABLISHED, Boolean.class);
         if (linkEstablished && closeHook != null) {
-            closeHook.handle(sender.getTarget().getAddress());
-        }
-    }
-
-    private static void onRemoteDetach(
-            final ProtonReceiver receiver,
-            final String remoteContainer,
-            final boolean closed,
-            final Handler<String> closeHook) {
-
-        final ErrorCondition error = receiver.getRemoteCondition();
-        if (error == null) {
-            LOG.debug("receiver [{}] detached (with closed={}) by peer [{}]",
-                    receiver.getSource().getAddress(), closed, remoteContainer);
-        } else {
-            LOG.debug("receiver [{}] detached (with closed={}) by peer [{}]: {} - {}",
-                    receiver.getSource().getAddress(), closed, remoteContainer, error.getCondition(), error.getDescription());
-        }
-        receiver.close();
-        final boolean linkEstablished = receiver.attachments().get(KEY_LINK_ESTABLISHED, Boolean.class);
-        if (linkEstablished && closeHook != null) {
-            closeHook.handle(receiver.getSource().getAddress());
+            closeHook.handle(address);
         }
     }
 }

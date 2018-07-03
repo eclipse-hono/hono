@@ -26,6 +26,7 @@ import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.service.amqp.AbstractAmqpEndpoint;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelper;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.HonoProtonHelper;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -156,7 +157,7 @@ public abstract class MessageForwardingEndpoint<T extends HonoMessagingConfigPro
 
             downstreamAdapter.onClientAttach(link, s -> {
                 if (s.succeeded()) {
-                    receiver.closeHandler(clientDetached -> {
+                    HonoProtonHelper.setCloseHandler(receiver, clientDetached -> {
                         // client has closed link -> inform TelemetryAdapter about client detach
                         onLinkDetach(link);
                         downstreamAdapter.onClientDetach(link);

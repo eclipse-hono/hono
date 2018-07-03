@@ -13,6 +13,7 @@ import org.eclipse.hono.service.AbstractProtocolAdapterBase;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EndpointType;
 import org.eclipse.hono.util.EventConstants;
+import org.eclipse.hono.util.HonoProtonHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.TelemetryConstants;
 import org.eclipse.hono.util.TenantObject;
@@ -127,9 +128,12 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             conn.open();
         });
         // when an Attach frame is received
-        connRequest
-                .receiverOpenHandler(remoteReceiverOpen -> handleRemoteReceiverOpen(remoteReceiverOpen, connRequest));
+        connRequest.receiverOpenHandler(receiver -> {
+            HonoProtonHelper.setDefaultCloseHandler(receiver);
+            handleRemoteReceiverOpen(receiver, connRequest);
+        });
         connRequest.senderOpenHandler(sender -> {
+            HonoProtonHelper.setDefaultCloseHandler(sender);
             // this should not happen -> no request-response for device clients.
             LOG.debug("client [container: {}] wants to open a link [address: {}] for receiving messages",
                     connRequest.getRemoteContainer(), sender.getRemoteSource());
@@ -180,33 +184,29 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                     ProtonHelper.condition(AmqpError.NOT_ALLOWED, "anonymous relay not supported by this adapter"));
             receiver.close();
         } else {
-            validateEndpoint(receiver)
-                    .recover(t -> {
-                        LOG.debug(
-                                "fail to establish a receiving link with client [{}] due to an invalid endpoint [{}]."
-                                        + " closing the link",
-                                receiver.getName(), receiver.getRemoteQoS());
-                        if (ClientErrorException.class.isInstance(t)) {
-                            final ClientErrorException error = (ClientErrorException) t;
-                            receiver.setCondition(
-                                    ProtonHelper.condition(AmqpError.NOT_FOUND, error.getMessage()));
-                            receiver.close();
-                        }
-                        return Future.failedFuture(t);
-                    })
-                    .compose(resource -> {
-                        receiver.setTarget(receiver.getRemoteTarget());
-                        receiver.setQoS(receiver.getRemoteQoS());
-                        LOG.debug("Established receiver link at [address: {}]",
-                                receiver.getRemoteTarget().getAddress());
-                        receiver.handler(
-                                (delivery, message) -> {
-                                    uploadMessage(new AmqpContext(delivery, message, resource));
-                                })
-                                .closeHandler(remoteDetach -> onLinkDetach(receiver))
-                                .open();
-                        return Future.succeededFuture();
-                    });
+            validateEndpoint(receiver).recover(t -> {
+                LOG.debug(
+                        "fail to establish a receiving link with client [{}] due to an invalid endpoint [{}]."
+                                + " closing the link",
+                        receiver.getName(), receiver.getRemoteQoS());
+                if (ClientErrorException.class.isInstance(t)) {
+                    final ClientErrorException error = (ClientErrorException) t;
+                    receiver.setCondition(ProtonHelper.condition(AmqpError.NOT_FOUND, error.getMessage()));
+                    receiver.close();
+                }
+                return Future.failedFuture(t);
+            }).compose(resource -> {
+                receiver.setTarget(receiver.getRemoteTarget());
+                receiver.setQoS(receiver.getRemoteQoS());
+                LOG.debug("Established receiver link at [address: {}]",
+                        receiver.getRemoteTarget().getAddress());
+                receiver.handler((delivery, message) -> {
+                    uploadMessage(new AmqpContext(delivery, message, resource));
+                });
+                HonoProtonHelper.setCloseHandler(receiver, remoteDetach -> onLinkDetach(receiver));
+                receiver.open();
+                return Future.succeededFuture();
+            });
         }
     }
 
