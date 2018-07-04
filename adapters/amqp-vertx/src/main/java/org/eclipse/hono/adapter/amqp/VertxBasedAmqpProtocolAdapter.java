@@ -209,7 +209,10 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             LOG.error("Connection disconnected " + conn.getCondition().getDescription());
         });
         // when a BEGIN frame is received
-        connRequest.sessionOpenHandler(session -> handleSessionOpen(connRequest, session));
+        connRequest.sessionOpenHandler(session -> {
+            HonoProtonHelper.setDefaultCloseHandler(session);
+            handleSessionOpen(connRequest, session);
+        });
         // when an OPEN is received
         connRequest.openHandler(remoteOpen -> {
             final ProtonConnection conn = remoteOpen.result();
@@ -269,7 +272,6 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
     private void handleSessionOpen(final ProtonConnection conn, final ProtonSession session) {
         LOG.debug("opening new session with client [container: {}]", conn.getRemoteContainer());
         session.setIncomingCapacity(DEFAULT_MAX_SESSION_WINDOW);
-        HonoProtonHelper.setDefaultCloseHandler(session);
         session.open();
     }
 
@@ -312,6 +314,11 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         }
     }
 
+    /**
+     * Forwards a message received from a device to downstream consumers.
+     * 
+     * @param context The context that the message has been received in.
+     */
     protected void uploadMessage(final AmqpContext context) {
         final Future<Void> formalCheck = Future.future();
         final String contentType = context.getMessageContentType();
