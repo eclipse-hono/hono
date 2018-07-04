@@ -208,7 +208,7 @@ public class VertxBasedHttpProtocolAdapterTest {
         when(tenantServiceClient.getOrCreateTenantClient()).thenReturn(Future.succeededFuture(tenantClient));
 
         final MessageConsumer commandConsumer = mock(MessageConsumer.class);
-        when(commandConnection.createCommandConsumer(anyString(), anyString(), any(BiConsumer.class), any(Handler.class))).
+        when(commandConnection.getOrCreateCommandConsumer(anyString(), anyString(), any(BiConsumer.class), any(Handler.class))).
                 thenReturn(Future.succeededFuture(commandConsumer));
 
         telemetrySender = mock(MessageSender.class);
@@ -476,7 +476,7 @@ public class VertxBasedHttpProtocolAdapterTest {
                 .handler(response -> {
                     ctx.assertEquals(HttpURLConnection.HTTP_ACCEPTED, response.statusCode());
                     // verify that a command receiver link was opened
-                    verify(commandConnection).createCommandConsumer(eq("DEFAULT_TENANT"), eq("device_1"),
+                    verify(commandConnection).getOrCreateCommandConsumer(eq("DEFAULT_TENANT"), eq("device_1"),
                             any(BiConsumer.class), any(Handler.class));
                     async.complete();
                 }).exceptionHandler(ctx::fail).end(new JsonObject().encode());

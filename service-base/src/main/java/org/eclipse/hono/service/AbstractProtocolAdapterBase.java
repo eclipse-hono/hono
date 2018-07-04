@@ -233,6 +233,15 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         this.commandConnection = commandConnection;
     }
 
+    /**
+     * Gets the client used for connecting to the AMQP 1.0 network to receive commands.
+     *
+     * @return The command connection.
+     */
+    public final CommandConnection getCommandConnection() {
+        return this.commandConnection;
+    }
+
     @Override
     protected final Future<Void> startInternal() {
 
@@ -448,7 +457,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
             final String deviceId,
             final BiConsumer<ProtonDelivery, Message> messageConsumer,
             final Handler<Void> closeHandler) {
-        return commandConnection.createCommandConsumer(tenantId, deviceId, messageConsumer, closeHandler);
+        return commandConnection.getOrCreateCommandConsumer(tenantId, deviceId, messageConsumer, closeHandler);
     }
 
     /**
@@ -918,4 +927,17 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
                 tenant, deviceId);
     }
 
+    /**
+     * This method will be called for arriving commands for a device.
+     *
+     * @param tenantId The ID of the tenant to send the command responses for.
+     * @param deviceId The ID of the device to send the command responses for.
+     * @param delivery The delivery state.
+     * @param message The command message.
+     */
+    protected void onCommandReceived(final String tenantId, final String deviceId, final ProtonDelivery delivery,
+                                     final Message message) {
+        LOG.debug("command received [tenantId: {}, deviceId: {}, command: {}", tenantId, deviceId,
+                message.getSubject());
+    }
 }
