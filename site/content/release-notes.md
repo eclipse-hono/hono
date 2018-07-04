@@ -14,6 +14,7 @@ title = "Release Notes"
 ### Fixes & Enhancements
 
 * The Device Registry's AMQP endpoints can now be configured with the number of credits they should flow to clients connecting to the endpoints. The default value is 100. See [Device Registry admin guide]({{< relref "admin-guide/device-registry-config.md#service-configuration" >}}) for details.
+* Hono's service components can now be configured to use OpenSSL instead of the JVM's default SSL engine. The [admin guide]({{< relref "admin-guide/secure_communication.md#using-openssl" >}}) describes how to do this.
 
 ## 0.7-M1
 
