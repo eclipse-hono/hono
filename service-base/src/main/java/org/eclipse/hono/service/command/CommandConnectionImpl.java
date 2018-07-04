@@ -13,7 +13,10 @@
 
 package org.eclipse.hono.service.command;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.function.BiConsumer;
 
 import org.apache.qpid.proton.message.Message;
@@ -27,11 +30,20 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.proton.ProtonDelivery;
+import org.eclipse.hono.service.auth.device.Device;
+import org.eclipse.hono.util.CommandConstants;
+import org.eclipse.hono.util.ResourceIdentifier;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Implements a connection between an Adapter and the AMQP 1.0 network to receive commands and send a response.
  */
 public class CommandConnectionImpl extends HonoClientImpl implements CommandConnection {
+
+    private final Logger LOG = LoggerFactory.getLogger(getClass());
+
+    protected final Map<String, MessageConsumer> commandReceivers = new HashMap<>();
 
     /**
      * Creates a new client for a set of configuration properties.
@@ -50,7 +62,30 @@ public class CommandConnectionImpl extends HonoClientImpl implements CommandConn
     /**
      * {@inheritDoc}
      */
-    public final Future<MessageConsumer> createCommandConsumer(
+    @Override
+    protected void clearState() {
+        super.clearState();
+        commandReceivers.clear();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public final Future<MessageConsumer> getOrCreateCommandConsumer(
+            final String tenantId,
+            final String deviceId,
+            final BiConsumer<ProtonDelivery, Message> commandConsumer,
+            final Handler<Void> closeHandler) {
+        // TODO: see getOrCreateSender().. needed for this per device receives?
+        final MessageConsumer messageConsumer = commandReceivers.get(Device.asAddress(tenantId, deviceId));
+        if (messageConsumer != null) {
+            return Future.succeededFuture(messageConsumer);
+        } else {
+            return createCommandConsumer(tenantId, deviceId, commandConsumer, closeHandler);
+        }
+    }
+
+    private Future<MessageConsumer> createCommandConsumer(
             final String tenantId,
             final String deviceId,
             final BiConsumer<ProtonDelivery, Message> commandConsumer,
@@ -70,9 +105,43 @@ public class CommandConnectionImpl extends HonoClientImpl implements CommandConn
         return checkConnected().compose(con -> {
             final Future<MessageConsumer> result = Future.future();
             CommandConsumer.create(context, clientConfigProperties, connection, tenantId, deviceId,
-                    messageConsumer, closeHook -> closeHandler.handle(null), result.completer());
+                    messageConsumer, closeHook -> {
+                        commandReceivers.remove(Device.asAddress(tenantId, deviceId));
+                        closeHandler.handle(null);
+                    }, creation -> {
+                        if(creation.succeeded()) {
+                            commandReceivers.put(Device.asAddress(tenantId, deviceId), creation.result());
+                        }
+                        result.complete(creation.result());
+                    });
             return result;
         });
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public Future<Void> closeCommandConsumer(final String tenantId, final String deviceId) {
+        Objects.requireNonNull(tenantId);
+        Objects.requireNonNull(deviceId);
+        final MessageConsumer commandReceiverLink = commandReceivers.get(Device.asAddress(tenantId, deviceId));
+        final Future<Void> future = Future.future();
+        if (commandReceiverLink != null) {
+            commandReceiverLink.close(closeHandler -> {
+                if (closeHandler.failed()) {
+                    LOG.error("Command receiver link close failed: {}", closeHandler.cause());
+                    future.fail(closeHandler.cause());
+                }
+                else {
+                    future.complete();
+                }
+            });
+        } else {
+            LOG.error("Command receiver should be closed but could not be found for tenant: [{}], device: [{}]",
+                    tenantId, deviceId);
+            future.fail("Command receiver should be closed but could not be found for tenant");
+        }
+        return future;
     }
 
     /**
@@ -82,8 +151,9 @@ public class CommandConnectionImpl extends HonoClientImpl implements CommandConn
             final String tenantId,
             final String deviceId,
             final String replyId) {
-
         Objects.requireNonNull(tenantId);
+        Objects.requireNonNull(deviceId);
+        Objects.requireNonNull(replyId);
         final Future<CommandResponseSender> result = Future.future();
         getOrCreateSender(
                 CommandResponseSenderImpl.getTargetAddress(tenantId, deviceId, replyId),
@@ -114,4 +184,55 @@ public class CommandConnectionImpl extends HonoClientImpl implements CommandConn
         });
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    public Future<Void> closeCommandResponseSender(final String tenantId, final String deviceId, final String replyId) {
+        Objects.requireNonNull(tenantId);
+        Objects.requireNonNull(deviceId);
+        Objects.requireNonNull(replyId);
+        final MessageSender commandResponseSender = activeSenders.get(CommandResponseSenderImpl.getTargetAddress(tenantId, deviceId, replyId));
+        final Future<Void> future = Future.future();
+        if (commandResponseSender != null) {
+            commandResponseSender.close(closeHandler -> {
+                if (closeHandler.failed()) {
+                    LOG.error("Command response sender link close failed: {}", closeHandler.cause());
+                    future.fail(closeHandler.cause());
+                }
+                else {
+                    future.complete();
+                }
+            });
+        } else {
+            LOG.error("Command response sender should be closed but could not be found for tenant: [{}], device: [{}]",
+                    tenantId, deviceId);
+            future.fail("Command response sender should be closed but could not be found");
+        }
+        return future;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public Future<Void> closeCommandResponseSenders(final String tenantId, final String deviceId) {
+        Objects.requireNonNull(tenantId);
+        Objects.requireNonNull(deviceId);
+        final Future<Void> future = Future.future();
+        final String controlAddress = ResourceIdentifier.from(CommandConstants.COMMAND_ENDPOINT, tenantId, deviceId).toString();
+        final Set<String> keys = activeSenders.keySet();
+        for(final String key : keys) {
+            if (key.startsWith(controlAddress)) {
+                final Future<Void> sub = Future.future();
+                activeSenders.get(key).close(c->{
+                    if(c.succeeded()) {
+                        sub.succeeded();
+                    } else {
+                        sub.fail(c.cause());
+                    }
+                });
+                future.compose(v-> sub);
+            }
+        }
+        return future;
+    }
 }

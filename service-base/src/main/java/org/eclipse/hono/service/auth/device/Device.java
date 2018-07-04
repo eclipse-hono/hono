@@ -146,4 +146,24 @@ public class Device implements User {
                 CredentialsConstants.FIELD_PAYLOAD_TENANT_ID,
                 getTenantId());
     }
+
+    /**
+     * Gets the device id in an address structure.
+     *
+     * @param tenantId The id of the tenant.
+     * @param deviceId The id of the device.
+     * @return tenantId and deviceId as an address.
+     */
+    public static String asAddress(final String tenantId, final String deviceId) {
+        return String.format("%s/%s", tenantId, deviceId);
+    }
+
+    /**
+     * Gets the device id in an address structure.
+     * @param device The device.
+     * @return tenantId and deviceId as an address.
+     */
+    public static String asAddress(final Device device) {
+        return String.format("%s/%s", device.getTenantId(), device.getDeviceId());
+    }
 }
