@@ -34,6 +34,11 @@ public class CommandConstants {
     public static final String COMMAND_ENDPOINT = "control";
 
     /**
+     * The short name of the control endpoint.
+     */
+    public static final String COMMAND_ENDPOINT_SHORT = "c";
+
+    /**
      * The command to be executed by a device.
      */
     public static final String APP_PROPERTY_COMMAND = "command";

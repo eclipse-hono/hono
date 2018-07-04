@@ -14,11 +14,18 @@
 package org.eclipse.hono.adapter.mqtt;
 
 import java.net.HttpURLConnection;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
+import io.vertx.mqtt.MqttTopicSubscription;
+import io.vertx.mqtt.messages.MqttPublishMessage;
+import io.vertx.proton.ProtonDelivery;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
@@ -34,6 +41,7 @@ import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EndpointType;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.ExecutionContext;
+import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.TelemetryConstants;
 import org.eclipse.hono.util.TenantObject;
@@ -73,6 +81,10 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
     private static final int IANA_MQTT_PORT = 1883;
     private static final int IANA_SECURE_MQTT_PORT = 8883;
 
+    private static final String COMMAND_REQUEST_PREFIX = "control/req";
+    private static final String COMMAND_RESPONSE_PREFIX = "control/res";
+    private static final String COMMAND_REQUEST_SUBSCRIPTION = COMMAND_REQUEST_PREFIX + "/#";
+
     /**
      * A logger to be used by concrete subclasses.
      */
@@ -83,6 +95,8 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
     private MqttServer server;
     private MqttServer insecureServer;
     private HonoClientBasedAuthProvider usernamePasswordAuthProvider;
+
+    private HashMap<String, MqttEndpoint> endpoints = new HashMap();
 
     /**
      * Sets the provider to use for authenticating devices based on a username and password.
@@ -442,8 +456,67 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
 
     private void onAuthenticationSuccess(final MqttEndpoint endpoint, final Device authenticatedDevice) {
 
+        // subscription handler for commands
+        endpoint.subscribeHandler(subscribe -> {
+            if(subscribe.topicSubscriptions().size()==1) {
+                final MqttTopicSubscription subscription = subscribe.topicSubscriptions().get(0);
+                final List<MqttQoS> grantedQosLevels = new ArrayList<>();
+                if (subscription.topicName().equals(COMMAND_REQUEST_SUBSCRIPTION)
+                            && subscription.qualityOfService() != MqttQoS.EXACTLY_ONCE) { // TODO: define allowed QoS 1 or 0 ?
+                    LOG.debug("subscription for [topic:{}, QoS:{}] from [tenant:{}, device:{}]",
+                            subscription.topicName(), subscription.qualityOfService(),
+                            authenticatedDevice.getTenantId(), authenticatedDevice.getDeviceId());
+                    grantedQosLevels.add(subscription.qualityOfService());
+                    // remember the endpoint for this device
+                    endpoints.put(Device.asAddress(authenticatedDevice), endpoint);
+                    endpoint.subscribeAcknowledge(subscribe.messageId(), grantedQosLevels);
+                    createCommandConsumer(authenticatedDevice).setHandler(h-> {
+                        if(h.succeeded()) {
+                            h.result().flow(1);
+                            sendTtdEvent(authenticatedDevice, -1);
+                        }
+                        else {
+                            LOG.error("command consumer could not be created for [tenant:{}, device:{}]: {}",
+                                    authenticatedDevice.getTenantId(), authenticatedDevice.getDeviceId(), h.cause());
+                        }
+                    });
+                }
+                else {
+                    LOG.error("denied subscription other then [{}] for [topic:{}, QoS:{}] from [tenant:{}, device:{}]",
+                            COMMAND_REQUEST_SUBSCRIPTION, subscription.topicName(), subscription.qualityOfService(),
+                            authenticatedDevice.getTenantId(), authenticatedDevice.getDeviceId());
+                }
+            }
+            else {
+                LOG.error("subscription for more/other topics then [{}] is not allowed - [tenant:{}, device:{}]",
+                        COMMAND_REQUEST_SUBSCRIPTION, authenticatedDevice.getTenantId(),
+                        authenticatedDevice.getDeviceId());
+            }
+        }).unsubscribeHandler(unsubscribe -> {
+            if(unsubscribe.topics().size()==1) {
+                final String topic = unsubscribe.topics().get(0);
+                if(topic.equals(COMMAND_REQUEST_SUBSCRIPTION)) {
+                    LOG.debug("unsubscribe for [topic:{}] from [tenant:{}, device:{}]",
+                            topic, authenticatedDevice.getTenantId(), authenticatedDevice.getDeviceId());
+                    endpoint.unsubscribeAcknowledge(unsubscribe.messageId());
+                    endpoints.remove(Device.asAddress(authenticatedDevice));
+                    sendTtdEvent(authenticatedDevice,0);
+                }
+                else {
+                    LOG.debug("denied unsubscribe for [topic:{}] from [tenant:{}, device:{}]",
+                            topic, authenticatedDevice.getTenantId(), authenticatedDevice.getDeviceId());
+                }
+            }
+            else {
+                LOG.error("unsubscribe for more/other topics then [{}] is not allowed - [tenant:{}, device:{}]",
+                        COMMAND_REQUEST_SUBSCRIPTION, authenticatedDevice.getTenantId(),
+                        authenticatedDevice.getDeviceId());
+            }
+        });
+
         endpoint.closeHandler(v -> {
             close(endpoint, authenticatedDevice);
+            endpoints.remove(Device.asAddress(authenticatedDevice));
             LOG.debug("connection to device [tenant-id: {}, device-id: {}] closed",
                     authenticatedDevice.getTenantId(), authenticatedDevice.getDeviceId());
             metrics.decrementMqttConnections(authenticatedDevice.getTenantId());
@@ -451,6 +524,25 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
 
         endpoint.publishHandler(message -> handlePublishedMessage(new MqttContext(message, endpoint, authenticatedDevice)));
         metrics.incrementMqttConnections(authenticatedDevice.getTenantId());
+    }
+
+    private Future<MessageConsumer> createCommandConsumer(final Device authenticatedDevice) {
+        return getCommandConnection().getOrCreateCommandConsumer(authenticatedDevice.getTenantId(), authenticatedDevice.getDeviceId(), (delivery, message) -> {
+            LOG.debug("command received for [{}] with delivery ", authenticatedDevice);
+            onCommandReceived(authenticatedDevice.getTenantId(), authenticatedDevice.getDeviceId(), delivery, message);
+        }, close -> {
+            LOG.debug("command receiver link closed remotely"); // TODO reopen?
+            getCommandConnection().closeCommandReceiver(authenticatedDevice.getTenantId(), authenticatedDevice.getDeviceId());
+            getCommandConnection().closeCommandResponseSenders(authenticatedDevice.getTenantId(), authenticatedDevice.getDeviceId());
+        }).map(consumer -> {
+            consumer.flow(1);
+            return consumer;
+        });
+    }
+
+    private void closeCommandLinks(final Device authenticatedDevice) {
+        getCommandConnection().closeCommandReceiver(authenticatedDevice.getTenantId(), authenticatedDevice.getDeviceId());
+        getCommandConnection().closeCommandResponseSenders(authenticatedDevice.getTenantId(), authenticatedDevice.getDeviceId());
     }
 
     private Future<Void> triggerLinkCreation(final String tenantId) {
@@ -490,7 +582,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
      * 
      * @param ctx The context in which the MQTT message has been published.
      * @param resource The resource that the message should be uploaded to.
-     * @param payload The message payload to send.
+     * @param message The message to send.
      * @return A future indicating the outcome of the operation.
      *         <p>
      *         The future will succeed if the message has been uploaded successfully. Otherwise the future will fail
@@ -501,11 +593,11 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
     public final Future<Void> uploadMessage(
             final MqttContext ctx,
             final ResourceIdentifier resource,
-            final Buffer payload) {
+            final MqttPublishMessage message) {
 
         Objects.requireNonNull(ctx);
         Objects.requireNonNull(resource);
-        Objects.requireNonNull(payload);
+        Objects.requireNonNull(message);
 
         switch (EndpointType.fromString(resource.getEndpoint())) {
         case TELEMETRY:
@@ -513,13 +605,13 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
                     ctx,
                     resource.getTenantId(),
                     resource.getResourceId(),
-                    payload);
+                    message.payload());
         case EVENT:
             return uploadEventMessage(
                     ctx,
                     resource.getTenantId(),
                     resource.getResourceId(),
-                    payload);
+                    message.payload());
         default:
             return Future
                     .failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "unsupported endpoint"));
@@ -586,7 +678,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
     }
 
     private Future<Void> uploadMessage(final MqttContext ctx, final String tenant, final String deviceId,
-            final Buffer payload, final Future<MessageSender> senderTracker, final String endpointName) {
+            final Buffer payload, final Future<? extends MessageSender> senderTracker, final String endpointName) {
 
         if (!isPayloadOfIndicatedType(payload, ctx.contentType())) {
             return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
@@ -677,7 +769,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
 
     /**
      * Gets the current span from an execution context.
-     * 
+     *
      * @param ctx The context.
      * @return The span or {@code null} if the context does not
      *         contain a span.
@@ -692,7 +784,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
 
     /**
      * Sets the current span on an execution context.
-     * 
+     *
      * @param ctx The context.
      * @param span The current span.
      */
@@ -796,5 +888,57 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
      * @param ctx The context in which the MQTT message has been published.
      */
     protected void onMessageUndeliverable(final MqttContext ctx) {
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected void onCommandReceived(final String tenantId, final String deviceId, final ProtonDelivery delivery, final Message message) {
+        super.onCommandReceived(tenantId, deviceId, delivery, message);
+
+        final MqttEndpoint endpoint = endpoints.get(Device.asAddress(tenantId, deviceId));
+        if(endpoint!=null) {
+            final String cmdReqId = validateAndGenerateCommandRequestId(tenantId,deviceId,message).get(); // TODO: why an optional?
+            endpoint.publish(String.format("%s/%s/%s", COMMAND_REQUEST_PREFIX, message.getSubject(),cmdReqId),
+                    MessageHelper.getPayload(message), MqttQoS.AT_LEAST_ONCE, false, false);
+        }
+        else {
+            LOG.error(
+                    "received command could not be delivered since no endpoint for device: [{}] from tenant: [{}] could be found",
+                    deviceId, tenantId);
+        }
+    }
+
+    /**
+     * Sends the event of a subscribed device, that is now online (ttd==-1), or disconnects (ttd=0).
+     *
+     * @param authenticatedDevice The device, that wants to handle commands.
+     * @param ttd The time til disconnect.
+     */
+    protected void sendTtdEvent(final Device authenticatedDevice, final Integer ttd) {
+        final String tenant = authenticatedDevice.getTenantId();
+        final String deviceId = authenticatedDevice.getDeviceId();
+        final Future<JsonObject> tokenTracker = getRegistrationAssertion(tenant, deviceId, authenticatedDevice);
+        final Future<TenantObject> tenantConfigTracker = getTenantConfiguration(tenant);
+        final Future<MessageSender> senderTracker = getEventSender(tenant);
+
+        CompositeFuture.all(tokenTracker, tenantConfigTracker, senderTracker).compose(ok -> {
+            if (tenantConfigTracker.result().isAdapterEnabled(getTypeName())) {
+                final MessageSender sender = senderTracker.result();
+                final Message msg = newMessage(
+                        ResourceIdentifier.from(EventConstants.EVENT_ENDPOINT, tenant, deviceId),
+                        senderTracker.result().isRegistrationAssertionRequired(),
+                        EventConstants.EVENT_ENDPOINT,
+                        EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION,
+                        Buffer.buffer(""), // TODO
+                        tokenTracker.result(),
+                        ttd);
+                return sender.send(msg);
+            } else {
+                // this adapter is not enabled for the tenant
+                return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_FORBIDDEN));
+            }
+        });
     }
 }
