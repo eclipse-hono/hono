@@ -1,5 +1,5 @@
 # The FROM field will be overridden by our build configuration
-# in the Hono template and is here just for completness.
+# in the Hono template and is here just for completeness.
 
 FROM fabric8/s2i-java:2.2
 
