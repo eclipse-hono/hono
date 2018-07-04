@@ -147,37 +147,42 @@ public class HonoReceiver extends AbstractClient {
             result.setSampleCount(messageCount);
             result.setErrorCount(errorCount); // NOTE: This method does nothing in JMeter 3.3/4.0
             result.setBytes(bytesReceived);
-            if (sampler.isUseSenderTime() && messageCount > 0) {
-                elapsed = totalSampleDeliveryTime / messageCount;
-                result.setStampAndTime(sampleStart, elapsed);
-            } else if (sampleStart != 0 && messageCount > 0) { // sampling is started only when a message with a
-                                                               // timestamp is received.
-                elapsed = System.currentTimeMillis() - sampleStart;
-                result.setStampAndTime(sampleStart, elapsed);
-                result.setIdleTime(elapsed);
+            if (messageCount > 0) {
+                if (sampler.isUseSenderTime() && sampleStart != 0 && errorCount == 0) {
+                    // errorCount has to be 0 here - otherwise totalSampleDeliveryTime doesn't have a correct value
+                    elapsed = totalSampleDeliveryTime / messageCount;
+                    result.setStampAndTime(sampleStart, elapsed);
+                } else if (sampleStart != 0) {
+                    elapsed = System.currentTimeMillis() - sampleStart;
+                    result.setStampAndTime(sampleStart, elapsed);
+                    result.setIdleTime(elapsed);
+                } else {
+                    LOGGER.warn("sampleStart hasn't been set - setting elapsed time to 0");
+                    result.setStampAndTime(System.currentTimeMillis(), 0);
+                    result.setIdleTime(0);
+                }
             } else {
-                noMessagesReceived(result);
+                // empty sample
+                result.setStampAndTime(System.currentTimeMillis(), 0);
+                result.setIdleTime(0);
             }
             if (errorCount == 0) {
-                LOGGER.info("{}: received batch of {} messages in {}ms", sampler.getThreadName(), messageCount, elapsed);
+                final String formatString = sampler.isUseSenderTime() ? "{}: received batch of {} messages; average delivery time: {}ms"
+                        : "{}: received batch of {} messages in {}ms";
+                LOGGER.info(formatString, sampler.getThreadName(), messageCount, elapsed);
+                result.setResponseMessage("");
             } else {
                 LOGGER.info("{}: received batch of {} messages with {} errors in {}ms", sampler.getThreadName(), messageCount, errorCount, elapsed);
+                result.setResponseMessage("got " + errorCount + " invalid messages");
             }
-            result.setResponseMessage(
-                    String.format("messages received: %d, bytes received: %d, time elapsed: %d",
-                            messageCount, bytesReceived, elapsed));
-            // reset all counters
+
+            // reset all fields
             totalSampleDeliveryTime = 0;
             bytesReceived = 0;
             messageCount = 0;
             errorCount = 0;
             sampleStart = 0;
         }
-    }
-
-    private void noMessagesReceived(final SampleResult result) {
-        LOGGER.warn("No messages were received");
-        result.setIdleTime(0);
     }
 
     private void messageReceived(final Message message) {
@@ -187,6 +192,7 @@ public class HonoReceiver extends AbstractClient {
 
             if (!(message.getBody() instanceof Data)) {
                 errorCount++;
+                setSampleStartIfNotSetYet(sampleReceivedTime);
                 LOGGER.warn("got message with non-Data body section; increasing errorCount in batch to {}; current batch size: {}",
                         errorCount, messageCount);
                 return;
@@ -196,25 +202,28 @@ public class HonoReceiver extends AbstractClient {
             final Long senderTime = getSenderTime(message, messageBody);
             if (sampler.isUseSenderTime() && senderTime == null) {
                 errorCount++;
+                setSampleStartIfNotSetYet(sampleReceivedTime);
                 LOGGER.warn("got message without sender time information; increasing errorCount in batch to {}; current batch size: {}",
                         errorCount, messageCount);
                 return;
             }
 
             if (sampler.isUseSenderTime()) {
-                if (sampleStart == 0) { // set sample start only once when the first message is received.
-                    sampleStart = senderTime;
-                }
+                setSampleStartIfNotSetYet(senderTime); // set sample start only once when the first message is received.
                 final long sampleDeliveryTime = sampleReceivedTime - senderTime;
                 totalSampleDeliveryTime += sampleDeliveryTime;
                 LOGGER.trace("received message; current batch size: {}; reception timestamp: {}; delivery time: {}ms",
                         messageCount, sampleReceivedTime, sampleDeliveryTime);
             } else {
-                if (sampleStart == 0) {
-                    sampleStart = sampleReceivedTime;
-                }
+                setSampleStartIfNotSetYet(sampleReceivedTime);
                 LOGGER.trace("received message; current batch size: {}; reception timestamp: {}", messageCount, sampleReceivedTime);
             }
+        }
+    }
+
+    private void setSampleStartIfNotSetYet(final long timestamp) {
+        if (sampleStart == 0) {
+            sampleStart = timestamp;
         }
     }
 
