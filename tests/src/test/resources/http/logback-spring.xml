@@ -18,9 +18,8 @@
   <springProfile name="dev">
     <logger name="org.eclipse.hono.adapter" level="DEBUG"/>
     <logger name="org.eclipse.hono.client" level="DEBUG"/>
-    <logger name="org.eclipse.hono.client.impl.AbstractRequestResponseClient" level="DEBUG"/>
     <logger name="org.eclipse.hono.connection" level="DEBUG"/>
-    <logger name="org.eclipse.hono.service.auth" level="DEBUG"/>
+    <logger name="org.eclipse.hono.service" level="DEBUG"/>
   </springProfile>
 
   <springProfile name="prod">
