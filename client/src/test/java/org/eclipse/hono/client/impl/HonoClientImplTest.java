@@ -23,7 +23,6 @@ import java.util.concurrent.CountDownLatch;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.RegistrationClient;
-import org.eclipse.hono.client.RequestResponseClient;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ClientConfigProperties;
@@ -175,8 +174,7 @@ public class HonoClientImplTest {
 
         client.getOrCreateRequestResponseClient(
                 "registration/tenant",
-                () -> Future.future(),
-                result -> {});
+                () -> Future.future());
 
         // WHEN an additional, concurrent attempt is made to create a client for "tenant"
         client.getOrCreateRequestResponseClient(
@@ -184,8 +182,7 @@ public class HonoClientImplTest {
                 () -> {
                     ctx.fail("should not create concurrent client");
                     return Future.succeededFuture(mock(RegistrationClient.class));
-                },
-                ctx.<RequestResponseClient> asyncAssertFailure(t -> {
+                }).setHandler(ctx.asyncAssertFailure(t -> {
                     // THEN the concurrent attempt fails without any attempt being made to create another client
                     ctx.assertTrue(ServerErrorException.class.isInstance(t));
                 }));
@@ -214,8 +211,7 @@ public class HonoClientImplTest {
                     ctx.assertFalse(creationFailure.isCompleted());
                     supplierInvocation.complete();
                     return Future.future();
-                },
-                ctx.asyncAssertFailure(cause -> creationFailure.complete()));
+                }).setHandler(ctx.asyncAssertFailure(cause -> creationFailure.complete()));
 
         // WHEN the underlying connection fails
         supplierInvocation.await();
@@ -460,15 +456,19 @@ public class HonoClientImplTest {
     @Test
     public void testConnectFailsAfterShutdown(final TestContext ctx) {
 
-        // GIVEN a shutdown client
-        client.shutdown();
-
-        // WHEN client connects
-        client.connect(new ProtonClientOptions()).setHandler(
-                ctx.asyncAssertFailure(cause -> {
-                    //THEN connect fails
-                    ctx.assertEquals(HttpURLConnection.HTTP_CONFLICT, ((ClientErrorException) cause).getErrorCode());
-                }));
+        client.connect().compose(ok -> {
+            // GIVEN a client that is connected to a server
+            final Future<Void> disconnected = Future.future();
+            // WHEN the client is shut down
+            client.shutdown(disconnected.completer());
+            return disconnected;
+        }).compose(d -> {
+            // AND tries to reconnect again
+            return client.connect(new ProtonClientOptions());
+        }).setHandler(ctx.asyncAssertFailure(cause -> {
+            // THEN the connection attempt fails
+            ctx.assertEquals(HttpURLConnection.HTTP_CONFLICT, ((ClientErrorException) cause).getErrorCode());
+        }));
     }
 
     /**
@@ -479,24 +479,20 @@ public class HonoClientImplTest {
     @Test
     public void testConnectSucceedsAfterDisconnect(final TestContext ctx) {
 
-        // If a client disconnects from the server
-        final Async disconnectTracker = ctx.async();
-        client.disconnect(ctx.asyncAssertSuccess(succeeds -> {
-            // client successfully disconnected from remote AMQP container.
-            disconnectTracker.complete();
+        client.connect().compose(ok -> {
+            // GIVEN a client that is connected to a server
+            final Future<Void> disconnected = Future.future();
+            // WHEN the client disconnects
+            client.disconnect(disconnected.completer());
+            return disconnected;
+        }).compose(d -> {
+            // AND tries to reconnect again
+            return client.connect(new ProtonClientOptions());
+        }).setHandler(ctx.asyncAssertSuccess(success -> {
+            // THEN the connection succeeds
         }));
-        disconnectTracker.await();
-
-        // AND tries to reconnect again
-        final Async connectionTracker = ctx.async();
-        client.connect(new ProtonClientOptions()).setHandler(
-                ctx.asyncAssertSuccess(success -> {
-                    connectionTracker.complete();
-                }));
-
-        // THEN the connection succeeds
-        connectionTracker.await();
     }
+
     /**
      * Verifies that the client does not try to re-connect to a server instance if the client was shutdown.
      * 

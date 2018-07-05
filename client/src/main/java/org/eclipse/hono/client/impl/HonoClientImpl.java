@@ -710,18 +710,9 @@ public class HonoClientImpl implements HonoClient {
             final String tenantId) {
 
         Objects.requireNonNull(tenantId);
-        final Future<CredentialsClient> result = Future.future();
-        getOrCreateRequestResponseClient(
+        return getOrCreateRequestResponseClient(
                 CredentialsClientImpl.getTargetAddress(tenantId),
-                () -> newCredentialsClient(tenantId),
-                attempt -> {
-                    if (attempt.succeeded()) {
-                        result.complete((CredentialsClient) attempt.result());
-                    } else {
-                        result.fail(attempt.cause());
-                    }
-                });
-        return result;
+                () -> newCredentialsClient(tenantId)).map(c -> (CredentialsClient) c);
     }
 
     /**
@@ -785,18 +776,9 @@ public class HonoClientImpl implements HonoClient {
 
         Objects.requireNonNull(tenantId);
 
-        final Future<RegistrationClient> result = Future.future();
-        getOrCreateRequestResponseClient(
+        return getOrCreateRequestResponseClient(
                 RegistrationClientImpl.getTargetAddress(tenantId),
-                () -> newRegistrationClient(tenantId),
-                attempt -> {
-                    if (attempt.succeeded()) {
-                        result.complete((RegistrationClient) attempt.result());
-                    } else {
-                        result.fail(attempt.cause());
-                    }
-                });
-        return result;
+                () -> newRegistrationClient(tenantId)).map(c -> (RegistrationClient) c);
     }
 
     /**
@@ -850,18 +832,9 @@ public class HonoClientImpl implements HonoClient {
     @Override
     public Future<TenantClient> getOrCreateTenantClient() {
 
-        final Future<TenantClient> result = Future.future();
-        getOrCreateRequestResponseClient(
+        return getOrCreateRequestResponseClient(
                 TenantClientImpl.getTargetAddress(),
-                () -> newTenantClient(),
-                attempt -> {
-                    if (attempt.succeeded()) {
-                        result.complete((TenantClient) attempt.result());
-                    } else {
-                        result.fail(attempt.cause());
-                    }
-                });
-        return result;
+                () -> newTenantClient()).map(c -> (TenantClient) c);
     }
 
     /**
@@ -916,23 +889,14 @@ public class HonoClientImpl implements HonoClient {
      */
     @Override
     public Future<CommandClient> getOrCreateCommandClient(final String tenantId, final String deviceId) {
+
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
-        final Future<CommandClient> result = Future.future();
+
         LOG.debug("get or create command client for [tenantId: {}, deviceId: {}]", tenantId, deviceId);
-        getOrCreateRequestResponseClient(
+        return getOrCreateRequestResponseClient(
                 ResourceIdentifier.from(CommandConstants.COMMAND_ENDPOINT, tenantId, deviceId).toString(),
-                () -> newCommandClient(tenantId, deviceId),
-                attempt -> {
-                    if (attempt.succeeded()) {
-                        LOG.debug("Command client created successfully for [tenantId: {}, deviceId: {}]", tenantId, deviceId);
-                        result.complete((CommandClient) attempt.result());
-                    } else {
-                        LOG.debug("Command client created failed for [tenantId: {}, deviceId: {}] : {}", tenantId, deviceId, attempt.cause().getMessage());
-                        result.fail(attempt.cause());
-                    }
-                });
-        return result;
+                () -> newCommandClient(tenantId, deviceId)).map(c -> (CommandClient) c);
     }
 
     private Future<RequestResponseClient> newCommandClient(final String tenantId, final String deviceId) {
@@ -954,18 +918,19 @@ public class HonoClientImpl implements HonoClient {
      *
      * @param key The key to look-up the client by.
      * @param clientSupplier A consumer for an attempt to create a new client.
-     * @param resultHandler The handler to inform about the outcome of the operation.
+     * @return A future indicating the outcome of the operation.
      */
-    void getOrCreateRequestResponseClient(
+    protected Future<RequestResponseClient> getOrCreateRequestResponseClient(
             final String key,
-            final Supplier<Future<RequestResponseClient>> clientSupplier,
-            final Handler<AsyncResult<RequestResponseClient>> resultHandler) {
+            final Supplier<Future<RequestResponseClient>> clientSupplier) {
 
-        context.runOnContext(get -> {
+        final Future<RequestResponseClient> result = Future.future();
+
+        context.runOnContext(go -> {
             final RequestResponseClient client = activeRequestResponseClients.get(key);
             if (client != null && client.isOpen()) {
                 LOG.debug("reusing existing client [target: {}]", key);
-                resultHandler.handle(Future.succeededFuture(client));
+                result.complete(client);
             } else if (!creationLocks.computeIfAbsent(key, k -> Boolean.FALSE)) {
 
                 // register a handler to be notified if the underlying connection to the server fails
@@ -973,8 +938,7 @@ public class HonoClientImpl implements HonoClient {
                 final Handler<Void> connectionFailureHandler = connectionLost -> {
                     // remove lock so that next attempt to open a sender doesn't fail
                     creationLocks.remove(key);
-                    resultHandler.handle(Future.failedFuture(
-                            new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "no connection to service")));
+                    result.tryFail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "no connection to service"));
                 };
                 creationRequests.add(connectionFailureHandler);
                 creationLocks.put(key, Boolean.TRUE);
@@ -984,21 +948,23 @@ public class HonoClientImpl implements HonoClient {
                     if (creationAttempt.succeeded()) {
                         LOG.debug("successfully created new client [target: {}]", key);
                         activeRequestResponseClients.put(key, creationAttempt.result());
+                        result.tryComplete(creationAttempt.result());
                     } else {
                         LOG.debug("failed to create new client [target: {}]", key, creationAttempt.cause());
                         activeRequestResponseClients.remove(key);
+                        result.tryFail(creationAttempt.cause());
                     }
                     creationLocks.remove(key);
                     creationRequests.remove(connectionFailureHandler);
-                    resultHandler.handle(creationAttempt);
                 });
 
             } else {
                 LOG.debug("already trying to create a client [target: {}]", key);
-                resultHandler.handle(Future.failedFuture(new ServerErrorException(
-                        HttpURLConnection.HTTP_UNAVAILABLE, "no connection to service")));
+                result.fail(new ServerErrorException(
+                        HttpURLConnection.HTTP_UNAVAILABLE, "no connection to service"));
             }
         });
+        return result;
     }
 
     /**
@@ -1031,11 +997,10 @@ public class HonoClientImpl implements HonoClient {
     public final void shutdown(final Handler<AsyncResult<Void>> completionHandler) {
         Objects.requireNonNull(completionHandler);
         if (shuttingDown.compareAndSet(Boolean.FALSE, Boolean.TRUE)) {
-            context.runOnContext(shutDownResult -> {
-                closeConnection(completionHandler);
-            });
+            closeConnection(completionHandler);
         } else {
-            completionHandler.handle(Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_CONFLICT, "already in the middle of a shutdown operation")));
+            completionHandler.handle(Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_CONFLICT,
+                    "already shutting down")));
         }
     }
 
@@ -1055,7 +1020,8 @@ public class HonoClientImpl implements HonoClient {
         });
         try {
             if (!countDown.await(5, TimeUnit.SECONDS)) {
-                LOG.error("Disconnecting from the server [{}:{}] timed out after 5 seconds", connectionFactory.getHost(), connectionFactory.getPort());
+                LOG.error("Disconnecting from the server [{}:{}] timed out after 5 seconds",
+                        connectionFactory.getHost(), connectionFactory.getPort());
             }
         } catch (final InterruptedException e) {
             Thread.currentThread().interrupt();
