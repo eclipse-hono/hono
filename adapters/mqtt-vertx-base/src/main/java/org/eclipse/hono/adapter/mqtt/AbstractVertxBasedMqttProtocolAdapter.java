@@ -321,38 +321,47 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
     private void handleConnectionRequestResult(final MqttEndpoint endpoint,
             final AsyncResult<Device> authenticationAttempt) {
 
-        if (authenticationAttempt.succeeded()) {
+        // This method is invoked from the vert.x context of one of the
+        // Hono clients that have been used for authenticating the device.
+        // We need to make sure that we send back our CONNACK packet on
+        // the same context that we had received the device's CONNECT packet on
+        // in order to prevent a race condition in MqttServer when the device publishes
+        // its first message
 
-            sendConnectedEvent(endpoint.clientIdentifier(), authenticationAttempt.result())
-                    .setHandler(sendAttempt -> {
-                        if (sendAttempt.succeeded()) {
-                            endpoint.accept(false);
-                        } else {
-                            LOG.warn(
-                                    "connection request from client [clientId: {}] rejected due to connection event "
-                                            + "failure: {}",
-                                    endpoint.clientIdentifier(),
-                                    MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE,
-                                    sendAttempt.cause());
-                            endpoint.reject(MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE);
-                        }
-                    });
+        context.runOnContext(go -> {
+            if (authenticationAttempt.succeeded()) {
 
-        } else {
+                sendConnectedEvent(endpoint.clientIdentifier(), authenticationAttempt.result())
+                        .setHandler(sendAttempt -> {
+                            if (sendAttempt.succeeded()) {
+                                endpoint.accept(false);
+                            } else {
+                                LOG.warn(
+                                        "connection request from client [clientId: {}] rejected due to connection event "
+                                                + "failure: {}",
+                                        endpoint.clientIdentifier(),
+                                        MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE,
+                                        sendAttempt.cause());
+                                endpoint.reject(MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE);
+                            }
+                        });
 
-            final Throwable t = authenticationAttempt.cause();
-            if (t instanceof MqttConnectionException) {
-                final MqttConnectReturnCode code = ((MqttConnectionException) t).code();
-                LOG.debug("connection request from client [clientId: {}] rejected with code: {}",
-                        endpoint.clientIdentifier(), code);
-                endpoint.reject(code);
             } else {
-                LOG.debug("connection request from client [clientId: {}] rejected: {}",
-                        endpoint.clientIdentifier(), MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE);
-                endpoint.reject(MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE);
-            }
 
-        }
+                final Throwable t = authenticationAttempt.cause();
+                if (t instanceof MqttConnectionException) {
+                    final MqttConnectReturnCode code = ((MqttConnectionException) t).code();
+                    LOG.debug("connection request from client [clientId: {}] rejected with code: {}",
+                            endpoint.clientIdentifier(), code);
+                    endpoint.reject(code);
+                } else {
+                    LOG.debug("connection request from client [clientId: {}] rejected: {}",
+                            endpoint.clientIdentifier(), MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE);
+                    endpoint.reject(MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE);
+                }
+
+            }
+        });
     }
 
     /**

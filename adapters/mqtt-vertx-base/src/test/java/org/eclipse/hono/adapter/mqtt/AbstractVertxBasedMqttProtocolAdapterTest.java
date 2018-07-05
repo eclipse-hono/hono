@@ -102,6 +102,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
     private ProtocolAdapterProperties config;
     private MqttAdapterMetrics metrics;
     private CommandConnection commandConnection;
+    private Context context;
 
     /**
      * Creates clients for the needed micro services and sets the configuration to enable the insecure port.
@@ -109,6 +110,13 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
     @Before
     @SuppressWarnings("unchecked")
     public void setup() {
+
+        context = mock(Context.class);
+        doAnswer(invocation -> {
+            final Handler<Void> handler = invocation.getArgument(0);
+            handler.handle(null);
+            return null;
+        }).when(context).runOnContext(any(Handler.class));
 
         config = new ProtocolAdapterProperties();
         config.setInsecurePortEnabled(true);
@@ -590,8 +598,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         when(server.actualPort()).thenReturn(0, 1883);
         when(server.endpointHandler(any(Handler.class))).thenReturn(server);
         when(server.listen(any(Handler.class))).then(invocation -> {
-            final Handler<AsyncResult<MqttServer>> handler = (Handler<AsyncResult<MqttServer>>) invocation
-                    .getArgument(0);
+            final Handler<AsyncResult<MqttServer>> handler = invocation.getArgument(0);
             if (startupShouldFail) {
                 handler.handle(Future.failedFuture("MQTT server intentionally failed to start"));
             } else {
@@ -629,7 +636,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
 
         if (server != null) {
             adapter.setMqttInsecureServer(server);
-            adapter.init(vertx, mock(Context.class));
+            adapter.init(vertx, context);
         }
 
         return adapter;
