@@ -193,24 +193,28 @@ public class HonoConsumerBase {
      */
     private void handleCommandReadinessNotification(final TimeUntilDisconnectNotification notification) {
 
-        System.out.println(String.format("Device is ready to receive a command : <%s>.", notification.toString()));
+        if (notification.getMillisecondsUntilExpiry() == 0) {
+            System.out.println(String.format("Device notified as not being ready to receive a command (anymore) : <%s>.", notification.toString()));
+        } else {
+            System.out.println(String.format("Device is ready to receive a command : <%s>.", notification.toString()));
 
-        final String tenantId = notification.getTenantId();
-        final String deviceId = notification.getDeviceId();
+            final String tenantId = notification.getTenantId();
+            final String deviceId = notification.getDeviceId();
 
-        honoClient.getOrCreateCommandClient(tenantId, deviceId).map(commandClient -> {
-            final JsonObject jsonCmd = new JsonObject().put("brightness", (int)(Math.random() * 100));
-            final Buffer commandBuffer = Buffer.buffer(jsonCmd.encodePrettily());
-            // let the commandClient timeout when the notification expires
-            commandClient.setRequestTimeout(notification.getMillisecondsUntilExpiry());
+            honoClient.getOrCreateCommandClient(tenantId, deviceId).map(commandClient -> {
+                final JsonObject jsonCmd = new JsonObject().put("brightness", (int) (Math.random() * 100));
+                final Buffer commandBuffer = Buffer.buffer(jsonCmd.encodePrettily());
+                // let the commandClient timeout when the notification expires
+                commandClient.setRequestTimeout(notification.getMillisecondsUntilExpiry());
 
-            // send the command upstream to the device
-            sendCommandToAdapter(commandClient, commandBuffer);
-            return commandClient;
-        }).otherwise(t -> {
-            System.err.println(String.format("Could not create command client : %s", t.getMessage()));
-            return null;
-        });
+                // send the command upstream to the device
+                sendCommandToAdapter(commandClient, commandBuffer);
+                return commandClient;
+            }).otherwise(t -> {
+                System.err.println(String.format("Could not create command client : %s", t.getMessage()));
+                return null;
+            });
+        }
     }
 
     private void sendCommandToAdapter(final CommandClient commandClient, final Buffer commandBuffer) {

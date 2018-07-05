@@ -85,12 +85,15 @@ public final class TimeUntilDisconnectNotification {
      */
     public static Optional<TimeUntilDisconnectNotification> fromMessage(final Message msg) {
 
-        if (MessageHelper.isDeviceCurrentlyConnected(msg)) {
+        final Integer ttd = MessageHelper.getTimeUntilDisconnect(msg);
+
+        if (ttd == null) {
+            return Optional.empty();
+        } else if (ttd == 0 || MessageHelper.isDeviceCurrentlyConnected(msg)) {
             final String tenantId = MessageHelper.getTenantIdAnnotation(msg);
             final String deviceId = MessageHelper.getDeviceId(msg);
 
             if (tenantId != null && deviceId != null) {
-                final Integer ttd = MessageHelper.getTimeUntilDisconnect(msg);
                 final Instant creationTime = Instant.ofEpochMilli(msg.getCreationTime());
 
                 final TimeUntilDisconnectNotification notification =
@@ -98,7 +101,6 @@ public final class TimeUntilDisconnectNotification {
                 return Optional.of(notification);
             }
         }
-
         return Optional.empty();
     }
 
