@@ -225,8 +225,8 @@ Start by creating a new project using:
 
 Then download and unpack EnMasse:
 
-    curl -LO https://github.com/EnMasseProject/enmasse/releases/download/0.20.0/enmasse-0.20.0.tgz
-    tar xzf enmasse-0.20.0.tgz
+    curl -LO https://github.com/EnMasseProject/enmasse/releases/download/0.21.0/enmasse-0.21.0.tgz
+    tar xzf enmasse-0.21.0.tgz
 
 {{% note title="Newer versions" %}}
 Newer versions of EnMasse might work as well, or might require some changes to
@@ -234,7 +234,7 @@ the deployment guide. Unless you explicitly want to try out a different version
 it is recommended to stick to the version mentioned in this tutorial.
 {{% /note %}}
 
-    ./enmasse-0.20.0/deploy.sh -n enmasse
+    ./enmasse-0.21.0/deploy.sh -n enmasse
 
 Wait for the admin console to completely start up. You can check this with
 the following command:
