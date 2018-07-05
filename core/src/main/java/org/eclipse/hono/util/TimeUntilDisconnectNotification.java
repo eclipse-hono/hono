@@ -24,6 +24,11 @@ import org.apache.qpid.proton.message.Message;
  */
 public final class TimeUntilDisconnectNotification {
 
+    /**
+     * Define the maximum time in milliseconds until a disconnect notification is expired to be 10000 days.
+     */
+    private static final long MAX_EXPIRY_MILLISECONDS = 60 * 60 * 24 * 10000 * 1000;
+
     private String tenantId;
 
     private String deviceId;
@@ -87,15 +92,22 @@ public final class TimeUntilDisconnectNotification {
             if (tenantId != null && deviceId != null) {
                 final Integer ttd = MessageHelper.getTimeUntilDisconnect(msg);
                 final Instant creationTime = Instant.ofEpochMilli(msg.getCreationTime());
-                final Instant deviceCommandReadyUntil = creationTime.plusSeconds(ttd);
 
                 final TimeUntilDisconnectNotification notification =
-                        new TimeUntilDisconnectNotification(tenantId, deviceId, deviceCommandReadyUntil);
+                        new TimeUntilDisconnectNotification(tenantId, deviceId, getReadyUntilInstantFromTtd(ttd, creationTime));
                 return Optional.of(notification);
             }
         }
 
         return Optional.empty();
+    }
+
+    private static Instant getReadyUntilInstantFromTtd(final long ttd, final Instant startingFrom) {
+        if (ttd == MessageHelper.TTD_VALUE_UNLIMITED) {
+            return Instant.MAX;
+        } else {
+            return startingFrom.plusSeconds(ttd);
+        }
     }
 
     /**
@@ -104,7 +116,11 @@ public final class TimeUntilDisconnectNotification {
      * @return The number of milliseconds until this notification expires, or 0 if the notification is already expired.
      */
     public long getMillisecondsUntilExpiry() {
-        final long milliseconds = getReadyUntil().toEpochMilli() - Instant.now().toEpochMilli();
-        return (milliseconds > 0 ? milliseconds : 0);
+        if (getReadyUntil().equals(Instant.MAX)) {
+            return MAX_EXPIRY_MILLISECONDS;
+        } else {
+            final long milliseconds = getReadyUntil().minusMillis(Instant.now().toEpochMilli()).toEpochMilli();
+            return (milliseconds > 0 ? milliseconds : 0);
+        }
     }
 }

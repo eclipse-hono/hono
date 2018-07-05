@@ -63,7 +63,7 @@ public final class MessageHelper {
     /**
      * Devices that are always ready to receive an upstream message can use this as value for {@link #APP_PROPERTY_DEVICE_TTD} to indicate it in messages.
      */
-    public static final int TTD_VALUE_ALWAYS_READY = -1;
+    public static final int TTD_VALUE_UNLIMITED = -1;
     /**
      * The name of the AMQP 1.0 message application property containing the id of the gateway
      * that wants to report data on behalf of another device.
@@ -575,7 +575,7 @@ public final class MessageHelper {
     public static Boolean isDeviceCurrentlyConnected(final Message msg) {
 
         return Optional.ofNullable(MessageHelper.getTimeUntilDisconnect(msg)).map(ttd -> {
-            if (ttd == MessageHelper.TTD_VALUE_ALWAYS_READY) {
+            if (ttd == MessageHelper.TTD_VALUE_UNLIMITED) {
                 return Boolean.TRUE;
             } else if (ttd == 0) {
                 return Boolean.FALSE;
