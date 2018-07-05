@@ -16,19 +16,19 @@ package org.eclipse.hono.vertx.example;
 import org.eclipse.hono.vertx.example.base.HonoConsumerBase;
 
 /**
- * Example class with minimal dependencies for consuming event data from Hono.
+ * Example class with minimal dependencies for consuming data from Hono and sending commands
+ * to connected devices.
  * <p>
  * Please refer to {@link org.eclipse.hono.vertx.example.base.HonoExampleConstants} to configure where Hono's
  * microservices are reachable.
  */
-public class HonoEventConsumer extends HonoConsumerBase {
+public class HonoConsumer extends HonoConsumerBase {
 
     public static void main(final String[] args) throws Exception {
 
-        System.out.println("Starting event consumer...");
-        final HonoEventConsumer honoDownstreamEventConsumer = new HonoEventConsumer();
-        honoDownstreamEventConsumer.setMode(MODE.EVENT);
-        honoDownstreamEventConsumer.consumeData();
-        System.out.println("Finishing event consumer.");
+        System.out.println("Starting consumer...");
+        final HonoConsumer honoConsumer = new HonoConsumer();
+        honoConsumer.consumeData();
+        System.out.println("Finishing consumer.");
     }
 }

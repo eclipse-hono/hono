@@ -13,10 +13,13 @@
 
 package org.eclipse.hono.vertx.example.base;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.function.Consumer;
 
+import io.vertx.core.Handler;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
 import io.vertx.proton.ProtonConnection;
@@ -36,35 +39,22 @@ import io.vertx.core.Vertx;
 
 
 /**
- * Example base class for consuming data from Hono.
+ * Example base class for consuming telemetry and event data from devices connected to Hono and sending commands to these devices.
  * <p>
- * This class implements all necessary code to get Hono's messaging consumer client running.
+ * This class implements all necessary code to get Hono's messaging consumer client and Hono's command client running.
+ * <p>
  * The code consumes data until it receives
  * any input on it's console (which finishes it and closes vertx).
- * <p>
- * By default, this class consumes telemetry data. This can be changed to event data by setting
- * {@link HonoConsumerBase#setMode(MODE)} to {@link MODE#EVENT}.
  */
 public class HonoConsumerBase {
     public static final String HONO_CLIENT_USER = "consumer@HONO";
     public static final String HONO_CLIENT_PASSWORD = "verysecret";
     protected final int DEFAULT_CONNECT_TIMEOUT_MILLIS = 1000;
 
-
     private final Vertx vertx = Vertx.vertx();
     private final HonoClient honoClient;
 
-    /**
-     * Enum to define from which source messages are consumed.
-     * <p>
-     * Instead of using a {@code Boolean} this enum allows for more modes in future extensions (e.g. to receive messages
-     * from both channels).
-     */
-    public enum MODE {
-        TELEMETRY, EVENT
-    }
-
-    private MODE mode = MODE.TELEMETRY;
+    private final Map<String, Handler<Void>> periodicCommandSenderTimerCancelerMap = new HashMap<>();
 
     /**
      * The consumer needs one connection to the AMQP 1.0 messaging network from which it can consume data.
@@ -99,7 +89,7 @@ public class HonoConsumerBase {
 
         consumerFuture.setHandler(result -> {
             if (!result.succeeded()) {
-                System.err.println("honoClient could not create telemetry consumer for " + HonoExampleConstants.HONO_AMQP_CONSUMER_HOST
+                System.err.println("honoClient could not create downstream consumer for " + HonoExampleConstants.HONO_AMQP_CONSUMER_HOST
                         + ":" + HonoExampleConstants.HONO_AMQP_CONSUMER_PORT + " : " + result.cause());
             }
             latch.countDown();
@@ -120,29 +110,31 @@ public class HonoConsumerBase {
     /**
      * Create the message consumer that handles the downstream messages and invokes the notification callback
      * {@link #handleCommandReadinessNotification(TimeUntilDisconnectNotification)} if the message indicates that it
-     * stays connected for a specified time. Supported are telemetry or event MessageConsumer.
+     * stays connected for a specified time. Supported are telemetry and event MessageConsumer.
      *
      * @return Future A succeeded future that contains the MessageConsumer if the creation was successful, a failed
      *         Future otherwise.
      */
     private Future<MessageConsumer> createConsumer() {
-        switch (mode) {
-            case EVENT:
-                // create the eventHandler by using the helper functionality for demultiplexing messages to callbacks
-                final Consumer<Message> eventHandler = MessageTap.getConsumer(
-                        this::handleEventMessage, this::handleCommandReadinessNotification);
-                return honoClient.createEventConsumer(HonoExampleConstants.TENANT_ID,
-                        eventHandler,
-                        closeHook -> System.err.println("remotely detached consumer link"));
-            case TELEMETRY:
-                // create the telemetryHandler by using the helper functionality for demultiplexing messages to callbacks
-                final Consumer<Message> telemetryHandler = MessageTap.getConsumer(
-                        this::handleTelemetryMessage, this::handleCommandReadinessNotification);
-                return honoClient.createTelemetryConsumer(HonoExampleConstants.TENANT_ID,
-                        telemetryHandler, closeHook -> System.err.println("remotely detached consumer link"));
-            default:
-                return Future.failedFuture("No valid mode set for consumer.");
-        }
+        // create the eventHandler by using the helper functionality for demultiplexing messages to callbacks
+        final Consumer<Message> eventHandler = MessageTap.getConsumer(
+                this::handleEventMessage, this::handleCommandReadinessNotification);
+
+        // create the telemetryHandler by using the helper functionality for demultiplexing messages to
+        // callbacks
+        final Consumer<Message> telemetryHandler = MessageTap.getConsumer(
+                this::handleTelemetryMessage, this::handleCommandReadinessNotification);
+
+        return honoClient.createEventConsumer(HonoExampleConstants.TENANT_ID,
+                eventHandler,
+                closeHook -> System.err.println("remotely detached consumer link")
+        ).compose(messageConsumer -> honoClient.createTelemetryConsumer(HonoExampleConstants.TENANT_ID,
+                telemetryHandler, closeHook -> System.err.println("remotely detached consumer link")
+        ).compose(telemetryMessageConsumer ->
+                Future.succeededFuture(telemetryMessageConsumer)
+        ).recover(t ->
+                Future.failedFuture(t)
+        ));
     }
 
     /**
@@ -183,52 +175,95 @@ public class HonoConsumerBase {
     }
 
     /**
-     * Handler method for a <em>device ready for command</em> notification (by an explicit event or contained implicit in
+     * Handler method for a <em>device ready for command</em> notification (by an explicit event or contained implicitly in
      * another message).
      * <p>
-     * The code creates a simple command in JSON
+     * The code creates a simple command in JSON.
      *
      * @param notification The notification containing the tenantId, deviceId and the Instant (that
      *                     defines until when this notification is valid). See {@link TimeUntilDisconnectNotification}.
      */
     private void handleCommandReadinessNotification(final TimeUntilDisconnectNotification notification) {
-
         if (notification.getMillisecondsUntilExpiry() == 0) {
             System.out.println(String.format("Device notified as not being ready to receive a command (anymore) : <%s>.", notification.toString()));
+            callPeriodicCommandSenderTimerCanceler(notification);
         } else {
             System.out.println(String.format("Device is ready to receive a command : <%s>.", notification.toString()));
 
             final String tenantId = notification.getTenantId();
             final String deviceId = notification.getDeviceId();
 
-            honoClient.getOrCreateCommandClient(tenantId, deviceId).map(commandClient -> {
-                final JsonObject jsonCmd = new JsonObject().put("brightness", (int) (Math.random() * 100));
-                final Buffer commandBuffer = Buffer.buffer(jsonCmd.encodePrettily());
-                // let the commandClient timeout when the notification expires
-                commandClient.setRequestTimeout(notification.getMillisecondsUntilExpiry());
-
-                // send the command upstream to the device
-                sendCommandToAdapter(commandClient, commandBuffer);
-                return commandClient;
-            }).otherwise(t -> {
-                System.err.println(String.format("Could not create command client : %s", t.getMessage()));
-                return null;
-            });
+            createCommandClientAndSendCommand(notification, tenantId, deviceId);
         }
     }
 
-    private void sendCommandToAdapter(final CommandClient commandClient, final Buffer commandBuffer) {
+    private void createCommandClientAndSendCommand(final TimeUntilDisconnectNotification notification, final String tenantId, final String deviceId) {
+        honoClient.getOrCreateCommandClient(tenantId, deviceId).map(commandClient -> {
+            final JsonObject jsonCmd = new JsonObject().put("brightness", (int) (Math.random() * 100));
+            // let the commandClient timeout when the notification expires
+            if (notification.getTtd() == -1) {
+                commandClient.setRequestTimeout(2000);
+            } else {
+                commandClient.setRequestTimeout(notification.getMillisecondsUntilExpiry());
+            }
+
+            // send the command upstream to the device
+            if (notification.getTtd() == -1) {
+                // cancel a still existing timer for this device (if found)
+                callPeriodicCommandSenderTimerCanceler(notification);
+                // for devices that stay connected, start a periodic timer now that repeatedly sends a command to the device
+                vertx.setPeriodic(2000, timerId -> {
+                    setPeriodicCommandSenderTimerCanceler(timerId, notification, commandClient);
+                    jsonCmd.put("brightness", (int) (Math.random() * 100));
+                    sendCommandToAdapter(commandClient, Buffer.buffer(jsonCmd.encodePrettily()), notification);
+                });
+            } else {
+                sendCommandToAdapter(commandClient, Buffer.buffer(jsonCmd.encodePrettily()), notification);
+            }
+            return commandClient;
+        }).otherwise(t -> {
+            System.err.println(String.format("Could not create command client : %s", t.getMessage()));
+            return null;
+        });
+    }
+
+    private void setPeriodicCommandSenderTimerCanceler(final Long timerId, final TimeUntilDisconnectNotification notification, final CommandClient commandClient) {
+        this.periodicCommandSenderTimerCancelerMap.put(notification.getTenantAndDeviceId(), v -> {
+            commandClient.close(ignore -> {});
+            vertx.cancelTimer(timerId);
+            periodicCommandSenderTimerCancelerMap.remove(notification.getTenantAndDeviceId());
+        });
+    }
+
+    private void callPeriodicCommandSenderTimerCanceler(final TimeUntilDisconnectNotification notification) {
+        if (isDeviceConnectedForCommands(notification)) {
+            periodicCommandSenderTimerCancelerMap.get(notification.getTenantAndDeviceId()).handle(null);
+        }
+    }
+
+    private boolean isDeviceConnectedForCommands(final TimeUntilDisconnectNotification notification) {
+        return (periodicCommandSenderTimerCancelerMap.containsKey(notification.getTenantAndDeviceId()));
+    }
+
+    private void sendCommandToAdapter(final CommandClient commandClient, final Buffer commandBuffer,
+                                      final TimeUntilDisconnectNotification notification) {
         commandClient.sendCommand("setBrightness", commandBuffer).map(result -> {
             System.out.println(String.format("Successfully sent command [%s] and received response: [%s]",
                     commandBuffer.toString(), Optional.ofNullable(result).orElse(Buffer.buffer()).toString()));
-            commandClient.close(v -> {
-            });
+            if (notification.getTtd() != -1) {
+                // do not close the command client if device stays connected
+                commandClient.close(v -> {
+                });
+            }
             return result;
         }).otherwise(t -> {
             System.out.println(
                     String.format("Could not send command or did not receive a response : %s", t.getMessage()));
-            commandClient.close(v -> {
-            });
+            if (notification.getTtd() != -1) {
+                // do not close the command client if device stays connected
+                commandClient.close(v -> {
+                });
+            }
             return (Buffer) null;
         });
     }
@@ -253,23 +288,5 @@ public class HonoConsumerBase {
      */
     private void handleEventMessage(final Message msg) {
         printMessage(HonoExampleConstants.TENANT_ID, msg, "event");
-    }
-
-    /**
-     * Gets the {@link MODE} of this consumer: event data or telemetry data.
-     *
-     * @return The mode of this consumer.
-     */
-    public MODE getMode() {
-        return mode;
-    }
-
-    /**
-     * Sets the consumer to consume event data or telemetry data.
-     *
-     * @param value The new {@link MODE} value.
-     */
-    public void setMode(final MODE value) {
-        this.mode = value;
     }
 }

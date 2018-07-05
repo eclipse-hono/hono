@@ -63,6 +63,15 @@ public final class TimeUntilDisconnectNotification {
         return deviceId;
     }
 
+    /**
+     * Get a representation of the deviceId scoped to the tenant.
+     *
+     * @return The combined representation, or {@code null} if the tenantId is {@code null}.
+     */
+    public String getTenantAndDeviceId() {
+        return Optional.ofNullable(tenantId).map(t -> t + "/" + deviceId).orElse(null);
+    }
+
     public Integer getTtd() {
         return ttd;
     }
