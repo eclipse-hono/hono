@@ -1,0 +1,201 @@
+kind: Template
+apiVersion: v1
+
+metadata:
+
+  name: grafana-openshift
+
+parameters:
+
+- name:           GIT_REPOSITORY
+  displayName:      Git repository URI
+  description:      location of the grafana git repo
+  value:            https://github.com/eclipse/hono
+- name:           GIT_BRANCH
+  displayName:      Git branch
+  description:      The git branch to build
+  value:            master
+  required:         true
+- name:           ADMIN_PASSWORD
+  displayName:      Initial admin password
+  description:      The password which will initially be set for the admin user
+  generate:         expression
+  from:             "[a-zA-Z0-9]{12}"
+  required:         true
+- name:           GRAFANA_VERSION
+  displayName:      Grafana version
+  description:      The version of Grafana to use
+  value:            5.1.4
+  required:         true
+- name:           VOLUME_SIZE
+  displayName:      Volume Size
+  description:      Size of persistent volume used for Grafana datastore
+  required:         true
+  value:            1Gi
+
+objects:
+
+- apiVersion: v1
+  kind: PersistentVolumeClaim
+  metadata:
+    name: grafana-pvc
+  spec:
+    accessModes:
+    - ReadWriteOnce
+    resources:
+      requests:
+        storage: ${VOLUME_SIZE}
+
+- kind: ImageStream
+  apiVersion: v1
+  metadata:
+    name: centos
+  spec:
+    lookupPolicy:
+      local: false
+    tags:
+    - name: "7"
+      from:
+        kind: DockerImage
+        name: docker.io/centos:7
+      importPolicy:
+        scheduled: true
+      referencePolicy:
+        type: Source
+
+- apiVersion: v1
+  kind: ImageStream
+  metadata:
+    name: grafana
+
+- apiVersion: v1
+  kind: BuildConfig
+  metadata:
+    name: grafana
+  spec:
+    output:
+      to:
+        kind: ImageStreamTag
+        name: grafana:latest
+    runPolicy: Serial
+    triggers:
+    - type: ImageChange
+    - type: ConfigChange
+    source:
+      git:
+        uri: ${GIT_REPOSITORY}
+        ref: ${GIT_BRANCH}
+      type: Git
+      contextDir: example/src/main/deploy/openshift_s2i/containers/grafana
+    strategy:
+      type: Docker
+      dockerStrategy:
+        env:
+        - name: GRAFANA_VERSION
+          value: ${GRAFANA_VERSION}
+        from:
+          kind: ImageStreamTag
+          name: centos:7
+
+- apiVersion: v1
+  kind: DeploymentConfig
+  metadata:
+    name: grafana
+    labels:
+      app: hono-metrics
+      deploymentconfig: grafana
+  spec:
+    replicas: 1
+    selector:
+      app: hono-metrics
+      deploymentconfig: grafana
+    strategy:
+      type: Recreate
+    template:
+      metadata:
+        labels:
+          app: hono-metrics
+          deploymentconfig: grafana
+      spec:
+        containers:
+        - name: grafana
+          image: grafana
+          env:
+          - name: GF_SECURITY_ADMIN_PASSWORD
+            value: ${ADMIN_PASSWORD}
+          ports:
+          - containerPort: 3000
+            protocol: TCP
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /login
+              port: 3000
+              scheme: HTTP
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /login
+              port: 3000
+              scheme: HTTP
+            initialDelaySeconds: 20
+          volumeMounts:
+          - mountPath: /var/lib/grafana
+            name: data
+          - mountPath: /etc/grafana/provisioning/datasources
+            name: grafana-provisioning-datasources
+          - mountPath: /etc/grafana/provisioning/dashboards
+            name: grafana-provisioning-dashboards
+          - mountPath: /etc/grafana/dashboard-definitions
+            name: grafana-dashboard-defs
+        volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: grafana-pvc
+        - name: grafana-provisioning-datasources
+          configMap:
+            name: grafana-provisioning-datasources
+        - name: grafana-provisioning-dashboards
+          configMap:
+            name: grafana-provisioning-dashboards
+        - name: grafana-dashboard-defs
+          configMap:
+            name: grafana-dashboard-defs
+    triggers:
+    - type: ConfigChange
+    - type: ImageChange
+      imageChangeParams:
+        automatic: true
+        containerNames:
+        - grafana
+        from:
+          kind: ImageStreamTag
+          name: grafana:latest
+
+- apiVersion: v1
+  kind: Service
+  metadata:
+    name: grafana
+  spec:
+    ports:
+    - name: 3000-tcp
+      port: 3000
+      protocol: TCP
+      targetPort: 3000
+    selector:
+      app: hono-metrics
+      deploymentconfig: grafana
+
+- apiVersion: v1
+  kind: Route
+  metadata:
+    name: grafana
+  spec:
+    port:
+      targetPort: 3000-tcp
+    to:
+      kind: Service
+      name: grafana
+

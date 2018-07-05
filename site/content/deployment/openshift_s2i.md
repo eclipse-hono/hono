@@ -93,7 +93,6 @@ ensure that you are running Minishift with the following settings:
 
     minishift start --cpus 4 --memory 16GB --disk-size 40GB
 
-
 {{% note title="Resource limits" %}}
 Once you created your Minishift cluster instance with `minishift start` the
 resource arguments (like `--cpus`) are ignored in future calls to
@@ -291,14 +290,25 @@ Start by creating a new project using:
 
     oc new-project grafana --display-name='Grafana Dashboard'
 
+Create the config resources:
+
+    oc create configmap grafana-provisioning-datasources --from-file=../../config/grafana/provisioning/datasources
+    oc create configmap grafana-provisioning-dashboards --from-file=../../config/grafana/provisioning/dashboards
+    oc create configmap grafana-dashboard-defs --from-file=../../config/grafana/dashboard-definitions
+
 Then deploy the Grafana instance using:
 
-    oc process -f ../openshift/grafana-template.yml \
+    oc process -f grafana-template.yml \
       -p ADMIN_PASSWORD=admin | oc create -f -
 
-After the Grafana instance is up and running, deploy the default resources:
+OpenShift templates allow to use *parameters* which can customize provided
+templates. If you want to specify template parameters from the command line
+use the following syntax:
 
-    ../configure_grafana.sh "$(oc get route grafana -o jsonpath='{.spec.host}')" 80
+    oc process -f grafana-template.yml \
+      -p ADMIN_PASSWORD=admin \
+      -p "GIT_REPOSITORY=https://github.com/your/hono.git" \
+      -p "GIT_BRANCH=0.6.x"| oc create -f -
 
 ## Configuring the installation
 
@@ -312,7 +322,7 @@ devices to 100 per tenant. If this is not enough for your setup you can change
 the setting by executing the following command, which will increate the number
 to 10.000 devices per tenant:
 
-    oc env dc/hono-service-device-registry HONO_REGISTRY_SVC_MAX_DEVICES_PER_TENANT=10000
+    oc env -n hono dc/hono-service-device-registry HONO_REGISTRY_SVC_MAX_DEVICES_PER_TENANT=10000
 
 ## Using the installation
 
