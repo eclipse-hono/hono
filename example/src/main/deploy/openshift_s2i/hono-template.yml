@@ -427,12 +427,6 @@ objects:
           credentialsPath: /etc/secrets/credentials.properties
         messaging:
           name: 'Hono MQTT Adapter'
-          port: 5671
-          username: mqtt-adapter@HONO
-          password: mqtt-secret
-          trustStorePath: /var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt
-          trustStoreFormat: PEM
-          credentialsPath: /etc/secrets/credentials.properties
         registration:
           name: 'Hono MQTT Adapter'
           port: 5671
@@ -553,7 +547,15 @@ objects:
               fieldRef:
                 fieldPath: metadata.namespace
           - name: HONO_MESSAGING_HOST
-            value: hono-service-messaging.$(KUBERNETES_NAMESPACE).svc
+            valueFrom:
+              configMapKeyRef:
+                name: hono-configuration
+                key: downstream.host
+          - name: HONO_MESSAGING_PORT
+            valueFrom:
+              configMapKeyRef:
+                name: hono-configuration
+                key: downstream.port
           - name: HONO_REGISTRATION_HOST
             value: hono-service-device-registry.$(KUBERNETES_NAMESPACE).svc
           - name: HONO_CREDENTIALS_HOST
@@ -763,12 +765,6 @@ objects:
           keyFormat: PEM
         messaging:
           name: 'Hono HTTP Adapter'
-          port: 5671
-          username: http-adapter@HONO
-          password: http-secret
-          trustStorePath: /var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt
-          trustStoreFormat: PEM
-          credentialsPath: /etc/secrets/credentials.properties
         registration:
           name: 'Hono HTTP Adapter'
           port: 5671
@@ -889,7 +885,15 @@ objects:
               fieldRef:
                 fieldPath: metadata.namespace
           - name: HONO_MESSAGING_HOST
-            value: hono-service-messaging.$(KUBERNETES_NAMESPACE).svc
+            valueFrom:
+              configMapKeyRef:
+                name: hono-configuration
+                key: downstream.host
+          - name: HONO_MESSAGING_PORT
+            valueFrom:
+              configMapKeyRef:
+                name: hono-configuration
+                key: downstream.port
           - name: HONO_REGISTRATION_HOST
             value: hono-service-device-registry.$(KUBERNETES_NAMESPACE).svc
           - name: HONO_CREDENTIALS_HOST
@@ -1667,259 +1671,3 @@ objects:
     selector:
       app: hono-service
       deploymentconfig: hono-service-auth
-
-# hono-service-messaging
-
-- kind: ImageStream
-  apiVersion: v1
-  metadata:
-    name: hono-service-messaging
-    labels:
-      app: hono-service
-
-- kind: BuildConfig
-  apiVersion: v1
-  metadata:
-    name: hono-service-messaging-build
-    labels:
-      app: hono-service
-  spec:
-    triggers: 
-      - type: ImageChange
-      - type: ConfigChange
-    source: 
-      type: Git
-      git:
-        uri: ${GIT_REPOSITORY}
-        ref: ${GIT_BRANCH}
-    strategy: 
-      type: source
-      sourceStrategy:
-        from:
-          kind: ImageStreamTag
-          name: fabric8-s2i-java-custom:2.2
-        env:
-        - name: MAVEN_ARGS_APPEND
-          value: -B -pl org.eclipse.hono:hono-service-messaging --also-make
-        - name: ARTIFACT_DIR
-          value: services/messaging/target
-        - name: ARTIFACT_COPY_ARGS
-          value: "*-exec.jar"
-    output:
-      to:
-        kind: ImageStreamTag
-        name: hono-service-messaging:latest
-
-- kind: ConfigMap
-  apiVersion: v1
-  metadata:
-    name: hono-service-messaging-config
-    labels:
-      app: hono-service
-  data:
-    application.yml: |+
-      hono:
-        app:
-          maxInstances: 1
-          healthCheckBindAddress: 0.0.0.0
-          healthCheckPort: 8088
-        auth:
-          port: 5671
-          keyPath: /etc/tls/tls.key
-          certPath: /etc/tls/tls.crt
-          keyFormat: PEM
-          trustStorePath: /var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt
-          trustStoreFormat: PEM
-          name: 'Hono Messaging'
-        messaging:
-          keyPath: /etc/tls/tls.key
-          certPath: /etc/tls/tls.crt
-          keyFormat: PEM
-          bindAddress: 0.0.0.0
-        metric:
-          reporter:
-            graphite:
-              active: true
-              port: 2003
-
-    logback-spring.xml: |+
-        <?xml version="1.0" encoding="UTF-8"?>
-        <!DOCTYPE xml>
-        
-        <configuration>
-        
-          <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
-            <!-- encoders are assigned the type
-                 ch.qos.logback.classic.encoder.PatternLayoutEncoder by default -->
-            <encoder>
-              <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
-            </encoder>
-          </appender>
-        
-          <root level="INFO">
-            <appender-ref ref="STDOUT" />
-          </root>
-        
-          <springProfile name="dev">
-            <logger name="org.eclipse.hono.client" level="DEBUG"/>
-            <logger name="org.eclipse.hono.connection" level="DEBUG"/>
-            <logger name="org.eclipse.hono.event" level="DEBUG"/>
-            <logger name="org.eclipse.hono.messaging" level="DEBUG"/>
-            <logger name="org.eclipse.hono.service.auth" level="DEBUG"/>
-            <logger name="org.eclipse.hono.telemetry" level="DEBUG"/>
-        
-            <logger name="io.netty.handler.logging.LoggingHandler" level="DEBUG"/>
-        
-            <logger name="io.vertx.proton.impl" level="INFO"/>
-            <logger name="io.vertx.core.net.impl" level="INFO"/>
-          </springProfile>
-        
-          <springProfile name="prod">
-            <logger name="org.eclipse.hono" level="INFO"/>
-        
-            <logger name="io.netty.handler.logging.LoggingHandler" level="INFO"/>
-        
-            <logger name="io.vertx.proton.impl" level="INFO"/>
-            <logger name="io.vertx.core.net.impl" level="INFO"/>
-          </springProfile>
-        
-        </configuration>
-
-- kind: DeploymentConfig
-  apiVersion: v1
-  metadata:
-    name: hono-service-messaging
-    labels:
-      app: hono-service
-      deploymentconfig: hono-service-messaging
-  spec:
-    replicas: 1
-    selector:
-      app: hono-service
-      deploymentconfig: hono-service-messaging
-    strategy:
-      type: Rolling
-      rollingParams:
-        timeoutSeconds: 3600
-    triggers:
-      - type: ConfigChange
-      - type: ImageChange
-        imageChangeParams:
-          automatic: true
-          containerNames:
-            - eclipsehono-hono-service-messaging
-          from:
-            kind: ImageStreamTag
-            name: hono-service-messaging:latest
-    template:
-      metadata:
-        labels:
-          app: hono-service
-          deploymentconfig: hono-service-messaging
-      spec:
-        containers:
-        - name: eclipsehono-hono-service-messaging
-          image: hono-service-messaging
-          imagePullPolicy: Always
-          env:
-          - name: SPRING_CONFIG_LOCATION
-            value: file:///etc/config/
-          - name: SPRING_PROFILES_ACTIVE
-            value: 
-          - name: LOGGING_CONFIG
-            value: file:///etc/config/logback-spring.xml
-          - name: HONO_AUTH_VALIDATION_SHARED_SECRET
-            valueFrom:
-              secretKeyRef:
-                name: hono-shared-signing-secret
-                key: sharedSecret
-          - name: HONO_MESSAGING_VALIDATION_SHARED_SECRET
-            valueFrom:
-              secretKeyRef:
-                name: hono-shared-signing-secret
-                key: sharedSecret
-          - name: KUBERNETES_NAMESPACE
-            valueFrom:
-              fieldRef:
-                fieldPath: metadata.namespace
-          - name: HONO_DOWNSTREAM_HOST
-            valueFrom:
-              configMapKeyRef:
-                name: hono-configuration
-                key: downstream.host
-          - name: HONO_DOWNSTREAM_PORT
-            valueFrom:
-              configMapKeyRef:
-                name: hono-configuration
-                key: downstream.port
-          - name: HONO_AUTH_HOST
-            value: hono-service-auth.$(KUBERNETES_NAMESPACE).svc
-          - name: HONO_METRIC_REPORTER_GRAPHITE_HOST
-            value: influxdb.$(KUBERNETES_NAMESPACE).svc
-          - name: AB_JOLOKIA_USER
-            value: jolokia
-          - name: AB_JOLOKIA_PASSWORD_RANDOM
-            value: "false"
-          - name: AB_JOLOKIA_PASSWORD
-            valueFrom:
-              secretKeyRef:
-                name: jolokia-shared-secrets
-                key: jolokia.password
-          livenessProbe:
-            httpGet:
-              path: /liveness
-              port: 8088
-              scheme: HTTP
-            initialDelaySeconds: 180
-          readinessProbe:
-            httpGet:
-              path: /readiness
-              port: 8088
-              scheme: HTTP
-          resources:
-            limits:
-              memory: 512Mi
-          ports:
-          - containerPort: 8778 
-            name: jolokia
-          - containerPort: 8088
-            name: radan-http
-            protocol: TCP
-          - containerPort: 5671
-            name: amqps
-            protocol: TCP
-          - containerPort: 5672
-            name: amqp
-            protocol: TCP
-          volumeMounts:
-          - mountPath: /etc/config
-            name: conf
-          - mountPath: /etc/tls
-            name: tls
-            readOnly: true
-        volumes:
-        - name: conf
-          configMap:
-            name: hono-service-messaging-config
-        - name: tls
-          secret:
-            secretName: hono-service-messaging-tls
-
-- apiVersion: v1
-  kind: Service
-  metadata:
-    name: hono-service-messaging
-    labels:
-      app: hono-service
-      deploymentconfig: hono-service-messaging
-    annotations:
-      service.alpha.openshift.io/serving-cert-secret-name: hono-service-messaging-tls
-  spec:
-    ports:
-    - name: amqps
-      port: 5671
-      protocol: TCP
-      targetPort: 5671
-    selector:
-      app: hono-service
-      deploymentconfig: hono-service-messaging
