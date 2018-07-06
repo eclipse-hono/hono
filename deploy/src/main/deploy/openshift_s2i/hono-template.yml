@@ -425,6 +425,7 @@ objects:
           certPath: /etc/tls/tls.crt
           keyFormat: PEM
           credentialsPath: /etc/secrets/credentials.properties
+          nativeTlsRequired: true
         messaging:
           name: 'Hono MQTT Adapter'
         registration:
@@ -763,6 +764,7 @@ objects:
           keyPath: /etc/tls/tls.key
           certPath: /etc/tls/tls.crt
           keyFormat: PEM
+          nativeTlsRequired: true
         messaging:
           name: 'Hono HTTP Adapter'
         registration:

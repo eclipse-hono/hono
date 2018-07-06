@@ -45,6 +45,7 @@
     <logback.version>1.2.3</logback.version>
     <mockito.version>2.19.0</mockito.version>
     <netty.version>4.1.19.Final</netty.version>
+    <netty.tcnative.version>2.0.10.Final</netty.tcnative.version>
     <opentracing.version>0.31.0</opentracing.version>
     <opentracing-resolver.version>0.1.4</opentracing-resolver.version>
     <opentracing-vertx-web.version>0.1.0</opentracing-vertx-web.version>
@@ -316,6 +317,12 @@
         <groupId>io.opentracing.contrib</groupId>
         <artifactId>opentracing-tracerresolver</artifactId>
         <version>${opentracing-resolver.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.netty</groupId>
+        <artifactId>netty-tcnative</artifactId>
+        <version>${netty.tcnative.version}</version>
+        <scope>runtime</scope>
       </dependency>
     </dependencies>
   </dependencyManagement>
