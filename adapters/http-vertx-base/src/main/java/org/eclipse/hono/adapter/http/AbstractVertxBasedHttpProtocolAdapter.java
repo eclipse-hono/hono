@@ -659,14 +659,6 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
         });
     }
 
-    private void closeCommandReceiverLink(final AtomicReference<MessageConsumer> messageConsumerRef) {
-        Optional.ofNullable(messageConsumerRef.get()).map(messageConsumer -> {
-            messageConsumer.close(v2 -> {
-            });
-            return null;
-        });
-    }
-
     /**
      * Create a consumer for a command message that can be used by the command and control consumer.
      *
@@ -760,7 +752,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                         // create a timer that is invoked if no command was received until timeToDelayResponse is expired
                         final long timerId = getVertx().setTimer(timeToDelayResponse * 1000L,
                                 delay -> {
-                                    closeCommandReceiverLink(messageConsumerRef);
+                                    getCommandConnection().closeCommandConsumer(tenant, deviceId);
                                     // command finished, invoke handler
                                     Optional.ofNullable(commandReceivedHandler).map(h -> {
                                         h.handle(null);
@@ -770,12 +762,12 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                         // define the cancel code as closure
                         resultWithLinkCloseHandler.complete(v -> {
                             getVertx().cancelTimer(timerId);
-                            closeCommandReceiverLink(messageConsumerRef);
+                            getCommandConnection().closeCommandConsumer(tenant, deviceId);
                         });
 
                         return messageConsumer;
                     }).recover(t -> {
-                        closeCommandReceiverLink(messageConsumerRef);
+                        getCommandConnection().closeCommandConsumer(tenant, deviceId);
                         resultWithLinkCloseHandler.fail(t);
                         return Future.failedFuture(t);
                     });

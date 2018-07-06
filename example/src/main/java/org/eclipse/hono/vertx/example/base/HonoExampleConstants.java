@@ -25,7 +25,7 @@ public class HonoExampleConstants {
     /**
      Define the host where Hono's microservices can be reached.
      */
-    public static final String HONO_CONTAINER_HOST = "127.0.0.1";
+    public static final String HONO_CONTAINER_HOST = "192.168.99.100";
 
     public static final String HONO_AMQP_CONSUMER_HOST = HONO_CONTAINER_HOST;
     /**

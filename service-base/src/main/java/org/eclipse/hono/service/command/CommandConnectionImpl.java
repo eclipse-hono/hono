@@ -124,7 +124,8 @@ public class CommandConnectionImpl extends HonoClientImpl implements CommandConn
     public Future<Void> closeCommandConsumer(final String tenantId, final String deviceId) {
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
-        final MessageConsumer commandReceiverLink = commandReceivers.get(Device.asAddress(tenantId, deviceId));
+        final String deviceAddress = Device.asAddress(tenantId, deviceId);
+        final MessageConsumer commandReceiverLink = commandReceivers.get(deviceAddress);
         final Future<Void> future = Future.future();
         if (commandReceiverLink != null) {
             commandReceiverLink.close(closeHandler -> {
@@ -136,6 +137,7 @@ public class CommandConnectionImpl extends HonoClientImpl implements CommandConn
                     future.complete();
                 }
             });
+            commandReceivers.remove(deviceAddress);
         } else {
             LOG.error("Command receiver should be closed but could not be found for tenant: [{}], device: [{}]",
                     tenantId, deviceId);
