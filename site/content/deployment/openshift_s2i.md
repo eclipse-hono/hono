@@ -334,7 +334,7 @@ line argument `-n <project>` to specify the project name without changing the
 default selected project.
 
 All examples in the following sub-sections assume that you are located in the
-`examples` directory.
+`example` directory.
 
 ### Extract certificates
 
