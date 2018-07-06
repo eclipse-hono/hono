@@ -19,6 +19,8 @@ import java.util.Map;
 import java.util.Objects;
 
 import org.eclipse.hono.tracing.TracingHelper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import io.opentracing.Span;
 import io.opentracing.contrib.vertx.ext.web.WebSpanDecorator;
@@ -34,6 +36,8 @@ import io.vertx.core.http.HttpServerResponse;
  *
  */
 public class ComponentMetaDataDecorator extends WebSpanDecorator.StandardTags {
+
+    private static final Logger LOG = LoggerFactory.getLogger(ComponentMetaDataDecorator.class);
 
     private final Map<String, String> tags;
 
@@ -57,6 +61,7 @@ public class ComponentMetaDataDecorator extends WebSpanDecorator.StandardTags {
 
     @Override
     public void onRequest(final HttpServerRequest request, final Span span) {
+        LOG.trace("starting span for request [method: {}, URI: {}", request.method(), request.absoluteURI());
         Tags.HTTP_METHOD.set(span, request.method().toString());
         Tags.HTTP_URL.set(span, request.absoluteURI());
         tags.forEach((key, value) -> {
@@ -66,6 +71,7 @@ public class ComponentMetaDataDecorator extends WebSpanDecorator.StandardTags {
 
     @Override
     public void onReroute(final HttpServerRequest request, final Span span) {
+        LOG.trace("logging re-routed request [method: {}, URI: {}", request.method(), request.absoluteURI());
         final Map<String, String> logs = new HashMap<>(3);
         logs.put(Fields.EVENT, "reroute");
         logs.put(Tags.HTTP_URL.getKey(), request.absoluteURI());
@@ -75,11 +81,13 @@ public class ComponentMetaDataDecorator extends WebSpanDecorator.StandardTags {
 
     @Override
     public void onResponse(final HttpServerRequest request, final Span span) {
+        LOG.trace("setting status code of response to request [method: {}, URI: {}", request.method(), request.absoluteURI());
         Tags.HTTP_STATUS.set(span, request.response().getStatusCode());
     }
 
     @Override
     public void onFailure(final Throwable throwable, final HttpServerResponse response, final Span span) {
+        LOG.trace("logging failed processing of request");
         TracingHelper.logError(span, throwable);
     }
 }
