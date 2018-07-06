@@ -26,6 +26,8 @@ public final class TriTuple<A, B, C> {
     private final B two;
     private final C three;
 
+    private String stringRep;
+
     private TriTuple(final A one, final B two, final C three) {
 
         if (one == null && two == null && three == null) {
@@ -71,6 +73,14 @@ public final class TriTuple<A, B, C> {
      */
     public C three() {
         return three;
+    }
+
+    @Override
+    public String toString() {
+        if (stringRep == null) {
+            stringRep = String.format("TriTuple[one: %s, two: %s, three: %s]", one, two, three);
+        }
+        return stringRep;
     }
 
     /* (non-Javadoc)
