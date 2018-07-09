@@ -38,6 +38,7 @@ public class HonoSenderSamplerUI extends HonoSamplerUI {
     private final JLabeledTextField  assertion;
     private final JLabeledTextField  waitForReceivers;
     private final JLabeledTextField  waitForReceiversTimeout;
+    private final JLabeledTextField  sampleSendTimeout;
     private final ServerOptionsPanel registrationServiceOptions;
     private final JLabeledTextField  tenant;
     private final JLabeledTextField  container;
@@ -76,6 +77,7 @@ public class HonoSenderSamplerUI extends HonoSamplerUI {
                 "Number of receivers to wait for (e.g. from other threads)");
         waitForReceiversTimeout = new JLabeledTextField(
                 "Max time (millis) to wait for receivers");
+        sampleSendTimeout = new JLabeledTextField("Max time (millis) for sending a message");
 
         addOption(honoServerOptions);
         addOption(tenant);
@@ -90,6 +92,7 @@ public class HonoSenderSamplerUI extends HonoSamplerUI {
         addOption(setSenderTime);
         addOption(waitForReceivers);
         addOption(waitForReceiversTimeout);
+        addOption(sampleSendTimeout);
     }
 
     @Override
@@ -118,6 +121,7 @@ public class HonoSenderSamplerUI extends HonoSamplerUI {
         sampler.setWaitForCredits(waitForCredits.isSelected());
         sampler.setWaitForReceivers(waitForReceivers.getText());
         sampler.setWaitForReceiversTimeout(waitForReceiversTimeout.getText());
+        sampler.setSendTimeout(sampleSendTimeout.getText());
         sampler.setContentType(contentType.getText());
         sampler.setData(data.getText());
         sampler.setRegistrationAssertion(assertion.getText());
@@ -136,6 +140,7 @@ public class HonoSenderSamplerUI extends HonoSamplerUI {
         deviceId.setText(sampler.getDeviceId());
         waitForReceivers.setText(sampler.getWaitForReceivers());
         waitForReceiversTimeout.setText(sampler.getWaitForReceiversTimeout());
+        sampleSendTimeout.setText(sampler.getSendTimeoutOrDefault());
         setSenderTime.setSelected(sampler.isSetSenderTime());
         waitForCredits.setSelected(sampler.isWaitForCredits());
         contentType.setText(sampler.getContentType());
@@ -160,6 +165,7 @@ public class HonoSenderSamplerUI extends HonoSamplerUI {
         waitForCredits.setSelected(true);
         waitForReceivers.setText("0");
         waitForReceiversTimeout.setText("5000");
+        sampleSendTimeout.setText(Integer.toString(HonoSenderSampler.DEFAULT_SEND_TIMEOUT));
         // device registration service
         registrationServiceOptions.clearGui();
     }

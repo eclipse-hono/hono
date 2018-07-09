@@ -37,6 +37,8 @@ public class HonoSenderSampler extends HonoSampler implements ThreadListener {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(HonoSenderSampler.class);
 
+    public static final int DEFAULT_SEND_TIMEOUT = 1000; // milliseconds
+
     private static final String REGISTRY_HOST = "registryHost";
     private static final String REGISTRY_USER = "registryUser";
     private static final String REGISTRY_PWD = "registryPwd";
@@ -50,6 +52,7 @@ public class HonoSenderSampler extends HonoSampler implements ThreadListener {
     private static final String WAIT_FOR_CREDITS = "waitForCredits";
     private static final String WAIT_FOR_RECEIVERS = "waitForReceivers";
     private static final String WAIT_FOR_RECEIVERS_TIMEOUT = "waitForReceiversTimeout";
+    private static final String SEND_TIMEOUT = "sendTimeout";
     private static final String PROPERTY_REGISTRATION_ASSERTION = "PROPERTY_REGISTRATION_ASSERTION";
 
     private HonoSender honoSender;
@@ -215,6 +218,44 @@ public class HonoSenderSampler extends HonoSampler implements ThreadListener {
         setProperty(WAIT_FOR_RECEIVERS_TIMEOUT, waitForReceiversTimeout);
     }
 
+    /**
+     * Gets the timeout for sending a message in milliseconds as integer.
+     *
+     * @return The timeout for sending a message in milliseconds or the default timeout
+     * if the value is empty or cannot be parsed as integer.
+     */
+    public int getSendTimeoutOrDefaultAsInt() {
+        final String value = getPropertyAsString(SEND_TIMEOUT);
+        if (value == null || value.isEmpty()) {
+            return DEFAULT_SEND_TIMEOUT;
+        }
+        try {
+            return Integer.parseInt(value);
+        } catch (final NumberFormatException e) {
+            return DEFAULT_SEND_TIMEOUT;
+        }
+    }
+
+    /**
+     * Gets the timeout for sending a message in milliseconds.
+     * 
+     * @return The timeout for sending a message in milliseconds or the default timeout
+     * if the value is empty.
+     */
+    public String getSendTimeoutOrDefault() {
+        final String value = getPropertyAsString(SEND_TIMEOUT);
+        return value == null || value.isEmpty() ? Integer.toString(DEFAULT_SEND_TIMEOUT) : value;
+    }
+
+    /**
+     * Sets the timeout for sending a message.
+     * 
+     * @param sendTimeout The timeout in milliseconds encoded as string.
+     */
+    public void setSendTimeout(final String sendTimeout) {
+        setProperty(SEND_TIMEOUT, sendTimeout);
+    }
+
     public String getDeviceId() {
         return getPropertyAsString(DEVICE_ID);
     }
@@ -321,6 +362,7 @@ public class HonoSenderSampler extends HonoSampler implements ThreadListener {
                     Thread.sleep(100);
                 } catch (final InterruptedException e) {
                     LOGGER.error("wait on receiver", e);
+                    Thread.currentThread().interrupt();
                 }
                 activeReceivers = getSemaphores();
                 LOGGER.info("wait on receivers ({}/{}) for address: {} ({})", activeReceivers, waitOn, getAddress(),

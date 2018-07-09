@@ -51,7 +51,6 @@ public class HonoSender extends AbstractClient {
 
     private static final int MAX_RECONNECT_ATTEMPTS = 3;
     private static final Logger LOGGER = LoggerFactory.getLogger(HonoSender.class);
-    private static final int SAMPLE_SEND_TIMEOUT = 1; // seconds
 
     private final AtomicBoolean running = new AtomicBoolean(false);
     private final HonoSenderSampler sampler;
@@ -268,7 +267,7 @@ public class HonoSender extends AbstractClient {
         });
 
         try {
-            tracker.get(SAMPLE_SEND_TIMEOUT, TimeUnit.SECONDS);
+            tracker.get(sampler.getSendTimeoutOrDefaultAsInt(), TimeUnit.MILLISECONDS);
             LOGGER.debug("{}: sent message for device [{}]", sampler.getThreadName(), deviceId);
         } catch (InterruptedException | CancellationException | ExecutionException | TimeoutException e) {
             sampleResult.setSuccessful(false);
