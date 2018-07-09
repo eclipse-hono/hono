@@ -61,7 +61,7 @@ public class HonoReceiver extends AbstractClient {
     public HonoReceiver(final HonoReceiverSampler sampler) {
 
         super();
-        if (sampler.isUseSenderTime() && sampler.getSenderTimeVariableName() == null) {
+        if (sampler.isUseSenderTime() && sampler.isSenderTimeInPayload() && sampler.getSenderTimeVariableName() == null) {
             throw new IllegalArgumentException("SenderTime VariableName must be set when using SenderTime flag");
         }
         this.sampler = sampler;
@@ -267,7 +267,7 @@ public class HonoReceiver extends AbstractClient {
         final Long senderTime = MessageHelper.getApplicationProperty(message.getApplicationProperties(), TIME_STAMP_VARIABLE,
                 Long.class);
         if (senderTime == null) {
-            LOGGER.warn("could not get sender time from 'timeStamp' message application property");
+            LOGGER.warn("could not get sender time from '" + TIME_STAMP_VARIABLE + "' message application property");
         }
         return senderTime;
     }

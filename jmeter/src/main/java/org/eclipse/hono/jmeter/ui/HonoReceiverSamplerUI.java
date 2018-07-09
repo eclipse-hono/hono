@@ -12,11 +12,15 @@
 
 package org.eclipse.hono.jmeter.ui;
 
+import java.awt.BorderLayout;
 import java.util.stream.Stream;
 
 import javax.swing.BorderFactory;
+import javax.swing.BoxLayout;
+import javax.swing.ButtonGroup;
 import javax.swing.JCheckBox;
 import javax.swing.JPanel;
+import javax.swing.JRadioButton;
 
 import org.apache.jmeter.gui.util.VerticalPanel;
 import org.apache.jmeter.testelement.TestElement;
@@ -33,7 +37,8 @@ public class HonoReceiverSamplerUI extends HonoSamplerUI {
     private static final long serialVersionUID = 2577635965483186422L;
 
     private final JCheckBox          useSenderTime;
-    private final JCheckBox          senderTimeInPayload;
+    private final JRadioButton       senderTimeInProperty;
+    private final JRadioButton       senderTimeInPayload;
     private final JLabeledTextField  senderTimeVariableName;
     private final JLabeledTextField  prefetch;
     private final JLabeledTextField  reconnectAttempts;
@@ -56,27 +61,29 @@ public class HonoReceiverSamplerUI extends HonoSamplerUI {
                 Stream.of(HonoSampler.Endpoint.values()).map(HonoSampler.Endpoint::name).toArray(String[]::new));
         endpoint.setToolTipText("<html>The name of the endpoint to send the AMQP message to.</html>");
         useSenderTime = new JCheckBox("Use sender time");
-        useSenderTime.setToolTipText(new StringBuilder()
-                .append("<html>")
-                .append("When checked, the sending time of received messages will be determined from information")
-                .append(" contained in the messages as follows:")
-                .append("<ul>")
-                .append("<li>If <em>Sender time in Payload</em> is unchecked, the sending time is retrieved from the ")
-                .append("message's application property <em>timeStamp</em>.</li>")
-                .append("<li>Otherwise, it will be retrieved from the message's JSON payload using the property name ")
-                .append("set in the <em>Sender time variable name</em>.</li>")
-                .append("</ul>")
-                .append("</html>")
-                .toString());
-        senderTimeInPayload = new JCheckBox("Sender time in Payload");
-        senderTimeVariableName = new JLabeledTextField("Sender time variable name");
+        senderTimeInProperty = new JRadioButton("Sender time in property");
+        senderTimeInProperty.setToolTipText("<html>If set, the sending time is retrieved from the message's application property <em>timeStamp</em>.</html>");
+        senderTimeInPayload = new JRadioButton("Sender time in JSON payload");
+        final ButtonGroup group = new ButtonGroup();
+        group.add(senderTimeInProperty);
+        group.add(senderTimeInPayload);
+        senderTimeInProperty.setSelected(true);
+        senderTimeVariableName = new JLabeledTextField("JSON value key");
+        senderTimeVariableName.setEnabled(false);
         prefetch = new JLabeledTextField("Prefetch");
         reconnectAttempts = new JLabeledTextField("Max reconnect attempts");
+
+        // wrap 'endpoint' JLabeledChoice in extra panel to align it on the right
+        final JPanel endpointContainerPanel = new JPanel(new BorderLayout());
+        endpointContainerPanel.add(endpoint, BorderLayout.WEST);
+        // fix superfluous outer indents of JLabeledChoice
+        endpoint.setLayout(new BoxLayout(endpoint, BoxLayout.X_AXIS));
+        endpoint.getComponentList().get(0).setBorder(BorderFactory.createEmptyBorder(0,0,0,5));
 
         addOption(honoServerOptions);
         addOption(tenant);
         addOption(container);
-        addOption(endpoint);
+        addOption(endpointContainerPanel);
         addOption(prefetch);
         addOption(reconnectAttempts);
         addOption(createTimeStampPanel());
@@ -122,7 +129,8 @@ public class HonoReceiverSamplerUI extends HonoSamplerUI {
         prefetch.setText(sampler.getPrefetch());
         reconnectAttempts.setText(sampler.getReconnectAttempts());
         useSenderTime.setSelected(sampler.isUseSenderTime());
-        senderTimeInPayload.setSelected(sampler.isSenderTimeInPayload());
+        final JRadioButton senderTimeButtonToSelect = sampler.isSenderTimeInPayload() ? senderTimeInPayload : senderTimeInProperty;
+        senderTimeButtonToSelect.setSelected(true);
         senderTimeVariableName.setText(sampler.getSenderTimeVariableName());
     }
 
@@ -136,26 +144,34 @@ public class HonoReceiverSamplerUI extends HonoSamplerUI {
         reconnectAttempts.setText("0");
         prefetch.setText("50");
         useSenderTime.setSelected(false);
-        senderTimeInPayload.setSelected(false);
+        senderTimeInProperty.setSelected(true);
         senderTimeVariableName.setText("timeStamp");
     }
 
     private JPanel createTimeStampPanel() {
         final JPanel timeStampPanel = new VerticalPanel();
         timeStampPanel.setBorder(
-                BorderFactory.createTitledBorder(BorderFactory.createEtchedBorder(), "Timestamp used for sampling"));
+                BorderFactory.createTitledBorder(BorderFactory.createEtchedBorder(), "Timestamp used for 'elapsed time' value"));
+
+        final JPanel senderTimeFromPayloadPanel = new JPanel(new BorderLayout(10, 0));
+        senderTimeFromPayloadPanel.add(senderTimeInPayload, BorderLayout.WEST);
+        senderTimeFromPayloadPanel.add(senderTimeVariableName, BorderLayout.CENTER);
+
+        final JPanel senderTimeOptionsPanel = new JPanel(new BorderLayout());
+        senderTimeOptionsPanel.add(senderTimeInProperty, BorderLayout.WEST);
+        senderTimeOptionsPanel.add(senderTimeFromPayloadPanel, BorderLayout.CENTER);
+
         timeStampPanel.add(useSenderTime);
-        timeStampPanel.add(senderTimeInPayload);
-        timeStampPanel.add(senderTimeVariableName);
+        timeStampPanel.add(senderTimeOptionsPanel);
+
         useSenderTime.addChangeListener(e -> {
-            if (e.getSource() == this.useSenderTime) {
-                if (this.useSenderTime.isSelected()) {
-                    senderTimeInPayload.setVisible(true);
-                    senderTimeVariableName.setVisible(true);
-                } else {
-                    senderTimeInPayload.setVisible(false);
-                    senderTimeVariableName.setVisible(false);
-                }
+            if (e.getSource() == useSenderTime) {
+                senderTimeOptionsPanel.setVisible(useSenderTime.isSelected());
+            }
+        });
+        senderTimeInPayload.addChangeListener(e -> {
+            if (e.getSource() == senderTimeInPayload) {
+                senderTimeVariableName.setEnabled(senderTimeInPayload.isSelected());
             }
         });
         return timeStampPanel;
