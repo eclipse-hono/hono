@@ -278,7 +278,7 @@ public class HonoSender extends AbstractClient {
                 sampleResult.setResponseCode(String.valueOf(sie.getErrorCode()));
             } else {
                 String uncompletedFutureHint = "";
-                if (e.getCause() instanceof TimeoutException) {
+                if (e instanceof TimeoutException) {
                     uncompletedFutureHint = !senderFuture.isComplete() ? " - timeout waiting for sender link"
                             : !regAssertionFuture.isComplete() ? "- timeout waiting for registration assertion"
                                     : !creditTracker.isComplete() ? " - timeout waiting for credits"
