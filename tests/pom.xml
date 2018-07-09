@@ -83,6 +83,11 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
       <artifactId>vertx-mqtt</artifactId>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-tcnative-boringssl-static</artifactId>
+      <version>${netty.tcnative.version}</version>
+    </dependency>
   </dependencies>
 
   <build>
@@ -463,20 +468,28 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     <from>${docker.image.org-name}/hono-adapter-http-vertx:${project.version}</from>
                     <assembly>
                       <mode>dir</mode>
-                      <basedir>/etc/hono</basedir>
+                      <basedir>/</basedir>
                       <inline>
                         <id>config</id>
+                        <dependencySets>
+                          <dependencySet>
+                            <includes>
+                              <include>io.netty:netty-tcnative-boringssl-static</include>
+                            </includes>
+                            <outputDirectory>opt/hono/extensions</outputDirectory>
+                          </dependencySet>
+                        </dependencySets>
                         <fileSets>
                           <fileSet>
                             <directory>${project.basedir}/src/test/resources/http</directory>
-                            <outputDirectory>.</outputDirectory>
+                            <outputDirectory>etc/hono</outputDirectory>
                             <includes>
                               <include>*</include>
                             </includes>
                           </fileSet>
                           <fileSet>
                             <directory>${project.build.directory}/certs</directory>
-                            <outputDirectory>certs</outputDirectory>
+                            <outputDirectory>etc/hono/certs</outputDirectory>
                             <includes>
                               <include>http-adapter-*.pem</include>
                               <include>trusted-certs.pem</include>
@@ -502,6 +515,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <SPRING_CONFIG_LOCATION>file:/etc/hono/</SPRING_CONFIG_LOCATION>
                       <!--<PN_TRACE_FRM>1</PN_TRACE_FRM>-->
                       <SPRING_PROFILES_ACTIVE>prod</SPRING_PROFILES_ACTIVE>
+                      <HONO_HTTP_NATIVE_TLS_REQUIRED>true</HONO_HTTP_NATIVE_TLS_REQUIRED>
                     </env>
                     <log>
                       <prefix>HTTP</prefix>
@@ -524,20 +538,28 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     <from>${docker.image.org-name}/hono-adapter-mqtt-vertx:${project.version}</from>
                     <assembly>
                       <mode>dir</mode>
-                      <basedir>/etc/hono</basedir>
+                      <basedir>/</basedir>
                       <inline>
                         <id>config</id>
+                        <dependencySets>
+                          <dependencySet>
+                            <includes>
+                              <include>io.netty:netty-tcnative-boringssl-static</include>
+                            </includes>
+                            <outputDirectory>opt/hono/extensions</outputDirectory>
+                          </dependencySet>
+                        </dependencySets>
                         <fileSets>
                           <fileSet>
                             <directory>${project.basedir}/src/test/resources/mqtt</directory>
-                            <outputDirectory>.</outputDirectory>
+                            <outputDirectory>etc/hono</outputDirectory>
                             <includes>
                               <include>*</include>
                             </includes>
                           </fileSet>
                           <fileSet>
                             <directory>${project.build.directory}/certs</directory>
-                            <outputDirectory>certs</outputDirectory>
+                            <outputDirectory>etc/hono/certs</outputDirectory>
                             <includes>
                               <include>mqtt-adapter-*.pem</include>
                               <include>trusted-certs.pem</include>
@@ -562,6 +584,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <SPRING_CONFIG_LOCATION>file:///etc/hono/</SPRING_CONFIG_LOCATION>
                       <!--<PN_TRACE_FRM>1</PN_TRACE_FRM>-->
                       <SPRING_PROFILES_ACTIVE>prod</SPRING_PROFILES_ACTIVE>
+                      <HONO_MQTT_NATIVE_TLS_REQUIRED>true</HONO_MQTT_NATIVE_TLS_REQUIRED>
                     </env>
                     <log>
                       <prefix>MQTT</prefix>
