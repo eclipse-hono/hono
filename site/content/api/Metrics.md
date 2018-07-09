@@ -20,9 +20,9 @@ this document. However they are not considered part of the interface to Hono and
 
 When metrics via InfluxDB is enabled, then Hono offers the following metrics
 in the Hono-local InfluxDB. Metrics are sent to InfluxDB via the Graphite
-reporter, however the Graphite reporter is not part of the guarantueed Hono
-interfacea. Only the structure of the InfluxDB is. This means that in a future
-version Hono might use a different mechanism to feed metrics in the InfluxDB,
+reporter, however the Graphite reporter is not part of the guaranteed Hono
+interface. Only the structure of the InfluxDB is. This means that a future
+version Hono might use a different mechanism to feed metrics into the InfluxDB,
 but the structure inside the InfluxDB will stay stable.
 
 ### Tags
@@ -58,17 +58,6 @@ to which metric.:
 | meter.hono.mqtt.messages.processed.m5_rate | host, tenant, type | Messages processed by the MQTT protocol adapter. Five minute, exponentially weighted, moving average. |
 | meter.hono.mqtt.messages.processed.m15_rate | host, tenant, type | Messages processed by the MQTT protocol adapter. Fifteen minute, exponentially weighted, moving average. |
 | meter.hono.mqtt.messages.processed.mean_rate | host, tenant, type | Messages processed by the MQTT protocol adapter. Mean rate of messages since the application start. |
-
-### Messaging Metrics
-
-| Metric | Tags | Description |
-| ------ | ---- | ----------- |
-| counter.hono.messaging.messages.discarded.count | host, tenant, type | Messages which could not be processed by the messaging component. Total count since application startup. |
-| meter.hono.messaging.messages.processed.count | host, tenant, type | Messages processed by the MQTT protocol adapter. Total count since application startup. |
-| meter.hono.messaging.messages.processed.m1_rate | host, tenant, type | Messages processed by the Messaging service. One minute, exponentially weighted, moving average. |
-| meter.hono.messaging.messages.processed.m5_rate | host, tenant, type | Messages processed by the Messaging service. Five minute, exponentially weighted, moving average. |
-| meter.hono.messaging.messages.processed.m15_rate | host, tenant, type | Messages processed by the Messaging service. Fifteen minute, exponentially weighted, moving average. |
-| meter.hono.messaging.messages.processed.mean_rate | host, tenant, type | Messages processed by the Messaging service. Mean rate of messages since the application start. |
 
 ## Metrics API
 
