@@ -50,6 +50,7 @@ public class HonoReceiver extends AbstractClient {
     private int  messageCount;
     private int  errorCount;
     private long totalSampleDeliveryTime;
+    private boolean senderClockNotInSync;
     private long bytesReceived;
 
     /**
@@ -143,14 +144,14 @@ public class HonoReceiver extends AbstractClient {
         synchronized (lock) {
             long elapsed = 0;
             result.setResponseCodeOK();
-            result.setSuccessful(errorCount == 0);
+            result.setSuccessful(errorCount == 0 && !senderClockNotInSync);
             result.setSampleCount(messageCount);
             result.setErrorCount(errorCount); // NOTE: This method does nothing in JMeter 3.3/4.0
             result.setBytes(bytesReceived);
             if (messageCount > 0) {
                 if (sampler.isUseSenderTime() && sampleStart != 0 && errorCount == 0) {
                     // errorCount has to be 0 here - otherwise totalSampleDeliveryTime doesn't have a correct value
-                    elapsed = totalSampleDeliveryTime / messageCount;
+                    elapsed = senderClockNotInSync ? -1 : totalSampleDeliveryTime / messageCount;
                     result.setStampAndTime(sampleStart, elapsed);
                 } else if (sampleStart != 0) {
                     elapsed = System.currentTimeMillis() - sampleStart;
@@ -166,18 +167,25 @@ public class HonoReceiver extends AbstractClient {
                 result.setStampAndTime(System.currentTimeMillis(), 0);
                 result.setIdleTime(0);
             }
+            String responseMessage = "";
             if (errorCount == 0) {
                 final String formatString = sampler.isUseSenderTime() ? "{}: received batch of {} messages; average delivery time: {}ms"
                         : "{}: received batch of {} messages in {}ms";
                 LOGGER.info(formatString, sampler.getThreadName(), messageCount, elapsed);
-                result.setResponseMessage("");
             } else {
                 LOGGER.info("{}: received batch of {} messages with {} errors in {}ms", sampler.getThreadName(), messageCount, errorCount, elapsed);
-                result.setResponseMessage("got " + errorCount + " invalid messages");
+                responseMessage = "got " + errorCount + " invalid messages";
             }
+            if (senderClockNotInSync) {
+                responseMessage = (responseMessage.isEmpty() ? "" : responseMessage + "; ") + "sender clock not in sync";
+                LOGGER.error("The sender time extracted from at least one of the received messages is newer than the receiver time" +
+                        " - sender and receiver clocks are not in sync. Consider deactivating usage of the sender time.");
+            }
+            result.setResponseMessage(responseMessage);
 
             // reset all fields
             totalSampleDeliveryTime = 0;
+            senderClockNotInSync = false;
             bytesReceived = 0;
             messageCount = 0;
             errorCount = 0;
@@ -211,6 +219,11 @@ public class HonoReceiver extends AbstractClient {
             if (sampler.isUseSenderTime()) {
                 setSampleStartIfNotSetYet(senderTime); // set sample start only once when the first message is received.
                 final long sampleDeliveryTime = sampleReceivedTime - senderTime;
+                if (sampleDeliveryTime < 0) {
+                    // means that time on sender and receiver is not in sync
+                    LOGGER.debug("got negative delivery time from received sender time: {}ms", sampleDeliveryTime);
+                    senderClockNotInSync = true;
+                }
                 totalSampleDeliveryTime += sampleDeliveryTime;
                 LOGGER.trace("received message; current batch size: {}; reception timestamp: {}; delivery time: {}ms",
                         messageCount, sampleReceivedTime, sampleDeliveryTime);
