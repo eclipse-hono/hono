@@ -590,24 +590,24 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                                 "adapter is not enabled for tenant"));
                     }
                 }).compose(delivery -> {
-
-                    final Command command = Command.get(ctx);
-                    setResponsePayload(ctx.response(), command);
-                    ctx.response().bodyEndHandler(ok -> {
-                        LOG.trace("successfully processed [{}] message for device [tenantId: {}, deviceId: {}]",
-                                endpointName, tenant, deviceId);
-                        metrics.incrementProcessedHttpMessages(endpointName, tenant);
-                    });
-                    ctx.response().exceptionHandler(t -> {
-                        LOG.debug("failed to send http response for [{}] message from device [tenantId: {}, deviceId: {}]",
-                                endpointName, tenant, deviceId, t);
-                        if (command != null) {
-                            final CommandResponse response = CommandResponse.from(command.getRequestId(), HttpURLConnection.HTTP_UNAVAILABLE);
-                            sendCommandResponse(tenant, deviceId, response);
-                        }
-                    });
-                    ctx.response().end();
-
+                    if (!ctx.response().closed()) {
+                        final Command command = Command.get(ctx);
+                        setResponsePayload(ctx.response(), command);
+                        ctx.response().bodyEndHandler(ok -> {
+                            LOG.trace("successfully processed [{}] message for device [tenantId: {}, deviceId: {}]",
+                                    endpointName, tenant, deviceId);
+                            metrics.incrementProcessedHttpMessages(endpointName, tenant);
+                        });
+                        ctx.response().exceptionHandler(t -> {
+                            LOG.debug("failed to send http response for [{}] message from device [tenantId: {}, deviceId: {}]",
+                                    endpointName, tenant, deviceId, t);
+                            if (command != null) {
+                                final CommandResponse response = CommandResponse.from(command.getRequestId(), HttpURLConnection.HTTP_UNAVAILABLE);
+                                sendCommandResponse(tenant, deviceId, response);
+                            }
+                        });
+                        ctx.response().end();
+                    }
                     return Future.succeededFuture();
 
                 }).recover(t -> {
@@ -710,12 +710,14 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                     }).map(consumer -> {
                         consumer.flow(1);
                         ctx.vertx().setTimer(ttdMillis, ttdExpired -> {
-                            responseReady.tryComplete();
-                            getCommandConnection().closeCommandConsumer(tenantId, deviceId).setHandler(v -> {
-                                if (v.failed()) {
-                                    LOG.warn("Close command consumer failed", v.cause());
-                                }
-                            });
+                            if (!responseReady.isComplete()) {
+                                responseReady.tryComplete();
+                                getCommandConnection().closeCommandConsumer(tenantId, deviceId).setHandler(v -> {
+                                    if (v.failed()) {
+                                        LOG.warn("Close command consumer failed", v.cause());
+                                    }
+                                });
+                            }
                         });
                         return consumer;
                     });

@@ -139,7 +139,7 @@ public class CommandConnectionImpl extends HonoClientImpl implements CommandConn
             });
             commandReceivers.remove(deviceAddress);
         } else {
-            LOG.error("Command receiver should be closed but could not be found for tenant: [{}], device: [{}]",
+            LOG.debug("Command receiver should be closed but could not be found for tenant: [{}], device: [{}] - possibly already closed?",
                     tenantId, deviceId);
             future.fail("Command receiver should be closed but could not be found for tenant");
         }
