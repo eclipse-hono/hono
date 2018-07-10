@@ -16,7 +16,6 @@ import java.awt.BorderLayout;
 import java.util.stream.Stream;
 
 import javax.swing.BorderFactory;
-import javax.swing.BoxLayout;
 import javax.swing.ButtonGroup;
 import javax.swing.JCheckBox;
 import javax.swing.JPanel;
@@ -73,17 +72,10 @@ public class HonoReceiverSamplerUI extends HonoSamplerUI {
         prefetch = new JLabeledTextField("Prefetch");
         reconnectAttempts = new JLabeledTextField("Max reconnect attempts");
 
-        // wrap 'endpoint' JLabeledChoice in extra panel to align it on the right
-        final JPanel endpointContainerPanel = new JPanel(new BorderLayout());
-        endpointContainerPanel.add(endpoint, BorderLayout.WEST);
-        // fix superfluous outer indents of JLabeledChoice
-        endpoint.setLayout(new BoxLayout(endpoint, BoxLayout.X_AXIS));
-        endpoint.getComponentList().get(0).setBorder(BorderFactory.createEmptyBorder(0,0,0,5));
-
         addOption(honoServerOptions);
         addOption(tenant);
         addOption(container);
-        addOption(endpointContainerPanel);
+        addOption(getWrapperPanelToFixAlignment(endpoint));
         addOption(prefetch);
         addOption(reconnectAttempts);
         addOption(createTimeStampPanel());
