@@ -45,6 +45,18 @@ public final class CommandResponse {
                     (statusCode == HttpURLConnection.HTTP_UNAVAILABLE);
 
     /**
+     * Creates an empty response for a request ID that contains only the status.
+     *
+     * @param requestId The request ID of the command that this is the response for.
+     * @param status The HTTP status code indicating the outcome of the command.
+     * @return The response or {@code null} if the request ID could not be parsed, the status is {@code null} or if the
+     *         status code is &lt; 200 or &gt;= 600.
+     */
+    public static CommandResponse from(final String requestId, final Integer status) {
+        return from(requestId, null, null, status);
+    }
+
+    /**
      * Creates a response for a request ID.
      * 
      * @param requestId The request ID of the command that this is the response for.

@@ -602,8 +602,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                         LOG.debug("failed to send http response for [{}] message from device [tenantId: {}, deviceId: {}]",
                                 endpointName, tenant, deviceId, t);
                         if (command != null) {
-                            final CommandResponse response = CommandResponse.from(command.getRequestId(),
-                                    null,null, HttpURLConnection.HTTP_UNAVAILABLE);
+                            final CommandResponse response = CommandResponse.from(command.getRequestId(), HttpURLConnection.HTTP_UNAVAILABLE);
                             sendCommandResponse(tenant, deviceId, response);
                         }
                     });
@@ -617,8 +616,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                             endpointName, tenant, deviceId, t);
                     final Command command = Command.get(ctx);
                     if (command != null) {
-                        final CommandResponse response = CommandResponse.from(command.getRequestId(), null,null,
-                                HttpURLConnection.HTTP_UNAVAILABLE);
+                        final CommandResponse response = CommandResponse.from(command.getRequestId(), HttpURLConnection.HTTP_UNAVAILABLE);
                         sendCommandResponse(tenant, deviceId, response);
                     }
 
