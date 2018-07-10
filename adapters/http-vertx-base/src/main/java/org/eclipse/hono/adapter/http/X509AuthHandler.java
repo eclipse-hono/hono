@@ -16,6 +16,7 @@ package org.eclipse.hono.adapter.http;
 import java.net.HttpURLConnection;
 import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
+import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
@@ -24,6 +25,7 @@ import javax.net.ssl.SSLPeerUnverifiedException;
 import javax.security.auth.x500.X500Principal;
 
 import org.eclipse.hono.client.HonoClient;
+import org.eclipse.hono.service.auth.device.DeviceCertificateValidator;
 import org.eclipse.hono.service.auth.device.HonoAuthHandler;
 import org.eclipse.hono.service.auth.device.HonoClientBasedAuthProvider;
 import org.eclipse.hono.util.CredentialsConstants;
@@ -44,6 +46,16 @@ import io.vertx.ext.web.handler.impl.HttpStatusException;
 
 /**
  * An authentication handler for client certificate based authentication.
+ * <p>
+ * This handler tries to retrieve a client certificate from the request and
+ * validate it against the trusted CA configured for the tenant that the device
+ * (supposedly) belongs to. This is done by looking up the tenant using the certificate's
+ * issuer DN as described by the
+ * <a href="https://www.eclipse.org/hono/api/tenant-api/#get-tenant-information">
+ * Tenant API</a>.
+ * <p>
+ * On successful validation of the certificate, the subject DN of the certificate is used
+ * to retrieve X.509 credentials for the device in order to determine the device identifier. 
  *
  */
 public class X509AuthHandler extends HonoAuthHandler {
@@ -51,6 +63,7 @@ public class X509AuthHandler extends HonoAuthHandler {
     private static final Logger LOG = LoggerFactory.getLogger(X509AuthHandler.class);
     private static final HttpStatusException UNAUTHORIZED = new HttpStatusException(HttpURLConnection.HTTP_UNAUTHORIZED);
     private final HonoClient tenantServiceClient;
+    private final DeviceCertificateValidator certPathValidator;
 
     /**
      * Creates a new handler for an authentication provider and a
@@ -60,11 +73,33 @@ public class X509AuthHandler extends HonoAuthHandler {
      *              the device identity.
      * @param tenantServiceClient The client to use for determining the tenant
      *              that the device belongs to.
-     * @throws NullPointerException if tenant service client is {@code null}.
+     * @throws NullPointerException if tenant client is {@code null}.
      */
-    public X509AuthHandler(final HonoClientBasedAuthProvider authProvider, final HonoClient tenantServiceClient) {
+    public X509AuthHandler(
+            final HonoClientBasedAuthProvider authProvider,
+            final HonoClient tenantServiceClient) {
+        this(authProvider, tenantServiceClient, new DeviceCertificateValidator());
+    }
+
+    /**
+     * Creates a new handler for an authentication provider and a
+     * Tenant service client.
+     * 
+     * @param authProvider The authentication provider to use for verifying
+     *              the device identity.
+     * @param tenantServiceClient The client to use for determining the tenant
+     *              that the device belongs to.
+     * @param certificateValidator The object to use for validating the client
+     *        certificate chain.
+     * @throws NullPointerException if tenant client or validator are {@code null}.
+     */
+    public X509AuthHandler(
+            final HonoClientBasedAuthProvider authProvider,
+            final HonoClient tenantServiceClient,
+            final DeviceCertificateValidator certificateValidator) {
         super(authProvider);
         this.tenantServiceClient = Objects.requireNonNull(tenantServiceClient);
+        this.certPathValidator = Objects.requireNonNull(certificateValidator);
     }
 
     @Override
@@ -75,10 +110,14 @@ public class X509AuthHandler extends HonoAuthHandler {
 
         if (context.request().isSSL()) {
             try {
-                final Certificate[] clientChain = context.request().sslSession().getPeerCertificates();
-                getX509CertificateChain(clientChain).compose(x509chain -> {
+                final Certificate[] path = context.request().sslSession().getPeerCertificates();
+                getX509CertificatePath(path).compose(x509chain -> {
                     final SpanContext currentSpan = TracingHandler.serverSpanContext(context);
-                    return getTenant(x509chain[0], currentSpan).compose(tenant -> getCredentials(x509chain, tenant));
+                    final Future<TenantObject> tenantTracker = getTenant(x509chain.get(0), currentSpan);
+                    final List<X509Certificate> chainToValidate = Collections.singletonList(x509chain.get(0));
+                    return tenantTracker
+                            .compose(tenant -> certPathValidator.validate(chainToValidate, tenant.getTrustAnchor()))
+                            .compose(ok -> getCredentials(x509chain, tenantTracker.result()));
                 }).setHandler(handler);
             } catch (SSLPeerUnverifiedException e) {
                 // client certificate has not been validated
@@ -95,19 +134,19 @@ public class X509AuthHandler extends HonoAuthHandler {
             tenantClient.get(clientCert.getIssuerX500Principal(), currentSpan));
     }
 
-    private Future<X509Certificate[]> getX509CertificateChain(final Certificate[] clientChain) {
+    private Future<List<X509Certificate>> getX509CertificatePath(final Certificate[] clientPath) {
 
-        final List<X509Certificate> chain = new LinkedList<>();
-        for (Certificate cert : clientChain) {
+        final List<X509Certificate> path = new LinkedList<>();
+        for (Certificate cert : clientPath) {
             if (cert instanceof X509Certificate) {
-                chain.add((X509Certificate) cert);
+                path.add((X509Certificate) cert);
             } else {
                 LOG.info("cannot authenticate device using unsupported certificate type [{}]",
                         cert.getClass().getName());
                 return Future.failedFuture(UNAUTHORIZED);
             }
         }
-        return Future.succeededFuture(chain.toArray(new X509Certificate[chain.size()]));
+        return Future.succeededFuture(path);
     }
 
     /**
@@ -124,7 +163,7 @@ public class X509AuthHandler extends HonoAuthHandler {
      * Subclasses may override this method in order to extract additional or other
      * information to be verified by e.g. a custom authentication provider.
      * 
-     * @param clientCertChain The validated client certificate chain that the device has
+     * @param clientCertPath The validated client certificate path that the device has
      *                   presented during the TLS handshake. The device's end certificate
      *                   is contained at index 0.
      * @param tenant The tenant that the device belongs to.
@@ -132,9 +171,9 @@ public class X509AuthHandler extends HonoAuthHandler {
      *         to the {@link HonoClientBasedAuthProvider} for verification. The future will be
      *         failed if the information cannot be extracted from the certificate chain.
      */
-    protected Future<JsonObject> getCredentials(final X509Certificate[] clientCertChain, final TenantObject tenant) {
+    protected Future<JsonObject> getCredentials(final List<X509Certificate> clientCertPath, final TenantObject tenant) {
 
-        final String subjectDn = clientCertChain[0].getSubjectX500Principal().getName(X500Principal.RFC2253);
+        final String subjectDn = clientCertPath.get(0).getSubjectX500Principal().getName(X500Principal.RFC2253);
         LOG.debug("authenticating device of tenant [{}] using X509 certificate [subject DN: {}]",
                 tenant.getTenantId(), subjectDn);
         return Future.succeededFuture(new JsonObject()

@@ -21,6 +21,8 @@ import org.eclipse.hono.adapter.http.HonoBasicAuthHandler;
 import org.eclipse.hono.adapter.http.HttpProtocolAdapterProperties;
 import org.eclipse.hono.adapter.http.X509AuthHandler;
 import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.config.AbstractConfig;
+import org.eclipse.hono.service.auth.ValidityBasedTrustOptions;
 import org.eclipse.hono.service.auth.device.Device;
 import org.eclipse.hono.service.auth.device.HonoChainAuthHandler;
 import org.eclipse.hono.service.auth.device.HonoClientBasedAuthProvider;
@@ -34,6 +36,7 @@ import org.slf4j.LoggerFactory;
 import io.vertx.core.Handler;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpMethod;
+import io.vertx.core.net.TrustOptions;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.ChainAuthHandler;
@@ -79,6 +82,29 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
      */
     public void setClientCertAuthProvider(final HonoClientBasedAuthProvider provider) {
         this.clientCertAuthProvider = Objects.requireNonNull(provider);
+    }
+
+    /**
+     * Gets the options for configuring the server side trust anchor.
+     * <p>
+     * This implementation returns the options returned by
+     * {@link AbstractConfig#getTrustOptions()} if not {@code null}.
+     * Otherwise, it returns trust options for verifying a client
+     * certificate's validity period.
+     * 
+     * @return The trust options.
+     */
+    @Override
+    protected TrustOptions getServerTrustOptions() {
+
+        return Optional.ofNullable(getConfig().getTrustOptions())
+                .orElseGet(() -> {
+                    if (getConfig().isAuthenticationRequired()) {
+                        return new ValidityBasedTrustOptions();
+                    } else {
+                        return null;
+                    }
+                });
     }
 
     /**

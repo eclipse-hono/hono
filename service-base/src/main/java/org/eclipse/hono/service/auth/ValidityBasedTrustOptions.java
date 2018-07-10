@@ -13,39 +13,30 @@
 
 package org.eclipse.hono.service.auth;
 
-import java.util.Objects;
-
 import javax.net.ssl.TrustManagerFactory;
-
-import org.eclipse.hono.client.HonoClient;
-import org.springframework.beans.factory.annotation.Autowired;
 
 import io.vertx.core.Vertx;
 import io.vertx.core.net.TrustOptions;
 
 
 /**
- * Options for retrieving trust anchors from a Tenant service implementation.
+ * Options for trusting certificates which are valid at the current moment
+ * according to their <em>not before</em> and <em>not after</em> properties.
  */
-public class TenantApiTrustOptions implements TrustOptions {
+public class ValidityBasedTrustOptions implements TrustOptions {
 
-    private final HonoTrustManagerFactory factory;
-
-    private TenantApiTrustOptions(final HonoTrustManagerFactory factory) {
-        this.factory = Objects.requireNonNull(factory);
-    }
+    private final ValidityOnlyTrustManagerFactory factory;
 
     /**
-     * @param client The client for accessing the Tenant service.
+     * Creates new options.
      */
-    public TenantApiTrustOptions(@Autowired final HonoClient client) {
-        this(new HonoTrustManagerFactory(
-                new TenantApiBasedX509TrustManager(Objects.requireNonNull(client))));
+    public ValidityBasedTrustOptions() {
+        this.factory = new ValidityOnlyTrustManagerFactory();
     }
 
     @Override
     public TrustOptions clone() {
-        return new TenantApiTrustOptions(factory);
+        return new ValidityBasedTrustOptions();
     }
 
     @Override
