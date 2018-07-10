@@ -82,7 +82,7 @@ public class HonoSenderSamplerUI extends HonoSamplerUI {
         addOption(honoServerOptions);
         addOption(tenant);
         addOption(container);
-        addOption(endpoint);
+        addOption(getWrapperPanelToFixAlignment(endpoint));
         addOption(deviceId);
         addOption(contentType);
         addOption(data);

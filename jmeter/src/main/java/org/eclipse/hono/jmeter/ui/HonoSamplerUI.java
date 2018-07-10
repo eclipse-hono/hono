@@ -14,11 +14,14 @@ package org.eclipse.hono.jmeter.ui;
 
 import java.awt.BorderLayout;
 
+import javax.swing.BorderFactory;
+import javax.swing.BoxLayout;
 import javax.swing.JComponent;
 import javax.swing.JPanel;
 
 import org.apache.jmeter.gui.util.VerticalPanel;
 import org.apache.jmeter.samplers.gui.AbstractSamplerGui;
+import org.apache.jorphan.gui.JLabeledChoice;
 
 /**
  * Base class for implementing GUI components for Hono samplers.
@@ -55,5 +58,15 @@ public abstract class HonoSamplerUI extends AbstractSamplerGui {
     @Override
     public String getLabelResource() {
         return null;
+    }
+
+    protected JPanel getWrapperPanelToFixAlignment(final JLabeledChoice labeledChoice) {
+        // wrap the JLabeledChoice in extra panel to align it on the right
+        final JPanel wrapperPanel = new JPanel(new BorderLayout());
+        wrapperPanel.add(labeledChoice, BorderLayout.WEST);
+        // fix superfluous outer indents of JLabeledChoice
+        labeledChoice.setLayout(new BoxLayout(labeledChoice, BoxLayout.X_AXIS));
+        labeledChoice.getComponentList().get(0).setBorder(BorderFactory.createEmptyBorder(0,0,0,5));
+        return wrapperPanel;
     }
 }
