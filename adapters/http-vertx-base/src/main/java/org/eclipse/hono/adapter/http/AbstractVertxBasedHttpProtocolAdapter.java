@@ -175,9 +175,6 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                     return Future.failedFuture("no router configured");
                 } else {
                     addRoutes(router);
-                    addTracingHandler(router, -5);
-                    // add default handler for failed routes
-                    router.route().order(-1).failureHandler(new DefaultFailureHandler());
                     return CompositeFuture.all(bindSecureHttpServer(router), bindInsecureHttpServer(router));
                 }
             }).compose(s -> {
@@ -273,6 +270,9 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
         final Router router = Router.router(vertx);
         LOG.info("limiting size of inbound request body to {} bytes", getConfig().getMaxPayloadSize());
         router.route().handler(BodyHandler.create(DEFAULT_UPLOADS_DIRECTORY).setBodyLimit(getConfig().getMaxPayloadSize()));
+        addTracingHandler(router, -5);
+        // add default handler for failed routes
+        router.route().order(-1).failureHandler(new DefaultFailureHandler());
 
         return router;
     }
@@ -597,7 +597,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                     if (!ctx.response().closed()) {
                         final Command command = Command.get(ctx);
                         setResponsePayload(ctx.response(), command);
-                        ctx.response().bodyEndHandler(ok -> {
+                        ctx.addBodyEndHandler(ok -> {
                             LOG.trace("successfully processed [{}] message for device [tenantId: {}, deviceId: {}]",
                                     endpointName, tenant, deviceId);
                             metrics.incrementProcessedHttpMessages(endpointName, tenant);
