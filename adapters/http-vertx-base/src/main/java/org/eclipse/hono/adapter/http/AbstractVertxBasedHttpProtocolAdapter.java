@@ -579,6 +579,8 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                                 HttpUtils.getTimeTilDisconnect(ctx));
                         customizeDownstreamMessage(downstreamMessage, ctx);
 
+                        addConnectionCloseHandler(ctx, commandConsumerTracker.result(), tenant, deviceId);
+
                         if (qosHeader == null) {
                             return CompositeFuture.all(sender.send(downstreamMessage, currentSpan), responseReady);
                         } else {
@@ -641,6 +643,33 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
         }
     }
 
+    /**
+     * Attach a handler that is called if a command consumer was opened and the client closes the HTTP connection before a response
+     * with a possible command could be sent.
+     * <p>
+     * In this case, the handler closes the command consumer since a command could not be added to the response anymore.
+     * The application receives an {@link HttpURLConnection#HTTP_UNAVAILABLE} if trying to send the command and can repeat
+     * it later.
+     *
+     * @param ctx The context to retrieve cookies and the HTTP response from.
+     * @param messageConsumer The message consumer to receive a command. Maybe {@code null} - in this case no handler is attached.
+     * @param tenantId The tenant that the device belongs to.
+     * @param deviceId The identifier of the device.
+     */
+    private void addConnectionCloseHandler(final RoutingContext ctx, final MessageConsumer messageConsumer,
+                                           final String tenantId, final String deviceId) {
+        Optional.ofNullable(messageConsumer).map(consumer -> {
+            ctx.response().closeHandler(v -> {
+                LOG.debug("Connection was closed before response could be sent - closing command consumer for device [tenantId: {}, deviceId: {}]", tenantId, deviceId);
+                getCommandConnection().closeCommandConsumer(tenantId, deviceId).setHandler(result -> {
+                    if (result.failed()) {
+                        LOG.warn("Close command consumer failed", result.cause());
+                    }
+                });
+            });
+            return consumer;
+        });
+    }
 
     private void setResponsePayload(final HttpServerResponse response, final Command command) {
         if (command == null) {
