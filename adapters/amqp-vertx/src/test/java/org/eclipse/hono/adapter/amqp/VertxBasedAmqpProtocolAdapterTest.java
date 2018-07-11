@@ -53,7 +53,7 @@ import io.vertx.proton.ProtonServer;
 public class VertxBasedAmqpProtocolAdapterTest {
 
     @Rule
-    public Timeout globalTimeout = new Timeout(2, TimeUnit.SECONDS);
+    public Timeout globalTimeout = new Timeout(5, TimeUnit.SECONDS);
 
     /**
      * A tenant identifier used for testing.
