@@ -157,8 +157,7 @@ public final class TelemetrySenderImpl extends AbstractSender {
         if (!isRegistrationAssertionRequired()) {
             MessageHelper.getAndRemoveRegistrationAssertion(rawMessage);
         }
-        final Future<ProtonDelivery> result = Future.future();
-        context.runOnContext(send -> {
+        return executeOrRunOnContext(result -> {
             if (sender.sendQueueFull()) {
                 final ServiceInvocationException e = new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "no credit available");
                 logError(span, e);
@@ -168,7 +167,6 @@ public final class TelemetrySenderImpl extends AbstractSender {
                 sendMessageAndWaitForOutcome(rawMessage, span).setHandler(result.completer());
             }
         });
-        return result;
     }
 
     /**

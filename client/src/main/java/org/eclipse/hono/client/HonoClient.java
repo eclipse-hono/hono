@@ -53,7 +53,18 @@ import io.vertx.proton.ProtonDelivery;
  * Some of the <em>connect</em> methods accept a {@code ProtonClientOptions} type parameter. Note that these options
  * only influence the client's behavior when establishing the TCP connection with the peer. The overall behavior of
  * the client regarding the establishment of the AMQP connection must be configured using the
- * {@link ClientConfigProperties} passed in to the <em>newClient</em> method.
+ * {@link ClientConfigProperties} passed in to the <em>newClient</em> method. In particular, the
+ * {@link ClientConfigProperties#setReconnectAttempts(int)} method can be used to specify, how many
+ * times the client should try to establish a connection to the peer before giving up.
+ * <p>
+ * <em>NB</em> When the client tries to establish a connection to the peer, it stores the <em>current</em>
+ * vert.x {@code Context} in a local variable and performs all further interactions with the peer running
+ * on this Context. Invoking any of the methods of the client from a vert.x Context other than the one
+ * used for establishing the connection may cause race conditions or even deadlocks because the handlers
+ * registered on the {@code Future}s returned by these methods will be invoked from the stored Context.
+ * It is the invoking code's responsibility to either ensure that the client's methods are always invoked
+ * from the same Context or to make sure that the handlers are running on the correct Context, e.g. by using
+ * the {@code Context}'s <em>runOnContext</em> method.
  */
 public interface HonoClient {
 

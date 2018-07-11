@@ -166,18 +166,13 @@ abstract public class AbstractSender extends AbstractHonoClient implements Messa
 
         Objects.requireNonNull(rawMessage);
 
-        if (capacityAvailableHandler == null) {
-            final Future<ProtonDelivery> result = Future.future();
-            context.runOnContext(send -> {
+        return executeOrRunOnContext(result -> {
+            if (capacityAvailableHandler == null) {
                 final Span currentSpan = startSpan(rawMessage);
                 sendMessage(rawMessage, currentSpan).setHandler(result.completer());
-            });
-            return result;
-        } else if (this.drainHandler != null) {
-            throw new IllegalStateException("cannot send message while waiting for replenishment with credit");
-        } else if (sender.isOpen()) {
-            final Future<ProtonDelivery> result = Future.future();
-            context.runOnContext(send -> {
+            } else if (this.drainHandler != null) {
+                result.fail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE));
+            } else if (sender.isOpen()) {
                 final Span currentSpan = startSpan(rawMessage);
                 sendMessage(rawMessage, currentSpan).setHandler(result.completer());
                 if (sender.sendQueueFull()) {
@@ -185,11 +180,10 @@ abstract public class AbstractSender extends AbstractHonoClient implements Messa
                 } else {
                     capacityAvailableHandler.handle(null);
                 }
-            });
-            return result;
-        } else {
-            throw new IllegalStateException("sender is not open");
-        }
+            } else {
+                result.fail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE));
+            }
+        });
     }
 
     @Override
@@ -213,8 +207,7 @@ abstract public class AbstractSender extends AbstractHonoClient implements Messa
         span.setTag(MessageHelper.APP_PROPERTY_DEVICE_ID, MessageHelper.getDeviceId(rawMessage));
         tracer.inject(span.context(), Format.Builtin.TEXT_MAP, new MessageAnnotationsInjectAdapter(rawMessage));
 
-        final Future<ProtonDelivery> result = Future.future();
-        context.runOnContext(send -> {
+        return executeOrRunOnContext(result -> {
             if (sender.sendQueueFull()) {
                 final ServiceInvocationException e = new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "no credit available");
                 logError(span, e);
@@ -224,7 +217,6 @@ abstract public class AbstractSender extends AbstractHonoClient implements Messa
                 sendMessage(rawMessage, span).setHandler(result.completer());
             }
         });
-        return result;
     }
 
     @Override
@@ -468,5 +460,4 @@ abstract public class AbstractSender extends AbstractHonoClient implements Messa
             return Future.failedFuture(t);
         });
     }
-
 }

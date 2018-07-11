@@ -121,6 +121,22 @@ public abstract class AbstractHonoClient {
     }
 
     /**
+     * Executes some code on the vert.x Context that has been used to establish the
+     * connection to the peer.
+     * 
+     * @param <T> The type of the result that the code produces.
+     * @param codeToRun The code to execute. The code is required to either complete or
+     *                  fail the future that is passed into the handler.
+     * @return The future passed into the handler for executing the code. The future
+     *         thus indicates the outcome of executing the code.
+     */
+    protected final <T> Future<T> executeOrRunOnContext(
+            final Handler<Future<T>> codeToRun) {
+
+        return HonoProtonHelper.executeOrRunOnContext(context, codeToRun);
+    }
+
+    /**
      * Marks an <em>OpenTracing</em> span as erroneous and logs an exception.
      * <p>
      * This method does <em>not</em> finish the span.
@@ -221,33 +237,9 @@ public abstract class AbstractHonoClient {
 
         Objects.requireNonNull(closeHandler);
 
-        final Future<Void> senderCloseHandler = Future.future();
-        senderCloseHandler.compose(closedSender -> {
+        final Future<Void> res = executeOrRunOnContext(result -> {
 
-            final Future<Void> receiverCloseHandler = Future.future();
-
-            if (receiver == null) {
-                receiverCloseHandler.handle(Future.succeededFuture());
-            } else {
-                final Handler<AsyncResult<ProtonReceiver>> wrappedHandler = HonoProtonHelper.setCloseHandler(receiver, closeAttempt -> {
-                    LOG.debug("closed message consumer for [{}]", receiver.getSource().getAddress());
-                    receiverCloseHandler.complete();
-                });
-                if (receiver.isOpen()) {
-                    // wait for peer's detach frame to trigger the handler
-                    receiver.close();
-                } else {
-                    // trigger handler manually to make sure that
-                    // resources are freed up
-                    wrappedHandler.handle(Future.succeededFuture());
-                }
-            }
-            return receiverCloseHandler;
-
-        }).setHandler(closeHandler);
-
-        context.runOnContext(go -> {
-
+            final Future<Void> senderCloseHandler = Future.future();
             if (sender == null) {
                 senderCloseHandler.complete();
             } else {
@@ -264,7 +256,29 @@ public abstract class AbstractHonoClient {
                     wrappedHandler.handle(Future.succeededFuture());
                 }
             }
+
+            senderCloseHandler.compose(closedSender -> {
+
+                if (receiver == null) {
+                    result.complete((Void) null);
+                } else {
+                    final Handler<AsyncResult<ProtonReceiver>> wrappedHandler = HonoProtonHelper.setCloseHandler(receiver, closeAttempt -> {
+                        LOG.debug("closed message consumer for [{}]", receiver.getSource().getAddress());
+                        result.complete((Void) null);
+                    });
+                    if (receiver.isOpen()) {
+                        // wait for peer's detach frame to trigger the handler
+                        receiver.close();
+                    } else {
+                        // trigger handler manually to make sure that
+                        // resources are freed up
+                        wrappedHandler.handle(Future.succeededFuture());
+                    }
+                }
+
+            }, result);
         });
+        res.setHandler(closeHandler);
     }
 
     /**
@@ -325,9 +339,7 @@ public abstract class AbstractHonoClient {
         Objects.requireNonNull(targetAddress);
         Objects.requireNonNull(qos);
 
-        final Future<ProtonSender> result = Future.future();
-
-        ctx.runOnContext(create -> {
+        return HonoProtonHelper.executeOrRunOnContext(ctx, result -> {
 
             final ProtonSender sender = con.createSender(targetAddress);
             sender.attachments().set(KEY_LINK_ESTABLISHED, Boolean.class, Boolean.FALSE);
@@ -362,8 +374,6 @@ public abstract class AbstractHonoClient {
             HonoProtonHelper.setCloseHandler(sender, remoteClosed -> onRemoteDetach(sender, con.getRemoteContainer(), true, closeHook));
             sender.open();
         });
-
-        return result;
     }
 
     /**
@@ -398,9 +408,7 @@ public abstract class AbstractHonoClient {
         Objects.requireNonNull(qos);
         Objects.requireNonNull(messageHandler);
 
-        final Future<ProtonReceiver> result = Future.future();
-        ctx.runOnContext(go -> {
-
+        return HonoProtonHelper.executeOrRunOnContext(ctx, result -> {
             final ProtonReceiver receiver = con.createReceiver(sourceAddress);
             receiver.attachments().set(KEY_LINK_ESTABLISHED, Boolean.class, Boolean.FALSE);
             receiver.setAutoAccept(true);
@@ -434,7 +442,6 @@ public abstract class AbstractHonoClient {
             HonoProtonHelper.setCloseHandler(receiver, remoteClosed -> onRemoteDetach(receiver, con.getRemoteContainer(), true, closeHook));
             receiver.open();
         });
-        return result;
     }
 
     private static void onRemoteDetach(

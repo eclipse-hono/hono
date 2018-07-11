@@ -49,6 +49,7 @@ import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.connection.ConnectionFactory;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.HonoProtonHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -68,6 +69,16 @@ import io.vertx.proton.ProtonDelivery;
 
 /**
  * A helper class for creating Vert.x based clients for Hono's arbitrary APIs.
+ * <p>
+ * The client ensures that all interactions with the peer are performed on the
+ * same vert.x {@code Context}. For this purpose the <em>connect</em> methods
+ * either use the current Context or create a new Context for connecting to
+ * the peer. This same Context is then used for all consecutive interactions with
+ * the peer as well, e.g. when creating consumers or senders.
+ * <p>
+ * Closing or disconnecting the client will <em>release</em> the Context. The next
+ * invocation of any of the connect methods will then use the same approach as
+ * described above to determine the Context to use.
  */
 public class HonoClientImpl implements HonoClient {
 
@@ -78,10 +89,6 @@ public class HonoClientImpl implements HonoClient {
      */
     protected final ClientConfigProperties clientConfigProperties;
     /**
-     * The vert.x Context to use for interacting with the peer.
-     */
-    protected final Context context;
-    /**
      * The senders that can be used to send telemetry and or event messages.
      * The target address is used as the key, e.g. <em>telemetry/DEFAULT_TENANT</em>.
      */
@@ -91,6 +98,10 @@ public class HonoClientImpl implements HonoClient {
      * The AMQP connection to the peer.
      */
     protected ProtonConnection connection;
+    /**
+     * The vert.x Context to use for interacting with the peer.
+     */
+    protected volatile Context context;
 
     private final Map<String, RequestResponseClient> activeRequestResponseClients = new HashMap<>();
     private final Map<String, Boolean> creationLocks = new HashMap<>();
@@ -148,7 +159,6 @@ public class HonoClientImpl implements HonoClient {
         } else {
             this.connectionFactory = ConnectionFactory.newConnectionFactory(this.vertx, clientConfigProperties);
         }
-        this.context = this.vertx.getOrCreateContext();
         this.clientConfigProperties = clientConfigProperties;
         this.connectAttempts = new AtomicInteger(0);
     }
@@ -179,20 +189,28 @@ public class HonoClientImpl implements HonoClient {
     }
 
     /**
+     * Executes some code on the vert.x Context that has been used to establish the
+     * connection to the peer.
+     * 
+     * @param <T> The type of the result that the code produces.
+     * @param codeToRun The code to execute. The code is required to either complete or
+     *                  fail the future that is passed into the handler.
+     * @return The future passed into the handler for executing the code. The future
+     *         thus indicates the outcome of executing the code. The future will
+     *         be failed if the <em>context</em> property is {@code null}.
+     */
+    private <T> Future<T> executeOrRunOnContext(final Handler<Future<T>> codeToRun) {
+
+        return HonoProtonHelper.executeOrRunOnContext(context, codeToRun);
+    }
+
+    /**
      * {@inheritDoc}
      */
     @Override
     public final Future<Void> isConnected() {
 
-        final Future<Void> result = Future.future();
-        context.runOnContext(check -> {
-            if (isConnectedInternal()) {
-                result.complete();
-            } else {
-                result.fail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE));
-            }
-        });
-        return result;
+        return executeOrRunOnContext(result -> checkConnected(result));
     }
 
     /**
@@ -203,12 +221,17 @@ public class HonoClientImpl implements HonoClient {
     protected final Future<Void> checkConnected() {
 
         final Future<Void> result = Future.future();
-        if (isConnectedInternal()) {
-            result.complete();
-        } else {
-            result.fail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "not connected"));
-        }
+        checkConnected(result);
         return result;
+    }
+
+    private void checkConnected(final Handler<AsyncResult<Void>> resultHandler) {
+        if (isConnectedInternal()) {
+            resultHandler.handle(Future.succeededFuture());
+        } else {
+            resultHandler.handle(Future.failedFuture(
+                    new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "not connected")));
+        }
     }
 
     private boolean isConnectedInternal() {
@@ -225,6 +248,7 @@ public class HonoClientImpl implements HonoClient {
             this.connection = connection;
             if (connection == null) {
                 this.offeredCapabilities = Collections.emptyList();
+                context = null;
             } else {
                 this.offeredCapabilities = Optional.ofNullable(connection.getRemoteOfferedCapabilities())
                         .map(caps -> Collections.unmodifiableList(Arrays.asList(caps)))
@@ -301,7 +325,12 @@ public class HonoClientImpl implements HonoClient {
             final Handler<AsyncResult<HonoClient>> connectionHandler,
             final Handler<ProtonConnection> disconnectHandler) {
 
-        context.runOnContext(connect -> {
+        context = vertx.getOrCreateContext();
+        LOG.trace("running on vert.x context [event-loop context: {}]", context.isEventLoopContext());
+
+        // context cannot be null thus it is safe to
+        // ignore the Future returned by executeOrRunContext
+        executeOrRunOnContext(ignore -> {
 
             if (isConnectedInternal()) {
                 LOG.debug("already connected to server [{}:{}]", connectionFactory.getHost(),
@@ -437,7 +466,7 @@ public class HonoClientImpl implements HonoClient {
         } else if (clientConfigProperties.getReconnectAttempts() - connectAttempts.getAndIncrement() == 0) {
             LOG.debug("max number of attempts [{}] to re-connect to peer [{}:{}] have been made, giving up",
                     clientConfigProperties.getReconnectAttempts(), connectionFactory.getHost(), connectionFactory.getPort());
-            connectAttempts = new AtomicInteger(0);
+            clearState();
             if (connectionFailureCause == null) {
                 connectionHandler.handle(Future.failedFuture(
                         new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "failed to connect")));
@@ -450,6 +479,7 @@ public class HonoClientImpl implements HonoClient {
                         new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "failed to connect",
                                 connectionFailureCause)));
             }
+
         } else {
             if (connectionFailureCause != null) {
                 LOG.debug("connection attempt failed", connectionFailureCause);
@@ -553,48 +583,51 @@ public class HonoClientImpl implements HonoClient {
             final String key,
             final Supplier<Future<MessageSender>> newSenderSupplier) {
 
-        final Future<MessageSender> result = Future.future();
+        return executeOrRunOnContext(result -> getOrCreateSender(key, newSenderSupplier, result));
+    }
 
-        context.runOnContext(get -> {
-            final MessageSender sender = activeSenders.get(key);
-            if (sender != null && sender.isOpen()) {
-                LOG.debug("reusing existing message sender [target: {}, credit: {}]", key, sender.getCredit());
-                result.complete(sender);
-            } else if (!creationLocks.computeIfAbsent(key, k -> Boolean.FALSE)) {
-                // register a handler to be notified if the underlying connection to the server fails
-                // so that we can fail the result handler passed in
-                final Handler<Void> connectionFailureHandler = connectionLost -> {
-                    // remove lock so that next attempt to open a sender doesn't fail
-                    creationLocks.remove(key);
-                    result.tryFail(
-                            new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "no connection to service"));
-                };
-                creationRequests.add(connectionFailureHandler);
-                creationLocks.put(key, Boolean.TRUE);
-                LOG.debug("creating new message sender for {}", key);
+    private void getOrCreateSender(
+            final String key,
+            final Supplier<Future<MessageSender>> newSenderSupplier,
+            final Future<MessageSender> result) {
 
-                newSenderSupplier.get().setHandler(creationAttempt -> {
-                    creationLocks.remove(key);
-                    creationRequests.remove(connectionFailureHandler);
-                    if (creationAttempt.succeeded()) {
-                        final MessageSender newSender = creationAttempt.result();
-                        LOG.debug("successfully created new message sender for {}", key);
-                        activeSenders.put(key, newSender);
-                        result.tryComplete(newSender);
-                    } else {
-                        LOG.debug("failed to create new message sender for {}", key, creationAttempt.cause());
-                        activeSenders.remove(key);
-                        result.tryFail(creationAttempt.cause());
-                    }
-                });
+        final MessageSender sender = activeSenders.get(key);
+        if (sender != null && sender.isOpen()) {
+            LOG.debug("reusing existing message sender [target: {}, credit: {}]", key, sender.getCredit());
+            result.tryComplete(sender);
+        } else if (!creationLocks.computeIfAbsent(key, k -> Boolean.FALSE)) {
+            // register a handler to be notified if the underlying connection to the server fails
+            // so that we can fail the result handler passed in
+            final Handler<Void> connectionFailureHandler = connectionLost -> {
+                // remove lock so that next attempt to open a sender doesn't fail
+                creationLocks.remove(key);
+                result.tryFail(
+                        new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "no connection to service"));
+            };
+            creationRequests.add(connectionFailureHandler);
+            creationLocks.put(key, Boolean.TRUE);
+            LOG.debug("creating new message sender for {}", key);
 
-            } else {
-                LOG.debug("already trying to create a message sender for {}", key);
-                result.fail(new ServerErrorException(
-                        HttpURLConnection.HTTP_UNAVAILABLE, "no connection to service"));
-            }
-        });
-        return result;
+            newSenderSupplier.get().setHandler(creationAttempt -> {
+                creationLocks.remove(key);
+                creationRequests.remove(connectionFailureHandler);
+                if (creationAttempt.succeeded()) {
+                    final MessageSender newSender = creationAttempt.result();
+                    LOG.debug("successfully created new message sender for {}", key);
+                    activeSenders.put(key, newSender);
+                    result.complete(newSender);
+                } else {
+                    LOG.debug("failed to create new message sender for {}", key, creationAttempt.cause());
+                    activeSenders.remove(key);
+                    result.tryFail(creationAttempt.cause());
+                }
+            });
+
+        } else {
+            LOG.debug("already trying to create a message sender for {}", key);
+            result.tryFail(new ServerErrorException(
+                    HttpURLConnection.HTTP_UNAVAILABLE, "no connection to service"));
+        }
     }
 
     /**
@@ -680,27 +713,30 @@ public class HonoClientImpl implements HonoClient {
             final String tenantId,
             final Supplier<Future<MessageConsumer>> newConsumerSupplier) {
 
-        final Future<MessageConsumer> result = Future.future();
-        context.runOnContext(get -> {
+        return executeOrRunOnContext(result -> createConsumer(tenantId, newConsumerSupplier, result));
+    }
 
-            // register a handler to be notified if the underlying connection to the server fails
-            // so that we can fail the returned future
-            final Handler<Void> connectionFailureHandler = connectionLost -> {
-                result.tryFail(
-                        new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "connection to server lost"));
-            };
-            creationRequests.add(connectionFailureHandler);
+    private void createConsumer(
+            final String tenantId,
+            final Supplier<Future<MessageConsumer>> newConsumerSupplier,
+            final Future<MessageConsumer> result) {
 
-            newConsumerSupplier.get().setHandler(attempt -> {
-                creationRequests.remove(connectionFailureHandler);
-                if (attempt.succeeded()) {
-                    result.tryComplete(attempt.result());
-                } else {
-                    result.tryFail(attempt.cause());
-                }
-            });
+        // register a handler to be notified if the underlying connection to the server fails
+        // so that we can fail the returned future
+        final Handler<Void> connectionFailureHandler = connectionLost -> {
+            result.tryFail(
+                    new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "connection to server lost"));
+        };
+        creationRequests.add(connectionFailureHandler);
+
+        newConsumerSupplier.get().setHandler(attempt -> {
+            creationRequests.remove(connectionFailureHandler);
+            if (attempt.succeeded()) {
+                result.tryComplete(attempt.result());
+            } else {
+                result.tryFail(attempt.cause());
+            }
         });
-        return result;
     }
 
     /**
@@ -938,47 +974,50 @@ public class HonoClientImpl implements HonoClient {
             final String key,
             final Supplier<Future<RequestResponseClient>> clientSupplier) {
 
-        final Future<RequestResponseClient> result = Future.future();
+        return executeOrRunOnContext(result -> getOrCreateRequestResponseClient(key, clientSupplier, result));
+    }
 
-        context.runOnContext(go -> {
-            final RequestResponseClient client = activeRequestResponseClients.get(key);
-            if (client != null && client.isOpen()) {
-                LOG.debug("reusing existing client [target: {}]", key);
-                result.complete(client);
-            } else if (!creationLocks.computeIfAbsent(key, k -> Boolean.FALSE)) {
+    private void getOrCreateRequestResponseClient(
+            final String key,
+            final Supplier<Future<RequestResponseClient>> clientSupplier,
+            final Future<RequestResponseClient> result) {
 
-                // register a handler to be notified if the underlying connection to the server fails
-                // so that we can fail the result handler passed in
-                final Handler<Void> connectionFailureHandler = connectionLost -> {
-                    // remove lock so that next attempt to open a sender doesn't fail
-                    creationLocks.remove(key);
-                    result.tryFail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "no connection to service"));
-                };
-                creationRequests.add(connectionFailureHandler);
-                creationLocks.put(key, Boolean.TRUE);
-                LOG.debug("creating new client [target: {}]", key);
+        final RequestResponseClient client = activeRequestResponseClients.get(key);
+        if (client != null && client.isOpen()) {
+            LOG.debug("reusing existing client [target: {}]", key);
+            result.complete(client);
+        } else if (!creationLocks.computeIfAbsent(key, k -> Boolean.FALSE)) {
 
-                clientSupplier.get().setHandler(creationAttempt -> {
-                    if (creationAttempt.succeeded()) {
-                        LOG.debug("successfully created new client [target: {}]", key);
-                        activeRequestResponseClients.put(key, creationAttempt.result());
-                        result.tryComplete(creationAttempt.result());
-                    } else {
-                        LOG.debug("failed to create new client [target: {}]", key, creationAttempt.cause());
-                        activeRequestResponseClients.remove(key);
-                        result.tryFail(creationAttempt.cause());
-                    }
-                    creationLocks.remove(key);
-                    creationRequests.remove(connectionFailureHandler);
-                });
+            // register a handler to be notified if the underlying connection to the server fails
+            // so that we can fail the result handler passed in
+            final Handler<Void> connectionFailureHandler = connectionLost -> {
+                // remove lock so that next attempt to open a sender doesn't fail
+                creationLocks.remove(key);
+                result.tryFail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "no connection to service"));
+            };
+            creationRequests.add(connectionFailureHandler);
+            creationLocks.put(key, Boolean.TRUE);
+            LOG.debug("creating new client [target: {}]", key);
 
-            } else {
-                LOG.debug("already trying to create a client [target: {}]", key);
-                result.fail(new ServerErrorException(
-                        HttpURLConnection.HTTP_UNAVAILABLE, "no connection to service"));
-            }
-        });
-        return result;
+            clientSupplier.get().setHandler(creationAttempt -> {
+                if (creationAttempt.succeeded()) {
+                    LOG.debug("successfully created new client [target: {}]", key);
+                    activeRequestResponseClients.put(key, creationAttempt.result());
+                    result.tryComplete(creationAttempt.result());
+                } else {
+                    LOG.debug("failed to create new client [target: {}]", key, creationAttempt.cause());
+                    activeRequestResponseClients.remove(key);
+                    result.tryFail(creationAttempt.cause());
+                }
+                creationLocks.remove(key);
+                creationRequests.remove(connectionFailureHandler);
+            });
+
+        } else {
+            LOG.debug("already trying to create a client [target: {}]", key);
+            result.fail(new ServerErrorException(
+                    HttpURLConnection.HTTP_UNAVAILABLE, "no connection to service"));
+        }
     }
 
     /**
@@ -1059,7 +1098,8 @@ public class HonoClientImpl implements HonoClient {
     //-----------------------------------< private methods >---
 
     private void closeConnection(final Handler<AsyncResult<Void>> completionHandler) {
-        context.runOnContext(close -> {
+
+        final Future<Void> result = executeOrRunOnContext(r -> {
             if (isConnectedInternal()) {
                 LOG.info("closing connection to server [{}:{}]...", connectionFactory.getHost(), connectionFactory.getPort());
                 final ProtonConnection connectionToClose = connection;
@@ -1080,7 +1120,8 @@ public class HonoClientImpl implements HonoClient {
                 LOG.info("connection to server [{}:{}] already closed", connectionFactory.getHost(), connectionFactory.getPort());
             }
             disconnecting.compareAndSet(Boolean.TRUE, Boolean.FALSE);
-            completionHandler.handle(Future.succeededFuture());
+            r.complete();
         });
+        result.setHandler(completionHandler);
     }
 }

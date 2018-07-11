@@ -679,7 +679,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
             currentSpan.setTag(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId);
         }
 
-        context.runOnContext(req -> {
+        executeOrRunOnContext(res -> {
             if (sender.sendQueueFull()) {
                 LOG.debug("cannot send request to peer, no credit left for link [target: {}]", targetAddress);
                 resultHandler.handle(Future.failedFuture(new ServerErrorException(
@@ -739,6 +739,11 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
                     }
                 }
             }
+        }).otherwise(t -> {
+            // there is no context to run on
+            resultHandler.handle(Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE,
+                    "not connected")));
+            return null;
         });
     }
 
