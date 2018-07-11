@@ -33,6 +33,8 @@ public final class TimeUntilDisconnectNotification {
 
     private String deviceId;
 
+    private Integer ttd;
+
     private Instant readyUntil;
 
     /**
@@ -40,14 +42,16 @@ public final class TimeUntilDisconnectNotification {
      *
      * @param tenantId The identifier of the tenant of the device the notification is constructed for.
      * @param deviceId The id of the device the notification is constructed for.
+     * @param ttd The time until the device <em>disconnects</em> again.
      * @param readyUntil The Instant that determines until when this notification is valid.
      * @throws NullPointerException If readyUntil is null.
      */
-    public TimeUntilDisconnectNotification(final String tenantId, final String deviceId, final Instant readyUntil) {
+    private TimeUntilDisconnectNotification(final String tenantId, final String deviceId, final Integer ttd, final Instant readyUntil) {
         Objects.requireNonNull(readyUntil);
 
         this.tenantId = tenantId;
         this.deviceId = deviceId;
+        this.ttd = ttd;
         this.readyUntil = readyUntil;
     }
 
@@ -59,6 +63,10 @@ public final class TimeUntilDisconnectNotification {
         return deviceId;
     }
 
+    public Integer getTtd() {
+        return ttd;
+    }
+
     public Instant getReadyUntil() {
         return readyUntil;
     }
@@ -68,6 +76,7 @@ public final class TimeUntilDisconnectNotification {
         return "TimeUntilDisconnectNotification{" +
                 "tenantId='" + tenantId + '\'' +
                 ", deviceId='" + deviceId + '\'' +
+                ", ttd='" + ttd + '\'' +
                 ", readyUntil=" + readyUntil +
                 '}';
     }
@@ -97,14 +106,14 @@ public final class TimeUntilDisconnectNotification {
                 final Instant creationTime = Instant.ofEpochMilli(msg.getCreationTime());
 
                 final TimeUntilDisconnectNotification notification =
-                        new TimeUntilDisconnectNotification(tenantId, deviceId, getReadyUntilInstantFromTtd(ttd, creationTime));
+                        new TimeUntilDisconnectNotification(tenantId, deviceId, ttd, getReadyUntilInstantFromTtd(ttd, creationTime));
                 return Optional.of(notification);
             }
         }
         return Optional.empty();
     }
 
-    private static Instant getReadyUntilInstantFromTtd(final long ttd, final Instant startingFrom) {
+    private static Instant getReadyUntilInstantFromTtd(final Integer ttd, final Instant startingFrom) {
         if (ttd == MessageHelper.TTD_VALUE_UNLIMITED) {
             return Instant.MAX;
         } else {

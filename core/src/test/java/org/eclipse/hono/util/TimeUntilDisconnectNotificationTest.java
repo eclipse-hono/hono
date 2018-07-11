@@ -14,6 +14,7 @@
 
 package org.eclipse.hono.util;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.util.Optional;
@@ -35,9 +36,13 @@ public class TimeUntilDisconnectNotificationTest {
     public void testNotificationIsConstructedIfTtdIsSetToPositiveValue() {
 
         final Message msg = createTestMessage();
-        MessageHelper.addProperty(msg, MessageHelper.APP_PROPERTY_DEVICE_TTD, 10);
+        MessageHelper.addProperty(msg, MessageHelper.APP_PROPERTY_DEVICE_TTD, new Integer(10));
+        final Optional<TimeUntilDisconnectNotification> ttdNotificationOpt = TimeUntilDisconnectNotification.fromMessage(msg);
+        assertTrue(ttdNotificationOpt.isPresent());
 
-        assertNotificationProperties(msg);
+        final TimeUntilDisconnectNotification notification = ttdNotificationOpt.get();
+        assertNotificationProperties(notification, msg);
+        assertEquals(notification.getTtd(), new Integer(10));
     }
 
     /**
@@ -48,14 +53,15 @@ public class TimeUntilDisconnectNotificationTest {
 
         final Message msg = createTestMessage();
         MessageHelper.addProperty(msg, MessageHelper.APP_PROPERTY_DEVICE_TTD, MessageHelper.TTD_VALUE_UNLIMITED);
-
-        assertNotificationProperties(msg);
-    }
-
-    private void assertNotificationProperties(final Message msg) {
         final Optional<TimeUntilDisconnectNotification> ttdNotificationOpt = TimeUntilDisconnectNotification.fromMessage(msg);
         assertTrue(ttdNotificationOpt.isPresent());
         final TimeUntilDisconnectNotification notification = ttdNotificationOpt.get();
+
+        assertNotificationProperties(notification, msg);
+        assertEquals(notification.getTtd(), new Integer(MessageHelper.TTD_VALUE_UNLIMITED));
+    }
+
+    private void assertNotificationProperties(final TimeUntilDisconnectNotification notification, final Message msg) {
         assertTrue(notification.getMillisecondsUntilExpiry() > 0);
         assertTrue(Constants.DEFAULT_TENANT.equals(notification.getTenantId()));
         assertTrue("4711".equals(notification.getDeviceId()));
