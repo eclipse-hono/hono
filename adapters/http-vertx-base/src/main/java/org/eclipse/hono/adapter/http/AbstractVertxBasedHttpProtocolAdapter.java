@@ -75,6 +75,8 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
     private static final int AT_LEAST_ONCE = 1;
     private static final int HEADER_QOS_INVALID = -1;
 
+    private static final String KEY_TIMER_ID = "timerId";
+
     private HttpServer         server;
     private HttpServer         insecureServer;
     private HttpAdapterMetrics metrics;
@@ -630,14 +632,6 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                         HttpUtils.serviceUnavailable(ctx, 2, "temporarily unavailable");
                     }
                     return Future.failedFuture(t);
-                }).setHandler(done -> {
-                    if (commandConsumerTracker.succeeded()) {
-                        final MessageConsumer consumer = commandConsumerTracker.result();
-                        if (consumer != null) {
-                            LOG.trace("closing command consumer for device [tenantId: {}, deviceId: {}]", tenant, deviceId);
-                            consumer.close(dontCare -> {});
-                        }
-                    }
                 });
             }
         }
@@ -659,14 +653,19 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
     private void addConnectionCloseHandler(final RoutingContext ctx, final MessageConsumer messageConsumer,
                                            final String tenantId, final String deviceId) {
         Optional.ofNullable(messageConsumer).map(consumer -> {
-            ctx.response().closeHandler(v -> {
-                LOG.debug("Connection was closed before response could be sent - closing command consumer for device [tenantId: {}, deviceId: {}]", tenantId, deviceId);
-                getCommandConnection().closeCommandConsumer(tenantId, deviceId).setHandler(result -> {
-                    if (result.failed()) {
-                        LOG.warn("Close command consumer failed", result.cause());
-                    }
+            if (!ctx.response().closed()) {
+                ctx.response().closeHandler(v -> {
+                    cancelCommandReceptionTimer(ctx);
+
+                    LOG.debug("Connection was closed before response could be sent - closing command consumer for device [tenantId: {}, deviceId: {}]", tenantId, deviceId);
+
+                    getCommandConnection().closeCommandConsumer(tenantId, deviceId).setHandler(result -> {
+                        if (result.failed()) {
+                            LOG.warn("Close command consumer failed", result.cause());
+                        }
+                    });
                 });
-            });
+            }
             return consumer;
         });
     }
@@ -726,6 +725,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                             } else {
                                 // put command to routing context and notify
                                 receivedCommand.put(ctx);
+                                cancelCommandReceptionTimer(ctx);
                                 responseReady.tryComplete();
                             }
                             if (v.failed()) {
@@ -738,19 +738,62 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                         // command consumer is closed by closeHandler, no explicit close necessary here
                     }).map(consumer -> {
                         consumer.flow(1);
-                        ctx.vertx().setTimer(ttdMillis, ttdExpired -> {
-                            if (!responseReady.isComplete()) {
-                                responseReady.tryComplete();
-                                getCommandConnection().closeCommandConsumer(tenantId, deviceId).setHandler(v -> {
-                                    if (v.failed()) {
-                                        LOG.warn("Close command consumer failed", v.cause());
-                                    }
-                                });
-                            }
-                        });
+                        if (!responseReady.isComplete()) {
+                            // if the request was not responded already, add a timer that closes the command consumer after expiry
+                            addCommandReceptionTimer(ctx, tenantId, deviceId, responseReady, ttdMillis);
+                        }
                         return consumer;
                     });
         }
+    }
+
+    /**
+     * Add a timer that closes the command connection after the given expiry time in milliseconds.
+     * In this case it additionally completes the <em>responseReady</em> Future.
+     * <p>
+     * The timerId is put to the routing context using the key {@link #KEY_TIMER_ID}.
+     *
+     * @param ctx The device's currently executing HTTP request.
+     * @param tenantId The tenant that the device belongs to.
+     * @param deviceId The identifier of the device.
+     * @param responseReady A future to complete if the timer expired.
+     * @param expiryTimeInMillis The expiry time of the timer.
+     */
+    private void addCommandReceptionTimer(final RoutingContext ctx, final String tenantId, final String deviceId,
+                                          final Future<Void> responseReady, final long expiryTimeInMillis) {
+        final Long timerId = ctx.vertx().setTimer(expiryTimeInMillis, id -> {
+
+            LOG.trace("Command Reception timer fired, id {}", id);
+
+            if (!responseReady.isComplete()) {
+                // if the request was responded already,
+                responseReady.tryComplete();
+                getCommandConnection().closeCommandConsumer(tenantId, deviceId).setHandler(v -> {
+                    if (v.failed()) {
+                        LOG.warn("Close command consumer failed", v.cause());
+                    }
+                });
+            } else {
+                LOG.trace("Nothing to close for timer since response was sent already");
+            }
+        });
+
+        LOG.trace("Adding command reception timer id {}", timerId);
+
+        ctx.put(KEY_TIMER_ID, timerId);
+    }
+
+    private void cancelCommandReceptionTimer(final RoutingContext ctx) {
+        Optional.ofNullable(ctx.get(KEY_TIMER_ID)).map(timerId -> {
+            if ((Long)timerId >= 0) {
+                if (ctx.vertx().cancelTimer((Long)timerId)) {
+                    LOG.trace("Cancelled timer id {}", timerId);
+                } else {
+                    LOG.debug("Could not cancel timer id {}", timerId);
+                }
+            }
+            return timerId;
+        });
     }
 
     /**

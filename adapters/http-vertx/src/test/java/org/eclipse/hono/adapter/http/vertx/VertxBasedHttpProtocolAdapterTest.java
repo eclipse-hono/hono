@@ -496,7 +496,7 @@ public class VertxBasedHttpProtocolAdapterTest {
                     verify(commandConnection).getOrCreateCommandConsumer(eq("DEFAULT_TENANT"), eq("device_1"),
                             any(BiConsumer.class), any(Handler.class));
                     // and the command consumer has been closed again
-                    verify(commandConsumer).close(any(Handler.class));
+                    verify(commandConnection).closeCommandConsumer(eq("DEFAULT_TENANT"), eq("device_1"));
                     async.complete();
                 }).exceptionHandler(ctx::fail).end(new JsonObject().encode());
     }
