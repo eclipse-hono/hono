@@ -98,7 +98,7 @@ public class TelemetryMqttQoS0IT extends MqttTestBase {
         if (isTestEnvironment()) {
             return MESSAGES_TO_SEND * 100;
         } else {
-            return MESSAGES_TO_SEND * 10;
+            return MESSAGES_TO_SEND * 20;
         }
     }
 

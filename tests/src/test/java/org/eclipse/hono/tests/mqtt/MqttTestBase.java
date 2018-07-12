@@ -246,7 +246,8 @@ public abstract class MqttTestBase {
                 VERTX.runOnContext(connect -> {
                     final MqttClientOptions options = new MqttClientOptions()
                             .setUsername(IntegrationTestSupport.getUsername(deviceId, tenantId))
-                            .setPassword(password);
+                            .setPassword(password)
+                            .setMaxInflightQueue(MESSAGES_TO_SEND);
                     mqttClient = MqttClient.create(VERTX, options);
                     mqttClient.connect(IntegrationTestSupport.MQTT_PORT, IntegrationTestSupport.MQTT_HOST, result.completer());
                 });
