@@ -120,13 +120,15 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      * @param config The configuration properties to use.
      * @param tenantId The identifier of the tenant that the client is scoped to. May be {@code null}.
      * @param deviceId The device id to which a specific client should be scoped.
+     * @param replyId Part of the reply-to-address, that specifies the unique instance beside device and tenant.
      * @throws NullPointerException if any of context or configuration are {@code null}.
      */
-    AbstractRequestResponseClient(final Context context, final ClientConfigProperties config, final String tenantId, final String deviceId) {
+    AbstractRequestResponseClient(final Context context, final ClientConfigProperties config, final String tenantId,
+                                  final String deviceId, final String replyId) {
         super(context, config);
         this.requestTimeoutMillis = config.getRequestTimeout();
         this.targetAddress = String.format("%s/%s/%s", getName(), tenantId, deviceId);
-        this.replyToAddress = String.format("%s/%s/%s/%s", getName(), tenantId, deviceId, UUID.randomUUID());
+        this.replyToAddress = String.format("%s/%s/%s/%s", getName(), tenantId, deviceId, replyId);
         this.tenantId = tenantId;
     }
 

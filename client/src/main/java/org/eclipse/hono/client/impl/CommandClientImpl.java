@@ -13,8 +13,8 @@
 
 package org.eclipse.hono.client.impl;
 
+import java.math.BigInteger;
 import java.util.Objects;
-import java.util.UUID;
 
 import org.eclipse.hono.client.CommandClient;
 import org.eclipse.hono.client.StatusCodeMapper;
@@ -40,8 +40,10 @@ public class CommandClientImpl extends AbstractRequestResponseClient<BufferResul
 
     private static final Logger LOG = LoggerFactory.getLogger(CommandClientImpl.class);
 
-    CommandClientImpl(final Context context, final ClientConfigProperties config, final String tenantId, final String deviceId) {
-        super(context, config, tenantId, deviceId);
+    private long messageCounter;
+
+    CommandClientImpl(final Context context, final ClientConfigProperties config, final String tenantId, final String deviceId, final String replyId) {
+        super(context, config, tenantId, deviceId, replyId);
     }
 
     @Override
@@ -51,7 +53,11 @@ public class CommandClientImpl extends AbstractRequestResponseClient<BufferResul
 
     @Override
     protected String createMessageId() {
-        return String.format("cmd-client-%s", UUID.randomUUID());
+        // Since the messages are scoped to the link between this client and the adapter it is not needed
+        // to create a UUID and a counter with a compressed serialized format is sufficient.
+        // This has a value, since this id is also given as part of the request id to device and should be
+        // as short as possible.
+        return BigInteger.valueOf(messageCounter++).toString(Character.MAX_RADIX);
     }
 
     @Override
@@ -86,6 +92,7 @@ public class CommandClientImpl extends AbstractRequestResponseClient<BufferResul
      *
      * @param tenantId The tenant to create the client for.
      * @param deviceId The device to create the client for.
+     * @param replyId The replyId used as a postfix to create the reply-to-address with.
      * @param context The vert.x context to run all interactions with the server on.
      * @param clientConfig The configuration properties to use.
      * @param con The AMQP connection to the server.
@@ -97,6 +104,7 @@ public class CommandClientImpl extends AbstractRequestResponseClient<BufferResul
     public static final void create(
             final String tenantId,
             final String deviceId,
+            final String replyId,
             final Context context,
             final ClientConfigProperties clientConfig,
             final ProtonConnection con,
@@ -104,7 +112,7 @@ public class CommandClientImpl extends AbstractRequestResponseClient<BufferResul
             final Handler<String> receiverCloseHook,
             final Handler<AsyncResult<CommandClient>> creationHandler) {
 
-        final CommandClientImpl client = new CommandClientImpl(context, clientConfig, tenantId, deviceId);
+        final CommandClientImpl client = new CommandClientImpl(context, clientConfig, tenantId, deviceId, replyId);
         client.createLinks(con, senderCloseHook, receiverCloseHook).setHandler(s -> {
             if (s.succeeded()) {
                 LOG.debug("successfully created command client for [{}]", tenantId);

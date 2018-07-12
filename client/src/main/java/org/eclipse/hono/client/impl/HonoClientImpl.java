@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -414,7 +415,7 @@ public class HonoClientImpl implements HonoClient {
 
     private void failAllCreationRequests() {
 
-        for (Iterator<Handler<Void>> iter = creationRequests.iterator(); iter.hasNext();) {
+        for (final Iterator<Handler<Void>> iter = creationRequests.iterator(); iter.hasNext();) {
             iter.next().handle(null);
             iter.remove();
         }
@@ -889,20 +890,32 @@ public class HonoClientImpl implements HonoClient {
      */
     @Override
     public Future<CommandClient> getOrCreateCommandClient(final String tenantId, final String deviceId) {
+        return getOrCreateCommandClient(tenantId, deviceId, UUID.randomUUID().toString());
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public Future<CommandClient> getOrCreateCommandClient(final String tenantId, final String deviceId,
+            final String replyId) {
 
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
+        Objects.requireNonNull(replyId);
 
-        LOG.debug("get or create command client for [tenantId: {}, deviceId: {}]", tenantId, deviceId);
+        LOG.debug("get or create command client for [tenantId: {}, deviceId: {}, replyId: {}]", tenantId, deviceId,
+                replyId);
         return getOrCreateRequestResponseClient(
                 ResourceIdentifier.from(CommandConstants.COMMAND_ENDPOINT, tenantId, deviceId).toString(),
-                () -> newCommandClient(tenantId, deviceId)).map(c -> (CommandClient) c);
+                () -> newCommandClient(tenantId, deviceId, replyId)).map(c -> (CommandClient) c);
     }
 
-    private Future<RequestResponseClient> newCommandClient(final String tenantId, final String deviceId) {
+    private Future<RequestResponseClient> newCommandClient(final String tenantId, final String deviceId,
+            final String replyId) {
         return checkConnected().compose(connected -> {
             final Future<CommandClient> result = Future.future();
-            CommandClientImpl.create(tenantId, deviceId,
+            CommandClientImpl.create(tenantId, deviceId, replyId,
                     context,
                     clientConfigProperties,
                     connection,

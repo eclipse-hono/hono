@@ -347,6 +347,10 @@ public interface HonoClient {
 
     /**
      * Gets a client for sending command with Hono's <em>Command and Control</em> API.
+     * <p>
+     * This method will use an internal mechanism like a UUID to create the unique reply-id of the response link. If
+     * you are able to supply a shorter String, that identifies a link from the tenant scoped device to this client,
+     * you should consider {@link #getOrCreateCommandClient(String, String, String)}
      *
      * @param tenantId The tenant to the all command receiving devices belong.
      * @param deviceId The device id.
@@ -357,6 +361,22 @@ public interface HonoClient {
      * @throws NullPointerException if the tenantId is {@code null}.
      */
     Future<CommandClient> getOrCreateCommandClient(String tenantId, String deviceId);
+
+    /**
+     * Gets a client for sending command with Hono's <em>Command and Control</em> API.
+     *
+     * @param tenantId The tenant to the all command receiving devices belong.
+     * @param deviceId The device id.
+     * @param replyId The id, which is used to identify the unique link between this command client and the adapter.
+     *                Should be as short as possible, since it need to be transported to the device and back
+     *                for correlation of command response.
+     * @return A future that will complete with the command and control client (if successful) or
+     *         fail if the client cannot be created, e.g. because the underlying connection
+     *         is not established or if a concurrent request to create a client for the same
+     *         tenant and device is already being executed.
+     * @throws NullPointerException if the tenantId is {@code null}.
+     */
+    Future<CommandClient> getOrCreateCommandClient(String tenantId, String deviceId, String replyId);
 
     /**
      * Closes this client's connection to the Hono server.
