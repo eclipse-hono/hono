@@ -999,18 +999,4 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         LOG.debug("Command consumer was closed for [tenantId: {}, deviceId: {}] - no command will be received for this request anymore.",
                 tenant, deviceId);
     }
-
-    /**
-     * This method will be called for arriving commands for a device.
-     *
-     * @param tenantId The ID of the tenant to send the command responses for.
-     * @param deviceId The ID of the device to send the command responses for.
-     * @param delivery The delivery state.
-     * @param message The command message.
-     */
-    protected void onCommandReceived(final String tenantId, final String deviceId, final ProtonDelivery delivery,
-                                     final Message message) {
-        LOG.debug("command received [tenantId: {}, deviceId: {}, command: {}", tenantId, deviceId,
-                message.getSubject());
-    }
 }
