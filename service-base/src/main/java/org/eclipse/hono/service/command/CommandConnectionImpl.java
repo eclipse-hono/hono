@@ -43,7 +43,11 @@ public class CommandConnectionImpl extends HonoClientImpl implements CommandConn
 
     private final Logger LOG = LoggerFactory.getLogger(getClass());
 
-    protected final Map<String, MessageConsumer> commandReceivers = new HashMap<>();
+    /**
+     * The consumers that can be used to receive command messages.
+     * The device, which belongs to a tenant is used as the key, e.g. <em>DEFAULT_TENANT/4711</em>.
+     */
+    private final Map<String, MessageConsumer> commandReceivers = new HashMap<>();
 
     /**
      * Creates a new client for a set of configuration properties.
@@ -76,24 +80,16 @@ public class CommandConnectionImpl extends HonoClientImpl implements CommandConn
             final String deviceId,
             final BiConsumer<ProtonDelivery, Message> commandConsumer,
             final Handler<Void> closeHandler) {
-        // TODO: see getOrCreateSender().. needed for this per device receives?
         final MessageConsumer messageConsumer = commandReceivers.get(Device.asAddress(tenantId, deviceId));
         if (messageConsumer != null) {
-            return Future.succeededFuture(messageConsumer);
+            final Future<MessageConsumer> result = Future.future();
+            result.complete(messageConsumer);
+            return result;
         } else {
-            return createCommandConsumer(tenantId, deviceId, commandConsumer, closeHandler);
+            return createConsumer(
+                    tenantId,
+                    () -> newCommandConsumer(tenantId, deviceId, commandConsumer, closeHandler));
         }
-    }
-
-    private Future<MessageConsumer> createCommandConsumer(
-            final String tenantId,
-            final String deviceId,
-            final BiConsumer<ProtonDelivery, Message> commandConsumer,
-            final Handler<Void> closeHandler) {
-
-        return createConsumer(
-                tenantId,
-                () -> newCommandConsumer(tenantId, deviceId, commandConsumer, closeHandler));
     }
 
     private Future<MessageConsumer> newCommandConsumer(
@@ -106,8 +102,7 @@ public class CommandConnectionImpl extends HonoClientImpl implements CommandConn
             final Future<MessageConsumer> result = Future.future();
             CommandConsumer.create(context, clientConfigProperties, connection, tenantId, deviceId,
                     messageConsumer, closeHook -> {
-                        commandReceivers.remove(Device.asAddress(tenantId, deviceId));
-                        closeHandler.handle(null);
+                        closeCommandConsumer(tenantId, deviceId);
                     }, creation -> {
                         if(creation.succeeded()) {
                             commandReceivers.put(Device.asAddress(tenantId, deviceId), creation.result());
@@ -160,12 +155,12 @@ public class CommandConnectionImpl extends HonoClientImpl implements CommandConn
         getOrCreateSender(
                 CommandResponseSenderImpl.getTargetAddress(tenantId, deviceId, replyId),
                 () -> createCommandResponseSender(tenantId, deviceId, replyId)).setHandler(h->{
-                    if(h.succeeded()) {
-                        result.complete((CommandResponseSender) h.result());
-                    }
-                    else {
-                        result.fail(h.cause());
-                    }
+            if(h.succeeded()) {
+                result.complete((CommandResponseSender) h.result());
+            }
+            else {
+                result.fail(h.cause());
+            }
         });
         return result;
     }
