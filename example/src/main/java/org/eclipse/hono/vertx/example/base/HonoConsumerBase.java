@@ -161,7 +161,8 @@ public class HonoConsumerBase {
     }
 
     private void printMessage(final String tenantId, final Message msg, final String messageType) {
-        final String content = ((Data) msg.getBody()).getValue().toString();
+        final Data body = (Data) msg.getBody();
+        final String content = body != null ? body.getValue().toString() : "";
         final String deviceId = MessageHelper.getDeviceId(msg);
 
         final StringBuilder sb = new StringBuilder("received ").

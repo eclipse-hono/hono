@@ -51,8 +51,6 @@ replied with `400 Bad request`.
 
 ## Command & Control over MQTT Adapter
 
-IMPORTANT: **Not implemented and just a DRAFT**
-
 When the device is connected to the MQTT Adapter it receives commands on the topic:
 
 * `control/[tenant]/[device-id]/req/<req-id>/<command>`

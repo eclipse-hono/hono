@@ -58,7 +58,7 @@ public final class HonoMessagingMessageFilter extends BaseMessageFilter {
          if (msg.getContentType() == null) {
              LOG.trace("message [{}] has no content type", msg.getMessageId());
              return false;
-         } else if (msg.getBody() == null || !(msg.getBody() instanceof Data)) {
+         } else if (msg.getBody() != null && !(msg.getBody() instanceof Data)) {
              LOG.trace("message [{}] has no body of type AMQP Data", msg.getMessageId());
              return false;
          } else {

@@ -30,6 +30,20 @@ import java.util.Objects;
  * <li>the <em>tenant ID</em></li>
  * <li>an (optional) <em>device ID</em></li>
  * </ol>
+ * <p>
+ * The basic scheme is {@code <endpoint>/[tenant]/[device-id]}
+ * <p>
+ * Examples:
+ * <ol>
+ * <li>telemetry/DEFAULT_TENANT/4711</li>
+ * <li>telemetry</li>
+ * <li>telemetry/</li>
+ * <li>telemetry//</li>
+ * <li>telemetry//4711</li>
+ * <li>telemetry/DEFAULT_TENANT</li>
+ * <li>telemetry/DEFAULT_TENANT/</li>
+ * </ol>
+ *
  */
 public final class ResourceIdentifier {
 
@@ -53,6 +67,17 @@ public final class ResourceIdentifier {
         setResourcePath(new String[]{endpoint, tenantId, resourceId});
     }
 
+    private ResourceIdentifier(final ResourceIdentifier resourceIdentifier, final String tenantId, final String resourceId) {
+        String[] path = resourceIdentifier.getResourcePath();
+        if (path.length < 3) {
+            path = new String[3];
+            path[IDX_ENDPOINT] = resourceIdentifier.getEndpoint();
+        }
+        path[IDX_TENANT_ID] = tenantId;
+        path[IDX_RESOURCE_ID] = resourceId;
+        setResourcePath(path);
+    }
+
     private ResourceIdentifier(final String[] path) {
         setResourcePath(path);
     }
@@ -70,6 +95,12 @@ public final class ResourceIdentifier {
             }
         }
         this.resourcePath = pathSegments.toArray(new String[pathSegments.size()]);
+        if (resourcePath.length > IDX_TENANT_ID && resourcePath[IDX_TENANT_ID].length() == 0) {
+            resourcePath[IDX_TENANT_ID] = null;
+        }
+        if (resourcePath.length > IDX_RESOURCE_ID && resourcePath[IDX_RESOURCE_ID].length() == 0) {
+            resourcePath[IDX_RESOURCE_ID] = null;
+        }
         createStringRepresentation();
     }
 
@@ -152,6 +183,21 @@ public final class ResourceIdentifier {
     public static ResourceIdentifier from(final String endpoint, final String tenantId, final String resourceId) {
         Objects.requireNonNull(endpoint);
         return new ResourceIdentifier(endpoint, tenantId, resourceId);
+    }
+
+    /**
+     * Creates a resource identifier for an endpoint from an other resource identifier. It uses all data from
+     * the original resource identifier but sets the new tenantId and resourceId.
+     *
+     * @param resourceIdentifier original resource identifier to copy values from.
+     * @param tenantId the tenant identifier (may be {@code null}).
+     * @param resourceId the resource identifier (may be {@code null}).
+     * @return the resource identifier.
+     * @throws NullPointerException if endpoint is {@code null}.
+     */
+    public static ResourceIdentifier from(final ResourceIdentifier resourceIdentifier, final String tenantId, final String resourceId) {
+        Objects.requireNonNull(resourceIdentifier);
+        return new ResourceIdentifier(resourceIdentifier, tenantId, resourceId);
     }
 
     /**

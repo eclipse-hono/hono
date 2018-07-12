@@ -50,7 +50,7 @@ public final class VertxBasedMqttProtocolAdapter extends AbstractVertxBasedMqttP
 
         return mapTopic(ctx.message())
         .compose(address -> checkAddress(ctx, address))
-        .compose(address -> uploadMessage(ctx, address, ctx.message().payload()))
+        .compose(address -> uploadMessage(ctx, address, ctx.message()))
         .recover(t -> {
             LOG.debug("discarding message [topic: {}] from device: {}", ctx.message().topicName(), t.getMessage());
             return Future.failedFuture(t);
@@ -74,6 +74,13 @@ public final class VertxBasedMqttProtocolAdapter extends AbstractVertxBasedMqttP
                     if (!MqttQoS.AT_LEAST_ONCE.equals(message.qosLevel())) {
                         // client tries to send event message using QoS 0 or 2
                         return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "Only QoS 1 supported for event messages"));
+                    } else {
+                        return Future.succeededFuture(topic);
+                    }
+                case CONTROL:
+                    if (MqttQoS.EXACTLY_ONCE.equals(message.qosLevel())) {
+                        // client tries to send control message using QoS 2
+                        return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "QoS 2 not supported for command response messages"));
                     } else {
                         return Future.succeededFuture(topic);
                     }
@@ -104,7 +111,7 @@ public final class VertxBasedMqttProtocolAdapter extends AbstractVertxBasedMqttP
                         "topic of authenticated message must not contain tenant ID only"));
             } else if (address.getTenantId() == null && address.getResourceId() == null) {
                 // use authenticated device's tenant to fill in missing information
-                final ResourceIdentifier downstreamAddress = ResourceIdentifier.from(address.getEndpoint(),
+                final ResourceIdentifier downstreamAddress = ResourceIdentifier.from(address,
                         ctx.authenticatedDevice().getTenantId(), ctx.authenticatedDevice().getDeviceId());
                 result.complete(downstreamAddress);
             } else {

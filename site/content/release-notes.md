@@ -4,6 +4,10 @@ title = "Release Notes"
 
 ## 0.7 (not released yet)
 
+### New Features
+
+* The MQTT protocol adapter now supports Command and Control. Please refer to [MQTT adapter User Guide]({{< relref "user-guide/mqtt-adapter.md" >}}) for details.
+
 ### Fixes & Enhancements
 
 * Hono is now licensed under the [Eclipse Public License 2.0](https://www.eclipse.org/legal/epl-2.0/). Please refer to the Eclipse Foundation's [FAQ](https://www.eclipse.org/legal/epl-2.0/faq.php) for details regarding any implications this might have.

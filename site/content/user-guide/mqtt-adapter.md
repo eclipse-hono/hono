@@ -156,3 +156,52 @@ The following properties are (currently) supported:
 | Name               | Type       | Default Value | Description                                                     |
 | :----------------- | :--------- | :------------ | :-------------------------------------------------------------- |
 | *enabled*          | *boolean*  | `true`       | If set to `false` the adapter will reject all data from devices belonging to the tenant. |
+
+# Command and Control
+
+All topics allow for a short version, as shown below:
+
+* `c` for `control` 
+* `q` for `req`
+* `s` for `res`
+
+Following variable fields will be used:
+
+`${command}` is a string, that indicates the command like e.g. `setBrightness` and is given on the application side. 
+`${req-id}` denotes the unique identifier of the command request and is provided to the device with the command. It has to be used again when sending a response to the command (and is internally used to correlate the command and the received response).
+
+The `property-bag` at the end is an optional bag of properties, that starts with a `?`. It is only allowed at the very end of the topic and is followed by pairs of URL encoded property names and values, that are separated by `&`:
+  `<url-encoded-name>=<url-encoded-value>`
+  
+ Property bags are not used right now but allow future additions.
+  
+`${status}` is the status of the command processing by the device, which is given with the response. 
+
+## Receive Commands 
+
+An **authenticated** device subscribes to: 
+
+* `control/+/+/req/#`
+
+Then the device gets commands on:
+
+* `control///req/${req-id}/${command}[/*][/property-bag]`
+
+An **unauthenticated** device subscribes to:
+* `control/${tenant-id}/${device-id}/req/#`
+
+Then it gets commands on:
+
+* `control/${tenant-id}/${device-id}/req/${req-id}/${command}[/*][/property-bag]`
+
+As soon as a device subscribes to the topic, the adapter sends an event with `ttd=-1` and the specific content-type ([Event API]({{< relref "api/Event-API.md" >}})). At unsubscribe it will send an event with the same content-type and `ttd=0`. 
+
+## Send Command Response
+
+An **authenticated** device sends the response to a previously received command to:
+
+* `control///res/${req-id}/${status}`
+
+An **unauthenticated** device sends the response to a previously received command to:
+
+* `control/${tenant-id}/${device-id}/res/${req-id}/${status}`
