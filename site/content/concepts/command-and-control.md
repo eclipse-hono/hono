@@ -35,10 +35,14 @@ The HTTP Adapter gets the command and writes it in the response of the devices `
 | `hono-cmd`              | The command, which should be executed by the device. It could need further data from the payload. |
 | `hono-cmd-req-id`       | Id, which is needed in the command response to correlate the response to the request.       |
 
- The `hono-cmd` is the command, which needs to be known by the device. The device can handle it and may also use the payload. The `hono-cmd-req-id` is needed for the command response to correlate it. It has to be sent back from the device to the adapter in a following operation (5). 
+ The `hono-cmd` is the command that should be executed by the device. Typically this command needs to be known by the device and the payload may contain additional details of the command. The `hono-cmd-req-id` is needed for the command response to correlate it. It has to be sent back from the device to the adapter in a following operation (5). 
  
 {{% note %}}
-This is, what is implemented in Hono 0.6. At the moment the Application does not get a response back from the device as shown in (5), (6) and (7). Instead the adapter sends a successful response without payload after sending the command to the device.  
+In Hono 0.6 an application that sends a command does not get a response back from the device as shown in (5), (6) and (7). Instead the adapter sends a successful response without payload after sending the command to the device.
+
+From Hono 0.7 on, the Hono command client (that is provided for applications that send a command) waits for a response from the
+device until the command is to be considered successful. If no such command response was received in the timeout (that can be
+set at the command client), an exception signalling the expiry is thrown.  
 {{% /note %}}
 
 The device needs to respond to the command (5), to inform the business application about the success. For this purpose 
