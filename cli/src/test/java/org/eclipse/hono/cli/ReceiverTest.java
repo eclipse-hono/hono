@@ -26,7 +26,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
 import org.junit.runner.RunWith;
-import org.mockito.MockitoAnnotations;
 
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
@@ -58,7 +57,6 @@ public class ReceiverTest {
     public void setup() {
         final HonoClient client = mock(HonoClient.class);
         receiver = new Receiver();
-        MockitoAnnotations.initMocks(this);
         when(client.connect(any(Handler.class))).thenReturn(Future.succeededFuture(client));
         when(client.connect()).thenReturn(Future.succeededFuture(client));
         when(client.createTelemetryConsumer(anyString(), any(Consumer.class), any(Handler.class)))
@@ -88,13 +86,10 @@ public class ReceiverTest {
     @Test
     public void testTelemetryStart(final TestContext context) {
         receiver.messageType = "telemetry";
-        final Future<Void> done = Future.future();
-        done.setHandler(context.asyncAssertSuccess());
-        receiver.start().setHandler(result -> {
-            context.assertNotNull(result.result().list());
-            context.assertTrue(result.result().list().size() == 1);
-            done.complete();
-        });
+        receiver.start().setHandler(context.asyncAssertSuccess(result->{
+            context.assertNotNull(result.list());
+            context.assertTrue(result.list().size()==1);
+        }));
     }
 
     /**
@@ -105,13 +100,10 @@ public class ReceiverTest {
     @Test
     public void testEventStart(final TestContext context) {
         receiver.messageType = "event";
-        final Future<Void> done = Future.future();
-        done.setHandler(context.asyncAssertSuccess());
-        receiver.start().setHandler(result -> {
-            context.assertNotNull(result.result().list());
-            context.assertTrue(result.result().list().size() == 1);
-            done.complete();
-        });
+        receiver.start().setHandler(context.asyncAssertSuccess(result->{
+            context.assertNotNull(result.list());
+            context.assertTrue(result.list().size()==1);
+        }));
     }
 
     /**
@@ -121,13 +113,11 @@ public class ReceiverTest {
      */
     @Test
     public void testDefaultStart(final TestContext context) {
-        final Future<Void> done = Future.future();
-        done.setHandler(context.asyncAssertSuccess());
-        receiver.start().setHandler(result -> {
-            context.assertNotNull(result.result().list());
-            context.assertTrue(result.result().list().size() == 2);
-            done.complete();
-        });
+        receiver.messageType="all";
+        receiver.start().setHandler(context.asyncAssertSuccess(result->{
+           context.assertNotNull(result.list());
+           context.assertTrue(result.list().size()==2);
+        }));
     }
 
     /**

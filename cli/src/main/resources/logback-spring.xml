@@ -32,7 +32,7 @@
     </springProfile>
 
     <springProfile name="dev">
-        <logger name="org.eclipse.hono.cli" level="TRACE"/>
+        <logger name="org.eclipse.hono.cli" level="DEBUG"/>
         <logger name="org.eclipse.hono.client" level="DEBUG"/>
     </springProfile>
 

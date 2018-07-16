@@ -33,7 +33,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Receiver that connects to the Hono Server, waits for incoming messages and logs the message payload if anything is
+ * Receiver that connects to the Hono, waits for incoming messages and logs the message payload if anything is
  * received.
  * <p>
  * Note that this example intentionally does not support Command and Control and rather is the most simple version of a

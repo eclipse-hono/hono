@@ -6,7 +6,7 @@ title = "Release Notes"
 
 ### Fixes & Enhancements
 * Hono deployment scripts are now available under `deploy` folder. Deployment scripts which were previously available under `example` folder were moved to `deploy`.
-
+* Hono-cli (Command Line Interface) is now available under folder `cli`. A command line argument `message.type` with value `telemetry`, `event` or `all` (default) tells the client what kind of messages to be received. See [Starting a Consumer]({{< relref "getting-started.md#starting-a-consumer" >}}) for more information.
 
 ## 0.7-M2
 

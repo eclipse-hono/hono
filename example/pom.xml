@@ -29,16 +29,6 @@
   <description>A collection of example code for sending and receiving telemetry data using HonoClient.</description>
   <url>https://www.eclipse.org/hono</url>
 
-  <properties>
-    <hono.messaging.host>hono-service-messaging.hono</hono.messaging.host>
-    <hono.registration.host>hono-service-device-registry.hono</hono.registration.host>
-    <hono.auth.host>hono-service-auth.hono</hono.auth.host>
-    <!-- 
-      The shared secret to use for creating/validating registration assertions.
-     -->
-    <hono.regAssertion.sharedSecret>g#aWO!BUm7aj*#%X*VGXKFhxkhNrMNj0</hono.regAssertion.sharedSecret>
-  </properties>
-
   <dependencies>
     <dependency>
       <groupId>org.eclipse.hono</groupId>

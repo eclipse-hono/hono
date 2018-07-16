@@ -64,8 +64,7 @@ public class AppConfiguration {
     }
 
     /**
-     * Exposes a factory for connections to the Hono server
-     * as a Spring bean.
+     * Exposes a factory for connections to the Hono as a Spring bean.
      * 
      * @return The connection factory.
      */

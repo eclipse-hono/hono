@@ -27,7 +27,7 @@ import io.vertx.core.Context;
 import io.vertx.core.Vertx;
 
 /**
- * A base class providing support for connecting to a Hono server.
+ * A base class providing support for connecting to Hono.
  *
  */
 abstract class AbstractClient {
@@ -37,8 +37,8 @@ abstract class AbstractClient {
     protected Context ctx;
     @Value(value = "${tenant.id}")
     protected String tenantId;
-    @Value(value = "${message.type:all}")
-    protected String messageType="all";
+    @Value(value = "${message.type}")
+    protected String messageType;
     protected Vertx vertx;
     protected HonoClient client;
     protected List<String> activeProfiles;
