@@ -28,6 +28,7 @@ import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsResult;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Repository;
 
 import io.vertx.core.AsyncResult;
@@ -47,6 +48,7 @@ import io.vertx.core.json.JsonObject;
  * On shutdown all credentials kept in memory are written to the file (if configured).
  */
 @Repository
+@ConditionalOnProperty(name = "hono.app.type", havingValue = "file", matchIfMissing = true)
 public final class FileBasedCredentialsService extends BaseCredentialsService<FileBasedCredentialsConfigProperties> {
 
     /**

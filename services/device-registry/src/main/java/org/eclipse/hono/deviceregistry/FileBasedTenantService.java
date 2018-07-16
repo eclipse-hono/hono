@@ -25,6 +25,7 @@ import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.TenantObject;
 import org.eclipse.hono.util.TenantResult;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Repository;
 
 import io.vertx.core.AsyncResult;
@@ -42,6 +43,7 @@ import io.vertx.core.json.JsonObject;
  * to the file.
  */
 @Repository
+@ConditionalOnProperty(name = "hono.app.type", havingValue = "file", matchIfMissing = true)
 public final class FileBasedTenantService extends BaseTenantService<FileBasedTenantsConfigProperties> {
 
     private static final long MAX_AGE_GET_TENANT = 180L; // seconds
@@ -152,7 +154,7 @@ public final class FileBasedTenantService extends BaseTenantService<FileBasedTen
             final TenantObject tenantObject = tenant.mapTo(TenantObject.class);
             log.debug("loading tenant [{}]", tenantObject.getTenantId());
             tenants.put(tenantObject.getTenantId(), tenantObject);
-        } catch (IllegalArgumentException e) {
+        } catch (final IllegalArgumentException e) {
             log.warn("cannot deserialize tenant", e);
         }
     }
@@ -311,7 +313,7 @@ public final class FileBasedTenantService extends BaseTenantService<FileBasedTen
                     dirty = true;
                     return TenantResult.from(HttpURLConnection.HTTP_CREATED);
                 }
-            } catch (IllegalArgumentException e) {
+            } catch (final IllegalArgumentException e) {
                 return TenantResult.from(HttpURLConnection.HTTP_BAD_REQUEST);
             }
         }
@@ -362,7 +364,7 @@ public final class FileBasedTenantService extends BaseTenantService<FileBasedTen
                         dirty = true;
                         return TenantResult.from(HttpURLConnection.HTTP_NO_CONTENT);
                     }
-                } catch (IllegalArgumentException e) {
+                } catch (final IllegalArgumentException e) {
                     return TenantResult.from(HttpURLConnection.HTTP_BAD_REQUEST);
                 }
             } else {

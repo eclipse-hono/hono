@@ -14,6 +14,11 @@ title = "Release Notes"
 * Hono deployment scripts are now available under `deploy` folder. Deployment scripts which were previously available under `example` folder were moved to `deploy`.
 * Hono-cli (Command Line Interface) is now available under folder `cli`. A command line argument `message.type` with value `telemetry`, `event` or `all` (default) tells the client what kind of messages to be received. See [Starting a Consumer]({{< relref "getting-started.md#starting-a-consumer" >}}) for more information.
 * Added metrics to Command and Control for the HTTP protocol adapter. Now Hono-Dashboard also shows the metrics from Command and Control.
+* Add a *dummy* implementation of the device registry services. This allows to
+  do better scale testing as the file based device registry cannot be scaled up
+  and thus is a bottleneck in the example setup. The device registry however has
+  no real storage. So it still can be part of the test, but is no limiting
+  factor anymore.
 
 ## 0.7-M2
 

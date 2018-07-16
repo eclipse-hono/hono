@@ -28,6 +28,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.eclipse.hono.service.registration.BaseRegistrationService;
 import org.eclipse.hono.util.RegistrationResult;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Repository;
 
 import io.vertx.core.AsyncResult;
@@ -45,6 +46,7 @@ import io.vertx.core.json.JsonObject;
  * devices kept in memory are written to the file.
  */
 @Repository
+@ConditionalOnProperty(name = "hono.app.type", havingValue = "file", matchIfMissing = true)
 public final class FileBasedRegistrationService extends BaseRegistrationService<FileBasedRegistrationConfigProperties> {
 
     /**
