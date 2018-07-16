@@ -27,15 +27,15 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
  * that the events can be consumed from the downstream host.
  */
 @RunWith(VertxUnitRunner.class)
-public class DeviceEventClientIT extends ClientTestBase {
+public class DeviceEventClientIT extends MessagingClientTestBase {
 
     @Override
-    Future<MessageSender> createProducer(final String tenantId) {
+    protected Future<MessageSender> createProducer(final String tenantId) {
         return honoClient.getOrCreateEventSender(tenantId, DEVICE_ID);
     }
 
     @Override
-    Future<MessageConsumer> createConsumer(final String tenantId, final Consumer<Message> messageConsumer) {
+    protected Future<MessageConsumer> createConsumer(final String tenantId, final Consumer<Message> messageConsumer) {
         return downstreamClient.createEventConsumer(tenantId, messageConsumer, close -> {});
     }
 }
