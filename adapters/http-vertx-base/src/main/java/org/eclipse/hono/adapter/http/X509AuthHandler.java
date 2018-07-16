@@ -17,8 +17,10 @@ import java.net.HttpURLConnection;
 import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 import javax.net.ssl.SSLPeerUnverifiedException;
@@ -28,14 +30,19 @@ import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.service.auth.device.DeviceCertificateValidator;
 import org.eclipse.hono.service.auth.device.HonoAuthHandler;
 import org.eclipse.hono.service.auth.device.HonoClientBasedAuthProvider;
+import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.RequestResponseApiConstants;
 import org.eclipse.hono.util.TenantObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.opentracing.Span;
 import io.opentracing.SpanContext;
+import io.opentracing.Tracer;
 import io.opentracing.contrib.vertx.ext.web.TracingHandler;
+import io.opentracing.noop.NoopTracerFactory;
+import io.opentracing.tag.Tags;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -64,6 +71,7 @@ public class X509AuthHandler extends HonoAuthHandler {
     private static final HttpStatusException UNAUTHORIZED = new HttpStatusException(HttpURLConnection.HTTP_UNAUTHORIZED);
     private final HonoClient tenantServiceClient;
     private final DeviceCertificateValidator certPathValidator;
+    private final Tracer tracer;
 
     /**
      * Creates a new handler for an authentication provider and a
@@ -78,7 +86,7 @@ public class X509AuthHandler extends HonoAuthHandler {
     public X509AuthHandler(
             final HonoClientBasedAuthProvider authProvider,
             final HonoClient tenantServiceClient) {
-        this(authProvider, tenantServiceClient, new DeviceCertificateValidator());
+        this(authProvider, tenantServiceClient, null);
     }
 
     /**
@@ -89,6 +97,27 @@ public class X509AuthHandler extends HonoAuthHandler {
      *              the device identity.
      * @param tenantServiceClient The client to use for determining the tenant
      *              that the device belongs to.
+     * @param tracer The tracer to use for tracking request processing
+     *               across process boundaries.
+     * @throws NullPointerException if tenant client is {@code null}.
+     */
+    public X509AuthHandler(
+            final HonoClientBasedAuthProvider authProvider,
+            final HonoClient tenantServiceClient,
+            final Tracer tracer) {
+        this(authProvider, tenantServiceClient, tracer, new DeviceCertificateValidator());
+    }
+
+    /**
+     * Creates a new handler for an authentication provider and a
+     * Tenant service client.
+     * 
+     * @param authProvider The authentication provider to use for verifying
+     *              the device identity.
+     * @param tenantServiceClient The client to use for determining the tenant
+     *              that the device belongs to.
+     * @param tracer The tracer to use for tracking request processing
+     *               across process boundaries.
      * @param certificateValidator The object to use for validating the client
      *        certificate chain.
      * @throws NullPointerException if tenant client or validator are {@code null}.
@@ -96,10 +125,16 @@ public class X509AuthHandler extends HonoAuthHandler {
     public X509AuthHandler(
             final HonoClientBasedAuthProvider authProvider,
             final HonoClient tenantServiceClient,
+            final Tracer tracer,
             final DeviceCertificateValidator certificateValidator) {
         super(authProvider);
         this.tenantServiceClient = Objects.requireNonNull(tenantServiceClient);
         this.certPathValidator = Objects.requireNonNull(certificateValidator);
+        if (tracer == null) {
+            this.tracer = NoopTracerFactory.create();
+        } else {
+            this.tracer = tracer;
+        }
     }
 
     @Override
@@ -109,18 +144,44 @@ public class X509AuthHandler extends HonoAuthHandler {
         Objects.requireNonNull(handler);
 
         if (context.request().isSSL()) {
+            final SpanContext currentSpan = TracingHandler.serverSpanContext(context);
+            final Span span = tracer.buildSpan("verify device certificate")
+                    .asChildOf(currentSpan)
+                    .ignoreActiveSpan()
+                    .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CLIENT)
+                    .withTag(Tags.COMPONENT.getKey(), getClass().getSimpleName())
+                    .start();
+            final Map<String, String> detail = new HashMap<>(4);
             try {
                 final Certificate[] path = context.request().sslSession().getPeerCertificates();
+
                 getX509CertificatePath(path).compose(x509chain -> {
-                    final SpanContext currentSpan = TracingHandler.serverSpanContext(context);
-                    final Future<TenantObject> tenantTracker = getTenant(x509chain.get(0), currentSpan);
-                    final List<X509Certificate> chainToValidate = Collections.singletonList(x509chain.get(0));
+
+                    final X509Certificate deviceCert = x509chain.get(0);
+                    detail.put("subject DN", deviceCert.getSubjectX500Principal().getName());
+                    detail.put("not before", deviceCert.getNotBefore().toString());
+                    detail.put("not after", deviceCert.getNotAfter().toString());
+
+                    final Future<TenantObject> tenantTracker = getTenant(deviceCert, span);
+                    final List<X509Certificate> chainToValidate = Collections.singletonList(deviceCert);
                     return tenantTracker
                             .compose(tenant -> certPathValidator.validate(chainToValidate, tenant.getTrustAnchor()))
                             .compose(ok -> getCredentials(x509chain, tenantTracker.result()));
-                }).setHandler(handler);
+                }).map(creds -> {
+                    span.log("certificate verified successfully");
+                    return creds;
+                }).recover(t -> {
+                    TracingHelper.logError(span, t);
+                    return Future.failedFuture(t);
+                }).setHandler(result -> {
+                    span.log(detail);
+                    span.finish();
+                    handler.handle(result);
+                });
             } catch (SSLPeerUnverifiedException e) {
                 // client certificate has not been validated
+                TracingHelper.logError(span, e);
+                span.finish();
                 handler.handle(Future.failedFuture(UNAUTHORIZED));
             }
         } else {
@@ -128,10 +189,10 @@ public class X509AuthHandler extends HonoAuthHandler {
         }
     }
 
-    private Future<TenantObject> getTenant(final X509Certificate clientCert, final SpanContext currentSpan) {
+    private Future<TenantObject> getTenant(final X509Certificate clientCert, final Span span) {
 
         return tenantServiceClient.getOrCreateTenantClient().compose(tenantClient ->
-            tenantClient.get(clientCert.getIssuerX500Principal(), currentSpan));
+            tenantClient.get(clientCert.getIssuerX500Principal(), span.context()));
     }
 
     private Future<List<X509Certificate>> getX509CertificatePath(final Certificate[] clientPath) {
