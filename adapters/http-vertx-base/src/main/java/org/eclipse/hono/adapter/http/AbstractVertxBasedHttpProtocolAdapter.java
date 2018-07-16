@@ -35,6 +35,7 @@ import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
+import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.TelemetryConstants;
 import org.eclipse.hono.util.TenantObject;
@@ -43,7 +44,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import io.opentracing.Span;
-import io.opentracing.SpanContext;
 import io.opentracing.contrib.vertx.ext.web.TracingHandler;
 import io.opentracing.contrib.vertx.ext.web.WebSpanDecorator;
 import io.opentracing.tag.Tags;
@@ -557,16 +557,19 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
             } else {
                 final Future<Void> responseReady = Future.future();
                 final Device authenticatedDevice = getAuthenticatedDevice(ctx);
-                final SpanContext currentSpan = Optional.ofNullable((Span) ctx.get(TracingHandler.CURRENT_SPAN)).map(span -> {
-                    span.setOperationName("upload " + endpointName);
-                    TracingHelper.TAG_TLS.set(span, ctx.request().isSSL());
-                    TracingHelper.TAG_AUTHENTICATED.set(span, authenticatedDevice != null);
-                    return span.context();
-                }).orElse(null);
+                final Span currentSpan = tracer.buildSpan("upload " + endpointName)
+                        .asChildOf(TracingHandler.serverSpanContext(ctx))
+                        .ignoreActiveSpan()
+                        .withTag(Tags.COMPONENT.getKey(), getTypeName())
+                        .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CLIENT)
+                        .withTag(MessageHelper.APP_PROPERTY_TENANT_ID, tenant)
+                        .withTag(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId)
+                        .withTag(TracingHelper.TAG_AUTHENTICATED.getKey(), authenticatedDevice != null)
+                        .start();
 
                 final Future<JsonObject> tokenTracker = getRegistrationAssertion(tenant, deviceId, authenticatedDevice);
-                final Future<TenantObject> tenantConfigTracker = getTenantConfiguration(tenant, currentSpan);
-                final Future<MessageConsumer> commandConsumerTracker = createCommandConsumer(tenant, deviceId, ctx, responseReady);
+                final Future<TenantObject> tenantConfigTracker = getTenantConfiguration(tenant, currentSpan.context());
+                final Future<MessageConsumer> commandConsumerTracker = createCommandConsumer(tenant, deviceId, ctx, responseReady, currentSpan);
 
                 CompositeFuture.all(tokenTracker, tenantConfigTracker, senderTracker, commandConsumerTracker).compose(ok -> {
 
@@ -585,9 +588,9 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                         addConnectionCloseHandler(ctx, commandConsumerTracker.result(), tenant, deviceId);
 
                         if (qosHeader == null) {
-                            return CompositeFuture.all(sender.send(downstreamMessage, currentSpan), responseReady);
+                            return CompositeFuture.all(sender.send(downstreamMessage, currentSpan.context()), responseReady);
                         } else {
-                            return CompositeFuture.all(sender.sendAndWaitForOutcome(downstreamMessage, currentSpan), responseReady);
+                            return CompositeFuture.all(sender.sendAndWaitForOutcome(downstreamMessage, currentSpan.context()), responseReady);
                         }
                     } else {
                         // this adapter is not enabled for the tenant
@@ -602,14 +605,18 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                             LOG.trace("successfully processed [{}] message for device [tenantId: {}, deviceId: {}]",
                                     endpointName, tenant, deviceId);
                             metrics.incrementProcessedHttpMessages(endpointName, tenant);
+                            currentSpan.finish();
                         });
                         ctx.response().exceptionHandler(t -> {
+                            currentSpan.log("failed to send HTTP response to device");
                             LOG.debug("failed to send http response for [{}] message from device [tenantId: {}, deviceId: {}]",
                                     endpointName, tenant, deviceId, t);
                             if (command != null) {
                                 final CommandResponse response = CommandResponse.from(command.getRequestId(), HttpURLConnection.HTTP_UNAVAILABLE);
                                 sendCommandResponse(tenant, deviceId, response);
                             }
+                            TracingHelper.logError(currentSpan, t);
+                            currentSpan.finish();
                         });
                         ctx.response().end();
                     }
@@ -632,6 +639,8 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                         metrics.incrementUndeliverableHttpMessages(endpointName, tenant);
                         HttpUtils.serviceUnavailable(ctx, 2, "temporarily unavailable");
                     }
+                    TracingHelper.logError(currentSpan, t);
+                    currentSpan.finish();
                     return Future.failedFuture(t);
                 });
             }
@@ -698,6 +707,8 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
      *              completed or</li>
      *              <li>the ttd has expired</li>
      *              </ul>
+     * @param currentSpan The OpenTracing Span to use for tracking the processing
+     *                       of the request.
      * @return A future indicating the outcome.
      *         The future will be completed with the created message consumer or it will
      *         be failed with a {@code ServiceInvocationException} if the consumer
@@ -707,7 +718,8 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
             final String tenantId,
             final String deviceId,
             final RoutingContext ctx,
-            final Future<Void> responseReady) {
+            final Future<Void> responseReady,
+            final Span currentSpan) {
 
         final long ttdMillis = Optional.ofNullable(HttpUtils.getTimeTilDisconnect(ctx)).map(ttd -> ttd * 1000L).orElse(0L);
         if (ttdMillis <= 0) {
@@ -715,6 +727,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
             responseReady.tryComplete();
             return Future.succeededFuture();
         } else {
+            currentSpan.setTag(MessageHelper.APP_PROPERTY_DEVICE_TTD, ttdMillis);
             return getCommandConnection().getOrCreateCommandConsumer(
                     tenantId,
                     deviceId,

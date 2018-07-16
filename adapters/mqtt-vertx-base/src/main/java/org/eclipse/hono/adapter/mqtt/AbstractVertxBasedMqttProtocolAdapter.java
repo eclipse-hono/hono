@@ -15,7 +15,6 @@ package org.eclipse.hono.adapter.mqtt;
 
 import java.net.HttpURLConnection;
 import java.util.Objects;
-import java.util.Optional;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ClientErrorException;
@@ -45,7 +44,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import io.netty.handler.codec.mqtt.MqttConnectReturnCode;
 import io.netty.handler.codec.mqtt.MqttQoS;
 import io.opentracing.Span;
-import io.opentracing.SpanContext;
 import io.opentracing.tag.Tags;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.CompositeFuture;
@@ -305,7 +303,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
     final void handleEndpointConnection(final MqttEndpoint endpoint) {
 
         LOG.debug("connection request from client [client-id: {}]", endpoint.clientIdentifier());
-        final Span span = tracer.buildSpan("connect")
+        final Span span = tracer.buildSpan("CONNECT")
                 .ignoreActiveSpan()
                 .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_SERVER)
                 .withTag(Tags.COMPONENT.getKey(), getTypeName())
@@ -490,11 +488,12 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
     private void handlePublishedMessage(final MqttContext context) {
         // there is no way to extract a SpanContext from an MQTT 3.1 message
         // so we start a new one for every message
-        final Span span = tracer.buildSpan("upload message")
+        final MqttQoS qos = context.message().qosLevel();
+        final Span span = tracer.buildSpan("PUBLISH")
             .ignoreActiveSpan()
             .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_SERVER)
             .withTag(Tags.MESSAGE_BUS_DESTINATION.getKey(), context.message().topicName())
-            .withTag(TracingHelper.TAG_QOS.getKey(), context.message().qosLevel().toString())
+            .withTag(TracingHelper.TAG_QOS.getKey(), qos.toString())
             .withTag(Tags.COMPONENT.getKey(), getTypeName())
             .withTag(TracingHelper.TAG_CLIENT_ID.getKey(), context.deviceEndpoint().clientIdentifier())
             .start();
@@ -617,15 +616,19 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
                     String.format("Content-Type %s does not match with payload", ctx.contentType())));
         } else {
 
-            final SpanContext currentSpan = Optional.ofNullable(getCurrentSpan(ctx)).map(span -> {
-                span.setOperationName("upload " + endpointName);
-                TracingHelper.TAG_AUTHENTICATED.set(span, ctx.authenticatedDevice() != null);
-                return span.context();
-            }).orElse(null);
+            final Span currentSpan = tracer.buildSpan("upload " + endpointName)
+                    .asChildOf(getCurrentSpan(ctx))
+                    .ignoreActiveSpan()
+                    .withTag(Tags.COMPONENT.getKey(), getTypeName())
+                    .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CLIENT)
+                    .withTag(MessageHelper.APP_PROPERTY_TENANT_ID, tenant)
+                    .withTag(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId)
+                    .withTag(TracingHelper.TAG_AUTHENTICATED.getKey(), ctx.authenticatedDevice() != null)
+                    .start();
 
             final Future<JsonObject> tokenTracker = getRegistrationAssertion(tenant, deviceId,
                     ctx.authenticatedDevice());
-            final Future<TenantObject> tenantConfigTracker = getTenantConfiguration(tenant, currentSpan);
+            final Future<TenantObject> tenantConfigTracker = getTenantConfiguration(tenant, currentSpan.context());
 
             return CompositeFuture.all(tokenTracker, tenantConfigTracker, senderTracker).compose(ok -> {
 
@@ -643,9 +646,9 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
                     customizeDownstreamMessage(downstreamMessage, ctx);
 
                     if (ctx.message().qosLevel() == MqttQoS.AT_LEAST_ONCE) {
-                        return sender.sendAndWaitForOutcome(downstreamMessage, currentSpan);
+                        return sender.sendAndWaitForOutcome(downstreamMessage, currentSpan.context());
                     } else {
-                        return sender.send(downstreamMessage, currentSpan);
+                        return sender.send(downstreamMessage, currentSpan.context());
                     }
                 } else {
                     // this adapter is not enabled for the tenant
@@ -661,8 +664,10 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
                 onMessageSent(ctx);
                 // check that the remote MQTT client is still connected before sending PUBACK
                 if (ctx.deviceEndpoint().isConnected() && ctx.message().qosLevel() == MqttQoS.AT_LEAST_ONCE) {
+                    currentSpan.log("sending PUBACK");
                     ctx.deviceEndpoint().publishAcknowledge(ctx.message().messageId());
                 }
+                currentSpan.finish();
                 return Future.<Void> succeededFuture();
 
             }).recover(t -> {
@@ -677,6 +682,8 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
                     metrics.incrementUndeliverableMqttMessages(endpointName, tenant);
                     onMessageUndeliverable(ctx);
                 }
+                TracingHelper.logError(currentSpan, t);
+                currentSpan.finish();
                 return Future.failedFuture(t);
             });
         }
