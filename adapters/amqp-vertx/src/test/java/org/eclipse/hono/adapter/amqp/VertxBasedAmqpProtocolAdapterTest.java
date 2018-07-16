@@ -248,6 +248,39 @@ public class VertxBasedAmqpProtocolAdapterTest {
         verify(delivery).disposition(isA(Rejected.class), eq(true));
     }
 
+    /**
+     * Verify that when an unauthenticated device uploads a message to an address that does not
+     * contain a device-id, then the uploading operation fails and the device is notified of failure.
+     * 
+     * This ensures that address for unauthenticated devices is of the form {@code [endpointName/tenant-id/device-id]}
+     */
+    @Test
+    public void testUploadFailsForInvalidAmqpAddress() {
+
+        // GIVEN an adapter configured to use a user-define server.
+        final VertxBasedAmqpProtocolAdapter adapter = givenAnAmqpAdapter();
+        final MessageSender telemetrySender = givenATelemetrySenderForAnyTenant();
+
+        // AND given a tenant which is ENABLED but DISABLED for the AMQP Adapter
+        givenAConfiguredTenant(TEST_TENANT_ID, Boolean.TRUE);
+
+        // WHEN a device uploads telemetry data to the adapter (and wants to be notified of failure)
+        final ProtonDelivery delivery = mock(ProtonDelivery.class);
+        when(delivery.remotelySettled()).thenReturn(false);
+
+        final String invalidAddress = String.format("%s/%s", TelemetryConstants.TELEMETRY_ENDPOINT, TEST_TENANT_ID);
+        final ResourceIdentifier resource = ResourceIdentifier.fromString(invalidAddress);
+        final AmqpContext context = spy(new AmqpContext(delivery, getFakeMessage(), resource, null));
+        adapter.uploadMessage(context);
+
+        // THEN the adapter does not send the message (regardless of the delivery mode).
+        verify(telemetrySender, never()).send(any(Message.class));
+        verify(telemetrySender, never()).sendAndWaitForOutcome(any(Message.class));
+
+        // AND notifies the device by sending back a REJECTED disposition
+        verify(delivery).disposition(isA(Rejected.class), eq(true));
+    }
+
     private void givenAConfiguredTenant(final String tenantId, final boolean enabled) {
         final TenantObject tenantConfig = TenantObject.from(tenantId, Boolean.TRUE);
         tenantConfig

@@ -18,8 +18,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.vertx.core.AsyncResult;
+import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Vertx;
 import io.vertx.core.net.NetSocket;
 import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.sasl.ProtonSaslAuthenticator;
@@ -118,6 +120,7 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
                 LOG.debug("client device wants to authenticate using SASL [mechanism: {}, host: {}, state: {}]",
                         remoteMechanism, sasl.getHostname(), sasl.getState());
 
+                final Context currentContext = Vertx.currentContext();
                 final Future<Device> deviceAuthTracker = Future.future();
                 deviceAuthTracker.setHandler(outcome -> {
                     if (outcome.succeeded()) {
@@ -133,7 +136,8 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
                         sasl.done(SaslOutcome.PN_SASL_AUTH);
 
                     }
-                    completionHandler.handle(Boolean.TRUE);
+                    // invoke the completion handler on the calling context.
+                    currentContext.runOnContext(action -> completionHandler.handle(Boolean.TRUE));
                 });
 
                 final byte[] saslResponse = new byte[sasl.pending()];
