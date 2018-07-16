@@ -96,10 +96,10 @@ In the following sections the `$(minikube ip)` is used  in order to put the IP a
 ### Starting a Consumer
 
 As described in the [Getting Started]({{< relref "getting-started.md" >}}) guide, data produced by devices is usually consumed by downstream applications which connect directly to the router network service.
-You can start the client from the `example` folder as follows:
+You can start the client from the `cli` folder as follows:
 
 ~~~sh
-~/hono/example$ mvn spring-boot:run -Drun.arguments=--hono.client.host=$(minikube ip),--hono.client.port=30671,--hono.client.username=consumer@HONO,--hono.client.password=verysecret
+~/hono/cli$ mvn spring-boot:run -Drun.arguments=--hono.client.host=$(minikube ip),--hono.client.port=30671,--hono.client.username=consumer@HONO,--hono.client.password=verysecret
 ~~~
 
 ### Uploading Telemetry

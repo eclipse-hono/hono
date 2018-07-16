@@ -10,7 +10,7 @@
  *    Bosch Software Innovations GmbH - initial creation
  */
 
-package org.eclipse.hono.example;
+package org.eclipse.hono.cli;
 
 import java.util.Arrays;
 import java.util.List;
@@ -30,21 +30,24 @@ import io.vertx.core.Vertx;
  * A base class providing support for connecting to a Hono server.
  *
  */
-abstract class AbstractExampleClient {
+abstract class AbstractClient {
 
     protected final Logger LOG = LoggerFactory.getLogger(getClass());
 
     protected Context ctx;
     @Value(value = "${tenant.id}")
     protected String tenantId;
+    @Value(value = "${message.type:all}")
+    protected String messageType="all";
     protected Vertx vertx;
     protected HonoClient client;
     protected List<String> activeProfiles;
 
+
     /**
      * Empty default constructor.
      */
-    protected AbstractExampleClient() {
+    protected AbstractClient() {
     }
 
     @Autowired

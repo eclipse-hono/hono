@@ -11,7 +11,7 @@
  *
  */
 
-package org.eclipse.hono.example;
+package org.eclipse.hono.cli;
 
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.impl.HonoClientImpl;
@@ -27,7 +27,7 @@ import io.vertx.core.VertxOptions;
 import io.vertx.core.dns.AddressResolverOptions;
 
 /**
- * Configuration for Example application.
+ * Configuration for CLI application.
  */
 @Configuration
 public class AppConfiguration {

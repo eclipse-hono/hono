@@ -276,10 +276,10 @@ OpenShift cluster, it works the same way.
 As described in the [Getting Started]({{< relref "getting-started.md" >}})
 guide, data produced by devices is usually consumed by downstream applications
 which connect directly to the router network service. You can start the client
-from the `example` folder as follows:
+from the `cli` folder as follows:
 
 ~~~sh
-~hono/example$ mvn spring-boot:run -Drun.arguments=--hono.client.host=$(oc get route messaging --template='{{.spec.host}}'),--hono.client.port=443,--hono.client.trustStorePath=target/config/hono-demo-certs-jar/tls.crt
+~hono/cli$ mvn spring-boot:run -Drun.arguments=--hono.client.host=$(oc get route messaging --template='{{.spec.host}}'),--hono.client.port=443,--hono.client.trustStorePath=target/config/hono-demo-certs-jar/tls.crt
 ~~~
 
 ### Uploading Telemetry with HTTP
