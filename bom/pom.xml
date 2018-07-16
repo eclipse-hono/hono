@@ -283,7 +283,7 @@
         <artifactId>vertx-codegen</artifactId>
         <version>${vertx.version}</version>
         <classifier>processor</classifier>
-        <scope>test</scope>
+        <scope>provided</scope>
       </dependency>
       <dependency>
         <groupId>io.opentracing</groupId>
