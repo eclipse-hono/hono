@@ -102,7 +102,6 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
 
     }
 
-
     @Override
     protected void doStop(final Future<Void> stopFuture) {
         CompositeFuture.all(stopSecureServer(), stopInsecureServer())
@@ -206,7 +205,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             connRequest.setContainer(String.format("%s-%s:%d", "insecure-server", getInsecurePortBindAddress(), getActualInsecurePort()));
         }
         connRequest.disconnectHandler(conn -> {
-            LOG.error("Connection disconnected " + conn.getCondition().getDescription());
+            LOG.error("connection of client [container: {}] disconnected", conn.getRemoteContainer());
         });
         // when a BEGIN frame is received
         connRequest.sessionOpenHandler(session -> {
@@ -299,10 +298,15 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                 }
                 return Future.failedFuture(t);
             }).compose(resource -> {
+                LOG.debug("Established receiver link at [address: {}]", receiver.getRemoteTarget().getAddress());
+
                 receiver.setTarget(receiver.getRemoteTarget());
                 receiver.setQoS(receiver.getRemoteQoS());
-                LOG.debug("Established receiver link at [address: {}]",
-                        receiver.getRemoteTarget().getAddress());
+                if (ProtonQoS.AT_LEAST_ONCE.equals(receiver.getRemoteQoS())) {
+                    // disable auto-accept for this transfer model.
+                    // in this case, the adapter will apply the required disposition
+                    receiver.setAutoAccept(false);
+                }
                 receiver.handler((delivery, message) -> {
                     final Device authenticatedDevice = conn.attachments().get(AmqpAdapterConstants.KEY_CLIENT_DEVICE, Device.class);
                     uploadMessage(new AmqpContext(delivery, message, resource, authenticatedDevice));
@@ -324,46 +328,58 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         final String contentType = context.getMessageContentType();
 
         if (isPayloadOfIndicatedType(context.getMessagePayload(), contentType)) {
-            formalCheck.complete();
+            if (!context.isDeviceAuthenticated() && context.getDeviceId() == null) {
+                formalCheck.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
+                        String.format("Missing device-id in [address: %s] for unauthenticated device", context.getResourceIdentifier())));
+            } else {
+                formalCheck.complete();
+            }
         } else {
             formalCheck.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
                     String.format("Content-Type: [%s] does not match payload", contentType)));
         }
+
         formalCheck.compose(ok -> {
             switch (EndpointType.fromString(context.getEndpoint())) {
             case TELEMETRY:
                 LOG.trace("Received request to upload telemetry data to endpoint [with name: {}]",
                         context.getEndpoint());
-                doUploadMessage(context, getTelemetrySender(context.getTenantId()),
+                return doUploadMessage(context, getTelemetrySender(context.getTenantId()),
                         TelemetryConstants.TELEMETRY_ENDPOINT);
-                break;
             case EVENT:
                 LOG.trace("Received request to upload events to endpoint [with name: {}]", context.getEndpoint());
-                doUploadMessage(context, getEventSender(context.getTenantId()), EventConstants.EVENT_ENDPOINT);
-                break;
+                return doUploadMessage(context, getEventSender(context.getTenantId()), EventConstants.EVENT_ENDPOINT);
             default:
                 return Future
                         .failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "unknown endpoint"));
             }
-            return Future.succeededFuture();
-        }).otherwise(t -> {
-            context.handleFailure((ServiceInvocationException) t);
+        }).recover(t -> {
+            if (!context.isRemotelySettled()) {
+                // client wants to be informed that the message cannot be processed.
+                context.handleFailure((ServiceInvocationException) t);
+            }
             return Future.failedFuture(t);
         });
+
     }
 
-    private void doUploadMessage(final AmqpContext context, final Future<MessageSender> senderFuture,
+    private Future<Void> doUploadMessage(final AmqpContext context, final Future<MessageSender> senderFuture,
             final String endpointName) {
 
-        final Future<JsonObject> tokenFuture = getRegistrationAssertion(context.getTenantId(), context.getDeviceId(),
+        final String deviceId = (context.isDeviceAuthenticated())
+                ? context.getAuthenticatedDevice().getDeviceId() : context.getDeviceId();
+
+        final Future<JsonObject> tokenFuture = getRegistrationAssertion(context.getTenantId(), deviceId,
                 context.getAuthenticatedDevice());
         final Future<TenantObject> tenantConfigFuture = getTenantConfiguration(context.getTenantId());
 
-        CompositeFuture.all(tenantConfigFuture, tokenFuture, senderFuture).compose(ok -> {
+        return CompositeFuture.all(tenantConfigFuture, tokenFuture, senderFuture).compose(ok -> {
             final TenantObject tenantObject = tenantConfigFuture.result();
             if (tenantObject.isAdapterEnabled(getTypeName())) {
+
                 final MessageSender sender = senderFuture.result();
-                final Message downstreamMessage = newMessage(context.getResourceIdentifier(),
+                final ResourceIdentifier resource = ResourceIdentifier.from(endpointName, context.getTenantId(), deviceId);
+                final Message downstreamMessage = newMessage(resource,
                         sender.isRegistrationAssertionRequired(),
                         endpointName, context.getMessageContentType(), context.getMessagePayload(),
                         tokenFuture.result(), null);
@@ -398,14 +414,10 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             }
             return Future.<Void> succeededFuture();
         }).recover(t -> {
-            LOG.debug("Cannot process message for Device [tenantId: {}, deviceId: {}, endpoint: {}]",
+            LOG.debug("Cannot process message for Device [tenantId: {}, deviceId: {}, endpoint: {}] due to Exception [Class: {}, Message: {}]",
                     context.getTenantId(),
-                    context.getDeviceId(),
-                    context.getEndpoint());
-            if (!context.isRemotelySettled()) {
-                // client wants to be informed that the message cannot be processed.
-                context.handleFailure((ServiceInvocationException) t);
-            }
+                    deviceId,
+                    context.getEndpoint(), t.getClass().getSimpleName(), t.getMessage());
             return Future.failedFuture(t);
         });
     }

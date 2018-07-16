@@ -81,7 +81,6 @@ public class Config extends AbstractAdapterConfig {
     @ConfigurationProperties(prefix = "hono.amqp")
     public ProtocolAdapterProperties adapterProperties() {
         final ProtocolAdapterProperties config = new ProtocolAdapterProperties();
-        config.setAuthenticationRequired(false);
         return config;
     }
 

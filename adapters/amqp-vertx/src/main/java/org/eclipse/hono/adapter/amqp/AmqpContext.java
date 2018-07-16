@@ -106,6 +106,16 @@ public class AmqpContext {
     Device getAuthenticatedDevice() {
         return authenticatedDevice;
     }
+
+    /**
+     * Determines if the AMQP 1.0 device is authenticated to the adapter.
+     * 
+     * @return True if the device is authenticated or false otherwise.
+     */
+    boolean isDeviceAuthenticated() {
+        return authenticatedDevice != null;
+    }
+
     /**
      * Sets an AMQP 1.0 message delivery state to either RELEASED in the case of a <em>ServerErrorException</em> or REJECTED in the
      * case of a <em>ClientErrorException</em>. In the REJECTED case, the supplied exception will provide
