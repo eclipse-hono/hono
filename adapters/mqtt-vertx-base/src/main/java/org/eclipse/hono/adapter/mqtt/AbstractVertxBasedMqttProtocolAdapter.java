@@ -330,59 +330,50 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
             final Span currentSpan,
             final AsyncResult<Device> authenticationAttempt) {
 
-        // This method is invoked from the vert.x context of one of the
-        // Hono clients that have been used for authenticating the device.
-        // We need to make sure that we send back our CONNACK packet on
-        // the same context that we had received the device's CONNECT packet on
-        // in order to prevent a race condition in MqttServer when the device publishes
-        // its first message
+        if (authenticationAttempt.succeeded()) {
 
-        context.runOnContext(go -> {
-            if (authenticationAttempt.succeeded()) {
+            final Device authenticatedDevice = authenticationAttempt.result();
+            TracingHelper.TAG_AUTHENTICATED.set(currentSpan, authenticatedDevice != null);
 
-                final Device authenticatedDevice = authenticationAttempt.result();
-                TracingHelper.TAG_AUTHENTICATED.set(currentSpan, authenticatedDevice != null);
-
-                sendConnectedEvent(endpoint.clientIdentifier(), authenticatedDevice)
-                        .setHandler(sendAttempt -> {
-                            if (sendAttempt.succeeded()) {
-                                endpoint.accept(false);
-                                if (authenticatedDevice != null) {
-                                    currentSpan.setTag(MessageHelper.APP_PROPERTY_TENANT_ID, authenticationAttempt.result().getTenantId());
-                                    currentSpan.setTag(MessageHelper.APP_PROPERTY_DEVICE_ID, authenticationAttempt.result().getDeviceId());
-                                }
-                                currentSpan.log("connection accepted");
-                            } else {
-                                LOG.warn(
-                                        "connection request from client [clientId: {}] rejected due to connection event "
-                                                + "failure: {}",
-                                        endpoint.clientIdentifier(),
-                                        MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE,
-                                        sendAttempt.cause());
-                                endpoint.reject(MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE);
-                                TracingHelper.logError(currentSpan, sendAttempt.cause());
+            sendConnectedEvent(endpoint.clientIdentifier(), authenticatedDevice)
+                    .setHandler(sendAttempt -> {
+                        if (sendAttempt.succeeded()) {
+                            endpoint.accept(false);
+                            if (authenticatedDevice != null) {
+                                currentSpan.setTag(MessageHelper.APP_PROPERTY_TENANT_ID, authenticationAttempt.result().getTenantId());
+                                currentSpan.setTag(MessageHelper.APP_PROPERTY_DEVICE_ID, authenticationAttempt.result().getDeviceId());
                             }
-                        });
+                            currentSpan.log("connection accepted");
+                        } else {
+                            LOG.warn(
+                                    "connection request from client [clientId: {}] rejected due to connection event "
+                                            + "failure: {}",
+                                    endpoint.clientIdentifier(),
+                                    MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE,
+                                    sendAttempt.cause());
+                            endpoint.reject(MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE);
+                            TracingHelper.logError(currentSpan, sendAttempt.cause());
+                        }
+                    });
 
+        } else {
+
+            TracingHelper.TAG_AUTHENTICATED.set(currentSpan, false);
+
+            final Throwable t = authenticationAttempt.cause();
+            if (t instanceof MqttConnectionException) {
+                final MqttConnectReturnCode code = ((MqttConnectionException) t).code();
+                LOG.debug("connection request from client [clientId: {}] rejected with code: {}",
+                        endpoint.clientIdentifier(), code);
+                endpoint.reject(code);
             } else {
-
-                TracingHelper.TAG_AUTHENTICATED.set(currentSpan, false);
-
-                final Throwable t = authenticationAttempt.cause();
-                if (t instanceof MqttConnectionException) {
-                    final MqttConnectReturnCode code = ((MqttConnectionException) t).code();
-                    LOG.debug("connection request from client [clientId: {}] rejected with code: {}",
-                            endpoint.clientIdentifier(), code);
-                    endpoint.reject(code);
-                } else {
-                    LOG.debug("connection request from client [clientId: {}] rejected: {}",
-                            endpoint.clientIdentifier(), MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE);
-                    endpoint.reject(MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE);
-                }
-                TracingHelper.logError(currentSpan, t);
+                LOG.debug("connection request from client [clientId: {}] rejected: {}",
+                        endpoint.clientIdentifier(), MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE);
+                endpoint.reject(MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE);
             }
-            currentSpan.finish();
-        });
+            TracingHelper.logError(currentSpan, t);
+        }
+        currentSpan.finish();
     }
 
     /**
