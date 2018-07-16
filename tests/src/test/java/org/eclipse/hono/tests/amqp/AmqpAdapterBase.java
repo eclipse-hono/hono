@@ -11,6 +11,7 @@ package org.eclipse.hono.tests.amqp;
 
 import java.net.HttpURLConnection;
 import java.util.concurrent.CountDownLatch;
+import java.util.function.Consumer;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ClientErrorException;
@@ -22,6 +23,7 @@ import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.tests.client.ClientTestBase;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.TenantObject;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -33,7 +35,6 @@ import org.junit.rules.TestName;
 
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
-import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
@@ -69,6 +70,23 @@ public abstract class AmqpAdapterBase extends ClientTestBase {
     private MessageConsumer consumer;
 
     /**
+     * Creates a test specific message consumer.
+     *
+     * @param tenantId        The tenant to create the consumer for.
+     * @param messageConsumer The handler to invoke for every message received.
+     * @return A future succeeding with the created consumer.
+     */
+    protected abstract Future<MessageConsumer> createConsumer(String tenantId, Consumer<Message> messageConsumer);
+
+    /**
+     * Creates a test specific message sender.
+     *
+     * @param tenantId     The tenant to create the sender for.
+     * @return A future succeeding with the created sender.
+     */
+    protected abstract Future<MessageSender> createProducer(String tenantId);
+
+    /**
      * Create a HTTP client for accessing the device registry (for registering devices and credentials) and
      * an AMQP 1.0 client for consuming messages from the messaging network.
      * 
@@ -96,7 +114,7 @@ public abstract class AmqpAdapterBase extends ClientTestBase {
      */
     @Before
     public void setUp() {
-        LOGGER.info("running {}", testName.getMethodName());
+        log.info("running {}", testName.getMethodName());
     }
 
     /**
@@ -215,10 +233,10 @@ public abstract class AmqpAdapterBase extends ClientTestBase {
         }).setHandler(context.asyncAssertSuccess(ok -> setup.complete()));
         setup.await();
 
-        final Handler<CountDownLatch> consumerHandler = latch -> {
+        final Consumer<CountDownLatch> receiver = latch -> {
             final Async consumerTracker = context.async();
             createConsumer(tenantId, msg -> {
-                LOGGER.trace("received {}", msg);
+                log.trace("received {}", msg);
                 assertMessageProperties(context, msg);
                 assertAdditionalMessageProperties(context, msg);
                 latch.countDown();
@@ -229,7 +247,7 @@ public abstract class AmqpAdapterBase extends ClientTestBase {
             consumerTracker.await();
         };
 
-        doUploadMessages(context, consumerHandler, payload -> {
+        doUploadMessages(context, receiver, payload -> {
             final Async sendingComplete = context.async();
             final Message msg = ProtonHelper.message(payload);
             sender.send(msg).setHandler(outcome -> {
@@ -303,7 +321,7 @@ public abstract class AmqpAdapterBase extends ClientTestBase {
 
         CompositeFuture.all(clientTracker, consumerTracker).setHandler(outcome -> {
             if (outcome.failed()) {
-                LOGGER.info("Error while disconnecting: ", outcome.cause());
+                log.info("Error while disconnecting: ", outcome.cause());
             }
             shutdown.complete();
         });
@@ -329,4 +347,24 @@ public abstract class AmqpAdapterBase extends ClientTestBase {
 
         shutdown.await(1000); // in ms
     }
+    private void assertMessageProperties(final TestContext ctx, final Message msg) {
+        ctx.assertNotNull(MessageHelper.getDeviceId(msg));
+        ctx.assertNotNull(MessageHelper.getTenantIdAnnotation(msg));
+        ctx.assertNotNull(MessageHelper.getDeviceIdAnnotation(msg));
+        ctx.assertNull(MessageHelper.getRegistrationAssertion(msg));
+    }
+
+    /**
+     * Perform additional checks on a received message.
+     * <p>
+     * This default implementation does nothing. Subclasses should override this method to implement
+     * reasonable checks.
+     * 
+     * @param ctx The test context.
+     * @param msg The message to perform checks on.
+     */
+    protected void assertAdditionalMessageProperties(final TestContext ctx, final Message msg) {
+        // empty
+    }
+
 }

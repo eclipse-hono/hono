@@ -29,15 +29,15 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
  * via the configured Artemis broker.
  */
 @RunWith(VertxUnitRunner.class)
-public class EventClientIT extends ClientTestBase {
+public class EventClientIT extends MessagingClientTestBase {
 
     @Override
-    Future<MessageConsumer> createConsumer(final String tenantId, final Consumer<Message> messageConsumer) {
+    protected Future<MessageConsumer> createConsumer(final String tenantId, final Consumer<Message> messageConsumer) {
         return downstreamClient.createEventConsumer(tenantId, messageConsumer, close -> {});
     }
 
     @Override
-    Future<MessageSender> createProducer(final String tenantId) {
+    protected Future<MessageSender> createProducer(final String tenantId) {
         return honoClient.getOrCreateEventSender(tenantId);
     }
 

@@ -28,15 +28,15 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
  * Hono server and verifies they are forwarded to the downstream host.
  */
 @RunWith(VertxUnitRunner.class)
-public class TelemetryClientIT extends ClientTestBase {
+public class TelemetryClientIT extends MessagingClientTestBase {
 
     @Override
-    Future<MessageConsumer> createConsumer(final String tenantId, final Consumer<Message> messageConsumer) {
+    protected Future<MessageConsumer> createConsumer(final String tenantId, final Consumer<Message> messageConsumer) {
         return downstreamClient.createTelemetryConsumer(tenantId, messageConsumer, close -> {});
     }
 
     @Override
-    Future<MessageSender> createProducer(final String tenantId) {
+    protected Future<MessageSender> createProducer(final String tenantId) {
 
         return honoClient.getOrCreateTelemetrySender(tenantId);
     }
