@@ -30,4 +30,12 @@ public interface CommandResponseSender extends MessageSender {
             Map<String, Object> properties,
             int status);
 
+    /**
+     * Sends a response message to a command back to the business application.
+     *
+     * @param commandResponse The command response.
+     * @return A future indicating the outcome of the operation.
+     * @throws NullPointerException if any of commandResponse is {@code null}.
+     */
+    Future<ProtonDelivery> sendCommandResponse(CommandResponse commandResponse);
 }

@@ -25,7 +25,7 @@ import java.util.Objects;
  * <p>
  * Within the <em>telemetry</em> and <em>registration</em> endpoints the remaining two
  * segments have the following semantics:
- * <ol> 
+ * <ol>
  * <li>the <em>tenant ID</em></li>
  * <li>an (optional) <em>device ID</em></li>
  * </ol>
@@ -74,7 +74,7 @@ public final class ResourceIdentifier {
 
     /**
      * Gets this resource identifier as path segments.
-     * 
+     *
      * @return the segments.
      */
     public String[] toPath() {
@@ -110,7 +110,7 @@ public final class ResourceIdentifier {
      * the endpoint, the second segment is used as the tenant ID and the third segment (if present) is used as the
      * device ID.
      * </p>
-     * 
+     *
      * @param resource the resource string to parse.
      * @return the resource identifier.
      * @throws NullPointerException if the given string is {@code null}.
@@ -128,7 +128,7 @@ public final class ResourceIdentifier {
      * the endpoint and the second segment (if present) is used as the device ID. The tenant ID is always set to
      * {@link Constants#DEFAULT_TENANT}.
      * </p>
-     * 
+     *
      * @param resource the resource string to parse.
      * @return the resource identifier.
      * @throws NullPointerException if the given string is {@code null}.
@@ -159,7 +159,7 @@ public final class ResourceIdentifier {
      * The given path will be stripped of any trailing {@code null}
      * segments.
      * </p>
-     * 
+     *
      * @param path the segments of the resource path.
      * @return the resource identifier.
      * @throws NullPointerException if path is {@code null}.
@@ -219,7 +219,7 @@ public final class ResourceIdentifier {
      * The string representation consists of all path segments separated by a
      * forward slash ("/").
      * </p>
-     * 
+     *
      * @return the resource id.
      */
     @Override
@@ -230,11 +230,21 @@ public final class ResourceIdentifier {
     /**
      * Gets a string representation of this resource identifier's
      * <em>endpoint</em> and <em>tenantId</em>.
-     * 
+     *
      * @return A string consisting of the properties separated by a forward slash.
      */
     public String getBasePath() {
         return basePath;
+    }
+
+    /**
+     * Gets a string representation of the resource identifiers' parts without the base path.
+     *
+     * @return A string with all parts after the base bath.
+     * @see ResourceIdentifier#getBasePath()
+     */
+    public String getPathWithoutBase() {
+        return createStringRepresentation(IDX_RESOURCE_ID);
     }
 
     @Override

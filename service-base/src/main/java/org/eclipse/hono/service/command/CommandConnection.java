@@ -58,24 +58,22 @@ public interface CommandConnection extends HonoClient {
      * Gets a sender for sending command responses back to the business application.
      * 
      * @param tenantId The ID of the tenant to send the command responses for.
-     * @param deviceId The ID of the device to send the command responses for.
-     * @param replyId The ID used to build the reply address as {@code control/tenantId/deviceId/replyId}.
+     * @param replyId The ID used to build the reply address as {@code control/tenantId/replyId}.
      * @return A future that will complete with the sender once the link has been established. The future will fail if
      *         the link cannot be established, e.g. because this client is not connected.
      * @throws NullPointerException if tenantId, deviceId or replyId is {@code null}.
      */
-    Future<CommandResponseSender> getOrCreateCommandResponseSender(String tenantId, String deviceId, String replyId);
+    Future<CommandResponseSender> getOrCreateCommandResponseSender(String tenantId, String replyId);
 
     /**
      * Close the command response sender (and removes it from internal map).
      *
      * @param tenantId The ID of the tenant to send the command responses for.
-     * @param deviceId The ID of the device to send the command responses for.
-     * @param replyId The ID used to build the reply address as {@code control/tenantId/deviceId/replyId}.
+     * @param replyId The ID used to build the reply address as {@code control/tenantId/replyId}.
      * @return A future indicating the result of the closing operation.
      * @throws NullPointerException if tenantId, deviceId or replyId is {@code null}.
      */
-    Future<Void> closeCommandResponseSender(String tenantId, String deviceId, String replyId);
+    Future<Void> closeCommandResponseSender(String tenantId, String replyId);
 
     /**
      * Close all command response sender for the given tenant and device (for one command response receiver).

@@ -33,6 +33,7 @@ public class CommandTest {
 
     /**
      * Verifies that a command can be created from a valid message.
+     * Verifies that the replyToId are build up of all segments behind the tenant.
      */
     @Test
     public void testFromMessageSucceeds() {
@@ -46,7 +47,7 @@ public class CommandTest {
         final Command cmd = Command.from(mock(ProtonDelivery.class), message, Constants.DEFAULT_TENANT, "4711");
         assertNotNull(cmd);
         assertThat(cmd.getName(), is("doThis"));
-        assertThat(cmd.getReplyToId(), is(replyToId));
+        assertThat(cmd.getReplyToId(), is(String.format("4711/%s",replyToId)));
         assertThat(cmd.getCorrelationId(), is(correlationId));
     }
 
@@ -75,7 +76,7 @@ public class CommandTest {
         when(message.getSubject()).thenReturn("doThis");
         when(message.getCorrelationId()).thenReturn(correlationId);
         when(message.getReplyTo()).thenReturn(String.format("%s/%s/%s",
-                CommandConstants.COMMAND_ENDPOINT, Constants.DEFAULT_TENANT, "4711"));
+                CommandConstants.COMMAND_ENDPOINT, "4711", Constants.DEFAULT_TENANT));
         assertNull(Command.from(mock(ProtonDelivery.class), message, Constants.DEFAULT_TENANT, "4711"));
     }
 
@@ -90,8 +91,8 @@ public class CommandTest {
         final Message message = mock(Message.class);
         when(message.getSubject()).thenReturn("doThis");
         when(message.getCorrelationId()).thenReturn(correlationId);
-        when(message.getReplyTo()).thenReturn(String.format("%s/%s/%s/%s",
-                CommandConstants.COMMAND_ENDPOINT, Constants.DEFAULT_TENANT, "4711", replyToId));
+        when(message.getReplyTo()).thenReturn(String.format("%s/%s",
+                CommandConstants.COMMAND_ENDPOINT, replyToId));
         assertNull(Command.from(mock(ProtonDelivery.class), message, Constants.DEFAULT_TENANT, "4712"));
     }
 }
