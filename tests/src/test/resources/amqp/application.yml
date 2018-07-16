@@ -1,0 +1,57 @@
+hono:
+  app:
+    maxInstances: 1
+    healthCheckBindAddress: 0.0.0.0
+    healthCheckPort: 8088
+    startupTimeout: 120
+  amqp:
+    bindAddress: 0.0.0.0
+    insecurePortBindAddress: 0.0.0.0
+    insecurePortEnabled: true
+  messaging:
+    name: 'Hono AMQP Adapter'
+    host: hono-dispatch-router.hono
+    port: 5673
+    amqpHostname: hono-internal
+    keyPath: /etc/hono/certs/mqtt-adapter-key.pem
+    certPath: /etc/hono/certs/mqtt-adapter-cert.pem
+    trustStorePath: /etc/hono/certs/trusted-certs.pem
+  registration:
+    name: 'Hono MQTT Adapter'
+    host: hono-service-device-registry.hono
+    port: 5672 # AMQP port of the device registry
+    username: amqp-adapter@HONO
+    password: amqp-secret
+  credentials:
+    name: 'Hono AMQP Adapter'
+    host: hono-service-device-registry.hono
+    port: 5672 # AMQP port of the device registry
+    username: amqp-adapter@HONO
+    password: amqp-secret
+  tenant:
+    name: 'Hono AMQP Adapter'
+    host: hono-service-device-registry.hono
+    port: 5672 # AMQP port of the device registry
+    username: amqp-adapter@HONO
+    password: amqp-secret
+  command:
+    name: 'Hono AMQP Adapter'
+    host: hono-dispatch-router.hono
+    port: 5673
+    amqpHostname: hono-internal
+    keyPath: /etc/hono/certs/mqtt-adapter-key.pem
+    certPath: /etc/hono/certs/mqtt-adapter-cert.pem
+    trustStorePath: /etc/hono/certs/trusted-certs.pem
+  metric:
+    reporter:
+      graphite:
+        active: false
+# disable spring boot actuator endpoints, enable metrics
+endpoints:
+  enabled: false
+  metrics:
+    enabled: false
+spring:
+  jmx:
+    enabled: false
+

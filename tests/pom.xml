@@ -232,7 +232,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     <env>
                       <LOGGING_CONFIG>file:///etc/hono/logback-spring.xml</LOGGING_CONFIG>
                       <SPRING_CONFIG_LOCATION>file:///etc/hono/</SPRING_CONFIG_LOCATION>
-                      <SPRING_PROFILES_ACTIVE>prod</SPRING_PROFILES_ACTIVE>
+                      <SPRING_PROFILES_ACTIVE>dev</SPRING_PROFILES_ACTIVE>
                     </env>
                     <log>
                       <prefix>REGISTRY</prefix>
@@ -568,6 +568,62 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     </wait>
                   </run>
                 </image>
+                <!-- ##### AMQP adapter ##### -->
+                <image>
+                  <name>${docker.image.org-name}/hono-adapter-amqp-test</name>
+                  <alias>amqp-adapter</alias>
+                  <build>
+                    <from>${docker.image.org-name}/hono-adapter-amqp-vertx:${project.version}</from>
+                    <assembly>
+                      <mode>dir</mode>
+                      <basedir>/etc/hono</basedir>
+                      <inline>
+                        <id>config</id>
+                        <fileSets>
+                          <fileSet>
+                            <directory>${project.basedir}/src/test/resources/amqp</directory>
+                            <outputDirectory>.</outputDirectory>
+                            <includes>
+                              <include>*</include>
+                            </includes>
+                          </fileSet>
+                          <fileSet>
+                            <directory>${project.build.directory}/certs</directory>
+                            <outputDirectory>certs</outputDirectory>
+                          </fileSet>
+                        </fileSets>
+                      </inline>
+                    </assembly>
+                  </build>
+                  <run>
+                    <ports>
+                      <port>+adapter.amqp.ip:adapter.amqp.port:4040</port>
+                      <port>+adapter.amqp.ip:adapter.amqp.health.port:8088</port>
+                    </ports>
+                    <network>
+                      <mode>custom</mode>
+                      <name>hono</name>
+                      <alias>hono-adapter-amqp-vertx.hono</alias>
+                    </network>
+                    <env>
+                      <LOGGING_CONFIG>file:///etc/hono/logback-spring.xml</LOGGING_CONFIG>
+                      <SPRING_CONFIG_LOCATION>file:///etc/hono/</SPRING_CONFIG_LOCATION>
+                      <SPRING_PROFILES_ACTIVE>prod</SPRING_PROFILES_ACTIVE>
+                    </env>
+                    <log>
+                      <prefix>AMQP</prefix>
+                      <color>RED</color>
+                    </log>
+                    <wait>
+                      <time>${service.startup.timeout}</time>
+                      <http>
+                        <method>GET</method>
+                        <url>http://${adapter.amqp.ip}:${adapter.amqp.health.port}/readiness</url>
+                        <status>200..299</status>
+                      </http>
+                    </wait>
+                  </run>
+                </image>
               </images>
             </configuration>
             <executions>
@@ -627,6 +683,8 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                 <https.port>${https.port}</https.port>
                 <mqtt.host>${mqtt.ip}</mqtt.host>
                 <mqtt.port>${mqtt.port}</mqtt.port>
+                <adapter.amqp.host>${adapter.amqp.ip}</adapter.amqp.host>
+                <adapter.amqp.port>${adapter.amqp.port}</adapter.amqp.port>
                 <trust-store.path>${project.build.directory}/certs/trusted-certs.pem</trust-store.path>
                 <test.env>${test.env}</test.env>
                 <!-- javax.net.debug>ssl:handshake</javax.net.debug-->
