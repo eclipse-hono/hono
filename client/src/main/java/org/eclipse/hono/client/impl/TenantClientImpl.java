@@ -217,7 +217,7 @@ public class TenantClientImpl extends AbstractRequestResponseClient<TenantResult
         Objects.requireNonNull(tenantId);
 
         final TriTuple<TenantAction, String, Object> key = TriTuple.of(TenantAction.get, tenantId, null);
-        final Span span = newChildSpan(parent, "get Tenant configuration");
+        final Span span = newChildSpan(parent, "get Tenant by ID");
         span.setTag(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId);
         final AtomicBoolean cacheHit = new AtomicBoolean(true);
 
@@ -267,7 +267,7 @@ public class TenantClientImpl extends AbstractRequestResponseClient<TenantResult
 
         final String subjectDnRfc2253 = subjectDn.getName(X500Principal.RFC2253);
         final TriTuple<TenantAction, X500Principal, Object> key = TriTuple.of(TenantAction.get, subjectDn, null);
-        final Span span = newChildSpan(parent, "get Tenant configuration");
+        final Span span = newChildSpan(parent, "get Tenant by subject DN");
         TAG_SUBJECT_DN.set(span, subjectDnRfc2253);
         final AtomicBoolean cacheHit = new AtomicBoolean(true);
 
@@ -275,7 +275,14 @@ public class TenantClientImpl extends AbstractRequestResponseClient<TenantResult
             cacheHit.set(false);
             final Future<TenantResult<TenantObject>> tenantResult = Future.future();
             final JsonObject payload = new JsonObject().put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, subjectDnRfc2253);
-            createAndSendRequest(TenantConstants.TenantAction.get.toString(), customizeRequestApplicationProperties(), payload.toBuffer(), tenantResult.completer(), key);
+            createAndSendRequest(
+                    TenantConstants.TenantAction.get.toString(),
+                    customizeRequestApplicationProperties(),
+                    payload.toBuffer(),
+                    RegistrationConstants.CONTENT_TYPE_APPLICATION_JSON,
+                    tenantResult.completer(),
+                    key,
+                    span);
             return tenantResult;
         }).map(tenantResult -> {
             TracingHelper.TAG_CACHE_HIT.set(span, cacheHit.get());
