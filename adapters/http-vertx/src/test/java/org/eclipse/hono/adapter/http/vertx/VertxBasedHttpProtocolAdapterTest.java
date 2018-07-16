@@ -16,7 +16,6 @@ package org.eclipse.hono.adapter.http.vertx;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -27,7 +26,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.function.BiConsumer;
 
-import io.vertx.core.buffer.Buffer;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.adapter.http.HttpProtocolAdapterProperties;
 import org.eclipse.hono.client.ClientErrorException;
@@ -107,7 +105,7 @@ public class VertxBasedHttpProtocolAdapterTest {
     private static String deploymentId;
     private static HttpClient httpClient;
 
-    private static final String syntacticallyCorrectCmdRequestId = "2fcmd-client-c925910f-ea2a-455c-a3f9-a339171f335474f48a55-c60d-4b99-8950-a2fbb9e8f1b6";
+    private static final String syntacticallyCorrectCmdRequestId = "12fcmd-client-c925910f-ea2a-455c-a3f9-a339171f335474f48a55-c60d-4b99-8950-a2fbb9e8f1b6";
 
     /**
      * Prepare the adapter by configuring it.
@@ -162,7 +160,7 @@ public class VertxBasedHttpProtocolAdapterTest {
         }).when(commandConnection).shutdown(any(Handler.class));
 
         commandResponseSender = mock(CommandResponseSender.class);
-        when(commandConnection.getOrCreateCommandResponseSender(anyString(), anyString(), anyString())).thenReturn(
+        when(commandConnection.getOrCreateCommandResponseSender(anyString(), anyString())).thenReturn(
                 Future.succeededFuture(commandResponseSender));
 
         usernamePasswordAuthProvider = mock(HonoClientBasedAuthProvider.class);
@@ -234,7 +232,7 @@ public class VertxBasedHttpProtocolAdapterTest {
 
     /**
      * Shuts down the server.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @AfterClass
@@ -245,7 +243,7 @@ public class VertxBasedHttpProtocolAdapterTest {
     /**
      * Verifies that a request to upload telemetry data using POST fails
      * if the request does not contain a Basic <em>Authorization</em> header.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
@@ -265,7 +263,7 @@ public class VertxBasedHttpProtocolAdapterTest {
      * Verifies that a request to upload telemetry data using POST fails
      * if the request contains a Basic <em>Authorization</em> header with
      * invalid credentials.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
@@ -287,7 +285,7 @@ public class VertxBasedHttpProtocolAdapterTest {
      * Verifies that a request to upload telemetry data using POST succeeds
      * if the request contains a Basic <em>Authorization</em> header with valid
      * credentials.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
@@ -338,7 +336,7 @@ public class VertxBasedHttpProtocolAdapterTest {
     /**
      * Verifies that a request (with valid credentials) to upload telemetry data with 'QoS-Level: 2' using POST fails
      * with a 400 (Bad Request) status code.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
@@ -362,7 +360,7 @@ public class VertxBasedHttpProtocolAdapterTest {
     /**
      * Verifies that a request (with valid credentials) to upload telemetry data with
      * 'QoS-Level: 1' using POST succeeds with a 202.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
@@ -587,8 +585,7 @@ public class VertxBasedHttpProtocolAdapterTest {
 
         mockSuccessfulAuthentication("DEFAULT_TENANT", "device_1");
 
-        when(commandResponseSender.sendCommandResponse(anyString(), anyString(), any(Buffer.class), isNull(), any(Integer.class))).
-                thenReturn(Future.failedFuture("error"));
+        when(commandResponseSender.sendCommandResponse(any())).thenReturn(Future.failedFuture("error"));
 
         httpClient.post(String.format("/control/res/%s?hono-cmd-status=200", syntacticallyCorrectCmdRequestId))
                 .putHeader(HttpHeaders.CONTENT_TYPE, HttpUtils.CONTENT_TYPE_JSON)
@@ -616,8 +613,7 @@ public class VertxBasedHttpProtocolAdapterTest {
 
         mockSuccessfulAuthentication("DEFAULT_TENANT", "device_1");
 
-        when(commandResponseSender.sendCommandResponse(anyString(), anyString(), any(Buffer.class), isNull(), any(Integer.class))).
-                thenReturn(Future.succeededFuture(remotelySettledDelivery));
+        when(commandResponseSender.sendCommandResponse(any())).thenReturn(Future.succeededFuture(remotelySettledDelivery));
 
         httpClient.post(String.format("/control/res/%s?hono-cmd-status=200", syntacticallyCorrectCmdRequestId))
                 .putHeader(HttpHeaders.CONTENT_TYPE, HttpUtils.CONTENT_TYPE_JSON)

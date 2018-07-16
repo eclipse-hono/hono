@@ -29,6 +29,8 @@ public class CommandResponseTest {
 
     private static final String CORRELATION_ID = "the-correlation-id";
     private static final String REPLY_TO_ID = "the-reply-to-id";
+    private static final String REPLY_TO_ID_WITH_DEVICE = "4711/the-reply-to-id";
+    private static final String DEVICE_ID = "4711";
 
     /**
      * Verifies that a response can be created from a request ID.
@@ -36,7 +38,7 @@ public class CommandResponseTest {
     @Test
     public void testFromResponseSucceeds() {
         final CommandResponse resp = CommandResponse.from(
-                encode(CORRELATION_ID, REPLY_TO_ID), HttpURLConnection.HTTP_OK);
+                Command.getRequestId(CORRELATION_ID, REPLY_TO_ID, DEVICE_ID), DEVICE_ID, HttpURLConnection.HTTP_OK);
         assertNotNull(resp);
         assertThat(resp.getCorrelationId(), is(CORRELATION_ID));
         assertThat(resp.getReplyToId(), is(REPLY_TO_ID));
@@ -50,12 +52,9 @@ public class CommandResponseTest {
     public void testFromFailsForMalformedRequestId() {
 
         assertNull(CommandResponse.from(
-                "ZZanyString", HttpURLConnection.HTTP_OK));
+                "ZZanyString", DEVICE_ID, HttpURLConnection.HTTP_OK));
     }
 
-    /**
-     * Verifies that a String that does not contain a hex number as first two chars at the beginning.
-     */
     /**
      * Verifies that creating a response from a request ID which contains less characters as indicated
      * by the hex encoded byte at the start position fails.
@@ -64,10 +63,26 @@ public class CommandResponseTest {
     public void testDecombineIncorrectStringReturnsNullForTooBigNumberAtBeginning() {
 
         assertNull(CommandResponse.from(
-                "FFthisIsLessThan255Characters", HttpURLConnection.HTTP_OK));
+                "FFthisIsLessThan255Characters", DEVICE_ID, HttpURLConnection.HTTP_OK));
     }
 
-    private static String encode(final String correlationId, final String replyToId) {
-        return String.format("%02x%s%s", correlationId.length(), correlationId, replyToId);
+    /**
+     * Verifies that device-id is rendered into replyTo when the request-id shows this with '1' as first character.
+     */
+    @Test
+    public void testDeviceInReply() {
+        final CommandResponse resp = CommandResponse.from(
+                Command.getRequestId(CORRELATION_ID, REPLY_TO_ID_WITH_DEVICE, DEVICE_ID), DEVICE_ID, HttpURLConnection.HTTP_OK);
+        assertThat(resp.getReplyToId(),is(REPLY_TO_ID_WITH_DEVICE));
+    }
+
+    /**
+     * Verifies that device-id is NOT rendered into replyTo when the request-id shows this with '0' as first character.
+     */
+    @Test
+    public void testDeviceNotInReply() {
+        final CommandResponse resp = CommandResponse.from(
+                Command.getRequestId(CORRELATION_ID, REPLY_TO_ID, DEVICE_ID), DEVICE_ID, HttpURLConnection.HTTP_OK);
+        assertThat(resp.getReplyToId(), is(REPLY_TO_ID));
     }
 }

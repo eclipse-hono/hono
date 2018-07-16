@@ -9,7 +9,8 @@ title = "Release Notes"
 * The Auth Server can now be used to authenticate clients connecting to the Apache Qpid Dispatch Router which is used in the example deployment. For this purpose the Auth Server is configured as a *remote auth server* implementing [Dispatch Router's *Auth Service Plugin* mechanism](https://qpid.apache.org/releases/qpid-dispatch-1.1.0/man/qdrouterd.conf.html#_authserviceplugin). Using this mechanism it is now possible to manage all identities and authorities using the Auth Server's configuration file.
 * The HTTP protocol adapter now supports to receive responses to a command that was previously sent to a device.
   Refer to the documentation of the [HTTP adapter]({{< relref "user-guide/http-adapter.md#sending-a-response-to-a-previously-received-command" >}}) 
-  for the details of the new HTTP URIs. 
+  for the details of the new HTTP URIs.
+* The Command and Control API has changed to be less restrictive on the allowed reply-to addresses. The responses no longer have to be scoped to the device-id but could be be scoped to a tenant.
 
 ### Fixes & Enhancements
 

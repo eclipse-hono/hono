@@ -60,7 +60,7 @@ public final class Command {
         this.deviceId = deviceId;
         this.replyToId = replyToId;
         this.correlationId = correlationId;
-        this.requestId = getRequestId(correlationId, replyToId);
+        this.requestId = getRequestId(correlationId, replyToId, deviceId);
     }
 
     /**
@@ -73,7 +73,7 @@ public final class Command {
      * of four segments</li>
      * <li>a String valued <em>correlation-id</em> and/or <em>message-id</em></li>
      * </ul>
-     * 
+     *
      * @param delivery The delivery corresponding to the command message.
      * @param message The message containing the command.
      * @param tenantId The tenant that the device belongs to.
@@ -110,10 +110,10 @@ public final class Command {
             if (!CommandConstants.COMMAND_ENDPOINT.equals(replyTo.getEndpoint())) {
                 // not a command message
                 return null;
-            } else if (!tenantId.equals(replyTo.getTenantId()) || !deviceId.equals(replyTo.getResourceId())) {
-                // command is targeted at wrong device
+            } else if (!tenantId.equals(replyTo.getTenantId())) {
+                // command response is targeted at wrong tenant
                 return null;
-            } else if (replyTo.getResourcePath().length < 4) {
+            } else if (replyTo.getResourcePath().length < 3) {
                 // reply-to-id is missing
                 return null;
             } else {
@@ -123,7 +123,7 @@ public final class Command {
                         Objects.requireNonNull(tenantId),
                         Objects.requireNonNull(deviceId),
                         correlationId,
-                        replyTo.getResourcePath()[3]);
+                        replyTo.getPathWithoutBase());
             }
         } catch (IllegalArgumentException e) {
             // reply-to could not be parsed
@@ -133,7 +133,7 @@ public final class Command {
 
     /**
      * Checks if an AMQP 1.0 message complies with Hono's Command &amp; Control API.
-     * 
+     *
      * @param message The message to check.
      * @param tenantId The tenant of the device that the message is supposed to be targeted at.
      * @param deviceId The identifier of the device that the message is supposed to be targeted at.
@@ -178,7 +178,7 @@ public final class Command {
 
     /**
      * Retrieves the command associated with a request.
-     * 
+     *
      * @param ctx The routing context for the request.
      * @return The command or {@code null} if the request has no command associated with it.
      * @throws NullPointerException if context is {@code null}.
@@ -189,7 +189,7 @@ public final class Command {
 
     /**
      * Associates this command with a request.
-     * 
+     *
      * @param ctx The routing context for the request.
      * @throws NullPointerException if context is {@code null}.
      */
@@ -199,7 +199,7 @@ public final class Command {
 
     /**
      * Gets the name of this command.
-     * 
+     *
      * @return The name.
      */
     public String getName() {
@@ -208,7 +208,7 @@ public final class Command {
 
     /**
      * Gets the tenant that the device belongs to.
-     * 
+     *
      * @return The tenant identifier.
      */
     public String getTenant() {
@@ -217,7 +217,7 @@ public final class Command {
 
     /**
      * Gets the device's identifier.
-     * 
+     *
      * @return The identifier.
      */
     public String getDeviceId() {
@@ -226,7 +226,7 @@ public final class Command {
 
     /**
      * Gets the request identifier of this command.
-     * 
+     *
      * @return The identifier.
      */
     public String getRequestId() {
@@ -235,7 +235,7 @@ public final class Command {
 
     /**
      * Gets the payload of this command.
-     * 
+     *
      * @return The message payload or {@code null} if the command message contains no payload.
      */
     public Buffer getPayload() {
@@ -244,7 +244,7 @@ public final class Command {
 
     /**
      * Gets this command's reply-to-id.
-     * 
+     *
      * @return The identifier.
      */
     public String getReplyToId() {
@@ -253,18 +253,22 @@ public final class Command {
 
     /**
      * Gets the ID to use for correlating a response to this command.
-     * 
+     *
      * @return The identifier.
      */
     public String getCorrelationId() {
         return correlationId;
     }
 
-    private static String getRequestId(final String correlationId, final String replyToId) {
-
+    static String getRequestId(final String correlationId, final String replyToId, final String deviceId) {
         final String stringOne = Optional.ofNullable(correlationId).orElse("");
-        final String stringTwo = Optional.ofNullable(replyToId).orElse("");
-        return String.format("%02x%s%s", stringOne.length(), stringOne, stringTwo);
+        String stringTwo = Optional.ofNullable(replyToId).orElse("");
+        final boolean removeDeviceFromReplyTo = stringTwo.startsWith(deviceId + "/");
+        if (removeDeviceFromReplyTo) {
+            stringTwo = stringTwo.substring(deviceId.length() + 1);
+        }
+        return String.format("%s%02x%s%s", removeDeviceFromReplyTo ? "1" : "0", stringOne.length(), stringOne,
+                stringTwo);
     }
 
     /**

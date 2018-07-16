@@ -146,15 +146,13 @@ public class CommandConnectionImpl extends HonoClientImpl implements CommandConn
      */
     public Future<CommandResponseSender> getOrCreateCommandResponseSender(
             final String tenantId,
-            final String deviceId,
             final String replyId) {
         Objects.requireNonNull(tenantId);
-        Objects.requireNonNull(deviceId);
         Objects.requireNonNull(replyId);
         final Future<CommandResponseSender> result = Future.future();
         getOrCreateSender(
-                CommandResponseSenderImpl.getTargetAddress(tenantId, deviceId, replyId),
-                () -> createCommandResponseSender(tenantId, deviceId, replyId)).setHandler(h->{
+                CommandResponseSenderImpl.getTargetAddress(tenantId, replyId),
+                () -> createCommandResponseSender(tenantId, replyId)).setHandler(h->{
             if(h.succeeded()) {
                 result.complete((CommandResponseSender) h.result());
             }
@@ -167,14 +165,13 @@ public class CommandConnectionImpl extends HonoClientImpl implements CommandConn
 
     private Future<MessageSender> createCommandResponseSender(
             final String tenantId,
-            final String deviceId,
             final String replyId) {
 
         return checkConnected().compose(connected -> {
             final Future<MessageSender> result = Future.future();
-            CommandResponseSenderImpl.create(context, clientConfigProperties, connection, tenantId, deviceId, replyId,
+            CommandResponseSenderImpl.create(context, clientConfigProperties, connection, tenantId, replyId,
                     onSenderClosed -> {
-                        activeSenders.remove(CommandResponseSenderImpl.getTargetAddress(tenantId, deviceId, replyId));
+                        activeSenders.remove(CommandResponseSenderImpl.getTargetAddress(tenantId, replyId));
                     },
                     result.completer());
             return result;
@@ -184,11 +181,10 @@ public class CommandConnectionImpl extends HonoClientImpl implements CommandConn
     /**
      * {@inheritDoc}
      */
-    public Future<Void> closeCommandResponseSender(final String tenantId, final String deviceId, final String replyId) {
+    public Future<Void> closeCommandResponseSender(final String tenantId, final String replyId) {
         Objects.requireNonNull(tenantId);
-        Objects.requireNonNull(deviceId);
         Objects.requireNonNull(replyId);
-        final MessageSender commandResponseSender = activeSenders.get(CommandResponseSenderImpl.getTargetAddress(tenantId, deviceId, replyId));
+        final MessageSender commandResponseSender = activeSenders.get(CommandResponseSenderImpl.getTargetAddress(tenantId, replyId));
         final Future<Void> future = Future.future();
         if (commandResponseSender != null) {
             commandResponseSender.close(closeHandler -> {
@@ -201,8 +197,8 @@ public class CommandConnectionImpl extends HonoClientImpl implements CommandConn
                 }
             });
         } else {
-            LOG.error("Command response sender should be closed but could not be found for tenant: [{}], device: [{}]",
-                    tenantId, deviceId);
+            LOG.error("Command response sender should be closed but could not be found for tenant: [{}], replyId: [{}]",
+                    tenantId, replyId);
             future.fail("Command response sender should be closed but could not be found");
         }
         return future;

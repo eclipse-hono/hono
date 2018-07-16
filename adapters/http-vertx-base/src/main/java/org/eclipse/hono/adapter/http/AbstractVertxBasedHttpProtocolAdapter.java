@@ -191,7 +191,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
 
     /**
      * Adds a handler for adding an OpenTracing Span to the routing context.
-     * 
+     *
      * @param router The router to add the handler to.
      * @param position The position to add the tracing handler at.
      */
@@ -211,7 +211,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
      * spans that are used for tracing requests handled by this adapter.
      * <p>
      * This method is empty by default.
-     * 
+     *
      * @param customTags The existing custom tags to add to. The map will already
      *                 include this adapter's {@linkplain #getTypeName() type name}
      *                 under key {@link Tags#COMPONENT}.
@@ -225,7 +225,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
      * stages of processing requests handled by this adapter.
      * <p>
      * This method is empty by default.
-     * 
+     *
      * @param decorators The decorators to add to. The list will already
      *                 include a {@linkplain ComponentMetaDataDecorator decorator} for
      *                 adding standard tags and component specific tags which can be customized by
@@ -612,8 +612,8 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                             LOG.debug("failed to send http response for [{}] message from device [tenantId: {}, deviceId: {}]",
                                     endpointName, tenant, deviceId, t);
                             if (command != null) {
-                                final CommandResponse response = CommandResponse.from(command.getRequestId(), HttpURLConnection.HTTP_UNAVAILABLE);
-                                sendCommandResponse(tenant, deviceId, response);
+                                final CommandResponse response = CommandResponse.from(command.getRequestId(), deviceId, HttpURLConnection.HTTP_UNAVAILABLE);
+                                sendCommandResponse(tenant, response);
                             }
                             TracingHelper.logError(currentSpan, t);
                             currentSpan.finish();
@@ -628,8 +628,8 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                             endpointName, tenant, deviceId, t);
                     final Command command = Command.get(ctx);
                     if (command != null) {
-                        final CommandResponse response = CommandResponse.from(command.getRequestId(), HttpURLConnection.HTTP_UNAVAILABLE);
-                        sendCommandResponse(tenant, deviceId, response);
+                        final CommandResponse response = CommandResponse.from(command.getRequestId(), deviceId, HttpURLConnection.HTTP_UNAVAILABLE);
+                        sendCommandResponse(tenant, response);
                     }
 
                     if (ClientErrorException.class.isInstance(t)) {
@@ -696,7 +696,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
 
     /**
      * Creates a consumer for command messages to be sent to a device.
-     * 
+     *
      * @param tenantId The tenant that the device belongs to.
      * @param deviceId The identifier of the device.
      * @param ctx The device's currently executing HTTP request.
@@ -834,12 +834,12 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
         LOG.debug("uploadCommandResponseMessage: [tenantId: {}, deviceId: {}, commandRequestId: {}, commandRequestStatus: {}]",
                 tenant, deviceId, commandRequestId, commandRequestStatus);
 
-        Optional.ofNullable(CommandResponse.from(commandRequestId, payload, contentType, commandRequestStatus)).map(commandResponse -> {
+        Optional.ofNullable(CommandResponse.from(commandRequestId, deviceId, payload, contentType, commandRequestStatus)).map(commandResponse -> {
             // send answer to caller via sender link
-            final Future<CommandResponseSender> responseSender = createCommandResponseSender(tenant, deviceId, commandResponse.getReplyToId());
+            final Future<CommandResponseSender> responseSender = createCommandResponseSender(tenant, commandResponse.getReplyToId());
 
             responseSender.compose(commandResponseSender ->
-                    commandResponseSender.sendCommandResponse(commandResponse.getCorrelationId(), contentType, payload, null, commandRequestStatus)
+                    commandResponseSender.sendCommandResponse(commandResponse)
             ).map(delivery -> {
                 if (delivery.remotelySettled()) {
                     LOG.debug("Command response [command-request-id: {}] acknowledged to sender.", commandRequestId);

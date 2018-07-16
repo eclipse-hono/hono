@@ -48,25 +48,27 @@ public final class CommandResponse {
      * Creates an empty response for a request ID that contains only the status.
      *
      * @param requestId The request ID of the command that this is the response for.
+     * @param deviceId The device ID of the device sending the response.
      * @param status The HTTP status code indicating the outcome of the command.
      * @return The response or {@code null} if the request ID could not be parsed, the status is {@code null} or if the
      *         status code is &lt; 200 or &gt;= 600.
      */
-    public static CommandResponse from(final String requestId, final Integer status) {
-        return from(requestId, null, null, status);
+    public static CommandResponse from(final String requestId, final String deviceId, final Integer status) {
+        return from(requestId, deviceId, null, null, status);
     }
 
     /**
      * Creates a response for a request ID.
      * 
      * @param requestId The request ID of the command that this is the response for.
+     * @param deviceId The device ID of the device sending the response.
      * @param payload The payload of the response.
      * @param contentType The contentType of the response. Maybe {@code null} since it is not required.
      * @param status The HTTP status code indicating the outcome of the command.
      * @return The response or {@code null} if the request ID could not be parsed, the status is {@code null} or if the
      *         status code is &lt; 200 or &gt;= 600.
      */
-    public static CommandResponse from(final String requestId, final Buffer payload, final String contentType, final Integer status) {
+    public static CommandResponse from(final String requestId, final String deviceId, final Buffer payload, final String contentType, final Integer status) {
 
         if (requestId == null) {
             return null;
@@ -74,17 +76,19 @@ public final class CommandResponse {
             return null;
         } else if (!responseStatusCodeValidator.test(status)) {
             return null;
-        } else if (requestId.length() < 2) {
+        } else if (requestId.length() < 3) {
             return null;
         } else {
             try {
-                final int lengthStringOne = Integer.parseInt(requestId.substring(0, 2), 16);
+                final boolean addDeviceIdToReply = "1".equals(requestId.substring(0,1));
+                final int lengthStringOne = Integer.parseInt(requestId.substring(1, 3), 16);
+                final String replyId = requestId.substring(3 + lengthStringOne);
                 return new CommandResponse(
                         payload,
                         contentType,
                         status,
-                        requestId.substring(2, 2 + lengthStringOne), // correlation ID
-                        requestId.substring(2 + lengthStringOne)); // reply-to ID
+                        requestId.substring(3, 3 + lengthStringOne), // correlation ID
+                        addDeviceIdToReply ? deviceId + "/" + replyId : replyId);
             } catch (NumberFormatException | StringIndexOutOfBoundsException se) {
                 return null;
             }

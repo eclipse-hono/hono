@@ -75,8 +75,8 @@ public class CommandResponseSenderImpl extends AbstractSender implements Command
         return send(message, context);
     }
 
-    static final String getTargetAddress(final String tenantId, final String deviceId, final String replyId) {
-        return String.format("%s/%s/%s/%s", CommandConstants.COMMAND_ENDPOINT, tenantId, deviceId, replyId);
+    static final String getTargetAddress(final String tenantId, final String replyId) {
+        return String.format("%s/%s/%s", CommandConstants.COMMAND_ENDPOINT, tenantId, replyId);
     }
 
     /**
@@ -90,6 +90,16 @@ public class CommandResponseSenderImpl extends AbstractSender implements Command
             final int status) {
         LOG.debug("send back a command response [correlationId: {}, status: {}]", correlationId, status);
         return sendAndWaitForOutcome(createResponseMessage(targetAddress, correlationId, contentType, payload, properties, status));
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public Future<ProtonDelivery> sendCommandResponse(final CommandResponse commandResponse) {
+        Objects.requireNonNull(commandResponse);
+        return sendAndWaitForOutcome(createResponseMessage(targetAddress,
+                commandResponse.getCorrelationId(), commandResponse.getContentType(), commandResponse.getPayload(),
+                null, commandResponse.getStatus()));
     }
 
     private static Message createResponseMessage(
@@ -126,7 +136,6 @@ public class CommandResponseSenderImpl extends AbstractSender implements Command
      * @param clientConfig The configuration properties to use.
      * @param con The connection to the AMQP network.
      * @param tenantId The tenant that the command response will be send for and the device belongs to.
-     * @param deviceId The device that sends the command response.
      * @param replyId The reply id as the unique postfix of the replyTo address.
      * @param closeHook A handler to invoke if the peer closes the link unexpectedly.
      * @param creationHandler The handler to invoke with the result of the creation attempt.
@@ -137,7 +146,6 @@ public class CommandResponseSenderImpl extends AbstractSender implements Command
             final ClientConfigProperties clientConfig,
             final ProtonConnection con,
             final String tenantId,
-            final String deviceId,
             final String replyId,
             final Handler<String> closeHook,
             final Handler<AsyncResult<MessageSender>> creationHandler) {
@@ -146,10 +154,9 @@ public class CommandResponseSenderImpl extends AbstractSender implements Command
         Objects.requireNonNull(clientConfig);
         Objects.requireNonNull(con);
         Objects.requireNonNull(tenantId);
-        Objects.requireNonNull(deviceId);
         Objects.requireNonNull(replyId);
 
-        final String targetAddress = CommandResponseSenderImpl.getTargetAddress(tenantId, deviceId, replyId);
+        final String targetAddress = CommandResponseSenderImpl.getTargetAddress(tenantId, replyId);
         createSender(context, clientConfig, con, targetAddress, ProtonQoS.AT_LEAST_ONCE, closeHook).compose(sender -> {
             return Future.<MessageSender> succeededFuture(
                     new CommandResponseSenderImpl(clientConfig, sender, tenantId, targetAddress, context));

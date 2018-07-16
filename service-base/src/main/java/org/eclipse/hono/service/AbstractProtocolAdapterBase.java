@@ -65,7 +65,7 @@ import io.vertx.proton.ProtonHelper;
  * A base class for implementing protocol adapters.
  * <p>
  * Provides connections to device registration and telemetry and event service endpoints.
- * 
+ *
  * @param <T> The type of configuration properties used by this service.
  */
 public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterProperties> extends AbstractServiceBase<T> {
@@ -127,7 +127,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
 
     /**
      * Sets the client to use for connecting to the Hono Messaging component.
-     * 
+     *
      * @param honoClient The client.
      * @throws NullPointerException if hono client is {@code null}.
      */
@@ -139,7 +139,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
 
     /**
      * Gets the client used for connecting to the Hono Messaging component.
-     * 
+     *
      * @return The client.
      */
     public final HonoClient getHonoMessagingClient() {
@@ -148,7 +148,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
 
     /**
      * Sets the client to use for connecting to the Device Registration service.
-     * 
+     *
      * @param registrationServiceClient The client.
      * @throws NullPointerException if the client is {@code null}.
      */
@@ -160,7 +160,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
 
     /**
      * Gets the client used for connecting to the Device Registration service.
-     * 
+     *
      * @return The client.
      */
     public final HonoClient getRegistrationServiceClient() {
@@ -169,7 +169,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
 
     /**
      * Sets the client to use for connecting to the Credentials service.
-     * 
+     *
      * @param credentialsServiceClient The client.
      * @throws NullPointerException if the client is {@code null}.
      */
@@ -181,7 +181,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
 
     /**
      * Gets the client used for connecting to the Credentials service.
-     * 
+     *
      * @return The client.
      */
     public final HonoClient getCredentialsServiceClient() {
@@ -190,7 +190,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
 
     /**
      * Sets the producer for connections events.
-     * 
+     *
      * @param connectionEventProducer The instance which will handle the production of connection events. Depending on
      *            the setup this could be a simple log message or an event using the Hono Event API.
      */
@@ -201,7 +201,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
 
     /**
      * Gets the producer of connection events.
-     * 
+     *
      * @return The implementation for producing connection events. Maybe {@code null}.
      */
     public ConnectionEventProducer getConnectionEventProducer() {
@@ -220,7 +220,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * <p>
      * The name returned by this method is added to a downstream message by the
      * {@link #addProperties(Message, JsonObject, boolean)} method.
-     * 
+     *
      * @return The adapter's name.
      */
     protected abstract String getTypeName();
@@ -395,9 +395,9 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
 
     /**
      * Checks if this adapter is connected to the services it depends on.
-     * 
+     *
      * <em>Hono Messaging</em> and the <em>Device Registration</em> service.
-     * 
+     *
      * @return A future indicating the outcome of the check. The future will succeed if this adapter is currently
      *         connected to
      *         <ul>
@@ -452,7 +452,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * The consumer checks if the received message contains all required information
      * and if so, creates a {@link Command} instance from it and hands it over to
      * the command handler.
-     * 
+     *
      * @param tenant The tenant of the device to which the commands are to be sent.
      * @param deviceId The identifier of the device to which the commands are to be sent.
      * @param commandHandler A handler to notify about a valid command message that has
@@ -485,23 +485,20 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * Create a command response sender for a specific device.
      *
      * @param tenantId The tenant of the command receiver.
-     * @param deviceId The device of the command receiver.
      * @param replyId The replyId to from the command to use for the response.
      * @return Result of the response sender creation.
      */
     public final Future<CommandResponseSender> createCommandResponseSender(
             final String tenantId,
-            final String deviceId,
             final String replyId) {
-        return commandConnection.getOrCreateCommandResponseSender(tenantId, deviceId, replyId);
+        return commandConnection.getOrCreateCommandResponseSender(tenantId, replyId);
     }
 
     /**
      * Forwards a response message that has been sent by a device in reply to a
      * command to the sender of the command.
-     * 
+     *
      * @param tenantId The tenant that the device belongs to.
-     * @param deviceId The identifier of the device.
      * @param response The response message.
      * @return A future indicating the outcome of the attempt to send
      *         the message.
@@ -509,21 +506,18 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      */
     protected Future<ProtonDelivery> sendCommandResponse(
             final String tenantId,
-            final String deviceId,
             final CommandResponse response) {
 
         Objects.requireNonNull(tenantId);
-        Objects.requireNonNull(deviceId);
         Objects.requireNonNull(response);
 
-        return createCommandResponseSender(tenantId, deviceId, response.getReplyToId())
-                .compose(sender -> sender.sendCommandResponse(response.getCorrelationId(),
-                        response.getContentType(), response.getPayload(), null, response.getStatus()));
+        return createCommandResponseSender(tenantId, response.getReplyToId())
+                .compose(sender -> sender.sendCommandResponse(response));
     }
 
     /**
      * Gets a client for sending telemetry data for a tenant.
-     * 
+     *
      * @param tenantId The tenant to send the telemetry data for.
      * @return The client.
      */
@@ -533,7 +527,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
 
     /**
      * Gets a client for sending events for a tenant.
-     * 
+     *
      * @param tenantId The tenant to send the events for.
      * @return The client.
      */
@@ -543,7 +537,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
 
     /**
      * Gets a client for interacting with the Device Registration service.
-     * 
+     *
      * @param tenantId The tenant that the client is scoped to.
      * @return The client.
      */
@@ -559,7 +553,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * <p>
      * In addition to the assertion the returned object may include <em>default</em> values for properties to set on
      * messages published by the device under property {@link RegistrationConstants#FIELD_DEFAULTS}.
-     * 
+     *
      * @param tenantId The tenant that the device belongs to.
      * @param deviceId The device to get the assertion for.
      * @param authenticatedDevice The device that has authenticated to this protocol adapter.
@@ -612,7 +606,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * <p>
      * The returned JSON object contains information as defined by Hono's
      * <a href="https://www.eclipse.org/hono/api/tenant-api/#response-payload">Tenant API</a>.
-     * 
+     *
      * @param tenantId The tenant to retrieve information for.
      * @return A future indicating the outcome of the operation.
      *         <p>
@@ -632,7 +626,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * <p>
      * The returned JSON object contains information as defined by Hono's
      * <a href="https://www.eclipse.org/hono/api/tenant-api/#response-payload">Tenant API</a>.
-     * 
+     *
      * @param tenantId The tenant to retrieve information for.
      * @param context The currently active OpenTracing span that is used to
      *                trace the retrieval of the tenant configuration.
@@ -655,7 +649,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * <p>
      * This methods simply invokes {@link #addProperties(Message, JsonObject, boolean)} with
      * with {@code true} as the value for the regAssertionRequired parameter.
-     * 
+     *
      * @param message The message to set the properties on.
      * @param registrationInfo The values to set.
      * @throws NullPointerException if any of the parameters is {@code null}.
@@ -681,7 +675,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * <li>Adds JMS vendor properties if configuration property <em>jmsVendorPropertiesEnabled</em> is set to
      * {@code true}.</li>
      * </ul>
-     * 
+     *
      * @param message The message to set the properties on.
      * @param registrationInfo The values to set.
      * @param regAssertionRequired {@code true} if the downstream peer requires the registration assertion to
@@ -790,7 +784,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * <li>additional properties set by {@link #addProperties(Message, JsonObject, boolean)}</li>
      * </ul>
      * This method also sets the message's payload as an AMQP <em>Data</em> section.
-     * 
+     *
      * @param target The resource that the message is targeted at.
      * @param regAssertionRequired {@code true} if the downstream peer requires the registration assertion to
      *            be included in the message.
@@ -867,7 +861,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
 
     /**
      * Trigger the creation of a <em>disconnected</em> event.
-     * 
+     *
      * @param remoteId The remote ID.
      * @param authenticatedDevice The (optional) authenticated device.
      * @return A failed future if an event producer is set but the event
