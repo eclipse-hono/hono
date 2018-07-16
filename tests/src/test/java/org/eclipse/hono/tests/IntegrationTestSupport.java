@@ -15,8 +15,6 @@ package org.eclipse.hono.tests;
 import java.net.InetAddress;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -48,6 +46,7 @@ public final class IntegrationTestSupport {
     public static final int    DEFAULT_HTTP_PORT = 8080;
     public static final int    DEFAULT_HTTPS_PORT = 8443;
     public static final int    DEFAULT_MQTT_PORT = 1883;
+    public static final int    DEFAULT_AMQP_PORT = 4040;
 
     public static final String PROPERTY_AUTH_HOST = "auth.host";
     public static final String PROPERTY_AUTH_PORT = "auth.amqp.port";
@@ -67,6 +66,8 @@ public final class IntegrationTestSupport {
     public static final String PROPERTY_HTTPS_PORT = "https.port";
     public static final String PROPERTY_MQTT_HOST = "mqtt.host";
     public static final String PROPERTY_MQTT_PORT = "mqtt.port";
+    public static final String PROPERTY_AMQP_HOST = "adapter.amqp.host";
+    public static final String PROPERTY_AMQP_PORT = "adapter.amqp.port";
     public static final String PROPERTY_TENANT = "tenant";
 
     public static final String AUTH_HOST = System.getProperty(PROPERTY_AUTH_HOST, DEFAULT_HOST);
@@ -93,6 +94,8 @@ public final class IntegrationTestSupport {
     public static final int    HTTPS_PORT = Integer.getInteger(PROPERTY_HTTPS_PORT, DEFAULT_HTTPS_PORT);
     public static final String MQTT_HOST = System.getProperty(PROPERTY_MQTT_HOST, DEFAULT_HOST);
     public static final int    MQTT_PORT = Integer.getInteger(PROPERTY_MQTT_PORT, DEFAULT_MQTT_PORT);
+    public static final String AMQP_HOST = System.getProperty(PROPERTY_AMQP_HOST, DEFAULT_HOST);
+    public static final int    AMQP_PORT = Integer.getInteger(PROPERTY_AMQP_PORT, DEFAULT_AMQP_PORT);
 
     public static final String PATH_SEPARATOR = System.getProperty("hono.pathSeparator", "/");
     public static final int    MSG_COUNT = Integer.getInteger("msg.count", 1000);
@@ -117,7 +120,7 @@ public final class IntegrationTestSupport {
      */
     public HonoClient downstreamClient;
 
-    private final List<String> tenantsToDelete = new LinkedList<>();
+    private final Set<String> tenantsToDelete = new HashSet<>();
     private final Map<String, Set<String>> devicesToDelete = new HashMap<>();
     private final Vertx vertx;
 
