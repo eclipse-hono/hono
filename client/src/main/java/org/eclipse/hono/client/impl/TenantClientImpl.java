@@ -18,7 +18,7 @@ import java.net.HttpURLConnection;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Supplier;
 
 import javax.security.auth.x500.X500Principal;
 
@@ -219,33 +219,17 @@ public class TenantClientImpl extends AbstractRequestResponseClient<TenantResult
         final TriTuple<TenantAction, String, Object> key = TriTuple.of(TenantAction.get, tenantId, null);
         final Span span = newChildSpan(parent, "get Tenant by ID");
         span.setTag(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId);
-        final AtomicBoolean cacheHit = new AtomicBoolean(true);
-
-        return getResponseFromCache(key).recover(t -> {
-            cacheHit.set(false);
-            final Future<TenantResult<TenantObject>> tenantResult = Future.future();
-            final JsonObject payload = new JsonObject().put(TenantConstants.FIELD_PAYLOAD_TENANT_ID, tenantId);
-            createAndSendRequest(
-                    TenantConstants.TenantAction.get.toString(),
-                    customizeRequestApplicationProperties(),
-                    payload.toBuffer(),
-                    RegistrationConstants.CONTENT_TYPE_APPLICATION_JSON,
-                    tenantResult.completer(),
-                    key,
-                    span);
-            return tenantResult;
-        }).map(tenantResult -> {
-            TracingHelper.TAG_CACHE_HIT.set(span, cacheHit.get());
-            span.finish();
-            switch(tenantResult.getStatus()) {
-                case HttpURLConnection.HTTP_OK:
-                    return tenantResult.getPayload();
-                case HttpURLConnection.HTTP_NOT_FOUND:
-                    throw new ClientErrorException(tenantResult.getStatus(), "no such tenant");
-                default:
-                    throw StatusCodeMapper.from(tenantResult);
-            }
-        });
+        return get(
+                key,
+                () -> new JsonObject().put(TenantConstants.FIELD_PAYLOAD_TENANT_ID, tenantId).toBuffer(),
+                span).map(tenant -> {
+                    span.finish();
+                    return tenant;
+                }).recover(t -> {
+                    logError(span, t);
+                    span.finish();
+                    return Future.failedFuture(t);
+                });
     }
 
 
@@ -269,31 +253,46 @@ public class TenantClientImpl extends AbstractRequestResponseClient<TenantResult
         final TriTuple<TenantAction, X500Principal, Object> key = TriTuple.of(TenantAction.get, subjectDn, null);
         final Span span = newChildSpan(parent, "get Tenant by subject DN");
         TAG_SUBJECT_DN.set(span, subjectDnRfc2253);
-        final AtomicBoolean cacheHit = new AtomicBoolean(true);
+        return get(
+                key,
+                () -> new JsonObject().put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, subjectDnRfc2253).toBuffer(),
+                span).map(tenant -> {
+                    span.finish();
+                    return tenant;
+                }).recover(t -> {
+                    logError(span, t);
+                    span.finish();
+                    return Future.failedFuture(t);
+                });
+    }
 
-        return getResponseFromCache(key).recover(t -> {
-            cacheHit.set(false);
+    private <T> Future<TenantObject> get(
+            final TriTuple<TenantAction, T, Object> key,
+            final Supplier<Buffer> payloadSupplier,
+            final Span currentSpan) {
+
+        TracingHelper.TAG_CACHE_HIT.set(currentSpan, true);
+
+        return getResponseFromCache(key).recover(cacheMiss -> {
+            TracingHelper.TAG_CACHE_HIT.set(currentSpan, false);
             final Future<TenantResult<TenantObject>> tenantResult = Future.future();
-            final JsonObject payload = new JsonObject().put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, subjectDnRfc2253);
             createAndSendRequest(
                     TenantConstants.TenantAction.get.toString(),
                     customizeRequestApplicationProperties(),
-                    payload.toBuffer(),
+                    payloadSupplier.get(),
                     RegistrationConstants.CONTENT_TYPE_APPLICATION_JSON,
                     tenantResult.completer(),
                     key,
-                    span);
+                    currentSpan);
             return tenantResult;
         }).map(tenantResult -> {
-            TracingHelper.TAG_CACHE_HIT.set(span, cacheHit.get());
-            span.finish();
             switch(tenantResult.getStatus()) {
-                case HttpURLConnection.HTTP_OK:
-                    return tenantResult.getPayload();
-                case HttpURLConnection.HTTP_NOT_FOUND:
-                    throw new ClientErrorException(tenantResult.getStatus(), "no such tenant");
-                default:
-                    throw StatusCodeMapper.from(tenantResult);
+            case HttpURLConnection.HTTP_OK:
+                return tenantResult.getPayload();
+            case HttpURLConnection.HTTP_NOT_FOUND:
+                throw new ClientErrorException(tenantResult.getStatus(), "no such tenant");
+            default:
+                throw StatusCodeMapper.from(tenantResult);
             }
         });
     }

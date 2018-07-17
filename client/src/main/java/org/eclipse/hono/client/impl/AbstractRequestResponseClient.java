@@ -366,20 +366,21 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
         if (handler == null) {
             LOG.debug("discarding unexpected response [reply-to: {}, correlation ID: {}]",
                     replyToAddress, message.getCorrelationId());
-            ProtonHelper.released(delivery, true);
+            ProtonHelper.rejected(delivery, true);
         } else {
             final R response = getRequestResponseResult(message);
             final Span span = handler.three();
             if (response == null) {
                 LOG.debug("discarding malformed response lacking status code [reply-to: {}, correlation ID: {}]",
                         replyToAddress, message.getCorrelationId());
-                TracingHelper.logError(span, "response lacks status code");
+                TracingHelper.logError(span, "response from peer released (no status code)");
                 ProtonHelper.released(delivery, true);
             } else {
                 LOG.debug("received response [reply-to: {}, subject: {}, correlation ID: {}, status: {}]",
                         replyToAddress, message.getSubject(), message.getCorrelationId(), response.getStatus());
                 addToCache(handler.two(), response);
                 if (span != null) {
+                    span.log("response from peer accepted");
                     Tags.HTTP_STATUS.set(span, response.getStatus());
                 }
                 handler.one().handle(Future.succeededFuture(response));
@@ -674,7 +675,6 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
         Tags.MESSAGE_BUS_DESTINATION.set(currentSpan, targetAddress);
         Tags.SPAN_KIND.set(currentSpan, Tags.SPAN_KIND_CLIENT);
         Tags.HTTP_METHOD.set(currentSpan, request.getSubject());
-        TracingHelper.TAG_QOS.set(currentSpan, ProtonQoS.AT_LEAST_ONCE.toString());
         if (tenantId != null) {
             currentSpan.setTag(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId);
         }
@@ -684,13 +684,15 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
                 LOG.debug("cannot send request to peer, no credit left for link [target: {}]", targetAddress);
                 resultHandler.handle(Future.failedFuture(new ServerErrorException(
                         HttpURLConnection.HTTP_UNAVAILABLE, "no credit available for sending request")));
-                TracingHelper.logError(currentSpan, "no credit left for request link");
             } else {
+                final Map<String, Object> details = new HashMap<>(3);
                 final Object correlationId = Optional.ofNullable(request.getCorrelationId()).orElse(request.getMessageId());
                 if (correlationId instanceof String) {
-                    TracingHelper.TAG_CORRELATION_ID.set(currentSpan, (String) correlationId);
+                    details.put(TracingHelper.TAG_CORRELATION_ID.getKey(), correlationId);
                 }
-                TracingHelper.TAG_CREDIT.set(currentSpan, sender.getCredit());
+                details.put(TracingHelper.TAG_CREDIT.getKey(), sender.getCredit());
+                details.put(TracingHelper.TAG_QOS.getKey(), sender.getQoS().toString());
+                currentSpan.log(details);
                 final TriTuple<Handler<AsyncResult<R>>, Object, Span> handler = TriTuple.of(resultHandler, cacheKey, currentSpan);
                 tracer.inject(currentSpan.context(), Format.Builtin.TEXT_MAP, new MessageAnnotationsInjectAdapter(request));
                 replyMap.put(correlationId, handler);
@@ -698,7 +700,6 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
                 sender.send(request, deliveryUpdated -> {
                     final Future<R> failedResult = Future.future();
                     final DeliveryState remoteState = deliveryUpdated.getRemoteState();
-                    TracingHelper.TAG_REMOTE_STATE.set(currentSpan, remoteState.getClass().getSimpleName());
                     if (Rejected.class.isInstance(remoteState)) {
                         final Rejected rejected = (Rejected) remoteState;
                         if (rejected.getError() != null) {
@@ -715,6 +716,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
                     } else if (Accepted.class.isInstance(remoteState)) {
                         LOG.trace("service has accepted request [target address: {}, subject: {}, correlation ID: {}]",
                                 targetAddress, request.getSubject(), correlationId);
+                        currentSpan.log("request accepted by peer");
                     } else {
                         LOG.debug("service did not accept request [target address: {}, subject: {}, correlation ID: {}]: {}",
                                 targetAddress, request.getSubject(), correlationId, remoteState);
