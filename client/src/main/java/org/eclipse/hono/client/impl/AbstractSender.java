@@ -171,7 +171,8 @@ abstract public class AbstractSender extends AbstractHonoClient implements Messa
                 final Span currentSpan = startSpan(rawMessage);
                 sendMessage(rawMessage, currentSpan).setHandler(result.completer());
             } else if (this.drainHandler != null) {
-                result.fail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE));
+                result.fail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE,
+                        "cannot send message while waiting for replenishment with credit"));
             } else if (sender.isOpen()) {
                 final Span currentSpan = startSpan(rawMessage);
                 sendMessage(rawMessage, currentSpan).setHandler(result.completer());
@@ -181,7 +182,8 @@ abstract public class AbstractSender extends AbstractHonoClient implements Messa
                     capacityAvailableHandler.handle(null);
                 }
             } else {
-                result.fail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE));
+                result.fail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE,
+                        "send link to peer is closed"));
             }
         });
     }
