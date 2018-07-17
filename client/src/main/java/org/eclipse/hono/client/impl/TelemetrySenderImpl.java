@@ -195,15 +195,18 @@ public final class TelemetrySenderImpl extends AbstractSender {
 
         final String messageId = String.format("%s-%d", getClass().getSimpleName(), MESSAGE_COUNTER.getAndIncrement());
         message.setMessageId(messageId);
-        TracingHelper.TAG_MESSAGE_ID.set(currentSpan, messageId);
-        TracingHelper.TAG_CREDIT.set(currentSpan, sender.getCredit());
-        TracingHelper.TAG_QOS.set(currentSpan, ProtonQoS.AT_LEAST_ONCE.toString());
+        final Map<String, Object> details = new HashMap<>(3);
+        details.put(TracingHelper.TAG_MESSAGE_ID.getKey(), messageId);
+        details.put(TracingHelper.TAG_CREDIT.getKey(), sender.getCredit());
+        details.put(TracingHelper.TAG_QOS.getKey(), sender.getQoS().toString());
+        currentSpan.log(details);
+
         final ProtonDelivery result = sender.send(message, deliveryUpdated -> {
             final DeliveryState remoteState = deliveryUpdated.getRemoteState();
-            TracingHelper.TAG_REMOTE_STATE.set(currentSpan, remoteState.getClass().getSimpleName());
             if (deliveryUpdated.remotelySettled()) {
                 if (Accepted.class.isInstance(remoteState)) {
                     LOG.trace("message [message ID: {}] accepted by peer", messageId);
+                    currentSpan.log("message accepted by peer");
                     Tags.HTTP_STATUS.set(currentSpan, HttpURLConnection.HTTP_ACCEPTED);
                 } else {
                     final Map<String, Object> events = new HashMap<>();

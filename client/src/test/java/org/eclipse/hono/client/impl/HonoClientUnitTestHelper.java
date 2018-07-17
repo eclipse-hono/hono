@@ -16,6 +16,7 @@ package org.eclipse.hono.client.impl;
 import io.vertx.core.Context;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
+import io.vertx.proton.ProtonQoS;
 import io.vertx.proton.ProtonReceiver;
 import io.vertx.proton.ProtonSender;
 
@@ -61,6 +62,7 @@ public final class HonoClientUnitTestHelper {
 
         final ProtonSender sender = mock(ProtonSender.class);
         when(sender.isOpen()).thenReturn(Boolean.TRUE);
+        when(sender.getQoS()).thenReturn(ProtonQoS.AT_LEAST_ONCE);
 
         return sender;
     }

@@ -18,6 +18,7 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -54,7 +55,6 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.proton.ProtonDelivery;
 import io.vertx.proton.ProtonHelper;
-import io.vertx.proton.ProtonQoS;
 import io.vertx.proton.ProtonSender;
 
 /**
@@ -408,17 +408,21 @@ abstract public class AbstractSender extends AbstractHonoClient implements Messa
 
         Objects.requireNonNull(message);
 
+
         final Future<ProtonDelivery> result = Future.future();
         final String messageId = String.format("%s-%d", getClass().getSimpleName(), MESSAGE_COUNTER.getAndIncrement());
         message.setMessageId(messageId);
-        TracingHelper.TAG_MESSAGE_ID.set(currentSpan, messageId);
-        TracingHelper.TAG_CREDIT.set(currentSpan, sender.getCredit());
-        TracingHelper.TAG_QOS.set(currentSpan, ProtonQoS.AT_LEAST_ONCE.toString());
+        final Map<String, Object> details = new HashMap<>(2);
+        details.put(TracingHelper.TAG_MESSAGE_ID.getKey(), messageId);
+        details.put(TracingHelper.TAG_CREDIT.getKey(), sender.getCredit());
+        details.put(TracingHelper.TAG_QOS.getKey(), sender.getQoS().toString());
+        currentSpan.log(details);
+
         sender.send(message, deliveryUpdated -> {
             final DeliveryState remoteState = deliveryUpdated.getRemoteState();
-            TracingHelper.TAG_REMOTE_STATE.set(currentSpan, remoteState.getClass().getSimpleName());
             if (deliveryUpdated.remotelySettled()) {
                 if (Accepted.class.isInstance(remoteState)) {
+                    currentSpan.log("message accepted by peer");
                     result.complete(deliveryUpdated);
                 } else {
                     ServiceInvocationException e = null;
