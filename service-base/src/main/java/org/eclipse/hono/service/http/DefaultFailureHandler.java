@@ -39,6 +39,7 @@ import io.vertx.ext.web.handler.impl.HttpStatusException;
  */
 public class DefaultFailureHandler implements Handler<RoutingContext> {
 
+    private static final String MSG_UNKNOWN_ERROR = "<unknown error>";
     private static final Logger LOG = LoggerFactory.getLogger(DefaultFailureHandler.class);
 
     /**
@@ -57,15 +58,15 @@ public class DefaultFailureHandler implements Handler<RoutingContext> {
             } else if (ctx.failure() != null) {
                 if (ctx.failure() instanceof ServiceInvocationException) {
                     final ServiceInvocationException e = (ServiceInvocationException) ctx.failure();
-                    sendError(ctx.response(), e.getErrorCode(), e.getMessage());
+                    sendError(ctx.response(), e.getErrorCode(), extractMessage(e));
                 } else if (ctx.failure() instanceof HttpStatusException) {
                     final HttpStatusException e = (HttpStatusException) ctx.failure();
-                    sendError(ctx.response(), e.getStatusCode(), e.getMessage());
+                    sendError(ctx.response(), e.getStatusCode(), extractMessage(e));
                 } else {
-                    sendError(ctx.response(), HttpURLConnection.HTTP_INTERNAL_ERROR, ctx.failure().getMessage());
+                    sendError(ctx.response(), HttpURLConnection.HTTP_INTERNAL_ERROR, extractMessage(ctx.failure()));
                 }
             } else if (ctx.statusCode() != -1) {
-                sendError(ctx.response(), ctx.statusCode(), ctx.response().getStatusMessage());
+                sendError(ctx.response(), ctx.statusCode(), extractMessage(ctx.response()));
             } else {
                 sendError(ctx.response(), HttpURLConnection.HTTP_INTERNAL_ERROR, "Internal Server Error");
             }
@@ -73,6 +74,32 @@ public class DefaultFailureHandler implements Handler<RoutingContext> {
             LOG.debug("skipping processing of non-failed route");
             ctx.next();
         }
+    }
+
+    private String extractMessage(final HttpServerResponse response) {
+        if ( response == null ) {
+            return MSG_UNKNOWN_ERROR;
+        }
+
+        final String message = response.getStatusMessage();
+        if ( message == null ) {
+            return MSG_UNKNOWN_ERROR;
+        }
+
+        return message;
+    }
+
+    private String extractMessage(final Throwable cause) {
+        if (cause == null) {
+            return MSG_UNKNOWN_ERROR;
+        }
+
+        final String message = cause.getMessage();
+        if (message == null) {
+            return cause.getClass().getName();
+        }
+
+        return message;
     }
 
     private void sendError(final HttpServerResponse response, final int errorCode, final String errorMessage) {
