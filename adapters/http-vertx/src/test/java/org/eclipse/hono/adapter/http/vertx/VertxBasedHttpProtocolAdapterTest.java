@@ -37,6 +37,7 @@ import org.eclipse.hono.client.TenantClient;
 import org.eclipse.hono.service.auth.device.Device;
 import org.eclipse.hono.service.auth.device.HonoClientBasedAuthProvider;
 import org.eclipse.hono.service.command.CommandConnection;
+import org.eclipse.hono.service.command.CommandResponse;
 import org.eclipse.hono.service.command.CommandResponseSender;
 import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.util.CommandConstants;
@@ -572,8 +573,8 @@ public class VertxBasedHttpProtocolAdapterTest {
     }
 
     /**
-     * Verifies that a POST request to the command reply URI for that the delivery to the associated link in the application
-     * fails results in a {@link HttpURLConnection#HTTP_UNAVAILABLE}.
+     * Verifies that a POST request to the command reply URI for which the response message cannot be
+     * transferred to the application fails with a 503.
      *
      * @param ctx The vert.x test context.
      */
@@ -585,7 +586,8 @@ public class VertxBasedHttpProtocolAdapterTest {
 
         mockSuccessfulAuthentication("DEFAULT_TENANT", "device_1");
 
-        when(commandResponseSender.sendCommandResponse(any())).thenReturn(Future.failedFuture("error"));
+        when(commandResponseSender.sendCommandResponse(any(CommandResponse.class))).thenReturn(
+                Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST)));
 
         httpClient.post(String.format("/control/res/%s?hono-cmd-status=200", syntacticallyCorrectCmdRequestId))
                 .putHeader(HttpHeaders.CONTENT_TYPE, HttpUtils.CONTENT_TYPE_JSON)

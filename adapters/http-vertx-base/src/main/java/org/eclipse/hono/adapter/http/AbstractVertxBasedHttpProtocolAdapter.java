@@ -25,6 +25,7 @@ import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.MessageSender;
+import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
 import org.eclipse.hono.service.auth.device.Device;
 import org.eclipse.hono.service.command.Command;
@@ -831,45 +832,40 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
         final Buffer payload = ctx.getBody();
         final String contentType = HttpUtils.getContentType(ctx);
 
-        LOG.debug("uploadCommandResponseMessage: [tenantId: {}, deviceId: {}, commandRequestId: {}, commandRequestStatus: {}]",
+        LOG.debug("processing response to command [tenantId: {}, deviceId: {}, cmd-req-id: {}, status code: {}]",
                 tenant, deviceId, commandRequestId, commandRequestStatus);
 
-        Optional.ofNullable(CommandResponse.from(commandRequestId, deviceId, payload, contentType, commandRequestStatus)).map(commandResponse -> {
-            // send answer to caller via sender link
-            final Future<CommandResponseSender> responseSender = createCommandResponseSender(tenant, commandResponse.getReplyToId());
+        final CommandResponse commandResponse = CommandResponse.from(commandRequestId, deviceId, payload, contentType, commandRequestStatus);
 
-            responseSender.compose(commandResponseSender ->
-                    commandResponseSender.sendCommandResponse(commandResponse)
-            ).map(delivery -> {
-                if (delivery.remotelySettled()) {
-                    LOG.debug("Command response [command-request-id: {}] acknowledged to sender.", commandRequestId);
-                    ctx.response().setStatusCode(HttpURLConnection.HTTP_ACCEPTED);
-                } else {
-                    LOG.debug("Command response [command-request-id: {}] failed - not remotely settled by sender.", commandRequestId);
-                    ctx.response().setStatusCode(HttpURLConnection.HTTP_UNAVAILABLE);
-                }
-                responseSender.result().close(v -> {
-                });
+        if (commandResponse == null) {
+            HttpUtils.badRequest(
+                    ctx,
+                    String.format("command-request-id [%s] or status code [%s] is missing/invalid",
+                            commandRequestId, commandRequestStatus));
+        } else {
+
+            // send answer to caller via sender link
+            final Future<CommandResponseSender> senderTracker = createCommandResponseSender(tenant, commandResponse.getReplyToId());
+
+            senderTracker.compose(commandResponseSender -> {
+                return commandResponseSender.sendCommandResponse(commandResponse);
+            }).map(delivery -> {
+                LOG.trace("command response [command-request-id: {}] accepted by application", commandRequestId);
+                ctx.response().setStatusCode(HttpURLConnection.HTTP_ACCEPTED);
                 ctx.response().end();
                 return delivery;
             }).otherwise(t -> {
-                LOG.debug("Command response [command-request-id: {}] failed", commandRequestId, t);
-                Optional.ofNullable(responseSender.result()).map(r -> {
-                    r.close(v -> {
-                    });
-                    return r;
-                });
-                ctx.response().setStatusCode(HttpURLConnection.HTTP_UNAVAILABLE);
-                ctx.response().end();
+                LOG.debug("could not send command response [command-request-id: {}] to application", commandRequestId, t);
+                ctx.fail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, t));
                 return null;
+            }).setHandler(c -> {
+                final CommandResponseSender sender = senderTracker.result();
+                if (sender != null) {
+                    sender.close(v -> {});
+                }
             });
 
-            return commandResponse;
-        }).orElseGet(() -> {
-            HttpUtils.badRequest(ctx, String.format("Cannot process command response message - command-request-id %s or status %s invalid",
-                    commandRequestId, commandRequestStatus));
-            return null;
-        });
+        }
     }
 
     private static Integer getQoSLevel(final String qosValue) {
