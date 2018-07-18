@@ -7,7 +7,7 @@ Since Hono 0.6 *Business applications* can send commands to devices following th
  
 <!--more-->
 
-This concept refers to the first implementation of Command and Control in Hono 0.6. With new versions this will be extended and documentation parts will be also transferred to the User Guide sections (e.g. HTTP Adapter and MQTT Adapter).
+This concept refers to the first implementation of Command and Control. With new versions this will be extended and documentation parts will be also transferred to the User Guide sections (e.g. HTTP Adapter and MQTT Adapter).
 
 {{% note %}}
 This feature is available now as a first fully working version but is considered to possibly have some unknown issues that may not make it
@@ -37,14 +37,6 @@ The HTTP Adapter gets the command and writes it in the response of the devices `
 
  The `hono-cmd` is the command that should be executed by the device. Typically this command needs to be known by the device and the payload may contain additional details of the command. The `hono-cmd-req-id` is needed for the command response to correlate it. It has to be sent back from the device to the adapter in a following operation (5). 
  
-{{% note %}}
-In Hono 0.6 an application that sends a command does not get a response back from the device as shown in (5), (6) and (7). Instead the adapter sends a successful response without payload after sending the command to the device.
-
-From Hono 0.7 on, the Hono command client (that is provided for applications that send a command) waits for a response from the
-device until the command is to be considered successful. If no such command response was received in the timeout (that can be
-set at the command client), an exception signalling the expiry is thrown.  
-{{% /note %}}
-
 The device needs to respond to the command (5), to inform the business application about the success. For this purpose 
 specific URIs are definded in [HTTP Adapter]({{< relref "user-guide/http-adapter.md#sending-a-response-to-a-previously-received-command" >}}).
 
@@ -59,21 +51,16 @@ replied with `400 Bad request`.
 
 ## Command & Control over MQTT Adapter
 
-IMPORTANT: **Not implemented in Hono 0.6 and just a DRAFT**
+IMPORTANT: **Not implemented and just a DRAFT**
 
-When the (authenticated) device is connected to the MQTT Adapter it receives commands on the topic:  
+When the device is connected to the MQTT Adapter it receives commands on the topic:
 
-* `control/req/${command}/${hono-cmd-req-id}`
+* `control/[tenant]/[device-id]/req/<req-id>/<command>`
+
+It depends on the authentication of the device if it is needed to give `tenant` and `device-id` at the subscription or just a `+`. 
 
 The response of the command will be send by the device to 
 
-* `control/res/${hono-cmd-req-id}/${status}`
-
-
-If the device is not authenticated:
-
-* `control/req/${tenant-id}/${device-id}/${command}/${hono-cmd-req-id}` (request topic)
-* `control/res/${tenant-id}/${device-id}/${hono-cmd-req-id}/${status}` (response topic) 
-
+* `control/[tenant]/[device-id]/res/<req-id>/<status>`
 
 ![Command & Control over MQTT Adapter](../command_control_concept_mqtt.png) 
