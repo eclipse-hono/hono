@@ -40,4 +40,25 @@ public interface MessageConsumer {
      * @throws IllegalStateException if prefetch is non-zero, or an existing drain operation is not yet complete
      */
     void flow(int credits) throws IllegalStateException;
+
+    /**
+     * Retrieves the current amount of credit.
+     * <p>
+     * The value returned will still include the credits that will be used by any queued
+     * incoming messages, use {@link #getQueued()} to assess the number of credits that will be used by queued messages.
+     * <p>
+     * Note that the value returned is valid during execution of the current vert.x handler only.
+     *
+     * @return The number of messages.
+     */
+    int getCredit();
+
+    /**
+     * Retrieves the current number of queued messages.
+     * <p>
+     * Note that the value returned is valid during execution of the current vert.x handler only.
+     *
+     * @return The number of messages.
+     */
+    int getQueued();
 }

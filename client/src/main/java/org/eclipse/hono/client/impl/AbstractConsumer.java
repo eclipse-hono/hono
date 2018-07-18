@@ -37,6 +37,16 @@ public abstract class AbstractConsumer extends AbstractHonoClient implements Mes
     }
 
     @Override
+    public int getCredit() {
+        return receiver.getCredit();
+    }
+
+    @Override
+    public int getQueued() {
+        return receiver.getQueued();
+    }
+
+    @Override
     public void flow(final int credits) throws IllegalStateException {
         receiver.flow(credits);
     }
