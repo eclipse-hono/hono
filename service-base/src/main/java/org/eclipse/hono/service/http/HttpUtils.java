@@ -43,7 +43,7 @@ public final class HttpUtils {
     /**
      * The <em>application/json; charset=utf-8</em> content type.
      */
-    public static final String CONTENT_TYPE_JSON_UFT8 = "application/json; charset=utf-8";
+    public static final String CONTENT_TYPE_JSON_UTF8 = "application/json; charset=utf-8";
     /**
      * The <em>application/json; charset=utf-8</em> content type.
      */
@@ -51,7 +51,7 @@ public final class HttpUtils {
     /**
      * The <em>text/plain; charset=utf-8</em> content type.
      */
-    public static final String CONTENT_TYPE_TEXT_UFT8 = "text/plain; charset=utf-8";
+    public static final String CONTENT_TYPE_TEXT_UTF8 = "text/plain; charset=utf-8";
 
     private HttpUtils() {
         // prevent instantiation
@@ -267,8 +267,9 @@ public final class HttpUtils {
     /**
      * Writes a JSON object to an HTTP response body.
      * <p>
-     * This method also sets the <em>content-type</em> and <em>content-length</em>
-     * headers of the HTTP response accordingly but does not end the response.
+     * This method also sets the <em>content-length</em> header of the HTTP response
+     * and sets the <em>content-type</em> header to {@link #CONTENT_TYPE_JSON_UTF8}
+     * but does not end the response.
      * 
      * @param response The HTTP response.
      * @param body The JSON object to serialize to the response body (may be {@code null}).
@@ -277,27 +278,47 @@ public final class HttpUtils {
     public static void setResponseBody(final HttpServerResponse response, final JsonObject body) {
         Objects.requireNonNull(response);
         if (body != null) {
-            final Buffer buffer = body.toBuffer();
-            response.putHeader(HttpHeaders.CONTENT_TYPE, CONTENT_TYPE_JSON_UFT8);
-            setResponseBody(response, buffer);
+            setResponseBody(response, body.toBuffer(), CONTENT_TYPE_JSON_UTF8);
         }
     }
 
     /**
      * Writes a Buffer to an HTTP response body.
      * <p>
-     * This method also sets the <em>content-type</em> and <em>content-length</em>
-     * headers of the HTTP response accordingly but does not end the response.
+     * This method also sets the <em>content-length</em> header of the HTTP response
+     * and sets the <em>content-type</em> header to {@link #CONTENT_TYPE_OCTET_STREAM}
+     * but does not end the response.
      *
      * @param response The HTTP response.
      * @param buffer The Buffer to set as the response body (may be {@code null}).
      * @throws NullPointerException if response is {@code null}.
      */
     public static void setResponseBody(final HttpServerResponse response, final Buffer buffer) {
+        setResponseBody(response, buffer, null);
+    }
+
+    /**
+     * Writes a Buffer to an HTTP response body.
+     * <p>
+     * This method also sets the <em>content-length</em> and <em>content-type</em>
+     * headers of the HTTP response accordingly but does not end the response.
+     *
+     * @param response The HTTP response.
+     * @param buffer The Buffer to set as the response body (may be {@code null}).
+     * @param contentType The type of the content. If {@code null}, a default value of
+     *                    {@link #CONTENT_TYPE_OCTET_STREAM} will be used.
+     * @throws NullPointerException if response is {@code null}.
+     */
+    public static void setResponseBody(final HttpServerResponse response, final Buffer buffer, final String contentType) {
         Objects.requireNonNull(response);
         if (buffer != null) {
-            response.putHeader(HttpHeaders.CONTENT_LENGTH, String.valueOf(buffer.length()))
-                    .write(buffer);
+            if (contentType == null) {
+                response.putHeader(HttpHeaders.CONTENT_TYPE, CONTENT_TYPE_OCTET_STREAM);
+            } else {
+                response.putHeader(HttpHeaders.CONTENT_TYPE, contentType);
+            }
+            response.putHeader(HttpHeaders.CONTENT_LENGTH, String.valueOf(buffer.length()));
+            response.write(buffer);
         }
     }
 

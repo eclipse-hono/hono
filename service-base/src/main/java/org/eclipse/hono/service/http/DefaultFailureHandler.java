@@ -20,7 +20,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.vertx.core.Handler;
-import io.vertx.core.http.HttpHeaders;
+import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.impl.HttpStatusException;
@@ -79,9 +79,11 @@ public class DefaultFailureHandler implements Handler<RoutingContext> {
         if (response.ended()) {
             throw new IllegalStateException("response already ended");
         } else {
-            response.putHeader(HttpHeaders.CONTENT_TYPE, HttpUtils.CONTENT_TYPE_TEXT_UFT8);
             response.setStatusCode(errorCode);
-            response.end(errorMessage);
+            if (errorMessage != null) {
+                HttpUtils.setResponseBody(response, Buffer.buffer(errorMessage), HttpUtils.CONTENT_TYPE_TEXT_UTF8);
+            }
+            response.end();
         }
     }
 }
