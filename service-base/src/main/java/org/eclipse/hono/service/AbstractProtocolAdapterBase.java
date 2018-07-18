@@ -437,7 +437,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * @param closeHandler Called when the peer detaches the link.
      * @return Result of the receiver creation.
      */
-    public final Future<MessageConsumer> createCommandConsumer(
+    protected final Future<MessageConsumer> createCommandConsumer(
             final String tenantId,
             final String deviceId,
             final BiConsumer<ProtonDelivery, Message> messageConsumer,
@@ -482,13 +482,13 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     }
 
     /**
-     * Create a command response sender for a specific device.
+     * Creates a command response sender for a specific device.
      *
      * @param tenantId The tenant of the command receiver.
      * @param replyId The replyId to from the command to use for the response.
      * @return Result of the response sender creation.
      */
-    public final Future<CommandResponseSender> createCommandResponseSender(
+    protected final Future<CommandResponseSender> createCommandResponseSender(
             final String tenantId,
             final String replyId) {
         return commandConnection.getOrCreateCommandResponseSender(tenantId, replyId);
