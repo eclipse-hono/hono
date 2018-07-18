@@ -200,14 +200,72 @@ public class HonoSender extends AbstractClient {
     }
 
     /**
+     * Publishes multiple messages to Hono.
+     *
+     * @param sampleResult The result object representing the combined outcome of the samples.
+     * @param messageCount The number of messages to send
+     * @param deviceId The identifier if the device to send a message for.
+     * @param waitOnCredits A flag indicating whether the sender should wait for more
+     *                      credits being available when there is no credit left after having sent the message.
+     * @param waitForDeliveryResult A flag indicating whether to wait for the result of the send operation.
+     */
+    public void send(final SampleResult sampleResult, final int messageCount, final String deviceId, final boolean waitOnCredits,
+                     final boolean waitForDeliveryResult) {
+        final long sampleStart = System.currentTimeMillis();
+        long addedSendDurations = 0;
+        boolean isSuccessful = true;
+        String firstResponseErrorMessage = "";
+        String firstResponseErrorCode = "";
+        long sentBytes = 0;
+        int errorCount = 0;
+        for (int i = 0; i < messageCount; i++) {
+            final SampleResult subResult = new SampleResult();
+            subResult.setDataType(SampleResult.TEXT);
+            subResult.setResponseOK();
+            subResult.setResponseCodeOK();
+            subResult.setSampleLabel(sampleResult.getSampleLabel());
+            // send the message
+            send(subResult, deviceId, waitOnCredits, waitForDeliveryResult);
+            // can't call sampleResult.addSubResult(subResult) here - this would prevent a later invocation of sampleResult.setStampAndTime()
+            sampleResult.addRawSubResult(subResult);
+
+            if (!subResult.isSuccessful()) {
+                isSuccessful = false;
+                errorCount++;
+                if (firstResponseErrorMessage.isEmpty()) {
+                    firstResponseErrorMessage = subResult.getResponseMessage();
+                    firstResponseErrorCode = subResult.getResponseCode();
+                }
+            }
+            sentBytes += subResult.getSentBytes();
+            addedSendDurations += subResult.getTime();
+        }
+        sampleResult.setSuccessful(isSuccessful);
+        final String responseMessage = MessageFormat.format("BatchResult {0}/{1}/{2}", sampler.getEndpoint(), sampler.getTenant(), deviceId);
+        if (isSuccessful) {
+            sampleResult.setResponseMessage(responseMessage);
+        } else {
+            sampleResult.setResponseMessage(responseMessage + ": " + errorCount + " errors - first: " + firstResponseErrorMessage);
+            sampleResult.setResponseCode(firstResponseErrorCode);
+        }
+        sampleResult.setSentBytes(sentBytes);
+        sampleResult.setSampleCount(messageCount);
+        sampleResult.setErrorCount(errorCount); // NOTE: This method does nothing in JMeter 3.3/4.0
+        final long averageElapsedTimePerMessage = addedSendDurations / messageCount;
+        sampleResult.setStampAndTime(sampleStart, averageElapsedTimePerMessage);
+    }
+
+    /**
      * Publishes a message to Hono.
      * 
      * @param sampleResult The result object representing the outcome of the sample.
      * @param deviceId The identifier if the device to send a message for.
      * @param waitOnCredits A flag indicating whether the sender should wait for more
-     *                      credits being available after having sent the message.
+     *                      credits being available when there is no credit left after having sent the message.
+     * @param waitForDeliveryResult A flag indicating whether to wait for the result of the send operation.
      */
-    public void send(final SampleResult sampleResult, final String deviceId, final boolean waitOnCredits) {
+    public void send(final SampleResult sampleResult, final String deviceId, final boolean waitOnCredits,
+            final boolean waitForDeliveryResult) {
 
         final CompletableFuture<SampleResult> tracker = new CompletableFuture<>();
         final String endpoint = sampler.getEndpoint();
@@ -225,27 +283,44 @@ public class HonoSender extends AbstractClient {
                 properties.put(TIME_STAMP_VARIABLE, System.currentTimeMillis());
             }
 
-            LOGGER.trace("sending messages for device [{}]", deviceId);
+            LOGGER.trace("sending message for device [{}]; credit: {}", deviceId, senderFuture.result().getCredit());
 
+            final Future<ProtonDelivery> sendResultFuture;
             if (waitOnCredits) {
 
-                senderFuture.result().send(
+                if (LOGGER.isDebugEnabled() && senderFuture.result().getCredit() == 1) {
+                    LOGGER.debug("only 1 credit left, will wait for new credit after having sent the message");
+                }
+                sendResultFuture = senderFuture.result().send(
                         deviceId,
                         properties,
                         sampler.getData(),
                         sampler.getContentType(),
                         token,
-                        replenished -> creditTracker.complete()).setHandler(deliveryTracker.completer());
-
+                        replenished -> creditTracker.complete());
             } else {
 
                 creditTracker.complete();
-                senderFuture.result().send(
+                sendResultFuture = senderFuture.result().send(
                         deviceId,
                         properties,
                         sampler.getData(),
                         sampler.getContentType(),
-                        token).setHandler(deliveryTracker.completer());
+                        token);
+            }
+            if (waitForDeliveryResult) {
+                sendResultFuture.setHandler(deliveryTracker.completer());
+            } else {
+                sendResultFuture.setHandler(ar -> {
+                    if (ar.succeeded()) {
+                        LOGGER.debug("{}: got delivery result for message sent for device [{}]: remoteState={}, localState={}",
+                                sampler.getThreadName(), deviceId, ar.result().getRemoteState(),
+                                ar.result().getLocalState());
+                    } else {
+                        LOGGER.warn("{}: error getting delivery result for message sent for device [{}]", sampler.getThreadName(), deviceId, ar.cause());
+                    }
+                });
+                deliveryTracker.complete();
             }
 
             CompositeFuture.all(deliveryTracker, creditTracker).setHandler(send -> {

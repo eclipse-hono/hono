@@ -50,9 +50,11 @@ public class HonoSenderSampler extends HonoSampler implements ThreadListener {
     private static final String CONTENT_TYPE = "contentType";
     private static final String DATA = "data";
     private static final String WAIT_FOR_CREDITS = "waitForCredits";
+    private static final String WAIT_FOR_DELIVERY_RESULT = "waitForDeliveryResult";
     private static final String WAIT_FOR_RECEIVERS = "waitForReceivers";
     private static final String WAIT_FOR_RECEIVERS_TIMEOUT = "waitForReceiversTimeout";
     private static final String SEND_TIMEOUT = "sendTimeout";
+    private static final String MESSAGE_COUNT_PER_SAMPLER_RUN = "messageCountPerSamplerRun";
     private static final String PROPERTY_REGISTRATION_ASSERTION = "PROPERTY_REGISTRATION_ASSERTION";
 
     private HonoSender honoSender;
@@ -295,6 +297,64 @@ public class HonoSenderSampler extends HonoSampler implements ThreadListener {
         setProperty(WAIT_FOR_CREDITS, isWaitForCredits);
     }
 
+    /**
+     * Sets whether to wait for the result of sending the message.
+     * <p>
+     * If this option has not been set, {@code true} is returned.
+     * 
+     * @return true in order to wait for the delivery result.
+     */
+    public boolean isWaitForDeliveryResult() {
+        return getPropertyAsBoolean(WAIT_FOR_DELIVERY_RESULT, true);
+    }
+
+    /**
+     * Sets whether to wait for the result of sending the message. The result contains the updated delivery state.
+     *
+     * @param isWaitForDeliveryResult {@code true} in order to wait for the result.
+     */
+    public void setWaitForDeliveryResult(final boolean isWaitForDeliveryResult) {
+        setProperty(WAIT_FOR_DELIVERY_RESULT, isWaitForDeliveryResult);
+    }
+
+    /**
+     * Gets the number of messages to send per sample run.
+     * 
+     * @return number of messages.
+     */
+    public String getMessageCountPerSamplerRun() {
+        return getPropertyAsString(MESSAGE_COUNT_PER_SAMPLER_RUN, "1");
+    }
+
+    /**
+     * Gets the number of messages to send per sample run as an integer.
+     * <p>
+     * If the property value is smaller than 1 or not a number, 1 is returned. 
+     *
+     * @return number of messages as integer.
+     */
+    public int getMessageCountPerSamplerRunAsInt() {
+        final String value = getPropertyAsString(MESSAGE_COUNT_PER_SAMPLER_RUN);
+        if (value == null || value.isEmpty()) {
+            return 1;
+        }
+        try {
+            final int messageCount = Integer.parseInt(value);
+            return messageCount > 0 ? messageCount : 1;
+        } catch (final NumberFormatException e) {
+            return 1;
+        }
+    }
+
+    /**
+     * Sets the number of messages to send per sample run.
+     *
+     * @param messageCountPerSamplerRun number of messages.
+     */
+    public void setMessageCountPerSamplerRun(final String messageCountPerSamplerRun) {
+        setProperty(MESSAGE_COUNT_PER_SAMPLER_RUN, messageCountPerSamplerRun);
+    }    
+
     public String getContentType() {
         return getPropertyAsString(CONTENT_TYPE);
     }
@@ -342,7 +402,12 @@ public class HonoSenderSampler extends HonoSampler implements ThreadListener {
         res.setResponseOK();
         res.setResponseCodeOK();
         res.setSampleLabel(getName());
-        honoSender.send(res, getDeviceId(), isWaitForCredits());
+        if (getMessageCountPerSamplerRunAsInt() == 1) {
+            honoSender.send(res, getDeviceId(), isWaitForCredits(), isWaitForDeliveryResult());
+        } else {
+            honoSender.send(res, getMessageCountPerSamplerRunAsInt(), getDeviceId(), isWaitForCredits(),
+                    isWaitForDeliveryResult());
+        }
         return res;
     }
 
