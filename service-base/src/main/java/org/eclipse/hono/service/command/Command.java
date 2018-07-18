@@ -113,17 +113,19 @@ public final class Command {
             } else if (!tenantId.equals(replyTo.getTenantId())) {
                 // command response is targeted at wrong tenant
                 return null;
-            } else if (replyTo.getResourcePath().length < 3) {
-                // reply-to-id is missing
-                return null;
             } else {
-                return new Command(
-                        Objects.requireNonNull(delivery),
-                        Objects.requireNonNull(message),
-                        Objects.requireNonNull(tenantId),
-                        Objects.requireNonNull(deviceId),
-                        correlationId,
-                        replyTo.getPathWithoutBase());
+                final String replyToId = replyTo.getPathWithoutBase();
+                if (replyToId == null) {
+                    return null;
+                } else {
+                    return new Command(
+                            Objects.requireNonNull(delivery),
+                            Objects.requireNonNull(message),
+                            Objects.requireNonNull(tenantId),
+                            Objects.requireNonNull(deviceId),
+                            correlationId,
+                            replyToId);
+                }
             }
         } catch (IllegalArgumentException e) {
             // reply-to could not be parsed

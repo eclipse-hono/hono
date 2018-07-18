@@ -13,7 +13,6 @@
 
 package org.eclipse.hono.service.command;
 
-import java.net.HttpURLConnection;
 import java.util.function.Predicate;
 
 import io.vertx.core.buffer.Buffer;
@@ -24,6 +23,9 @@ import io.vertx.core.buffer.Buffer;
  *
  */
 public final class CommandResponse {
+
+    private static final Predicate<Integer> INVALID_STATUS_CODE = code ->
+        code == null || code < 200 || (code >= 300 && code < 400) || code >= 600;
 
     private final Buffer payload;
     private final String contentType;
@@ -38,11 +40,6 @@ public final class CommandResponse {
         this.replyTo = replyTo;
         this.correlationId = correlationId;
     }
-
-    private static final Predicate<Integer> responseStatusCodeValidator = statusCode ->
-            (statusCode >= 200 && statusCode < 300) ||
-                    (statusCode >= 400 && statusCode < 500) ||
-                    (statusCode == HttpURLConnection.HTTP_UNAVAILABLE);
 
     /**
      * Creates an empty response for a request ID that contains only the status.
@@ -68,13 +65,16 @@ public final class CommandResponse {
      * @return The response or {@code null} if the request ID could not be parsed, the status is {@code null} or if the
      *         status code is &lt; 200 or &gt;= 600.
      */
-    public static CommandResponse from(final String requestId, final String deviceId, final Buffer payload, final String contentType, final Integer status) {
+    public static CommandResponse from(
+            final String requestId,
+            final String deviceId,
+            final Buffer payload,
+            final String contentType,
+            final Integer status) {
 
         if (requestId == null) {
             return null;
-        } else if (status == null) {
-            return null;
-        } else if (!responseStatusCodeValidator.test(status)) {
+        } else if (INVALID_STATUS_CODE.test(status)) {
             return null;
         } else if (requestId.length() < 3) {
             return null;
