@@ -3081,7 +3081,7 @@
         "multi": false,
         "name": "TENANT",
         "options": [],
-        "query": "SHOW TAG VALUES FROM \"meter.hono.messaging.messages.processed.count\" WITH KEY = \"tenant\"",
+        "query": "SHOW TAG VALUES WITH KEY = \"tenant\"",
         "refresh": 1,
         "regex": "",
         "sort": 0,
