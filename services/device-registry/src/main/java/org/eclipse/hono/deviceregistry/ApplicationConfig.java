@@ -18,6 +18,7 @@ import io.vertx.core.dns.AddressResolverOptions;
 
 import org.eclipse.hono.config.ApplicationConfigProperties;
 import org.eclipse.hono.config.ServiceConfigProperties;
+import org.eclipse.hono.config.VertxProperties;
 import org.eclipse.hono.service.credentials.CredentialsAmqpEndpoint;
 import org.eclipse.hono.service.credentials.CredentialsHttpEndpoint;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelper;
@@ -59,6 +60,9 @@ public class ApplicationConfig {
                         .setCacheNegativeTimeToLive(0) // discard failed DNS lookup results immediately
                         .setCacheMaxTimeToLive(0) // support DNS based service resolution
                         .setQueryTimeout(1000));
+
+        vertxProperties().configureVertx(options);
+
         return Vertx.vertx(options);
     }
 
@@ -267,4 +271,16 @@ public class ApplicationConfig {
         }
         return RegistrationAssertionHelperImpl.forSigning(vertx(), serviceProps.getSigning());
     }
+
+    /**
+     * Exposes configuration options for vertx.
+     * 
+     * @return The Properties.
+     */
+    @ConfigurationProperties("hono.vertx")
+    @Bean
+    public VertxProperties vertxProperties() {
+        return new VertxProperties();
+    }
+
 }
