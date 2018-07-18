@@ -1099,29 +1099,39 @@ public class HonoClientImpl implements HonoClient {
 
     private void closeConnection(final Handler<AsyncResult<Void>> completionHandler) {
 
-        final Future<Void> result = executeOrRunOnContext(r -> {
+        final Handler<AsyncResult<Object>> handler = attempt -> {
+            disconnecting.compareAndSet(Boolean.TRUE, Boolean.FALSE);
+            if (attempt.succeeded()) {
+                completionHandler.handle(Future.succeededFuture());
+            } else {
+                completionHandler.handle(Future.failedFuture(attempt.cause()));
+            }
+        };
+
+        synchronized (connectionLock) {
             if (isConnectedInternal()) {
-                LOG.info("closing connection to server [{}:{}]...", connectionFactory.getHost(), connectionFactory.getPort());
-                final ProtonConnection connectionToClose = connection;
-                connectionToClose.disconnectHandler(null); // make sure we are not trying to re-connect
-                connectionToClose.closeHandler(closedCon -> {
-                    if (closedCon.succeeded()) {
-                        LOG.info("closed connection to server [{}:{}]", connectionFactory.getHost(),
-                                connectionFactory.getPort());
-                    } else {
-                        LOG.info("closed connection to server [{}:{}]", connectionFactory.getHost(),
-                                connectionFactory.getPort(), closedCon.cause());
-                    }
-                    connectionToClose.disconnect();
-                });
-                connectionToClose.close();
-                clearState();
+                executeOrRunOnContext(r -> {
+                    LOG.info("closing connection to server [{}:{}]...", connectionFactory.getHost(), connectionFactory.getPort());
+                    final ProtonConnection connectionToClose = connection;
+                    connectionToClose.disconnectHandler(null); // make sure we are not trying to re-connect
+                    connectionToClose.closeHandler(closedCon -> {
+                        if (closedCon.succeeded()) {
+                            LOG.info("closed connection to server [{}:{}]", connectionFactory.getHost(),
+                                    connectionFactory.getPort());
+                        } else {
+                            LOG.info("closed connection to server [{}:{}]", connectionFactory.getHost(),
+                                    connectionFactory.getPort(), closedCon.cause());
+                        }
+                        connectionToClose.disconnect();
+                    });
+                    connectionToClose.close();
+                    clearState();
+                    r.complete();
+                }).setHandler(handler);
             } else {
                 LOG.info("connection to server [{}:{}] already closed", connectionFactory.getHost(), connectionFactory.getPort());
+                handler.handle(Future.succeededFuture());
             }
-            disconnecting.compareAndSet(Boolean.TRUE, Boolean.FALSE);
-            r.complete();
-        });
-        result.setHandler(completionHandler);
+        }
     }
 }
