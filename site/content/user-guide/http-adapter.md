@@ -283,19 +283,6 @@ Publish some JSON data for device `4712` via gateway `gw-1`:
 
 **NB**: The example above assumes that a gateway device with ID `gw-1` has been registered with `hashed-password` credentials with *auth-id* `gw` and password `gw-secret`.
 
-## Downstream Meta Data
-
-The adapter includes the following meta data in the application properties of messages being sent downstream:
-
-| Name               | Type      | Description                                                     |
-| :----------------- | :-------- | :-------------------------------------------------------------- |
-| *orig_adapter*     | *string*  | Contains the adapter's *type name* which can be used by downstream consumers to determine the protocol adapter that the message has been received over. The HTTP adapter's type name is `hono-http`. |
-| *orig_address*     | *string*  | Contains the (relative) URI that the device has originally posted the data to. |
-
-The adapter also considers [*defaults* registered for the device]({{< relref "api/Device-Registration-API.md#payload-format" >}}). For each default value the adapter checks if a corresponding property is already set on the message and if not, sets the message's property to the registered default value or adds a corresponding application property.
-
-Note that of the standard AMQP 1.0 message properties only the *content-type* can be set this way to a registered default value.
-
 ## Specifying the time a device will wait for a response
 
 The adapter lets devices specify the number of seconds they will wait for a response by setting a header or a query parameter.
@@ -307,7 +294,7 @@ This feature has been added in Hono 0.6. Previous versions of the adapter do not
 The parameter is available for all variants `authenticated`, `unauthenticated` and `authenticated gateway`. For simplification
 only the `authenticated` URI is used below.
 
-### Use a specific HTTP header
+### Using an HTTP Header
 
 The optional header `hono-ttd` can be set for any downstream message.
 
@@ -319,7 +306,7 @@ Example:
     HTTP/1.1 202 Accepted
     Content-Length: 0
 
-### Use a query parameter
+### Using a Query Parameter
 
 Alternatively the value for `hono-ttd` can be set by using a query parameter.
 
@@ -331,15 +318,9 @@ Example:
     HTTP/1.1 202 Accepted
     Content-Length: 0
 
-## Sending a response to a previously received command
+## Sending a Response to a Command (authenticated Device)
 
-{{% note %}}
-This feature has been added in Hono 0.7. Previous versions of the adapter do not support it.
-{{% /note %}}
-
-
-### Sending a response (authenticated Device)
-
+* Since: 0.7
 * URI: `/control/res/${commandRequestId}` or `/control/res/${commandRequestId}?hono-cmd-status=${status}`
 * Method: `POST`
 * Request Headers:
@@ -375,8 +356,9 @@ Send a response to a previously received command with the command-request-id `2f
 
  
 
-## Sending a response (unauthenticated Device)
+## Sending a Response to a Command (unauthenticated Device)
 
+* Since: 0.7
 * URI: `/control/res/${tenantId}/${deviceId}/${commandRequestId}` or `/control/res/${tenantId}/${deviceId}/${commandRequestId}?hono-cmd-status=${status}`
 * Method: `PUT`
 * Request Headers:
@@ -410,8 +392,9 @@ Send a response to a previously received command with the command-request-id `2f
     Content-Length: 0
 
 
-## Sending a response (authenticated Gateway)
+## Sending a Response to a Command (authenticated Gateway)
 
+* Since: 0.7
 * URI: `/control/res/${tenantId}/${deviceId}/${commandRequestId}` or `/control/res/${tenantId}/${deviceId}/${commandRequestId}?hono-cmd-status=${status}`
 * Method: `PUT`
 * Request Headers:
@@ -452,8 +435,18 @@ Send a response to a previously received command with the command-request-id `2f
 
 **NB**: The example above assumes that a gateway device with ID `gw-1` has been registered with `hashed-password` credentials with *auth-id* `gw` and password `gw-secret`.
 
+## Downstream Meta Data
 
+The adapter includes the following meta data in the application properties of messages being sent downstream:
 
+| Name               | Type      | Description                                                     |
+| :----------------- | :-------- | :-------------------------------------------------------------- |
+| *orig_adapter*     | *string*  | Contains the adapter's *type name* which can be used by downstream consumers to determine the protocol adapter that the message has been received over. The HTTP adapter's type name is `hono-http`. |
+| *orig_address*     | *string*  | Contains the (relative) URI that the device has originally posted the data to. |
+
+The adapter also considers [*defaults* registered for the device]({{< relref "api/Device-Registration-API.md#payload-format" >}}). For each default value the adapter checks if a corresponding property is already set on the message and if not, sets the message's property to the registered default value or adds a corresponding application property.
+
+Note that of the standard AMQP 1.0 message properties only the *content-type* can be set this way to a registered default value.
 
 ## Tenant specific Configuration
 
