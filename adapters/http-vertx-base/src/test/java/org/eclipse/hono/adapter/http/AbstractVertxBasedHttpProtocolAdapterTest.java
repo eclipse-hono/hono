@@ -15,7 +15,6 @@ package org.eclipse.hono.adapter.http;
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.*;
-import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 import java.net.HttpURLConnection;
