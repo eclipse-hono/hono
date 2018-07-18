@@ -66,10 +66,10 @@ The status property must contain a valid HTTP status code: <a name="status"></a>
 
 | Code | Description |
 | :--- | :---------- |
-| *2xx* | Indicating success; the codes are dependent on the adapter and device, which handles the command. |
-| *4xx* | Indicating failure; the codes are dependent on the adapter and device, which handles the command. |
-| *503* | The command cannot be sent to the target device. |
+| *2xx* | The command has been processed successfully. The semantics of the individual codes are specific to the adapter and device, which are involved in the processing of the command. |
+| *4xx* | The command could not be processed due to a client error, e.g. malformed message payload. The semantics of the individual codes are specific to the adapter and device, which are involved in the processing of the command. |
+| *5xx* | The command could not be processed due to a problem at the device side. The semantics of the individual codes are specific to the adapter and device, which are involved in the processing of the command. |
 
-For status codes indicating an error (codes in the `400 - 499` range) the message body MAY contain a detailed description of the error that occurred.
+For status codes indicating an error (codes in the `400 - 599` range) the message body MAY contain a detailed description of the error that occurred.
 
 If a command message response contains a payload, the body of the message MUST consist of a single AMQP *Data* section containing the response message data. 
