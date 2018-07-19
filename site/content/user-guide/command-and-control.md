@@ -3,22 +3,17 @@ title = "Command and Control"
 weight = 250
 +++
 
-In Hono 0.6 the first implementation of Command and Control is available that enables applications to send a command
-upstream to a device.
+Eclipse Hono&trade;'s Command &amp; Control API allows applications to send a command to a device and receive a response containing the result of the command.
 
-In the following it is shown how a command is sent to a device by using Hono's example application.
+This page illustrates the usage of the API based on Hono's example application.
 
 <!--more-->
 
+{{% warning %}}
+The Command & Control functionality has been introduced in Hono 0.6 to the HTTP protocol adapter. As of Hono 0.7-M2 it is still considered a *technical preview* only. As such it is not intended to be used in production use cases yet.
+{{% /warning %}}
 
-{{% note %}}
-This feature is available now as a first fully working version but is considered to possibly have some unknown issues that may not make it
-fully production ready yet.
-
-Note that in Hono 0.6 it is only supported by the HTTP protocol adapter.
-{{% /note %}}
-
-Refer to [Command and Control API]({{< relref "api/Command-And-Control-API.md" >}}) and [Command and Control Concepts]({{< relref "concepts/command-and-control.md" >}}) for detailed explanations and specifications.
+Please refer to [Command &amp; Control API]({{< relref "api/Command-And-Control-API.md" >}}) and [Command &amp; Control Concepts]({{< relref "concepts/command-and-control.md" >}}) for further details.
 
 ## Preparations
 
@@ -30,33 +25,26 @@ This device is also the hard-coded default device in the following example appli
 
 ## Starting the application
 
-Hono comes with an example application that is as small as possible but still covers the main message communication patterns.
-For Hono 0.6 this application was extended to also support Command and Control.
+Hono comes with an example application (located in the `example` module) that is as small as possible but still covers the main message communication patterns.
+Since Hono 0.6 this application also supports Command &amp; Control.
 
 Please start (and potentially configure) the application as described [here]({{< relref "dev-guide/java_client_consumer.md" >}}).
-The application writes the payload of incoming messages to `System.out` and will serve to view how messages are received
+The application writes the payload of incoming messages to standard output and will serve to view how messages are received
 and sent by Hono. 
 
-After the application has been successfully connected to
-the AMQP 1.0 network, it is time to send an appropriate downstream message to the HTTP protocol adapter that is responded 
-with a command. 
+After the application has been successfully connected to the AMQP 1.0 network, it is time to send an appropriate downstream message to the HTTP protocol adapter to trigger the sending of a command. 
 
-Note that it is the responsibility of the application to send a command - to illustrate how this is done,
-the example application sends a command `setBrightness` when it receives a downstream message that has a valid 
-*time until disconnect* parameter set. Refer to the usage of the helper class `MessageTap` in the example code as a blueprint for
-writing your own application.
+Note that it is the responsibility of the application to send a command - to illustrate how this is done, the example application sends a command `setBrightness` when it receives a downstream message that has a valid *time until disconnect* parameter set. Refer to the usage of the helper class `MessageTap` in the example code as a blueprint for writing your own application.
 
-## Sending a downstream message and receive a command in the response
+## Uploading Data and receiving a Command
 
 To simulate an HTTP device, we use the standard tool `curl` to publish some JSON data for the device `4711`.
-To signal that the device can handle a command in the response to the downstream message, it additionally specifies the number of seconds
-it can wait for the response by supplying the *time until disconnect* request parameter `hono-ttd`:
+To signal that the device is willing to receive and process a command, the device uploads a telemetry or event message and includes the `hono-ttd` request parameter to indicate the number of seconds it will wait for the response:
 
     $ curl -i -X POST -u sensor1@DEFAULT_TENANT:hono-secret -H 'Content-Type: application/json' \
-    $ --data-binary '{"temp": 5}' http://127.0.0.1:8080/telemetry?hono-ttd=5
+    --data-binary '{"temp": 5}' http://127.0.0.1:8080/telemetry?hono-ttd=30
 
-
-Watch the example application that receives the message - on it's `stdout` you will find a line like
+Watch the example application that receives the message - on it's standard output you will find a line like
 
     Device is ready to receive a command : <TimeUntilDisconnectNotification{tenantId='DEFAULT_TENANT', deviceId='4711', readyUntil=2018-05-22T12:11:35.055Z}>
 
@@ -66,52 +54,47 @@ and some lines below
 
 The response to the `curl` command contains the command from the example application and looks like the following:
 
-    HTTP/1.1 202 Accepted
+    HTTP/1.1 200 Accepted
     hono-command: setBrightness
-    hono-cmd-req-id: 47#cmd-client-299c7172-75ce-484d-bee1-cd279755c5fea3c84d64-681e-4ba3-9e74-f8e1ca412d60
+    hono-cmd-req-id: 10117f669c12-09ef-416d-88c1-1787f894856d
     Content-Length: 23
     
     {
       "brightness" : 87
     }
     
-Every time the `curl` message is repeated, the response will be differing regarding the value of `brightness` and the
-`hono-cmd-req-id`.
-
-The `brightness` is set to a random value inside the application between `0` and `100`, while the `hono-cmd-req-id` is
-set to a unique id that can be used by the device to send a response to exactly this command later on. 
-To correlate such a respond coming from the device is currently in the responsibility of the application itself.
+The example application sets the `brightness` to a random value between 0 and 100 on each invocation. It also generates a unique correlation identifier for each new command to be sent to the device. The device will need to include this identifier in its response to the command so that the application can properly correlate the response with the request.
 
 {{% note %}}
-If you are using `docker-machine`, `minikube` or `minishift` for your Hono installation, and do not explicitly synchronize the clock of it with the
- machine your (example) application is running, it may happen that the `hono-ttd` parameter is considered to be already
- expired by the application. This would be the case if the application machine's clock is already in the future compared 
- to the clock the HTTP protocol adapter sees.
- The result is that the application does not invoke the internal callback to send a command.
- 
- Please ensure that the clocks of the machine running the application and the machine running the HTTP protocol adapter are synchronized (you may want to search the
- internet for several solutions to this problem). 
+If you are running Hono on another node than the application, e.g. using *Docker Machine*, *Minikube* or *Minishift*, and the clock of that node is not in sync with the node that your (example) application is running on, then the application might consider the *time til disconnect* indicated by the device in its *hono-ttd* parameter to already have expired. This will happen if the application node's clock is ahead of the clock on the HTTP protocol adapter node. Consequently, this will result in the application **not** sending any command to the device.
+
+Thus, you need to make sure that the clocks of the node running the application and the node running the HTTP protocol adapter are synchronized (you may want to search the internet for several solutions to this problem).
 {{% /note %}}
 
+## Sending the Response to the Command
+
+After the device has received the command and has processed it, it needs to inform the application about the outcome. For this purpose the device uploads the result to the HTTP adapter using a new HTTP request. The following command simulates the device uploading some JSON payload indicating a successful result:
+
+    $ curl -i -X POST -u sensor1@DEFAULT_TENANT:hono-secret -H 'Content-Type: application/json' \
+    -H 'hono-cmd-status: 200' --data-binary '{"success": true}' \
+    http://127.0.0.1:8080/control/res/10117f669c12-09ef-416d-88c1-1787f894856d
     
+    HTTP/1.1 202 Accepted
+    Content-Length: 0
+
+**NB** Make sure to issue the command above before the application gives up on waiting for the response. By default, the example application will wait for as long as indicated in the `hono-ttd` parameter of the uploaded telemetry message. Also make sure to use the actual value of the `hono-cmd-req-id` header from the HTTP response that contained the command.
+
+
 ## Summary
 
 The following parts of Hono are involved in the upper scenario:
 
-- HTTP protocol adapter: detects the `hono-ttd` parameter in the request and opens an AMQP 1.0 receiver link for the device
-- example application: receives a telemetry message with `hono-ttd` which invokes an application internal callback that
-  sends a command to the opened receiver link. Additionally it opens a receiver link for any responses.
-- HTTP protocol adapter: receives the command and 
-  - responses to the HTTP request and include the command in the HTTP response
-  - opens a sender link to the application and sends a successful response (with empty payload) to the application.
- 
+* HTTP protocol adapter: detects the `hono-ttd` parameter in the request and opens an AMQP 1.0 receiver link with the AMQP 1.0
+  Messaging Network in order to receive commands for the device
+* example application: receives a telemetry message with `hono-ttd` which invokes an application internal callback that sends a
+  command to the HTTP adapter via the opened receiver link. Additionally it opens a receiver link for any responses.
+* HTTP protocol adapter: receives the command and forwards it to the device in the HTTP response body
+* Device sends result of processing the command to HTTP adapter which then forwards it to the application
+
 The [Command and Control Concepts]({{< relref "concepts/command-and-control.md" >}}) page contains sequence diagrams that
-explain this in further details.
- 
-{{% note %}}
-The successful response is only the current (incomplete) implementation in Hono 0.6 and is foreseen to be substituted by a response of
-the device itself in the future.
-{{% /note %}}
-
-
-
+explain this in more detail.
