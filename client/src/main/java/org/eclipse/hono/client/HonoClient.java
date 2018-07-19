@@ -381,6 +381,10 @@ public interface HonoClient {
      * @param replyId The id, which is used to identify the unique link between this command client and the adapter.
      *                Should be as short as possible, since it need to be transported to the device and back
      *                for correlation of command response.
+     *                This id is only used during creation. When determining an already created client for reuse,
+     *                it is not included in the key.
+     *                This means that a CommandClient from the previous generation with
+     *                {@link #getOrCreateCommandClient(String, String)} may also be supplied.
      * @return A future that will complete with the command and control client (if successful) or
      *         fail if the client cannot be created, e.g. because the underlying connection
      *         is not established or if a concurrent request to create a client for the same
