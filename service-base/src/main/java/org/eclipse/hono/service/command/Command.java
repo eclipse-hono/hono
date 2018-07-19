@@ -274,6 +274,20 @@ public final class Command {
     }
 
     /**
+     * Gets the type of this command's payload.
+     * 
+     * @return The content type or {@code null} if not set.
+     * @throws IllegalStateException if this command is invalid.
+     */
+    public String getContentType() {
+        if (isValid()) {
+            return message.getContentType();
+        } else {
+            throw new IllegalStateException("command is invalid");
+        }
+    }
+
+    /**
      * Gets this command's reply-to-id.
      *
      * @return The identifier.

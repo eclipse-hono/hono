@@ -725,7 +725,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
             response.putHeader(Constants.HEADER_COMMAND, command.getName());
             response.putHeader(Constants.HEADER_COMMAND_REQUEST_ID, command.getRequestId());
 
-            HttpUtils.setResponseBody(response, command.getPayload());
+            HttpUtils.setResponseBody(response, command.getPayload(), command.getContentType());
         }
     }
 
