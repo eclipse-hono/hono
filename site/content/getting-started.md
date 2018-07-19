@@ -120,7 +120,8 @@ The first thing to do is registering a device identity with Hono. Hono uses this
 The following command registers a device with ID `4711` with the Device Registry.
 
 ~~~sh
-$ curl -X POST -i -H 'Content-Type: application/json' -d '{"device-id": "4711"}' http://localhost:28080/registration/DEFAULT_TENANT
+$ curl -X POST -i -H 'Content-Type: application/json' -d '{"device-id": "4711"}' \
+http://localhost:28080/registration/DEFAULT_TENANT
 ~~~
 
 or (using HTTPie):
@@ -168,7 +169,7 @@ Content-Length: 35
 
 ~~~sh
 $ curl -X POST -i -u sensor1@DEFAULT_TENANT:hono-secret -H 'Content-Type: application/json' \
-> --data-binary '{"temp": 5}' http://localhost:8080/telemetry
+--data-binary '{"temp": 5}' http://localhost:8080/telemetry
 ~~~
 
 or (using HTTPie):
@@ -183,13 +184,14 @@ When you first invoke any of the two commands above after you have started up yo
 
 ~~~
 HTTP/1.1 503 Service Unavailable
-Content-Length: 47
-Content-Type: text/plain
+Content-Length: 23
+Content-Type: text/plain; charset=utf-8
+Retry-After: 2
 
-resource limit exceeded, please try again later
+temporarily unavailable
 ~~~
 
-This is because the first request to publish data for a tenant (`DEFAULT_TENANT` in the example) is used as the trigger to establish a tenant specific link with the Hono Messaging component to forward the data over. However, the HTTP adapter may not receive credits from Hono Messaging quickly enough for the request to be served successfully.
+This is because the first request to publish data for a tenant (`DEFAULT_TENANT` in the example) is used as the trigger to establish a tenant specific sender link with the AMQP 1.0 Messaging Network to forward the data over. However, the HTTP adapter may not receive credits quickly enough for the request to be served immediately.
 You can simply ignore this response and re-submit the command. You should then get a response like this:
 
 ~~~
@@ -201,7 +203,7 @@ If you have started the consumer as described above, you should now see the tele
 
 If you haven't started a consumer you will continue to get `503 Resource Unavailable` responses because Hono does not accept any telemetry data from devices if there aren't any consumers connected that are interested in the data. Telemetry data is *never* persisted within Hono, thus it doesn't make any sense to accept and process telemetry data if there is no consumer to deliver it to.
 
-The HTTP Adapter also supports publishing telemetry messages using QoS level `AT_LEAST_ONCE`. For information on how that works and additional examples for interacting with Hono via HTTP, please refer to the [HTTP Adapter documentation]({{< relref "http-adapter.md" >}}) .
+The HTTP Adapter also supports publishing telemetry messages using *at least once* delivery semantics. For information on how that works and additional examples for interacting with Hono via HTTP, please refer to the [HTTP adapter's User Guide]({{< relref "http-adapter.md" >}}) .
 
 ### Uploading Event Data using the HTTP Adapter
 
@@ -209,7 +211,7 @@ In a similar way you can upload event data, using curl
 
 ~~~sh
 $ curl -X POST -i -u sensor1@DEFAULT_TENANT:hono-secret -H 'Content-Type: application/json' \
-> --data-binary '{"alarm": "fire"}' http://localhost:8080/event
+--data-binary '{"alarm": "fire"}' http://localhost:8080/event
 ~~~
 
 or (using HTTPie):
@@ -222,11 +224,11 @@ $ http --auth sensor1@DEFAULT_TENANT:hono-secret POST http://localhost:8080/even
 
 In the above examples, we have always used the `DEFAULT_TENANT`, which is pre-configured in the example setup.
 
-You can add more tenants to Hono by using the [Tenant related HTTP endpoints]({{< relref "user-guide/device-registry.md#managing-tenants" >}}) of the Device Registry. Each tenant you create can have its own configuration, e.g. which protocol adapters are enabled.
+You can add more tenants to Hono by using the [Tenant management HTTP endpoints]({{< relref "user-guide/device-registry.md#managing-tenants" >}}) of the Device Registry. Each tenant you create can have its own configuration, e.g. for specifying which protocol adapters the tenant is allowed to use.
 
 ## Stopping Hono
 
-The Hono instance's services can be stopped and removed using the following command:
+The Hono instance's Docker services can be stopped and removed using the following command:
 
 ~~~sh
 ~/hono/example/target/deploy/docker$ ./swarm_undeploy.sh
@@ -252,4 +254,4 @@ If you do not run Docker on localhost, replace *localhost* in the link with the 
 
 ## Using Command & Control
 
-Since Hono 0.6 the first implementation of Command & Control is available. Please refer to the [Command & Control user guide]({{< relref "user-guide/command-and-control.md" >}}) for a walk-through example.
+Hono 0.6 has introduced initial support for sending commands to devices using the [Command & Control API]({{< relref "Command-And-Control-API.md" >}}). This functionality is still considered a *technical preview*. However, we encourage you to try it out by following the walk-trough example provided in the [Command & Control user guide]({{< relref "user-guide/command-and-control.md" >}}).
