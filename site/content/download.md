@@ -32,7 +32,9 @@ A Java based command line client for consuming telemetry data and events from Ho
 The client can be run from the command line like this:
 
 ~~~sh
-$ java -jar hono-example-0.6-exec.jar --hono.client.host=hono.eclipse.org --hono.client.port=15671 --hono.client.tlsEnabled=true --hono.client.username=consumer@HONO --hono.client.password=verysecret --spring.profiles.active=receiver --tenant.id=DEFAULT_TENANT
+$ java -jar hono-example-0.6-exec.jar --hono.client.host=hono.eclipse.org --hono.client.port=15671 \
+--hono.client.tlsEnabled=true --hono.client.username=consumer@HONO --hono.client.password=verysecret \
+--spring.profiles.active=receiver --tenant.id=DEFAULT_TENANT
 ~~~
 
 Please refer to the [Admin Guide]({{< relref "admin-guide/hono-client-configuration.md" >}}) for details regarding the command line options that the client supports.
@@ -43,6 +45,8 @@ The newest features and bugfixes are available in *milestones* that are publishe
 
 Installation works in the same way as for the latest stable release.
 
+* [Eclipse Hono 0.7-M2 Archive](https://www.eclipse.org/downloads/download.php?file=/hono/eclipse-hono-example-0.7-M2.tar.gz)
+* [Eclipse Hono 0.7-M2 Command Line Client](https://www.eclipse.org/downloads/download.php?file=/hono/hono-example-0.7-M2-exec.jar)
 * [Eclipse Hono 0.7-M1 Archive](https://www.eclipse.org/downloads/download.php?file=/hono/eclipse-hono-example-0.7-M1.tar.gz)
 * [Eclipse Hono 0.7-M1 Command Line Client](https://www.eclipse.org/downloads/download.php?file=/hono/hono-example-0.7-M1-exec.jar)
 
