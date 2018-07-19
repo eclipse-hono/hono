@@ -7,6 +7,11 @@ On this page you can find links to arbitrary material covering Eclipse Hono whic
 and meet-ups or are available online.
 <!--more-->
 
+## "Using multi-tenancy in Eclipse Hono" (Blog post April 2018)
+
+* Author : Kai Hudalla (Bosch Software Innovations)
+* [Article](https://blog.bosch-si.com/developer/using-multi-tenancy-in-eclipse-hono/)
+
 ## "Eclipse Hono: Connecting large numbers of IoT devices" (Blog post January 2018)
 
 * Authors : [Dejan Bosanac](https://twitter.com/dejanb) (Red Hat), Karsten Frank (Bosch Software Innovations), [Paolo Patierno](https://twitter.com/ppatierno) (Red Hat)
