@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# Copyright (c) 2017 Bosch Software Innovations GmbH and others.
+# Copyright (c) 2017, 2018 Bosch Software Innovations GmbH and others.
 #
 # All rights reserved. This program and the accompanying materials
 # are made available under the terms of the Eclipse Public License v1.0
@@ -36,7 +36,14 @@ docker service create $CREATE_OPTIONS --name influxdb \
   --secret influxdb.conf \
   --limit-memory 128m \
   influxdb:${influxdb.version} -config /run/secrets/influxdb.conf
+
+docker config create -l project=$NS filesystem-provisioner.yaml $SCRIPTPATH/grafana/provisioning/dashboards/filesystem-provisioner.yaml
+docker config create -l project=$NS grafana_dashboard.json $SCRIPTPATH/grafana/dashboard-definitions/grafana_dashboard.json
+docker config create -l project=$NS influxdb.yaml $SCRIPTPATH/grafana/provisioning/datasources/influxdb.yaml
 docker service create $CREATE_OPTIONS --name grafana -p 3001:3000 \
+  --config source=filesystem-provisioner.yaml,target=/etc/grafana/provisioning/dashboards/filesystem-provisioner.yaml \
+  --config source=grafana_dashboard.json,target=/etc/grafana/dashboard-definitions/grafana_dashboard.json \
+  --config source=influxdb.yaml,target=/etc/grafana/provisioning/datasources/influxdb.yaml \
   --limit-memory 64m \
   grafana/grafana:${grafana.version}
 echo ... done
@@ -67,15 +74,11 @@ echo ... done
 echo
 echo Deploying Qpid Dispatch Router ...
 docker secret create -l project=$NS qdrouterd.json $SCRIPTPATH/qpid/sandbox-qdrouterd.json
-docker secret create -l project=$NS qdrouter-sasl.conf $SCRIPTPATH/qpid/qdrouter-sasl.conf
-docker secret create -l project=$NS qdrouterd.sasldb $SCRIPTPATH/qpid/qdrouterd.sasldb
 docker service create $CREATE_OPTIONS --name hono-dispatch-router -p 15671:5671 -p 15672:5672 \
   --secret hono.eclipse.org-key.pem \
   --secret hono.eclipse.org-cert.pem \
   --secret trusted-certs.pem \
   --secret qdrouterd.json \
-  --secret qdrouter-sasl.conf \
-  --secret qdrouterd.sasldb \
   --limit-memory 256m \
   ${dispatch-router.image.name} /sbin/qdrouterd -c /run/secrets/qdrouterd.json
 echo ... done
@@ -227,4 +230,3 @@ echo ... done
 
 echo ECLIPSE HONO SANDBOX DEPLOYED TO DOCKER SWARM
 echo
-echo "Please do not forget to configure the Grafana data source and dashboard using the $SCRIPTPATH/../deploy/configure_grafana.sh script"

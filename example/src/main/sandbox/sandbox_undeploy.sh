@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# Copyright (c) 2017 Red Hat and others.
+# Copyright (c) 2017, 2018 Red Hat and others.
 #
 # All rights reserved. This program and the accompanying materials
 # are made available under the terms of the Eclipse Public License v1.0
@@ -48,8 +48,9 @@ docker secret rm \
   hono-service-device-registry-config.yml
 
 docker service rm init-device-registry-data
-docker secret rm sandbox-credentials.json
-docker secret rm sandbox-tenants.json
+docker secret rm \
+  sandbox-credentials.json \
+  sandbox-tenants.json
 
 docker service rm hono-service-auth
 docker secret rm \
@@ -59,10 +60,7 @@ docker secret rm \
   hono-service-auth-config.yml
 
 docker service rm hono-dispatch-router
-docker secret rm \
-  qdrouterd.json \
-  qdrouter-sasl.conf \
-  qdrouterd.sasldb
+docker secret rm qdrouterd.json
 
 docker service rm hono-artemis
 docker secret rm \
@@ -74,7 +72,13 @@ docker secret rm \
   logging.properties \
   artemis.profile
 
-docker service rm grafana influxdb
+docker service rm grafana
+docker config rm \
+  filesystem-provisioner.yaml \
+  grafana_dashboard.json \
+  influxdb.yaml
+
+docker service rm influxdb
 docker secret rm influxdb.conf
 
 docker secret rm trusted-certs.pem
