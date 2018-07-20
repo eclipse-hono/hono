@@ -52,6 +52,7 @@ public class HonoReceiver extends AbstractClient {
     private long totalSampleDeliveryTime;
     private boolean senderClockNotInSync;
     private long bytesReceived;
+    private MessageConsumer messageConsumer;
 
     /**
      * Creates a new receiver.
@@ -93,6 +94,7 @@ public class HonoReceiver extends AbstractClient {
         connect().compose(client -> createConsumer(endpoint, tenant)).setHandler(attempt -> {
             if (attempt.succeeded()) {
                 LOGGER.debug("receiver active: {}/{} ({})", endpoint, tenant, Thread.currentThread().getName());
+                messageConsumer = attempt.result();
                 result.complete(null);
             } else {
                 result.completeExceptionally(attempt.cause());
@@ -225,11 +227,12 @@ public class HonoReceiver extends AbstractClient {
                     senderClockNotInSync = true;
                 }
                 totalSampleDeliveryTime += sampleDeliveryTime;
-                LOGGER.trace("received message; current batch size: {}; reception timestamp: {}; delivery time: {}ms",
-                        messageCount, sampleReceivedTime, sampleDeliveryTime);
+                LOGGER.trace("received message; current batch size: {}; reception timestamp: {}; delivery time: {}ms; remaining credit: {}",
+                        messageCount, sampleReceivedTime, sampleDeliveryTime, messageConsumer.getRemainingCredit());
             } else {
                 setSampleStartIfNotSetYet(sampleReceivedTime);
-                LOGGER.trace("received message; current batch size: {}; reception timestamp: {}", messageCount, sampleReceivedTime);
+                LOGGER.trace("received message; current batch size: {}; reception timestamp: {}; remaining credit: {}", 
+                        messageCount, sampleReceivedTime, messageConsumer.getRemainingCredit());
             }
         }
     }
