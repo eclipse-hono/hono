@@ -21,8 +21,15 @@ CONFIG=$SCRIPTPATH/../config
 CERTS=$CONFIG/hono-demo-certs-jar
 NS=hono
 CREATE_OPTIONS="-l project=$NS --network $NS --detach=false"
+HONO_VERSION="${project.version}"
 
-echo DEPLOYING ECLIPSE HONO SANDBOX TO DOCKER SWARM
+if [ "" != ""$1 ]
+then
+  HONO_VERSION=$1
+fi
+
+echo "DEPLOYING ECLIPSE HONO ($HONO_VERSION) SANDBOX TO DOCKER SWARM"
+echo
 
 # creating Hono network
 docker network create --label project=$NS --driver overlay $NS
@@ -101,7 +108,7 @@ docker service create $CREATE_OPTIONS --name hono-service-auth \
   --env SPRING_PROFILES_ACTIVE=authentication-impl,prod \
   --env LOGGING_CONFIG=classpath:logback-spring.xml \
   --mount type=volume,source=hono-extensions,target=/opt/hono/extensions,readonly \
-  ${docker.image.org-name}/hono-service-auth:${project.version}
+  ${docker.image.org-name}/hono-service-auth:$HONO_VERSION
 echo ... done
 
 echo
@@ -141,7 +148,7 @@ docker service create $CREATE_OPTIONS --name hono-service-device-registry -p 256
   --env SPRING_PROFILES_ACTIVE=dev \
   --mount type=volume,source=device-registry,target=/var/lib/hono/device-registry \
   --mount type=volume,source=hono-extensions,target=/opt/hono/extensions,readonly \
-  ${docker.image.org-name}/hono-service-device-registry:${project.version}
+  ${docker.image.org-name}/hono-service-device-registry:$HONO_VERSION
 echo ... done
 
 # For the time being, we do not deploy Hono Messaging anymore because
@@ -164,7 +171,7 @@ echo ... done
 #  --env LOGGING_CONFIG=classpath:logback-spring.xml \
 #  --env SPRING_PROFILES_ACTIVE=prod \
 #  --env _JAVA_OPTIONS=-Xmx196m \
-#  ${docker.image.org-name}/hono-service-messaging:${project.version}
+#  ${docker.image.org-name}/hono-service-messaging:$HONO_VERSION
 #echo ... done
 
 echo
@@ -182,7 +189,7 @@ docker service create $CREATE_OPTIONS --name hono-adapter-http-vertx -p 8080:808
   --env SPRING_PROFILES_ACTIVE=trace \
   --env LOGGING_CONFIG=classpath:logback-spring.xml \
   --mount type=volume,source=hono-extensions,target=/opt/hono/extensions,readonly \
-  ${docker.image.org-name}/hono-adapter-http-vertx:${project.version}
+  ${docker.image.org-name}/hono-adapter-http-vertx:$HONO_VERSION
 echo ... done
 
 echo
@@ -200,7 +207,7 @@ docker service create $CREATE_OPTIONS --name hono-adapter-mqtt-vertx -p 1883:188
   --env SPRING_PROFILES_ACTIVE=dev \
   --env LOGGING_CONFIG=classpath:logback-spring.xml \
   --mount type=volume,source=hono-extensions,target=/opt/hono/extensions,readonly \
-  ${docker.image.org-name}/hono-adapter-mqtt-vertx:${project.version}
+  ${docker.image.org-name}/hono-adapter-mqtt-vertx:$HONO_VERSION
 echo ... done
 
 echo
@@ -218,7 +225,7 @@ docker service create $CREATE_OPTIONS --name hono-adapter-kura -p 1884:1883 -p 8
   --env SPRING_PROFILES_ACTIVE=prod \
   --env LOGGING_CONFIG=classpath:logback-spring.xml \
   --mount type=volume,source=hono-extensions,target=/opt/hono/extensions,readonly \
-  ${docker.image.org-name}/hono-adapter-kura:${project.version}
+  ${docker.image.org-name}/hono-adapter-kura:$HONO_VERSION
 echo ... done
 
 echo
