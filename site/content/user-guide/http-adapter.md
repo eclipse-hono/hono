@@ -32,12 +32,13 @@ NB: There is a subtle difference between the *device identifier* (*device-id*) a
 * Method: `POST`
 * Request Headers:
   * (optional) `Authorization`: The device's *auth-id* and plain text password encoded according to the [Basic HTTP authentication scheme](https://tools.ietf.org/html/rfc7617). If not set, the adapter expects the device to present a client certificate as part of the TLS handshake during connection establishment.
-  * (required) `Content-Type`: The type of payload contained in the body.
+  * (required) `Content-Type`: The type of payload contained in the request body.
   * (optional) `hono-ttd`: The number of seconds the device will wait for the response. (since 0.6)
   * (optional) `QoS-Level`: The QoS level for publishing telemetry messages. Only QoS 1 is supported by the adapter. (since 0.6)
 * Request Body:
   * (required) Arbitrary payload encoded according to the given content type.
 * Response Headers:
+  * (optional) `Content-Type`: A media type describing the semantics and format of payload contained in the response body. This header will only be present if the response contains a command to be executed by the device which requires input data. (since 0.7)
   * (optional) `hono-command`: The name of the command to execute. This header will only be present if the response contains a command to be executed by the device. (since 0.6)
   * (optional) `hono-cmd-req-id`: An identifier that the device must include in its response to a command. This header will only be present if the response contains a command to be executed by the device. (since 0.6)
 * Response Body:
@@ -101,6 +102,7 @@ Publish some JSON data for device `4711`, indicating that the device will wait f
 * Request Body:
   * (required) Arbitrary payload encoded according to the given content type.
 * Response Headers:
+  * (optional) `Content-Type`: A media type describing the semantics and format of payload contained in the response body. This header will only be present if the response contains a command to be executed by the device which requires input data. (since 0.7)
   * (optional) `hono-command`: The name of the command to execute. This header will only be present if the response contains a command to be executed by the device. (since 0.6)
   * (optional) `hono-cmd-req-id`: An identifier that the device must include in its response to a command. This header will only be present if the response contains a command to be executed by the device. (since 0.6)
 * Response Body:
@@ -166,6 +168,7 @@ Publish some JSON data for device `4711`, indicating that the device will wait f
 * Request Body:
   * (required) Arbitrary payload encoded according to the given content type.
 * Response Headers:
+  * (optional) `Content-Type`: A media type describing the semantics and format of payload contained in the response body. This header will only be present if the response contains a command to be executed by the device which requires input data. (since 0.7)
   * (optional) `hono-command`: The name of the command to execute. This header will only be present if the response contains a command to be executed by the device. (since 0.6)
   * (optional) `hono-cmd-req-id`: An identifier that the device must include in its response to a command. This header will only be present if the response contains a command to be executed by the device. (since 0.6)
 * Response Body:
@@ -235,6 +238,7 @@ Publish some JSON data for device `4712`, indicating that the gateway will wait 
 * Request Body:
   * (required) Arbitrary payload encoded according to the given content type.
 * Response Headers:
+  * (optional) `Content-Type`: A media type describing the semantics and format of payload contained in the response body. This header will only be present if the response contains a command to be executed by the device which requires input data. (since 0.7)
   * (optional) `hono-command`: The name of the command to execute. This header will only be present if the response contains a command to be executed by the device. (since 0.6)
   * (optional) `hono-cmd-req-id`: An identifier that the device must include in its response to a command. This header will only be present if the response contains a command to be executed by the device. (since 0.6)
 * Response Body:
@@ -274,6 +278,7 @@ Publish some JSON data for device `4711`:
 * Request Body:
   * (required) Arbitrary payload encoded according to the given content type.
 * Response Headers:
+  * (optional) `Content-Type`: A media type describing the semantics and format of payload contained in the response body. This header will only be present if the response contains a command to be executed by the device which requires input data. (since 0.7)
   * (optional) `hono-command`: The name of the command to execute. This header will only be present if the response contains a command to be executed by the device. (since 0.6)
   * (optional) `hono-cmd-req-id`: An identifier that the device must include in its response to a command. This header will only be present if the response contains a command to be executed by the device. (since 0.6)
 * Response Body:
@@ -314,6 +319,7 @@ Publish some JSON data for device `4711`:
 * Request Body:
   * (required) Arbitrary payload encoded according to the given content type.
 * Response Headers:
+  * (optional) `Content-Type`: A media type describing the semantics and format of payload contained in the response body. This header will only be present if the response contains a command to be executed by the device which requires input data. (since 0.7)
   * (optional) `hono-command`: The name of the command to execute. This header will only be present if the response contains a command to be executed by the device. (since 0.6)
   * (optional) `hono-cmd-req-id`: An identifier that the device must include in its response to a command. This header will only be present if the response contains a command to be executed by the device. (since 0.6)
 * Response Body:
@@ -391,11 +397,11 @@ Example:
 * Method: `POST`
 * Request Headers:
   * (optional) `Authorization`: The device's *auth-id* and plain text password encoded according to the [Basic HTTP authentication scheme](https://tools.ietf.org/html/rfc7617). If not set, the adapter expects the device to present a client certificate as part of the TLS handshake during connection establishment.
+  * (optional) `Content-Type`: A media type describing the semantics and format of the payload contained in the request body. This header may be set if the result of processing the command on the device is non-empty. In this case the result data is contained in the request body. (since 0.7)
   * (optional) `hono-cmd-status`: The status of the command execution. If not set, the adapter expects that the URI contains it
     as request parameter at the end.
 * Request Body:
-  * (optional) Arbitrary payload. The type of the payload should be determined by the command that was sent to the device previously
-    and is unknown to Hono.
+  * (optional) Arbitrary data representing the result of processing the command on the device.
 * Status Codes:
   * 202 (Accepted): The response has been accepted and was successfully delivered to the application.
   * 400 (Bad Request): The request cannot be processed because the command status is missing.
@@ -426,11 +432,11 @@ Send a response to a previously received command with the command-request-id `re
 * URI: `/control/res/${tenantId}/${deviceId}/${commandRequestId}` or `/control/res/${tenantId}/${deviceId}/${commandRequestId}?hono-cmd-status=${status}`
 * Method: `PUT`
 * Request Headers:
+  * (optional) `Content-Type`: A media type describing the semantics and format of the payload contained in the request body (the outcome of processing the command). (since 0.7)
   * (optional) `hono-cmd-status`: The status of the command execution. If not set, the adapter expects that the URI contains it
     as request parameter at the end.
 * Request Body:
-  * (optional) Arbitrary payload. The type of the payload should be determined by the command that was sent to the device previously
-    and is unknown to Hono.
+  * (optional) Arbitrary data representing the result of processing the command on the device.
 * Status Codes:
   * 200 (OK): The event has been accepted and put to a persistent store for delivery to consumers. The response contains a command for the device to execute.
   * 202 (Accepted): The event has been accepted and put to a persistent store for delivery to consumers.
@@ -464,11 +470,11 @@ Send a response to a previously received command with the command-request-id `re
 * Method: `PUT`
 * Request Headers:
   * (optional) `Authorization`: The gateway's *auth-id* and plain text password encoded according to the [Basic HTTP authentication scheme](https://tools.ietf.org/html/rfc7617). If not set, the adapter expects the gateway to present a client certificate as part of the TLS handshake during connection establishment.
+  * (optional) `Content-Type`: A media type describing the semantics and format of the payload contained in the request body (the outcome of processing the command). (since 0.7)
   * (optional) `hono-cmd-status`: The status of the command execution. If not set, the adapter expects that the URI contains it
     as request parameter at the end.
 * Request Body:
-  * (optional) Arbitrary payload. The type of the payload should be determined by the command that was sent to the device previously
-    and is unknown to Hono.
+  * (optional) Arbitrary data representing the result of processing the command on the device.
 * Status Codes:
   * 202 (Accepted): The event has been accepted and put to a persistent store for delivery to consumers.
   * 400 (Bad Request): The request cannot be processed because the command status is missing.
