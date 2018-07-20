@@ -37,13 +37,8 @@ public abstract class AbstractConsumer extends AbstractHonoClient implements Mes
     }
 
     @Override
-    public int getCredit() {
-        return receiver.getCredit();
-    }
-
-    @Override
-    public int getQueued() {
-        return receiver.getQueued();
+    public int getRemainingCredit() {
+        return receiver.getCredit() - receiver.getQueued();
     }
 
     @Override

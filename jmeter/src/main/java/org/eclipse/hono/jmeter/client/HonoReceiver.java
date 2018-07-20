@@ -228,11 +228,11 @@ public class HonoReceiver extends AbstractClient {
                 }
                 totalSampleDeliveryTime += sampleDeliveryTime;
                 LOGGER.trace("received message; current batch size: {}; reception timestamp: {}; delivery time: {}ms; remaining credit: {}",
-                        messageCount, sampleReceivedTime, sampleDeliveryTime, messageConsumer.getCredit() - messageConsumer.getQueued());
+                        messageCount, sampleReceivedTime, sampleDeliveryTime, messageConsumer.getRemainingCredit());
             } else {
                 setSampleStartIfNotSetYet(sampleReceivedTime);
                 LOGGER.trace("received message; current batch size: {}; reception timestamp: {}; remaining credit: {}", 
-                        messageCount, sampleReceivedTime, messageConsumer.getCredit() - messageConsumer.getQueued());
+                        messageCount, sampleReceivedTime, messageConsumer.getRemainingCredit());
             }
         }
     }
