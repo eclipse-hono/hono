@@ -42,8 +42,7 @@ public interface MessageConsumer {
     void flow(int credits) throws IllegalStateException;
 
     /**
-     * Gets the number of messages this consumer can receive based on its current number of credits, 
-     * excluding credits used by any queued incoming messages.
+     * Gets the number of additional messages this consumer can receive.
      * <p>
      * Note that the value returned is valid during execution of the current vert.x handler only.
      *
