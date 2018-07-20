@@ -40,10 +40,11 @@ The following sequence diagram shows the whole message exchange including the re
 
 The following table provides an overview of the properties the *Business Application* needs to set on a command message.
 
-| Name | Mandatory | Location | Type      | Description |
-| :--- | :-------: | :------- | :-------- | :---------- |
+| Name             | Mandatory | Location                 | Type         | Description |
+| :--------------- | :-------: | :----------------------- | :----------- | :---------- |
 | *subject*        | yes       | *properties*             | *string*     | MUST contain the command name to be executed by a device. |
-| *correlation-id* | no        | *properties*             | *message-id* | MAY contain an ID used to correlate a response message to the original request. If set, it is used as the *correlation-id* property in the response, otherwise the value of the *message-id* property is used. |
+| *content-type*   | no        | *properties*             | *string*     | If present, MUST contain a *Media Type* as defined by [RFC 2046](https://tools.ietf.org/html/rfc2046) which describes the semantics and format of the command's input data contained in the message payload. However, not all protocol adapters will support this property as not all transport protocols provide means to convey this information, e.g. MQTT 3.1.1 has no notion of message headers. |
+| *correlation-id* | no        | *properties*             | *message-id* | If present, MUST contain an ID used to correlate a response message to the original request. If set, it is used as the *correlation-id* property in the response, otherwise the value of the *message-id* property is used. |
 | *message-id*     | yes       | *properties*             | *string*     | MUST contain an identifier that uniquely identifies the message at the sender side. |
 | *reply-to*       | yes       | *properties*             | *string*     | MUST contain the source address that the client wants to receive response messages from. This address MUST be the same as the source address used for establishing the client's receive link (see [Preconditions]({{< relref "#preconditions" >}})). |
 
@@ -57,10 +58,11 @@ After execution of a command on a device, the device MUST send a response messag
 
 The following table provides an overview of the properties set on a Command's response message.
 
-| Name | Mandatory | Location | Type | Description |
-| :--- | :-------: | :------- | :-------- | :---------- |
-| *correlation-id* | yes | *properties* | *message-id* | MUST contain the correlation ID used to match the command message with the response message containing the result of execution on the device. |
-| *status* | yes | *application-properties* | *integer* | MUST indicate the status of the execution. See table below for possible values. |
+| Name             | Mandatory | Location                 | Type         | Description |
+| :--------------- | :-------: | :----------------------- | :----------- | :---------- |
+| *content-type*   | no        | *properties*             | *string*     | If present, MUST contain a *Media Type* as defined by [RFC 2046](https://tools.ietf.org/html/rfc2046) which describes the semantics and format of the command's input data contained in the message payload. However, not all protocol adapters will support this property as not all transport protocols provide means to convey this information, e.g. MQTT 3.1.1 has no notion of message headers. |
+| *correlation-id* | yes       | *properties*             | *message-id* | MUST contain the correlation ID used to match the command message with the response message containing the result of execution on the device. |
+| *status*         | yes       | *application-properties* | *integer*    | MUST indicate the status of the execution. See table below for possible values. |
 
 The status property must contain a valid HTTP status code: <a name="status"></a>
 
