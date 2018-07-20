@@ -10,8 +10,8 @@
 package org.eclipse.hono.tests.amqp;
 
 import java.net.HttpURLConnection;
-import java.util.concurrent.CountDownLatch;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ClientErrorException;
@@ -35,6 +35,7 @@ import org.junit.rules.TestName;
 
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
+import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
@@ -48,6 +49,9 @@ public abstract class AmqpAdapterBase extends ClientTestBase {
 
     private static final String DEVICE_PASSWORD = "device-password";
 
+    /**
+     * Support logging of test name.
+     */
     @Rule
     public final TestName testName = new TestName();
 
@@ -233,18 +237,15 @@ public abstract class AmqpAdapterBase extends ClientTestBase {
         }).setHandler(context.asyncAssertSuccess(ok -> setup.complete()));
         setup.await();
 
-        final Consumer<CountDownLatch> receiver = latch -> {
-            final Async consumerTracker = context.async();
-            createConsumer(tenantId, msg -> {
-                log.trace("received {}", msg);
+        final Function<Handler<Void>, Future<Void>> receiver = callback -> {
+            return createConsumer(tenantId, msg -> {
                 assertMessageProperties(context, msg);
                 assertAdditionalMessageProperties(context, msg);
-                latch.countDown();
+                callback.handle(null);
             }).map(c -> {
                 consumer = c;
-                return c;
-            }).setHandler(context.asyncAssertSuccess(ok -> consumerTracker.complete()));
-            consumerTracker.await();
+                return null;
+            });
         };
 
         doUploadMessages(context, receiver, payload -> {

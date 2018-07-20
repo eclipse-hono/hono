@@ -13,9 +13,9 @@
 
 package org.eclipse.hono.tests.client;
 
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.HonoClient;
@@ -35,6 +35,7 @@ import org.junit.Test;
 
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
+import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
@@ -246,18 +247,15 @@ public abstract class MessagingClientTestBase extends ClientTestBase {
         }).setHandler(ok -> setup.complete());
         setup.await();
 
-        final Consumer<CountDownLatch> receiver = latch -> {
-            final Async consumerTracker = ctx.async();
-            createConsumer(TEST_TENANT_ID, msg -> {
-                log.trace("received {}", msg);
+        final Function<Handler<Void>, Future<Void>> receiver = callback -> {
+            return createConsumer(TEST_TENANT_ID, msg -> {
                 assertMessageProperties(ctx, msg);
                 assertAdditionalMessageProperties(ctx, msg);
-                latch.countDown();
+                callback.handle(null);
             }).map(c -> {
                 consumer = c;
-                return c;
-            }).setHandler(ctx.asyncAssertSuccess(ok -> consumerTracker.complete()));
-            consumerTracker.await();
+                return null;
+            });
         };
 
         doUploadMessages(ctx, receiver, payload -> {
