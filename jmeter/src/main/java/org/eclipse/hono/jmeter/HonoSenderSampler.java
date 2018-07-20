@@ -143,12 +143,7 @@ public class HonoSenderSampler extends HonoSampler implements ThreadListener {
      * @return The registry port as integer, {@code 0} if the value cannot be parsed as an integer.
      */
     public int getRegistryPortAsInt() {
-        final String portString = getRegistryPort();
-        try {
-            return Integer.parseInt(portString);
-        } catch (final NumberFormatException e) {
-            return 0;
-        }
+        return getIntValueOrDefault(getRegistryPort(), 0);
     }
 
     public String getRegistryPort() {
@@ -171,12 +166,7 @@ public class HonoSenderSampler extends HonoSampler implements ThreadListener {
      * if the value cannot be parsed as integer.
      */
     public int getWaitForReceiversAsInt() {
-        final String value = getPropertyAsString(WAIT_FOR_RECEIVERS);
-        try {
-            return Integer.parseInt(value);
-        } catch (final NumberFormatException e) {
-            return 0;
-        }
+        return getIntValueOrDefault(getPropertyAsString(WAIT_FOR_RECEIVERS), 0);
     }
 
     public String getWaitForReceivers() {
@@ -199,12 +189,7 @@ public class HonoSenderSampler extends HonoSampler implements ThreadListener {
      * if the value cannot be parsed as integer.
      */
     public int getWaitForReceiversTimeoutAsInt() {
-        final String value = getPropertyAsString(WAIT_FOR_RECEIVERS_TIMEOUT);
-        try {
-            return Integer.parseInt(value);
-        } catch (final NumberFormatException e) {
-            return 0;
-        }
+        return getIntValueOrDefault(getPropertyAsString(WAIT_FOR_RECEIVERS_TIMEOUT), 0);
     }
 
     public String getWaitForReceiversTimeout() {
@@ -227,15 +212,7 @@ public class HonoSenderSampler extends HonoSampler implements ThreadListener {
      * if the value is empty or cannot be parsed as integer.
      */
     public int getSendTimeoutOrDefaultAsInt() {
-        final String value = getPropertyAsString(SEND_TIMEOUT);
-        if (value == null || value.isEmpty()) {
-            return DEFAULT_SEND_TIMEOUT;
-        }
-        try {
-            return Integer.parseInt(value);
-        } catch (final NumberFormatException e) {
-            return DEFAULT_SEND_TIMEOUT;
-        }
+        return getIntValueOrDefault(getPropertyAsString(SEND_TIMEOUT), DEFAULT_SEND_TIMEOUT);
     }
 
     /**
@@ -298,11 +275,11 @@ public class HonoSenderSampler extends HonoSampler implements ThreadListener {
     }
 
     /**
-     * Sets whether to wait for the result of sending the message.
+     * Gets whether to wait for the result of sending the message.
      * <p>
      * If this option has not been set, {@code true} is returned.
      * 
-     * @return true in order to wait for the delivery result.
+     * @return {@code true} in order to wait for the delivery result.
      */
     public boolean isWaitForDeliveryResult() {
         return getPropertyAsBoolean(WAIT_FOR_DELIVERY_RESULT, true);
@@ -334,16 +311,8 @@ public class HonoSenderSampler extends HonoSampler implements ThreadListener {
      * @return number of messages as integer.
      */
     public int getMessageCountPerSamplerRunAsInt() {
-        final String value = getPropertyAsString(MESSAGE_COUNT_PER_SAMPLER_RUN);
-        if (value == null || value.isEmpty()) {
-            return 1;
-        }
-        try {
-            final int messageCount = Integer.parseInt(value);
-            return messageCount > 0 ? messageCount : 1;
-        } catch (final NumberFormatException e) {
-            return 1;
-        }
+        final int messageCount = getIntValueOrDefault(getPropertyAsString(MESSAGE_COUNT_PER_SAMPLER_RUN), 1);
+        return messageCount > 0 ? messageCount : 1;
     }
 
     /**
@@ -352,8 +321,20 @@ public class HonoSenderSampler extends HonoSampler implements ThreadListener {
      * @param messageCountPerSamplerRun number of messages.
      */
     public void setMessageCountPerSamplerRun(final String messageCountPerSamplerRun) {
-        setProperty(MESSAGE_COUNT_PER_SAMPLER_RUN, messageCountPerSamplerRun);
-    }    
+        final int parsedMessageCount = getIntValueOrDefault(messageCountPerSamplerRun, 1);
+        setProperty(MESSAGE_COUNT_PER_SAMPLER_RUN, parsedMessageCount > 0 ? Integer.toString(parsedMessageCount) : "1");
+    }
+
+    private static int getIntValueOrDefault(final String stringValue, final int defaultValue) {
+        if (stringValue == null || stringValue.isEmpty()) {
+            return defaultValue;
+        }
+        try {
+            return Integer.parseInt(stringValue);
+        } catch (final NumberFormatException e) {
+            return defaultValue;
+        }
+    }
 
     public String getContentType() {
         return getPropertyAsString(CONTENT_TYPE);

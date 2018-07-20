@@ -67,9 +67,10 @@ public class HonoSenderSamplerUI extends HonoSamplerUI {
         assertion = new JLabeledTextField("Registration Assertion");
         contentType = new JLabeledTextField("Content type");
         data = new JLabeledTextArea("Message data");
-        waitForCredits = new JCheckBox("Wait for credits if none is left");
+        waitForCredits = new JCheckBox("Wait for credits if none left after sending");
         waitForDeliveryResult = new JCheckBox("Wait for delivery result");
-        waitForDeliveryResult.setToolTipText("<html>Deselecting this option increases throughput, especially of <em>event</em> messages.</html>");
+        waitForDeliveryResult.setToolTipText("<html>Deselecting this option increases sender throughput, especially of <em>event</em> messages, " +
+                "at the expense of not finding out about rejected messages. <br>For this, the number of messages at the receiver end has to be checked.</html>");
         setSenderTime = new JCheckBox("Set sender time in property");
         setSenderTime.setToolTipText(new StringBuilder()
                 .append("<html>")
