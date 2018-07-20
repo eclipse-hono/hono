@@ -33,6 +33,7 @@ public class HonoSenderSamplerUI extends HonoSamplerUI {
     private final JLabeledTextField  deviceId;
     private final JCheckBox          setSenderTime;
     private final JCheckBox          waitForCredits;
+    private final JCheckBox          waitForDeliveryResult;
     private final JLabeledTextField  contentType;
     private final JLabeledTextArea   data;
     private final JLabeledTextField  assertion;
@@ -44,6 +45,7 @@ public class HonoSenderSamplerUI extends HonoSamplerUI {
     private final JLabeledTextField  container;
     private final JLabeledChoice     endpoint;
     private final ServerOptionsPanel honoServerOptions;
+    private final JLabeledTextField  msgCountPerSamplerRun;
 
     /**
      * Creates a new UI that provides means to configure
@@ -65,7 +67,10 @@ public class HonoSenderSamplerUI extends HonoSamplerUI {
         assertion = new JLabeledTextField("Registration Assertion");
         contentType = new JLabeledTextField("Content type");
         data = new JLabeledTextArea("Message data");
-        waitForCredits = new JCheckBox("Wait for credits");
+        waitForCredits = new JCheckBox("Wait for credits if none left after sending");
+        waitForDeliveryResult = new JCheckBox("Wait for delivery result");
+        waitForDeliveryResult.setToolTipText("<html>Deselecting this option increases sender throughput, especially of <em>event</em> messages, " +
+                "at the expense of not finding out about rejected messages. <br>For this, the number of messages at the receiver end has to be checked.</html>");
         setSenderTime = new JCheckBox("Set sender time in property");
         setSenderTime.setToolTipText(new StringBuilder()
                 .append("<html>")
@@ -78,6 +83,7 @@ public class HonoSenderSamplerUI extends HonoSamplerUI {
         waitForReceiversTimeout = new JLabeledTextField(
                 "Max time (millis) to wait for receivers");
         sampleSendTimeout = new JLabeledTextField("Max time (millis) for sending a message");
+        msgCountPerSamplerRun = new JLabeledTextField("Number of messages per sampler run");
 
         addOption(honoServerOptions);
         addOption(tenant);
@@ -89,10 +95,12 @@ public class HonoSenderSamplerUI extends HonoSamplerUI {
         addOption(assertion);
         addOption(registrationServiceOptions);
         addOption(waitForCredits);
+        addOption(waitForDeliveryResult);
         addOption(setSenderTime);
         addOption(waitForReceivers);
         addOption(waitForReceiversTimeout);
         addOption(sampleSendTimeout);
+        addOption(msgCountPerSamplerRun);
     }
 
     @Override
@@ -119,9 +127,11 @@ public class HonoSenderSamplerUI extends HonoSamplerUI {
         sampler.setDeviceId(deviceId.getText());
         sampler.setSetSenderTime(setSenderTime.isSelected());
         sampler.setWaitForCredits(waitForCredits.isSelected());
+        sampler.setWaitForDeliveryResult(waitForDeliveryResult.isSelected());
         sampler.setWaitForReceivers(waitForReceivers.getText());
         sampler.setWaitForReceiversTimeout(waitForReceiversTimeout.getText());
         sampler.setSendTimeout(sampleSendTimeout.getText());
+        sampler.setMessageCountPerSamplerRun(msgCountPerSamplerRun.getText());
         sampler.setContentType(contentType.getText());
         sampler.setData(data.getText());
         sampler.setRegistrationAssertion(assertion.getText());
@@ -141,8 +151,10 @@ public class HonoSenderSamplerUI extends HonoSamplerUI {
         waitForReceivers.setText(sampler.getWaitForReceivers());
         waitForReceiversTimeout.setText(sampler.getWaitForReceiversTimeout());
         sampleSendTimeout.setText(sampler.getSendTimeoutOrDefault());
+        msgCountPerSamplerRun.setText(sampler.getMessageCountPerSamplerRun());
         setSenderTime.setSelected(sampler.isSetSenderTime());
         waitForCredits.setSelected(sampler.isWaitForCredits());
+        waitForDeliveryResult.setSelected(sampler.isWaitForDeliveryResult());
         contentType.setText(sampler.getContentType());
         data.setText(sampler.getData());
         assertion.setText(sampler.getRegistrationAssertion());
@@ -163,9 +175,11 @@ public class HonoSenderSamplerUI extends HonoSamplerUI {
         data.setText("");
         assertion.setText("");
         waitForCredits.setSelected(true);
+        waitForDeliveryResult.setSelected(true);
         waitForReceivers.setText("0");
         waitForReceiversTimeout.setText("5000");
         sampleSendTimeout.setText(Integer.toString(HonoSenderSampler.DEFAULT_SEND_TIMEOUT));
+        msgCountPerSamplerRun.setText("1");
         // device registration service
         registrationServiceOptions.clearGui();
     }
