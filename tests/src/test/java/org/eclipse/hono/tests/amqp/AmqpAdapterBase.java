@@ -157,7 +157,7 @@ public abstract class AmqpAdapterBase extends ClientTestBase {
 
         msg.setContentType("application/vnd.eclipse-hono-empty-notification");
 
-        sender.send(msg).setHandler(context.asyncAssertFailure(t -> {
+        sender.sendAndWaitForOutcome(msg).setHandler(context.asyncAssertFailure(t -> {
 
             context.assertTrue(ClientErrorException.class.isInstance(t));
 
@@ -186,7 +186,7 @@ public abstract class AmqpAdapterBase extends ClientTestBase {
         setup.await();
 
         final Message msg = ProtonHelper.message("some payload");
-        sender.send(msg).setHandler(context.asyncAssertFailure(t -> {
+        sender.sendAndWaitForOutcome(msg).setHandler(context.asyncAssertFailure(t -> {
 
             context.assertTrue(ClientErrorException.class.isInstance(t));
 
@@ -251,7 +251,7 @@ public abstract class AmqpAdapterBase extends ClientTestBase {
         doUploadMessages(context, receiver, payload -> {
             final Async sendingComplete = context.async();
             final Message msg = ProtonHelper.message(payload);
-            sender.send(msg).setHandler(outcome -> {
+            sender.sendAndWaitForOutcome(msg).setHandler(outcome -> {
                 sendingComplete.complete();
             });
             sendingComplete.await();
