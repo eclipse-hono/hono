@@ -3,16 +3,12 @@ title = "Device Registry"
 weight = 205
 +++
 
-The Device Registry component is an example implementation of the following Hono APIs:
-
-* [Tenant API]({{< relref "api/Tenant-API.md" >}})
-* [Device Registration API]({{< relref "api/Device-Registration-API.md" >}})
-* [Credentials API]({{< relref "api/Credentials-API.md" >}})
+The Device Registry component provides exemplary implementations of Hono's [Tenant API]({{< relref "api/Tenant-API.md" >}}), [Device Registration API]({{< relref "api/Device-Registration-API.md" >}}) and [Credentials API]({{< relref "api/Credentials-API.md" >}}).
 
 <!--more-->
-It implements AMQP 1.0 API endpoints and provides JSON based file persistence for data. 
+As such it exposes AMQP 1.0 based endpoints for retrieving the relevant information and persists data in the local filesystem. 
 
-In addition to the AMQP 1.0 based API endpoints, the Device Registry also exposes HTTP resources for managing the contents of the registry.
+In addition, the Device Registry also exposes HTTP resources for managing the contents of the registry.
 
 {{% warning %}}
 The Device Registry is not intended to be used in production environments. In particular, access to the HTTP resources described below is not restricted to authorized clients only.
