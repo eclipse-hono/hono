@@ -11,7 +11,7 @@
  *
  */
 
-package org.eclipse.hono.example;
+package org.eclipse.hono.cli;
 
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.impl.HonoClientImpl;
@@ -27,7 +27,7 @@ import io.vertx.core.VertxOptions;
 import io.vertx.core.dns.AddressResolverOptions;
 
 /**
- * Configuration for Example application.
+ * Configuration for CLI application.
  */
 @Configuration
 public class AppConfiguration {
@@ -64,8 +64,7 @@ public class AppConfiguration {
     }
 
     /**
-     * Exposes a factory for connections to the Hono server
-     * as a Spring bean.
+     * Exposes a factory for connections to the Hono as a Spring bean.
      * 
      * @return The connection factory.
      */

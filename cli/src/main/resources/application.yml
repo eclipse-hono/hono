@@ -21,6 +21,8 @@ spring:
 hono:
   client:
     port: 15671
+message:
+  type: all
 
 ---
 

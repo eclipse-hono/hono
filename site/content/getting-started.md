@@ -82,20 +82,26 @@ You may notice that the list also includes two additional services called `hono-
 ## Starting a Consumer
 
 The telemetry data produced by devices is usually consumed by downstream applications that use it to implement their corresponding business functionality.
-In this example we will use a simple command line client that logs all telemetry messages to the console.
-You can start the client from the `example` folder as follows:
+In this example we will use a simple command line client that logs all telemetry and event messages to the console.
+You can start the client from the `cli` folder as follows:
 
 ~~~sh
-~/hono/example$ mvn spring-boot:run -Drun.arguments=--hono.client.host=localhost,--hono.client.username=consumer@HONO,--hono.client.password=verysecret
+~/hono/cli$ mvn spring-boot:run -Drun.arguments=--hono.client.host=localhost,--hono.client.username=consumer@HONO,--hono.client.password=verysecret,--message.type=telemetry
 ~~~
 
 Event messages are very similar to telemetry ones, except that they use `AT LEAST ONCE` quality of service. You can receive and log event messages uploaded to Hono using the same client.
 
-In order to do so, run the client from the `example` folder as follows:
+In order to do so, run the client from the `cli` folder as follows:
 
 ~~~sh
-mvn spring-boot:run -Drun.arguments=--hono.client.host=localhost,--hono.client.username=consumer@HONO,--hono.client.password=verysecret -Drun.profiles=receiver,ssl,event
+~/hono/cli$ mvn spring-boot:run -Drun.arguments=--hono.client.host=localhost,--hono.client.username=consumer@HONO,--hono.client.password=verysecret,--message.type=event
 ~~~
+
+In order to receive and log both telemetry and event messages, run the client from the `cli` folder as follows:
+
+~~~sh
+~/hono/cli$ mvn spring-boot:run -Drun.arguments=--hono.client.host=localhost,--hono.client.username=consumer@HONO,--hono.client.password=verysecret
+~~~ 
 
 {{% warning %}}
 Replace *localhost* with the name or IP address of the host that Docker is running on.

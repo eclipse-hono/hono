@@ -9,7 +9,7 @@
  * Contributors:
  *    Bosch Software Innovations GmbH - initial creation
  */
-package org.eclipse.hono.example;
+package org.eclipse.hono.cli;
 
 import javax.annotation.PostConstruct;
 
@@ -20,7 +20,8 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 /**
- * An example of using HonoClient for uploading and retrieving telemetry data and event messages to/from Hono.
+ * A CLI(Command Line Interface) Application using HonoClient for receiving telemetry data and event messages to/from
+ * Hono.
  */
 @SpringBootApplication
 public class Application {
