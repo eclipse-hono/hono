@@ -405,13 +405,14 @@ public final class MessageHelper {
     }
 
     /**
-     * Adds the <em>time until disconnect</em> property to an AMQP 1.0 message.
+     * Adds a property indicating a device's <em>time until disconnect</em> property to
+     * an AMQP 1.0 message.
      * <p>
      * The value is put to the message's <em>application-properties</em> under key
      * {@link #APP_PROPERTY_DEVICE_TTD}.
      *
      * @param msg The message to add the property to.
-     * @param timeUntilDisconnect The value of the property.
+     * @param timeUntilDisconnect The value of the property (number of seconds).
      */
     public static void addTimeUntilDisconnect(final Message msg, final int timeUntilDisconnect) {
         addProperty(msg, APP_PROPERTY_DEVICE_TTD, timeUntilDisconnect);
