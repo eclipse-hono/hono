@@ -504,7 +504,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      *         the message.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
-    protected Future<ProtonDelivery> sendCommandResponse(
+    protected final Future<ProtonDelivery> sendCommandResponse(
             final String tenantId,
             final CommandResponse response) {
 
@@ -513,6 +513,29 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
 
         return createCommandResponseSender(tenantId, response.getReplyToId())
                 .compose(sender -> sender.sendCommandResponse(response));
+    }
+
+    /**
+     * Forwards a response message indicating a failure to the sender of the command.
+     * <p>
+     * This method may be used by protocol adapters if they have not been able to
+     * forward the command to the device. A reasonable status code to use in this
+     * case is {@code 503 Unavailable}.
+     * 
+     * @param command The failed command. If {@code null}, no message will be sent.
+     * @param statusCode The status code indicating the reason for failure.
+     * @return A future indicating the outcome of the attempt to send
+     *         the message.
+     */
+    protected final Future<ProtonDelivery> failCommand(final Command command, final int statusCode) {
+
+        if (command == null) {
+            return Future.succeededFuture();
+        } else {
+            return sendCommandResponse(
+                    command.getTenant(),
+                    CommandResponse.from(command.getRequestId(), command.getDeviceId(), statusCode));
+        }
     }
 
     /**

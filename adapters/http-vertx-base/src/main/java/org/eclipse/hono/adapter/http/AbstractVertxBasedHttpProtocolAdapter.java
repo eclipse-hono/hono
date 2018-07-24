@@ -557,7 +557,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
             if (qos != null && qos == HEADER_QOS_INVALID) {
                 HttpUtils.badRequest(ctx, "unsupported QoS-Level header value");
             } else {
-                final Future<Void> responseReady = Future.future();
+
                 final Device authenticatedDevice = getAuthenticatedDevice(ctx);
                 final Span currentSpan = tracer.buildSpan("upload " + endpointName)
                         .asChildOf(TracingHandler.serverSpanContext(ctx))
@@ -569,6 +569,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                         .withTag(TracingHelper.TAG_AUTHENTICATED.getKey(), authenticatedDevice != null)
                         .start();
 
+                final Future<Void> responseReady = Future.future();
                 final Future<JsonObject> tokenTracker = getRegistrationAssertion(tenant, deviceId, authenticatedDevice);
                 final Future<TenantObject> tenantConfigTracker = getTenantConfiguration(tenant, currentSpan.context());
                 final Future<MessageConsumer> commandConsumerTracker = createCommandConsumer(tenant, deviceId, ctx, responseReady, currentSpan);
@@ -614,10 +615,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                             currentSpan.log("failed to send HTTP response to device");
                             LOG.debug("failed to send http response for [{}] message from device [tenantId: {}, deviceId: {}]",
                                     endpointName, tenant, deviceId, t);
-                            if (command != null) {
-                                final CommandResponse response = CommandResponse.from(command.getRequestId(), deviceId, HttpURLConnection.HTTP_UNAVAILABLE);
-                                sendCommandResponse(tenant, response);
-                            }
+                            failCommand(command, HttpURLConnection.HTTP_UNAVAILABLE);
                             TracingHelper.logError(currentSpan, t);
                             currentSpan.finish();
                         });
@@ -629,11 +627,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
 
                     LOG.debug("cannot process [{}] message from device [tenantId: {}, deviceId: {}]",
                             endpointName, tenant, deviceId, t);
-                    final Command command = Command.get(ctx);
-                    if (command != null) {
-                        final CommandResponse response = CommandResponse.from(command.getRequestId(), deviceId, HttpURLConnection.HTTP_UNAVAILABLE);
-                        sendCommandResponse(tenant, response);
-                    }
+                    failCommand(Command.get(ctx), HttpURLConnection.HTTP_UNAVAILABLE);
 
                     if (ClientErrorException.class.isInstance(t)) {
                         final ClientErrorException e = (ClientErrorException) t;
