@@ -26,6 +26,8 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.qpid.proton.amqp.messaging.AmqpValue;
 import org.apache.qpid.proton.amqp.messaging.Rejected;
+import org.apache.qpid.proton.amqp.messaging.Target;
+import org.apache.qpid.proton.engine.Record;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageSender;
@@ -55,6 +57,7 @@ import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonDelivery;
+import io.vertx.proton.ProtonQoS;
 import io.vertx.proton.ProtonReceiver;
 import io.vertx.proton.ProtonServer;
 
@@ -65,7 +68,7 @@ import io.vertx.proton.ProtonServer;
 public class VertxBasedAmqpProtocolAdapterTest {
 
     @Rule
-    public Timeout globalTimeout = new Timeout(5, TimeUnit.SECONDS);
+    public Timeout globalTimeout = new Timeout(5, TimeUnit.HOURS);
 
     /**
      * A tenant identifier used for testing.
@@ -158,25 +161,26 @@ public class VertxBasedAmqpProtocolAdapterTest {
     }
 
     /**
-     * Verifies that the AMQP Adapter does not support anonymous relay.
+     * Verifies that the AMQP Adapter rejects (closes) AMQP links that contains a target address.
      */
     @Test
-    public void testAnonymousRelayNotSupported() {
+    public void testAnonymousRelayRequired() {
         // GIVEN an AMQP adapter with a configured server.
         final ProtonServer server = getAmqpServer();
         final VertxBasedAmqpProtocolAdapter adapter = getAdapter(server);
 
-        // WHEN the adapter receives a request from a link
-        // that does not specify a target address
-        final ProtonReceiver receiver = mock(ProtonReceiver.class);
-        adapter.handleRemoteReceiverOpen(receiver, mock(ProtonConnection.class));
+        // WHEN the adapter receives a link that contains a target address
+        final ResourceIdentifier targetAddress = ResourceIdentifier.from(TelemetryConstants.TELEMETRY_ENDPOINT, TEST_TENANT_ID, TEST_DEVICE);
+        final ProtonReceiver link = getReceiver(ProtonQoS.AT_LEAST_ONCE, getTarget(targetAddress));
+
+        adapter.handleRemoteReceiverOpen(link, getConnection(null));
 
         // THEN the adapter closes the link.
-        verify(receiver).close();
+        verify(link).close();
     }
 
     /**
-     * Verifies that a request to upload telemetry message (with settled=true) results in the sender sending the message
+     * Verifies that a request to upload a "settled" telemetry message results in the sender sending the message
      * without waiting for a response from the downstream peer.
      * 
      * AT_MOST_ONCE delivery semantics
@@ -194,16 +198,16 @@ public class VertxBasedAmqpProtocolAdapterTest {
         final ProtonDelivery delivery = mock(ProtonDelivery.class);
         when(delivery.remotelySettled()).thenReturn(true);
 
-        final ResourceIdentifier resource = ResourceIdentifier.from(TelemetryConstants.TELEMETRY_ENDPOINT, TEST_TENANT_ID, TEST_DEVICE);
-        final Device authenticatedDevice = getAuthenticatedDevice();
-        adapter.uploadMessage(new AmqpContext(delivery, getFakeMessage(), resource, authenticatedDevice));
+        final String to = ResourceIdentifier.from(TelemetryConstants.TELEMETRY_ENDPOINT, TEST_TENANT_ID, TEST_DEVICE).toString();
+
+        adapter.uploadMessage(new AmqpContext(delivery, getFakeMessage(to), null));
 
         // THEN the adapter sends the message and does not wait for response from the peer.
         verify(telemetrySender).send(any(Message.class));
     }
 
     /**
-     * Verifies that a request to upload telemetry message (with settled=false) results in the sender sending the
+     * Verifies that a request to upload an "unsettled" telemetry message results in the sender sending the
      * message and waits for a response from the downstream peer.
      * 
      * AT_LEAST_ONCE delivery semantics.
@@ -220,19 +224,18 @@ public class VertxBasedAmqpProtocolAdapterTest {
         // IF a device send telemetry data (with un-settled delivery)
         final ProtonDelivery delivery = mock(ProtonDelivery.class);
         when(delivery.remotelySettled()).thenReturn(false);
-        final ResourceIdentifier resource = ResourceIdentifier.from(TelemetryConstants.TELEMETRY_ENDPOINT, TEST_TENANT_ID, TEST_DEVICE);
 
-        final Device authenticatedDevice = null;
-        adapter.uploadMessage(new AmqpContext(delivery, getFakeMessage(), resource, authenticatedDevice));
+        final String to = ResourceIdentifier.from(TelemetryConstants.TELEMETRY_ENDPOINT, TEST_TENANT_ID, TEST_DEVICE).toString();
+
+        adapter.uploadMessage(new AmqpContext(delivery, getFakeMessage(to), null));
 
         // THEN the sender sends the message and waits for the outcome from the downstream peer
         verify(telemetrySender).sendAndWaitForOutcome(any(Message.class));
     }
 
     /**
-     * Verifies that a request to upload a telemetry message from a device that belongs to a tenant for which the AMQP
-     * adapter is disabled fails and that the device is notified when the message cannot be processed (un-settled
-     * delivery).
+     * Verifies that a request to upload an "unsettled" telemetry message from a device that belongs to a tenant for which the AMQP
+     * adapter is disabled fails and that the device is notified when the message cannot be processed.
      * 
      */
     @Test
@@ -247,8 +250,9 @@ public class VertxBasedAmqpProtocolAdapterTest {
         // WHEN a device uploads telemetry data to the adapter (and wants to be notified of failure)
         final ProtonDelivery delivery = mock(ProtonDelivery.class);
         when(delivery.remotelySettled()).thenReturn(false);
-        final ResourceIdentifier resource = ResourceIdentifier.from(TelemetryConstants.TELEMETRY_ENDPOINT, TEST_TENANT_ID, TEST_DEVICE);
-        final AmqpContext context = spy(new AmqpContext(delivery, getFakeMessage(), resource, null));
+        final String to = ResourceIdentifier.from(TelemetryConstants.TELEMETRY_ENDPOINT, TEST_TENANT_ID, TEST_DEVICE).toString();
+
+        final AmqpContext context = spy(new AmqpContext(delivery, getFakeMessage(to), null));
         adapter.uploadMessage(context);
 
         // THEN the adapter does not send the message (regardless of the delivery mode).
@@ -260,37 +264,25 @@ public class VertxBasedAmqpProtocolAdapterTest {
         verify(delivery).disposition(isA(Rejected.class), eq(true));
     }
 
-    /**
-     * Verify that when an unauthenticated device uploads a message to an address that does not
-     * contain a device-id, then the uploading operation fails and the device is notified of failure.
-     * 
-     * This ensures that address for unauthenticated devices is of the form {@code [endpointName/tenant-id/device-id]}
-     */
-    @Test
-    public void testUploadFailsForInvalidAmqpAddress() {
+    private Target getTarget(final ResourceIdentifier resource) {
+        final Target target = new Target();
+        target.setAddress(resource.toString());
+        return target;
+    }
 
-        // GIVEN an adapter configured to use a user-define server.
-        final VertxBasedAmqpProtocolAdapter adapter = givenAnAmqpAdapter();
-        final MessageSender telemetrySender = givenATelemetrySenderForAnyTenant();
+    private ProtonReceiver getReceiver(final ProtonQoS qos, final Target target) {
+        final ProtonReceiver receiver = mock(ProtonReceiver.class);
+        when(receiver.getRemoteTarget()).thenReturn(target);
+        when(receiver.getRemoteQoS()).thenReturn(qos);
+        return receiver;
+    }
 
-        // AND given a tenant which is ENABLED but DISABLED for the AMQP Adapter
-        givenAConfiguredTenant(TEST_TENANT_ID, Boolean.TRUE);
-
-        // WHEN a device uploads telemetry data to the adapter (and wants to be notified of failure)
-        final ProtonDelivery delivery = mock(ProtonDelivery.class);
-        when(delivery.remotelySettled()).thenReturn(false);
-
-        final String invalidAddress = String.format("%s/%s", TelemetryConstants.TELEMETRY_ENDPOINT, TEST_TENANT_ID);
-        final ResourceIdentifier resource = ResourceIdentifier.fromString(invalidAddress);
-        final AmqpContext context = spy(new AmqpContext(delivery, getFakeMessage(), resource, null));
-        adapter.uploadMessage(context);
-
-        // THEN the adapter does not send the message (regardless of the delivery mode).
-        verify(telemetrySender, never()).send(any(Message.class));
-        verify(telemetrySender, never()).sendAndWaitForOutcome(any(Message.class));
-
-        // AND notifies the device by sending back a REJECTED disposition
-        verify(delivery).disposition(isA(Rejected.class), eq(true));
+    private ProtonConnection getConnection(final Device device) {
+        final ProtonConnection conn = mock(ProtonConnection.class);
+        final Record record = mock(Record.class);
+        when(record.get(anyString(), eq(Device.class))).thenReturn(device);
+        when(conn.attachments()).thenReturn(record);
+        return conn;
     }
 
     private void givenAConfiguredTenant(final String tenantId, final boolean enabled) {
@@ -300,10 +292,11 @@ public class VertxBasedAmqpProtocolAdapterTest {
         when(tenantClient.get(tenantId)).thenReturn(Future.succeededFuture(tenantConfig));
     }
 
-    private Message getFakeMessage() {
+    private Message getFakeMessage(final String to) {
         final Message message = mock(Message.class);
         when(message.getContentType()).thenReturn("application/text");
         when(message.getBody()).thenReturn(new AmqpValue("some payload"));
+        when(message.getAddress()).thenReturn(to);
         return message;
     }
 
@@ -311,10 +304,6 @@ public class VertxBasedAmqpProtocolAdapterTest {
         final MessageSender sender = mock(MessageSender.class);
         when(messagingServiceClient.getOrCreateTelemetrySender(anyString())).thenReturn(Future.succeededFuture(sender));
         return sender;
-    }
-
-    private Device getAuthenticatedDevice() {
-        return new Device(TEST_TENANT_ID, TEST_DEVICE);
     }
 
     /**

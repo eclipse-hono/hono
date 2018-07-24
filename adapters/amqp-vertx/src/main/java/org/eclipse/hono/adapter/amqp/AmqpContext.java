@@ -40,11 +40,21 @@ public class AmqpContext {
     private final ResourceIdentifier resource;
     private final Device authenticatedDevice;
 
-    AmqpContext(final ProtonDelivery delivery, final Message message, final ResourceIdentifier resource, final Device authenticatedDevice) {
+    /**
+     * Creates an AmqpContext instance using the specified delivery, message and authenticated device.
+     * <p>
+     * This constructor <b>does not</b> validate the message address. It is the responsibility of the caller to make
+     * sure that the message address is valid i.e matches the pattern {@code endpointName/tenantId/deviceId}.
+     * 
+     * @param delivery The delivery of the message.
+     * @param message The AMQP 1.0 message. The message must contain a valid address.
+     * @param authenticatedDevice The device that authenticates to the adapter or {@code null} if the device is unauthenticated.
+     */
+    AmqpContext(final ProtonDelivery delivery, final Message message, final Device authenticatedDevice) {
         this.delivery = delivery;
         this.message = message;
-        this.resource = resource;
         this.authenticatedDevice = authenticatedDevice;
+        this.resource = ResourceIdentifier.fromString(message.getAddress());
     }
 
     /**
@@ -75,21 +85,21 @@ public class AmqpContext {
     }
 
     /**
-     * Gets the tenant identifier of this context's resource.
+     * Gets the tenant identifier for this context.
      *
      * @return The tenant identifier.
      */
     String getTenantId() {
-        return resource.getTenantId();
+        return isDeviceAuthenticated() ? authenticatedDevice.getTenantId() : resource.getTenantId();
     }
 
     /**
-     * Gets the device identifier of this context's resource.
+     * Gets the device identifier for this context.
      *
      * @return The device identifier.
      */
     String getDeviceId() {
-        return resource.getResourceId();
+        return isDeviceAuthenticated() ? authenticatedDevice.getDeviceId() : resource.getResourceId();
     }
 
     /**
@@ -133,15 +143,20 @@ public class AmqpContext {
      * case of a <em>ClientErrorException</em>. In the REJECTED case, the supplied exception will provide
      * the error condition value and description as reason for rejection.
      *
-     * @param error The service invocation exception.
+     * @param t The service invocation exception.
      * @throws NullPointerException if error is {@code null}.
      */
-    void handleFailure(final ServiceInvocationException error) {
-        Objects.requireNonNull(error);
-        if (ServerErrorException.class.isInstance(error)) {
-            ProtonHelper.released(delivery, true);
+    void handleFailure(final Throwable t) {
+        Objects.requireNonNull(t);
+        final ErrorCondition condition = getErrorCondition(t);
+        if (ServiceInvocationException.class.isInstance(t)) {
+            final ServiceInvocationException error = (ServiceInvocationException) t;
+            if (ServerErrorException.class.isInstance(error)) {
+                ProtonHelper.released(delivery, true);
+            } else {
+                MessageHelper.rejected(delivery, condition);
+            }
         } else {
-            final ErrorCondition condition = getErrorCondition(error);
             MessageHelper.rejected(delivery, condition);
         }
     }
@@ -177,20 +192,25 @@ public class AmqpContext {
 
     //---------------------------------------------< private methods >---
     /**
-     * Creates an ErrorCondition using the given service invocation error to provide an error condition value
-     * and description.
+     * Creates an ErrorCondition using the given throwable to provide an error condition value and
+     * description. All throwables that are not service invocation exceptions will be mapped to {@link AmqpError#PRECONDITION_FAILED}.
      *
-     * @param error The service invocation error.
+     * @param t The throwable to map to an error condition.
      * @return The ErrorCondition.
      */
-    private ErrorCondition getErrorCondition(final ServiceInvocationException error) {
-        switch (error.getErrorCode()) {
-        case HttpURLConnection.HTTP_BAD_REQUEST:
-            return ProtonHelper.condition(Constants.AMQP_BAD_REQUEST, error.getMessage());
-        case HttpURLConnection.HTTP_FORBIDDEN:
-            return ProtonHelper.condition(AmqpError.UNAUTHORIZED_ACCESS, error.getMessage());
-        default:
-            return ProtonHelper.condition(AmqpError.PRECONDITION_FAILED, error.getMessage());
+    static ErrorCondition getErrorCondition(final Throwable t) {
+        if (ServiceInvocationException.class.isInstance(t)) {
+            final ServiceInvocationException error = (ServiceInvocationException) t;
+            switch (error.getErrorCode()) {
+            case HttpURLConnection.HTTP_BAD_REQUEST:
+                return ProtonHelper.condition(Constants.AMQP_BAD_REQUEST, error.getMessage());
+            case HttpURLConnection.HTTP_FORBIDDEN:
+                return ProtonHelper.condition(AmqpError.UNAUTHORIZED_ACCESS, error.getMessage());
+            default:
+                return ProtonHelper.condition(AmqpError.PRECONDITION_FAILED, error.getMessage());
+            }
+        } else {
+            return ProtonHelper.condition(AmqpError.PRECONDITION_FAILED, t.getMessage());
         }
     }
 }
