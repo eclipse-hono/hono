@@ -572,9 +572,19 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                 final Future<Void> responseReady = Future.future();
                 final Future<JsonObject> tokenTracker = getRegistrationAssertion(tenant, deviceId, authenticatedDevice);
                 final Future<TenantObject> tenantConfigTracker = getTenantConfiguration(tenant, currentSpan.context());
-                final Future<MessageConsumer> commandConsumerTracker = createCommandConsumer(tenant, deviceId, ctx, responseReady, currentSpan);
+                final Future<Integer> ttdTracker = tenantConfigTracker.compose(tenantObj -> {
+                    final Integer ttdParam = HttpUtils.getTimeTilDisconnect(ctx);
+                    return getTimeUntilDisconnect(tenantObj, ttdParam).map(effectiveTtd -> {
+                        if (effectiveTtd != null) {
+                            currentSpan.setTag(MessageHelper.APP_PROPERTY_DEVICE_TTD, effectiveTtd);
+                        }
+                        return effectiveTtd;
+                    });
+                });
+                final Future<MessageConsumer> commandConsumerTracker = ttdTracker
+                        .compose(ttd -> createCommandConsumer(ttd, tenant, deviceId, ctx, responseReady, currentSpan));
 
-                CompositeFuture.all(tokenTracker, tenantConfigTracker, senderTracker, commandConsumerTracker).compose(ok -> {
+                CompositeFuture.all(tokenTracker, senderTracker, commandConsumerTracker).compose(ok -> {
 
                     if (tenantConfigTracker.result().isAdapterEnabled(getTypeName())) {
                         final MessageSender sender = senderTracker.result();
@@ -585,7 +595,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                                 contentType,
                                 payload,
                                 tokenTracker.result(),
-                                HttpUtils.getTimeTilDisconnect(ctx));
+                                ttdTracker.result());
                         customizeDownstreamMessage(downstreamMessage, ctx);
 
                         addConnectionCloseHandler(ctx, commandConsumerTracker.result(), tenant, deviceId);
@@ -645,7 +655,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
     }
 
     /**
-     * Attach a handler that is called if a command consumer was opened and the client closes the HTTP connection before a response
+     * Attaches a handler that is called if a command consumer was opened and the client closes the HTTP connection before a response
      * with a possible command could be sent.
      * <p>
      * In this case, the handler closes the command consumer since a command could not be added to the response anymore.
@@ -657,9 +667,13 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
      * @param tenantId The tenant that the device belongs to.
      * @param deviceId The identifier of the device.
      */
-    private void addConnectionCloseHandler(final RoutingContext ctx, final MessageConsumer messageConsumer,
-                                           final String tenantId, final String deviceId) {
-        Optional.ofNullable(messageConsumer).map(consumer -> {
+    private void addConnectionCloseHandler(
+            final RoutingContext ctx,
+            final MessageConsumer messageConsumer,
+            final String tenantId,
+            final String deviceId) {
+
+        if (messageConsumer != null) {
             if (!ctx.response().closed()) {
                 ctx.response().closeHandler(v -> {
                     cancelCommandReceptionTimer(ctx);
@@ -673,8 +687,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                     });
                 });
             }
-            return consumer;
-        });
+        }
     }
 
     private void setResponsePayload(final HttpServerResponse response, final Command command, final Span currentSpan) {
@@ -696,6 +709,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
     /**
      * Creates a consumer for command messages to be sent to a device.
      *
+     * @param ttdSecs The number of seconds the device waits for a command.
      * @param tenantId The tenant that the device belongs to.
      * @param deviceId The identifier of the device.
      * @param ctx The device's currently executing HTTP request.
@@ -712,21 +726,28 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
      *         The future will be completed with the created message consumer or it will
      *         be failed with a {@code ServiceInvocationException} if the consumer
      *         could not be created.
+     * @throws NullPointerException if any of the parameters other than TTD are {@code null}.
      */
     protected final Future<MessageConsumer> createCommandConsumer(
+            final Integer ttdSecs,
             final String tenantId,
             final String deviceId,
             final RoutingContext ctx,
             final Future<Void> responseReady,
             final Span currentSpan) {
 
-        final long ttdMillis = Optional.ofNullable(HttpUtils.getTimeTilDisconnect(ctx)).map(ttd -> ttd * 1000L).orElse(0L);
-        if (ttdMillis <= 0) {
+        Objects.requireNonNull(tenantId);
+        Objects.requireNonNull(deviceId);
+        Objects.requireNonNull(ctx);
+        Objects.requireNonNull(responseReady);
+        Objects.requireNonNull(currentSpan);
+
+        if (ttdSecs == null || ttdSecs <= 0) {
             // no need to wait for a command
             responseReady.tryComplete();
             return Future.succeededFuture();
         } else {
-            currentSpan.setTag(MessageHelper.APP_PROPERTY_DEVICE_TTD, ttdMillis);
+            currentSpan.setTag(MessageHelper.APP_PROPERTY_DEVICE_TTD, ttdSecs);
             return getCommandConnection().getOrCreateCommandConsumer(
                     tenantId,
                     deviceId,
@@ -752,8 +773,8 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                     }).map(consumer -> {
                         consumer.flow(1);
                         if (!responseReady.isComplete()) {
-                            // if the request was not responded already, add a timer that closes the command consumer after expiry
-                            addCommandReceptionTimer(ctx, tenantId, deviceId, responseReady, ttdMillis);
+                            // if the request was not responded already, add a timer for closing the command consumer
+                            addCommandReceptionTimer(ctx, tenantId, deviceId, responseReady, ttdSecs);
                         }
                         return consumer;
                     });
@@ -761,25 +782,30 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
     }
 
     /**
-     * Add a timer that closes the command connection after the given expiry time in milliseconds.
+     * Adds a timer that closes the command connection after a given delay.
      * In this case it additionally completes the <em>responseReady</em> Future.
      * <p>
-     * The timerId is put to the routing context using the key {@link #KEY_TIMER_ID}.
+     * The created timer's ID is put to the routing context using key {@link #KEY_TIMER_ID}.
      *
      * @param ctx The device's currently executing HTTP request.
      * @param tenantId The tenant that the device belongs to.
      * @param deviceId The identifier of the device.
-     * @param responseReady A future to complete if the timer expired.
-     * @param expiryTimeInMillis The expiry time of the timer.
+     * @param responseReady A future to complete when the timer fires.
+     * @param delaySecs The number of seconds after which the timer should fire.
      */
-    private void addCommandReceptionTimer(final RoutingContext ctx, final String tenantId, final String deviceId,
-                                          final Future<Void> responseReady, final long expiryTimeInMillis) {
-        final Long timerId = ctx.vertx().setTimer(expiryTimeInMillis, id -> {
+    private void addCommandReceptionTimer(
+            final RoutingContext ctx,
+            final String tenantId,
+            final String deviceId,
+            final Future<Void> responseReady,
+            final long delaySecs) {
+
+        final Long timerId = ctx.vertx().setTimer(delaySecs * 1000L, id -> {
 
             LOG.trace("Command Reception timer fired, id {}", id);
 
             if (!responseReady.isComplete()) {
-                // if the request was responded already,
+                // the response hasn't been sent yet
                 responseReady.tryComplete();
                 getCommandConnection().closeCommandConsumer(tenantId, deviceId).setHandler(v -> {
                     if (v.failed()) {

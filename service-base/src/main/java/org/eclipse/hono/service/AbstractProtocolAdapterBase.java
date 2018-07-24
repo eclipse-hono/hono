@@ -226,6 +226,31 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     protected abstract String getTypeName();
 
     /**
+     * Gets the number of seconds after which this protocol adapter should
+     * give up waiting for an upstream command for a device of a given tenant.
+     * <p>
+     * Protocol adapters may override this method to e.g. use a static value
+     * for all tenants.
+     * 
+     * @param tenant The tenant that the device belongs to.
+     * @param deviceTtd The TTD value provided by the device.
+     * @return A succeeded future that contains {@code null} if device TTD is {@code null},
+     *         or otherwise the lesser of device TTD and the value returned by
+     *         {@link TenantObject#getMaxTimeUntilDisconnect(String)}.
+     * @throws NullPointerException if tenant is {@code null}.
+     */
+    protected Future<Integer> getTimeUntilDisconnect(final TenantObject tenant, final Integer deviceTtd) {
+
+        Objects.requireNonNull(tenant);
+
+        if (deviceTtd == null) {
+            return Future.succeededFuture();
+        } else {
+            return Future.succeededFuture(Math.min(tenant.getMaxTimeUntilDisconnect(getTypeName()), deviceTtd));
+        }
+    }
+
+    /**
      * Sets the client to use for connecting to the AMQP 1.0 network to receive commands.
      *
      * @param commandConnection The command connection.

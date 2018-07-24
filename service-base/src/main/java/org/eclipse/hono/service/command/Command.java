@@ -35,8 +35,11 @@ import io.vertx.proton.ProtonDelivery;
  */
 public final class Command {
 
+    /**
+     * The key under which the current Command is stored.
+     */
+    public static final String KEY_COMMAND = "command";
     private static final Logger LOG = LoggerFactory.getLogger(Command.class);
-    private static final String KEY_COMMAND = "command";
 
     private final ProtonDelivery delivery;
     private final Message message;

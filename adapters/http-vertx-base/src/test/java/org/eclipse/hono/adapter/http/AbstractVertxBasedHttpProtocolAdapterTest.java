@@ -18,6 +18,7 @@ import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
 import java.net.HttpURLConnection;
+import java.util.function.BiConsumer;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ClientErrorException;
@@ -25,7 +26,11 @@ import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.TenantClient;
+import org.eclipse.hono.service.command.Command;
 import org.eclipse.hono.service.command.CommandConnection;
+import org.eclipse.hono.service.command.CommandConsumer;
+import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantObject;
@@ -35,11 +40,16 @@ import org.junit.Test;
 import org.junit.rules.Timeout;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.Mockito;
 
+import io.opentracing.Span;
 import io.opentracing.SpanContext;
+import io.opentracing.contrib.vertx.ext.web.TracingHandler;
 import io.vertx.core.AsyncResult;
+import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.http.HttpServerRequest;
@@ -75,6 +85,9 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
     private TenantClient                  tenantClient;
     private HttpProtocolAdapterProperties config;
     private CommandConnection             commandConnection;
+    private CommandConsumer               commandConsumer;
+    private Vertx                         vertx;
+    private Context                       context;
 
     /**
      * Sets up common fixture.
@@ -82,6 +95,15 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
     @SuppressWarnings("unchecked")
     @Before
     public void setup() {
+
+        context = mock(Context.class);
+        vertx = mock(Vertx.class);
+        // run timers immediately
+        when(vertx.setTimer(anyLong(), any(Handler.class))).thenAnswer(invocation -> {
+            final Handler<Void> task = invocation.getArgument(1);
+            task.handle(null);
+            return 1L;
+        });
 
         config = new HttpProtocolAdapterProperties();
         config.setInsecurePortEnabled(true);
@@ -111,6 +133,10 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
 
         commandConnection = mock(CommandConnection.class);
         when(commandConnection.connect(any(Handler.class))).thenReturn(Future.succeededFuture(commandConnection));
+        when(commandConnection.closeCommandConsumer(anyString(), anyString())).thenReturn(Future.succeededFuture());
+        commandConsumer = mock(CommandConsumer.class);
+        when(commandConnection.getOrCreateCommandConsumer(anyString(), anyString(), any(BiConsumer.class), any(Handler.class)))
+            .thenReturn(Future.succeededFuture(commandConsumer));
     }
 
     /**
@@ -201,8 +227,8 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
 
         // GIVEN an adapter
         final HttpServer server = getHttpServer(false);
-        final MessageSender sender = mock(MessageSender.class);
-        when(messagingClient.getOrCreateTelemetrySender(anyString())).thenReturn(Future.succeededFuture(sender));
+        final MessageSender sender = givenATelemetrySenderForOutcome(Future.succeededFuture());
+
         // which is disabled for tenant "my-tenant"
         final TenantObject myTenantConfig = TenantObject.from("my-tenant", true);
         myTenantConfig.addAdapterConfiguration(new JsonObject()
@@ -304,18 +330,66 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         verify(response).end();
     }
 
-    private static RoutingContext newRoutingContext(final Buffer payload) {
+    /**
+     * Verifies that the adapter uses the max TTD configured for the adapter if a device provides
+     * a TTD value that is greater than the max value.
+     */
+    @Test
+    public void testUploadTelemetryUsesConfiguredMaxTtd() {
+
+        // GIVEN an adapter with a downstream telemetry consumer attached
+        final Future<ProtonDelivery> outcome = Future.succeededFuture(mock(ProtonDelivery.class));
+        givenATelemetrySenderForOutcome(outcome);
+
+        final HttpServer server = getHttpServer(false);
+        final AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> adapter = getAdapter(server, null);
+        final MessageSender sender = givenATelemetrySenderForOutcome(Future.succeededFuture());
+
+        // WHEN a device publishes a telemetry message that belongs to a tenant with
+        // a max TTD of 20 secs
+        when(tenantClient.get(eq("tenant"), (SpanContext) any())).thenAnswer(invocation -> {
+            return Future.succeededFuture(TenantObject.from("tenant", true).setProperty(TenantConstants.FIELD_MAX_TTD, 20));
+        });
+
+        // and includes a TTD value of 40 in its request
+        final Buffer payload = Buffer.buffer("some payload");
+        final HttpServerResponse response = mock(HttpServerResponse.class);
+        final HttpServerRequest request = mock(HttpServerRequest.class);
+        when(request.getHeader(eq(Constants.HEADER_TIME_TIL_DISCONNECT))).thenReturn("40");
+        final RoutingContext ctx = newRoutingContext(payload, request, response);
+
+        adapter.uploadTelemetryMessage(ctx, "tenant", "device", payload, "application/text");
+
+        // THEN the device receives a 202 response immediately
+        verify(response).setStatusCode(202);
+        verify(response).end();
+        // and the downstream message contains the configured max TTD
+        final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
+        verify(sender).send(messageCaptor.capture(), (SpanContext) any());
+        assertThat(MessageHelper.getTimeUntilDisconnect(messageCaptor.getValue()), is(20));
+    }
+
+    private RoutingContext newRoutingContext(final Buffer payload) {
         return newRoutingContext(payload, mock(HttpServerResponse.class));
     }
 
-    private static RoutingContext newRoutingContext(final Buffer payload, final HttpServerResponse response) {
+    private RoutingContext newRoutingContext(final Buffer payload, final HttpServerResponse response) {
+        return newRoutingContext(payload, mock(HttpServerRequest.class), response);
+    }
 
-        final HttpServerRequest request = mock(HttpServerRequest.class);
-        final RoutingContext ctx = mock(RoutingContext.class);
+    private RoutingContext newRoutingContext(
+            final Buffer payload,
+            final HttpServerRequest request,
+            final HttpServerResponse response) {
+
+        final RoutingContext ctx = mock(RoutingContext.class, Mockito.RETURNS_SMART_NULLS);
         when(ctx.getBody()).thenReturn(payload);
         when(ctx.response()).thenReturn(response);
         when(ctx.request()).thenReturn(request);
         when(response.setStatusCode(anyInt())).thenReturn(response);
+        when(ctx.get(TracingHandler.CURRENT_SPAN)).thenReturn(mock(Span.class));
+        when(ctx.vertx()).thenReturn(vertx);
+        when(ctx.get(Command.KEY_COMMAND)).thenReturn(null);
         return ctx;
     }
 
@@ -368,6 +442,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
             }
         };
 
+        adapter.init(vertx, context);
         adapter.setConfig(config);
         adapter.setInsecureHttpServer(server);
         adapter.setTenantServiceClient(tenantServiceClient);
@@ -380,20 +455,22 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         return adapter;
     }
 
-    private void givenAnEventSenderForOutcome(final Future<ProtonDelivery> outcome) {
+    private MessageSender givenAnEventSenderForOutcome(final Future<ProtonDelivery> outcome) {
 
         final MessageSender sender = mock(MessageSender.class);
         when(sender.send(any(Message.class), (SpanContext) any())).thenReturn(outcome);
 
         when(messagingClient.getOrCreateEventSender(anyString())).thenReturn(Future.succeededFuture(sender));
+        return sender;
     }
 
-    private void givenATelemetrySenderForOutcome(final Future<ProtonDelivery> outcome) {
+    private MessageSender givenATelemetrySenderForOutcome(final Future<ProtonDelivery> outcome) {
 
         final MessageSender sender = mock(MessageSender.class);
         when(sender.send(any(Message.class), (SpanContext) any())).thenReturn(outcome);
 
         when(messagingClient.getOrCreateTelemetrySender(anyString())).thenReturn(Future.succeededFuture(sender));
+        return sender;
     }
 
     private static void assertContextFailedWithClientError(final RoutingContext ctx, final int statusCode) {
