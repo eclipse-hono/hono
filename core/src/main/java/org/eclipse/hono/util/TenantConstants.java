@@ -20,6 +20,12 @@ package org.eclipse.hono.util;
 public final class TenantConstants extends RequestResponseApiConstants {
 
     /**
+     * The default number of seconds that a protocol adapter should wait for
+     * an upstream command.
+     */
+    public static final int DEFAULT_MAX_TTD = 60; // seconds
+
+    /**
      *  Messages that are sent by the Hono client for the Tenant API use this as a prefix for the messageId.
      */
     public static final String MESSAGE_ID_PREFIX = "tenant-client";
@@ -28,6 +34,11 @@ public final class TenantConstants extends RequestResponseApiConstants {
     public static final String FIELD_ADAPTERS                    = "adapters";
     public static final String FIELD_ADAPTERS_TYPE               = "type";
     public static final String FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED = "device-authentication-required";
+    /**
+     * The name of the property that contains the maximum <em>time til disconnect</em> that protocol
+     * adapters should use for a tenant.
+     */
+    public static final String FIELD_MAX_TTD = "max-ttd";
     /**
      * The name of the property that contains the Base64 encoded (binary) DER encoding of
      * the trusted certificate configured for a tenant.

@@ -150,6 +150,47 @@ public class TenantObjectTest {
         assertThat(trustAnchor.getCAPublicKey(), is(trustedCaCert.getPublicKey()));
     }
 
+    /**
+     * Verifies that a TTD value specific to an adapter has higher priority than
+     * a value specified for all adapter types.
+     */
+    @Test
+    public void testGetMaxTTDReturnsAdapterSpecificValue() {
+        final TenantObject obj = TenantObject.from(Constants.DEFAULT_TENANT, true);
+        obj.addAdapterConfiguration(TenantObject.newAdapterConfig("custom", true).put(TenantConstants.FIELD_MAX_TTD, 10));
+        assertThat(obj.getMaxTimeUntilDisconnect("custom"), is(10));
+    }
+
+    /**
+     * Verifies that a generic TTD value has higher priority than the default value.
+     */
+    @Test
+    public void testGetMaxTTDReturnsGenericValue() {
+        final TenantObject obj = TenantObject.from(Constants.DEFAULT_TENANT, true);
+        obj.setProperty(TenantConstants.FIELD_MAX_TTD, 15);
+        assertThat(obj.getMaxTimeUntilDisconnect("custom"), is(15));
+    }
+
+    /**
+     * Verifies that the default TTD value is used if no specific or generic value is
+     * set.
+     */
+    @Test
+    public void testGetMaxTTDReturnsDefaultValue() {
+        final TenantObject obj = TenantObject.from(Constants.DEFAULT_TENANT, true);
+        assertThat(obj.getMaxTimeUntilDisconnect("custom"), is(TenantConstants.DEFAULT_MAX_TTD));
+    }
+
+    /**
+     * Verifies that the default TTD value is used if the max TTD is set to a value &lt; 0.
+     */
+    @Test
+    public void testGetMaxTTDReturnsDefaultValueInsteadOfIllegalValue() {
+        final TenantObject obj = TenantObject.from(Constants.DEFAULT_TENANT, true);
+        obj.setProperty(TenantConstants.FIELD_MAX_TTD, -2);
+        assertThat(obj.getMaxTimeUntilDisconnect("custom"), is(TenantConstants.DEFAULT_MAX_TTD));
+    }
+
     private X509Certificate getCaCertificate() {
 
         try (InputStream is = new FileInputStream(TRUST_STORE_PATH)) {

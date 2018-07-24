@@ -93,6 +93,7 @@ public final class TenantObject {
             return null;
         }
     }
+
     /**
      * Adds a property to this tenant.
      * 
@@ -458,6 +459,42 @@ public final class TenantObject {
             } else {
                 return config.getBoolean(TenantConstants.FIELD_ENABLED, Boolean.FALSE);
             }
+        }
+    }
+
+    /**
+     * Gets the maximum number of seconds that a protocol adapter should
+     * wait for a command targeted at a device.
+     * <p>
+     * The returned value is determined as follows:
+     * <ol>
+     * <li>if this tenant configuration contains an integer typed {@link TenantConstants#FIELD_MAX_TTD}
+     * property specific to the given adapter type, then return its value if it is &gt;= 0</li>
+     * <li>otherwise, if this tenant configuration contains a general integer typed
+     * {@link TenantConstants#FIELD_MAX_TTD} property, then return its value if it is &gt;= 0</li>
+     * <li>otherwise, return {@link TenantConstants#DEFAULT_MAX_TTD}</li>
+     * </ol>
+     * 
+     * @param typeName The type of protocol adapter to get the TTD for.
+     * @return The number of seconds.
+     */
+    @JsonIgnore
+    public int getMaxTimeUntilDisconnect(final String typeName) {
+
+        Objects.requireNonNull(typeName);
+
+        final int maxTtd = Optional.ofNullable(getAdapterConfiguration(typeName)).map(conf -> {
+            return Optional.ofNullable(getProperty(conf, TenantConstants.FIELD_MAX_TTD)).map(obj -> {
+                return (Integer) obj;
+            }).orElse(TenantConstants.DEFAULT_MAX_TTD);
+        }).orElse(Optional.ofNullable(getProperty(TenantConstants.FIELD_MAX_TTD)).map(obj -> {
+            return (Integer) obj;
+        }).orElse(TenantConstants.DEFAULT_MAX_TTD));
+
+        if (maxTtd < 0) {
+            return TenantConstants.DEFAULT_MAX_TTD;
+        } else {
+            return maxTtd;
         }
     }
 
