@@ -552,8 +552,9 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
         if (!isPayloadOfIndicatedType(payload, contentType)) {
             HttpUtils.badRequest(ctx, String.format("content type [%s] does not match payload", contentType));
         } else {
-            final Integer qosHeader = getQoSLevel(ctx.request().getHeader(Constants.HEADER_QOS_LEVEL));
-            if (qosHeader != null && qosHeader == HEADER_QOS_INVALID) {
+            final String qosHeaderValue = ctx.request().getHeader(Constants.HEADER_QOS_LEVEL);
+            final Integer qos = getQoSLevel(qosHeaderValue);
+            if (qos != null && qos == HEADER_QOS_INVALID) {
                 HttpUtils.badRequest(ctx, "unsupported QoS-Level header value");
             } else {
                 final Future<Void> responseReady = Future.future();
@@ -588,9 +589,10 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
 
                         addConnectionCloseHandler(ctx, commandConsumerTracker.result(), tenant, deviceId);
 
-                        if (qosHeader == null) {
+                        if (qos == null) {
                             return CompositeFuture.all(sender.send(downstreamMessage, currentSpan.context()), responseReady);
                         } else {
+                            currentSpan.setTag(Constants.HEADER_QOS_LEVEL, qosHeaderValue);
                             return CompositeFuture.all(sender.sendAndWaitForOutcome(downstreamMessage, currentSpan.context()), responseReady);
                         }
                     } else {
@@ -601,7 +603,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                 }).compose(delivery -> {
                     if (!ctx.response().closed()) {
                         final Command command = Command.get(ctx);
-                        setResponsePayload(ctx.response(), command);
+                        setResponsePayload(ctx.response(), command, currentSpan);
                         ctx.addBodyEndHandler(ok -> {
                             LOG.trace("successfully processed [{}] message for device [tenantId: {}, deviceId: {}]",
                                     endpointName, tenant, deviceId);
@@ -681,10 +683,12 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
         });
     }
 
-    private void setResponsePayload(final HttpServerResponse response, final Command command) {
+    private void setResponsePayload(final HttpServerResponse response, final Command command, final Span currentSpan) {
         if (command == null) {
             response.setStatusCode(HttpURLConnection.HTTP_ACCEPTED);
         } else {
+            currentSpan.log(String.format("adding command [name: {}, request-id: {}] to response",
+                    command.getName(), command.getRequestId()));
             LOG.trace("adding command [name: {}, request-id: {}] to response for device [tenant-id: {}, device-id: {}]",
                     command.getName(), command.getRequestId(), command.getTenant(), command.getDeviceId());
             response.setStatusCode(HttpURLConnection.HTTP_OK);
