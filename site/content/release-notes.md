@@ -5,6 +5,8 @@ title = "Release Notes"
 ## 0.7 (not released yet)
 
 ### Fixes & Enhancements
+
+* Hono is now licensed under the [Eclipse Public License 2.0](https://www.eclipse.org/legal/epl-2.0/). Please refer to the Eclipse Foundation's [FAQ](https://www.eclipse.org/legal/epl-2.0/faq.php) for details regarding any implications this might have.
 * Hono deployment scripts are now available under `deploy` folder. Deployment scripts which were previously available under `example` folder were moved to `deploy`.
 * Hono-cli (Command Line Interface) is now available under folder `cli`. A command line argument `message.type` with value `telemetry`, `event` or `all` (default) tells the client what kind of messages to be received. See [Starting a Consumer]({{< relref "getting-started.md#starting-a-consumer" >}}) for more information.
 
