@@ -20,7 +20,6 @@ import org.apache.qpid.proton.amqp.transport.AmqpError;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.MessageSender;
-import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
 import org.eclipse.hono.service.auth.device.Device;
@@ -28,10 +27,9 @@ import org.eclipse.hono.service.auth.device.HonoClientBasedAuthProvider;
 import org.eclipse.hono.service.auth.device.UsernamePasswordAuthProvider;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EndpointType;
-import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.HonoProtonHelper;
+import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
-import org.eclipse.hono.util.TelemetryConstants;
 import org.eclipse.hono.util.TenantObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,6 +38,7 @@ import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 import io.vertx.proton.ProtonConnection;
+import io.vertx.proton.ProtonDelivery;
 import io.vertx.proton.ProtonHelper;
 import io.vertx.proton.ProtonQoS;
 import io.vertx.proton.ProtonReceiver;
@@ -287,80 +286,79 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
     }
 
     /**
-     * This method is invoked when an AMQP Attach frame is received by this server.
+     * This method is invoked when an AMQP Attach frame is received by this server. If the receiver link contains
+     * a target address, this method simply closes the link, otherwise, it accept and open the link.
      * 
      * @param receiver The receiver link for receiving the data.
      * @param conn The connection through which the request is initiated.
      */
     protected void handleRemoteReceiverOpen(final ProtonReceiver receiver, final ProtonConnection conn) {
-        if (receiver.getRemoteTarget() == null) {
+        if (receiver.getRemoteTarget() != null && receiver.getRemoteTarget().getAddress() != null) {
+            if (!receiver.getRemoteTarget().getAddress().isEmpty()) {
+                LOG.debug("Closing link due to the present of Target [address : {}]", receiver.getRemoteTarget().getAddress());
+            }
             receiver.setCondition(
-                    ProtonHelper.condition(AmqpError.NOT_ALLOWED, "anonymous relay not supported by this adapter"));
+                    AmqpContext.getErrorCondition(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
+                            "This adapter does not accept a target address on receiver links")));
             receiver.close();
         } else {
-            validateEndpoint(receiver).recover(t -> {
-                LOG.debug(
-                        "fail to establish a receiving link with client [{}] due to an invalid endpoint [{}]."
-                                + " closing the link",
-                        receiver.getName(), receiver.getRemoteQoS());
-                if (ClientErrorException.class.isInstance(t)) {
-                    final ClientErrorException error = (ClientErrorException) t;
-                    receiver.setCondition(ProtonHelper.condition(AmqpError.NOT_FOUND, error.getMessage()));
-                    receiver.close();
-                }
-                return Future.failedFuture(t);
-            }).compose(resource -> {
-                LOG.debug("Established receiver link at [address: {}]", receiver.getRemoteTarget().getAddress());
+            final Device authenticatedDevice = conn.attachments().get(AmqpAdapterConstants.KEY_CLIENT_DEVICE,
+                    Device.class);
+            LOG.debug("Established receiver link at [address: {}]",
+                    (receiver.getRemoteTarget() != null) ? receiver.getRemoteTarget().getAddress() : null);
 
-                receiver.setTarget(receiver.getRemoteTarget());
-                receiver.setQoS(receiver.getRemoteQoS());
-                if (ProtonQoS.AT_LEAST_ONCE.equals(receiver.getRemoteQoS())) {
-                    // disable auto-accept for this transfer model.
-                    // in this case, the adapter will apply the required disposition
-                    receiver.setAutoAccept(false);
-                }
-                receiver.handler((delivery, message) -> {
-                    final Device authenticatedDevice = conn.attachments().get(AmqpAdapterConstants.KEY_CLIENT_DEVICE, Device.class);
-                    uploadMessage(new AmqpContext(delivery, message, resource, authenticatedDevice));
-                });
-                HonoProtonHelper.setCloseHandler(receiver, remoteDetach -> onLinkDetach(receiver));
-                receiver.open();
-                return Future.succeededFuture();
+            receiver.setTarget(null);
+            receiver.setQoS(receiver.getRemoteQoS());
+            if (ProtonQoS.AT_LEAST_ONCE.equals(receiver.getRemoteQoS())) {
+                // disable auto-accept for this transfer model.
+                // in this case, the adapter will apply the required disposition
+                receiver.setAutoAccept(false);
+            }
+            receiver.handler((delivery, message) -> {
+
+                validateEndpoint(message.getAddress(), delivery)
+                        .compose(address -> validateAddress(address, authenticatedDevice))
+                        .compose(validAddress -> {
+                            message.setAddress(validAddress.toString());
+                            uploadMessage(new AmqpContext(delivery, message, authenticatedDevice));
+                            return Future.succeededFuture();
+                        })
+                        .recover(t -> {
+                            // invalid message address / endpoint
+                            MessageHelper.rejected(delivery, AmqpContext.getErrorCondition(t));
+                            return Future.failedFuture(t);
+                        });
             });
+            HonoProtonHelper.setCloseHandler(receiver, remoteDetach -> onLinkDetach(receiver));
+            receiver.open();
         }
     }
 
     /**
      * Forwards a message received from a device to downstream consumers.
-     * 
+     *
      * @param context The context that the message has been received in.
      */
     protected void uploadMessage(final AmqpContext context) {
-        final Future<Void> formalCheck = Future.future();
+        final Future<Void> contentTypeCheck = Future.future();
         final String contentType = context.getMessageContentType();
 
-        if (isPayloadOfIndicatedType(context.getMessagePayload(), contentType)) {
-            if (!context.isDeviceAuthenticated() && context.getDeviceId() == null) {
-                formalCheck.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
-                        String.format("Missing device-id in [address: %s] for unauthenticated device", context.getResourceIdentifier())));
-            } else {
-                formalCheck.complete();
-            }
-        } else {
-            formalCheck.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
+        if (!isPayloadOfIndicatedType(context.getMessagePayload(), contentType)) {
+            contentTypeCheck.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
                     String.format("Content-Type: [%s] does not match payload", contentType)));
+        } else {
+            contentTypeCheck.complete();
         }
 
-        formalCheck.compose(ok -> {
+        contentTypeCheck.compose(ok -> {
             switch (EndpointType.fromString(context.getEndpoint())) {
             case TELEMETRY:
                 LOG.trace("Received request to upload telemetry data to endpoint [with name: {}]",
                         context.getEndpoint());
-                return doUploadMessage(context, getTelemetrySender(context.getTenantId()),
-                        TelemetryConstants.TELEMETRY_ENDPOINT);
+                return doUploadMessage(context, getTelemetrySender(context.getTenantId()));
             case EVENT:
                 LOG.trace("Received request to upload events to endpoint [with name: {}]", context.getEndpoint());
-                return doUploadMessage(context, getEventSender(context.getTenantId()), EventConstants.EVENT_ENDPOINT);
+                return doUploadMessage(context, getEventSender(context.getTenantId()));
             default:
                 return Future
                         .failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "unknown endpoint"));
@@ -368,20 +366,17 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         }).recover(t -> {
             if (!context.isRemotelySettled()) {
                 // client wants to be informed that the message cannot be processed.
-                context.handleFailure((ServiceInvocationException) t);
+                context.handleFailure(t);
             }
             return Future.failedFuture(t);
         });
 
     }
 
-    private Future<Void> doUploadMessage(final AmqpContext context, final Future<MessageSender> senderFuture,
-            final String endpointName) {
+    @SuppressWarnings("deprecation")
+    private Future<Void> doUploadMessage(final AmqpContext context, final Future<MessageSender> senderFuture) {
 
-        final String deviceId = (context.isDeviceAuthenticated())
-                ? context.getAuthenticatedDevice().getDeviceId() : context.getDeviceId();
-
-        final Future<JsonObject> tokenFuture = getRegistrationAssertion(context.getTenantId(), deviceId,
+        final Future<JsonObject> tokenFuture = getRegistrationAssertion(context.getTenantId(), context.getDeviceId(),
                 context.getAuthenticatedDevice());
         final Future<TenantObject> tenantConfigFuture = getTenantConfiguration(context.getTenantId());
 
@@ -390,10 +385,9 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             if (tenantObject.isAdapterEnabled(getTypeName())) {
 
                 final MessageSender sender = senderFuture.result();
-                final ResourceIdentifier resource = ResourceIdentifier.from(endpointName, context.getTenantId(), deviceId);
-                final Message downstreamMessage = newMessage(resource,
+                final Message downstreamMessage = newMessage(context.getResourceIdentifier(),
                         sender.isRegistrationAssertionRequired(),
-                        endpointName, context.getMessageContentType(), context.getMessagePayload(),
+                        context.getEndpoint(), context.getMessageContentType(), context.getMessagePayload(),
                         tokenFuture.result(), null);
 
                 if (context.isRemotelySettled()) {
@@ -426,10 +420,10 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             }
             return Future.<Void> succeededFuture();
         }).recover(t -> {
-            LOG.debug("Cannot process message for Device [tenantId: {}, deviceId: {}, endpoint: {}] due to Exception [Class: {}, Message: {}]",
+            LOG.debug("Cannot process message for Device [tenantId: {}, deviceId: {}, endpoint: {}]",
                     context.getTenantId(),
-                    deviceId,
-                    context.getEndpoint(), t.getClass().getSimpleName(), t.getMessage());
+                    context.getDeviceId(),
+                    context.getEndpoint(), t);
             return Future.failedFuture(t);
         });
     }
@@ -445,38 +439,71 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
     }
 
     /**
-     * This method validates that a client tries to publish a message to a supported endpoint. If the endpoint is
-     * supported, the method returns a succeeded future containing the valid address.
+     * This method validates that a client tries to publish a message to a supported endpoint. If the endpoint is supported,
+     * this method also validates that the quality service of the supported endpoint.
      * 
-     * @param receiver The link with which the message is received.
+     * @param address The message address.
+     * @param delivery The delivery through which this adapter receives the message.
+     *
      * @return A future with the address upon success or a failed future.
      */
-    Future<ResourceIdentifier> validateEndpoint(final ProtonReceiver receiver) {
+    Future<ResourceIdentifier> validateEndpoint(final String address, final ProtonDelivery delivery) {
+
+        if (address == null || address.isEmpty()) {
+            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "Message address cannot be null or empty"));
+        }
+
         final Future<ResourceIdentifier> result = Future.future();
-        final ResourceIdentifier address = ResourceIdentifier.fromString(receiver.getRemoteTarget().getAddress());
-        switch (EndpointType.fromString(address.getEndpoint())) {
+        final ResourceIdentifier resource = ResourceIdentifier.fromString(address);
+
+        switch (EndpointType.fromString(resource.getEndpoint())) {
         case TELEMETRY:
-            if (!ProtonQoS.AT_LEAST_ONCE
-                    .equals(receiver.getRemoteQoS()) && !ProtonQoS.AT_MOST_ONCE.equals(receiver.getRemoteQoS())) {
-                result.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
-                        "Telemetry endpoint only supports either AT_LEAST_ONCE or AT_MOST_ONCE delivery semantics."));
-            } else {
-                result.complete(address);
-            }
+            result.complete(resource);
             break;
         case EVENT:
-            if (!ProtonQoS.AT_LEAST_ONCE.equals(receiver.getRemoteQoS())) {
+            if (delivery.remotelySettled()) {
                 result.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
-                        "Event endpoint only supports AT_LEAST_ONCE delivery semantics."));
+                        "The Event endpoint only supports unsettled delivery for messages"));
             } else {
-                result.complete(address);
+                result.complete(resource);
             }
             break;
         default:
             LOG.error("Endpoint with [name: {}] is not supported by this adapter ",
-                    address.getEndpoint());
+                    resource.getEndpoint());
             result.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "unsupported endpoint"));
             break;
+        }
+        return result;
+    }
+
+    /**
+     * Validates the address contained in an AMQP 1.0 message.
+     * 
+     * @param address The message address to validate.
+     * @param authenticatedDevice The authenticated device.
+     * 
+     * @return A succeeded future with the valid message address or a failed future if the message address is not valid.
+     */
+    private Future<ResourceIdentifier> validateAddress(final ResourceIdentifier address, final Device authenticatedDevice) {
+        final Future<ResourceIdentifier> result = Future.future();
+
+        if (authenticatedDevice == null) {
+            if (address.getTenantId() == null || address.getResourceId() == null) {
+                throw new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "Invalid address for unauthenticated devices");
+            } else {
+                result.complete(address);
+            }
+        } else {
+            if (address.getTenantId() != null && address.getResourceId() == null) {
+                result.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "address of authenticated message must not contain tenant ID only"));
+            } else if (address.getTenantId() == null && address.getResourceId() == null) {
+                final ResourceIdentifier resource = ResourceIdentifier.from(address.getEndpoint(),
+                        authenticatedDevice.getTenantId(), authenticatedDevice.getTenantId());
+                result.complete(resource);
+            } else {
+                result.complete(address);
+            }
         }
         return result;
     }
