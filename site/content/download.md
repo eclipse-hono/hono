@@ -7,7 +7,7 @@ weight = 150
 ## Binaries
 
 The preferred way of deploying Eclipse Hono&trade; is by means of using the pre-built Docker images provided
-on [Docker Hub](https://hub.docker.com/u/eclipsehono/).
+on [Docker Hub](https://hub.docker.com/u/eclipse/).
 
 The most convenient way to both pull the images and start corresponding containers is by means of running the deployment script contained in the release archive.
 
