@@ -1,6 +1,6 @@
 +++
 title = "Event API"
-weight = 430
+weight = 410
 +++
 
 The *Event* API is used by *Devices* to send event messages downstream.

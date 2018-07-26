@@ -1,6 +1,6 @@
 +++
 title = "Telemetry API"
-weight = 420
+weight = 405
 +++
 
 The *Telemetry* API is used by *Devices* to send data downstream.

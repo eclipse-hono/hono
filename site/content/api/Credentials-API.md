@@ -1,6 +1,6 @@
 +++
 title = "Credentials API"
-weight = 435
+weight = 430
 +++
 
 The *Credentials API* is used by *Protocol Adapters* to retrieve credentials used to authenticate *Devices* connecting to the adapter. In particular, the API supports the storage, look up and deletion of *shared secrets* which are often used by IoT devices by means of *username/password* based authentication schemes.

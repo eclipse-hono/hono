@@ -1,6 +1,6 @@
 +++
 title = "Authentication API"
-weight = 405
+weight = 435
 +++
 
 The *Authentication API* is used to retrieve a *token* asserting a subject's identity and granted authorities. Other service implementations use such a token to make authorization decisions on a client's request to read or write from/to a resource or to invoke a certain operation.

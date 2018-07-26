@@ -1,6 +1,6 @@
 +++
 title = "Device Registration API"
-weight = 410
+weight = 425
 +++
 
 The *Device Registration API* is used to make Hono aware of devices that will connect to the service and send telemetry data.

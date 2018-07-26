@@ -1,6 +1,6 @@
 +++
 title = "Tenant API"
-weight = 407
+weight = 420
 +++
 
 The *Tenant API* is used to make Hono aware of the tenants that are available in an installation. 

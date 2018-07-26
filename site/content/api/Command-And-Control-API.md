@@ -1,6 +1,6 @@
 +++
 title = "Command & Control API"
-weight = 440
+weight = 415
 +++
 
 The *Command and Control* API is used by *Business Applications* to send commands to devices connected to Hono. Command messages can be used to
