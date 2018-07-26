@@ -454,14 +454,18 @@ public final class MessageHelper {
     }
 
     /**
-     * Sets an AMQP 1.0 message's delivery state to <em>rejected</em>.
+     * Rejects and settles an AMQP 1.0 message.
      *
-     * @param delivery The message's delivery object.
-     * @param error The error condition to set as the reason for rejecting the message.
+     * @param delivery The message's delivery handle.
+     * @param error The error condition to set as the reason for rejecting the message (may be {@code null}.
+     * @throws NullPointerException if delivery is {@code null}.
      */
     public static void rejected(final ProtonDelivery delivery, final ErrorCondition error) {
+
+        Objects.requireNonNull(delivery);
+
         final Rejected rejected = new Rejected();
-        rejected.setError(error);
+        rejected.setError(error); // doesn't matter if null
         delivery.disposition(rejected, true);
     }
 
