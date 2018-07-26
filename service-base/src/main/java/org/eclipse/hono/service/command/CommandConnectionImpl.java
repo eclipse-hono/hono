@@ -127,8 +127,7 @@ public class CommandConnectionImpl extends HonoClientImpl implements CommandConn
                 if (closeHandler.failed()) {
                     LOG.error("Command receiver link close failed: {}", closeHandler.cause());
                     future.fail(closeHandler.cause());
-                }
-                else {
+                } else {
                     future.complete();
                 }
             });
@@ -155,8 +154,7 @@ public class CommandConnectionImpl extends HonoClientImpl implements CommandConn
                 () -> createCommandResponseSender(tenantId, replyId)).setHandler(h->{
             if(h.succeeded()) {
                 result.complete((CommandResponseSender) h.result());
-            }
-            else {
+            } else {
                 result.fail(h.cause());
             }
         });
@@ -191,8 +189,7 @@ public class CommandConnectionImpl extends HonoClientImpl implements CommandConn
                 if (closeHandler.failed()) {
                     LOG.error("Command response sender link close failed: {}", closeHandler.cause());
                     future.fail(closeHandler.cause());
-                }
-                else {
+                } else {
                     future.complete();
                 }
             });

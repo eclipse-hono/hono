@@ -119,7 +119,7 @@ public class DelegatingAuthenticationService extends AbstractHonoAuthenticationS
                         log.debug("readiness check failed to resolve Authentication service address [{}]: ",
                                 getConfig().getHost(), lookupAttempt.cause().getMessage());
                         status.tryComplete(Status.KO());
-                    };
+                    }
                 });
             });
         } else {

@@ -80,8 +80,7 @@ public class CommandClientImpl extends AbstractRequestResponseClient<BufferResul
         return responseTracker.map(response -> {
             if(response.isOk()) {
                 return response.getPayload();
-            }
-            else {
+            } else {
                 throw StatusCodeMapper.from(response);
             }
         });
