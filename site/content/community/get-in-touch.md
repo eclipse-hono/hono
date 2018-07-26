@@ -29,4 +29,4 @@ the development of Hono. You can join by using the following link:
 <https://bluejeans.com/494114785>
 
 You can also import the calendar file [project-call.ics](../project-call.ics "Project Call") 
-which contains more information about joining by computer of by telephone. 
+which contains more information about joining by computer or telephone.
