@@ -53,7 +53,7 @@ public abstract class RequestResponseApiConstants {
     /**
      * Empty default constructor.
      */
-    protected RequestResponseApiConstants () {
+    protected RequestResponseApiConstants() {
     }
 
     /**

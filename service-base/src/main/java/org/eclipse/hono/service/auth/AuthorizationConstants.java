@@ -45,7 +45,8 @@ public final class AuthorizationConstants {
      */
     public static final String DENIED = "denied";
 
-    private AuthorizationConstants () {
+    private AuthorizationConstants() {
+        // prevent instantiation
     }
 
     /**

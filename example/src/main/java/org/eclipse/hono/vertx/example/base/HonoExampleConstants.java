@@ -56,6 +56,7 @@ public class HonoExampleConstants {
      */
     public static final String DEVICE_ID = "4711"; // needs to be registered first
 
-    private HonoExampleConstants () {
+    private HonoExampleConstants() {
+        // prevent instantiation
     }
 }

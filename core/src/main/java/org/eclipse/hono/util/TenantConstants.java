@@ -30,9 +30,19 @@ public final class TenantConstants extends RequestResponseApiConstants {
      */
     public static final String MESSAGE_ID_PREFIX = "tenant-client";
 
-    /* message payload fields */
-    public static final String FIELD_ADAPTERS                    = "adapters";
+    /**
+     * The name of the property that contains configuration options for specific
+     * protocol adapters.
+     */
+    public static final String FIELD_ADAPTERS = "adapters";
+    /**
+     * The name of the property that contains the type name of a protocol adapter.
+     */
     public static final String FIELD_ADAPTERS_TYPE               = "type";
+    /**
+     * The name of the property that indicates whether a protocol adapter requires
+     * all devices to authenticate.
+     */
     public static final String FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED = "device-authentication-required";
     /**
      * The name of the property that contains the maximum <em>time til disconnect</em> that protocol
@@ -53,6 +63,7 @@ public final class TenantConstants extends RequestResponseApiConstants {
      * The name of the property that contains the trusted certificate authority configured for a tenant.
      */
     public static final String FIELD_PAYLOAD_TRUSTED_CA = "trusted-ca";
+
     /**
      * The name of the Tenant API endpoint.
      */
@@ -105,6 +116,7 @@ public final class TenantConstants extends RequestResponseApiConstants {
         }
     }
 
-    private TenantConstants () {
+    private TenantConstants() {
+        // prevent instantiation
     }
 }

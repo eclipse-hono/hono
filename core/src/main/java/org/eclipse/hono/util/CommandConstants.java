@@ -18,10 +18,8 @@ package org.eclipse.hono.util;
  */
 public class CommandConstants {
 
-    /**
-     * Empty default constructor.
-     */
-    protected CommandConstants () {
+    private CommandConstants() {
+        // prevent instantiation
     }
 
     /**

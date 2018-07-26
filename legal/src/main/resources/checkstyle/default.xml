@@ -52,6 +52,7 @@
 
     <!-- whitespaces, linebreaks -->
 
+    <module name="MethodParamPad" />
     <module name="RegexpSinglelineJava">
       <property name="format" value="^\s+$" />
       <property name="message" value="Empty lines must not contain whitespaces" />

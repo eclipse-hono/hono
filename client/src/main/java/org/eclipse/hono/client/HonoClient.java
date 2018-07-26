@@ -434,7 +434,7 @@ public interface HonoClient {
      * @param clientConfigProperties The client properties to use. Must not be {@code null}.
      * @return A new instance of a <em>Hono Client</em>.
      */
-    static HonoClient newClient (final Vertx vertx, final ClientConfigProperties clientConfigProperties) {
+    static HonoClient newClient(final Vertx vertx, final ClientConfigProperties clientConfigProperties) {
         return new HonoClientImpl(vertx, clientConfigProperties);
     }
 }

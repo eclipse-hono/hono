@@ -27,7 +27,7 @@ public class BaseMessageFilter {
     /**
      * Empty default constructor.
      */
-    protected BaseMessageFilter () {
+    protected BaseMessageFilter() {
     }
 
     /**
