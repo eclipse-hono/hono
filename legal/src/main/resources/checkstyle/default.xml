@@ -74,4 +74,17 @@
 
   <module name="FileTabCharacter" />
 
+  <!--
+    Make sure that each Java source code file contains a header.
+    We are not striving for assuring that all files contain a specific
+    license header because some files have been copied from other projects
+    and thus need to contain their original license header.
+    However, at least we can easily spot newly added files for which the author
+    forgot to add a header at all.
+    -->
+
+  <module name="RegexpHeader">
+    <property name="header" value="^\/\*+$"/>
+    <property name="fileExtensions" value=".java" />
+  </module>
 </module>
