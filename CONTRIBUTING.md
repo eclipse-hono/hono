@@ -65,32 +65,32 @@ Please make sure any file you newly create contains a proper license header like
 
 ````
 /**
- * Copyright (c) 2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
  *
  * This program and the accompanying materials are made available under the
- * terms of the Eclipse Public License 1.0 which is available at
- * https://www.eclipse.org/legal/epl-v10.html
+ * terms of the Eclipse Public License 2.0 which is available at
+ * https://www.eclipse.org/legal/epl-2.0
  *
- * SPDX-License-Identifier: EPL-1.0
+ * SPDX-License-Identifier: EPL-2.0
  */
 ````
 You should, of course, adapt this header to use the specific mechanism for comments pertaining to the type of file you create, e.g. using something like
 
 ````
 <!--
- Copyright (c) 2017 Contributors to the Eclipse Foundation
+ Copyright (c) 2018 Contributors to the Eclipse Foundation
 
  See the NOTICE file(s) distributed with this work for additional
  information regarding copyright ownership.
 
  This program and the accompanying materials are made available under the
- terms of the Eclipse Public License 1.0 which is available at
- https://www.eclipse.org/legal/epl-v10.html
+ terms of the Eclipse Public License 2.0 which is available at
+ https://www.eclipse.org/legal/epl-2.0
 
- SPDX-License-Identifier: EPL-1.0
+ SPDX-License-Identifier: EPL-2.0
 -->
 ````
 
@@ -98,7 +98,7 @@ when adding an XML file.
 
 **Important**
 
-Please do not forget to add your name/organization to the `/legal/legal/NOTICE.md` file's *Copyright Holders* section. If this is not the first contribution you make then simply update the time period contained in the copyright entry to use year of your first contribution as the lower boundary and the current year as the upper boundary, e.g.
+Please do not forget to add your name/organization to the `/legal/legal/NOTICE.md` file's *Copyright Holders* section. If this is not the first contribution you make, then simply update the time period contained in the copyright entry to use the year of your first contribution as the lower boundary and the current year as the upper boundary, e.g.
 
 `Copyright 2017, 2018 ACME Corporation`
 

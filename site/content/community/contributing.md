@@ -65,10 +65,10 @@ You can find all the details in the [Contributing via Git](http://wiki.eclipse.o
          * information regarding copyright ownership.
          *
          * This program and the accompanying materials are made available under the
-         * terms of the Eclipse Public License 1.0 which is available at
-         * https://www.eclipse.org/legal/epl-v10.html
+         * terms of the Eclipse Public License 2.0 which is available at
+         * https://www.eclipse.org/legal/epl-2.0
          *
-         * SPDX-License-Identifier: EPL-1.0
+         * SPDX-License-Identifier: EPL-2.0
          */
 
 6. Do not forget to add yourself or your organization to the copyright holder list in the NOTICE file in the parent folder if you haven't already done so in a previous contribution.
