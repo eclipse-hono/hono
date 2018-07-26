@@ -58,6 +58,7 @@
       <property name="message" value="Empty lines must not contain whitespaces" />
     </module>
     <module name="RightCurly" />
+    <module name="WhitespaceAfter"/>
 
     <!-- javadoc validation -->
 

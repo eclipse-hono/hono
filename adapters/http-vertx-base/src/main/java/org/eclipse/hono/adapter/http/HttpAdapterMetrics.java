@@ -30,11 +30,11 @@ public class HttpAdapterMetrics extends Metrics {
     }
 
     void incrementProcessedHttpMessages(final String resourceId, final String tenantId) {
-        counterService.increment(METER_PREFIX + getPrefix() + MESSAGES + mergeAsMetric(resourceId,tenantId) + PROCESSED);
+        counterService.increment(METER_PREFIX + getPrefix() + MESSAGES + mergeAsMetric(resourceId, tenantId) + PROCESSED);
     }
 
     void incrementUndeliverableHttpMessages(final String resourceId, final String tenantId) {
-        counterService.increment(getPrefix() + MESSAGES + mergeAsMetric(resourceId,tenantId) + UNDELIVERABLE);
+        counterService.increment(getPrefix() + MESSAGES + mergeAsMetric(resourceId, tenantId) + UNDELIVERABLE);
     }
 
 }

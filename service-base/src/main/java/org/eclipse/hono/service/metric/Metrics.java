@@ -101,7 +101,7 @@ abstract public class Metrics {
      * @return The full address, separated by points
      */
     protected String mergeAsMetric(final String... parts ) {
-        return String.join(".",parts);
+        return String.join(".", parts);
     }
 
 }

@@ -207,7 +207,7 @@ public abstract class HonoSampler extends AbstractSampler {
         synchronized (semaphoreLock) {
             final String receivers = (getSemaphores() + 1) + "";
             JMeterUtils.setProperty(HONO_PREFIX + getAddress(), receivers);
-            LOGGER.info("addSemaphore - receivers: {}",receivers);
+            LOGGER.info("addSemaphore - receivers: {}", receivers);
         }
     }
 

@@ -422,7 +422,7 @@ public abstract class AbstractHonoClient {
                 }
             });
             receiver.openHandler(recvOpen -> {
-                if(recvOpen.succeeded()) {
+                if (recvOpen.succeeded()) {
                     LOG.debug("receiver open [source: {}]", sourceAddress);
                     receiver.attachments().set(KEY_LINK_ESTABLISHED, Boolean.class, Boolean.TRUE);
                     result.complete(recvOpen.result());

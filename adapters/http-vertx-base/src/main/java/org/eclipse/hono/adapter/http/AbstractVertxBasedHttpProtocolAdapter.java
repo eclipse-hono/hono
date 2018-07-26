@@ -827,16 +827,15 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
     }
 
     private void cancelCommandReceptionTimer(final RoutingContext ctx) {
-        Optional.ofNullable(ctx.get(KEY_TIMER_ID)).map(timerId -> {
-            if ((Long)timerId >= 0) {
-                if (ctx.vertx().cancelTimer((Long)timerId)) {
-                    LOG.trace("Cancelled timer id {}", timerId);
-                } else {
-                    LOG.debug("Could not cancel timer id {}", timerId);
-                }
+
+        final Long timerId = ctx.get(KEY_TIMER_ID);
+        if (timerId != null && timerId >= 0) {
+            if (ctx.vertx().cancelTimer(timerId)) {
+                LOG.trace("Cancelled timer id {}", timerId);
+            } else {
+                LOG.debug("Could not cancel timer id {}", timerId);
             }
-            return timerId;
-        });
+        }
     }
 
     /**

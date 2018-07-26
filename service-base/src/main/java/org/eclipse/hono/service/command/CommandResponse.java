@@ -80,7 +80,7 @@ public final class CommandResponse {
             return null;
         } else {
             try {
-                final boolean addDeviceIdToReply = "1".equals(requestId.substring(0,1));
+                final boolean addDeviceIdToReply = "1".equals(requestId.substring(0, 1));
                 final int lengthStringOne = Integer.parseInt(requestId.substring(1, 3), 16);
                 final String replyId = requestId.substring(3 + lengthStringOne);
                 return new CommandResponse(

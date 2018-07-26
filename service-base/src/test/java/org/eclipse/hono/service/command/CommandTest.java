@@ -47,7 +47,7 @@ public class CommandTest {
         final Command cmd = Command.from(mock(ProtonDelivery.class), message, Constants.DEFAULT_TENANT, "4711");
         assertNotNull(cmd);
         assertThat(cmd.getName(), is("doThis"));
-        assertThat(cmd.getReplyToId(), is(String.format("4711/%s",replyToId)));
+        assertThat(cmd.getReplyToId(), is(String.format("4711/%s", replyToId)));
         assertThat(cmd.getCorrelationId(), is(correlationId));
     }
 

@@ -78,7 +78,7 @@ public class CommandClientImpl extends AbstractRequestResponseClient<BufferResul
         createAndSendRequest(command, null, data, null, responseTracker.completer(), null);
 
         return responseTracker.map(response -> {
-            if(response.isOk()) {
+            if (response.isOk()) {
                 return response.getPayload();
             } else {
                 throw StatusCodeMapper.from(response);

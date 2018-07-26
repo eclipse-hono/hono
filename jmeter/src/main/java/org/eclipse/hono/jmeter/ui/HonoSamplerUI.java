@@ -67,7 +67,7 @@ public abstract class HonoSamplerUI extends AbstractSamplerGui {
         wrapperPanel.add(labeledChoice, BorderLayout.WEST);
         // fix superfluous outer indents of JLabeledChoice
         labeledChoice.setLayout(new BoxLayout(labeledChoice, BoxLayout.X_AXIS));
-        labeledChoice.getComponentList().get(0).setBorder(BorderFactory.createEmptyBorder(0,0,0,5));
+        labeledChoice.getComponentList().get(0).setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 5));
         return wrapperPanel;
     }
 }

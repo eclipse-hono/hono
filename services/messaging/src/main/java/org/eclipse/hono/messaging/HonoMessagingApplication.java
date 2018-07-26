@@ -58,7 +58,7 @@ public class HonoMessagingApplication extends AbstractApplication {
 
         final Future<Void> result = Future.future();
 
-        final Future<String> authFuture = deployAuthenticationService();// we only need 1 authentication service
+        final Future<String> authFuture = deployAuthenticationService(); // we only need 1 authentication service
         authFuture.setHandler(ar -> {
             if (ar.succeeded()) {
                 result.complete();

@@ -169,7 +169,7 @@ public final class AuthenticationConstants
             throw new CredentialException("client provided malformed PLAIN response");
         } else if (fields.get(1) == null || fields.get(1).length() == 0) {
             throw new CredentialException("PLAIN response must contain an authentication ID");
-        } else if(fields.get(2) == null || fields.get(2).length() == 0) {
+        } else if (fields.get(2) == null || fields.get(2).length() == 0) {
             throw new CredentialException("PLAIN response must contain a password");
         } else {
             return fields.toArray(new String[3]);

@@ -104,7 +104,7 @@ public class CommandConnectionImpl extends HonoClientImpl implements CommandConn
                     messageConsumer, closeHook -> {
                         closeCommandConsumer(tenantId, deviceId);
                     }, creation -> {
-                        if(creation.succeeded()) {
+                        if (creation.succeeded()) {
                             commandReceivers.put(Device.asAddress(tenantId, deviceId), creation.result());
                         }
                         result.complete(creation.result());
@@ -152,7 +152,7 @@ public class CommandConnectionImpl extends HonoClientImpl implements CommandConn
         getOrCreateSender(
                 CommandResponseSenderImpl.getTargetAddress(tenantId, replyId),
                 () -> createCommandResponseSender(tenantId, replyId)).setHandler(h->{
-            if(h.succeeded()) {
+            if (h.succeeded()) {
                 result.complete((CommandResponseSender) h.result());
             } else {
                 result.fail(h.cause());
@@ -210,11 +210,11 @@ public class CommandConnectionImpl extends HonoClientImpl implements CommandConn
         final Future<Void> future = Future.future();
         final String controlAddress = ResourceIdentifier.from(CommandConstants.COMMAND_ENDPOINT, tenantId, deviceId).toString();
         final Set<String> keys = activeSenders.keySet();
-        for(final String key : keys) {
+        for (final String key : keys) {
             if (key.startsWith(controlAddress)) {
                 final Future<Void> sub = Future.future();
                 activeSenders.get(key).close(c->{
-                    if(c.succeeded()) {
+                    if (c.succeeded()) {
                         sub.succeeded();
                     } else {
                         sub.fail(c.cause());

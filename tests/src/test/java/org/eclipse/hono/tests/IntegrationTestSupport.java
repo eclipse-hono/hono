@@ -266,8 +266,8 @@ public final class IntegrationTestSupport {
                     if (!(jsonObject.getValue(entry.getKey()) instanceof JsonObject)) {
                         containResult.set(false);
                     } else {
-                        if (!testJsonObjectToBeContained((JsonObject)entry.getValue(),
-                                (JsonObject)jsonObject.getValue(entry.getKey()))) {
+                        if (!testJsonObjectToBeContained((JsonObject) entry.getValue(),
+                                (JsonObject) jsonObject.getValue(entry.getKey()))) {
                             containResult.set(false);
                         }
                     }

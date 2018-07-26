@@ -328,7 +328,7 @@ public final class MessageHelper {
         } else if (msg.getBody() instanceof AmqpValue) {
             final AmqpValue body = (AmqpValue) msg.getBody();
             if (body.getValue() instanceof byte[]) {
-                return Buffer.buffer((byte[])body.getValue());
+                return Buffer.buffer((byte[]) body.getValue());
             } else if (body.getValue() instanceof String) {
                 return Buffer.buffer((String) body.getValue());
             }
