@@ -499,7 +499,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                 result.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "address of authenticated message must not contain tenant ID only"));
             } else if (address.getTenantId() == null && address.getResourceId() == null) {
                 final ResourceIdentifier resource = ResourceIdentifier.from(address.getEndpoint(),
-                        authenticatedDevice.getTenantId(), authenticatedDevice.getTenantId());
+                        authenticatedDevice.getTenantId(), authenticatedDevice.getDeviceId());
                 result.complete(resource);
             } else {
                 result.complete(address);
