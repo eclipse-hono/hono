@@ -44,7 +44,6 @@ import java.util.List;
 @Profile("receiver")
 public class Receiver extends AbstractClient {
 
-    private final int DEFAULT_CONNECT_TIMEOUT_MILLIS = 1000;
     private static final String TYPE_TELEMETRY = "telemetry";
     private static final String TYPE_EVENT = "event";
     private static final String TYPE_ALL = "all";
@@ -65,7 +64,7 @@ public class Receiver extends AbstractClient {
     private CompositeFuture createConsumer(final HonoClient connectedClient) {
         final Handler<Void> closeHandler = closeHook -> {
             LOG.info("close handler of consumer is called");
-            vertx.setTimer(DEFAULT_CONNECT_TIMEOUT_MILLIS, reconnect -> {
+            vertx.setTimer(connectionTimeOut, reconnect -> {
                 LOG.info("attempting to re-open the consumer link ...");
                 createConsumer(connectedClient);
             });
@@ -90,7 +89,7 @@ public class Receiver extends AbstractClient {
 
     private void onDisconnect(final ProtonConnection con) {
         // give Vert.x some time to clean up NetClient
-        vertx.setTimer(DEFAULT_CONNECT_TIMEOUT_MILLIS, reconnect -> {
+        vertx.setTimer(connectionTimeOut, reconnect -> {
             LOG.info("attempting to re-connect to Hono ...");
             client.connect(this::onDisconnect)
                     .compose(this::createConsumer);

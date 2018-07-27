@@ -18,9 +18,21 @@ device:
 
 spring:
   profiles: receiver
+
 hono:
   client:
     port: 15671
+
+address:
+  resolver:
+    cacheNegativeTimeToLive: 0 #discard failed DNS lookup results immediately
+    cacheMaxTimeToLive: 0 #support DNS based service resolution
+    rotateServers: true
+    queryTimeout: 2000
+
+connection:
+  timeout: 1000
+
 message:
   type: all
 

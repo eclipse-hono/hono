@@ -40,10 +40,11 @@ abstract class AbstractClient {
     protected String tenantId;
     @Value(value = "${message.type}")
     protected String messageType;
+    @Value(value = "${connection.timeout}")
+    protected int connectionTimeOut;
     protected Vertx vertx;
     protected HonoClient client;
     protected List<String> activeProfiles;
-
 
     /**
      * Empty default constructor.
