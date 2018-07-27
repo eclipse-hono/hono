@@ -43,6 +43,9 @@ public class DefaultFailureHandler implements Handler<RoutingContext> {
 
     /**
      * Handles routing failures.
+     * <p>
+     * This method simply delegates to the next handler if the response is already
+     * ended or the context is not failed.
      * 
      * @param ctx The failing routing context.
      */
@@ -50,24 +53,27 @@ public class DefaultFailureHandler implements Handler<RoutingContext> {
     public void handle(final RoutingContext ctx) {
 
         if (ctx.failed()) {
-            LOG.debug("handling failed route for request [method: {}, URI: {}]",
-                    ctx.request().method(), ctx.request().absoluteURI());
+
             if (ctx.response().ended()) {
-                LOG.debug("cannot handle error, response already ended");
-            } else if (ctx.failure() != null) {
-                if (ctx.failure() instanceof ServiceInvocationException) {
-                    final ServiceInvocationException e = (ServiceInvocationException) ctx.failure();
-                    sendError(ctx.response(), e.getErrorCode(), e.getMessage());
-                } else if (ctx.failure() instanceof HttpStatusException) {
-                    final HttpStatusException e = (HttpStatusException) ctx.failure();
-                    sendError(ctx.response(), e.getStatusCode(), e.getMessage());
-                } else {
-                    sendError(ctx.response(), HttpURLConnection.HTTP_INTERNAL_ERROR, ctx.failure().getMessage());
-                }
-            } else if (ctx.statusCode() != -1) {
-                sendError(ctx.response(), ctx.statusCode(), ctx.response().getStatusMessage());
+                LOG.debug("skipping processing of failed route, response already ended");
             } else {
-                sendError(ctx.response(), HttpURLConnection.HTTP_INTERNAL_ERROR, "Internal Server Error");
+                LOG.debug("handling failed route for request [method: {}, URI: {}]",
+                        ctx.request().method(), ctx.request().absoluteURI());
+                if (ctx.failure() != null) {
+                    if (ctx.failure() instanceof ServiceInvocationException) {
+                        final ServiceInvocationException e = (ServiceInvocationException) ctx.failure();
+                        sendError(ctx.response(), e.getErrorCode(), e.getMessage());
+                    } else if (ctx.failure() instanceof HttpStatusException) {
+                        final HttpStatusException e = (HttpStatusException) ctx.failure();
+                        sendError(ctx.response(), e.getStatusCode(), e.getMessage());
+                    } else {
+                        sendError(ctx.response(), HttpURLConnection.HTTP_INTERNAL_ERROR, ctx.failure().getMessage());
+                    }
+                } else if (ctx.statusCode() != -1) {
+                    sendError(ctx.response(), ctx.statusCode(), ctx.response().getStatusMessage());
+                } else {
+                    sendError(ctx.response(), HttpURLConnection.HTTP_INTERNAL_ERROR, "Internal Server Error");
+                }
             }
         } else {
             LOG.debug("skipping processing of non-failed route");
@@ -76,14 +82,11 @@ public class DefaultFailureHandler implements Handler<RoutingContext> {
     }
 
     private void sendError(final HttpServerResponse response, final int errorCode, final String errorMessage) {
-        if (response.ended()) {
-            throw new IllegalStateException("response already ended");
-        } else {
-            response.setStatusCode(errorCode);
-            if (errorMessage != null) {
-                HttpUtils.setResponseBody(response, Buffer.buffer(errorMessage), HttpUtils.CONTENT_TYPE_TEXT_UTF8);
-            }
-            response.end();
+
+        response.setStatusCode(errorCode);
+        if (errorMessage != null) {
+            HttpUtils.setResponseBody(response, Buffer.buffer(errorMessage), HttpUtils.CONTENT_TYPE_TEXT_UTF8);
         }
+        response.end();
     }
 }

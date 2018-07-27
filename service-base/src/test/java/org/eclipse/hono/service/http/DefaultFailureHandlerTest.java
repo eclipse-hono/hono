@@ -37,6 +37,26 @@ import io.vertx.ext.web.RoutingContext;
 public class DefaultFailureHandlerTest {
 
     /**
+     * Verifies that the handler does not try to process a failed
+     * context if the response is already ended.
+     */
+    @Test
+    public void testHandlerDetectsEndedResponse() {
+        final HttpServerResponse response = mock(HttpServerResponse.class);
+        when(response.ended()).thenReturn(true);
+        final RoutingContext ctx = mock(RoutingContext.class);
+        when(ctx.response()).thenReturn(response);
+        when(ctx.failed()).thenReturn(true);
+
+        final DefaultFailureHandler handler = new DefaultFailureHandler();
+        handler.handle(ctx);
+
+        verify(response, never()).setStatusCode(anyInt());
+        verify(response, never()).write(any(Buffer.class));
+        verify(response, never()).end();
+    }
+
+    /**
      * Verifies that the handler sets an empty response body for
      * a context that has failed with an exception that does not contain
      * a detail message.

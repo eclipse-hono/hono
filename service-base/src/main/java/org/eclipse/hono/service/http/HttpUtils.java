@@ -171,7 +171,10 @@ public final class HttpUtils {
 
     /**
      * Fails a request with a given error.
-     *
+     * <p>
+     * This method does nothing if the context is already failed
+     * or if the response has already ended.
+     * 
      * @param ctx The request context to fail.
      * @param error The reason for the failure.
      * @param headers HTTP headers to set on the response (may be {@code null}).
@@ -184,12 +187,17 @@ public final class HttpUtils {
 
         Objects.requireNonNull(ctx);
         Objects.requireNonNull(error);
-        if (headers != null) {
-            for (final Entry<CharSequence, CharSequence> header : headers.entrySet()) {
-                ctx.response().putHeader(header.getKey(), header.getValue());
+
+        if (ctx.failed() || ctx.response().ended()) {
+            // nothing to do
+        } else {
+            if (headers != null) {
+                for (final Entry<CharSequence, CharSequence> header : headers.entrySet()) {
+                    ctx.response().putHeader(header.getKey(), header.getValue());
+                }
             }
+            ctx.fail(error);
         }
-        ctx.fail(error);
     }
 
     /**
@@ -303,7 +311,10 @@ public final class HttpUtils {
      * <p>
      * This method also sets the <em>content-length</em> and <em>content-type</em>
      * headers of the HTTP response accordingly but does not end the response.
-     *
+     * <p>
+     * If the response is already ended or the buffer is {@code null}, this method
+     * does nothing.
+     * 
      * @param response The HTTP response.
      * @param buffer The Buffer to set as the response body (may be {@code null}).
      * @param contentType The type of the content. If {@code null}, a default value of
@@ -311,8 +322,9 @@ public final class HttpUtils {
      * @throws NullPointerException if response is {@code null}.
      */
     public static void setResponseBody(final HttpServerResponse response, final Buffer buffer, final String contentType) {
+
         Objects.requireNonNull(response);
-        if (buffer != null) {
+        if (!response.ended() && buffer != null) {
             if (contentType == null) {
                 response.putHeader(HttpHeaders.CONTENT_TYPE, CONTENT_TYPE_OCTET_STREAM);
             } else {
