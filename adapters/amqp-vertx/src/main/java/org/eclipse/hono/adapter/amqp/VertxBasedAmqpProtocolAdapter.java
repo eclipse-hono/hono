@@ -34,6 +34,7 @@ import org.eclipse.hono.util.TenantObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.vertx.core.AsyncResult;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
@@ -218,6 +219,8 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         connRequest.disconnectHandler(conn -> {
             LOG.error("connection of client [container: {}] disconnected", conn.getRemoteContainer());
         });
+        connRequest.closeHandler(remoteClose -> handleRemoteConnectionClose(connRequest, remoteClose));
+
         // when a BEGIN frame is received
         connRequest.sessionOpenHandler(session -> {
             HonoProtonHelper.setDefaultCloseHandler(session);
@@ -283,6 +286,23 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         LOG.debug("opening new session with client [container: {}]", conn.getRemoteContainer());
         session.setIncomingCapacity(DEFAULT_MAX_SESSION_WINDOW);
         session.open();
+    }
+    /**
+     * Invoked when a client closes the connection with this server.
+     * <p>
+     * Copied from AmqpServiceBase#handleRemoteConnectionClose.
+     * 
+     * @param con The connection to close.
+     * @param res The client's close frame.
+     */
+    private void handleRemoteConnectionClose(final ProtonConnection con, final AsyncResult<ProtonConnection> res) {
+        if (res.succeeded()) {
+            LOG.debug("client [container: {}] closed connection", con.getRemoteContainer());
+        } else {
+            LOG.debug("client [container: {}] closed connection with error", con.getRemoteContainer(), res.cause());
+        }
+        con.close();
+        con.disconnect();
     }
 
     /**
