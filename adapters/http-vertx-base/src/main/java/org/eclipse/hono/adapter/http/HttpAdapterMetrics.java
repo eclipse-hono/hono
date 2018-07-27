@@ -23,10 +23,21 @@ import org.springframework.stereotype.Component;
 public class HttpAdapterMetrics extends Metrics {
 
     private static final String SERVICE_PREFIX = "hono.http";
+    private static final String COMMANDS = ".commands";
 
     @Override
     protected String getPrefix() {
         return SERVICE_PREFIX;
     }
+    void incrementCommandDeliveredToDevice(final String tenantId) {
+        counterService.increment(METER_PREFIX + getPrefix() + mergeAsMetric(COMMANDS, tenantId, "device", "delivered"));
+    }
 
+    void incrementNoCommandReceivedAndTTDExpired(final String tenantId) {
+        counterService.increment(METER_PREFIX + getPrefix() + mergeAsMetric(COMMANDS, tenantId, "ttd", "expired"));
+    }
+
+    void incrementCommandResponseDeliveredToApplication(final String tenantId) {
+        counterService.increment(METER_PREFIX + getPrefix() + mergeAsMetric(COMMANDS, tenantId, "response", "delivered"));
+    }
 }
