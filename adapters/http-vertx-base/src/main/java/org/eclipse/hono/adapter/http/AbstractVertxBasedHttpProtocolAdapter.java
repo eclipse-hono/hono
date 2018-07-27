@@ -624,6 +624,10 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                                     endpointName, tenant, deviceId);
                             metrics.incrementProcessedMessages(endpointName, tenant);
                             metrics.incrementProcessedPayload(endpointName, tenant, messagePayloadSize(ctx));
+                            if (command!=null){
+                                metrics.incrementCommandDeliveredToDevice(tenant);
+                                LOG.trace("Command [{}] for device [tenantId: {}, deviceId: {}]", command.getPayload(), tenant, deviceId);
+                            }
                             currentSpan.finish();
                         });
                         ctx.response().exceptionHandler(t -> {
@@ -664,7 +668,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
      * <p>
      * This implementation simply counts the bytes of the HTTP payload buffer and ignores all other attributes of the
      * HTTP request.
-     * 
+     *
      * @param ctx The payload to measure. May be {@code null}.
      * @return The number of bytes of the payload or zero if any input is {@code null}.
      */
@@ -698,7 +702,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
             if (!ctx.response().closed()) {
                 ctx.response().closeHandler(v -> {
                     cancelCommandReceptionTimer(ctx);
-
+                    metrics.incrementNoCommandReceivedAndTTDExpired(tenantId);
                     LOG.debug("Connection was closed before response could be sent - closing command consumer for device [tenantId: {}, deviceId: {}]", tenantId, deviceId);
 
                     getCommandConnection().closeCommandConsumer(tenantId, deviceId).setHandler(result -> {
@@ -890,6 +894,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
             senderTracker.compose(commandResponseSender -> {
                 return commandResponseSender.sendCommandResponse(commandResponse);
             }).map(delivery -> {
+                metrics.incrementCommandResponseDeliveredToApplication(tenant);
                 LOG.trace("command response [command-request-id: {}] accepted by application", commandRequestId);
                 ctx.response().setStatusCode(HttpURLConnection.HTTP_ACCEPTED);
                 ctx.response().end();
