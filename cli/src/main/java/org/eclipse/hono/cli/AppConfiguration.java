@@ -32,28 +32,34 @@ import io.vertx.core.dns.AddressResolverOptions;
 @Configuration
 public class AppConfiguration {
 
-    private final int DEFAULT_ADDRESS_RESOLUTION_TIMEOUT = 2000;
-
     /**
      * Exposes a Vert.x instance as a Spring bean.
-     * 
+     *
      * @return The Vert.x instance.
      */
     @Bean
     public Vertx vertx() {
         final VertxOptions options = new VertxOptions()
                 .setWarningExceptionTime(1500000000)
-                .setAddressResolverOptions(new AddressResolverOptions()
-                        .setCacheNegativeTimeToLive(0) // discard failed DNS lookup results immediately
-                        .setCacheMaxTimeToLive(0) // support DNS based service resolution
-                        .setRotateServers(true)
-                        .setQueryTimeout(DEFAULT_ADDRESS_RESOLUTION_TIMEOUT));
+                .setAddressResolverOptions(addressResolverOptions());
         return Vertx.vertx(options);
     }
 
     /**
+     * Exposes address resolver option properties as a Spring bean.
+     *
+     * @return The properties.
+     */
+    @ConfigurationProperties(prefix = "address.resolver")
+    @Bean
+    public AddressResolverOptions addressResolverOptions() {
+        final AddressResolverOptions addressResolverOptions = new AddressResolverOptions();
+        return addressResolverOptions;
+    }
+
+    /**
      * Exposes client configuration properties as a Spring bean.
-     * 
+     *
      * @return The properties.
      */
     @ConfigurationProperties(prefix = "hono.client")
@@ -65,7 +71,7 @@ public class AppConfiguration {
 
     /**
      * Exposes a factory for connections to the Hono as a Spring bean.
-     * 
+     *
      * @return The connection factory.
      */
     @Bean
@@ -73,10 +79,9 @@ public class AppConfiguration {
         return new ConnectionFactoryImpl(vertx(), honoClientConfig());
     }
 
-
     /**
      * Exposes a {@code HonoClient} as a Spring bean.
-     * 
+     *
      * @return The Hono client.
      */
     @Bean
