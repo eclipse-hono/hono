@@ -360,7 +360,10 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
         // 1. the handler for processing the response and
         // 2. the key to use for caching the response
         // 3. the Opentracing span covering the execution
-        final TriTuple<Handler<AsyncResult<R>>, Object, Span> handler = replyMap.remove(message.getCorrelationId());
+
+        final Object correlationId = correlationIdFromMessage(message);
+
+        final TriTuple<Handler<AsyncResult<R>>, Object, Span> handler = replyMap.remove(correlationId);
 
         if (handler == null) {
             LOG.debug("discarding unexpected response [reply-to: {}, correlation ID: {}]",
@@ -376,7 +379,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
                 ProtonHelper.released(delivery, true);
             } else {
                 LOG.debug("received response [reply-to: {}, subject: {}, correlation ID: {}, status: {}]",
-                        replyToAddress, message.getSubject(), message.getCorrelationId(), response.getStatus());
+                        replyToAddress, message.getSubject(), correlationId, response.getStatus());
                 addToCache(handler.two(), response);
                 if (span != null) {
                     span.log("response from peer accepted");
@@ -685,7 +688,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
                         HttpURLConnection.HTTP_UNAVAILABLE, "no credit available for sending request")));
             } else {
                 final Map<String, Object> details = new HashMap<>(3);
-                final Object correlationId = Optional.ofNullable(request.getCorrelationId()).orElse(request.getMessageId());
+                final Object correlationId = correlationIdFromMessage(request);
                 if (correlationId instanceof String) {
                     details.put(TracingHelper.TAG_CORRELATION_ID.getKey(), correlationId);
                 }
@@ -746,6 +749,10 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
                     "not connected")));
             return null;
         });
+    }
+
+    private Object correlationIdFromMessage(final Message message) {
+        return Optional.ofNullable(message.getCorrelationId()).orElse(message.getMessageId());
     }
 
     /**
