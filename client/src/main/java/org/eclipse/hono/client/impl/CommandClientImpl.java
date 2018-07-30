@@ -72,7 +72,6 @@ public class CommandClientImpl extends AbstractRequestResponseClient<BufferResul
     public Future<Buffer> sendCommand(final String command, final Buffer data) {
 
         Objects.requireNonNull(command);
-        Objects.requireNonNull(data);
 
         final Future<BufferResult> responseTracker = Future.future();
         createAndSendRequest(command, null, data, null, responseTracker.completer(), null);

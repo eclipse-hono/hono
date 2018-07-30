@@ -31,14 +31,14 @@ public interface CommandClient extends RequestResponseClient {
      * any data for it. The device also needs to be connected for a successful delivery.
      *
      * @param command The command name.
-     * @param data The command data to send to the device.
+     * @param data The command data to send to the device or {@code null} if the command has no input data.
      * @return A future indicating the result of the operation.
      *         <p>
      *         The future will succeed if a response with status 2xx has been received from the device. If the response has no payload, the future will complete with {@code null}.
      *         <p>
      *         Otherwise, the future will fail with a {@link ServiceInvocationException} containing
      *         the (error) status code. Status codes are defined at <a href="https://www.eclipse.org/hono/api/command-and-control-api">Command and Control API</a>.
-     * @throws NullPointerException if command or data is {@code null}.
+     * @throws NullPointerException if command is {@code null}.
      * @see RequestResponseClient#setRequestTimeout(long)
      */
     Future<Buffer> sendCommand(String command, Buffer data);
