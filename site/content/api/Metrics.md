@@ -17,7 +17,7 @@ not considered part of Hono's external interface and thus may be changed or remo
 
 ## InfluxDB
 
-In the [deployment examples]({{< relref "/deployment" >}}) an InfluxDB is used for collecting
+In the [deployment examples](/hono/deployment) an InfluxDB is used for collecting
 metrics reported by Hono's service components. For this purpose, some of the services are
 configured to use Dropwizard's *Graphite reporter* to transmit metrics to the InfluxDB instance
 using the Graphite wire format.
