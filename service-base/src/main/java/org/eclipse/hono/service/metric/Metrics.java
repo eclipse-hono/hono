@@ -26,7 +26,7 @@ abstract public class Metrics {
 
     /**
      * Special prefixes used by spring boot actuator together with dropwizard metrics.
-     * 
+     *
      * @see <a href=
      *      "https://docs.spring.io/spring-boot/docs/current/reference/html/production-ready-metrics.html#production-ready-dropwizard-metrics">Spring
      *      Boot</a>
@@ -42,6 +42,7 @@ abstract public class Metrics {
     protected static final String UNDELIVERABLE = ".undeliverable";
     protected static final String CONNECTIONS = ".connections.";
     protected static final String UNAUTHENTICATED_CONNECTIONS = ".unauthenticatedConnections.";
+    protected static final String COMMANDS = ".commands";
 
     protected static final String PAYLOAD = ".payload.";
 
@@ -103,7 +104,7 @@ abstract public class Metrics {
 
     /**
      * Merge the given address parts as a full string, separated by '.'.
-     * 
+     *
      * @param parts The address parts
      * @return The full address, separated by points
      */
@@ -113,7 +114,7 @@ abstract public class Metrics {
 
     /**
      * Increment the number of processes messages by one.
-     * 
+     *
      * @param resourceId The ID of the resource to track.
      * @param tenantId The tenant this resource belongs to.
      */
@@ -123,7 +124,7 @@ abstract public class Metrics {
 
     /**
      * Increment the number of undeliverable messages by one.
-     * 
+     *
      * @param resourceId The ID of the resource to track.
      * @param tenantId The tenant this resource belongs to.
      */
@@ -133,7 +134,7 @@ abstract public class Metrics {
 
     /**
      * Increment the counter for the number of processed bytes.
-     * 
+     *
      * @param resourceId The ID of the resource to track.
      * @param tenantId The tenant this resource belongs to.
      * @param payloadSize The size of the payload in bytes.

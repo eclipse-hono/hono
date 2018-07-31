@@ -23,7 +23,6 @@ import org.springframework.stereotype.Component;
 public class HttpAdapterMetrics extends Metrics {
 
     private static final String SERVICE_PREFIX = "hono.http";
-    private static final String COMMANDS = ".commands";
 
     @Override
     protected String getPrefix() {

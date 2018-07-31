@@ -45,7 +45,7 @@ extracting the following *tags* from metric names transmitted via the Graphite r
 | *host*     | The name of the host that the service reporting the metric is running on. |
 | *type*     | The type of message that the metric is being processed for (either `telemetry` or `event`) |
 | *tenant*   | The name of the tenant that the metric is being reported for. |
-| *protocol* | The protocol of message that the metric is being processed for (example: `http`, `mqtt`) |
+| *protocol* | The protocol of message that the metric is being processed for (example: `http`, `mqtt`). This is used only in Command and Control metrics. |
 
 The following sections describe which of these tags are extracted for which metrics specifically.
  
