@@ -258,9 +258,8 @@ public abstract class MqttTestBase {
 
         final long start = System.currentTimeMillis();
         while (messageCount.get() < MESSAGES_TO_SEND) {
-
             final Async messageSent = ctx.async();
-            VERTX.runOnContext(go -> {
+            VERTX.setTimer(5, timerId -> {
                 final Buffer msg = Buffer.buffer("hello " + messageCount.getAndIncrement());
                 send(tenantId, deviceId, msg, useShortTopicName).setHandler(sendAttempt -> {
                     if (sendAttempt.failed()) {
@@ -276,7 +275,9 @@ public abstract class MqttTestBase {
             messageSent.await();
         }
 
-        received.await(getTimeToWait(), TimeUnit.MILLISECONDS);
+        if (!received.await(getTimeToWait(), TimeUnit.MILLISECONDS)) {
+            LOGGER.info("Timeout of {} milliseconds reached, stop waiting to receive messages.", getTimeToWait());
+        }
         final long messagesReceived = MESSAGES_TO_SEND - received.getCount();
         LOGGER.info("sent {} and received {} messages in {} milliseconds",
                 messageCount.get(), messagesReceived, lastReceivedTimestamp.get() - start);
