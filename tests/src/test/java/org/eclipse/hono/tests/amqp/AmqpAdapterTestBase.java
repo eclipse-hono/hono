@@ -12,6 +12,7 @@
  *******************************************************************************/
 package org.eclipse.hono.tests.amqp;
 import java.util.Objects;
+import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -34,11 +35,14 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestName;
 
+import io.vertx.core.AsyncResult;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
+import io.vertx.core.net.PemTrustOptions;
+import io.vertx.core.net.SelfSignedCertificate;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.proton.ProtonClient;
@@ -47,6 +51,8 @@ import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonHelper;
 import io.vertx.proton.ProtonQoS;
 import io.vertx.proton.ProtonSender;
+import io.vertx.proton.sasl.impl.ProtonSaslExternalImpl;
+import io.vertx.proton.sasl.impl.ProtonSaslPlainImpl;
 
 /**
  * Base class for the AMQP adapter integration tests.
@@ -67,6 +73,9 @@ public abstract class AmqpAdapterTestBase extends ClientTestBase {
 
     private static Vertx vertx;
     private Context context;
+
+    private static ProtonClientOptions defaultOptions;
+    private SelfSignedCertificate deviceCert;
 
     /**
      * Perform additional checks on a received message.
@@ -108,6 +117,11 @@ public abstract class AmqpAdapterTestBase extends ClientTestBase {
         vertx = Vertx.vertx();
         helper = new IntegrationTestSupport(vertx);
         helper.init(ctx);
+
+        defaultOptions = new ProtonClientOptions()
+                .setTrustOptions(new PemTrustOptions().addCertPath(IntegrationTestSupport.TRUST_STORE_PATH))
+                .setHostnameVerificationAlgorithm("")
+                .setSsl(true);
     }
 
     /**
@@ -126,6 +140,7 @@ public abstract class AmqpAdapterTestBase extends ClientTestBase {
     @Before
     public void before() {
         log.info("running {}", testName.getMethodName());
+        deviceCert = SelfSignedCertificate.create(UUID.randomUUID().toString());
     }
 
     /**
@@ -137,6 +152,9 @@ public abstract class AmqpAdapterTestBase extends ClientTestBase {
     @After
     public void after(final TestContext context) {
         helper.deleteObjects(context);
+        if (deviceCert != null) {
+            deviceCert.delete();
+        }
         close(context);
     }
 
@@ -278,6 +296,45 @@ public abstract class AmqpAdapterTestBase extends ClientTestBase {
         }).setHandler(ctx.asyncAssertSuccess(ok -> setup.complete()));
         setup.await();
 
+        testUploadMessages(tenantId, ctx);
+    }
+
+    /**
+     * Verifies that a number of messages uploaded to the AMQP adapter using client certificate
+     * based authentication can be successfully consumed via the AMQP Messaging Network.
+     *
+     * @param ctx The test context.
+     * @throws InterruptedException if test execution is interrupted.
+     */
+    @Test
+    public void testUploadMessagesUsingClientCertificate(final TestContext ctx) throws InterruptedException {
+        final Async setup = ctx.async();
+        final String tenantId = helper.getRandomTenantId();
+        final String deviceId = helper.getRandomDeviceId(tenantId);
+
+        helper.getCertificate(deviceCert.certificatePath()).compose(cert -> {
+            final TenantObject tenant = TenantObject.from(tenantId, true);
+            tenant.setTrustAnchor(cert.getPublicKey(), cert.getSubjectX500Principal());
+            return helper.registry.addDeviceForTenant(tenant, deviceId, cert);
+        }).compose(ok -> connectToAdapter(deviceCert))
+        .compose(con -> createProducer(new Target()))        
+        .map(s -> {
+            sender = s;
+            setup.complete();
+            return s;
+        }).recover(t -> {
+            log.error("error setting up AMQP protocol adapter", t);
+            return Future.failedFuture(t);
+        });
+
+        setup.await();
+
+        testUploadMessages(tenantId, ctx);
+    }
+
+    //------------------------------------------< private methods >---
+
+    private void testUploadMessages(final String tenantId, final TestContext ctx) throws InterruptedException {
         final Function<Handler<Void>, Future<Void>> receiver = callback -> {
             return createConsumer(tenantId, msg -> {
                 callback.handle(null);
@@ -302,7 +359,6 @@ public abstract class AmqpAdapterTestBase extends ClientTestBase {
         });
     }
 
-    //------------------------------------------< private methods >---
     /**
      * Creates a test specific message sender.
      * 
@@ -369,30 +425,54 @@ public abstract class AmqpAdapterTestBase extends ClientTestBase {
     private Future<ProtonConnection> connectToAdapter(final String username, final String password) {
 
         final Future<ProtonConnection> result = Future.future();
-        final ProtonClientOptions options = new ProtonClientOptions();
         final ProtonClient client = ProtonClient.create(vertx);
 
-        client.connect(options, IntegrationTestSupport.AMQP_HOST, IntegrationTestSupport.AMQP_PORT,
-                username, password, conAttempt -> {
-            if (conAttempt.failed()) {
-                result.fail(conAttempt.cause());
-            } else {
-                this.context = Vertx.currentContext();
-                this.connection = conAttempt.result();
-                connection.openHandler(remoteOpen -> {
-                    if (remoteOpen.succeeded()) {
-                        result.complete(connection);
-                    } else {
-                        result.fail(remoteOpen.cause());
-                    }
-                });
-                connection.closeHandler(remoteClose -> {
-                    connection.close();
-                });
-                connection.open();
-            }
-        });
+        defaultOptions.addEnabledSaslMechanism(ProtonSaslPlainImpl.MECH_NAME);
+        client.connect(
+                defaultOptions,
+                IntegrationTestSupport.AMQP_HOST,
+                IntegrationTestSupport.AMQPS_PORT,
+                username,
+                password,
+                conAttempt -> handleConnectionAttemptResult(conAttempt, result.completer()));
         return result;
+    }
+
+    private Future<ProtonConnection> connectToAdapter(final SelfSignedCertificate clientCertificate) {
+
+        final Future<ProtonConnection> result = Future.future();
+        final ProtonClient client = ProtonClient.create(vertx);
+
+        final ProtonClientOptions secureOptions = new ProtonClientOptions(defaultOptions);
+        secureOptions.setKeyCertOptions(clientCertificate.keyCertOptions());
+        secureOptions.addEnabledSaslMechanism(ProtonSaslExternalImpl.MECH_NAME);
+        client.connect(
+                secureOptions,
+                IntegrationTestSupport.AMQP_HOST,
+                IntegrationTestSupport.AMQPS_PORT,
+                conAttempt -> handleConnectionAttemptResult(conAttempt, result.completer()));
+        return result;
+    }
+
+    private void handleConnectionAttemptResult(final AsyncResult<ProtonConnection> conAttempt, final Handler<AsyncResult<ProtonConnection>> handler) {
+        if (conAttempt.failed()) {
+            handler.handle(Future.failedFuture(conAttempt.cause()));
+        } else {
+            this.context = Vertx.currentContext();
+            this.connection = conAttempt.result();
+            connection.openHandler(remoteOpen -> {
+                if (remoteOpen.succeeded()) {
+                    handler.handle(Future.succeededFuture(connection));
+                } else {
+                    handler.handle(Future.failedFuture(remoteOpen.cause()));
+                }
+            });
+            connection.closeHandler(remoteClose -> {
+                connection.close();
+            });
+            connection.open();
+        }
+
     }
 
     private void close(final TestContext ctx) {
@@ -431,5 +511,4 @@ public abstract class AmqpAdapterTestBase extends ClientTestBase {
         });
         shutdown.await();
     }
-
 }

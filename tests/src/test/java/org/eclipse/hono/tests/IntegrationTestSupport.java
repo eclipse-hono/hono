@@ -13,7 +13,11 @@
 
 package org.eclipse.hono.tests;
 
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
 import java.net.InetAddress;
+import java.security.cert.CertificateFactory;
+import java.security.cert.X509Certificate;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -53,6 +57,7 @@ public final class IntegrationTestSupport {
     public static final int    DEFAULT_HTTPS_PORT = 8443;
     public static final int    DEFAULT_MQTT_PORT = 1883;
     public static final int    DEFAULT_AMQP_PORT = 4040;
+    public static final int    DEFAULT_AMQPS_PORT = 4041;
 
     public static final String PROPERTY_AUTH_HOST = "auth.host";
     public static final String PROPERTY_AUTH_PORT = "auth.amqp.port";
@@ -74,6 +79,7 @@ public final class IntegrationTestSupport {
     public static final String PROPERTY_MQTT_PORT = "mqtt.port";
     public static final String PROPERTY_AMQP_HOST = "adapter.amqp.host";
     public static final String PROPERTY_AMQP_PORT = "adapter.amqp.port";
+    public static final String PROPERTY_AMQPS_PORT = "adapter.amqps.port";
     public static final String PROPERTY_TENANT = "tenant";
 
     public static final String AUTH_HOST = System.getProperty(PROPERTY_AUTH_HOST, DEFAULT_HOST);
@@ -102,6 +108,7 @@ public final class IntegrationTestSupport {
     public static final int    MQTT_PORT = Integer.getInteger(PROPERTY_MQTT_PORT, DEFAULT_MQTT_PORT);
     public static final String AMQP_HOST = System.getProperty(PROPERTY_AMQP_HOST, DEFAULT_HOST);
     public static final int    AMQP_PORT = Integer.getInteger(PROPERTY_AMQP_PORT, DEFAULT_AMQP_PORT);
+    public static final int    AMQPS_PORT = Integer.getInteger(PROPERTY_AMQPS_PORT, DEFAULT_AMQPS_PORT);
 
     public static final String PATH_SEPARATOR = System.getProperty("hono.pathSeparator", "/");
     public static final int    MSG_COUNT = Integer.getInteger("msg.count", 1000);
@@ -424,4 +431,31 @@ public final class IntegrationTestSupport {
     public static String getUsername(final String deviceId, final String tenant) {
         return String.format("%s@%s", deviceId, tenant);
     }
+
+    /**
+     * Generates a certificate object and initializes it with the data read from a file.
+     * 
+     * @param path The file-system path to load the certificate from.
+     * @return A future with the generated certificate on success.
+     */
+    public Future<X509Certificate> getCertificate(final String path) {
+
+        return loadFile(path).map(buffer -> {
+            try (InputStream is = new ByteArrayInputStream(buffer.getBytes())) {
+                final CertificateFactory factory = CertificateFactory.getInstance("X.509");
+                return (X509Certificate) factory.generateCertificate(is);
+            } catch (final Exception e) {
+                throw new IllegalArgumentException("file cannot be parsed into X.509 certificate");
+            }
+        });
+    }
+
+    //----------------------------------< private methods >---
+    private Future<Buffer> loadFile(final String path) {
+
+        final Future<Buffer> result = Future.future();
+        vertx.fileSystem().readFile(path, result.completer());
+        return result;
+    }
+
 }

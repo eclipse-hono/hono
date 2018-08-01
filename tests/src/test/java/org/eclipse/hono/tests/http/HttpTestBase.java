@@ -13,12 +13,8 @@
 
 package org.eclipse.hono.tests.http;
 
-import java.io.ByteArrayInputStream;
-import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.nio.charset.StandardCharsets;
-import java.security.cert.CertificateFactory;
-import java.security.cert.X509Certificate;
 import java.util.Base64;
 import java.util.Optional;
 import java.util.UUID;
@@ -152,25 +148,6 @@ public abstract class HttpTestBase {
            .setTrustOptions(new PemTrustOptions().addCertPath(IntegrationTestSupport.TRUST_STORE_PATH))
            .setVerifyHost(false)
            .setSsl(true);
-    }
-
-    private static Future<Buffer> loadFile(final String path) {
-
-        final Future<Buffer> result = Future.future();
-        VERTX.fileSystem().readFile(path, result.completer());
-        return result;
-    }
-
-    private static Future<X509Certificate> getCertificate(final String path) {
-
-        return loadFile(path).map(buffer -> {
-            try (InputStream is = new ByteArrayInputStream(buffer.getBytes())) {
-                final CertificateFactory factory = CertificateFactory.getInstance("X.509");
-                return (X509Certificate) factory.generateCertificate(is);
-            } catch (final Exception e) {
-                throw new IllegalArgumentException("file cannot be parsed into X.509 certificate");
-            }
-        });
     }
 
     /**
@@ -320,7 +297,7 @@ public abstract class HttpTestBase {
                 .add(HttpHeaders.CONTENT_TYPE, "text/plain")
                 .add(HttpHeaders.ORIGIN, ORIGIN_URI);
 
-        getCertificate(deviceCert.certificatePath()).compose(cert -> {
+        helper.getCertificate(deviceCert.certificatePath()).compose(cert -> {
             final TenantObject tenant = TenantObject.from(tenantId, true);
             tenant.setTrustAnchor(cert.getPublicKey(), cert.getSubjectX500Principal());
             return helper.registry.addDeviceForTenant(tenant, deviceId, cert);
