@@ -98,7 +98,13 @@ public abstract class CredentialsApiAuthProvider implements HonoClientBasedAuthP
         validationResult.setHandler(resultHandler);
 
         getCredentialsForDevice(deviceCredentials).recover(t -> {
+
+            if (!(t instanceof ServiceInvocationException)) {
+                return Future.failedFuture(t);
+            }
+
             final ServiceInvocationException e = (ServiceInvocationException) t;
+
             if (e.getErrorCode() == HttpURLConnection.HTTP_NOT_FOUND) {
                 return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED, "bad credentials"));
             } else {
