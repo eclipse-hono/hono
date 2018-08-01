@@ -49,10 +49,11 @@ public class AmqpContext {
      * @param delivery The delivery of the message.
      * @param message The AMQP 1.0 message. The message must contain a valid address.
      * @param authenticatedDevice The device that authenticates to the adapter or {@code null} if the device is unauthenticated.
+     * @throws NullPointerException if the delivery or message is null.
      */
     AmqpContext(final ProtonDelivery delivery, final Message message, final Device authenticatedDevice) {
-        this.delivery = delivery;
-        this.message = message;
+        this.delivery = Objects.requireNonNull(delivery);
+        this.message = Objects.requireNonNull(message);
         this.authenticatedDevice = authenticatedDevice;
         this.resource = ResourceIdentifier.fromString(message.getAddress());
     }

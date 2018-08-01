@@ -621,6 +621,10 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                           <fileSet>
                             <directory>${project.build.directory}/certs</directory>
                             <outputDirectory>certs</outputDirectory>
+                            <includes>
+                              <include>amqp-adapter-*.pem</include>
+                              <include>trusted-certs.pem</include>
+                            </includes>
                           </fileSet>
                         </fileSets>
                       </inline>
@@ -629,6 +633,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                   <run>
                     <ports>
                       <port>+adapter.amqp.ip:adapter.amqp.port:4040</port>
+                      <port>+adapter.amqps.ip:adapter.amqps.port:4041</port>
                       <port>+adapter.amqp.ip:adapter.amqp.health.port:8088</port>
                       <port>8000:8000</port>
                     </ports>
@@ -718,6 +723,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                 <mqtt.port>${mqtt.port}</mqtt.port>
                 <adapter.amqp.host>${adapter.amqp.ip}</adapter.amqp.host>
                 <adapter.amqp.port>${adapter.amqp.port}</adapter.amqp.port>
+                <adapter.amqps.port>${adapter.amqps.port}</adapter.amqps.port>
                 <trust-store.path>${project.build.directory}/certs/trusted-certs.pem</trust-store.path>
                 <test.env>${test.env}</test.env>
                 <!-- javax.net.debug>ssl:handshake</javax.net.debug-->

@@ -23,8 +23,6 @@ import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
 import org.eclipse.hono.service.auth.device.Device;
-import org.eclipse.hono.service.auth.device.HonoClientBasedAuthProvider;
-import org.eclipse.hono.service.auth.device.UsernamePasswordAuthProvider;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EndpointType;
 import org.eclipse.hono.util.HonoProtonHelper;
@@ -102,8 +100,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         checkPortConfiguration()
                 .compose(success -> {
                     if (authenticatorFactory == null && getConfig().isAuthenticationRequired()) {
-                        final HonoClientBasedAuthProvider usernamePasswordAuthProvider = new UsernamePasswordAuthProvider(getCredentialsServiceClient(), getConfig());
-                        authenticatorFactory = new AmqpAdapterSaslAuthenticatorFactory(usernamePasswordAuthProvider, getConfig());
+                        authenticatorFactory = new AmqpAdapterSaslAuthenticatorFactory(getTenantServiceClient(), getCredentialsServiceClient(), getConfig());
                     }
                     return Future.succeededFuture();
                 }).compose(succcess -> {

@@ -8,13 +8,15 @@ hono:
     bindAddress: 0.0.0.0
     insecurePortBindAddress: 0.0.0.0
     insecurePortEnabled: true
+    keyPath: /etc/hono/certs/amqp-adapter-key.pem
+    certPath: /etc/hono/certs/amqp-adapter-cert.pem
   messaging:
     name: 'Hono AMQP Adapter'
     host: hono-dispatch-router.hono
     port: 5673
     amqpHostname: hono-internal
-    keyPath: /etc/hono/certs/mqtt-adapter-key.pem
-    certPath: /etc/hono/certs/mqtt-adapter-cert.pem
+    keyPath: /etc/hono/certs/amqp-adapter-key.pem
+    certPath: /etc/hono/certs/amqp-adapter-cert.pem
     trustStorePath: /etc/hono/certs/trusted-certs.pem
   registration:
     name: 'Hono MQTT Adapter'
@@ -39,8 +41,8 @@ hono:
     host: hono-dispatch-router.hono
     port: 5673
     amqpHostname: hono-internal
-    keyPath: /etc/hono/certs/mqtt-adapter-key.pem
-    certPath: /etc/hono/certs/mqtt-adapter-cert.pem
+    keyPath: /etc/hono/certs/amqp-adapter-key.pem
+    certPath: /etc/hono/certs/amqp-adapter-cert.pem
     trustStorePath: /etc/hono/certs/trusted-certs.pem
   metric:
     reporter:
