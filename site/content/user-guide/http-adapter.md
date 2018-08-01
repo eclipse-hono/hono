@@ -83,7 +83,7 @@ Publish some JSON data for device `4711`, indicating that the device will wait f
 
     HTTP/1.1 200 OK
     hono-command: set
-    hono-cmd-req-id: 47#cmd-client-299c7172-75ce-484d-bee1-cd279755c5fea3c84d64-681e-4ba3-9e74-f8e1ca412d60
+    hono-cmd-req-id: 1010a7249aa5-f742-4376-8458-bbfc88c72d92
     Content-Length: 23
     
     {
@@ -146,7 +146,7 @@ Publish some JSON data for device `4711`, indicating that the device will wait f
 
     HTTP/1.1 200 OK
     hono-command: set
-    hono-cmd-req-id: 47#cmd-client-299c7172-75ce-484d-bee1-cd279755c5fea3c84d64-681e-4ba3-9e74-f8e1ca412d60
+    hono-cmd-req-id: 1010a7249aa5-f742-4376-8458-bbfc88c72d92
     Content-Length: 23
     
     {
@@ -215,7 +215,7 @@ Publish some JSON data for device `4712`, indicating that the gateway will wait 
 
     HTTP/1.1 200 OK
     hono-command: set
-    hono-cmd-req-id: 47#cmd-client-299c7172-75ce-484d-bee1-cd279755c5fea3c84d64-681e-4ba3-9e74-f8e1ca412d60
+    hono-cmd-req-id: 1010a7249aa5-f742-4376-8458-bbfc88c72d92
     Content-Length: 23
     
     {
