@@ -111,12 +111,12 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
     /**
      * Creates a request-response client.
      * <p>
-     * The client will be ready to use after invoking {@link #createLinks(ProtonConnection, ClientConfigProperties)} only.
+     * The client will only be ready to use after invoking {@link #createLinks(ProtonConnection, Handler, Handler)} or
+     * one of its variants.
      * 
      * @param context The vert.x context to run message exchanges with the peer on.
      * @param config The configuration properties to use.
-     * @param tracer The tracer to use for tracking request processing
-     *               across process boundaries.
+     * @param tracer The tracer to use for tracking request processing across process boundaries.
      * @param tenantId The identifier of the tenant that the client is scoped to.
      * @throws NullPointerException if any of the parameters other than tracer is {@code null}.
      */
