@@ -190,16 +190,12 @@ public class HonoConsumerBase {
             callPeriodicCommandSenderTimerCanceler(notification);
         } else {
             System.out.println(String.format("Device is ready to receive a command : <%s>.", notification.toString()));
-
-            final String tenantId = notification.getTenantId();
-            final String deviceId = notification.getDeviceId();
-
-            createCommandClientAndSendCommand(notification, tenantId, deviceId);
+            createCommandClientAndSendCommand(notification);
         }
     }
 
-    private void createCommandClientAndSendCommand(final TimeUntilDisconnectNotification notification, final String tenantId, final String deviceId) {
-        honoClient.getOrCreateCommandClient(tenantId, deviceId).map(commandClient -> {
+    private void createCommandClientAndSendCommand(final TimeUntilDisconnectNotification notification) {
+        honoClient.getOrCreateCommandClient(notification.getTenantId(), notification.getDeviceId()).map(commandClient -> {
             final JsonObject jsonCmd = new JsonObject().put("brightness", (int) (Math.random() * 100));
             // let the commandClient timeout when the notification expires
             if (notification.getTtd() == -1) {
