@@ -147,7 +147,7 @@ public class CommandSubscription {
      * @param topic The topic to subscribe for commands.
      * @param authenticatedDevice The authenticated device or {@code null}.
      * @return The CommandSubscription object or {@code null} if the topic does not match the rules.
-     * @throws NullPointerException if topic is {@node null}.
+     * @throws NullPointerException if topic is {@code null}.
      */
     public static CommandSubscription fromTopic(final String topic, final Device authenticatedDevice) {
         try {
