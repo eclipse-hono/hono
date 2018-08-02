@@ -57,6 +57,6 @@ public class TelemetryMqttQoS1IT extends MqttTestBase {
     @Override
     protected Future<MessageConsumer> createConsumer(final String tenantId, final Consumer<Message> messageConsumer) {
 
-        return helper.downstreamClient.createTelemetryConsumer(tenantId, messageConsumer, remoteClose -> {});
+        return helper.honoClient.createTelemetryConsumer(tenantId, messageConsumer, remoteClose -> {});
     }
 }

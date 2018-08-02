@@ -31,7 +31,7 @@ public class EventAmqpIT extends AmqpAdapterTestBase {
 
     @Override
     protected Future<MessageConsumer> createConsumer(final String tenantId, final Consumer<Message> messageConsumer) {
-        return helper.downstreamClient.createEventConsumer(tenantId, messageConsumer, close -> {});
+        return helper.honoClient.createEventConsumer(tenantId, messageConsumer, close -> {});
     }
 
     @Override

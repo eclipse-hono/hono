@@ -118,8 +118,9 @@ public final class IntegrationTestSupport {
     public DeviceRegistryHttpClient registry;
     /**
      * A client for connecting to the AMQP Messaging Network.
+     * This can be used for downstream <em>or</em> upstream messages.
      */
-    public HonoClient downstreamClient;
+    public HonoClient honoClient;
 
     private final Set<String> tenantsToDelete = new HashSet<>();
     private final Map<String, Set<String>> devicesToDelete = new HashMap<>();
@@ -150,9 +151,9 @@ public final class IntegrationTestSupport {
         downstreamProps.setPort(IntegrationTestSupport.DOWNSTREAM_PORT);
         downstreamProps.setUsername(IntegrationTestSupport.DOWNSTREAM_USER);
         downstreamProps.setPassword(IntegrationTestSupport.DOWNSTREAM_PWD);
-        downstreamClient = new HonoClientImpl(vertx, downstreamProps);
+        honoClient = new HonoClientImpl(vertx, downstreamProps);
 
-        downstreamClient.connect().setHandler(ctx.asyncAssertSuccess());
+        honoClient.connect().setHandler(ctx.asyncAssertSuccess());
     }
 
     /**
@@ -203,7 +204,7 @@ public final class IntegrationTestSupport {
      */
     public void disconnect(final TestContext ctx) {
 
-        downstreamClient.shutdown(ctx.asyncAssertSuccess());
+        honoClient.shutdown(ctx.asyncAssertSuccess());
     }
 
     /**

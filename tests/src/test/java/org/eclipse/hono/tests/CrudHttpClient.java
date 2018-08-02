@@ -30,6 +30,8 @@ import io.vertx.core.http.HttpClientRequest;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.RequestOptions;
 import io.vertx.core.json.JsonObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A vert.x based HTTP client for invoking generic CRUD operations on HTTP APIs.
@@ -37,6 +39,7 @@ import io.vertx.core.json.JsonObject;
  */
 public final class CrudHttpClient {
 
+    private final Logger LOGGER = LoggerFactory.getLogger(getClass());
     private static final String CONTENT_TYPE_JSON = "application/json";
 
     private final HttpClient client;
@@ -231,6 +234,7 @@ public final class CrudHttpClient {
         context.runOnContext(go -> {
             final HttpClientRequest req = client.post(requestOptions)
                     .handler(response -> {
+                        LOGGER.trace("response status code {}", response.statusCode());
                         if (successPredicate.test(response.statusCode())) {
                             result.complete(response.headers());
                         } else {

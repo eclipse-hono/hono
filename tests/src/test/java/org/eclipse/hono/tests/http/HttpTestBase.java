@@ -229,13 +229,15 @@ public abstract class HttpTestBase {
         helper.registry.addDeviceForTenant(tenant, deviceId, password).setHandler(ctx.asyncAssertSuccess(ok -> setup.complete()));
         setup.await();
 
-        testUploadMessages(ctx, tenantId, count -> {
-            return httpClient.create(
-                    getEndpointUri(),
-                    Buffer.buffer("hello " + count),
-                    requestHeaders,
-                    statusCode -> statusCode == HttpURLConnection.HTTP_ACCEPTED);
-        });
+        testUploadMessages(ctx, tenantId,
+                msg -> assertAllMessageProperties(ctx, msg),
+                count -> {
+                    return httpClient.create(
+                            getEndpointUri(),
+                            Buffer.buffer("hello " + count),
+                            requestHeaders,
+                            statusCode -> statusCode == HttpURLConnection.HTTP_ACCEPTED);
+                });
     }
 
     /**
@@ -273,9 +275,14 @@ public abstract class HttpTestBase {
         });
     }
 
+    protected void assertAllMessageProperties(final TestContext ctx, final Message msg) {
+        assertMessageProperties(ctx, msg);
+        assertAdditionalMessageProperties(ctx, msg);
+    }
+
     /**
      * Uploads messages to the HTTP endpoint.
-     * 
+     *
      * @param ctx The test context to run on.
      * @param tenantId The tenant that the device belongs to.
      * @param requestSender The test device that will publish the data.
@@ -286,14 +293,31 @@ public abstract class HttpTestBase {
             final TestContext ctx,
             final String tenantId,
             final Function<Integer, Future<MultiMap>> requestSender) throws InterruptedException {
+        this.testUploadMessages(ctx, tenantId, msg -> assertAllMessageProperties(ctx, msg), requestSender);
+    }
+
+    /**
+     * Uploads messages to the HTTP endpoint.
+     *
+     * @param ctx The test context to run on.
+     * @param tenantId The tenant that the device belongs to.
+     * @param messageConsumer Consumer that is invoked when a message was received.
+     * @param requestSender The test device that will publish the data.
+     * @throws InterruptedException if the test is interrupted before it
+     *              has finished.
+     */
+    protected void testUploadMessages(
+            final TestContext ctx,
+            final String tenantId,
+            final Consumer<Message> messageConsumer,
+            final Function<Integer, Future<MultiMap>> requestSender) throws InterruptedException {
 
         final CountDownLatch received = new CountDownLatch(MESSAGES_TO_SEND);
         final Async setup = ctx.async();
 
         createConsumer(tenantId, msg -> {
             LOGGER.trace("received {}", msg);
-            assertMessageProperties(ctx, msg);
-            assertAdditionalMessageProperties(ctx, msg);
+            messageConsumer.accept(msg);
             received.countDown();
             if (received.getCount() % 20 == 0) {
                 LOGGER.info("messages received: {}", MESSAGES_TO_SEND - received.getCount());
@@ -399,7 +423,7 @@ public abstract class HttpTestBase {
 
 
         if (hasValidOrigin) {
-            result.complete();;
+            result.complete();
         } else {
             result.fail(new IllegalArgumentException("response contains invalid allowed origin: " + allowedOrigin));
         }

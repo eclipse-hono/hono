@@ -31,7 +31,7 @@ public class TelemetryAmqpIT extends AmqpAdapterTestBase {
 
     @Override
     protected Future<MessageConsumer> createConsumer(final String tenantId, final Consumer<Message> messageConsumer) {
-        return helper.downstreamClient.createTelemetryConsumer(tenantId, messageConsumer, close -> {});
+        return helper.honoClient.createTelemetryConsumer(tenantId, messageConsumer, close -> {});
     }
 
     @Override

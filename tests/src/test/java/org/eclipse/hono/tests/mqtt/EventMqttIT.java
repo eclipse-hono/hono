@@ -56,6 +56,6 @@ public class EventMqttIT extends MqttTestBase {
     @Override
     protected Future<MessageConsumer> createConsumer(final String tenantId, final Consumer<Message> messageConsumer) {
 
-        return helper.downstreamClient.createEventConsumer(tenantId, messageConsumer, remoteClose -> {});
+        return helper.honoClient.createEventConsumer(tenantId, messageConsumer, remoteClose -> {});
     }
 }
