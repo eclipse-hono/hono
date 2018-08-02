@@ -28,7 +28,7 @@ The following API defines operations that can be used by *Business Applications*
 2. *Business Application* has established an AMQP link in role *sender* with the target address `control/${tenant_id}/${device_id}`. Where `${device_id}` is the ID of the device to send messages to and `${tenant_id}` is the ID of the tenant that the device belongs to.
 3. *Business Application* has established an AMQP link in role *receiver* with the source address `control/${tenant_id}/${reply-id}`. Where `${reply-id}` may be any arbitrary string chosen by the client. This link is used by the client to receive the response of the executed command. This link’s source address is also referred to as the reply-to address for the request messages. 
 
-To scope each response to the device the `${reply-id}` could consist of the device-id plus an arbitrary string to scope the command sender instance. If all responses should be received just in the context of the tenant, the device-id could be ommited.   
+To scope each response to the device the `${reply-id}` could consist of the device-id plus an arbitrary string to scope the command sender instance. If all responses should be received just in the context of the tenant, the device-id could be omitted.   
 
 **Link establishment and Message Flow**
 

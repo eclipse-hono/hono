@@ -3,7 +3,7 @@ title = "Device notifications"
 weight = 190
 +++
 
-*Business applications* can be informed by Hono about specific states of a device. This concept - refered to as
+*Business applications* can be informed by Hono about specific states of a device. This concept - referred to as
  **Device notifications** - is described in detail here.
  
  

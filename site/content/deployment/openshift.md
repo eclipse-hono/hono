@@ -178,7 +178,7 @@ components deployed as part of Hono.
 The screenshots below show Hono's components deployed to OpenShift:
 
 {{< figure src="../openshift_01_hono_ready.png"
- caption="Hono dashbaord in OpenShift"
+ caption="Hono dashboard in OpenShift"
  alt="Screenshot of OpenShift showing Hono deployment state"
  >}}
 

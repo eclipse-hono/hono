@@ -319,7 +319,7 @@ will give you an introduction.
 
 The default settings for the example Hono device registry limit the number of
 devices to 100 per tenant. If this is not enough for your setup you can change
-the setting by executing the following command, which will increate the number
+the setting by executing the following command, which will increase the number
 to 10.000 devices per tenant:
 
     oc env -n hono dc/hono-service-device-registry HONO_REGISTRY_SVC_MAX_DEVICES_PER_TENANT=10000
