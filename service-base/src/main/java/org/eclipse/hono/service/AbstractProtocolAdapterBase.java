@@ -49,8 +49,10 @@ import org.springframework.beans.factory.annotation.Qualifier;
 
 import io.opentracing.SpanContext;
 import io.vertx.core.CompositeFuture;
+import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.healthchecks.HealthCheckHandler;
@@ -862,10 +864,14 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     }
 
     /**
-     * Does not register any checks.
+     * Register a liveness check procedure which succeeds if
+     * the vert.x event loop of this protocol adapter is not blocked.
+     *
+     * @param handler The health check handler to register the checks with.
      */
     @Override
     public void registerLivenessChecks(final HealthCheckHandler handler) {
+        registerEventLoopBlockedCheck(handler);
     }
 
     /**
@@ -1093,5 +1099,27 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
                                         ) {
         LOG.debug("Command consumer was closed for [tenantId: {}, deviceId: {}] - no command will be received for this request anymore.",
                 tenant, deviceId);
+    }
+
+    /**
+     * Registers a health check procedure which tries to run an action on the protocol adapter context.
+     * If the protocol adapter vert.x event loop is blocked, the health check procedure will not complete
+     * with OK status within the defined timeout.
+     *
+     * @param handler The health check handler to register the checks with.
+     */
+    protected void registerEventLoopBlockedCheck(final HealthCheckHandler handler) {
+        handler.register("event-loop-blocked-check", getConfig().getEventLoopBlockedCheckTimeout(), procedure -> {
+            final Context currentContext = Vertx.currentContext();
+
+            if (currentContext != context) {
+                context.runOnContext(action -> {
+                    procedure.complete(Status.OK());
+                });
+            } else {
+                LOG.info("Protocol Adapter - HealthCheck Server context match. Assume protocol adapter is alive.");
+                procedure.complete(Status.OK());
+            }
+        });
     }
 }

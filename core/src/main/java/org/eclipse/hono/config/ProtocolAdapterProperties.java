@@ -22,6 +22,7 @@ public class ProtocolAdapterProperties extends ServiceConfigProperties {
     private boolean authenticationRequired = true;
     private boolean jmsVendorPropsEnabled = false;
     private boolean defaultsEnabled = true;
+    private long eventLoopBlockedCheckTimeout = 5000L;
 
     /**
      * Checks whether the protocol adapter always authenticates devices using their provided credentials as defined
@@ -129,5 +130,28 @@ public class ProtocolAdapterProperties extends ServiceConfigProperties {
      */
     public void setDefaultsEnabled(final boolean flag) {
         this.defaultsEnabled = flag;
+    }
+
+    /**
+     * Gets the timeout value used by protocol adapter liveness check,
+     * which determines if protocol adapter vert.x event loop is blocked.
+     * <p>
+     * Default value of the timeout is 5000 milliseconds.
+     *
+     * @return The timeout value in milliseconds.
+     */
+    public final long getEventLoopBlockedCheckTimeout() {
+        return eventLoopBlockedCheckTimeout;
+    }
+
+    /**
+     * Sets the timeout value used by protocol adapter liveness check,
+     * which determines if protocol adapter vert.x event loop is blocked.
+     * <p>
+     *
+     * @param eventLoopBlockedCheckTimeout Liveness check timeout value in milliseconds.
+     */
+    public final void setEventLoopBlockedCheckTimeout(final long eventLoopBlockedCheckTimeout) {
+        this.eventLoopBlockedCheckTimeout = eventLoopBlockedCheckTimeout;
     }
 }
