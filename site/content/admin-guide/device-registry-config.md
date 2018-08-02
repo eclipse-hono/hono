@@ -3,8 +3,8 @@ title = "Device Registry Configuration"
 weight = 315
 +++
 
-The Device Registry component provides an examplatory implementation of Eclipse Hono&trade;'s [Device Registration]({{< relref "api/Device-Registration-API.md" >}}) and [Credentials]({{< relref "api/Credentials-API.md" >}}) APIs. 
-Since Hono version 0.6 it also provides an examplatory implementation of the [Tenant]({{< relref "api/Tenant-API.md" >}}) API.
+The Device Registry component provides an exemplary implementation of Eclipse Hono&trade;'s [Device Registration]({{< relref "api/Device-Registration-API.md" >}}) and [Credentials]({{< relref "api/Credentials-API.md" >}}) APIs. 
+Since Hono version 0.6 it also provides an exemplary implementation of the [Tenant]({{< relref "api/Tenant-API.md" >}}) API.
 
 Protocol adapters use these APIs to assert a device's registration status, e.g. if it is enabled and if it is registered with a particular tenant, and to authenticate a device before accepting any data for processing from it.
 

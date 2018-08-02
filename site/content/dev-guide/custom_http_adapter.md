@@ -73,7 +73,7 @@ Now that you have your custom HTTP protocol adapter up and running, you can use 
 Note that before publishing data to your custom HTTP protocol adapter, you need to start a *consumer* for the tenant you intend to publish data for.
 Otherwise you will not be able to successfully send data. For this purpose, you may use the example consumer as described in the [Getting Started]({{< relref "getting-started.md" >}}) guide.
 
-## Further extend the custom HTTP Protocl Adapter
+## Further extend the custom HTTP Protocol Adapter
 
 The abstract base class includes additional hooks which you may use to *plug into* the adapter's life cycle:
 
