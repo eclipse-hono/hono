@@ -59,7 +59,7 @@ public class CommandConnectionImpl extends HonoClientImpl implements CommandConn
      * @param clientConfigProperties The configuration properties to use.
      * @throws NullPointerException if clientConfigProperties is {@code null}
      */
-    public CommandConnectionImpl(final Vertx vertx, final CommandConfigProperties clientConfigProperties) {
+    public CommandConnectionImpl(final Vertx vertx, final ClientConfigProperties clientConfigProperties) {
         super(vertx, clientConfigProperties);
     }
 
@@ -117,27 +117,24 @@ public class CommandConnectionImpl extends HonoClientImpl implements CommandConn
      * {@inheritDoc}
      */
     public Future<Void> closeCommandConsumer(final String tenantId, final String deviceId) {
+
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
+
+        final Future<Void> result = Future.future();
         final String deviceAddress = Device.asAddress(tenantId, deviceId);
-        final MessageConsumer commandReceiverLink = commandReceivers.get(deviceAddress);
-        final Future<Void> future = Future.future();
-        if (commandReceiverLink != null) {
-            commandReceiverLink.close(closeHandler -> {
-                if (closeHandler.failed()) {
-                    LOG.error("Command receiver link close failed: {}", closeHandler.cause());
-                    future.fail(closeHandler.cause());
-                } else {
-                    future.complete();
-                }
-            });
-            commandReceivers.remove(deviceAddress);
+        final MessageConsumer commandReceiverLink = commandReceivers.remove(deviceAddress);
+
+        if (commandReceiverLink == null) {
+            result.fail(new IllegalStateException("no command consumer found for device"));
         } else {
-            LOG.debug("Command receiver should be closed but could not be found for tenant: [{}], device: [{}] - possibly already closed?",
-                    tenantId, deviceId);
-            future.fail("Command receiver should be closed but could not be found for tenant");
+            commandReceiverLink.close(result);
         }
-        return future;
+
+        return result.recover(t -> {
+            LOG.info("cannot close command consumer [tenant-id: {}, device-id: {}]", tenantId, deviceId, t);
+            return Future.failedFuture(t);
+        });
     }
 
     /**

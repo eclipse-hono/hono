@@ -21,7 +21,6 @@ import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.client.impl.HonoClientImpl;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.service.cache.SpringCacheProvider;
-import org.eclipse.hono.service.command.CommandConfigProperties;
 import org.eclipse.hono.service.command.CommandConnection;
 import org.eclipse.hono.service.command.CommandConnectionImpl;
 import org.eclipse.hono.service.metric.MetricConfig;
@@ -311,8 +310,8 @@ public abstract class AbstractAdapterConfig {
     @Qualifier(CommandConstants.COMMAND_ENDPOINT)
     @ConfigurationProperties(prefix = "hono.command")
     @Bean
-    public CommandConfigProperties commandConnectionClientConfig() {
-        return new CommandConfigProperties();
+    public ClientConfigProperties commandConnectionClientConfig() {
+        return new ClientConfigProperties();
     }
 
     /**

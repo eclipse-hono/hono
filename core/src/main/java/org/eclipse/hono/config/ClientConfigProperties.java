@@ -54,6 +54,34 @@ public class ClientConfigProperties extends AbstractConfig {
     private int reconnectAttempts = -1;
 
     /**
+     * Creates new properties with default values.
+     */
+    public ClientConfigProperties() {
+        super();
+    }
+
+    /**
+     * Creates properties based on other properties.
+     * 
+     * @param otherProperties The properties to copy.
+     */
+    public ClientConfigProperties(final ClientConfigProperties otherProperties) {
+        this.amqpHostname = otherProperties.amqpHostname;
+        this.credentialsPath = otherProperties.credentialsPath;
+        this.flowLatency = otherProperties.flowLatency;
+        this.host = otherProperties.host;
+        this.hostnameVerificationRequired = otherProperties.hostnameVerificationRequired;
+        this.initialCredits = otherProperties.initialCredits;
+        this.name = otherProperties.name;
+        this.password = otherProperties.password;
+        this.port = otherProperties.port;
+        this.reconnectAttempts = otherProperties.reconnectAttempts;
+        this.requestTimeoutMillis = otherProperties.requestTimeoutMillis;
+        this.tlsEnabled = otherProperties.tlsEnabled;
+        this.username = otherProperties.username;
+    }
+
+    /**
      * Gets the name or literal IP address of the host that the client is configured to connect to.
      * <p>
      * The default value of this property is "localhost".

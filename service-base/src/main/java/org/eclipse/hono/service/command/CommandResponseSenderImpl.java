@@ -45,6 +45,13 @@ import io.vertx.proton.ProtonSender;
  */
 public class CommandResponseSenderImpl extends AbstractSender implements CommandResponseSender {
 
+    /**
+     * The default amount of time to wait for credits after link creation. This
+     * is higher as in the client defaults, because for the command response the link
+     * is created on demand and the response should not fail.
+     */
+    public static final long DEFAULT_COMMAND_FLOW_LATENCY = 200L; //ms
+
     CommandResponseSenderImpl(final ClientConfigProperties config, final ProtonSender sender, final String tenantId,
             final String targetAddress, final Context context) {
 
@@ -143,8 +150,14 @@ public class CommandResponseSenderImpl extends AbstractSender implements Command
 
     /**
      * Creates a new sender to send responses for commands back to the business application.
+     * <p>
+     * The underlying sender link will be created with the following properties:
+     * <ul>
+     * <li><em>flow latency</em> will be set to @{@link #DEFAULT_COMMAND_FLOW_LATENCY} if
+     * the configured value is smaller than the default</li>
+     * </ul>
      *
-     * @param context The vertx context to run all interactions with the server on.
+     * @param context The vert.x context to run all interactions with the server on.
      * @param clientConfig The configuration properties to use.
      * @param con The connection to the AMQP network.
      * @param tenantId The tenant that the command response will be send for and the device belongs to.
@@ -169,10 +182,14 @@ public class CommandResponseSenderImpl extends AbstractSender implements Command
         Objects.requireNonNull(replyId);
 
         final String targetAddress = CommandResponseSenderImpl.getTargetAddress(tenantId, replyId);
-        createSender(context, clientConfig, con, targetAddress, ProtonQoS.AT_LEAST_ONCE, closeHook).compose(sender -> {
-            return Future.<MessageSender> succeededFuture(
-                    new CommandResponseSenderImpl(clientConfig, sender, tenantId, targetAddress, context));
-        }).setHandler(creationHandler);
+        final ClientConfigProperties props = new ClientConfigProperties(clientConfig);
+        if (props.getFlowLatency() < DEFAULT_COMMAND_FLOW_LATENCY) {
+            props.setFlowLatency(DEFAULT_COMMAND_FLOW_LATENCY);
+        }
+
+        createSender(context, props, con, targetAddress, ProtonQoS.AT_LEAST_ONCE, closeHook)
+            .map(sender -> (MessageSender) new CommandResponseSenderImpl(clientConfig, sender, tenantId, targetAddress, context))
+            .setHandler(creationHandler);
     }
 
     @Override

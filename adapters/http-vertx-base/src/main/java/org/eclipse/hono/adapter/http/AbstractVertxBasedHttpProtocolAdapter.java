@@ -775,7 +775,6 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                         LOG.debug("peer closed command receiver link [tenant-id: {}, device-id: {}]", tenantId, deviceId);
                         // command consumer is closed by closeHandler, no explicit close necessary here
                     }).map(consumer -> {
-                        consumer.flow(1);
                         if (!responseReady.isComplete()) {
                             // if the request was not responded already, add a timer for closing the command consumer
                             addCommandReceptionTimer(ctx, tenantId, deviceId, responseReady, ttdSecs);

@@ -18,7 +18,6 @@ import java.util.Optional;
 import java.util.function.BiConsumer;
 
 import org.apache.qpid.proton.amqp.Binary;
-import org.apache.qpid.proton.amqp.messaging.Accepted;
 import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.amqp.messaging.Rejected;
 import org.apache.qpid.proton.message.Message;
@@ -475,7 +474,9 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * <p>
      * The consumer checks if the received message contains all required information
      * and if so, creates a {@link Command} instance from it and hands it over to
-     * the command handler.
+     * the given handler. If the handler succeeds, the command message is settled
+     * with the <em>Accepted</em> outcome. Otherwise, the command message is settled
+     * with the <em>Rejected</em> outcome.
      *
      * @param tenant The tenant of the device to which the commands are to be sent.
      * @param deviceId The identifier of the device to which the commands are to be sent.
@@ -499,8 +500,12 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
             } else {
                 LOG.trace("trying to send command [subject: {}, request-id: {}] to device [tenant-id: {}, device-id: {}]",
                         command.getName(), command.getRequestId(), tenant, deviceId);
-                delivery.disposition(new Accepted(), true);
-                commandHandler.handle(command);
+                try {
+                    commandHandler.handle(command);
+                    ProtonHelper.accepted(delivery, true);
+                } catch (Throwable t) {
+                    ProtonHelper.modified(delivery, true, true, true);
+                }
             }
         };
     }

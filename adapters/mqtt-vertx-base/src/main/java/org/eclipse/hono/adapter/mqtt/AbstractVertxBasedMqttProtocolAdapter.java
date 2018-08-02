@@ -17,7 +17,6 @@ import java.net.HttpURLConnection;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.atomic.AtomicReference;
 
 import io.vertx.mqtt.MqttTopicSubscription;
 import io.vertx.mqtt.messages.MqttPublishMessage;
@@ -544,20 +543,18 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
     }
 
     private Future<MessageConsumer> createCommandConsumer(final MqttEndpoint mqttEndpoint, final CommandSubscription sub) {
-        final AtomicReference<MessageConsumer> refConsumer = new AtomicReference<>(); // TODO: better option
-        return createCommandConsumer(sub.getTenant(), sub.getDeviceId(), createCommandMessageConsumer(sub.getTenant(), sub.getDeviceId(), command -> {
-            onCommandReceived(mqttEndpoint, sub, command);
-            refConsumer.get().flow(1);
-        }), close -> {
-            LOG.debug("command receiver link closed remotely for [tenant-id: {}, device-id: {}]", sub.getTenant(), sub.getDeviceId());
-            closeCommandConsumer(sub.getTenant(), sub.getDeviceId());
-            // close the mqtt connection, so the device will reconnect (happens if e.g. the dispatch router is killed)
-            close(mqttEndpoint, new Device(sub.getTenant(), sub.getDeviceId()));
-        }).map(consumer -> {
-            refConsumer.set(consumer);
-            consumer.flow(1);
-            return consumer;
-        });
+
+        return createCommandConsumer(
+                sub.getTenant(),
+                sub.getDeviceId(),
+                createCommandMessageConsumer(sub.getTenant(), sub.getDeviceId(), command -> {
+                    onCommandReceived(mqttEndpoint, sub, command);
+                }), close -> {
+                    LOG.debug("command receiver link closed remotely for [tenant-id: {}, device-id: {}]", sub.getTenant(), sub.getDeviceId());
+                    closeCommandConsumer(sub.getTenant(), sub.getDeviceId());
+                    // close the mqtt connection, so the device will reconnect (happens if e.g. the dispatch router is killed)
+                    close(mqttEndpoint, new Device(sub.getTenant(), sub.getDeviceId()));
+                });
     }
 
     private void closeCommandConsumer(final String tenantId, final String deviceId) {

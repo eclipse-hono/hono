@@ -18,7 +18,6 @@ import java.util.function.BiConsumer;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.impl.AbstractConsumer;
-import org.eclipse.hono.client.impl.AbstractHonoClient;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.ResourceIdentifier;
@@ -48,6 +47,13 @@ public class CommandConsumer extends AbstractConsumer {
 
     /**
      * Creates a new command consumer.
+     * <p>
+     * The underlying receiver link will be created with the following properties:
+     * <ul>
+     * <li><em>auto accept</em> will be set to {@code true}</li>
+     * <li><em>pre-fetch size</em> will be set to {@code 1}, regardless of the value
+     * of the <em>initial credits</em> configuration property</li>
+     * </ul>
      *
      * @param context The vert.x context to run all interactions with the server on.
      * @param clientConfig The configuration properties to use.
@@ -78,22 +84,28 @@ public class CommandConsumer extends AbstractConsumer {
         Objects.requireNonNull(receiverCloseHook);
         Objects.requireNonNull(creationHandler);
 
-        LOG.debug("creating new command consumer for [{}, {}]", tenantId, deviceId);
+        LOG.trace("creating new command consumer [tenant-id: {}, device-id: {}]", tenantId, deviceId);
 
         final String address = ResourceIdentifier.from(CommandConstants.COMMAND_ENDPOINT, tenantId, deviceId).toString();
-        AbstractHonoClient
-                .createReceiver(context, clientConfig, con, address, ProtonQoS.AT_LEAST_ONCE, messageConsumer::accept,
-                        receiverCloseHook)
-                .setHandler(s -> {
+        final ClientConfigProperties props = new ClientConfigProperties(clientConfig);
+        props.setInitialCredits(1);
+
+        createReceiver(
+                context,
+                props,
+                con,
+                address,
+                ProtonQoS.AT_LEAST_ONCE,
+                messageConsumer::accept,
+                receiverCloseHook).setHandler(s -> {
+
                     if (s.succeeded()) {
-                        LOG.debug("successfully created command consumer for [{}, {}]", tenantId, deviceId);
-                        creationHandler
-                                .handle(Future.succeededFuture(new CommandConsumer(context, clientConfig, s.result())));
+                        LOG.debug("successfully created command consumer [tenant-id: {}, device-id: {}]", tenantId, deviceId);
+                        creationHandler.handle(Future.succeededFuture(new CommandConsumer(context, clientConfig, s.result())));
                     } else {
-                        LOG.debug("failed to create command consumer for [{}, {}]", tenantId, deviceId, s.cause());
+                        LOG.debug("failed to create command consumer [tenant-id: {}, device-id: {}]", tenantId, deviceId, s.cause());
                         creationHandler.handle(Future.failedFuture(s.cause()));
                     }
                 });
     }
-
 }
