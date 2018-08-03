@@ -29,21 +29,4 @@ public class HttpAdapterMetrics extends Metrics {
         return SERVICE_PREFIX;
     }
 
-    void incrementProcessedHttpMessages(final String resourceId, final String tenantId) {
-        counterService.increment(METER_PREFIX + getPrefix() + MESSAGES + mergeAsMetric(resourceId, tenantId) + PROCESSED);
-    }
-
-    void incrementUndeliverableHttpMessages(final String resourceId, final String tenantId) {
-        counterService.increment(getPrefix() + MESSAGES + mergeAsMetric(resourceId, tenantId) + UNDELIVERABLE);
-    }
-
-    void incrementProcessedHttpPayload(final String resourceId, final String tenantId, final long payloadSize) {
-        if (payloadSize < 0) {
-            // A negative size would mess up the metrics
-            return;
-        }
-        counterService
-                .increment(METER_PREFIX + getPrefix() + PAYLOAD + mergeAsMetric(resourceId, tenantId) + PROCESSED);
-    }
-
 }

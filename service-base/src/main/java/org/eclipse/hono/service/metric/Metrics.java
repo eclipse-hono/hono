@@ -111,4 +111,40 @@ abstract public class Metrics {
         return String.join(".", parts);
     }
 
+    /**
+     * Increment the number of processes messages by one.
+     * 
+     * @param resourceId The ID of the resource to track.
+     * @param tenantId The tenant this resource belongs to.
+     */
+    public void incrementProcessedMessages(final String resourceId, final String tenantId) {
+        counterService.increment(METER_PREFIX + getPrefix() + MESSAGES + mergeAsMetric(resourceId, tenantId) + PROCESSED);
+    }
+
+    /**
+     * Increment the number of undeliverable messages by one.
+     * 
+     * @param resourceId The ID of the resource to track.
+     * @param tenantId The tenant this resource belongs to.
+     */
+    public void incrementUndeliverableMessages(final String resourceId, final String tenantId) {
+        counterService.increment(getPrefix() + MESSAGES + mergeAsMetric(resourceId, tenantId) + UNDELIVERABLE);
+    }
+
+    /**
+     * Increment the counter for the number of processed bytes.
+     * 
+     * @param resourceId The ID of the resource to track.
+     * @param tenantId The tenant this resource belongs to.
+     * @param payloadSize The size of the payload in bytes.
+     */
+    public void incrementProcessedPayload(final String resourceId, final String tenantId, final long payloadSize) {
+        if (payloadSize < 0) {
+            // A negative size would mess up the metrics
+            return;
+        }
+        counterService
+                .increment(METER_PREFIX + getPrefix() + PAYLOAD + mergeAsMetric(resourceId, tenantId) + PROCESSED);
+    }
+
 }

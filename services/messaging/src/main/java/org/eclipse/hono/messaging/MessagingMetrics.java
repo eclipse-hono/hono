@@ -61,12 +61,14 @@ public class MessagingMetrics extends Metrics {
         counterService.decrement(SERVICE_PREFIX + RECEIVERS_UPSTREAM_LINKS + normalizeAddress(address));
     }
 
-    void incrementProcessedMessages(final String address) {
-        counterService.increment(METER_PREFIX + SERVICE_PREFIX + MESSAGES + normalizeAddress(address) + PROCESSED);
-    }
     void incrementDiscardedMessages(final String address) {
         counterService.increment(SERVICE_PREFIX + MESSAGES + normalizeAddress(address) + DISCARDED);
     }
+
+    void incrementProcessedMessages(final String address) {
+        counterService.increment(METER_PREFIX + SERVICE_PREFIX + MESSAGES + normalizeAddress(address) + PROCESSED);
+    }
+
     void incrementUndeliverableMessages(final String address) {
         counterService.increment(SERVICE_PREFIX + MESSAGES + normalizeAddress(address) + UNDELIVERABLE);
     }

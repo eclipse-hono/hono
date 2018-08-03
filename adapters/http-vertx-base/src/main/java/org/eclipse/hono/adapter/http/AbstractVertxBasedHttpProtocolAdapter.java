@@ -622,8 +622,8 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                         ctx.addBodyEndHandler(ok -> {
                             LOG.trace("successfully processed [{}] message for device [tenantId: {}, deviceId: {}]",
                                     endpointName, tenant, deviceId);
-                            metrics.incrementProcessedHttpMessages(endpointName, tenant);
-                            metrics.incrementProcessedHttpPayload(endpointName, tenant, messagePayloadSize(ctx));
+                            metrics.incrementProcessedMessages(endpointName, tenant);
+                            metrics.incrementProcessedPayload(endpointName, tenant, messagePayloadSize(ctx));
                             currentSpan.finish();
                         });
                         ctx.response().exceptionHandler(t -> {
@@ -648,7 +648,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                         final ClientErrorException e = (ClientErrorException) t;
                         ctx.fail(e);
                     } else {
-                        metrics.incrementUndeliverableHttpMessages(endpointName, tenant);
+                        metrics.incrementUndeliverableMessages(endpointName, tenant);
                         HttpUtils.serviceUnavailable(ctx, 2, "temporarily unavailable");
                     }
                     TracingHelper.logError(currentSpan, t);
