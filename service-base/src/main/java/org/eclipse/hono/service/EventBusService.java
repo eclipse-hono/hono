@@ -228,12 +228,14 @@ public abstract class EventBusService<C> extends ConfigurationSupportingVerticle
      */
     protected final JsonObject getRequestPayload(final JsonObject payload) {
 
-        final JsonObject result = Optional.ofNullable(payload).orElse(new JsonObject());
-        final Boolean enabled = getTypesafeValueForField(result, RequestResponseApiConstants.FIELD_ENABLED);
-        if (enabled == null) {
-            log.debug("adding 'enabled=true' property to request payload");
-            result.put(RequestResponseApiConstants.FIELD_ENABLED, Boolean.TRUE);
-        }
-        return result;
+        return Optional.ofNullable(payload).map(pl -> {
+            final Object obj = pl.getValue(RequestResponseApiConstants.FIELD_ENABLED);
+            if ((obj instanceof Boolean)) {
+                return pl;
+            } else {
+                log.trace("adding 'enabled=true' property to request payload");
+                return pl.copy().put(RequestResponseApiConstants.FIELD_ENABLED, Boolean.TRUE);
+            }
+        }).orElse(new JsonObject().put(RequestResponseApiConstants.FIELD_ENABLED, Boolean.TRUE));
     }
 }
