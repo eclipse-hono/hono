@@ -2,7 +2,7 @@ spring:
   jmx:
     enabled: false
   profiles:
-    active: receiver,ssl
+    active: receiver,ssl,amqp-adapter-cli
 
 hono:
   client:
