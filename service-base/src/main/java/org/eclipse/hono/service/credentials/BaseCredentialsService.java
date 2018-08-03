@@ -84,9 +84,11 @@ public abstract class BaseCredentialsService<T> extends EventBusService<T> imple
         if (tenantId == null || payload == null) {
             return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
         } else {
-            final String type = removeTypesafeValueForField(payload, CredentialsConstants.FIELD_TYPE);
-            final String authId = removeTypesafeValueForField(payload, CredentialsConstants.FIELD_AUTH_ID);
-            final String deviceId = removeTypesafeValueForField(payload, CredentialsConstants.FIELD_PAYLOAD_DEVICE_ID);
+            final String type = removeTypesafeValueForField(String.class, payload, CredentialsConstants.FIELD_TYPE);
+            final String authId = removeTypesafeValueForField(String.class, payload,
+                    CredentialsConstants.FIELD_AUTH_ID);
+            final String deviceId = removeTypesafeValueForField(String.class, payload,
+                    CredentialsConstants.FIELD_PAYLOAD_DEVICE_ID);
 
             if (type == null) {
                 return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
@@ -96,7 +98,8 @@ public abstract class BaseCredentialsService<T> extends EventBusService<T> imple
                 get(tenantId, type, authId, payload, result.completer());
                 return result.map(res -> {
                     final String deviceIdFromPayload = Optional.ofNullable(res.getPayload())
-                            .map(p -> (String) getTypesafeValueForField(p, TenantConstants.FIELD_PAYLOAD_DEVICE_ID))
+                            .map(p -> getTypesafeValueForField(String.class, p,
+                                    TenantConstants.FIELD_PAYLOAD_DEVICE_ID))
                             .orElse(null);
                     return request.getResponse(res.getStatus())
                             .setDeviceId(deviceIdFromPayload)
@@ -171,9 +174,10 @@ public abstract class BaseCredentialsService<T> extends EventBusService<T> imple
         if (tenantId == null || payload == null) {
             return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
         } else {
-            final String type = getTypesafeValueForField(payload, CredentialsConstants.FIELD_TYPE);
-            final String authId = getTypesafeValueForField(payload, CredentialsConstants.FIELD_AUTH_ID);
-            final String deviceId = getTypesafeValueForField(payload, CredentialsConstants.FIELD_PAYLOAD_DEVICE_ID);
+            final String type = getTypesafeValueForField(String.class, payload, CredentialsConstants.FIELD_TYPE);
+            final String authId = getTypesafeValueForField(String.class, payload, CredentialsConstants.FIELD_AUTH_ID);
+            final String deviceId = getTypesafeValueForField(String.class, payload,
+                    CredentialsConstants.FIELD_PAYLOAD_DEVICE_ID);
 
             // there exist several valid combinations of parameters
 

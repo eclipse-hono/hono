@@ -306,7 +306,8 @@ public final class FileBasedCredentialsService extends BaseCredentialsService<Fi
         for (final Object obj : credentials) {
             if (obj instanceof JsonObject) {
                 final JsonObject currentCredentials = (JsonObject) obj;
-                if (deviceId.equals(getTypesafeValueForField(currentCredentials, CredentialsConstants.FIELD_PAYLOAD_DEVICE_ID))) {
+                if (deviceId.equals(getTypesafeValueForField(String.class, currentCredentials,
+                        CredentialsConstants.FIELD_PAYLOAD_DEVICE_ID))) {
                     // device ID matches, add a copy of credentials to result
                     result.add(currentCredentials.copy());
                 }
