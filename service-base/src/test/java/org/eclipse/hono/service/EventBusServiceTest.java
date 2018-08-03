@@ -17,6 +17,7 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 
 import org.eclipse.hono.util.EventBusMessage;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -77,4 +78,50 @@ public class EventBusServiceTest {
         final JsonObject result = service.getRequestPayload(device);
         assertThat(result.getBoolean("enabled"), is(Boolean.TRUE));
     }
+
+    /**
+     * Verify that a valid type works.
+     */
+    @Test
+    public void testValidType() {
+        final JsonObject payload = new JsonObject()
+                .put("booleanValue", true)
+                .put("stringValue", "foo")
+                .put("intValue", 42);
+
+        final String stringValue = EventBusService.getTypesafeValueForField(String.class, payload, "stringValue");
+        Assert.assertEquals("foo", stringValue);
+
+        final Integer intValue = EventBusService.getTypesafeValueForField(Integer.class, payload, "intValue");
+        Assert.assertEquals(Integer.valueOf(42), intValue);
+
+        final Boolean booleanValue = EventBusService.getTypesafeValueForField(Boolean.class, payload, "booleanValue");
+        Assert.assertEquals(Boolean.TRUE, booleanValue);
+    }
+
+    /**
+     * Verify that the method actually returns null when the type does not match.
+     */
+    @Test
+    public void testInvalidType() {
+        final JsonObject device = new JsonObject().put("device-id", "someValue");
+
+        final String stringValue = EventBusService.getTypesafeValueForField(String.class, device, "device-id");
+        Assert.assertEquals("someValue", stringValue);
+
+        final Integer intValue = EventBusService.getTypesafeValueForField(Integer.class, device, "device-id");
+        Assert.assertNull(intValue);
+    }
+
+    /**
+     * Verify that the method returns null, when the value is null.
+     */
+    @Test
+    public void testGetNull() {
+        final JsonObject device = new JsonObject().put("device-id", (String) null);
+
+        final String value = EventBusService.getTypesafeValueForField(String.class, device, "device-id");
+        Assert.assertNull(value);
+    }
+
 }

@@ -95,8 +95,10 @@ public abstract class BaseTenantService<T> extends EventBusService<T> implements
 
         } else {
 
-            final String tenantIdFromPayload = getTypesafeValueForField(payload, TenantConstants.FIELD_PAYLOAD_TENANT_ID);
-            final String subjectDn = getTypesafeValueForField(payload, TenantConstants.FIELD_PAYLOAD_SUBJECT_DN);
+            final String tenantIdFromPayload = getTypesafeValueForField(String.class, payload,
+                    TenantConstants.FIELD_PAYLOAD_TENANT_ID);
+            final String subjectDn = getTypesafeValueForField(String.class, payload,
+                    TenantConstants.FIELD_PAYLOAD_SUBJECT_DN);
 
             if (tenantIdFromPayload == null && subjectDn == null) {
                 log.debug("payload does not contain any query parameters");
@@ -134,7 +136,8 @@ public abstract class BaseTenantService<T> extends EventBusService<T> implements
                         .setJsonPayload(tr.getPayload())
                         .setCacheDirective(tr.getCacheDirective());
                 if (tr.isOk() && tr.getPayload() != null) {
-                    response.setTenant((String) getTypesafeValueForField(tr.getPayload(), TenantConstants.FIELD_PAYLOAD_TENANT_ID));
+                    response.setTenant(getTypesafeValueForField(String.class, tr.getPayload(),
+                            TenantConstants.FIELD_PAYLOAD_TENANT_ID));
                 }
                 return response;
             });
