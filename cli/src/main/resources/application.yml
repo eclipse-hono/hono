@@ -44,3 +44,9 @@ hono:
   client:
     hostnameVerificationRequired: false
     trustStorePath: target/config/hono-demo-certs-jar/trusted-certs.pem
+
+---
+
+spring:
+  profiles: amqp-adapter-cli
+    
