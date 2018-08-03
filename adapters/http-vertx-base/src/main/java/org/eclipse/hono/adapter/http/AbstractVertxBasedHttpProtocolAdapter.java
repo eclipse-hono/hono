@@ -759,20 +759,15 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                     tenantId,
                     deviceId,
                     createCommandMessageConsumer(tenantId, deviceId, receivedCommand -> {
-                        getCommandConnection().closeCommandConsumer(tenantId, deviceId).setHandler(v -> {
-                            if (responseReady.isComplete()) {
-                                // the timer has already fired, release the command
-                                receivedCommand.release();
-                            } else {
-                                // put command to routing context and notify
-                                receivedCommand.put(ctx);
-                                cancelCommandReceptionTimer(ctx);
-                                responseReady.tryComplete();
-                            }
-                            if (v.failed()) {
-                                LOG.warn("Close command consumer failed", v.cause());
-                            }
-                        });
+                        if (responseReady.isComplete()) {
+                            // the timer has already fired, release the command
+                            receivedCommand.release();
+                        } else {
+                            // put command to routing context and notify
+                            receivedCommand.put(ctx);
+                            cancelCommandReceptionTimer(ctx);
+                            responseReady.tryComplete();
+                        }
                     }),
                     remoteDetach -> {
                         LOG.debug("peer closed command receiver link [tenant-id: {}, device-id: {}]", tenantId, deviceId);

@@ -503,6 +503,11 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
                 try {
                     commandHandler.handle(command);
                     ProtonHelper.accepted(delivery, true);
+                    getCommandConnection().closeCommandConsumer(tenant, deviceId).setHandler(v -> {
+                        if (v.failed()) {
+                            LOG.warn("Close command consumer failed", v.cause());
+                        }
+                    });
                 } catch (Throwable t) {
                     ProtonHelper.modified(delivery, true, true, true);
                 }
