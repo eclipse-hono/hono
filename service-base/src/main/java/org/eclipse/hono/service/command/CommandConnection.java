@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -29,8 +29,11 @@ import io.vertx.proton.ProtonDelivery;
 public interface CommandConnection extends HonoClient {
 
     /**
-     *
-     * Creates a new consumer of commands for a tenants device.
+     * Gets a command consumer for a device.
+     * <p>
+     * Implementations may choose to cache consumers for devices and
+     * return a cached instance instead of creating a new consumer on
+     * each instantiation.
      * 
      * @param tenantId The tenant to consume commands from.
      * @param deviceId The device for which the consumer will be created.
@@ -45,17 +48,17 @@ public interface CommandConnection extends HonoClient {
             Handler<Void> closeHandler);
 
     /**
-     * Close the command consumer (and removes it from internal map).
+     * Closes the command consumer for a given device.
      *
      * @param tenantId The tenant to consume commands from.
      * @param deviceId The device for which the consumer will be created.
-     * @return A future indicating the result of the closing operation.
-     * @throws NullPointerException if tenantId or deviceId is {@code null}.
+     * @return A future indicating the outcome of the operation.
+     * @throws NullPointerException if tenantId or deviceId are {@code null}.
      */
     Future<Void> closeCommandConsumer(String tenantId, String deviceId);
 
     /**
-     * Gets a sender for sending command responses back to the business application.
+     * Gets a sender for sending command responses to a business application.
      * 
      * @param tenantId The ID of the tenant to send the command responses for.
      * @param replyId The ID used to build the reply address as {@code control/tenantId/replyId}.
@@ -66,23 +69,14 @@ public interface CommandConnection extends HonoClient {
     Future<CommandResponseSender> getOrCreateCommandResponseSender(String tenantId, String replyId);
 
     /**
-     * Close the command response sender (and removes it from internal map).
+     * Closes the command response sender for a device.
      *
      * @param tenantId The ID of the tenant to send the command responses for.
-     * @param replyId The ID used to build the reply address as {@code control/tenantId/replyId}.
+     * @param replyId The identifier from the command's reply-to address
+     *                ({@code control/${tenantId}/${replyId}}) which represents
+     *                the device.
      * @return A future indicating the result of the closing operation.
-     * @throws NullPointerException if tenantId, deviceId or replyId is {@code null}.
+     * @throws NullPointerException if any of the parameters are {@code null}.
      */
     Future<Void> closeCommandResponseSender(String tenantId, String replyId);
-
-    /**
-     * Close all command response sender for the given tenant and device (for one command response receiver).
-     *
-     * @param tenantId The ID of the tenant to send the command responses for.
-     * @param deviceId The ID of the device to send the command responses for.
-     * @return A future indicating the result of the closing operation.
-     * @throws NullPointerException if tenantId or deviceId is {@code null}.
-     */
-    Future<Void> closeCommandResponseSenders(String tenantId, String deviceId);
-
 }

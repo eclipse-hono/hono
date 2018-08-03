@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -16,7 +16,6 @@ package org.eclipse.hono.service.command;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 import java.util.function.BiConsumer;
 
 import org.apache.qpid.proton.message.Message;
@@ -25,16 +24,14 @@ import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.impl.HonoClientImpl;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.connection.ConnectionFactory;
+import org.eclipse.hono.service.auth.device.Device;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.proton.ProtonDelivery;
-import org.eclipse.hono.service.auth.device.Device;
-import org.eclipse.hono.util.CommandConstants;
-import org.eclipse.hono.util.ResourceIdentifier;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Implements a connection between an Adapter and the AMQP 1.0 network to receive commands and send a response.
@@ -191,31 +188,6 @@ public class CommandConnectionImpl extends HonoClientImpl implements CommandConn
             LOG.error("Command response sender should be closed but could not be found for tenant: [{}], replyId: [{}]",
                     tenantId, replyId);
             future.fail("Command response sender should be closed but could not be found");
-        }
-        return future;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    public Future<Void> closeCommandResponseSenders(final String tenantId, final String deviceId) {
-        Objects.requireNonNull(tenantId);
-        Objects.requireNonNull(deviceId);
-        final Future<Void> future = Future.future();
-        final String controlAddress = ResourceIdentifier.from(CommandConstants.COMMAND_ENDPOINT, tenantId, deviceId).toString();
-        final Set<String> keys = activeSenders.keySet();
-        for (final String key : keys) {
-            if (key.startsWith(controlAddress)) {
-                final Future<Void> sub = Future.future();
-                activeSenders.get(key).close(c->{
-                    if (c.succeeded()) {
-                        sub.succeeded();
-                    } else {
-                        sub.fail(c.cause());
-                    }
-                });
-                future.compose(v-> sub);
-            }
         }
         return future;
     }
