@@ -52,6 +52,7 @@ public class TelemetryHttpIT extends HttpTestBase {
     private final Logger LOGGER = LoggerFactory.getLogger(getClass());
 
     private static final String URI = String.format("/%s", TelemetryConstants.TELEMETRY_ENDPOINT);
+    private static final String COMMAND_RESPONSE_URI = "/control/res/%s";
 
     private static final String COMMAND_TO_SEND = "setBrightness";
     private static final String COMMAND_JSON_KEY = "brightness";
@@ -59,6 +60,10 @@ public class TelemetryHttpIT extends HttpTestBase {
     @Override
     protected String getEndpointUri() {
         return URI;
+    }
+
+    private String getCommandResponseUri(final String commandRequestId) {
+        return String.format(COMMAND_RESPONSE_URI, commandRequestId);
     }
 
     @Override
@@ -164,7 +169,34 @@ public class TelemetryHttpIT extends HttpTestBase {
                             getEndpointUri(),
                             Buffer.buffer("hello " + count),
                             requestHeaders,
-                            responsePredicate);
+                            responsePredicate).compose(multiMap -> {
+                        // send a response to the command now
+                        final String receivedCommandRequestId = multiMap.get(Constants.HEADER_COMMAND_REQUEST_ID);
+                        LOGGER.info("Replying to the command with uri {}", getCommandResponseUri(receivedCommandRequestId));
+
+                        final MultiMap cmdResponseRequestHeaders = MultiMap.caseInsensitiveMultiMap()
+                                .add(HttpHeaders.CONTENT_TYPE, "binary/octet-stream")
+                                .add(HttpHeaders.AUTHORIZATION, getBasicAuth(tenantId, deviceId, password))
+                                .add(HttpHeaders.ORIGIN, ORIGIN_URI)
+                                .add(Constants.HEADER_COMMAND_RESPONSE_STATUS, "200");
+
+                        return httpClient.create(
+                                getCommandResponseUri(receivedCommandRequestId),
+                                Buffer.buffer("command response"),
+                                cmdResponseRequestHeaders,
+                                response -> {
+                                    LOGGER.trace("Checking status code of command reply now {}", response.statusCode());
+                                    return response.statusCode() == HttpURLConnection.HTTP_ACCEPTED;
+                                }).map(multiMapCommandResponse -> {
+                                    LOGGER.trace("Checking response header of command reply now {}", receivedCommandRequestId);
+                                    // TODO: check that the response reached the command sender
+                                    return multiMapCommandResponse;
+                                }).recover(t -> {
+                                    // TODO: asserts here to let the test case fail?
+                                    LOGGER.error("Status code of command reply invalid", t);
+                                    return Future.failedFuture(t);
+                                });
+                    });
                 });
     }
 
@@ -251,7 +283,7 @@ public class TelemetryHttpIT extends HttpTestBase {
                                       final TimeUntilDisconnectNotification notification) {
         LOGGER.trace("Trying to send command {}", commandBuffer.toString());
         commandClient.sendCommand(COMMAND_TO_SEND, commandBuffer).map(result -> {
-            LOGGER.trace("Successfully sent command [{}] and received response: [{}]",
+            LOGGER.info("Successfully sent command [{}] and received response: [{}]",
                     commandBuffer.toString(), Optional.ofNullable(result).orElse(Buffer.buffer()).toString());
             commandClient.close(v -> {
             });

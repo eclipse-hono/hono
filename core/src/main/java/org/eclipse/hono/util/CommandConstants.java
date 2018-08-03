@@ -44,6 +44,16 @@ public class CommandConstants {
     public static final String COMMAND_RESPONSE_REQUEST_PART_SHORT = "q";
 
     /**
+     * The part of the address for a command response between a device and an adapter, which identifies the response.
+     */
+    public static final String COMMAND_RESPONSE_RESPONSE_PART = "res";
+
+    /**
+     * Short version of COMMAND_RESPONSE_RESPONSE_PART.
+     */
+    public static final String COMMAND_RESPONSE_RESPONSE_PART_SHORT = "s";
+
+    /**
      * Position of the status code in the MQTT command response topic.
      * {@code control/[tenant]/[device-id]/res/<req-id>/<status>}
      */
