@@ -161,10 +161,12 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
 
     /**
      * Cleans up fixture.
+     * 
+     * @param ctx The vert.x test context.
      */
     @AfterClass
-    public static void shutDown() {
-        vertx.close();
+    public static void shutDown(final TestContext ctx) {
+        vertx.close(ctx.asyncAssertSuccess());
     }
 
     private static MqttContext newMqttContext(final MqttPublishMessage message, final MqttEndpoint endpoint) {
