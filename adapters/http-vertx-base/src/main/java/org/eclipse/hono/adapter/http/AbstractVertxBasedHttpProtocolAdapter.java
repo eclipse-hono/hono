@@ -752,6 +752,9 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
             return Future.succeededFuture();
         } else {
             currentSpan.setTag(MessageHelper.APP_PROPERTY_DEVICE_TTD, ttdSecs);
+            // get or create a command consumer - if there is one command consumer existing already, it is reused.
+            // This prevents that receiver links are opened massively if a device is misbehaving by sending a huge number
+            // of downstream messages with a ttd value set.
             return getCommandConnection().getOrCreateCommandConsumer(
                     tenantId,
                     deviceId,
