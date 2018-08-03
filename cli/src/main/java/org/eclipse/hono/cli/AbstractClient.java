@@ -13,8 +13,6 @@
 
 package org.eclipse.hono.cli;
 
-import java.util.Arrays;
-import java.util.List;
 import java.util.Objects;
 
 import org.eclipse.hono.client.HonoClient;
@@ -22,45 +20,27 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.env.Environment;
-
-import io.vertx.core.Context;
-import io.vertx.core.Vertx;
 
 /**
  * A base class providing support for connecting to Hono.
  *
  */
-abstract class AbstractClient {
+abstract class AbstractClient extends AbstractCliClient {
 
     protected final Logger LOG = LoggerFactory.getLogger(getClass());
 
-    protected Context ctx;
     @Value(value = "${tenant.id}")
     protected String tenantId;
     @Value(value = "${message.type}")
     protected String messageType;
     @Value(value = "${connection.timeout}")
     protected int connectionTimeOut;
-    protected Vertx vertx;
     protected HonoClient client;
-    protected List<String> activeProfiles;
 
     /**
      * Empty default constructor.
      */
     protected AbstractClient() {
-    }
-
-    @Autowired
-    public final void setActiveProfiles(final Environment env) {
-        activeProfiles = Arrays.asList(env.getActiveProfiles());
-    }
-
-    @Autowired
-    public final void setVertx(final Vertx vertx) {
-        this.vertx = vertx;
-        this.ctx = vertx.getOrCreateContext();
     }
 
     @Autowired
