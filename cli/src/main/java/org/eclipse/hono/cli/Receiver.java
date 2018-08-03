@@ -70,6 +70,7 @@ public class Receiver extends AbstractClient {
             });
         };
 
+        @SuppressWarnings("rawtypes")
         final List<Future> consumerFutures = new ArrayList<>();
         if (messageType.equals(TYPE_EVENT) || messageType.equals(TYPE_ALL)) {
             consumerFutures.add(

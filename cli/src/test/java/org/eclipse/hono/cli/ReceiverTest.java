@@ -53,6 +53,7 @@ public class ReceiverTest {
      * Setups the receiver with mocks.
      *
      */
+    @SuppressWarnings("unchecked")
     @Before
     public void setup() {
         final HonoClient client = mock(HonoClient.class);

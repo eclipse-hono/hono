@@ -175,6 +175,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         return result;
     }
 
+    @SuppressWarnings("unchecked")
     private static MqttEndpoint mockEndpoint() {
         final MqttEndpoint endpoint = mock(MqttEndpoint.class);
         when(endpoint.subscribeHandler(any(Handler.class))).thenReturn(endpoint);
@@ -593,6 +594,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         when(commandConnection.isConnected()).thenReturn(Future.succeededFuture());
     }
 
+    @SuppressWarnings("unchecked")
     private MqttEndpoint getMqttEndpointAuthenticated(final String username, final String password) {
         final MqttEndpoint endpoint = mockEndpoint();
         when(endpoint.auth()).thenReturn(new MqttAuth(username, password));
