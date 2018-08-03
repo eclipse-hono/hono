@@ -112,7 +112,7 @@ public final class DeviceRegistryHttpClient {
      */
     public Future<Void> addTenant(final JsonObject requestPayload, final String contentType, final int expectedStatusCode) {
 
-        return httpClient.create(URI_ADD_TENANT, requestPayload, contentType, statusCode -> statusCode == expectedStatusCode);
+        return httpClient.create(URI_ADD_TENANT, requestPayload, contentType, response -> response.statusCode() == expectedStatusCode);
     }
 
     /**
@@ -289,7 +289,7 @@ public final class DeviceRegistryHttpClient {
             requestJson.put(RegistrationConstants.FIELD_PAYLOAD_DEVICE_ID, deviceId);
         }
         final String uri = String.format("/%s/%s", RegistrationConstants.REGISTRATION_ENDPOINT, tenantId);
-        return httpClient.create(uri, requestJson, contentType, statusCode -> statusCode == expectedStatus);
+        return httpClient.create(uri, requestJson, contentType, response -> response.statusCode() == expectedStatus);
     }
 
     /**
@@ -430,7 +430,7 @@ public final class DeviceRegistryHttpClient {
 
         Objects.requireNonNull(tenantId);
         final String uri = String.format("/%s/%s", CredentialsConstants.CREDENTIALS_ENDPOINT, tenantId);
-        return httpClient.create(uri, credentialsSpec, contentType, statusCode -> statusCode == expectedStatusCode);
+        return httpClient.create(uri, credentialsSpec, contentType, response -> response.statusCode() == expectedStatusCode);
     }
 
     /**

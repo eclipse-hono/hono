@@ -17,6 +17,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Predicate;
 
+import io.vertx.core.http.HttpClientResponse;
 import org.eclipse.hono.client.ServiceInvocationException;
 
 import io.vertx.core.Context;
@@ -146,7 +147,7 @@ public final class CrudHttpClient {
      * @return A future that will succeed if the predicate evaluates to {@code true}.
      * @throws NullPointerException if URI or predicate are {@code null}.
      */
-    public Future<Void> create(final String uri, final JsonObject body, final Predicate<Integer> successPredicate) {
+    public Future<Void> create(final String uri, final JsonObject body, final Predicate<HttpClientResponse> successPredicate) {
         return create(uri, body, CONTENT_TYPE_JSON, successPredicate);
     }
 
@@ -160,7 +161,7 @@ public final class CrudHttpClient {
      * @return A future that will succeed if the predicate evaluates to {@code true}.
      * @throws NullPointerException if URI, content type or predicate are {@code null}.
      */
-    public Future<Void> create(final String uri, final JsonObject body, final String contentType, final Predicate<Integer> successPredicate) {
+    public Future<Void> create(final String uri, final JsonObject body, final String contentType, final Predicate<HttpClientResponse> successPredicate) {
 
         return create(uri, Optional.ofNullable(body).map(json -> json.toBuffer()).orElse(null), contentType, successPredicate);
     }
@@ -175,7 +176,7 @@ public final class CrudHttpClient {
      * @return A future that will succeed if the predicate evaluates to {@code true}.
      * @throws NullPointerException if URI or predicate are {@code null}.
      */
-    public Future<Void> create(final String uri, final Buffer body, final String contentType, final Predicate<Integer> successPredicate) {
+    public Future<Void> create(final String uri, final Buffer body, final String contentType, final Predicate<HttpClientResponse> successPredicate) {
 
         final MultiMap headers = Optional.ofNullable(contentType)
                 .map(ct -> MultiMap.caseInsensitiveMultiMap().add(HttpHeaders.CONTENT_TYPE, contentType))
@@ -198,7 +199,7 @@ public final class CrudHttpClient {
             final String uri,
             final Buffer body,
             final MultiMap requestHeaders,
-            final Predicate<Integer> successPredicate) {
+            final Predicate<HttpClientResponse> successPredicate) {
 
         Objects.requireNonNull(uri);
         Objects.requireNonNull(successPredicate);
@@ -224,7 +225,7 @@ public final class CrudHttpClient {
             final RequestOptions requestOptions,
             final Buffer body,
             final MultiMap requestHeaders,
-            final Predicate<Integer> successPredicate) {
+            final Predicate<HttpClientResponse> successPredicate) {
 
         Objects.requireNonNull(requestOptions);
         Objects.requireNonNull(successPredicate);
@@ -235,7 +236,7 @@ public final class CrudHttpClient {
             final HttpClientRequest req = client.post(requestOptions)
                     .handler(response -> {
                         LOGGER.trace("response status code {}", response.statusCode());
-                        if (successPredicate.test(response.statusCode())) {
+                        if (successPredicate.test(response)) {
                             result.complete(response.headers());
                         } else {
                             result.fail(new ServiceInvocationException(response.statusCode()));

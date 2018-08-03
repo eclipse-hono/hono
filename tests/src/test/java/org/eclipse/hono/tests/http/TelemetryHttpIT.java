@@ -16,7 +16,9 @@ package org.eclipse.hono.tests.http;
 import java.net.HttpURLConnection;
 import java.util.Optional;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
 
+import io.vertx.core.http.HttpClientResponse;
 import io.vertx.core.json.JsonObject;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.CommandClient;
@@ -50,6 +52,9 @@ public class TelemetryHttpIT extends HttpTestBase {
     private final Logger LOGGER = LoggerFactory.getLogger(getClass());
 
     private static final String URI = String.format("/%s", TelemetryConstants.TELEMETRY_ENDPOINT);
+
+    private static final String COMMAND_TO_SEND = "setBrightness";
+    private static final String COMMAND_JSON_KEY = "brightness";
 
     @Override
     protected String getEndpointUri() {
@@ -91,7 +96,7 @@ public class TelemetryHttpIT extends HttpTestBase {
                     getEndpointUri(),
                     Buffer.buffer("hello " + count),
                     requestHeaders,
-                    statusCode -> statusCode == HttpURLConnection.HTTP_ACCEPTED);
+                    response -> response.statusCode() == HttpURLConnection.HTTP_ACCEPTED);
         });
     }
 
@@ -104,7 +109,7 @@ public class TelemetryHttpIT extends HttpTestBase {
      * @throws InterruptedException if the test fails.
      */
     @Test
-    public void testUploadMessagesUsingBasicAuth2(final TestContext ctx) throws InterruptedException {
+    public void testUploadMessagesWithTtdThatReplyWithCommand(final TestContext ctx) throws InterruptedException {
 
         final Async setup = ctx.async();
         final String tenantId = helper.getRandomTenantId();
@@ -119,6 +124,26 @@ public class TelemetryHttpIT extends HttpTestBase {
 
         helper.registry.addDeviceForTenant(tenant, deviceId, password).setHandler(ctx.asyncAssertSuccess(ok -> setup.complete()));
         setup.await();
+
+        // following predicate validates the correct response status and that the command and control related response
+        // headers are found with the correct values and the response body contains the payload of the command.
+        final Predicate<HttpClientResponse> responsePredicate = response -> {
+            final String receivedCommand = response.headers().get(Constants.HEADER_COMMAND);
+            // for simplification of the code, the predicate is not only returning a boolean value, but may end by throwing
+            // an assertion error.
+            ctx.assertNotNull(receivedCommand);
+            ctx.assertEquals(COMMAND_TO_SEND, receivedCommand);
+            final String receivedCommandRequestId = response.headers().get(Constants.HEADER_COMMAND_REQUEST_ID);
+            ctx.assertNotNull(receivedCommandRequestId);
+            response.bodyHandler(buffer -> {
+                ctx.assertNotNull(buffer);
+                // try to decode the json command that was sent
+                final JsonObject jsonBuffer = new JsonObject(buffer);
+                // check the existence of the json key of the command
+                ctx.assertNotNull(jsonBuffer.getValue(COMMAND_JSON_KEY));
+            });
+            return (response.statusCode() == HttpURLConnection.HTTP_OK);
+        };
 
         testUploadMessages(ctx, tenantId,
                 msg -> {
@@ -139,13 +164,77 @@ public class TelemetryHttpIT extends HttpTestBase {
                             getEndpointUri(),
                             Buffer.buffer("hello " + count),
                             requestHeaders,
-                            statusCode -> statusCode == HttpURLConnection.HTTP_OK);
+                            responsePredicate);
                 });
+    }
+
+    /**
+     * Upload some telemetry messages that signal that the sender stays connected for some time.
+     * No command is sent as reply, so the
+     * <p>
+     * Verify that the http response header contains a command.
+     * @param ctx The test context.
+     * @throws InterruptedException if the test fails.
+     */
+    @Test
+    public void testUploadMessagesWithTtdThatDoNotReplyWithCommand(final TestContext ctx) throws InterruptedException {
+
+        final Async setup = ctx.async();
+        final String tenantId = helper.getRandomTenantId();
+        final String deviceId = helper.getRandomDeviceId(tenantId);
+        final String password = "secret";
+        final TenantObject tenant = TenantObject.from(tenantId, true);
+        final MultiMap requestHeaders = MultiMap.caseInsensitiveMultiMap()
+                .add(HttpHeaders.CONTENT_TYPE, "binary/octet-stream")
+                .add(HttpHeaders.AUTHORIZATION, getBasicAuth(tenantId, deviceId, password))
+                .add(HttpHeaders.ORIGIN, ORIGIN_URI)
+                .add(Constants.HEADER_TIME_TIL_DISCONNECT, "2");
+
+        helper.registry.addDeviceForTenant(tenant, deviceId, password).setHandler(ctx.asyncAssertSuccess(ok -> setup.complete()));
+        setup.await();
+
+        // following predicate validates the correct response status and that are no command and control related response
+        // headers found and the response body is null.
+        final Predicate<HttpClientResponse> responsePredicate = response -> {
+            final String receivedCommand = response.headers().get(Constants.HEADER_COMMAND);
+            // for simplification of the code, the predicate is not only returning a boolean value, but may end by throwing
+            // an assertion error.
+            ctx.assertNull(receivedCommand);
+            final String receivedCommandRequestId = response.headers().get(Constants.HEADER_COMMAND_REQUEST_ID);
+            ctx.assertNull(receivedCommandRequestId);
+            response.bodyHandler(buffer -> {
+                ctx.assertEquals(buffer.length(), 0);
+            });
+            return (response.statusCode() == HttpURLConnection.HTTP_ACCEPTED);
+        };
+
+        testUploadMessages(ctx, tenantId,
+                msg -> {
+                    assertAllMessageProperties(ctx, msg);
+                    final Integer ttd = MessageHelper.getTimeUntilDisconnect(msg);
+                    LOGGER.trace("piggy backed telemetry message received: {}, ttd = {}", msg, ttd);
+                    ctx.assertNotNull(ttd);
+                    final Optional<TimeUntilDisconnectNotification> notificationOpt = TimeUntilDisconnectNotification.fromMessage(msg);
+                    ctx.assertTrue(notificationOpt.isPresent());
+                    final TimeUntilDisconnectNotification notification = notificationOpt.get();
+                    ctx.assertEquals(tenantId, notification.getTenantId());
+                    ctx.assertEquals(deviceId, notification.getDeviceId());
+                    // do explicitly NOT send a command, but let the http adapter timer answer the message
+                },
+                count -> {
+                    return httpClient.create(
+                            getEndpointUri(),
+                            Buffer.buffer("hello " + count),
+                            requestHeaders,
+                            // request is responded with 202
+                            responsePredicate);
+                },
+                3);
     }
 
     private void createCommandClientAndSendCommand(final TimeUntilDisconnectNotification notification) {
         helper.honoClient.getOrCreateCommandClient(notification.getTenantId(), notification.getDeviceId()).map(commandClient -> {
-            final JsonObject jsonCmd = new JsonObject().put("brightness", (int) (Math.random() * 100));
+            final JsonObject jsonCmd = new JsonObject().put(COMMAND_JSON_KEY, (int) (Math.random() * 100));
             // let the commandClient timeout when the notification expires
             commandClient.setRequestTimeout(notification.getMillisecondsUntilExpiry());
 
@@ -161,7 +250,7 @@ public class TelemetryHttpIT extends HttpTestBase {
     private void sendCommandToAdapter(final CommandClient commandClient, final Buffer commandBuffer,
                                       final TimeUntilDisconnectNotification notification) {
         LOGGER.trace("Trying to send command {}", commandBuffer.toString());
-        commandClient.sendCommand("setBrightness", commandBuffer).map(result -> {
+        commandClient.sendCommand(COMMAND_TO_SEND, commandBuffer).map(result -> {
             LOGGER.trace("Successfully sent command [{}] and received response: [{}]",
                     commandBuffer.toString(), Optional.ofNullable(result).orElse(Buffer.buffer()).toString());
             commandClient.close(v -> {

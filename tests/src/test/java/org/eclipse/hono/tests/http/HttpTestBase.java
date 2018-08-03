@@ -236,7 +236,7 @@ public abstract class HttpTestBase {
                             getEndpointUri(),
                             Buffer.buffer("hello " + count),
                             requestHeaders,
-                            statusCode -> statusCode == HttpURLConnection.HTTP_ACCEPTED);
+                            response -> response.statusCode() == HttpURLConnection.HTTP_ACCEPTED);
                 });
     }
 
@@ -271,7 +271,7 @@ public abstract class HttpTestBase {
                     getEndpointUri(),
                     Buffer.buffer("hello " + count),
                     requestHeaders,
-                    statusCode -> statusCode == HttpURLConnection.HTTP_ACCEPTED);
+                    response -> response.statusCode() == HttpURLConnection.HTTP_ACCEPTED);
         });
     }
 
@@ -311,8 +311,28 @@ public abstract class HttpTestBase {
             final String tenantId,
             final Consumer<Message> messageConsumer,
             final Function<Integer, Future<MultiMap>> requestSender) throws InterruptedException {
+        this.testUploadMessages(ctx, tenantId, messageConsumer, requestSender, MESSAGES_TO_SEND);
+    }
 
-        final CountDownLatch received = new CountDownLatch(MESSAGES_TO_SEND);
+    /**
+     * Uploads messages to the HTTP endpoint.
+     *
+     * @param ctx The test context to run on.
+     * @param tenantId The tenant that the device belongs to.
+     * @param messageConsumer Consumer that is invoked when a message was received.
+     * @param requestSender The test device that will publish the data.
+     * @param numberOfMessages The number of messages that are uploaded.
+     * @throws InterruptedException if the test is interrupted before it
+     *              has finished.
+     */
+    protected void testUploadMessages(
+            final TestContext ctx,
+            final String tenantId,
+            final Consumer<Message> messageConsumer,
+            final Function<Integer, Future<MultiMap>> requestSender,
+            final int numberOfMessages) throws InterruptedException {
+
+        final CountDownLatch received = new CountDownLatch(numberOfMessages);
         final Async setup = ctx.async();
 
         createConsumer(tenantId, msg -> {
@@ -320,7 +340,7 @@ public abstract class HttpTestBase {
             messageConsumer.accept(msg);
             received.countDown();
             if (received.getCount() % 20 == 0) {
-                LOGGER.info("messages received: {}", MESSAGES_TO_SEND - received.getCount());
+                LOGGER.info("messages received: {}", numberOfMessages - received.getCount());
             }
         }).setHandler(ctx.asyncAssertSuccess(ok -> setup.complete()));
 
@@ -328,7 +348,7 @@ public abstract class HttpTestBase {
         final long start = System.currentTimeMillis();
         final AtomicInteger messageCount = new AtomicInteger(0);
 
-        while (messageCount.get() < MESSAGES_TO_SEND) {
+        while (messageCount.get() < numberOfMessages) {
 
             final Async sending = ctx.async();
             requestSender.apply(messageCount.getAndIncrement()).compose(this::assertHttpResponse).setHandler(attempt -> {
@@ -346,14 +366,14 @@ public abstract class HttpTestBase {
             sending.await();
         }
 
-        final long timeToWait = Math.max(TEST_TIMEOUT - 1000, Math.round(MESSAGES_TO_SEND * 20));
+        final long timeToWait = Math.max(TEST_TIMEOUT - 1000, Math.round(numberOfMessages * 20));
         if (!received.await(timeToWait, TimeUnit.MILLISECONDS)) {
             LOGGER.info("sent {} and received {} messages after {} milliseconds",
-                    messageCount, MESSAGES_TO_SEND - received.getCount(), System.currentTimeMillis() - start);
+                    messageCount, numberOfMessages - received.getCount(), System.currentTimeMillis() - start);
             ctx.fail("did not receive all messages sent");
         } else {
             LOGGER.info("sent {} and received {} messages after {} milliseconds",
-                    messageCount, MESSAGES_TO_SEND - received.getCount(), System.currentTimeMillis() - start);
+                    messageCount, numberOfMessages - received.getCount(), System.currentTimeMillis() - start);
         }
     }
 
@@ -386,7 +406,7 @@ public abstract class HttpTestBase {
                     getEndpointUri(),
                     Buffer.buffer("hello"),
                     requestHeaders,
-                    statusCode -> statusCode == HttpURLConnection.HTTP_OK);
+                    response -> response.statusCode() == HttpURLConnection.HTTP_OK);
         }).setHandler(ctx.asyncAssertFailure(t -> {
             // THEN the message gets rejected by the HTTP adapter
             LOGGER.info("could not publish message for disabled tenant [{}]", tenantId);
