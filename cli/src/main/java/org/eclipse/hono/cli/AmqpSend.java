@@ -53,14 +53,14 @@ public class AmqpSend extends AbstractCliClient {
     @Value(value = "${password}")
     protected String password;
 
-    @Value(value = "${message}")
-    protected String message;
+    @Value(value = "${payload}")
+    protected String payload;
 
     @PostConstruct
     void start() {
 
-        final Message msg = ProtonHelper.message(message);
-        msg.setAddress(messageAddress);
+        final Message message = ProtonHelper.message(payload);
+        message.setAddress(messageAddress);
 
         final CountDownLatch sent = new CountDownLatch(1);
         connectToAdapter(username, password).setHandler(result -> {
@@ -69,7 +69,7 @@ public class AmqpSend extends AbstractCliClient {
                 final ProtonSender sender = result.result().createSender(null);
                 sender.openHandler(remoteAttach -> {
                     if (remoteAttach.succeeded()) {
-                        sender.send(msg, delivery -> {
+                        sender.send(message, delivery -> {
                             // Logs the delivery state to the console
                             pw.println("\n" + delivery.getRemoteState() + "\n");
                             pw.flush();
