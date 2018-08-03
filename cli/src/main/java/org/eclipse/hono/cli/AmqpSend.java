@@ -104,8 +104,6 @@ public class AmqpSend extends AbstractCliClient {
         final Future<ProtonConnection> result = Future.future();
         final ProtonClientOptions options = new ProtonClientOptions();
         final ProtonClient client = ProtonClient.create(vertx);
-        // final String host = hostAndPort[0];
-        // final int port = getPort(hostAndPort[1]);
         if (username != null && password != null) {
             // SASL PLAIN authc.
             client.connect(options, amqpHost, amqpPort, username, password, conAttempt -> {

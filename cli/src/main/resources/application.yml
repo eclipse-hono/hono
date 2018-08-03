@@ -49,4 +49,4 @@ hono:
 
 spring:
   profiles: amqp-adapter-cli
-    
+
