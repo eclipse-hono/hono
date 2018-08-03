@@ -21,6 +21,7 @@ import org.eclipse.hono.util.EventConstants;
 import org.junit.runner.RunWith;
 
 import io.vertx.core.Future;
+import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 
 
@@ -42,5 +43,11 @@ public class EventHttpIT extends HttpTestBase {
     protected Future<MessageConsumer> createConsumer(final String tenantId, final Consumer<Message> messageConsumer) {
 
         return helper.honoClient.createEventConsumer(tenantId, messageConsumer, remoteClose -> {});
+    }
+
+    @Override
+    protected void assertAdditionalMessageProperties(final TestContext ctx, final Message msg) {
+        // assert that events are marked as "durable"
+        ctx.assertTrue(msg.isDurable());
     }
 }

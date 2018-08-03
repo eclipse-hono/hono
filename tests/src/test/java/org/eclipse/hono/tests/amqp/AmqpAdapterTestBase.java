@@ -67,6 +67,19 @@ public abstract class AmqpAdapterTestBase extends ClientTestBase {
     private static Vertx vertx;
 
     /**
+     * Perform additional checks on a received message.
+     * <p>
+     * This default implementation does nothing. Subclasses should override this method to implement
+     * reasonable checks.
+     * 
+     * @param ctx The test context.
+     * @param msg The message to perform checks on.
+     */
+    protected void assertAdditionalMessageProperties(final TestContext ctx, final Message msg) {
+        // empty
+    }
+
+    /**
      * Creates a test specific message consumer.
      *
      * @param tenantId        The tenant to create the consumer for.
@@ -275,6 +288,7 @@ public abstract class AmqpAdapterTestBase extends ClientTestBase {
         final Function<Handler<Void>, Future<Void>> receiver = callback -> {
             return createConsumer(tenantId, msg -> {
                 callback.handle(null);
+                assertAdditionalMessageProperties(context, msg);
             }).map(c -> {
                 consumer = c;
                 return null;

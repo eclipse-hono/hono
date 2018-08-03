@@ -264,7 +264,6 @@ abstract public class AbstractSender extends AbstractHonoClient implements Messa
         msg.setBody(new Data(new Binary(payload)));
         setApplicationProperties(msg, properties);
         addProperties(msg, deviceId, contentType, registrationAssertion);
-        addEndpointSpecificProperties(msg, deviceId);
         return send(msg);
     }
 
@@ -292,7 +291,6 @@ abstract public class AbstractSender extends AbstractHonoClient implements Messa
         msg.setBody(new Data(new Binary(payload)));
         setApplicationProperties(msg, properties);
         addProperties(msg, deviceId, contentType, registrationAssertion);
-        addEndpointSpecificProperties(msg, deviceId);
         return send(msg, capacityAvailableHandler);
     }
 
@@ -357,21 +355,6 @@ abstract public class AbstractSender extends AbstractHonoClient implements Messa
         if (isRegistrationAssertionRequired()) {
             MessageHelper.addRegistrationAssertion(msg, registrationAssertion);
         }
-    }
-
-    /**
-     * Sets additional properties on the message to be sent.
-     * <p>
-     * Subclasses should override this method to set any properties on messages
-     * that are specific to the particular endpoint the message is to be sent to.
-     * <p>
-     * This method does nothing by default.
-     * 
-     * @param msg The message to be sent.
-     * @param deviceId The ID of the device that the message's content originates from.
-     */
-    protected void addEndpointSpecificProperties(final Message msg, final String deviceId) {
-        // empty
     }
 
     private Charset getCharsetForContentType(final String contentType) {

@@ -23,6 +23,7 @@ import org.junit.runner.RunWith;
 import io.netty.handler.codec.mqtt.MqttQoS;
 import io.vertx.core.Future;
 import io.vertx.core.buffer.Buffer;
+import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 
 
@@ -57,5 +58,11 @@ public class EventMqttIT extends MqttTestBase {
     protected Future<MessageConsumer> createConsumer(final String tenantId, final Consumer<Message> messageConsumer) {
 
         return helper.honoClient.createEventConsumer(tenantId, messageConsumer, remoteClose -> {});
+    }
+
+    @Override
+    protected void assertAdditionalMessageProperties(final TestContext ctx, final Message msg) {
+        // assert that events are marked as "durable"
+        ctx.assertTrue(msg.isDurable());
     }
 }

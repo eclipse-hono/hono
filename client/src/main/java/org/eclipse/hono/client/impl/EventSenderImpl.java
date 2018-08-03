@@ -140,18 +140,11 @@ public final class EventSenderImpl extends AbstractSender {
     }
 
     /**
-     * Sets the <em>durable</em> message property to {@code true}.
-     */
-    @Override
-    protected void addEndpointSpecificProperties(final Message msg, final String deviceId) {
-        msg.setDurable(true);
-    }
-
-    /**
      * Sends an AMQP 1.0 message to the peer this client is configured for
      * and waits for the outcome of the transfer.
      * <p>
-     * This method simply invokes {@link #sendMessageAndWaitForOutcome(Message, Span)}.
+     * This method sets the message's <em>durable</em> property to {@code true} and
+     * then invokes {@link #sendMessageAndWaitForOutcome(Message, Span)}.
      * 
      * @param message The message to send.
      * @param currentSpan The <em>OpenTracing</em> span used to trace the sending of the message.
@@ -169,6 +162,7 @@ public final class EventSenderImpl extends AbstractSender {
     @Override
     protected Future<ProtonDelivery> sendMessage(final Message message, final Span currentSpan) {
 
+        message.setDurable(true);
         return sendMessageAndWaitForOutcome(message, currentSpan);
     }
 

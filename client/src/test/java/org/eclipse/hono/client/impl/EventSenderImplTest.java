@@ -155,4 +155,52 @@ public class EventSenderImplTest {
         verify(sender, never()).send(any(Message.class), any(Handler.class));
     }
 
+    /**
+     * Verifies that the sender marks messages as durable.
+     * 
+     * @param ctx The vert.x test context.
+     */
+    @SuppressWarnings({ "unchecked" })
+    @Test
+    public void testSendMarksMessageAsDurable(final TestContext ctx) {
+
+        // GIVEN a sender that has credit
+        when(sender.sendQueueFull()).thenReturn(Boolean.FALSE);
+        final MessageSender messageSender = new EventSenderImpl(config, sender, "tenant", "telemetry/tenant", context);
+        when(sender.send(any(Message.class), any(Handler.class))).thenReturn(mock(ProtonDelivery.class));
+
+        // WHEN trying to send a message
+        final Message msg = ProtonHelper.message("telemetry/tenant/deviceId", "some payload");
+        messageSender.send(msg);
+
+        // THEN the message has been sent
+        verify(sender).send(any(Message.class), any(Handler.class));
+        // and the message has been marked as durable
+        assertTrue(msg.isDurable());
+    }
+
+    /**
+     * Verifies that the sender marks messages as durable.
+     * 
+     * @param ctx The vert.x test context.
+     */
+    @SuppressWarnings({ "unchecked" })
+    @Test
+    public void testSendAndWaitForOutcomeMarksMessageAsDurable(final TestContext ctx) {
+
+        // GIVEN a sender that has credit
+        when(sender.sendQueueFull()).thenReturn(Boolean.FALSE);
+        final MessageSender messageSender = new EventSenderImpl(config, sender, "tenant", "telemetry/tenant", context);
+        when(sender.send(any(Message.class), any(Handler.class))).thenReturn(mock(ProtonDelivery.class));
+
+        // WHEN trying to send a message
+        final Message msg = ProtonHelper.message("telemetry/tenant/deviceId", "some payload");
+        messageSender.sendAndWaitForOutcome(msg);
+
+        // THEN the message has been sent
+        verify(sender).send(any(Message.class), any(Handler.class));
+        // and the message has been marked as durable
+        assertTrue(msg.isDurable());
+    }
+
 }
