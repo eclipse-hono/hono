@@ -54,7 +54,7 @@ and some lines below
 
 The response to the `curl` command contains the command from the example application and looks like the following:
 
-    HTTP/1.1 200 Accepted
+    HTTP/1.1 200 OK
     hono-command: setBrightness
     hono-cmd-req-id: 10117f669c12-09ef-416d-88c1-1787f894856d
     Content-Length: 23
