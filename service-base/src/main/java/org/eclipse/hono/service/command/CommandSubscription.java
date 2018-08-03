@@ -141,8 +141,9 @@ public class CommandSubscription {
     }
 
     /**
-     * Creates a command subscription object for the given topic. When the authenticated device is given it is used to
-     * ether check given tenant and device-id from topic or fill this fields if not given.
+     * Creates a command subscription object for the given topic. When the authenticated device is given
+     * it is used to either check given tenant and device-id from topic or fill this
+     * fields if not given.
      *
      * @param topic The topic to subscribe for commands.
      * @param authenticatedDevice The authenticated device or {@code null}.

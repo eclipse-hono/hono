@@ -135,6 +135,64 @@ Publish some JSON data for device `4712` via gateway `gw-1`:
 
 **NB**: The example above assumes that a gateway device with ID `gw-1` has been registered with `hashed-password` credentials with *auth-id* `gw` and password `gw-secret`.
 
+## Command & Control
+
+The MQTT adapter supports devices to receive commands that have been sent by business applications by means of sending an MQTT *SUBSCRIBE* packet containing a device specific *topic filter*. The adapter indicates the outcome of the subscription request by sending back a corresponding *SUBACK* packet. The adapter only supports publishing of command messages using QoS 0. When a device no longer wants to receive commands anymore, it can send an MQTT *UNSUBSCRIBE* packet to the adapter, including the same topic filter that has been used to subscribe.
+
+When a device has successfully subscribed, the adapter sends an [empty notification]({{< relref "/api/Event-API.md#empty-notification" >}}) on behalf of the device to the downstream AMQP 1.0 Messaging Network with the *ttd* header set to `-1`, indicating that the device will be ready to receive commands until further notice. Analogously, the adapter sends an empty notification with the *ttd* header set to `0` when a device unsubcribes from commands.
+
+Devices send their responses to commands by means of sending an MQTT *PUBLISH* message to a topic that is specific to the command that has been executed. The MQTT adapter accepts responses being published using either QoS 0 or QoS 1.
+
+The following sections define the topic filters/names to use for subscribing to and responding to commands. The following *shorthand* versions of topic path segments are supported:
+
+* `c` instead of `control`
+* `q` instead of `req`
+* `s` instead of `res`
+
+The following variables are used:
+
+* `${command}` is an arbitrary string that indicates the command to execute, e.g. `setBrightness`. The command is provided by the application that sends the command.
+* `${req-id}` denotes the unique identifier of the command execution request and is passed to the device as part of the name of the topic that the command is published to. The device needs to publish its response to the command to a topic which includes this identifier, thus allowing the adapter to correlate the response with the request.
+* `${status}` is the HTTP status code indicating the outcome of executing the command. This status code is passed on to the application in the AMQP message's *status* header.
+
+The `property-bag` is an optional collection of properties intended for the receiver of the message. A property bag is only allowed at the very end of a topic. It always starts with a `?` character, followed by pairs of URL encoded property names and values that are separated by `&`. The following example shows a property bag that contains two properties *seqNo* and *importance*:
+
+    /topic/name/?seqNo=10034&importance="high"
+
+The MQTT adapter currently does not require nor use any properties.
+
+### Receiving Commands (authenticated Device)
+
+An authenticated device MUST use the following topic filter to subscribe to commands:
+
+* `control/+/+/req/#`
+
+The adapter will then publish commands for the device to topic:
+
+* `control///req/${req-id}/${command}[/*][/property-bag]`
+
+### Receiving Commands (unauthenticated Device)
+
+An unauthenticated device MUST use the following topic filter to subscribe to commands:
+
+* `control/${tenant-id}/${device-id}/req/#`
+
+The adapter will then publish commands for the device to topic:
+
+* `control/${tenant-id}/${device-id}/req/${req-id}/${command}[/*][/property-bag]`
+
+### Sending a Response to a Command (authenticated Device)
+
+An authenticated device MUST send the response to a previously received command to the following topic:
+
+* `control///res/${req-id}/${status}`
+
+### Sending a Response to a Command (authenticated Device)
+
+An unauthenticated device MUST send the response to a previously received command to the following topic:
+
+* `control/${tenant-id}/${device-id}/res/${req-id}/${status}`
+
 ## Downstream Meta Data
 
 The adapter includes the following meta data in messages being sent downstream:
@@ -157,51 +215,3 @@ The following properties are (currently) supported:
 | :----------------- | :--------- | :------------ | :-------------------------------------------------------------- |
 | *enabled*          | *boolean*  | `true`       | If set to `false` the adapter will reject all data from devices belonging to the tenant. |
 
-# Command and Control
-
-All topics allow for a short version, as shown below:
-
-* `c` for `control` 
-* `q` for `req`
-* `s` for `res`
-
-Following variable fields will be used:
-
-`${command}` is a string, that indicates the command like e.g. `setBrightness` and is given on the application side. 
-`${req-id}` denotes the unique identifier of the command request and is provided to the device with the command. It has to be used again when sending a response to the command (and is internally used to correlate the command and the received response).
-
-The `property-bag` at the end is an optional bag of properties, that starts with a `?`. It is only allowed at the very end of the topic and is followed by pairs of URL encoded property names and values, that are separated by `&`:
-  `<url-encoded-name>=<url-encoded-value>`
-  
- Property bags are not used right now but allow future additions.
-  
-`${status}` is the status of the command processing by the device, which is given with the response. 
-
-## Receive Commands 
-
-An **authenticated** device subscribes to: 
-
-* `control/+/+/req/#`
-
-Then the device gets commands on:
-
-* `control///req/${req-id}/${command}[/*][/property-bag]`
-
-An **unauthenticated** device subscribes to:
-* `control/${tenant-id}/${device-id}/req/#`
-
-Then it gets commands on:
-
-* `control/${tenant-id}/${device-id}/req/${req-id}/${command}[/*][/property-bag]`
-
-As soon as a device subscribes to the topic, the adapter sends an event with `ttd=-1` and the specific content-type ([Event API]({{< relref "api/Event-API.md" >}})). At unsubscribe it will send an event with the same content-type and `ttd=0`. 
-
-## Send Command Response
-
-An **authenticated** device sends the response to a previously received command to:
-
-* `control///res/${req-id}/${status}`
-
-An **unauthenticated** device sends the response to a previously received command to:
-
-* `control/${tenant-id}/${device-id}/res/${req-id}/${status}`

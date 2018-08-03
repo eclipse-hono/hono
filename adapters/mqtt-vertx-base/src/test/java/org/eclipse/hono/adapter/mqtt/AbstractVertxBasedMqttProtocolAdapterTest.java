@@ -15,17 +15,12 @@ package org.eclipse.hono.adapter.mqtt;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 import java.net.HttpURLConnection;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
@@ -33,6 +28,7 @@ import java.util.function.BiConsumer;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.HonoClient;
+import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.TenantClient;
@@ -43,6 +39,7 @@ import org.eclipse.hono.service.auth.device.HonoClientBasedAuthProvider;
 import org.eclipse.hono.service.auth.device.UsernamePasswordCredentials;
 import org.eclipse.hono.service.command.CommandConnection;
 import org.eclipse.hono.util.EventConstants;
+import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.TelemetryConstants;
@@ -73,7 +70,9 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.mqtt.MqttAuth;
 import io.vertx.mqtt.MqttEndpoint;
 import io.vertx.mqtt.MqttServer;
+import io.vertx.mqtt.MqttTopicSubscription;
 import io.vertx.mqtt.messages.MqttPublishMessage;
+import io.vertx.mqtt.messages.MqttSubscribeMessage;
 import io.vertx.proton.ProtonDelivery;
 
 /**
@@ -281,8 +280,8 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
     }
 
     /**
-     * Verifies that an adapter that is configured to require devices to authenticate, rejects connections from devices
-     * not providing any credentials.
+     * Verifies that an adapter that is configured to require devices to authenticate rejects
+     * connections from devices which do not provide proper credentials.
      */
     @Test
     public void testEndpointHandlerRejectsUnauthenticatedDevices() {
@@ -293,12 +292,15 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
 
         forceClientMocksToConnected();
 
-        // WHEN a device connects without providing any credentials
+        // WHEN a device connects without providing proper credentials
         final MqttEndpoint endpoint = mockEndpoint();
+        when(endpoint.auth()).thenReturn(null, new MqttAuth("foo", null), new MqttAuth(null, "bar"));
+        adapter.handleEndpointConnection(endpoint);
+        adapter.handleEndpointConnection(endpoint);
         adapter.handleEndpointConnection(endpoint);
 
         // THEN the connection is refused
-        verify(endpoint).reject(MqttConnectReturnCode.CONNECTION_REFUSED_BAD_USER_NAME_OR_PASSWORD);
+        verify(endpoint, times(3)).reject(MqttConnectReturnCode.CONNECTION_REFUSED_BAD_USER_NAME_OR_PASSWORD);
     }
 
     /**
@@ -546,6 +548,103 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
     }
 
     /**
+     * Verifies that the adapter registers a hook to close the command consumer
+     * created for a device's command subscription.
+     * 
+     * @param ctx The vert.x test context.
+     */
+    @SuppressWarnings({ "unchecked" })
+    @Test
+    public void testOnSubscribeRegistersCommandConsumerCloseHook(final TestContext ctx) {
+
+        // GIVEN a device connected to an adapter
+        final Future<ProtonDelivery> outcome = Future.succeededFuture(mock(ProtonDelivery.class));
+        final MessageSender sender = givenAnEventSenderForOutcome(outcome);
+        final MqttServer server = getMqttServer(false);
+        final AbstractVertxBasedMqttProtocolAdapter<ProtocolAdapterProperties> adapter = getAdapter(server);
+        final MqttEndpoint endpoint = mockEndpoint();
+
+        // WHEN a device subscribes to commands
+        when(commandConnection.getOrCreateCommandConsumer(eq("tenant"), eq("deviceId"), any(BiConsumer.class), any(Handler.class))).thenReturn(
+                Future.succeededFuture(mock(MessageConsumer.class)));
+        final List<MqttTopicSubscription> subscriptions = Collections.singletonList(
+                newMockTopicSubsription("control/tenant/deviceId/req/#", MqttQoS.AT_MOST_ONCE));
+        final MqttSubscribeMessage msg = mock(MqttSubscribeMessage.class);
+        when(msg.messageId()).thenReturn(15);
+        when(msg.topicSubscriptions()).thenReturn(subscriptions);
+
+        adapter.onSubscribe(endpoint, null, msg);
+
+        // THEN the adapter registers a hook for closing the command consumer for the device
+        final ArgumentCaptor<Handler<Void>> closeHookCaptor = ArgumentCaptor.forClass(Handler.class);
+        verify(endpoint).closeHandler(closeHookCaptor.capture());
+        // which closes the command consumer when the connection is closed
+        closeHookCaptor.getValue().handle(null);
+        verify(commandConnection).closeCommandConsumer("tenant", "deviceId");
+        // and sends an empty notification downstream with TTD 0
+        final ArgumentCaptor<Message> msgCaptor = ArgumentCaptor.forClass(Message.class);
+        verify(sender, times(2)).sendAndWaitForOutcome(msgCaptor.capture(), any());
+        assertThat(msgCaptor.getValue().getContentType(), is(EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION));
+        assertThat(MessageHelper.getTimeUntilDisconnect(msgCaptor.getValue()), is(0));
+    }
+
+    /**
+     * Verifies that the adapter includes a status code for each topic filter
+     * in its SUBACK packet.
+     * 
+     * @param ctx The vert.x test context.
+     */
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testOnSubscribeIncludesStatusCodeForEachFilter(final TestContext ctx) {
+
+        // GIVEN a device connected to an adapter
+        final Future<ProtonDelivery> outcome = Future.succeededFuture(mock(ProtonDelivery.class));
+        final MessageSender sender = givenAnEventSenderForOutcome(outcome);
+        final MqttServer server = getMqttServer(false);
+        final AbstractVertxBasedMqttProtocolAdapter<ProtocolAdapterProperties> adapter = getAdapter(server);
+        final MqttEndpoint endpoint = mockEndpoint();
+
+        // WHEN a device sends a SUBSCRIBE packet for several unsupported filters
+        final List<MqttTopicSubscription> subscriptions = new ArrayList<>();
+        subscriptions.add(newMockTopicSubsription("unsupported/#", MqttQoS.AT_LEAST_ONCE));
+        subscriptions.add(newMockTopicSubsription("bumlux/+/+/#", MqttQoS.AT_MOST_ONCE));
+        subscriptions.add(newMockTopicSubsription("bumlux/+/+/#", MqttQoS.AT_MOST_ONCE));
+        // and for subscribing to commands
+        when(commandConnection.getOrCreateCommandConsumer(eq("tenant"), eq("deviceId"), any(BiConsumer.class), any(Handler.class))).thenReturn(
+                Future.succeededFuture(mock(MessageConsumer.class)));
+        subscriptions.add(newMockTopicSubsription("control/tenant/deviceId/req/#", MqttQoS.AT_MOST_ONCE));
+        final MqttSubscribeMessage msg = mock(MqttSubscribeMessage.class);
+        when(msg.messageId()).thenReturn(15);
+        when(msg.topicSubscriptions()).thenReturn(subscriptions);
+
+        adapter.onSubscribe(endpoint, null, msg);
+
+        // THEN the adapter sends a SUBACK packet to the device
+        // which contains a failure status code for each filter
+        final ArgumentCaptor<List<MqttQoS>> codeCaptor = ArgumentCaptor.forClass(List.class);
+        verify(endpoint).subscribeAcknowledge(eq(15), codeCaptor.capture());
+        assertThat(codeCaptor.getValue().size(), is(4));
+        assertThat(codeCaptor.getValue().get(0), is(MqttQoS.FAILURE));
+        assertThat(codeCaptor.getValue().get(1), is(MqttQoS.FAILURE));
+        assertThat(codeCaptor.getValue().get(2), is(MqttQoS.FAILURE));
+        assertThat(codeCaptor.getValue().get(3), is(MqttQoS.AT_MOST_ONCE));
+        // and sends an empty notification downstream with TTD -1
+        final ArgumentCaptor<Message> msgCaptor = ArgumentCaptor.forClass(Message.class);
+        verify(sender).sendAndWaitForOutcome(msgCaptor.capture(), any());
+        assertThat(msgCaptor.getValue().getContentType(), is(EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION));
+        assertThat(MessageHelper.getTimeUntilDisconnect(msgCaptor.getValue()), is(-1));
+
+    }
+
+    private static MqttTopicSubscription newMockTopicSubsription(final String filter, final MqttQoS qos) {
+        final MqttTopicSubscription result = mock(MqttTopicSubscription.class);
+        when(result.qualityOfService()).thenReturn(qos);
+        when(result.topicName()).thenReturn(filter);
+        return result;
+    }
+
+    /**
      *
      * Verifies that the adapter will accept uploading messages to standard as well
      * as shortened topic names.
@@ -660,7 +759,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         return adapter;
     }
 
-    private void givenAnEventSenderForOutcome(final Future<ProtonDelivery> outcome) {
+    private MessageSender givenAnEventSenderForOutcome(final Future<ProtonDelivery> outcome) {
 
         final MessageSender sender = mock(MessageSender.class);
         when(sender.getEndpoint()).thenReturn(EventConstants.EVENT_ENDPOINT);
@@ -668,6 +767,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         when(sender.sendAndWaitForOutcome(any(Message.class), (SpanContext) any())).thenReturn(outcome);
 
         when(messagingClient.getOrCreateEventSender(anyString())).thenReturn(Future.succeededFuture(sender));
+        return sender;
     }
 
     private void givenAQoS0TelemetrySender() {
@@ -688,46 +788,6 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         when(sender.sendAndWaitForOutcome(any(Message.class), (SpanContext) any())).thenReturn(outcome);
 
         when(messagingClient.getOrCreateTelemetrySender(anyString())).thenReturn(Future.succeededFuture(sender));
-    }
-
-    /**
-     * Verify that a missing password rejects the connection.
-     * <p>
-     * The connection must be rejected with the code {@link MqttConnectReturnCode#CONNECTION_REFUSED_BAD_USER_NAME_OR_PASSWORD}.
-     */
-    @Test
-    public void testMissingPassword() {
-
-        final MqttServer server = getMqttServer(false);
-        final AbstractVertxBasedMqttProtocolAdapter<ProtocolAdapterProperties> adapter = getAdapter(server);
-
-        forceClientMocksToConnected();
-
-        final MqttEndpoint endpoint = getMqttEndpointAuthenticated("foo", null);
-
-        adapter.handleEndpointConnection(endpoint);
-
-        verify(endpoint).reject(MqttConnectReturnCode.CONNECTION_REFUSED_BAD_USER_NAME_OR_PASSWORD);
-    }
-
-    /**
-     * Verify that a missing username rejects the connection.
-     * <p>
-     * The connection must be rejected with the code {@link MqttConnectReturnCode#CONNECTION_REFUSED_BAD_USER_NAME_OR_PASSWORD}.
-     */
-    @Test
-    public void testMissingUsername() {
-
-        final MqttServer server = getMqttServer(false);
-        final AbstractVertxBasedMqttProtocolAdapter<ProtocolAdapterProperties> adapter = getAdapter(server);
-
-        forceClientMocksToConnected();
-
-        final MqttEndpoint endpoint = getMqttEndpointAuthenticated(null, "bar");
-
-        adapter.handleEndpointConnection(endpoint);
-
-        verify(endpoint).reject(MqttConnectReturnCode.CONNECTION_REFUSED_BAD_USER_NAME_OR_PASSWORD);
     }
 
     /**

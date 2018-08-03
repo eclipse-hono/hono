@@ -977,6 +977,91 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     }
 
     /**
+     * Sends an <em>empty notification</em> event for a device that will remain
+     * connected for an indeterminate amount of time.
+     * <p>
+     * This method invokes {@link #sendTtdEvent(String, String, Device, Integer)} with
+     * a TTD of {@code -1}.
+     * 
+     * @param tenant The tenant that the device belongs to, who owns the device.
+     * @param deviceId The device for which the TTD is reported.
+     * @param authenticatedDevice The authenticated device or {@code null}.
+     * @return A future indicating the outcome of the operation. The future will be
+     *         succeeded if the TTD event has been sent downstream successfully.
+     *         Otherwise, it will be failed with a {@link ServiceInvocationException}.
+     * @throws NullPointerException if any of tenant or device ID are {@code null}.
+     */
+    protected final Future<ProtonDelivery> sendConnectedTtdEvent(final String tenant, final String deviceId,
+            final Device authenticatedDevice) {
+
+        return sendTtdEvent(tenant, deviceId, authenticatedDevice, -1);
+    }
+
+    /**
+     * Sends an <em>empty notification</em> event for a device that has disconnected
+     * from a protocol adapter.
+     * <p>
+     * This method invokes {@link #sendTtdEvent(String, String, Device, Integer)} with
+     * a TTD of {@code 0}.
+     * 
+     * @param tenant The tenant that the device belongs to, who owns the device.
+     * @param deviceId The device for which the TTD is reported.
+     * @param authenticatedDevice The authenticated device or {@code null}.
+     * @return A future indicating the outcome of the operation. The future will be
+     *         succeeded if the TTD event has been sent downstream successfully.
+     *         Otherwise, it will be failed with a {@link ServiceInvocationException}.
+     * @throws NullPointerException if any of tenant or device ID are {@code null}.
+     */
+    protected final Future<ProtonDelivery> sendDisconnectedTtdEvent(final String tenant, final String deviceId,
+            final Device authenticatedDevice) {
+
+        return sendTtdEvent(tenant, deviceId, authenticatedDevice, 0);
+    }
+
+    /**
+     * Sends an <em>empty notification</em> containing a given <em>time until disconnect</em> for
+     * a device.
+     *
+     * @param tenant The tenant that the device belongs to, who owns the device.
+     * @param deviceId The device for which the TTD is reported.
+     * @param authenticatedDevice The authenticated device or {@code null}.
+     * @param ttd The time until disconnect (seconds).
+     * @return A future indicating the outcome of the operation. The future will be
+     *         succeeded if the TTD event has been sent downstream successfully.
+     *         Otherwise, it will be failed with a {@link ServiceInvocationException}.
+     * @throws NullPointerException if any of tenant, device ID or TTD are {@code null}.
+     */
+    protected final Future<ProtonDelivery> sendTtdEvent(final String tenant, final String deviceId, final Device authenticatedDevice,
+            final Integer ttd) {
+
+        Objects.requireNonNull(tenant);
+        Objects.requireNonNull(deviceId);
+        Objects.requireNonNull(ttd);
+
+        final Future<JsonObject> tokenTracker = getRegistrationAssertion(tenant, deviceId, authenticatedDevice, null);
+        final Future<TenantObject> tenantConfigTracker = getTenantConfiguration(tenant, null);
+        final Future<MessageSender> senderTracker = getEventSender(tenant);
+
+        return CompositeFuture.all(tokenTracker, tenantConfigTracker, senderTracker).compose(ok -> {
+            if (tenantConfigTracker.result().isAdapterEnabled(getTypeName())) {
+                final MessageSender sender = senderTracker.result();
+                final Message msg = newMessage(
+                        ResourceIdentifier.from(EventConstants.EVENT_ENDPOINT, tenant, deviceId),
+                        senderTracker.result().isRegistrationAssertionRequired(),
+                        EventConstants.EVENT_ENDPOINT,
+                        EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION,
+                        null,
+                        tokenTracker.result(),
+                        ttd);
+                return sender.sendAndWaitForOutcome(msg, (SpanContext) null);
+            } else {
+                // this adapter is not enabled for the tenant
+                return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_FORBIDDEN));
+            }
+        });
+    }
+
+    /**
      * Checks if the payload conveyed in the body of a request is consistent with the indicated content type.
      *
      * @param contentType The indicated content type.
