@@ -46,7 +46,7 @@ public class CommandSubscription {
         Objects.requireNonNull(topic);
         final String[] parts = topic.split("\\/");
         if (parts.length != 5 || !"#".equals(parts[4])) {
-            throw new IllegalArgumentException("the subscription does not fulfill the 'control|c/+/+/req|q/#' pattern");
+            throw new IllegalArgumentException("topic filter does not match pattern: control|c/+/+/req|q/#");
         }
         endpoint = parts[0];
         if (!CommandConstants.isCommandEndpoint(endpoint)) {
@@ -153,7 +153,7 @@ public class CommandSubscription {
         try {
             return new CommandSubscription(topic, authenticatedDevice);
         } catch (final IllegalArgumentException e) {
-            LOG.error(e.getMessage());
+            LOG.debug(e.getMessage());
             return null;
         }
     }
