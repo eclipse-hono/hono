@@ -825,8 +825,8 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
 
             LOG.trace("successfully processed message [topic: {}, QoS: {}] for device [tenantId: {}, deviceId: {}]",
                     ctx.message().topicName(), ctx.message().qosLevel(), tenant, deviceId);
-            metrics.incrementProcessedMqttMessages(endpointName, tenant);
-            metrics.incrementProcessedMqttPayload(endpointName, tenant, messagePayloadSize(ctx.message()));
+            metrics.incrementProcessedMessages(endpointName, tenant);
+            metrics.incrementProcessedPayload(endpointName, tenant, messagePayloadSize(ctx.message()));
             onMessageSent(ctx);
             // check that the remote MQTT client is still connected before sending PUBACK
             if (ctx.deviceEndpoint().isConnected() && ctx.message().qosLevel() == MqttQoS.AT_LEAST_ONCE) {
@@ -845,7 +845,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
             } else {
                 LOG.debug("cannot process message for device [tenantId: {}, deviceId: {}, endpoint: {}]",
                         tenant, deviceId, endpointName, t);
-                metrics.incrementUndeliverableMqttMessages(endpointName, tenant);
+                metrics.incrementUndeliverableMessages(endpointName, tenant);
                 onMessageUndeliverable(ctx);
             }
             TracingHelper.logError(currentSpan, t);
