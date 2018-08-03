@@ -333,6 +333,14 @@
             <configLocation>checkstyle/default.xml</configLocation>
             <suppressionsLocation>checkstyle/suppressions.xml</suppressionsLocation>
             <includeTestSourceDirectory>true</includeTestSourceDirectory>
+            
+            <!--
+              The next two lines are required due to an issue in M2E support
+              for Checkstyle.
+              Also see: https://github.com/m2e-code-quality/m2e-code-quality/issues/117#issuecomment-380022879
+              -->
+            <sourceDirectories>${project.compileSourceRoots}</sourceDirectories>
+            <testSourceDirectories>${project.testCompileSourceRoots}</testSourceDirectories>
           </configuration>
         </plugin>
         <plugin>
