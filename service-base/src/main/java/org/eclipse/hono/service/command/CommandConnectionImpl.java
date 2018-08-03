@@ -131,10 +131,7 @@ public class CommandConnectionImpl extends HonoClientImpl implements CommandConn
             commandReceiverLink.close(result);
         }
 
-        return result.recover(t -> {
-            LOG.info("cannot close command consumer [tenant-id: {}, device-id: {}]", tenantId, deviceId, t);
-            return Future.failedFuture(t);
-        });
+        return result;
     }
 
     /**

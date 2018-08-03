@@ -558,13 +558,11 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
     }
 
     private void closeCommandConsumer(final String tenantId, final String deviceId) {
-        getCommandConnection().closeCommandConsumer(tenantId, deviceId).setHandler(h -> {
-            if (h.failed()) {
-                // not an error if already closed - e.g. tries to close on unsubscribe and close
-                LOG.debug("command consumer could not be closed for [tenant-id: {}, device-id: {}]: {}",
-                        tenantId, deviceId,
-                        h.cause().getMessage());
-            }
+        getCommandConnection().closeCommandConsumer(tenantId, deviceId).otherwise(t -> {
+            // not an error if already closed - e.g. tries to close on unsubscribe and close
+            LOG.debug("cannot close command consumer [tenant-id: {}, device-id: {}]: {}",
+                    tenantId, deviceId, t.getMessage());
+            return null;
         });
     }
 
