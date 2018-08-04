@@ -1,0 +1,55 @@
+hono:
+  app:
+    maxInstances: 1
+    healthCheckPort: 8088
+    healthCheckBindAddress: 0.0.0.0
+  amqp:
+    bindAddress: 0.0.0.0
+    insecurePortBindAddress: 0.0.0.0
+    insecurePortEnabled: true
+  messaging:
+    name: 'Hono AMQP Adapter'
+    amqpHostname: hono-internal
+    host: hono-dispatch-router.hono
+    port: 5673
+    keyPath: ${secret.path}/amqp-adapter-key.pem
+    certPath: ${secret.path}/amqp-adapter-cert.pem
+    trustStorePath: ${secret.path}/trusted-certs.pem
+  registration:
+    name: 'Hono AMQP Adapter'
+    host: ${hono.registration.host}
+    port: 5671
+    credentialsPath: ${secret.path}/amqp-adapter.credentials
+    trustStorePath: ${secret.path}/trusted-certs.pem
+  credentials:
+    name: 'Hono AMQP Adapter'
+    host: ${hono.registration.host}
+    port: 5671
+    credentialsPath: ${secret.path}/amqp-adapter.credentials
+    trustStorePath: ${secret.path}/trusted-certs.pem
+  tenant:
+    name: 'Hono AMQP Adapter'
+    host: ${hono.registration.host}
+    port: 5671
+    credentialsPath: ${secret.path}/amqp-adapter.credentials
+    trustStorePath: ${secret.path}/trusted-certs.pem
+  command:
+    name: 'Hono AMQP Adapter'
+    amqpHostname: hono-amqp-internal
+    host: hono-dispatch-router.hono
+    port: 5673
+    keyPath: ${secret.path}/amqp-adapter-key.pem
+    certPath: ${secret.path}/amqp-adapter-cert.pem
+    trustStorePath: ${secret.path}/trusted-certs.pem
+  metric:
+    reporter:
+      graphite:
+        active: true
+        host: influxdb.hono
+        port: 2003
+# disable spring boot actuator endpoints, enable metrics
+endpoints:
+  enabled: false
+  metrics:
+    enabled: true
+

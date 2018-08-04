@@ -98,6 +98,13 @@ keyUsage             = keyAgreement,keyEncipherment,digitalSignature
 extendedKeyUsage     = serverAuth, clientAuth
 subjectAltName       = DNS.1:hono-adapter-mqtt-vertx,DNS.2:hono-adapter-mqtt-vertx.hono,DNS.3:localhost
 
+[ req_ext_amqp-adapter ]
+
+subjectKeyIdentifier = hash
+keyUsage             = keyAgreement,keyEncipherment,digitalSignature
+extendedKeyUsage     = serverAuth, clientAuth
+subjectAltName       = DNS.1:hono-adapter-amqp-vertx,DNS.2:hono-adapter-amqp-vertx.hono,DNS.3:localhost
+
 [ req_ext_kura-adapter ]
 
 subjectKeyIdentifier = hash

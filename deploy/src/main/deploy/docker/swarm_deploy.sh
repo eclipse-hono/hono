@@ -200,6 +200,26 @@ docker service create $CREATE_OPTIONS --name hono-adapter-mqtt-vertx -p 1883:188
 echo ... done
 
 echo
+echo Deploying AMQP adapter ...
+docker secret create -l project=$NS amqp-adapter-key.pem $CERTS/amqp-adapter-key.pem
+docker secret create -l project=$NS amqp-adapter-cert.pem $CERTS/amqp-adapter-cert.pem
+docker secret create -l project=$NS amqp-adapter.credentials $SCRIPTPATH/../amqp-adapter.credentials
+docker secret create -l project=$NS hono-adapter-amqp-vertx-config.yml $SCRIPTPATH/hono-adapter-amqp-vertx-config.yml
+docker service create $CREATE_OPTIONS --name hono-adapter-amqp-vertx -p 4040:4040 -p 4041:4041 \
+  --secret amqp-adapter-key.pem \
+  --secret amqp-adapter-cert.pem \
+  --secret trusted-certs.pem \
+  --secret amqp-adapter.credentials \
+  --secret hono-adapter-amqp-vertx-config.yml \
+  --limit-memory 256m \
+  --env _JAVA_OPTIONS=-Xmx180m \
+  --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-adapter-amqp-vertx-config.yml \
+  --env SPRING_PROFILES_ACTIVE=dev \
+  --env LOGGING_CONFIG=classpath:logback-spring.xml \
+  ${docker.image.org-name}/hono-adapter-amqp-vertx:${project.version}
+echo ... done
+
+echo
 echo Deploying Kura adapter ...
 docker secret create -l project=$NS kura-adapter-key.pem $CERTS/kura-adapter-key.pem
 docker secret create -l project=$NS kura-adapter-cert.pem $CERTS/kura-adapter-cert.pem
