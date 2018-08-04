@@ -18,6 +18,7 @@ import java.util.concurrent.CountDownLatch;
 import javax.annotation.PostConstruct;
 
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.util.Strings;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
@@ -63,10 +64,10 @@ public class AmqpSend extends AbstractCliClient {
         message.setAddress(messageAddress);
 
         final CountDownLatch sent = new CountDownLatch(1);
-        connectToAdapter(username, password).setHandler(result -> {
+        connectToAdapter().setHandler(result -> {
             final PrintWriter pw = new PrintWriter(System.out);
             if (result.succeeded()) {
-                final ProtonSender sender = result.result().createSender(null);
+                final ProtonSender sender = adapterConnection.createSender(null);
                 sender.openHandler(remoteAttach -> {
                     if (remoteAttach.succeeded()) {
                         sender.send(message, delivery -> {
@@ -99,12 +100,11 @@ public class AmqpSend extends AbstractCliClient {
 
     // ----------------------------------< Vertx-proton >---
 
-    private Future<ProtonConnection> connectToAdapter(final String username,
-            final String password) {
-        final Future<ProtonConnection> result = Future.future();
+    private Future<Void> connectToAdapter() {
+        final Future<Void> result = Future.future();
         final ProtonClientOptions options = new ProtonClientOptions();
         final ProtonClient client = ProtonClient.create(vertx);
-        if (username != null && password != null) {
+        if (!Strings.isNullOrEmpty(username) && !Strings.isNullOrEmpty(password)) {
             // SASL PLAIN authc.
             client.connect(options, amqpHost, amqpPort, username, password, conAttempt -> {
                 if (conAttempt.failed()) {
@@ -113,7 +113,7 @@ public class AmqpSend extends AbstractCliClient {
                     adapterConnection = conAttempt.result();
                     adapterConnection.openHandler(remoteOpen -> {
                         if (remoteOpen.succeeded()) {
-                            result.complete(adapterConnection);
+                            result.complete();
                         }
                     }).open();
                 }
@@ -127,7 +127,7 @@ public class AmqpSend extends AbstractCliClient {
                     adapterConnection = conAttempt.result();
                     adapterConnection.openHandler(remoteOpen -> {
                         if (remoteOpen.succeeded()) {
-                            result.complete(adapterConnection);
+                            result.complete();
                         }
                     }).open();
                 }
