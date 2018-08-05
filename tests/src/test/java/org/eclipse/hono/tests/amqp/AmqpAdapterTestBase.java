@@ -35,6 +35,7 @@ import org.junit.Test;
 import org.junit.rules.TestName;
 
 import io.vertx.core.CompositeFuture;
+import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
@@ -65,6 +66,7 @@ public abstract class AmqpAdapterTestBase extends ClientTestBase {
     private MessageConsumer consumer;
 
     private static Vertx vertx;
+    private Context context;
 
     /**
      * Perform additional checks on a received message.
@@ -150,10 +152,9 @@ public abstract class AmqpAdapterTestBase extends ClientTestBase {
         final String deviceId = helper.getRandomDeviceId(tenantId);
 
         final Async setup = context.async();
-        setupProtocolAdapter(tenantId, deviceId, false)
-        .compose(s -> {
+        setupProtocolAdapter(tenantId, deviceId, false).map(s -> {
             sender = s;
-            return Future.succeededFuture();
+            return s;
         }).setHandler(context.asyncAssertSuccess(ok -> setup.complete()));
         setup.await();
 
@@ -167,10 +168,7 @@ public abstract class AmqpAdapterTestBase extends ClientTestBase {
 
             final Rejected rejected = (Rejected) delivery.getRemoteState();
             final ErrorCondition error = rejected.getError();
-            final String expected = String.format("Content-Type: [%s] does not match payload", INVALID_CONTENT_TYPE);
-
             context.assertEquals(Constants.AMQP_BAD_REQUEST, error.getCondition());
-            context.assertEquals(expected, error.getDescription());
 
             completionTracker.complete();
         });
@@ -204,10 +202,9 @@ public abstract class AmqpAdapterTestBase extends ClientTestBase {
         final String deviceId = helper.getRandomDeviceId(tenantId);
 
         final Async setup = context.async();
-        setupProtocolAdapter(tenantId, deviceId, true)
-        .compose(s -> {
+        setupProtocolAdapter(tenantId, deviceId, true).map(s -> {
             sender = s;
-            return Future.succeededFuture();
+            return s;
         }).setHandler(context.asyncAssertSuccess(ok -> setup.complete()));
         setup.await();
 
@@ -220,11 +217,7 @@ public abstract class AmqpAdapterTestBase extends ClientTestBase {
 
             final Rejected rejected = (Rejected) delivery.getRemoteState();
             final ErrorCondition error = rejected.getError();
-            final String expected = String.format("This adapter is not enabled for tenant [tenantId: %s].", tenantId);
-
             context.assertEquals(AmqpError.UNAUTHORIZED_ACCESS, error.getCondition());
-            context.assertEquals(expected, error.getDescription());
-
             completionTracker.complete();
         });
         completionTracker.await();
@@ -251,57 +244,59 @@ public abstract class AmqpAdapterTestBase extends ClientTestBase {
         final String username = IntegrationTestSupport.getUsername(deviceId, tenantId);
 
         // connect and create sender (with a valid target address)
-        connectToAdapter(username, DEVICE_PASSWORD)
-                .compose(connection -> {
-                    this.connection = connection;
-                    final Target target = new Target();
-                    target.setAddress(targetAddress);
-                    return createProducer(target);
-                }).setHandler(context.asyncAssertFailure(t -> {
-                    final ErrorCondition expected = ProtonHelper.condition(Constants.AMQP_BAD_REQUEST,
-                            "This adapter does not accept a target address on receiver links");
+        connectToAdapter(username, DEVICE_PASSWORD).map(con -> {
+            this.connection = con;
+            final Target target = new Target();
+            target.setAddress(targetAddress);
+            return target;
+        }).compose(target -> createProducer(target)).setHandler(context.asyncAssertFailure(t -> {
+            log.info("got {}", t.getClass().getName());
+            final ErrorCondition expected = ProtonHelper.condition(Constants.AMQP_BAD_REQUEST,
+                    "This adapter does not accept a target address on receiver links");
 
-                    context.assertEquals(expected.toString(), t.getMessage());
-                }));
+            context.assertEquals(expected.toString(), t.getMessage());
+        }));
     }
 
     /**
      * Verifies that a number of messages published through the AMQP adapter can be successfully consumed by
      * applications connected to the AMQP messaging network.
      *
-     * @param context The Vert.x test context.
+     * @param ctx The Vert.x test context.
      * @throws InterruptedException Exception.
      */
     @Test
-    public void testUploadingXnumberOfMessages(final TestContext context) throws InterruptedException {
+    public void testUploadingXnumberOfMessages(final TestContext ctx) throws InterruptedException {
         final String tenantId = helper.getRandomTenantId();
         final String deviceId = helper.getRandomDeviceId(tenantId);
 
-        final Async setup = context.async();
+        final Async setup = ctx.async();
         setupProtocolAdapter(tenantId, deviceId, false)
         .compose(s -> {
             sender = s;
             return Future.succeededFuture();
-        }).setHandler(context.asyncAssertSuccess(ok -> setup.complete()));
+        }).setHandler(ctx.asyncAssertSuccess(ok -> setup.complete()));
         setup.await();
 
         final Function<Handler<Void>, Future<Void>> receiver = callback -> {
             return createConsumer(tenantId, msg -> {
                 callback.handle(null);
-                assertAdditionalMessageProperties(context, msg);
+                assertAdditionalMessageProperties(ctx, msg);
             }).map(c -> {
                 consumer = c;
                 return null;
             });
         };
 
-        doUploadMessages(context, receiver, payload -> {
-            final Async sendingComplete = context.async();
+        doUploadMessages(ctx, receiver, payload -> {
+            final Async sendingComplete = ctx.async();
             final Message msg = ProtonHelper.message(payload);
             msg.setAddress(getEndpointName());
-            sender.send(msg, delivery -> {
-                context.assertTrue(Accepted.class.isInstance(delivery.getRemoteState()));
-                sendingComplete.complete();
+            context.runOnContext(go -> {
+                sender.send(msg, delivery -> {
+                    ctx.assertTrue(Accepted.class.isInstance(delivery.getRemoteState()));
+                    sendingComplete.complete();
+                });
             });
             sendingComplete.await();
         });
@@ -317,19 +312,25 @@ public abstract class AmqpAdapterTestBase extends ClientTestBase {
      * @throws NullPointerException if the target or connection is null.
      */
     private Future<ProtonSender> createProducer(final Target target) {
+
         Objects.requireNonNull(target, "Target cannot be null");
-        Objects.requireNonNull(connection, "connection cannot be null");
+        if (context == null) {
+            throw new IllegalStateException("not connected");
+        }
 
         final Future<ProtonSender>  result = Future.future();
-        final ProtonSender sender = connection.createSender(target.getAddress());
-        sender.setQoS(ProtonQoS.AT_LEAST_ONCE);
-        sender.openHandler(remoteAttach -> {
-            if (remoteAttach.succeeded()) {
-                result.complete(sender);
-            } else {
-                result.fail(remoteAttach.cause());
-            }
-        }).open();
+        context.runOnContext(go -> {
+            final ProtonSender sender = connection.createSender(target.getAddress());
+            sender.setQoS(ProtonQoS.AT_LEAST_ONCE);
+            sender.openHandler(remoteAttach -> {
+                if (remoteAttach.succeeded()) {
+                    result.complete(sender);
+                } else {
+                    result.fail(remoteAttach.cause());
+                }
+            });
+            sender.open();
+        });
         return result;
     }
 
@@ -357,15 +358,12 @@ public abstract class AmqpAdapterTestBase extends ClientTestBase {
         }
 
         return helper.registry
-        .addDeviceForTenant(tenant, deviceId, DEVICE_PASSWORD)
-        .compose(ok -> {
-           // connect and create sender (with a null target address)
-            return connectToAdapter(username, DEVICE_PASSWORD)
-                    .compose(connection -> {
-                        this.connection = connection;
-                        return createProducer(new Target());
-                    });
-        });
+                .addDeviceForTenant(tenant, deviceId, DEVICE_PASSWORD)
+                .compose(ok -> connectToAdapter(username, DEVICE_PASSWORD))
+                .compose(con -> createProducer(new Target())).recover(t -> {
+                    log.error("error setting up AMQP protocol adapter", t);
+                    return Future.failedFuture(t);
+                });
     }
 
     private Future<ProtonConnection> connectToAdapter(final String username, final String password) {
@@ -374,16 +372,24 @@ public abstract class AmqpAdapterTestBase extends ClientTestBase {
         final ProtonClientOptions options = new ProtonClientOptions();
         final ProtonClient client = ProtonClient.create(vertx);
 
-        client.connect(options, IntegrationTestSupport.AMQP_HOST, IntegrationTestSupport.AMQP_PORT, username, password, conAttempt -> {
+        client.connect(options, IntegrationTestSupport.AMQP_HOST, IntegrationTestSupport.AMQP_PORT,
+                username, password, conAttempt -> {
             if (conAttempt.failed()) {
                 result.fail(conAttempt.cause());
             } else {
-                final ProtonConnection adapterConnection = conAttempt.result();
-                adapterConnection.openHandler(remoteOpen -> {
+                this.context = Vertx.currentContext();
+                this.connection = conAttempt.result();
+                connection.openHandler(remoteOpen -> {
                     if (remoteOpen.succeeded()) {
-                        result.complete(adapterConnection);
+                        result.complete(connection);
+                    } else {
+                        result.fail(remoteOpen.cause());
                     }
-                }).open();
+                });
+                connection.closeHandler(remoteClose -> {
+                    connection.close();
+                });
+                connection.open();
             }
         });
         return result;
@@ -391,41 +397,36 @@ public abstract class AmqpAdapterTestBase extends ClientTestBase {
 
     private void close(final TestContext ctx) {
         final Async shutdown = ctx.async();
-        final Future<Void> connectionTracker = Future.future();
-        final Future<Void> senderTracker = Future.future();
-
-        if (sender != null) {
-            sender.closeHandler(remoteClose -> {
-                if (remoteClose.succeeded()) {
-                    senderTracker.complete();
-                } else {
-                    senderTracker.fail(remoteClose.cause());
-                }
-            }).close();
-        } else {
-            senderTracker.complete();
-        }
-
-        if (connection != null) {
-            connection.closeHandler(remoteClose -> {
-                if (remoteClose.succeeded()) {
-                    connectionTracker.complete();
-                } else {
-                    connectionTracker.fail(remoteClose.cause());
-                }
-            }).close();
-        } else {
-            connectionTracker.complete();
-        }
-
+        final Future<ProtonConnection> connectionTracker = Future.future();
+        final Future<ProtonSender> senderTracker = Future.future();
         final Future<Void> receiverTracker = Future.future();
-        if (consumer != null) {
-            consumer.close(receiverTracker.completer());
+
+        if (sender == null) {
+            senderTracker.complete();
         } else {
-            receiverTracker.complete();
+            context.runOnContext(go -> {
+                sender.closeHandler(senderTracker);
+                sender.close();
+            });
         }
 
-        CompositeFuture.all(connectionTracker, senderTracker, receiverTracker).setHandler(ok -> {
+        if (consumer == null) {
+            receiverTracker.complete();
+        } else {
+            consumer.close(receiverTracker);
+        }
+
+        if (connection == null || connection.isDisconnected()) {
+            connectionTracker.complete();
+        } else {
+            context.runOnContext(go -> {
+                connection.closeHandler(connectionTracker);
+                connection.close();
+            });
+        }
+
+        CompositeFuture.join(connectionTracker, senderTracker, receiverTracker).setHandler(c -> {
+           context = null;
            shutdown.complete();
         });
         shutdown.await();
