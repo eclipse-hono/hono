@@ -217,7 +217,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             connRequest.setContainer(String.format("%s-%s:%d", "insecure-server", getInsecurePortBindAddress(), getActualInsecurePort()));
         }
         connRequest.disconnectHandler(conn -> {
-            LOG.error("connection of client [container: {}] disconnected", conn.getRemoteContainer());
+            LOG.debug("client [container: {}] has disconnected", conn.getRemoteContainer());
         });
         connRequest.closeHandler(remoteClose -> handleRemoteConnectionClose(connRequest, remoteClose));
 
@@ -301,6 +301,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         } else {
             LOG.debug("client [container: {}] closed connection with error", con.getRemoteContainer(), res.cause());
         }
+        con.disconnectHandler(null);
         con.close();
         con.disconnect();
     }
