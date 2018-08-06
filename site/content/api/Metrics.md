@@ -64,7 +64,7 @@ The following sections describe which of these tags are extracted for which metr
 
 | Metric                                           | Tags                     | Description |
 | ------------------------------------------------ | ------------------------ | ----------- |
-| *counter.hono.mqtt.connection.count*             | *host*, *tenant*         | Messages processed by the MQTT protocol adapter. Total count since application startup. |
+| *counter.hono.mqtt.connection.count*             | *host*, *tenant*         | Current number of authenticated MQTT connections. |
 | *counter.hono.mqtt.messages.undeliverable.count* | *host*, *tenant*, *type* | Messages which could not be processed by the MQTT protocol adapter- Total count since application startup. |
 | *meter.hono.mqtt.messages.processed.count*       | *host*, *tenant*, *type* | Messages processed by the MQTT protocol adapter. Total count since application startup. |
 | *meter.hono.mqtt.messages.processed.m1_rate*     | *host*, *tenant*, *type* | Messages processed by the MQTT protocol adapter. One minute, exponentially weighted, moving average. |
