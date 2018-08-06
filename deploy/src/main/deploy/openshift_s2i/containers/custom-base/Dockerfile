@@ -36,7 +36,7 @@ RUN \
     cd netty-tcnative && \
     git checkout netty-tcnative-parent-$NETTY_TCNATIVE_VERSION && \
     cd .. && \
-    mvn -B clean install -f netty-tcnative/openssl-dynamic/pom.xml -am && \
+    mvn -B clean install -f netty-tcnative/openssl-dynamic/pom.xml -am -DskipTests && \
     install -m 0755 netty-tcnative/openssl-dynamic/target/native-lib-only/META-INF/native/linux64/libnetty_tcnative.so /usr/lib64/libnetty_tcnative.so && \
     rm -Rf ~/.m2/repository && \
     rm -Rf netty-tcnative && \
