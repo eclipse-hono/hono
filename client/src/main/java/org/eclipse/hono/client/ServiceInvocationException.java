@@ -13,6 +13,9 @@
 
 package org.eclipse.hono.client;
 
+import java.net.HttpURLConnection;
+import java.util.Optional;
+
 /**
  * Indicates an unexpected outcome of a (remote) service invocation.
  *
@@ -95,5 +98,21 @@ public class ServiceInvocationException extends RuntimeException {
         } else {
             return "Error Code: " + errorCode;
         }
+    }
+
+    /**
+     * Extract the HTTP status code from an exception.
+     * 
+     * @param t The exception to extract the code from.
+     * @return The HTTP status code, or 500 if the exception is not of type {@link ServiceInvocationException}.
+     */
+    public static int extractStatusCode(final Throwable t) {
+        return Optional.of(t).map(cause -> {
+            if (cause instanceof ServiceInvocationException) {
+                return ((ServiceInvocationException) cause).getErrorCode();
+            } else {
+                return null;
+            }
+        }).orElse(HttpURLConnection.HTTP_INTERNAL_ERROR);
     }
 }

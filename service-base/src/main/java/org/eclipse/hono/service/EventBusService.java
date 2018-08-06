@@ -13,7 +13,6 @@
 
 package org.eclipse.hono.service;
 
-import java.net.HttpURLConnection;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -55,6 +54,7 @@ public abstract class EventBusService<C> extends ConfigurationSupportingVerticle
      *
      * @param startFuture The future to complete on successful startup.
      */
+    @Override
     public final void start(final Future<Void> startFuture) {
         registerConsumer();
         doStart(startFuture);
@@ -88,6 +88,7 @@ public abstract class EventBusService<C> extends ConfigurationSupportingVerticle
      *
      * @param stopFuture the future to invoke once shutdown is complete.
      */
+    @Override
     public final void stop(final Future<Void> stopFuture) {
         if (requestConsumer != null) {
             requestConsumer.unregister();
@@ -128,13 +129,7 @@ public abstract class EventBusService<C> extends ConfigurationSupportingVerticle
         final EventBusMessage request = EventBusMessage.fromJson(msg.body());
         processRequest(request).recover(t -> {
             log.debug("cannot process request [operation: {}]: {}", request.getOperation(), t.getMessage());
-            final int status = Optional.of(t).map(cause -> {
-                if (cause instanceof ServiceInvocationException) {
-                    return ((ServiceInvocationException) cause).getErrorCode();
-                } else {
-                    return null;
-                }
-            }).orElse(HttpURLConnection.HTTP_INTERNAL_ERROR);
+            final int status = ServiceInvocationException.extractStatusCode(t);
             return Future.succeededFuture(request.getResponse(status));
         }).map(response -> {
             if (response.getReplyToAddress() == null) {
@@ -189,7 +184,7 @@ public abstract class EventBusService<C> extends ConfigurationSupportingVerticle
 
         try {
             return (T) payload.getValue(field);
-        } catch (ClassCastException e) {
+        } catch (final ClassCastException e) {
             return null;
         }
     }
@@ -211,7 +206,7 @@ public abstract class EventBusService<C> extends ConfigurationSupportingVerticle
 
         try {
             return (T) payload.remove(field);
-        } catch (ClassCastException e) {
+        } catch (final ClassCastException e) {
             return null;
         }
     }
@@ -230,7 +225,7 @@ public abstract class EventBusService<C> extends ConfigurationSupportingVerticle
 
         return Optional.ofNullable(payload).map(pl -> {
             final Object obj = pl.getValue(RequestResponseApiConstants.FIELD_ENABLED);
-            if ((obj instanceof Boolean)) {
+            if (obj instanceof Boolean) {
                 return pl;
             } else {
                 log.trace("adding 'enabled=true' property to request payload");

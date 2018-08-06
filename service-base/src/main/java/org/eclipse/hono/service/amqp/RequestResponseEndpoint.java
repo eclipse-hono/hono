@@ -12,9 +12,7 @@
  *******************************************************************************/
 package org.eclipse.hono.service.amqp;
 
-import java.net.HttpURLConnection;
 import java.util.Objects;
-import java.util.Optional;
 
 import org.apache.qpid.proton.amqp.transport.AmqpError;
 import org.apache.qpid.proton.message.Message;
@@ -263,13 +261,7 @@ public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties>
                 }
                 final EventBusMessage response = EventBusMessage.fromJson(message.body());
                 filterResponse(Constants.getClientPrincipal(con), response).recover(t -> {
-                    final int status = Optional.of(t).map(cause -> {
-                        if (cause instanceof ServiceInvocationException) {
-                            return ((ServiceInvocationException) cause).getErrorCode();
-                        } else {
-                            return null;
-                        }
-                    }).orElse(HttpURLConnection.HTTP_INTERNAL_ERROR);
+                    final int status = ServiceInvocationException.extractStatusCode(t);
                     return Future.succeededFuture(response.getResponse(status));
                 }).map(filteredResponse -> {
                     final Message amqpReply = getAmqpReply(filteredResponse);
