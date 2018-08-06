@@ -14,29 +14,32 @@
 package org.eclipse.hono.adapter.http;
 
 import org.eclipse.hono.service.metric.Metrics;
-import org.springframework.stereotype.Component;
 
 /**
  * Metrics for the HTTP based adapters.
  */
-@Component
-public class HttpAdapterMetrics extends Metrics {
+public interface HttpAdapterMetrics extends Metrics {
 
-    private static final String SERVICE_PREFIX = "hono.http";
+    /**
+     * Reports a command being delivered to a device.
+     * 
+     * @param tenantId The tenant that the device belongs to.
+     */
+    void incrementCommandDeliveredToDevice(String tenantId);
 
-    @Override
-    protected String getPrefix() {
-        return SERVICE_PREFIX;
-    }
-    void incrementCommandDeliveredToDevice(final String tenantId) {
-        counterService.increment(METER_PREFIX + getPrefix() + mergeAsMetric(COMMANDS, tenantId, "device", "delivered"));
-    }
+    /**
+     * Reports a TTD having expired without a command being delivered
+     * to a device.
+     * 
+     * @param tenantId The tenant that the device belongs to.
+     */
+    void incrementNoCommandReceivedAndTTDExpired(String tenantId);
 
-    void incrementNoCommandReceivedAndTTDExpired(final String tenantId) {
-        counterService.increment(METER_PREFIX + getPrefix() + mergeAsMetric(COMMANDS, tenantId, "ttd", "expired"));
-    }
-
-    void incrementCommandResponseDeliveredToApplication(final String tenantId) {
-        counterService.increment(METER_PREFIX + getPrefix() + mergeAsMetric(COMMANDS, tenantId, "response", "delivered"));
-    }
+    /**
+     * Reports a response to a command being delivered to an application.
+     * 
+     * @param tenantId The tenant to which the device belongs from which the response
+     *                 has been received.
+     */
+    void incrementCommandResponseDeliveredToApplication(String tenantId);
 }

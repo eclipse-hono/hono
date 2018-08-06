@@ -170,7 +170,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                 if (metrics == null) {
                     // use default implementation
                     // which simply discards all reported metrics
-                    metrics = new HttpAdapterMetrics();
+                    metrics = new DropwizardBasedHttpAdapterMetrics();
                 }
                 final Router router = createRouter();
                 if (router == null) {

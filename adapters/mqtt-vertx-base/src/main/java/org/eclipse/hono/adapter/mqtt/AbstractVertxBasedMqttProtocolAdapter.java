@@ -243,7 +243,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
                 if (metrics == null) {
                     // use default implementation
                     // which simply discards all reported metrics
-                    metrics = new MqttAdapterMetrics();
+                    metrics = new DropwizardBasedMqttAdapterMetrics();
                 }
                 return CompositeFuture.all(bindSecureMqttServer(), bindInsecureMqttServer());
             }).compose(t -> {

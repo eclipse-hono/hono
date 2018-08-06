@@ -13,12 +13,21 @@
 
 package org.eclipse.hono.adapter.mqtt;
 
-import org.eclipse.hono.service.metric.Metrics;
+import org.eclipse.hono.service.metric.DropwizardBasedMetrics;
+import org.springframework.stereotype.Component;
 
 /**
  * Metrics for the MQTT adapter.
  */
-public interface MqttAdapterMetrics extends Metrics {
+@Component
+public class DropwizardBasedMqttAdapterMetrics extends DropwizardBasedMetrics implements MqttAdapterMetrics {
+
+    private static final String SERVICE_PREFIX = "hono.mqtt";
+
+    @Override
+    protected String getPrefix() {
+        return SERVICE_PREFIX;
+    }
 
     /**
      * Increments the number of MQTT connections that have been established
@@ -26,7 +35,10 @@ public interface MqttAdapterMetrics extends Metrics {
      * 
      * @param tenantId The tenant that the device belongs to.
      */
-    void incrementMqttConnections(String tenantId);
+    @Override
+    public final void incrementMqttConnections(final String tenantId) {
+        counterService.increment(getPrefix() + CONNECTIONS + tenantId);
+    }
 
     /**
      * Decrements the number of MQTT connections that have been established
@@ -34,17 +46,26 @@ public interface MqttAdapterMetrics extends Metrics {
      * 
      * @param tenantId The tenant that the device belongs to.
      */
-    void decrementMqttConnections(String tenantId);
+    @Override
+    public final void decrementMqttConnections(final String tenantId) {
+        counterService.decrement(getPrefix() + CONNECTIONS + tenantId);
+    }
 
     /**
      * Increments the number of MQTT connections that have been established
      * with an <em>unauthenticated</em> device by one.
      */
-    void incrementUnauthenticatedMqttConnections();
+    @Override
+    public final void incrementUnauthenticatedMqttConnections() {
+        counterService.increment(getPrefix() + UNAUTHENTICATED_CONNECTIONS);
+    }
 
     /**
      * Decrements the number of MQTT connections that have been established
      * with an <em>unauthenticated</em> device by one.
      */
-    void decrementUnauthenticatedMqttConnections();
+    @Override
+    public final void decrementUnauthenticatedMqttConnections() {
+        counterService.decrement(getPrefix() + UNAUTHENTICATED_CONNECTIONS);
+    }
 }

@@ -13,14 +13,14 @@
 
 package org.eclipse.hono.adapter.kura;
 
-import org.eclipse.hono.adapter.mqtt.MqttAdapterMetrics;
+import org.eclipse.hono.adapter.mqtt.DropwizardBasedMqttAdapterMetrics;
 import org.springframework.stereotype.Component;
 
 /**
  * Metrics for the Kura adapter.
  */
 @Component
-public class KuraAdapterMetrics extends MqttAdapterMetrics {
+public class DropwizardBasedKuraAdapterMetrics extends DropwizardBasedMqttAdapterMetrics {
 
     private static final String SERVICE_PREFIX = "hono.kura";
 

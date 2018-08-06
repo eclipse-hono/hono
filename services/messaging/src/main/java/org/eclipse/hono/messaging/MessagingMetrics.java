@@ -20,56 +20,77 @@ import org.springframework.stereotype.Component;
  * Metrics for Hono Messaging.
  */
 @Component
-public class MessagingMetrics extends Metrics {
+public interface MessagingMetrics extends Metrics {
 
-    private static final String SERVICE_PREFIX = "hono.messaging";
+    /**
+     * Reports a newly established connection to the downstream
+     * AMQP 1.0 Messaging Network.
+     */
+    void incrementDownStreamConnections();
 
-    private static final String CONNECTIONS_DOWNSTREAM   = ".connections.downstream";
-    private static final String LINK_DOWNSTREAM_CREDITS  = ".link.downstream.credits.";
-    private static final String SENDERS_DOWNSTREAM       = ".senders.downstream.";
-    private static final String RECEIVERS_UPSTREAM_LINKS = ".receivers.upstream.links.";
+    /**
+     * Reports a connection to the downstream AMQP 1.0 Messaging Network
+     * being closed.
+     */
+    void decrementDownStreamConnections();
 
-    @Override
-    protected String getPrefix() {
-        return SERVICE_PREFIX;
-    }
+    /**
+     * 
+     * @param address The link's target address.
+     * @param credits The number of credits.
+     */
+    void submitDownstreamLinkCredits(String address, double credits);
 
-    void incrementDownStreamConnections() {
-        counterService.increment(SERVICE_PREFIX + CONNECTIONS_DOWNSTREAM);
-    }
+    /**
+     * Reports a newly established sender link to the downstream
+     * AMQP 1.0 Messaging Network.
+     * 
+     * @param address The link's target address.
+     */
+    void incrementDownstreamSenders(String address);
 
-    void decrementDownStreamConnections() {
-        counterService.decrement(SERVICE_PREFIX + CONNECTIONS_DOWNSTREAM);
-    }
+    /**
+     * Reports a sender link to the downstream AMQP 1.0 Messaging Network
+     * being closed.
+     * 
+     * @param address The link's target address.
+     */
+    void decrementDownstreamSenders(String address);
 
-    void submitDownstreamLinkCredits(final String address, final double credits) {
-        gaugeService.submit(SERVICE_PREFIX + LINK_DOWNSTREAM_CREDITS + normalizeAddress(address), credits);
-    }
+    /**
+     * Reports a newly established receiver link to an upstream protocol
+     * adapter.
+     * 
+     * @param address The link's target address.
+     */
+    void incrementUpstreamLinks(String address);
 
-    void incrementDownstreamSenders(final String address) {
-        counterService.increment(SERVICE_PREFIX + SENDERS_DOWNSTREAM + normalizeAddress(address));
-    }
+    /**
+     * Reports a receiver link to an upstream protocol adapter
+     * being closed.
+     * 
+     * @param address The link's target address.
+     */
+    void decrementUpstreamLinks(String address);
 
-    void decrementDownstreamSenders(final String address) {
-        counterService.decrement(SERVICE_PREFIX + SENDERS_DOWNSTREAM + normalizeAddress(address));
-    }
+    /**
+     * Reports a message having been discarded.
+     * 
+     * @param address The message's address.
+     */
+    void incrementDiscardedMessages(String address);
 
-    void incrementUpstreamLinks(final String address) {
-        counterService.increment(SERVICE_PREFIX + RECEIVERS_UPSTREAM_LINKS + normalizeAddress(address));
-    }
-    void decrementUpstreamLinks(final String address) {
-        counterService.decrement(SERVICE_PREFIX + RECEIVERS_UPSTREAM_LINKS + normalizeAddress(address));
-    }
+    /**
+     * Reports a message having been processed.
+     * 
+     * @param address The message's address.
+     */
+    void incrementProcessedMessages(String address);
 
-    void incrementDiscardedMessages(final String address) {
-        counterService.increment(SERVICE_PREFIX + MESSAGES + normalizeAddress(address) + DISCARDED);
-    }
-
-    void incrementProcessedMessages(final String address) {
-        counterService.increment(METER_PREFIX + SERVICE_PREFIX + MESSAGES + normalizeAddress(address) + PROCESSED);
-    }
-
-    void incrementUndeliverableMessages(final String address) {
-        counterService.increment(SERVICE_PREFIX + MESSAGES + normalizeAddress(address) + UNDELIVERABLE);
-    }
+    /**
+     * Reports a message as being <em>undeliverable</em>.
+     * 
+     * @param address The message's address.
+     */
+    void incrementUndeliverableMessages(String address);
 }

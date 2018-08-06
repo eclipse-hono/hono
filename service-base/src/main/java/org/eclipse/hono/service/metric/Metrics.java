@@ -13,139 +13,34 @@
 
 package org.eclipse.hono.service.metric;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.actuate.metrics.CounterService;
-import org.springframework.boot.actuate.metrics.GaugeService;
-
-import java.util.Objects;
-
 /**
- * Base metrics collector.
+ * A collector for metrics.
  */
-abstract public class Metrics {
+public interface Metrics {
 
     /**
-     * Special prefixes used by spring boot actuator together with dropwizard metrics.
-     *
-     * @see <a href=
-     *      "https://docs.spring.io/spring-boot/docs/current/reference/html/production-ready-metrics.html#production-ready-dropwizard-metrics">Spring
-     *      Boot</a>
-     */
-    protected static final String METER_PREFIX = "meter.";
-    protected static final String TIMER_PREFIX = "timer.";
-    protected static final String HISTOGRAM_PREFIX = "histogram.";
-
-    /** metric parts for messages - usable for AMQP, MQTT, etc. */
-    protected static final String MESSAGES = ".messages.";
-    protected static final String PROCESSED = ".processed";
-    protected static final String DISCARDED = ".discarded";
-    protected static final String UNDELIVERABLE = ".undeliverable";
-    protected static final String CONNECTIONS = ".connections.";
-    protected static final String UNAUTHENTICATED_CONNECTIONS = ".unauthenticatedConnections.";
-    protected static final String COMMANDS = ".commands";
-
-    protected static final String PAYLOAD = ".payload.";
-
-    protected GaugeService gaugeService = NullGaugeService.getInstance();
-    protected CounterService counterService = NullCounterService.getInstance();
-
-    /**
-     * It is needed to set the specific service prefix; if no config is given it is not needed and will never be used.
-     *
-     * @param metricConfig The metrics config
-     */
-    @Autowired(required = false)
-    public void setMetricConfig(final MetricConfig metricConfig) {
-        metricConfig.setPrefix(getPrefix());
-    }
-
-    /**
-     * Deriving classes need to provide a prefix to scope the metrics of the service.
-     *
-     * @return The Prefix
-     */
-    protected abstract String getPrefix();
-
-    /**
-     * Sets the service to use for managing gauges.
-     * <p>
-     * Spring Boot will inject a concrete implementation that is available on the class path.
-     *
-     * @param gaugeService The gauge service.
-     */
-    @Autowired(required = false)
-    public final void setGaugeService(final GaugeService gaugeService) {
-        this.gaugeService = gaugeService;
-    }
-
-    /**
-     * Sets the service to use for managing counters.
-     * <p>
-     * Spring Boot will inject a concrete implementation that is available on the class path.
-     *
-     * @param counterService The counter service.
-     */
-    @Autowired(required = false)
-    public final void setCounterService(final CounterService counterService) {
-        this.counterService = counterService;
-    }
-
-    /**
-     * Replaces '/' with '.' to transform e.g. <code>telemetry/DEFAULT_TENANT</code> to
-     * <code>telemetry.DEFAULT_TENANT</code>
-     *
-     * @param address The address with slashes to transform in an address with points
-     * @return The address with points
-     */
-    protected String normalizeAddress(final String address) {
-        Objects.requireNonNull(address);
-        return address.replace('/', '.');
-    }
-
-    /**
-     * Merge the given address parts as a full string, separated by '.'.
-     *
-     * @param parts The address parts
-     * @return The full address, separated by points
-     */
-    protected String mergeAsMetric(final String... parts) {
-        return String.join(".", parts);
-    }
-
-    /**
-     * Increment the number of processes messages by one.
+     * Reports a message received from a device as <em>processed</em>.
      *
      * @param resourceId The ID of the resource to track.
-     * @param tenantId The tenant this resource belongs to.
+     * @param tenantId The tenant that the device belongs to.
      */
-    public void incrementProcessedMessages(final String resourceId, final String tenantId) {
-        counterService.increment(METER_PREFIX + getPrefix() + MESSAGES + mergeAsMetric(resourceId, tenantId) + PROCESSED);
-    }
+    void incrementProcessedMessages(String resourceId, String tenantId);
 
     /**
-     * Increment the number of undeliverable messages by one.
+     * Reports a message received from a device as <em>undeliverable</em>.
      *
      * @param resourceId The ID of the resource to track.
-     * @param tenantId The tenant this resource belongs to.
+     * @param tenantId The tenant that the device belongs to.
      */
-    public void incrementUndeliverableMessages(final String resourceId, final String tenantId) {
-        counterService.increment(getPrefix() + MESSAGES + mergeAsMetric(resourceId, tenantId) + UNDELIVERABLE);
-    }
+    void incrementUndeliverableMessages(String resourceId, String tenantId);
 
     /**
-     * Increment the counter for the number of processed bytes.
+     * Reports the size of a processed message's payload that has been received
+     * from a device.
      *
      * @param resourceId The ID of the resource to track.
-     * @param tenantId The tenant this resource belongs to.
+     * @param tenantId The tenant that the device belongs to.
      * @param payloadSize The size of the payload in bytes.
      */
-    public void incrementProcessedPayload(final String resourceId, final String tenantId, final long payloadSize) {
-        if (payloadSize < 0) {
-            // A negative size would mess up the metrics
-            return;
-        }
-        counterService
-                .increment(METER_PREFIX + getPrefix() + PAYLOAD + mergeAsMetric(resourceId, tenantId) + PROCESSED);
-    }
-
+    void incrementProcessedPayload(String resourceId, String tenantId, long payloadSize);
 }
