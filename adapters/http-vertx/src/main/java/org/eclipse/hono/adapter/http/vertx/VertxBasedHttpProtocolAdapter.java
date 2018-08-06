@@ -254,7 +254,7 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
                 HttpMethod.PUT,
                 String.format("/control/res/:%s/:%s/:%s", PARAM_TENANT, PARAM_DEVICE_ID, PARAM_COMMAND_REQUEST_ID))
             .handler(ctx -> uploadCommandResponseMessage(ctx, getTenantParam(ctx), getDeviceIdParam(ctx),
-                    getCommandRequestIdParam(ctx), getCommandRequestStatusParam(ctx)));
+                    getCommandRequestIdParam(ctx), getCommandResponseStatusParam(ctx)));
     }
 
 
@@ -271,7 +271,7 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
         return ctx.request().getParam(PARAM_COMMAND_REQUEST_ID);
     }
 
-    private static Integer getCommandRequestStatusParam(final RoutingContext ctx) {
+    private static Integer getCommandResponseStatusParam(final RoutingContext ctx) {
         return HttpUtils.getCommandResponseStatus(ctx).orElse(null);
     }
 
@@ -304,7 +304,7 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
         if (Device.class.isInstance(ctx.user())) {
             final Device device = (Device) ctx.user();
             uploadCommandResponseMessage(ctx, device.getTenantId(), device.getDeviceId(),
-                    getCommandRequestIdParam(ctx), getCommandRequestStatusParam(ctx));
+                    getCommandRequestIdParam(ctx), getCommandResponseStatusParam(ctx));
         } else {
             handle401(ctx);
         }

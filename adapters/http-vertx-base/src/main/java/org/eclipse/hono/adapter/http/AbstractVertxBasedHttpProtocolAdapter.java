@@ -853,19 +853,18 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
     }
 
     /**
-     * Uploads a command response message to the Hono server.
+     * Uploads a command response message to Hono.
      *
      * @param ctx The routing context of the HTTP request.
-     * @param tenant The tenant of the device from that a command response was received.
-     * @param deviceId The id of the device from that a command response was received.
-     * @param commandRequestId The id of the command that is responded.
-     * @param commandRequestStatus The status of the command that is responded by the device.
-     * @throws NullPointerException if ctx, tenant or deviceId is {@code null}.
-     * @throws IllegalArgumentException if the commandRequestId cannot be processed since it is invalid, or if the commandRequestStatus
-     *          does not contain a valid status code.
+     * @param tenant The tenant of the device from which the command response was received.
+     * @param deviceId The device from which the command response was received.
+     * @param commandRequestId The id of the command that the response has been sent in reply to.
+     * @param responseStatus The HTTP status code that the device has provided in its request to indicate
+     *                       the outcome of processing the command (may be {@code null}).
+     * @throws NullPointerException if ctx, tenant or deviceId are {@code null}.
      */
     public final void uploadCommandResponseMessage(final RoutingContext ctx, final String tenant, final String deviceId,
-                                                   final String commandRequestId, final Integer commandRequestStatus) {
+                                                   final String commandRequestId, final Integer responseStatus) {
         Objects.requireNonNull(ctx);
         Objects.requireNonNull(tenant);
         Objects.requireNonNull(deviceId);
@@ -874,18 +873,18 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
         final String contentType = HttpUtils.getContentType(ctx);
 
         LOG.debug("processing response to command [tenantId: {}, deviceId: {}, cmd-req-id: {}, status code: {}]",
-                tenant, deviceId, commandRequestId, commandRequestStatus);
+                tenant, deviceId, commandRequestId, responseStatus);
 
-        final CommandResponse commandResponse = CommandResponse.from(commandRequestId, deviceId, payload, contentType, commandRequestStatus);
+        final CommandResponse commandResponse = CommandResponse.from(commandRequestId, deviceId, payload, contentType, responseStatus);
 
         if (commandResponse == null) {
             HttpUtils.badRequest(
                     ctx,
                     String.format("command-request-id [%s] or status code [%s] is missing/invalid",
-                            commandRequestId, commandRequestStatus));
+                            commandRequestId, responseStatus));
         } else {
 
-            // send answer to caller via sender link
+            // send response message to application via sender link
             final Future<CommandResponseSender> senderTracker = createCommandResponseSender(tenant, commandResponse.getReplyToId());
 
             senderTracker.compose(commandResponseSender -> {
