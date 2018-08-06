@@ -42,6 +42,7 @@
 
     <module name="FinalLocalVariable"/>
     <module name="RedundantModifier"/>
+    <module name="NeedBraces"/>
 
     <!-- possible issues -->
 
