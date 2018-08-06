@@ -36,14 +36,12 @@ import io.vertx.ext.web.Session;
 import io.vertx.ext.web.handler.AuthHandler;
 import io.vertx.ext.web.handler.impl.HttpStatusException;
 
-
 /**
- * A Hono specific version of vert.x web's standard {@code AuthHandlerImpl}
- * that does not swallow the root exception which caused an authentication failure.
+ * A Hono specific version of vert.x web's standard {@code AuthHandlerImpl} that does not swallow the root exception
+ * which caused an authentication failure.
  * <p>
- * This class is a copy of {@code io.vertx.ext.web.handler.impl.AuthHandlerImpl}
- * with small modifications in the <em>handle</em> and <em>processException</em>
- * methods to allow handling of {@code ServiceInvocationException}s.
+ * This class is a copy of {@code io.vertx.ext.web.handler.impl.AuthHandlerImpl} with small modifications in the
+ * <em>handle</em> and <em>processException</em> methods to allow handling of {@code ServiceInvocationException}s.
  */
 public abstract class HonoAuthHandler implements AuthHandler {
 
@@ -63,7 +61,7 @@ public abstract class HonoAuthHandler implements AuthHandler {
      * @param authProvider The provider to use for verifying credentials.
      */
     public HonoAuthHandler(final AuthProvider authProvider) {
-      this(authProvider, "");
+        this(authProvider, "");
     }
 
     /**
@@ -73,217 +71,218 @@ public abstract class HonoAuthHandler implements AuthHandler {
      * @param realm The security realm name.
      */
     public HonoAuthHandler(final AuthProvider authProvider, final String realm) {
-      this.authProvider = authProvider;
-      this.realm = realm;
+        this.authProvider = authProvider;
+        this.realm = realm;
     }
 
     @Override
     public AuthHandler addAuthority(final String authority) {
-      authorities.add(authority);
-      return this;
+        authorities.add(authority);
+        return this;
     }
 
     @Override
     public AuthHandler addAuthorities(final Set<String> authorities) {
-      this.authorities.addAll(authorities);
-      return this;
+        this.authorities.addAll(authorities);
+        return this;
     }
 
     @Override
     public void authorize(final User user, final Handler<AsyncResult<Void>> handler) {
-      final int requiredcount = authorities.size();
-      if (requiredcount > 0) {
-        if (user == null) {
-          handler.handle(Future.failedFuture(FORBIDDEN));
-          return;
-        }
-
-        final AtomicInteger count = new AtomicInteger();
-        final AtomicBoolean sentFailure = new AtomicBoolean();
-
-        final Handler<AsyncResult<Boolean>> authHandler = res -> {
-          if (res.succeeded()) {
-            if (res.result()) {
-              if (count.incrementAndGet() == requiredcount) {
-                // Has all required authorities
-                handler.handle(Future.succeededFuture());
-              }
-            } else {
-              if (sentFailure.compareAndSet(false, true)) {
+        final int requiredcount = authorities.size();
+        if (requiredcount > 0) {
+            if (user == null) {
                 handler.handle(Future.failedFuture(FORBIDDEN));
-              }
+                return;
             }
-          } else {
-            handler.handle(Future.failedFuture(res.cause()));
-          }
-        };
-        for (final String authority : authorities) {
-          if (!sentFailure.get()) {
-            user.isAuthorized(authority, authHandler);
-          }
+
+            final AtomicInteger count = new AtomicInteger();
+            final AtomicBoolean sentFailure = new AtomicBoolean();
+
+            final Handler<AsyncResult<Boolean>> authHandler = res -> {
+                if (res.succeeded()) {
+                    if (res.result()) {
+                        if (count.incrementAndGet() == requiredcount) {
+                            // Has all required authorities
+                            handler.handle(Future.succeededFuture());
+                        }
+                    } else {
+                        if (sentFailure.compareAndSet(false, true)) {
+                            handler.handle(Future.failedFuture(FORBIDDEN));
+                        }
+                    }
+                } else {
+                    handler.handle(Future.failedFuture(res.cause()));
+                }
+            };
+            for (final String authority : authorities) {
+                if (!sentFailure.get()) {
+                    user.isAuthorized(authority, authHandler);
+                }
+            }
+        } else {
+            // No auth required
+            handler.handle(Future.succeededFuture());
         }
-      } else {
-        // No auth required
-        handler.handle(Future.succeededFuture());
-      }
     }
 
     protected String authenticateHeader(final RoutingContext context) {
-      return null;
+        return null;
     }
 
     @Override
     public void handle(final RoutingContext ctx) {
 
-      if (handlePreflight(ctx)) {
-        return;
-      }
-
-      final User user = ctx.user();
-      if (user != null) {
-        // proceed to AuthZ
-        authorizeUser(ctx, user);
-        return;
-      }
-      // parse the request in order to extract the credentials object
-      parseCredentials(ctx, res -> {
-        if (res.failed()) {
-          processException(ctx, res.cause());
-          return;
-        }
-        // check if the user has been set
-        final User updatedUser = ctx.user();
-
-        if (updatedUser != null) {
-          final Session session = ctx.session();
-          if (session != null) {
-            // the user has upgraded from unauthenticated to authenticated
-            // session should be upgraded as recommended by owasp
-            session.regenerateId();
-          }
-          // proceed to AuthZ
-          authorizeUser(ctx, updatedUser);
-          return;
+        if (handlePreflight(ctx)) {
+            return;
         }
 
-        // proceed to authN
-        getAuthProvider(ctx).authenticate(res.result(), authN -> {
-          if (authN.succeeded()) {
-            final User authenticated = authN.result();
-            ctx.setUser(authenticated);
-            final Session session = ctx.session();
-            if (session != null) {
-              // the user has upgraded from unauthenticated to authenticated
-              // session should be upgraded as recommended by owasp
-              session.regenerateId();
-            }
+        final User user = ctx.user();
+        if (user != null) {
             // proceed to AuthZ
-            authorizeUser(ctx, authenticated);
-          } else {
-            final String header = authenticateHeader(ctx);
-            if (header != null) {
-              ctx.response()
-                .putHeader("WWW-Authenticate", header);
+            authorizeUser(ctx, user);
+            return;
+        }
+        // parse the request in order to extract the credentials object
+        parseCredentials(ctx, res -> {
+            if (res.failed()) {
+                processException(ctx, res.cause());
+                return;
             }
-            // to allow further processing if needed
-            processException(ctx, authN.cause());
-          }
+            // check if the user has been set
+            final User updatedUser = ctx.user();
+
+            if (updatedUser != null) {
+                final Session session = ctx.session();
+                if (session != null) {
+                    // the user has upgraded from unauthenticated to authenticated
+                    // session should be upgraded as recommended by owasp
+                    session.regenerateId();
+                }
+                // proceed to AuthZ
+                authorizeUser(ctx, updatedUser);
+                return;
+            }
+
+            // proceed to authN
+            getAuthProvider(ctx).authenticate(res.result(), authN -> {
+                if (authN.succeeded()) {
+                    final User authenticated = authN.result();
+                    ctx.setUser(authenticated);
+                    final Session session = ctx.session();
+                    if (session != null) {
+                        // the user has upgraded from unauthenticated to authenticated
+                        // session should be upgraded as recommended by owasp
+                        session.regenerateId();
+                    }
+                    // proceed to AuthZ
+                    authorizeUser(ctx, authenticated);
+                } else {
+                    final String header = authenticateHeader(ctx);
+                    if (header != null) {
+                        ctx.response()
+                                .putHeader("WWW-Authenticate", header);
+                    }
+                    // to allow further processing if needed
+                    processException(ctx, authN.cause());
+                }
+            });
         });
-      });
     }
 
     /**
-     * This method is protected so custom auth handlers can override the default
-     * error handling.
+     * This method is protected so custom auth handlers can override the default error handling.
      * 
      * @param ctx The routing context.
      * @param exception The cause of failure to process the request.
      */
     protected void processException(final RoutingContext ctx, final Throwable exception) {
 
-      if (exception != null) {
+        if (exception != null) {
 
-        if (exception instanceof HttpStatusException || exception instanceof ServiceInvocationException) {
-          final int statusCode;
-          final String payload;
-          if (exception instanceof HttpStatusException) {
-              statusCode = ((HttpStatusException) exception).getStatusCode();
-              payload = ((HttpStatusException) exception).getPayload();
-          } else {
-              statusCode = ((ServiceInvocationException) exception).getErrorCode();
-              payload = null;
-          }
+            if (exception instanceof HttpStatusException || exception instanceof ServiceInvocationException) {
+                final int statusCode;
+                final String payload;
+                if (exception instanceof HttpStatusException) {
+                    statusCode = ((HttpStatusException) exception).getStatusCode();
+                    payload = ((HttpStatusException) exception).getPayload();
+                } else {
+                    statusCode = ((ServiceInvocationException) exception).getErrorCode();
+                    payload = null;
+                }
 
-          switch (statusCode) {
-            case 302:
-              ctx.response()
-                .putHeader(HttpHeaders.LOCATION, payload)
-                .setStatusCode(302)
-                .end("Redirecting to " + payload + ".");
-              return;
-            case 401:
-              final String header = authenticateHeader(ctx);
-              if (header != null) {
-                ctx.response()
-                  .putHeader("WWW-Authenticate", header);
-              }
-              ctx.fail(exception);
-              return;
-            default:
-              ctx.fail(exception);
-              return;
-          }
+                switch (statusCode) {
+                case 302:
+                    ctx.response()
+                            .putHeader(HttpHeaders.LOCATION, payload)
+                            .setStatusCode(302)
+                            .end("Redirecting to " + payload + ".");
+                    return;
+                case 401:
+                    final String header = authenticateHeader(ctx);
+                    if (header != null) {
+                        ctx.response()
+                                .putHeader("WWW-Authenticate", header);
+                    }
+                    ctx.fail(exception);
+                    return;
+                default:
+                    ctx.fail(exception);
+                    return;
+                }
+            }
         }
-      }
 
-      // fallback 500
-      ctx.fail(exception);
+        // fallback 500
+        ctx.fail(exception);
     }
 
     private void authorizeUser(final RoutingContext ctx, final User user) {
-      authorize(user, authZ -> {
-        if (authZ.failed()) {
-          processException(ctx, authZ.cause());
-          return;
-        }
-        // success, allowed to continue
-        ctx.next();
-      });
+        authorize(user, authZ -> {
+            if (authZ.failed()) {
+                processException(ctx, authZ.cause());
+                return;
+            }
+            // success, allowed to continue
+            ctx.next();
+        });
     }
 
     private boolean handlePreflight(final RoutingContext ctx) {
-      final HttpServerRequest request = ctx.request();
-      // See: https://www.w3.org/TR/cors/#cross-origin-request-with-preflight-0
-      // Preflight requests should not be subject to security due to the reason UAs will remove the Authorization header
-      if (request.method() == HttpMethod.OPTIONS) {
-        // check if there is a access control request header
-        final String accessControlRequestHeader = ctx.request().getHeader(HttpHeaders.ACCESS_CONTROL_REQUEST_HEADERS);
-        if (accessControlRequestHeader != null) {
-          // lookup for the Authorization header
-          for (final String ctrlReq : accessControlRequestHeader.split(",")) {
-            if (ctrlReq.equalsIgnoreCase("Authorization")) {
-              // this request has auth in access control, so we can allow preflighs without authentication
-              ctx.next();
-              return true;
+        final HttpServerRequest request = ctx.request();
+        // See: https://www.w3.org/TR/cors/#cross-origin-request-with-preflight-0
+        // Preflight requests should not be subject to security due to the reason UAs will remove the Authorization
+        // header
+        if (request.method() == HttpMethod.OPTIONS) {
+            // check if there is a access control request header
+            final String accessControlRequestHeader = ctx.request()
+                    .getHeader(HttpHeaders.ACCESS_CONTROL_REQUEST_HEADERS);
+            if (accessControlRequestHeader != null) {
+                // lookup for the Authorization header
+                for (final String ctrlReq : accessControlRequestHeader.split(",")) {
+                    if (ctrlReq.equalsIgnoreCase("Authorization")) {
+                        // this request has auth in access control, so we can allow preflighs without authentication
+                        ctx.next();
+                        return true;
+                    }
+                }
             }
-          }
         }
-      }
 
-      return false;
+        return false;
     }
 
     private AuthProvider getAuthProvider(final RoutingContext ctx) {
-      try {
-        final AuthProvider provider = ctx.get(AUTH_PROVIDER_CONTEXT_KEY);
-        if (provider != null) {
-          // we're overruling the configured one for this request
-          return provider;
+        try {
+            final AuthProvider provider = ctx.get(AUTH_PROVIDER_CONTEXT_KEY);
+            if (provider != null) {
+                // we're overruling the configured one for this request
+                return provider;
+            }
+        } catch (final RuntimeException e) {
+            // bad type, ignore and return default
         }
-      } catch (final RuntimeException e) {
-        // bad type, ignore and return default
-      }
 
-      return authProvider;
+        return authProvider;
     }
 }
