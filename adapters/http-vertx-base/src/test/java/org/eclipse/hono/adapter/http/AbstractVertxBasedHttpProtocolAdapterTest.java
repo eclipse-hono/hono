@@ -89,6 +89,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
     private CommandConsumer               commandConsumer;
     private Vertx                         vertx;
     private Context                       context;
+    private HttpAdapterMetrics            metrics;
 
     /**
      * Sets up common fixture.
@@ -108,6 +109,8 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
 
         config = new HttpProtocolAdapterProperties();
         config.setInsecurePortEnabled(true);
+
+        metrics = mock(HttpAdapterMetrics.class);
 
         regClient = mock(RegistrationClient.class);
         final JsonObject result = new JsonObject().put(RegistrationConstants.FIELD_ASSERTION, "token");
@@ -248,12 +251,15 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         assertContextFailedWithClientError(ctx, HttpURLConnection.HTTP_FORBIDDEN);
         // and the message has not been forwarded downstream
         verify(sender, never()).send(any(Message.class));
+        // and has not been reported as processed
+        verify(metrics, never()).incrementProcessedMessages(anyString(), anyString());
     }
 
     /**
      * Verifies that the adapter waits for an event being settled and accepted
      * by a downstream peer before responding with a 202 status to the device.
      */
+    @SuppressWarnings("unchecked")
     @Test
     public void testUploadEventWaitsForAcceptedOutcome() {
 
@@ -268,16 +274,25 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         final Buffer payload = Buffer.buffer("some payload");
         final HttpServerResponse response = mock(HttpServerResponse.class);
         final RoutingContext ctx = newRoutingContext(payload, response);
+        when(ctx.addBodyEndHandler(any(Handler.class))).thenAnswer(invocation -> {
+            final Handler<Void> handler = invocation.getArgument(0);
+            handler.handle(null);
+            return 0;
+        });
 
         adapter.uploadEventMessage(ctx, "tenant", "device", payload, "application/text");
 
         // THEN the device does not get a response
         verify(response, never()).end();
+        // and the message is not reported as being processed
+        verify(metrics, never()).incrementProcessedMessages(anyString(), anyString());
 
         // until the event has been accepted
         outcome.complete(mock(ProtonDelivery.class));
         verify(response).setStatusCode(202);
         verify(response).end();
+        verify(metrics).incrementProcessedMessages(anyString(), eq("tenant"));
+        verify(metrics).incrementProcessedPayload(anyString(), eq("tenant"), eq((long) payload.length()));
     }
 
     /**
@@ -303,12 +318,15 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
 
         // THEN the device gets a 400
         assertContextFailedWithClientError(ctx, HttpURLConnection.HTTP_BAD_REQUEST);
+        // and has not been reported as processed
+        verify(metrics, never()).incrementProcessedMessages(anyString(), anyString());
     }
 
     /**
      * Verifies that the adapter does not wait for a telemetry message being settled and accepted
      * by a downstream peer before responding with a 202 status to the device.
      */
+    @SuppressWarnings("unchecked")
     @Test
     public void testUploadTelemetryDoesNotWaitForAcceptedOutcome() {
 
@@ -323,12 +341,20 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         final Buffer payload = Buffer.buffer("some payload");
         final HttpServerResponse response = mock(HttpServerResponse.class);
         final RoutingContext ctx = newRoutingContext(payload, response);
+        when(ctx.addBodyEndHandler(any(Handler.class))).thenAnswer(invocation -> {
+            final Handler<Void> handler = invocation.getArgument(0);
+            handler.handle(null);
+            return 0;
+        });
 
         adapter.uploadTelemetryMessage(ctx, "tenant", "device", payload, "application/text");
 
         // THEN the device receives a 202 response immediately
         verify(response).setStatusCode(202);
         verify(response).end();
+        // and the message has been reported as processed
+        verify(metrics).incrementProcessedMessages(anyString(), eq("tenant"));
+        verify(metrics).incrementProcessedPayload(anyString(), eq("tenant"), eq((long) payload.length()));
     }
 
     /**
@@ -383,11 +409,13 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
             final HttpServerRequest request,
             final HttpServerResponse response) {
 
+        when(response.setStatusCode(anyInt())).thenReturn(response);
+        when(response.closed()).thenReturn(false);
+
         final RoutingContext ctx = mock(RoutingContext.class, Mockito.RETURNS_SMART_NULLS);
         when(ctx.getBody()).thenReturn(payload);
         when(ctx.response()).thenReturn(response);
         when(ctx.request()).thenReturn(request);
-        when(response.setStatusCode(anyInt())).thenReturn(response);
         when(ctx.get(TracingHandler.CURRENT_SPAN)).thenReturn(mock(Span.class));
         when(ctx.vertx()).thenReturn(vertx);
         when(ctx.get(Command.KEY_COMMAND)).thenReturn(null);
@@ -445,13 +473,13 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
 
         adapter.init(vertx, context);
         adapter.setConfig(config);
+        adapter.setMetrics(metrics);
         adapter.setInsecureHttpServer(server);
         adapter.setTenantServiceClient(tenantServiceClient);
         adapter.setHonoMessagingClient(messagingClient);
         adapter.setRegistrationServiceClient(registrationServiceClient);
         adapter.setCredentialsServiceClient(credentialsServiceClient);
         adapter.setCommandConnection(commandConnection);
-        adapter.setMetrics(mock(HttpAdapterMetrics.class));
 
         return adapter;
     }

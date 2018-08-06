@@ -411,6 +411,8 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
                     // because the device's registration status could not be asserted
                     ctx.assertEquals(HttpURLConnection.HTTP_NOT_FOUND,
                             ((ClientErrorException) t).getErrorCode());
+                    // and the message has not been reported as processed
+                    verify(metrics, never()).incrementProcessedMessages(anyString(), anyString());
                 }));
     }
 
@@ -447,6 +449,8 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
                     // because the tenant is not enabled
                     ctx.assertEquals(HttpURLConnection.HTTP_FORBIDDEN,
                             ((ClientErrorException) t).getErrorCode());
+                    // and the message has not been reported as processed
+                    verify(metrics, never()).incrementProcessedMessages(anyString(), anyString());
                 }));
     }
 
@@ -508,10 +512,13 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
 
         // THEN the device does not receive a PUBACK
         verify(endpoint, never()).publishAcknowledge(anyInt());
+        // and the message has not been reported as processed
+        verify(metrics, never()).incrementProcessedMessages(anyString(), anyString());
 
         // until the message has been settled and accepted
         outcome.complete(mock(ProtonDelivery.class));
         verify(endpoint).publishAcknowledge(5555555);
+        verify(metrics).incrementProcessedMessages(anyString(), anyString());
     }
 
     /**
@@ -545,6 +552,9 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
 
         // THEN the device has not received a PUBACK
         verify(endpoint, never()).publishAcknowledge(anyInt());
+        // and the message has not been reported as processed
+        verify(metrics, never()).incrementProcessedMessages(anyString(), anyString());
+
     }
 
     /**
