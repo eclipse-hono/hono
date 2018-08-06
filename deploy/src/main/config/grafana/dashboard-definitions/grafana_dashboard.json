@@ -6,7 +6,7 @@
   "gnetId": null,
   "graphTooltip": 0,
   "id": 3,
-  "iteration": 1533297853372,
+  "iteration": 1533541889600,
   "links": [
     {
       "icon": "external link",
@@ -776,7 +776,7 @@
       "renderer": "flot",
       "seriesOverrides": [],
       "spaceLength": 10,
-      "stack": false,
+      "stack": true,
       "steppedLine": false,
       "targets": [
         {
@@ -3301,7 +3301,7 @@
       "renderer": "flot",
       "seriesOverrides": [],
       "spaceLength": 10,
-      "stack": false,
+      "stack": true,
       "steppedLine": false,
       "targets": [
         {
@@ -3418,7 +3418,7 @@
       "renderer": "flot",
       "seriesOverrides": [],
       "spaceLength": 10,
-      "stack": false,
+      "stack": true,
       "steppedLine": false,
       "targets": [
         {
@@ -4897,5 +4897,5 @@
   "timezone": "browser",
   "title": "Hono",
   "uid": "a7yIj8Vmz",
-  "version": 3
+  "version": 4
 }
