@@ -17,6 +17,8 @@ import java.net.HttpURLConnection;
 
 import org.eclipse.hono.tests.CrudHttpClient;
 import org.eclipse.hono.tests.IntegrationTestSupport;
+import org.eclipse.hono.util.CommandConstants;
+import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.TelemetryConstants;
 import org.junit.BeforeClass;
@@ -85,6 +87,8 @@ public class CorsIT {
                 status -> status == HttpURLConnection.HTTP_OK)
         .setHandler(ctx.asyncAssertSuccess(headers -> {
             assertAccessControlHeaders(ctx, headers, HttpMethod.POST);
+            ctx.assertTrue(headers.get(HttpHeaders.ACCESS_CONTROL_ALLOW_HEADERS).contains(Constants.HEADER_QOS_LEVEL));
+            ctx.assertTrue(headers.get(HttpHeaders.ACCESS_CONTROL_ALLOW_HEADERS).contains(Constants.HEADER_TIME_TIL_DISCONNECT));
         }));
     }
 
@@ -105,6 +109,8 @@ public class CorsIT {
                 status -> status == HttpURLConnection.HTTP_OK)
         .setHandler(ctx.asyncAssertSuccess(headers -> {
             assertAccessControlHeaders(ctx, headers, HttpMethod.PUT);
+            ctx.assertTrue(headers.get(HttpHeaders.ACCESS_CONTROL_ALLOW_HEADERS).contains(Constants.HEADER_QOS_LEVEL));
+            ctx.assertTrue(headers.get(HttpHeaders.ACCESS_CONTROL_ALLOW_HEADERS).contains(Constants.HEADER_TIME_TIL_DISCONNECT));
         }));
     }
 
@@ -125,6 +131,7 @@ public class CorsIT {
                 status -> status == HttpURLConnection.HTTP_OK)
         .setHandler(ctx.asyncAssertSuccess(headers -> {
             assertAccessControlHeaders(ctx, headers, HttpMethod.POST);
+            ctx.assertTrue(headers.get(HttpHeaders.ACCESS_CONTROL_ALLOW_HEADERS).contains(Constants.HEADER_TIME_TIL_DISCONNECT));
         }));
     }
 
@@ -145,6 +152,49 @@ public class CorsIT {
                 status -> status == HttpURLConnection.HTTP_OK)
         .setHandler(ctx.asyncAssertSuccess(headers -> {
             assertAccessControlHeaders(ctx, headers, HttpMethod.PUT);
+            ctx.assertTrue(headers.get(HttpHeaders.ACCESS_CONTROL_ALLOW_HEADERS).contains(Constants.HEADER_TIME_TIL_DISCONNECT));
+        }));
+    }
+
+    /**
+     * Verifies that the HTTP adapter returns matching CORS headers in response to a
+     * CORS preflight request for posting a command response.
+     * 
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testCorsPreflightRequestForPostingCommandResponse(final TestContext ctx) {
+
+        httpClient.options(
+                String.format("/%s/res/%s", CommandConstants.COMMAND_ENDPOINT, "cmd-request-id"),
+                MultiMap.caseInsensitiveMultiMap()
+                    .add(HttpHeaders.ORIGIN, CORS_ORIGIN)
+                    .add(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, HttpMethod.POST.name()),
+                status -> status == HttpURLConnection.HTTP_OK)
+        .setHandler(ctx.asyncAssertSuccess(headers -> {
+            assertAccessControlHeaders(ctx, headers, HttpMethod.POST);
+            ctx.assertTrue(headers.get(HttpHeaders.ACCESS_CONTROL_ALLOW_HEADERS).contains(Constants.HEADER_COMMAND_RESPONSE_STATUS));
+        }));
+    }
+
+    /**
+     * Verifies that the HTTP adapter returns matching CORS headers in response to a
+     * CORS preflight request for putting a command response.
+     * 
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testCorsPreflightRequestForPuttingCommandResonse(final TestContext ctx) {
+
+        httpClient.options(
+                String.format("/%s/res/%s/%s/%s", CommandConstants.COMMAND_ENDPOINT, "my-tenant", "my-device", "cmd-request-id"),
+                MultiMap.caseInsensitiveMultiMap()
+                    .add(HttpHeaders.ORIGIN, CORS_ORIGIN)
+                    .add(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, HttpMethod.PUT.name()),
+                status -> status == HttpURLConnection.HTTP_OK)
+        .setHandler(ctx.asyncAssertSuccess(headers -> {
+            assertAccessControlHeaders(ctx, headers, HttpMethod.PUT);
+            ctx.assertTrue(headers.get(HttpHeaders.ACCESS_CONTROL_ALLOW_HEADERS).contains(Constants.HEADER_COMMAND_RESPONSE_STATUS));
         }));
     }
 
