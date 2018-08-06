@@ -1,0 +1,25 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: hono-adapter-amqp-vertx
+    version: "${project.version}"
+    group: ${project.groupId}
+  name: hono-adapter-amqp-vertx
+spec:
+  ports:
+  - name: amqp
+    nodePort: 30040
+    port: 4040
+    protocol: TCP
+    targetPort: 4040
+  - name: amqps
+    nodePort: 30041
+    port: 4041
+    protocol: TCP
+    targetPort: 4041
+  selector:
+    app: hono-adapter-amqp-vertx
+    group: ${project.groupId}
+  type: NodePort

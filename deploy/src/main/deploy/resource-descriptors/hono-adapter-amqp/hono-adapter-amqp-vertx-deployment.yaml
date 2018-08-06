@@ -1,0 +1,71 @@
+---
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  labels:
+    app: hono-adapter-amqp-vertx
+    version: "${project.version}"
+    group: ${project.groupId}
+  name: hono-adapter-amqp-vertx
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: hono-adapter-amqp-vertx
+      group: ${project.groupId}
+  template:
+    metadata:
+      labels:
+        app: hono-adapter-amqp-vertx
+        version: "${project.version}"
+        group: ${project.groupId}
+    spec:
+      containers:
+      - image: eclipse/hono-adapter-amqp-vertx:${project.version}
+        imagePullPolicy: IfNotPresent
+        name: eclipse-hono-adapter-amqp-vertx
+        ports:
+        - containerPort: 8088
+          protocol: TCP
+        - containerPort: 4041
+          protocol: TCP
+        - containerPort: 4040
+          protocol: TCP
+        securityContext:
+          privileged: false
+        env:
+        - name: SPRING_CONFIG_LOCATION
+          value: file:///etc/hono/
+        - name: SPRING_PROFILES_ACTIVE
+          value: dev
+        - name: LOGGING_CONFIG
+          value: classpath:logback-spring.xml
+        - name: _JAVA_OPTIONS
+          value: -Xmx180m
+        - name: KUBERNETES_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        volumeMounts:
+        - mountPath: /etc/hono
+          name: conf
+          readOnly: true
+        resources:
+          limits:
+            memory: "256Mi"
+        livenessProbe:
+          httpGet:
+            path: /liveness
+            port: 8088
+            scheme: HTTP
+          initialDelaySeconds: 180
+        readinessProbe:
+          httpGet:
+            path: /readiness
+            port: 8088
+            scheme: HTTP
+          initialDelaySeconds: 10
+      volumes:
+      - name: conf
+        secret:
+          secretName: hono-adapter-amqp-vertx-conf

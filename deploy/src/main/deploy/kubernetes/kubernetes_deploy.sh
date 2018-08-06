@@ -134,6 +134,18 @@ kubectl create -f $RESOURCES/hono-adapter-mqtt --namespace $NS
 echo ... done
 
 echo
+echo "Deploying AMQP adapter ..."
+kubectl create secret generic hono-adapter-amqp-vertx-conf \
+  --from-file=$CERTS/amqp-adapter-key.pem \
+  --from-file=$CERTS/amqp-adapter-cert.pem \
+  --from-file=$CERTS/trusted-certs.pem \
+  --from-file=$SCRIPTPATH/../amqp-adapter.credentials \
+  --from-file=application.yml=$SCRIPTPATH/hono-adapter-amqp-vertx-config.yml \
+  --namespace $NS
+kubectl create -f $RESOURCES/hono-adapter-amqp --namespace $NS
+echo ... done
+
+echo
 echo "Deploying Kura adapter ..."
 kubectl create secret generic hono-adapter-kura-conf \
   --from-file=$CERTS/kura-adapter-key.pem \
