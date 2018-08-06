@@ -198,38 +198,39 @@ public abstract class HonoAuthHandler implements AuthHandler {
      */
     protected void processException(final RoutingContext ctx, final Throwable exception) {
 
-        if (exception != null) {
+        if (ctx.response().ended()) {
+            return;
+        }
 
-            if (exception instanceof HttpStatusException || exception instanceof ServiceInvocationException) {
-                final int statusCode;
-                final String payload;
-                if (exception instanceof HttpStatusException) {
-                    statusCode = ((HttpStatusException) exception).getStatusCode();
-                    payload = ((HttpStatusException) exception).getPayload();
-                } else {
-                    statusCode = ((ServiceInvocationException) exception).getErrorCode();
-                    payload = null;
-                }
+        if (exception instanceof HttpStatusException || exception instanceof ServiceInvocationException) {
+            final int statusCode;
+            final String payload;
+            if (exception instanceof HttpStatusException) {
+                statusCode = ((HttpStatusException) exception).getStatusCode();
+                payload = ((HttpStatusException) exception).getPayload();
+            } else {
+                statusCode = ((ServiceInvocationException) exception).getErrorCode();
+                payload = null;
+            }
 
-                switch (statusCode) {
-                case 302:
+            switch (statusCode) {
+            case 302:
+                ctx.response()
+                        .putHeader(HttpHeaders.LOCATION, payload)
+                        .setStatusCode(302)
+                        .end("Redirecting to " + payload + ".");
+                return;
+            case 401:
+                final String header = authenticateHeader(ctx);
+                if (header != null) {
                     ctx.response()
-                            .putHeader(HttpHeaders.LOCATION, payload)
-                            .setStatusCode(302)
-                            .end("Redirecting to " + payload + ".");
-                    return;
-                case 401:
-                    final String header = authenticateHeader(ctx);
-                    if (header != null) {
-                        ctx.response()
-                                .putHeader("WWW-Authenticate", header);
-                    }
-                    ctx.fail(exception);
-                    return;
-                default:
-                    ctx.fail(exception);
-                    return;
+                            .putHeader("WWW-Authenticate", header);
                 }
+                ctx.fail(exception);
+                return;
+            default:
+                ctx.fail(exception);
+                return;
             }
         }
 
