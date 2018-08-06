@@ -84,6 +84,11 @@ public class AuthenticationEndpoint extends AbstractAmqpEndpoint<AuthenticationS
     }
 
     @Override
+    public void onConnectionClosed(final ProtonConnection connection) {
+        // we have nothing to clean up
+    }
+
+    @Override
     protected boolean passesFormalVerification(final ResourceIdentifier targetAddress, final Message message) {
         return false;
     }
