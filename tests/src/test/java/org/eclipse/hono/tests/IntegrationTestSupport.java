@@ -23,12 +23,18 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.eclipse.hono.client.HonoClient;
+import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.impl.HonoClientImpl;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.TimeUntilDisconnectNotification;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import io.vertx.core.CompositeFuture;
+import io.vertx.core.Future;
 import io.vertx.core.Vertx;
+import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
@@ -121,6 +127,8 @@ public final class IntegrationTestSupport {
      * This can be used for downstream <em>or</em> upstream messages.
      */
     public HonoClient honoClient;
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(IntegrationTestSupport.class);
 
     private final Set<String> tenantsToDelete = new HashSet<>();
     private final Map<String, Set<String>> devicesToDelete = new HashMap<>();
@@ -233,6 +241,37 @@ public final class IntegrationTestSupport {
         final Set<String> devices = devicesToDelete.computeIfAbsent(tenantId, t -> new HashSet<>());
         devices.add(deviceId);
         return deviceId;
+    }
+
+    /**
+     * Sends a command to a device.
+     * 
+     * @param notification The empty notification indicating the device's readiness to receive a command.
+     * @param command The name of the command to send.
+     * @param payload The command's input data to send to the device.
+     * @return A future that is either succeeded with the response payload from the device or
+     *         failed with a {@link ServiceInvocationException}.
+     */
+    public Future<Buffer> sendCommand(final TimeUntilDisconnectNotification notification, final String command, final Buffer payload) {
+
+        return honoClient.getOrCreateCommandClient(notification.getTenantId(), notification.getDeviceId()).compose(commandClient -> {
+
+            // let the commandClient timeout when the notification expires
+            commandClient.setRequestTimeout(notification.getMillisecondsUntilExpiry());
+
+            // send the command upstream to the device
+            LOGGER.trace("sending command [name: {}, payload: {}]", command, payload);
+            return commandClient.sendCommand(command, payload).map(responsePayload -> {
+                LOGGER.debug("successfully sent command [name: {}, payload: {}] and received response [payload: {}]",
+                        command, payload, responsePayload);
+                commandClient.close(v -> {});
+                return responsePayload;
+            }).recover(t -> {
+                LOGGER.debug("could not send command or did not receive a response: {}", t.getMessage());
+                commandClient.close(v -> {});
+                return Future.failedFuture(t);
+            });
+        });
     }
 
     /**

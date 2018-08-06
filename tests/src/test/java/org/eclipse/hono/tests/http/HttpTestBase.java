@@ -20,6 +20,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.util.Base64;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -36,6 +37,7 @@ import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantObject;
+import org.eclipse.hono.util.TimeUntilDisconnectNotification;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -64,6 +66,10 @@ import io.vertx.ext.unit.TestContext;
  *
  */
 public abstract class HttpTestBase {
+
+    private static final String COMMAND_TO_SEND = "setBrightness";
+    private static final String COMMAND_JSON_KEY = "brightness";
+    private static final String COMMAND_RESPONSE_URI_TEMPLATE = "/control/res/%s";
 
     private static final String ORIGIN_WILDCARD = "*";
     private static final Vertx VERTX = Vertx.vertx();
@@ -230,7 +236,6 @@ public abstract class HttpTestBase {
         setup.await();
 
         testUploadMessages(ctx, tenantId,
-                msg -> assertAllMessageProperties(ctx, msg),
                 count -> {
                     return httpClient.create(
                             getEndpointUri(),
@@ -275,11 +280,6 @@ public abstract class HttpTestBase {
         });
     }
 
-    protected void assertAllMessageProperties(final TestContext ctx, final Message msg) {
-        assertMessageProperties(ctx, msg);
-        assertAdditionalMessageProperties(ctx, msg);
-    }
-
     /**
      * Uploads messages to the HTTP endpoint.
      *
@@ -293,7 +293,7 @@ public abstract class HttpTestBase {
             final TestContext ctx,
             final String tenantId,
             final Function<Integer, Future<MultiMap>> requestSender) throws InterruptedException {
-        this.testUploadMessages(ctx, tenantId, msg -> assertAllMessageProperties(ctx, msg), requestSender);
+        this.testUploadMessages(ctx, tenantId, null, requestSender);
     }
 
     /**
@@ -337,7 +337,10 @@ public abstract class HttpTestBase {
 
         createConsumer(tenantId, msg -> {
             LOGGER.trace("received {}", msg);
-            messageConsumer.accept(msg);
+            assertMessageProperties(ctx, msg);
+            if (messageConsumer != null) {
+                messageConsumer.accept(msg);
+            }
             received.countDown();
             if (received.getCount() % 20 == 0) {
                 LOGGER.info("messages received: {}", numberOfMessages - received.getCount());
@@ -356,6 +359,7 @@ public abstract class HttpTestBase {
                     LOGGER.debug("sent message {}", messageCount.get());
                 } else {
                     LOGGER.info("failed to send message {}: {}", messageCount.get(), attempt.cause().getMessage());
+                    ctx.fail(attempt.cause());
                 }
                 sending.complete();
             });
@@ -414,15 +418,147 @@ public abstract class HttpTestBase {
         }));
     }
 
+    /**
+     * Verifies that the HTTP adapter returns empty responses when uploading
+     * telemetry data or events with a TTD but no command is pending for the device.
+     * 
+     * @param ctx The test context.
+     * @throws InterruptedException if the test fails.
+     */
+    @Test
+    public void testUploadMessagesWithTtdThatDoNotReplyWithCommand(final TestContext ctx) throws InterruptedException {
+
+        final Async setup = ctx.async();
+        final String tenantId = helper.getRandomTenantId();
+        final String deviceId = helper.getRandomDeviceId(tenantId);
+        final String password = "secret";
+        final TenantObject tenant = TenantObject.from(tenantId, true);
+        final MultiMap requestHeaders = MultiMap.caseInsensitiveMultiMap()
+                .add(HttpHeaders.CONTENT_TYPE, "text/plain")
+                .add(HttpHeaders.AUTHORIZATION, getBasicAuth(tenantId, deviceId, password))
+                .add(HttpHeaders.ORIGIN, ORIGIN_URI)
+                .add(Constants.HEADER_TIME_TIL_DISCONNECT, "1");
+
+        helper.registry.addDeviceForTenant(tenant, deviceId, password).setHandler(ctx.asyncAssertSuccess(ok -> setup.complete()));
+        setup.await();
+
+        testUploadMessages(ctx, tenantId,
+                msg -> {
+                    final Integer ttd = MessageHelper.getTimeUntilDisconnect(msg);
+                    LOGGER.trace("received telemetry message [ttd: {}]", ttd);
+                    ctx.assertNotNull(ttd);
+                    final Optional<TimeUntilDisconnectNotification> notificationOpt = TimeUntilDisconnectNotification.fromMessage(msg);
+                    ctx.assertTrue(notificationOpt.isPresent());
+                    final TimeUntilDisconnectNotification notification = notificationOpt.get();
+                    ctx.assertEquals(tenantId, notification.getTenantId());
+                    ctx.assertEquals(deviceId, notification.getDeviceId());
+                    // do NOT send a command, but let the HTTP adapter's timer expire
+                },
+                count -> {
+                    return httpClient.create(
+                            getEndpointUri(),
+                            Buffer.buffer("hello " + count),
+                            requestHeaders,
+                            response -> response.statusCode() == HttpURLConnection.HTTP_ACCEPTED).map(responseHeaders -> {
+
+                                // assert that the response does not contain a command nor a request ID nor a payload
+                                ctx.assertNull(responseHeaders.get(Constants.HEADER_COMMAND));
+                                ctx.assertNull(responseHeaders.get(Constants.HEADER_COMMAND_REQUEST_ID));
+                                ctx.assertEquals(responseHeaders.get(HttpHeaders.CONTENT_LENGTH), "0");
+                                return responseHeaders;
+                            });
+                },
+                3);
+    }
+
+    /**
+     * Verifies that the HTTP adapter delivers a command to a device and accepts the corresponding
+     * response from the device.
+     * 
+     * @param ctx The test context.
+     * @throws InterruptedException if the test fails.
+     */
+    @Test
+    public void testUploadMessagesWithTtdThatReplyWithCommand(final TestContext ctx) throws InterruptedException {
+
+        final Async setup = ctx.async();
+        final String tenantId = helper.getRandomTenantId();
+        final String deviceId = helper.getRandomDeviceId(tenantId);
+        final String password = "secret";
+        final TenantObject tenant = TenantObject.from(tenantId, true);
+
+        final MultiMap requestHeaders = MultiMap.caseInsensitiveMultiMap()
+                .add(HttpHeaders.CONTENT_TYPE, "text/plain")
+                .add(HttpHeaders.AUTHORIZATION, getBasicAuth(tenantId, deviceId, password))
+                .add(HttpHeaders.ORIGIN, ORIGIN_URI)
+                .add(Constants.HEADER_TIME_TIL_DISCONNECT, "2");
+
+        final MultiMap cmdResponseRequestHeaders = MultiMap.caseInsensitiveMultiMap()
+                .add(HttpHeaders.CONTENT_TYPE, "text/plain")
+                .add(HttpHeaders.AUTHORIZATION, getBasicAuth(tenantId, deviceId, password))
+                .add(HttpHeaders.ORIGIN, ORIGIN_URI)
+                .add(Constants.HEADER_COMMAND_RESPONSE_STATUS, "200");
+
+        helper.registry.addDeviceForTenant(tenant, deviceId, password).setHandler(ctx.asyncAssertSuccess(ok -> setup.complete()));
+        setup.await();
+
+        testUploadMessages(ctx, tenantId,
+                msg -> {
+                    final Integer ttd = MessageHelper.getTimeUntilDisconnect(msg);
+                    LOGGER.trace("piggy backed telemetry message received: {}, ttd = {}", msg, ttd);
+                    final Optional<TimeUntilDisconnectNotification> notificationOpt = TimeUntilDisconnectNotification.fromMessage(msg);
+                    ctx.assertTrue(notificationOpt.isPresent());
+                    final TimeUntilDisconnectNotification notification = notificationOpt.get();
+                    ctx.assertEquals(tenantId, notification.getTenantId());
+                    ctx.assertEquals(deviceId, notification.getDeviceId());
+                    // now ready to send a command
+                    final JsonObject inputData = new JsonObject().put(COMMAND_JSON_KEY, (int) (Math.random() * 100));
+                    helper.sendCommand(notification, COMMAND_TO_SEND, inputData.toBuffer());
+                },
+                count -> {
+                    return httpClient.create(
+                            getEndpointUri(),
+                            Buffer.buffer("hello " + count),
+                            requestHeaders,
+                            response -> response.statusCode() == HttpURLConnection.HTTP_OK).map(responseHeaders -> {
+
+                                // assert that the response contains a command
+                                ctx.assertEquals(COMMAND_TO_SEND, responseHeaders.get(Constants.HEADER_COMMAND));
+                                final String requestId = responseHeaders.get(Constants.HEADER_COMMAND_REQUEST_ID);
+                                ctx.assertNotNull(requestId);
+                                ctx.assertNotEquals(responseHeaders.get(HttpHeaders.CONTENT_LENGTH), "0");
+                                return requestId;
+
+                            }).compose(receivedCommandRequestId -> {
+
+                                // send a response to the command now
+                                final String responseUri = getCommandResponseUri(receivedCommandRequestId);
+
+                                LOGGER.debug("posting response to command [uri: {}]", responseUri);
+
+                                return httpClient.create(
+                                        responseUri,
+                                        Buffer.buffer("ok"),
+                                        cmdResponseRequestHeaders,
+                                        response -> response.statusCode() == HttpURLConnection.HTTP_ACCEPTED);
+                            });
+                });
+    }
+
+    private static String getCommandResponseUri(final String commandRequestId) {
+        return String.format(COMMAND_RESPONSE_URI_TEMPLATE, commandRequestId);
+    }
+
     private void assertMessageProperties(final TestContext ctx, final Message msg) {
         ctx.assertNotNull(MessageHelper.getDeviceId(msg));
         ctx.assertNotNull(MessageHelper.getTenantIdAnnotation(msg));
         ctx.assertNotNull(MessageHelper.getDeviceIdAnnotation(msg));
         ctx.assertNull(MessageHelper.getRegistrationAssertion(msg));
+        assertAdditionalMessageProperties(ctx, msg);
     }
 
     /**
-     * Perform additional checks on a received message.
+     * Performs additional checks on a received message.
      * <p>
      * This default implementation does nothing. Subclasses should override this method to implement
      * reasonable checks.
