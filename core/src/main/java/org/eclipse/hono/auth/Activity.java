@@ -15,8 +15,7 @@ package org.eclipse.hono.auth;
 /**
  * Defines permissions that are required to access Hono service resources.
  */
-public enum Activity
-{
+public enum Activity {
     /**
      * Permission required for receiving message from a node.
      */

@@ -530,7 +530,7 @@ public class EventBusMessage {
 
         try {
             return (T) json.getValue(key);
-        } catch (ClassCastException e) {
+        } catch (final ClassCastException e) {
             return null;
         }
     }
@@ -592,8 +592,7 @@ public class EventBusMessage {
      * @return The correlation identifier.
      * @throws NullPointerException if the JSON is {@code null}.
      */
-    private static Object decodeIdFromJson(final JsonObject json)
-    {
+    private static Object decodeIdFromJson(final JsonObject json) {
         Objects.requireNonNull(json);
 
         final String type = json.getString(FIELD_CORRELATION_ID_TYPE);

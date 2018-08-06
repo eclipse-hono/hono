@@ -59,8 +59,7 @@ public abstract class BaseAuthenticationService<T> extends ConfigurationSupporti
      * 
      * @param startFuture Completes if startup succeeded.
      */
-    protected void doStart(final Future<Void> startFuture)
-    {
+    protected void doStart(final Future<Void> startFuture) {
         // should be overridden by subclasses
         startFuture.complete();
     }

@@ -27,8 +27,7 @@ import io.vertx.core.json.JsonObject;
 /**
  * Constants related to authentication.
  */
-public final class AuthenticationConstants
-{
+public final class AuthenticationConstants {
     /**
      * The name of the AMQP message application property holding the type of token contained in the body.
      */

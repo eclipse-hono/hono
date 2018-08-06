@@ -58,6 +58,7 @@
       <property name="format" value="^\s+$" />
       <property name="message" value="Empty lines must not contain whitespaces" />
     </module>
+    <module name="LeftCurly" />
     <module name="RightCurly" />
     <module name="WhitespaceAfter"/>
 
