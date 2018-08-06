@@ -40,6 +40,9 @@ import org.mockito.junit.MockitoJUnitRunner;
 
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
+import io.vertx.core.eventbus.EventBus;
+import io.vertx.core.eventbus.MessageConsumer;
+import io.vertx.core.json.JsonObject;
 import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonDelivery;
 import io.vertx.proton.ProtonHelper;
@@ -55,12 +58,21 @@ import io.vertx.proton.ProtonSender;
 public class RequestResponseEndpointTest {
 
     private static final ResourceIdentifier resource = ResourceIdentifier.from("endpoint", Constants.DEFAULT_TENANT, null);
+    private static final ResourceIdentifier REPLY_RESOURCE = ResourceIdentifier.from("endpoint",
+            Constants.DEFAULT_TENANT, "reply-to");
 
-    @Mock private ProtonConnection connection;
-    @Mock private Vertx            vertx;
+    @Mock
+    private ProtonConnection connection;
+    @Mock
+    private Vertx vertx;
+    @Mock
+    private EventBus eventBus;
+    @Mock
+    private MessageConsumer<JsonObject> messageConsumer;
 
     private ProtonReceiver receiver;
-    private ProtonSender   sender;
+    private ProtonSender sender;
+
 
     /**
      * Initializes common fixture.
@@ -74,6 +86,10 @@ public class RequestResponseEndpointTest {
         when(receiver.setAutoAccept(any(Boolean.class))).thenReturn(receiver);
         when(receiver.setPrefetch(any(Integer.class))).thenReturn(receiver);
         when(receiver.setQoS(any(ProtonQoS.class))).thenReturn(receiver);
+
+        when(vertx.eventBus()).thenReturn(eventBus);
+
+        when(eventBus.<JsonObject> consumer(any(), any())).thenReturn(messageConsumer);
 
         sender = mock(ProtonSender.class);
     }
@@ -152,6 +168,7 @@ public class RequestResponseEndpointTest {
 
         final Message msg = ProtonHelper.message();
         msg.setSubject("unauthorized");
+        msg.setReplyTo(REPLY_RESOURCE.toString());
         final ProtonConnection con = mock(ProtonConnection.class);
         final ProtonDelivery delivery = mock(ProtonDelivery.class);
         final AuthorizationService authService = mock(AuthorizationService.class);
@@ -159,6 +176,7 @@ public class RequestResponseEndpointTest {
         final Future<Void> processingTracker = Future.future();
         final RequestResponseEndpoint<ServiceConfigProperties> endpoint = getEndpoint(true, processingTracker);
         endpoint.setAuthorizationService(authService);
+        endpoint.onLinkAttach(con, sender, REPLY_RESOURCE);
 
         // WHEN a request for an operation is received that the client is not authorized to invoke
         endpoint.handleMessage(con, receiver, resource, delivery, msg);
@@ -181,6 +199,7 @@ public class RequestResponseEndpointTest {
 
         final Message msg = ProtonHelper.message();
         msg.setSubject("get");
+        msg.setReplyTo(REPLY_RESOURCE.toString());
         final ProtonConnection con = mock(ProtonConnection.class);
         final ProtonDelivery delivery = mock(ProtonDelivery.class);
         final AuthorizationService authService = mock(AuthorizationService.class);
@@ -189,6 +208,8 @@ public class RequestResponseEndpointTest {
         final Future<Void> processingTracker = Future.future();
         final RequestResponseEndpoint<ServiceConfigProperties> endpoint = getEndpoint(true, processingTracker);
         endpoint.setAuthorizationService(authService);
+
+        endpoint.onLinkAttach(con, sender, REPLY_RESOURCE);
 
         // WHEN a request for an operation is received that the client is authorized to invoke
         endpoint.handleMessage(con, receiver, resource, delivery, msg);
@@ -200,6 +221,68 @@ public class RequestResponseEndpointTest {
         verify(receiver, never()).close();
         verify(authService).isAuthorized(Constants.PRINCIPAL_ANONYMOUS, resource, "get");
         assertTrue(processingTracker.isComplete());
+    }
+
+    /**
+     * Verify that a second response link to the same address is being rejected.
+     */
+    @Test
+    public void testDuplicateSubscription() {
+
+        final ProtonConnection con1 = mock(ProtonConnection.class);
+        final ProtonConnection con2 = mock(ProtonConnection.class);
+
+        final ProtonSender sender1 = mock(ProtonSender.class);
+        final ProtonSender sender2 = mock(ProtonSender.class);
+
+        final Future<Void> processingTracker = Future.future();
+        final RequestResponseEndpoint<ServiceConfigProperties> endpoint = getEndpoint(true, processingTracker);
+
+        // WHEN a first sender attaches
+        endpoint.onLinkAttach(con1, sender1, REPLY_RESOURCE);
+
+        // THEN open has to be called
+        verify(sender1).open();
+
+        // WHEN a second sender attaches
+        endpoint.onLinkAttach(con2, sender2, REPLY_RESOURCE);
+
+        // THEN close has to be called
+        verify(sender2).close();
+    }
+
+    /**
+     * Verify that a second response link to the same address is being accepted if the first is released before.
+     */
+    @Test
+    public void testFreeSubscription() {
+
+        final ProtonConnection con1 = mock(ProtonConnection.class);
+        final ProtonConnection con2 = mock(ProtonConnection.class);
+
+        final ProtonSender sender1 = mock(ProtonSender.class);
+        final ProtonSender sender2 = mock(ProtonSender.class);
+
+        final Future<Void> processingTracker = Future.future();
+        final RequestResponseEndpoint<ServiceConfigProperties> endpoint = getEndpoint(true, processingTracker);
+
+        // WHEN a first sender attaches
+        endpoint.onLinkAttach(con1, sender1, REPLY_RESOURCE);
+
+        // THEN open has to be called
+        verify(sender1).open();
+
+        // WHEN the connection closed
+        endpoint.onConnectionClosed(con1);
+
+        // THEN the unregister method has to be called
+        verify(messageConsumer).unregister();
+
+        // WHEN a new link is attached
+        endpoint.onLinkAttach(con2, sender2, REPLY_RESOURCE);
+
+        // THEN open has to be called
+        verify(sender2).open();
     }
 
     private RequestResponseEndpoint<ServiceConfigProperties> getEndpoint(final boolean passesFormalVerification) {

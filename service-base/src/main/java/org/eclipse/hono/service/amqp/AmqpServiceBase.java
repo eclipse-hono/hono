@@ -672,13 +672,15 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
     }
 
     /**
-     * Is called whenever a proton connection was closed. The implementation is intentionally empty.
+     * Is called whenever a proton connection was closed.
      * <p>
-     * Subclasses should override this method to publish this as an event on the vertx bus if desired.
+     * Subclasses may override this method to publish this as an event on the vertx bus if desired. If they choose to
+     * override, they must however call this super method.
      *
      * @param con The connection that was closed.
      */
     protected void publishConnectionClosedEvent(final ProtonConnection con) {
+        endpoints.values().forEach(endpoint -> endpoint.onConnectionClosed(con));
     }
 
     /**

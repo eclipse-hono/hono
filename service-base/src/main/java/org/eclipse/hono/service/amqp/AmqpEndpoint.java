@@ -42,4 +42,15 @@ public interface AmqpEndpoint extends Endpoint {
      * @param sourceAddress The (remote) source address from the client's AMQP <em>ATTACH</em> message.
      */
     void onLinkAttach(ProtonConnection connection, ProtonSender sender, ResourceIdentifier sourceAddress);
+
+    /**
+     * Handles a closed connection.
+     * <p>
+     * This method is called whenever a connection got closed. Either actively but a call to disconnect, or by a
+     * broken/lost connection.
+     * </p>
+     * 
+     * @param connection The connection which got closed.
+     */
+    void onConnectionClosed(ProtonConnection connection);
 }

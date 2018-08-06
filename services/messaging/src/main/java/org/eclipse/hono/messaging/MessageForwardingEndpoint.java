@@ -268,4 +268,8 @@ public abstract class MessageForwardingEndpoint<T extends HonoMessagingConfigPro
             }
         });
     }
+
+    @Override
+    public void onConnectionClosed(final ProtonConnection connection) {
+    }
 }
