@@ -25,47 +25,7 @@ public class DropwizardBasedMqttAdapterMetrics extends DropwizardBasedMetrics im
     private static final String SERVICE_PREFIX = "hono.mqtt";
 
     @Override
-    protected String getPrefix() {
+    protected String getScope() {
         return SERVICE_PREFIX;
-    }
-
-    /**
-     * Increments the number of MQTT connections that have been established
-     * with an authenticated device by one.
-     * 
-     * @param tenantId The tenant that the device belongs to.
-     */
-    @Override
-    public final void incrementMqttConnections(final String tenantId) {
-        counterService.increment(getPrefix() + CONNECTIONS + tenantId);
-    }
-
-    /**
-     * Decrements the number of MQTT connections that have been established
-     * with an authenticated device by one.
-     * 
-     * @param tenantId The tenant that the device belongs to.
-     */
-    @Override
-    public final void decrementMqttConnections(final String tenantId) {
-        counterService.decrement(getPrefix() + CONNECTIONS + tenantId);
-    }
-
-    /**
-     * Increments the number of MQTT connections that have been established
-     * with an <em>unauthenticated</em> device by one.
-     */
-    @Override
-    public final void incrementUnauthenticatedMqttConnections() {
-        counterService.increment(getPrefix() + UNAUTHENTICATED_CONNECTIONS);
-    }
-
-    /**
-     * Decrements the number of MQTT connections that have been established
-     * with an <em>unauthenticated</em> device by one.
-     */
-    @Override
-    public final void decrementUnauthenticatedMqttConnections() {
-        counterService.decrement(getPrefix() + UNAUTHENTICATED_CONNECTIONS);
     }
 }

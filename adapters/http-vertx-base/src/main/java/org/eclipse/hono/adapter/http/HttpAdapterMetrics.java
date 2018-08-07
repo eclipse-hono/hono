@@ -20,26 +20,5 @@ import org.eclipse.hono.service.metric.Metrics;
  */
 public interface HttpAdapterMetrics extends Metrics {
 
-    /**
-     * Reports a command being delivered to a device.
-     * 
-     * @param tenantId The tenant that the device belongs to.
-     */
-    void incrementCommandDeliveredToDevice(String tenantId);
-
-    /**
-     * Reports a TTD having expired without a command being delivered
-     * to a device.
-     * 
-     * @param tenantId The tenant that the device belongs to.
-     */
-    void incrementNoCommandReceivedAndTTDExpired(String tenantId);
-
-    /**
-     * Reports a response to a command being delivered to an application.
-     * 
-     * @param tenantId The tenant to which the device belongs from which the response
-     *                 has been received.
-     */
-    void incrementCommandResponseDeliveredToApplication(String tenantId);
+    // empty for now
 }

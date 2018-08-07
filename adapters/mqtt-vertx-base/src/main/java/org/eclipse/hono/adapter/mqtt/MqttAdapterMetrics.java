@@ -20,31 +20,5 @@ import org.eclipse.hono.service.metric.Metrics;
  */
 public interface MqttAdapterMetrics extends Metrics {
 
-    /**
-     * Increments the number of MQTT connections that have been established
-     * with an authenticated device by one.
-     * 
-     * @param tenantId The tenant that the device belongs to.
-     */
-    void incrementMqttConnections(String tenantId);
-
-    /**
-     * Decrements the number of MQTT connections that have been established
-     * with an authenticated device by one.
-     * 
-     * @param tenantId The tenant that the device belongs to.
-     */
-    void decrementMqttConnections(String tenantId);
-
-    /**
-     * Increments the number of MQTT connections that have been established
-     * with an <em>unauthenticated</em> device by one.
-     */
-    void incrementUnauthenticatedMqttConnections();
-
-    /**
-     * Decrements the number of MQTT connections that have been established
-     * with an <em>unauthenticated</em> device by one.
-     */
-    void decrementUnauthenticatedMqttConnections();
+    // empty for now
 }

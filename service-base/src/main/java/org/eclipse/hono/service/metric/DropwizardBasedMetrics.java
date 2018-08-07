@@ -25,28 +25,33 @@ import java.util.Objects;
 abstract public class DropwizardBasedMetrics implements Metrics {
 
     /**
-     * Special prefixes used by spring boot actuator together with dropwizard metrics.
+     * Special prefixes used by Spring Boot Actuator together with Dropwizard metrics.
      *
      * @see <a href=
      *      "https://docs.spring.io/spring-boot/docs/current/reference/html/production-ready-metrics.html#production-ready-dropwizard-metrics">Spring
      *      Boot</a>
      */
-    protected static final String METER_PREFIX = "meter.";
-    protected static final String TIMER_PREFIX = "timer.";
-    protected static final String HISTOGRAM_PREFIX = "histogram.";
+    protected static final String METER_PREFIX = "meter";
+    protected static final String TIMER_PREFIX = "timer";
+    protected static final String HISTOGRAM_PREFIX = "histogram";
 
     /** metric parts for messages - usable for AMQP, MQTT, etc. */
-    protected static final String MESSAGES = ".messages.";
-    protected static final String PROCESSED = ".processed";
-    protected static final String DISCARDED = ".discarded";
-    protected static final String UNDELIVERABLE = ".undeliverable";
-    protected static final String CONNECTIONS = ".connections.";
-    protected static final String UNAUTHENTICATED_CONNECTIONS = ".unauthenticatedConnections.";
-    protected static final String COMMANDS = ".commands";
+    protected static final String MESSAGES = "messages";
+    protected static final String PROCESSED = "processed";
+    protected static final String DISCARDED = "discarded";
+    protected static final String UNDELIVERABLE = "undeliverable";
+    protected static final String CONNECTIONS = "connections";
+    protected static final String COMMANDS = "commands";
 
-    protected static final String PAYLOAD = ".payload.";
+    protected static final String PAYLOAD = "payload";
 
+    /**
+     * The service to use for reporting gauge based metrics.
+     */
     protected GaugeService gaugeService = NullGaugeService.getInstance();
+    /**
+     * The service to use for reporting counter based metrics.
+     */
     protected CounterService counterService = NullCounterService.getInstance();
 
     /**
@@ -56,15 +61,20 @@ abstract public class DropwizardBasedMetrics implements Metrics {
      */
     @Autowired(required = false)
     public final void setMetricConfig(final MetricConfig metricConfig) {
-        metricConfig.setPrefix(getPrefix());
+        metricConfig.setPrefix(getScope());
     }
 
     /**
-     * Deriving classes need to provide a prefix to scope the metrics of the service.
+     * Gets the scope in which the metrics are collected.
+     * <p>
+     * The value returned by this method is used in all names of metrics collected by this
+     * class.
+     * <p>
+     * Subclasses should return a component specific value.
      *
-     * @return The Prefix
+     * @return The scope.
      */
-    protected abstract String getPrefix();
+    protected abstract String getScope();
 
     /**
      * Sets the service to use for managing gauges.
@@ -97,7 +107,7 @@ abstract public class DropwizardBasedMetrics implements Metrics {
      * @param address The address with slashes to transform in an address with points
      * @return The address with points
      */
-    protected final String normalizeAddress(final String address) {
+    protected static final String normalizeAddress(final String address) {
         Objects.requireNonNull(address);
         return address.replace('/', '.');
     }
@@ -108,39 +118,41 @@ abstract public class DropwizardBasedMetrics implements Metrics {
      * @param parts The address parts
      * @return The full address, separated by points
      */
-    protected final String mergeAsMetric(final String... parts) {
+    protected static final String mergeAsMetric(final String... parts) {
         return String.join(".", parts);
     }
 
-    /**
-     * Increment the number of processes messages by one.
-     *
-     * @param resourceId The ID of the resource to track.
-     * @param tenantId The tenant this resource belongs to.
-     */
+
+    @Override
+    public final void incrementConnections(final String tenantId) {
+        counterService.increment(mergeAsMetric(getScope(), CONNECTIONS, "authenticated", tenantId));
+    }
+
+    @Override
+    public final void decrementConnections(final String tenantId) {
+        counterService.decrement(mergeAsMetric(getScope(), CONNECTIONS, "authenticated", tenantId));
+    }
+
+    @Override
+    public final void incrementAnonymousConnections() {
+        counterService.increment(mergeAsMetric(getScope(), CONNECTIONS, "anonymous"));
+    }
+
+    @Override
+    public final void decrementAnonymousConnections() {
+        counterService.decrement(mergeAsMetric(getScope(), CONNECTIONS, "anonymous"));
+    }
+
     @Override
     public final void incrementProcessedMessages(final String resourceId, final String tenantId) {
-        counterService.increment(METER_PREFIX + getPrefix() + MESSAGES + mergeAsMetric(resourceId, tenantId) + PROCESSED);
+        counterService.increment(mergeAsMetric(METER_PREFIX, getScope(), MESSAGES, resourceId, tenantId, PROCESSED));
     }
 
-    /**
-     * Increment the number of undeliverable messages by one.
-     *
-     * @param resourceId The ID of the resource to track.
-     * @param tenantId The tenant this resource belongs to.
-     */
     @Override
     public final void incrementUndeliverableMessages(final String resourceId, final String tenantId) {
-        counterService.increment(getPrefix() + MESSAGES + mergeAsMetric(resourceId, tenantId) + UNDELIVERABLE);
+        counterService.increment(mergeAsMetric(getScope(), MESSAGES, resourceId, tenantId, UNDELIVERABLE));
     }
 
-    /**
-     * Increment the counter for the number of processed bytes.
-     *
-     * @param resourceId The ID of the resource to track.
-     * @param tenantId The tenant this resource belongs to.
-     * @param payloadSize The size of the payload in bytes.
-     */
     @Override
     public final void incrementProcessedPayload(final String resourceId, final String tenantId, final long payloadSize) {
         if (payloadSize < 0) {
@@ -148,7 +160,21 @@ abstract public class DropwizardBasedMetrics implements Metrics {
             return;
         }
         counterService
-                .increment(METER_PREFIX + getPrefix() + PAYLOAD + mergeAsMetric(resourceId, tenantId) + PROCESSED);
+                .increment(mergeAsMetric(METER_PREFIX, getScope(), PAYLOAD, resourceId, tenantId, PROCESSED));
     }
 
+    @Override
+    public final void incrementCommandDeliveredToDevice(final String tenantId) {
+        counterService.increment(mergeAsMetric(METER_PREFIX, getScope(), COMMANDS, tenantId, "device", "delivered"));
+    }
+
+    @Override
+    public final void incrementNoCommandReceivedAndTTDExpired(final String tenantId) {
+        counterService.increment(mergeAsMetric(METER_PREFIX, getScope(), COMMANDS, tenantId, "ttd", "expired"));
+    }
+
+    @Override
+    public final void incrementCommandResponseDeliveredToApplication(final String tenantId) {
+        counterService.increment(mergeAsMetric(METER_PREFIX, getScope(), COMMANDS, tenantId, "response", "delivered"));
+    }
 }

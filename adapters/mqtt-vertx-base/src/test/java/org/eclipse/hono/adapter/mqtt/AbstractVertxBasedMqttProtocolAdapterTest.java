@@ -830,22 +830,22 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
 
         adapter.handleEndpointConnection(endpoint);
 
-        verify(metrics).incrementMqttConnections("DEFAULT_TENANT");
+        verify(metrics).incrementConnections("DEFAULT_TENANT");
 
         closeHandlerRef.get().handle(null);
 
-        verify(metrics).decrementMqttConnections("DEFAULT_TENANT");
+        verify(metrics).decrementConnections("DEFAULT_TENANT");
     }
 
     /**
-     * Verifies the connection metrics for unauthenticated connections.
+     * Verifies the connection metrics for anonymous connections.
      * <p>
      * This test should check if the metrics receive a call to increment and decrement when a connection is being
      * established and then closed.
      */
     @SuppressWarnings("unchecked")
     @Test
-    public void testUnauthenticatedConnectionMetrics() {
+    public void testAnonymousConnectionMetrics() {
 
         config.setAuthenticationRequired(false);
 
@@ -864,10 +864,10 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
 
         adapter.handleEndpointConnection(endpoint);
 
-        verify(metrics).incrementUnauthenticatedMqttConnections();
+        verify(metrics).incrementAnonymousConnections();
 
         closeHandlerRef.get().handle(null);
 
-        verify(metrics).decrementUnauthenticatedMqttConnections();
+        verify(metrics).decrementAnonymousConnections();
     }
 }

@@ -410,7 +410,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
         endpoint.unsubscribeHandler(unsubscribeMsg -> onUnsubscribe(endpoint, null, unsubscribeMsg));
 
         LOG.debug("unauthenticated device [clientId: {}] connected", endpoint.clientIdentifier());
-        metrics.incrementUnauthenticatedMqttConnections();
+        metrics.incrementAnonymousConnections();
         return accepted();
     }
 
@@ -486,7 +486,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
         endpoint.subscribeHandler(subscribeMsg -> onSubscribe(endpoint, authenticatedDevice, subscribeMsg));
         endpoint.unsubscribeHandler(unsubscribeMsg -> onUnsubscribe(endpoint, authenticatedDevice, unsubscribeMsg));
 
-        metrics.incrementMqttConnections(authenticatedDevice.getTenantId());
+        metrics.incrementConnections(authenticatedDevice.getTenantId());
     }
 
     /**
@@ -948,12 +948,12 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
         onClose(endpoint);
         sendDisconnectedEvent(endpoint.clientIdentifier(), authenticatedDevice);
         if (authenticatedDevice == null) {
-            LOG.debug("connection to unauthenticated device [clientId: {}] closed", endpoint.clientIdentifier());
-            metrics.decrementUnauthenticatedMqttConnections();
+            LOG.debug("connection to anonymous device [clientId: {}] closed", endpoint.clientIdentifier());
+            metrics.decrementAnonymousConnections();
         } else {
             LOG.debug("connection to device [tenant-id: {}, device-id: {}] closed",
                     authenticatedDevice.getTenantId(), authenticatedDevice.getDeviceId());
-            metrics.decrementMqttConnections(authenticatedDevice.getTenantId());
+            metrics.decrementConnections(authenticatedDevice.getTenantId());
         }
         if (endpoint.isConnected()) {
             LOG.debug("closing connection with client [client ID: {}]", endpoint.clientIdentifier());

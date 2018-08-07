@@ -19,28 +19,75 @@ package org.eclipse.hono.service.metric;
 public interface Metrics {
 
     /**
-     * Reports a message received from a device as <em>processed</em>.
-     *
-     * @param resourceId The ID of the resource to track.
+     * Reports a newly established connection with an authenticated device.
+     * 
      * @param tenantId The tenant that the device belongs to.
      */
-    void incrementProcessedMessages(String resourceId, String tenantId);
+    void incrementConnections(String tenantId);
+
+    /**
+     * Reports a connection to an authenticated device being closed.
+     * 
+     * @param tenantId The tenant that the device belongs to.
+     */
+    void decrementConnections(String tenantId);
+
+    /**
+     * Reports a newly established connection with an anonymous device.
+     */
+    void incrementAnonymousConnections();
+
+    /**
+     * Reports a connection to an anonymous device being closed.
+     */
+    void decrementAnonymousConnections();
+
+    /**
+     * Reports a message received from a device as <em>processed</em>.
+     *
+     * @param type The type of message received, e.g. <em>telemetry</em> or <em>event</em>.
+     * @param tenantId The tenant that the device belongs to.
+     */
+    void incrementProcessedMessages(String type, String tenantId);
 
     /**
      * Reports a message received from a device as <em>undeliverable</em>.
      *
-     * @param resourceId The ID of the resource to track.
+     * @param type The type of message received, e.g. <em>telemetry</em> or <em>event</em>.
      * @param tenantId The tenant that the device belongs to.
      */
-    void incrementUndeliverableMessages(String resourceId, String tenantId);
+    void incrementUndeliverableMessages(String type, String tenantId);
 
     /**
      * Reports the size of a processed message's payload that has been received
      * from a device.
      *
-     * @param resourceId The ID of the resource to track.
+     * @param type The type of message received, e.g. <em>telemetry</em> or <em>event</em>.
      * @param tenantId The tenant that the device belongs to.
      * @param payloadSize The size of the payload in bytes.
      */
-    void incrementProcessedPayload(String resourceId, String tenantId, long payloadSize);
+    void incrementProcessedPayload(String type, String tenantId, long payloadSize);
+
+    /**
+     * Reports a command being delivered to a device.
+     * 
+     * @param tenantId The tenant that the device belongs to.
+     */
+    void incrementCommandDeliveredToDevice(String tenantId);
+
+    /**
+     * Reports a TTD having expired without a command being delivered
+     * to a device.
+     * 
+     * @param tenantId The tenant that the device belongs to.
+     */
+    void incrementNoCommandReceivedAndTTDExpired(String tenantId);
+
+    /**
+     * Reports a response to a command being delivered to an application.
+     * 
+     * @param tenantId The tenant to which the device belongs from which the response
+     *                 has been received.
+     */
+    void incrementCommandResponseDeliveredToApplication(String tenantId);
 }
