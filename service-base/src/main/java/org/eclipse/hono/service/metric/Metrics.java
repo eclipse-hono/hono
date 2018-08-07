@@ -33,14 +33,14 @@ public interface Metrics {
     void decrementConnections(String tenantId);
 
     /**
-     * Reports a newly established connection with an anonymous device.
+     * Reports a newly established connection with an unauthenticated device.
      */
-    void incrementAnonymousConnections();
+    void incrementUnauthenticatedConnections();
 
     /**
-     * Reports a connection to an anonymous device being closed.
+     * Reports a connection to an unauthenticated device being closed.
      */
-    void decrementAnonymousConnections();
+    void decrementUnauthenticatedConnections();
 
     /**
      * Reports a message received from a device as <em>processed</em>.

@@ -134,13 +134,13 @@ abstract public class DropwizardBasedMetrics implements Metrics {
     }
 
     @Override
-    public final void incrementAnonymousConnections() {
-        counterService.increment(mergeAsMetric(getScope(), CONNECTIONS, "anonymous"));
+    public final void incrementUnauthenticatedConnections() {
+        counterService.increment(mergeAsMetric(getScope(), CONNECTIONS, "unauthenticated"));
     }
 
     @Override
-    public final void decrementAnonymousConnections() {
-        counterService.decrement(mergeAsMetric(getScope(), CONNECTIONS, "anonymous"));
+    public final void decrementUnauthenticatedConnections() {
+        counterService.decrement(mergeAsMetric(getScope(), CONNECTIONS, "unauthenticated"));
     }
 
     @Override

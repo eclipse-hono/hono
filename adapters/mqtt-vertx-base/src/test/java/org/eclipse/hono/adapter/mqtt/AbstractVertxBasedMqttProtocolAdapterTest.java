@@ -864,10 +864,10 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
 
         adapter.handleEndpointConnection(endpoint);
 
-        verify(metrics).incrementAnonymousConnections();
+        verify(metrics).incrementUnauthenticatedConnections();
 
         closeHandlerRef.get().handle(null);
 
-        verify(metrics).decrementAnonymousConnections();
+        verify(metrics).decrementUnauthenticatedConnections();
     }
 }

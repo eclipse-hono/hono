@@ -410,7 +410,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
         endpoint.unsubscribeHandler(unsubscribeMsg -> onUnsubscribe(endpoint, null, unsubscribeMsg));
 
         LOG.debug("unauthenticated device [clientId: {}] connected", endpoint.clientIdentifier());
-        metrics.incrementAnonymousConnections();
+        metrics.incrementUnauthenticatedConnections();
         return accepted();
     }
 
@@ -949,7 +949,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
         sendDisconnectedEvent(endpoint.clientIdentifier(), authenticatedDevice);
         if (authenticatedDevice == null) {
             LOG.debug("connection to anonymous device [clientId: {}] closed", endpoint.clientIdentifier());
-            metrics.decrementAnonymousConnections();
+            metrics.decrementUnauthenticatedConnections();
         } else {
             LOG.debug("connection to device [tenant-id: {}, device-id: {}] closed",
                     authenticatedDevice.getTenantId(), authenticatedDevice.getDeviceId());
