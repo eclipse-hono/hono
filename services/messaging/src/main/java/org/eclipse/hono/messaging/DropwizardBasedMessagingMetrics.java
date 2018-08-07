@@ -24,63 +24,62 @@ public class DropwizardBasedMessagingMetrics extends DropwizardBasedMetrics impl
 
     private static final String SERVICE_PREFIX = "hono.messaging";
 
-    private static final String CONNECTIONS_DOWNSTREAM   = ".connections.downstream";
-    private static final String LINK_DOWNSTREAM_CREDITS  = ".link.downstream.credits.";
-    private static final String SENDERS_DOWNSTREAM       = ".senders.downstream.";
-    private static final String RECEIVERS_UPSTREAM_LINKS = ".receivers.upstream.links.";
+    private static final String LINK_DOWNSTREAM_CREDITS  = "link.downstream.credits";
+    private static final String SENDERS_DOWNSTREAM       = "senders.downstream";
+    private static final String RECEIVERS_UPSTREAM_LINKS = "receivers.upstream.links";
 
     @Override
-    protected String getPrefix() {
+    protected String getScope() {
         return SERVICE_PREFIX;
     }
 
     @Override
     public final void incrementDownStreamConnections() {
-        counterService.increment(SERVICE_PREFIX + CONNECTIONS_DOWNSTREAM);
+        counterService.increment(mergeAsMetric(SERVICE_PREFIX, CONNECTIONS, "downstream"));
     }
 
     @Override
     public final void decrementDownStreamConnections() {
-        counterService.decrement(SERVICE_PREFIX + CONNECTIONS_DOWNSTREAM);
+        counterService.decrement(mergeAsMetric(SERVICE_PREFIX, CONNECTIONS, "downstream"));
     }
 
     @Override
     public final void submitDownstreamLinkCredits(final String address, final double credits) {
-        gaugeService.submit(SERVICE_PREFIX + LINK_DOWNSTREAM_CREDITS + normalizeAddress(address), credits);
+        gaugeService.submit(mergeAsMetric(SERVICE_PREFIX, LINK_DOWNSTREAM_CREDITS, normalizeAddress(address)), credits);
     }
 
     @Override
     public final void incrementDownstreamSenders(final String address) {
-        counterService.increment(SERVICE_PREFIX + SENDERS_DOWNSTREAM + normalizeAddress(address));
+        counterService.increment(mergeAsMetric(SERVICE_PREFIX, SENDERS_DOWNSTREAM, normalizeAddress(address)));
     }
 
     @Override
     public final void decrementDownstreamSenders(final String address) {
-        counterService.decrement(SERVICE_PREFIX + SENDERS_DOWNSTREAM + normalizeAddress(address));
+        counterService.decrement(mergeAsMetric(SERVICE_PREFIX, SENDERS_DOWNSTREAM, normalizeAddress(address)));
     }
 
     @Override
     public final void incrementUpstreamLinks(final String address) {
-        counterService.increment(SERVICE_PREFIX + RECEIVERS_UPSTREAM_LINKS + normalizeAddress(address));
+        counterService.increment(mergeAsMetric(SERVICE_PREFIX, RECEIVERS_UPSTREAM_LINKS, normalizeAddress(address)));
     }
 
     @Override
     public final void decrementUpstreamLinks(final String address) {
-        counterService.decrement(SERVICE_PREFIX + RECEIVERS_UPSTREAM_LINKS + normalizeAddress(address));
+        counterService.decrement(mergeAsMetric(SERVICE_PREFIX, RECEIVERS_UPSTREAM_LINKS, normalizeAddress(address)));
     }
 
     @Override
     public final void incrementDiscardedMessages(final String address) {
-        counterService.increment(SERVICE_PREFIX + MESSAGES + normalizeAddress(address) + DISCARDED);
+        counterService.increment(mergeAsMetric(SERVICE_PREFIX, MESSAGES, normalizeAddress(address), DISCARDED));
     }
 
     @Override
     public final void incrementProcessedMessages(final String address) {
-        counterService.increment(METER_PREFIX + SERVICE_PREFIX + MESSAGES + normalizeAddress(address) + PROCESSED);
+        counterService.increment(mergeAsMetric(METER_PREFIX, SERVICE_PREFIX, MESSAGES, normalizeAddress(address), PROCESSED));
     }
 
     @Override
     public final void incrementUndeliverableMessages(final String address) {
-        counterService.increment(SERVICE_PREFIX + MESSAGES + normalizeAddress(address) + UNDELIVERABLE);
+        counterService.increment(mergeAsMetric(SERVICE_PREFIX, MESSAGES, normalizeAddress(address), UNDELIVERABLE));
     }
 }

@@ -22,7 +22,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
 
 import org.apache.qpid.proton.message.Message;
@@ -820,21 +819,14 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
             return null;
         }).when(usernamePasswordAuthProvider).authenticate(any(DeviceCredentials.class), any(Handler.class));
 
-        final AtomicReference<Handler<Void>> closeHandlerRef = new AtomicReference<>();
-
         final MqttEndpoint endpoint = getMqttEndpointAuthenticated();
-        doAnswer(invocation -> {
-            closeHandlerRef.set(invocation.getArgument(0));
-            return endpoint;
-        }).when(endpoint).closeHandler(any(Handler.class));
-
         adapter.handleEndpointConnection(endpoint);
 
-        verify(metrics).incrementMqttConnections("DEFAULT_TENANT");
-
-        closeHandlerRef.get().handle(null);
-
-        verify(metrics).decrementMqttConnections("DEFAULT_TENANT");
+        verify(metrics).incrementConnections("DEFAULT_TENANT");
+        final ArgumentCaptor<Handler<Void>> closeHandlerCaptor = ArgumentCaptor.forClass(Handler.class);
+        verify(endpoint).closeHandler(closeHandlerCaptor.capture());
+        closeHandlerCaptor.getValue().handle(null);
+        verify(metrics).decrementConnections("DEFAULT_TENANT");
     }
 
     /**
@@ -854,20 +846,13 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
 
         forceClientMocksToConnected();
 
-        final AtomicReference<Handler<Void>> closeHandlerRef = new AtomicReference<>();
-
         final MqttEndpoint endpoint = mockEndpoint();
-        doAnswer(invocation -> {
-            closeHandlerRef.set(invocation.getArgument(0));
-            return endpoint;
-        }).when(endpoint).closeHandler(any(Handler.class));
-
         adapter.handleEndpointConnection(endpoint);
 
-        verify(metrics).incrementUnauthenticatedMqttConnections();
-
-        closeHandlerRef.get().handle(null);
-
-        verify(metrics).decrementUnauthenticatedMqttConnections();
+        verify(metrics).incrementUnauthenticatedConnections();
+        final ArgumentCaptor<Handler<Void>> closeHandlerCaptor = ArgumentCaptor.forClass(Handler.class);
+        verify(endpoint).closeHandler(closeHandlerCaptor.capture());
+        closeHandlerCaptor.getValue().handle(null);
+        verify(metrics).decrementUnauthenticatedConnections();
     }
 }

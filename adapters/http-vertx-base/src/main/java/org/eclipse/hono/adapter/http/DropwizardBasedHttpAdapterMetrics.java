@@ -25,22 +25,7 @@ public class DropwizardBasedHttpAdapterMetrics extends DropwizardBasedMetrics im
     private static final String SERVICE_PREFIX = "hono.http";
 
     @Override
-    protected String getPrefix() {
+    protected String getScope() {
         return SERVICE_PREFIX;
-    }
-
-    @Override
-    public final void incrementCommandDeliveredToDevice(final String tenantId) {
-        counterService.increment(METER_PREFIX + getPrefix() + mergeAsMetric(COMMANDS, tenantId, "device", "delivered"));
-    }
-
-    @Override
-    public final void incrementNoCommandReceivedAndTTDExpired(final String tenantId) {
-        counterService.increment(METER_PREFIX + getPrefix() + mergeAsMetric(COMMANDS, tenantId, "ttd", "expired"));
-    }
-
-    @Override
-    public final void incrementCommandResponseDeliveredToApplication(final String tenantId) {
-        counterService.increment(METER_PREFIX + getPrefix() + mergeAsMetric(COMMANDS, tenantId, "response", "delivered"));
     }
 }
