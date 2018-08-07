@@ -33,16 +33,6 @@ The following table provides an overview of the environment variables and corres
 | `HONO_MESSAGING_SECURE_PROTOCOLS`<br>`--hono.messaging.secureProtocols` | no | `TLSv1.2` | A (comma separated) list of secure protocols that are supported when negotiating TLS sessions. Please refer to the [vert.x documentation](https://vertx.io/docs/vertx-core/java/#ssl) for a list of supported protocol names. |
 | `HONO_MESSAGING_VALIDATION_CERT_PATH`<br>`--hono.messaging.validation.certPath` | yes | - | The path to a PEM file containing the *Device Registration* service's certificate. The public key contained in the certificate is used to validate RSA based registration assertion tokens issued by the *Device Registration* service. Either this variable or `HONO_MESSAGING_VALIDATION_SHARED_SECRET` must be set in order for the Hono Messaging component being able to process telemetry data and events received from devices. |
 | `HONO_MESSAGING_VALIDATION_SHARED_SECRET`<br>`--hono.messaging.validation.sharedSecret` | yes | - | The secret to use for validating tokens asserting the registration status of devices using HmacSHA256. The secret's UTF8 encoding must consist of at least 32 bytes. Either this variable or `HONO_MESSAGING_VALIDATION_CERT_PATH` must be set in order for the Hono Messaging component being able to process telemetry data and events received from devices. |
-| `HONO_METRIC_REPORTER_GRAPHITE_ACTIVE`<br>`--hono.metric.reporter.graphite.active` | no  | `false` | Activates the metrics reporter to Graphite (or a graphite compatible system - we use InfluxDB in the `example`). |
-| `HONO_METRIC_REPORTER_GRAPHITE_HOST`<br>`--hono.metric.reporter.graphite.host` | no  | `localhost` | Sets the host, to which the metrics will be reported. |
-| `HONO_METRIC_REPORTER_GRAPHITE_PORT`<br>`--hono.metric.reporter.graphite.host` | no  | `2003` | Sets the port - 2003 ist standard for Graphite. |
-| `HONO_METRIC_REPORTER_GRAPHITE_PERIOD`<br>`--hono.metric.reporter.graphite.period` | no  | `5000` | Sets the time interval for reporting. |
-| `HONO_METRIC_REPORTER_GRAPHITE_PREFIX`<br>`--hono.metric.reporter.graphite.prefix` | no  | - | Prefix all metric names with the given string. |
-| `HONO_METRIC_REPORTER_CONSOLE_ACTIVE`<br>`--hono.metric.reporter.console.active` | no  | `false` | Activates the metrics reporter to the console/log. |
-| `HONO_METRIC_REPORTER_CONSOLE_PERIOD`<br>`--hono.metric.reporter.console.period` | no  | `5000` | Sets the time interval for reporting. |
-| `HONO_METRIC_JVM_MEMORY`<br>`--hono.metric.jvm.memory` | no  | `false` | Activates JVM memory metrics (from the Dropwizard JVM Instrumentation). The metric name is `hono.messaging.jvm.memory`. |
-| `HONO_METRIC_JVM_THREAD`<br>`--hono.metric.jvm.thread` | no  | `false` | Activates JVM thread metrics (from the Dropwizard JVM Instrumentation). The metric name is `hono.messaging.jvm.thread`.|
-| `HONO_METRIC_VERTX`<br>`--hono.metric.vertx` | no  | `false` | Activates the Vert.x metrics (from the Vert.x metrics project). The metric name is `hono.messaging.vertx`. |
 
 The variables only need to be set if the default value does not match your environment.
 
@@ -133,7 +123,9 @@ The following table provides an overview of the configuration variables and corr
 | `HONO_DOWNSTREAM_TRUST_STORE_PATH`<br>`--hono.downstream.trustStorePath` | no  | - | The absolute path to the Java key store containing the CA certificates the Hono Messaging component uses for authenticating the downstream AMQP 1.0 Messaging Network. This property **must** be set if the Messaging Network has been configured to support TLS. The key store format can be either `JKS`, `PKCS12` or `PEM` indicated by a `.jks`, `.p12` or `.pem` file suffix. |
 | `HONO_DOWNSTREAM_USERNAME`<br>`--hono.downstream.username` | no | - | The username to use for authenticating to the downstream *AMQP 1.0 Messaging Network*. This property (and the corresponding *password*) needs to be set only if the Messaging Network is configured to use `SASL PLAIN` for authenticating the Hono Messaging component. |
 
+## Metrics Configuration
 
+See [Monitoring & Tracing Admin Guide]({{< ref "/admin-guide/monitoring-tracing-config.md" >}}) for details on how to configure the reporting of metrics.
 
 ## Run as a Docker Swarm Service
 

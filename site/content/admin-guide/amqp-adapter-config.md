@@ -114,6 +114,9 @@ where the `${PREFIX}` is set to `HONO_CREDENTIALS`.
 
 Responses of the Credentials Service are currently not cached, so the cache properties can be ignored.
 
+## Metrics Configuration
+
+See [Monitoring & Tracing Admin Guide]({{< ref "/admin-guide/monitoring-tracing-config.md" >}}) for details on how to configure the reporting of metrics.
 
 ## Run as a Docker Swarm Service
 

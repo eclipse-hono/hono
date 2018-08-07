@@ -91,6 +91,10 @@ This can be used to narrow the visibility of the insecure port to a local networ
 
 The server may be configured to open both a secure and a non-secure port at the same time simply by configuring both ports as described above. For this to work, both ports must be configured to use different port numbers, otherwise startup will fail.
 
+## Metrics Configuration
+
+See [Monitoring & Tracing Admin Guide]({{< ref "/admin-guide/monitoring-tracing-config.md" >}}) for details on how to configure the reporting of metrics.
+
 ## Run as a Docker Swarm Service
 
 The Auth Server can be run as a Docker container from the command line. The following commands create and start the Auth Server as a Docker Swarm service using the default keys and configuration files contained in the `services/auth` and `demo-certs` modules:
