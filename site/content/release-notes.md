@@ -19,6 +19,9 @@ title = "Release Notes"
   and thus is a bottleneck in the example setup. The device registry however has
   no real storage. So it still can be part of the test, but is no limiting
   factor anymore.
+* The Hono Travis build now also builds for JDK 10 in addition to JDK 8.
+  Hono is still intended to run on Java 8, but the JDK 10 build was enabled to
+  be better prepared for Java 11.
 
 ## 0.7-M2
 
