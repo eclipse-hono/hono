@@ -22,7 +22,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
 
 import org.apache.qpid.proton.message.Message;
@@ -820,32 +819,25 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
             return null;
         }).when(usernamePasswordAuthProvider).authenticate(any(DeviceCredentials.class), any(Handler.class));
 
-        final AtomicReference<Handler<Void>> closeHandlerRef = new AtomicReference<>();
-
         final MqttEndpoint endpoint = getMqttEndpointAuthenticated();
-        doAnswer(invocation -> {
-            closeHandlerRef.set(invocation.getArgument(0));
-            return endpoint;
-        }).when(endpoint).closeHandler(any(Handler.class));
-
         adapter.handleEndpointConnection(endpoint);
 
         verify(metrics).incrementConnections("DEFAULT_TENANT");
-
-        closeHandlerRef.get().handle(null);
-
+        final ArgumentCaptor<Handler<Void>> closeHandlerCaptor = ArgumentCaptor.forClass(Handler.class);
+        verify(endpoint).closeHandler(closeHandlerCaptor.capture());
+        closeHandlerCaptor.getValue().handle(null);
         verify(metrics).decrementConnections("DEFAULT_TENANT");
     }
 
     /**
-     * Verifies the connection metrics for anonymous connections.
+     * Verifies the connection metrics for unauthenticated connections.
      * <p>
      * This test should check if the metrics receive a call to increment and decrement when a connection is being
      * established and then closed.
      */
     @SuppressWarnings("unchecked")
     @Test
-    public void testAnonymousConnectionMetrics() {
+    public void testUnauthenticatedConnectionMetrics() {
 
         config.setAuthenticationRequired(false);
 
@@ -854,20 +846,13 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
 
         forceClientMocksToConnected();
 
-        final AtomicReference<Handler<Void>> closeHandlerRef = new AtomicReference<>();
-
         final MqttEndpoint endpoint = mockEndpoint();
-        doAnswer(invocation -> {
-            closeHandlerRef.set(invocation.getArgument(0));
-            return endpoint;
-        }).when(endpoint).closeHandler(any(Handler.class));
-
         adapter.handleEndpointConnection(endpoint);
 
         verify(metrics).incrementUnauthenticatedConnections();
-
-        closeHandlerRef.get().handle(null);
-
+        final ArgumentCaptor<Handler<Void>> closeHandlerCaptor = ArgumentCaptor.forClass(Handler.class);
+        verify(endpoint).closeHandler(closeHandlerCaptor.capture());
+        closeHandlerCaptor.getValue().handle(null);
         verify(metrics).decrementUnauthenticatedConnections();
     }
 }
