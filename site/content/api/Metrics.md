@@ -45,7 +45,7 @@ extracting the following *tags* from metric names transmitted via the Graphite r
 | *host*     | The name of the host that the service reporting the metric is running on. |
 | *type*     | The type of message that the metric is being processed for (either `telemetry` or `event`) |
 | *tenant*   | The name of the tenant that the metric is being reported for. |
-| *protocol* | The protocol of message that the metric is being processed for (example: `http`, `mqtt`). This is used only in Command and Control metrics. |
+| *protocol* | The protocol of message that the metric is being processed for (example: `http`, `mqtt`). |
 
 The following sections describe which of these tags are extracted for which metrics specifically.
  
@@ -62,35 +62,36 @@ The following sections describe which of these tags are extracted for which metr
 
 ### MQTT Metrics
 
-| Metric                                           | Tags                     | Description |
-| ------------------------------------------------ | ------------------------ | ----------- |
-| *counter.hono.mqtt.connection.count*             | *host*, *tenant*         | Current number of authenticated MQTT connections. |
-| *counter.hono.mqtt.messages.undeliverable.count* | *host*, *tenant*, *type* | Messages which could not be processed by the MQTT protocol adapter- Total count since application startup. |
-| *meter.hono.mqtt.messages.processed.count*       | *host*, *tenant*, *type* | Messages processed by the MQTT protocol adapter. Total count since application startup. |
-| *meter.hono.mqtt.messages.processed.m1_rate*     | *host*, *tenant*, *type* | Messages processed by the MQTT protocol adapter. One minute, exponentially weighted, moving average. |
-| *meter.hono.mqtt.messages.processed.m5_rate*     | *host*, *tenant*, *type* | Messages processed by the MQTT protocol adapter. Five minute, exponentially weighted, moving average. |
-| *meter.hono.mqtt.messages.processed.m15_rate*    | *host*, *tenant*, *type* | Messages processed by the MQTT protocol adapter. Fifteen minute, exponentially weighted, moving average. |
-| *meter.hono.mqtt.messages.processed.mean_rate*   | *host*, *tenant*, *type* | Messages processed by the MQTT protocol adapter. Mean rate of messages since the application start. |
+| Metric                                               | Tags                     | Description |
+| ---------------------------------------------------- | ------------------------ | ----------- |
+| *counter.hono.mqtt.connections.count*                | *host*, *tenant*         | Current number of authenticated MQTT connections. |
+| *counter.hono.mqtt.unauthenticatedConnections.count* | *host*, *tenant*         | Current number of anonymous MQTT connections. |
+| *counter.hono.mqtt.messages.undeliverable.count*     | *host*, *tenant*, *type* | Messages which could not be processed by the MQTT protocol adapter- Total count since application startup. |
+| *meter.hono.mqtt.messages.processed.count*           | *host*, *tenant*, *type* | Messages processed by the MQTT protocol adapter. Total count since application startup. |
+| *meter.hono.mqtt.messages.processed.m1_rate*         | *host*, *tenant*, *type* | Messages processed by the MQTT protocol adapter. One minute, exponentially weighted, moving average. |
+| *meter.hono.mqtt.messages.processed.m5_rate*         | *host*, *tenant*, *type* | Messages processed by the MQTT protocol adapter. Five minute, exponentially weighted, moving average. |
+| *meter.hono.mqtt.messages.processed.m15_rate*        | *host*, *tenant*, *type* | Messages processed by the MQTT protocol adapter. Fifteen minute, exponentially weighted, moving average. |
+| *meter.hono.mqtt.messages.processed.mean_rate*       | *host*, *tenant*, *type* | Messages processed by the MQTT protocol adapter. Mean rate of messages since the application start. |
 
 ### Command and Control Metrics
 
 | Metric                                             | Tags                             | Description |
 | -------------------------------------------------- | -------------------------------- | ----------- |
-| *meter.hono.commands.device.delivered.count*       | *host*, *tenant*, *protocol*     | Command delivered to device before ttd expires. Total count since application startup. |
-| *meter.hono.commands.response.delivered.count*     | *host*, *tenant*, *protocol*     | Command response delivered from device to application. Total count since application startup. |
-| *meter.hono.commands.ttd.expired.count*            | *host*, *tenant*, *protocol*     | Ttd expired with no command received from application. Total count since application startup. |
-| *meter.hono.commands.device.delivered.m1_rate*     | *host*, *tenant*, *protocol*     | Command delivered to device before ttd expires. One minute, exponentially weighted, moving average. |
-| *meter.hono.commands.response.delivered.m1_rate*   | *host*, *tenant*, *protocol*     | Command response delivered from device to application. One minute, exponentially weighted, moving average. |
-| *meter.hono.commands.ttd.expired.m1_rate*          | *host*, *tenant*, *protocol*     | Ttd expired with no command received from application. One minute, exponentially weighted, moving average. |
-| *meter.hono.commands.device.delivered.m5_rate*     | *host*, *tenant*, *protocol*     | Command delivered to device before ttd expires. Five minute, exponentially weighted, moving average. |
-| *meter.hono.commands.response.delivered.m5_rate*   | *host*, *tenant*, *protocol*     | Command response delivered from device to application. Five minute, exponentially weighted, moving average. |
-| *meter.hono.commands.ttd.expired.m5_rate*          | *host*, *tenant*, *protocol*     | Ttd expired with no command received from application. Five minute, exponentially weighted, moving average. |
-| *meter.hono.commands.device.delivered.m15_rate*    | *host*, *tenant*, *protocol*     | Command delivered to device before ttd expires. Fifteen minute, exponentially weighted, moving average. |
-| *meter.hono.commands.response.delivered.m15_rate*  | *host*, *tenant*, *protocol*     | Command response delivered from device to application. Fifteen minute, exponentially weighted, moving average. |
-| *meter.hono.commands.ttd.expired.m15_rate*         | *host*, *tenant*, *protocol*     | Ttd expired with no command received from application. Fifteen minute, exponentially weighted, moving average. |
-| *meter.hono.commands.device.delivered.mean_rate*   | *host*, *tenant*, *protocol*     | Command delivered to device before ttd expires. Mean rate of messages since the application start. |
-| *meter.hono.commands.response.delivered.mean_rate* | *host*, *tenant*, *protocol*     | Command response delivered from device to application. Mean rate of messages since the application start. |
-| *meter.hono.commands.ttd.expired.mean_rate*        | *host*, *tenant*, *protocol*     | Ttd expired with no command received from application. Mean rate of messages since the application start. |
+| *meter.hono.commands.device.delivered.count*       | *host*, *tenant*, *protocol*     | Commands delivered to devices. Total count since application start. |
+| *meter.hono.commands.device.delivered.m1_rate*     | *host*, *tenant*, *protocol*     | Commands delivered to devices. One minute, exponentially weighted, moving average. |
+| *meter.hono.commands.device.delivered.m5_rate*     | *host*, *tenant*, *protocol*     | Commands delivered to devices. Five minute, exponentially weighted, moving average. |
+| *meter.hono.commands.device.delivered.m15_rate*    | *host*, *tenant*, *protocol*     | Commands delivered to devices. Fifteen minute, exponentially weighted, moving average. |
+| *meter.hono.commands.device.delivered.mean_rate*   | *host*, *tenant*, *protocol*     | Commands delivered to devices. Mean rate of messages since application start. |
+| *meter.hono.commands.response.delivered.count*     | *host*, *tenant*, *protocol*     | Command responses delivered to applications. Total count since application startup. |
+| *meter.hono.commands.response.delivered.m1_rate*   | *host*, *tenant*, *protocol*     | Command responses delivered to applications. One minute, exponentially weighted, moving average. |
+| *meter.hono.commands.response.delivered.m5_rate*   | *host*, *tenant*, *protocol*     | Command responses delivered to applications. Five minute, exponentially weighted, moving average. |
+| *meter.hono.commands.response.delivered.m15_rate*  | *host*, *tenant*, *protocol*     | Command responses delivered to applications. Fifteen minute, exponentially weighted, moving average. |
+| *meter.hono.commands.response.delivered.mean_rate* | *host*, *tenant*, *protocol*     | Command responses delivered to applications. Mean rate of messages since the application start. |
+| *meter.hono.commands.ttd.expired.count*            | *host*, *tenant*, *protocol*     | Messages containing a TTD that expired with no pending command(s). Total count since application startup. |
+| *meter.hono.commands.ttd.expired.m1_rate*          | *host*, *tenant*, *protocol*     | Messages containing a TTD that expired with no pending command(s). One minute, exponentially weighted, moving average. |
+| *meter.hono.commands.ttd.expired.m5_rate*          | *host*, *tenant*, *protocol*     | Messages containing a TTD that expired with no pending command(s). Five minute, exponentially weighted, moving average. |
+| *meter.hono.commands.ttd.expired.m15_rate*         | *host*, *tenant*, *protocol*     | Messages containing a TTD that expired with no pending command(s). Fifteen minute, exponentially weighted, moving average. |
+| *meter.hono.commands.ttd.expired.mean_rate*        | *host*, *tenant*, *protocol*     | Messages containing a TTD that expired with no pending command(s). Mean rate of messages since the application start. |
 
 ## Metrics API
 
