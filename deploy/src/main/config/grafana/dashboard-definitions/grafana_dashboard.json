@@ -3187,7 +3187,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "alias": "1 Minute",
+          "alias": "",
           "dsType": "influxdb",
           "groupBy": [
             {
@@ -3305,7 +3305,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "alias": "1 Minute",
+          "alias": "",
           "dsType": "influxdb",
           "groupBy": [
             {
@@ -3422,7 +3422,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "alias": "1 Minute",
+          "alias": "",
           "dsType": "influxdb",
           "groupBy": [
             {
