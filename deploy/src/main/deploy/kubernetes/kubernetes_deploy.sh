@@ -145,16 +145,4 @@ kubectl create secret generic hono-adapter-kura-conf \
 kubectl create -f $RESOURCES/hono-adapter-kura --namespace $NS
 echo ... done
 
-#echo
-#echo "Configuring Grafana with data source & dashboard ..."
-#
-#chmod +x $SCRIPTPATH/../configure_grafana.sh
-#HOST=$(kubectl get nodes --output=jsonpath='{range .items[*]}{.status.addresses[?(@.type=="InternalIP")].address} {.spec.podCIDR} {"\n"}{end}')
-#GRAFANA_PORT='NaN'
-#until [ "$GRAFANA_PORT" -eq "$GRAFANA_PORT" ] 2>/dev/null; do
-#  GRAFANA_PORT=$(kubectl get service grafana -n hono --output='jsonpath={.spec.ports[0].nodePort}'); sleep 1;
-#done
-#$SCRIPTPATH/../configure_grafana.sh $HOST $GRAFANA_PORT
-#echo ... done
-
 echo ECLIPSE HONO DEPLOYED TO KUBERNETES
