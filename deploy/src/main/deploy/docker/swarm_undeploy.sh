@@ -39,6 +39,13 @@ docker secret rm \
   mqtt-adapter-cert.pem \
   hono-adapter-mqtt-vertx-config.yml
 
+docker service rm hono-adapter-amqp-vertx
+docker secret rm \
+  hono-adapter-amqp-vertx-config.yml \
+  amqp-adapter.credentials \
+  amqp-adapter-key.pem \
+  amqp-adapter-cert.pem
+
 docker service rm hono-service-messaging
 docker secret rm \
   hono-messaging-key.pem \

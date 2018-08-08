@@ -70,6 +70,7 @@ You may also deploy each of Hono's components separately by copying the relevant
 The Kubernetes deployment provides access to Eclipse Hono by means of *services* and the main ones are:
 
 * **hono-dispatch-router-ext**: router network for the business application in order to consume data
+* **hono-adapter-amqp-vertx**: protocol adapter for publishing telemetry data and events using the AMQP 1.0 protocol
 * **hono-adapter-mqtt-vertx**: protocol adapter for publishing telemetry data and events using the MQTT protocol
 * **hono-adapter-rest-vertx**: protocol adapter for publishing telemetry data and events using the HTTP protocol
 * **hono-service-device-registry**: component for registering and managing devices
@@ -77,17 +78,18 @@ The Kubernetes deployment provides access to Eclipse Hono by means of *services*
 You can check these services through the `kubectl get services --namespace hono` command having the following output :
 
 ~~~sh
-NAME                           CLUSTER-IP   EXTERNAL-IP   PORT(S)                                      AGE
-grafana                        10.0.0.115   <nodes>       3000:31000/TCP                               15m
-hono-adapter-mqtt-vertx        10.0.0.155   <nodes>       1883:31883/TCP,8883:30883/TCP                2m
-hono-adapter-rest-vertx        10.0.0.184   <nodes>       8080:30080/TCP,8443:30443/TCP                3m
-hono-artemis                   10.0.0.11    <none>        5672/TCP                                     6m
-hono-dispatch-router           10.0.0.175   <none>        5673/TCP                                     5m
-hono-dispatch-router-ext       10.0.0.124   <nodes>       5671:30671/TCP,5672:30672/TCP                5m
-hono-service-auth              10.0.0.116   <none>        5671/TCP                                     5m
-hono-service-device-registry   10.0.0.248   <none>        5671:31671/TCP,8080:31080/TCP,8443:31443/TCP 4m
-hono-service-messaging         10.0.0.223   <none>        5671/TCP                                     3m
-influxdb                       10.0.0.217   <none>        2003/TCP,8083/TCP,8086/TCP                   15m
+NAME                           CLUSTER-IP      EXTERNAL-IP   PORT(S)                                      AGE
+grafana                        10.0.0.115      <nodes>       3000:31000/TCP                               15m
+hono-adapter-amqp-vertx        10.108.52.132   <none>        4040:30040/TCP,4041:30041/TCP                6m
+hono-adapter-mqtt-vertx        10.0.0.155      <nodes>       1883:31883/TCP,8883:30883/TCP                2m
+hono-adapter-rest-vertx        10.0.0.184      <nodes>       8080:30080/TCP,8443:30443/TCP                3m
+hono-artemis                   10.0.0.11       <none>        5672/TCP                                     6m
+hono-dispatch-router           10.0.0.175      <none>        5673/TCP                                     5m
+hono-dispatch-router-ext       10.0.0.124      <nodes>       5671:30671/TCP,5672:30672/TCP                5m
+hono-service-auth              10.0.0.116      <none>        5671/TCP                                     5m
+hono-service-device-registry   10.0.0.248      <none>        5671:31671/TCP,8080:31080/TCP,8443:31443/TCP 4m
+hono-service-messaging         10.0.0.223      <none>        5671/TCP                                     3m
+influxdb                       10.0.0.217      <none>        2003/TCP,8083/TCP,8086/TCP                   15m
 ~~~
 
 These services are accessible using the Minikube VM's IP address (which you can get with the `minikube ip` command) and the so called *node ports* (i.e. 30080, 30671, ...).
