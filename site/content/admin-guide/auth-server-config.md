@@ -3,7 +3,7 @@ title = "Auth Server Configuration"
 weight = 305
 +++
 
-The Auth Server component exposes a service endpoint implementing Eclipse Hono&trade;'s [Authentication]({{< relref "api/Authentication-API.md" >}}) API. Other services use this component for authenticating clients and retrieving a token asserting the client's identity and corresponding authorities.
+The Auth Server component exposes a service endpoint implementing Eclipse Hono&trade;'s [Authentication]({{< ref "Authentication-API.md" >}}) API. Other services use this component for authenticating clients and retrieving a token asserting the client's identity and corresponding authorities.
 <!--more-->
 
 This component serves as a default implementation of the *Authentication* API only. On startup, it reads in all identities and their authorities from a JSON file from the file system. All data is then kept in memory and there are no remote service APIs for managing the identities and their authorities.
@@ -93,7 +93,7 @@ The server may be configured to open both a secure and a non-secure port at the 
 
 ## Metrics Configuration
 
-See [Monitoring & Tracing Admin Guide]({{< ref "/admin-guide/monitoring-tracing-config.md" >}}) for details on how to configure the reporting of metrics.
+See [Monitoring & Tracing Admin Guide]({{< ref "monitoring-tracing-config.md" >}}) for details on how to configure the reporting of metrics.
 
 ## Run as a Docker Swarm Service
 

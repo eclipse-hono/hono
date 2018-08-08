@@ -3,7 +3,7 @@ title = "Hono Messaging Configuration"
 weight = 310
 +++
 
-The Hono Messaging component exposes service endpoints implementing the *south bound* part of Eclipse Hono&trade;'s [Telemetry]({{< relref "api/Telemetry-API.md" >}}) and [Event]({{< relref "api/Event-API.md" >}}) APIs.
+The Hono Messaging component exposes service endpoints implementing the *south bound* part of Eclipse Hono&trade;'s [Telemetry]({{< ref "Telemetry-API.md" >}}) and [Event]({{< ref "Event-API.md" >}}) APIs.
 The south bound API is used by protocol adapters to upload telemetry data and events to be forwarded to downstream consumers.
 <!--more-->
 
@@ -113,7 +113,7 @@ with `HONO_DOWNSTREAM` being used as `${PREFIX}`. Since there are no responses b
 
 ## Metrics Configuration
 
-See [Monitoring & Tracing Admin Guide]({{< ref "/admin-guide/monitoring-tracing-config.md" >}}) for details on how to configure the reporting of metrics.
+See [Monitoring & Tracing Admin Guide]({{< ref "monitoring-tracing-config.md" >}}) for details on how to configure the reporting of metrics.
 
 ## Run as a Docker Swarm Service
 

@@ -3,8 +3,8 @@ title = "Device Registry Configuration"
 weight = 315
 +++
 
-The Device Registry component provides an exemplary implementation of Eclipse Hono&trade;'s [Device Registration]({{< relref "api/Device-Registration-API.md" >}}) and [Credentials]({{< relref "api/Credentials-API.md" >}}) APIs. 
-Since Hono version 0.6 it also provides an exemplary implementation of the [Tenant]({{< relref "api/Tenant-API.md" >}}) API.
+The Device Registry component provides an exemplary implementation of Eclipse Hono&trade;'s [Device Registration]({{< ref "Device-Registration-API.md" >}}) and [Credentials]({{< ref "Credentials-API.md" >}}) APIs. 
+Since Hono version 0.6 it also provides an exemplary implementation of the [Tenant]({{< ref "Tenant-API.md" >}}) API.
 
 Protocol adapters use these APIs to assert a device's registration status, e.g. if it is enabled and if it is registered with a particular tenant, and to authenticate a device before accepting any data for processing from it.
 
@@ -12,7 +12,7 @@ Protocol adapters use these APIs to assert a device's registration status, e.g. 
 
 There is no particular technical reason to implement these three API's in one component, so for production scenarios there might be up to three different components each implementing one of the API's.
 
-The Device Registry component also exposes [HTTP based resources]({{< relref "user-guide/device-registry.md" >}}) for managing tenants and the registration information and credentials of devices.
+The Device Registry component also exposes [HTTP based resources]({{< relref "/user-guide/device-registry.md" >}}) for managing tenants and the registration information and credentials of devices.
 
 The Device Registry is implemented as a Spring Boot application. It can be run either directly from the command line or by means of starting the corresponding [Docker image](https://hub.docker.com/r/eclipse/hono-service-device-registry/) created from it.
 
@@ -136,7 +136,7 @@ In addition to the standard client configuration properties, following propertie
 
 ## Metrics Configuration
 
-See [Monitoring & Tracing Admin Guide]({{< ref "/admin-guide/monitoring-tracing-config.md" >}}) for details on how to configure the reporting of metrics.
+See [Monitoring & Tracing Admin Guide]({{< ref "monitoring-tracing-config.md" >}}) for details on how to configure the reporting of metrics.
 
 
 ## Device Identities File Format

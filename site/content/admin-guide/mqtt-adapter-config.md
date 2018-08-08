@@ -80,7 +80,7 @@ Both the secure as well as the insecure port numbers may be explicitly set to `0
 
 ## Tenant Service Connection Configuration
 
-The adapter requires a connection to an implementation of Hono's [Tenant API]({{< relref "api/Tenant-API.md" >}}) in order to retrieve information for a tenant.
+The adapter requires a connection to an implementation of Hono's [Tenant API]({{< ref "Tenant-API.md" >}}) in order to retrieve information for a tenant.
 
 The connection to the Tenant Service is configured according to [Hono Client Configuration]({{< relref "hono-client-configuration.md" >}})
 where the `${PREFIX}` is set to `HONO_TENANT` and the additional values for response caching apply.
@@ -89,14 +89,14 @@ The adapter caches the responses for the *get* operation until they expire. This
 
 ## AMQP 1.0 Messaging Network Connection Configuration
 
-The adapter requires a connection to the *AMQP 1.0 Messaging Network* in order to forward [telemetry]({{< relref "api/Telemetry-API.md" >}}) data and [events]({{< relref "api/Event-API.md" >}}) received from devices to downstream consumers.
+The adapter requires a connection to the *AMQP 1.0 Messaging Network* in order to forward telemetry data and events received from devices to downstream consumers.
 
 The connection to the messaging network is configured according to [Hono Client Configuration]({{< relref "hono-client-configuration.md" >}})
 with `HONO_MESSAGING` being used as `${PREFIX}`. Since there are no responses being received, the properties for configuring response caching can be ignored.
 
 ## Device Registration Service Connection Configuration
 
-The adapter requires a connection to an implementation of Hono's [Device Registration API]({{< relref "api/Device-Registration-API.md" >}}) in order to retrieve registration status assertions for connected devices.
+The adapter requires a connection to an implementation of Hono's [Device Registration API]({{< ref "Device-Registration-API.md" >}}) in order to retrieve registration status assertions for connected devices.
 
 The connection to the Device Registration Service is configured according to [Hono Client Configuration]({{< relref "hono-client-configuration.md" >}})
 where the `${PREFIX}` is set to `HONO_REGISTRATION`.
@@ -105,7 +105,7 @@ The adapter caches responses for the *assert Device Registration* operation unti
 
 ## Credentials Service Connection Configuration
 
-The adapter requires a connection to an implementation of Hono's [Credentials API]({{< relref "api/Credentials-API.md" >}}) in order to retrieve credentials stored for devices that need to be authenticated.
+The adapter requires a connection to an implementation of Hono's [Credentials API]({{< ref "Credentials-API.md" >}}) in order to retrieve credentials stored for devices that need to be authenticated.
 
 The connection to the Credentials Service is configured according to [Hono Client Configuration]({{< relref "hono-client-configuration.md" >}})
 where the `${PREFIX}` is set to `HONO_CREDENTIALS`.
@@ -114,7 +114,7 @@ Responses of the Credentials Service are currently not cached, so the cache prop
 
 ## Metrics Configuration
 
-See [Monitoring & Tracing Admin Guide]({{< ref "/admin-guide/monitoring-tracing-config.md" >}}) for details on how to configure the reporting of metrics.
+See [Monitoring & Tracing Admin Guide]({{< ref "monitoring-tracing-config.md" >}}) for details on how to configure the reporting of metrics.
 
 ## Run as a Docker Swarm Service
 

@@ -24,7 +24,7 @@ Within a Hono installation the following communication channels can be secured w
 
 ## Auth Server
 
-The Auth Server supports the use of TLS for connections to clients. Please refer to the [Auth Server admin guide]({{< relref "admin-guide/auth-server-config.md" >}}) for details regarding the required configuration steps.
+The Auth Server supports the use of TLS for connections to clients. Please refer to the [Auth Server admin guide]({{< relref "auth-server-config.md" >}}) for details regarding the required configuration steps.
 
 The `demo-certs/certs` folder includes the following demo keys and certificates to be used with the Auth Server for that purpose.
 
@@ -50,7 +50,7 @@ The `demo-certs/certs` folder includes the following demo keys and certificates 
 ## Hono Messaging
 
 Hono Messaging supports the use of TLS for connections to protocol adapters, the Dispatch Router and the Auth Server.
-Please refer to the [Hono Messaging admin guide]({{< relref "admin-guide/hono-messaging-config.md" >}}) for details regarding the required configuration steps.
+Please refer to the [Hono Messaging admin guide]({{< relref "hono-messaging-config.md" >}}) for details regarding the required configuration steps.
 
 The `demo-certs/certs` folder contains the following demo keys and certificates to be used with Hono Messaging for that purpose.
 
@@ -65,7 +65,7 @@ The `demo-certs/certs` folder contains the following demo keys and certificates 
 ## Device Registry
 
 The Device Registry supports the use of TLS for connections to protocol adapters and the Auth Server.
-Please refer to the [Device Registry admin guide]({{< relref "admin-guide/device-registry-config.md" >}}) for details regarding the required configuration steps.
+Please refer to the [Device Registry admin guide]({{< relref "device-registry-config.md" >}}) for details regarding the required configuration steps.
 
 The `demo-certs/certs` folder contains the following demo keys and certificates to be used with the Device Registry for that purpose.
 
@@ -80,7 +80,7 @@ The `demo-certs/certs` folder contains the following demo keys and certificates 
 ## HTTP Adapter
 
 The HTTP adapter supports the use of TLS for its connections to the Tenant service, the Device Registration service, the Credentials service and the Hono Messaging component. The adapter also supports the use of TLS for connections with devices. For this purpose, the adapter can be configured with a server certificate and private key.
-Please refer to the [HTTP adapter admin guide]({{< relref "admin-guide/http-adapter-config.md" >}}) for details regarding the required configuration steps.
+Please refer to the [HTTP adapter admin guide]({{< relref "http-adapter-config.md" >}}) for details regarding the required configuration steps.
 
 The `demo-certs/certs` folder contains the following demo keys and certificates to be used with the HTTP adapter for that purpose.
 
@@ -94,7 +94,7 @@ The `demo-certs/certs` folder contains the following demo keys and certificates 
 ## MQTT Adapter
 
 The MQTT adapter supports the use of TLS for its connections to the Tenant service, the Device Registration service, the Credentials service and the Hono Messaging component. The adapter also supports the use of TLS for connections with devices. For this purpose, the adapter can be configured with a server certificate and private key.
-Please refer to the [MQTT adapter admin guide]({{< relref "admin-guide/mqtt-adapter-config.md" >}}) for details regarding the required configuration steps.
+Please refer to the [MQTT adapter admin guide]({{< relref "mqtt-adapter-config.md" >}}) for details regarding the required configuration steps.
 
 The `demo-certs/certs` folder contains the following demo keys and certificates to be used with the MQTT adapter for that purpose.
 
@@ -107,7 +107,7 @@ The `demo-certs/certs` folder contains the following demo keys and certificates 
 ## Kura Adapter
 
 The Kura adapter supports the use of TLS for its connections to the Tenant service, the Device Registration service, the Credentials service and the Hono Messaging component. The adapter also supports the use of TLS for connections with devices. For this purpose, the adapter can be configured with a server certificate and private key.
-Please refer to the [Kura adapter admin guide]({{< relref "admin-guide/kura-adapter-config.md" >}}) for details regarding the required configuration steps.
+Please refer to the [Kura adapter admin guide]({{< relref "kura-adapter-config.md" >}}) for details regarding the required configuration steps.
 
 The `demo-certs/certs` folder contains the following demo keys and certificates to be used with the Kura adapter for that purpose.
 
@@ -121,7 +121,7 @@ The `demo-certs/certs` folder contains the following demo keys and certificates 
 
 ## Client Application
 
-When the connection between an application client and Hono (i.e. the Dispatch Router) is supposed to be secured by TLS (which is a good idea), then the client application needs to be configured to trust the CA that signed the Dispatch Router's certificate chain. When the application uses the `org.eclipse.hono.client.HonoClientImpl` class from the `client` module, then this can be done by means of configuring the `org.eclipse.hono.connection.ConnectionFactoryImpl` with a trust store containing the CA's certificate. Please refer to the [Hono Client configuration guide]({{< relref "admin-guide/hono-client-configuration.md" >}}) for details regarding the configuration properties that need to be set.
+When the connection between an application client and Hono (i.e. the Dispatch Router) is supposed to be secured by TLS (which is a good idea), then the client application needs to be configured to trust the CA that signed the Dispatch Router's certificate chain. When the application uses the `org.eclipse.hono.client.HonoClientImpl` class from the `client` module, then this can be done by means of configuring the `org.eclipse.hono.connection.ConnectionFactoryImpl` with a trust store containing the CA's certificate. Please refer to the [Hono Client configuration guide]({{< relref "hono-client-configuration.md" >}}) for details regarding the configuration properties that need to be set.
 
 The `demo-certs/certs` folder contains the following demo keys to be used with client applications for that purpose.
 
