@@ -32,6 +32,11 @@ parameters:
   description:      Size of persistent volume used for Grafana datastore
   required:         true
   value:            1Gi
+- name:           HONO_NAMESPACE
+  displayName:      Eclipse Hono Namespace
+  description:      The name of the project/namespace Hono is deployed to.
+  required:         true
+  value:            hono
 
 objects:
 
@@ -39,6 +44,8 @@ objects:
   kind: PersistentVolumeClaim
   metadata:
     name: grafana-pvc
+    labels:
+      app: hono-metrics
   spec:
     accessModes:
     - ReadWriteOnce
@@ -67,11 +74,15 @@ objects:
   kind: ImageStream
   metadata:
     name: grafana
+    labels:
+      app: hono-metrics
 
 - apiVersion: v1
   kind: BuildConfig
   metadata:
     name: grafana
+    labels:
+      app: hono-metrics
   spec:
     output:
       to:
@@ -96,6 +107,29 @@ objects:
         from:
           kind: ImageStreamTag
           name: centos:7
+
+- apiVersion: v1
+  kind: ConfigMap
+  metadata:
+    name: grafana-provisioning-datasources
+    labels:
+      app: hono-metrics
+      deploymentconfig: grafana
+  data:
+    influxdb.yaml: |
+      apiVersion: 1
+      
+      datasources:
+      - name: hono_data
+        version: 1
+        type: influxdb
+        access: proxy
+        orgId: 1
+        url: http://influxdb.${HONO_NAMESPACE}.svc:8086
+        database: graphite
+        basicAuth: false
+        isDefault: false
+        editable: true
 
 - apiVersion: v1
   kind: DeploymentConfig
@@ -178,6 +212,8 @@ objects:
   kind: Service
   metadata:
     name: grafana
+    labels:
+      app: hono-metrics
   spec:
     ports:
     - name: 3000-tcp
@@ -192,6 +228,8 @@ objects:
   kind: Route
   metadata:
     name: grafana
+    labels:
+      app: hono-metrics
   spec:
     port:
       targetPort: 3000-tcp

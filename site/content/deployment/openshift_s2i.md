@@ -31,7 +31,7 @@ document will be updated accordingly with the progress.
 In order to work through this example deployment you will need the OpenShift
 client tools installed. Please align the version of the client tools with
 the version of your OpenShift cluster. This guide was tested with
-OpenShift 3.7.2. It should work with older or newer versions as well, but that
+OpenShift 3.9.0. It should work with older or newer versions as well, but that
 is untested.
 
 {{% warning title="Mac OS X 10.13+" %}}
@@ -187,10 +187,10 @@ need to request three projects. The guide expects the projects names to be:
 * `grafana` – For running an instance of Grafana. Primarily
                for showing Hono dashboards.
 
-Those projects must be allowing to perform internal communication.
+Those projects must be allowed to perform internal communication.
 
 If projects will be created for you, then you can ignore the
-calls to `oc new-project` in the following sections. 
+calls to `oc new-project` in the following sections.
 
 ## Clone the Hono repository
 
@@ -259,6 +259,7 @@ Start by creating a new project using:
 Create the InfluxDB ConfigMap from the local file:
 
     oc create configmap influxdb-config --from-file="../influxdb.conf"
+    oc label configmap/influxdb-config app=hono-metrics
 
 Then process and execute the main Hono template:
 
@@ -269,9 +270,9 @@ templates. If you want to specify template parameters from the command line
 use the following syntax:
 
     oc process -f hono-template.yml \
-      -p "ENMASSE_NAMESPACE=enmasse" \
-      -p "GIT_REPOSITORY=https://github.com/your/hono.git" \
-      -p "GIT_BRANCH=0.6.x"| oc create -f -
+      -p ENMASSE_NAMESPACE=enmasse \
+      -p GIT_REPOSITORY=https://github.com/your/hono.git \
+      -p GIT_BRANCH=0.6.x| oc create -f -
 
 {{% note title="Align branches" %}}
 By default the Hono template uses the `master` branch for deploying Hono. As
@@ -292,9 +293,10 @@ Start by creating a new project using:
 
 Create the config resources:
 
-    oc create configmap grafana-provisioning-datasources --from-file=../../config/grafana/provisioning/datasources
     oc create configmap grafana-provisioning-dashboards --from-file=../../config/grafana/provisioning/dashboards
     oc create configmap grafana-dashboard-defs --from-file=../../config/grafana/dashboard-definitions
+    oc label configmap grafana-provisioning-dashboards app=hono-metrics
+    oc label configmap grafana-dashboard-defs app=hono-metrics
 
 Then deploy the Grafana instance using:
 
@@ -307,8 +309,9 @@ use the following syntax:
 
     oc process -f grafana-template.yml \
       -p ADMIN_PASSWORD=admin \
-      -p "GIT_REPOSITORY=https://github.com/your/hono.git" \
-      -p "GIT_BRANCH=0.6.x"| oc create -f -
+      -p HONO_NAMESPACE=hono \
+      -p GIT_REPOSITORY=https://github.com/your/hono.git \
+      -p GIT_BRANCH=0.6.x| oc create -f -
 
 ## Configuring the installation
 
@@ -334,7 +337,7 @@ line argument `-n <project>` to specify the project name without changing the
 default selected project.
 
 All examples in the following sub-sections assume that you are located in the
-`example` directory.
+`cli` directory.
 
 ### Extract certificates
 
