@@ -64,8 +64,6 @@ public class DeviceRegistrationIT {
     @Before
     public void init() throws JMSException {
         registration = client.getRegistrationTestSupport();
-        registration.createConsumer();
-        registration.createProducer();
     }
 
     /**
