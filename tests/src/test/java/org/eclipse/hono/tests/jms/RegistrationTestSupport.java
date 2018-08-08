@@ -68,6 +68,10 @@ class RegistrationTestSupport {
     }
 
     void createProducer() throws JMSException {
+        if (producer != null) {
+            throw new IllegalStateException("Producer already created");
+        }
+
         producer = session.createProducer(destination);
     }
 
@@ -76,6 +80,10 @@ class RegistrationTestSupport {
     }
 
     private void createConsumer(final Destination consumerDestination) throws JMSException {
+        if (consumer != null) {
+            throw new IllegalStateException("Consumer already created");
+        }
+
         consumer = session.createConsumer(consumerDestination);
 
         consumer.setMessageListener(message -> {
@@ -125,9 +133,11 @@ class RegistrationTestSupport {
     void close() throws JMSException {
         if (consumer != null) {
             consumer.close();
+            consumer = null;
         }
         if (producer != null) {
             producer.close();
+            producer = null;
         }
     }
 
@@ -175,6 +185,7 @@ class RegistrationTestSupport {
         }
     }
 
+    @SuppressWarnings("unused")
     private static int toInt( final String s, final int def ) {
         try {
             return Integer.parseInt(s);
@@ -183,6 +194,7 @@ class RegistrationTestSupport {
         }
     }
 
+    @SuppressWarnings("unused")
     private static String getStringProperty(final Message message, final String name)  {
         try {
             return message.getStringProperty(name);
