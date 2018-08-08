@@ -675,7 +675,8 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
      * Is called whenever a proton connection was closed.
      * <p>
      * Subclasses may override this method to publish this as an event on the vertx bus if desired. If they choose to
-     * override, they must however call this super method.
+     * override, they must however call this super method as this method forwards the call to
+     * {@link AmqpEndpoint#onConnectionClosed(ProtonConnection)} of all endpoints managed by this instance.
      *
      * @param con The connection that was closed.
      */

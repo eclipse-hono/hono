@@ -83,6 +83,14 @@ public class AuthenticationEndpoint extends AbstractAmqpEndpoint<AuthenticationS
         super.onLinkAttach(con, receiver, targetResource);
     }
 
+    /**
+     * Handles a closed connection.
+     * <p>
+     * This implementation does nothing.
+     * </p>
+     * 
+     * @param connection The connection which got closed.
+     */
     @Override
     public void onConnectionClosed(final ProtonConnection connection) {
         // we have nothing to clean up
