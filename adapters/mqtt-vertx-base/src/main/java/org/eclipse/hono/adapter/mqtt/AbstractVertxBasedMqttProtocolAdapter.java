@@ -713,13 +713,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
                     ctx,
                     resource.getTenantId(),
                     resource.getResourceId(),
-                    message).compose(result-> {
-                        final Future<Void> metricsResult = Future.future();
-                        LOG.trace("Command response sent from device [{}:{}]", resource.getTenantId(),
-                                resource.getResourceId());
-                        metrics.incrementCommandResponseDeliveredToApplication(resource.getTenantId());
-                        return metricsResult;
-                    });
+                    message);
         default:
             return Future
                     .failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "unsupported endpoint"));
@@ -753,7 +747,17 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
                 Objects.requireNonNull(deviceId),
                 Objects.requireNonNull(payload),
                 getTelemetrySender(tenant),
-                TelemetryConstants.TELEMETRY_ENDPOINT);
+                TelemetryConstants.TELEMETRY_ENDPOINT
+        ).compose(success -> {
+            metrics.incrementProcessedMessages(TelemetryConstants.TELEMETRY_ENDPOINT, tenant);
+            metrics.incrementProcessedPayload(TelemetryConstants.TELEMETRY_ENDPOINT, tenant, messagePayloadSize(ctx.message()));
+            return Future.succeededFuture(success);
+        }).recover(error -> {
+            if (!(error instanceof ClientErrorException)) {
+                metrics.incrementUndeliverableMessages(TelemetryConstants.TELEMETRY_ENDPOINT, tenant);
+            }
+            return Future.failedFuture(error);
+        });
     }
 
     /**
@@ -782,7 +786,17 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
                 Objects.requireNonNull(deviceId),
                 Objects.requireNonNull(payload),
                 getEventSender(tenant),
-                EventConstants.EVENT_ENDPOINT);
+                EventConstants.EVENT_ENDPOINT
+        ).compose(success -> {
+            metrics.incrementProcessedMessages(EventConstants.EVENT_ENDPOINT, tenant);
+            metrics.incrementProcessedPayload(EventConstants.EVENT_ENDPOINT, tenant, messagePayloadSize(ctx.message()));
+            return Future.succeededFuture(success);
+        }).recover(error -> {
+            if (!(error instanceof ClientErrorException)) {
+                metrics.incrementUndeliverableMessages(EventConstants.EVENT_ENDPOINT, tenant);
+            }
+            return Future.failedFuture(error);
+        });
     }
 
     /**
@@ -827,7 +841,11 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
                     createCommandResponseSender(tenant, commandResponse.getReplyToId()),
                     CommandConstants.COMMAND_ENDPOINT,
                     commandResponse.getCorrelationId(),
-                    status);
+                    status).compose(success -> {
+                        LOG.trace("command response sent from device [{}:{}]", tenant, deviceId);
+                        metrics.incrementCommandResponseDeliveredToApplication(tenant);
+                        return Future.succeededFuture(success);
+                    });
         } else {
             return Future.failedFuture(
                     "command response need to be in the format 'control/[tenant]/[device-id]/res/<req-id>/<status>'");
@@ -899,8 +917,6 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
 
             LOG.trace("successfully processed message [topic: {}, QoS: {}] for device [tenantId: {}, deviceId: {}]",
                     ctx.message().topicName(), ctx.message().qosLevel(), tenant, deviceId);
-            metrics.incrementProcessedMessages(endpointName, tenant);
-            metrics.incrementProcessedPayload(endpointName, tenant, messagePayloadSize(ctx.message()));
             onMessageSent(ctx);
             // check that the remote MQTT client is still connected before sending PUBACK
             if (ctx.deviceEndpoint().isConnected() && ctx.message().qosLevel() == MqttQoS.AT_LEAST_ONCE) {
@@ -919,7 +935,6 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
             } else {
                 LOG.debug("cannot process message for device [tenantId: {}, deviceId: {}, endpoint: {}]",
                         tenant, deviceId, endpointName, t);
-                metrics.incrementUndeliverableMessages(endpointName, tenant);
                 onMessageUndeliverable(ctx);
             }
             TracingHelper.logError(currentSpan, t);
