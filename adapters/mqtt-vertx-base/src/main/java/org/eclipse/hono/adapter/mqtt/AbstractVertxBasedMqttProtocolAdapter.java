@@ -713,7 +713,13 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
                     ctx,
                     resource.getTenantId(),
                     resource.getResourceId(),
-                    message);
+                    message).compose(result-> {
+                        final Future<Void> metricsResult = Future.future();
+                        LOG.trace("Command response sent from device [{}:{}]", resource.getTenantId(),
+                                resource.getResourceId());
+                        metrics.incrementCommandResponseDeliveredToApplication(resource.getTenantId());
+                        return metricsResult;
+                    });
         default:
             return Future
                     .failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "unsupported endpoint"));
@@ -1104,5 +1110,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
                 String.format("%s/%s/%s/%s/%s/%s", subscription.getEndpoint(), tenantId, deviceId,
                         subscription.getRequestPart(), command.getRequestId(), command.getName()),
                 command.getPayload(), MqttQoS.AT_LEAST_ONCE, false, false);
+        LOG.trace("Command delivered to device [{}:{}]", subscription.getTenant(), subscription.getDeviceId());
+        metrics.incrementCommandDeliveredToDevice(subscription.getTenant());
     }
 }
