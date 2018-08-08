@@ -269,6 +269,14 @@ public abstract class MessageForwardingEndpoint<T extends HonoMessagingConfigPro
         });
     }
 
+    /**
+     * Handles a closed connection.
+     * <p>
+     * This implementation does nothing.
+     * </p>
+     * 
+     * @param connection The connection which got closed.
+     */
     @Override
     public void onConnectionClosed(final ProtonConnection connection) {
     }

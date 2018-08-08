@@ -346,14 +346,13 @@ public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties>
                                 return Future.succeededFuture(response.getResponse(status));
                             })
                             .map(filteredResponse -> {
-                                final Message amqpReply = getAmqpReply(filteredResponse);
-                                sender.send(amqpReply);
-                                flowCreditToRequestor(replyTo);
+                                try {
+                                    final Message amqpReply = getAmqpReply(filteredResponse);
+                                    sender.send(amqpReply);
+                                } finally {
+                                    flowCreditToRequestor(replyTo);
+                                }
                                 return null;
-                            })
-                            .recover(t -> {
-                                flowCreditToRequestor(replyTo);
-                                return Future.failedFuture(t);
                             });
                 });
 
@@ -367,12 +366,10 @@ public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties>
             logger.debug("client [{}] closed sender link, removing associated event bus consumer [{}]",
                     sender.getName(), replyConsumer.address());
 
-            deallocateReceiverForReplyTo(replyToAddress.toString());
+            deallocateReceiverForReplyTo(replyTo);
             unregisterConsumerForConnection(con, replyTo, replyConsumer);
 
-            if (senderClosed.succeeded()) {
-                senderClosed.result().close();
-            }
+            sender.close();
         });
 
         sender.open();
