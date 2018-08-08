@@ -80,13 +80,12 @@ The protocol adapter may be configured to open both a secure and a non-secure po
 
 Both the secure as well as the insecure port numbers may be explicitly set to `0`. The protocol adapter will then use arbitrary (unused) port numbers determined by the operating system during startup.
 
-## Hono Messaging Connection Configuration
+## AMQP 1.0 Messaging Network Connection Configuration
 
-The adapter requires a connection to the Hono Messaging component in order to forward [telemetry]({{< relref "api/Telemetry-API.md" >}}) data and [events]({{< relref "api/Event-API.md" >}}) received from devices to downstream consumers.
+The adapter requires a connection to the *AMQP 1.0 Messaging Network* in order to forward [telemetry]({{< relref "api/Telemetry-API.md" >}}) data and [events]({{< relref "api/Event-API.md" >}}) received from devices to downstream consumers.
 
-The connection to Hono Messaging is configured according to [Hono Client Configuration]({{< relref "hono-client-configuration.md" >}})
-where the `${PREFIX}` is set to `HONO_MESSAGING`. Since Hono Messaging does not allow caching of the responses, the cache properties
-can be ignored.
+The connection to the messaging network is configured according to [Hono Client Configuration]({{< relref "hono-client-configuration.md" >}})
+with `HONO_MESSAGING` being used as `${PREFIX}`. Since there are no responses being received, the properties for configuring response caching can be ignored.
 
 ## Tenant Service Connection Configuration
 
