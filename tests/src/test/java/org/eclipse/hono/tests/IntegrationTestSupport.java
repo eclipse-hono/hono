@@ -253,11 +253,30 @@ public final class IntegrationTestSupport {
      *         failed with a {@link ServiceInvocationException}.
      */
     public Future<Buffer> sendCommand(final TimeUntilDisconnectNotification notification, final String command, final Buffer payload) {
+        return sendCommand(notification.getTenantId(), notification.getDeviceId(), command, payload, notification.getMillisecondsUntilExpiry());
+    }
 
-        return honoClient.getOrCreateCommandClient(notification.getTenantId(), notification.getDeviceId()).compose(commandClient -> {
+    /**
+     * Sends a command to a device.
+     * 
+     * @param tenantId The tenant that the device belongs to.
+     * @param deviceId The identifier of the device.
+     * @param command The name of the command to send.
+     * @param payload The command's input data to send to the device.
+     * @param requestTimeout The number of milliseconds to wait for a response from the device.
+     * @return A future that is either succeeded with the response payload from the device or
+     *         failed with a {@link ServiceInvocationException}.
+     */
+    public Future<Buffer> sendCommand(
+            final String tenantId,
+            final String deviceId,
+            final String command,
+            final Buffer payload,
+            final long requestTimeout) {
 
-            // let the commandClient timeout when the notification expires
-            commandClient.setRequestTimeout(notification.getMillisecondsUntilExpiry());
+        return honoClient.getOrCreateCommandClient(tenantId, deviceId).compose(commandClient -> {
+
+            commandClient.setRequestTimeout(requestTimeout);
 
             // send the command upstream to the device
             LOGGER.trace("sending command [name: {}, payload: {}]", command, payload);
