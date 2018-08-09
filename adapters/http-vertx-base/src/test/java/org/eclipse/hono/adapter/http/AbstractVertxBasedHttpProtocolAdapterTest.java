@@ -15,11 +15,18 @@ package org.eclipse.hono.adapter.http;
 
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.*;
-import static org.mockito.Mockito.*;
+import static org.junit.Assert.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.net.HttpURLConnection;
-import java.util.function.BiConsumer;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ClientErrorException;
@@ -139,7 +146,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         when(commandConnection.connect(any(Handler.class))).thenReturn(Future.succeededFuture(commandConnection));
         when(commandConnection.closeCommandConsumer(anyString(), anyString())).thenReturn(Future.succeededFuture());
         commandConsumer = mock(CommandConsumer.class);
-        when(commandConnection.getOrCreateCommandConsumer(anyString(), anyString(), any(BiConsumer.class), any(Handler.class)))
+        when(commandConnection.getOrCreateCommandConsumer(anyString(), anyString(), any(Handler.class), any(Handler.class)))
             .thenReturn(Future.succeededFuture(commandConsumer));
     }
 

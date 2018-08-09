@@ -13,15 +13,11 @@
 
 package org.eclipse.hono.service.command;
 
-import java.util.function.BiConsumer;
-
-import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageConsumer;
 
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
-import io.vertx.proton.ProtonDelivery;
 
 /**
  * A bidirectional connection between an Adapter and the AMQP 1.0 network to receive commands and send a response.
@@ -37,14 +33,16 @@ public interface CommandConnection extends HonoClient {
      * 
      * @param tenantId The tenant to consume commands from.
      * @param deviceId The device for which the consumer will be created.
-     * @param commandConsumer The handler to invoke with every command received.
+     * @param commandHandler The handler to invoke with every command received.
      * @param closeHandler The handler invoked when the peer detaches the link.
      * @return A future that will complete with the consumer once the link has been established. The future will fail if
      *         the link cannot be established, e.g. because this client is not connected.
      * @throws NullPointerException if tenantId, deviceId or messageConsumer is {@code null}.
      */
-    Future<MessageConsumer> getOrCreateCommandConsumer(String tenantId, String deviceId,
-            BiConsumer<ProtonDelivery, Message> commandConsumer,
+    Future<MessageConsumer> getOrCreateCommandConsumer(
+            String tenantId,
+            String deviceId,
+            Handler<Command> commandHandler,
             Handler<Void> closeHandler);
 
     /**

@@ -19,6 +19,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 import io.vertx.mqtt.messages.MqttPublishMessage;
@@ -616,27 +617,28 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
 
     private Future<MessageConsumer> createCommandConsumer(final MqttEndpoint mqttEndpoint, final CommandSubscription sub) {
 
+        final AtomicReference<MessageConsumer> consumerRef = new AtomicReference<>();
         return createCommandConsumer(
                 sub.getTenant(),
                 sub.getDeviceId(),
-                createCommandMessageConsumer(sub.getTenant(), sub.getDeviceId(),
-                        command -> onCommandReceived(mqttEndpoint, sub, command)),
+                command -> {
+                    if (command.isValid()) {
+                        onCommandReceived(mqttEndpoint, sub, command);
+                        command.accept();
+                    }
+                    // issue credit so that application(s) can send the next command
+                    command.flow(1);
+                },
                 close -> {
                     LOG.debug("command receiver link closed remotely for [tenant-id: {}, device-id: {}]",
                             sub.getTenant(), sub.getDeviceId());
                     closeCommandConsumer(sub.getTenant(), sub.getDeviceId());
-                    // close the mqtt connection, so the device will reconnect (happens if e.g. the dispatch router is killed)
+                    // close the MQTT connection, so the device will reconnect (happens if e.g. the dispatch router is killed)
                     close(mqttEndpoint, new Device(sub.getTenant(), sub.getDeviceId()));
+                }).map(consumer -> {
+                    consumerRef.set(consumer);
+                    return consumer;
                 });
-    }
-
-    private void closeCommandConsumer(final String tenantId, final String deviceId) {
-        getCommandConnection().closeCommandConsumer(tenantId, deviceId).otherwise(t -> {
-            // not an error if already closed - e.g. tries to close on unsubscribe and close
-            LOG.debug("cannot close command consumer [tenant-id: {}, device-id: {}]: {}",
-                    tenantId, deviceId, t.getMessage());
-            return null;
-        });
     }
 
     private Future<Void> triggerLinkCreation(final String tenantId) {
@@ -800,18 +802,17 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
     }
 
     /**
-     * Uploads an command response message.
+     * Uploads a command response message.
      *
      * @param ctx The context in which the MQTT message has been published.
      * @param tenant The tenant of the device that has produced the data.
      * @param deviceId The id of the device that has produced the data.
-     * @param message The message payload to send.
+     * @param message The MQTT PUBLISH packet received from the device.
      * @return A future indicating the outcome of the operation.
      *         <p>
      *         The future will succeed if the message has been uploaded successfully. Otherwise the future will fail
      *         with a {@link ServiceInvocationException}.
-     * @throws NullPointerException if any of context, tenant, device ID or message is {@code null}.
-     * @throws IllegalArgumentException if the payload is empty.
+     * @throws NullPointerException if any of of the parameters are {@code null}.
      */
     public final Future<Void> uploadCommandResponseMessage(
             final MqttContext ctx,
@@ -828,7 +829,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
             try {
                 status = Integer.parseInt(topicPath[CommandConstants.TOPIC_POSITION_RESPONSE_STATUS]);
             } catch(final NumberFormatException e) {
-                return Future.failedFuture("invalid status code");
+                return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "invalid status code"));
             }
             final CommandResponse commandResponse = CommandResponse.from(
                     topicPath[CommandConstants.TOPIC_POSITION_RESPONSE_REQ_ID], deviceId, message.payload(),
@@ -842,13 +843,14 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
                     CommandConstants.COMMAND_ENDPOINT,
                     commandResponse.getCorrelationId(),
                     status).compose(success -> {
-                        LOG.trace("command response sent from device [{}:{}]", tenant, deviceId);
+                        LOG.trace("successfully forwarded command response from device [tenant-id: {}, device-id: {}]",
+                                tenant, deviceId);
                         metrics.incrementCommandResponseDeliveredToApplication(tenant);
                         return Future.succeededFuture(success);
                     });
         } else {
-            return Future.failedFuture(
-                    "command response need to be in the format 'control/[tenant]/[device-id]/res/<req-id>/<status>'");
+            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
+                    "command response need to be in the format 'control/[tenant]/[device-id]/res/<req-id>/<status>'"));
         }
     }
 
@@ -1114,7 +1116,11 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
      * @param subscription The MQTT subscription for which the command arrives.
      * @param command The received command.
      */
-    protected void onCommandReceived(final MqttEndpoint endpoint, final CommandSubscription subscription, final Command command) {
+    protected void onCommandReceived(
+            final MqttEndpoint endpoint,
+            final CommandSubscription subscription,
+            final Command command) {
+
         String tenantId = subscription.getTenant();
         String deviceId = subscription.getDeviceId();
         // example: control/DEFAULT_TENANT/4711/req/xyz/light

@@ -616,6 +616,10 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                                 "adapter is not enabled for tenant"));
                     }
                 }).compose(delivery -> {
+
+                    // the command consumer is always used for a single request only
+                    closeCommandConsumer(tenant, deviceId);
+
                     if (!ctx.response().closed()) {
                         final Command command = Command.get(ctx);
                         setResponsePayload(ctx.response(), command, currentSpan);
@@ -624,9 +628,8 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                                     endpointName, tenant, deviceId);
                             metrics.incrementProcessedMessages(endpointName, tenant);
                             metrics.incrementProcessedPayload(endpointName, tenant, messagePayloadSize(ctx));
-                            if (command!=null){
+                            if (command != null) {
                                 metrics.incrementCommandDeliveredToDevice(tenant);
-                                LOG.trace("Command [{}] for device [tenantId: {}, deviceId: {}]", command.getPayload(), tenant, deviceId);
                             }
                             currentSpan.finish();
                         });
@@ -643,6 +646,9 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                     return Future.succeededFuture();
 
                 }).recover(t -> {
+
+                    // the command consumer is always used for a single request only
+                    closeCommandConsumer(tenant, deviceId);
 
                     LOG.debug("cannot process [{}] message from device [tenantId: {}, deviceId: {}]",
                             endpointName, tenant, deviceId, t);
@@ -680,15 +686,12 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
     }
 
     /**
-     * Attaches a handler that is called if a command consumer was opened and the client closes the HTTP connection before a response
-     * with a possible command could be sent.
+     * Adds a handler for tidying up when a device closes the HTTP connection before a response could be sent.
      * <p>
-     * In this case, the handler closes the command consumer since a command could not be added to the response anymore.
-     * The application receives an {@link HttpURLConnection#HTTP_UNAVAILABLE} if trying to send the command and can repeat
-     * it later.
-     *
+     * The handler increases the metric for expired TTDs.
+     * 
      * @param ctx The context to retrieve cookies and the HTTP response from.
-     * @param messageConsumer The message consumer to receive a command. Maybe {@code null} - in this case no handler is attached.
+     * @param messageConsumer The message consumer to receive a command. If {@code null}, no handler is added.
      * @param tenantId The tenant that the device belongs to.
      * @param deviceId The identifier of the device.
      */
@@ -701,15 +704,10 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
         if (messageConsumer != null) {
             if (!ctx.response().closed()) {
                 ctx.response().closeHandler(v -> {
+                    LOG.debug("device [tenantId: {}, deviceId: {}] closed connection before response could be sent ",
+                            tenantId, deviceId);
                     cancelCommandReceptionTimer(ctx);
                     metrics.incrementNoCommandReceivedAndTTDExpired(tenantId);
-                    LOG.debug("Connection was closed before response could be sent - closing command consumer for device [tenantId: {}, deviceId: {}]", tenantId, deviceId);
-
-                    getCommandConnection().closeCommandConsumer(tenantId, deviceId).setHandler(result -> {
-                        if (result.failed()) {
-                            LOG.warn("Close command consumer failed", result.cause());
-                        }
-                    });
                 });
             }
         }
@@ -776,20 +774,26 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
             // get or create a command consumer - if there is one command consumer existing already, it is reused.
             // This prevents that receiver links are opened massively if a device is misbehaving by sending a huge number
             // of downstream messages with a ttd value set.
-            return getCommandConnection().getOrCreateCommandConsumer(
+            return createCommandConsumer(
                     tenantId,
                     deviceId,
-                    createCommandMessageConsumer(tenantId, deviceId, receivedCommand -> {
-                        if (responseReady.isComplete()) {
-                            // the timer has already fired, release the command
-                            receivedCommand.release();
-                        } else {
-                            // put command to routing context and notify
-                            receivedCommand.put(ctx);
-                            cancelCommandReceptionTimer(ctx);
-                            responseReady.tryComplete();
+                    command -> {
+                        if (command.isValid()) {
+                            if (responseReady.isComplete()) {
+                                // the timer has already fired, release the command
+                                command.release();
+                            } else {
+                                // put command to routing context and notify
+                                command.put(ctx);
+                                command.accept();
+                                cancelCommandReceptionTimer(ctx);
+                                responseReady.tryComplete();
+                            }
+                            // we do not issue any new credit because the
+                            // consumer is supposed to delivery a single command
+                            // only per HTTP request
                         }
-                    }),
+                    },
                     remoteDetach -> {
                         LOG.debug("peer closed command receiver link [tenant-id: {}, device-id: {}]", tenantId, deviceId);
                         // command consumer is closed by closeHandler, no explicit close necessary here
@@ -824,22 +828,18 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
 
         final Long timerId = ctx.vertx().setTimer(delaySecs * 1000L, id -> {
 
-            LOG.trace("Command Reception timer fired, id {}", id);
+            LOG.trace("command reception timer [id: {}] fired", id);
 
-            if (!responseReady.isComplete()) {
+            if (responseReady.isComplete()) {
+                LOG.trace("response already sent, nothing to do ...");
+            } else {
                 // the response hasn't been sent yet
                 responseReady.tryComplete();
-                getCommandConnection().closeCommandConsumer(tenantId, deviceId).setHandler(v -> {
-                    if (v.failed()) {
-                        LOG.warn("Close command consumer failed", v.cause());
-                    }
-                });
-            } else {
-                LOG.trace("Nothing to close for timer since response was sent already");
+                closeCommandConsumer(tenantId, deviceId);
             }
         });
 
-        LOG.trace("Adding command reception timer id {}", timerId);
+        LOG.trace("adding command reception timer [id: {}]", timerId);
 
         ctx.put(KEY_TIMER_ID, timerId);
     }

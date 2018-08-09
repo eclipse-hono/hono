@@ -16,9 +16,7 @@ package org.eclipse.hono.service.command;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
-import java.util.function.BiConsumer;
 
-import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.impl.HonoClientImpl;
@@ -31,7 +29,6 @@ import org.slf4j.LoggerFactory;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
-import io.vertx.proton.ProtonDelivery;
 
 /**
  * Implements a connection between an Adapter and the AMQP 1.0 network to receive commands and send a response.
@@ -75,7 +72,7 @@ public class CommandConnectionImpl extends HonoClientImpl implements CommandConn
     public final Future<MessageConsumer> getOrCreateCommandConsumer(
             final String tenantId,
             final String deviceId,
-            final BiConsumer<ProtonDelivery, Message> commandConsumer,
+            final Handler<Command> commandConsumer,
             final Handler<Void> closeHandler) {
         final MessageConsumer messageConsumer = commandReceivers.get(Device.asAddress(tenantId, deviceId));
         if (messageConsumer != null) {
@@ -90,13 +87,13 @@ public class CommandConnectionImpl extends HonoClientImpl implements CommandConn
     private Future<MessageConsumer> newCommandConsumer(
             final String tenantId,
             final String deviceId,
-            final BiConsumer<ProtonDelivery, Message> messageConsumer,
+            final Handler<Command> commandConsumer,
             final Handler<Void> closeHandler) {
 
         return checkConnected().compose(con -> {
             final Future<MessageConsumer> result = Future.future();
             CommandConsumer.create(context, clientConfigProperties, connection, tenantId, deviceId,
-                    messageConsumer, closeHook -> {
+                    commandConsumer, closeHook -> {
                         closeCommandConsumer(tenantId, deviceId);
                     }, creation -> {
                         if (creation.succeeded()) {

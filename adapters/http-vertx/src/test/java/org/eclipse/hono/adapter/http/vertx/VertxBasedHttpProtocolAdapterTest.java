@@ -24,7 +24,6 @@ import static org.mockito.Mockito.when;
 import java.net.HttpURLConnection;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
-import java.util.function.BiConsumer;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.adapter.http.HttpProtocolAdapterProperties;
@@ -36,6 +35,7 @@ import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.TenantClient;
 import org.eclipse.hono.service.auth.device.Device;
 import org.eclipse.hono.service.auth.device.HonoClientBasedAuthProvider;
+import org.eclipse.hono.service.command.Command;
 import org.eclipse.hono.service.command.CommandConnection;
 import org.eclipse.hono.service.command.CommandResponse;
 import org.eclipse.hono.service.command.CommandResponseSender;
@@ -68,6 +68,7 @@ import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.proton.ProtonDelivery;
+import io.vertx.proton.ProtonReceiver;
 
 /**
  * Verifies behavior of {@link VertxBasedHttpProtocolAdapter}.
@@ -209,8 +210,9 @@ public class VertxBasedHttpProtocolAdapterTest {
         when(tenantServiceClient.getOrCreateTenantClient()).thenReturn(Future.succeededFuture(tenantClient));
 
         final MessageConsumer commandConsumer = mock(MessageConsumer.class);
-        when(commandConnection.getOrCreateCommandConsumer(anyString(), anyString(), any(BiConsumer.class), any(Handler.class))).
+        when(commandConnection.getOrCreateCommandConsumer(anyString(), anyString(), any(Handler.class), any(Handler.class))).
                 thenReturn(Future.succeededFuture(commandConsumer));
+        when(commandConnection.closeCommandConsumer(anyString(), anyString())).thenReturn(Future.succeededFuture());
 
         telemetrySender = mock(MessageSender.class);
         when(telemetrySender.send(any(Message.class), (SpanContext) any())).thenReturn(Future.succeededFuture(mock(ProtonDelivery.class)));
@@ -471,16 +473,19 @@ public class VertxBasedHttpProtocolAdapterTest {
 
         // GIVEN an device for which a command is pending
         mockSuccessfulAuthentication("DEFAULT_TENANT", "device_1");
-        final Message pendingCommand = newMockMessage("DEFAULT_TENANT", "device_1", "doThis");
+        final Message msg = newMockMessage("DEFAULT_TENANT", "device_1", "doThis");
+        final Command pendingCommand = Command.from(mock(ProtonReceiver.class), mock(ProtonDelivery.class), msg, "DEFAULT_TENANT", "device_1");
         final MessageConsumer commandConsumer = mock(MessageConsumer.class);
-        when(commandConnection.getOrCreateCommandConsumer(anyString(), anyString(), any(BiConsumer.class), any(Handler.class))).
+        when(commandConnection.getOrCreateCommandConsumer(eq("DEFAULT_TENANT"), eq("device_1"), any(Handler.class), any(Handler.class))).
                 thenAnswer(invocation -> {
-                    final BiConsumer<ProtonDelivery, Message> consumer = invocation.getArgument(2);
-                    consumer.accept(mock(ProtonDelivery.class), pendingCommand);
+                    final Handler<Command> consumer = invocation.getArgument(2);
+                    consumer.handle(pendingCommand);
                     return Future.succeededFuture(commandConsumer);
                 });
-        when(commandConnection.closeCommandConsumer(anyString(), anyString())).
-                thenAnswer(invocation -> Future.succeededFuture());
+        when(commandConnection.closeCommandConsumer(eq("DEFAULT_TENANT"), eq("device_1"))).then(invocation -> {
+            commandConsumer.close(closeAttempt -> {});
+            return Future.succeededFuture();
+        });
 
         // WHEN the device posts a telemetry message including a TTD
         httpClient.post("/telemetry?hono-ttd=3")
@@ -493,9 +498,9 @@ public class VertxBasedHttpProtocolAdapterTest {
                     ctx.assertEquals("doThis", response.getHeader(Constants.HEADER_COMMAND));
                     ctx.assertNotNull(response.getHeader(Constants.HEADER_COMMAND_REQUEST_ID));
                     verify(commandConnection).getOrCreateCommandConsumer(eq("DEFAULT_TENANT"), eq("device_1"),
-                            any(BiConsumer.class), any(Handler.class));
+                            any(Handler.class), any(Handler.class));
                     // and the command consumer has been closed again
-                    verify(commandConnection).closeCommandConsumer(eq("DEFAULT_TENANT"), eq("device_1"));
+                    verify(commandConsumer).close(any(Handler.class));
                     async.complete();
                 }).exceptionHandler(ctx::fail).end(new JsonObject().encode());
     }

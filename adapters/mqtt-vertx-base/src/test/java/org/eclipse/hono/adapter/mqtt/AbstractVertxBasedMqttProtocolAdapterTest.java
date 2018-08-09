@@ -15,7 +15,16 @@ package org.eclipse.hono.adapter.mqtt;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
-import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.net.HttpURLConnection;
 import java.util.ArrayList;
@@ -574,7 +583,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         final MqttEndpoint endpoint = mockEndpoint();
 
         // WHEN a device subscribes to commands
-        when(commandConnection.getOrCreateCommandConsumer(eq("tenant"), eq("deviceId"), any(BiConsumer.class), any(Handler.class))).thenReturn(
+        when(commandConnection.getOrCreateCommandConsumer(eq("tenant"), eq("deviceId"), any(Handler.class), any(Handler.class))).thenReturn(
                 Future.succeededFuture(mock(MessageConsumer.class)));
         final List<MqttTopicSubscription> subscriptions = Collections.singletonList(
                 newMockTopicSubsription("control/tenant/deviceId/req/#", MqttQoS.AT_MOST_ONCE));
@@ -620,7 +629,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         subscriptions.add(newMockTopicSubsription("bumlux/+/+/#", MqttQoS.AT_MOST_ONCE));
         subscriptions.add(newMockTopicSubsription("bumlux/+/+/#", MqttQoS.AT_MOST_ONCE));
         // and for subscribing to commands
-        when(commandConnection.getOrCreateCommandConsumer(eq("tenant"), eq("deviceId"), any(BiConsumer.class), any(Handler.class))).thenReturn(
+        when(commandConnection.getOrCreateCommandConsumer(eq("tenant"), eq("deviceId"), any(Handler.class), any(Handler.class))).thenReturn(
                 Future.succeededFuture(mock(MessageConsumer.class)));
         subscriptions.add(newMockTopicSubsription("control/tenant/deviceId/req/#", MqttQoS.AT_MOST_ONCE));
         final MqttSubscribeMessage msg = mock(MqttSubscribeMessage.class);
