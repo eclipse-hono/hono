@@ -53,7 +53,7 @@ NB: There is a subtle difference between the *device identifier* (*device-id*) a
   * 401 (Unauthorized): The request cannot be processed because the request does not contain valid credentials.
   * 403 (Forbidden): The request cannot be processed because the device's registration status cannot be asserted. Possible reasons for this include:
         * The given tenant is not allowed to use this protocol adapter.
-        * The given device is disabled.
+  * 404 (Not Found): The request cannot be processed because the device is disabled or does not exist.
   * 503 (Service Unavailable): The request cannot be processed because there is no consumer of telemetry data for the given tenant connected to Hono.
 
 This is the preferred way for devices to publish telemetry data. It is available only if the protocol adapter is configured to require devices to authenticate (which is the default).
@@ -116,7 +116,7 @@ Publish some JSON data for device `4711`, indicating that the device will wait f
   * 403 (Forbidden): The request cannot be processed because the device's registration status cannot be asserted. Possible reasons for this include:
         * The given tenant is not allowed to use this protocol adapter.
         * The given device does not belong to the given tenant.
-        * The given device is disabled.
+  * 404 (Not Found): The request cannot be processed because the device is disabled or does not exist.
   * 503 (Service Unavailable): The request cannot be processed because there is no consumer of telemetry data for the given tenant connected to Hono.
 
 This resource MUST be used by devices that have not authenticated to the protocol adapter. Note that this requires the `HONO_HTTP_AUTHENTICATION_REQUIRED` configuration property to be explicitly set to `false`.
@@ -183,7 +183,7 @@ Publish some JSON data for device `4711`, indicating that the device will wait f
         * The tenant that the gateway belongs to is not allowed to use this protocol adapter.
         * The device belongs to another tenant than the gateway.
         * The gateway is not authorized to act *on behalf of* the device.
-        * The gateway is disabled.
+  * 404 (Not Found): The request cannot be processed because the device is disabled or does not exist.
   * 503 (Service Unavailable): The request cannot be processed because there is no consumer of telemetry data for the given tenant connected to Hono.
 
 This resource can be used by *gateway* components to publish data *on behalf of* other devices which do not connect to a protocol adapter directly but instead are connected to the gateway, e.g. using some low-bandwidth radio based technology like [SigFox](https://www.sigfox.com) or [LoRa](https://www.lora-alliance.org/). In this case the credentials provided by the gateway during connection establishment with the protocol adapter are used to authenticate the gateway whereas the parameters from the URI are used to identify the device that the gateway publishes data for.
@@ -249,7 +249,7 @@ Publish some JSON data for device `4712`, indicating that the gateway will wait 
   * 401 (Unauthorized): The request cannot be processed because the request does not contain valid credentials.
   * 403 (Forbidden): The request cannot be processed because the device's registration status cannot be asserted. Possible reasons for this include:
         * The given tenant is not allowed to use this protocol adapter.
-        * The given device is disabled.
+  * 404 (Not Found): The request cannot be processed because the device is disabled or does not exist.
   * 503 (Service Unavailable): The request cannot be processed because there is no consumer of telemetry data for the given tenant connected to Hono.
 
 This is the preferred way for devices to publish events. It is available only if the protocol adapter is configured to require devices to authenticate (which is the default).
@@ -288,7 +288,7 @@ Publish some JSON data for device `4711`:
   * 403 (Forbidden): The request cannot be processed because the device's registration status cannot be asserted. Possible reasons for this include:
         * The given tenant is not allowed to use this protocol adapter.
         * The given device does not belong to the given tenant.
-        * The given device is disabled.
+  * 404 (Not Found): The request cannot be processed because the device is disabled or does not exist.
   * 503 (Service Unavailable): The request cannot be processed because there is no consumer of telemetry data for the given tenant connected to Hono.
 
 This resource MUST be used by devices that have not authenticated to the protocol adapter. Note that this requires the `HONO_HTTP_AUTHENTICATION_REQUIRED` configuration property to be explicitly set to `false`.
@@ -330,7 +330,7 @@ Publish some JSON data for device `4711`:
         * The tenant that the gateway belongs to is not allowed to use this protocol adapter.
         * The device belongs to another tenant than the gateway.
         * The gateway is not authorized to act *on behalf of* the device.
-        * The gateway is disabled.
+  * 404 (Not Found): The request cannot be processed because the device is disabled or does not exist.
   * 503 (Service Unavailable): The request cannot be processed because there is no consumer of telemetry data for the given tenant connected to Hono.
 
 This resource can be used by *gateway* components to publish data *on behalf of* other devices which do not connect to a protocol adapter directly but instead are connected to the gateway, e.g. using some low-bandwidth radio based technology like [SigFox](https://www.sigfox.com) or [LoRa](https://www.lora-alliance.org/). In this case the credentials provided by the gateway during connection establishment with the protocol adapter are used to authenticate the gateway whereas the parameters from the URI are used to identify the device that the gateway publishes data for.
@@ -402,7 +402,7 @@ Example:
   * 401 (Unauthorized): The request cannot be processed because the request does not contain valid credentials.  
   * 403 (Forbidden): The request cannot be processed because the device's registration status cannot be asserted. Possible reasons for this include:
         * The given tenant is not allowed to use this protocol adapter.
-        * The given device is disabled.
+  * 404 (Not Found): The request cannot be processed because the device is disabled or does not exist.
   * 503 (Service Unavailable): The request cannot be processed. Possible reasons for this include:
          * There is no application listening for a reply to the given *commandRequestId*.
          * The application has already given up on waiting for a response.
@@ -438,7 +438,7 @@ Send a response to a previously received command with the command-request-id `re
   * 403 (Forbidden): The request cannot be processed because the device's registration status cannot be asserted. Possible reasons for this might be:
         * The given tenant is not allowed to use this protocol adapter.
         * The given device does not belong to the given tenant.
-        * The given device is disabled.
+  * 404 (Not Found): The request cannot be processed because the device is disabled or does not exist.
   * 503 (Service Unavailable): The request cannot be processed. Possible reasons for this include:
          * There is no application listening for a reply to the given *commandRequestId*.
          * The application has already given up on waiting for a response.
@@ -475,7 +475,7 @@ Send a response to a previously received command with the command-request-id `re
   * 403 (Forbidden): The request cannot be processed because the device's registration status cannot be asserted. Possible reasons for this might be:
         * The given tenant is not allowed to use this protocol adapter.
         * The given device does not belong to the given tenant.
-        * The given device is disabled.
+  * 404 (Not Found): The request cannot be processed because the device is disabled or does not exist.
   * 503 (Service Unavailable): The request cannot be processed. Possible reasons for this include:
          * There is no application listening for a reply to the given *commandRequestId*.
          * The application has already given up on waiting for a response.
