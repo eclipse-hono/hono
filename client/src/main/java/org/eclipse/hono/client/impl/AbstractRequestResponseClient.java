@@ -763,7 +763,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
     public final void close(final Handler<AsyncResult<Void>> closeHandler) {
 
         Objects.requireNonNull(closeHandler);
-        LOG.info("closing request-response client ...");
+        LOG.debug("closing request-response client ...");
         closeLinks(closeHandler);
     }
 
