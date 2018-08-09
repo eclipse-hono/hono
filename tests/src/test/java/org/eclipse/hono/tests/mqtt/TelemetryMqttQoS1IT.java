@@ -32,7 +32,7 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
  *
  */
 @RunWith(VertxUnitRunner.class)
-public class TelemetryMqttQoS1IT extends MqttTestBase {
+public class TelemetryMqttQoS1IT extends MqttPublishTestBase {
 
     private static final String TOPIC_TEMPLATE = "%s/%s/%s";
 

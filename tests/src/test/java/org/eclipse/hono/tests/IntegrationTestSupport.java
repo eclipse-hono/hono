@@ -22,9 +22,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.ServiceInvocationException;
-import org.eclipse.hono.client.impl.HonoClientImpl;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.TimeUntilDisconnectNotification;
@@ -126,14 +124,13 @@ public final class IntegrationTestSupport {
      * A client for connecting to the AMQP Messaging Network.
      * This can be used for downstream <em>or</em> upstream messages.
      */
-    public HonoClient honoClient;
+    public IntegrationTestHonoClient honoClient;
 
     private static final Logger LOGGER = LoggerFactory.getLogger(IntegrationTestSupport.class);
 
     private final Set<String> tenantsToDelete = new HashSet<>();
     private final Map<String, Set<String>> devicesToDelete = new HashMap<>();
     private final Vertx vertx;
-
     /**
      * Creates a new helper instance.
      * 
@@ -159,7 +156,7 @@ public final class IntegrationTestSupport {
         downstreamProps.setPort(IntegrationTestSupport.DOWNSTREAM_PORT);
         downstreamProps.setUsername(IntegrationTestSupport.DOWNSTREAM_USER);
         downstreamProps.setPassword(IntegrationTestSupport.DOWNSTREAM_PWD);
-        honoClient = new HonoClientImpl(vertx, downstreamProps);
+        honoClient = new IntegrationTestHonoClient(vertx, downstreamProps);
 
         honoClient.connect().setHandler(ctx.asyncAssertSuccess());
     }
@@ -206,13 +203,15 @@ public final class IntegrationTestSupport {
     }
 
     /**
-     * Closes the AMQP 1.0 Messaging Network client.
+     * Closes the connections to the AMQP 1.0 Messaging Network.
      * 
      * @param ctx The vert.x test context.
      */
     public void disconnect(final TestContext ctx) {
 
-        honoClient.shutdown(ctx.asyncAssertSuccess());
+        final Async shutdown = ctx.async();
+        honoClient.shutdown(attempt -> shutdown.complete());
+        shutdown.await();
     }
 
     /**

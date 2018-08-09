@@ -25,15 +25,16 @@ import org.eclipse.hono.util.TenantObject;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import io.netty.handler.codec.mqtt.MqttConnectReturnCode;
 import io.netty.handler.codec.mqtt.MqttQoS;
 import io.vertx.core.Future;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
-import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.mqtt.MqttClient;
 import io.vertx.mqtt.MqttClientOptions;
+import io.vertx.mqtt.MqttConnectionException;
 import io.vertx.mqtt.messages.MqttConnAckMessage;
 
 
@@ -43,7 +44,7 @@ import io.vertx.mqtt.messages.MqttConnAckMessage;
  *
  */
 @RunWith(VertxUnitRunner.class)
-public class TelemetryMqttQoS0IT extends MqttTestBase {
+public class TelemetryMqttQoS0IT extends MqttPublishTestBase {
 
     private static final String TOPIC_TEMPLATE = "%s/%s/%s";
 
@@ -64,12 +65,14 @@ public class TelemetryMqttQoS0IT extends MqttTestBase {
                 tenantId,
                 deviceId);
         final Future<Void> result = Future.future();
-        mqttClient.publish(topic, payload, MqttQoS.AT_MOST_ONCE, false, false, sendAttempt -> {
-            if (sendAttempt.succeeded()) {
-                result.complete();
-            } else {
-                result.fail(sendAttempt.cause());
-            }
+        VERTX.setTimer(5, go -> {
+            mqttClient.publish(topic, payload, MqttQoS.AT_MOST_ONCE, false, false, sendAttempt -> {
+                if (sendAttempt.succeeded()) {
+                    result.complete();
+                } else {
+                    result.fail(sendAttempt.cause());
+                }
+            });
         });
         return result;
     }
@@ -118,7 +121,6 @@ public class TelemetryMqttQoS0IT extends MqttTestBase {
     public void testConnectFailsForDisabledTenant(final TestContext ctx) {
 
         // GIVEN a tenant for which the HTTP adapter is disabled
-        final Async rejected = ctx.async();
         final String tenantId = helper.getRandomTenantId();
         final String deviceId = helper.getRandomDeviceId(tenantId);
         final String password = "secret";
@@ -129,20 +131,21 @@ public class TelemetryMqttQoS0IT extends MqttTestBase {
         tenant.addAdapterConfiguration(adapterDetailsHttp);
 
         helper.registry.addDeviceForTenant(tenant, deviceId, password)
-            .compose(ok -> {
+            .recover(t -> {
+                return Future.failedFuture(t);
+            }).compose(ok -> {
                 final Future<MqttConnAckMessage> result = Future.future();
                 final MqttClientOptions options = new MqttClientOptions()
                         .setUsername(IntegrationTestSupport.getUsername(deviceId, tenantId))
                         .setPassword(password);
                 mqttClient = MqttClient.create(VERTX, options);
                 // WHEN a device that belongs to the tenant tries to connect to the adapter
-                mqttClient.connect(IntegrationTestSupport.MQTT_PORT, IntegrationTestSupport.MQTT_HOST, result.completer());
+                mqttClient.connect(IntegrationTestSupport.MQTT_PORT, IntegrationTestSupport.MQTT_HOST, result);
                 return result;
             }).setHandler(ctx.asyncAssertFailure(t -> {
-                // THEN the connection attempt gets rejected
-                rejected.complete();
+                ctx.assertTrue(t instanceof MqttConnectionException);
+                // THEN the connection is refused with a NOT_AUTHORIZED code
+                ctx.assertEquals(((MqttConnectionException) t).code(), MqttConnectReturnCode.CONNECTION_REFUSED_NOT_AUTHORIZED);
             }));
-
-        rejected.await(TEST_TIMEOUT);
     }
 }
