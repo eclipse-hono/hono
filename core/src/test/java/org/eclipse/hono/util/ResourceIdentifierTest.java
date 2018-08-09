@@ -38,6 +38,20 @@ public class ResourceIdentifierTest {
     }
 
     /**
+     * Verifies that a resource identifier can be created from a string with empty
+     * path segments.
+     */
+    @Test
+    public void testFromStringAllowsEmptyPathSegments() {
+        final ResourceIdentifier resourceId = ResourceIdentifier.fromString("control///req/cmd-req-id");
+        assertNotNull(resourceId);
+        assertThat(resourceId.getEndpoint(), is("control"));
+        assertNull(resourceId.getTenantId());
+        assertNull(resourceId.getResourceId());
+        assertThat(resourceId.getResourcePath()[4], is("cmd-req-id"));
+    }
+
+    /**
      * Verifies that a resource identifier created from a string containing
      * a single segment only contains the segment as endpoint and the default tenant.
      */
