@@ -79,9 +79,7 @@ public class CommandConnectionImpl extends HonoClientImpl implements CommandConn
             final Handler<Void> closeHandler) {
         final MessageConsumer messageConsumer = commandReceivers.get(Device.asAddress(tenantId, deviceId));
         if (messageConsumer != null) {
-            final Future<MessageConsumer> result = Future.future();
-            result.complete(messageConsumer);
-            return result;
+            return Future.succeededFuture(messageConsumer);
         } else {
             return createConsumer(
                     tenantId,
