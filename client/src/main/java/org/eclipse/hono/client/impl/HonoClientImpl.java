@@ -953,10 +953,11 @@ public class HonoClientImpl implements HonoClient {
             final String replyId) {
         return checkConnected().compose(connected -> {
             final Future<CommandClient> result = Future.future();
-            CommandClientImpl.create(tenantId, deviceId, replyId,
+            CommandClientImpl.create(
                     context,
                     clientConfigProperties,
                     connection,
+                    tenantId, deviceId, replyId,
                     this::removeActiveRequestResponseClient,
                     this::removeActiveRequestResponseClient,
                     result.completer());
