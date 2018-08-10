@@ -340,11 +340,12 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      * Creates a result object from the status and payload of a response received from the endpoint.
      *
      * @param status The status of the response.
+     * @param contentType A media type describing the payload or {@code null} if unknown.
      * @param payload The representation of the payload (may be {@code null}).
      * @param cacheDirective Restrictions regarding the caching of the payload (may be {@code null}).
      * @return The result object.
      */
-    protected abstract R getResult(int status, Buffer payload, CacheDirective cacheDirective);
+    protected abstract R getResult(int status, String contentType, Buffer payload, CacheDirective cacheDirective);
 
     /**
      * Creates the sender and receiver links to the peer for sending requests
@@ -486,7 +487,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
             return null;
         } else {
             final CacheDirective cacheDirective = CacheDirective.from(MessageHelper.getCacheDirective(message));
-            return getResult(status, MessageHelper.getPayload(message), cacheDirective);
+            return getResult(status, message.getContentType(), MessageHelper.getPayload(message), cacheDirective);
         }
     }
 

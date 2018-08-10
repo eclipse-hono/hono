@@ -16,13 +16,16 @@ package org.eclipse.hono.util;
 import io.vertx.core.buffer.Buffer;
 
 /**
- * A container for a RequestResponseResult with an opaque value.
+ * A container for the opaque result of a request-response service invocation.
  *
  */
 public final class BufferResult extends RequestResponseResult<Buffer> {
 
-    private BufferResult(final int status, final Buffer payload) {
+    private final String contentType;
+
+    private BufferResult(final int status, final String contentType, final Buffer payload) {
         super(status, payload, CacheDirective.noCacheDirective());
+        this.contentType = contentType;
     }
 
     /**
@@ -32,7 +35,7 @@ public final class BufferResult extends RequestResponseResult<Buffer> {
      * @return The result.
      */
     public static BufferResult from(final int status) {
-        return new BufferResult(status, null);
+        return new BufferResult(status, null, null);
     }
 
     /**
@@ -43,6 +46,27 @@ public final class BufferResult extends RequestResponseResult<Buffer> {
      * @return The result.
      */
     public static BufferResult from(final int status, final Buffer payload) {
-        return new BufferResult(status, payload);
+        return new BufferResult(status, null, payload);
+    }
+
+    /**
+     * Creates a new result for a status code and payload.
+     * 
+     * @param status The status code.
+     * @param contentType A media type describing the payload or {@code null} if unknown.
+     * @param payload The payload to include in the result.
+     * @return The result.
+     */
+    public static BufferResult from(final int status, final String contentType, final Buffer payload) {
+        return new BufferResult(status, contentType, payload);
+    }
+
+    /**
+     * Gets the type of the payload.
+     * 
+     * @return The media type describing the payload or {@code null} if unknown.
+     */
+    public String getContentType() {
+        return contentType;
     }
 }

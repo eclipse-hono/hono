@@ -24,6 +24,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ClientConfigProperties;
+import org.eclipse.hono.util.BufferResult;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.TimeUntilDisconnectNotification;
 import org.slf4j.Logger;
@@ -247,12 +248,24 @@ public final class IntegrationTestSupport {
      * 
      * @param notification The empty notification indicating the device's readiness to receive a command.
      * @param command The name of the command to send.
+     * @param contentType The type of the command's input data.
      * @param payload The command's input data to send to the device.
      * @return A future that is either succeeded with the response payload from the device or
      *         failed with a {@link ServiceInvocationException}.
      */
-    public Future<Buffer> sendCommand(final TimeUntilDisconnectNotification notification, final String command, final Buffer payload) {
-        return sendCommand(notification.getTenantId(), notification.getDeviceId(), command, payload, notification.getMillisecondsUntilExpiry());
+    public Future<BufferResult> sendCommand(
+            final TimeUntilDisconnectNotification notification,
+            final String command,
+            final String contentType,
+            final Buffer payload) {
+
+        return sendCommand(
+                notification.getTenantId(),
+                notification.getDeviceId(),
+                command,
+                contentType,
+                payload,
+                notification.getMillisecondsUntilExpiry());
     }
 
     /**
@@ -261,15 +274,17 @@ public final class IntegrationTestSupport {
      * @param tenantId The tenant that the device belongs to.
      * @param deviceId The identifier of the device.
      * @param command The name of the command to send.
+     * @param contentType The type of the command's input data.
      * @param payload The command's input data to send to the device.
      * @param requestTimeout The number of milliseconds to wait for a response from the device.
      * @return A future that is either succeeded with the response payload from the device or
      *         failed with a {@link ServiceInvocationException}.
      */
-    public Future<Buffer> sendCommand(
+    public Future<BufferResult> sendCommand(
             final String tenantId,
             final String deviceId,
             final String command,
+            final String contentType,
             final Buffer payload,
             final long requestTimeout) {
 
@@ -278,8 +293,8 @@ public final class IntegrationTestSupport {
             commandClient.setRequestTimeout(requestTimeout);
 
             // send the command upstream to the device
-            LOGGER.trace("sending command [name: {}, payload: {}]", command, payload);
-            return commandClient.sendCommand(command, payload).map(responsePayload -> {
+            LOGGER.trace("sending command [name: {}, contentType: {}, payload: {}]", command, contentType, payload);
+            return commandClient.sendCommand(command, contentType, payload).map(responsePayload -> {
                 LOGGER.debug("successfully sent command [name: {}, payload: {}] and received response [payload: {}]",
                         command, payload, responsePayload);
                 commandClient.close(v -> {});

@@ -670,7 +670,11 @@ public abstract class HttpTestBase {
                     ctx.assertEquals(deviceId, notification.getDeviceId());
                     // now ready to send a command
                     final JsonObject inputData = new JsonObject().put(COMMAND_JSON_KEY, (int) (Math.random() * 100));
-                    helper.sendCommand(notification, COMMAND_TO_SEND, inputData.toBuffer());
+                    helper
+                        .sendCommand(notification, COMMAND_TO_SEND, "application/json", inputData.toBuffer())
+                        .setHandler(ctx.asyncAssertSuccess(response -> {
+                            ctx.assertEquals("text/plain", response.getContentType());
+                        }));
                 },
                 count -> {
                     return httpClient.create(
@@ -681,6 +685,7 @@ public abstract class HttpTestBase {
 
                                 // assert that the response contains a command
                                 ctx.assertEquals(COMMAND_TO_SEND, responseHeaders.get(Constants.HEADER_COMMAND));
+                                ctx.assertEquals("application/json", responseHeaders.get(HttpHeaders.CONTENT_TYPE));
                                 final String requestId = responseHeaders.get(Constants.HEADER_COMMAND_REQUEST_ID);
                                 ctx.assertNotNull(requestId);
                                 ctx.assertNotEquals(responseHeaders.get(HttpHeaders.CONTENT_LENGTH), "0");
