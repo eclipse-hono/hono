@@ -31,6 +31,8 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.proton.ProtonConnection;
+import io.vertx.proton.ProtonReceiver;
+import io.vertx.proton.ProtonSender;
 
 /**
  * A Vertx-Proton based client for Hono's Command and Control API.
@@ -42,8 +44,53 @@ public class CommandClientImpl extends AbstractRequestResponseClient<BufferResul
 
     private long messageCounter;
 
-    CommandClientImpl(final Context context, final ClientConfigProperties config, final String tenantId, final String deviceId, final String replyId) {
+    /**
+     * Creates a request-response client.
+     * <p>
+     * The client will be ready to use after invoking {@link #createLinks(ProtonConnection)} or
+     * {@link #createLinks(ProtonConnection, Handler, Handler)} only.
+     * 
+     * @param context The vert.x context to run message exchanges with the peer on.
+     * @param config The configuration properties to use.
+     * @param tenantId The tenant that the device belongs to.
+     * @param deviceId The device to create the client for.
+     * @param replyId The replyId to use in the reply-to address.
+     * @throws NullPointerException if any of the parameters are {@code null}.
+     */
+    CommandClientImpl(
+            final Context context,
+            final ClientConfigProperties config,
+            final String tenantId,
+            final String deviceId,
+            final String replyId) {
+
         super(context, config, tenantId, deviceId, replyId);
+    }
+
+    /**
+     * Creates a request-response client.
+     * 
+     * @param context The vert.x context to run message exchanges with the peer on.
+     * @param config The configuration properties to use.
+     * @param tenantId The tenant that the device belongs to.
+     * @param deviceId The device to create the client for.
+     * @param replyId The replyId to use in the reply-to address.
+     * @param sender The link to use for sending command requests.
+     * @param receiver The link to use for receiving command responses.
+     * @throws NullPointerException if any of the parameters are {@code null}.
+     */
+    CommandClientImpl(
+            final Context context,
+            final ClientConfigProperties config,
+            final String tenantId,
+            final String deviceId,
+            final String replyId,
+            final ProtonSender sender,
+            final ProtonReceiver receiver) {
+
+        this(context, config, tenantId, deviceId, replyId);
+        this.sender = Objects.requireNonNull(sender);
+        this.receiver = Objects.requireNonNull(receiver);
     }
 
     @Override
@@ -51,12 +98,18 @@ public class CommandClientImpl extends AbstractRequestResponseClient<BufferResul
         return CommandConstants.COMMAND_ENDPOINT;
     }
 
+    /**
+     * The command's message ID is transferred to the device in order to be able to correlate the
+     * response received from the device with the request message. It is therefore
+     * desirable to keep the message ID as short as possible in order to reduce the number of bytes
+     * exchanged with the device.
+     * <p>
+     * This methods creates message IDs based on a counter that is increased on each invocation.
+     * 
+     * @return The message ID.
+     */
     @Override
     protected String createMessageId() {
-        // Since the messages are scoped to the link between this client and the adapter it is not needed
-        // to create a UUID and a counter with a compressed serialized format is sufficient.
-        // This has a value, since this id is also given as part of the request id to device and should be
-        // as short as possible.
         return BigInteger.valueOf(messageCounter++).toString(Character.MAX_RADIX);
     }
 
@@ -67,14 +120,28 @@ public class CommandClientImpl extends AbstractRequestResponseClient<BufferResul
 
     /**
      * {@inheritDoc}
+     * <p>
+     * This method simply invokes {@link #sendCommand(String, String, Buffer)} with
+     * {@code null} as the *content-type*.
      */
     @Override
     public Future<Buffer> sendCommand(final String command, final Buffer data) {
+        return sendCommand(command, null, data);
+    }
+
+    /**
+     * {@inheritDoc}
+     * <p>
+     * This method uses the {@linkplain #createMessageId() message ID} to correlate the response received
+     * from a device with the request.
+     */
+    @Override
+    public Future<Buffer> sendCommand(final String command, final String contentType, final Buffer data) {
 
         Objects.requireNonNull(command);
 
         final Future<BufferResult> responseTracker = Future.future();
-        createAndSendRequest(command, null, data, null, responseTracker.completer(), null);
+        createAndSendRequest(command, null, data, contentType, responseTracker.completer(), null);
 
         return responseTracker.map(response -> {
             if (response.isOk()) {
@@ -87,25 +154,32 @@ public class CommandClientImpl extends AbstractRequestResponseClient<BufferResul
 
     /**
      * Creates a new command client for a tenant and device.
-     *
-     * @param tenantId The tenant to create the client for.
-     * @param deviceId The device to create the client for.
-     * @param replyId The replyId used as a postfix to create the reply-to-address with.
+     * <p>
+     * The instance created is scoped to the given device.
+     * In particular, the sender link's target address is set to
+     * <em>control/${tenantId}/${deviceId}</em> and the receiver link's source
+     * address is set to <em>control/${tenantId}/${deviceId}/${replyId}</em>.
+     * This address is also used as the value of the <em>reply-to</em>
+     * property of all command request messages sent by this client.
+     * 
      * @param context The vert.x context to run all interactions with the server on.
      * @param clientConfig The configuration properties to use.
      * @param con The AMQP connection to the server.
+     * @param tenantId The tenant that the device belongs to.
+     * @param deviceId The device to create the client for.
+     * @param replyId The replyId to use in the reply-to address.
      * @param senderCloseHook A handler to invoke if the peer closes the sender link unexpectedly.
      * @param receiverCloseHook A handler to invoke if the peer closes the receiver link unexpectedly.
      * @param creationHandler The handler to invoke with the outcome of the creation attempt.
-     * @throws NullPointerException if any of the parameters is {@code null}.
+     * @throws NullPointerException if any of the parameters are {@code null}.
      */
     public static final void create(
-            final String tenantId,
-            final String deviceId,
-            final String replyId,
             final Context context,
             final ClientConfigProperties clientConfig,
             final ProtonConnection con,
+            final String tenantId,
+            final String deviceId,
+            final String replyId,
             final Handler<String> senderCloseHook,
             final Handler<String> receiverCloseHook,
             final Handler<AsyncResult<CommandClient>> creationHandler) {

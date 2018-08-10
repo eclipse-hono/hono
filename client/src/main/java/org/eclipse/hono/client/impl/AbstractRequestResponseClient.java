@@ -96,12 +96,14 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
     /**
      * Creates a request-response client.
      * <p>
-     * The client will be ready to use after invoking {@link #createLinks(ProtonConnection)} or
-     * {@link #createLinks(ProtonConnection, Handler, Handler)} only.
+     * This constructor simply invokes
+     * {@link #AbstractRequestResponseClient(Context, ClientConfigProperties, Tracer, String)}
+     * with {@code null} as the tracer.
      * 
      * @param context The vert.x context to run message exchanges with the peer on.
      * @param config The configuration properties to use.
-     * @param tenantId The identifier of the tenant that the client is scoped to. May be {@code null}.
+     * @param tenantId The tenant that the client should be scoped to or {@code null} if the
+     *                 client should not be scoped to a tenant.
      * @throws NullPointerException if any of context or configuration are {@code null}.
      */
     AbstractRequestResponseClient(final Context context, final ClientConfigProperties config, final String tenantId) {
@@ -111,14 +113,25 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
     /**
      * Creates a request-response client.
      * <p>
-     * The client will only be ready to use after invoking {@link #createLinks(ProtonConnection, Handler, Handler)} or
-     * one of its variants.
+     * The created instance's sender link's target address is set to
+     * <em>${name}[/${tenantId}]</em> and the receiver link's source
+     * address is set to <em>${name}[/${tenantId}]/${UUID}</em>
+     * (where ${name} is the value returned by {@link #getName()}
+     * and ${UUID} is a generated UUID).
+     * <p>
+     * The latter address is also used as the value of the <em>reply-to</em>
+     * property of all request messages sent by this client.
+     * <p>
+     * The client will be ready to use after invoking {@link #createLinks(ProtonConnection)} or
+     * {@link #createLinks(ProtonConnection, Handler, Handler)} only.
      * 
      * @param context The vert.x context to run message exchanges with the peer on.
      * @param config The configuration properties to use.
-     * @param tracer The tracer to use for tracking request processing across process boundaries.
-     * @param tenantId The identifier of the tenant that the client is scoped to.
-     * @throws NullPointerException if any of the parameters other than tracer is {@code null}.
+     * @param tracer The tracer to use for tracking request processing across process
+     *               boundaries or {@code null} to disable tracing.
+     * @param tenantId The tenant that the client should be scoped to or {@code null} if the
+     *                 client should not be scoped to a tenant.
+     * @throws NullPointerException if any of context or configuration are {@code null}.
      */
     AbstractRequestResponseClient(
             final Context context,
@@ -141,19 +154,63 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
     /**
      * Creates a request-response client.
      * <p>
+     * This methods simply invokes
+     * {@link #AbstractRequestResponseClient(Context, ClientConfigProperties, Tracer, String, String, String)}
+     * with {@code null} as the tracer.
+     *
+     * @param context The vert.x context to run message exchanges with the peer on.
+     * @param config The configuration properties to use.
+     * @param tenantId The tenant that the device belongs to.
+     * @param deviceId The device to create the client for.
+     * @param replyId The replyId to use in the reply-to address.
+     * @throws NullPointerException if any of the parameters are {@code null}.
+     */
+    AbstractRequestResponseClient(
+            final Context context,
+            final ClientConfigProperties config,
+            final String tenantId,
+            final String deviceId,
+            final String replyId) {
+        this(context, config, null, tenantId, deviceId, replyId);
+    }
+
+    /**
+     * Creates a request-response client.
+     * <p>
+     * The instance created is scoped to the given device.
+     * In particular, the sender link's target address is set to
+     * <em>${name}/${tenantId}/${deviceId}</em> and the receiver link's source
+     * address is set to <em>${name}/${tenantId}/${deviceId}/${replyId}</em>
+     * (where ${name} is the value returned by {@link #getName()}).
+     * <p>
+     * The latter address is also used as the value of the <em>reply-to</em>
+     * property of all request messages sent by this client.
+     * <p>
      * The client will be ready to use after invoking {@link #createLinks(ProtonConnection)} or
      * {@link #createLinks(ProtonConnection, Handler, Handler)} only.
      *
      * @param context The vert.x context to run message exchanges with the peer on.
      * @param config The configuration properties to use.
-     * @param tenantId The identifier of the tenant that the client is scoped to. May be {@code null}.
-     * @param deviceId The device id to which a specific client should be scoped.
-     * @param replyId Part of the reply-to-address, that specifies the unique instance beside device and tenant.
-     * @throws NullPointerException if any of context or configuration are {@code null}.
+     * @param tracer The tracer to use for tracking request processing across process
+     *               boundaries or {@code null} to disable tracing.
+     * @param tenantId The tenant that the device belongs to.
+     * @param deviceId The device to create the client for.
+     * @param replyId The replyId to use in the reply-to address.
+     * @throws NullPointerException if any of the parameters other than tracer are {@code null}.
      */
-    AbstractRequestResponseClient(final Context context, final ClientConfigProperties config, final String tenantId,
-                                  final String deviceId, final String replyId) {
-        super(context, config);
+    AbstractRequestResponseClient(
+            final Context context,
+            final ClientConfigProperties config,
+            final Tracer tracer,
+            final String tenantId,
+            final String deviceId,
+            final String replyId) {
+
+        super(context, config, tracer);
+        Objects.requireNonNull(tenantId);
+        Objects.requireNonNull(deviceId);
+        Objects.requireNonNull(replyId);
+
         this.requestTimeoutMillis = config.getRequestTimeout();
         this.targetAddress = String.format("%s/%s/%s", getName(), tenantId, deviceId);
         this.replyToAddress = String.format("%s/%s/%s/%s", getName(), tenantId, deviceId, replyId);
@@ -165,11 +222,11 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      * 
      * @param context The vert.x context to run message exchanges with the peer on.
      * @param config The configuration properties to use.
-     * @param tenantId The identifier of the tenant that the client is scoped to. May be {@code null}.
+     * @param tenantId The tenant that the client should be scoped to or {@code null} if the
+     *                 client should not be scoped to a tenant.
      * @param sender The AMQP 1.0 link to use for sending requests to the peer.
      * @param receiver The AMQP 1.0 link to use for receiving responses from the peer.
-     * @throws NullPointerException if any of the parameters except tenant ID is {@code null}.
-     * @throws NullPointerException if any of the parameters is {@code null}.
+     * @throws NullPointerException if any of the parameters other than tenant are {@code null}.
      */
     AbstractRequestResponseClient(
             final Context context,
@@ -178,9 +235,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
             final ProtonSender sender,
             final ProtonReceiver receiver) {
 
-        this(context, config, tenantId);
-        this.sender = Objects.requireNonNull(sender);
-        this.receiver = Objects.requireNonNull(receiver);
+        this(context, config, null, tenantId, sender, receiver);
     }
 
     /**
@@ -188,10 +243,14 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      * 
      * @param context The vert.x context to run message exchanges with the peer on.
      * @param config The configuration properties to use.
-     * @param tenantId The identifier of the tenant that the client is scoped to.
+     * @param tracer The tracer to use for tracking request processing across process
+     *               boundaries or {@code null} to disable tracing.
+     * @param tenantId The tenant that the client should be scoped to or {@code null} if the
+     *                 client should not be scoped to a tenant.
      * @param sender The AMQP 1.0 link to use for sending requests to the peer.
      * @param receiver The AMQP 1.0 link to use for receiving responses from the peer.
-     * @throws NullPointerException if any of the parameters other than tracer is {@code null}.
+     * @throws NullPointerException if any of the parameters other than tracer or tenant
+     *                              are {@code null}.
      */
     AbstractRequestResponseClient(
             final Context context,
