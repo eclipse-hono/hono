@@ -114,8 +114,8 @@ public class CommandClientImpl extends AbstractRequestResponseClient<BufferResul
     }
 
     @Override
-    protected BufferResult getResult(final int status, final Buffer payload, final CacheDirective cacheDirective) {
-        return BufferResult.from(status, payload);
+    protected BufferResult getResult(final int status, final String contentType, final Buffer payload, final CacheDirective cacheDirective) {
+        return BufferResult.from(status, contentType, payload);
     }
 
     /**
@@ -125,7 +125,7 @@ public class CommandClientImpl extends AbstractRequestResponseClient<BufferResul
      * {@code null} as the *content-type*.
      */
     @Override
-    public Future<Buffer> sendCommand(final String command, final Buffer data) {
+    public Future<BufferResult> sendCommand(final String command, final Buffer data) {
         return sendCommand(command, null, data);
     }
 
@@ -136,7 +136,7 @@ public class CommandClientImpl extends AbstractRequestResponseClient<BufferResul
      * from a device with the request.
      */
     @Override
-    public Future<Buffer> sendCommand(final String command, final String contentType, final Buffer data) {
+    public Future<BufferResult> sendCommand(final String command, final String contentType, final Buffer data) {
 
         Objects.requireNonNull(command);
 
@@ -145,7 +145,7 @@ public class CommandClientImpl extends AbstractRequestResponseClient<BufferResul
 
         return responseTracker.map(response -> {
             if (response.isOk()) {
-                return response.getPayload();
+                return response;
             } else {
                 throw StatusCodeMapper.from(response);
             }

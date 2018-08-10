@@ -13,6 +13,8 @@
 
 package org.eclipse.hono.client;
 
+import org.eclipse.hono.util.BufferResult;
+
 import io.vertx.core.Future;
 import io.vertx.core.buffer.Buffer;
 
@@ -42,7 +44,7 @@ public interface CommandClient extends RequestResponseClient {
      * @throws NullPointerException if command is {@code null}.
      * @see RequestResponseClient#setRequestTimeout(long)
      */
-    Future<Buffer> sendCommand(String command, Buffer data);
+    Future<BufferResult> sendCommand(String command, Buffer data);
 
     /**
      * Sends a command to a device and expects a response.
@@ -62,5 +64,5 @@ public interface CommandClient extends RequestResponseClient {
      * @throws NullPointerException if command is {@code null}.
      * @see RequestResponseClient#setRequestTimeout(long)
      */
-    Future<Buffer> sendCommand(String command, String contentType, Buffer data);
+    Future<BufferResult> sendCommand(String command, String contentType, Buffer data);
 }

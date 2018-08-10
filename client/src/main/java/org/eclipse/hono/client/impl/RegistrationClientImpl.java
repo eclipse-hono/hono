@@ -111,7 +111,11 @@ public class RegistrationClientImpl extends AbstractRequestResponseClient<Regist
     }
 
     @Override
-    protected final RegistrationResult getResult(final int status, final Buffer payload, final CacheDirective cacheDirective) {
+    protected final RegistrationResult getResult(
+            final int status,
+            final String contentType,
+            final Buffer payload,
+            final CacheDirective cacheDirective) {
 
         if (payload == null) {
             return RegistrationResult.from(status);

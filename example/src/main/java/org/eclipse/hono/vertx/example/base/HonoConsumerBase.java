@@ -19,10 +19,6 @@ import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.function.Consumer;
 
-import io.vertx.core.Handler;
-import io.vertx.core.buffer.Buffer;
-import io.vertx.core.json.JsonObject;
-import io.vertx.proton.ProtonConnection;
 import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.CommandClient;
@@ -30,12 +26,16 @@ import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.impl.HonoClientImpl;
 import org.eclipse.hono.config.ClientConfigProperties;
-import org.eclipse.hono.util.MessageTap;
 import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.util.MessageTap;
 import org.eclipse.hono.util.TimeUntilDisconnectNotification;
 
 import io.vertx.core.Future;
+import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
+import io.vertx.core.buffer.Buffer;
+import io.vertx.core.json.JsonObject;
+import io.vertx.proton.ProtonConnection;
 
 
 /**
@@ -246,7 +246,7 @@ public class HonoConsumerBase {
                                       final TimeUntilDisconnectNotification notification) {
         commandClient.sendCommand("setBrightness", commandBuffer).map(result -> {
             System.out.println(String.format("Successfully sent command [%s] and received response: [%s]",
-                    commandBuffer.toString(), Optional.ofNullable(result).orElse(Buffer.buffer()).toString()));
+                    commandBuffer.toString(), Optional.ofNullable(result.getPayload()).orElse(Buffer.buffer()).toString()));
             if (notification.getTtd() != -1) {
                 // do not close the command client if device stays connected
                 commandClient.close(v -> {
@@ -261,7 +261,7 @@ public class HonoConsumerBase {
                 commandClient.close(v -> {
                 });
             }
-            return (Buffer) null;
+            return null;
         });
     }
 

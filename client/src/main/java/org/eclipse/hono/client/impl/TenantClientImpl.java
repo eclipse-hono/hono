@@ -135,13 +135,20 @@ public class TenantClientImpl extends AbstractRequestResponseClient<TenantResult
     }
 
     @Override
-    protected final TenantResult<TenantObject> getResult(final int status, final Buffer payload, final CacheDirective cacheDirective) {
+    protected final TenantResult<TenantObject> getResult(
+            final int status,
+            final String contentType,
+            final Buffer payload,
+            final CacheDirective cacheDirective) {
 
         if (payload == null) {
             return TenantResult.from(status, (TenantObject) null, cacheDirective);
         } else {
             try {
-                return TenantResult.from(status, OBJECT_MAPPER.readValue(payload.getBytes(), TenantObject.class), cacheDirective);
+                return TenantResult.from(
+                        status,
+                        OBJECT_MAPPER.readValue(payload.getBytes(), TenantObject.class),
+                        cacheDirective);
             } catch (final IOException e) {
                 LOG.warn("received malformed payload from Tenant service", e);
                 return TenantResult.from(HttpURLConnection.HTTP_INTERNAL_ERROR);

@@ -431,7 +431,11 @@ public class AbstractRequestResponseClientTest  {
             }
 
             @Override
-            protected SimpleRequestResponseResult getResult(final int status, final Buffer payload, final CacheDirective cacheDirective) {
+            protected SimpleRequestResponseResult getResult(
+                    final int status,
+                    final String contentType,
+                    final Buffer payload,
+                    final CacheDirective cacheDirective) {
                 return SimpleRequestResponseResult.from(status, payload, cacheDirective);
             }
         };

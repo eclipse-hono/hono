@@ -73,13 +73,20 @@ public class CredentialsClientImpl extends AbstractRequestResponseClient<Credent
     }
 
     @Override
-    protected final CredentialsResult<CredentialsObject> getResult(final int status, final Buffer payload, final CacheDirective cacheDirective) {
+    protected final CredentialsResult<CredentialsObject> getResult(
+            final int status,
+            final String contentType,
+            final Buffer payload,
+            final CacheDirective cacheDirective) {
 
         if (payload == null) {
             return CredentialsResult.from(status);
         } else {
             try {
-                return CredentialsResult.from(status, OBJECT_MAPPER.readValue(payload.getBytes(), CredentialsObject.class), cacheDirective);
+                return CredentialsResult.from(
+                        status,
+                        OBJECT_MAPPER.readValue(payload.getBytes(), CredentialsObject.class),
+                        cacheDirective);
             } catch (final IOException e) {
                 LOG.warn("received malformed payload from Credentials service", e);
                 return CredentialsResult.from(HttpURLConnection.HTTP_INTERNAL_ERROR);
