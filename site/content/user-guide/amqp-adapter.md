@@ -19,11 +19,15 @@ For a client-side error, the adapter **rejects** the message and provides a reas
 
 ## Device Authentication
 
-By default, all Hono protocol adapters require clients (devices or gateway components) to authenticate during connection establishment. This is the preferred way for devices to publish data via protocol adapters. The AMQP adapter can be configured to *disallow* authentication for devices by setting the value of `HONO_AMQP_AUTHENTICATION_REQUIRED` to `false`. In this guide, we will give examples for publishing telemetry and events for *authenticated* and *unauthenticated* clients.
+By default, all Hono protocol adapters require clients (devices or gateway components) to authenticate during connection establishment. This is the preferred way for devices to publish data via protocol adapters. The AMQP adapter supports both the [SASL PLAIN](https://tools.ietf.org/html/rfc4616) and [SASL EXTERNAL](https://tools.ietf.org/html/rfc4422) authentication mechanisms. The former uses a *username* and *password* to authenticate to the adapter while the latter uses a client certificate.
+
+In this guide, we will give examples for publishing telemetry and events for *authenticated* (using SASL PLAIN) and *unauthenticated* clients. 
+
+NB: The AMQP adapter can be configured to *disallow* authentication for devices by setting the value of `HONO_AMQP_AUTHENTICATION_REQUIRED` to `false`.
 
 ### SASL PLAIN Authentication
 
-The AMQP adapter currently supports authenticating clients using [SASL PLAIN](https://tools.ietf.org/html/rfc4616) (i.e a *username* and *password*). This means that clients need to provide a *username* and a *password* when connecting to the AMQP adapter. If the adapter is configured for multi-tenancy (i.e `HONO_AMQP_SINGLE_TENANT` is set to `false`), then the *username* must match the pattern [*auth-id@tenant*], e.g. `sensor1@DEFAULT_TENANT`. Otherwise the `DEFAULT_TENANT` is assumed and the tenant-id can be omitted from the username.
+The AMQP adapter supports authenticating clients using a *username* and *password*. This means that clients need to provide a *username* and a *password* when connecting to the AMQP adapter. If the adapter is configured for multi-tenancy (i.e `HONO_AMQP_SINGLE_TENANT` is set to `false`), then the *username* must match the pattern [*auth-id@tenant*], e.g. `sensor1@DEFAULT_TENANT`. Otherwise the `DEFAULT_TENANT` is assumed and the tenant-id can be omitted from the username.
 
 The adapter verifies the credentials provided by the client against the credentials that the [Credentials Service] ({{< relref "#credentials-service-connection-configuration" >}}) has on record for the device. If the credentials match, then authentication is successful and the client device can proceed to publish messages to Hono.
 
@@ -34,12 +38,20 @@ There is a subtle difference between the *device identifier* (*device-id*) and t
 {{% /note %}}
 
 ### SASL EXTERNAL Authentication
-TODO
+When a device uses a client certificate for authentication, the TLS handshake is initiated during TCP connection establishment. If no trust anchor is configured for the AMQP adapter, the TLS handshake will succeed only if the certificate has not yet expired. Once the TLS handshake completes and a secure connection is established, the certificate's signature is checked during the SASL handshake. To complete the SASL handshake and authenticate the client, the adapter performs the following steps:
+
+* Adapter extracts the client certificate's Issuer DN and uses it to
+* perform a Tenant API lookup to retrieve the tenant that the client belongs to. In order for the lookup to succeed, the tenant’s trust anchor needs to be configured by means of registering the [trusted certificate authority]({{< relref "Tenant-API.md/#trusted-ca-format" >}}).
+* If the lookup succeeds, the Tenant API returns the tenant, thus implicitly establishing the tenant that the device belongs to.
+* Adapter validates the device’s client certificate using the registered trust anchor for the tenant.
+* Finally, adapter authenticates the client certificate using Hono's credentials API. In this step, the adapter uses the client certificate’s subject DN (as authentication identifier) and x509-cert (as credentials type) in order to determine the device ID.
+
+NB: The AMQP adapter needs to be configured for TLS in order to support this mechanism.
 
 ## AMQP Command-line Client
-For the purposes of demonstrating the usage of the AMQP adapter, the **Hono CLI Module** contains an AMQP command-line client for interacting with the AMQP adapter.
+For purposes of demonstrating the usage of the AMQP adapter, the **Hono CLI Module** contains an AMQP command-line client for interacting with the AMQP adapter.
 
-The command-line client contains the following arguments (with default values):
+The command-line client supports the following parameters (with default values):
 
 * `--message.address`: The AMQP 1.0 message address (default: `telemetry/DEFAULT_TENANT/4711`)
 * `--amqp.host`: The hostname that the AMQP adapter is running on (default: `localhost`)
@@ -53,13 +65,13 @@ To run the client using the above default values, open a terminal and execute th
 
     $ /hono/cli/target$ java -jar hono-cli-0.7-SNAPSHOT-exec.jar --spring.profiles.active=amqp-adapter-cli
 
-To run the client with a different value for the message address, username, password and payload body, we supply those values to command by doing the following:
+To run the client with a different value for the message address, username, password and payload body, do the following:
 
     $ /hono/cli/target$ java -jar hono-cli-0.7-SNAPSHOT-exec.jar --spring.profiles.active=amqp-adapter-cli --username=sensor20@DEFAULT_TENANT --password=my-secret --message.address=event/DEFAULT_TENANT/4710 --payload='{"alarm": 1}'
     
-    Rejected{error=Error{condition=amqp:precondition-failed, description='device unknown or disabled', info=null}}
+    Accepted{}
 
-After running the client, the delivery state is printed to standard output. As shown above, if we try to publish a message for a device that is not registered, the message will be rejected by the AMQP adapter by sending back the *rejected* disposition frame. The disposition frame received from the client is logged to standard output.
+After running the client, the delivery state is printed to standard output. The output shown above shows that the request to upload a telemetry message succeeded and `accepted` disposition frame is printed to standard output. 
 
 {{% note %}}
 There are two JAR files in the hono/cli/target directory. The JAR to use for the client is the `hono-cli-0.7-SNAPSHOT-exec.jar` and not the `hono-cli-0.7-SNAPSHOT.jar` file. Running the latter will not work and will output the message: `no main manifest attribute, in hono-cli-0.7-SNAPSHOT.jar`
