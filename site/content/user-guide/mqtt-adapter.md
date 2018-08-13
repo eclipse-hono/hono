@@ -187,7 +187,7 @@ An authenticated device MUST send the response to a previously received command 
 
 * `control///res/${req-id}/${status}`
 
-### Sending a Response to a Command (authenticated Device)
+### Sending a Response to a Command (unauthenticated Device)
 
 An unauthenticated device MUST send the response to a previously received command to the following topic:
 
