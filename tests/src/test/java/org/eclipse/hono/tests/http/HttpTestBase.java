@@ -76,8 +76,11 @@ public abstract class HttpTestBase {
     private static final Vertx VERTX = Vertx.vertx();
     private static final long  TEST_TIMEOUT = 10000; // ms
     private static final int MESSAGES_TO_SEND = 60;
-    private static final String PWD = "secret";
 
+    /**
+     * The default password of devices.
+     */
+    protected static final String PWD = "secret";
     /**
      * The CORS <em>origin</em> address to use for sending messages.
      */
@@ -117,11 +120,20 @@ public abstract class HttpTestBase {
      * for authentication.
      */
     protected CrudHttpClient httpClientWithClientCert;
+    /**
+     * The random tenant identifier created for each test case.
+     */
+    protected String tenantId;
+    /**
+     * The random device identifier created for each test case.
+     */
+    protected String deviceId;
+    /**
+     * The BASIC Auth header value created for the random device.
+     */
+    protected String authorization;
 
     private SelfSignedCertificate deviceCert;
-    private String tenantId;
-    private String deviceId;
-    private String authorization;
 
     /**
      * Sets up clients.
@@ -173,14 +185,14 @@ public abstract class HttpTestBase {
                 IntegrationTestSupport.HTTP_PORT,
                 IntegrationTestSupport.HTTPS_PORT);
 
-        tenantId = helper.getRandomTenantId();
-        deviceId = helper.getRandomDeviceId(tenantId);
-        authorization = getBasicAuth(tenantId, deviceId, PWD);
-
         deviceCert = SelfSignedCertificate.create(UUID.randomUUID().toString());
         httpClient = new CrudHttpClient(VERTX, new HttpClientOptions(defaultOptions));
         httpClientWithClientCert = new CrudHttpClient(VERTX, new HttpClientOptions(defaultOptions)
                 .setKeyCertOptions(deviceCert.keyCertOptions()));
+
+        tenantId = helper.getRandomTenantId();
+        deviceId = helper.getRandomDeviceId(tenantId);
+        authorization = getBasicAuth(tenantId, deviceId, PWD);
     }
 
     /**
@@ -642,7 +654,6 @@ public abstract class HttpTestBase {
 
         final Async setup = ctx.async();
         final TenantObject tenant = TenantObject.from(tenantId, true);
-        final String authorization = getBasicAuth(tenantId, deviceId, PWD);
 
         final MultiMap requestHeaders = MultiMap.caseInsensitiveMultiMap()
                 .add(HttpHeaders.CONTENT_TYPE, "text/plain")

@@ -64,17 +64,14 @@ public class TelemetryHttpIT extends HttpTestBase {
     public void testUploadUsingQoS1(final TestContext ctx) throws InterruptedException {
 
         final Async setup = ctx.async();
-        final String tenantId = helper.getRandomTenantId();
-        final String deviceId = helper.getRandomDeviceId(tenantId);
-        final String password = "secret";
         final TenantObject tenant = TenantObject.from(tenantId, true);
         final MultiMap requestHeaders = MultiMap.caseInsensitiveMultiMap()
                 .add(HttpHeaders.CONTENT_TYPE, "binary/octet-stream")
-                .add(HttpHeaders.AUTHORIZATION, getBasicAuth(tenantId, deviceId, password))
+                .add(HttpHeaders.AUTHORIZATION, authorization)
                 .add(HttpHeaders.ORIGIN, ORIGIN_URI)
                 .add(Constants.HEADER_QOS_LEVEL, "1");
 
-        helper.registry.addDeviceForTenant(tenant, deviceId, password).setHandler(ctx.asyncAssertSuccess(ok -> setup.complete()));
+        helper.registry.addDeviceForTenant(tenant, deviceId, PWD).setHandler(ctx.asyncAssertSuccess(ok -> setup.complete()));
         setup.await();
 
         testUploadMessages(ctx, tenantId, count -> {
