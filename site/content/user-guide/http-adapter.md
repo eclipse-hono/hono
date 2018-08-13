@@ -183,6 +183,7 @@ Publish some JSON data for device `4711`, indicating that the device will wait f
         * The tenant that the gateway belongs to is not allowed to use this protocol adapter.
         * The device belongs to another tenant than the gateway.
         * The gateway is not authorized to act *on behalf of* the device.
+        * The gateway associated with the device is not registered or disabled.
   * 404 (Not Found): The request cannot be processed because the device is disabled or does not exist.
   * 503 (Service Unavailable): The request cannot be processed because there is no consumer of telemetry data for the given tenant connected to Hono.
 
@@ -330,6 +331,7 @@ Publish some JSON data for device `4711`:
         * The tenant that the gateway belongs to is not allowed to use this protocol adapter.
         * The device belongs to another tenant than the gateway.
         * The gateway is not authorized to act *on behalf of* the device.
+        * The gateway associated with the device is not registered or disabled.
   * 404 (Not Found): The request cannot be processed because the device is disabled or does not exist.
   * 503 (Service Unavailable): The request cannot be processed because there is no consumer of telemetry data for the given tenant connected to Hono.
 
@@ -475,6 +477,8 @@ Send a response to a previously received command with the command-request-id `re
   * 403 (Forbidden): The request cannot be processed because the device's registration status cannot be asserted. Possible reasons for this might be:
         * The given tenant is not allowed to use this protocol adapter.
         * The given device does not belong to the given tenant.
+        * The gateway is not authorized to act *on behalf of* the device.
+        * The gateway associated with the device is not registered or disabled.
   * 404 (Not Found): The request cannot be processed because the device is disabled or does not exist.
   * 503 (Service Unavailable): The request cannot be processed. Possible reasons for this include:
          * There is no application listening for a reply to the given *commandRequestId*.
