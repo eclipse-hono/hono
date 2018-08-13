@@ -35,6 +35,7 @@ import org.eclipse.hono.tests.CrudHttpClient;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantObject;
 import org.eclipse.hono.util.TimeUntilDisconnectNotification;
@@ -75,6 +76,7 @@ public abstract class HttpTestBase {
     private static final Vertx VERTX = Vertx.vertx();
     private static final long  TEST_TIMEOUT = 10000; // ms
     private static final int MESSAGES_TO_SEND = 60;
+    private static final String PWD = "secret";
 
     /**
      * The CORS <em>origin</em> address to use for sending messages.
@@ -102,6 +104,11 @@ public abstract class HttpTestBase {
     public final TestName testName = new TestName();
 
     /**
+     * A logger to be shared with subclasses.
+     */
+    protected final Logger logger = LoggerFactory.getLogger(getClass());
+
+    /**
      * A client for connecting to the HTTP adapter.
      */
     protected CrudHttpClient httpClient;
@@ -111,8 +118,10 @@ public abstract class HttpTestBase {
      */
     protected CrudHttpClient httpClientWithClientCert;
 
-    private final Logger LOGGER = LoggerFactory.getLogger(getClass());
     private SelfSignedCertificate deviceCert;
+    private String tenantId;
+    private String deviceId;
+    private String authorization;
 
     /**
      * Sets up clients.
@@ -158,11 +167,15 @@ public abstract class HttpTestBase {
     @Before
     public void setUp() {
 
-        LOGGER.info("running {}", testName.getMethodName());
-        LOGGER.info("using HTTP adapter [host: {}, http port: {}, https port: {}]",
+        logger.info("running {}", testName.getMethodName());
+        logger.info("using HTTP adapter [host: {}, http port: {}, https port: {}]",
                 IntegrationTestSupport.HTTP_HOST,
                 IntegrationTestSupport.HTTP_PORT,
                 IntegrationTestSupport.HTTPS_PORT);
+
+        tenantId = helper.getRandomTenantId();
+        deviceId = helper.getRandomDeviceId(tenantId);
+        authorization = getBasicAuth(tenantId, deviceId, PWD);
 
         deviceCert = SelfSignedCertificate.create(UUID.randomUUID().toString());
         httpClient = new CrudHttpClient(VERTX, new HttpClientOptions(defaultOptions));
@@ -223,17 +236,51 @@ public abstract class HttpTestBase {
     public void testUploadMessagesUsingBasicAuth(final TestContext ctx) throws InterruptedException {
 
         final Async setup = ctx.async();
-        final String tenantId = helper.getRandomTenantId();
-        final String deviceId = helper.getRandomDeviceId(tenantId);
-        final String password = "secret";
         final TenantObject tenant = TenantObject.from(tenantId, true);
         final MultiMap requestHeaders = MultiMap.caseInsensitiveMultiMap()
-                .add(HttpHeaders.CONTENT_TYPE, "binary/octet-stream")
-                .add(HttpHeaders.AUTHORIZATION, getBasicAuth(tenantId, deviceId, password))
+                .add(HttpHeaders.CONTENT_TYPE, "text/plain")
+                .add(HttpHeaders.AUTHORIZATION, authorization)
                 .add(HttpHeaders.ORIGIN, ORIGIN_URI);
 
-        helper.registry.addDeviceForTenant(tenant, deviceId, password).setHandler(ctx.asyncAssertSuccess(ok -> setup.complete()));
+        helper.registry.addDeviceForTenant(tenant, deviceId, PWD).setHandler(ctx.asyncAssertSuccess(ok -> setup.complete()));
         setup.await();
+
+        testUploadMessages(ctx, tenantId,
+                count -> {
+                    return httpClient.create(
+                            getEndpointUri(),
+                            Buffer.buffer("hello " + count),
+                            requestHeaders,
+                            response -> response.statusCode() == HttpURLConnection.HTTP_ACCEPTED);
+                });
+    }
+
+    /**
+     * Verifies that a number of messages uploaded to the HTTP adapter via a gateway
+     * using HTTP Basic auth can be successfully consumed via the AMQP Messaging Network.
+     * 
+     * @param ctx The test context.
+     * @throws InterruptedException if the test fails.
+     */
+    @Test
+    public void testUploadMessagesViaGateway(final TestContext ctx) throws InterruptedException {
+
+        // GIVEN a device that is connected via a gateway
+        final TenantObject tenant = TenantObject.from(tenantId, true);
+        final String gatewayId = helper.getRandomDeviceId(tenantId);
+        final JsonObject deviceData = new JsonObject()
+                .put("via", gatewayId);
+
+        final Async setup = ctx.async();
+        helper.registry.addDeviceForTenant(tenant, gatewayId, PWD)
+        .compose(ok -> helper.registry.registerDevice(tenantId, deviceId, deviceData))
+        .setHandler(ctx.asyncAssertSuccess(ok -> setup.complete()));
+        setup.await();
+
+        final MultiMap requestHeaders = MultiMap.caseInsensitiveMultiMap()
+                .add(HttpHeaders.CONTENT_TYPE, "text/plain")
+                .add(HttpHeaders.AUTHORIZATION, getBasicAuth(tenantId, gatewayId, PWD))
+                .add(HttpHeaders.ORIGIN, ORIGIN_URI);
 
         testUploadMessages(ctx, tenantId,
                 count -> {
@@ -257,10 +304,8 @@ public abstract class HttpTestBase {
     public void testUploadMessagesUsingClientCertificate(final TestContext ctx) throws InterruptedException {
 
         final Async setup = ctx.async();
-        final String tenantId = helper.getRandomTenantId();
-        final String deviceId = helper.getRandomDeviceId(tenantId);
         final MultiMap requestHeaders = MultiMap.caseInsensitiveMultiMap()
-                .add(HttpHeaders.CONTENT_TYPE, "binary/octet-stream")
+                .add(HttpHeaders.CONTENT_TYPE, "text/plain")
                 .add(HttpHeaders.ORIGIN, ORIGIN_URI);
 
         getCertificate(deviceCert.certificatePath()).compose(cert -> {
@@ -336,14 +381,14 @@ public abstract class HttpTestBase {
         final Async setup = ctx.async();
 
         createConsumer(tenantId, msg -> {
-            LOGGER.trace("received {}", msg);
+            logger.trace("received {}", msg);
             assertMessageProperties(ctx, msg);
             if (messageConsumer != null) {
                 messageConsumer.accept(msg);
             }
             received.countDown();
             if (received.getCount() % 20 == 0) {
-                LOGGER.info("messages received: {}", numberOfMessages - received.getCount());
+                logger.info("messages received: {}", numberOfMessages - received.getCount());
             }
         }).setHandler(ctx.asyncAssertSuccess(ok -> setup.complete()));
 
@@ -356,34 +401,35 @@ public abstract class HttpTestBase {
             final Async sending = ctx.async();
             requestSender.apply(messageCount.getAndIncrement()).compose(this::assertHttpResponse).setHandler(attempt -> {
                 if (attempt.succeeded()) {
-                    LOGGER.debug("sent message {}", messageCount.get());
+                    logger.debug("sent message {}", messageCount.get());
                 } else {
-                    LOGGER.info("failed to send message {}: {}", messageCount.get(), attempt.cause().getMessage());
+                    logger.info("failed to send message {}: {}", messageCount.get(), attempt.cause().getMessage());
                     ctx.fail(attempt.cause());
                 }
                 sending.complete();
             });
 
             if (messageCount.get() % 20 == 0) {
-                LOGGER.info("messages sent: " + messageCount.get());
+                logger.info("messages sent: " + messageCount.get());
             }
             sending.await();
         }
 
         final long timeToWait = Math.max(TEST_TIMEOUT - 1000, Math.round(numberOfMessages * 20));
         if (!received.await(timeToWait, TimeUnit.MILLISECONDS)) {
-            LOGGER.info("sent {} and received {} messages after {} milliseconds",
+            logger.info("sent {} and received {} messages after {} milliseconds",
                     messageCount, numberOfMessages - received.getCount(), System.currentTimeMillis() - start);
             ctx.fail("did not receive all messages sent");
         } else {
-            LOGGER.info("sent {} and received {} messages after {} milliseconds",
+            logger.info("sent {} and received {} messages after {} milliseconds",
                     messageCount, numberOfMessages - received.getCount(), System.currentTimeMillis() - start);
         }
     }
 
     /**
      * Verifies that the HTTP adapter rejects messages from a device
-     * that belongs to a tenant for which the HTTP adapter has been disabled.
+     * that belongs to a tenant for which the HTTP adapter has been disabled
+     * with a 403.
      *
      * @param ctx The test context
      */
@@ -391,29 +437,145 @@ public abstract class HttpTestBase {
     public void testUploadMessageFailsForDisabledTenant(final TestContext ctx) {
 
         // GIVEN a tenant for which the HTTP adapter is disabled
-        final String tenantId = helper.getRandomTenantId();
-        final String deviceId = helper.getRandomDeviceId(tenantId);
-        final String password = "secret";
-        final MultiMap requestHeaders = MultiMap.caseInsensitiveMultiMap()
-                .add(HttpHeaders.CONTENT_TYPE, "binary/octet-stream")
-                .add(HttpHeaders.AUTHORIZATION, getBasicAuth(tenantId, deviceId, password));
-
         final JsonObject adapterDetailsHttp = new JsonObject()
                 .put(TenantConstants.FIELD_ADAPTERS_TYPE, Constants.PROTOCOL_ADAPTER_TYPE_HTTP)
                 .put(TenantConstants.FIELD_ENABLED, Boolean.FALSE);
         final TenantObject tenant = TenantObject.from(tenantId, true);
         tenant.addAdapterConfiguration(adapterDetailsHttp);
 
-        helper.registry.addDeviceForTenant(tenant, deviceId, password).compose(ok -> {
+        helper.registry.addDeviceForTenant(tenant, deviceId, PWD).compose(ok -> {
+
             // WHEN a device that belongs to the tenant uploads a message
+            final MultiMap requestHeaders = MultiMap.caseInsensitiveMultiMap()
+                    .add(HttpHeaders.CONTENT_TYPE, "test/plain")
+                    .add(HttpHeaders.AUTHORIZATION, authorization);
+
             return httpClient.create(
                     getEndpointUri(),
                     Buffer.buffer("hello"),
                     requestHeaders,
-                    response -> response.statusCode() == HttpURLConnection.HTTP_OK);
+                    response -> response.statusCode() == HttpURLConnection.HTTP_ACCEPTED);
+
         }).setHandler(ctx.asyncAssertFailure(t -> {
-            // THEN the message gets rejected by the HTTP adapter
-            LOGGER.info("could not publish message for disabled tenant [{}]", tenantId);
+
+            // THEN the message gets rejected by the HTTP adapter with a 403
+            logger.info("could not publish message for disabled tenant [{}]", tenantId);
+            ctx.assertEquals(HttpURLConnection.HTTP_FORBIDDEN, ((ServiceInvocationException) t).getErrorCode());
+        }));
+    }
+
+    /**
+     * Verifies that the HTTP adapter rejects messages from a disabled device
+     * with a 404.
+     *
+     * @param ctx The test context
+     */
+    @Test
+    public void testUploadMessageFailsForDisabledDevice(final TestContext ctx) {
+
+        // GIVEN a disabled device
+        final TenantObject tenant = TenantObject.from(tenantId, true);
+        final JsonObject deviceData = new JsonObject()
+                .put(RegistrationConstants.FIELD_ENABLED, Boolean.FALSE);
+
+        helper.registry.addDeviceForTenant(tenant, deviceId, deviceData, PWD).compose(ok -> {
+
+            // WHEN the device tries to upload a message
+            final MultiMap requestHeaders = MultiMap.caseInsensitiveMultiMap()
+                    .add(HttpHeaders.CONTENT_TYPE, "text/plain")
+                    .add(HttpHeaders.AUTHORIZATION, authorization);
+
+            return httpClient.create(
+                    getEndpointUri(),
+                    Buffer.buffer("hello"),
+                    requestHeaders,
+                    response -> response.statusCode() == HttpURLConnection.HTTP_ACCEPTED);
+
+        }).setHandler(ctx.asyncAssertFailure(t -> {
+
+            // THEN the message gets rejected by the HTTP adapter with a 404
+            logger.info("could not publish message for disabled device [tenant-id: {}, device-id: {}]",
+                    tenantId, deviceId);
+            ctx.assertEquals(HttpURLConnection.HTTP_NOT_FOUND, ((ServiceInvocationException) t).getErrorCode());
+        }));
+    }
+
+    /**
+     * Verifies that the HTTP adapter rejects messages from a disabled gateway
+     * for an enabled device with a 403.
+     *
+     * @param ctx The test context
+     */
+    @Test
+    public void testUploadMessageFailsForDisabledGateway(final TestContext ctx) {
+
+        // GIVEN a device that is connected via a disabled gateway
+        final TenantObject tenant = TenantObject.from(tenantId, true);
+        final String gatewayId = helper.getRandomDeviceId(tenantId);
+        final JsonObject gatewayData = new JsonObject()
+                .put(RegistrationConstants.FIELD_ENABLED, Boolean.FALSE);
+        final JsonObject deviceData = new JsonObject()
+                .put("via", gatewayId);
+
+        helper.registry.addDeviceForTenant(tenant, gatewayId, gatewayData, PWD)
+        .compose(ok -> helper.registry.registerDevice(tenantId, deviceId, deviceData))
+        .compose(ok -> {
+
+            // WHEN the gateway tries to upload a message for the device
+            final MultiMap requestHeaders = MultiMap.caseInsensitiveMultiMap()
+                    .add(HttpHeaders.CONTENT_TYPE, "text/plain")
+                    .add(HttpHeaders.AUTHORIZATION, getBasicAuth(tenantId, gatewayId, PWD));
+
+            return httpClient.update(
+                    String.format("%s/%s/%s", getEndpointUri(), tenantId, deviceId),
+                    Buffer.buffer("hello"),
+                    requestHeaders,
+                    statusCode -> statusCode == HttpURLConnection.HTTP_ACCEPTED);
+
+        }).setHandler(ctx.asyncAssertFailure(t -> {
+
+            // THEN the message gets rejected by the HTTP adapter with a 403
+            logger.info("could not publish message for disabled gateway [tenant-id: {}, gateway-id: {}]",
+                    tenantId, gatewayId);
+            ctx.assertEquals(HttpURLConnection.HTTP_FORBIDDEN, ((ServiceInvocationException) t).getErrorCode());
+        }));
+    }
+
+    /**
+     * Verifies that the HTTP adapter rejects messages from a gateway
+     * for an device that it is not authorized for with a 403.
+     *
+     * @param ctx The test context
+     */
+    @Test
+    public void testUploadMessageFailsForUnauthorizedGateway(final TestContext ctx) {
+
+        // GIVEN a device that is connected via gateway "not-the-created-gateway"
+        final TenantObject tenant = TenantObject.from(tenantId, true);
+        final String gatewayId = helper.getRandomDeviceId(tenantId);
+        final JsonObject deviceData = new JsonObject()
+                .put("via", "not-the-created-gateway");
+
+        helper.registry.addDeviceForTenant(tenant, gatewayId, PWD)
+        .compose(ok -> helper.registry.registerDevice(tenantId, deviceId, deviceData))
+        .compose(ok -> {
+
+            // WHEN another gateway tries to upload a message for the device
+            final MultiMap requestHeaders = MultiMap.caseInsensitiveMultiMap()
+                    .add(HttpHeaders.CONTENT_TYPE, "text/plain")
+                    .add(HttpHeaders.AUTHORIZATION, getBasicAuth(tenantId, gatewayId, PWD));
+
+            return httpClient.update(
+                    String.format("%s/%s/%s", getEndpointUri(), tenantId, deviceId),
+                    Buffer.buffer("hello"),
+                    requestHeaders,
+                    statusCode -> statusCode == HttpURLConnection.HTTP_ACCEPTED);
+
+        }).setHandler(ctx.asyncAssertFailure(t -> {
+
+            // THEN the message gets rejected by the HTTP adapter with a 403
+            logger.info("could not publish message for unauthorized gateway [tenant-id: {}, gateway-id: {}]",
+                    tenantId, gatewayId);
             ctx.assertEquals(HttpURLConnection.HTTP_FORBIDDEN, ((ServiceInvocationException) t).getErrorCode());
         }));
     }
@@ -429,23 +591,20 @@ public abstract class HttpTestBase {
     public void testUploadMessagesWithTtdThatDoNotReplyWithCommand(final TestContext ctx) throws InterruptedException {
 
         final Async setup = ctx.async();
-        final String tenantId = helper.getRandomTenantId();
-        final String deviceId = helper.getRandomDeviceId(tenantId);
-        final String password = "secret";
         final TenantObject tenant = TenantObject.from(tenantId, true);
         final MultiMap requestHeaders = MultiMap.caseInsensitiveMultiMap()
                 .add(HttpHeaders.CONTENT_TYPE, "text/plain")
-                .add(HttpHeaders.AUTHORIZATION, getBasicAuth(tenantId, deviceId, password))
+                .add(HttpHeaders.AUTHORIZATION, authorization)
                 .add(HttpHeaders.ORIGIN, ORIGIN_URI)
                 .add(Constants.HEADER_TIME_TIL_DISCONNECT, "1");
 
-        helper.registry.addDeviceForTenant(tenant, deviceId, password).setHandler(ctx.asyncAssertSuccess(ok -> setup.complete()));
+        helper.registry.addDeviceForTenant(tenant, deviceId, PWD).setHandler(ctx.asyncAssertSuccess(ok -> setup.complete()));
         setup.await();
 
         testUploadMessages(ctx, tenantId,
                 msg -> {
                     final Integer ttd = MessageHelper.getTimeUntilDisconnect(msg);
-                    LOGGER.trace("received telemetry message [ttd: {}]", ttd);
+                    logger.trace("received telemetry message [ttd: {}]", ttd);
                     ctx.assertNotNull(ttd);
                     final Optional<TimeUntilDisconnectNotification> notificationOpt = TimeUntilDisconnectNotification.fromMessage(msg);
                     ctx.assertTrue(notificationOpt.isPresent());
@@ -482,30 +641,28 @@ public abstract class HttpTestBase {
     public void testUploadMessagesWithTtdThatReplyWithCommand(final TestContext ctx) throws InterruptedException {
 
         final Async setup = ctx.async();
-        final String tenantId = helper.getRandomTenantId();
-        final String deviceId = helper.getRandomDeviceId(tenantId);
-        final String password = "secret";
         final TenantObject tenant = TenantObject.from(tenantId, true);
+        final String authorization = getBasicAuth(tenantId, deviceId, PWD);
 
         final MultiMap requestHeaders = MultiMap.caseInsensitiveMultiMap()
                 .add(HttpHeaders.CONTENT_TYPE, "text/plain")
-                .add(HttpHeaders.AUTHORIZATION, getBasicAuth(tenantId, deviceId, password))
+                .add(HttpHeaders.AUTHORIZATION, authorization)
                 .add(HttpHeaders.ORIGIN, ORIGIN_URI)
                 .add(Constants.HEADER_TIME_TIL_DISCONNECT, "2");
 
         final MultiMap cmdResponseRequestHeaders = MultiMap.caseInsensitiveMultiMap()
                 .add(HttpHeaders.CONTENT_TYPE, "text/plain")
-                .add(HttpHeaders.AUTHORIZATION, getBasicAuth(tenantId, deviceId, password))
+                .add(HttpHeaders.AUTHORIZATION, authorization)
                 .add(HttpHeaders.ORIGIN, ORIGIN_URI)
                 .add(Constants.HEADER_COMMAND_RESPONSE_STATUS, "200");
 
-        helper.registry.addDeviceForTenant(tenant, deviceId, password).setHandler(ctx.asyncAssertSuccess(ok -> setup.complete()));
+        helper.registry.addDeviceForTenant(tenant, deviceId, PWD).setHandler(ctx.asyncAssertSuccess(ok -> setup.complete()));
         setup.await();
 
         testUploadMessages(ctx, tenantId,
                 msg -> {
                     final Integer ttd = MessageHelper.getTimeUntilDisconnect(msg);
-                    LOGGER.trace("piggy backed telemetry message received: {}, ttd = {}", msg, ttd);
+                    logger.trace("piggy backed telemetry message received: {}, ttd = {}", msg, ttd);
                     final Optional<TimeUntilDisconnectNotification> notificationOpt = TimeUntilDisconnectNotification.fromMessage(msg);
                     ctx.assertTrue(notificationOpt.isPresent());
                     final TimeUntilDisconnectNotification notification = notificationOpt.get();
@@ -534,7 +691,7 @@ public abstract class HttpTestBase {
                                 // send a response to the command now
                                 final String responseUri = getCommandResponseUri(receivedCommandRequestId);
 
-                                LOGGER.debug("posting response to command [uri: {}]", responseUri);
+                                logger.debug("posting response to command [uri: {}]", responseUri);
 
                                 return httpClient.create(
                                         responseUri,

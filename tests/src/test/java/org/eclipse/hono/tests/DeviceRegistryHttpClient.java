@@ -591,18 +591,43 @@ public final class DeviceRegistryHttpClient {
     /**
      * Creates a tenant and adds a device to it with a given password.
      * <p>
-     * The password will be added as a <em>sha-512</em> hashed password
-     * using the device identifier as the authentication identifier.
+     * This method simply invokes {@link #addDeviceForTenant(TenantObject, String, JsonObject, String)}
+     * with an empty JSON object as the device data.
      * 
      * @param tenant The tenant to create.
      * @param deviceId The identifier of the device to add to the tenant.
      * @param password The password to use for the device's credentials.
      * @return A future indicating the outcome of the operation.
+     * @throws NullPointerException if tenant is {@code null}.
      */
     public Future<Void> addDeviceForTenant(final TenantObject tenant, final String deviceId, final String password) {
 
+        return addDeviceForTenant(tenant, deviceId, new JsonObject(), password);
+    }
+
+    /**
+     * Creates a tenant and adds a device to it with a given password.
+     * <p>
+     * The password will be added as a <em>sha-512</em> hashed password
+     * using the device identifier as the authentication identifier.
+     * 
+     * @param tenant The tenant to create.
+     * @param deviceId The identifier of the device to add.
+     * @param data The data to register for the device.
+     * @param password The password to use for the device's credentials.
+     * @return A future indicating the outcome of the operation.
+     * @throws NullPointerException if tenant is {@code null}.
+     */
+    public Future<Void> addDeviceForTenant(
+            final TenantObject tenant,
+            final String deviceId,
+            final JsonObject data,
+            final String password) {
+
+        Objects.requireNonNull(tenant);
+
         return addTenant(JsonObject.mapFrom(tenant))
-            .compose(ok -> registerDevice(tenant.getTenantId(), deviceId))
+            .compose(ok -> registerDevice(tenant.getTenantId(), deviceId, data))
             .compose(ok -> {
                 final CredentialsObject credentialsSpec =
                         CredentialsObject.fromHashedPassword(deviceId, deviceId, password, "sha-512", null, null, null);
@@ -620,8 +645,11 @@ public final class DeviceRegistryHttpClient {
      * @param deviceId The identifier of the device to add to the tenant.
      * @param deviceCert The device's client certificate.
      * @return A future indicating the outcome of the operation.
+     * @throws NullPointerException if tenant or certificate are {@code null}.
      */
     public Future<Void> addDeviceForTenant(final TenantObject tenant, final String deviceId, final X509Certificate deviceCert) {
+
+        Objects.requireNonNull(tenant);
 
         return addTenant(JsonObject.mapFrom(tenant))
             .compose(ok -> registerDevice(tenant.getTenantId(), deviceId))
