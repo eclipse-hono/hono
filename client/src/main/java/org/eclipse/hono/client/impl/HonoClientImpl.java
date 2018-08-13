@@ -197,11 +197,17 @@ public class HonoClientImpl implements HonoClient {
      *                  fail the future that is passed into the handler.
      * @return The future passed into the handler for executing the code. The future
      *         thus indicates the outcome of executing the code. The future will
-     *         be failed if the <em>context</em> property is {@code null}.
+     *         be failed with a {@link ServerErrorException} if the <em>context</em>
+     *         property is {@code null}.
      */
     private <T> Future<T> executeOrRunOnContext(final Handler<Future<T>> codeToRun) {
 
-        return HonoProtonHelper.executeOrRunOnContext(context, codeToRun);
+        if (context == null) {
+            // this means that the connection to the peer is not established (yet)
+            return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "not connected"));
+        } else {
+            return HonoProtonHelper.executeOrRunOnContext(context, codeToRun);
+        }
     }
 
     /**

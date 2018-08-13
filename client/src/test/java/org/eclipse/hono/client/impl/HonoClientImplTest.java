@@ -23,6 +23,7 @@ import java.util.concurrent.CountDownLatch;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.RegistrationClient;
+import org.eclipse.hono.client.RequestResponseClient;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ClientConfigProperties;
@@ -156,6 +157,21 @@ public class HonoClientImplTest {
         }));
         // and the client has indeed tried three times in total
         assertTrue(connectionFactory.awaitFailure());
+    }
+
+    /**
+     * Verifies that a request to create a request-response client fails the given
+     * future for tracking the attempt if the client is not connected to the peer.
+     * 
+     * @param ctx The helper to use for running async tests.
+     */
+    @Test
+    public void testGetOrCreateRequestResponseClientFailsWhenNotConnected(final TestContext ctx) {
+
+        client.getOrCreateRequestResponseClient("the-key", () -> Future.succeededFuture(mock(RequestResponseClient.class)))
+        .setHandler(ctx.asyncAssertFailure(t -> {
+            ctx.assertTrue(t instanceof ServerErrorException);
+        }));
     }
 
     /**
