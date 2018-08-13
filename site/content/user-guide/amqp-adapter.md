@@ -3,7 +3,10 @@ title = "AMQP Adapter"
 weight = 215
 +++
 
-The AMQP protocol adapter allows clients (devices or gateway components) supporting the AMQP 1.0 protocol to publish telemetry messages and events to Eclipse Hono&trade;'s Telemetry and Event endpoints. Clients can publish Telemetry messages using either `AT_MOST_ONCE` (presettled) or `AT_LEAST_ONCE` (unsettled) quality of service while Event messages can be published using only `AT_LEAST_ONCE` quality of service. 
+The AMQP protocol adapter allows clients (devices or gateway components) supporting the AMQP 1.0 protocol to publish telemetry messages and events to Eclipse Hono&trade;'s Telemetry and Event endpoints. 
+<!--more-->
+
+Clients can publish Telemetry messages using either `AT_MOST_ONCE` (presettled) or `AT_LEAST_ONCE` (unsettled) quality of service while Event messages can be published using only `AT_LEAST_ONCE` quality of service. 
 
 `AT_MOST_ONCE` QoS means that the client does not wait for the message to be accepted and settled by the downstream consumer while with `AT_LEAST_ONCE`, the client sends the message and wait for the message to be delivered. If the message cannot be delivered due to a failure, the client will be notified.
 
@@ -13,8 +16,6 @@ The AMQP adapter distinguishes between two types of failures when a message is p
 * A failure caused by a server-side error (e.g sender queue full, no credit available yet to send the message, etc).
 
 For a client-side error, the adapter **rejects** the message and provides a reason why it was rejected. In the case of a server-side error, the adapter **releases** the message, indicating to the client that the message was OK but it cannot be delivered due to a failure beyond the control of the client. In this case, the client should attempt to redeliver the message again.
-
-<!--more-->
 
 ## Device Authentication
 
@@ -39,6 +40,7 @@ TODO
 For the purposes of demonstrating the usage of the AMQP adapter, the **Hono CLI Module** contains an AMQP command-line client for interacting with the AMQP adapter.
 
 The command-line client contains the following arguments (with default values):
+
 * `--message.address`: The AMQP 1.0 message address (default: `telemetry/DEFAULT_TENANT/4711`)
 * `--amqp.host`: The hostname that the AMQP adapter is running on (default: `localhost`)
 * `--amqp.port`: The port that the adapter is listening for incoming connections (default: `4040`)
