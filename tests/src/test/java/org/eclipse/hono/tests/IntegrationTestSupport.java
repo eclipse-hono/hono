@@ -190,7 +190,7 @@ public final class IntegrationTestSupport {
                         registry.deregisterDevice(tenantId, deviceId),
                         registry.removeAllCredentials(tenantId, deviceId))
                     .setHandler(ok -> deletion.complete());
-                deletion.await();
+                deletion.await(1000);
             });
         });
         devicesToDelete.clear();
@@ -198,7 +198,7 @@ public final class IntegrationTestSupport {
         tenantsToDelete.forEach(tenantId -> {
             final Async deletion = ctx.async();
             registry.removeTenant(tenantId).setHandler(ok -> deletion.complete());
-            deletion.await();
+            deletion.await(1000);
         });
         tenantsToDelete.clear();
     }
