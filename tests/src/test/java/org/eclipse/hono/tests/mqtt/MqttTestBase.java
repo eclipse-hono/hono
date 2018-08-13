@@ -117,12 +117,12 @@ public abstract class MqttTestBase {
             });
         }
         disconnectHandler.setHandler(tidyUp -> {
+            LOGGER.info("connection to MQTT adapter closed");
             context = null;
-            helper.deleteObjects(ctx);
             clientDisconnect.complete();
         });
-        LOGGER.info("connection to MQTT adapter closed");
-        clientDisconnect.await();
+        clientDisconnect.await(2000);
+        helper.deleteObjects(ctx);
     }
 
     /**
