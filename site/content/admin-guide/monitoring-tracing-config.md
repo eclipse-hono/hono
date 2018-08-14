@@ -54,7 +54,7 @@ This also means that (currently) only Tracer implementations can be used with Ho
 
 Assuming that the HTTP adapter should be configured to use [Jaeger tracing](https://www.jaegertracing.io/), the following steps are necessary:
 
-1. Download [Jaeger's Java Tracer Resolver](https://github.com/jaegertracing/jaeger-client-java/tree/master/jaeger-tracerresolver) implementation and its dependencies.
+1. Download [Jaeger's Java Tracer Resolver](https://github.com/jaegertracing/jaeger-client-java/tree/master/jaeger-tracerresolver) implementation and its dependencies (see the hint at the end).
 2. Put the jars to a folder on the Docker host, e.g. `/tmp/jaeger`.
 3. Start the HTTP adapter Docker image mounting the host folder:
 
@@ -70,3 +70,12 @@ Note that the command given above does not contain the environment variables and
 When the HTTP adapter starts up, it will look for a working implementation of the Tracer Resolver on its classpath and (if found) initialize and use it for publishing traces. The adapter's log file will indicate the name of the Tracer implementation being used.
 
 Using a Docker *volume* instead of a *bind mount* works the same way but requires the use of `volume` as the *type* of the `--mount` parameter. Please refer to the [Docker reference documentation](https://docs.docker.com/edge/engine/reference/commandline/service_create/#add-bind-mounts-volumes-or-memory-filesystems) for details.
+
+**Hint**: to resolve all dependencies for `jaeger-tracerresolver` in order to provide them to `/opt/hono/extensions`, you may want to rely on Maven's dependency plugin. To obtain all jar files you can invoke the following command in a simple Maven project that contains only the dependency to `jaeger-tracerresolver`:
+
+   ```bash
+   $> mvn dependency:copy-dependencies
+   ```
+    
+All jar files can then be found in the directory `target/dependency`.    
+
