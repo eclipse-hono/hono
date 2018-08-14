@@ -29,6 +29,7 @@ import io.vertx.proton.ProtonClientOptions;
 import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonHelper;
 import io.vertx.proton.ProtonSender;
+import io.vertx.proton.sasl.impl.ProtonSaslPlainImpl;
 
 /**
  * A simple command-line client for interacting with the AMQP adapter.
@@ -106,6 +107,7 @@ public class AmqpSend extends AbstractCliClient {
         final ProtonClient client = ProtonClient.create(vertx);
         if (!Strings.isNullOrEmpty(username) && !Strings.isNullOrEmpty(password)) {
             // SASL PLAIN authc.
+            options.addEnabledSaslMechanism(ProtonSaslPlainImpl.MECH_NAME);
             client.connect(options, amqpHost, amqpPort, username, password, conAttempt -> {
                 if (conAttempt.failed()) {
                     result.fail(conAttempt.cause());
