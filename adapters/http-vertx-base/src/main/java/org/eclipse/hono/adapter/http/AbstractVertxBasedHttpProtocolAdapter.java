@@ -30,7 +30,6 @@ import org.eclipse.hono.service.AbstractProtocolAdapterBase;
 import org.eclipse.hono.service.auth.device.Device;
 import org.eclipse.hono.service.command.Command;
 import org.eclipse.hono.service.command.CommandResponse;
-import org.eclipse.hono.service.command.CommandResponseSender;
 import org.eclipse.hono.service.http.DefaultFailureHandler;
 import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.tracing.TracingHelper;
@@ -889,11 +888,8 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
         } else {
 
             // send response message to application via sender link
-            final Future<CommandResponseSender> senderTracker = createCommandResponseSender(tenant, commandResponse.getReplyToId());
-
-            senderTracker.compose(commandResponseSender -> {
-                return commandResponseSender.sendCommandResponse(commandResponse);
-            }).map(delivery -> {
+            sendCommandResponse(tenant, commandResponse)
+            .map(delivery -> {
                 metrics.incrementCommandResponseDeliveredToApplication(tenant);
                 LOG.trace("command response [command-request-id: {}] accepted by application", commandRequestId);
                 ctx.response().setStatusCode(HttpURLConnection.HTTP_ACCEPTED);
@@ -903,13 +899,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                 LOG.debug("could not send command response [command-request-id: {}] to application", commandRequestId, t);
                 ctx.fail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, t));
                 return null;
-            }).setHandler(c -> {
-                final CommandResponseSender sender = senderTracker.result();
-                if (sender != null) {
-                    sender.close(v -> {});
-                }
             });
-
         }
     }
 

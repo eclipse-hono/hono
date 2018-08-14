@@ -18,13 +18,10 @@ import java.util.Map;
 import java.util.Objects;
 
 import org.eclipse.hono.client.MessageConsumer;
-import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.impl.HonoClientImpl;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.connection.ConnectionFactory;
 import org.eclipse.hono.service.auth.device.Device;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -34,8 +31,6 @@ import io.vertx.core.Vertx;
  * Implements a connection between an Adapter and the AMQP 1.0 network to receive commands and send a response.
  */
 public class CommandConnectionImpl extends HonoClientImpl implements CommandConnection {
-
-    private final Logger LOG = LoggerFactory.getLogger(getClass());
 
     /**
      * The consumers that can be used to receive command messages.
@@ -128,62 +123,21 @@ public class CommandConnectionImpl extends HonoClientImpl implements CommandConn
 
     /**
      * {@inheritDoc}
+     * 
+     * This implementation always creates a new sender link.
      */
-    public Future<CommandResponseSender> getOrCreateCommandResponseSender(
+    public Future<CommandResponseSender> getCommandResponseSender(
             final String tenantId,
             final String replyId) {
+
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(replyId);
-        final Future<CommandResponseSender> result = Future.future();
-        getOrCreateSender(
-                CommandResponseSenderImpl.getTargetAddress(tenantId, replyId),
-                () -> createCommandResponseSender(tenantId, replyId)).setHandler(h->{
-            if (h.succeeded()) {
-                result.complete((CommandResponseSender) h.result());
-            } else {
-                result.fail(h.cause());
-            }
-        });
-        return result;
-    }
-
-    private Future<MessageSender> createCommandResponseSender(
-            final String tenantId,
-            final String replyId) {
-
         return checkConnected().compose(connected -> {
-            final Future<MessageSender> result = Future.future();
+            final Future<CommandResponseSender> result = Future.future();
             CommandResponseSenderImpl.create(context, clientConfigProperties, connection, tenantId, replyId,
-                    onSenderClosed -> {
-                        activeSenders.remove(CommandResponseSenderImpl.getTargetAddress(tenantId, replyId));
-                    },
+                    onSenderClosed -> {},
                     result.completer());
             return result;
         });
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    public Future<Void> closeCommandResponseSender(final String tenantId, final String replyId) {
-        Objects.requireNonNull(tenantId);
-        Objects.requireNonNull(replyId);
-        final MessageSender commandResponseSender = activeSenders.get(CommandResponseSenderImpl.getTargetAddress(tenantId, replyId));
-        final Future<Void> future = Future.future();
-        if (commandResponseSender != null) {
-            commandResponseSender.close(closeHandler -> {
-                if (closeHandler.failed()) {
-                    LOG.error("Command response sender link close failed: {}", closeHandler.cause());
-                    future.fail(closeHandler.cause());
-                } else {
-                    future.complete();
-                }
-            });
-        } else {
-            LOG.error("Command response sender should be closed but could not be found for tenant: [{}], replyId: [{}]",
-                    tenantId, replyId);
-            future.fail("Command response sender should be closed but could not be found");
-        }
-        return future;
     }
 }

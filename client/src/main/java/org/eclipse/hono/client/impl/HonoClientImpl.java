@@ -189,6 +189,16 @@ public class HonoClientImpl implements HonoClient {
     }
 
     /**
+     * Gets the OpenTracing {@code Tracer} to use for tracing the processing
+     * of messages received from or sent to devices.
+     * 
+     * @return The tracer.
+     */
+    public final Tracer getTracer() {
+        return tracer;
+    }
+
+    /**
      * Executes some code on the vert.x Context that has been used to establish the
      * connection to the peer.
      * 

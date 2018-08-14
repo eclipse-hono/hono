@@ -64,17 +64,5 @@ public interface CommandConnection extends HonoClient {
      *         the link cannot be established, e.g. because this client is not connected.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
-    Future<CommandResponseSender> getOrCreateCommandResponseSender(String tenantId, String replyId);
-
-    /**
-     * Closes the command response sender for a device.
-     *
-     * @param tenantId The ID of the tenant to send the command responses for.
-     * @param replyId The identifier from the command's reply-to address
-     *                ({@code control/${tenantId}/${replyId}}) which represents
-     *                the device.
-     * @return A future indicating the result of the closing operation.
-     * @throws NullPointerException if any of the parameters are {@code null}.
-     */
-    Future<Void> closeCommandResponseSender(String tenantId, String replyId);
+    Future<CommandResponseSender> getCommandResponseSender(String tenantId, String replyId);
 }

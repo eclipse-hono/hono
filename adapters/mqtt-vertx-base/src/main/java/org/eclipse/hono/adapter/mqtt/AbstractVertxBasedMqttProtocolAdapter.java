@@ -711,11 +711,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
                     resource.getResourceId(),
                     message.payload());
         case CONTROL:
-            return uploadCommandResponseMessage(
-                    ctx,
-                    resource.getTenantId(),
-                    resource.getResourceId(),
-                    message);
+            return uploadCommandResponseMessage(ctx, resource);
         default:
             return Future
                     .failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "unsupported endpoint"));
@@ -805,68 +801,66 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
      * Uploads a command response message.
      *
      * @param ctx The context in which the MQTT message has been published.
-     * @param tenant The tenant of the device that has produced the data.
-     * @param deviceId The id of the device that has produced the data.
-     * @param message The MQTT PUBLISH packet received from the device.
+     * @param topic The topic that the response has been published to.
      * @return A future indicating the outcome of the operation.
      *         <p>
-     *         The future will succeed if the message has been uploaded successfully. Otherwise the future will fail
-     *         with a {@link ServiceInvocationException}.
+     *         The future will succeed if the message has been uploaded successfully.
+     *         Otherwise, the future will fail with a {@link ServiceInvocationException}.
      * @throws NullPointerException if any of of the parameters are {@code null}.
      */
     public final Future<Void> uploadCommandResponseMessage(
             final MqttContext ctx,
-            final String tenant,
-            final String deviceId,
-            final MqttPublishMessage message) {
+            final ResourceIdentifier topic) {
 
         Objects.requireNonNull(ctx);
-        Objects.requireNonNull(message);
+        Objects.requireNonNull(topic);
 
-        final String[] topicPath = message.topicName().split("\\/");
-        if (topicPath.length > CommandConstants.TOPIC_POSITION_RESPONSE_STATUS) {
-            final Integer status;
+        final String[] topicPath = topic.getResourcePath();
+
+        if (topicPath.length <= CommandConstants.TOPIC_POSITION_RESPONSE_STATUS) {
+            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "malformed topic name"));
+        } else {
             try {
-                status = Integer.parseInt(topicPath[CommandConstants.TOPIC_POSITION_RESPONSE_STATUS]);
+                final Integer status = Integer.parseInt(topicPath[CommandConstants.TOPIC_POSITION_RESPONSE_STATUS]);
+                final String reqId = topicPath[CommandConstants.TOPIC_POSITION_RESPONSE_REQ_ID];
+                final CommandResponse commandResponse = CommandResponse.from(
+                        reqId, topic.getResourceId(), ctx.message().payload(), ctx.contentType(), status);
+
+                if (commandResponse == null) {
+                    return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "malformed topic name"));
+               } else {
+
+                   return sendCommandResponse(topic.getTenantId(), commandResponse)
+                           .map(delivery -> {
+                               LOG.trace("successfully forwarded command response from device [tenant-id: {}, device-id: {}]",
+                                       topic.getTenantId(), topic.getResourceId());
+                               metrics.incrementCommandResponseDeliveredToApplication(topic.getTenantId());
+                               // check that the remote MQTT client is still connected before sending PUBACK
+                               if (ctx.deviceEndpoint().isConnected() && ctx.message().qosLevel() == MqttQoS.AT_LEAST_ONCE) {
+                                   ctx.deviceEndpoint().publishAcknowledge(ctx.message().messageId());
+                               }
+                               return (Void) null;
+                           });
+
+               }
             } catch(final NumberFormatException e) {
                 return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "invalid status code"));
             }
-            final CommandResponse commandResponse = CommandResponse.from(
-                    topicPath[CommandConstants.TOPIC_POSITION_RESPONSE_REQ_ID], deviceId, message.payload(),
-                    ctx.contentType(), status);
-            return uploadMessage(
-                    ctx,
-                    Objects.requireNonNull(tenant),
-                    Objects.requireNonNull(deviceId),
-                    message.payload(),
-                    createCommandResponseSender(tenant, commandResponse.getReplyToId()),
-                    CommandConstants.COMMAND_ENDPOINT,
-                    commandResponse.getCorrelationId(),
-                    status).compose(success -> {
-                        LOG.trace("successfully forwarded command response from device [tenant-id: {}, device-id: {}]",
-                                tenant, deviceId);
-                        metrics.incrementCommandResponseDeliveredToApplication(tenant);
-                        return Future.succeededFuture(success);
-                    });
-        } else {
-            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
-                    "command response need to be in the format 'control/[tenant]/[device-id]/res/<req-id>/<status>'"));
         }
     }
 
-    private Future<Void> uploadMessage(final MqttContext ctx, final String tenant, final String deviceId,
-            final Buffer payload, final Future<? extends MessageSender> senderTracker, final String endpointName) {
+    private Future<Void> uploadMessage(
+            final MqttContext ctx,
+            final String tenant,
+            final String deviceId,
+            final Buffer payload,
+            final Future<? extends MessageSender> senderTracker,
+            final String endpointName) {
+
         if (!isPayloadOfIndicatedType(payload, ctx.contentType())) {
             return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
                     String.format("Content-Type %s does not match payload", ctx.contentType())));
         } else {
-            return uploadMessage(ctx, tenant, deviceId, payload, senderTracker, endpointName, null, null);
-        }
-    }
-
-    private Future<Void> uploadMessage(final MqttContext ctx, final String tenant, final String deviceId,
-        final Buffer payload, final Future<? extends MessageSender> senderTracker, final String endpointName,
-        final String correlationId, final Integer status) {
 
             final Span currentSpan = tracer.buildSpan("upload " + endpointName)
                     .asChildOf(getCurrentSpan(ctx))
@@ -882,67 +876,62 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
                     ctx.authenticatedDevice(), currentSpan.context());
             final Future<TenantObject> tenantConfigTracker = getTenantConfiguration(tenant, currentSpan.context());
 
-        return CompositeFuture.all(tokenTracker, tenantConfigTracker, senderTracker).compose(ok -> {
+            return CompositeFuture.all(tokenTracker, tenantConfigTracker, senderTracker).compose(ok -> {
 
-            if (tenantConfigTracker.result().isAdapterEnabled(getTypeName())) {
+                if (tenantConfigTracker.result().isAdapterEnabled(getTypeName())) {
 
-                final MessageSender sender = senderTracker.result();
-                final Message downstreamMessage = newMessage(
-                        ResourceIdentifier.from(endpointName, tenant, deviceId),
-                        sender.isRegistrationAssertionRequired(),
-                        ctx.message().topicName(),
-                        ctx.contentType(),
-                        payload,
-                        tokenTracker.result(),
-                        null);
+                    final MessageSender sender = senderTracker.result();
+                    final Message downstreamMessage = newMessage(
+                            ResourceIdentifier.from(endpointName, tenant, deviceId),
+                            sender.isRegistrationAssertionRequired(),
+                            ctx.message().topicName(),
+                            ctx.contentType(),
+                            payload,
+                            tokenTracker.result(),
+                            null);
 
-                // command response specific
-                downstreamMessage.setCorrelationId(correlationId);
-                if (status != null) {
-                    MessageHelper.addProperty(downstreamMessage, MessageHelper.APP_PROPERTY_STATUS, status);
-                }
+                    customizeDownstreamMessage(downstreamMessage, ctx);
 
-                customizeDownstreamMessage(downstreamMessage, ctx);
-
-                if (ctx.message().qosLevel() == MqttQoS.AT_LEAST_ONCE) {
-                    return sender.sendAndWaitForOutcome(downstreamMessage, currentSpan.context());
+                    if (ctx.message().qosLevel() == MqttQoS.AT_LEAST_ONCE) {
+                        return sender.sendAndWaitForOutcome(downstreamMessage, currentSpan.context());
+                    } else {
+                        return sender.send(downstreamMessage, currentSpan.context());
+                    }
                 } else {
-                    return sender.send(downstreamMessage, currentSpan.context());
+                    // this adapter is not enabled for the tenant
+                    return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_FORBIDDEN,
+                            "adapter is not enabled for tenant"));
                 }
-            } else {
-                // this adapter is not enabled for the tenant
-                return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_FORBIDDEN,
-                        "adapter is not enabled for tenant"));
-            }
 
-        }).compose(delivery -> {
+            }).compose(delivery -> {
 
-            LOG.trace("successfully processed message [topic: {}, QoS: {}] for device [tenantId: {}, deviceId: {}]",
-                    ctx.message().topicName(), ctx.message().qosLevel(), tenant, deviceId);
-            onMessageSent(ctx);
-            // check that the remote MQTT client is still connected before sending PUBACK
-            if (ctx.deviceEndpoint().isConnected() && ctx.message().qosLevel() == MqttQoS.AT_LEAST_ONCE) {
-                currentSpan.log("sending PUBACK");
-                ctx.deviceEndpoint().publishAcknowledge(ctx.message().messageId());
-            }
-            currentSpan.finish();
-            return Future.<Void> succeededFuture();
+                LOG.trace("successfully processed message [topic: {}, QoS: {}] for device [tenantId: {}, deviceId: {}]",
+                        ctx.message().topicName(), ctx.message().qosLevel(), tenant, deviceId);
+                onMessageSent(ctx);
+                // check that the remote MQTT client is still connected before sending PUBACK
+                if (ctx.deviceEndpoint().isConnected() && ctx.message().qosLevel() == MqttQoS.AT_LEAST_ONCE) {
+                    currentSpan.log("sending PUBACK");
+                    ctx.deviceEndpoint().publishAcknowledge(ctx.message().messageId());
+                }
+                currentSpan.finish();
+                return Future.<Void> succeededFuture();
 
-        }).recover(t -> {
+            }).recover(t -> {
 
-            if (ClientErrorException.class.isInstance(t)) {
-                final ClientErrorException e = (ClientErrorException) t;
-                LOG.debug("cannot process message for device [tenantId: {}, deviceId: {}, endpoint: {}]: {} - {}",
-                        tenant, deviceId, endpointName, e.getErrorCode(), e.getMessage());
-            } else {
-                LOG.debug("cannot process message for device [tenantId: {}, deviceId: {}, endpoint: {}]",
-                        tenant, deviceId, endpointName, t);
-                onMessageUndeliverable(ctx);
-            }
-            TracingHelper.logError(currentSpan, t);
-            currentSpan.finish();
-            return Future.failedFuture(t);
-        });
+                if (ClientErrorException.class.isInstance(t)) {
+                    final ClientErrorException e = (ClientErrorException) t;
+                    LOG.debug("cannot process message for device [tenantId: {}, deviceId: {}, endpoint: {}]: {} - {}",
+                            tenant, deviceId, endpointName, e.getErrorCode(), e.getMessage());
+                } else {
+                    LOG.debug("cannot process message for device [tenantId: {}, deviceId: {}, endpoint: {}]",
+                            tenant, deviceId, endpointName, t);
+                    onMessageUndeliverable(ctx);
+                }
+                TracingHelper.logError(currentSpan, t);
+                currentSpan.finish();
+                return Future.failedFuture(t);
+            });
+        }
     }
 
     /**

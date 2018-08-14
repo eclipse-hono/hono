@@ -162,7 +162,7 @@ public class VertxBasedHttpProtocolAdapterTest {
         }).when(commandConnection).shutdown(any(Handler.class));
 
         commandResponseSender = mock(CommandResponseSender.class);
-        when(commandConnection.getOrCreateCommandResponseSender(anyString(), anyString())).thenReturn(
+        when(commandConnection.getCommandResponseSender(anyString(), anyString())).thenReturn(
                 Future.succeededFuture(commandResponseSender));
 
         usernamePasswordAuthProvider = mock(HonoClientBasedAuthProvider.class);

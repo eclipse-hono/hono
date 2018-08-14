@@ -492,27 +492,31 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     }
 
     /**
-     * Creates a command response sender for a specific device.
+     * Creates a link for sending a command response downstream.
      *
-     * @param tenantId The tenant of the command receiver.
-     * @param replyId The replyId to from the command to use for the response.
-     * @return Result of the response sender creation.
+     * @param tenantId The tenant that the device belongs to from which
+     *                 the response has been received.
+     * @param replyId The command's reply-to-id.
+     * @return The sender.
      */
     protected final Future<CommandResponseSender> createCommandResponseSender(
             final String tenantId,
             final String replyId) {
-        return commandConnection.getOrCreateCommandResponseSender(tenantId, replyId);
+        return commandConnection.getCommandResponseSender(tenantId, replyId);
     }
 
     /**
      * Forwards a response message that has been sent by a device in reply to a
      * command to the sender of the command.
+     * <p>
+     * This method opens a new link for sending the response, tries to send the
+     * response message and then closes the link again.
      *
      * @param tenantId The tenant that the device belongs to.
      * @param response The response message.
      * @return A future indicating the outcome of the attempt to send
-     *         the message.
-     * @throws NullPointerException if any of the parameters are {@code null}.
+     *         the message. The link will be closed in any case.
+     * @throws NullPointerException if any of the parameters other than context are {@code null}.
      */
     protected final Future<ProtonDelivery> sendCommandResponse(
             final String tenantId,
@@ -521,8 +525,18 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(response);
 
-        return createCommandResponseSender(tenantId, response.getReplyToId())
-                .compose(sender -> sender.sendCommandResponse(response));
+        final Future<CommandResponseSender> senderTracker = createCommandResponseSender(tenantId, response.getReplyToId());
+        return senderTracker
+                .compose(sender -> sender.sendCommandResponse(response))
+                .map(delivery -> {
+                    senderTracker.result().close(c -> {});
+                    return delivery;
+                }).recover(t -> {
+                    if (senderTracker.succeeded()) {
+                        senderTracker.result().close(c -> {});
+                    }
+                    return Future.failedFuture(t);
+                });
     }
 
     /**

@@ -19,7 +19,6 @@ import org.apache.qpid.proton.amqp.Binary;
 import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
 import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.message.Message;
-import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.impl.AbstractSender;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.util.CommandConstants;
@@ -173,7 +172,7 @@ public class CommandResponseSenderImpl extends AbstractSender implements Command
             final String tenantId,
             final String replyId,
             final Handler<String> closeHook,
-            final Handler<AsyncResult<MessageSender>> creationHandler) {
+            final Handler<AsyncResult<CommandResponseSender>> creationHandler) {
 
         Objects.requireNonNull(context);
         Objects.requireNonNull(clientConfig);
@@ -188,7 +187,7 @@ public class CommandResponseSenderImpl extends AbstractSender implements Command
         }
 
         createSender(context, props, con, targetAddress, ProtonQoS.AT_LEAST_ONCE, closeHook)
-            .map(sender -> (MessageSender) new CommandResponseSenderImpl(clientConfig, sender, tenantId, targetAddress, context))
+            .map(sender -> (CommandResponseSender) new CommandResponseSenderImpl(clientConfig, sender, tenantId, targetAddress, context))
             .setHandler(creationHandler);
     }
 
