@@ -41,7 +41,7 @@ There is a subtle difference between the *device identifier* (*device-id*) and t
 When a device uses a client certificate for authentication, the TLS handshake is initiated during TCP connection establishment. If no trust anchor is configured for the AMQP adapter, the TLS handshake will succeed only if the certificate has not yet expired. Once the TLS handshake completes and a secure connection is established, the certificate's signature is checked during the SASL handshake. To complete the SASL handshake and authenticate the client, the adapter performs the following steps:
 
 * Adapter extracts the client certificate's Issuer DN and uses it to
-* perform a Tenant API lookup to retrieve the tenant that the client belongs to. In order for the lookup to succeed, the tenant’s trust anchor needs to be configured by means of registering the [trusted certificate authority]({{< relref "Tenant-API.md/#trusted-ca-format" >}}).
+* perform a Tenant API lookup to retrieve the tenant that the client belongs to. In order for the lookup to succeed, the tenant’s trust anchor needs to be configured by means of registering the [trusted certificate authority]({{< relref "/api/Tenant-API.md#trusted-ca-format" >}}).
 * If the lookup succeeds, the Tenant API returns the tenant, thus implicitly establishing the tenant that the device belongs to.
 * Adapter validates the device’s client certificate using the registered trust anchor for the tenant.
 * Finally, adapter authenticates the client certificate using Hono's credentials API. In this step, the adapter uses the client certificate’s subject DN (as authentication identifier) and x509-cert (as credentials type) in order to determine the device ID.
