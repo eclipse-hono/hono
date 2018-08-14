@@ -22,6 +22,7 @@ import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.service.auth.device.Device;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.MapBasedExecutionContext;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
 
@@ -33,7 +34,7 @@ import io.vertx.proton.ProtonHelper;
  * A class that contains context information used by the AMQP Adapter when uploading messages to Hono. An instance of
  * this class is created after link establishment to handle messages sent by client devices.
  */
-public class AmqpContext {
+public class AmqpContext extends MapBasedExecutionContext {
 
     private final ProtonDelivery delivery;
     private final Message message;
