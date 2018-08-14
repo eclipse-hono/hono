@@ -23,6 +23,13 @@ title = "Release Notes"
   Hono is still intended to run on Java 8, but the JDK 10 build was enabled to
   be better prepared for Java 11.
 
+### API Changes
+
+* Fix the `EventBusService` methods handling type safety to handle a
+  mismatching type according to their documentation, returning `null`. This
+  introduced a method signature change for `getTypesafeValueForField` and
+  `removeTypesafeValueForField`. Also see PR [#757](https://github.com/eclipse/hono/pull/757).
+
 ## 0.7-M2
 
 ### New Features
