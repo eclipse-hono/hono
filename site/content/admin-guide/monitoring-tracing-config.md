@@ -21,16 +21,16 @@ All protocol adapters support the reporting of metrics using the Graphite wire f
 
 | Environment Variable<br>Command Line Option                   | Mandatory | Default | Description |
 | :------------------------------------------------------------ | :-------: | :------ | :---------- |
-| `HONO_METRIC_REPORTER_CONSOLE_ACTIVE`<br>`‑‑hono.metric.reporter.console.active`   | no  | `false` | Enables the logging of metrics to the console/log. |
-| `HONO_METRIC_REPORTER_CONSOLE_PERIOD`<br>`‑‑hono.metric.reporter.console.period`   | no  | `5000` | Sets the time period (in milliseconds) after which metrics are reported to the console (if activated). |
-| `HONO_METRIC_REPORTER_GRAPHITE_ACTIVE`<br>`‑‑hono.metric.reporter.graphite.active` | no  | `false` | Enables reporting of metrics to a remote system (e.g. InfluxDB) using the Graphite wire format. |
-| `HONO_METRIC_REPORTER_GRAPHITE_HOST`<br>`‑‑hono.metric.reporter.graphite.host`     | no  | `localhost` | The name or IP address of the host, to which metrics should be reported. |
-| `HONO_METRIC_REPORTER_GRAPHITE_PORT`<br>`‑‑hono.metric.reporter.graphite.port`     | no  | `2003` | The port to which metrics should be reported. The default value is the standard port for Graphite. |
-| `HONO_METRIC_REPORTER_GRAPHITE_PERIOD`<br>`‑‑hono.metric.reporter.graphite.period` | no  | `5000` | Sets the time period (in milliseconds) after which metrics are reported to the remote host (if activated). |
-| `HONO_METRIC_REPORTER_GRAPHITE_PREFIX`<br>`‑‑hono.metric.reporter.graphite.prefix` | no  | - | An arbitrary string that all metric names will be prefixed with. |
-| `HONO_METRIC_JVM_MEMORY`<br>`‑‑hono.metric.jvm.memory`                             | no  | `false` | Enables reporting of the JVM's memory metrics (from the Dropwizard JVM Instrumentation). The metric name is `hono.http.jvm.memory`. |
-| `HONO_METRIC_JVM_THREAD`<br>`‑‑hono.metric.jvm.thread`                             | no  | `false` | Enables reporting of the JVM's thread metrics (from the Dropwizard JVM Instrumentation). The metric name is `hono.http.jvm.thread`.|
-| `HONO_METRIC_VERTX`<br>`‑‑hono.metric.vertx`                                       | no  | `false` | Enables reporting of Vert.x' standard metrics (from the Vert.x metrics project). The metric name is `hono.http.vertx`. |
+| `HONO_METRIC_REPORTER_CONSOLE_ACTIVE`<br><nobr>`--hono.metric.reporter.console.active`</nobr>   | no  | `false` | Enables the logging of metrics to the console/log. |
+| `HONO_METRIC_REPORTER_CONSOLE_PERIOD`<br><nobr>`--hono.metric.reporter.console.period`</nobr>   | no  | `5000` | Sets the time period (in milliseconds) after which metrics are reported to the console (if activated). |
+| `HONO_METRIC_REPORTER_GRAPHITE_ACTIVE`<br><nobr>`--hono.metric.reporter.graphite.active`</nobr> | no  | `false` | Enables reporting of metrics to a remote system (e.g. InfluxDB) using the Graphite wire format. |
+| `HONO_METRIC_REPORTER_GRAPHITE_HOST`<br><nobr>`--hono.metric.reporter.graphite.host`</nobr>     | no  | `localhost` | The name or IP address of the host, to which metrics should be reported. |
+| `HONO_METRIC_REPORTER_GRAPHITE_PORT`<br><nobr>`--hono.metric.reporter.graphite.port`</nobr>     | no  | `2003` | The port to which metrics should be reported. The default value is the standard port for Graphite. |
+| `HONO_METRIC_REPORTER_GRAPHITE_PERIOD`<br><nobr>`--hono.metric.reporter.graphite.period`</nobr> | no  | `5000` | Sets the time period (in milliseconds) after which metrics are reported to the remote host (if activated). |
+| `HONO_METRIC_REPORTER_GRAPHITE_PREFIX`<br><nobr>`--hono.metric.reporter.graphite.prefix`</nobr> | no  | - | An arbitrary string that all metric names will be prefixed with. |
+| `HONO_METRIC_JVM_MEMORY`<br><nobr>`--hono.metric.jvm.memory`</nobr>                             | no  | `false` | Enables reporting of the JVM's memory metrics (from the Dropwizard JVM Instrumentation). The metric name is `hono.http.jvm.memory`. |
+| `HONO_METRIC_JVM_THREAD`<br><nobr>`--hono.metric.jvm.thread`</nobr>                             | no  | `false` | Enables reporting of the JVM's thread metrics (from the Dropwizard JVM Instrumentation). The metric name is `hono.http.jvm.thread`.|
+| `HONO_METRIC_VERTX`<br><nobr>`--hono.metric.vertx`</nobr>                                       | no  | `false` | Enables reporting of Vert.x' standard metrics (from the Vert.x metrics project). The metric name is `hono.http.vertx`. |
 
 The names and semantics of the individual metrics being reported by the components are described in the [Metrics specification]({{< relref "/api/Metrics.md" >}}).
 
