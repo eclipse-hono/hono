@@ -37,6 +37,7 @@ import org.eclipse.hono.service.auth.device.Device;
 import org.eclipse.hono.service.auth.device.HonoClientBasedAuthProvider;
 import org.eclipse.hono.service.command.Command;
 import org.eclipse.hono.service.command.CommandConnection;
+import org.eclipse.hono.service.command.CommandContext;
 import org.eclipse.hono.service.command.CommandResponse;
 import org.eclipse.hono.service.command.CommandResponseSender;
 import org.eclipse.hono.service.http.HttpUtils;
@@ -54,6 +55,7 @@ import org.junit.runner.RunWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
@@ -474,12 +476,13 @@ public class VertxBasedHttpProtocolAdapterTest {
         // GIVEN an device for which a command is pending
         mockSuccessfulAuthentication("DEFAULT_TENANT", "device_1");
         final Message msg = newMockMessage("DEFAULT_TENANT", "device_1", "doThis");
-        final Command pendingCommand = Command.from(mock(ProtonReceiver.class), mock(ProtonDelivery.class), msg, "DEFAULT_TENANT", "device_1");
+        final Command pendingCommand = Command.from(msg, "DEFAULT_TENANT", "device_1");
+        final CommandContext commandContext = CommandContext.from(pendingCommand, mock(ProtonDelivery.class), mock(ProtonReceiver.class), mock(Span.class));
         final MessageConsumer commandConsumer = mock(MessageConsumer.class);
         when(commandConnection.getOrCreateCommandConsumer(eq("DEFAULT_TENANT"), eq("device_1"), any(Handler.class), any(Handler.class))).
                 thenAnswer(invocation -> {
-                    final Handler<Command> consumer = invocation.getArgument(2);
-                    consumer.handle(pendingCommand);
+                    final Handler<CommandContext> consumer = invocation.getArgument(2);
+                    consumer.handle(commandContext);
                     return Future.succeededFuture(commandConsumer);
                 });
         when(commandConnection.closeCommandConsumer(eq("DEFAULT_TENANT"), eq("device_1"))).then(invocation -> {

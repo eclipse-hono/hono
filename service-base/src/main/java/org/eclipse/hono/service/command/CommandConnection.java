@@ -42,7 +42,7 @@ public interface CommandConnection extends HonoClient {
     Future<MessageConsumer> getOrCreateCommandConsumer(
             String tenantId,
             String deviceId,
-            Handler<Command> commandHandler,
+            Handler<CommandContext> commandHandler,
             Handler<Void> closeHandler);
 
     /**

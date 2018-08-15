@@ -21,6 +21,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
+import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.MessageConsumer;
@@ -716,8 +717,8 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
         if (command == null) {
             response.setStatusCode(HttpURLConnection.HTTP_ACCEPTED);
         } else {
-            currentSpan.log(String.format("adding command [name: {}, request-id: {}] to response",
-                    command.getName(), command.getRequestId()));
+            currentSpan.setTag(Constants.HEADER_COMMAND, command.getName());
+            currentSpan.setTag(Constants.HEADER_COMMAND_REQUEST_ID, command.getRequestId());
             LOG.trace("adding command [name: {}, request-id: {}] to response for device [tenant-id: {}, device-id: {}]",
                     command.getName(), command.getRequestId(), command.getTenant(), command.getDeviceId());
             response.setStatusCode(HttpURLConnection.HTTP_OK);
@@ -776,22 +777,31 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
             return createCommandConsumer(
                     tenantId,
                     deviceId,
-                    command -> {
+                    commandContext -> {
+                        Tags.COMPONENT.set(commandContext.getCurrentSpan(), getTypeName());
+                        final Command command = commandContext.getCommand();
                         if (command.isValid()) {
                             if (responseReady.isComplete()) {
                                 // the timer has already fired, release the command
-                                command.release();
+                                commandContext.release();
                             } else {
                                 // put command to routing context and notify
                                 command.put(ctx);
-                                command.accept();
+                                // we accept the message before sending it to the
+                                // device in order to provide a consistent behavior
+                                // across all protocol adapters, i.e. accepting
+                                // the message only means that the message contains
+                                // a valid command which we are willing to deliver
+                                commandContext.accept();
                                 cancelCommandReceptionTimer(ctx);
                                 responseReady.tryComplete();
                             }
-                            // we do not issue any new credit because the
-                            // consumer is supposed to delivery a single command
-                            // only per HTTP request
+                        } else {
+                            commandContext.reject(new ErrorCondition(Constants.AMQP_BAD_REQUEST, "malformed command message"));
                         }
+                        // we do not issue any new credit because the
+                        // consumer is supposed to deliver a single command
+                        // only per HTTP request
                     },
                     remoteDetach -> {
                         LOG.debug("peer closed command receiver link [tenant-id: {}, device-id: {}]", tenantId, deviceId);

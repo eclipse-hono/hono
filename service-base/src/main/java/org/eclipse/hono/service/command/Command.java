@@ -16,21 +16,13 @@ package org.eclipse.hono.service.command;
 import java.util.Objects;
 import java.util.Optional;
 
-import org.apache.qpid.proton.amqp.messaging.Rejected;
-import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.util.CommandConstants;
-import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import io.vertx.core.buffer.Buffer;
 import io.vertx.ext.web.RoutingContext;
-import io.vertx.proton.ProtonDelivery;
-import io.vertx.proton.ProtonHelper;
-import io.vertx.proton.ProtonReceiver;
 
 /**
  * A wrapper around an AMQP 1.0 message representing a command.
@@ -42,11 +34,8 @@ public final class Command {
      * The key under which the current Command is stored.
      */
     public static final String KEY_COMMAND = "command";
-    private static final Logger LOG = LoggerFactory.getLogger(Command.class);
 
     private final boolean valid;
-    private final ProtonReceiver receiver;
-    private final ProtonDelivery delivery;
     private final Message message;
     private final String tenantId;
     private final String deviceId;
@@ -56,8 +45,6 @@ public final class Command {
 
     private Command(
             final boolean valid,
-            final ProtonReceiver receiver,
-            final ProtonDelivery delivery,
             final Message message,
             final String tenantId,
             final String deviceId,
@@ -65,8 +52,6 @@ public final class Command {
             final String replyToId) {
 
         this.valid = valid;
-        this.receiver = receiver;
-        this.delivery = delivery;
         this.message = message;
         this.tenantId = tenantId;
         this.deviceId = deviceId;
@@ -86,27 +71,20 @@ public final class Command {
      * <li>a String valued <em>correlation-id</em> and/or <em>message-id</em></li>
      * </ul>
      * <p>
-     * If any of the requirements above are not met, then the message will be settled with
-     * the <em>Rejected</em> outcome and the returned command's {@link Command#isValid()}
+     * If any of the requirements above are not met, then the returned command's {@link Command#isValid()}
      * method will return {@code false}.
      *
-     * @param receiver The link over which the message has been received.
-     * @param delivery The delivery corresponding to the message.
      * @param message The message containing the command.
      * @param tenantId The tenant that the device belongs to.
      * @param deviceId The identifier of the device.
-     * @return The command or {@code null} if the command does not contain all required information.
+     * @return The command.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
     public static Command from(
-            final ProtonReceiver receiver,
-            final ProtonDelivery delivery,
             final Message message,
             final String tenantId,
             final String deviceId) {
 
-        Objects.requireNonNull(receiver);
-        Objects.requireNonNull(delivery);
         Objects.requireNonNull(message);
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
@@ -159,17 +137,12 @@ public final class Command {
 
         final Command result = new Command(
                 valid,
-                receiver,
-                delivery,
                 message,
                 tenantId,
                 deviceId,
                 correlationId,
                 replyToId);
 
-        if (!valid) {
-            result.reject(new ErrorCondition(Constants.AMQP_BAD_REQUEST, "malformed command message"));
-        }
         return result;
     }
 
@@ -315,7 +288,15 @@ public final class Command {
         }
     }
 
-    static String getRequestId(final String correlationId, final String replyToId, final String deviceId) {
+    /**
+     * Creates a request ID for a command.
+     * 
+     * @param correlationId The identifier to use for correlating the response with the request.
+     * @param replyToId An arbitrary identifier to encode into the request ID.
+     * @param deviceId The target of the command.
+     * @return The request identifier or {@code null} if any of the parameters are {@code null}.
+     */
+    public static String getRequestId(final String correlationId, final String replyToId, final String deviceId) {
 
         if (correlationId == null || replyToId == null || deviceId == null) {
             return null;
@@ -331,45 +312,13 @@ public final class Command {
                 stringTwo);
     }
 
-    /**
-     * Settles the command message with the <em>accepted</em> outcome.
-     */
-    public void accept() {
-        LOG.trace("accepting command message [name: {}, request-id: {}] for device [tenant-id: {}, device-id: {}]",
-                getName(), getRequestId(), getTenant(), getDeviceId());
-        ProtonHelper.accepted(delivery, true);
-    }
-
-    /**
-     * Settles the command message with the <em>released</em> outcome.
-     */
-    public void release() {
-        ProtonHelper.released(delivery, true);
-    }
-
-    /**
-     * Settles the command message with the <em>released</em> outcome.
-     *
-     * @param errorCondition The error condition to send in the disposition frame (may be {@code null}).
-     */
-    public void reject(final ErrorCondition errorCondition) {
-        final Rejected rejected = new Rejected();
-        if (errorCondition != null) {
-            rejected.setError(errorCondition);
+    @Override
+    public String toString() {
+        if (valid) {
+            return String.format("Command [name: %s, tenant-id: %s, device-id %s, request-id: %s]",
+                    getName(), getTenant(), getDeviceId(), getRequestId());
+        } else {
+            return "Invalid Command";
         }
-        delivery.disposition(rejected, true);
-    }
-
-    /**
-     * Issues credits to the peer that this command has been received from.
-     * 
-     * @param credits The number of credits.
-     * @throws IllegalArgumentException if credits is &lt; 1
-     */
-    public void flow(final int credits) {
-        if (credits < 1) {
-            throw new IllegalArgumentException("credits must be positve");
-        }
-        receiver.flow(credits);
     }
 }

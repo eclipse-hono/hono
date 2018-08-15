@@ -67,7 +67,7 @@ public class CommandConnectionImpl extends HonoClientImpl implements CommandConn
     public final Future<MessageConsumer> getOrCreateCommandConsumer(
             final String tenantId,
             final String deviceId,
-            final Handler<Command> commandConsumer,
+            final Handler<CommandContext> commandConsumer,
             final Handler<Void> closeHandler) {
         final MessageConsumer messageConsumer = commandReceivers.get(Device.asAddress(tenantId, deviceId));
         if (messageConsumer != null) {
@@ -82,7 +82,7 @@ public class CommandConnectionImpl extends HonoClientImpl implements CommandConn
     private Future<MessageConsumer> newCommandConsumer(
             final String tenantId,
             final String deviceId,
-            final Handler<Command> commandConsumer,
+            final Handler<CommandContext> commandConsumer,
             final Handler<Void> closeHandler) {
 
         return checkConnected().compose(con -> {
@@ -95,7 +95,7 @@ public class CommandConnectionImpl extends HonoClientImpl implements CommandConn
                             commandReceivers.put(Device.asAddress(tenantId, deviceId), creation.result());
                         }
                         result.complete(creation.result());
-                    });
+                    }, getTracer());
             return result;
         });
     }

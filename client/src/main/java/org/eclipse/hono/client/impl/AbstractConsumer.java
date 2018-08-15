@@ -13,6 +13,7 @@
 
 package org.eclipse.hono.client.impl;
 
+import io.opentracing.Tracer;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Handler;
@@ -33,7 +34,26 @@ public abstract class AbstractConsumer extends AbstractHonoClient implements Mes
      * @param receiver The proton receiver link.
      */
     public AbstractConsumer(final Context context, final ClientConfigProperties config, final ProtonReceiver receiver) {
-        super(context, config);
+
+        this(context, config, receiver, null);
+    }
+
+    /**
+     * Creates an abstract message consumer.
+     *
+     * @param context The vert.x context to run all interactions with the server on.
+     * @param config The configuration properties to use.
+     * @param receiver The proton receiver link.
+     * @param tracer The tracer to use for tracking the processing of received
+     *               messages. If {@code null}, the *noop* tracer will be used.
+     */
+    public AbstractConsumer(
+            final Context context,
+            final ClientConfigProperties config,
+            final ProtonReceiver receiver,
+            final Tracer tracer) {
+
+        super(context, config, tracer);
         this.receiver = receiver;
     }
 

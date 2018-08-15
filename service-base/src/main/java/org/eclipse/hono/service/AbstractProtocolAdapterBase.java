@@ -33,6 +33,7 @@ import org.eclipse.hono.service.auth.ValidityBasedTrustOptions;
 import org.eclipse.hono.service.auth.device.Device;
 import org.eclipse.hono.service.command.Command;
 import org.eclipse.hono.service.command.CommandConnection;
+import org.eclipse.hono.service.command.CommandContext;
 import org.eclipse.hono.service.command.CommandResponse;
 import org.eclipse.hono.service.command.CommandResponseSender;
 import org.eclipse.hono.service.monitoring.ConnectionEventProducer;
@@ -467,7 +468,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     protected final Future<MessageConsumer> createCommandConsumer(
             final String tenantId,
             final String deviceId,
-            final Handler<Command> commandConsumer,
+            final Handler<CommandContext> commandConsumer,
             final Handler<Void> closeHandler) {
 
         return commandConnection.getOrCreateCommandConsumer(tenantId, deviceId, commandConsumer, closeHandler);
