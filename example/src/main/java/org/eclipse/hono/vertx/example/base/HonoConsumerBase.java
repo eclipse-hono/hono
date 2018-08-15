@@ -227,10 +227,11 @@ public class HonoConsumerBase {
                 sendCommandToAdapter(commandClient, notification);
 
                 // for devices that stay connected, start a periodic timer now that repeatedly sends a command to the device
-                vertx.setPeriodic(HonoExampleConstants.COMMAND_INTERVAL_FOR_DEVICES_CONNECTED_WITH_UNLIMITED_EXPIRY*1000, timerId -> {
-                    setPeriodicCommandSenderTimerCanceler(timerId, notification, commandClient);
+                final long timerId = vertx.setPeriodic(HonoExampleConstants.COMMAND_INTERVAL_FOR_DEVICES_CONNECTED_WITH_UNLIMITED_EXPIRY*1000, id -> {
                     sendCommandToAdapter(commandClient, notification);
                 });
+                // register a canceler for this timer directly after it was created
+                setPeriodicCommandSenderTimerCanceler(timerId, notification, commandClient);
             } else {
                 sendCommandToAdapter(commandClient, notification);
             }
