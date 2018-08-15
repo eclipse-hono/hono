@@ -11,7 +11,8 @@ It shall serve as a blueprint to integrate your existing java source code with H
 The code is found in the [example](https://github.com/eclipse/hono/tree/master/example) module in the package [org.eclipse.hono.vertx.example](https://github.com/eclipse/hono/tree/master/example/src/main/java/org/eclipse/hono/vertx/example).
 
 The provided classes are kept as simple as possible (in the tradition of a classical "Hello World" implementation).
-This means that they make use of simple constant definitions, deal with exceptions as rarely as possible and use a few `System.out`'s.
+This means that they make use of simple constant definitions and deal with exceptions as rarely as possible.
+You may want to change the level of detail that should be logged to the console by editing the contained `resources/logback.xml` file.
 
 Please refer to the javadoc of the classes for details.
  

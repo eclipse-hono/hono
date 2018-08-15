@@ -37,6 +37,8 @@ import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
 import io.vertx.proton.ProtonConnection;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
 /**
@@ -48,10 +50,10 @@ import io.vertx.proton.ProtonConnection;
  * any input on it's console (which finishes it and closes vertx).
  */
 public class HonoConsumerBase {
-
     public static final Boolean USE_PLAIN_CONNECTION = Boolean.valueOf(System.getProperty("plain.connection", "false"));
     public static final String HONO_CLIENT_USER = System.getProperty("username", "consumer@HONO");
     public static final String HONO_CLIENT_PASSWORD = System.getProperty("password", "verysecret");
+
     protected final int DEFAULT_CONNECT_TIMEOUT_MILLIS = 1000;
 
     private final Vertx vertx = Vertx.vertx();
@@ -59,6 +61,7 @@ public class HonoConsumerBase {
 
     private final Map<String, Handler<Void>> periodicCommandSenderTimerCancelerMap = new HashMap<>();
 
+    private static final Logger LOG = LoggerFactory.getLogger(HonoConsumerBase.class);
     /**
      * The consumer needs one connection to the AMQP 1.0 messaging network from which it can consume data.
      * <p>
@@ -94,8 +97,9 @@ public class HonoConsumerBase {
 
         consumerFuture.setHandler(result -> {
             if (!result.succeeded()) {
-                System.err.println("honoClient could not create downstream consumer for " + HonoExampleConstants.HONO_AMQP_CONSUMER_HOST
-                        + ":" + HonoExampleConstants.HONO_AMQP_CONSUMER_PORT + " : " + result.cause());
+                LOG.error("honoClient could not create downstream consumer for [{}:{}]",
+                        HonoExampleConstants.HONO_AMQP_CONSUMER_HOST,
+                        HonoExampleConstants.HONO_AMQP_CONSUMER_PORT, result.cause());
             }
             latch.countDown();
         });
@@ -132,12 +136,13 @@ public class HonoConsumerBase {
 
         return honoClient.createEventConsumer(HonoExampleConstants.TENANT_ID,
                 eventHandler,
-                closeHook -> System.err.println("remotely detached consumer link")
+                closeHook -> LOG.error("remotely detached consumer link")
         ).compose(messageConsumer -> honoClient.createTelemetryConsumer(HonoExampleConstants.TENANT_ID,
-                telemetryHandler, closeHook -> System.err.println("remotely detached consumer link")
-        ).compose(telemetryMessageConsumer ->
-                Future.succeededFuture(telemetryMessageConsumer)
-        ).recover(t ->
+                telemetryHandler, closeHook -> LOG.error("remotely detached consumer link")
+        ).compose(telemetryMessageConsumer -> {
+            LOG.info("Consumer ready for telemetry and event messages.");
+            return Future.succeededFuture(telemetryMessageConsumer);
+        }).recover(t ->
                 Future.failedFuture(t)
         ));
     }
@@ -155,29 +160,31 @@ public class HonoConsumerBase {
 
         // give Vert.x some time to clean up NetClient
         vertx.setTimer(DEFAULT_CONNECT_TIMEOUT_MILLIS, reconnect -> {
-            System.out.println("attempting to re-connect to Hono ...");
+            LOG.info("attempting to re-connect to Hono ...");
             honoClient.connect(this::onDisconnect).
                     compose(connectedClient -> createConsumer()).
                     map(messageConsumer -> {
-                        System.out.println("Reconnected to Hono.");
+                        LOG.info("Reconnected to Hono.");
                         return null;
                     });
         });
     }
 
     private void printMessage(final String tenantId, final Message msg, final String messageType) {
-        final Data body = (Data) msg.getBody();
-        final String content = body != null ? body.getValue().toString() : "";
-        final String deviceId = MessageHelper.getDeviceId(msg);
+        if (LOG.isDebugEnabled()) {
+            final Data body = (Data) msg.getBody();
+            final String content = body != null ? body.getValue().toString() : "";
+            final String deviceId = MessageHelper.getDeviceId(msg);
 
-        final StringBuilder sb = new StringBuilder("received ").
-                append(messageType).
-                append(" [tenant: ").append(tenantId).
-                append(", device: ").append(deviceId).
-                append(", content-type: ").append(msg.getContentType()).
-                append(" ]: ").append(content);
+            final StringBuilder sb = new StringBuilder("received ").
+                    append(messageType).
+                    append(" [tenant: ").append(tenantId).
+                    append(", device: ").append(deviceId).
+                    append(", content-type: ").append(msg.getContentType()).
+                    append(" ]: [").append(content).append("].");
 
-        System.out.println(sb.toString());
+            LOG.debug(sb.toString());
+        }
     }
 
     /**
@@ -191,10 +198,10 @@ public class HonoConsumerBase {
      */
     private void handleCommandReadinessNotification(final TimeUntilDisconnectNotification notification) {
         if (notification.getMillisecondsUntilExpiry() == 0) {
-            System.out.println(String.format("Device notified as not being ready to receive a command (anymore) : <%s>.", notification.toString()));
+            LOG.info("Device notified as not being ready to receive a command (anymore) : [{}].", notification.toString());
             cancelPeriodicCommandSender(notification);
         } else {
-            System.out.println(String.format("Device is ready to receive a command : <%s>.", notification.toString()));
+            LOG.info("Device is ready to receive a command : [{}].", notification.toString());
             createCommandClientAndSendCommand(notification);
         }
     }
@@ -229,7 +236,7 @@ public class HonoConsumerBase {
             }
             return commandClient;
         }).otherwise(t -> {
-            System.err.println(String.format("Could not create command client : %s", t.getMessage()));
+            LOG.error("Could not create command client", t);
             return null;
         });
     }
@@ -253,7 +260,11 @@ public class HonoConsumerBase {
 
     private void setPeriodicCommandSenderTimerCanceler(final Long timerId, final TimeUntilDisconnectNotification notification, final CommandClient commandClient) {
         this.periodicCommandSenderTimerCancelerMap.put(notification.getTenantAndDeviceId(), v -> {
-            commandClient.close(ignore -> {});
+            commandClient.close(ignore -> {
+                if (LOG.isDebugEnabled()) {
+                    LOG.trace("Closed commandClient for [{}].", notification.getTenantAndDeviceId());
+                }
+            });
             vertx.cancelTimer(timerId);
             periodicCommandSenderTimerCancelerMap.remove(notification.getTenantAndDeviceId());
         });
@@ -279,13 +290,24 @@ public class HonoConsumerBase {
      */
     private void sendCommandToAdapter(final CommandClient commandClient, final TimeUntilDisconnectNotification notification) {
         final Buffer commandBuffer = buildCommandPayload();
+        final String command = "setBrightness";
 
-        commandClient.sendCommand("setBrightness", "application/json", commandBuffer).map(result -> {
-            System.out.println(String.format("Successfully sent command [%s] and received response: [%s]",
-                    commandBuffer.toString(), Optional.ofNullable(result.getPayload()).orElse(Buffer.buffer()).toString()));
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("Sending command [{}] to [{}].", command, notification.getTenantAndDeviceId());
+        }
+
+        commandClient.sendCommand(command, commandBuffer).map(result -> {
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Successfully sent command payload: [{}].", commandBuffer.toString());
+                LOG.debug("And received response: [{}].", Optional.ofNullable(result.getPayload()).orElse(Buffer.buffer()).toString());
+            }
+
             if (notification.getTtd() != -1) {
                 // do not close the command client if device stays connected
                 commandClient.close(v -> {
+                    if (LOG.isDebugEnabled()) {
+                        LOG.trace("Closed commandClient for [{}].", notification.getTenantAndDeviceId());
+                    }
                 });
             } else {
                 // cancel periodic timer and send a command again
@@ -296,15 +318,17 @@ public class HonoConsumerBase {
         }).otherwise(t -> {
             if (t instanceof ServiceInvocationException) {
                 final int errorCode = ((ServiceInvocationException) t).getErrorCode();
-                System.out.println(String.format("Command was replied with error code [%d]", errorCode));
+                LOG.debug("Command was replied with error code [{}].", errorCode);
             } else {
-                System.out.println(
-                        String.format("Could not send command : %s", t.getMessage()));
+                LOG.debug("Could not send command : {}.", t.getMessage());
             }
 
             if (notification.getTtd() != -1) {
                 // do not close the command client if device stays connected
                 commandClient.close(v -> {
+                    if (LOG.isDebugEnabled()) {
+                        LOG.trace("Closed commandClient for [{}].", notification.getTenantAndDeviceId());
+                    }
                 });
             }
             return null;
