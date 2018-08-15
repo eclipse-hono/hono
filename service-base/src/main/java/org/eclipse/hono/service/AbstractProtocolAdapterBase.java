@@ -515,20 +515,24 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      *
      * @param tenantId The tenant that the device belongs to.
      * @param response The response message.
+     * @param context The currently active OpenTracing span. An implementation
+     *         should use this as the parent for any span it creates for tracing
+     *         the execution of this operation.
      * @return A future indicating the outcome of the attempt to send
      *         the message. The link will be closed in any case.
      * @throws NullPointerException if any of the parameters other than context are {@code null}.
      */
     protected final Future<ProtonDelivery> sendCommandResponse(
             final String tenantId,
-            final CommandResponse response) {
+            final CommandResponse response,
+            final SpanContext context) {
 
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(response);
 
         final Future<CommandResponseSender> senderTracker = createCommandResponseSender(tenantId, response.getReplyToId());
         return senderTracker
-                .compose(sender -> sender.sendCommandResponse(response))
+                .compose(sender -> sender.sendCommandResponse(response, context))
                 .map(delivery -> {
                     senderTracker.result().close(c -> {});
                     return delivery;
@@ -549,17 +553,24 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * 
      * @param command The failed command. If {@code null}, no message will be sent.
      * @param statusCode The status code indicating the reason for failure.
+     * @param context The currently active OpenTracing span. An implementation
+     *         should use this as the parent for any span it creates for tracing
+     *         the execution of this operation.
      * @return A future indicating the outcome of the attempt to send
      *         the message.
      */
-    protected final Future<ProtonDelivery> failCommand(final Command command, final int statusCode) {
+    protected final Future<ProtonDelivery> failCommand(
+            final Command command,
+            final int statusCode,
+            final SpanContext context) {
 
         if (command == null) {
             return Future.succeededFuture();
         } else {
             return sendCommandResponse(
                     command.getTenant(),
-                    CommandResponse.from(command.getRequestId(), command.getDeviceId(), statusCode));
+                    CommandResponse.from(command.getRequestId(), command.getDeviceId(), statusCode),
+                    context);
         }
     }
 

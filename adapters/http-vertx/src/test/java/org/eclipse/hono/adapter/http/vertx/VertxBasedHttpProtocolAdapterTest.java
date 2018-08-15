@@ -509,7 +509,7 @@ public class VertxBasedHttpProtocolAdapterTest {
     }
 
     /**
-     * Verifies that a POST request to the command reply URI with a misconstructed command-request-id results in a
+     * Verifies that a POST request to the command reply URI with a malformed command-request-id results in a
      * {@link HttpURLConnection#HTTP_BAD_REQUEST}.
      *
      * @param ctx The vert.x test context.
@@ -594,7 +594,7 @@ public class VertxBasedHttpProtocolAdapterTest {
 
         mockSuccessfulAuthentication("DEFAULT_TENANT", "device_1");
 
-        when(commandResponseSender.sendCommandResponse(any(CommandResponse.class))).thenReturn(
+        when(commandResponseSender.sendCommandResponse(any(CommandResponse.class), (SpanContext) any())).thenReturn(
                 Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST)));
 
         httpClient.post(String.format("/control/res/%s?hono-cmd-status=200", syntacticallyCorrectCmdRequestId))
@@ -623,7 +623,8 @@ public class VertxBasedHttpProtocolAdapterTest {
 
         mockSuccessfulAuthentication("DEFAULT_TENANT", "device_1");
 
-        when(commandResponseSender.sendCommandResponse(any())).thenReturn(Future.succeededFuture(remotelySettledDelivery));
+        when(commandResponseSender.sendCommandResponse(any(CommandResponse.class), (SpanContext) any())).thenReturn(
+                Future.succeededFuture(remotelySettledDelivery));
 
         httpClient.post(String.format("/control/res/%s?hono-cmd-status=200", syntacticallyCorrectCmdRequestId))
                 .putHeader(HttpHeaders.CONTENT_TYPE, HttpUtils.CONTENT_TYPE_JSON)

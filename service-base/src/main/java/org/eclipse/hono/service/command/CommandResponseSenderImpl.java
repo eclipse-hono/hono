@@ -51,12 +51,6 @@ public class CommandResponseSenderImpl extends AbstractSender implements Command
      */
     public static final long DEFAULT_COMMAND_FLOW_LATENCY = 200L; //ms
 
-    CommandResponseSenderImpl(final ClientConfigProperties config, final ProtonSender sender, final String tenantId,
-            final String targetAddress, final Context context) {
-
-        this(config, sender, tenantId, targetAddress, context, null);
-    }
-
     CommandResponseSenderImpl(
             final ClientConfigProperties config,
             final ProtonSender sender,
@@ -105,19 +99,33 @@ public class CommandResponseSenderImpl extends AbstractSender implements Command
             final String contentType,
             final Buffer payload,
             final Map<String, Object> properties,
-            final int status) {
-        LOG.debug("send back a command response [correlationId: {}, status: {}]", correlationId, status);
-        return sendAndWaitForOutcome(createResponseMessage(targetAddress, correlationId, contentType, payload, properties, status));
+            final int status,
+            final SpanContext context) {
+
+        LOG.trace("sending command response [correlationId: {}, status: {}]", correlationId, status);
+        return sendAndWaitForOutcome(
+                createResponseMessage(targetAddress, correlationId, contentType, payload, properties, status),
+                context);
     }
 
     /**
      * {@inheritDoc}
      */
-    public Future<ProtonDelivery> sendCommandResponse(final CommandResponse commandResponse) {
+    public Future<ProtonDelivery> sendCommandResponse(final CommandResponse commandResponse, final SpanContext context) {
+
         Objects.requireNonNull(commandResponse);
-        return sendAndWaitForOutcome(createResponseMessage(targetAddress,
-                commandResponse.getCorrelationId(), commandResponse.getContentType(), commandResponse.getPayload(),
-                null, commandResponse.getStatus()));
+        return sendAndWaitForOutcome(createResponseMessage(commandResponse), context);
+    }
+
+    private Message createResponseMessage(final CommandResponse commandResponse) {
+
+        return createResponseMessage(
+                targetAddress,
+                commandResponse.getCorrelationId(),
+                commandResponse.getContentType(),
+                commandResponse.getPayload(),
+                null,
+                commandResponse.getStatus());
     }
 
     private static Message createResponseMessage(
@@ -163,7 +171,9 @@ public class CommandResponseSenderImpl extends AbstractSender implements Command
      * @param replyId The reply id as the unique postfix of the replyTo address.
      * @param closeHook A handler to invoke if the peer closes the link unexpectedly.
      * @param creationHandler The handler to invoke with the result of the creation attempt.
-     * @throws NullPointerException if any of context, clientConfig, con, tenantId, deviceId or replyId  is {@code null}.
+     * @param tracer The tracer to use for tracking the processing of received
+     *               messages. If {@code null}, OpenTracing's {@code NoopTracer} will be used.
+     * @throws NullPointerException if any of context, clientConfig, con, tenantId, deviceId or replyId  are {@code null}.
      */
     public static void create(
             final Context context,
@@ -172,7 +182,8 @@ public class CommandResponseSenderImpl extends AbstractSender implements Command
             final String tenantId,
             final String replyId,
             final Handler<String> closeHook,
-            final Handler<AsyncResult<CommandResponseSender>> creationHandler) {
+            final Handler<AsyncResult<CommandResponseSender>> creationHandler,
+            final Tracer tracer) {
 
         Objects.requireNonNull(context);
         Objects.requireNonNull(clientConfig);
@@ -187,7 +198,7 @@ public class CommandResponseSenderImpl extends AbstractSender implements Command
         }
 
         createSender(context, props, con, targetAddress, ProtonQoS.AT_LEAST_ONCE, closeHook)
-            .map(sender -> (CommandResponseSender) new CommandResponseSenderImpl(clientConfig, sender, tenantId, targetAddress, context))
+            .map(sender -> (CommandResponseSender) new CommandResponseSenderImpl(clientConfig, sender, tenantId, targetAddress, context, tracer))
             .setHandler(creationHandler);
     }
 
@@ -195,10 +206,10 @@ public class CommandResponseSenderImpl extends AbstractSender implements Command
     protected Span startSpan(final SpanContext parent, final Message rawMessage) {
 
         if (tracer == null) {
-            return null;
+            throw new IllegalStateException("no tracer configured");
         } else {
-            final Span span = newFollowingSpan(parent, "send command response");
-            Tags.SPAN_KIND.set(span, Tags.SPAN_KIND_PRODUCER);
+            final Span span = newChildSpan(parent, "forward Command response");
+            Tags.SPAN_KIND.set(span, Tags.SPAN_KIND_CLIENT);
             return span;
         }
     }

@@ -22,10 +22,6 @@ import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
-import io.vertx.mqtt.messages.MqttPublishMessage;
-import io.vertx.mqtt.messages.MqttSubscribeMessage;
-import io.vertx.mqtt.messages.MqttUnsubscribeMessage;
-
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ClientErrorException;
@@ -72,6 +68,9 @@ import io.vertx.mqtt.MqttConnectionException;
 import io.vertx.mqtt.MqttEndpoint;
 import io.vertx.mqtt.MqttServer;
 import io.vertx.mqtt.MqttServerOptions;
+import io.vertx.mqtt.messages.MqttPublishMessage;
+import io.vertx.mqtt.messages.MqttSubscribeMessage;
+import io.vertx.mqtt.messages.MqttUnsubscribeMessage;
 
 /**
  * A base class for implementing Vert.x based Hono protocol adapters for publishing events &amp; telemetry data using
@@ -519,6 +518,19 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
         final Map<String, Future> topicFilters = new HashMap<>();
         final List<Future> subscriptionOutcome = new ArrayList<>(subscribeMsg.topicSubscriptions().size());
 
+        final Span span = tracer.buildSpan("SUBSCRIBE")
+                .ignoreActiveSpan()
+                .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_SERVER)
+                .withTag(Tags.COMPONENT.getKey(), getTypeName())
+                .withTag(TracingHelper.TAG_CLIENT_ID.getKey(), endpoint.clientIdentifier())
+                .withTag(TracingHelper.TAG_AUTHENTICATED.getKey(), authenticatedDevice != null)
+                .start();
+
+        if (authenticatedDevice != null) {
+            span.setTag(MessageHelper.APP_PROPERTY_TENANT_ID, authenticatedDevice.getTenantId());
+            span.setTag(MessageHelper.APP_PROPERTY_DEVICE_ID, authenticatedDevice.getDeviceId());
+        }
+
         subscribeMsg.topicSubscriptions().forEach(subscription -> {
 
             Future result = topicFilters.get(subscription.topicName());
@@ -533,6 +545,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
                 // we currently only support subscriptions for receiving commands
                 final CommandSubscription cmdSub = CommandSubscription.fromTopic(subscription.topicName(), authenticatedDevice);
                 if (cmdSub == null) {
+                    span.log(String.format("ignoring unsupported topic filter [%s]", subscription.topicName()));
                     LOG.debug("cannot create subscription [filter: {}, requested QoS: {}]: unsupported topic filter",
                             subscription.topicName(), subscription.qualityOfService());
                     result = Future.failedFuture(new IllegalArgumentException("unsupported topic filter"));
@@ -545,11 +558,15 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
                             closeCommandConsumer(cmdSub.getTenant(), cmdSub.getDeviceId());
                             close(endpoint, authenticatedDevice);
                         });
+                        span.log(String.format("accepting subscription [filter: %s, requested QoS: %s, granted QoS: %s]",
+                                subscription.topicName(), subscription.qualityOfService(), MqttQoS.AT_MOST_ONCE));
                         LOG.debug("created subscription [tenant: {}, device: {}, filter: {}, requested QoS: {}, granted QoS: {}]",
                                 cmdSub.getTenant(), cmdSub.getDeviceId(), subscription.topicName(),
                                 subscription.qualityOfService(), MqttQoS.AT_MOST_ONCE);
                         return cmdSub;
                     }).recover(t -> {
+                        TracingHelper.logError(span, String.format("error creating subscription [filter: %s, requested QoS: %s]: %s",
+                                subscription.topicName(), subscription.qualityOfService(), t.getMessage()));
                         LOG.debug("cannot create subscription [tenant: {}, device: {}, filter: {}, requested QoS: {}]",
                                 cmdSub.getTenant(), cmdSub.getDeviceId(), subscription.topicName(),
                                 subscription.qualityOfService(), t);
@@ -569,7 +586,9 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
                     .map(f -> f.failed() ? MqttQoS.FAILURE : MqttQoS.AT_MOST_ONCE)
                     .collect(Collectors.toList());
 
-            endpoint.subscribeAcknowledge(subscribeMsg.messageId(), grantedQosLevels);
+            if (endpoint.isConnected()) {
+                endpoint.subscribeAcknowledge(subscribeMsg.messageId(), grantedQosLevels);
+            }
 
             // now that we have informed the device about the outcome
             // we can send empty notifications for succeeded command subscriptions
@@ -580,6 +599,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
                     sendConnectedTtdEvent(s.getTenant(), s.getDeviceId(), authenticatedDevice);
                 }
             });
+            span.finish();
         });
     }
 
@@ -601,20 +621,38 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
             final Device authenticatedDevice,
             final MqttUnsubscribeMessage unsubscribeMsg) {
 
+        final Span span = tracer.buildSpan("UNSUBSCRIBE")
+                .ignoreActiveSpan()
+                .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_SERVER)
+                .withTag(Tags.COMPONENT.getKey(), getTypeName())
+                .withTag(TracingHelper.TAG_CLIENT_ID.getKey(), endpoint.clientIdentifier())
+                .withTag(TracingHelper.TAG_AUTHENTICATED.getKey(), authenticatedDevice != null)
+                .start();
+
+        if (authenticatedDevice != null) {
+            span.setTag(MessageHelper.APP_PROPERTY_TENANT_ID, authenticatedDevice.getTenantId());
+            span.setTag(MessageHelper.APP_PROPERTY_DEVICE_ID, authenticatedDevice.getDeviceId());
+        }
+
         unsubscribeMsg.topics().forEach(topic -> {
             final CommandSubscription cmdSub = CommandSubscription.fromTopic(topic, authenticatedDevice);
             if (cmdSub == null) {
+                span.log(String.format("ignoring unsupported topic filter [%s]", topic));
                 LOG.debug("ignoring unsubscribe request for unsupported topic filter [{}]", topic);
             } else {
                 final String tenantId = cmdSub.getTenant();
                 final String deviceId = cmdSub.getDeviceId();
+                span.log(String.format("unsubscribing device from topic [filter: %s]", topic));
                 LOG.debug("unsubscribing device [tenant-id: {}, device-id: {}] from topic [{}]",
                         tenantId, deviceId, topic);
                 closeCommandConsumer(tenantId, deviceId);
                 sendDisconnectedTtdEvent(tenantId, deviceId, authenticatedDevice);
             }
         });
-        endpoint.unsubscribeAcknowledge(unsubscribeMsg.messageId());
+        if (endpoint.isConnected()) {
+            endpoint.unsubscribeAcknowledge(unsubscribeMsg.messageId());
+        }
+        span.finish();
     }
 
     private Future<MessageConsumer> createCommandConsumer(final MqttEndpoint mqttEndpoint, final CommandSubscription sub) {
@@ -841,7 +879,19 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
                     return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "malformed topic name"));
                } else {
 
-                   return sendCommandResponse(topic.getTenantId(), commandResponse)
+                   final Span currentSpan = tracer.buildSpan("upload Command response")
+                           .asChildOf(getCurrentSpan(ctx))
+                           .ignoreActiveSpan()
+                           .withTag(Tags.COMPONENT.getKey(), getTypeName())
+                           .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CLIENT)
+                           .withTag(MessageHelper.APP_PROPERTY_TENANT_ID, topic.getTenantId())
+                           .withTag(MessageHelper.APP_PROPERTY_DEVICE_ID, topic.getResourceId())
+                           .withTag(Constants.HEADER_COMMAND_RESPONSE_STATUS, status)
+                           .withTag(Constants.HEADER_COMMAND_REQUEST_ID, reqId)
+                           .withTag(TracingHelper.TAG_AUTHENTICATED.getKey(), ctx.authenticatedDevice() != null)
+                           .start();
+
+                   return sendCommandResponse(topic.getTenantId(), commandResponse, currentSpan.context())
                            .map(delivery -> {
                                LOG.trace("successfully forwarded command response from device [tenant-id: {}, device-id: {}]",
                                        topic.getTenantId(), topic.getResourceId());
@@ -850,7 +900,12 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
                                if (ctx.deviceEndpoint().isConnected() && ctx.message().qosLevel() == MqttQoS.AT_LEAST_ONCE) {
                                    ctx.deviceEndpoint().publishAcknowledge(ctx.message().messageId());
                                }
+                               currentSpan.finish();
                                return (Void) null;
+                           }).recover(t -> {
+                               TracingHelper.logError(currentSpan, t);
+                               currentSpan.finish();
+                               return Future.failedFuture(t);
                            });
 
                }

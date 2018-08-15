@@ -637,7 +637,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                             currentSpan.log("failed to send HTTP response to device");
                             LOG.debug("failed to send http response for [{}] message from device [tenantId: {}, deviceId: {}]",
                                     endpointName, tenant, deviceId, t);
-                            failCommand(command, HttpURLConnection.HTTP_UNAVAILABLE);
+                            failCommand(command, HttpURLConnection.HTTP_UNAVAILABLE, currentSpan.context());
                             TracingHelper.logError(currentSpan, t);
                             currentSpan.finish();
                         });
@@ -652,7 +652,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
 
                     LOG.debug("cannot process [{}] message from device [tenantId: {}, deviceId: {}]",
                             endpointName, tenant, deviceId, t);
-                    failCommand(Command.get(ctx), HttpURLConnection.HTTP_UNAVAILABLE);
+                    failCommand(Command.get(ctx), HttpURLConnection.HTTP_UNAVAILABLE, currentSpan.context());
 
                     if (ClientErrorException.class.isInstance(t)) {
                         final ClientErrorException e = (ClientErrorException) t;
@@ -876,8 +876,13 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
      *                       the outcome of processing the command (may be {@code null}).
      * @throws NullPointerException if ctx, tenant or deviceId are {@code null}.
      */
-    public final void uploadCommandResponseMessage(final RoutingContext ctx, final String tenant, final String deviceId,
-                                                   final String commandRequestId, final Integer responseStatus) {
+    public final void uploadCommandResponseMessage(
+            final RoutingContext ctx,
+            final String tenant,
+            final String deviceId,
+            final String commandRequestId,
+            final Integer responseStatus) {
+
         Objects.requireNonNull(ctx);
         Objects.requireNonNull(tenant);
         Objects.requireNonNull(deviceId);
@@ -897,18 +902,35 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                             commandRequestId, responseStatus));
         } else {
 
+            final Device authenticatedDevice = getAuthenticatedDevice(ctx);
+            final Span currentSpan = tracer.buildSpan("upload Command response")
+                    .asChildOf(TracingHandler.serverSpanContext(ctx))
+                    .ignoreActiveSpan()
+                    .withTag(Tags.COMPONENT.getKey(), getTypeName())
+                    .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CLIENT)
+                    .withTag(MessageHelper.APP_PROPERTY_TENANT_ID, tenant)
+                    .withTag(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId)
+                    .withTag(Constants.HEADER_COMMAND_RESPONSE_STATUS, responseStatus)
+                    .withTag(Constants.HEADER_COMMAND_REQUEST_ID, commandRequestId)
+                    .withTag(TracingHelper.TAG_AUTHENTICATED.getKey(), authenticatedDevice != null)
+                    .start();
+
             // send response message to application via sender link
-            sendCommandResponse(tenant, commandResponse)
+            sendCommandResponse(tenant, commandResponse, currentSpan.context())
             .map(delivery -> {
                 metrics.incrementCommandResponseDeliveredToApplication(tenant);
-                LOG.trace("command response [command-request-id: {}] accepted by application", commandRequestId);
+                LOG.trace("delivered command response [command-request-id: {}] to application", commandRequestId);
+                currentSpan.log("delivered command response to application");
                 ctx.response().setStatusCode(HttpURLConnection.HTTP_ACCEPTED);
                 ctx.response().end();
                 return delivery;
             }).otherwise(t -> {
                 LOG.debug("could not send command response [command-request-id: {}] to application", commandRequestId, t);
+                TracingHelper.logError(currentSpan, t);
                 ctx.fail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, t));
                 return null;
+            }).setHandler(c -> {
+                currentSpan.finish();
             });
         }
     }

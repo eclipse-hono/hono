@@ -136,7 +136,8 @@ public class CommandConnectionImpl extends HonoClientImpl implements CommandConn
             final Future<CommandResponseSender> result = Future.future();
             CommandResponseSenderImpl.create(context, clientConfigProperties, connection, tenantId, replyId,
                     onSenderClosed -> {},
-                    result.completer());
+                    result.completer(),
+                    getTracer());
             return result;
         });
     }

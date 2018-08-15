@@ -622,6 +622,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         final MqttServer server = getMqttServer(false);
         final AbstractVertxBasedMqttProtocolAdapter<ProtocolAdapterProperties> adapter = getAdapter(server);
         final MqttEndpoint endpoint = mockEndpoint();
+        when(endpoint.isConnected()).thenReturn(true);
 
         // WHEN a device sends a SUBSCRIBE packet for several unsupported filters
         final List<MqttTopicSubscription> subscriptions = new ArrayList<>();
