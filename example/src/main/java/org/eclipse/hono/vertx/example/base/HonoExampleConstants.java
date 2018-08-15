@@ -22,15 +22,17 @@ package org.eclipse.hono.vertx.example.base;
  */
 public class HonoExampleConstants {
     /**
-     Define the host where Hono's microservices can be reached.
+     * The default host name to assume for interacting with Hono.
      */
     public static final String HONO_CONTAINER_HOST = "127.0.0.1";
-
-    public static final String HONO_AMQP_CONSUMER_HOST = HONO_CONTAINER_HOST;
+    /**
+     * The name or IP address of the host to connect to for consuming messages.
+     */
+    public static final String HONO_AMQP_CONSUMER_HOST = System.getProperty("consumer.host", HONO_CONTAINER_HOST);
     /**
      * Port of the AMQP network where consumers can receive data (in the standard setup this is the port of the qdrouter).
      */
-    public static final int HONO_AMQP_CONSUMER_PORT = 15671;
+    public static final int HONO_AMQP_CONSUMER_PORT = Integer.parseInt(System.getProperty("consumer.port", "15671"));
 
     public static final String HONO_REGISTRY_HOST = HONO_CONTAINER_HOST;
     /**

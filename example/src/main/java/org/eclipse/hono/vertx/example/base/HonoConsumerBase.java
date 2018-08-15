@@ -48,8 +48,10 @@ import io.vertx.proton.ProtonConnection;
  * any input on it's console (which finishes it and closes vertx).
  */
 public class HonoConsumerBase {
-    public static final String HONO_CLIENT_USER = "consumer@HONO";
-    public static final String HONO_CLIENT_PASSWORD = "verysecret";
+
+    public static final Boolean USE_PLAIN_CONNECTION = Boolean.valueOf(System.getProperty("plain.connection", "false"));
+    public static final String HONO_CLIENT_USER = System.getProperty("username", "consumer@HONO");
+    public static final String HONO_CLIENT_PASSWORD = System.getProperty("password", "verysecret");
     protected final int DEFAULT_CONNECT_TIMEOUT_MILLIS = 1000;
 
     private final Vertx vertx = Vertx.vertx();
@@ -70,10 +72,12 @@ public class HonoConsumerBase {
         final ClientConfigProperties props = new ClientConfigProperties();
         props.setHost(HonoExampleConstants.HONO_AMQP_CONSUMER_HOST);
         props.setPort(HonoExampleConstants.HONO_AMQP_CONSUMER_PORT);
-        props.setUsername(HONO_CLIENT_USER);
-        props.setPassword(HONO_CLIENT_PASSWORD);
-        props.setTrustStorePath("target/config/hono-demo-certs-jar/trusted-certs.pem");
-        props.setHostnameVerificationRequired(false);
+        if (!USE_PLAIN_CONNECTION) {
+            props.setUsername(HONO_CLIENT_USER);
+            props.setPassword(HONO_CLIENT_PASSWORD);
+            props.setTrustStorePath("target/config/hono-demo-certs-jar/trusted-certs.pem");
+            props.setHostnameVerificationRequired(false);
+        }
 
         honoClient = new HonoClientImpl(vertx, props);
     }
@@ -276,7 +280,7 @@ public class HonoConsumerBase {
     private void sendCommandToAdapter(final CommandClient commandClient, final TimeUntilDisconnectNotification notification) {
         final Buffer commandBuffer = buildCommandPayload();
 
-        commandClient.sendCommand("setBrightness", commandBuffer).map(result -> {
+        commandClient.sendCommand("setBrightness", "application/json", commandBuffer).map(result -> {
             System.out.println(String.format("Successfully sent command [%s] and received response: [%s]",
                     commandBuffer.toString(), Optional.ofNullable(result.getPayload()).orElse(Buffer.buffer()).toString()));
             if (notification.getTtd() != -1) {
