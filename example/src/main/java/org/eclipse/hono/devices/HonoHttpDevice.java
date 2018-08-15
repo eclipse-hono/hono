@@ -18,25 +18,28 @@ import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
+import java.util.concurrent.CompletionException;
 import java.util.function.Predicate;
 
-import io.vertx.core.json.JsonObject;
 import org.eclipse.hono.client.ServiceInvocationException;
-
-import io.vertx.core.MultiMap;
-import io.vertx.core.Vertx;
-import io.vertx.core.http.HttpClientRequest;
-import io.vertx.core.http.HttpHeaders;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
+
+import io.vertx.core.Future;
+import io.vertx.core.MultiMap;
+import io.vertx.core.Vertx;
+import io.vertx.core.buffer.Buffer;
+import io.vertx.core.http.HttpClient;
+import io.vertx.core.http.HttpClientOptions;
+import io.vertx.core.http.HttpClientRequest;
+import io.vertx.core.http.HttpHeaders;
+import io.vertx.core.json.JsonObject;
 
 /**
  * Example base class for sending messages to Hono and signal the readiness for commands for a certain time interval.
  * <p>
- * This class simulates an http device. It sends different kind of messages (defined per enum in an array) and sends them sequentially
+ * This class simulates an HTTP device. It sends different kind of messages (defined per enum in an array) and sends them sequentially
  * with 1 second delay. Some messages signal the command readiness while others do not - see the enum description for details.
  */
 public class HonoHttpDevice {
@@ -73,16 +76,18 @@ public class HonoHttpDevice {
      */
     public static final String DEVICE_PASSWORD = "hono-secret";
 
+    private static final Vertx VERTX = Vertx.vertx();
+
     /**
-     * Different type of messages this application may sent, defined as enum.
+     * Different types of requests this application may send.
      */
-    private enum MessageTypes {
+    private enum Request {
         EmptyEventWithTtd(null, EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION, 60, true),
         EmptyEventAlreadyInvalid(null, EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION, 0, true),
-        JsonEventWithoutTtd(new JsonObject().put("anEventKey", "aValue"), "application/json", null, true),
-        JsonEventWithTtd(new JsonObject().put("anEventKey", "aValue"), "application/json", 120, true),
-        TelemetryWithoutTtd(new JsonObject().put("aTeleKey", "aValue"), "application/json", null, false),
-        TelemetryWithTtd(new JsonObject().put("aTeleKey", "aValue"), "application/json", 60, false);
+        JsonEventWithoutTtd(new JsonObject().put("threshold", "exceeded"), "application/json", null, true),
+        JsonEventWithTtd(new JsonObject().put("threshold", "exceeded"), "application/json", 120, true),
+        TelemetryWithoutTtd(new JsonObject().put("wheather", "sunny"), "application/json", null, false),
+        TelemetryWithTtd(new JsonObject().put("wheather", "cloudy"), "application/json", 60, false);
 
         /**
          * The payload of the message, defined as JsonObject. Maybe {@code null}.
@@ -101,82 +106,142 @@ public class HonoHttpDevice {
          */
         private final Boolean isEvent;
 
-        MessageTypes(final JsonObject payload, final String contentType, final Integer ttd, final Boolean isEvent) {
+        Request(final JsonObject payload, final String contentType, final Integer ttd, final Boolean isEvent) {
             this.payload = payload;
             this.contentType = contentType;
             this.ttd = ttd;
             this.isEvent = isEvent;
         }
 
+        public MultiMap getHeaders() {
+
+            final MultiMap headers = MultiMap.caseInsensitiveMultiMap();
+            headers.add(HttpHeaders.CONTENT_TYPE, contentType);
+            if (ttd != null) {
+                headers.add(Constants.HEADER_TIME_TIL_DISCONNECT, ttd.toString());
+            }
+            return headers;
+        }
+
         @Override
         public String toString() {
-            return "MessageTypes{" +
-                    "payload=" + payload +
-                    ", contentType='" + contentType + '\'' +
-                    ", ttd=" + ttd +
-                    ", isEvent=" + isEvent +
-                    '}';
+            return String.format("%s [content type: %s, ttd: %d, is event: %b, payload: %s]",
+                    name(), contentType, ttd, isEvent, payload);
         }
     }
 
-    final List<MessageTypes> messages = Arrays.asList(
-            MessageTypes.EmptyEventWithTtd,
-            MessageTypes.EmptyEventWithTtd,
-            MessageTypes.EmptyEventWithTtd,
-            MessageTypes.TelemetryWithoutTtd,
-            MessageTypes.EmptyEventWithTtd,
-            MessageTypes.TelemetryWithoutTtd,
-            MessageTypes.JsonEventWithTtd,
-            MessageTypes.TelemetryWithoutTtd,
-            MessageTypes.JsonEventWithoutTtd,
-            MessageTypes.EmptyEventAlreadyInvalid,
-            MessageTypes.TelemetryWithTtd,
-            MessageTypes.TelemetryWithoutTtd
+    private final List<Request> requests = Arrays.asList(
+            Request.EmptyEventWithTtd,
+            Request.EmptyEventWithTtd,
+            Request.EmptyEventWithTtd,
+            Request.TelemetryWithoutTtd,
+            Request.EmptyEventWithTtd,
+            Request.TelemetryWithoutTtd,
+            Request.JsonEventWithTtd,
+            Request.TelemetryWithoutTtd,
+            Request.JsonEventWithoutTtd,
+            Request.EmptyEventAlreadyInvalid,
+            Request.TelemetryWithTtd,
+            Request.TelemetryWithoutTtd
     );
 
-    private final Vertx vertx = Vertx.vertx();
+    private HttpClient httpClient;
+    private MultiMap standardRequestHeaders;
+
+    private HonoHttpDevice() {
+        final HttpClientOptions options = new HttpClientOptions();
+        options.setDefaultHost(HONO_HTTP_ADAPTER_HOST);
+        options.setDefaultPort(HONO_HTTP_ADAPTER_PORT);
+        httpClient = VERTX.createHttpClient(options);
+        standardRequestHeaders = MultiMap.caseInsensitiveMultiMap()
+                .add(HttpHeaders.AUTHORIZATION, getBasicAuth(TENANT_ID, DEVICE_AUTH_ID, DEVICE_PASSWORD))
+                .add(HttpHeaders.ORIGIN, ORIGIN_URI);
+    }
 
     public static void main(final String[] args) {
         final HonoHttpDevice httpDevice = new HonoHttpDevice();
         httpDevice.sendData();
+
+        // give some time for flushing asynchronous message buffers before shutdown
+        VERTX.setTimer(2000, timerId -> {
+            VERTX.close();
+        });
     }
 
     /**
      * Send a message to Hono HTTP adapter. Delay any successful response by 1000 milliseconds.
      *
      * @param payload JSON object that will be sent as UTF-8 encoded String.
-     * @param headersToAdd A map that contains all headers to add to the http request.
+     * @param headersToAdd A map that contains all headers to add to the HTTP request.
      * @param asEvent If {@code true}, an event message is sent, otherwise a telemetry message.
-     * @return CompletableFuture&lt;MultiMap&gt; A completable future that contains the HTTP response in a MultiMap.
+     * @return The HTTP response headers.
      */
-    private CompletableFuture<MultiMap> sendMessage(final JsonObject payload, final MultiMap headersToAdd, final boolean asEvent) {
-        final CompletableFuture<MultiMap> result = new CompletableFuture<>();
+    private CompletableFuture<Void> sendMessage(final Request request) {
 
-        final Predicate<Integer> successfulStatus = statusCode -> statusCode == HttpURLConnection.HTTP_ACCEPTED;
-        final HttpClientRequest req = vertx.createHttpClient()
-                .post(HONO_HTTP_ADAPTER_PORT, HONO_HTTP_ADAPTER_HOST, asEvent ? "/event" : "/telemetry")
+        final CompletableFuture<Void> result = new CompletableFuture<>();
+
+        final Predicate<Integer> successfulStatus = statusCode -> statusCode >= 200 && statusCode < 300;
+
+        final HttpClientRequest req = httpClient
+                .post(request.isEvent ? "/event" : "/telemetry")
                 .handler(response -> {
+                    System.out.println(response.statusCode() + " " + response.statusMessage());
                     if (successfulStatus.test(response.statusCode())) {
-                        vertx.setTimer(1000, l -> result.complete(response.headers()));
+                        final MultiMap resultMap = response.headers();
+                        resultMap.entries().stream().forEach(entry -> {
+                            System.out.println(String.format("%s: %s", entry.getKey(), entry.getValue()));
+                        });
+                        response.bodyHandler(b -> {
+                            if (b.length() > 0) {
+                                System.out.println();
+                                System.out.println(b.toString());
+                            }
+                        });
+                        final String commandReqId = response.headers().get(Constants.HEADER_COMMAND_REQUEST_ID);
+                        if (commandReqId == null) {
+                            VERTX.setTimer(1000, l -> result.complete(null));
+                        } else {
+                            // response contains a command
+                            sendCommandResponse("text/plain", Buffer.buffer("ok"), commandReqId, HttpURLConnection.HTTP_OK)
+                            .map(status -> {
+                                System.out.println(String.format("sent response to command [HTTP response status: %d]", status));
+                                VERTX.setTimer(1000, l -> result.complete(null));
+                                return null;
+                            });
+                        }
                     } else {
                         result.completeExceptionally(new ServiceInvocationException(response.statusCode()));
                     }
                 }).exceptionHandler(t -> result.completeExceptionally(t));
 
-        req.headers().addAll(headersToAdd);
-        req.headers().addAll(MultiMap.caseInsensitiveMultiMap()
-                .add(HttpHeaders.AUTHORIZATION, getBasicAuth(TENANT_ID, DEVICE_AUTH_ID, DEVICE_PASSWORD))
-                .add(HttpHeaders.ORIGIN, ORIGIN_URI));
+        req.headers().addAll(standardRequestHeaders);
+        req.headers().addAll(request.getHeaders());
 
 
-        if (payload == null) {
+        if (request.payload == null) {
             req.end();
         } else {
-            req.end(payload.encode());
+            req.end(request.payload.encode());
         }
         return result;
     }
 
+    private Future<Integer> sendCommandResponse(final String contentType, final Buffer payload, final String commandReqId, final int status) {
+
+        final Future<Integer> result = Future.future();
+        final HttpClientRequest req = httpClient.post(String.format("/control/res/%s", commandReqId, status))
+                .handler(response -> {
+                    result.complete(response.statusCode());
+                });
+        req.putHeader(Constants.HEADER_COMMAND_RESPONSE_STATUS, Integer.toString(status));
+        req.headers().addAll(standardRequestHeaders);
+        if (payload == null) {
+            req.end();
+        } else {
+            req.end(payload);
+        }
+        return result;
+    }
 
     /**
      * Send messages to Hono HTTP adapter in a sequence.
@@ -185,35 +250,22 @@ public class HonoHttpDevice {
      */
     protected void sendData() {
         // Send single messages sequentially in a loop and print a summary of the message deliveries.
-        System.out.println(String.format("Total number of messages: %s", messages.size()));
+        System.out.println(String.format("Total number of requests to send: %s", requests.size()));
 
 
-        messages.stream().forEachOrdered(messageType -> {
-            final MultiMap headerMap = MultiMap.caseInsensitiveMultiMap();
-            headerMap.add(HttpHeaders.CONTENT_TYPE, messageType.contentType);
-            Optional.ofNullable(messageType.ttd).ifPresent(
-                    timeToDeliver -> headerMap.add(Constants.HEADER_TIME_TIL_DISCONNECT, timeToDeliver.toString())
-            );
+        requests.stream().forEachOrdered(request -> {
 
-            System.out.println(String.format("Sending message type %s", messageType.toString()));
+            System.out.println();
+            System.out.println();
+            System.out.println(String.format("Sending request [type: %s] ...", request.toString()));
 
-            final CompletableFuture<MultiMap> responseFuture = sendMessage(messageType.payload, headerMap, messageType.isEvent);
+            final CompletableFuture<Void> responseFuture = sendMessage(request);
+
             try {
-                final MultiMap resultMap = responseFuture.get();
-                System.out.println(String.format("Got %d response keys.", resultMap.size()));
-                resultMap.entries().stream().forEach(entry -> {
-                    System.out.println(String.format("  %s:%s", entry.getKey(), entry.getValue()));
-                });
-            } catch (final InterruptedException e) {
-                e.printStackTrace();
-            } catch (final ExecutionException e) {
-                e.printStackTrace();
+                responseFuture.join();
+            } catch (final CompletionException e) {
+                System.err.println("error sending request to HTTP adapter: " + e.getMessage());
             }
-        });
-
-        // give some time for flushing asynchronous message buffers before shutdown
-        vertx.setTimer(2000, timerId -> {
-            vertx.close();
         });
     }
 
