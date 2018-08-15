@@ -24,6 +24,7 @@ import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.CommandClient;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageConsumer;
+import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.impl.HonoClientImpl;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.util.MessageHelper;
@@ -187,41 +188,63 @@ public class HonoConsumerBase {
     private void handleCommandReadinessNotification(final TimeUntilDisconnectNotification notification) {
         if (notification.getMillisecondsUntilExpiry() == 0) {
             System.out.println(String.format("Device notified as not being ready to receive a command (anymore) : <%s>.", notification.toString()));
-            callPeriodicCommandSenderTimerCanceler(notification);
+            cancelPeriodicCommandSender(notification);
         } else {
             System.out.println(String.format("Device is ready to receive a command : <%s>.", notification.toString()));
             createCommandClientAndSendCommand(notification);
         }
     }
 
+    /**
+     * Create a command client for the device for that a {@link TimeUntilDisconnectNotification} was received.
+     * <p>
+     * If the contained <em>ttd</em> is set to -1, a command will be sent periodically every
+     * {@link HonoExampleConstants#COMMAND_INTERVAL_FOR_DEVICES_CONNECTED_WITH_UNLIMITED_EXPIRY} seconds to the device
+     * until a new notification was received with a <em>ttd</em> set to 0. See {@link #handleCommandReadinessNotification(TimeUntilDisconnectNotification)}
+     * that cancels the periodic timer again.
+     * @param notification The notification that was received for the device.
+     */
     private void createCommandClientAndSendCommand(final TimeUntilDisconnectNotification notification) {
         honoClient.getOrCreateCommandClient(notification.getTenantId(), notification.getDeviceId()).map(commandClient -> {
-            final JsonObject jsonCmd = new JsonObject().put("brightness", (int) (Math.random() * 100));
-            // let the commandClient timeout when the notification expires
-            if (notification.getTtd() == -1) {
-                commandClient.setRequestTimeout(2000);
-            } else {
-                commandClient.setRequestTimeout(notification.getMillisecondsUntilExpiry());
-            }
+            commandClient.setRequestTimeout(calculateCommandTimeout(notification));
 
             // send the command upstream to the device
             if (notification.getTtd() == -1) {
                 // cancel a still existing timer for this device (if found)
-                callPeriodicCommandSenderTimerCanceler(notification);
+                cancelPeriodicCommandSender(notification);
+
+                sendCommandToAdapter(commandClient, notification);
+
                 // for devices that stay connected, start a periodic timer now that repeatedly sends a command to the device
-                vertx.setPeriodic(2000, timerId -> {
+                vertx.setPeriodic(HonoExampleConstants.COMMAND_INTERVAL_FOR_DEVICES_CONNECTED_WITH_UNLIMITED_EXPIRY*1000, timerId -> {
                     setPeriodicCommandSenderTimerCanceler(timerId, notification, commandClient);
-                    jsonCmd.put("brightness", (int) (Math.random() * 100));
-                    sendCommandToAdapter(commandClient, Buffer.buffer(jsonCmd.encodePrettily()), notification);
+                    sendCommandToAdapter(commandClient, notification);
                 });
             } else {
-                sendCommandToAdapter(commandClient, Buffer.buffer(jsonCmd.encodePrettily()), notification);
+                sendCommandToAdapter(commandClient, notification);
             }
             return commandClient;
         }).otherwise(t -> {
             System.err.println(String.format("Could not create command client : %s", t.getMessage()));
             return null;
         });
+    }
+
+    /**
+     * Calculate the timeout for a command that is tried to be sent to a device for which a {@link TimeUntilDisconnectNotification}
+     * was received.
+     *
+     * @param notification The notification that was received for the device.
+     * @return The timeout to be set for the command.
+     */
+    private long calculateCommandTimeout(final TimeUntilDisconnectNotification notification) {
+        if (notification.getTtd() == -1) {
+            // let the command expire directly before the next periodic timer is started
+            return HonoExampleConstants.COMMAND_INTERVAL_FOR_DEVICES_CONNECTED_WITH_UNLIMITED_EXPIRY*1000;
+        } else {
+            // let the command expire when the notification expires
+            return notification.getMillisecondsUntilExpiry();
+        }
     }
 
     private void setPeriodicCommandSenderTimerCanceler(final Long timerId, final TimeUntilDisconnectNotification notification, final CommandClient commandClient) {
@@ -232,7 +255,7 @@ public class HonoConsumerBase {
         });
     }
 
-    private void callPeriodicCommandSenderTimerCanceler(final TimeUntilDisconnectNotification notification) {
+    private void cancelPeriodicCommandSender(final TimeUntilDisconnectNotification notification) {
         if (isDeviceConnectedForCommands(notification)) {
             periodicCommandSenderTimerCancelerMap.get(notification.getTenantAndDeviceId()).handle(null);
         }
@@ -242,8 +265,17 @@ public class HonoConsumerBase {
         return (periodicCommandSenderTimerCancelerMap.containsKey(notification.getTenantAndDeviceId()));
     }
 
-    private void sendCommandToAdapter(final CommandClient commandClient, final Buffer commandBuffer,
-                                      final TimeUntilDisconnectNotification notification) {
+    /**
+     * Send a command to the device for which a {@link TimeUntilDisconnectNotification} was received.
+     * <p>
+     * If the contained <em>ttd</em> is set to a value @gt; 0, the commandClient will be closed after a response was received.
+     * If the contained <em>ttd</em> is set to -1, the commandClient will remain open for further commands to be sent.
+     * @param commandClient The command client to be used for sending the command to the device.
+     * @param notification The notification that was received for the device.
+     */
+    private void sendCommandToAdapter(final CommandClient commandClient, final TimeUntilDisconnectNotification notification) {
+        final Buffer commandBuffer = buildCommandPayload();
+
         commandClient.sendCommand("setBrightness", commandBuffer).map(result -> {
             System.out.println(String.format("Successfully sent command [%s] and received response: [%s]",
                     commandBuffer.toString(), Optional.ofNullable(result.getPayload()).orElse(Buffer.buffer()).toString()));
@@ -251,11 +283,21 @@ public class HonoConsumerBase {
                 // do not close the command client if device stays connected
                 commandClient.close(v -> {
                 });
+            } else {
+                // cancel periodic timer and send a command again
+                cancelPeriodicCommandSender(notification);
+                createCommandClientAndSendCommand(notification);
             }
             return result;
         }).otherwise(t -> {
-            System.out.println(
-                    String.format("Could not send command or did not receive a response : %s", t.getMessage()));
+            if (t instanceof ServiceInvocationException) {
+                final int errorCode = ((ServiceInvocationException) t).getErrorCode();
+                System.out.println(String.format("Command was replied with error code [%d]", errorCode));
+            } else {
+                System.out.println(
+                        String.format("Could not send command : %s", t.getMessage()));
+            }
+
             if (notification.getTtd() != -1) {
                 // do not close the command client if device stays connected
                 commandClient.close(v -> {
@@ -263,6 +305,11 @@ public class HonoConsumerBase {
             }
             return null;
         });
+    }
+
+    private Buffer buildCommandPayload() {
+        final JsonObject jsonCmd = new JsonObject().put("brightness", (int) (Math.random() * 100));
+        return Buffer.buffer(jsonCmd.encodePrettily());
     }
 
     /**

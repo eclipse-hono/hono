@@ -19,7 +19,6 @@ package org.eclipse.hono.vertx.example.base;
  * used e.g.).
  *
  * Please adopt the values to your needs - the defaults serve for a typical docker swarm setup.
- * TODO: check and (possibly) change to kubernetes values.
  */
 public class HonoExampleConstants {
     /**
@@ -55,6 +54,11 @@ public class HonoExampleConstants {
      * Please refer to Hono's "Getting started" guide for details.
      */
     public static final String DEVICE_ID = "4711"; // needs to be registered first
+
+    /**
+     * For devices signalling that they remain connected for an indeterminate amount of time, a command is periodically sent to the device after the following number of seconds elapsed.
+     */
+    public static final int COMMAND_INTERVAL_FOR_DEVICES_CONNECTED_WITH_UNLIMITED_EXPIRY = 15;
 
     private HonoExampleConstants() {
         // prevent instantiation
