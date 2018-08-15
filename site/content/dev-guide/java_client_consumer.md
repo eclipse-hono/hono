@@ -3,15 +3,21 @@ title = "Consuming Messages from Java"
 weight = 385
 +++
 
-To illustrate how Eclipse Hono&trade; can be integrated with Java code, a simple program is provided that consumes telemetry or event data 
-from the default tenant from a device. It also includes support for sending a command to a device and receiving a response to it.
+To illustrate how Eclipse Hono&trade; can be integrated with Java code, a simple application is provided that consumes telemetry and event data 
+for devices belonging to the default tenant. 
 
-It shall serve as a blueprint to integrate your existing java source code with Hono. 
+It also includes support for Command and Control:
 
-The code is found in the [example](https://github.com/eclipse/hono/tree/master/example) module in the package [org.eclipse.hono.vertx.example](https://github.com/eclipse/hono/tree/master/example/src/main/java/org/eclipse/hono/vertx/example).
+if indicated by a received downstream message that contains a `ttd` value (refer to [Device notifications]({{< relref "concepts/device-notifications.md" >}}) for details) it tries to send a command to the device.
+If the value of `ttd` indicates that the device stays connected for an unlimited time (`ttd == -1`), the application will periodically repeat to send a command until
+notified the device is disconnected again (`ttd == 0`).
 
-The provided classes are kept as simple as possible (in the tradition of a classical "Hello World" implementation).
-This means that they make use of simple constant definitions and deal with exceptions as rarely as possible.
+This application shall serve as a blueprint to integrate your existing java source code with Hono. 
+Its code is found in the [example](https://github.com/eclipse/hono/tree/master/example) module in the package [org.eclipse.hono.vertx.example](https://github.com/eclipse/hono/tree/master/example/src/main/java/org/eclipse/hono/vertx/example).
+
+The provided classes are kept as simple as possible (in the tradition of a classical "Hello World" implementation) while still
+covering the most relevant messaging patterns (downstream and upstream messages).
+For this purpose they make use of simple constant definitions and deal with exceptions as rarely as possible.
 You may want to change the level of detail that should be logged to the console by editing the contained `resources/logback.xml` file.
 
 Please refer to the javadoc of the classes for details.
@@ -25,38 +31,40 @@ Note that production ready code likely has to think more about error handling an
 For simplicity, all configurations are defined as Java constants inside the class [HonoExampleConstants](https://github.com/eclipse/hono/blob/master/example/src/main/java/org/eclipse/hono/vertx/example/base/HonoExampleConstants.java).
 
 If you have Hono running in Docker under `localhost`, the example should work out of the box.
-Otherwise, please check and change the values to your needs (they are documented inside the class) and recompile them.
-   
+
+Some configuration values can be overridden by providing them as property to the application.
+
+This includes the `host` and the `port` of the AMQP network.
+In the standard setup of Hono they should be configured to the [qdrouter](https://qpid.apache.org/components/dispatch-router/index.html) from the Apache Qpid project.
+In production scenarios this might be a large setup of AMQP routers, brokers, etc.
+
+Please refer to the class `HonoExampleConstants` to find out which part of the application can be configured by properties.
 
 ## Run the example
 
 The application waits for messages until you press any key or kill it.
 
-### Telemetry Data
+It is started by
 
-`$ mvn exec:java -Dexec.mainClass=org.eclipse.hono.vertx.example.HonoTelemetryConsumer`
+`$ mvn exec:java -Dexec.mainClass=org.eclipse.hono.vertx.example.HonoConsumer`
 
-All received telemetry data are printed to the console.
+or - if e.g. the host of the AMQP network should be changed - 
+ 
+`$ mvn exec:java -Dexec.mainClass=org.eclipse.hono.vertx.example.HonoConsumer -Dconsumer.host=192.168.99.100`
 
-### Event Data
-  
-`$ mvn exec:java -Dexec.mainClass=org.eclipse.hono.vertx.example.HonoEventConsumer`
 
-All received event data are printed to the console.
+### Telemetry and Event messages
 
+Depending on the logger configuration, all received downstream messages are printed to the console.
 
 Please note that consumers do not connect with Hono directly, but rather with an AMQP router network. 
-In the standard setup of Hono this is the [qdrouter](https://qpid.apache.org/components/dispatch-router/index.html) from the Apache Qpid project.
-In production scenarios this might be a large setup of AMQP routers, brokers, etc.
 
 ### Command and Control
 
 By using a helper class provided by Hono, a callback in the application code is invoked when a downstream message was received
 that signals the device will stay connected to the protocol adapter for some time (see [Device notifications]({{< relref "concepts/device-notifications.md" >}}) for details).
 
-Inside this callback an arbitrary simple command is sent down to the device and the response is written to `System.out`.
-
-Note that for Hono 0.6 this only works for the HTTP protocol adapter.
+Inside this callback an arbitrary simple command is sent down to the device (once or periodically) and the response is logged to the console.
 
 ### Encryption of communication 
   

@@ -33,7 +33,7 @@ import io.vertx.proton.ProtonClientOptions;
 /**
  * Example base class for sending data to Hono.
  * <p>
- * This class implements all necessary code to get Hono's client running. It sends data 50 times
+ * This class implements all necessary code to get Hono's client running. It sends data 1000 times
  * in sequence and shows the necessary programming patterns for that. At the end, it prints a summary of the delivery
  * of messages.
  * <p>
