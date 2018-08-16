@@ -188,7 +188,7 @@ docker service create $CREATE_OPTIONS --name hono-adapter-http-vertx -p 8080:808
   --limit-memory 384m \
   --env _JAVA_OPTIONS=-Xmx256m \
   --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-adapter-http-vertx-config.yml \
-  --env SPRING_PROFILES_ACTIVE=trace \
+  --env SPRING_PROFILES_ACTIVE=dev \
   --env LOGGING_CONFIG=classpath:logback-spring.xml \
   --mount type=volume,source=hono-extensions,target=/opt/hono/extensions,readonly \
   ${docker.image.org-name}/hono-adapter-http-vertx:$HONO_VERSION
