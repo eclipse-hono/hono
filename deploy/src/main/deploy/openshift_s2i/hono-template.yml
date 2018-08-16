@@ -389,7 +389,7 @@ objects:
           name: fabric8-s2i-java-custom:2.2
         env:
         - name: MAVEN_ARGS_APPEND
-          value: -B -pl org.eclipse.hono:hono-adapter-mqtt-vertx --also-make
+          value: -B -pl org.eclipse.hono:hono-adapter-mqtt-vertx --also-make -Pnetty-tcnative
         - name: ARTIFACT_DIR
           value: adapters/mqtt-vertx/target
         - name: ARTIFACT_COPY_ARGS
@@ -731,7 +731,7 @@ objects:
           name: fabric8-s2i-java-custom:2.2
         env:
         - name: MAVEN_ARGS_APPEND
-          value: -B -pl org.eclipse.hono:hono-adapter-http-vertx --also-make
+          value: -B -pl org.eclipse.hono:hono-adapter-http-vertx --also-make -Pnetty-tcnative
         - name: ARTIFACT_DIR
           value: adapters/http-vertx/target
         - name: ARTIFACT_COPY_ARGS
@@ -1053,7 +1053,7 @@ objects:
           name: fabric8-s2i-java-custom:2.2
         env:
         - name: MAVEN_ARGS_APPEND
-          value: -B -pl org.eclipse.hono:hono-service-device-registry --also-make
+          value: -B -pl org.eclipse.hono:hono-service-device-registry --also-make -Pnetty-tcnative
         - name: ARTIFACT_DIR
           value: services/device-registry/target
         - name: ARTIFACT_COPY_ARGS
@@ -1395,7 +1395,7 @@ objects:
           name: fabric8-s2i-java-custom:2.2
         env:
         - name: MAVEN_ARGS_APPEND
-          value: -B -pl org.eclipse.hono:hono-service-auth --also-make
+          value: -B -pl org.eclipse.hono:hono-service-auth --also-make -Pnetty-tcnative
         - name: ARTIFACT_DIR
           value: services/auth/target
         - name: ARTIFACT_COPY_ARGS
