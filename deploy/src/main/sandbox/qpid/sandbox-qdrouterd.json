@@ -8,7 +8,13 @@
   ["authServicePlugin", {
     "name": "Hono Auth",
     "host": "hono-service-auth.hono",
-    "port": 5672
+    "port": 5671,
+    "sslProfile": "internal"
+  }],
+
+  ["sslProfile", {
+    "name": "internal",
+    "certDb": "/run/secrets/trusted-certs.pem"
   }],
 
   ["sslProfile", {
