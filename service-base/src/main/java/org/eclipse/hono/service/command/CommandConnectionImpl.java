@@ -16,6 +16,7 @@ package org.eclipse.hono.service.command;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.impl.HonoClientImpl;
@@ -110,13 +111,11 @@ public class CommandConnectionImpl extends HonoClientImpl implements CommandConn
 
         final Future<Void> result = Future.future();
         final String deviceAddress = Device.asAddress(tenantId, deviceId);
-        final MessageConsumer commandReceiverLink = commandReceivers.remove(deviceAddress);
 
-        if (commandReceiverLink == null) {
-            result.fail(new IllegalStateException("no command consumer found for device"));
-        } else {
+        Optional.ofNullable(commandReceivers.remove(deviceAddress)).map(commandReceiverLink -> {
             commandReceiverLink.close(result);
-        }
+            return commandReceiverLink;
+        });
 
         return result;
     }

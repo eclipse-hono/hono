@@ -485,8 +485,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     protected final void closeCommandConsumer(final String tenantId, final String deviceId) {
 
         getCommandConnection().closeCommandConsumer(tenantId, deviceId).otherwise(t -> {
-            // not an error if already closed - e.g. tries to close on unsubscribe and close
-            LOG.debug("cannot close command consumer [tenant-id: {}, device-id: {}]: {}",
+            LOG.warn("cannot close command consumer [tenant-id: {}, device-id: {}]: {}",
                     tenantId, deviceId, t.getMessage());
             return null;
         });
