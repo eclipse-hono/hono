@@ -23,6 +23,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 
 import javax.security.auth.x500.X500Principal;
 
@@ -371,7 +372,7 @@ public final class CredentialsObject {
 
     /**
      * Creates a credentials object for a device based on a username
-     * and password.
+     * and (clear text) password.
      * <p>
      * The credentials created are of type <em>hashed-password</em>.
      * The {@linkplain #setAuthId(String) authentication identifier} will be set to
@@ -408,9 +409,9 @@ public final class CredentialsObject {
     }
 
     /**
-     * Creates a hashed-password secret.
+     * Creates a hashed-password secret for a clear text password.
      * 
-     * @param password The password.
+     * @param password The (clear text) password.
      * @param hashAlgorithm The algorithm to use for creating the password hash.
      * @param notBefore The point in time from which on the secret is valid.
      * @param notAfter The point in time until the secret is valid.
@@ -431,18 +432,43 @@ public final class CredentialsObject {
         Objects.requireNonNull(password);
         Objects.requireNonNull(hashAlgorithm);
 
+        final String encodedSalt = Optional.ofNullable(salt).map(s -> Base64.getEncoder().encodeToString(s)).orElse(null);
+        final String passwordHash = getHashedPassword(hashAlgorithm, salt, password);
+        return hashedPasswordSecretForPasswordHash(passwordHash, hashAlgorithm, notBefore, notAfter, encodedSalt);
+    }
+
+    /**
+     * Creates a hashed-password secret for a password hash.
+     * 
+     * @param passwordHash The Base64 encoded password hash.
+     * @param hashAlgorithm The algorithm used for creating the password hash.
+     * @param notBefore The point in time from which on the secret is valid.
+     * @param notAfter The point in time until the secret is valid.
+     * @param encodedSalt The Base64 encoded salt bytes used for creating the password hash or {@code null}
+     *                    if no salt has been used.
+     * @return The secret.
+     * @throws NullPointerException if any of password hash or hash algorithm are {@code null}.
+     * @throws IllegalArgumentException if the <em>not-before</em> instant does not lie
+     *                                  before the <em>not after</em> instant or if the
+     *                                  algorithm is not supported.
+     */
+    public static JsonObject hashedPasswordSecretForPasswordHash(
+            final String passwordHash,
+            final String hashAlgorithm,
+            final Instant notBefore,
+            final Instant notAfter,
+            final String encodedSalt) {
+
+        Objects.requireNonNull(passwordHash);
+        Objects.requireNonNull(hashAlgorithm);
+
         final JsonObject secret = emptySecret(notBefore, notAfter);
         secret.put(CredentialsConstants.FIELD_SECRETS_HASH_FUNCTION, hashAlgorithm);
-        if (salt != null) {
-            secret.put(
-                    CredentialsConstants.FIELD_SECRETS_SALT,
-                    Base64.getEncoder().encodeToString(salt));
+        if (encodedSalt != null) {
+            secret.put(CredentialsConstants.FIELD_SECRETS_SALT, encodedSalt);
         }
-        secret.put(
-                CredentialsConstants.FIELD_SECRETS_PWD_HASH,
-                getHashedPassword(hashAlgorithm, salt, password));
+        secret.put(CredentialsConstants.FIELD_SECRETS_PWD_HASH, passwordHash);
         return secret;
-
     }
 
     /**

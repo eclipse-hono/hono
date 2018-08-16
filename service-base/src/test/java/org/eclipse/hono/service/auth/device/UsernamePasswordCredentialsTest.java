@@ -12,9 +12,13 @@
  *******************************************************************************/
 package org.eclipse.hono.service.auth.device;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
@@ -123,11 +127,14 @@ public class UsernamePasswordCredentialsTest {
     @Test
     public void testMatchesCredentialsSucceedsForMatchingBCryptPassword() {
 
-        // GIVEN a secret on record that uses bcrypt as the hash function
-        final JsonObject candidateSecret = CredentialsObject.emptySecret(null, null);
-        candidateSecret.put(CredentialsConstants.FIELD_SECRETS_PWD_HASH, "$2a$12$BjLeC/gqcnEyk.XNo2qorul.a/v4HDuOUlfmojdSZXRSFTjymPdVm");
-        candidateSecret.put(CredentialsConstants.FIELD_SECRETS_HASH_FUNCTION, "bcrypt");
-
+        // GIVEN a secret on record that uses the bcrypt hash function (with salt version 2a)
+        // see https://www.dailycred.com/article/bcrypt-calculator
+        final JsonObject candidateSecret = CredentialsObject.hashedPasswordSecretForPasswordHash(
+                "$2a$12$rcrgLZrGHkEMAMfP5atLGe4HOvI0ZdclQdWDt/6DfUcgNEphwK27i",
+                "bcrypt",
+                null,
+                null,
+                null);
 
         // WHEN a device provides matching credentials
         final UsernamePasswordCredentials credentials = UsernamePasswordCredentials.create(TEST_USER_OTHER_TENANT, "kapua-password", false);
@@ -143,7 +150,7 @@ public class UsernamePasswordCredentialsTest {
     public void testMatchesCredentialsFailsForNonMatchingPassword() {
 
         // GIVEN a secret on record that uses sha-512 as the hash function
-        final JsonObject candidateSecret = CredentialsObject.hashedPasswordSecret(TEST_PASSWORD, "sha-512", null, null, null);
+        final JsonObject candidateSecret = CredentialsObject.hashedPasswordSecret(TEST_PASSWORD, "sha-512", Instant.now(), null, null);
 
         // WHEN a device provides non-matching credentials
         final UsernamePasswordCredentials credentials = UsernamePasswordCredentials.create(TEST_USER_OTHER_TENANT, "wrongpassword", false);
