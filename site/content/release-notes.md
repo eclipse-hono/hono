@@ -25,8 +25,12 @@ title = "Release Notes"
 * The example application in the `example` folder now supports Command and Control for all `ttd` values, including a 
   value of `-1` that signals that a device stays connected for an unlimited time frame. In this case it sends a command
   every 15 seconds, which is helpful for testing this feature with MQTT devices. A `ttd` value of `0` stops this
-  behaviour again (both automatically sent by the MQTT adapter for `subscribe` and `unsubscribe`, see [Consuming Messages from Java]({{< relref "dev-guide/java_client_consumer.md" >}})
-  for details). 
+  behaviour again (both automatically sent by the MQTT adapter for `subscribe` and `unsubscribe`, see 
+  [Consuming Messages from Java]({{< relref "dev-guide/java_client_consumer.md" >}}) for details). 
+* The maximum value for the value of `ttd` that is allowed for requests to the HTTP adapter is now configurable per tenant. 
+  The default value is `60` seconds. 
+  Please refer to [HTTP Adapter Tenant Configuration]({{< relref "user-guide/http-adapter.md#tenant-specific-configuration" >}}).
+
 
 ### API Changes
 
