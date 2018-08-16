@@ -22,6 +22,11 @@ title = "Release Notes"
 * The Hono Travis build now also builds for JDK 10 in addition to JDK 8.
   Hono is still intended to run on Java 8, but the JDK 10 build was enabled to
   be better prepared for Java 11.
+* The example application in the `example` folder now supports Command and Control for all `ttd` values, including a 
+  value of `-1` that signals that a device stays connected for an unlimited time frame. In this case it sends a command
+  every 15 seconds, which is helpful for testing this feature with MQTT devices. A `ttd` value of `0` stops this
+  behaviour again (both automatically sent by the MQTT adapter for `subscribe` and `unsubscribe`, see [Consuming Messages from Java]({{< relref "dev-guide/java_client_consumer.md" >}})
+  for details). 
 
 ### API Changes
 
