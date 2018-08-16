@@ -15,7 +15,7 @@ This feature is available now as a fully working version but is considered to po
 fully production ready yet.
 {{% /note %}}
 
-You can try the implementation directly by following the [Command and Control Userguide]({{< relref "user-guide/command-and-control.md" >}}).
+You can try the implementation directly by following the [Getting Started]({{< ref "getting-started" >}}) guide.
 
 
 ## Command & Control over HTTP Adapter

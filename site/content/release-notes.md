@@ -87,8 +87,8 @@ instance. It also makes more use of ConfigMaps and service key/cert management.
 * The concept and implementation of *Device notifications* were added. It enables devices to signal that they are ready to receive an upstream message by specifying a `time til disconnect` parameter with any downstream message. Please see [Device notifications]({{< relref "concepts/device-notifications.md" >}}) for details.
 * **Tech preview**: *Command and Control* is now available for the HTTP protocol adapter (NB: currently without responses from the device to the application). 
   It enables HTTP devices to signal how long they stay *connected* to the HTTP protocol adapter, resulting in a delayed response.
-  The response then may contain a command sent by the application. Please refer to the [Command and Control example]({{< relref "user-guide/command-and-control.md" >}})
-  and the [Command and Control Concepts]({{< relref "concepts/command-and-control.md" >}}) to find more details.  
+  The response then may contain a command sent by the application. Please refer to the [Getting Started]({{< ref "getting-started" >}})
+  guide and the Command & Control [concept page]({{< relref "concepts/command-and-control.md" >}}) for details.  
   **Note**: This feature is available now as a first fully working version but is considered to possibly have some unknown issues that may not make it
   fully production ready yet.
 
