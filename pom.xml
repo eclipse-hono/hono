@@ -32,9 +32,9 @@
 
   <licenses>
     <license>
-      <name>Eclipse Public License - Version 1.0</name>
-      <url>http://www.eclipse.org/legal/epl-v10.html</url>
-      <comments>SPDX-License-Identifier: EPL-1.0</comments>
+      <name>Eclipse Public License - Version 2.0</name>
+      <url>http://www.eclipse.org/legal/epl-2.0</url>
+      <comments>SPDX-License-Identifier: EPL-2.0</comments>
     </license>
   </licenses>
 
@@ -48,6 +48,11 @@
     <system>GitHub Issues</system>
     <url>https://github.com/eclipse/hono/issues</url>
   </issueManagement>
+
+  <ciManagement>
+    <system>Jenkins</system>
+    <url>https://ci.eclipse.org/hono/job/Hono-CI/</url>
+  </ciManagement>
 
   <distributionManagement>
     <repository>
