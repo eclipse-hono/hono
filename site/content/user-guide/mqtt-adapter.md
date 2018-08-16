@@ -167,9 +167,21 @@ An authenticated device MUST use the following topic filter to subscribe to comm
 
 * `control/+/+/req/#`
 
+**Example**
+
+    $ mosquitto_sub -v -u 'sensor1@DEFAULT_TENANT' -P hono-secret -t control/+/+/req/#
+
 The adapter will then publish commands for the device to topic:
 
 * `control///req/${req-id}/${command}[/*][/property-bag]`
+
+**Example**
+
+For example, if the [HonoConsumer]({{< relref "dev-guide/java_client_consumer.md" >}}) was started, after the `ttd` event requested by the subscription of mosquitto_sub, it layers a command that arrives as follows:  
+
+    $ c///q/1010f8ab0b53-bd96-4d99-9d9c-56b868474a6a/setBrightness {
+       "brightness" : 79
+    }
 
 ### Receiving Commands (unauthenticated Device)
 
@@ -177,9 +189,15 @@ An unauthenticated device MUST use the following topic filter to subscribe to co
 
 * `control/${tenant-id}/${device-id}/req/#`
 
+**Example**
+
+    $ mosquitto_sub -v -t control/DEFAULT_TENANT/4711/req/#
+
 The adapter will then publish commands for the device to topic:
 
 * `control/${tenant-id}/${device-id}/req/${req-id}/${command}[/*][/property-bag]`
+
+(For an example of the incoming command see above at authenticated device)
 
 ### Sending a Response to a Command (authenticated Device)
 
@@ -187,11 +205,23 @@ An authenticated device MUST send the response to a previously received command 
 
 * `control///res/${req-id}/${status}`
 
+**Example**
+
+After a command has arrived as in the above example, you send a response using the arrived `${req-id}`:
+
+    $ mosquitto_pub -u 'sensor1@DEFAULT_TENANT' -P hono-secret -t control///res/1010f8ab0b53-bd96-4d99-9d9c-56b868474a6a/200 -m '{"lumen": 200}'
+
 ### Sending a Response to a Command (unauthenticated Device)
 
 An unauthenticated device MUST send the response to a previously received command to the following topic:
 
 * `control/${tenant-id}/${device-id}/res/${req-id}/${status}`
+
+**Example**
+
+After a command has arrived as in the above example, you send a response using the arrived `${req-id}`:
+
+    $ mosquitto_pub -t control/DEFAULT_TENANT/4711/res/1010f8ab0b53-bd96-4d99-9d9c-56b868474a6a/200 -m '{"lumen": 200}'
 
 ## Downstream Meta Data
 
