@@ -236,7 +236,10 @@ public interface HonoClient {
     void disconnect(Handler<AsyncResult<Void>> completionHandler);
 
     /**
-     * Gets a client for sending telemetry messages to a Hono server.
+     * Gets a client for sending data to Hono's south bound <em>Telemetry</em> API.
+     * <p>
+     * The client returned may be either newly created or it may be an existing
+     * client for the given tenant.
      *
      * @param tenantId The ID of the tenant to send messages for.
      * @return A future that will complete with the sender once the link has been established. The future will fail if
@@ -247,7 +250,10 @@ public interface HonoClient {
     Future<MessageSender> getOrCreateTelemetrySender(String tenantId);
 
     /**
-     * Gets a client for sending telemetry messages to a Hono server.
+     * Gets a client for sending data to Hono's south bound <em>Telemetry</em> API.
+     * <p>
+     * The client returned may be either newly created or it may be an existing
+     * client for the given device.
      *
      * @param tenantId The ID of the tenant to send messages for.
      * @param deviceId The ID of the device to send events for (may be {@code null}).
@@ -259,7 +265,10 @@ public interface HonoClient {
     Future<MessageSender> getOrCreateTelemetrySender(String tenantId, String deviceId);
 
     /**
-     * Gets a client for sending events to a Hono server.
+     * Gets a client for sending events to Hono's south bound <em>Event</em> API.
+     * <p>
+     * The client returned may be either newly created or it may be an existing
+     * client for the given tenant.
      *
      * @param tenantId The ID of the tenant to send events for.
      * @return A future that will complete with the sender once the link has been established. The future will fail if
@@ -270,7 +279,10 @@ public interface HonoClient {
     Future<MessageSender> getOrCreateEventSender(String tenantId);
 
     /**
-     * Gets a client for sending events to a Hono server.
+     * Gets a client for sending events to Hono's south bound <em>Event</em> API.
+     * <p>
+     * The client returned may be either newly created or it may be an existing
+     * client for the given device.
      *
      * @param tenantId The ID of the tenant to send events for.
      * @param deviceId The ID of the device to send events for (may be {@code null}).
@@ -282,7 +294,7 @@ public interface HonoClient {
     Future<MessageSender> getOrCreateEventSender(String tenantId, String deviceId);
 
     /**
-     * Creates a new consumer of telemetry data for a tenant.
+     * Creates a client for consuming data from Hono's north bound <em>Telemetry API</em>.
      *
      * @param tenantId The tenant to consume data for.
      * @param telemetryConsumer The handler to invoke with every message received.
@@ -295,7 +307,7 @@ public interface HonoClient {
             Handler<Void> closeHandler);
 
     /**
-     * Creates a new consumer of events for a tenant.
+     * Creates a client for consuming events from Hono's north bound <em>Event API</em>.
      * <p>
      * The events passed in to the event consumer will be settled automatically if the consumer does not throw an
      * exception.
@@ -311,7 +323,7 @@ public interface HonoClient {
             Handler<Void> closeHandler);
 
     /**
-     * Creates a new consumer of events for a tenant.
+     * Creates a client for consuming events from Hono's north bound <em>Event API</em>.
      * <p>
      * The events passed in to the event consumer will be settled automatically if the consumer does not throw an
      * exception and does not manually handle the message disposition using the passed in delivery.
@@ -339,6 +351,9 @@ public interface HonoClient {
 
     /**
      * Gets a client for interacting with Hono's <em>Credentials</em> API.
+     * <p>
+     * The client returned may be either newly created or it may be an existing
+     * client for the given tenant.
      *
      * @param tenantId The tenant to manage device credentials data for.
      * @return A future that will complete with the credentials client (if successful) or fail if the client cannot be
@@ -350,6 +365,9 @@ public interface HonoClient {
 
     /**
      * Gets a client for interacting with Hono's <em>Tenant</em> API.
+     * <p>
+     * The client returned may be either newly created or it may be an existing
+     * client for the given tenant.
      *
      * @return A future that will complete with the tenant client (if successful) or fail if the client cannot be
      *         created, e.g. because the underlying connection is not established or if a concurrent request to create a
@@ -358,14 +376,22 @@ public interface HonoClient {
     Future<TenantClient> getOrCreateTenantClient();
 
     /**
-     * Gets a client for sending command with Hono's <em>Command and Control</em> API.
+     * Gets a client for sending commands to a device.
      * <p>
-     * This method will use an internal mechanism like a UUID to create the unique reply-id of the response link. If
-     * you are able to supply a shorter String, that identifies a link from the tenant scoped device to this client,
-     * you should consider {@link #getOrCreateCommandClient(String, String, String)}
+     * The client returned may be either newly created or it may be an existing
+     * client for the given device.
+     * <p>
+     * This method will use an implementation specific mechanism (e.g. a UUID) to create
+     * a unique reply-to address to be included in commands sent to the device. The protocol
+     * adapters need to convey an encoding of the reply-to address to the device when delivering
+     * the command. Consequently, the number of bytes transferred to the device depends on the
+     * length of the reply-to address being used. In situations where this is a major concern it
+     * might be advisable to use {@link #getOrCreateCommandClient(String, String, String)} for
+     * creating a command client and provide custom (and shorter) <em>reply-to identifier</em>
+     * to be used in the reply-to address.
      *
-     * @param tenantId The tenant to the all command receiving devices belong.
-     * @param deviceId The device id.
+     * @param tenantId The tenant that the device belongs to.
+     * @param deviceId The device to send the commands to.
      * @return A future that will complete with the command and control client (if successful) or
      *         fail if the client cannot be created, e.g. because the underlying connection
      *         is not established or if a concurrent request to create a client for the same
@@ -375,17 +401,21 @@ public interface HonoClient {
     Future<CommandClient> getOrCreateCommandClient(String tenantId, String deviceId);
 
     /**
-     * Gets a client for sending command with Hono's <em>Command and Control</em> API.
+     * Gets a client for sending commands to a device.
+     * <p>
+     * The client returned may be either newly created or it may be an existing
+     * client for the given device.
      *
-     * @param tenantId The tenant to the all command receiving devices belong.
-     * @param deviceId The device id.
-     * @param replyId The id, which is used to identify the unique link between this command client and the adapter.
-     *                Should be as short as possible, since it need to be transported to the device and back
-     *                for correlation of command response.
-     *                This id is only used during creation. When determining an already created client for reuse,
-     *                it is not included in the key.
-     *                This means that a CommandClient from the previous generation with
-     *                {@link #getOrCreateCommandClient(String, String)} may also be supplied.
+     * @param tenantId The tenant that the device belongs to.
+     * @param deviceId The device to send the commands to.
+     * @param replyId An arbitrary string which (in conjunction with the tenant and device ID) uniquely
+     *                identifies this command client.
+     *                This identifier will only be used for creating a <em>new</em> client for the device.
+     *                If this method returns an existing client for the device then the client will use
+     *                the reply-to address determined during its initial creation. In particular, this
+     *                means that if the (existing) client has originally been created using the
+     *                {@link #getOrCreateCommandClient(String, String)} method, then the reply-to address
+     *                used by the client will most likely not contain the given identifier.
      * @return A future that will complete with the command and control client (if successful) or
      *         fail if the client cannot be created, e.g. because the underlying connection
      *         is not established or if a concurrent request to create a client for the same

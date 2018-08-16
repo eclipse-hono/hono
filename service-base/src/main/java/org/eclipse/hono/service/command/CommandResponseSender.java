@@ -35,9 +35,10 @@ public interface CommandResponseSender extends MessageSender {
      * @param payload The payload or {@code null}.
      * @param properties The properties or {@code null}.
      * @param status The status of the command, which was send to the device.
-     * @param context The currently active OpenTracing span. An implementation
-     *         should use this as the parent for any span it creates for tracing
-     *         the execution of this operation.
+     * @param context The currently active OpenTracing span or {@code null} if no
+     *         span is currently active. An implementation should use this as the
+     *         parent for any new span(s) it creates for tracing the execution of
+     *         this operation.
      * @return A future indicating the outcome of the operation.
      *         <p>
      *         The future will succeed if the message has been accepted (and settled)
@@ -59,9 +60,10 @@ public interface CommandResponseSender extends MessageSender {
      * Sends a response message to a command back to the business application.
      *
      * @param response The response.
-     * @param context The currently active OpenTracing span. An implementation
-     *         should use this as the parent for any span it creates for tracing
-     *         the execution of this operation.
+     * @param context The currently active OpenTracing span or {@code null} if no
+     *         span is currently active. An implementation should use this as the
+     *         parent for any new span(s) it creates for tracing the execution of
+     *         this operation.
      * @return A future indicating the outcome of the operation.
      *         <p>
      *         The future will succeed if the message has been accepted (and settled)
