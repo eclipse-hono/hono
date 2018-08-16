@@ -17,5 +17,5 @@ activate HTTP Adapter
 HTTP Adapter->Application: 6. transfer("control/TENANT/4711/${replyId}","status=200","lumen=100")
 Application->HTTP Adapter: disposition("accepted")
 deactivate Application
-HTTP Adapter->Device: 7. HTTP response ("204")
+HTTP Adapter->Device: 7. HTTP response ("202")
 deactivate HTTP Adapter
