@@ -76,8 +76,11 @@ Alternatively the default property values for devices from the Device Registry c
   
 ### Hono's MQTT protocol adapter
 
-Since the MQTT version used by the Hono MQTT protocol adapter does not support to set any meta-data (besides the Content-Type),
-the only way to set the value for `ttd` is currently by using the default properties for devices from the Device Registry (described above).
+The MQTT protocol adapter automatically sends a `Time until disconnect notification` with a `ttd` value of `-1`
+for a device that subscribes to
+the appropriate command topic (refer to the [MQTT Adapter]({{< relref "user-guide/mqtt-adapter.md" >}}) for details).
+
+If it unsubscribes again, the adapter automatically sends a `Time until disconnect notification` with a `ttd` value of `0`.
 
 ### Sequence diagrams of Device command readiness notifications
 
