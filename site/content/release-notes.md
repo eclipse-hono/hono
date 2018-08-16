@@ -2,11 +2,14 @@
 title = "Release Notes"
 +++
 
-## 0.7 (not released yet)
+## 0.7
 
 ### New Features
 
-* The MQTT protocol adapter now supports Command and Control. Please refer to [MQTT adapter User Guide]({{< relref "user-guide/mqtt-adapter.md" >}}) for details.
+* The MQTT protocol adapter now supports Command and Control. Please refer to [MQTT adapter User Guide]({{< relref "/user-guide/mqtt-adapter.md" >}}) for details.
+* The Credentials API now explicitly defines [Bcrypt](https://de.wikipedia.org/wiki/Bcrypt) as a supported hash function for [*hashed-password* credentials](https://www.eclipse.org/hono/api/credentials-api/#hashed-password). The protocol adapters also support verification of username/password credentials against Bcrypt hashes.
+* Hono's HTTP and MQTT protocol adapters and HonoClient have been instrumented using [OpenTracing](http://opentracing.io) in order to support tracing of the interactions between Hono components that are involved in the processing of messages as they flow through the system. The new [Monitoring & Tracing]({{< relref "/admin-guide/monitoring-tracing-config.md" >}}) admin guide has the details.
+* Hono now contains an initial version of an AMQP protocol adapter which can be used to connect devices to Hono using the AMQP 1.0 protocol. The adapter currently exposes Telemetry and Event endpoints only. Support for Command & Control will be added in a future release. Please refer to the AMQP adapter's [Admin Guide]({{< relref "/admin-guide/amqp-adapter-config.md" >}}) and [User Guide]({{< relref "/user-guide/amqp-adapter.md" >}}) for details regarding how to set up and use the new adapter.
 
 ### Fixes & Enhancements
 
