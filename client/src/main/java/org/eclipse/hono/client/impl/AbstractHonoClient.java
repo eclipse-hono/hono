@@ -242,18 +242,9 @@ public abstract class AbstractHonoClient {
             if (sender == null) {
                 senderCloseHandler.complete();
             } else {
-                final Handler<AsyncResult<ProtonSender>> wrappedHandler = HonoProtonHelper.setCloseHandler(sender, closeAttempt -> {
-                    LOG.debug("closed message sender for [{}]", sender.getTarget().getAddress());
-                    senderCloseHandler.complete();
-                });
-                if (sender.isOpen()) {
-                    // wait for peer's detach frame to trigger the handler
-                    sender.close();
-                } else {
-                    // trigger handler manually to make sure that
-                    // resources are freed up
-                    wrappedHandler.handle(Future.succeededFuture());
-                }
+                sender.close();
+                // free resources even if remote peer did not reply with a detach frame
+                sender.free();
             }
 
             senderCloseHandler.compose(closedSender -> {
@@ -261,18 +252,9 @@ public abstract class AbstractHonoClient {
                 if (receiver == null) {
                     result.complete((Void) null);
                 } else {
-                    final Handler<AsyncResult<ProtonReceiver>> wrappedHandler = HonoProtonHelper.setCloseHandler(receiver, closeAttempt -> {
-                        LOG.debug("closed message consumer for [{}]", receiver.getSource().getAddress());
-                        result.complete((Void) null);
-                    });
-                    if (receiver.isOpen()) {
-                        // wait for peer's detach frame to trigger the handler
-                        receiver.close();
-                    } else {
-                        // trigger handler manually to make sure that
-                        // resources are freed up
-                        wrappedHandler.handle(Future.succeededFuture());
-                    }
+                    receiver.close();
+                    // free resources even if remote peer did not reply with a detach frame
+                    receiver.free();
                 }
 
             }, result);
