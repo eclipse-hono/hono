@@ -26,6 +26,11 @@ docker secret rm \
   kura-adapter.credentials \
   hono-adapter-kura-config.yml
 
+docker service rm hono-adapter-amqp-vertx
+docker secret rm \
+  hono-adapter-amqp-vertx-config.yml \
+  amqp-adapter.credentials
+
 docker service rm hono-adapter-http-vertx
 docker secret rm \
   http-adapter.credentials \

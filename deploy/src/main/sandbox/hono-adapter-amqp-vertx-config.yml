@@ -1,0 +1,48 @@
+hono:
+  app:
+    maxInstances: 1
+  amqp:
+    bindAddress: 0.0.0.0
+    insecurePortBindAddress: 0.0.0.0
+    insecurePortEnabled: true
+    keyPath: /run/secrets/hono.eclipse.org-key.pem
+    certPath: /run/secrets/hono.eclipse.org-cert.pem
+  messaging:
+    name: 'Hono AMQP Adapter'
+    amqpHostname: hono-internal
+    host: hono-dispatch-router.hono
+    port: 5673
+    amqpHostname: hono-internal
+  registration:
+    name: 'Hono AMQP Adapter'
+    host: ${hono.registration.host}
+    port: 5672
+    credentialsPath: /run/secrets/amqp-adapter.credentials
+  credentials:
+    name: 'Hono AMQP Adapter'
+    host: ${hono.registration.host}
+    port: 5672
+    credentialsPath: /run/secrets/amqp-adapter.credentials
+  tenant:
+    name: 'Hono AMQP Adapter'
+    host: ${hono.registration.host}
+    port: 5672
+    credentialsPath: /run/secrets/amqp-adapter.credentials
+  command:
+    name: 'Hono AMQP Adapter'
+    amqpHostname: hono-amqp-internal
+    host: hono-dispatch-router.hono
+    port: 5673
+    amqpHostname: hono-internal
+  metric:
+    reporter:
+      graphite:
+        active: true
+        host: influxdb.hono
+        port: 2003
+# disable spring boot actuator endpoints, enable metrics
+endpoints:
+  enabled: false
+  metrics:
+    enabled: true
+
