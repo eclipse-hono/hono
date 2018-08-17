@@ -10,7 +10,7 @@ This page describes the high level components constituting an Eclipse Hono&trade
 
 The diagram below provides an overview of the top level *logical* components.
 
-{{< figure src="../Top-Level.jpg" >}}
+{{< figure src="../top-level.png" >}}
 
 The *MQTT* and *HTTP Adapters* use the *Device Registry* to authenticate *Devices* connecting to the adapters and asserting their
 registration status. The adapters then forward the telemetry data and events received from the devices to the *AMQP 1.0 Messaging Network*
@@ -31,7 +31,7 @@ All interactions between the components are based on AMQP 1.0 message exchanges 
 
 The diagram below provides an overview of the *Device Registry* component's internal structure.
 
-{{< figure src="../Device-Registry.jpg" width="100%" >}}
+{{< figure src="../device-registry.png" width="100%" >}}
 
 The *Device Registry* component implements the [Credentials API]({{< relref "/api/Credentials-API.md" >}}), [Tenant API]({{< relref "/api/Tenant-API.md" >}}) and [Device Registration API]({{< relref "/api/Device-Registration-API.md" >}}). Clients opening a connection to *SimpleDeviceRegistryServer* are authenticated by means of an external service accessed via the *Auth* port. The *FileBasedCredentialsService*, *FileBasedTenantService* and *FileBasedRegistrationService* store all data in the local file system. The *Device Registry* is therefore not recommended to be used in production environments because the component cannot easily scale out horizontally. It is mainly intended to be used for demonstration purposes and PoCs. In real world scenarios, a more sophisticated implementation should be used that is designed to scale out, e.g. using a persistent store for keeping device registration information that can be shared by multiple instances.
 
@@ -41,6 +41,6 @@ The *AMQP 1.0 Messaging Network* is not *per-se* a component being developed as 
 
 The diagram below provides an overview of the default implementation of the Messaging Network component used with Hono.
 
-{{< figure src="../Hono-Messaging.jpg" >}}
+{{< figure src="../hono-messaging.png" >}}
 
 Scaling out messaging infrastructure is a not a trivial task. Hono **does not** provide an out-of-the-box solution to this problem but instead integrates with the [EnMasse](http://enmasse.io) project which aims at providing *Messaging as a Service* infrastructure.
