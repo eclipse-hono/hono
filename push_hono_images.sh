@@ -16,7 +16,7 @@ TAG=$1
 
 if [ -n "$TAG" ]
 then
-  for image in hono-adapter-http-vertx hono-adapter-mqtt-vertx hono-adapter-kura hono-service-auth hono-service-device-registry hono-service-messaging
+  for image in hono-adapter-http-vertx hono-adapter-mqtt-vertx hono-adapter-kura hono-adapter-amqp-vertx hono-service-auth hono-service-device-registry hono-service-messaging
   do
     docker push eclipse/$image:$TAG
   done
