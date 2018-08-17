@@ -128,11 +128,13 @@ abstract public class AbstractSender extends AbstractHonoClient implements Messa
     }
 
     @Override
+    @Deprecated
     public final boolean sendQueueFull() {
         return sender.sendQueueFull();
     }
 
     @Override
+    @Deprecated
     public final void sendQueueDrainHandler(final Handler<Void> handler) {
         if (this.drainHandler != null) {
             throw new IllegalStateException("already waiting for replenishment with credit");
@@ -162,6 +164,7 @@ abstract public class AbstractSender extends AbstractHonoClient implements Messa
     }
 
     @Override
+    @Deprecated
     public final Future<ProtonDelivery> send(final Message rawMessage, final Handler<Void> capacityAvailableHandler) {
 
         Objects.requireNonNull(rawMessage);
@@ -227,6 +230,7 @@ abstract public class AbstractSender extends AbstractHonoClient implements Messa
     }
 
     @Override
+    @Deprecated
     public final Future<ProtonDelivery> send(final String deviceId, final byte[] payload, final String contentType, final String registrationAssertion,
             final Handler<Void> capacityAvailableHandler) {
         return send(deviceId, null, payload, contentType, registrationAssertion, capacityAvailableHandler);
@@ -238,6 +242,7 @@ abstract public class AbstractSender extends AbstractHonoClient implements Messa
     }
 
     @Override
+    @Deprecated
     public final Future<ProtonDelivery> send(final String deviceId, final String payload, final String contentType, final String registrationAssertion,
             final Handler<Void> capacityAvailableHandler) {
         return send(deviceId, null, payload, contentType, registrationAssertion, capacityAvailableHandler);
@@ -268,6 +273,7 @@ abstract public class AbstractSender extends AbstractHonoClient implements Messa
     }
 
     @Override
+    @Deprecated
     public final Future<ProtonDelivery> send(final String deviceId, final Map<String, ?> properties,
             final String payload, final String contentType, final String registrationAssertion,
             final Handler<Void> capacityAvailableHandler) {
@@ -277,6 +283,7 @@ abstract public class AbstractSender extends AbstractHonoClient implements Messa
     }
 
     @Override
+    @Deprecated
     public final Future<ProtonDelivery> send(final String deviceId, final Map<String, ?> properties,
             final byte[] payload, final String contentType, final String registrationAssertion,
             final Handler<Void> capacityAvailableHandler) {
