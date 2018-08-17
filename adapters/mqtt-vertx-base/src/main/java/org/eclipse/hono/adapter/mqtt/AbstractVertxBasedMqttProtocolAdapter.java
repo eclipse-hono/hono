@@ -326,6 +326,10 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
                 .withTag(TracingHelper.TAG_CLIENT_ID.getKey(), endpoint.clientIdentifier())
                 .start();
 
+        if (!endpoint.isCleanSession()) {
+            span.log("ignoring client's intent to resume existing session");
+        }
+
         isConnected()
                 .compose(v -> handleConnectionRequest(endpoint, span))
                 .setHandler(result -> handleConnectionRequestResult(endpoint, span, result));
@@ -333,6 +337,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
     }
 
     private Future<Device> handleConnectionRequest(final MqttEndpoint endpoint, final Span currentSpan) {
+
         if (getConfig().isAuthenticationRequired()) {
             return handleEndpointConnectionWithAuthentication(endpoint, currentSpan);
         } else {
@@ -352,6 +357,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
             sendConnectedEvent(endpoint.clientIdentifier(), authenticatedDevice)
                     .setHandler(sendAttempt -> {
                         if (sendAttempt.succeeded()) {
+                            // we NEVER maintain session state
                             endpoint.accept(false);
                             if (authenticatedDevice != null) {
                                 currentSpan.setTag(MessageHelper.APP_PROPERTY_TENANT_ID, authenticationAttempt.result().getTenantId());

@@ -720,6 +720,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         when(endpoint.auth()).thenReturn(new MqttAuth(username, password));
         when(endpoint.subscribeHandler(any(Handler.class))).thenReturn(endpoint);
         when(endpoint.unsubscribeHandler(any(Handler.class))).thenReturn(endpoint);
+        when(endpoint.isCleanSession()).thenReturn(Boolean.FALSE);
         return endpoint;
     }
 

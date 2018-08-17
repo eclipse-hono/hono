@@ -3,8 +3,16 @@ title = "MQTT Adapter"
 weight = 215
 +++
 
-The MQTT protocol adapter exposes an MQTT topic hierarchy for publishing messages and events to Eclipse Hono&trade;'s Telemetry and Event endpoints.
+The MQTT protocol adapter exposes an MQTT topic hierarchy for publishing telemetry data and events to downstream consumers and for receiving commands from applications and sending back responses.
 <!--more-->
+
+The MQTT adapter is **not** a general purpose MQTT broker. In particular the adapter
+
+* supports MQTT 3.1.1 only.
+* does not maintain session state for clients and thus always sets the *session present* flag in its CONNACK packet to `0`, regardless of the value  of the *clean session* flag provided in a client's CONNECT packet.
+* only supports topic names/filters for devices to publish and subscribe to that are specific to Hono's functionality as described in the following sections.
+
+## Authentication
 
 The MQTT adapter by default requires clients (devices or gateway components) to authenticate during connection establishment. In order to do so, clients need to provide a *username* and a *password* in the MQTT *CONNECT* packet. The *username* must have the form *auth-id@tenant*, e.g. `sensor1@DEFAULT_TENANT`. The adapter verifies the credentials provided by the client against the credentials the [configured Credentials service]({{< relref "admin-guide/mqtt-adapter-config.md#credentials-service-connection-configuration" >}}) has on record for the client. The adapter uses the Credentials API's *get* operation to retrieve the credentials on record with the *tenant* and *auth-id* provided by the client in the *username* and `hashed-password` as the *type* of secret as query parameters.
 
