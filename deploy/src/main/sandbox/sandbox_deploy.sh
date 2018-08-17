@@ -221,8 +221,8 @@ docker service create $CREATE_OPTIONS --name hono-adapter-amqp-vertx -p 4040:404
   --secret hono.eclipse.org-cert.pem \
   --secret amqp-adapter.credentials \
   --secret hono-adapter-amqp-vertx-config.yml \
-  --limit-memory 256m \
-  --env _JAVA_OPTIONS=-Xmx180m \
+  --limit-memory 384m \
+  --env _JAVA_OPTIONS=-Xmx256m \
   --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-adapter-amqp-vertx-config.yml \
   --env SPRING_PROFILES_ACTIVE=dev \
   --env LOGGING_CONFIG=classpath:logback-spring.xml \

@@ -12,7 +12,6 @@ hono:
     amqpHostname: hono-internal
     host: hono-dispatch-router.hono
     port: 5673
-    amqpHostname: hono-internal
   registration:
     name: 'Hono AMQP Adapter'
     host: ${hono.registration.host}
@@ -30,10 +29,9 @@ hono:
     credentialsPath: /run/secrets/amqp-adapter.credentials
   command:
     name: 'Hono AMQP Adapter'
-    amqpHostname: hono-amqp-internal
+    amqpHostname: hono-internal
     host: hono-dispatch-router.hono
     port: 5673
-    amqpHostname: hono-internal
   metric:
     reporter:
       graphite:
