@@ -55,7 +55,9 @@ public interface MessageSender {
      * Note that the value returned is valid during execution of the current vert.x handler only.
      * 
      * @return {@code true} if a message can not be sent or buffered at the moment.
+     * @deprecated Explicitly check availability of credit using {@link #getCredit()}.
      */
+    @Deprecated
     boolean sendQueueFull();
 
     /**
@@ -82,7 +84,10 @@ public interface MessageSender {
      * @param handler The handler to invoke when this sender has been replenished with credit.
      * @throws IllegalStateException if there already is a handler registered. Note that this means
      *                               that this sender is already waiting for credit.
+     * @deprecated Explicitly check availability of credit using {@link #getCredit()} and then
+     *             use one of the <em>send</em> methods not requiring a drain handler.
      */
+    @Deprecated
     void sendQueueDrainHandler(Handler<Void> handler);
 
     /**
@@ -395,7 +400,10 @@ public interface MessageSender {
      *         be failed with either a {@code ServerErrorException} or a {@link ClientErrorException}
      *         depending on the reason for the failure to process the message.
      * @throws NullPointerException if the message is {@code null}.
+     * @deprecated Use {@link #send(Message)} instead, optionally checking availability of credit
+     *             first using {@link #getCredit()}.
      */
+    @Deprecated
     Future<ProtonDelivery> send(Message message, Handler<Void> capacityAvailableHandler);
 
     /**
@@ -438,7 +446,10 @@ public interface MessageSender {
      *         depending on the reason for the failure to process the message.
      * @throws NullPointerException if any of device id, payload, content type or registration assertion is {@code null}.
      * @throws IllegalArgumentException if the content type specifies an unsupported character set.
+     * @deprecated Use {@link #send(String, String, String, String)} instead, optionally checking
+     *             availability of credit first using {@link #getCredit()}.
      */
+    @Deprecated
     Future<ProtonDelivery> send(
             String deviceId,
             String payload,
@@ -483,7 +494,10 @@ public interface MessageSender {
      *         depending on the reason for the failure to process the message.
      * @throws NullPointerException if any of device id, payload, content type or registration assertion is {@code null}.
      * @throws IllegalArgumentException if the content type specifies an unsupported character set.
+     * @deprecated Use {@link #send(String, byte[], String, String)} instead, optionally checking
+     *             availability of credit first using {@link #getCredit()}.
      */
+    @Deprecated
     Future<ProtonDelivery> send(
             String deviceId,
             byte[] payload,
@@ -534,7 +548,10 @@ public interface MessageSender {
      *         depending on the reason for the failure to process the message.
      * @throws NullPointerException if any of device id, payload, content type or registration assertion is {@code null}.
      * @throws IllegalArgumentException if the content type specifies an unsupported character set.
+     * @deprecated Use {@link #send(String, Map, String, String, String)} instead, optionally checking
+     *             availability of credit first using {@link #getCredit()}.
      */
+    @Deprecated
     Future<ProtonDelivery> send(
             String deviceId,
             Map<String, ?> properties,
@@ -583,7 +600,10 @@ public interface MessageSender {
      *         depending on the reason for the failure to process the message.
      * @throws NullPointerException if any of device id, payload, content type or registration assertion is {@code null}.
      * @throws IllegalArgumentException if the content type specifies an unsupported character set.
+     * @deprecated Use {@link #send(String, Map, byte[], String, String)} instead, optionally checking
+     *             availability of credit first using {@link #getCredit()}.
      */
+    @Deprecated
     Future<ProtonDelivery> send(
             String deviceId,
             Map<String, ?> properties,
