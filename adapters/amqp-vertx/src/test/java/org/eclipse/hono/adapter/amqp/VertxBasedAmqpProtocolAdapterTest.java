@@ -22,8 +22,6 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.util.concurrent.TimeUnit;
-
 import org.apache.qpid.proton.amqp.messaging.AmqpValue;
 import org.apache.qpid.proton.amqp.messaging.Rejected;
 import org.apache.qpid.proton.amqp.messaging.Target;
@@ -62,13 +60,16 @@ import io.vertx.proton.ProtonReceiver;
 import io.vertx.proton.ProtonServer;
 
 /**
- * Verifies the behaviour of {@link VertxBasedAmqpProtocolAdapter}.
+ * Verifies the behavior of {@link VertxBasedAmqpProtocolAdapter}.
  */
 @RunWith(VertxUnitRunner.class)
 public class VertxBasedAmqpProtocolAdapterTest {
 
+    /**
+     * Time out all tests after five seconds.
+     */
     @Rule
-    public Timeout globalTimeout = new Timeout(5, TimeUnit.HOURS);
+    public Timeout globalTimeout = Timeout.seconds(5);
 
     /**
      * A tenant identifier used for testing.
