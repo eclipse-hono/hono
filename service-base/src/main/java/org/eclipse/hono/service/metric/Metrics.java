@@ -52,7 +52,12 @@ public interface Metrics {
 
     /**
      * Reports a message received from a device as <em>undeliverable</em>.
-     *
+     * <p>
+     * A message is considered undeliverable if the failure to deliver has not been caused by the device
+     * that the message originates from. In particular, messages that cannot be authorized or
+     * that are published to an unsupported/unrecognized endpoint do not fall into this category.
+     * Such messages should be silently discarded instead.
+     * 
      * @param type The type of message received, e.g. <em>telemetry</em> or <em>event</em>.
      * @param tenantId The tenant that the device belongs to.
      */
