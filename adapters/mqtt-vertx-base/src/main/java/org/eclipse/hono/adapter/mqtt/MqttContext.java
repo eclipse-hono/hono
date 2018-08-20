@@ -14,9 +14,11 @@
 package org.eclipse.hono.adapter.mqtt;
 
 import java.util.Objects;
+import java.util.Optional;
 
 import org.eclipse.hono.service.auth.device.Device;
 import org.eclipse.hono.util.MapBasedExecutionContext;
+import org.eclipse.hono.util.ResourceIdentifier;
 
 import io.vertx.mqtt.MqttEndpoint;
 import io.vertx.mqtt.messages.MqttPublishMessage;
@@ -31,6 +33,7 @@ public final class MqttContext extends MapBasedExecutionContext {
     private final MqttPublishMessage message;
     private final MqttEndpoint deviceEndpoint;
     private final Device authenticatedDevice;
+    private final ResourceIdentifier topic;
 
     private String contentType;
 
@@ -66,6 +69,12 @@ public final class MqttContext extends MapBasedExecutionContext {
         this.message = Objects.requireNonNull(publishedMessage);
         this.deviceEndpoint = Objects.requireNonNull(deviceEndpoint);
         this.authenticatedDevice = authenticatedDevice;
+        ResourceIdentifier t = null;
+        try {
+            t = ResourceIdentifier.fromString(publishedMessage.topicName());
+        } catch (final Throwable e) {
+        }
+        this.topic = t;
     }
 
     /**
@@ -114,5 +123,36 @@ public final class MqttContext extends MapBasedExecutionContext {
      */
     public void setContentType(final String contentType) {
         this.contentType = contentType;
+    }
+
+    /**
+     * Gets the topic that the message has been published to.
+     * 
+     * @return The topic or {@code null} if the topic could not be
+     * parsed into a resource identifier.
+     */
+    public ResourceIdentifier topic() {
+        return topic;
+    }
+
+    /**
+     * Gets the tenant that the device belongs to that published
+     * the message.
+     * 
+     * @return The tenant identifier or {@code null} if the tenant cannot
+     *         be determined from the message's topic.
+     */
+    public String tenant() {
+        return Optional.ofNullable(topic).map(t -> t.getTenantId()).orElse(null);
+    }
+
+    /**
+     * Gets the name of the endpoint that the message has been published to.
+     * 
+     * @return The name or {@code null} if the endpoint cannot
+     *         be determined from the message's topic.
+     */
+    public String endpoint() {
+        return Optional.ofNullable(topic).map(t -> t.getEndpoint()).orElse(null);
     }
 }

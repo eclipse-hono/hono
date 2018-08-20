@@ -710,7 +710,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
         });
     }
 
-    private void handlePublishedMessage(final MqttContext context) {
+    void handlePublishedMessage(final MqttContext context) {
         // there is no way to extract a SpanContext from an MQTT 3.1 message
         // so we start a new one for every message
         final MqttQoS qos = context.message().qosLevel();
@@ -723,14 +723,37 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
             .withTag(TracingHelper.TAG_CLIENT_ID.getKey(), context.deviceEndpoint().clientIdentifier())
             .start();
         context.put(KEY_CURRENT_SPAN, span);
-        onPublishedMessage(context).setHandler(processing -> {
-            if (processing.succeeded()) {
-                span.setTag(Tags.HTTP_STATUS.getKey(), HttpURLConnection.HTTP_ACCEPTED);
-            } else {
-                TracingHelper.logError(span, processing.cause());
-            }
-            span.finish();
-        });
+
+        checkTopic(context)
+            .compose(ok -> onPublishedMessage(context))
+            .setHandler(processing -> {
+                if (processing.succeeded()) {
+                    Tags.HTTP_STATUS.set(span, HttpURLConnection.HTTP_ACCEPTED);
+                    onMessageSent(context);
+                } else {
+                    if (processing.cause() instanceof ServiceInvocationException) {
+                        final ServiceInvocationException sie = (ServiceInvocationException) processing.cause();
+                        Tags.HTTP_STATUS.set(span, sie.getErrorCode());
+                    } else {
+                        Tags.HTTP_STATUS.set(span, HttpURLConnection.HTTP_INTERNAL_ERROR);
+                    }
+                    if (processing.cause() instanceof ClientErrorException) {
+                        // TODO update "malformed message" metric
+                    } else {
+                        metrics.incrementUndeliverableMessages(context.endpoint(), context.tenant());
+                        onMessageUndeliverable(context);
+                    }
+                }
+                span.finish();
+            });
+    }
+
+    private Future<Void> checkTopic(final MqttContext context) {
+        if (context.topic() == null) {
+            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "malformed topic name"));
+        } else {
+            return Future.succeededFuture();
+        }
     }
 
     /**
@@ -804,15 +827,10 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
                 Objects.requireNonNull(payload),
                 getTelemetrySender(tenant),
                 TelemetryConstants.TELEMETRY_ENDPOINT
-        ).compose(success -> {
+        ).map(success -> {
             metrics.incrementProcessedMessages(TelemetryConstants.TELEMETRY_ENDPOINT, tenant);
             metrics.incrementProcessedPayload(TelemetryConstants.TELEMETRY_ENDPOINT, tenant, messagePayloadSize(ctx.message()));
-            return Future.succeededFuture(success);
-        }).recover(error -> {
-            if (!(error instanceof ClientErrorException)) {
-                metrics.incrementUndeliverableMessages(TelemetryConstants.TELEMETRY_ENDPOINT, tenant);
-            }
-            return Future.failedFuture(error);
+            return (Void) null;
         });
     }
 
@@ -843,15 +861,10 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
                 Objects.requireNonNull(payload),
                 getEventSender(tenant),
                 EventConstants.EVENT_ENDPOINT
-        ).compose(success -> {
+        ).map(success -> {
             metrics.incrementProcessedMessages(EventConstants.EVENT_ENDPOINT, tenant);
             metrics.incrementProcessedPayload(EventConstants.EVENT_ENDPOINT, tenant, messagePayloadSize(ctx.message()));
-            return Future.succeededFuture(success);
-        }).recover(error -> {
-            if (!(error instanceof ClientErrorException)) {
-                metrics.incrementUndeliverableMessages(EventConstants.EVENT_ENDPOINT, tenant);
-            }
-            return Future.failedFuture(error);
+            return (Void) null;
         });
     }
 
@@ -859,7 +872,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
      * Uploads a command response message.
      *
      * @param ctx The context in which the MQTT message has been published.
-     * @param topic The topic that the response has been published to.
+     * @param targetAddress The address that the response should be forwarded to.
      * @return A future indicating the outcome of the operation.
      *         <p>
      *         The future will succeed if the message has been uploaded successfully.
@@ -868,21 +881,21 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
      */
     public final Future<Void> uploadCommandResponseMessage(
             final MqttContext ctx,
-            final ResourceIdentifier topic) {
+            final ResourceIdentifier targetAddress) {
 
         Objects.requireNonNull(ctx);
-        Objects.requireNonNull(topic);
+        Objects.requireNonNull(targetAddress);
 
-        final String[] topicPath = topic.getResourcePath();
+        final String[] addressPath = targetAddress.getResourcePath();
 
-        if (topicPath.length <= CommandConstants.TOPIC_POSITION_RESPONSE_STATUS) {
+        if (addressPath.length <= CommandConstants.TOPIC_POSITION_RESPONSE_STATUS) {
             return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "malformed topic name"));
         } else {
             try {
-                final Integer status = Integer.parseInt(topicPath[CommandConstants.TOPIC_POSITION_RESPONSE_STATUS]);
-                final String reqId = topicPath[CommandConstants.TOPIC_POSITION_RESPONSE_REQ_ID];
+                final Integer status = Integer.parseInt(addressPath[CommandConstants.TOPIC_POSITION_RESPONSE_STATUS]);
+                final String reqId = addressPath[CommandConstants.TOPIC_POSITION_RESPONSE_REQ_ID];
                 final CommandResponse commandResponse = CommandResponse.from(
-                        reqId, topic.getResourceId(), ctx.message().payload(), ctx.contentType(), status);
+                        reqId, targetAddress.getResourceId(), ctx.message().payload(), ctx.contentType(), status);
 
                 if (commandResponse == null) {
                     return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "malformed topic name"));
@@ -893,18 +906,18 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
                            .ignoreActiveSpan()
                            .withTag(Tags.COMPONENT.getKey(), getTypeName())
                            .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CLIENT)
-                           .withTag(MessageHelper.APP_PROPERTY_TENANT_ID, topic.getTenantId())
-                           .withTag(MessageHelper.APP_PROPERTY_DEVICE_ID, topic.getResourceId())
+                           .withTag(MessageHelper.APP_PROPERTY_TENANT_ID, targetAddress.getTenantId())
+                           .withTag(MessageHelper.APP_PROPERTY_DEVICE_ID, targetAddress.getResourceId())
                            .withTag(Constants.HEADER_COMMAND_RESPONSE_STATUS, status)
                            .withTag(Constants.HEADER_COMMAND_REQUEST_ID, reqId)
                            .withTag(TracingHelper.TAG_AUTHENTICATED.getKey(), ctx.authenticatedDevice() != null)
                            .start();
 
-                   return sendCommandResponse(topic.getTenantId(), commandResponse, currentSpan.context())
+                   return sendCommandResponse(targetAddress.getTenantId(), commandResponse, currentSpan.context())
                            .map(delivery -> {
                                LOG.trace("successfully forwarded command response from device [tenant-id: {}, device-id: {}]",
-                                       topic.getTenantId(), topic.getResourceId());
-                               metrics.incrementCommandResponseDeliveredToApplication(topic.getTenantId());
+                                       targetAddress.getTenantId(), targetAddress.getResourceId());
+                               metrics.incrementCommandResponseDeliveredToApplication(targetAddress.getTenantId());
                                // check that the remote MQTT client is still connected before sending PUBACK
                                if (ctx.deviceEndpoint().isConnected() && ctx.message().qosLevel() == MqttQoS.AT_LEAST_ONCE) {
                                    ctx.deviceEndpoint().publishAcknowledge(ctx.message().messageId());
@@ -980,9 +993,8 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
 
             }).compose(delivery -> {
 
-                LOG.trace("successfully processed message [topic: {}, QoS: {}] for device [tenantId: {}, deviceId: {}]",
+                LOG.trace("successfully processed message [topic: {}, QoS: {}] from device [tenantId: {}, deviceId: {}]",
                         ctx.message().topicName(), ctx.message().qosLevel(), tenant, deviceId);
-                onMessageSent(ctx);
                 // check that the remote MQTT client is still connected before sending PUBACK
                 if (ctx.deviceEndpoint().isConnected() && ctx.message().qosLevel() == MqttQoS.AT_LEAST_ONCE) {
                     currentSpan.log("sending PUBACK");
@@ -995,12 +1007,11 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
 
                 if (ClientErrorException.class.isInstance(t)) {
                     final ClientErrorException e = (ClientErrorException) t;
-                    LOG.debug("cannot process message for device [tenantId: {}, deviceId: {}, endpoint: {}]: {} - {}",
-                            tenant, deviceId, endpointName, e.getErrorCode(), e.getMessage());
+                    LOG.debug("cannot process message [endpoint: {}] from device [tenantId: {}, deviceId: {}]: {} - {}",
+                            endpointName, tenant, deviceId, e.getErrorCode(), e.getMessage());
                 } else {
-                    LOG.debug("cannot process message for device [tenantId: {}, deviceId: {}, endpoint: {}]",
-                            tenant, deviceId, endpointName, t);
-                    onMessageUndeliverable(ctx);
+                    LOG.debug("cannot process message [endpoint: {}] from device [tenantId: {}, deviceId: {}]",
+                            endpointName, tenant, deviceId, t);
                 }
                 TracingHelper.logError(currentSpan, t);
                 currentSpan.finish();
@@ -1123,7 +1134,9 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
      * </ul>
      * and then invoke one of the <em>upload*</em> methods to send the message downstream.
      * 
-     * @param ctx The context in which the MQTT message has been published.
+     * @param ctx The context in which the MQTT message has been published. The
+     *            {@link MqttContext#topic()} method will return a non-null resource identifier
+     *            for the topic that the message has been published to.
      * @return A future indicating the outcome of the operation.
      *         <p>
      *         The future will succeed if the message has been successfully uploaded. Otherwise, the future will fail

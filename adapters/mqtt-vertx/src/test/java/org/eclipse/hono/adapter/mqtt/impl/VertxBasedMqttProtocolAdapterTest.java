@@ -20,6 +20,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import org.eclipse.hono.adapter.mqtt.MqttContext;
+import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.auth.device.Device;
 import org.eclipse.hono.util.EndpointType;
@@ -69,7 +70,7 @@ public class VertxBasedMqttProtocolAdapterTest {
 
         // WHEN a device publishes a message to a topic with an unknown endpoint
         final MqttPublishMessage message = newMessage(MqttQoS.AT_MOST_ONCE, "unknown");
-        adapter.mapTopic(message).setHandler(ctx.asyncAssertFailure(t -> {
+        adapter.mapTopic(newContext(message, null)).setHandler(ctx.asyncAssertFailure(t -> {
             // THEN no downstream sender can be created for the message
         }));
     }
@@ -86,8 +87,9 @@ public class VertxBasedMqttProtocolAdapterTest {
 
         // WHEN a device publishes a message with QoS 2 to a "telemetry" topic
         final MqttPublishMessage message = newMessage(MqttQoS.EXACTLY_ONCE, TelemetryConstants.TELEMETRY_ENDPOINT);
-        adapter.mapTopic(message).setHandler(ctx.asyncAssertFailure(t -> {
+        adapter.mapTopic(newContext(message, null)).setHandler(ctx.asyncAssertFailure(t -> {
             // THEN no downstream sender can be created for the message
+            ctx.assertTrue(t instanceof ClientErrorException);
         }));
     }
 
@@ -103,7 +105,7 @@ public class VertxBasedMqttProtocolAdapterTest {
 
         // WHEN a device publishes a message with QoS 0 to an "event" topic
         final MqttPublishMessage message = newMessage(MqttQoS.AT_MOST_ONCE, EventConstants.EVENT_ENDPOINT);
-        adapter.mapTopic(message).setHandler(ctx.asyncAssertFailure(t -> {
+        adapter.mapTopic(newContext(message, null)).setHandler(ctx.asyncAssertFailure(t -> {
             // THEN no downstream sender can be created for the message
         }));
     }
@@ -120,7 +122,7 @@ public class VertxBasedMqttProtocolAdapterTest {
 
         // WHEN a device publishes a message with QoS 2 to an "event" topic
         final MqttPublishMessage message = newMessage(MqttQoS.EXACTLY_ONCE, EventConstants.EVENT_ENDPOINT);
-        adapter.mapTopic(message).setHandler(ctx.asyncAssertFailure(t -> {
+        adapter.mapTopic(newContext(message, null)).setHandler(ctx.asyncAssertFailure(t -> {
             // THEN no downstream sender can be created for the message
         }));
     }
@@ -193,7 +195,7 @@ public class VertxBasedMqttProtocolAdapterTest {
         final MqttPublishMessage message = newMessage(MqttQoS.AT_MOST_ONCE, TelemetryConstants.TELEMETRY_ENDPOINT);
         final MqttContext context = newContext(message, new Device("my-tenant", "4711"));
         final Async addressCheck = ctx.async();
-        final Future<ResourceIdentifier> checkedAddress = adapter.mapTopic(message)
+        final Future<ResourceIdentifier> checkedAddress = adapter.mapTopic(context)
             .compose(address -> adapter.checkAddress(context, address))
             .map(address -> {
                 addressCheck.complete();
@@ -218,30 +220,36 @@ public class VertxBasedMqttProtocolAdapterTest {
         givenAnAdapter();
 
         MqttPublishMessage message = newMessage(MqttQoS.AT_LEAST_ONCE, EventConstants.EVENT_ENDPOINT);
-        adapter.mapTopic(message).setHandler(ctx.asyncAssertSuccess());
+        MqttContext context = newContext(message, null);
+        adapter.mapTopic(context).setHandler(ctx.asyncAssertSuccess());
 
         message = newMessage(MqttQoS.AT_LEAST_ONCE, EventConstants.EVENT_ENDPOINT);
-        adapter.mapTopic(message).setHandler(
+        context = newContext(message, null);
+        adapter.mapTopic(context).setHandler(
             address -> assertEquals(EndpointType.EVENT, EndpointType.fromString(address.result().getEndpoint()))
         );
 
         message = newMessage(MqttQoS.AT_LEAST_ONCE, TelemetryConstants.TELEMETRY_ENDPOINT);
-        adapter.mapTopic(message).setHandler(
+        context = newContext(message, null);
+        adapter.mapTopic(context).setHandler(
             address -> assertEquals(EndpointType.TELEMETRY, EndpointType.fromString(address.result().getEndpoint()))
         );
 
         message = newMessage(MqttQoS.AT_LEAST_ONCE, EventConstants.EVENT_ENDPOINT_SHORT);
-        adapter.mapTopic(message).setHandler(
+        context = newContext(message, null);
+        adapter.mapTopic(context).setHandler(
             address -> assertEquals(EndpointType.EVENT, EndpointType.fromString(address.result().getEndpoint()))
         );
 
         message = newMessage(MqttQoS.AT_LEAST_ONCE, TelemetryConstants.TELEMETRY_ENDPOINT_SHORT);
-        adapter.mapTopic(message).setHandler(
+        context = newContext(message, null);
+        adapter.mapTopic(context).setHandler(
             address -> assertEquals(EndpointType.TELEMETRY, EndpointType.fromString(address.result().getEndpoint()))
         );
 
         message = newMessage(MqttQoS.AT_LEAST_ONCE, "unknown");
-        adapter.mapTopic(message).setHandler(ctx.asyncAssertFailure());
+        context = newContext(message, null);
+        adapter.mapTopic(context).setHandler(ctx.asyncAssertFailure());
 
     }
 

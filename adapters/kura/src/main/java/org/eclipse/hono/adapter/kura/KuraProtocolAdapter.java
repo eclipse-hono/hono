@@ -53,44 +53,40 @@ public final class KuraProtocolAdapter extends AbstractVertxBasedMqttProtocolAda
                 .recover(t -> {
                     LOG.debug("discarding message [topic: {}] from device: {}", ctx.message().topicName(), t.getMessage());
                     return Future.failedFuture(t);
-                }).compose(address -> uploadMessage(ctx, address, ctx.message()));
+                }).compose(targetAddress -> uploadMessage(ctx, targetAddress, ctx.message()));
     }
 
     Future<ResourceIdentifier> mapTopic(final MqttContext ctx) {
 
         final Future<ResourceIdentifier> result = Future.future();
-        try {
-            final ResourceIdentifier topic = ResourceIdentifier.fromString(ctx.message().topicName());
-            ResourceIdentifier mappedTopic = null;
+        final ResourceIdentifier topic = ctx.topic();
+        ResourceIdentifier mappedTopic = null;
 
-            if (getConfig().getControlPrefix().equals(topic.getEndpoint())) {
+        if (getConfig().getControlPrefix().equals(topic.getEndpoint())) {
 
-                // this is a "control" message
-                ctx.setContentType(getConfig().getCtrlMsgContentType());
-                final String[] mappedPath = Arrays.copyOf(topic.getResourcePath(), topic.getResourcePath().length);
-                mappedPath[0] = getEndpoint(ctx.message().qosLevel());
-                mappedTopic = ResourceIdentifier.fromPath(mappedPath);
+            // this is a "control" message
+            ctx.setContentType(getConfig().getCtrlMsgContentType());
+            final String[] mappedPath = Arrays.copyOf(topic.getResourcePath(), topic.getResourcePath().length);
+            mappedPath[0] = getEndpoint(ctx.message().qosLevel());
+            mappedTopic = ResourceIdentifier.fromPath(mappedPath);
 
-            } else {
+        } else {
 
-                // map "data" messages based on QoS
-                ctx.setContentType(getConfig().getDataMsgContentType());
-                final String[] mappedPath = new String[topic.getResourcePath().length + 1];
-                System.arraycopy(topic.getResourcePath(), 0, mappedPath, 1, topic.getResourcePath().length);
-                mappedPath[0] = getEndpoint(ctx.message().qosLevel());
-                mappedTopic = ResourceIdentifier.fromPath(mappedPath);
-            }
+            // map "data" messages based on QoS
+            ctx.setContentType(getConfig().getDataMsgContentType());
+            final String[] mappedPath = new String[topic.getResourcePath().length + 1];
+            System.arraycopy(topic.getResourcePath(), 0, mappedPath, 1, topic.getResourcePath().length);
+            mappedPath[0] = getEndpoint(ctx.message().qosLevel());
+            mappedTopic = ResourceIdentifier.fromPath(mappedPath);
+        }
 
-            if (mappedTopic.getResourcePath().length < 3) {
-                // topic does not contain account_name and client_id
-                result.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "topic does not comply with Kura format"));
-            } else {
-                LOG.debug("mapped Kura message [topic: {}, QoS: {}] to Hono message [to: {}, device_id: {}, content-type: {}]",
-                        topic, ctx.message().qosLevel(), mappedTopic.getBasePath(), mappedTopic.getResourceId(), ctx.contentType());
-                result.complete(mappedTopic);
-            }
-        } catch (final IllegalArgumentException e) {
-            result.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "malformed topic name"));
+        if (mappedTopic.getResourcePath().length < 3) {
+            // topic does not contain account_name and client_id
+            result.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "topic does not comply with Kura format"));
+        } else {
+            LOG.debug("mapped Kura message [topic: {}, QoS: {}] to Hono message [to: {}, device_id: {}, content-type: {}]",
+                    topic, ctx.message().qosLevel(), mappedTopic.getBasePath(), mappedTopic.getResourceId(), ctx.contentType());
+            result.complete(mappedTopic);
         }
         return result;
     }

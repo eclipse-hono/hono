@@ -390,6 +390,32 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
     }
 
     /**
+     * Verifies that the adapter discards messages that contain a malformed
+     * topic.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testHandlePublishedMessageFailsForMalformedTopic(final TestContext ctx) {
+
+        // GIVEN an adapter
+        final MqttServer server = getMqttServer(false);
+        final AbstractVertxBasedMqttProtocolAdapter<ProtocolAdapterProperties> adapter = getAdapter(server);
+
+        // WHEN a device publishes a message with a malformed topic
+        final MqttPublishMessage msg = mock(MqttPublishMessage.class);
+        final MqttEndpoint device = mockEndpoint();
+        when(msg.qosLevel()).thenReturn(MqttQoS.AT_LEAST_ONCE);
+        when(msg.topicName()).thenReturn(null);
+        adapter.handlePublishedMessage(newMqttContext(msg, device));
+
+        // THEN the message is not processed
+        verify(metrics, never()).incrementProcessedMessages(anyString(), anyString());
+        // and no PUBACK is sent to the device
+        verify(device, never()).publishAcknowledge(anyInt());
+    }
+
+    /**
      * Verifies that the adapter does not forward a message published by a device if the device's registration status
      * cannot be asserted.
      *
@@ -409,8 +435,10 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         final MessageSender sender = mock(MessageSender.class);
         when(messagingClient.getOrCreateTelemetrySender(anyString())).thenReturn(Future.succeededFuture(sender));
 
+        final MqttPublishMessage msg = mock(MqttPublishMessage.class);
+        when(msg.topicName()).thenReturn(TelemetryConstants.TELEMETRY_ENDPOINT);
         adapter.uploadTelemetryMessage(
-                newMqttContext(mock(MqttPublishMessage.class), mockEndpoint()),
+                newMqttContext(msg, mockEndpoint()),
                 "my-tenant",
                 "unknown",
                 Buffer.buffer("test")).setHandler(ctx.asyncAssertFailure(t -> {
@@ -447,8 +475,10 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         when(messagingClient.getOrCreateTelemetrySender(anyString())).thenReturn(Future.succeededFuture(sender));
 
         // WHEN a device of "my-tenant" publishes a telemetry message
+        final MqttPublishMessage msg = mock(MqttPublishMessage.class);
+        when(msg.topicName()).thenReturn(TelemetryConstants.TELEMETRY_ENDPOINT);
         adapter.uploadTelemetryMessage(
-                newMqttContext(mock(MqttPublishMessage.class), mockEndpoint()),
+                newMqttContext(msg, mockEndpoint()),
                 "my-tenant",
                 "the-device",
                 Buffer.buffer("test")).setHandler(ctx.asyncAssertFailure(t -> {
@@ -515,6 +545,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         when(messageFromDevice.qosLevel()).thenReturn(MqttQoS.AT_LEAST_ONCE);
         when(messageFromDevice.messageId()).thenReturn(5555555);
         when(messageFromDevice.payload()).thenReturn(payload);
+        when(messageFromDevice.topicName()).thenReturn("telemetry");
         final MqttContext context = newMqttContext(messageFromDevice, endpoint);
         upload.accept(adapter, context);
 
@@ -551,6 +582,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         final MqttPublishMessage messageFromDevice = mock(MqttPublishMessage.class);
         when(messageFromDevice.qosLevel()).thenReturn(MqttQoS.AT_LEAST_ONCE);
         when(messageFromDevice.messageId()).thenReturn(5555555);
+        when(messageFromDevice.topicName()).thenReturn("event");
         final MqttContext context = newMqttContext(messageFromDevice, endpoint);
 
         adapter.uploadEventMessage(context, "my-tenant", "4712", payload).setHandler(ctx.asyncAssertFailure());
@@ -687,6 +719,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         when(messageFromDevice.qosLevel()).thenReturn(MqttQoS.AT_LEAST_ONCE);
         when(messageFromDevice.messageId()).thenReturn(5555555);
         when(messageFromDevice.payload()).thenReturn(payload);
+        when(messageFromDevice.topicName()).thenReturn("bumlux");
         final MqttContext context = newMqttContext(messageFromDevice, endpoint);
 
         ResourceIdentifier resourceId = ResourceIdentifier.from("telemetry", "my-tenant", "4712");
@@ -790,7 +823,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         return sender;
     }
 
-    private void givenAQoS0TelemetrySender() {
+    private MessageSender givenAQoS0TelemetrySender() {
 
         final MessageSender sender = mock(MessageSender.class);
         when(sender.getEndpoint()).thenReturn(TelemetryConstants.TELEMETRY_ENDPOINT);
@@ -798,9 +831,10 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         when(sender.sendAndWaitForOutcome(any(Message.class), (SpanContext) any())).thenThrow(new UnsupportedOperationException());
 
         when(messagingClient.getOrCreateTelemetrySender(anyString())).thenReturn(Future.succeededFuture(sender));
+        return sender;
     }
 
-    private void givenAQoS1TelemetrySender(final Future<ProtonDelivery> outcome) {
+    private MessageSender givenAQoS1TelemetrySender(final Future<ProtonDelivery> outcome) {
 
         final MessageSender sender = mock(MessageSender.class);
         when(sender.getEndpoint()).thenReturn(TelemetryConstants.TELEMETRY_ENDPOINT);
@@ -808,6 +842,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         when(sender.sendAndWaitForOutcome(any(Message.class), (SpanContext) any())).thenReturn(outcome);
 
         when(messagingClient.getOrCreateTelemetrySender(anyString())).thenReturn(Future.succeededFuture(sender));
+        return sender;
     }
 
     /**
