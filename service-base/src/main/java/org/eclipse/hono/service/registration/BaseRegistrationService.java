@@ -31,11 +31,17 @@ import io.vertx.core.Handler;
 import io.vertx.core.json.JsonObject;
 
 /**
- * Base class for implementing {@link RegistrationService}s.
+ * Base class for implementing minimalist {@link RegistrationService}s.
+ * Only implements the mandatory operations of the API.
  * <p>
- * In particular, this base class provides support for receiving service invocation request messages
+ * This base class provides support for receiving "Assert" request messages
  * via vert.x' event bus and route them to specific methods corresponding to the operation indicated
  * in the message.
+ *
+ * Note: this class provides a simple mechanism to assert devices.
+ * Subclasses may override it to provide another asserting method.
+ * <b>However</b> if a subclass use the provided {@link #assertRegistration(String, String, Handler) asserting}
+ * mechanism, it MUST override {@link #getDevice(String, String, Handler)} to provide a functional method.
  * 
  * @param <T> The type of configuration properties this service requires.
  */
@@ -95,102 +101,15 @@ public abstract class BaseRegistrationService<T> extends EventBusService<T> impl
      * @throws NullPointerException If the request message is {@code null}.
      */
     @Override
-    public final Future<EventBusMessage> processRequest(final EventBusMessage requestMessage) {
+    public Future<EventBusMessage> processRequest(final EventBusMessage requestMessage) {
 
         Objects.requireNonNull(requestMessage);
 
         switch (requestMessage.getOperation()) {
-        case RegistrationConstants.ACTION_REGISTER:
-            return processRegisterRequest(requestMessage);
         case RegistrationConstants.ACTION_ASSERT:
             return processAssertRequest(requestMessage);
-        case RegistrationConstants.ACTION_GET:
-            return processGetRequest(requestMessage);
-        case RegistrationConstants.ACTION_UPDATE:
-            return processUpdateRequest(requestMessage);
-        case RegistrationConstants.ACTION_DEREGISTER:
-            return processDeregisterRequest(requestMessage);
         default:
             return processCustomRegistrationMessage(requestMessage);
-        }
-    }
-
-    private Future<EventBusMessage> processRegisterRequest(final EventBusMessage request) {
-
-        final String tenantId = request.getTenant();
-        final String deviceId = request.getDeviceId();
-        final JsonObject payload = getRequestPayload(request.getJsonPayload());
-
-        if (tenantId == null || deviceId == null) {
-            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
-        } else {
-            log.debug("registering device [{}] for tenant [{}]", deviceId, tenantId);
-            final Future<RegistrationResult> result = Future.future();
-            addDevice(tenantId, deviceId, payload, result.completer());
-            return result.map(res -> {
-                return request.getResponse(res.getStatus())
-                        .setDeviceId(deviceId)
-                        .setCacheDirective(res.getCacheDirective());
-            });
-        }
-    }
-
-    private Future<EventBusMessage> processGetRequest(final EventBusMessage request) {
-
-        final String tenantId = request.getTenant();
-        final String deviceId = request.getDeviceId();
-
-        if (tenantId == null || deviceId == null) {
-            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
-        } else {
-            log.debug("retrieving device [{}] of tenant [{}]", deviceId, tenantId);
-            final Future<RegistrationResult> result = Future.future();
-            getDevice(tenantId, deviceId, result.completer());
-            return result.map(res -> {
-                return request.getResponse(res.getStatus())
-                        .setDeviceId(deviceId)
-                        .setJsonPayload(res.getPayload())
-                        .setCacheDirective(res.getCacheDirective());
-            });
-        }
-    }
-
-    private Future<EventBusMessage> processUpdateRequest(final EventBusMessage request) {
-
-        final String tenantId = request.getTenant();
-        final String deviceId = request.getDeviceId();
-        final JsonObject payload = getRequestPayload(request.getJsonPayload());
-
-        if (tenantId == null || deviceId == null) {
-            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
-        } else {
-            log.debug("updating registration information for device [{}] of tenant [{}]", deviceId, tenantId);
-            final Future<RegistrationResult> result = Future.future();
-            updateDevice(tenantId, deviceId, payload, result.completer());
-            return result.map(res -> {
-                return request.getResponse(res.getStatus())
-                        .setDeviceId(deviceId)
-                        .setCacheDirective(res.getCacheDirective());
-            });
-        }
-    }
-
-    private Future<EventBusMessage> processDeregisterRequest(final EventBusMessage request) {
-
-        final String tenantId = request.getTenant();
-        final String deviceId = request.getDeviceId();
-
-        if (tenantId == null || deviceId == null) {
-            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
-        } else {
-            log.debug("deregistering device [{}] of tenant [{}]", deviceId, tenantId);
-            final Future<RegistrationResult> result = Future.future();
-            removeDevice(tenantId, deviceId, result.completer());
-            return result.map(res -> {
-                return request.getResponse(res.getStatus())
-                        .setDeviceId(deviceId)
-                        .setCacheDirective(res.getCacheDirective());
-            });
         }
     }
 
@@ -241,18 +160,6 @@ public abstract class BaseRegistrationService<T> extends EventBusService<T> impl
     protected Future<EventBusMessage> processCustomRegistrationMessage(final EventBusMessage request) {
         log.debug("invalid operation in request message [{}]", request.getOperation());
         return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
-    };
-
-    /**
-     * {@inheritDoc}
-     *
-     * This default implementation simply returns an empty result with status code 501 (Not Implemented).
-     * Subclasses should override this method in order to provide a reasonable implementation.
-     */
-    @Override
-    public void addDevice(final String tenantId, final String deviceId, final JsonObject otherKeys,
-            final Handler<AsyncResult<RegistrationResult>> resultHandler) {
-        handleUnimplementedOperation(resultHandler);
     }
 
     /**
@@ -260,33 +167,11 @@ public abstract class BaseRegistrationService<T> extends EventBusService<T> impl
      *
      * This default implementation simply returns an empty result with status code 501 (Not Implemented).
      * Subclasses should override this method in order to provide a reasonable implementation.
+     *
+     * This method is not mandatory to implement regarding the Hono Device Registry API.
+     * However it must me implemented if using the provided {@link #assertRegistration(String, String, Handler)} mechanism.
      */
-    @Override
     public void getDevice(final String tenantId, final String deviceId,
-            final Handler<AsyncResult<RegistrationResult>> resultHandler) {
-        handleUnimplementedOperation(resultHandler);
-    }
-
-    /**
-     * {@inheritDoc}
-     *
-     * This default implementation simply returns an empty result with status code 501 (Not Implemented).
-     * Subclasses should override this method in order to provide a reasonable implementation.
-     */
-    @Override
-    public void updateDevice(final String tenantId, final String deviceId, final JsonObject otherKeys,
-            final Handler<AsyncResult<RegistrationResult>> resultHandler) {
-        handleUnimplementedOperation(resultHandler);
-    }
-
-    /**
-     * {@inheritDoc}
-     *
-     * This default implementation simply returns an empty result with status code 501 (Not Implemented).
-     * Subclasses should override this method in order to provide a reasonable implementation.
-     */
-    @Override
-    public void removeDevice(final String tenantId, final String deviceId,
             final Handler<AsyncResult<RegistrationResult>> resultHandler) {
         handleUnimplementedOperation(resultHandler);
     }
@@ -296,6 +181,7 @@ public abstract class BaseRegistrationService<T> extends EventBusService<T> impl
      * <p>
      * Subclasses may override this method in order to implement a more sophisticated approach for asserting registration status, e.g.
      * using cached information etc.
+     * This method requires a functional {@link #getDevice(String, String, Handler) getDevice} method to work.
      */
     @Override
     public void assertRegistration(
@@ -327,6 +213,7 @@ public abstract class BaseRegistrationService<T> extends EventBusService<T> impl
      * <p>
      * Subclasses may override this method in order to implement a more sophisticated approach for asserting registration status, e.g.
      * using cached information etc.
+     * This method requires a functional {@link #getDevice(String, String, Handler) getDevice} method to work.
      */
     @Override
     public void assertRegistration(
@@ -391,7 +278,7 @@ public abstract class BaseRegistrationService<T> extends EventBusService<T> impl
      * <p>
      * Subclasses may override this method in order to implement a more
      * sophisticated check.
-     * 
+     *
      * @param gatewayId The identifier of the gateway.
      * @param gatewayData The data registered for the gateway.
      * @param deviceId The identifier of the device.
@@ -440,7 +327,7 @@ public abstract class BaseRegistrationService<T> extends EventBusService<T> impl
     /**
      * Wraps a given device ID and registration data into a JSON structure suitable
      * to be returned to clients as the result of a registration operation.
-     * 
+     *
      * @param deviceId The device ID.
      * @param data The registration data.
      * @return The JSON structure.
