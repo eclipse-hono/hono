@@ -234,52 +234,26 @@ public abstract class AbstractHonoClient {
      */
     protected final void closeLinks(final Handler<AsyncResult<Void>> closeHandler) {
 
-        Objects.requireNonNull(closeHandler);
-
         final Future<Void> res = executeOrRunOnContext(result -> {
 
             final Future<Void> senderCloseHandler = Future.future();
             if (sender == null) {
                 senderCloseHandler.complete();
             } else {
-                final Handler<AsyncResult<ProtonSender>> wrappedHandler = HonoProtonHelper.setCloseHandler(sender, closeAttempt -> {
-                    LOG.debug("closed message sender for [{}]", sender.getTarget().getAddress());
-                    senderCloseHandler.complete();
-                });
-                if (sender.isOpen()) {
-                    // wait for peer's detach frame to trigger the handler
-                    sender.close();
-                } else {
-                    // trigger handler manually to make sure that
-                    // resources are freed up
-                    wrappedHandler.handle(Future.succeededFuture());
-                }
+                HonoProtonHelper.closeAndFree(context, sender, senderCloseHandler);
             }
 
             senderCloseHandler.compose(closedSender -> {
-
                 if (receiver == null) {
                     result.complete((Void) null);
                 } else {
-                    final Handler<AsyncResult<ProtonReceiver>> wrappedHandler = HonoProtonHelper.setCloseHandler(receiver, closeAttempt -> {
-                        LOG.debug("closed message consumer for [{}]", receiver.getSource().getAddress());
-                        result.complete((Void) null);
-                    });
-                    if (receiver.isOpen()) {
-                        // wait for peer's detach frame to trigger the handler
-                        receiver.close();
-                    } else {
-                        // trigger handler manually to make sure that
-                        // resources are freed up
-                        wrappedHandler.handle(Future.succeededFuture());
-                    }
+                    HonoProtonHelper.closeAndFree(context, receiver, result);
                 }
 
             }, result);
         });
         res.setHandler(closeHandler);
     }
-
     /**
      * Set the application properties for a Proton Message but do a check for all properties first if they only contain
      * values that the AMQP 1.0 spec allows.

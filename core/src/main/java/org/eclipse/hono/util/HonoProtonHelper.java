@@ -13,6 +13,7 @@
 package org.eclipse.hono.util;
 
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicLong;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
@@ -26,6 +27,11 @@ import io.vertx.proton.ProtonSession;
  * Utility methods for working with Proton objects.
  */
 public final class HonoProtonHelper {
+
+    /**
+     * The default number of milliseconds to wait for a remote peer to send a detach frame after client closed a link.
+     */
+    public static final long DEFAULT_FREE_LINK_AFTER_CLOSE_INTERVAL_MILLIS = 3000;
 
     private HonoProtonHelper() {
         // prevent instantiation
@@ -163,5 +169,60 @@ public final class HonoProtonHelper {
             }
         }
         return result;
+    }
+
+    /**
+     * Close the passed link and later call its {@link ProtonLink#free()} method in an attached closeHandler.
+     * <p>
+     * Additionally supervise if this handler is called in the number of {@link #DEFAULT_FREE_LINK_AFTER_CLOSE_INTERVAL_MILLIS}
+     * milliseconds. If not, the timer is triggered and the link will be freed inside the timer code.
+     *
+     * @param context The context to run the timer code on.
+     * @param link The link to close and free.
+     * @param closeHandler The handler to invoke after the link was freed.
+     */
+    public static void closeAndFree(final Context context, final ProtonLink link,
+                                    final Future<Void> closeHandler) {
+        closeAndFree(context, link, DEFAULT_FREE_LINK_AFTER_CLOSE_INTERVAL_MILLIS, closeHandler);
+    }
+
+    /**
+     * Close the passed link and later call its {@link ProtonLink#free()} method in an attached closeHandler.
+     * <p>
+     * Additionally supervise if this handler is called in the number of milliseconds being passed.
+     * If not, the timer is triggered and the link will be freed inside the timer code.
+     *
+     * @param context The context to run the timer code on.
+     * @param link The link to close and free.
+     * @param timeoutToInvokeCloseHandler The timeout in milliseconds that is used for the supervision timer.
+     * @param closeHandler The handler to invoke after the link was freed.
+     */
+    public static void closeAndFree(final Context context, final ProtonLink link, final long timeoutToInvokeCloseHandler,
+                                    final Future<Void> closeHandler) {
+        final AtomicLong closeSenderTimerId = new AtomicLong(-1);
+
+        final Handler<Void> freeLinkHandler = v -> {
+            closeHandler.complete();
+            link.free();
+        };
+
+        // if sender gets remote peer detach close -> complete senderCloseHandler
+        link.closeHandler(closeAttempt -> {
+            context.owner().cancelTimer(closeSenderTimerId.get());
+            executeOrRunOnContext(context, v -> freeLinkHandler.handle(null));
+        });
+
+        if (link.isOpen()) {
+            // start a timer to free resources if peer should not detach after following close
+            closeSenderTimerId.set(context.owner().setTimer(timeoutToInvokeCloseHandler, timerId -> {
+                executeOrRunOnContext(context, v -> freeLinkHandler.handle(null));
+            }));
+            // close the link and wait for peer's detach frame to trigger the close handler
+            link.close();
+        } else {
+            // trigger handler manually to make sure that
+            // resources are freed up
+            executeOrRunOnContext(context, v -> freeLinkHandler.handle(null));
+        }
     }
 }
