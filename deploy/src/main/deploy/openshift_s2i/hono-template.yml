@@ -15,11 +15,11 @@ metadata:
 
 parameters:
 - name:         GIT_REPOSITORY
-  description:     Git repository
+  displayName:     Git repository
   value:           https://github.com/eclipse/hono
   required:        true
 - name:         GIT_BRANCH
-  description:     Git branch
+  displayName:     Git branch
   value:           master
   required:        true
 - name:         SIGNING_SHARED_SECRET
@@ -41,11 +41,23 @@ parameters:
   required:        true
   value:           enmasse
 - name:         INFLUXDB_STORAGE_SIZE
+  displayName:     InfluxDB storage size
   description:     The size of the persistent volume claim for the Influx DB.
                    You need to ensure that a persistent volume of that size
                    will be available for binding. 
   required:        true
   value:           20Gi
+- name:         HONO_DEVICE_REGISTRY_STORAGE_SIZE
+  displayName:     Device registry storage size
+  description:     The size of the persistent volume claim for the Hono Devvice
+                   registry.
+                   You need to ensure that a persistent volume of that size
+                   will be available for binding. 
+  required:        true
+  value:           128Mi
+- name:         VOLUME_STORAGE_CLASS
+  displayName:     Storage class name
+  description:     The storage class to use for volumes. Leave empty for default.
 
 objects:
 
@@ -254,6 +266,7 @@ objects:
     resources:
       requests:
         storage: ${INFLUXDB_STORAGE_SIZE}
+    storageClassName: ${VOLUME_STORAGE_CLASS}
 
 - kind: DeploymentConfig
   apiVersion: v1
@@ -1163,7 +1176,8 @@ objects:
     - ReadWriteOnce
     resources:
       requests:
-        storage: 128Mi
+        storage: ${HONO_DEVICE_REGISTRY_STORAGE_SIZE}
+    storageClassName: ${VOLUME_STORAGE_CLASS}
 
 - kind: DeploymentConfig
   apiVersion: v1

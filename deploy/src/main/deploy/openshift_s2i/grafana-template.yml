@@ -37,6 +37,9 @@ parameters:
   description:      The name of the project/namespace Hono is deployed to.
   required:         true
   value:            hono
+- name:           VOLUME_STORAGE_CLASS
+  displayName:      Storage class name
+  description:      The storage class to use for volumes. Leave empty for default.
 
 objects:
 
@@ -52,6 +55,7 @@ objects:
     resources:
       requests:
         storage: ${VOLUME_SIZE}
+    storageClassName: ${VOLUME_STORAGE_CLASS}
 
 - kind: ImageStream
   apiVersion: v1
