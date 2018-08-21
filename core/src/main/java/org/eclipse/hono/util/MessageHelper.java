@@ -44,6 +44,13 @@ public final class MessageHelper {
      * the <em>correlation-id</em>.
      */
     public static final String ANNOTATION_X_OPT_APP_CORRELATION_ID = "x-opt-app-correlation-id";
+    /**
+     * The name of the AMQP 1.0 message annotation that is used to indicate that the sender of the
+     * message intended the message to be <em>retained</em> in the MQTT sense. The value of the
+     * property is a boolean. If a message does not contain this annotation, then a consumer must process
+     * the message as if the annotation exists and has a value of {@code false}.
+     */
+    public static final String ANNOTATION_X_OPT_RETAIN = "x-opt-retain";
 
     /**
      * The name of the AMQP 1.0 message application property containing the caching directive
@@ -57,13 +64,9 @@ public final class MessageHelper {
     public static final String APP_PROPERTY_DEVICE_ID              = "device_id";
     /**
      * The name of the AMQP 1.0 message application property containing the time until disconnect of the device that is available
-     * for receiving an upstream message for the given number of seconds (short for <em>Time Til Disconnect</em>).
+     * for receiving an upstream message for the given number of seconds (short for <em>Time til Disconnect</em>).
      */
     public static final String APP_PROPERTY_DEVICE_TTD              = "ttd";
-    /**
-     * Devices that are always ready to receive an upstream message can use this as value for {@link #APP_PROPERTY_DEVICE_TTD} to indicate it in messages.
-     */
-    public static final int TTD_VALUE_UNLIMITED = -1;
     /**
      * The name of the AMQP 1.0 message application property containing the id of the gateway
      * that wants to report data on behalf of another device.
@@ -149,6 +152,11 @@ public final class MessageHelper {
      * The AMQP 1.0 <em>to</em> message property.
      */
     public static final String SYS_PROPERTY_TO                     = "to";
+
+    /**
+     * The time-til-disconnect value to use for indicating that a device will remain connected until further notice.
+     */
+    public static final int TTD_VALUE_UNLIMITED = -1;
 
     /**
      * The {@code JMS_AMQP_CONTENT_ENCODING} vendor property name.

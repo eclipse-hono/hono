@@ -13,6 +13,7 @@ The MQTT adapter is **not** a general purpose MQTT broker. In particular the ada
 * ignores any *Will* included in a client's CONNECT packet.
 * only supports topic names/filters for devices to publish and subscribe to that are specific to Hono's functionality as described in the following sections.
 * discards *malformed* messages that e.g. are published to an unsupported topic or use an unsupported QoS value.
+* does not support *retaining* messages. However, if an event or telemetry message's *retain* flag is set to `1` then the corresponding AMQP 1.0 message being sent downstream by the adapter will contain an *x-opt-retain* message annotation containing the boolean value `true`. A downstream consumer may then react according to the presence of this annotation.
 
 ## Authentication
 
@@ -237,10 +238,11 @@ After a command has arrived as in the above example, you send a response using t
 
 The adapter includes the following meta data in messages being sent downstream:
 
-| Name               | Location        | Type      | Description                                                     |
-| :----------------- | :-------------- | :-------- | :-------------------------------------------------------------- |
-| *orig_adapter*     | *application*   | *string*  | Contains the adapter's *type name* which can be used by downstream consumers to determine the protocol adapter that the message has been received over. The MQTT adapter's type name is `hono-mqtt`. |
-| *orig_address*     | *application*   | *string*  | Contains the name of the MQTT topic that the device has originally published the data to. |
+| Name               | Location                | Type      | Description                                                     |
+| :----------------- | :---------------------- | :-------- | :-------------------------------------------------------------- |
+| *orig_adapter*     | *application*           | *string*  | Contains the adapter's *type name* which can be used by downstream consumers to determine the protocol adapter that the message has been received over. The MQTT adapter's type name is `hono-mqtt`. |
+| *orig_address*     | *application*           | *string*  | Contains the name of the MQTT topic that the device has originally published the data to. |
+| *x-opt-retain*     | * *message-annotations* | *boolean* | Contains `true` if the device has published an event or telemetry message with its *retain* flag set to `1` |
 
 The adapter also considers [*defaults* registered for the device]({{< relref "api/Device-Registration-API.md#payload-format" >}}). For each default value the adapter checks if a corresponding property is already set on the message and if not, sets the message's property to the registered default value or adds a corresponding application property.
 

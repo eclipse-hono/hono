@@ -598,6 +598,43 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
     }
 
     /**
+     * Verifies that the adapter includes a message annotation in a downstream
+     * message if the device publishes a message with its <em>retain</em> flag set.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testUploadTelemetryMessageIncludesRetainAnnotation(final TestContext ctx) {
+
+        // GIVEN an adapter with a downstream telemetry consumer
+        final MessageSender sender = givenAQoS1TelemetrySender(Future.succeededFuture());
+        final MqttServer server = getMqttServer(false);
+        final AbstractVertxBasedMqttProtocolAdapter<ProtocolAdapterProperties> adapter = getAdapter(server);
+
+        // WHEN a device publishes a message with its retain flag set
+        final MqttEndpoint endpoint = mockEndpoint();
+        when(endpoint.isConnected()).thenReturn(Boolean.TRUE);
+        final MqttPublishMessage messageFromDevice = mock(MqttPublishMessage.class);
+        when(messageFromDevice.qosLevel()).thenReturn(MqttQoS.AT_LEAST_ONCE);
+        when(messageFromDevice.messageId()).thenReturn(5555555);
+        when(messageFromDevice.topicName()).thenReturn("t");
+        when(messageFromDevice.isRetain()).thenReturn(Boolean.TRUE);
+        final MqttContext context = newMqttContext(messageFromDevice, endpoint);
+
+        adapter.uploadTelemetryMessage(context, "my-tenant", "4712", Buffer.buffer("some payload")).setHandler(ctx.asyncAssertSuccess(ok -> {
+
+            // THEN the device has received a PUBACK
+            verify(endpoint).publishAcknowledge(5555555);
+            // and the message has been sent downstream
+            final ArgumentCaptor<Message> msgCaptor = ArgumentCaptor.forClass(Message.class);
+            verify(sender).sendAndWaitForOutcome(msgCaptor.capture(), (SpanContext) any());
+            // including the "retain" annotation
+            assertThat(MessageHelper.getAnnotation(msgCaptor.getValue(), MessageHelper.ANNOTATION_X_OPT_RETAIN, Boolean.class), is(Boolean.TRUE));
+            verify(metrics).incrementProcessedMessages(TelemetryConstants.TELEMETRY_ENDPOINT, "my-tenant");
+        }));
+    }
+
+    /**
      * Verifies that the adapter registers a hook to close the command consumer
      * created for a device's command subscription.
      * 

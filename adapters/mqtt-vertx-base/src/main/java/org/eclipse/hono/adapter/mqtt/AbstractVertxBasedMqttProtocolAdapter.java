@@ -978,6 +978,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
                             tokenTracker.result(),
                             null);
 
+                    addRetainAnnotation(ctx, downstreamMessage, currentSpan);
                     customizeDownstreamMessage(downstreamMessage, ctx);
 
                     if (ctx.message().qosLevel() == MqttQoS.AT_LEAST_ONCE) {
@@ -1223,5 +1224,13 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
         items.put(Tags.MESSAGE_BUS_DESTINATION.getKey(), topic);
         items.put(TracingHelper.TAG_QOS.getKey(), qos.toString());
         currentSpan.log(items);
+    }
+
+    private static void addRetainAnnotation(final MqttContext context, final Message downstreamMessage, final Span currentSpan) {
+
+        if (context.message().isRetain()) {
+            currentSpan.log("device wants to retain message");
+            MessageHelper.addAnnotation(downstreamMessage, MessageHelper.ANNOTATION_X_OPT_RETAIN, Boolean.TRUE);
+        }
     }
 }
