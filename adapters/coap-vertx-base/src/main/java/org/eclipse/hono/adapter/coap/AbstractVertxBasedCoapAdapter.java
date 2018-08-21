@@ -28,7 +28,6 @@ import org.eclipse.californium.core.network.config.NetworkConfig;
 import org.eclipse.californium.core.server.resources.CoapExchange;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.MessageSender;
-import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
 import org.eclipse.hono.service.auth.device.Device;
 import org.eclipse.hono.util.Constants;
@@ -300,10 +299,6 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
 
     /**
      * Uploads the body of an COAP request as a telemetry message to the Hono server.
-     * <p>
-     * This method simply invokes
-     * {@link #doUploadMessage(CoapExchange, Device, Device, boolean, Buffer, String, Future, String)} with objects
-     * retrieved from the coap message exchange.
      * 
      * @param exchange coap message exchange
      * @param authenticatedDevice authenticated device
@@ -314,6 +309,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
      */
     public final void uploadTelemetryMessage(final CoapExchange exchange, final Device authenticatedDevice,
             final Device originDevice, final boolean waitForOutcome) {
+
         doUploadMessage(Objects.requireNonNull(exchange), Objects.requireNonNull(authenticatedDevice),
                 Objects.requireNonNull(originDevice), waitForOutcome,
                 Buffer.buffer(exchange.getRequestPayload()),
@@ -324,10 +320,6 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
 
     /**
      * Uploads the body of an COAP request as a event message to the Hono server.
-     * <p>
-     * This method simply invokes
-     * {@link #doUploadMessage(CoapExchange, Device, Device, boolean, Buffer, String, Future, String)} with objects
-     * retrieved from the coap message exchange.
      * 
      * @param exchange coap message exchange
      * @param authenticatedDevice authenticated device
@@ -336,6 +328,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
      */
     public final void uploadEventMessage(final CoapExchange exchange, final Device authenticatedDevice,
             final Device originDevice) {
+
         doUploadMessage(Objects.requireNonNull(exchange), Objects.requireNonNull(authenticatedDevice),
                 Objects.requireNonNull(originDevice), true,
                 Buffer.buffer(exchange.getRequestPayload()),
@@ -412,14 +405,14 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
             }).compose(delivery -> {
                 LOG.trace("successfully processed message for device [tenantId: {}, deviceId: {}, endpoint: {}]",
                         device.getTenantId(), device.getDeviceId(), endpointName);
-                metrics.incrementProcessedCoapMessages(endpointName, device.getTenantId());
+                metrics.incrementProcessedMessages(endpointName, device.getTenantId());
                 exchange.respond(ResponseCode.CHANGED);
                 return Future.succeededFuture();
             }).recover(t -> {
                 LOG.debug("cannot process message for device [tenantId: {}, deviceId: {}, endpoint: {}]: {}",
                         device.getTenantId(), device.getDeviceId(), endpointName, t.getMessage());
-                if (ServerErrorException.class.isInstance(t)) {
-                    metrics.incrementUndeliverableCoapMessages(endpointName, device.getTenantId());
+                if (!(ClientErrorException.class.isInstance(t))) {
+                    metrics.incrementUndeliverableMessages(endpointName, device.getTenantId());
                 }
                 CoapErrorResponse.respond(exchange, t);
                 return Future.failedFuture(t);

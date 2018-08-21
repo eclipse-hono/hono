@@ -13,12 +13,19 @@
 
 package org.eclipse.hono.adapter.coap;
 
-import org.eclipse.hono.service.metric.Metrics;
+import org.eclipse.hono.service.metric.DropwizardBasedMetrics;
+import org.springframework.stereotype.Component;
 
 /**
- * Metrics for the COAP based adapters.
+ * Metrics for the CoAP based adapters.
  */
-public interface CoapAdapterMetrics extends Metrics {
+@Component
+public class DropwizardBasedCoapAdapterMetrics extends DropwizardBasedMetrics {
 
-    // nothing for now
+    private static final String SERVICE_PREFIX = "hono.coap";
+
+    @Override
+    protected String getScope() {
+        return SERVICE_PREFIX;
+    }
 }
