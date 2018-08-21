@@ -329,6 +329,9 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
         if (!endpoint.isCleanSession()) {
             span.log("ignoring client's intent to resume existing session");
         }
+        if (endpoint.will() != null) {
+            span.log("ignoring client's last will");
+        }
 
         isConnected()
                 .compose(v -> handleConnectionRequest(endpoint, span))

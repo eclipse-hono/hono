@@ -10,6 +10,7 @@ The MQTT adapter is **not** a general purpose MQTT broker. In particular the ada
 
 * supports MQTT 3.1.1 only.
 * does not maintain session state for clients and thus always sets the *session present* flag in its CONNACK packet to `0`, regardless of the value  of the *clean session* flag provided in a client's CONNECT packet.
+* ignores any *Will* included in a client's CONNECT packet.
 * only supports topic names/filters for devices to publish and subscribe to that are specific to Hono's functionality as described in the following sections.
 
 ## Authentication
