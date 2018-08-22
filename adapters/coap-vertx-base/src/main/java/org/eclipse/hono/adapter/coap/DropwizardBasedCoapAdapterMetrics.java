@@ -20,7 +20,7 @@ import org.springframework.stereotype.Component;
  * Metrics for the CoAP based adapters.
  */
 @Component
-public class DropwizardBasedCoapAdapterMetrics extends DropwizardBasedMetrics {
+public class DropwizardBasedCoapAdapterMetrics extends DropwizardBasedMetrics implements CoapAdapterMetrics {
 
     private static final String SERVICE_PREFIX = "hono.coap";
 
