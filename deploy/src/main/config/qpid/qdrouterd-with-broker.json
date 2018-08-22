@@ -106,7 +106,7 @@
       "maxConnections": 9,
       "groups": {
         "Hono": {
-          "users": "Eclipse IoT;Hono;hono-messaging, Eclipse IoT;Hono;http-adapter, Eclipse IoT;Hono;mqtt-adapter, Eclipse IoT;Hono;kura-adapter, Eclipse IoT;Hono;amqp-adapter",
+          "users": "Eclipse IoT;Hono;hono-messaging, Eclipse IoT;Hono;http-adapter, Eclipse IoT;Hono;mqtt-adapter, Eclipse IoT;Hono;kura-adapter, Eclipse IoT;Hono;amqp-adapter, Eclipse IoT;Hono;coap-adapter",
           "remoteHosts": "*",
           "maxSessions": 2,
           "maxFrameSize": 16384,
@@ -166,6 +166,20 @@
     "groups": {
       "Hono": {
         "users": "Eclipse IoT;Hono;http-adapter",
+        "remoteHosts": "*",
+        "allowUserIdProxy": true,
+        "sources": "control/*",
+        "targets": "control/*"
+      }
+    }
+  }],
+
+  ["vhost", {
+    "id": "hono-coap-internal",
+    "maxConnections": 30,
+    "groups": {
+      "Hono": {
+        "users": "Eclipse IoT;Hono;coap-adapter",
         "remoteHosts": "*",
         "allowUserIdProxy": true,
         "sources": "control/*",

@@ -20,12 +20,22 @@ CERTS=$CONFIG/hono-demo-certs-jar
 NS=hono
 CREATE_OPTIONS="-l project=$NS --network $NS --detach=false"
 
-echo DEPLOYING ECLIPSE HONO TO DOCKER SWARM
+# --no-adapter deployment, without adapters and optional components (e.g. grafana)
+if [ "$1" = "--no-adapter" ] ; then
+  DEPLOYMENT=0
+  echo DEPLOYING ECLIPSE HONO WITHOUT ADAPTERS TO DOCKER SWARM
+else
+  DEPLOYMENT=1
+  echo DEPLOYING ECLIPSE HONO TO DOCKER SWARM
+fi
 
 # creating Hono network
 docker network create --label project=$NS --driver overlay $NS
 
 docker secret create -l project=$NS trusted-certs.pem $CERTS/trusted-certs.pem
+
+if [ $DEPLOYMENT = "1" ]
+then
 
 echo
 echo Deploying Influx DB and Grafana ...
@@ -45,6 +55,8 @@ docker service create $CREATE_OPTIONS --name grafana -p 3000:3000 \
   --limit-memory 64m \
   grafana/grafana:${grafana.version}
 echo ... done
+
+fi
 
 echo
 echo Deploying Artemis broker ...
@@ -75,10 +87,16 @@ echo ... done
 
 echo
 echo Deploying Qpid Dispatch Router ...
+if [ $DEPLOYMENT = "1" ]
+then
+PORT_FORWARDS="-p 15671:5671 -p 15672:5672"
+else
+PORT_FORWARDS="-p 15671:5671 -p 15672:5672 -p 15673:5673"
+fi
 docker secret create -l project=$NS qdrouter-key.pem $CERTS/qdrouter-key.pem
 docker secret create -l project=$NS qdrouter-cert.pem $CERTS/qdrouter-cert.pem
 docker secret create -l project=$NS qdrouterd.json $SCRIPTPATH/qpid/qdrouterd-with-broker.json
-docker service create $CREATE_OPTIONS --name hono-dispatch-router -p 15671:5671 -p 15672:5672 \
+docker service create $CREATE_OPTIONS --name hono-dispatch-router ${PORT_FORWARDS} \
   --secret qdrouter-key.pem \
   --secret qdrouter-cert.pem \
   --secret trusted-certs.pem \
@@ -140,6 +158,8 @@ docker service create $CREATE_OPTIONS --name hono-service-device-registry -p 256
   --mount type=volume,source=device-registry,target=/var/lib/hono/device-registry \
   ${docker.image.org-name}/hono-service-device-registry:${project.version}
 
+if [ $DEPLOYMENT = "1" ]
+then
 echo
 echo Deploying Hono Messaging ...
 docker secret create -l project=$NS hono-messaging-key.pem $CERTS/hono-messaging-key.pem
@@ -238,5 +258,28 @@ docker service create $CREATE_OPTIONS --name hono-adapter-kura -p 1884:1883 -p 8
   --env LOGGING_CONFIG=classpath:logback-spring.xml \
   ${docker.image.org-name}/hono-adapter-kura:${project.version}
 echo ... done
+
+echo
+# coap deduplicator requires currently a large heap ;-(
+echo Deploying Coap adapter ...
+docker secret create -l project=$NS coap-adapter-key.pem $CERTS/coap-adapter-key.pem
+docker secret create -l project=$NS coap-adapter-cert.pem $CERTS/coap-adapter-cert.pem
+docker secret create -l project=$NS coap-adapter.credentials $SCRIPTPATH/../coap-adapter.credentials
+docker secret create -l project=$NS hono-adapter-coap-vertx-config.yml $SCRIPTPATH/hono-adapter-coap-vertx-config.yml
+docker service create $CREATE_OPTIONS --name hono-adapter-coap-vertx -p 5683:5683/udp -p 5684:5684/udp \
+  --secret coap-adapter-key.pem \
+  --secret coap-adapter-cert.pem \
+  --secret trusted-certs.pem \
+  --secret coap-adapter.credentials \
+  --secret hono-adapter-coap-vertx-config.yml \
+  --limit-memory 4096m \
+  --env _JAVA_OPTIONS=-Xmx4000m \
+  --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-adapter-coap-vertx-config.yml \
+  --env SPRING_PROFILES_ACTIVE=prod \
+  --env LOGGING_CONFIG=classpath:logback-spring.xml \
+  ${docker.image.org-name}/hono-adapter-coap-vertx:${project.version}
+echo ... done
+
+fi
 
 echo ECLIPSE HONO DEPLOYED TO DOCKER SWARM

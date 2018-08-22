@@ -18,6 +18,15 @@ NS=hono
 
 echo UNDEPLOYING ECLIPSE HONO FROM DOCKER SWARM
 
+docker service rm hono-adapter-coap-vertx
+docker secret rm \
+  coap-adapter-keyStore.jks \
+  coap-adapter-trustStore.jks \
+  coap-adapter.credentials \
+  coap-adapter-key.pem \
+  coap-adapter-cert.pem \
+  hono-adapter-coap-vertx-config.yml
+
 docker service rm hono-adapter-kura
 docker secret rm \
   kura-adapter.credentials \

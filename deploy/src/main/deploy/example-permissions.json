@@ -60,6 +60,11 @@
     ]
   },
   "users": {
+    "coap-adapter@HONO": {
+      "mechanism": "PLAIN",
+      "password": "coap-secret",
+      "authorities": [ "hono-component", "protocol-adapter" ]
+    },
     "http-adapter@HONO": {
       "mechanism": "PLAIN",
       "password": "http-secret",
