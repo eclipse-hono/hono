@@ -319,27 +319,31 @@ public abstract class AbstractHonoClient {
             sender.setQoS(qos);
             sender.setAutoSettle(true);
             sender.openHandler(senderOpen -> {
+                // we only "try" to complete/fail the result future because
+                // it may already have been failed if the connection broke
+                // away after we have sent our attach frame but before we have
+                // received the peer's attach frame
                 if (senderOpen.succeeded()) {
                     LOG.debug("sender open [target: {}, sendQueueFull: {}]", targetAddress, sender.sendQueueFull());
                     sender.attachments().set(KEY_LINK_ESTABLISHED, Boolean.class, Boolean.TRUE);
                     // wait on credits a little time, if not already given
-                    if (sender.sendQueueFull()) {
+                    if (sender.getCredit() <= 0) {
                         ctx.owner().setTimer(clientConfig.getFlowLatency(), timerID -> {
                             LOG.debug("sender [target: {}] has {} credits after grace period of {}ms", targetAddress,
                                     sender.getCredit(), clientConfig.getFlowLatency());
-                            result.complete(sender);
+                            result.tryComplete(sender);
                         });
                     } else {
-                        result.complete(sender);
+                        result.tryComplete(sender);
                     }
                 } else {
                     final ErrorCondition error = sender.getRemoteCondition();
                     if (error == null) {
                         LOG.debug("opening sender [{}] failed", targetAddress, senderOpen.cause());
-                        result.fail(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND, "cannot open sender", senderOpen.cause()));
+                        result.tryFail(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND, "cannot open sender", senderOpen.cause()));
                     } else {
                         LOG.debug("opening sender [{}] failed: {} - {}", targetAddress, error.getCondition(), error.getDescription());
-                        result.fail(StatusCodeMapper.from(error));
+                        result.tryFail(StatusCodeMapper.from(error));
                     }
                 }
             });
@@ -396,18 +400,22 @@ public abstract class AbstractHonoClient {
                 }
             });
             receiver.openHandler(recvOpen -> {
+                // we only "try" to complete/fail the result future because
+                // it may already have been failed if the connection broke
+                // away after we have sent our attach frame but before we have
+                // received the peer's attach frame
                 if (recvOpen.succeeded()) {
                     LOG.debug("receiver open [source: {}]", sourceAddress);
                     receiver.attachments().set(KEY_LINK_ESTABLISHED, Boolean.class, Boolean.TRUE);
-                    result.complete(recvOpen.result());
+                    result.tryComplete(recvOpen.result());
                 } else {
                     final ErrorCondition error = receiver.getRemoteCondition();
                     if (error == null) {
                         LOG.debug("opening receiver [{}] failed", sourceAddress, recvOpen.cause());
-                        result.fail(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND, "cannot open receiver", recvOpen.cause()));
+                        result.tryFail(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND, "cannot open receiver", recvOpen.cause()));
                     } else {
                         LOG.debug("opening receiver [{}] failed: {} - {}", sourceAddress, error.getCondition(), error.getDescription());
-                        result.fail(StatusCodeMapper.from(error));
+                        result.tryFail(StatusCodeMapper.from(error));
                     }
                 }
             });
