@@ -21,6 +21,11 @@
         "type": "hono-kura",
         "enabled": false,
         "device-authentication-required": true
+      },
+      {
+        "type": "hono-coap",
+        "enabled": false,
+        "device-authentication-required": true
       }
     ]
   }
