@@ -25,7 +25,7 @@ import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.eclipse.hono.service.registration.BaseRegistrationService;
+import org.eclipse.hono.service.registration.CompleteBaseRegistrationService;
 import org.eclipse.hono.util.RegistrationResult;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -47,7 +47,7 @@ import io.vertx.core.json.JsonObject;
  */
 @Repository
 @ConditionalOnProperty(name = "hono.app.type", havingValue = "file", matchIfMissing = true)
-public final class FileBasedRegistrationService extends BaseRegistrationService<FileBasedRegistrationConfigProperties> {
+public final class FileBasedRegistrationService extends CompleteBaseRegistrationService<FileBasedRegistrationConfigProperties> {
 
     /**
      * The name of the JSON array containing device registration information for a tenant.
