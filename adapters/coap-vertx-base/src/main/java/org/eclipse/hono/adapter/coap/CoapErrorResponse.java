@@ -64,6 +64,7 @@ public class CoapErrorResponse {
      * @param defaultCode default response code, if a more specific response code is not available.
      */
     public static void respond(final CoapExchange exchange, final Throwable cause, final ResponseCode defaultCode) {
+        final String message = cause == null ? null : cause.getMessage();
         final ResponseCode code;
         if (ServiceInvocationException.class.isInstance(cause)) {
             final int error = ((ServiceInvocationException) cause).getErrorCode();
@@ -79,8 +80,19 @@ public class CoapErrorResponse {
         } else {
             code = defaultCode;
         }
+        respond(exchange, message, code);
+    }
+
+    /**
+     * Respond the coap exchange with the provide error cause.
+     * 
+     * @param exchange coap exchange to be responded
+     * @param message error message sent as payload.
+     * @param code response code.
+     */
+    public static void respond(final CoapExchange exchange, final String message, final ResponseCode code) {
         final Response response = new Response(code);
-        response.setPayload(cause.getMessage());
+        response.setPayload(message);
         exchange.respond(response);
     }
 
@@ -94,7 +106,7 @@ public class CoapErrorResponse {
     public static ResponseCode toCoapCode(final int httpCode, final ResponseCode defaultCode) {
         final int codeClass = httpCode / 100;
         final int codeDetail = httpCode % 100;
-        if (0 < codeClass && codeClass < 8 && 0 <= codeDetail && codeDetail < 64) {
+        if (0 < codeClass && codeClass < 8 && 0 <= codeDetail && codeDetail < 32) {
             try {
                 return ResponseCode.valueOf(codeClass << 5 | codeDetail);
             } catch (MessageFormatException e) {

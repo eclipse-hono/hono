@@ -94,10 +94,10 @@ public class AbstractVertxBasedCoapAdapterTest {
 
         regClient = mock(RegistrationClient.class);
         final JsonObject result = new JsonObject().put(RegistrationConstants.FIELD_ASSERTION, "token");
-        when(regClient.assertRegistration(anyString(), any())).thenReturn(Future.succeededFuture(result));
+        when(regClient.assertRegistration(anyString(), any(), any())).thenReturn(Future.succeededFuture(result));
 
         tenantClient = mock(TenantClient.class);
-        when(tenantClient.get(anyString())).thenAnswer(invocation -> {
+        when(tenantClient.get(anyString(), any())).thenAnswer(invocation -> {
             return Future.succeededFuture(TenantObject.from(invocation.getArgument(0), true));
         });
 
@@ -226,7 +226,7 @@ public class AbstractVertxBasedCoapAdapterTest {
         myTenantConfig.addAdapterConfiguration(new JsonObject()
                 .put(TenantConstants.FIELD_ADAPTERS_TYPE, ADAPTER_TYPE)
                 .put(TenantConstants.FIELD_ENABLED, false));
-        when(tenantClient.get("my-tenant")).thenReturn(Future.succeededFuture(myTenantConfig));
+        when(tenantClient.get("my-tenant", null)).thenReturn(Future.succeededFuture(myTenantConfig));
         final CoapServer server = getCoapServer(false);
         final AbstractVertxBasedCoapAdapter<CoapAdapterProperties> adapter = getAdapter(server, true, null);
 

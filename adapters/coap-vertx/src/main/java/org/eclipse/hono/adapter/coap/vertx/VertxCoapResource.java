@@ -61,6 +61,13 @@ public class VertxCoapResource extends CoapResource {
     }
 
     @Override
+    public void handlePOST(final CoapExchange exchange) {
+        adapterContext.runOnContext((v) -> {
+            handler.handlePOST(exchange);
+        });
+    }
+
+    @Override
     public void handlePUT(final CoapExchange exchange) {
         adapterContext.runOnContext((v) -> {
             handler.handlePUT(exchange);
