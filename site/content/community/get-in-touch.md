@@ -6,6 +6,10 @@ weight = 630
 Wanna tell us what you think about Eclipse Hono&trade;? What we can improve? Which feature is missing? Or just discuss architectural issues?
 <!--more-->
 
+## Ask a Question
+
+We would be delighted to answer your questions regarding the usage of Hono on [StackOverflow](https://stackoverflow.com/). Make sure to add the *eclipse-hono* tag to your question so that we can easily find (and answer) it.
+
 ## Report an Issue
 
 The easiest way to tell us about a problem you experience with Hono is by [opening an issue on our GitHub page](https://github.com/eclipse/hono/issues).
