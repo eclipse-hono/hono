@@ -163,13 +163,18 @@ public abstract class BaseRegistrationService<T> extends EventBusService<T> impl
     }
 
     /**
-     * {@inheritDoc}
-     *
+     * Gets device registration data by device ID.
+     * <p>
+     * This method is invoked by {@link #assertRegistration(String, String, String, Handler)} to retrieve
+     * device registration information from the persistent store.
+     * <p>
      * This default implementation simply returns an empty result with status code 501 (Not Implemented).
-     * Subclasses should override this method in order to provide a reasonable implementation.
-     *
-     * This method is not mandatory to implement regarding the Hono Device Registry API.
-     * However it must me implemented if using the provided {@link #assertRegistration(String, String, Handler)} mechanism.
+     * Subclasses need to override this method and provide a reasonable implementation in order for this
+     * class' default implementation of <em>assertRegistration</em> to work properly.
+     * 
+     * @param tenantId The tenant the device belongs to.
+     * @param deviceId The ID of the device to remove.
+     * @param resultHandler The handler to invoke with the registration information.
      */
     public void getDevice(final String tenantId, final String deviceId,
             final Handler<AsyncResult<RegistrationResult>> resultHandler) {
