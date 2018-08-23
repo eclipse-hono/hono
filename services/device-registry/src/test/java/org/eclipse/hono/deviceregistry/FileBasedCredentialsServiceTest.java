@@ -22,7 +22,7 @@ import static org.mockito.Mockito.*;
 import java.net.HttpURLConnection;
 import java.nio.charset.StandardCharsets;
 
-import org.eclipse.hono.service.credentials.CredentialsService;
+import org.eclipse.hono.service.credentials.CompleteCredentialsService;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsObject;
@@ -87,7 +87,7 @@ public class FileBasedCredentialsServiceTest {
     /**
      * Verifies that the credentials service creates a file for persisting credentials
      * data if it does not exist yet during startup.
-     * 
+     *
      * @param ctx The vert.x context.
      */
     @SuppressWarnings({ "unchecked", "rawtypes" })
@@ -125,7 +125,7 @@ public class FileBasedCredentialsServiceTest {
     /**
      * Verifies that the credentials service fails to start if it cannot create the file for
      * persisting credentials data during startup.
-     * 
+     *
      * @param ctx The vert.x context.
      */
     @SuppressWarnings({ "unchecked", "rawtypes" })
@@ -157,7 +157,7 @@ public class FileBasedCredentialsServiceTest {
     /**
      * Verifies that the credentials service successfully starts up even if
      * the file to read credentials from contains malformed JSON.
-     * 
+     *
      * @param ctx The vert.x context.
      */
     @SuppressWarnings({ "unchecked", "rawtypes" })
@@ -190,7 +190,7 @@ public class FileBasedCredentialsServiceTest {
 
     /**
      * Verifies that credentials are successfully loaded from file during startup.
-     * 
+     *
      * @param ctx The test context.
      */
     @SuppressWarnings({ "unchecked", "rawtypes" })
@@ -223,7 +223,7 @@ public class FileBasedCredentialsServiceTest {
     /**
      * Verifies that the file written by the registry when persisting the registry's contents can
      * be loaded in again.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @SuppressWarnings({ "unchecked", "rawtypes" })
@@ -289,7 +289,7 @@ public class FileBasedCredentialsServiceTest {
 
     /**
      * Verifies that only one set of credentials can be registered for an auth-id and type (per tenant).
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
@@ -312,7 +312,7 @@ public class FileBasedCredentialsServiceTest {
 
     /**
      * Verifies that the service returns 404 if a client wants to retrieve non-existing credentials.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
@@ -328,7 +328,7 @@ public class FileBasedCredentialsServiceTest {
 
     /**
      * Verifies that the service returns existing credentials.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
@@ -394,7 +394,7 @@ public class FileBasedCredentialsServiceTest {
 
     /**
      * Verifies that the service removes credentials for a given auth-id and type.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
@@ -414,7 +414,7 @@ public class FileBasedCredentialsServiceTest {
     /**
      * Verifies that the service removes all credentials for a device but keeps credentials
      * of other devices.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
@@ -437,7 +437,7 @@ public class FileBasedCredentialsServiceTest {
 
     /**
      * Verifies that the <em>modificationEnabled</em> property prevents updating an existing entry.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
@@ -461,7 +461,7 @@ public class FileBasedCredentialsServiceTest {
 
     /**
      * Verifies that the <em>modificationEnabled</em> property prevents removing an existing entry.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
@@ -484,7 +484,7 @@ public class FileBasedCredentialsServiceTest {
     }
 
     private static void assertRegistered(
-            final CredentialsService svc,
+            final CompleteCredentialsService svc,
             final String tenant,
             final String authId,
             final String type,
@@ -499,7 +499,7 @@ public class FileBasedCredentialsServiceTest {
     }
 
     private static void assertNotRegistered(
-            final CredentialsService svc,
+            final CompleteCredentialsService svc,
             final String tenant,
             final String authId,
             final String type,
@@ -514,7 +514,7 @@ public class FileBasedCredentialsServiceTest {
     }
 
     private static void register(
-            final CredentialsService svc,
+            final CompleteCredentialsService svc,
             final String tenant,
             final String deviceId,
             final String authId,
@@ -524,7 +524,7 @@ public class FileBasedCredentialsServiceTest {
     }
 
     private static void register(
-            final CredentialsService svc,
+            final CompleteCredentialsService svc,
             final String tenant,
             final String deviceId,
             final String authId,

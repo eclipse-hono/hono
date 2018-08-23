@@ -23,7 +23,7 @@ import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.eclipse.hono.service.credentials.BaseCredentialsService;
+import org.eclipse.hono.service.credentials.CompleteBaseCredentialsService;
 import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsResult;
@@ -49,7 +49,7 @@ import io.vertx.core.json.JsonObject;
  */
 @Repository
 @ConditionalOnProperty(name = "hono.app.type", havingValue = "file", matchIfMissing = true)
-public final class FileBasedCredentialsService extends BaseCredentialsService<FileBasedCredentialsConfigProperties> {
+public final class FileBasedCredentialsService extends CompleteBaseCredentialsService<FileBasedCredentialsConfigProperties> {
 
     /**
      * The name of the JSON array within a tenant that contains the credentials.
