@@ -15,6 +15,9 @@ package org.eclipse.hono.adapter.coap;
 import java.io.File;
 import java.net.HttpURLConnection;
 import java.net.InetSocketAddress;
+import java.security.Principal;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
 
 import org.apache.qpid.proton.message.Message;
@@ -26,6 +29,8 @@ import org.eclipse.californium.core.network.CoapEndpoint;
 import org.eclipse.californium.core.network.Endpoint;
 import org.eclipse.californium.core.network.config.NetworkConfig;
 import org.eclipse.californium.core.server.resources.CoapExchange;
+import org.eclipse.californium.scandium.DTLSConnector;
+import org.eclipse.californium.scandium.config.DtlsConnectorConfig;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
@@ -60,8 +65,13 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
      * COAP server. Created from blocking execution, therefore use volatile.
      */
     private CoapServer server;
+    private volatile Endpoint secureEndpoint;
     private volatile Endpoint insecureEndpoint;
     private CoapAdapterMetrics metrics;
+    /**
+     * Map for authorization handler.
+     */
+    protected final Map<Class<? extends Principal>, CoapAuthenticationHandler> authenticationHandlerMap = new HashMap<Class<? extends Principal>, CoapAuthenticationHandler>();
 
     /**
      * Sets the metrics for this service.
@@ -91,7 +101,12 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
 
     @Override
     protected final int getActualPort() {
-        return Constants.PORT_UNCONFIGURED;
+        int port = Constants.PORT_UNCONFIGURED;
+        final Endpoint endpoint = secureEndpoint;
+        if (endpoint != null) {
+            port = endpoint.getAddress().getPort();
+        }
+        return port;
     }
 
     @Override
@@ -102,6 +117,16 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
             port = endpoint.getAddress().getPort();
         }
         return port;
+    }
+
+    /**
+     * Get authentication handler for the type of the provided principal.
+     * 
+     * @param principal principal to be authenticated
+     * @return authentication handler, or {@code null}, if no handler is available for this principal or no principal was provided.
+     */
+    protected CoapAuthenticationHandler getAuthenticationHandler(final Principal principal) {
+        return principal == null ? null : authenticationHandlerMap.get(principal.getClass());
     }
 
     /**
@@ -137,6 +162,11 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
             // access environment using the context of this vertx and
             // load it into finals to access them within the executeBlocking
             final CoapAdapterProperties config = getConfig();
+            final CoapPreSharedKeyHandler coapPreSharedKeyProvider = new CoapPreSharedKeyHandler(getVertx(), config,
+                    getCredentialsServiceClient());
+            // add handler to authentication handler map.
+            authenticationHandlerMap.put(coapPreSharedKeyProvider.getType(), coapPreSharedKeyProvider);
+            final NetworkConfig secureNetworkConfig = getSecureNetworkConfig();
             final NetworkConfig insecureNetworkConfig = getInsecureNetworkConfig();
             final Context adapterContext = this.context;
             final CoapServer server = this.server;
@@ -146,6 +176,24 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                 // Call some potential blocking API
                 final CoapServer startingServer = server == null ? new CoapServer(insecureNetworkConfig) : server;
                 addResources(adapterContext, startingServer);
+                final DtlsConnectorConfig.Builder dtlsConfig = new DtlsConnectorConfig.Builder();
+                dtlsConfig.setClientAuthenticationRequired(config.isAuthenticationRequired());
+                dtlsConfig.setConnectionThreadCount(config.getConnectorThreads());
+                dtlsConfig.setAddress(
+                        new InetSocketAddress(config.getBindAddress(), config.getPort(getPortDefaultValue())));
+                if (coapPreSharedKeyProvider != null) {
+                    dtlsConfig.setPskStore(coapPreSharedKeyProvider);
+                }
+                Endpoint secureEndpoint = null;
+                try {
+                    final CoapEndpoint.CoapEndpointBuilder builder = new CoapEndpoint.CoapEndpointBuilder();
+                    builder.setNetworkConfig(secureNetworkConfig);
+                    builder.setConnector(new DTLSConnector(dtlsConfig.build()));
+                    secureEndpoint = builder.build();
+                    startingServer.addEndpoint(secureEndpoint);
+                } catch (IllegalStateException ex) {
+                    LOG.warn("Failed to create secure endpoint!", ex);
+                }
                 Endpoint insecureEndpoint = null;
                 if (config.isInsecurePortEnabled()) {
                     if (config.isAuthenticationRequired()) {
@@ -160,6 +208,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                     }
                 }
                 startingServer.start();
+                this.secureEndpoint = secureEndpoint;
                 this.insecureEndpoint = insecureEndpoint;
                 future.complete(startingServer);
             }, res -> {
@@ -202,6 +251,27 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
      */
     protected void onStartupSuccess() {
         // empty
+    }
+
+    /**
+     * Get the coap network configuration for the secure endpoint.
+     * 
+     * Creates a coap network configuration setup with defaults. If the {@link CoapAdapterProperties} provides a
+     * filename in "networkConfig", load that available values from that file overwriting existing values. If the
+     * {@link CoapAdapterProperties} provides a filename in "secureNetworkConfig", load that available values from that
+     * file also overwriting existing values.
+     * 
+     * @return coap network configuration for the secure endpoint.
+     */
+    protected NetworkConfig getSecureNetworkConfig() {
+        final CoapAdapterProperties config = getConfig();
+        final NetworkConfig networkConfig = new NetworkConfig();
+        networkConfig.setInt(NetworkConfig.Keys.PROTOCOL_STAGE_THREAD_COUNT, config.getCoapThreads());
+        networkConfig.setInt(NetworkConfig.Keys.NETWORK_STAGE_RECEIVER_THREAD_COUNT, config.getConnectorThreads());
+        networkConfig.setInt(NetworkConfig.Keys.NETWORK_STAGE_SENDER_THREAD_COUNT, config.getConnectorThreads());
+        loadNetworkConfig(config.getNetworkConfig(), networkConfig);
+        loadNetworkConfig(config.getSecureNetworkConfig(), networkConfig);
+        return networkConfig;
     }
 
     /**
@@ -350,7 +420,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
      * error.</li>
      * <li>5.03 (Service Unavailable) - if the message could not be sent to the Hono server, e.g. due to lack of
      * connection or credit.</li>
-     * <li>?.?? (Generic mapped HTPP error) - if the message could not be sent caused by an specific processing error.
+     * <li>?.?? (Generic mapped HTTP error) - if the message could not be sent caused by an specific processing error.
      * See {@link CoapErrorResponse}.</li>
      * </ul>
      * 
@@ -375,12 +445,12 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
             exchange.respond(ResponseCode.NOT_ACCEPTABLE);
         } else {
 
-            final Future<JsonObject> tokenTracker = getRegistrationAssertion(device.getTenantId(), device.getDeviceId(),
-                    authenticatedDevice);
-            final Future<TenantObject> tenantConfigTracker = getTenantConfiguration(device.getTenantId());
-
+            final Future<JsonObject> tokenTracker = getRegistrationAssertion(
+                    device.getTenantId(), device.getDeviceId(),
+                    authenticatedDevice,
+                    null);
+            final Future<TenantObject> tenantConfigTracker = getTenantConfiguration(device.getTenantId(), null);
             CompositeFuture.all(tokenTracker, senderTracker, tenantConfigTracker).compose(ok -> {
-
                 if (tenantConfigTracker.result().isAdapterEnabled(getTypeName())) {
                     final MessageSender sender = senderTracker.result();
                     final Message downstreamMessage = newMessage(

@@ -22,6 +22,16 @@ import org.eclipse.californium.core.server.resources.CoapExchange;
 public interface CoapRequestHandler {
 
     /**
+     * Handle COAP POST request.
+     * 
+     * Called, when a COAP POST request is forwarded to vertx.
+     * 
+     * @param exchange coap exchange of request
+     * @see CoapResource#handlePOST(CoapExchange)
+     */
+    void handlePOST(CoapExchange exchange);
+
+    /**
      * Handle COAP PUT request.
      * 
      * Called, when a COAP PUT request is forwarded to vertx.

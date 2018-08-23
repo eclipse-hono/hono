@@ -47,7 +47,7 @@ public class ExtendedDevice {
     @Override
     public String toString() {
         if (authenticatedDevice == null || originDevice == null) {
-            return "unauthenticated";
+            return "unknown";
         }
         if (authenticatedDevice == originDevice) {
             return authenticatedDevice.toString();
