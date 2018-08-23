@@ -79,8 +79,8 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     protected static final String CONTENT_TYPE_OCTET_STREAM = "application/octet-stream";
 
     private HonoClient messagingClient;
-    private HonoClient registrationClient;
-    private HonoClient tenantClient;
+    private HonoClient registrationServiceClient;
+    private HonoClient tenantServiceClient;
     private HonoClient credentialsServiceClient;
     private CommandConnection commandConnection;
 
@@ -107,7 +107,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     @Qualifier(TenantConstants.TENANT_ENDPOINT)
     @Autowired
     public final void setTenantServiceClient(final HonoClient tenantClient) {
-        this.tenantClient = Objects.requireNonNull(tenantClient);
+        this.tenantServiceClient = Objects.requireNonNull(tenantClient);
     }
 
     /**
@@ -116,7 +116,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * @return The client.
      */
     public final HonoClient getTenantServiceClient() {
-        return tenantClient;
+        return tenantServiceClient;
     }
 
     /**
@@ -158,7 +158,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     @Qualifier(RegistrationConstants.REGISTRATION_ENDPOINT)
     @Autowired
     public final void setRegistrationServiceClient(final HonoClient registrationServiceClient) {
-        this.registrationClient = Objects.requireNonNull(registrationServiceClient);
+        this.registrationServiceClient = Objects.requireNonNull(registrationServiceClient);
     }
 
     /**
@@ -167,7 +167,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * @return The client.
      */
     public final HonoClient getRegistrationServiceClient() {
-        return registrationClient;
+        return registrationServiceClient;
     }
 
     /**
@@ -273,6 +273,17 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         return this.commandConnection;
     }
 
+    /**
+     * Establishes the connections to the services this adapter depends on.
+     * <p>
+     * Note that the connections will most likely not have been established when the
+     * returned future completes. The {@link #isConnected()} method can be used to
+     * determine the current connection status.
+     * 
+     * @return A future indicating the outcome of the startup process. the future will
+     *         fail if the {@link #getTypeName()} method returns {@code null} or an empty string
+     *         or if any of the service clients are not set. Otherwise the future will succeed.
+     */
     @Override
     protected final Future<Void> startInternal() {
 
@@ -280,20 +291,20 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
 
         if (Strings.isNullOrEmpty(getTypeName())) {
             result.fail(new IllegalStateException("adapter does not define a typeName"));
-        } else if (tenantClient == null) {
+        } else if (tenantServiceClient == null) {
             result.fail(new IllegalStateException("Tenant service client must be set"));
         } else if (messagingClient == null) {
             result.fail(new IllegalStateException("Hono Messaging client must be set"));
-        } else if (registrationClient == null) {
+        } else if (registrationServiceClient == null) {
             result.fail(new IllegalStateException("Device Registration service client must be set"));
         } else if (credentialsServiceClient == null) {
             result.fail(new IllegalStateException("Credentials service client must be set"));
         } else if (commandConnection == null) {
-            result.fail(new IllegalStateException("Command and Control service client must be set"));
+            result.fail(new IllegalStateException("Command & Control service client must be set"));
         } else {
-            connectToService(tenantClient, "Tenant service");
+            connectToService(tenantServiceClient, "Tenant service");
             connectToService(messagingClient, "Messaging");
-            connectToService(registrationClient, "Device Registration service");
+            connectToService(registrationServiceClient, "Device Registration service");
             connectToService(credentialsServiceClient, "Credentials service");
             connectToService(commandConnection, "Command and Control service");
             doStart(result);
@@ -336,9 +347,9 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     private CompositeFuture closeServiceClients() {
 
         return CompositeFuture.all(
-                closeServiceClient(tenantClient),
+                closeServiceClient(tenantServiceClient),
                 closeServiceClient(messagingClient),
-                closeServiceClient(registrationClient),
+                closeServiceClient(registrationServiceClient),
                 closeServiceClient(credentialsServiceClient));
     }
 
@@ -423,8 +434,9 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
 
     /**
      * Checks if this adapter is connected to the services it depends on.
-     *
-     * <em>Hono Messaging</em> and the <em>Device Registration</em> service.
+     * <p>
+     * Subclasses may override this method in order to add checks or omit checks for
+     * connection to services that are not used/needed by the adapter.
      *
      * @return A future indicating the outcome of the check. The future will succeed if this adapter is currently
      *         connected to
@@ -432,26 +444,30 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      *         <li>a Tenant service</li>
      *         <li>a Device Registration service</li>
      *         <li>a Credentials service</li>
-     *         <li>a service implementing the Telemetry &amp; Event APIs</li>
+     *         <li>a service implementing the south bound Telemetry &amp; Event APIs</li>
+     *         <li>a service implementing the south bound Command &amp; Control API</li>
      *         </ul>
      *         Otherwise, the future will fail.
      */
-    protected final Future<Void> isConnected() {
+    protected Future<Void> isConnected() {
 
-        final Future<Void> tenantCheck = Optional.ofNullable(tenantClient)
+        final Future<Void> tenantCheck = Optional.ofNullable(tenantServiceClient)
                 .map(client -> client.isConnected())
                 .orElse(Future.failedFuture(new IllegalStateException("Tenant service client is not set")));
-        final Future<Void> messagingCheck = Optional.ofNullable(messagingClient)
-                .map(client -> client.isConnected())
-                .orElse(Future.failedFuture(new IllegalStateException("Messaging client is not set")));
-        final Future<Void> registrationCheck = Optional.ofNullable(registrationClient)
+        final Future<Void> registrationCheck = Optional.ofNullable(registrationServiceClient)
                 .map(client -> client.isConnected())
                 .orElse(Future
                         .failedFuture(new IllegalStateException("Device Registration service client is not set")));
         final Future<Void> credentialsCheck = Optional.ofNullable(credentialsServiceClient)
                 .map(client -> client.isConnected())
                 .orElse(Future.failedFuture(new IllegalStateException("Credentials service client is not set")));
-        return CompositeFuture.all(tenantCheck, messagingCheck, registrationCheck, credentialsCheck).compose(ok -> {
+        final Future<Void> messagingCheck = Optional.ofNullable(messagingClient)
+                .map(client -> client.isConnected())
+                .orElse(Future.failedFuture(new IllegalStateException("Messaging client is not set")));
+        final Future<Void> commandCheck = Optional.ofNullable(commandConnection)
+                .map(client -> client.isConnected())
+                .orElse(Future.failedFuture(new IllegalStateException("Command & Control client is not set")));
+        return CompositeFuture.all(tenantCheck, registrationCheck, credentialsCheck, messagingCheck, commandCheck).compose(ok -> {
             return Future.succeededFuture();
         });
     }
@@ -846,8 +862,9 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     }
 
     /**
-     * Registers a check that succeeds if this component is connected to Hono Messaging, the Tenant Service, the Device
-     * Registration and the Credentials service.
+     * Registers a check that succeeds if this component is connected to the services it depends on.
+     * 
+     * @see #isConnected()
      */
     @Override
     public void registerReadinessChecks(final HealthCheckHandler handler) {
@@ -867,6 +884,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * the vert.x event loop of this protocol adapter is not blocked.
      *
      * @param handler The health check handler to register the checks with.
+     * @see #registerEventLoopBlockedCheck(HealthCheckHandler)
      */
     @Override
     public void registerLivenessChecks(final HealthCheckHandler handler) {
