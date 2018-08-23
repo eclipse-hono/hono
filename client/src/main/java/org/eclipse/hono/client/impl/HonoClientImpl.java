@@ -449,7 +449,6 @@ public class HonoClientImpl implements HonoClient {
     protected void clearState() {
 
         setConnection(null);
-        offeredCapabilities = Collections.emptyList();
 
         activeSenders.clear();
         activeRequestResponseClients.clear();
