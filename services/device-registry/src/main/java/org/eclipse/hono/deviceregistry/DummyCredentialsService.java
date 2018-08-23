@@ -50,4 +50,9 @@ public final class DummyCredentialsService extends BaseCredentialsService<Object
                 CredentialsResult.from(HttpURLConnection.HTTP_OK, JsonObject.mapFrom(result), CacheDirective.noCacheDirective())));
     }
 
+    @Override
+    public void getAll(final String tenantId, final String deviceId, final Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
+        get(tenantId, null, null, resultHandler);
+    }
+
 }
