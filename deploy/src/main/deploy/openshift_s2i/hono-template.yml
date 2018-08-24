@@ -1357,7 +1357,10 @@ objects:
     name: hono-service-device-registry-http
   spec:
     port:
-      targetPort: 8080
+      targetPort: http
+    tls:
+      insecureEdgeTerminationPolicy: Allow
+      termination: edge
     to:
       kind: Service
       name: hono-service-device-registry
@@ -1370,7 +1373,7 @@ objects:
     name: hono-service-device-registry-https
   spec:
     port:
-      targetPort: 8443
+      targetPort: https
     tls:
       termination: passthrough
     to:

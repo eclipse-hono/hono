@@ -237,6 +237,9 @@ objects:
   spec:
     port:
       targetPort: 3000-tcp
+    tls:
+      insecureEdgeTerminationPolicy: Allow
+      termination: edge
     to:
       kind: Service
       name: grafana
