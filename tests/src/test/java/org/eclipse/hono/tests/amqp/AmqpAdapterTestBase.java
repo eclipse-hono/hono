@@ -11,10 +11,15 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 package org.eclipse.hono.tests.amqp;
+import java.security.GeneralSecurityException;
+import java.security.KeyPair;
+import java.util.Base64;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.function.Function;
+
+import javax.security.auth.x500.X500Principal;
 
 import org.apache.qpid.proton.amqp.messaging.Accepted;
 import org.apache.qpid.proton.amqp.messaging.Rejected;
@@ -26,6 +31,7 @@ import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.tests.client.ClientTestBase;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantObject;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -41,6 +47,7 @@ import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
+import io.vertx.core.json.JsonObject;
 import io.vertx.core.net.PemTrustOptions;
 import io.vertx.core.net.SelfSignedCertificate;
 import io.vertx.ext.unit.Async;
@@ -62,10 +69,20 @@ public abstract class AmqpAdapterTestBase extends ClientTestBase {
     private static final String DEVICE_PASSWORD = "device-password";
     private static final String INVALID_CONTENT_TYPE = "application/vnd.eclipse-hono-empty-notification";
 
+    /**
+     * Support outputting current test's name.
+     */
     @Rule
     public TestName testName = new TestName();
 
+    /**
+     * A helper for accessing the AMQP 1.0 Messaging Network and
+     * for managing tenants/devices/credentials.
+     */
     protected static IntegrationTestSupport helper;
+    /**
+     * The connection established between the device and the AMQP adapter.
+     */
     protected ProtonConnection connection;
 
     private ProtonSender sender;
@@ -317,7 +334,7 @@ public abstract class AmqpAdapterTestBase extends ClientTestBase {
             tenant.setTrustAnchor(cert.getPublicKey(), cert.getSubjectX500Principal());
             return helper.registry.addDeviceForTenant(tenant, deviceId, cert);
         }).compose(ok -> connectToAdapter(deviceCert))
-        .compose(con -> createProducer(new Target()))        
+        .compose(con -> createProducer(new Target()))
         .map(s -> {
             sender = s;
             setup.complete();
@@ -330,6 +347,82 @@ public abstract class AmqpAdapterTestBase extends ClientTestBase {
         setup.await();
 
         testUploadMessages(tenantId, ctx);
+    }
+
+    /**
+     * Verifies that the adapter fails to authorize a device using a client certificate
+     * if the public key that is registered for the tenant that the device belongs to can
+     * not be parsed into a trust anchor.
+     * 
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testUploadFailsForMalformedCaPublicKey(final TestContext ctx) {
+
+        final String tenantId = helper.getRandomTenantId();
+        final String deviceId = helper.getRandomDeviceId(tenantId);
+        final TenantObject tenant = TenantObject.from(tenantId, true);
+
+        // GIVEN a tenant configured with an invalid Base64 encoding of the
+        // trust anchor public key
+        helper.getCertificate(deviceCert.certificatePath())
+        .compose(cert -> {
+            tenant.setProperty(
+                    TenantConstants.FIELD_PAYLOAD_TRUSTED_CA,
+                    new JsonObject()
+                        .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, cert.getIssuerX500Principal().getName(X500Principal.RFC2253))
+                        .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, "notBase64"));
+            return helper.registry.addDeviceForTenant(tenant, deviceId, cert);
+        })
+        .compose(ok -> {
+            // WHEN a device tries to connect to the adapter
+            // using a client certificate
+            return connectToAdapter(deviceCert);
+        })
+        .setHandler(ctx.asyncAssertFailure(t -> {
+            // THEN the connection is not established
+            ctx.assertTrue(t instanceof SecurityException);
+        }));
+    }
+
+    /**
+     * Verifies that the adapter fails to authenticate a device if the device's client
+     * certificate's signature cannot be validated using the trust anchor that is registered
+     * for the tenant that the device belongs to.
+     *
+     * @param ctx The test context.
+     * @throws GeneralSecurityException if the tenant's trust anchor cannot be generated
+     */
+    @Test
+    public void testConnectFailsForFailsForNonMatchingTrustAnchor(final TestContext ctx) throws GeneralSecurityException {
+
+        final String tenantId = helper.getRandomTenantId();
+        final String deviceId = helper.getRandomDeviceId(tenantId);
+        final TenantObject tenant = TenantObject.from(tenantId, true);
+
+        final KeyPair keyPair = helper.newEcKeyPair();
+
+        // GIVEN a tenant configured with a trust anchor
+        helper.getCertificate(deviceCert.certificatePath())
+        .compose(cert -> {
+            tenant.setProperty(
+                    TenantConstants.FIELD_PAYLOAD_TRUSTED_CA,
+                    new JsonObject()
+                        .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, cert.getIssuerX500Principal().getName(X500Principal.RFC2253))
+                        .put(TenantConstants.FIELD_ADAPTERS_TYPE, "EC")
+                        .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, Base64.getEncoder().encodeToString(keyPair.getPublic().getEncoded())));
+            return helper.registry.addDeviceForTenant(tenant, deviceId, cert);
+        })
+        .compose(ok -> {
+            // WHEN a device tries to connect to the adapter
+            // using a client certificate that cannot be validated
+            // using the trust anchor registered for the device's tenant
+            return connectToAdapter(deviceCert);
+        })
+        .setHandler(ctx.asyncAssertFailure(t -> {
+            // THEN the connection is not established
+            ctx.assertTrue(t instanceof SecurityException);
+        }));
     }
 
     //------------------------------------------< private methods >---

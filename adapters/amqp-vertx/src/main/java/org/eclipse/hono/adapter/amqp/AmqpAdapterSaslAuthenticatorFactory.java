@@ -12,7 +12,9 @@
  *******************************************************************************/
 package org.eclipse.hono.adapter.amqp;
 
+import java.security.GeneralSecurityException;
 import java.security.cert.Certificate;
+import java.security.cert.TrustAnchor;
 import java.security.cert.X509Certificate;
 import java.util.Collections;
 import java.util.Objects;
@@ -213,22 +215,29 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
             } else {
 
                 final X509Certificate deviceCert = (X509Certificate) peerCertificateChain[0];
-                final String subjectDn = deviceCert.getSubjectX500Principal().getName(X500Principal.RFC2253);
-
-                LOG.debug("Authenticating client certificate [Subject DN: {}]", subjectDn);
+                if (LOG.isDebugEnabled()) {
+                    final String subjectDn = deviceCert.getSubjectX500Principal().getName(X500Principal.RFC2253);
+                    LOG.debug("Authenticating client certificate [Subject DN: {}]", subjectDn);
+                }
 
                 final Future<TenantObject> tenantTracker = getTenantObject(deviceCert.getIssuerX500Principal());
                 tenantTracker
-                        .compose(tenant -> getValidator().validate(Collections.singletonList(deviceCert),
-                                tenant.getTrustAnchor()))
+                        .compose(tenant -> {
+                            try {
+                                final TrustAnchor trustAnchor = tenant.getTrustAnchor();
+                                return getValidator().validate(Collections.singletonList(deviceCert), trustAnchor);
+                            } catch(final GeneralSecurityException e) {
+                                return Future.failedFuture(e);
+                            }
+                        })
                         .map(validPath -> {
                             final String tenantId = tenantTracker.result().getTenantId();
-                            final DeviceCredentials credentials = SubjectDnCredentials.create(tenantId, subjectDn);
+                            final DeviceCredentials credentials = SubjectDnCredentials.create(tenantId, deviceCert.getSubjectX500Principal());
                             getCertificateAuthProvider().authenticate(credentials, completer);
-                            return Future.succeededFuture();
-                        }).recover(t -> {
+                            return null;
+                        }).otherwise(t -> {
                             completer.handle(Future.failedFuture(new CredentialException(t.getMessage())));
-                            return Future.failedFuture(t);
+                            return null;
                         });
             }
         }

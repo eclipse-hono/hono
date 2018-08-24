@@ -15,6 +15,8 @@ package org.eclipse.hono.tests.http;
 
 import java.net.HttpURLConnection;
 import java.nio.charset.StandardCharsets;
+import java.security.GeneralSecurityException;
+import java.security.KeyPair;
 import java.util.Base64;
 import java.util.Optional;
 import java.util.UUID;
@@ -23,6 +25,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Function;
+
+import javax.security.auth.x500.X500Principal;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.MessageConsumer;
@@ -128,8 +132,10 @@ public abstract class HttpTestBase {
      * The BASIC Auth header value created for the random device.
      */
     protected String authorization;
-
-    private SelfSignedCertificate deviceCert;
+    /**
+     * The self-signed certificate that a device may use for authentication.
+     */
+    protected SelfSignedCertificate deviceCert;
 
     /**
      * Sets up clients.
@@ -413,6 +419,95 @@ public abstract class HttpTestBase {
             logger.info("sent {} and received {} messages after {} milliseconds",
                     messageCount, numberOfMessages - received.getCount(), System.currentTimeMillis() - start);
         }
+    }
+
+    /**
+     * Verifies that the adapter fails to authorize a device using a client certificate
+     * if the public key that is registered for the tenant that the device belongs to can
+     * not be parsed into a trust anchor.
+     * 
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testUploadFailsForMalformedCaPublicKey(final TestContext ctx) {
+
+        final Async setup = ctx.async();
+        final TenantObject tenant = TenantObject.from(tenantId, true);
+        final MultiMap requestHeaders = MultiMap.caseInsensitiveMultiMap()
+                .add(HttpHeaders.CONTENT_TYPE, "text/plain")
+                .add(HttpHeaders.ORIGIN, ORIGIN_URI);
+
+        // GIVEN a tenant configured with an invalid Base64 encoding of the
+        // trust anchor public key
+        helper.getCertificate(deviceCert.certificatePath())
+        .compose(cert -> {
+            tenant.setProperty(
+                    TenantConstants.FIELD_PAYLOAD_TRUSTED_CA,
+                    new JsonObject()
+                        .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, cert.getIssuerX500Principal().getName(X500Principal.RFC2253))
+                        .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, "notBase64"));
+            return helper.registry.addDeviceForTenant(tenant, deviceId, cert);
+        })
+        .setHandler(ctx.asyncAssertSuccess(ok -> setup.complete()));
+        setup.await();
+
+        // WHEN a device tries to upload data and authenticate with a client
+        // certificate that has been signed with the configured trusted CA
+        httpClientWithClientCert.create(
+                getEndpointUri(),
+                Buffer.buffer("hello"),
+                requestHeaders,
+                response -> response.statusCode() == HttpURLConnection.HTTP_ACCEPTED).setHandler(ctx.asyncAssertFailure(t -> {
+                    // THEN the request fails with a 401
+                    ctx.assertTrue(t instanceof ServiceInvocationException);
+                    ctx.assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED, ((ServiceInvocationException) t).getErrorCode());
+                }));
+    }
+
+    /**
+     * Verifies that the adapter fails to authenticate a device if the device's client
+     * certificate's signature cannot be validated using the trust anchor that is registered
+     * for the tenant that the device belongs to.
+     * 
+     * @param ctx The vert.x test context.
+     * @throws GeneralSecurityException if the tenant's trust anchor cannot be generated
+     */
+    @Test
+    public void testUploadFailsForNonMatchingTrustAnchor(final TestContext ctx) throws GeneralSecurityException {
+
+        final Async setup = ctx.async();
+        final TenantObject tenant = TenantObject.from(tenantId, true);
+        final MultiMap requestHeaders = MultiMap.caseInsensitiveMultiMap()
+                .add(HttpHeaders.CONTENT_TYPE, "text/plain")
+                .add(HttpHeaders.ORIGIN, ORIGIN_URI);
+
+        final KeyPair keyPair = helper.newEcKeyPair();
+
+        // GIVEN a tenant configured with a trust anchor
+        helper.getCertificate(deviceCert.certificatePath())
+        .compose(cert -> {
+            tenant.setProperty(
+                    TenantConstants.FIELD_PAYLOAD_TRUSTED_CA,
+                    new JsonObject()
+                        .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, cert.getIssuerX500Principal().getName(X500Principal.RFC2253))
+                        .put(TenantConstants.FIELD_ADAPTERS_TYPE, "EC")
+                        .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, Base64.getEncoder().encodeToString(keyPair.getPublic().getEncoded())));
+            return helper.registry.addDeviceForTenant(tenant, deviceId, cert);
+        })
+        .setHandler(ctx.asyncAssertSuccess(ok -> setup.complete()));
+        setup.await();
+
+        // WHEN a device tries to upload data and authenticate with a client
+        // certificate that has not been signed with the configured trusted CA
+        httpClientWithClientCert.create(
+                getEndpointUri(),
+                Buffer.buffer("hello"),
+                requestHeaders,
+                response -> response.statusCode() == HttpURLConnection.HTTP_ACCEPTED).setHandler(ctx.asyncAssertFailure(t -> {
+                    // THEN the request fails with a 401
+                    ctx.assertTrue(t instanceof ServiceInvocationException);
+                    ctx.assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED, ((ServiceInvocationException) t).getErrorCode());
+                }));
     }
 
     /**

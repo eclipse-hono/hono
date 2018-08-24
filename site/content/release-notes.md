@@ -2,11 +2,15 @@
 title = "Release Notes"
 +++
 
-## 0.8-M1
+## 0.8-M1 (Not released yet)
 
 ### Fixes & Enhancements
 
 * Hono-cli extends support to Command & Control. Using command line, users can send commands to devices and receive command responses.  See [Using Cli for command & control]({{< relref "getting-started.md#using-cli-command-line-interface-to-send-commands-and-receive-command-responses" >}}) for more information.
+
+### API Changes
+
+* The `org.eclipse.hono.util.TenantObject`'s *getTrustAnchor* method now throws a `GeneralSecurityException` to indicate a problem with decoding/parsing the certificate or public key that is configured as the trusted CA for the tenant. This allows client code to get some insight into the reason for the failure to authenticate a device based on a client certificate.
 
 ## 0.7
 

@@ -16,6 +16,9 @@ package org.eclipse.hono.tests;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.net.InetAddress;
+import java.security.GeneralSecurityException;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.util.HashMap;
@@ -448,6 +451,18 @@ public final class IntegrationTestSupport {
                 throw new IllegalArgumentException("file cannot be parsed into X.509 certificate");
             }
         });
+    }
+
+    /**
+     * Creates a new EC based private/public key pair.
+     * 
+     * @return The key pair.
+     * @throws GeneralSecurityException if the JVM doesn't support ECC.
+     */
+    public KeyPair newEcKeyPair() throws GeneralSecurityException {
+
+        final KeyPairGenerator gen = KeyPairGenerator.getInstance("EC");
+        return gen.generateKeyPair();
     }
 
     //----------------------------------< private methods >---

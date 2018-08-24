@@ -20,8 +20,10 @@ import java.security.PublicKey;
 import java.security.cert.CertificateEncodingException;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
+import java.security.cert.CertificateParsingException;
 import java.security.cert.TrustAnchor;
 import java.security.cert.X509Certificate;
+import java.security.spec.InvalidKeySpecException;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.Base64;
 import java.util.HashMap;
@@ -227,28 +229,30 @@ public final class TenantObject {
      * {@code -----BEGIN CERTIFICATE-----} and trailing {@code -----END CERTIFICATE-----}.
      * 
      * @return The certificate or {@code null} if no certificate authority
-     *         has been set or the certificate is not DER encoded.
+     *         has been set.
+     * @throws CertificateException if the value of <em>cert</em> property cannot be parsed into
+     *             an X.509 certificate.
      */
     @JsonIgnore
-    public X509Certificate getTrustedCertificateAuthority() {
+    public X509Certificate getTrustedCertificateAuthority() throws CertificateException {
 
         final JsonObject trustedCa = getProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA);
         if (trustedCa == null) {
             return null;
         } else {
-            return Optional.ofNullable(trustedCa.getValue(TenantConstants.FIELD_PAYLOAD_CERT)).map(obj -> {
-                if (obj instanceof String) {
-                    try {
-                        final CertificateFactory factory = CertificateFactory.getInstance("X.509");
-                        final byte[] derEncodedCert = Base64.getDecoder().decode(((String) obj));
-                        return (X509Certificate) factory.generateCertificate(new ByteArrayInputStream(derEncodedCert));
-                    } catch (CertificateException e) {
-                        return null;
-                    }
-                } else {
-                    return null;
+            final Object obj = trustedCa.getValue(TenantConstants.FIELD_PAYLOAD_CERT);
+            if (obj instanceof String) {
+                try {
+                    final byte[] derEncodedCert = Base64.getDecoder().decode(((String) obj));
+                    final CertificateFactory factory = CertificateFactory.getInstance("X.509");
+                    return (X509Certificate) factory.generateCertificate(new ByteArrayInputStream(derEncodedCert));
+                } catch (final IllegalArgumentException e) {
+                    // Base64 decoding failed
+                    throw new CertificateParsingException("cannot decode Base64 encoded certificate", e);
                 }
-            }).orElse(null);
+            } else {
+                return null;
+            }
         }
     }
 
@@ -273,9 +277,12 @@ public final class TenantObject {
      * 
      * @return The trust anchor or {@code null} if no trusted certificate authority
      *         has been set.
+     * @throws GeneralSecurityException if the value of the <em>trusted-ca</em> property
+     *             cannot be parsed into a trust anchor, e.g. because of unsupported
+     *             key type, malformed certificate or public key encoding etc. 
      */
     @JsonIgnore
-    public TrustAnchor getTrustAnchor() {
+    public TrustAnchor getTrustAnchor() throws GeneralSecurityException {
 
         if (trustAnchor != null) {
             return trustAnchor;
@@ -291,7 +298,7 @@ public final class TenantObject {
     }
 
     @JsonIgnore
-    private TrustAnchor getTrustAnchorForPublicKey(final JsonObject keyProps) {
+    private TrustAnchor getTrustAnchorForPublicKey(final JsonObject keyProps) throws GeneralSecurityException {
 
         if (keyProps == null) {
             return null;
@@ -308,8 +315,9 @@ public final class TenantObject {
                     final PublicKey publicKey = factory.generatePublic(keySpec);
                     trustAnchor = new TrustAnchor(subjectDn, publicKey, null);
                     return trustAnchor;
-                } catch (GeneralSecurityException e) {
-                    return null;
+                } catch (final IllegalArgumentException e) {
+                    // Base64 decoding failed
+                    throw new InvalidKeySpecException("cannot decode Base64 encoded public key", e);
                 }
             }
         }

@@ -14,14 +14,17 @@
 package org.eclipse.hono.util;
 
 import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.security.GeneralSecurityException;
 import java.security.KeyStore;
-import java.security.cert.CertificateEncodingException;
 import java.security.cert.TrustAnchor;
 import java.security.cert.X509Certificate;
 
@@ -122,10 +125,10 @@ public class TenantObjectTest {
     /**
      * Verifies that the trust anchor uses the configured trusted CA certificate.
      * 
-     * @throws CertificateEncodingException if the certificate cannot be DER encoded.
+     * @throws GeneralSecurityException if the certificate cannot be DER encoded.
      */
     @Test
-    public void testGetTrustAnchorUsesCertificate() throws CertificateEncodingException {
+    public void testGetTrustAnchorUsesCertificate() throws GeneralSecurityException {
 
         final X509Certificate trustedCaCert = getCaCertificate();
         final TenantObject obj = TenantObject.from(Constants.DEFAULT_TENANT, Boolean.TRUE)
@@ -137,9 +140,11 @@ public class TenantObjectTest {
 
     /**
      * Verifies that the trust anchor uses the configured trusted CA's public key and subject DN.
+     * 
+     * @throws GeneralSecurityException if the certificate cannot be DER encoded.
      */
     @Test
-    public void testGetTrustAnchorUsesPublicKey() {
+    public void testGetTrustAnchorUsesPublicKey() throws GeneralSecurityException {
 
         final X509Certificate trustedCaCert = getCaCertificate();
         final TenantObject obj = TenantObject.from(Constants.DEFAULT_TENANT, Boolean.TRUE)
@@ -148,6 +153,28 @@ public class TenantObjectTest {
         final TrustAnchor trustAnchor = obj.getTrustAnchor();
         assertThat(trustAnchor.getCA(), is(trustedCaCert.getSubjectX500Principal()));
         assertThat(trustAnchor.getCAPublicKey(), is(trustedCaCert.getPublicKey()));
+    }
+
+    /**
+     * Verifies that the trust anchor cannot be read from an invalid Base64 encoding of
+     * a public key.
+     */
+    @Test
+    public void testGetTrustAnchorFailsForInvalidBase64Encoding() {
+
+        final TenantObject obj = TenantObject.from(Constants.DEFAULT_TENANT, Boolean.TRUE)
+                .setProperty(
+                        TenantConstants.FIELD_PAYLOAD_TRUSTED_CA,
+                        new JsonObject()
+                        .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, "CN=test")
+                        .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, "noBase64"));
+
+        try {
+            obj.getTrustAnchor();
+            fail("should not have been able to read trust anchor from malformed Base64");
+        } catch (final GeneralSecurityException e) {
+            // as expected
+        }
     }
 
     /**

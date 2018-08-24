@@ -14,7 +14,9 @@
 package org.eclipse.hono.adapter.http;
 
 import java.net.HttpURLConnection;
+import java.security.GeneralSecurityException;
 import java.security.cert.Certificate;
+import java.security.cert.TrustAnchor;
 import java.security.cert.X509Certificate;
 import java.util.Collections;
 import java.util.HashMap;
@@ -151,32 +153,40 @@ public class X509AuthHandler extends HonoAuthHandler {
                     .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CLIENT)
                     .withTag(Tags.COMPONENT.getKey(), getClass().getSimpleName())
                     .start();
-            final Map<String, String> detail = new HashMap<>(4);
+
             try {
                 final Certificate[] path = context.request().sslSession().getPeerCertificates();
 
                 getX509CertificatePath(path).compose(x509chain -> {
 
                     final X509Certificate deviceCert = x509chain.get(0);
+                    final Map<String, String> detail = new HashMap<>(3);
                     detail.put("subject DN", deviceCert.getSubjectX500Principal().getName());
                     detail.put("not before", deviceCert.getNotBefore().toString());
                     detail.put("not after", deviceCert.getNotAfter().toString());
+                    span.log(detail);
 
                     final Future<TenantObject> tenantTracker = getTenant(deviceCert, span);
                     final List<X509Certificate> chainToValidate = Collections.singletonList(deviceCert);
                     return tenantTracker
-                            .compose(tenant -> certPathValidator.validate(chainToValidate, tenant.getTrustAnchor()))
-                            .compose(ok -> getCredentials(x509chain, tenantTracker.result()));
-                }).map(creds -> {
-                    span.log("certificate verified successfully");
-                    return creds;
-                }).recover(t -> {
-                    TracingHelper.logError(span, t);
-                    return Future.failedFuture(t);
-                }).setHandler(result -> {
-                    span.log(detail);
+                            .compose(tenant -> {
+                                try {
+                                    final TrustAnchor trustAnchor = tenant.getTrustAnchor();
+                                    return certPathValidator.validate(chainToValidate, trustAnchor);
+                                } catch (final GeneralSecurityException e) {
+                                    return Future.failedFuture(e);
+                                }
+                            }).compose(ok -> getCredentials(x509chain, tenantTracker.result()));
+                }).setHandler(verificationAttempt -> {
+                    if (verificationAttempt.succeeded()) {
+                        span.log("certificate verified successfully");
+                        handler.handle(verificationAttempt);
+                    } else {
+                        LOG.debug("verification of client certificate failed: {}", verificationAttempt.cause().getMessage());
+                        TracingHelper.logError(span, verificationAttempt.cause());
+                        handler.handle(Future.failedFuture(UNAUTHORIZED));
+                    }
                     span.finish();
-                    handler.handle(result);
                 });
             } catch (SSLPeerUnverifiedException e) {
                 // client certificate has not been validated
