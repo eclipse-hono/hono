@@ -9,6 +9,9 @@ hono:
     host: localhost
     reconnectAttempts: 5
 
+connection:
+  retryInterval: 1000
+
 tenant:
   id: DEFAULT_TENANT
 device:
@@ -29,9 +32,6 @@ address:
     cacheMaxTimeToLive: 0 #support DNS based service resolution
     rotateServers: true
     queryTimeout: 2000
-
-connection:
-  timeout: 1000
 
 message:
   type: all
@@ -62,4 +62,22 @@ username: sensor1@DEFAULT_TENANT
 password: hono-secret
 
 payload: '{"temp": 5}'
+
+---
+
+spring:
+  profiles: command
+
+hono:
+  client:
+    port: 15671
+
+command:
+  timeoutInSeconds: 60
+
+tenant:
+  id: DEFAULT_TENANT
+
+device:
+  id: 4711
 

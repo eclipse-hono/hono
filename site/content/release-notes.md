@@ -2,6 +2,12 @@
 title = "Release Notes"
 +++
 
+## 0.8-M1
+
+### Fixes & Enhancements
+
+* Hono-cli extends support to Command & Control. Using command line, users can send commands to devices and receive command responses.  See [Using Cli for command & control]({{< relref "getting-started.md#using-cli-command-line-interface-to-send-commands-and-receive-command-responses" >}}) for more information.
+
 ## 0.7
 
 ### New Features

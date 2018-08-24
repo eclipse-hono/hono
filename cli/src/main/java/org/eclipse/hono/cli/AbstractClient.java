@@ -31,10 +31,10 @@ abstract class AbstractClient extends AbstractCliClient {
 
     @Value(value = "${tenant.id}")
     protected String tenantId;
-    @Value(value = "${message.type}")
-    protected String messageType;
-    @Value(value = "${connection.timeout}")
-    protected int connectionTimeOut;
+    @Value(value = "${device.id}")
+    protected String deviceId;
+    @Value(value = "${connection.retryInterval}")
+    protected int connectionRetryInterval;
     protected HonoClient client;
 
     /**
