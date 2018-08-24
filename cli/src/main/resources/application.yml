@@ -9,6 +9,9 @@ hono:
     host: localhost
     reconnectAttempts: 5
 
+connection:
+  retryInterval: 1000
+
 tenant:
   id: DEFAULT_TENANT
 device:
@@ -29,9 +32,6 @@ address:
     cacheMaxTimeToLive: 0 #support DNS based service resolution
     rotateServers: true
     queryTimeout: 2000
-
-connection:
-  retryInterval: 1000
 
 message:
   type: all
@@ -74,9 +74,6 @@ hono:
 
 command:
   timeoutInSeconds: 60
-
-connection:
-  retryInterval: 1000
 
 tenant:
   id: DEFAULT_TENANT
