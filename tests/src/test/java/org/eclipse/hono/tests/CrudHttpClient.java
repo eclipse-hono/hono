@@ -143,7 +143,7 @@ public final class CrudHttpClient {
      * 
      * @param uri The URI to post to.
      * @param body The body to post.
-     * @param successPredicate A predicate on the returned HTTP status code for determining success.
+     * @param successPredicate A predicate on the HTTP response for determining success.
      * @return A future that will succeed if the predicate evaluates to {@code true}.
      * @throws NullPointerException if URI or predicate are {@code null}.
      */
@@ -157,7 +157,7 @@ public final class CrudHttpClient {
      * @param uri The URI to post to.
      * @param body The body to post (may be {@code null}).
      * @param contentType The content type to set in the request (may be {@code null}).
-     * @param successPredicate A predicate on the returned HTTP status code for determining success.
+     * @param successPredicate A predicate on the HTTP response for determining success.
      * @return A future that will succeed if the predicate evaluates to {@code true}.
      * @throws NullPointerException if URI, content type or predicate are {@code null}.
      */
@@ -172,7 +172,7 @@ public final class CrudHttpClient {
      * @param uri The URI to post to.
      * @param body The body to post (may be {@code null}).
      * @param contentType The content type to set in the request (may be {@code null}).
-     * @param successPredicate A predicate on the returned HTTP status code for determining success.
+     * @param successPredicate A predicate on the HTTP response for determining success.
      * @return A future that will succeed if the predicate evaluates to {@code true}.
      * @throws NullPointerException if URI or predicate are {@code null}.
      */
@@ -191,7 +191,7 @@ public final class CrudHttpClient {
      * @param uri The URI to post to.
      * @param body The body to post (may be {@code null}).
      * @param requestHeaders The headers to include in the request (may be {@code null}).
-     * @param successPredicate A predicate on the returned HTTP status code for determining success.
+     * @param successPredicate A predicate on the HTTP response for determining success.
      * @return A future that will succeed if the predicate evaluates to {@code true}.
      * @throws NullPointerException if URI or predicate are {@code null}.
      */
@@ -217,7 +217,7 @@ public final class CrudHttpClient {
      * @param requestOptions The options to use for the request.
      * @param body The body to post (may be {@code null}).
      * @param requestHeaders The headers to include in the request (may be {@code null}).
-     * @param successPredicate A predicate on the returned HTTP status code for determining success.
+     * @param successPredicate A predicate on the HTTP response for determining success.
      * @return A future that will succeed if the predicate evaluates to {@code true}.
      * @throws NullPointerException if options or predicate are {@code null}.
      */
