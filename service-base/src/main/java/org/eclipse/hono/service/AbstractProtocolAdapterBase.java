@@ -17,8 +17,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.function.BiConsumer;
 
-import org.apache.qpid.proton.amqp.Binary;
-import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.HonoClient;
@@ -948,12 +946,8 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         if (publishAddress != null) {
             MessageHelper.addProperty(msg, MessageHelper.APP_PROPERTY_ORIG_ADDRESS, publishAddress);
         }
-        if (contentType != null) {
-            msg.setContentType(contentType);
-        }
-        if (payload != null) {
-            msg.setBody(new Data(new Binary(payload.getBytes())));
-        }
+        MessageHelper.setPayload(msg, contentType, payload);
+        msg.setContentType(contentType);
         if (timeUntilDisconnect != null) {
             MessageHelper.addTimeUntilDisconnect(msg, timeUntilDisconnect);
         }

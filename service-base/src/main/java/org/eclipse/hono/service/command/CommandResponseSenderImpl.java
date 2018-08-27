@@ -15,15 +15,12 @@ package org.eclipse.hono.service.command;
 import java.util.Map;
 import java.util.Objects;
 
-import org.apache.qpid.proton.amqp.Binary;
 import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
-import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.impl.AbstractSender;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.MessageHelper;
-
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
@@ -94,6 +91,7 @@ public class CommandResponseSenderImpl extends AbstractSender implements Command
     /**
      * {@inheritDoc}
      */
+    @Override
     public Future<ProtonDelivery> sendCommandResponse(
             final String correlationId,
             final String contentType,
@@ -111,6 +109,7 @@ public class CommandResponseSenderImpl extends AbstractSender implements Command
     /**
      * {@inheritDoc}
      */
+    @Override
     public Future<ProtonDelivery> sendCommandResponse(final CommandResponse commandResponse, final SpanContext context) {
 
         Objects.requireNonNull(commandResponse);
@@ -144,9 +143,7 @@ public class CommandResponseSenderImpl extends AbstractSender implements Command
         if (contentType != null) {
             msg.setContentType(contentType);
         }
-        if (payload != null) {
-            msg.setBody(new Data(new Binary(payload.getBytes())));
-        }
+        MessageHelper.setPayload(msg, contentType, payload);
         if (properties != null) {
             msg.setApplicationProperties(new ApplicationProperties(properties));
         }

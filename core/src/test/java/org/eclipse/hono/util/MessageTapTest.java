@@ -19,8 +19,6 @@ import static org.junit.Assert.assertTrue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
-import org.apache.qpid.proton.amqp.Binary;
-import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.amqp.messaging.Section;
 import org.apache.qpid.proton.message.Message;
 import org.junit.Test;
@@ -81,8 +79,8 @@ public class MessageTapTest {
         MessageHelper.setCreationTime(msg);
         MessageHelper.addDeviceId(msg, "4711");
         MessageHelper.addAnnotation(msg, MessageHelper.APP_PROPERTY_TENANT_ID, Constants.DEFAULT_TENANT);
+        MessageHelper.setPayload(msg, null, payload);
         msg.setContentEncoding(contentEncoding);
-        msg.setBody(new Data(new Binary(payload.getBytes())));
         return msg;
     }
 

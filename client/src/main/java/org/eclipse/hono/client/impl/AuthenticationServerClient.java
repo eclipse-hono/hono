@@ -15,8 +15,6 @@ package org.eclipse.hono.client.impl;
 
 import java.util.Objects;
 
-import org.apache.qpid.proton.amqp.messaging.AmqpValue;
-import org.apache.qpid.proton.amqp.messaging.Section;
 import org.eclipse.hono.auth.HonoUser;
 import org.eclipse.hono.auth.HonoUserAdapter;
 import org.eclipse.hono.connection.ConnectionFactory;
@@ -131,18 +129,17 @@ public final class AuthenticationServerClient {
                     String.class);
 
             if (AuthenticationConstants.TYPE_AMQP_JWT.equals(type)) {
-                final Section body = message.getBody();
-                if (body instanceof AmqpValue) {
-                    final String token = ((AmqpValue) body).getValue().toString();
+
+                final String payload = MessageHelper.getPayloadAsString(message);
+                if (payload != null) {
                     final HonoUser user = new HonoUserAdapter() {
                         @Override
                         public String getToken() {
-                            return token;
+                            return payload;
                         }
                     };
                     LOG.debug("successfully retrieved token from Authentication service");
                     authResult.complete(user);
-
                 } else {
                     authResult.fail("message from Authentication service contains no body");
                 }

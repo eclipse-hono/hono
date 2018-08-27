@@ -17,8 +17,6 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import org.apache.qpid.proton.amqp.Binary;
-import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.amqp.messaging.Target;
 import org.apache.qpid.proton.engine.Record;
 import org.apache.qpid.proton.message.Message;
@@ -93,9 +91,8 @@ public final class TestSupport {
     public static Message newTelemetryData(final String messageId, final String deviceId, final int temperature) {
         final Message message = ProtonHelper.message();
         message.setMessageId(messageId);
-        message.setContentType("application/json");
         MessageHelper.addDeviceId(message, deviceId);
-        message.setBody(new Data(new Binary(String.format("{\"temp\" : %d}", temperature).getBytes())));
+        MessageHelper.setPayload(message, "application/json", String.format("{\"temp\" : %d}", temperature));
         return message;
     }
 

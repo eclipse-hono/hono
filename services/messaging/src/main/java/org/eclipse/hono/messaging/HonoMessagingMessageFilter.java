@@ -12,7 +12,6 @@
  *******************************************************************************/
 package org.eclipse.hono.messaging;
 
-import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.util.BaseMessageFilter;
 import org.eclipse.hono.util.MessageHelper;
@@ -58,7 +57,7 @@ public final class HonoMessagingMessageFilter extends BaseMessageFilter {
          if (msg.getContentType() == null) {
              LOG.trace("message [{}] has no content type", msg.getMessageId());
              return false;
-         } else if (msg.getBody() != null && !(msg.getBody() instanceof Data)) {
+        } else if (!MessageHelper.hasDataBody(msg, false)) {
              LOG.trace("message [{}] has no body of type AMQP Data", msg.getMessageId());
              return false;
          } else {

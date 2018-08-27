@@ -18,7 +18,6 @@ import java.util.concurrent.CompletableFuture;
 import javax.jms.IllegalStateException;
 
 import org.apache.jmeter.samplers.SampleResult;
-import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageConsumer;
@@ -199,14 +198,15 @@ public class HonoReceiver extends AbstractClient {
             final long sampleReceivedTime = System.currentTimeMillis();
             messageCount++;
 
-            if (!(message.getBody() instanceof Data)) {
+            if (!MessageHelper.hasDataBody(message, false)) {
                 errorCount++;
                 setSampleStartIfNotSetYet(sampleReceivedTime);
                 LOGGER.warn("got message with non-Data body section; increasing errorCount in batch to {}; current batch size: {}",
                         errorCount, messageCount);
                 return;
             }
-            final byte[] messageBody = ((Data) message.getBody()).getValue().getArray();
+            final Buffer payload = MessageHelper.getPayload(message);
+            final byte[] messageBody = payload.getBytes();
             bytesReceived += messageBody.length;
             final Long senderTime = getSenderTime(message, messageBody);
             if (sampler.isUseSenderTime() && senderTime == null) {

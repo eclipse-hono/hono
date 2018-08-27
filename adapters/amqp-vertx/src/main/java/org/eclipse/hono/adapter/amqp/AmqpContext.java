@@ -40,6 +40,7 @@ public class AmqpContext extends MapBasedExecutionContext {
     private final Message message;
     private final ResourceIdentifier resource;
     private final Device authenticatedDevice;
+    private final Buffer payload;
 
     /**
      * Creates an AmqpContext instance using the specified delivery, message and authenticated device.
@@ -57,6 +58,7 @@ public class AmqpContext extends MapBasedExecutionContext {
         this.message = Objects.requireNonNull(message);
         this.authenticatedDevice = authenticatedDevice;
         this.resource = ResourceIdentifier.fromString(message.getAddress());
+        this.payload = MessageHelper.getPayload(message);
     }
 
     /**
@@ -65,7 +67,7 @@ public class AmqpContext extends MapBasedExecutionContext {
      * @return The body of the AMQP 1.0 message as a buffer object.
      */
     Buffer getMessagePayload() {
-        return MessageHelper.getPayload(message);
+        return payload;
     }
 
     /**
