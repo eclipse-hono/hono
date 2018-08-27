@@ -26,9 +26,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.apache.qpid.proton.amqp.Binary;
 import org.apache.qpid.proton.amqp.messaging.Accepted;
-import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.amqp.messaging.Rejected;
 import org.apache.qpid.proton.amqp.transport.DeliveryState;
 import org.apache.qpid.proton.message.Message;
@@ -266,9 +264,9 @@ abstract public class AbstractSender extends AbstractHonoClient implements Messa
 
         final Message msg = ProtonHelper.message();
         msg.setAddress(getTo(deviceId));
-        msg.setBody(new Data(new Binary(payload)));
+        MessageHelper.setPayload(msg, contentType, payload);
         setApplicationProperties(msg, properties);
-        addProperties(msg, deviceId, contentType, registrationAssertion);
+        addProperties(msg, deviceId, registrationAssertion);
         return send(msg);
     }
 
@@ -295,9 +293,9 @@ abstract public class AbstractSender extends AbstractHonoClient implements Messa
 
         final Message msg = ProtonHelper.message();
         msg.setAddress(getTo(deviceId));
-        msg.setBody(new Data(new Binary(payload)));
+        MessageHelper.setPayload(msg, contentType, payload);
         setApplicationProperties(msg, properties);
-        addProperties(msg, deviceId, contentType, registrationAssertion);
+        addProperties(msg, deviceId, registrationAssertion);
         return send(msg, capacityAvailableHandler);
     }
 
@@ -356,8 +354,7 @@ abstract public class AbstractSender extends AbstractHonoClient implements Messa
      */
     protected abstract String getTo(String deviceId);
 
-    private void addProperties(final Message msg, final String deviceId, final String contentType, final String registrationAssertion) {
-        msg.setContentType(contentType);
+    private void addProperties(final Message msg, final String deviceId, final String registrationAssertion) {
         MessageHelper.addDeviceId(msg, deviceId);
         if (isRegistrationAssertionRequired()) {
             MessageHelper.addRegistrationAssertion(msg, registrationAssertion);
@@ -399,7 +396,6 @@ abstract public class AbstractSender extends AbstractHonoClient implements Messa
     protected Future<ProtonDelivery> sendMessageAndWaitForOutcome(final Message message, final Span currentSpan) {
 
         Objects.requireNonNull(message);
-
 
         final Future<ProtonDelivery> result = Future.future();
         final String messageId = String.format("%s-%d", getClass().getSimpleName(), MESSAGE_COUNTER.getAndIncrement());

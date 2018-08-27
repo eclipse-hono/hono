@@ -12,9 +12,9 @@
  *******************************************************************************/
 package org.eclipse.hono.service.registration;
 
-import org.apache.qpid.proton.amqp.messaging.AmqpValue;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.util.BaseMessageFilter;
+import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.slf4j.Logger;
@@ -50,13 +50,9 @@ public final class RegistrationMessageFilter extends BaseMessageFilter {
          } else if (msg.getReplyTo() == null) {
              LOG.trace("message [{}] contains no reply-to address", msg.getMessageId());
              return false;
-         } else if (msg.getBody() != null) {
-             if (!(msg.getBody() instanceof AmqpValue)) {
-                 LOG.trace("message [{}] contains non-AmqpValue section payload", msg.getMessageId());
-                 return false;
-             } else {
-                 return true;
-             }
+        } else if (msg.getBody() != null && !MessageHelper.hasDataBody(msg, true)) {
+            LOG.trace("message [{}] contains no AmqpValue or Data section payload", msg.getMessageId());
+            return false;
          } else {
              return true;
          }

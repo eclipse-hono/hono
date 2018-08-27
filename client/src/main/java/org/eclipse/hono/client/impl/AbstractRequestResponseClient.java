@@ -22,7 +22,6 @@ import java.util.Optional;
 import java.util.UUID;
 
 import org.apache.qpid.proton.amqp.messaging.Accepted;
-import org.apache.qpid.proton.amqp.messaging.AmqpValue;
 import org.apache.qpid.proton.amqp.messaging.Rejected;
 import org.apache.qpid.proton.amqp.transport.DeliveryState;
 import org.apache.qpid.proton.message.Message;
@@ -699,12 +698,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
 
         if (isOpen()) {
             final Message request = createMessage(action, properties);
-            if (payload != null) {
-                if (contentType != null) {
-                    request.setContentType(contentType);
-                }
-                request.setBody(new AmqpValue(payload.getBytes()));
-            }
+            MessageHelper.setPayload(request, contentType, payload);
             sendRequest(request, resultHandler, cacheKey, currentSpan);
         } else {
             TracingHelper.logError(currentSpan, "sender and/or receiver link is not open");

@@ -12,18 +12,23 @@
  *******************************************************************************/
 package org.eclipse.hono.util;
 
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.Objects;
 import java.util.Optional;
 
 import io.vertx.core.buffer.Buffer;
+
+import org.apache.qpid.proton.amqp.Binary;
 import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.amqp.messaging.AmqpValue;
 import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
 import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.amqp.messaging.MessageAnnotations;
 import org.apache.qpid.proton.amqp.messaging.Rejected;
+import org.apache.qpid.proton.amqp.messaging.Section;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.message.Message;
 import org.slf4j.Logger;
@@ -40,8 +45,7 @@ import io.vertx.proton.ProtonDelivery;
 public final class MessageHelper {
 
     /**
-     * The name of the AMQP 1.0 message annotation that is used to indicate the type of
-     * the <em>correlation-id</em>.
+     * The name of the AMQP 1.0 message annotation that is used to indicate the type of the <em>correlation-id</em>.
      */
     public static final String ANNOTATION_X_OPT_APP_CORRELATION_ID = "x-opt-app-correlation-id";
     /**
@@ -53,101 +57,103 @@ public final class MessageHelper {
     public static final String ANNOTATION_X_OPT_RETAIN = "x-opt-retain";
 
     /**
-     * The name of the AMQP 1.0 message application property containing the caching directive
-     * to follow for the body of the message.
+     * The name of the AMQP 1.0 message application property containing the caching directive to follow for the body of
+     * the message.
      */
-    public static final String APP_PROPERTY_CACHE_CONTROL          = "cache_control";
+    public static final String APP_PROPERTY_CACHE_CONTROL = "cache_control";
     /**
      * The name of the AMQP 1.0 message application property containing the id of the device that has reported the data
      * belongs to.
      */
-    public static final String APP_PROPERTY_DEVICE_ID              = "device_id";
+    public static final String APP_PROPERTY_DEVICE_ID = "device_id";
     /**
      * The name of the AMQP 1.0 message application property containing the time until disconnect of the device that is available
      * for receiving an upstream message for the given number of seconds (short for <em>Time til Disconnect</em>).
      */
-    public static final String APP_PROPERTY_DEVICE_TTD              = "ttd";
+    public static final String APP_PROPERTY_DEVICE_TTD = "ttd";
     /**
-     * The name of the AMQP 1.0 message application property containing the id of the gateway
-     * that wants to report data on behalf of another device.
+     * The name of the AMQP 1.0 message application property containing the id of the gateway that wants to report data
+     * on behalf of another device.
      */
-    public static final String APP_PROPERTY_GATEWAY_ID             = "gateway_id";
+    public static final String APP_PROPERTY_GATEWAY_ID = "gateway_id";
     /**
-     * The name of the AMQP 1.0 application property that is used to convey the
-     * address that a message has been originally published to by a device.
+     * The name of the AMQP 1.0 application property that is used to convey the address that a message has been
+     * originally published to by a device.
      */
-    public static final String APP_PROPERTY_ORIG_ADDRESS           = "orig_address";
+    public static final String APP_PROPERTY_ORIG_ADDRESS = "orig_address";
     /**
-     * The name of the AMQP 1.0 message application property containing the name of the
-     * protocol adapter over which an uploaded message has originally been received.
+     * The name of the AMQP 1.0 message application property containing the name of the protocol adapter over which an
+     * uploaded message has originally been received.
      */
-    public static final String APP_PROPERTY_ORIG_ADAPTER           = "orig_adapter";
+    public static final String APP_PROPERTY_ORIG_ADAPTER = "orig_adapter";
     /**
-     * The name of the AMQP 1.0 message application property containing a JWT token asserting a device's registration status.
+     * The name of the AMQP 1.0 message application property containing a JWT token asserting a device's registration
+     * status.
      */
     public static final String APP_PROPERTY_REGISTRATION_ASSERTION = "reg_assertion";
     /**
      * The name of the AMQP 1.0 message application property containing the resource a message is addressed at.
      */
-    public static final String APP_PROPERTY_RESOURCE               = "resource";
+    public static final String APP_PROPERTY_RESOURCE = "resource";
     /**
-     * The name of the AMQP 1.0 message application property containing the status code indicating the outcome of processing a request.
+     * The name of the AMQP 1.0 message application property containing the status code indicating the outcome of
+     * processing a request.
      */
-    public static final String APP_PROPERTY_STATUS                 = "status";
+    public static final String APP_PROPERTY_STATUS = "status";
     /**
      * The name of the AMQP 1.0 message application property containing the id of the tenant the device that has
      * reported the data belongs to.
      */
-    public static final String APP_PROPERTY_TENANT_ID              = "tenant_id";
+    public static final String APP_PROPERTY_TENANT_ID = "tenant_id";
 
     /**
      * The AMQP 1.0 <em>absolute-expiry-time</em> message property.
      */
-    public static final String SYS_PROPERTY_ABSOLUTE_EXPIRY_TIME   = "absolute-expiry-time";
+    public static final String SYS_PROPERTY_ABSOLUTE_EXPIRY_TIME = "absolute-expiry-time";
     /**
      * The AMQP 1.0 <em>content-encoding</em> message property.
      */
-    public static final String SYS_PROPERTY_CONTENT_ENCODING       = "content-encoding";
+    public static final String SYS_PROPERTY_CONTENT_ENCODING = "content-encoding";
     /**
      * The AMQP 1.0 <em>content-type</em> message property.
      */
-    public static final String SYS_PROPERTY_CONTENT_TYPE           = "content-type";
+    public static final String SYS_PROPERTY_CONTENT_TYPE = "content-type";
     /**
      * The AMQP 1.0 <em>correlation-id</em> message property.
      */
-    public static final String SYS_PROPERTY_CORRELATION_ID         = "correlation-id";
+    public static final String SYS_PROPERTY_CORRELATION_ID = "correlation-id";
     /**
      * The AMQP 1.0 <em>creation-time</em> message property.
      */
-    public static final String SYS_PROPERTY_CREATION_TIME          = "creation-time";
+    public static final String SYS_PROPERTY_CREATION_TIME = "creation-time";
     /**
      * The AMQP 1.0 <em>group-id</em> message property.
      */
-    public static final String SYS_PROPERTY_GROUP_ID               = "group-id";
+    public static final String SYS_PROPERTY_GROUP_ID = "group-id";
     /**
      * The AMQP 1.0 <em>group-sequence</em> message property.
      */
-    public static final String SYS_PROPERTY_GROUP_SEQUENCE         = "group-sequence";
+    public static final String SYS_PROPERTY_GROUP_SEQUENCE = "group-sequence";
     /**
      * The AMQP 1.0 <em>message-id</em> message property.
      */
-    public static final String SYS_PROPERTY_MESSAGE_ID             = "message-id";
+    public static final String SYS_PROPERTY_MESSAGE_ID = "message-id";
     /**
      * The AMQP 1.0 <em>reply-to</em> message property.
      */
-    public static final String SYS_PROPERTY_REPLY_TO               = "reply-to";
+    public static final String SYS_PROPERTY_REPLY_TO = "reply-to";
     /**
      * The AMQP 1.0 <em>reply-to-group-id</em> message property.
      */
-    public static final String SYS_PROPERTY_REPLY_TO_GROUP_ID      = "reply-to-group-id";
+    public static final String SYS_PROPERTY_REPLY_TO_GROUP_ID = "reply-to-group-id";
     /**
      * The AMQP 1.0 <em>subject</em> message property.
      */
-    public static final String SYS_PROPERTY_SUBJECT                = "subject";
+    public static final String SYS_PROPERTY_SUBJECT = "subject";
     /**
      * The AMQP 1.0 <em>user-id</em> message property.
      */
-    public static final String SYS_PROPERTY_USER_ID                = "user-id";
+    public static final String SYS_PROPERTY_USER_ID = "user-id";
     /**
      * The AMQP 1.0 <em>to</em> message property.
      */
@@ -165,7 +171,7 @@ public final class MessageHelper {
     /**
      * The {@code JMS_AMQP_CONTENT_TYPE} vendor property name.
      */
-    public static final String JMS_VENDOR_PROPERTY_CONTENT_TYPE     = "JMS_AMQP_CONTENT_TYPE";
+    public static final String JMS_VENDOR_PROPERTY_CONTENT_TYPE = "JMS_AMQP_CONTENT_TYPE";
 
     private static final Logger LOG = LoggerFactory.getLogger(MessageHelper.class);
 
@@ -197,12 +203,11 @@ public final class MessageHelper {
     /**
      * Gets the registration assertion conveyed in an AMQP 1.0 message.
      * <p>
-     * The assertion is expected to be contained in the messages's <em>application-properties</em>
-     * under key {@link #APP_PROPERTY_REGISTRATION_ASSERTION}.
+     * The assertion is expected to be contained in the messages's <em>application-properties</em> under key
+     * {@link #APP_PROPERTY_REGISTRATION_ASSERTION}.
      *
      * @param msg The message.
-     * @return The assertion or {@code null} if the message does not contain an assertion (at the
-     *         expected location).
+     * @return The assertion or {@code null} if the message does not contain an assertion (at the expected location).
      */
     public static String getRegistrationAssertion(final Message msg) {
         return getRegistrationAssertion(msg, false);
@@ -211,12 +216,11 @@ public final class MessageHelper {
     /**
      * Gets and removes the registration assertion conveyed in an AMQP 1.0 message.
      * <p>
-     * The assertion is expected to be contained in the messages's <em>application-properties</em>
-     * under key {@link #APP_PROPERTY_REGISTRATION_ASSERTION}.
+     * The assertion is expected to be contained in the messages's <em>application-properties</em> under key
+     * {@link #APP_PROPERTY_REGISTRATION_ASSERTION}.
      *
      * @param msg The message.
-     * @return The assertion or {@code null} if the message does not contain an assertion (at the
-     *         expected location).
+     * @return The assertion or {@code null} if the message does not contain an assertion (at the expected location).
      */
     public static String getAndRemoveRegistrationAssertion(final Message msg) {
         return getRegistrationAssertion(msg, true);
@@ -266,8 +270,7 @@ public final class MessageHelper {
      * Gets the value of the {@code x-opt-appl-correlation-id} annotation from a message.
      *
      * @param msg the message to get the annotation from.
-     * @return the value of the annotation (if present) or {@code false} if the message
-     *         does not contain the annotation.
+     * @return the value of the annotation (if present) or {@code false} if the message does not contain the annotation.
      */
     public static boolean getXOptAppCorrelationId(final Message msg) {
         Objects.requireNonNull(msg);
@@ -282,11 +285,12 @@ public final class MessageHelper {
      * @param props The application properties to retrieve the value from.
      * @param name The property name.
      * @param type The expected value type.
-     * @return The value or {@code null} if the properties do not contain a value of
-     *         the expected type for the given name.
+     * @return The value or {@code null} if the properties do not contain a value of the expected type for the given
+     *         name.
      */
     @SuppressWarnings("unchecked")
-    public static <T> T getApplicationProperty(final ApplicationProperties props, final String name, final Class<T> type) {
+    public static <T> T getApplicationProperty(final ApplicationProperties props, final String name,
+            final Class<T> type) {
         if (props == null) {
             return null;
         } else {
@@ -303,8 +307,8 @@ public final class MessageHelper {
      * Parses a message's body into a JSON object.
      *
      * @param msg The AMQP 1.0 message to parse the body of.
-     * @return The message body parsed into a JSON object or {@code null} if the message does not have a
-     *         <em>Data</em> nor an <em>AmqpValue</em> section.
+     * @return The message body parsed into a JSON object or {@code null} if the message does not have a <em>Data</em>
+     *         nor an <em>AmqpValue</em> section.
      * @throws NullPointerException if the message is {@code null}.
      * @throws DecodeException if the payload cannot be parsed into a JSON object.
      */
@@ -318,8 +322,8 @@ public final class MessageHelper {
      * Gets a message's body as Buffer object.
      *
      * @param msg The AMQP 1.0 message to parse the body of.
-     * @return The message body as a Buffer or {@code null} if the message does not have a <em>Data</em>
-     *         nor an <em>AmqpValue</em> section.
+     * @return The message body as a Buffer or {@code null} if the message does not have a <em>Data</em> nor an
+     *         <em>AmqpValue</em> section.
      * @throws NullPointerException if the message is {@code null}.
      */
     public static Buffer getPayload(final Message msg) {
@@ -343,6 +347,44 @@ public final class MessageHelper {
         }
 
         LOG.debug("unsupported body type [{}]", msg.getBody().getClass().getName());
+        return null;
+    }
+
+    /**
+     * Gets a message's body as Buffer object as {@link String}.
+     *
+     * @param message The AMQP 1.0 message to parse the body of.
+     * @return The message body as a {@link String} or {@code null} if the message does not have a <em>Data</em> nor an
+     *         <em>AmqpValue</em> section.
+     * 
+     * @throws NullPointerException if the message is {@code null}.
+     */
+    public static String getPayloadAsString(final Message message) {
+
+        Objects.requireNonNull(message);
+
+        if (message.getBody() == null) {
+            LOG.trace("message has no body");
+            return null;
+        }
+
+        if (message.getBody() instanceof Data) {
+
+            final Data body = (Data) message.getBody();
+            return StandardCharsets.UTF_8.decode(body.getValue().asByteBuffer()).toString();
+
+        } else if (message.getBody() instanceof AmqpValue) {
+
+            final AmqpValue body = (AmqpValue) message.getBody();
+            if (body.getValue() instanceof byte[]) {
+                return StandardCharsets.UTF_8.decode(ByteBuffer.wrap((byte[]) body.getValue())).toString();
+            } else if (body.getValue() instanceof String) {
+                return (String) body.getValue();
+            }
+
+        }
+
+        LOG.debug("unsupported body type [{}]", message.getBody().getClass().getName());
         return null;
     }
 
@@ -412,11 +454,9 @@ public final class MessageHelper {
     }
 
     /**
-     * Adds a property indicating a device's <em>time until disconnect</em> property to
-     * an AMQP 1.0 message.
+     * Adds a property indicating a device's <em>time until disconnect</em> property to an AMQP 1.0 message.
      * <p>
-     * The value is put to the message's <em>application-properties</em> under key
-     * {@link #APP_PROPERTY_DEVICE_TTD}.
+     * The value is put to the message's <em>application-properties</em> under key {@link #APP_PROPERTY_DEVICE_TTD}.
      *
      * @param msg The message to add the property to.
      * @param timeUntilDisconnect The value of the property (number of seconds).
@@ -477,13 +517,16 @@ public final class MessageHelper {
     }
 
     /**
-     * Adds several AMQP 1.0 message <em>annotations</em> to the given message that are used to process/route the message.
+     * Adds several AMQP 1.0 message <em>annotations</em> to the given message that are used to process/route the
+     * message.
      * <p>
      * In particular, the following annotations are added:
      * <ul>
      * <li>{@link #APP_PROPERTY_TENANT_ID} - the tenant ID segment of the resource identifier</li>
-     * <li>{@link #APP_PROPERTY_DEVICE_ID} - the resource ID segment of the resource identifier (if not {@code null}</li>
-     * <li>{@link #APP_PROPERTY_RESOURCE} - the full resource path including the endpoint, the tenant and the resource ID</li>
+     * <li>{@link #APP_PROPERTY_DEVICE_ID} - the resource ID segment of the resource identifier (if not
+     * {@code null}</li>
+     * <li>{@link #APP_PROPERTY_RESOURCE} - the full resource path including the endpoint, the tenant and the resource
+     * ID</li>
      * </ul>
      *
      * @param msg the message to add the message annotations to.
@@ -499,11 +542,10 @@ public final class MessageHelper {
 
     /**
      * Adds JMS vendor properties defined by
-     * <a href="https://www.oasis-open.org/committees/download.php/60574/amqp-bindmap-jms-v1.0-wd09.pdf">
-     * AMQP JMS Mapping 1.0</a> as AMQP 1.0 application properties to a given message.
+     * <a href="https://www.oasis-open.org/committees/download.php/60574/amqp-bindmap-jms-v1.0-wd09.pdf"> AMQP JMS
+     * Mapping 1.0</a> as AMQP 1.0 application properties to a given message.
      * <p>
-     * The following vendor properties are added (if the message has a corresponding
-     * non-null value set):
+     * The following vendor properties are added (if the message has a corresponding non-null value set):
      * <ul>
      * <li>{@link #JMS_VENDOR_PROPERTY_CONTENT_TYPE}</li>
      * <li>{@link #JMS_VENDOR_PROPERTY_CONTENT_ENCODING}</li>
@@ -537,15 +579,15 @@ public final class MessageHelper {
     }
 
     /**
-     * Returns the value to which the specified key is mapped in the message annotations,
-     * or {@code null} if the message annotations contain no mapping for the key.
+     * Returns the value to which the specified key is mapped in the message annotations, or {@code null} if the message
+     * annotations contain no mapping for the key.
      *
      * @param <T> the expected type of the property to read.
      * @param msg the message that contains the annotations.
      * @param key the name of the symbol to return a value for.
      * @param type the expected type of the value.
-     * @return the annotation's value or {@code null} if no such annotation exists or its value
-     *          is not of the expected type.
+     * @return the annotation's value or {@code null} if no such annotation exists or its value is not of the expected
+     *         type.
      */
     @SuppressWarnings("unchecked")
     public static <T> T getAnnotation(final Message msg, final String key, final Class<T> type) {
@@ -574,14 +616,14 @@ public final class MessageHelper {
     }
 
     /**
-     * Verify if a device is currently connected to a protocol adapter.
-     * This is evaluated at the point in time this method is invoked.
+     * Verify if a device is currently connected to a protocol adapter. This is evaluated at the point in time this
+     * method is invoked.
      * <p>
      * This could be used as a trigger condition for an attempt to send a command upstream to the device.
      *
      * @param msg Message that is evaluated.
-     * @return Boolean {@code true} if the message signals that the device now should be ready to receive a command, {@code false}
-     * otherwise.
+     * @return Boolean {@code true} if the message signals that the device now should be ready to receive a command,
+     *         {@code false} otherwise.
      * @throws NullPointerException If msg is {@code null}.
      */
     public static Boolean isDeviceCurrentlyConnected(final Message msg) {
@@ -596,6 +638,135 @@ public final class MessageHelper {
                 return Instant.now().isBefore(creationTime.plusSeconds(ttd));
             }
         }).orElse(Boolean.FALSE);
+    }
+
+    /**
+     * Set the payload of the message.
+     * <p>
+     * If the payload is {@code null}, then neither the payload, nor content type will be set.
+     * </p>
+     * 
+     * @param message The message to update.
+     * @param contentType An optional content type.
+     * @param payload The optional message payload.
+     * 
+     * @throws NullPointerException If the parameter {@code message} was {@code null}.
+     */
+    public static void setPayload(final Message message, final String contentType, final byte[] payload) {
+        Objects.requireNonNull(message);
+
+        if (payload != null) {
+            if (contentType != null) {
+                message.setContentType(contentType);
+            }
+            message.setBody(new Data(new Binary(payload)));
+        }
+    }
+
+    /**
+     * Set the payload of the message.
+     * <p>
+     * If the payload is {@code null}, then neither the payload, nor content type will be set.
+     * </p>
+     * 
+     * @param message The message to update.
+     * @param contentType An optional content type.
+     * @param payload The optional message payload.
+     * 
+     * @throws NullPointerException If the parameter {@code message} was {@code null}.
+     */
+    public static void setPayload(final Message message, final String contentType, final Buffer payload) {
+        Objects.requireNonNull(message);
+
+        setPayload(message, contentType, payload != null ? payload.getBytes() : null);
+    }
+
+    /**
+     * Set the payload of the message.
+     * <p>
+     * If the payload is {@code null}, then neither the payload, nor content type will be set.
+     * </p>
+     * 
+     * @param message The message to update.
+     * @param contentType An optional content type.
+     * @param payload The optional message payload.
+     * 
+     * @throws NullPointerException If the parameter {@code message} was {@code null}.
+     */
+    public static void setPayload(final Message message, final String contentType, final JsonObject payload) {
+        Objects.requireNonNull(message);
+
+        setPayload(message, contentType, payload != null ? payload.toBuffer() : null);
+    }
+
+    /**
+     * Set the payload of the message.
+     * <p>
+     * If the payload is {@code null}, then neither the payload, nor content type will be set.
+     * </p>
+     * 
+     * @param message The message to update.
+     * @param contentType An optional content type.
+     * @param payload The optional message payload.
+     * 
+     * @throws NullPointerException If the parameter {@code message} was {@code null}.
+     */
+    public static void setPayload(final Message message, final String contentType, final String payload) {
+        Objects.requireNonNull(message);
+
+        setPayload(message, contentType, payload != null ? payload.getBytes(StandardCharsets.UTF_8) : null);
+    }
+
+    /**
+     * Test is the message has a data section set as the body.
+     * 
+     * @param message The message to test.
+     * @param allowAmqpValue Whether or now to allow AmqpValue of type {@code String} or {@code byte[]} to pass as well.
+     * @return {@code true} if the body was not {@code null} and an instance of {@link Data}, {@code false} otherwise.
+     *         If the parameter {@code allowAmqpValue} was {@code true}, then the method would also return {@code true}
+     *         if the body contains an {@link AmqpValue} of type {@code String} or {@code byte[]}.
+     * 
+     * @throws NullPointerException If the parameter {@code message} was {@code null}.
+     */
+    public static boolean hasDataBody(final Message message, final boolean allowAmqpValue) {
+        Objects.requireNonNull(message);
+
+        final Section body = message.getBody();
+
+        if (body == null) {
+            // the body is null, so the answer is false
+            return false;
+        }
+
+        if (body instanceof Data) {
+            // early return, a data section
+            return true;
+        }
+
+        if (!allowAmqpValue) {
+            // no data section, but we don't allow AmqpValue either
+            return false;
+        }
+
+        if (body instanceof AmqpValue) {
+
+            // extract the actual value
+            final Object value = ((AmqpValue) body).getValue();
+
+            if (value instanceof byte[]) {
+                // byte arrays are fine
+                return true;
+            }
+
+            if (value instanceof String) {
+                // as are strings, because we return them as byte arrays
+                return true;
+            }
+        }
+
+        // we ran out of options
+
+        return false;
     }
 
 }

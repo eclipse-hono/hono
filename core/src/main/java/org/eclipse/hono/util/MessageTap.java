@@ -15,8 +15,6 @@ package org.eclipse.hono.util;
 import java.util.Objects;
 import java.util.function.Consumer;
 
-import org.apache.qpid.proton.amqp.messaging.Data;
-import org.apache.qpid.proton.amqp.messaging.Section;
 import org.apache.qpid.proton.message.Message;
 
 /**
@@ -25,7 +23,7 @@ import org.apache.qpid.proton.message.Message;
  */
 public final class MessageTap implements Consumer<Message> {
 
-    private Consumer<Message> tapConsumer;
+    private final Consumer<Message> tapConsumer;
 
     private MessageTap(final Consumer<Message> tapConsumer) {
         this.tapConsumer = tapConsumer;
@@ -48,8 +46,7 @@ public final class MessageTap implements Consumer<Message> {
 
         return new MessageTap(
                 msg -> {
-                    final Section body = msg.getBody();
-                    if (body!=null && !(body instanceof Data)) {
+                    if (!MessageHelper.hasDataBody(msg, false)) {
                         return;
                     }
                     TimeUntilDisconnectNotification.fromMessage(msg).ifPresent(

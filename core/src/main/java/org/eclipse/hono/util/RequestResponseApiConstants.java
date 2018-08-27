@@ -18,7 +18,6 @@ import java.util.Objects;
 import java.util.UUID;
 
 import org.apache.qpid.proton.amqp.Symbol;
-import org.apache.qpid.proton.amqp.messaging.AmqpValue;
 import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
 import org.apache.qpid.proton.amqp.messaging.MessageAnnotations;
 import org.apache.qpid.proton.message.Message;
@@ -104,10 +103,8 @@ public abstract class RequestResponseApiConstants {
                 message.setMessageAnnotations(new MessageAnnotations(annotations));
             }
 
-            if (payload != null) {
-                message.setContentType(CONTENT_TYPE_APPLICATION_JSON);
-                message.setBody(new AmqpValue(payload.encode()));
-            }
+            MessageHelper.setPayload(message, CONTENT_TYPE_APPLICATION_JSON, payload);
+
             return message;
         }
     }

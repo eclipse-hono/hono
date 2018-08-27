@@ -19,7 +19,6 @@ import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.function.Consumer;
 
-import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.CommandClient;
 import org.eclipse.hono.client.HonoClient;
@@ -172,8 +171,7 @@ public class HonoConsumerBase {
 
     private void printMessage(final String tenantId, final Message msg, final String messageType) {
         if (LOG.isDebugEnabled()) {
-            final Data body = (Data) msg.getBody();
-            final String content = body != null ? body.getValue().toString() : "";
+            final String content = MessageHelper.getPayloadAsString(msg);
             final String deviceId = MessageHelper.getDeviceId(msg);
 
             final StringBuilder sb = new StringBuilder("received ").

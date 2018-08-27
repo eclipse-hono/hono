@@ -17,9 +17,8 @@ import javax.annotation.PostConstruct;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Handler;
-import org.apache.qpid.proton.amqp.messaging.AmqpValue;
-import org.apache.qpid.proton.amqp.messaging.Data;
-import org.apache.qpid.proton.amqp.messaging.Section;
+import io.vertx.core.buffer.Buffer;
+
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.util.MessageHelper;
@@ -101,16 +100,11 @@ public class Receiver extends AbstractClient {
 
     private void handleMessage(final String endpoint, final Message msg) {
         final String deviceId = MessageHelper.getDeviceId(msg);
-        final Section body = msg.getBody();
-        String content = null;
-        if (body instanceof Data) {
-            content = ((Data) msg.getBody()).getValue().toString();
-        } else if (body instanceof AmqpValue) {
-            content = ((AmqpValue) msg.getBody()).getValue().toString();
-        }
+
+        final Buffer payload = MessageHelper.getPayload(msg);
 
         LOG.info("received {} message [device: {}, content-type: {}]: {}", endpoint, deviceId, msg.getContentType(),
-                content);
+                payload);
 
         if (msg.getApplicationProperties() != null) {
             LOG.info("... with application properties: {}", msg.getApplicationProperties().getValue());

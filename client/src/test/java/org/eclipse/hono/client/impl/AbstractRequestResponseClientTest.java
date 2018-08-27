@@ -26,7 +26,7 @@ import java.util.Collections;
 import java.util.Map;
 
 import io.vertx.core.buffer.Buffer;
-import org.apache.qpid.proton.amqp.messaging.AmqpValue;
+import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.amqp.messaging.Rejected;
 import org.apache.qpid.proton.amqp.transport.Target;
 import org.apache.qpid.proton.message.Message;
@@ -151,9 +151,9 @@ public class AbstractRequestResponseClientTest  {
         verify(sender).send(messageCaptor.capture(), any(Handler.class));
         assertThat(messageCaptor.getValue(), is(notNullValue()));
         assertThat(messageCaptor.getValue().getBody(), is(notNullValue()));
-        assertThat(messageCaptor.getValue().getBody(), instanceOf(AmqpValue.class));
-        final AmqpValue body = (AmqpValue) messageCaptor.getValue().getBody();
-        assertThat(body.getValue(), is(payload.toBuffer().getBytes()));
+        assertThat(messageCaptor.getValue().getBody(), instanceOf(Data.class));
+        final Buffer body = MessageHelper.getPayload(messageCaptor.getValue());
+        assertThat(body.getBytes(), is(payload.toBuffer().getBytes()));
         assertThat(messageCaptor.getValue().getApplicationProperties(), is(notNullValue()));
         assertThat(messageCaptor.getValue().getApplicationProperties().getValue().get("test-key"), is("test-value"));
         // and a timer has been set to time out the request after 200 ms
