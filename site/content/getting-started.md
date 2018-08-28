@@ -328,24 +328,25 @@ After the device has received the command and has processed it, it needs to info
 
 ### Using CLI (command line interface) to send commands and receive command responses
 `cli` module has an example that demonstrates how to send commands to devices and receive command responses from devices. 
-If you want to commands to any device, run the client from the `cli` folder as follows:
+If you want to send commands to any device, run the client from the `cli` folder as follows:
  
 ~~~sh
 ~/hono/cli$ mvn spring-boot:run -Drun.arguments=--hono.client.host=localhost,--hono.client.username=consumer@HONO,--hono.client.password=verysecret -Drun.profiles=command,ssl
 ~~~
 
-Client will prompt for user input as below. You can enter the command and payload that you would like to send to a device. For more information about command and payload refer to [Command and Control Concepts]({{< relref "concepts/command-and-control.md" >}}).
+The client will prompt for user input as below. You can enter the command and payload that you would like to send to a device. For more information about command and payload refer to [Command and Control Concepts]({{< relref "concepts/command-and-control.md" >}}).
 
     >>>>>>>>> Enter command for device [<TenantId>:<DeviceId>] <then press Enter, hit ctrl-c to exit >:
     >>>>>>>>> Enter command payload for device [<TenantId>:<DeviceId>] <then press Enter, hit ctrl-c to exit>:
     
-Below example shows that a command `setVolume` with payload `{"level": 50}` is sent to a device with device-id 4711.
+Below example shows that a command `setVolume` with payload `{"level": 50}` is sent to a device with device-id `4711`.
 
     >>>>>>>>> Enter command for device [DEFAULT_TENANT:4711] <then press Enter, hit ctrl-c to exit >: setVolume
     >>>>>>>>> Enter command payload for device [DEFAULT_TENANT:4711] <then press Enter, hit ctrl-c to exit>: {"level": 50}
     INFO  org.eclipse.hono.cli.Commander - Command sent to device... [Command request will timeout in 60 seconds]
 
-In the above example, CLI waits for 60 seconds for the response from the device before the request get timed out. For more information on how to connect devices, receive commands and send responses refer to [Commands using HTTP]({{< relref "user-guide/http-adapter.md#specifying-the-time-a-device-will-wait-for-a-response" >}}) and [Commands using MQTT]({{< relref "user-guide/mqtt-adapter.md#command-control" >}}).
+In the above example, the CLI waits for 60 seconds for the response from the device before the request get timed out. 
+For more information on how to connect devices, receive commands and send responses refer to [Commands using HTTP]({{< relref "user-guide/http-adapter.md#specifying-the-time-a-device-will-wait-for-a-response" >}}) and [Commands using MQTT]({{< relref "user-guide/mqtt-adapter.md#command-control" >}}).
 
 The received command response `{"result":"success"}` is displayed as shown in the below example. 
 
