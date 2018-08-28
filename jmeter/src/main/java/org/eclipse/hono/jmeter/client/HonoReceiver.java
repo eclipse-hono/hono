@@ -77,7 +77,7 @@ public class HonoReceiver extends AbstractClient {
         clientConfig.setPassword(sampler.getPwd());
         clientConfig.setTrustStorePath(sampler.getTrustStorePath());
         clientConfig.setInitialCredits(Integer.parseInt(sampler.getPrefetch()));
-
+        clientConfig.setReconnectAttempts(Integer.parseInt(sampler.getReconnectAttempts()));
         // amqp network config
         amqpNetworkClient = new HonoClientImpl(vertx, clientConfig);
     }
@@ -105,10 +105,8 @@ public class HonoReceiver extends AbstractClient {
     }
 
     private Future<HonoClient> connect() {
-
-        final int reconnectAttempts = Integer.parseInt(sampler.getReconnectAttempts());
         return amqpNetworkClient
-                .connect(getClientOptions(reconnectAttempts))
+                .connect(getClientOptions())
                 .map(client -> {
                     LOGGER.info("connected to AMQP Messaging Network [{}:{}]", sampler.getHost(), sampler.getPort());
                     return client;

@@ -64,7 +64,7 @@ public class HonoSender extends AbstractClient {
 
     /**
      * Creates a new sender for configuration properties.
-     * 
+     *
      * @param sampler The configuration properties.
      */
     public HonoSender(final HonoSenderSampler sampler) {
@@ -82,14 +82,14 @@ public class HonoSender extends AbstractClient {
         honoProps.setUsername(sampler.getUser());
         honoProps.setPassword(sampler.getPwd());
         honoProps.setTrustStorePath(sampler.getTrustStorePath());
-
+        honoProps.setReconnectAttempts(MAX_RECONNECT_ATTEMPTS);
         honoClient = new HonoClientImpl(vertx, honoProps);
 
         final String registryHost = sampler.getRegistryHost();
         final String staticAssertion = sampler.getRegistrationAssertion();
         if ((registryHost != null && registryHost.length() > 0) &&
                 (staticAssertion == null || staticAssertion.length() == 0)) {
-            // only connect to Device Registration service if no static assertion token 
+            // only connect to Device Registration service if no static assertion token
             // has been configured
             final ClientConfigProperties registryProps = new ClientConfigProperties();
             registryProps.setHostnameVerificationRequired(false);
@@ -99,7 +99,7 @@ public class HonoSender extends AbstractClient {
             registryProps.setUsername(sampler.getRegistryUser());
             registryProps.setPassword(sampler.getRegistryPwd());
             registryProps.setTrustStorePath(sampler.getRegistryTrustStorePath());
-
+            registryProps.setReconnectAttempts(MAX_RECONNECT_ATTEMPTS);
             registrationHonoClient = new HonoClientImpl(vertx, registryProps);
         } else {
             LOGGER.info("Registration Service host is not set, will use static token from Registration Assertion config option");
@@ -111,7 +111,7 @@ public class HonoSender extends AbstractClient {
      * <p>
      * As part of the startup the sender connects to Hono Messaging and the
      * Device Registration service.
-     * 
+     *
      * @return A future indicating the outcome of the startup process.
      */
     public CompletableFuture<Void> start() {
@@ -143,7 +143,7 @@ public class HonoSender extends AbstractClient {
     private Future<HonoClient> connectToHonoMessaging() {
 
         return honoClient
-                .connect(getClientOptions(MAX_RECONNECT_ATTEMPTS))
+                .connect(getClientOptions())
                 .map(client -> {
                     LOGGER.info("connected to Hono Messaging [{}:{}]", sampler.getHost(), sampler.getPort());
                     return client;
@@ -157,7 +157,7 @@ public class HonoSender extends AbstractClient {
             return Future.succeededFuture(null);
         } else {
             return registrationHonoClient
-                    .connect(getClientOptions(MAX_RECONNECT_ATTEMPTS))
+                    .connect(getClientOptions())
                     .map(client -> {
                         LOGGER.info("connected to Device Registration service [{}:{}]", sampler.getRegistryHost(), sampler.getRegistryPort());
                         return client;
@@ -258,7 +258,7 @@ public class HonoSender extends AbstractClient {
 
     /**
      * Publishes a message to Hono.
-     * 
+     *
      * @param sampleResult The result object representing the outcome of the sample.
      * @param deviceId The identifier if the device to send a message for.
      * @param waitOnCredits A flag indicating whether the sender should wait for more
@@ -373,7 +373,7 @@ public class HonoSender extends AbstractClient {
 
     /**
      * Closes the connections to the Device Registration Service and Hono Messaging.
-     * 
+     *
      * @return A future that successfully completes once the connections are closed.
      */
     public CompletableFuture<Void> close() {

@@ -128,7 +128,7 @@ public class HonoReceiverSampler extends HonoSampler implements TestBean, Thread
             honoReceiver.start().join();
             addSemaphore();
         } catch (final CompletionException e) {
-            LOGGER.error("error starting receiver: {}/{} ({)}", getEndpoint(), getTenant(),
+            LOGGER.error("error starting receiver: {}/{} ({})", getEndpoint(), getTenant(),
                     Thread.currentThread().getName(), e.getCause());
         }
     }
