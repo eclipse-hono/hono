@@ -145,8 +145,8 @@ public class HonoHttpDevice {
             Request.TelemetryWithoutTtd
     );
 
-    private HttpClient httpClient;
-    private MultiMap standardRequestHeaders;
+    private final HttpClient httpClient;
+    private final MultiMap standardRequestHeaders;
 
     private HonoHttpDevice() {
         final HttpClientOptions options = new HttpClientOptions();
@@ -170,10 +170,8 @@ public class HonoHttpDevice {
 
     /**
      * Send a message to Hono HTTP adapter. Delay any successful response by 1000 milliseconds.
-     *
-     * @param payload JSON object that will be sent as UTF-8 encoded String.
-     * @param headersToAdd A map that contains all headers to add to the HTTP request.
-     * @param asEvent If {@code true}, an event message is sent, otherwise a telemetry message.
+     * 
+     * @param request The request to send.
      * @return The HTTP response headers.
      */
     private CompletableFuture<Void> sendMessage(final Request request) {
