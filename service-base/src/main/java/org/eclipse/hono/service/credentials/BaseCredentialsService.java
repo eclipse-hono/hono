@@ -163,9 +163,14 @@ public abstract class BaseCredentialsService<T> extends EventBusService<T> imple
     }
 
     /**
-     * {@inheritDoc}
-     *
+     * Get all credentials for a device.
+     * <p>
      * Subclasses MUST implement this method in order to build a working Credential Service.
+     * </p>
+     * 
+     * @param tenantId The tenant the device belongs to.
+     * @param deviceId The ID of the device.
+     * @param resultHandler The handler to invoke with the result of the operation.
      */
     public abstract void getAll(String tenantId, String deviceId, Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler);
 
