@@ -560,6 +560,39 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     }
 
     /**
+     * Sends a response message for a notification command with the given status code in reply to
+     * the sender of the command. The message carries no payload.
+     * <p>
+     * This method may be used by protocol adapters after the notification command was sent to the device.
+     * A reasonable status code to use in this
+     * case is {@code 200 Ok}.
+     *
+     * @param command The command to which the status response message relates.
+     * @param statusCode The status code of the response message.
+     * @param context The currently active OpenTracing span. An implementation
+     *         should use this as the parent for any span it creates for tracing
+     *         the execution of this operation.
+     * @return A future indicating the outcome of the attempt to send
+     *         the message. The link will be closed in any case.
+     * @throws NullPointerException if any of the parameters other than statusCode are {@code null}.
+     */
+    protected final Future<ProtonDelivery> sendNotificationCommandResponse(
+            final Command command,
+            final int statusCode,
+            final SpanContext context) {
+
+
+        if (command == null) {
+            return Future.succeededFuture();
+        } else {
+            return sendCommandResponse(
+                    command.getTenant(),
+                    CommandResponse.from(command.getRequestId(), command.getDeviceId(), statusCode),
+                    context);
+        }
+    }
+
+    /**
      * Forwards a response message indicating a failure to the sender of the command.
      * <p>
      * This method may be used by protocol adapters if they have not been able to
@@ -573,6 +606,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      *         the execution of this operation.
      * @return A future indicating the outcome of the attempt to send
      *         the message.
+     * @throws NullPointerException if any of the parameters other than statusCode are {@code null}.
      */
     protected final Future<ProtonDelivery> failCommand(
             final Command command,

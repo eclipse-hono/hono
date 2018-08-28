@@ -15,9 +15,11 @@ package org.eclipse.hono.service.command;
 
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.BiConsumer;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.util.CommandConstants;
+import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
 
@@ -36,6 +38,7 @@ public final class Command {
     public static final String KEY_COMMAND = "command";
 
     private final boolean valid;
+    private final boolean notification;
     private final Message message;
     private final String tenantId;
     private final String deviceId;
@@ -45,6 +48,7 @@ public final class Command {
 
     private Command(
             final boolean valid,
+            final boolean notification,
             final Message message,
             final String tenantId,
             final String deviceId,
@@ -52,6 +56,7 @@ public final class Command {
             final String replyToId) {
 
         this.valid = valid;
+        this.notification = notification;
         this.message = message;
         this.tenantId = tenantId;
         this.deviceId = deviceId;
@@ -135,8 +140,15 @@ public final class Command {
             }
         }
 
+        final Boolean isNotification = Optional.ofNullable(
+                MessageHelper.getApplicationProperty(message.getApplicationProperties(),
+                        MessageHelper.APP_PROPERTY_NOTIFY_COMMAND,
+                        Boolean.class)).
+                orElse(false);
+        // TODO: add test
         final Command result = new Command(
                 valid,
+                isNotification,
                 message,
                 tenantId,
                 deviceId,
@@ -153,6 +165,10 @@ public final class Command {
      */
     public boolean isValid() {
         return valid;
+    }
+
+    public boolean isNotificationCommand() {
+        return notification;
     }
 
     /**
@@ -320,5 +336,22 @@ public final class Command {
         } else {
             return "Invalid Command";
         }
+    }
+
+    /**
+     * Dump the command as <em>headers</em> (key-value-pairs) by invoking the dumpHandler for each pair.
+     *
+     * @param dumpHandler The dumpHandler that receives the key and the value for further processing.
+     * @throws NullPointerException If the dumpHandler is {@code null}.
+     */
+    public void dumpCommandAsHeaders(final BiConsumer<String, String> dumpHandler) {
+        Objects.requireNonNull(dumpHandler);
+
+        if (this.isNotificationCommand()) {
+            dumpHandler.accept(Constants.HEADER_NOTIFY_COMMAND, this.getName());
+        } else {
+            dumpHandler.accept(Constants.HEADER_COMMAND, this.getName());
+        }
+        dumpHandler.accept(Constants.HEADER_COMMAND_REQUEST_ID, this.getRequestId());
     }
 }

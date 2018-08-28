@@ -65,4 +65,44 @@ public interface CommandClient extends RequestResponseClient {
      * @see RequestResponseClient#setRequestTimeout(long)
      */
     Future<BufferResult> sendCommand(String command, String contentType, Buffer data);
+
+    /**
+     * Sends a notification command to a device, i.e. there is no response from the device expected.
+     * <p>
+     * A device needs to be (successfully) registered before a client can upload
+     * any data for it. The device also needs to be connected for a successful delivery.
+     *
+     * @param notificationCommand The notification command name.
+     * @param data The command data to send to the device or {@code null} if the notification command has no input data.
+     * @return A future indicating the result of the operation.
+     *         <p>
+     *         The future will succeed with the status code from the protocol adapter that received the notification command.
+     *         <p>
+     *         If the notification command could not be processed by the protocol adapter, the future will fail with a {@link ServiceInvocationException} containing
+     *         the (error) status code. Status codes are defined at <a href="https://www.eclipse.org/hono/api/command-and-control-api">Command and Control API</a>.
+     * @throws NullPointerException if command is {@code null}.
+     * @see RequestResponseClient#setRequestTimeout(long)
+     */
+    Future<Integer> sendNotificationCommand(String notificationCommand, Buffer data);
+
+    /**
+     * Sends a notification command to a device, i.e. there is no response from the device expected.
+     * <p>
+     * A device needs to be (successfully) registered before a client can upload
+     * any data for it. The device also needs to be connected for a successful delivery.
+     *
+     * @param notificationCommand The notification command name.
+     * @param contentType The type of the data submitted as part of the notification command or {@code null} if unknown.
+     * @param data The command data to send to the device or {@code null} if the command has no input data.
+     * @return A future indicating the result of the operation.
+     *         <p>
+     *         The future will succeed with the status code from the protocol adapter that received the notification command.
+     *         <p>
+     *         If the notification command could not be processed by the protocol adapter, the future will fail with a {@link ServiceInvocationException} containing
+     *         the (error) status code. Status codes are defined at <a href="https://www.eclipse.org/hono/api/command-and-control-api">Command and Control API</a>.
+     * @throws NullPointerException if notificationCommand is {@code null}.
+     * @see RequestResponseClient#setRequestTimeout(long)
+     */
+    Future<Integer> sendNotificationCommand(String notificationCommand, String contentType, Buffer data);
+
 }

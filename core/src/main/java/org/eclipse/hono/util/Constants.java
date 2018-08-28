@@ -217,6 +217,11 @@ public final class Constants {
     public static final String HEADER_COMMAND = "hono-command";
 
     /**
+     * The header name defined for setting the <em>notification command</em> that is sent to the device.
+     */
+    public static final String HEADER_NOTIFY_COMMAND = "hono-notify";
+
+    /**
      * The header name defined for setting the <em>status code</em> of a device respond to a command that was previously received by the device.
      */
     public static final String HEADER_COMMAND_RESPONSE_STATUS = "hono-cmd-status";
