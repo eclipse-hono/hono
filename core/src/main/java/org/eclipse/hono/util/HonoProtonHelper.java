@@ -181,7 +181,7 @@ public final class HonoProtonHelper {
      * @param link The link to close and free.
      * @param closeHandler The handler to invoke after the link was freed.
      */
-    public static void closeAndFree(final Context context, final ProtonLink link,
+    public static void closeAndFree(final Context context, final ProtonLink<?> link,
                                     final Future<Void> closeHandler) {
         closeAndFree(context, link, DEFAULT_FREE_LINK_AFTER_CLOSE_INTERVAL_MILLIS, closeHandler);
     }
@@ -197,7 +197,8 @@ public final class HonoProtonHelper {
      * @param timeoutToInvokeCloseHandler The timeout in milliseconds that is used for the supervision timer.
      * @param closeHandler The handler to invoke after the link was freed.
      */
-    public static void closeAndFree(final Context context, final ProtonLink link, final long timeoutToInvokeCloseHandler,
+    public static void closeAndFree(final Context context, final ProtonLink<?> link,
+            final long timeoutToInvokeCloseHandler,
                                     final Future<Void> closeHandler) {
         final AtomicLong closeSenderTimerId = new AtomicLong(-1);
 
