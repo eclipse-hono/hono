@@ -228,7 +228,7 @@ public class TenantClientImpl extends AbstractRequestResponseClient<TenantResult
         span.setTag(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId);
         return get(
                 key,
-                () -> new JsonObject().put(TenantConstants.FIELD_PAYLOAD_TENANT_ID, tenantId).toBuffer(),
+                () -> new JsonObject().put(TenantConstants.FIELD_PAYLOAD_TENANT_ID, tenantId),
                 span).map(tenant -> {
                     span.finish();
                     return tenant;
@@ -262,7 +262,7 @@ public class TenantClientImpl extends AbstractRequestResponseClient<TenantResult
         TAG_SUBJECT_DN.set(span, subjectDnRfc2253);
         return get(
                 key,
-                () -> new JsonObject().put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, subjectDnRfc2253).toBuffer(),
+                () -> new JsonObject().put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, subjectDnRfc2253),
                 span).map(tenant -> {
                     span.finish();
                     return tenant;
@@ -275,7 +275,7 @@ public class TenantClientImpl extends AbstractRequestResponseClient<TenantResult
 
     private <T> Future<TenantObject> get(
             final TriTuple<TenantAction, T, Object> key,
-            final Supplier<Buffer> payloadSupplier,
+            final Supplier<JsonObject> payloadSupplier,
             final Span currentSpan) {
 
         TracingHelper.TAG_CACHE_HIT.set(currentSpan, true);
@@ -286,7 +286,7 @@ public class TenantClientImpl extends AbstractRequestResponseClient<TenantResult
             createAndSendRequest(
                     TenantConstants.TenantAction.get.toString(),
                     customizeRequestApplicationProperties(),
-                    payloadSupplier.get(),
+                    payloadSupplier.get().toBuffer(),
                     RegistrationConstants.CONTENT_TYPE_APPLICATION_JSON,
                     tenantResult.completer(),
                     key,

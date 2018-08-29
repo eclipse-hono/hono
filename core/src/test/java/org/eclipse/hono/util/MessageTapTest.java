@@ -79,7 +79,7 @@ public class MessageTapTest {
         MessageHelper.setCreationTime(msg);
         MessageHelper.addDeviceId(msg, "4711");
         MessageHelper.addAnnotation(msg, MessageHelper.APP_PROPERTY_TENANT_ID, Constants.DEFAULT_TENANT);
-        MessageHelper.setPayload(msg, null, payload);
+        MessageHelper.setJsonPayload(msg, payload);
         msg.setContentEncoding(contentEncoding);
         return msg;
     }

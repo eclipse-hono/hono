@@ -519,11 +519,11 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
     /**
      * Creates a request message for a payload and sends it to the peer.
      * <p>
-     * This method simply invokes {@link #createAndSendRequest(String, Map, Buffer, Handler)}
-     * with {@code null} for the properties parameter.
+     * This method simply invokes {@link #createAndSendRequest(String, Map, Buffer, Handler)} with {@code null} for the
+     * properties parameter.
      * 
      * @param action The operation that the request is supposed to trigger/invoke.
-     * @param payload The payload to include in the request message as a an AMQP Value section.
+     * @param payload The payload to include in the request message as an AMQP Value section.
      * @param resultHandler The handler to notify about the outcome of the request.
      * @throws NullPointerException if any of action or result handler is {@code null}.
      */
@@ -538,11 +538,11 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
     /**
      * Creates a request message for a payload and sends it to the peer.
      * <p>
-     * This method simply invokes {@link #createAndSendRequest(String, Map, Buffer, String, Handler, Object, Span)}
-     * with {@code null} for the properties, content type and cache key parameters.
+     * This method simply invokes {@link #createAndSendRequest(String, Map, Buffer, String, Handler, Object, Span)} with
+     * {@code null} for the properties, content type and cache key parameters.
      * 
      * @param action The operation that the request is supposed to trigger/invoke.
-     * @param payload The payload to include in the request message as a an AMQP Value section.
+     * @param payload The payload to include in the request message as an AMQP Value section.
      * @param resultHandler The handler to notify about the outcome of the request.
      * @param currentSpan The <em>Opentracing</em> span used to trace the request execution.
      * @throws NullPointerException if any of action, result handler or current span is {@code null}.
