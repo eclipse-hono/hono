@@ -173,6 +173,11 @@ public final class MessageHelper {
      */
     public static final String JMS_VENDOR_PROPERTY_CONTENT_TYPE = "JMS_AMQP_CONTENT_TYPE";
 
+    /**
+     * The MIME type representing the String representation of a JSON Object.
+     */
+    public static final String CONTENT_TYPE_APPLICATION_JSON = "application/json";
+
     private static final Logger LOG = LoggerFactory.getLogger(MessageHelper.class);
 
     private MessageHelper() {
@@ -682,39 +687,41 @@ public final class MessageHelper {
     }
 
     /**
-     * Set the payload of the message.
+     * Set the JSON payload of the message.
      * <p>
      * If the payload is {@code null}, then neither the payload, nor content type will be set.
      * </p>
      * 
      * @param message The message to update.
-     * @param contentType An optional content type.
      * @param payload The optional message payload.
      * 
      * @throws NullPointerException If the parameter {@code message} was {@code null}.
      */
-    public static void setPayload(final Message message, final String contentType, final JsonObject payload) {
+    public static void setJsonPayload(final Message message, final JsonObject payload) {
         Objects.requireNonNull(message);
 
-        setPayload(message, contentType, payload != null ? payload.toBuffer() : null);
+        setPayload(message, CONTENT_TYPE_APPLICATION_JSON, payload != null ? payload.toBuffer() : null);
     }
 
     /**
-     * Set the payload of the message.
+     * Set the JSON payload of the message.
      * <p>
      * If the payload is {@code null}, then neither the payload, nor content type will be set.
      * </p>
+     * <p>
+     * <b>Note:</b> No formal check is done if the payload actually is a JSON string.
+     * </p>
      * 
      * @param message The message to update.
-     * @param contentType An optional content type.
      * @param payload The optional message payload.
      * 
      * @throws NullPointerException If the parameter {@code message} was {@code null}.
      */
-    public static void setPayload(final Message message, final String contentType, final String payload) {
+    public static void setJsonPayload(final Message message, final String payload) {
         Objects.requireNonNull(message);
 
-        setPayload(message, contentType, payload != null ? payload.getBytes(StandardCharsets.UTF_8) : null);
+        setPayload(message, CONTENT_TYPE_APPLICATION_JSON,
+                payload != null ? payload.getBytes(StandardCharsets.UTF_8) : null);
     }
 
     /**

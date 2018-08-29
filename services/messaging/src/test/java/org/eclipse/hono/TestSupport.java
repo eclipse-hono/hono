@@ -92,7 +92,7 @@ public final class TestSupport {
         final Message message = ProtonHelper.message();
         message.setMessageId(messageId);
         MessageHelper.addDeviceId(message, deviceId);
-        MessageHelper.setPayload(message, "application/json", String.format("{\"temp\" : %d}", temperature));
+        MessageHelper.setJsonPayload(message, String.format("{\"temp\" : %d}", temperature));
         return message;
     }
 

@@ -33,7 +33,7 @@ public abstract class RequestResponseApiConstants {
     /**
      * The MIME type representing the String representation of a JSON Object.
      */
-    public static final String CONTENT_TYPE_APPLICATION_JSON = "application/json";
+    public static final String CONTENT_TYPE_APPLICATION_JSON = MessageHelper.CONTENT_TYPE_APPLICATION_JSON;
 
     /* message payload fields */
     public static final String FIELD_PAYLOAD_DEVICE_ID = Constants.JSON_FIELD_DEVICE_ID;
@@ -103,7 +103,7 @@ public abstract class RequestResponseApiConstants {
                 message.setMessageAnnotations(new MessageAnnotations(annotations));
             }
 
-            MessageHelper.setPayload(message, CONTENT_TYPE_APPLICATION_JSON, payload);
+            MessageHelper.setJsonPayload(message, payload);
 
             return message;
         }
