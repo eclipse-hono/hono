@@ -13,7 +13,6 @@
 
 package org.eclipse.hono.client.impl;
 
-import java.math.BigInteger;
 import java.util.Objects;
 
 import org.eclipse.hono.client.CommandClient;
@@ -110,7 +109,7 @@ public class CommandClientImpl extends AbstractRequestResponseClient<BufferResul
      */
     @Override
     protected String createMessageId() {
-        return BigInteger.valueOf(messageCounter++).toString(Character.MAX_RADIX);
+        return Long.toString(messageCounter++, Character.MAX_RADIX);
     }
 
     @Override
