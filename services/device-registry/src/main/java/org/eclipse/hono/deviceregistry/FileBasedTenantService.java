@@ -20,7 +20,7 @@ import java.util.Objects;
 
 import javax.security.auth.x500.X500Principal;
 
-import org.eclipse.hono.service.tenant.BaseTenantService;
+import org.eclipse.hono.service.tenant.CompleteBaseTenantService;
 import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.TenantObject;
 import org.eclipse.hono.util.TenantResult;
@@ -44,7 +44,7 @@ import io.vertx.core.json.JsonObject;
  */
 @Repository
 @ConditionalOnProperty(name = "hono.app.type", havingValue = "file", matchIfMissing = true)
-public final class FileBasedTenantService extends BaseTenantService<FileBasedTenantsConfigProperties> {
+public final class FileBasedTenantService extends CompleteBaseTenantService<FileBasedTenantsConfigProperties> {
 
     private static final long MAX_AGE_GET_TENANT = 180L; // seconds
 
