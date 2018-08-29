@@ -22,7 +22,7 @@ SCRIPTPATH="$(cd "$(dirname "$0")" && pwd -P)"
 CONFIG=$SCRIPTPATH/../config
 CERTS=$CONFIG/hono-demo-certs-jar
 NS=hono
-CREATE_OPTIONS="-l project=$NS --network $NS --detach=false"
+CREATE_OPTIONS="-l project=$NS --network $NS --detach=false --log-driver json-file --log-opt max-size=1m --log-opt max-file=3"
 HONO_VERSION="${project.version}"
 
 if [ "" != ""$1 ]
