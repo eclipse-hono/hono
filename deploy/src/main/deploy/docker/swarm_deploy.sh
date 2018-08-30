@@ -34,9 +34,6 @@ docker network create --label project=$NS --driver overlay $NS
 
 docker secret create -l project=$NS trusted-certs.pem $CERTS/trusted-certs.pem
 
-if [ $DEPLOYMENT = "1" ]
-then
-
 echo
 echo Deploying Influx DB and Grafana ...
 docker secret create -l project=$NS influxdb.conf $SCRIPTPATH/../influxdb.conf
@@ -55,8 +52,6 @@ docker service create $CREATE_OPTIONS --name grafana -p 3000:3000 \
   --limit-memory 64m \
   grafana/grafana:${grafana.version}
 echo ... done
-
-fi
 
 echo
 echo Deploying Artemis broker ...
