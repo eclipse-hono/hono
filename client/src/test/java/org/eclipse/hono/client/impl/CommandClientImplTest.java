@@ -20,9 +20,11 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
+import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.MessageHelper;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -108,4 +110,34 @@ public class CommandClientImplTest {
         assertThat(messageCaptor.getValue().getReplyTo(),
                 is(String.format("%s/%s/%s/%s", client.getName(), Constants.DEFAULT_TENANT, DEVICE_ID, REPLY_ID)));
     }
+
+    /**
+     * Verifies that a notification command sent has its properties set correctly.
+     *
+     * <ul>
+     * <li>subject set to given command</li>
+     * <li>message-id not null</li>
+     * <li>content-type set to given type</li>
+     * <li>reply-to address set to default address created from device and UUID</li>
+     * <li>application property for notification command set to true</li>
+     * </ul>
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testSendNotificationCommandSetsProperties(final TestContext ctx) {
+
+        client.sendNotificationCommand("notifySomething", "text/plain", Buffer.buffer("payload"));
+        final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
+        verify(sender).send(messageCaptor.capture(), any(Handler.class));
+        assertThat(messageCaptor.getValue().getSubject(), is("notifySomething"));
+        assertNotNull(messageCaptor.getValue().getMessageId());
+        assertThat(messageCaptor.getValue().getContentType(), is("text/plain"));
+        assertThat(messageCaptor.getValue().getReplyTo(),
+                is(String.format("%s/%s/%s/%s", client.getName(), Constants.DEFAULT_TENANT, DEVICE_ID, REPLY_ID)));
+        final ApplicationProperties applicationProperties = messageCaptor.getValue().getApplicationProperties();
+        assertNotNull(applicationProperties);
+        assertThat((Boolean) (applicationProperties.getValue().get(MessageHelper.APP_PROPERTY_NOTIFY_COMMAND)), is(Boolean.TRUE));
+    }
+
 }

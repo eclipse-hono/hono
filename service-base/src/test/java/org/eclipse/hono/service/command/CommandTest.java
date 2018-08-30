@@ -20,10 +20,14 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.MessageHelper;
 import org.junit.Test;
+
+import java.util.Map;
 
 
 /**
@@ -109,4 +113,27 @@ public class CommandTest {
                 CommandConstants.COMMAND_ENDPOINT, replyToId));
         assertFalse(Command.from(message, Constants.DEFAULT_TENANT, "4712").isValid());
     }
+
+    /**
+     * Verifies that a notification command can be created from a valid message that has the application property
+     * for notification commands set to {@code Boolean.TRUE}.
+     */
+    @Test
+    public void testNotificationCommandFromMessage() {
+        final String replyToId = "the-reply-to-id";
+        final String correlationId = "the-correlation-id";
+        final Message message = mock(Message.class);
+        when(message.getSubject()).thenReturn("doThis");
+        when(message.getCorrelationId()).thenReturn(correlationId);
+        when(message.getReplyTo()).thenReturn(String.format("%s/%s/%s/%s",
+                CommandConstants.COMMAND_ENDPOINT, Constants.DEFAULT_TENANT, "4711", replyToId));
+        final Map<String, Object> propertyMap = mock(Map.class);
+        when(propertyMap.get(MessageHelper.APP_PROPERTY_NOTIFY_COMMAND)).thenReturn(Boolean.TRUE);
+        final ApplicationProperties applicationProperties = new ApplicationProperties(propertyMap);
+        when(message.getApplicationProperties()).thenReturn(applicationProperties);
+        final Command cmd = Command.from(message, Constants.DEFAULT_TENANT, "4711");
+        assertTrue(cmd.isValid());
+        assertTrue(cmd.isNotificationCommand());
+    }
+
 }
