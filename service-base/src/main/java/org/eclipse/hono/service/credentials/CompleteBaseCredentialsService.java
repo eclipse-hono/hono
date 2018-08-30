@@ -27,12 +27,10 @@ import java.util.Objects;
 import java.util.Optional;
 
 /**
- * Base class for implementing {@link CompleteCredentialsService}s.
- * This covers all the opration defined in the API. For mandatory operations only see
- * {@link CredentialsService} and {@link BaseCredentialsService}.
+ * A base class for implementing {@link CompleteCredentialsService}s.
  * <p>
  * In particular, this base class provides support for receiving service invocation request messages
- * via vert.x' event bus and route them to specific methods corresponding to the operation indicated
+ * via vert.x' event bus and routing them to specific methods corresponding to the operation indicated
  * in the message.
  *
  * @param <T> The type of configuration class this service supports.

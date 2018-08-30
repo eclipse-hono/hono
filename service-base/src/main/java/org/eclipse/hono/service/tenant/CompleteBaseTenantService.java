@@ -29,7 +29,7 @@ import java.net.HttpURLConnection;
 import java.util.Objects;
 
 /**
- * Base class for implementing {@link CompleteTenantService}s.
+ * A base class for implementing {@link CompleteTenantService}.
  * <p>
  * In particular, this base class provides support for receiving service invocation request messages
  * via vert.x' event bus and route them to specific methods corresponding to the operation indicated

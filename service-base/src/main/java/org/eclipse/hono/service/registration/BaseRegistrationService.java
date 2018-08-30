@@ -31,17 +31,20 @@ import io.vertx.core.Handler;
 import io.vertx.core.json.JsonObject;
 
 /**
- * Base class for implementing minimalist {@link RegistrationService}s.
- * Only implements the mandatory operations of the API.
+ * A base class for implementing {@link RegistrationService}.
  * <p>
- * This base class provides support for receiving "Assert" request messages
- * via vert.x' event bus and route them to specific methods corresponding to the operation indicated
- * in the message.
- *
- * Note: this class provides a simple mechanism to assert devices.
- * Subclasses may override it to provide another asserting method.
- * <b>However</b> if a subclass use the provided {@link #assertRegistration(String, String, Handler) asserting}
- * mechanism, it MUST override {@link #getDevice(String, String, Handler)} to provide a functional method.
+ * This base class provides support for receiving <em>assert Registration</em> request messages
+ * via vert.x' event bus and routing them to specific methods accepting the
+ * query parameters contained in the request message.
+ * <p>
+ * <em>NB</em> This class provides a basic implementation for asserting a device's registration
+ * status. Subclasses may override the {@link #assertRegistration(String, String, String, Handler)}
+ * method in order to implement a more sophisticated assertion method.
+ * <p>
+ * The default implementation of <em>assertRegistration</em> relies on {@link #getDevice(String, String, Handler)}
+ * to retrieve a device's registration information from persistent storage. Thus, subclasses need
+ * to override (and implement) this method in order to get a working implementation of the default
+ * assertion mechanism.
  * 
  * @param <T> The type of configuration properties this service requires.
  */

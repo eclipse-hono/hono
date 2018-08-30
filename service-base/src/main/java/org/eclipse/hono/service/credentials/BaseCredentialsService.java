@@ -29,17 +29,11 @@ import io.vertx.core.Handler;
 import io.vertx.core.json.JsonObject;
 
 /**
- * Base class for implementing {@link CredentialsService}s.
- * Only implements the mandatory operations of the API.
- * See {@link CompleteCredentialsService} and {@link CompleteBaseCredentialsService}
- * for the optional API operations.
+ * A base class for implementing {@link CredentialsService}s.
  * <p>
- * This base class provides support for receiving "Get" request messages
- * via vert.x' event bus and route them to specific methods corresponding to the operation indicated
- * in the message.
- *
- * Note: Subclasses <b>MUST</b> implement {@link #getAll(String, String, Handler)}, as it is used
- * by the routing mechanism (see {@link #processGetRequest(EventBusMessage)}).
+ * This base class provides support for receiving <em>Get</em> request messages
+ * via vert.x' event bus and routing them to specific methods accepting the
+ * query parameters contained in the request message.
  *
  * @param <T> The type of configuration class this service supports.
  */
@@ -75,7 +69,13 @@ public abstract class BaseCredentialsService<T> extends EventBusService<T> imple
         }
     }
 
-    Future<EventBusMessage> processGetRequest(final EventBusMessage request) {
+    /**
+     * Processes a <em>get Credentials</em> request message.
+     * 
+     * @param request The request message.
+     * @return The response to send to the client via the event bus.
+     */
+    protected Future<EventBusMessage> processGetRequest(final EventBusMessage request) {
 
         final String tenantId = request.getTenant();
         final JsonObject payload = request.getJsonPayload();
@@ -163,10 +163,7 @@ public abstract class BaseCredentialsService<T> extends EventBusService<T> imple
     }
 
     /**
-     * Get all credentials for a device.
-     * <p>
-     * Subclasses MUST implement this method in order to build a working Credential Service.
-     * </p>
+     * Gets all credentials on record for a device.
      * 
      * @param tenantId The tenant the device belongs to.
      * @param deviceId The ID of the device.

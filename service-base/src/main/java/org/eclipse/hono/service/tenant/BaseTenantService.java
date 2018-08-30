@@ -32,11 +32,11 @@ import io.vertx.core.Handler;
 import io.vertx.core.json.JsonObject;
 
 /**
- * Base class for implementing {@link TenantService}s.
+ * a Base class for implementing {@link TenantService}.
  * <p>
  * In particular, this base class provides support for receiving service invocation request messages
- * via vert.x' event bus and route them to specific methods corresponding to the operation indicated
- * in the message.
+ * via vert.x' event bus and routing them to specific methods accepting the
+ * query parameters contained in the request message.
  *
  * @param <T> The type of configuration properties this service requires.
  */
