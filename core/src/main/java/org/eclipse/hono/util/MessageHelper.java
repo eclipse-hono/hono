@@ -356,7 +356,7 @@ public final class MessageHelper {
     }
 
     /**
-     * Gets a message's body as Buffer object as {@link String}.
+     * Gets a message's body as String.
      *
      * @param message The AMQP 1.0 message to parse the body of.
      * @return The message body as a {@link String} or {@code null} if the message does not have a <em>Data</em> nor an
@@ -646,7 +646,7 @@ public final class MessageHelper {
     }
 
     /**
-     * Set the payload of the message.
+     * Set the payload of the message using a {@link Data} section.
      * <p>
      * If the payload is {@code null}, then neither the payload, nor content type will be set.
      * </p>
@@ -660,16 +660,16 @@ public final class MessageHelper {
     public static void setPayload(final Message message, final String contentType, final byte[] payload) {
         Objects.requireNonNull(message);
 
+        if (contentType != null) {
+            message.setContentType(contentType);
+        }
         if (payload != null) {
-            if (contentType != null) {
-                message.setContentType(contentType);
-            }
             message.setBody(new Data(new Binary(payload)));
         }
     }
 
     /**
-     * Set the payload of the message.
+     * Set the payload of the message using a {@link Data} section.
      * <p>
      * If the payload is {@code null}, then neither the payload, nor content type will be set.
      * </p>
@@ -687,7 +687,7 @@ public final class MessageHelper {
     }
 
     /**
-     * Set the JSON payload of the message.
+     * Set the JSON payload of the message using a {@link Data} section.
      * <p>
      * If the payload is {@code null}, then neither the payload, nor content type will be set.
      * </p>
@@ -704,7 +704,7 @@ public final class MessageHelper {
     }
 
     /**
-     * Set the JSON payload of the message.
+     * Set the JSON payload of the message using a {@link Data} section.
      * <p>
      * If the payload is {@code null}, then neither the payload, nor content type will be set.
      * </p>
@@ -725,7 +725,7 @@ public final class MessageHelper {
     }
 
     /**
-     * Test is the message has a data section set as the body.
+     * Test if the message has a {@link Data} section set as the body.
      * 
      * @param message The message to test.
      * @param allowAmqpValue Whether or now to allow AmqpValue of type {@code String} or {@code byte[]} to pass as well.
