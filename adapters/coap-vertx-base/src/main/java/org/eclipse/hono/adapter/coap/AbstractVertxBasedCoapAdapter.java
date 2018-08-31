@@ -59,6 +59,9 @@ import io.vertx.core.json.JsonObject;
 public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterProperties>
         extends AbstractProtocolAdapterBase<T> {
 
+    /**
+     * A logger shared with subclasses.
+     */
     protected final Logger log = LoggerFactory.getLogger(getClass());
 
     /**
@@ -166,14 +169,14 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                     getCredentialsServiceClient());
             // add handler to authentication handler map.
             authenticationHandlerMap.put(coapPreSharedKeyProvider.getType(), coapPreSharedKeyProvider);
-            final NetworkConfig secureNetworkConfig = getSecureNetworkConfig();
-            final NetworkConfig insecureNetworkConfig = getInsecureNetworkConfig();
             final Context adapterContext = this.context;
             final CoapServer server = this.server;
 
             // delegate for blocking execution
             getVertx().executeBlocking(future -> {
                 // Call some potential blocking API
+                final NetworkConfig secureNetworkConfig = getSecureNetworkConfig();
+                final NetworkConfig insecureNetworkConfig = getInsecureNetworkConfig();
                 final CoapServer startingServer = server == null ? new CoapServer(insecureNetworkConfig) : server;
                 addResources(adapterContext, startingServer);
                 final DtlsConnectorConfig.Builder dtlsConfig = new DtlsConnectorConfig.Builder();
@@ -254,14 +257,14 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
     }
 
     /**
-     * Get the coap network configuration for the secure endpoint.
-     * 
+     * Gets the CoAP network configuration for the secure endpoint.
+     * <p>
      * Creates a coap network configuration setup with defaults. If the {@link CoapAdapterProperties} provides a
      * filename in "networkConfig", load that available values from that file overwriting existing values. If the
      * {@link CoapAdapterProperties} provides a filename in "secureNetworkConfig", load that available values from that
      * file also overwriting existing values.
      * 
-     * @return coap network configuration for the secure endpoint.
+     * @return The network configuration for the secure endpoint.
      */
     protected NetworkConfig getSecureNetworkConfig() {
         final CoapAdapterProperties config = getConfig();
@@ -275,14 +278,14 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
     }
 
     /**
-     * Get the coap network configuration for the insecure endpoint.
+     * Gets the CoAP network configuration for the insecure endpoint.
      * 
      * Creates a coap network configuration setup with defaults. If the {@link CoapAdapterProperties} provides a
      * filename in "networkConfig", load that available values from that file overwriting existing values. If the
      * {@link CoapAdapterProperties} provides a filename in "insecureNetworkConfig", load that available values from
      * that file also overwriting existing values.
      * 
-     * @return coap network configuration for the insecure endpoint.
+     * @return The network configuration for the insecure endpoint.
      */
     protected NetworkConfig getInsecureNetworkConfig() {
         final CoapAdapterProperties config = getConfig();
@@ -319,12 +322,13 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
      * <p>
      * Subclasses may override this method in order to customize the message before it is sent, e.g. adding custom
      * properties.
+     * <p>
+     * This default implementation does nothing.
      * 
      * @param downstreamMessage The message that will be sent downstream.
-     * @param exchange coap message exchange.
+     * @param exchange The CoAP message exchange that the request from the device is part of.
      */
     protected void customizeDownstreamMessage(final Message downstreamMessage, final CoapExchange exchange) {
-        // this default implementation does nothing
     }
 
     @Override
@@ -368,7 +372,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
     }
 
     /**
-     * Uploads the body of an COAP request as a telemetry message to the Hono server.
+     * Forwards the body of a CoAP request to the south bound Telemetry API of the AMQP 1.0 Messaging Network.
      * 
      * @param exchange coap message exchange
      * @param authenticatedDevice authenticated device
@@ -380,8 +384,11 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
     public final void uploadTelemetryMessage(final CoapExchange exchange, final Device authenticatedDevice,
             final Device originDevice, final boolean waitForOutcome) {
 
-        doUploadMessage(Objects.requireNonNull(exchange), Objects.requireNonNull(authenticatedDevice),
-                Objects.requireNonNull(originDevice), waitForOutcome,
+        doUploadMessage(
+                Objects.requireNonNull(exchange),
+                Objects.requireNonNull(authenticatedDevice),
+                Objects.requireNonNull(originDevice),
+                waitForOutcome,
                 Buffer.buffer(exchange.getRequestPayload()),
                 MediaTypeRegistry.toString(exchange.getRequestOptions().getContentFormat()),
                 getTelemetrySender(authenticatedDevice.getTenantId()),
@@ -389,7 +396,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
     }
 
     /**
-     * Uploads the body of an COAP request as a event message to the Hono server.
+     * Forwards the body of a CoAP request to the south bound Event API of the AMQP 1.0 Messaging Network.
      * 
      * @param exchange coap message exchange
      * @param authenticatedDevice authenticated device
@@ -399,26 +406,28 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
     public final void uploadEventMessage(final CoapExchange exchange, final Device authenticatedDevice,
             final Device originDevice) {
 
-        doUploadMessage(Objects.requireNonNull(exchange), Objects.requireNonNull(authenticatedDevice),
-                Objects.requireNonNull(originDevice), true,
+        doUploadMessage(
+                Objects.requireNonNull(exchange),
+                Objects.requireNonNull(authenticatedDevice),
+                Objects.requireNonNull(originDevice),
+                true,
                 Buffer.buffer(exchange.getRequestPayload()),
                 MediaTypeRegistry.toString(exchange.getRequestOptions().getContentFormat()),
                 getEventSender(authenticatedDevice.getTenantId()), EventConstants.EVENT_ENDPOINT);
     }
 
     /**
-     * Uploads a telemetry or event message to the Hono server.
+     * Forwards a message to the south bound Telemetry or Event API of the AMQP 1.0 Messaging Network.
      * <p>
-     * Depending on the outcome of the attempt to upload the message to Hono, the COAP response's code is set as
+     * Depending on the outcome of the attempt to upload the message, the CaAP response's code is set as
      * follows:
      * <ul>
-     * <li>2.04 (Changed) - if the message has been sent to the Hono server.</li>
+     * <li>2.04 (Changed) - if the message has been forwarded downstream.</li>
      * <li>4.01 (Unauthorized) - if the device could not be authorized.</li>
      * <li>4.03 (Forbidden) - if the tenant/device is not authorized to send messages.</li>
-     * <li>4.06 (Not Acceptable) - if the message is misformed.</li>
-     * <li>5.00 (Internal Server Error) - if the message could not be sent caused by an unspecific processing
-     * error.</li>
-     * <li>5.03 (Service Unavailable) - if the message could not be sent to the Hono server, e.g. due to lack of
+     * <li>4.06 (Not Acceptable) - if the message is malformed.</li>
+     * <li>5.00 (Internal Server Error) - if the message could not be processed due to an unknown processing error.</li>
+     * <li>5.03 (Service Unavailable) - if the message could not be forwarded, e.g. due to lack of
      * connection or credit.</li>
      * <li>?.?? (Generic mapped HTTP error) - if the message could not be sent caused by an specific processing error.
      * See {@link CoapErrorResponse}.</li>
@@ -472,12 +481,12 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                     // this adapter is not enabled for the tenant
                     return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_FORBIDDEN));
                 }
-            }).compose(delivery -> {
+            }).map(delivery -> {
                 LOG.trace("successfully processed message for device [tenantId: {}, deviceId: {}, endpoint: {}]",
                         device.getTenantId(), device.getDeviceId(), endpointName);
                 metrics.incrementProcessedMessages(endpointName, device.getTenantId());
                 exchange.respond(ResponseCode.CHANGED);
-                return Future.succeededFuture();
+                return delivery;
             }).recover(t -> {
                 LOG.debug("cannot process message for device [tenantId: {}, deviceId: {}, endpoint: {}]: {}",
                         device.getTenantId(), device.getDeviceId(), endpointName, t.getMessage());
