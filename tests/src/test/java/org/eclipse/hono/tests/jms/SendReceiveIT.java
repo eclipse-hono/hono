@@ -17,6 +17,7 @@ import static org.junit.Assert.*;
 
 import java.time.Duration;
 import java.util.LongSummaryStatistics;
+import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
@@ -124,7 +125,7 @@ public class SendReceiveIT {
 
         givenAReceiver();
         givenASender();
-        getRegistrationClient().register(DEVICE_ID, Duration.ofMillis(DEFAULT_TEST_TIMEOUT));
+        getRegistrationClient().register(DEVICE_ID, Optional.empty(), Duration.ofMillis(DEFAULT_TEST_TIMEOUT));
         final CountDownLatch latch = new CountDownLatch(IntegrationTestSupport.MSG_COUNT);
         final LongSummaryStatistics stats = new LongSummaryStatistics();
 
@@ -178,7 +179,7 @@ public class SendReceiveIT {
 
         givenAReceiver();
         givenASender();
-        getRegistrationClient().register(SPECIAL_DEVICE, Duration.ofMillis(DEFAULT_TEST_TIMEOUT));
+        getRegistrationClient().register(SPECIAL_DEVICE, Optional.empty(), Duration.ofMillis(DEFAULT_TEST_TIMEOUT));
         final CountDownLatch latch = new CountDownLatch(1);
 
         // get registration assertion
