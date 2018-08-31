@@ -71,7 +71,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
     /**
      * Map for authorization handler.
      */
-    protected final Map<Class<? extends Principal>, CoapAuthenticationHandler> authenticationHandlerMap = new HashMap<Class<? extends Principal>, CoapAuthenticationHandler>();
+    protected final Map<Class<? extends Principal>, CoapAuthenticationHandler> authenticationHandlerMap = new HashMap<>();
 
     /**
      * Sets the metrics for this service.

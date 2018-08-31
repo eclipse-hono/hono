@@ -15,6 +15,8 @@ package org.eclipse.hono.adapter.coap;
 
 import java.net.InetSocketAddress;
 import java.security.Principal;
+import java.util.Base64;
+import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
@@ -28,6 +30,8 @@ import org.eclipse.californium.scandium.dtls.pskstore.PskStore;
 import org.eclipse.californium.scandium.util.ServerNames;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.service.auth.device.Device;
+import org.eclipse.hono.util.CredentialsConstants;
+import org.eclipse.hono.util.CredentialsObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -95,11 +99,12 @@ public class CoapPreSharedKeyHandler implements PskStore, CoapAuthenticationHand
      * @return future with pre-shared-key.
      */
     protected final Future<byte[]> getSharedKeyForDevice(final PreSharedKeyDeviceIdentity handshakeIdentity) {
+
         Objects.requireNonNull(handshakeIdentity);
         return credentialsServiceClient.getOrCreateCredentialsClient(handshakeIdentity.getTenantId())
                 .compose(client -> client.get(handshakeIdentity.getType(), handshakeIdentity.getAuthId()))
                 .compose((credentials) -> {
-                    final byte[] key = handshakeIdentity.getCredentialsSecret(credentials);
+                    final byte[] key = getCandidateKey(credentials);
                     if (key != null) {
                         devices.put(handshakeIdentity,
                                 new Device(handshakeIdentity.getTenantId(), credentials.getDeviceId()));
@@ -108,6 +113,30 @@ public class CoapPreSharedKeyHandler implements PskStore, CoapAuthenticationHand
                         return Future.failedFuture("secret key missing!");
                     }
                 });
+    }
+
+    /**
+     * Extracts the (pre-shared) key from the candidate secret(s) on record for the device.
+     * 
+     * @param credentialsOnRecord The credentials on record as returned by the Credentials service.
+     * @return The key or {@code null} if no candidate secret is on record.
+     */
+    private static byte[] getCandidateKey(final CredentialsObject credentialsOnRecord) {
+
+        final List<byte[]> keys = credentialsOnRecord.getCandidateSecrets(candidateSecret -> {
+
+            final String secretKeyBase64 = candidateSecret.getString(CredentialsConstants.FIELD_SECRETS_KEY);
+            if (secretKeyBase64 != null) {
+                return Base64.getDecoder().decode(secretKeyBase64);
+            } else {
+                return new byte[0];
+            }
+        });
+        if (keys.isEmpty()) {
+            return null;
+        } else {
+            return keys.get(0);
+        }
     }
 
     /**
@@ -131,11 +160,11 @@ public class CoapPreSharedKeyHandler implements PskStore, CoapAuthenticationHand
         //
         final CompletableFuture<byte[]> secret = new CompletableFuture<>();
         vertx.runOnContext((v) -> {
-            getSharedKeyForDevice(handshakeIdentity).setHandler((result) -> {
-                if (result.succeeded()) {
-                    secret.complete(result.result());
+            getSharedKeyForDevice(handshakeIdentity).setHandler((getAttempt) -> {
+                if (getAttempt.succeeded()) {
+                    secret.complete(getAttempt.result());
                 } else {
-                    secret.completeExceptionally(result.cause());
+                    secret.completeExceptionally(getAttempt.cause());
                 }
             });
         });

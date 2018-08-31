@@ -12,20 +12,14 @@
  */
 package org.eclipse.hono.adapter.coap;
 
-import java.util.ArrayList;
-import java.util.Base64;
-import java.util.List;
 import java.util.Objects;
 
-import org.eclipse.hono.service.auth.device.AbstractDeviceCredentials;
 import org.eclipse.hono.service.auth.device.DeviceCredentials;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import io.vertx.core.json.JsonObject;
 
 /**
  * Helper class to represent the device identity based on pre shared key identity.
@@ -155,56 +149,4 @@ public class PreSharedKeyDeviceIdentity implements DeviceCredentials {
         // Identities doesn't validate
         return false;
     }
-
-    /**
-     * Extract pre-shared-key.
-     * 
-     * @param credentialsOnRecord credentials record form credentials service.
-     * @return pre-shared-key
-     */
-    public byte[] getCredentialsSecret(final CredentialsObject credentialsOnRecord) {
-        final SecretDeviceCredentials util = new SecretDeviceCredentials(this);
-        util.validate(credentialsOnRecord);
-        if (util.sharedKeys.isEmpty()) {
-            return null;
-        }
-        return util.sharedKeys.get(0);
-    }
-
-    /**
-     * Secret device credentials for pre-shared-key.
-     * <p>
-     * Use base class implementation to select credentials and extract the valid secret for pre-shared-key instead of
-     * comparing it.
-     */
-    private static class SecretDeviceCredentials extends AbstractDeviceCredentials {
-
-        /**
-         * Extracted pre-shared-key.
-         */
-        private final List<byte[]> sharedKeys = new ArrayList<byte[]>();
-
-        private SecretDeviceCredentials(final PreSharedKeyDeviceIdentity identity) {
-            super(identity.getTenantId(), identity.getAuthId());
-        }
-
-        @Override
-        public final String getType() {
-            return CredentialsConstants.SECRETS_TYPE_PRESHARED_KEY;
-        }
-
-        @Override
-        public boolean matchesCredentials(final JsonObject candidateSecret) {
-            final String secretKeyBase64 = candidateSecret.getString(CredentialsConstants.FIELD_SECRETS_KEY);
-
-            if (secretKeyBase64 != null) {
-                final byte[] secret = Base64.getDecoder().decode(secretKeyBase64);
-                sharedKeys.add(secret);
-            }
-
-            return false;
-        }
-
-    }
-
 }
