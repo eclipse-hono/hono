@@ -18,6 +18,7 @@ import org.eclipse.hono.config.ApplicationConfigProperties;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.AbstractAdapterConfig;
+import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.service.monitoring.ConnectionEventProducer;
 import org.eclipse.hono.service.monitoring.LoggingConnectionEventProducer;
 import org.springframework.beans.factory.config.ObjectFactoryCreatingFactoryBean;
@@ -25,6 +26,9 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Scope;
+
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.spring.autoconfigure.MeterRegistryCustomizer;
 
 /**
  * Spring Boot configuration for the MQTT protocol adapter.
@@ -87,6 +91,17 @@ public class Config extends AbstractAdapterConfig {
     @ConfigurationProperties(prefix = "hono.mqtt")
     public ProtocolAdapterProperties adapterProperties() {
         return new ProtocolAdapterProperties();
+    }
+
+    /**
+     * Customizer for meter registry.
+     * 
+     * @return The new meter registry customizer.
+     */
+    @Bean
+    public MeterRegistryCustomizer<MeterRegistry> commonTags() {
+        return r -> r.config().commonTags(
+                MetricsTags.forProtocolAdapter(MetricsTags.VALUE_PROTOCOL_MQTT));
     }
 
     /**

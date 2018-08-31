@@ -24,9 +24,16 @@ hono:
     bindAddress: 0.0.0.0
     validation:
       sharedSecret: ${hono.regAssertion.sharedSecret}
-  metric:
-    reporter:
+  metrics:
+    legacy: true
+
+# disable spring boot actuator endpoints
+endpoints:
+  enabled: false
+
+management:
+  metrics:
+    export:
       graphite:
-        active: true
-        host: influxdb
+        host: influxdb.hono
         port: 2003

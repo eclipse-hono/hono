@@ -24,7 +24,6 @@ import org.eclipse.hono.config.VertxProperties;
 import org.eclipse.hono.service.cache.SpringCacheProvider;
 import org.eclipse.hono.service.command.CommandConnection;
 import org.eclipse.hono.service.command.CommandConnectionImpl;
-import org.eclipse.hono.service.metric.MetricConfig;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
@@ -39,6 +38,7 @@ import org.springframework.context.annotation.Scope;
 
 import com.google.common.cache.CacheBuilder;
 
+import io.micrometer.core.instrument.MeterRegistry;
 import io.opentracing.Tracer;
 import io.opentracing.contrib.tracerresolver.TracerResolver;
 import io.opentracing.noop.NoopTracerFactory;
@@ -74,7 +74,6 @@ public abstract class AbstractAdapterConfig {
      * Vert.x metrics options, if configured.
      *
      * @param metricsOptions Vert.x metrics options
-     * @see MetricConfig
      */
     @Autowired(required = false)
     public void setMetricsOptions(final MetricsOptions metricsOptions) {
@@ -95,13 +94,36 @@ public abstract class AbstractAdapterConfig {
                         .setCacheMaxTimeToLive(0) // support DNS based service resolution
                         .setQueryTimeout(1000));
 
-        if (metricsOptions != null) {
-            options.setMetricsOptions(metricsOptions);
-        }
+        configureMetrics(options);
 
         vertxProperties().configureVertx(options);
 
         return Vertx.vertx(options);
+    }
+
+    /**
+     * Configure metrics system of vertx.
+     * <p>
+     * This method will apply the configured metrics options. If no metrics options are configured, then metrics will be
+     * enabled without further configuration. When vertx-micrometer support is found, then this will trigger the use of
+     * the global {@link MeterRegistry}.
+     * </p>
+     * 
+     * @param options The options object used to configure the vertx instance.
+     */
+    protected void configureMetrics(final VertxOptions options) {
+
+        if (this.metricsOptions != null) {
+
+            options.setMetricsOptions(this.metricsOptions);
+
+        } else {
+
+            options.setMetricsOptions(
+                    new MetricsOptions()
+                            .setEnabled(true));
+
+        }
     }
 
     /**

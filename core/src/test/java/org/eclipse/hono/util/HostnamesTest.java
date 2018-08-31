@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -11,21 +11,21 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package org.eclipse.hono.adapter.http;
+package org.eclipse.hono.util;
 
-import org.eclipse.hono.service.metric.DropwizardBasedMetrics;
-import org.springframework.stereotype.Component;
+import org.junit.Assert;
+import org.junit.Test;
 
 /**
- * Metrics for the HTTP based adapters.
+ * Unit tests for {@link Hostnames}.
  */
-@Component
-public class DropwizardBasedHttpAdapterMetrics extends DropwizardBasedMetrics implements HttpAdapterMetrics {
+public class HostnamesTest {
 
-    private static final String SERVICE_PREFIX = "hono.http";
-
-    @Override
-    protected String getScope() {
-        return SERVICE_PREFIX;
+    /**
+     * The result must never be {@code null}.
+     */
+    @Test
+    public void testNonNull() {
+        Assert.assertNotNull(Hostnames.getHostname());
     }
 }

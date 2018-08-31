@@ -14,11 +14,23 @@
 package org.eclipse.hono.adapter.coap;
 
 import org.eclipse.hono.service.metric.Metrics;
+import org.eclipse.hono.service.metric.NoopBasedMetrics;
 
 /**
  * Metrics for the COAP based adapters.
  */
 public interface CoapAdapterMetrics extends Metrics {
+
+    /**
+     * A no-op implementation this specific metrics type.
+     */
+    final class Noop extends NoopBasedMetrics implements CoapAdapterMetrics {
+
+        private Noop() {
+        }
+    }
+
+    CoapAdapterMetrics NOOP = new Noop();
 
     // nothing for now
 }

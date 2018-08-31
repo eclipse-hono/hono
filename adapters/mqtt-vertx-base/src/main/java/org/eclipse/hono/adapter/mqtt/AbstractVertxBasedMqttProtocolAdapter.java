@@ -95,7 +95,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
      */
     protected final Logger LOG = LoggerFactory.getLogger(getClass());
 
-    private MqttAdapterMetrics metrics;
+    private MqttAdapterMetrics metrics = MqttAdapterMetrics.NOOP;
 
     private MqttServer server;
     private MqttServer insecureServer;
@@ -243,11 +243,6 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
         }
         checkPortConfiguration()
             .compose(ok -> {
-                if (metrics == null) {
-                    // use default implementation
-                    // which simply discards all reported metrics
-                    metrics = new DropwizardBasedMqttAdapterMetrics();
-                }
                 return CompositeFuture.all(bindSecureMqttServer(), bindInsecureMqttServer());
             }).compose(t -> {
                 if (usernamePasswordAuthProvider == null) {

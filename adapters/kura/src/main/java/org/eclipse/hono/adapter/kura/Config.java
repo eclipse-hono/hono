@@ -13,15 +13,21 @@
 
 package org.eclipse.hono.adapter.kura;
 
+import org.eclipse.hono.adapter.mqtt.MicrometerBasedMqttAdapterMetrics;
+import org.eclipse.hono.adapter.mqtt.MqttAdapterMetrics;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.config.ApplicationConfigProperties;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.service.AbstractAdapterConfig;
+import org.eclipse.hono.service.metric.MetricsTags;
 import org.springframework.beans.factory.config.ObjectFactoryCreatingFactoryBean;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Scope;
+
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.spring.autoconfigure.MeterRegistryCustomizer;
 
 /**
  * Spring Boot configuration for the Eclipse Kura protocol adapter.
@@ -84,6 +90,28 @@ public class Config extends AbstractAdapterConfig {
     @ConfigurationProperties(prefix = "hono.kura")
     public KuraAdapterProperties adapterProperties() {
         return new KuraAdapterProperties();
+    }
+
+    /**
+     * Customizer for meter registry.
+     * 
+     * @return The new meter registry customizer.
+     */
+    @Bean
+    public MeterRegistryCustomizer<MeterRegistry> commonTags() {
+        return r -> r.config().commonTags(
+                MetricsTags.forProtocolAdapter("kura"));
+    }
+
+    /**
+     * Provides the adapter metrics instance to use.
+     * 
+     * @param registry The meter registry to use.
+     * @return A new adapter metrics instance.
+     */
+    @Bean
+    public MqttAdapterMetrics adapterMetrics(final MeterRegistry registry) {
+        return new MicrometerBasedMqttAdapterMetrics(registry);
     }
 
     /**

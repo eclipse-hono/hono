@@ -15,12 +15,12 @@ package org.eclipse.hono.deviceregistry;
 
 import io.vertx.core.VertxOptions;
 import io.vertx.core.dns.AddressResolverOptions;
-
 import org.eclipse.hono.config.ApplicationConfigProperties;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.config.VertxProperties;
 import org.eclipse.hono.service.credentials.CredentialsAmqpEndpoint;
 import org.eclipse.hono.service.credentials.CredentialsHttpEndpoint;
+import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelper;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelperImpl;
 import org.eclipse.hono.service.registration.RegistrationHttpEndpoint;
@@ -34,6 +34,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.spring.autoconfigure.MeterRegistryCustomizer;
 import io.vertx.core.Vertx;
 import org.springframework.context.annotation.Scope;
 
@@ -281,6 +283,19 @@ public class ApplicationConfig {
     @Bean
     public VertxProperties vertxProperties() {
         return new VertxProperties();
+    }
+
+    /**
+     * Customizer for meter registry.
+     * 
+     * @return The new meter registry customizer.
+     */
+    @Bean
+    public MeterRegistryCustomizer<MeterRegistry> commonTags() {
+
+        return r -> r.config().commonTags(
+                MetricsTags.forService(MetricsTags.VALUE_SERVICE_REGISTRY));
+
     }
 
 }
