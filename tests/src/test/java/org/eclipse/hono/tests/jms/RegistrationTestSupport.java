@@ -17,6 +17,7 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.eclipse.hono.util.RegistrationConstants.*;
 
 import java.time.Duration;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
@@ -102,28 +103,30 @@ class RegistrationTestSupport {
         consumer.receiveNoWait();
     }
 
-    private CompletableFuture<RegistrationResult> register(final String deviceId) {
-        return register(deviceId, (Integer) null);
+    private CompletableFuture<RegistrationResult> register(final String deviceId, final Optional<JsonObject> data) {
+        return register(deviceId, data, (Integer) null);
     }
 
-    CompletableFuture<RegistrationResult> register(final String deviceId, final Integer expectedStatus) {
-        return send(deviceId, ACTION_REGISTER, expectedStatus);
+    CompletableFuture<RegistrationResult> register(final String deviceId, final Optional<JsonObject> data,
+            final Integer expectedStatus) {
+        return send(deviceId, ACTION_REGISTER, data, expectedStatus);
     }
 
     CompletableFuture<RegistrationResult> assertRegistration(final String deviceId, final Integer expectedStatus) {
-        return send(deviceId, ACTION_ASSERT, expectedStatus);
+        return send(deviceId, ACTION_ASSERT, Optional.empty(), expectedStatus);
     }
 
     CompletableFuture<RegistrationResult> deregister(final String deviceId, final Integer expectedStatus) {
-        return send(deviceId, ACTION_DEREGISTER, expectedStatus);
+        return send(deviceId, ACTION_DEREGISTER, Optional.empty(), expectedStatus);
     }
 
     CompletableFuture<RegistrationResult> retrieve(final String deviceId, final Integer expectedStatus) {
-        return send(deviceId, ACTION_GET, expectedStatus);
+        return send(deviceId, ACTION_GET, Optional.empty(), expectedStatus);
     }
 
-    RegistrationResult register(final String deviceId, final Duration timeout) throws Exception {
-        return register(deviceId).get(timeout.toMillis(), MILLISECONDS);
+    RegistrationResult register(final String deviceId, final Optional<JsonObject> data, final Duration timeout)
+            throws Exception {
+        return register(deviceId, data).get(timeout.toMillis(), MILLISECONDS);
     }
 
     RegistrationResult assertRegistration(final String deviceId, final Duration timeout) throws Exception {
@@ -141,11 +144,18 @@ class RegistrationTestSupport {
         }
     }
 
-    private CompletableFuture<RegistrationResult> send(final String deviceId, final String action, final Integer expectedStatus) {
+    private CompletableFuture<RegistrationResult> send(final String deviceId, final String action,
+            final Optional<JsonObject> data, final Integer expectedStatus) {
 
         try {
             final String correlationId = UUID.randomUUID().toString();
-            final Message message = session.createMessage();
+            final Message message;
+
+            if (data.isPresent()) {
+                message = session.createTextMessage(data.get().toString());
+            } else {
+                message = session.createMessage();
+            }
             message.setStringProperty(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId);
             message.setJMSType(action);
             message.setJMSReplyTo(reply);
