@@ -14,6 +14,11 @@ title = "Release Notes"
 * The `org.eclipse.hono.service.registration.RegistrationService` interface now describes only the mandatory operations of the API. The complete API is offered in `org.eclipse.hono.service.registration.CompleteRegistrationService`. These interfaces are implemented in `org.eclipse.hono.service.registration.BaseRegistrationService` and `org.eclipse.hono.service.registration.CompleteBaseRegistrationService` respectfully. Device Registries implementations can offer the mandatory only or the full API by extending the according base class.
 * The `org.eclipse.hono.service.tenant.TenantService` interface now describes only the mandatory operations of the API. The complete API is offered in `org.eclipse.hono.service.tenant.CompleteTenantService`. These interfaces are implemented in `org.eclipse.hono.service.tenant.BaseTenantService` and `org.eclipse.hono.service.tenant.CompleteBaseTenantService` respectfully. Tenant services implementations can offer the mandatory only or the full API by extending the according base class.
 * The `org.eclipse.hono.service.credentials.CredentialsService` interface now describes only the mandatory operations of the API. The complete API is offered in `org.eclipse.hono.service.credentials.CompleteCredentialsService`. These interfaces are implemented in `org.eclipse.hono.service.credentials.BaseCredentialsService` and `org.eclipse.hono.service.credentials.CompleteBaseCredentialsService` respectfully. Credentials services implementations can offer the mandatory only or the full API by extending the according base class.
+* All messages containing JSON objects as payload are now encoded using *Data*
+  sections and are required to have the content type `application/json`.
+  This affects the Tenant, Credentials and Registry API. When evaluating Hono
+  still accepts *AMQP Values* of type String or byte[]. But this behavior is
+  deprecated and my be dropped in releases after 0.8.
 
 ## 0.7
 

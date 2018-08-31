@@ -136,7 +136,7 @@ The body of the message SHOULD be empty and will be ignored if it is not.
 
 A response to an *assertion* request contains the [Standard Response Properties]({{< relref "#standard-response-properties" >}}).
 
-The body of the response message consists of a single *AMQP Value* section containing a UTF-8 encoded string representation of a single JSON object having the following properties:
+The body of the response message consists of a single *Data* section containing a UTF-8 encoded string representation of a single JSON object having the following properties:
 
 | Name             | Mandatory | Type          | Description |
 | :--------------- | :-------: | :------------ | :---------- |
@@ -252,6 +252,7 @@ The following table provides an overview of the properties shared by all request
 | *correlation-id* | no        | *properties*             | *message-id* | MAY contain an ID used to correlate a response message to the original request. If set, it is used as the *correlation-id* property in the response, otherwise the value of the *message-id* property is used. |
 | *message-id*     | yes       | *properties*             | *string*     | MUST contain an identifier that uniquely identifies the message at the sender side. |
 | *reply-to*       | yes       | *properties*             | *string*     | MUST contain the source address that the client wants to received response messages from. This address MUST be the same as the source address used for establishing the client's receive link (see [Preconditions]({{< relref "#preconditions" >}})). |
+| *content-type*   | yes       | *properties*             | *string*     | MUST be set to `application/json`. |
 | *device_id*      | yes       | *application-properties* | *string*     | MUST contain the ID of the device that is subject to the operation. |
 
 ## Standard Response Properties
@@ -261,6 +262,7 @@ The following table provides an overview of the properties shared by all respons
 | Name             | Mandatory | Location                 | Type         | Description |
 | :--------------- | :-------: | :----------------------- | :----------- | :---------- |
 | *correlation-id* | yes       | *properties*             | *message-id* | Contains the *message-id* (or the *correlation-id*, if specified) of the request message that this message is the response to. |
+| *content-type*   | yes       | *properties*             | *string*     | MUST be set to `application/json`. |
 | *device_id*      | yes       | *application-properties* | *string*     | Contains the ID of the device. |
 | *tenant_id*      | yes       | *application-properties* | *string*     | Contains the ID of the tenant to which the device belongs. |
 | *status*         | yes       | *application-properties* | *int*        | Contains the status code indicating the outcome of the operation. Concrete values and their semantics are defined for each particular operation. |
@@ -279,7 +281,7 @@ Hono uses the following AMQP message delivery states when receiving request mess
 
 Most of the operations of the Device Registration API allow or require the inclusion of registration data in the payload of the
 request or response messages of the operation. Such payload is carried in the body of the corresponding AMQP 
-messages as part of a single *AMQP Value* section.
+messages as part of a single *Data* section. The content type must be set to `application/json`.
 
 The registration data is carried in the payload as a UTF-8 encoded string representation of a single JSON object. It is an error to include payload that is not of this type.
 
