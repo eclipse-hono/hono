@@ -80,9 +80,9 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
 
     private static final String KEY_TIMER_ID = "timerId";
 
-    private HttpServer         server;
-    private HttpServer         insecureServer;
-    private HttpAdapterMetrics metrics;
+    private HttpServer server;
+    private HttpServer insecureServer;
+    private HttpAdapterMetrics metrics = HttpAdapterMetrics.NOOP;
 
     /**
      * Sets the metrics for this service.
@@ -164,15 +164,9 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
 
     @Override
     public final void doStart(final Future<Void> startFuture) {
-
         checkPortConfiguration()
             .compose(s -> preStartup())
             .compose(s -> {
-                if (metrics == null) {
-                    // use default implementation
-                    // which simply discards all reported metrics
-                    metrics = new DropwizardBasedHttpAdapterMetrics();
-                }
                 final Router router = createRouter();
                 if (router == null) {
                     return Future.failedFuture("no router configured");
@@ -184,7 +178,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                 try {
                     onStartupSuccess();
                     startFuture.complete();
-                } catch (Exception e) {
+                } catch (final Exception e) {
                     LOG.error("error in onStartupSuccess", e);
                     startFuture.fail(e);
                 }
@@ -408,7 +402,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
 
         try {
             preShutdown();
-        } catch (Exception e) {
+        } catch (final Exception e) {
             LOG.error("error in preShutdown", e);
         }
 
@@ -945,7 +939,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
             } else {
                 return Integer.parseInt(qosValue) != AT_LEAST_ONCE ? HEADER_QOS_INVALID : AT_LEAST_ONCE;
             }
-        } catch (NumberFormatException e) {
+        } catch (final NumberFormatException e) {
             return HEADER_QOS_INVALID;
         }
     }

@@ -35,14 +35,16 @@ hono:
     name: 'Hono HTTP Adapter'
     host: messaging.hono
     port: 5672
-  metric:
-    reporter:
-      graphite:
-        active: true
-        host: influxdb.hono
-        port: 2003
-# disable spring boot actuator endpoints, enable metrics
+  metrics:
+    legacy: true
+
+# disable spring boot actuator endpoints
 endpoints:
   enabled: false
+
+management:
   metrics:
-    enabled: true
+    export:
+      graphite:
+        host: influxdb.hono
+        port: 2003

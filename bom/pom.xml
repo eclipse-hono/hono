@@ -32,7 +32,6 @@
     <assertj-core.version>3.2.0</assertj-core.version>
     <californium.version>2.0.0-M11</californium.version>
     <dispatch-router.image.name>enmasseproject/qdrouterd-base:1.1.0</dispatch-router.image.name>
-    <dropwizard-metrics.version>3.2.2</dropwizard-metrics.version>
     <grafana.version>5.1.4</grafana.version>
     <guava.version>19.0</guava.version>
     <influxdb.version>1.5.4-alpine</influxdb.version>
@@ -44,6 +43,7 @@
     <jmeter.version>3.3</jmeter.version>
     <junit.version>4.12</junit.version>
     <logback.version>1.2.3</logback.version>
+    <micrometer.version>1.0.6</micrometer.version>
     <mockito.version>2.19.0</mockito.version>
     <netty.version>4.1.19.Final</netty.version>
     <netty.tcnative.version>2.0.10.Final</netty.tcnative.version>
@@ -126,23 +126,36 @@
         <version>${spring-boot.version}</version>
       </dependency>
       <dependency>
-        <groupId>io.dropwizard.metrics</groupId>
-        <artifactId>metrics-core</artifactId>
-        <version>${dropwizard-metrics.version}</version>
+        <groupId>io.micrometer</groupId>
+        <artifactId>micrometer-core</artifactId>
+        <version>${micrometer.version}</version>
       </dependency>
       <dependency>
-        <groupId>io.dropwizard.metrics</groupId>
-        <artifactId>metrics-jvm</artifactId>
-        <version>${dropwizard-metrics.version}</version>
+        <groupId>io.micrometer</groupId>
+        <artifactId>micrometer-spring-legacy</artifactId>
+        <version>${micrometer.version}</version>
       </dependency>
       <dependency>
-        <groupId>io.dropwizard.metrics</groupId>
-        <artifactId>metrics-graphite</artifactId>
-        <version>${dropwizard-metrics.version}</version>
+        <groupId>io.micrometer</groupId>
+        <artifactId>micrometer-registry-graphite</artifactId>
+        <version>${micrometer.version}</version>
+        <scope>runtime</scope>
+      </dependency>
+      <dependency>
+        <groupId>io.micrometer</groupId>
+        <artifactId>micrometer-registry-influx</artifactId>
+        <version>${micrometer.version}</version>
+        <scope>runtime</scope>
+      </dependency>
+      <dependency>
+        <groupId>io.micrometer</groupId>
+        <artifactId>micrometer-registry-prometheus</artifactId>
+        <version>${micrometer.version}</version>
+        <scope>runtime</scope>
       </dependency>
       <dependency>
         <groupId>io.vertx</groupId>
-        <artifactId>vertx-dropwizard-metrics</artifactId>
+        <artifactId>vertx-micrometer-metrics</artifactId>
         <version>${vertx.version}</version>
       </dependency>
       <dependency>

@@ -14,11 +14,23 @@
 package org.eclipse.hono.adapter.mqtt;
 
 import org.eclipse.hono.service.metric.Metrics;
+import org.eclipse.hono.service.metric.NoopBasedMetrics;
 
 /**
  * Metrics for the MQTT adapter.
  */
 public interface MqttAdapterMetrics extends Metrics {
+
+    /**
+     * A no-op implementation this specific metrics type.
+     */
+    final class Noop extends NoopBasedMetrics implements MqttAdapterMetrics {
+
+        private Noop() {
+        }
+    }
+
+    MqttAdapterMetrics NOOP = new Noop();
 
     // empty for now
 }

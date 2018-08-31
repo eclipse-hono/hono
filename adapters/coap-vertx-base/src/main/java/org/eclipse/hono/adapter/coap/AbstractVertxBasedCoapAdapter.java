@@ -70,7 +70,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
     private CoapServer server;
     private volatile Endpoint secureEndpoint;
     private volatile Endpoint insecureEndpoint;
-    private CoapAdapterMetrics metrics;
+    private CoapAdapterMetrics metrics = CoapAdapterMetrics.NOOP;
     /**
      * Map for authorization handler.
      */
@@ -194,7 +194,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                     builder.setConnector(new DTLSConnector(dtlsConfig.build()));
                     secureEndpoint = builder.build();
                     startingServer.addEndpoint(secureEndpoint);
-                } catch (IllegalStateException ex) {
+                } catch (final IllegalStateException ex) {
                     LOG.warn("Failed to create secure endpoint!", ex);
                 }
                 Endpoint insecureEndpoint = null;
@@ -227,7 +227,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
             try {
                 onStartupSuccess();
                 startFuture.complete();
-            } catch (Exception e) {
+            } catch (final Exception e) {
                 LOG.error("error in onStartupSuccess", e);
                 startFuture.fail(e);
             }
@@ -336,7 +336,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
 
         try {
             preShutdown();
-        } catch (Exception e) {
+        } catch (final Exception e) {
             LOG.error("error in preShutdown", e);
         }
 

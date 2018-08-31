@@ -41,14 +41,16 @@ hono:
     keyPath: ${secret.path}/coap-adapter-key.pem
     certPath: ${secret.path}/coap-adapter-cert.pem
     trustStorePath: ${secret.path}/trusted-certs.pem
-  metric:
-    reporter:
-      graphite:
-        active: true
-        host: influxdb.hono
-        port: 2003
-# disable spring boot actuator endpoints, enable metrics
+  metrics:
+    legacy: true
+
+# disable spring boot actuator endpoints
 endpoints:
   enabled: false
+
+management:
   metrics:
-    enabled: true
+    export:
+      graphite:
+        host: influxdb.hono
+        port: 2003

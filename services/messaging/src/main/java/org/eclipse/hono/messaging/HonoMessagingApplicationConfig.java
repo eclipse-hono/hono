@@ -16,7 +16,7 @@ package org.eclipse.hono.messaging;
 import org.eclipse.hono.config.ApplicationConfigProperties;
 import org.eclipse.hono.connection.ConnectionFactory;
 import org.eclipse.hono.connection.impl.ConnectionFactoryImpl;
-import org.eclipse.hono.service.metric.MetricConfig;
+import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelper;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelperImpl;
 import org.eclipse.hono.util.Constants;
@@ -27,6 +27,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.spring.autoconfigure.MeterRegistryCustomizer;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
 import io.vertx.core.dns.AddressResolverOptions;
@@ -47,7 +49,6 @@ public class HonoMessagingApplicationConfig {
      * Vert.x metrics options, if configured.
      *
      * @param metricsOptions Vert.x metrics options
-     * @see MetricConfig
      */
     @Autowired(required = false)
     public void setMetricsOptions(final MetricsOptions metricsOptions) {
@@ -67,10 +68,35 @@ public class HonoMessagingApplicationConfig {
                         .setCacheNegativeTimeToLive(0) // discard failed DNS lookup results immediately
                         .setCacheMaxTimeToLive(0) // support DNS based service resolution
                         .setQueryTimeout(1000));
-        if (metricsOptions != null) {
-            options.setMetricsOptions(metricsOptions);
-        }
+
+        configureMetrics(options);
+
         return Vertx.vertx(options);
+    }
+
+    /**
+     * Configure metrics system of vertx.
+     * <p>
+     * This method will apply the configured metrics options. If no metrics options are configured, then metrics will be
+     * enabled without further configuration. When vertx-micrometer support is found, then this will trigger the use of
+     * the global {@link MeterRegistry}.
+     * </p>
+     * 
+     * @param options The options object used to configure the vertx instance.
+     */
+    protected void configureMetrics(final VertxOptions options) {
+
+        if (this.metricsOptions != null) {
+
+            options.setMetricsOptions(this.metricsOptions);
+
+        } else {
+
+            options.setMetricsOptions(
+                    new MetricsOptions()
+                            .setEnabled(true));
+
+        }
     }
 
     /**
@@ -161,5 +187,18 @@ public class HonoMessagingApplicationConfig {
             serviceProps.getValidation().setCertPath(serviceProps.getCertPath());
         }
         return RegistrationAssertionHelperImpl.forValidating(vertx(), serviceProps.getValidation());
+    }
+
+    /**
+     * Customizer for meter registry.
+     * 
+     * @return The new meter registry customizer.
+     */
+    @Bean
+    public MeterRegistryCustomizer<MeterRegistry> commonTags() {
+
+        return r -> r.config().commonTags(
+                MetricsTags.forService(MetricsTags.VALUE_SERVICE_MESSAGING));
+
     }
 }

@@ -14,11 +14,23 @@
 package org.eclipse.hono.adapter.http;
 
 import org.eclipse.hono.service.metric.Metrics;
+import org.eclipse.hono.service.metric.NoopBasedMetrics;
 
 /**
  * Metrics for the HTTP based adapters.
  */
 public interface HttpAdapterMetrics extends Metrics {
+
+    /**
+     * A no-op implementation this specific metrics type.
+     */
+    final class Noop extends NoopBasedMetrics implements HttpAdapterMetrics {
+
+        private Noop() {
+        }
+    }
+
+    HttpAdapterMetrics NOOP = new Noop();
 
     // empty for now
 }
