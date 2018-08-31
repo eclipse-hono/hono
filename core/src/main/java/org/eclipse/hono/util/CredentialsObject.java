@@ -24,6 +24,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import javax.security.auth.x500.X500Principal;
 
@@ -273,6 +275,67 @@ public final class CredentialsObject {
         } else {
             return false;
         }
+    }
+
+    /**
+     * Filters the currently valid secrets from the secrets on record.
+     * <p>
+     * A secret is considered valid if the current instant of time falls
+     * into its validity period.
+     *  
+     * @return The secrets.
+     */
+    @JsonIgnore
+    public List<JsonObject> getCandidateSecrets() {
+
+        return getCandidateSecrets(secret -> secret);
+    }
+
+    /**
+     * Filters the currently valid secrets from the secrets on record.
+     * <p>
+     * A secret is considered valid if the current instant of time falls
+     * into its validity period.
+     * 
+     * @param <T> The type of the property that the candidate secrets are
+     *            projected on.
+     * @param projection A function to apply to each candidate secret. This function
+     *               can be used to project the secret to one of its properties.
+     *               The function may return {@code null} in order to omit the
+     *               candidate secret from the result list.
+     * @return The properties that the secrets have been projected on.
+     * @throws NullPointerException if the function is {@code null}.
+     */
+    @JsonIgnore
+    public <T> List<T> getCandidateSecrets(final Function<JsonObject, T> projection) {
+
+        Objects.requireNonNull(projection);
+
+        return getSecrets().stream()
+                .filter(obj -> {
+                    if (obj instanceof JsonObject) {
+                        return CredentialsObject.isInValidityPeriod((JsonObject) obj, Instant.now());
+                    } else {
+                        return false;
+                    }
+                }).map(obj -> (JsonObject) obj)
+                .map(projection)
+                .filter(obj -> obj != null)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Checks if a given instant of time falls into a secret's validity period.
+     * 
+     * @param secret The secret to check against.
+     * @param instant The instant of time.
+     * @return {@code true} if the instant falls into the secret's validity period.
+     */
+    public static boolean isInValidityPeriod(final JsonObject secret, final Instant instant) {
+
+        final Instant notBefore = CredentialsObject.getNotBefore(secret);
+        final Instant notAfter = CredentialsObject.getNotAfter(secret);
+        return (notBefore == null || instant.isAfter(notBefore)) && (notAfter == null || instant.isBefore(notAfter));
     }
 
     /**

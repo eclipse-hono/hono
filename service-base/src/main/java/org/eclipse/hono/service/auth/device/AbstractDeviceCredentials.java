@@ -13,12 +13,10 @@
 
 package org.eclipse.hono.service.auth.device;
 
-import java.time.Instant;
 import java.util.Objects;
 
 import org.eclipse.hono.util.CredentialsObject;
 
-import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
 /**
@@ -68,30 +66,8 @@ public abstract class AbstractDeviceCredentials implements DeviceCredentials {
         } else if (!credentialsOnRecord.isEnabled()) {
             return false;
         } else {
-
-            final JsonArray secrets = credentialsOnRecord.getSecrets();
-
-            if (secrets == null) {
-                throw new IllegalArgumentException("credentials do not contain any secret");
-            } else {
-                return validate(secrets);
-            }
+            return credentialsOnRecord.getCandidateSecrets().stream().anyMatch(candidateSecret -> matchesCredentials(candidateSecret));
         }
-    }
-
-    private boolean validate(final JsonArray secretsOnRecord) {
-
-        return secretsOnRecord.stream().filter(obj -> obj instanceof JsonObject).anyMatch(obj -> {
-            final JsonObject candidateSecret = (JsonObject) obj;
-            return isInValidityPeriod(candidateSecret, Instant.now()) && matchesCredentials(candidateSecret);
-        });
-    }
-
-    private boolean isInValidityPeriod(final JsonObject secret, final Instant instant) {
-
-        final Instant notBefore = CredentialsObject.getNotBefore(secret);
-        final Instant notAfter = CredentialsObject.getNotAfter(secret);
-        return (notBefore == null || instant.isAfter(notBefore)) && (notAfter == null || instant.isBefore(notAfter));
     }
 
     /**
