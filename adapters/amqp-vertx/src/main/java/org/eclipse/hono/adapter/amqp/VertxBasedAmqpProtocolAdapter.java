@@ -59,12 +59,12 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
     /**
      * The default insecure port that this adapter binds to for unencrypted connections.
      */
-    private static final int DEFAULT_INSECURE_PORT = 4040;
+    private static final int DEFAULT_INSECURE_PORT = 5672;
 
     /**
-     * The default secure port that this adapter binds to for TLS encrypted secure connections.
+     * The default secure port that this adapter binds to for TLS based secure connections.
      */
-    private static final int DEFAULT_SECURE_PORT = 4041;
+    private static final int DEFAULT_SECURE_PORT = 5671;
 
     /**
      * The AMQP server instance that maps to a secure port.

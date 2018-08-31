@@ -27,9 +27,9 @@ spec:
         ports:
         - containerPort: 8088
           protocol: TCP
-        - containerPort: 4041
+        - containerPort: 5671
           protocol: TCP
-        - containerPort: 4040
+        - containerPort: 5672
           protocol: TCP
         securityContext:
           privileged: false

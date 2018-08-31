@@ -10,7 +10,7 @@ metadata:
   name: hono-adapter-amqp-vertx-sec
 spec:
   port:
-    targetPort: 4041
+    targetPort: 5671
   tls:
     termination: passthrough
   to:

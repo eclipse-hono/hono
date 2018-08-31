@@ -11,14 +11,14 @@ spec:
   ports:
   - name: amqp
     nodePort: 30040
-    port: 4040
+    port: 5672
     protocol: TCP
-    targetPort: 4040
+    targetPort: 5672
   - name: amqps
     nodePort: 30041
-    port: 4041
+    port: 5671
     protocol: TCP
-    targetPort: 4041
+    targetPort: 5671
   selector:
     app: hono-adapter-amqp-vertx
     group: ${project.groupId}

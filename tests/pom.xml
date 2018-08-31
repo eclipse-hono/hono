@@ -756,8 +756,8 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                   </build>
                   <run>
                     <ports>
-                      <port>+adapter.amqp.ip:adapter.amqp.port:4040</port>
-                      <port>+adapter.amqps.ip:adapter.amqps.port:4041</port>
+                      <port>+adapter.amqp.ip:adapter.amqp.port:5672</port>
+                      <port>+adapter.amqps.ip:adapter.amqps.port:5671</port>
                       <port>+adapter.amqp.ip:adapter.amqp.health.port:8088</port>
                       <port>8000:8000</port>
                     </ports>

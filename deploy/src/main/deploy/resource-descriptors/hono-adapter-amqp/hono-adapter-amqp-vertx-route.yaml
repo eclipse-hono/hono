@@ -10,7 +10,7 @@ metadata:
   name: hono-adapter-amqp-vertx
 spec:
   port:
-    targetPort: 4040
+    targetPort: 5672
   to:
     kind: Service
     name: hono-adapter-amqp-vertx
