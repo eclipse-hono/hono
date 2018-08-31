@@ -42,11 +42,10 @@ import io.vertx.proton.ProtonSender;
 public class CommandResponseSenderImpl extends AbstractSender implements CommandResponseSender {
 
     /**
-     * The default amount of time to wait for credits after link creation. This
-     * is higher as in the client defaults, because for the command response the link
-     * is created on demand and the response should not fail.
+     * The default amount of time to wait for credits after link creation. This is higher as in the client defaults,
+     * because for the command response the link is created on demand and the response should not fail.
      */
-    public static final long DEFAULT_COMMAND_FLOW_LATENCY = 200L; //ms
+    public static final long DEFAULT_COMMAND_FLOW_LATENCY = 200L; // ms
 
     CommandResponseSenderImpl(
             final ClientConfigProperties config,
@@ -110,7 +109,8 @@ public class CommandResponseSenderImpl extends AbstractSender implements Command
      * {@inheritDoc}
      */
     @Override
-    public Future<ProtonDelivery> sendCommandResponse(final CommandResponse commandResponse, final SpanContext context) {
+    public Future<ProtonDelivery> sendCommandResponse(final CommandResponse commandResponse,
+            final SpanContext context) {
 
         Objects.requireNonNull(commandResponse);
         return sendAndWaitForOutcome(createResponseMessage(commandResponse), context);
@@ -140,9 +140,6 @@ public class CommandResponseSenderImpl extends AbstractSender implements Command
         final Message msg = ProtonHelper.message();
         msg.setCorrelationId(correlationId);
         msg.setAddress(targetAddress);
-        if (contentType != null) {
-            msg.setContentType(contentType);
-        }
         MessageHelper.setPayload(msg, contentType, payload);
         if (properties != null) {
             msg.setApplicationProperties(new ApplicationProperties(properties));
@@ -157,8 +154,8 @@ public class CommandResponseSenderImpl extends AbstractSender implements Command
      * <p>
      * The underlying sender link will be created with the following properties:
      * <ul>
-     * <li><em>flow latency</em> will be set to @{@link #DEFAULT_COMMAND_FLOW_LATENCY} if
-     * the configured value is smaller than the default</li>
+     * <li><em>flow latency</em> will be set to @{@link #DEFAULT_COMMAND_FLOW_LATENCY} if the configured value is
+     * smaller than the default</li>
      * </ul>
      *
      * @param context The vert.x context to run all interactions with the server on.
@@ -168,9 +165,10 @@ public class CommandResponseSenderImpl extends AbstractSender implements Command
      * @param replyId The reply id as the unique postfix of the replyTo address.
      * @param closeHook A handler to invoke if the peer closes the link unexpectedly.
      * @param creationHandler The handler to invoke with the result of the creation attempt.
-     * @param tracer The tracer to use for tracking the processing of received
-     *               messages. If {@code null}, OpenTracing's {@code NoopTracer} will be used.
-     * @throws NullPointerException if any of context, clientConfig, con, tenantId, deviceId or replyId  are {@code null}.
+     * @param tracer The tracer to use for tracking the processing of received messages. If {@code null}, OpenTracing's
+     *            {@code NoopTracer} will be used.
+     * @throws NullPointerException if any of context, clientConfig, con, tenantId, deviceId or replyId are
+     *             {@code null}.
      */
     public static void create(
             final Context context,
@@ -195,8 +193,9 @@ public class CommandResponseSenderImpl extends AbstractSender implements Command
         }
 
         createSender(context, props, con, targetAddress, ProtonQoS.AT_LEAST_ONCE, closeHook)
-            .map(sender -> (CommandResponseSender) new CommandResponseSenderImpl(clientConfig, sender, tenantId, targetAddress, context, tracer))
-            .setHandler(creationHandler);
+                .map(sender -> (CommandResponseSender) new CommandResponseSenderImpl(clientConfig, sender, tenantId,
+                        targetAddress, context, tracer))
+                .setHandler(creationHandler);
     }
 
     @Override
