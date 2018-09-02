@@ -225,16 +225,16 @@ public class CommandAndControlMqttIT extends MqttTestBase {
 
         // send a message without message and correlation ID
         final Message messageWithoutId = ProtonHelper.message("input data");
-        messageWithoutSubject.setSubject("setValue");
-        messageWithoutSubject.setReplyTo("reply/to/address");
+        messageWithoutId.setSubject("setValue");
+        messageWithoutId.setReplyTo("reply/to/address");
         sender.get().sendAndWaitForOutcome(messageWithoutId).setHandler(ctx.asyncAssertFailure(t -> {
             ctx.assertTrue(t instanceof ClientErrorException);
         }));
 
         // send a message without reply-to address
         final Message messageWithoutReplyTo = ProtonHelper.message("input data");
-        messageWithoutSubject.setSubject("setValue");
-        messageWithoutSubject.setMessageId("message-id");
+        messageWithoutReplyTo.setSubject("setValue");
+        messageWithoutReplyTo.setMessageId("message-id");
         sender.get().sendAndWaitForOutcome(messageWithoutReplyTo).setHandler(ctx.asyncAssertFailure(t -> {
             ctx.assertTrue(t instanceof ClientErrorException);
         }));
