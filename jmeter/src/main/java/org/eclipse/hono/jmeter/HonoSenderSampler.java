@@ -23,6 +23,8 @@ import org.eclipse.hono.jmeter.ui.ServerOptionsPanel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.eclipse.hono.jmeter.HonoSamplerUtils.getIntValueOrDefault;
+
 /**
  * JMeter creates an instance of a sampler class for every occurrence of the element in every thread. [some additional
  * copies may be created before the test run starts]
@@ -307,7 +309,7 @@ public class HonoSenderSampler extends HonoSampler implements ThreadListener {
     /**
      * Gets the number of messages to send per sample run as an integer.
      * <p>
-     * If the property value is smaller than 1 or not a number, 1 is returned. 
+     * If the property value is smaller than 1 or not a number, 1 is returned.
      *
      * @return number of messages as integer.
      */
@@ -324,17 +326,6 @@ public class HonoSenderSampler extends HonoSampler implements ThreadListener {
     public void setMessageCountPerSamplerRun(final String messageCountPerSamplerRun) {
         final int parsedMessageCount = getIntValueOrDefault(messageCountPerSamplerRun, 1);
         setProperty(MESSAGE_COUNT_PER_SAMPLER_RUN, parsedMessageCount > 0 ? Integer.toString(parsedMessageCount) : "1");
-    }
-
-    private static int getIntValueOrDefault(final String stringValue, final int defaultValue) {
-        if (stringValue == null || stringValue.isEmpty()) {
-            return defaultValue;
-        }
-        try {
-            return Integer.parseInt(stringValue);
-        } catch (final NumberFormatException e) {
-            return defaultValue;
-        }
     }
 
     public String getContentType() {
