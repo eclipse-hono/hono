@@ -630,6 +630,9 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                             metrics.incrementProcessedPayload(endpointName, tenant, messagePayloadSize(ctx));
                             if (command != null) {
                                 metrics.incrementCommandDeliveredToDevice(tenant);
+                                if (command.isNotificationCommand()) {
+                                    sendNotificationCommandResponse(command, HttpURLConnection.HTTP_OK, currentSpan.context());
+                                }
                             }
                             currentSpan.finish();
                         });
@@ -717,14 +720,11 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
         if (command == null) {
             response.setStatusCode(HttpURLConnection.HTTP_ACCEPTED);
         } else {
-            currentSpan.setTag(Constants.HEADER_COMMAND, command.getName());
-            currentSpan.setTag(Constants.HEADER_COMMAND_REQUEST_ID, command.getRequestId());
+            command.dumpCommandAsHeaders((header, value) -> currentSpan.setTag(header, value));
+            command.dumpCommandAsHeaders((header, value) -> response.putHeader(header, value));
             LOG.trace("adding command [name: {}, request-id: {}] to response for device [tenant-id: {}, device-id: {}]",
                     command.getName(), command.getRequestId(), command.getTenant(), command.getDeviceId());
             response.setStatusCode(HttpURLConnection.HTTP_OK);
-            response.putHeader(Constants.HEADER_COMMAND, command.getName());
-            response.putHeader(Constants.HEADER_COMMAND_REQUEST_ID, command.getRequestId());
-
             HttpUtils.setResponseBody(response, command.getPayload(), command.getContentType());
         }
     }

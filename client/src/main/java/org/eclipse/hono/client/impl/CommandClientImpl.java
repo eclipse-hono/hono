@@ -13,6 +13,9 @@
 
 package org.eclipse.hono.client.impl;
 
+import java.net.HttpURLConnection;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
 
 import org.eclipse.hono.client.CommandClient;
@@ -21,6 +24,7 @@ import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.BufferResult;
+import org.eclipse.hono.util.MessageHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,6 +45,8 @@ public class CommandClientImpl extends AbstractRequestResponseClient<BufferResul
 
     private static final Logger LOG = LoggerFactory.getLogger(CommandClientImpl.class);
 
+    private static final Map<String, Object> notificationCommandProperties = new HashMap<>(1);
+
     private long messageCounter;
 
     /**
@@ -50,7 +56,7 @@ public class CommandClientImpl extends AbstractRequestResponseClient<BufferResul
      * {@link #createLinks(ProtonConnection, Handler, Handler)} only.
      * 
      * @param context The vert.x context to run message exchanges with the peer on.
-     * @param config The configuration properties to use.
+     * @param config The configuration notificationCommandProperties to use.
      * @param tenantId The tenant that the device belongs to.
      * @param deviceId The device to create the client for.
      * @param replyId The replyId to use in the reply-to address.
@@ -70,7 +76,7 @@ public class CommandClientImpl extends AbstractRequestResponseClient<BufferResul
      * Creates a request-response client.
      * 
      * @param context The vert.x context to run message exchanges with the peer on.
-     * @param config The configuration properties to use.
+     * @param config The configuration notificationCommandProperties to use.
      * @param tenantId The tenant that the device belongs to.
      * @param deviceId The device to create the client for.
      * @param replyId The replyId to use in the reply-to address.
@@ -118,6 +124,16 @@ public class CommandClientImpl extends AbstractRequestResponseClient<BufferResul
     }
 
     /**
+     * Create application property that declares to send a notification command.
+     *
+     * @return The application property map.
+     */
+    private static Map<String, Object> createNotificationCommandProperties() {
+        notificationCommandProperties.put(MessageHelper.APP_PROPERTY_NOTIFY_COMMAND, Boolean.TRUE);
+        return notificationCommandProperties;
+    }
+
+    /**
      * {@inheritDoc}
      * <p>
      * This method simply invokes {@link #sendCommand(String, String, Buffer)} with
@@ -151,6 +167,31 @@ public class CommandClientImpl extends AbstractRequestResponseClient<BufferResul
         });
     }
 
+    @Override
+    public Future<Integer> sendNotificationCommand(final String notificationCommand, final Buffer data) {
+        return sendNotificationCommand(notificationCommand, null, data);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public Future<Integer> sendNotificationCommand(final String notificationCommand, final String contentType, final Buffer data) {
+        Objects.requireNonNull(notificationCommand);
+
+        final Future<BufferResult> responseTracker = Future.future();
+
+        createAndSendRequest(notificationCommand, createNotificationCommandProperties(), data, contentType, responseTracker.completer(), null);
+
+        return responseTracker.map(response -> {
+            if (response.isOk()) {
+                return HttpURLConnection.HTTP_OK;
+            } else {
+                throw StatusCodeMapper.from(response);
+            }
+        });
+    }
+
     /**
      * Creates a new command client for a tenant and device.
      * <p>
@@ -162,7 +203,7 @@ public class CommandClientImpl extends AbstractRequestResponseClient<BufferResul
      * property of all command request messages sent by this client.
      * 
      * @param context The vert.x context to run all interactions with the server on.
-     * @param clientConfig The configuration properties to use.
+     * @param clientConfig The configuration notificationCommandProperties to use.
      * @param con The AMQP connection to the server.
      * @param tenantId The tenant that the device belongs to.
      * @param deviceId The device to create the client for.

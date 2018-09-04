@@ -213,6 +213,9 @@ public class HonoConsumerBase {
      * {@link HonoExampleConstants#COMMAND_INTERVAL_FOR_DEVICES_CONNECTED_WITH_UNLIMITED_EXPIRY} seconds to the device
      * until a new notification was received with a <em>ttd</em> set to 0. See {@link #handleCommandReadinessNotification(TimeUntilDisconnectNotification)}
      * that cancels the periodic timer again.
+     * <p>
+     * If the contained <em>ttd</em> is set to 50, a notification command will be sent to the device (not expecting a reply from the device) as a response.
+     *
      * @param notification The notification that was received for the device.
      */
     private void createCommandClientAndSendCommand(final TimeUntilDisconnectNotification notification) {
@@ -233,7 +236,11 @@ public class HonoConsumerBase {
                 // register a canceler for this timer directly after it was created
                 setPeriodicCommandSenderTimerCanceler(timerId, notification, commandClient);
             } else {
-                sendCommandToAdapter(commandClient, notification);
+                if (notification.getTtd() == 50) {
+                    sendNotificationCommandToAdapter(commandClient, notification);
+                } else {
+                    sendCommandToAdapter(commandClient, notification);
+                }
             }
             return commandClient;
         }).otherwise(t -> {
@@ -259,15 +266,11 @@ public class HonoConsumerBase {
         }
     }
 
-    private void setPeriodicCommandSenderTimerCanceler(final Long timerId, final TimeUntilDisconnectNotification notification, final CommandClient commandClient) {
-        this.periodicCommandSenderTimerCancelerMap.put(notification.getTenantAndDeviceId(), v -> {
-            commandClient.close(ignore -> {
-                if (LOG.isDebugEnabled()) {
-                    LOG.trace("Closed commandClient for [{}].", notification.getTenantAndDeviceId());
-                }
-            });
+    private void setPeriodicCommandSenderTimerCanceler(final Long timerId, final TimeUntilDisconnectNotification ttdNotification, final CommandClient commandClient) {
+        this.periodicCommandSenderTimerCancelerMap.put(ttdNotification.getTenantAndDeviceId(), v -> {
+            closeCommandClient(commandClient, ttdNotification);
             vertx.cancelTimer(timerId);
-            periodicCommandSenderTimerCancelerMap.remove(notification.getTenantAndDeviceId());
+            periodicCommandSenderTimerCancelerMap.remove(ttdNotification.getTenantAndDeviceId());
         });
     }
 
@@ -287,14 +290,14 @@ public class HonoConsumerBase {
      * If the contained <em>ttd</em> is set to a value @gt; 0, the commandClient will be closed after a response was received.
      * If the contained <em>ttd</em> is set to -1, the commandClient will remain open for further commands to be sent.
      * @param commandClient The command client to be used for sending the command to the device.
-     * @param notification The notification that was received for the device.
+     * @param ttdNotification The ttd notification that was received for the device.
      */
-    private void sendCommandToAdapter(final CommandClient commandClient, final TimeUntilDisconnectNotification notification) {
+    private void sendCommandToAdapter(final CommandClient commandClient, final TimeUntilDisconnectNotification ttdNotification) {
         final Buffer commandBuffer = buildCommandPayload();
         final String command = "setBrightness";
 
         if (LOG.isDebugEnabled()) {
-            LOG.debug("Sending command [{}] to [{}].", command, notification.getTenantAndDeviceId());
+            LOG.debug("Sending command [{}] to [{}].", command, ttdNotification.getTenantAndDeviceId());
         }
 
         commandClient.sendCommand(command, commandBuffer).map(result -> {
@@ -303,17 +306,13 @@ public class HonoConsumerBase {
                 LOG.debug("And received response: [{}].", Optional.ofNullable(result.getPayload()).orElse(Buffer.buffer()).toString());
             }
 
-            if (notification.getTtd() != -1) {
+            if (ttdNotification.getTtd() != -1) {
                 // do not close the command client if device stays connected
-                commandClient.close(v -> {
-                    if (LOG.isDebugEnabled()) {
-                        LOG.trace("Closed commandClient for [{}].", notification.getTenantAndDeviceId());
-                    }
-                });
+                closeCommandClient(commandClient, ttdNotification);
             } else {
                 // cancel periodic timer and send a command again
-                cancelPeriodicCommandSender(notification);
-                createCommandClientAndSendCommand(notification);
+                cancelPeriodicCommandSender(ttdNotification);
+                createCommandClientAndSendCommand(ttdNotification);
             }
             return result;
         }).otherwise(t -> {
@@ -324,15 +323,63 @@ public class HonoConsumerBase {
                 LOG.debug("Could not send command : {}.", t.getMessage());
             }
 
-            if (notification.getTtd() != -1) {
+            if (ttdNotification.getTtd() != -1) {
                 // do not close the command client if device stays connected
-                commandClient.close(v -> {
-                    if (LOG.isDebugEnabled()) {
-                        LOG.trace("Closed commandClient for [{}].", notification.getTenantAndDeviceId());
-                    }
-                });
+                closeCommandClient(commandClient, ttdNotification);
             }
             return null;
+        });
+    }
+
+    /**
+     * Send a notification command to the device for which a {@link TimeUntilDisconnectNotification} was received.
+     * <p>
+     * If the contained <em>ttd</em> is set to a value @gt; 0, the commandClient will be closed after a response was received.
+     * If the contained <em>ttd</em> is set to -1, the commandClient will remain open for further commands to be sent.
+     * @param commandClient The command client to be used for sending the notification command to the device.
+     * @param ttdNotification The ttd notification that was received for the device.
+     */
+    private void sendNotificationCommandToAdapter(final CommandClient commandClient, final TimeUntilDisconnectNotification ttdNotification) {
+        final Buffer commandBuffer = buildNotificationCommandPayload();
+        final String command = "sendLifecycleInfo";
+
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("Sending notification command [{}] to [{}].", command, ttdNotification.getTenantAndDeviceId());
+        }
+
+        commandClient.sendNotificationCommand(command, commandBuffer).map(result -> {
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Successfully sent notification command payload: [{}].", commandBuffer.toString());
+                //LOG.debug("And received response: [{}].", Optional.ofNullable(result.getPayload()).orElse(Buffer.buffer()).toString());
+            }
+
+            if (ttdNotification.getTtd() != -1) {
+                // do not close the command client if device stays connected
+                closeCommandClient(commandClient, ttdNotification);
+            }
+            return result;
+        }).otherwise(t -> {
+            if (t instanceof ServiceInvocationException) {
+                final int errorCode = ((ServiceInvocationException) t).getErrorCode();
+                LOG.debug("Notification command was replied with error code [{}].", errorCode);
+            } else {
+                LOG.debug("Could not send notification command : {}.", t.getMessage());
+            }
+
+            if (ttdNotification.getTtd() != -1) {
+                // do not close the command client if device stays connected
+                closeCommandClient(commandClient, ttdNotification);
+            }
+            return null;
+        });
+    }
+
+    private void closeCommandClient(final CommandClient commandClient, final TimeUntilDisconnectNotification ttdNotification) {
+        // do not close the command client if device stays connected
+        commandClient.close(v -> {
+            if (LOG.isDebugEnabled()) {
+                LOG.trace("Closed commandClient for [{}].", ttdNotification.getTenantAndDeviceId());
+            }
         });
     }
 
@@ -341,6 +388,10 @@ public class HonoConsumerBase {
         return Buffer.buffer(jsonCmd.encodePrettily());
     }
 
+    private Buffer buildNotificationCommandPayload() {
+        final JsonObject jsonCmd = new JsonObject().put("info", "app restarted.");
+        return Buffer.buffer(jsonCmd.encodePrettily());
+    }
     /**
      * Handler method for a Message from Hono that was received as telemetry data.
      * <p>

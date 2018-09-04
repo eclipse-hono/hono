@@ -100,6 +100,8 @@ public final class MessageHelper {
      */
     public static final String APP_PROPERTY_TENANT_ID              = "tenant_id";
 
+    public static final String APP_PROPERTY_NOTIFY_COMMAND         = "notify_command";
+
     /**
      * The AMQP 1.0 <em>absolute-expiry-time</em> message property.
      */
