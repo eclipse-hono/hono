@@ -173,6 +173,8 @@
       The organization name to use for our Docker image names.
      -->
      <docker.image.org-name>eclipse</docker.image.org-name>
+
+     <jacoco.version>0.8.2</jacoco.version>
   </properties>
 
   <modules>
@@ -222,6 +224,11 @@
               </image>
             </images>
           </configuration>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-antrun-plugin</artifactId>
+          <version>1.8</version>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
@@ -446,7 +453,7 @@
       <plugin>
         <groupId>org.jacoco</groupId>
         <artifactId>jacoco-maven-plugin</artifactId>
-        <version>0.8.2</version>
+        <version>${jacoco.version}</version>
         <executions>
           <execution>
             <!-- enable test execution with jacoco -->
@@ -460,7 +467,7 @@
       <plugin>
         <groupId>de.dentrassi.maven</groupId>
         <artifactId>jacoco-extras</artifactId>
-        <version>0.1.2</version>
+        <version>0.1.4</version>
         <executions>
           <execution>
             <!--
