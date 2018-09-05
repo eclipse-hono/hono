@@ -1,0 +1,13 @@
+title Send command (Unsuccessful outcome)
+
+participant AMQP 1.0 Network
+participant Business Application
+
+
+
+Business Application->AMQP 1.0 Network: transfer("control/${tenant_id}/${device_id}", command)
+AMQP 1.0 Network->Business Application: disposition("Rejected" or "Released")
+activate Business Application
+note over Business Application: close response link
+Business Application->AMQP 1.0 Network: detach("sender", "control/${tenantId}/${reply-id}", closed=TRUE)
+AMQP 1.0 Network->Business Application: detach("receiver", "control/${tenantId}/${reply-id}", closed=TRUE)

@@ -1,10 +1,9 @@
+title Send command (Success)
+
 participant AMQP 1.0 Network
 participant Business Application
 
-Business Application->AMQP 1.0 Network: attach("sender","control/${tenant_id}/${device_id}")
-Business Application->AMQP 1.0 Network: attach("receiver","control/${tenant_id}/${reply-to}")
-
 Business Application->AMQP 1.0 Network: transfer("control/${tenant_id}/${device_id}", command)
+AMQP 1.0 Network->Business Application: disposition("Accepted")
 activate Business Application
-AMQP 1.0 Network->Business Application: transfer("control/${tenant_id}/${reply-to}", command-reply)
-deactivate Business Application
+note over Business Application: wait for response
