@@ -40,9 +40,18 @@ the *Business Application* needs to open a receiver link as precondition:
 
 1. The *Business Application* has established an AMQP link in role *receiver* with the source address `control/${tenant_id}/${reply-id}`.
 This link is used by the *Business Application* to receive the response of the executed command. This link’s source address is also referred to as `the reply-to address` for the request messages. 
-2. The `${reply-id}` may be any arbitrary string chosen by the client.  
+2. The `${reply-id}` may be any arbitrary string chosen by the client. 
 
-To scope a response to the device the `${reply-id}` should consist of the device-id plus an arbitrary string to scope the command sender instance. If all responses shall be received just in the context of the tenant, the device-id has to be omitted.   
+### Choosing a strategy for building the receiver link address
+
+While the `${reply-id}` can be completely chosen by the client, the specific use case for sending commands may influence 
+how it should be set.
+Thus following hints for choosing the right `${reply-id}` may be helpful:
+
+- if only one command response is expected from the device, the `${reply-id}` could be set to a UUID and closed again after receiving the response.
+- if several command responses are expected from the device (e.g. since multiple commands were or will be sent to it),  the `${reply-id}` could be set to the `${device_id}` plus an arbitrary string to scope the command sender instance. Such a link should usually remain open after the reception of any response. 
+- if all command responses for the `${tenant_id}` shall be received in the application,  the `${reply-id}` could be set to just an arbitrary (short) string to scope the command sender instance (without the `${device_id}`). Such a link should usually remain open after the reception of any response.
+
 
 **Link establishment**
 
@@ -51,7 +60,7 @@ The following sequence diagram shows the necessary links that need to be establi
 ![Send Command](../command_control_receive_preconditions.png)
 
 # Outcomes for sending a command or notification command
-Commands and notification commands that are forwarded by the AMQP 1.0 network to a protocol adapter need to be responded with following outcomes:
+Commands and notification commands that are forwarded by the AMQP 1.0 network to a protocol adapter need to be responded with one of the following outcomes:
 
 | Processing in protocol adapter   | AMQP outcome                  |
 |----------------------------------|------------------------------ |
@@ -59,14 +68,14 @@ Commands and notification commands that are forwarded by the AMQP 1.0 network to
 | Device not connected (anymore)   | Release                       | 
 | Command delivered                | Accepted                      | 
 
-For any outcome except for `Accepted` the *Business application* should immediately close the response receiver link again, 
-if it was scoped to exactly one command response. If the receiver link is scoped to the tenant, it usually should remain 
-open.
+Depending on the strategy for the receiver link address (see [Strategy for building the receiver link address]({{< relref "#choosing-a-strategy-for-building-the-receiver-link-address">}}) ), the *Business application* may want to close the response receiver
+link again if the outcome was not set to `Accepted`.
 
 
 # Operations
 
-The following API defines operations that can be used by *Business Applications* to send commands or notification commands to devices over an AMQP 1.0 Network and get a response in return to a sent command.
+The following API defines operations that can be used by *Business Applications* to send commands (which get a response 
+in return) or notification commands to devices over an AMQP 1.0 Network.
 
 ## Send a Notification Command
 
