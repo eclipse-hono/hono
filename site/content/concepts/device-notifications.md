@@ -37,6 +37,14 @@ See Hono's example module for details where such a notification callback is used
  
 Please refer to the [Telemetry API]({{< relref "api/Telemetry-API.md" >}}) and the [Event API]({{< relref "api/Event-API.md" >}}) for further details.
 
+### Semantics of the `ttd` property
+
+| ttd value | Semantic |
+| :--- | :---------- |
+| > 0  | The number of seconds the device will stay connected. Additionally this signals that the device will be not connected anymore after having received a downstream message (matching request-response pattern based protocols like HTTP). **NB**: if in the future there should be protocols where the device stays connected for a specific number of seconds (even after having received a command), we will notify this by an additional value or flag.
+| -1   | The device is now connected (i.e. available to receive downstream messages) until further notification (usually a `ttd` of `0`).
+| 0    | The device is now disconnected (i.e. not available anymore to receive downstream messages).
+
 ### Time based validation of a notification 
 
 An application receiving a downstream message containing the notification relevant properties can verify at any point in
@@ -82,14 +90,14 @@ the appropriate command topic (refer to the [MQTT Adapter]({{< relref "user-guid
 
 If it unsubscribes again, the adapter automatically sends a `Time until disconnect notification` with a `ttd` value of `0`.
 
-### Sequence diagrams of Device command readiness notifications
+### Sequence diagrams of Time until disconnect notifications
 
-The following sequence diagram shows a **device command readiness notification** while sending a telemetry message downstream
+The following sequence diagram shows a **Time until disconnect notification** while sending a telemetry message downstream
 via the HTTP protocol adapter:
 
 ![Device command readiness with telemetry data](../device_commandReadinessImplicit.png)
 
-The following sequence diagram shows a **device command readiness notification** by sending an empty event message downstream
+The following sequence diagram shows a **Time until disconnect notification** by sending an empty event message downstream
 via the HTTP protocol adapter:
 
 ![Device command readiness with explict event](../device_commandReadinessExplicit.png)
