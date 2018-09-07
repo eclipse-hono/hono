@@ -41,9 +41,9 @@ Please refer to the [Telemetry API]({{< relref "api/Telemetry-API.md" >}}) and t
 
 | ttd value | Semantic |
 | :--- | :---------- |
-| > 0  | The number of seconds the device will stay connected. Additionally this signals that the device will be not connected anymore after having received a downstream message (matching request-response pattern based protocols like HTTP). **NB**: if in the future there should be protocols where the device stays connected for a specific number of seconds (even after having received a command), we will notify this by an additional value or flag.
-| -1   | The device is now connected (i.e. available to receive downstream messages) until further notification (usually a `ttd` of `0`).
-| 0    | The device is now disconnected (i.e. not available anymore to receive downstream messages).
+| > 0  | The number of seconds the device will stay connected. Additionally this signals that the device will be not connected anymore after having received an upstream message (matching request-response pattern based protocols like HTTP). **NB**: if in the future there should be protocols where the device stays connected for a specific number of seconds (even after having received a command), we will notify this by an additional value or flag.
+| -1   | The device is now connected (i.e. available to receive upstream messages) until further notification (usually a `ttd` of `0`).
+| 0    | The device is now disconnected (i.e. not available anymore to receive upstream messages).
 
 ### Time based validation of a notification 
 
