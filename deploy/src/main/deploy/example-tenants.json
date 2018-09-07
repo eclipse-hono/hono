@@ -1,7 +1,12 @@
 [
   {
     "tenant-id": "DEFAULT_TENANT",
-    "enabled": true
+    "enabled": true,
+    "trusted-ca": {
+      "subject-dn": "C=CA,L=Ottawa,O=Eclipse IoT,OU=Californium,CN=cf-ca",
+      "type": "EC",
+      "public-key": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEGTYGKFKF3grlWqJFBYkiLGMT3tTSyCGf/IoalXoCx38N2FaB6j6cVJmYlQZecYtnQNh+BgEfK8OLv3n8zwFP2Q=="
+    }
   },
   {
     "tenant-id": "HTTP_TENANT",

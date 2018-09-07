@@ -257,11 +257,13 @@ echo ... done
 echo
 # coap deduplicator requires currently a large heap ;-(
 echo Deploying Coap adapter ...
+docker secret create -l project=$NS coap-adapter-keyStore.jks $CERTS/coap-adapter-keyStore.jks
 docker secret create -l project=$NS coap-adapter-key.pem $CERTS/coap-adapter-key.pem
 docker secret create -l project=$NS coap-adapter-cert.pem $CERTS/coap-adapter-cert.pem
 docker secret create -l project=$NS coap-adapter.credentials $SCRIPTPATH/../coap-adapter.credentials
 docker secret create -l project=$NS hono-adapter-coap-vertx-config.yml $SCRIPTPATH/hono-adapter-coap-vertx-config.yml
 docker service create $CREATE_OPTIONS --name hono-adapter-coap-vertx -p 5683:5683/udp -p 5684:5684/udp \
+  --secret coap-adapter-keyStore.jks \
   --secret coap-adapter-key.pem \
   --secret coap-adapter-cert.pem \
   --secret trusted-certs.pem \
