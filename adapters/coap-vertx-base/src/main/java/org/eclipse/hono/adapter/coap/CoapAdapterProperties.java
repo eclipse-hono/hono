@@ -23,6 +23,10 @@ import org.eclipse.hono.config.ProtocolAdapterProperties;
 public class CoapAdapterProperties extends ProtocolAdapterProperties {
 
     /**
+     * The default keystore alias to load server credentials.
+     */
+    public static final String DEFAULT_KEYSTORE_ALIAS = "server";
+    /**
      * The default regular expression to split the identity into authority and tenant.
      */
     public static final String DEFAULT_ID_SPLIT_REGEX = "@";
@@ -35,6 +39,7 @@ public class CoapAdapterProperties extends ProtocolAdapterProperties {
      */
     public static final long DEFAULT_DEVICE_CACHE_MAX_SIZE = 1000000L;
 
+    private String keyStoreAlias = DEFAULT_KEYSTORE_ALIAS;
     private String idSplitRegex = DEFAULT_ID_SPLIT_REGEX;
     private String networkConfig = null;
     private String secureNetworkConfig = null;
@@ -43,6 +48,19 @@ public class CoapAdapterProperties extends ProtocolAdapterProperties {
     private int coapThreads = 2;
     private int deviceCacheMinSize = DEFAULT_DEVICE_CACHE_MIN_SIZE;
     private long deviceCacheMaxSize = DEFAULT_DEVICE_CACHE_MAX_SIZE;
+
+    /**
+     * Alias the read server credentials from key store.
+     * 
+     * @return alias
+     */
+    public final String getKeyStoreAlias() {
+        return keyStoreAlias;
+    }
+
+    public final void setKeyStoreAlias(final String keyStoreAlias) {
+        this.keyStoreAlias = Objects.requireNonNull(keyStoreAlias);
+    }
 
     public final String getIdSplitRegex() {
         return idSplitRegex;

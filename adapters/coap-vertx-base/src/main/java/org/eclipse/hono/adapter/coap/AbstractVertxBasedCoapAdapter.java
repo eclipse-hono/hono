@@ -13,9 +13,12 @@
 package org.eclipse.hono.adapter.coap;
 
 import java.io.File;
+import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.InetSocketAddress;
+import java.security.GeneralSecurityException;
 import java.security.Principal;
+import java.security.cert.Certificate;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -29,6 +32,7 @@ import org.eclipse.californium.core.network.CoapEndpoint;
 import org.eclipse.californium.core.network.Endpoint;
 import org.eclipse.californium.core.network.config.NetworkConfig;
 import org.eclipse.californium.core.server.resources.CoapExchange;
+import org.eclipse.californium.elements.util.SslContextUtil;
 import org.eclipse.californium.scandium.DTLSConnector;
 import org.eclipse.californium.scandium.config.DtlsConnectorConfig;
 import org.eclipse.hono.client.ClientErrorException;
@@ -167,8 +171,12 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
             final CoapAdapterProperties config = getConfig();
             final CoapPreSharedKeyHandler coapPreSharedKeyProvider = new CoapPreSharedKeyHandler(getVertx(), config,
                     getCredentialsServiceClient());
+            final CoapCertificateHandler coapCertificateVerifier = new CoapCertificateHandler(getVertx(), config,
+                    getTenantServiceClient(),
+                    getCredentialsServiceClient());
             // add handler to authentication handler map.
             authenticationHandlerMap.put(coapPreSharedKeyProvider.getType(), coapPreSharedKeyProvider);
+            authenticationHandlerMap.put(coapCertificateVerifier.getType(), coapCertificateVerifier);
             final Context adapterContext = this.context;
             final CoapServer server = this.server;
 
@@ -180,12 +188,49 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                 final CoapServer startingServer = server == null ? new CoapServer(insecureNetworkConfig) : server;
                 addResources(adapterContext, startingServer);
                 final DtlsConnectorConfig.Builder dtlsConfig = new DtlsConnectorConfig.Builder();
-                dtlsConfig.setClientAuthenticationRequired(config.isAuthenticationRequired());
                 dtlsConfig.setConnectionThreadCount(config.getConnectorThreads());
                 dtlsConfig.setAddress(
                         new InetSocketAddress(config.getBindAddress(), config.getPort(getPortDefaultValue())));
                 if (coapPreSharedKeyProvider != null) {
                     dtlsConfig.setPskStore(coapPreSharedKeyProvider);
+                }
+                if (config.getKeyStorePassword() != null) {
+                    try {
+                        // try to load server certificate chain
+                        final char[] pass = config.getKeyStorePassword().toCharArray();
+                        final SslContextUtil.Credentials serverCredentials = SslContextUtil.loadCredentials(
+                                config.getKeyStorePath(),
+                                config.getKeyStoreAlias(), pass, pass);
+                        dtlsConfig.setIdentity(serverCredentials.getPrivateKey(),
+                                serverCredentials.getCertificateChain(), false);
+                    } catch (GeneralSecurityException e) {
+                        LOG.warn("Failed to load server certificate from {}, alias {}!", config.getKeyStorePath(),
+                                config.getKeyStoreAlias(), e);
+                    } catch (IOException e) {
+                        LOG.warn("Failed to load server certificate from {}, alias {}!", config.getKeyStorePath(),
+                                config.getKeyStoreAlias(), e);
+                    }
+                    // continue to setup other credentials
+                }
+                if (config.getTrustStorePassword() != null) {
+                    // configured static trust
+                    try {
+                        // try to load trusts
+                        final Certificate[] trustedCertificates = SslContextUtil.loadTrustedCertificates(
+                                config.getTrustStorePath(), null,
+                                config.getTrustStorePassword().toCharArray());
+                        dtlsConfig.setTrustStore(trustedCertificates);
+                        dtlsConfig.setClientAuthenticationRequired(true);
+                    } catch (GeneralSecurityException e) {
+                        LOG.warn("Failed to load trusts from {}!", config.getTrustStorePath(), e);
+                    } catch (IOException e) {
+                        LOG.warn("Failed to load trusts from {}!", config.getTrustStorePath(), e);
+                    }
+                    // continue to setup other credentials
+                } else if (coapCertificateVerifier != null) {
+                    // use tenant aware trust.
+                    dtlsConfig.setCertificateVerifier(coapCertificateVerifier);
+                    dtlsConfig.setClientAuthenticationRequired(true);
                 }
                 Endpoint secureEndpoint = null;
                 try {
