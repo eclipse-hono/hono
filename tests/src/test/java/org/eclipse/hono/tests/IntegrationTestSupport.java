@@ -260,6 +260,7 @@ public final class IntegrationTestSupport {
      * @param command The name of the command to send.
      * @param contentType The type of the command's input data.
      * @param payload The command's input data to send to the device.
+     * @param properties The headers to include in the command message as AMQP application properties.
      * @return A future that is either succeeded with the response payload from the device or
      *         failed with a {@link ServiceInvocationException}.
      */
@@ -267,7 +268,8 @@ public final class IntegrationTestSupport {
             final TimeUntilDisconnectNotification notification,
             final String command,
             final String contentType,
-            final Buffer payload) {
+            final Buffer payload,
+            final Map<String, Object> properties) {
 
         return sendCommand(
                 notification.getTenantId(),
@@ -275,6 +277,7 @@ public final class IntegrationTestSupport {
                 command,
                 contentType,
                 payload,
+                properties,
                 notification.getMillisecondsUntilExpiry());
     }
 
@@ -286,6 +289,7 @@ public final class IntegrationTestSupport {
      * @param command The name of the command to send.
      * @param contentType The type of the command's input data.
      * @param payload The command's input data to send to the device.
+     * @param properties The headers to include in the command message as AMQP application properties.
      * @param requestTimeout The number of milliseconds to wait for a response from the device.
      * @return A future that is either succeeded with the response payload from the device or
      *         failed with a {@link ServiceInvocationException}.
@@ -296,6 +300,7 @@ public final class IntegrationTestSupport {
             final String command,
             final String contentType,
             final Buffer payload,
+            final Map<String, Object> properties,
             final long requestTimeout) {
 
         return honoClient.getOrCreateCommandClient(tenantId, deviceId).compose(commandClient -> {
@@ -304,7 +309,7 @@ public final class IntegrationTestSupport {
 
             // send the command upstream to the device
             LOGGER.trace("sending command [name: {}, contentType: {}, payload: {}]", command, contentType, payload);
-            return commandClient.sendCommand(command, contentType, payload).map(responsePayload -> {
+            return commandClient.sendCommand(command, contentType, payload, properties).map(responsePayload -> {
                 LOGGER.debug("successfully sent command [name: {}, payload: {}] and received response [payload: {}]",
                         command, payload, responsePayload);
                 commandClient.close(v -> {});

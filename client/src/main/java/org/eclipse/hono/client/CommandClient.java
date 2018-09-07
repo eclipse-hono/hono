@@ -18,6 +18,8 @@ import org.eclipse.hono.util.BufferResult;
 import io.vertx.core.Future;
 import io.vertx.core.buffer.Buffer;
 
+import java.util.Map;
+
 /**
  * A client for accessing Hono's Command and Control API.
  * <p>
@@ -55,6 +57,7 @@ public interface CommandClient extends RequestResponseClient {
      * @param command The command name.
      * @param contentType The type of the data submitted as part of the command or {@code null} if unknown.
      * @param data The command data to send to the device or {@code null} if the command has no input data.
+     * @param properties The headers to include in the command message as AMQP application properties.
      * @return A future indicating the result of the operation.
      *         <p>
      *         The future will succeed if a response with status 2xx has been received from the device. If the response has no payload, the future will complete with {@code null}.
@@ -64,5 +67,5 @@ public interface CommandClient extends RequestResponseClient {
      * @throws NullPointerException if command is {@code null}.
      * @see RequestResponseClient#setRequestTimeout(long)
      */
-    Future<BufferResult> sendCommand(String command, String contentType, Buffer data);
+    Future<BufferResult> sendCommand(String command, String contentType, Buffer data, Map<String, Object> properties);
 }

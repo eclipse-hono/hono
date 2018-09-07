@@ -13,6 +13,7 @@
 
 package org.eclipse.hono.client.impl;
 
+import java.util.Map;
 import java.util.Objects;
 
 import org.eclipse.hono.client.CommandClient;
@@ -120,12 +121,12 @@ public class CommandClientImpl extends AbstractRequestResponseClient<BufferResul
     /**
      * {@inheritDoc}
      * <p>
-     * This method simply invokes {@link #sendCommand(String, String, Buffer)} with
-     * {@code null} as the *content-type*.
+     * This method simply invokes {@link #sendCommand(String, String, Buffer, Map)} with
+     * {@code null} as the *content-type* and {@code null} as  *application properties*.
      */
     @Override
     public Future<BufferResult> sendCommand(final String command, final Buffer data) {
-        return sendCommand(command, null, data);
+        return sendCommand(command, null, data, null);
     }
 
     /**
@@ -135,12 +136,12 @@ public class CommandClientImpl extends AbstractRequestResponseClient<BufferResul
      * from a device with the request.
      */
     @Override
-    public Future<BufferResult> sendCommand(final String command, final String contentType, final Buffer data) {
+    public Future<BufferResult> sendCommand(final String command, final String contentType, final Buffer data, final Map<String, Object> properties) {
 
         Objects.requireNonNull(command);
 
         final Future<BufferResult> responseTracker = Future.future();
-        createAndSendRequest(command, null, data, contentType, responseTracker.completer(), null);
+        createAndSendRequest(command, properties, data, contentType, responseTracker.completer(), null);
 
         return responseTracker.map(response -> {
             if (response.isOk()) {

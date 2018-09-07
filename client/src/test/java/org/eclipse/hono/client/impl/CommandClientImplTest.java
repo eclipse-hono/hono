@@ -39,6 +39,9 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.proton.ProtonReceiver;
 import io.vertx.proton.ProtonSender;
 
+import java.util.HashMap;
+import java.util.Map;
+
 
 /**
  * Tests verifying behavior of {@link CommandClientImpl}.
@@ -98,8 +101,10 @@ public class CommandClientImplTest {
     @SuppressWarnings("unchecked")
     @Test
     public void testSendCommandSetsProperties(final TestContext ctx) {
+        final Map<String, Object> applicationProperties = new HashMap<String, Object>();
+        applicationProperties.put("appKey", "appValue");
 
-        client.sendCommand("doSomething", "text/plain", Buffer.buffer("payload"));
+        client.sendCommand("doSomething", "text/plain", Buffer.buffer("payload"), applicationProperties);
         final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
         verify(sender).send(messageCaptor.capture(), any(Handler.class));
         assertThat(messageCaptor.getValue().getSubject(), is("doSomething"));
@@ -107,5 +112,7 @@ public class CommandClientImplTest {
         assertThat(messageCaptor.getValue().getContentType(), is("text/plain"));
         assertThat(messageCaptor.getValue().getReplyTo(),
                 is(String.format("%s/%s/%s/%s", client.getName(), Constants.DEFAULT_TENANT, DEVICE_ID, REPLY_ID)));
+        assertNotNull(messageCaptor.getValue().getApplicationProperties());
+        assertThat(messageCaptor.getValue().getApplicationProperties().getValue().get("appKey"), is("appValue"));
     }
 }

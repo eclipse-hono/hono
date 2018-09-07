@@ -754,7 +754,7 @@ public abstract class HttpTestBase {
                     // now ready to send a command
                     final JsonObject inputData = new JsonObject().put(COMMAND_JSON_KEY, (int) (Math.random() * 100));
                     helper
-                        .sendCommand(notification, COMMAND_TO_SEND, "application/json", inputData.toBuffer())
+                        .sendCommand(notification, COMMAND_TO_SEND, "application/json", inputData.toBuffer(), null)
                         .setHandler(ctx.asyncAssertSuccess(response -> {
                             ctx.assertEquals("text/plain", response.getContentType());
                         }));

@@ -290,12 +290,11 @@ public class HonoConsumerBase {
     private void sendCommandToAdapter(final CommandClient commandClient, final TimeUntilDisconnectNotification notification) {
         final Buffer commandBuffer = buildCommandPayload();
         final String command = "setBrightness";
-
         if (LOG.isDebugEnabled()) {
             LOG.debug("Sending command [{}] to [{}].", command, notification.getTenantAndDeviceId());
         }
 
-        commandClient.sendCommand(command, commandBuffer).map(result -> {
+        commandClient.sendCommand(command, "application/json", commandBuffer, buildCommandProperties()).map(result -> {
             if (LOG.isDebugEnabled()) {
                 LOG.debug("Successfully sent command payload: [{}].", commandBuffer.toString());
                 LOG.debug("And received response: [{}].", Optional.ofNullable(result.getPayload()).orElse(Buffer.buffer()).toString());
@@ -332,6 +331,17 @@ public class HonoConsumerBase {
             }
             return null;
         });
+    }
+
+    /**
+     * Provides an application property that is suitable to be sent with the command upstream.
+     *
+     * @return Map The application property map.
+     */
+    private Map<String, Object> buildCommandProperties() {
+        final Map<String, Object> applicationProperties = new HashMap<String, Object>(1);
+        applicationProperties.put("appId", "example#1");
+        return applicationProperties;
     }
 
     private Buffer buildCommandPayload() {

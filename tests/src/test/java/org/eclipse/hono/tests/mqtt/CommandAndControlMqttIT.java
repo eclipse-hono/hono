@@ -145,7 +145,7 @@ public class CommandAndControlMqttIT extends MqttTestBase {
             final Async commandSent = ctx.async();
             context.runOnContext(go -> {
                 final Buffer msg = Buffer.buffer("value: " + commandsSent.getAndIncrement());
-                helper.sendCommand(tenantId, deviceId, "setValue", "text/plain", msg, 200).setHandler(sendAttempt -> {
+                helper.sendCommand(tenantId, deviceId, "setValue", "text/plain", msg, null, 200).setHandler(sendAttempt -> {
                     if (sendAttempt.failed()) {
                         LOGGER.debug("error sending command {}", commandsSent.get(), sendAttempt.cause());
                     } else {
