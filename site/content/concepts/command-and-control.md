@@ -66,3 +66,39 @@ The response of the command will be sent by the device to
 If the device is authenticated, the `tenant` and `device-id` are left empty (resulting in 3 subsequent `/`s).
 
 ![Command & Control over MQTT Adapter](../command_control_concept_mqtt.png) 
+
+## Command & Control over AMQP Adapter
+
+When a device connected to the AMQP adapter wants to receive commands from the adapter, it opens a receiver link specifying the following source address:
+
+* `control` for authenticated devices
+* `control/${tenant}/${device-id}` for unauthenticated devices
+
+Once the receiver link is opened, the AMQP adapter sends command messages to devices through the link. The `subject` property of the message contains the actual command to be executed on the device while the `request_id` application property contains the identifier used to correlate the command request with the response.
+
+Devices can publish command response messages by opening an **anonymous** sender link (similar to how `telemetry` and `event` messages are published) using the following message address:
+
+* `control` (authenticated device)
+* `control/${tenant}/${device-id}` (unauthenticated device)
+
+The device should set the `request_id` application property and the `status` application property on the command response message sent over the sender link. The `status` application property should contain the outcome of executing the command on the device.
+
+**Command Request Message Properties**
+
+The following table shows the properties that are set on a command request message by the AMQP adapter.
+
+| Name            | Mandatory       | Location                 | Type        | Description |
+| :-------------- | :-------------: | :----------------------- | :---------- | :---------- |
+| *subject*       | yes             | *properties*             | *string*    | Contains the command name to be executed on a device. |
+| *request_id*    | yes             | *application-properties* | *string*    | The request identifier used to correlate the command request with the response. |
+
+**Command Response Message Properties**
+
+The following table shows the properties that are set on a command response message by a client device.
+
+| Name            | Mandatory       | Location                 | Type        | Description |
+| :-------------- | :-------------: | :----------------------- | :---------- | :---------- |
+| *status*        | yes             | *application-properties* | *string*    | The status code indicating the outcome of processing the command by the device. MUST be set by the device after executing the command. |
+| *request_id*    | yes             | *application-properties* | *string*    | The request identifier used to correlate the command request with the response. This identifier can be obtained from the properties of the command request message. |
+
+![Command & Control over AMQP Adapter](../command_control_concept_amqp.png) 
