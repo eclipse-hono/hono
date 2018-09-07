@@ -62,11 +62,11 @@ The following sequence diagram shows the necessary links that need to be establi
 # Outcomes for sending a command or notification command
 Commands and notification commands that are forwarded by the AMQP 1.0 network to a protocol adapter need to be responded with one of the following outcomes:
 
-| Processing in protocol adapter   | AMQP outcome                  |
-|----------------------------------|------------------------------ |
-| Bad command                      | Rejected ("hono:bad-request") |
-| Device not connected (anymore)   | Release                       | 
-| Command delivered                | Accepted                      | 
+| Processing in protocol adapter                         | AMQP outcome                  |
+|--------------------------------------------------------|------------------------------ |
+| Bad command                                            | Rejected ("hono:bad-request") |
+| Device not connected (anymore)                         | Release                       | 
+| Command approved (will be tried to deliver to device)  | Accepted                      | 
 
 Depending on the strategy for the receiver link address (see [Strategy for building the receiver link address]({{< relref "#choosing-a-strategy-for-building-the-receiver-link-address">}}) ), the *Business application* may want to close the response receiver
 link again if the outcome was not set to `Accepted`.
