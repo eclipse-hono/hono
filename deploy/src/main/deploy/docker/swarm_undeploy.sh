@@ -21,7 +21,6 @@ echo UNDEPLOYING ECLIPSE HONO FROM DOCKER SWARM
 docker service rm hono-adapter-coap-vertx
 docker secret rm \
   coap-adapter-keyStore.jks \
-  coap-adapter-trustStore.jks \
   coap-adapter.credentials \
   coap-adapter-key.pem \
   coap-adapter-cert.pem \
