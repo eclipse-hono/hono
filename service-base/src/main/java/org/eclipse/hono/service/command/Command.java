@@ -13,6 +13,7 @@
 
 package org.eclipse.hono.service.command;
 
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -148,7 +149,7 @@ public final class Command {
 
     /**
      * Checks if this command contains all required information.
-     * 
+     *
      * @return {@code true} if this is a valid command.
      */
     public boolean isValid() {
@@ -248,7 +249,7 @@ public final class Command {
 
     /**
      * Gets the type of this command's payload.
-     * 
+     *
      * @return The content type or {@code null} if not set.
      * @throws IllegalStateException if this command is invalid.
      */
@@ -289,8 +290,24 @@ public final class Command {
     }
 
     /**
+     * Gets the application properties of a message if any.
+     *
+     * @return The application properties.
+     * @throws IllegalStateException if this command is invalid.
+     */
+    public Map<String, Object> getApplicationProperties() {
+        if (isValid()) {
+            if (message.getApplicationProperties() == null) {
+                return null;
+            }
+            return message.getApplicationProperties().getValue();
+        } else {
+            throw new IllegalStateException("command is invalid");
+        }
+    }
+    /**
      * Creates a request ID for a command.
-     * 
+     *
      * @param correlationId The identifier to use for correlating the response with the request.
      * @param replyToId An arbitrary identifier to encode into the request ID.
      * @param deviceId The target of the command.
