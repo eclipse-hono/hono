@@ -51,7 +51,7 @@ public class MessageTapTest {
 
     /**
      * Verifies that the message tap calls the message AND the notification consumer
-     * if the message indicates command readiness.
+     * if a non empty message indicates command readiness.
      */
     @Test
     public void testTapCallsNotificationDeviceReadyToDeliverConsumer() {
@@ -73,14 +73,43 @@ public class MessageTapTest {
         assertTrue(messageConsumerCalled.get());
     }
 
+    /**
+     * Verifies that the message tap calls the message AND the notification consumer
+     * if an empty message indicates command readiness.
+     */
+    @Test
+    public void testTapCallsNotificationDeviceReadyToDeliverConsumerForEmptyEvent() {
+
+        final Message msg = createTestMessageWithoutBody("bum/lux");
+
+        MessageHelper.addTimeUntilDisconnect(msg, 6000);
+
+        final AtomicBoolean messageConsumerCalled = new AtomicBoolean(false);
+        final AtomicBoolean notificationConsumerCalled = new AtomicBoolean(false);
+
+        final Consumer<Message> messageConsumer = MessageTap.getConsumer(
+                m -> messageConsumerCalled.set(true),
+                message -> notificationConsumerCalled.set(true)
+        );
+        messageConsumer.accept(msg);
+
+        assertTrue(notificationConsumerCalled.get());
+        assertTrue(messageConsumerCalled.get());
+    }
+
     private Message createTestMessage(final String contentEncoding, final String payload) {
-        final Message msg = ProtonHelper.message();
+        final Message msg = createTestMessageWithoutBody(payload);
         msg.setBody(new Section() {});
+        msg.setContentEncoding(contentEncoding);
+        MessageHelper.setJsonPayload(msg, payload);
+        return msg;
+    }
+
+    private Message createTestMessageWithoutBody(final String payload) {
+        final Message msg = ProtonHelper.message();
         MessageHelper.setCreationTime(msg);
         MessageHelper.addDeviceId(msg, "4711");
         MessageHelper.addAnnotation(msg, MessageHelper.APP_PROPERTY_TENANT_ID, Constants.DEFAULT_TENANT);
-        MessageHelper.setJsonPayload(msg, payload);
-        msg.setContentEncoding(contentEncoding);
         return msg;
     }
 
