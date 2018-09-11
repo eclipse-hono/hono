@@ -5,15 +5,15 @@ weight = 415
 
 The *Command and Control* API is used by *Business Applications* to send **command** or **notification command** messages to devices connected to Hono. 
 
-Command messages can be used to execute operations on devices, e.g. updating a configuration property, installing a software component or activating an actuator.
+**Command** messages can be used to execute operations on devices, e.g. updating a configuration property, installing a software component or activating an actuator.
 Commands are bidirectional, i.e. a device receiving a command is expected to send a response to it.
 
-Notification command messages are unidirectional and cannot be responded.
+**Notification command** messages are unidirectional and cannot be responded.
 <!--more-->
 
 {{% note %}}
 This API has been added in Hono 0.6. Previous versions do not support nor implement the Command & Control API.
-The notification commands will be added during the development of Hono 0.8.
+The notification commands are fully specified and the implementation will be added during the development of Hono 0.8.
 {{% /note %}}
 
 The Command & Control API is defined by means of AMQP 1.0 message exchanges, i.e. a client needs to connect to Hono using AMQP 1.0 in order to invoke operations of the API as described in the following sections. Throughout the remainder of this page we will simply use AMQP when referring to AMQP 1.0.
@@ -55,7 +55,7 @@ Thus following hints for choosing the right `${reply-id}` may be helpful:
 
 **Link establishment**
 
-The following sequence diagram shows the necessary links that need to be established to enable sending back a response to the Business Application:
+The following sequence diagram shows the necessary links that need to be established to enable sending a command response to the Business Application:
 
 ![Send Command](../command_control_receive_preconditions.png)
 

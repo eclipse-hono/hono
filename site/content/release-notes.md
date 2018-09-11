@@ -9,6 +9,8 @@ title = "Release Notes"
 * Hono-cli extends support to Command & Control. Using command line, users can send commands to devices and receive command responses.  See [Using Cli for command & control]({{< relref "getting-started.md#using-cli-command-line-interface-to-send-commands-and-receive-command-responses" >}}) for more information.
 * The command client now enables the setting of application properties for command messages. This can be helpful if custom protocol adapters want to react to specifically annotated commands sent by an application. The standard protocol adapters of Hono do not further exploit these properties.
 * The command consumer (typically used in protocol adapters) allows access to the application properties of command messages.
+* A new message exchange pattern - called **notification commands** - is fully specified for the [Command and Control API]({{< relref "/api/Command-And-Control-API.md" >}}).
+  Note that currently there is no implementation included, this is planned for the following milestone.
 
 ### API Changes
 
