@@ -48,8 +48,8 @@ While the `${reply-id}` can be completely chosen by the client, the specific use
 how it should be set.
 Thus following hints for choosing the right `${reply-id}` may be helpful:
 
-- if only one command response is expected from the device, the `${reply-id}` could be set to a UUID and closed again after receiving the response.
-- if several command responses are expected from the device (e.g. since multiple commands were or will be sent to it),  the `${reply-id}` could be set to the `${device_id}` plus an arbitrary string to scope the command sender instance. Such a link should usually remain open after the reception of any response. 
+- if only one command response is expected from the device, the `${reply-id}` could be set to the `${device_id}` plus an arbitrary string to scope the command sender instance and closed again after receiving the response.
+- if several command responses are expected from the device (e.g. since multiple commands were or will be sent to it), such a link should usually remain open after the reception of any response. 
 - if all command responses for the `${tenant_id}` shall be received in the application,  the `${reply-id}` could be set to just an arbitrary (short) string to scope the command sender instance (without the `${device_id}`). Such a link should usually remain open after the reception of any response.
 
 
