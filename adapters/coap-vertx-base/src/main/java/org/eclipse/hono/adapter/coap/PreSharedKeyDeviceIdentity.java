@@ -74,7 +74,7 @@ public class PreSharedKeyDeviceIdentity implements DeviceCredentials {
             // multi tenantId -> <userId><sep-regex><tenantId> (default)
             final String[] userComponents = identity.split(separateRegex, 2);
             if (userComponents.length != 2) {
-                LOG.trace("username does not comply with expected pattern [<authId>@<tenantId>]", identity);
+                LOG.trace("username [{}] does not comply with expected pattern [<authId>@<tenantId>]", identity);
                 return null;
             }
             return new PreSharedKeyDeviceIdentity(userComponents[1], userComponents[0]);

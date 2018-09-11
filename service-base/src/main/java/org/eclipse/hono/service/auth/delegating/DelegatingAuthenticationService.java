@@ -102,7 +102,7 @@ public class DelegatingAuthenticationService extends AbstractHonoAuthenticationS
                     if (lookupAttempt.succeeded()) {
                         status.tryComplete(Status.OK());
                     } else {
-                        log.debug("readiness check failed to resolve Authentication service address [{}]: ",
+                        log.debug("readiness check failed to resolve Authentication service address [{}]: {}",
                                 getConfig().getHost(), lookupAttempt.cause().getMessage());
                         status.tryComplete(Status.KO());
                     }
@@ -116,7 +116,7 @@ public class DelegatingAuthenticationService extends AbstractHonoAuthenticationS
                     if (lookupAttempt.succeeded()) {
                         status.tryComplete(Status.OK());
                     } else {
-                        log.debug("readiness check failed to resolve Authentication service address [{}]: ",
+                        log.debug("readiness check failed to resolve Authentication service address [{}]: {}",
                                 getConfig().getHost(), lookupAttempt.cause().getMessage());
                         status.tryComplete(Status.KO());
                     }

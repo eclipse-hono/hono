@@ -69,7 +69,7 @@ public class UsernamePasswordCredentials extends AbstractDeviceCredentials {
             // multi tenantId -> <userId>@<tenantId>
             final String[] userComponents = username.split("@", 2);
             if (userComponents.length != 2) {
-                LOG.trace("username does not comply with expected pattern [<authId>@<tenantId>]", username);
+                LOG.trace("username [{}] does not comply with expected pattern [<authId>@<tenantId>]", username);
                 return null;
             } else {
                 credentials = new UsernamePasswordCredentials(userComponents[1], userComponents[0]);
