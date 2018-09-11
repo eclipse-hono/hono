@@ -14,17 +14,22 @@
 package org.eclipse.hono.service.command;
 
 import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.notNullValue;
+import static org.hamcrest.CoreMatchers.nullValue;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.util.HashMap;
+import java.util.Map;
+
+import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
 import org.junit.Test;
-
 
 /**
  * Verifies behavior of {@link Command}.
@@ -50,6 +55,52 @@ public class CommandTest {
         assertThat(cmd.getName(), is("doThis"));
         assertThat(cmd.getReplyToId(), is(String.format("4711/%s", replyToId)));
         assertThat(cmd.getCorrelationId(), is(correlationId));
+    }
+
+    /**
+     * Verifies that a command can be created from a valid message with application properties.
+     * Verifies that the application properties are able to be retrieved from the message.
+     */
+    @Test
+    public void testFromMessageSucceedsWithApplicationProperties() {
+        final String replyToId = "the-reply-to-id";
+        final String correlationId = "the-correlation-id";
+        final Message message = mock(Message.class);
+        final Map<String, Object> applicationProperties = new HashMap<String, Object>() {
+            {
+                put("deviceId", "4711");
+                put("tenantId", "DEFAULT_TENANT");
+            }
+        };
+        when(message.getApplicationProperties()).thenReturn(new ApplicationProperties(applicationProperties));
+        when(message.getSubject()).thenReturn("doThis");
+        when(message.getCorrelationId()).thenReturn(correlationId);
+        when(message.getReplyTo()).thenReturn(String.format("%s/%s/%s/%s",
+                CommandConstants.COMMAND_ENDPOINT, Constants.DEFAULT_TENANT, "4711", replyToId));
+        final Command cmd = Command.from(message, Constants.DEFAULT_TENANT, "4711");
+        assertTrue(cmd.isValid());
+        assertThat(cmd.getApplicationProperties(), is(notNullValue()));
+        assertThat(cmd.getApplicationProperties().size(), is(2));
+        assertThat(cmd.getApplicationProperties().get("deviceId"), is("4711"));
+        assertThat(cmd.getApplicationProperties().get("tenantId"), is("DEFAULT_TENANT"));
+    }
+
+    /**
+     * Verifies that a command can be created from a valid message with no application properties is valid.
+     */
+    @Test
+    public void testFromMessageSucceedsWithNoApplicationProperties() {
+        final String replyToId = "the-reply-to-id";
+        final String correlationId = "the-correlation-id";
+        final Message message = mock(Message.class);
+        when(message.getApplicationProperties()).thenReturn(null);
+        when(message.getSubject()).thenReturn("doThis");
+        when(message.getCorrelationId()).thenReturn(correlationId);
+        when(message.getReplyTo()).thenReturn(String.format("%s/%s/%s/%s",
+                CommandConstants.COMMAND_ENDPOINT, Constants.DEFAULT_TENANT, "4711", replyToId));
+        final Command cmd = Command.from(message, Constants.DEFAULT_TENANT, "4711");
+        assertTrue(cmd.isValid());
+        assertThat(cmd.getApplicationProperties(), is(nullValue()));
     }
 
     /**
