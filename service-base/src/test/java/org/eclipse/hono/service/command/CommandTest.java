@@ -59,7 +59,7 @@ public class CommandTest {
 
     /**
      * Verifies that a command can be created from a valid message with application properties.
-     * Verifies that the application properties is able to be retrieved from message.
+     * Verifies that the application properties are able to be retrieved from the message.
      */
     @Test
     public void testFromMessageSucceedsWithApplicationProperties() {
@@ -79,17 +79,14 @@ public class CommandTest {
                 CommandConstants.COMMAND_ENDPOINT, Constants.DEFAULT_TENANT, "4711", replyToId));
         final Command cmd = Command.from(message, Constants.DEFAULT_TENANT, "4711");
         assertTrue(cmd.isValid());
-        assertThat(cmd.getName(), is("doThis"));
-        assertThat(cmd.getReplyToId(), is(String.format("4711/%s", replyToId)));
-        assertThat(cmd.getCorrelationId(), is(correlationId));
         assertThat(cmd.getApplicationProperties(), is(notNullValue()));
-        assertThat(cmd.getApplicationProperties(), is(notNullValue()));
+        assertThat(cmd.getApplicationProperties().size(), is(2));
         assertThat(cmd.getApplicationProperties().get("deviceId"), is("4711"));
         assertThat(cmd.getApplicationProperties().get("tenantId"), is("DEFAULT_TENANT"));
     }
 
     /**
-     * Verifies that a command can be created from a valid message with no application properties.
+     * Verifies that a command can be created from a valid message with no application properties, is valid.
      */
     @Test
     public void testFromMessageSucceedsWithNoApplicationProperties() {
@@ -103,9 +100,6 @@ public class CommandTest {
                 CommandConstants.COMMAND_ENDPOINT, Constants.DEFAULT_TENANT, "4711", replyToId));
         final Command cmd = Command.from(message, Constants.DEFAULT_TENANT, "4711");
         assertTrue(cmd.isValid());
-        assertThat(cmd.getName(), is("doThis"));
-        assertThat(cmd.getReplyToId(), is(String.format("4711/%s", replyToId)));
-        assertThat(cmd.getCorrelationId(), is(correlationId));
         assertThat(cmd.getApplicationProperties(), is(nullValue()));
     }
 
