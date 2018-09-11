@@ -86,7 +86,7 @@ public class CommandTest {
     }
 
     /**
-     * Verifies that a command can be created from a valid message with no application properties, is valid.
+     * Verifies that a command can be created from a valid message with no application properties is valid.
      */
     @Test
     public void testFromMessageSucceedsWithNoApplicationProperties() {
