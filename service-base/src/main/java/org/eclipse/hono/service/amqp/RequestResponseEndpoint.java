@@ -401,7 +401,7 @@ public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties>
 
         final ProtonReceiver receiver = replyToReceiverMap.get(replyTo);
         if (receiver == null) {
-            logger.warn("No receiver found for reply-to address", replyTo);
+            logger.warn("No receiver found for reply-to address [{}]", replyTo);
             return;
         }
 
@@ -419,7 +419,7 @@ public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties>
 
         final ProtonReceiver receiver = replyToReceiverMap.remove(replyTo);
         if (receiver == null) {
-            logger.warn("Receiver [{}] was not allocated to replyTo address [{}]", replyTo);
+            logger.warn("Receiver was not allocated to replyTo address [{}]", replyTo);
         } else {
             logger.debug("Deallocated receiver [{}] for replies to [{}]", receiver, replyTo);
         }

@@ -227,7 +227,7 @@ public class HonoHttpDevice {
     private Future<Integer> sendCommandResponse(final String contentType, final Buffer payload, final String commandReqId, final int status) {
 
         final Future<Integer> result = Future.future();
-        final HttpClientRequest req = httpClient.post(String.format("/control/res/%s", commandReqId, status))
+        final HttpClientRequest req = httpClient.post(String.format("/control/res/%s", commandReqId))
                 .handler(response -> {
                     result.complete(response.statusCode());
                 });

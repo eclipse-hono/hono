@@ -126,7 +126,7 @@ public final class HealthCheckServer implements Lifecycle {
                             URI_LIVENESS_PROBE);
                     result.complete();
                 } else {
-                    LOG.warn("failed to start health checks HTTP server:", startAttempt.cause().getMessage());
+                    LOG.warn("failed to start health checks HTTP server: {}", startAttempt.cause().getMessage());
                     result.fail(startAttempt.cause());
                 }
             });
