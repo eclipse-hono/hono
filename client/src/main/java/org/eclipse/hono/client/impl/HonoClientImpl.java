@@ -13,6 +13,7 @@
 package org.eclipse.hono.client.impl;
 
 import java.net.HttpURLConnection;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -104,7 +105,7 @@ public class HonoClientImpl implements HonoClient {
     protected volatile Context context;
 
     private final Map<String, RequestResponseClient> activeRequestResponseClients = new HashMap<>();
-    private final Map<String, Boolean> creationLocks = new HashMap<>();
+    private final Map<String, Long> creationLocks = new HashMap<>();
     private final List<Handler<Void>> creationRequests = new ArrayList<>();
     private final AtomicBoolean connecting = new AtomicBoolean(false);
     private final AtomicBoolean shuttingDown = new AtomicBoolean(false);
@@ -610,7 +611,7 @@ public class HonoClientImpl implements HonoClient {
         if (sender != null && sender.isOpen()) {
             LOG.debug("reusing existing message sender [target: {}, credit: {}]", key, sender.getCredit());
             result.tryComplete(sender);
-        } else if (!creationLocks.computeIfAbsent(key, k -> Boolean.FALSE)) {
+        } else if (creationLocks.computeIfAbsent(key, k -> 0L) == 0) {
             // register a handler to be notified if the underlying connection to the server fails
             // so that we can fail the result handler passed in
             final Handler<Void> connectionFailureHandler = connectionLost -> {
@@ -620,7 +621,8 @@ public class HonoClientImpl implements HonoClient {
                         new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "no connection to service"));
             };
             creationRequests.add(connectionFailureHandler);
-            creationLocks.put(key, Boolean.TRUE);
+            // set the timeout for the creation lock to one second in the future
+            creationLocks.put(key, calculateCreationTimeoutAsEpochMilliSeconds(1));
             LOG.debug("creating new message sender for {}", key);
 
             newSenderSupplier.get().setHandler(creationAttempt -> {
@@ -640,9 +642,24 @@ public class HonoClientImpl implements HonoClient {
 
         } else {
             LOG.debug("already trying to create a message sender for {}", key);
-            result.tryFail(new ServerErrorException(
-                    HttpURLConnection.HTTP_UNAVAILABLE, "no connection to service"));
+            if (isCreationLockExpired(key)) {
+                LOG.info("Releasing expired lock for {}", key);
+                creationLocks.remove(key);
+                getOrCreateSender(key, newSenderSupplier, result);
+            } else {
+                result.tryFail(new ServerErrorException(
+                        HttpURLConnection.HTTP_UNAVAILABLE, "no connection to service"));
+            }
         }
+    }
+
+    private long calculateCreationTimeoutAsEpochMilliSeconds(final int seconds) {
+        return Instant.now().plusSeconds(seconds).toEpochMilli();
+    }
+
+    private boolean isCreationLockExpired(final String key) {
+        return Optional.ofNullable(creationLocks.get(key)).map(timeMs ->
+                (Instant.ofEpochMilli(timeMs).isBefore(Instant.now()))).orElse(false);
     }
 
     /**
@@ -1003,7 +1020,7 @@ public class HonoClientImpl implements HonoClient {
         if (client != null && client.isOpen()) {
             LOG.debug("reusing existing client [target: {}]", key);
             result.complete(client);
-        } else if (!creationLocks.computeIfAbsent(key, k -> Boolean.FALSE)) {
+        } else if (creationLocks.computeIfAbsent(key, k -> 0L) == 0) {
 
             // register a handler to be notified if the underlying connection to the server fails
             // so that we can fail the result handler passed in
@@ -1013,7 +1030,8 @@ public class HonoClientImpl implements HonoClient {
                 result.tryFail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "no connection to service"));
             };
             creationRequests.add(connectionFailureHandler);
-            creationLocks.put(key, Boolean.TRUE);
+            // set the timeout for the creation lock to one second in the future
+            creationLocks.put(key, calculateCreationTimeoutAsEpochMilliSeconds(1));
             LOG.debug("creating new client [target: {}]", key);
 
             clientSupplier.get().setHandler(creationAttempt -> {
@@ -1032,8 +1050,14 @@ public class HonoClientImpl implements HonoClient {
 
         } else {
             LOG.debug("already trying to create a client [target: {}]", key);
-            result.fail(new ServerErrorException(
-                    HttpURLConnection.HTTP_UNAVAILABLE, "no connection to service"));
+            if (isCreationLockExpired(key)) {
+                LOG.info("Releasing expired lock for {}", key);
+                creationLocks.remove(key);
+                getOrCreateRequestResponseClient(key, clientSupplier, result);
+            } else {
+                result.fail(new ServerErrorException(
+                        HttpURLConnection.HTTP_UNAVAILABLE, "no connection to service"));
+            }
         }
     }
 
