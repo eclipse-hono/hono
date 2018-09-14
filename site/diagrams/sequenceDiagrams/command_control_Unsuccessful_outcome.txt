@@ -1,0 +1,10 @@
+title Send command (Unsuccessful outcome)
+
+participant AMQP 1.0 Network
+participant Business Application
+
+Business Application->AMQP 1.0 Network: transfer("control/${tenant_id}/${device_id}", command)
+AMQP 1.0 Network->Business Application: disposition("Rejected" or "Released")
+
+note over Business Application: may want to close response link (if it is scoped to the command)
+end note over
