@@ -271,7 +271,10 @@ public class HonoConsumerBase {
 
     private void cancelPeriodicCommandSender(final TimeUntilDisconnectNotification notification) {
         if (isDeviceConnectedForCommands(notification)) {
+            LOG.debug("Cancelling periodic sender for {}", notification.getTenantAndDeviceId());
             periodicCommandSenderTimerCancelerMap.get(notification.getTenantAndDeviceId()).handle(null);
+        } else {
+            LOG.debug("Wanted to cancel periodic sender for {}, but could not find one", notification.getTenantAndDeviceId());
         }
     }
 
