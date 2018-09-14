@@ -122,9 +122,8 @@ public abstract class AbstractMessageSenderConnectionEventProducer implements Co
                             deviceId,
                             payload.encode().getBytes(StandardCharsets.UTF_8),
                             EventConstants.EVENT_CONNECTION_NOTIFICATION_CONTENT_TYPE,
-                            assertionFuture.result(),
-                            v -> {
-                            });
+                            assertionFuture.result()
+                            );
                 });
     }
 
