@@ -2,7 +2,9 @@
 title = "Release Notes"
 +++
 
-## 0.8-M1
+## 0.8-M1_1
+
+Since 0.8-M1 missed an important artifact, the first 0.8 milestone is available as 0.8-M1_1.
 
 ### New Features
 

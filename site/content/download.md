@@ -43,8 +43,8 @@ Please refer to the [Admin Guide]({{< relref "/admin-guide/hono-client-configura
 
 The newest features and bugfixes are available in *milestones* that are published every 4 -6 weeks. Please note that these milestones represent the latest *state of development* which also means that APIs or features may change from one milestone to the other.
 Installation works in the same way as for the latest stable release.
-* [Eclipse Hono 0.8-M1 Archive](https://www.eclipse.org/downloads/download.php?file=/hono/eclipse-hono-example-0.8-M1.tar.gz)
-* [Eclipse Hono 0.8-M1 Command Line Client](https://www.eclipse.org/downloads/download.php?file=/hono/hono-example-0.8-M1-exec.jar)
+* [Eclipse Hono 0.8-M1_1 Archive](https://www.eclipse.org/downloads/download.php?file=/hono/eclipse-hono-example-0.8-M1_1.tar.gz)
+* [Eclipse Hono 0.8-M1_1 Command Line Client](https://www.eclipse.org/downloads/download.php?file=/hono/hono-example-0.8-M1_1-exec.jar)
 
 ### Older Versions
 
