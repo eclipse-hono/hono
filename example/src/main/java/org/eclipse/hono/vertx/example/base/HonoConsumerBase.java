@@ -58,7 +58,17 @@ public class HonoConsumerBase {
     private final Vertx vertx = Vertx.vertx();
     private final HonoClient honoClient;
 
+    /**
+     * A map holding a handler to cancel a timer that was started to send commands periodically to a device.
+     * Only affects devices that use a connection oriented protocol like MQTT.
+     */
     private final Map<String, Handler<Void>> periodicCommandSenderTimerCancelerMap = new HashMap<>();
+    /**
+     * A map holding the last reported notification for a device being connected. Will be emptied as soon as the notification
+     * is handled.
+     * Only affects devices that use a connection oriented protocol like MQTT.
+     */
+    private final Map<String, TimeUntilDisconnectNotification> pendingTtdNotification = new HashMap<>();
 
     private static final Logger LOG = LoggerFactory.getLogger(HonoConsumerBase.class);
     /**
@@ -189,15 +199,18 @@ public class HonoConsumerBase {
      * Handler method for a <em>device ready for command</em> notification (by an explicit event or contained implicitly in
      * another message).
      * <p>
-     * The code creates a simple command in JSON.
+     * For notifications with a positive ttd value (as usual for request-response protocols), the
+     * code creates a simple command in JSON.
+     * <p>
+     * For notifications signalling a connection oriented protocol, the handling is delegated to
+     * {@link #handlePermanentlyConnectedCommandReadinessNotification(TimeUntilDisconnectNotification)}.
      *
      * @param notification The notification containing the tenantId, deviceId and the Instant (that
      *                     defines until when this notification is valid). See {@link TimeUntilDisconnectNotification}.
      */
     private void handleCommandReadinessNotification(final TimeUntilDisconnectNotification notification) {
-        if (notification.getMillisecondsUntilExpiry() == 0) {
-            LOG.info("Device notified as not being ready to receive a command (anymore) : [{}].", notification.toString());
-            cancelPeriodicCommandSender(notification);
+        if (notification.getTtd() <= 0) {
+            handlePermanentlyConnectedCommandReadinessNotification(notification);
         } else {
             LOG.info("Device is ready to receive a command : [{}].", notification.toString());
             createCommandClientAndSendCommand(notification);
@@ -205,7 +218,52 @@ public class HonoConsumerBase {
     }
 
     /**
-     * Create a command client for the device for that a {@link TimeUntilDisconnectNotification} was received.
+     * Handle a ttd notification for permanently connected devices.
+     * <p>
+     * Instead of immediately handling the notification, it is first put to a map and a timer is started to handle it later.
+     * Notifications for the same device that are received before the timer expired, will overwrite the original notification.
+     * By this an <em>event flickering</em> (like it could occur when starting the app while several notifications were persisted
+     * in the AMQP network) is handled correctly.
+     *
+     * @param notification The notification of a permanently connected device to handle.
+     */
+    private void handlePermanentlyConnectedCommandReadinessNotification(final TimeUntilDisconnectNotification notification) {
+        final String keyForDevice = notification.getTenantAndDeviceId();
+
+        Optional.ofNullable(pendingTtdNotification.get(keyForDevice)).map(previousNotification -> {
+            if (notification.getCreationTime().isAfter(previousNotification.getCreationTime())) {
+                LOG.info("Set new ttd value [{}] of notification for [{}]", notification.getTtd(), notification.getTenantAndDeviceId());
+                pendingTtdNotification.put(keyForDevice, notification);
+            } else {
+                LOG.trace("Received notification for [{}] that was already superseded by newer [{}]", notification, previousNotification);
+            }
+            return false;
+        }).orElseGet(() -> {
+            pendingTtdNotification.put(keyForDevice, notification);
+            // there was no notification available already, so start a handler now
+            vertx.setTimer(1000, timerId -> {
+                LOG.debug("Handle device notification for [{}].", notification.getTenantAndDeviceId());
+                // now take the notification from the pending map and handle it
+                Optional.ofNullable(pendingTtdNotification.remove(keyForDevice)).map(notificationToHandle -> {
+                    if (notificationToHandle.getTtd() == -1) {
+                        LOG.info("Device notified as being ready to receive a command until further notice : [{}].", notificationToHandle.toString());
+                        createCommandClientAndSendCommand(notificationToHandle);
+                    } else {
+                        LOG.info("Device notified as not being ready to receive a command (anymore) : [{}].", notification.toString());
+                        cancelPeriodicCommandSender(notificationToHandle);
+                        LOG.debug("Device will not receive further commands : [{}].", notification.getTenantAndDeviceId());
+                    }
+                    return null;
+                });
+            });
+
+            return true;
+        });
+    }
+
+    /**
+     * Create a command client for the device for that a {@link TimeUntilDisconnectNotification} was received, if no such
+     * command client is already active.
      * <p>
      * If the contained <em>ttd</em> is set to -1, a command will be sent periodically every
      * {@link HonoExampleConstants#COMMAND_INTERVAL_FOR_DEVICES_CONNECTED_WITH_UNLIMITED_EXPIRY} seconds to the device
@@ -214,30 +272,35 @@ public class HonoConsumerBase {
      * @param notification The notification that was received for the device.
      */
     private void createCommandClientAndSendCommand(final TimeUntilDisconnectNotification notification) {
-        honoClient.getOrCreateCommandClient(notification.getTenantId(), notification.getDeviceId()).map(commandClient -> {
-            commandClient.setRequestTimeout(calculateCommandTimeout(notification));
+        honoClient.getOrCreateCommandClient(notification.getTenantId(), notification.getDeviceId())
+                .map(commandClient -> {
+                    commandClient.setRequestTimeout(calculateCommandTimeout(notification));
 
-            // send the command upstream to the device
-            if (notification.getTtd() == -1) {
-                // cancel a still existing timer for this device (if found)
-                cancelPeriodicCommandSender(notification);
+                    // send the command upstream to the device
+                    if (notification.getTtd() == -1) {
+                        // cancel a still existing timer for this device (if found)
+                        cancelPeriodicCommandSender(notification);
 
-                sendCommandToAdapter(commandClient, notification);
+                        sendCommandToAdapter(commandClient, notification);
 
-                // for devices that stay connected, start a periodic timer now that repeatedly sends a command to the device
-                final long timerId = vertx.setPeriodic(HonoExampleConstants.COMMAND_INTERVAL_FOR_DEVICES_CONNECTED_WITH_UNLIMITED_EXPIRY*1000, id -> {
-                    sendCommandToAdapter(commandClient, notification);
+                        // for devices that stay connected, start a periodic timer now that repeatedly sends a command
+                        // to the device
+                        final long timerId = vertx.setPeriodic(
+                                HonoExampleConstants.COMMAND_INTERVAL_FOR_DEVICES_CONNECTED_WITH_UNLIMITED_EXPIRY
+                                        * 1000,
+                                id -> {
+                                    sendCommandToAdapter(commandClient, notification);
+                                });
+                        // register a canceler for this timer directly after it was created
+                        setPeriodicCommandSenderTimerCanceler(timerId, notification, commandClient);
+                    } else {
+                        sendCommandToAdapter(commandClient, notification);
+                    }
+                    return commandClient;
+                }).otherwise(t -> {
+                    LOG.error("Could not create command client", t);
+                    return null;
                 });
-                // register a canceler for this timer directly after it was created
-                setPeriodicCommandSenderTimerCanceler(timerId, notification, commandClient);
-            } else {
-                sendCommandToAdapter(commandClient, notification);
-            }
-            return commandClient;
-        }).otherwise(t -> {
-            LOG.error("Could not create command client", t);
-            return null;
-        });
     }
 
     /**
@@ -269,16 +332,18 @@ public class HonoConsumerBase {
         });
     }
 
-    private void cancelPeriodicCommandSender(final TimeUntilDisconnectNotification notification) {
-        if (isDeviceConnectedForCommands(notification)) {
+    private boolean cancelPeriodicCommandSender(final TimeUntilDisconnectNotification notification) {
+        if (isPeriodicCommandSenderActiveForDevice(notification)) {
             LOG.debug("Cancelling periodic sender for {}", notification.getTenantAndDeviceId());
             periodicCommandSenderTimerCancelerMap.get(notification.getTenantAndDeviceId()).handle(null);
+            return true;
         } else {
             LOG.debug("Wanted to cancel periodic sender for {}, but could not find one", notification.getTenantAndDeviceId());
         }
+        return false;
     }
 
-    private boolean isDeviceConnectedForCommands(final TimeUntilDisconnectNotification notification) {
+    private boolean isPeriodicCommandSenderActiveForDevice(final TimeUntilDisconnectNotification notification) {
         return (periodicCommandSenderTimerCancelerMap.containsKey(notification.getTenantAndDeviceId()));
     }
 
