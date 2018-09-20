@@ -1053,7 +1053,7 @@ objects:
     port:
       targetPort: 8443
     tls:
-      termination: passthrough
+      termination: reencrypt
     to:
       kind: Service
       name: hono-adapter-http-vertx
@@ -1378,28 +1378,12 @@ objects:
   metadata:
     labels:
       app: hono-service
-    name: hono-service-device-registry-http
-  spec:
-    port:
-      targetPort: http
-    tls:
-      insecureEdgeTerminationPolicy: Allow
-      termination: edge
-    to:
-      kind: Service
-      name: hono-service-device-registry
-
-- kind: Route
-  apiVersion: v1
-  metadata:
-    labels:
-      app: hono-service
     name: hono-service-device-registry-https
   spec:
     port:
       targetPort: https
     tls:
-      termination: passthrough
+      termination: reencrypt
     to:
       kind: Service
       name: hono-service-device-registry

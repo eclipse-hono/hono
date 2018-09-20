@@ -34,25 +34,6 @@ the version of your OpenShift cluster. This guide was tested with
 OpenShift 3.9.0. It should work with older or newer versions as well, but that
 is untested.
 
-{{% warning title="Mac OS X 10.13+" %}}
-The `curl` binary on Mac OS X before 10.13 suffers from an issue with TLS SNI.
-Also see: https://github.com/curl/curl/issues/1533
-
-As the use of SNI is required for Kubernetes/OpenShift when it comes to routing
-requests to services, it is not possible to use the provided version of
-`curl` on Mac OS X before 10.13.
-
-You can install a working `curl` version using in those Mac OS X released with
-the following commands:
-
-    brew install curl --with-openssl
-
-Or upgrade your existing installation using:
-
-    brew reinstall curl --with-openssl
-
-{{% /warning %}}
-
 ### Assumptions
 
 This tutorial makes the following assumptions about your environment, if those
@@ -192,6 +173,51 @@ Those projects must be allowed to perform internal communication.
 If projects will be created for you, then you can ignore the
 calls to `oc new-project` in the following sections.
 
+### Certificates
+
+Certificates are a difficult topic, as every components brings in its own
+concept about how certificates are handled. This deployment guide tries to
+align everything with OpenShifts capabilities of managing certificates. That
+means that internal communication tries to use cluster generated certificates,
+signed by the cluster CA. And externally it tries to re-use the OpenShift
+router certificates, which are provided during the installation of OpenShift.
+One exception to that are the AMQP and MQTT protocols. As those currently
+cannot be re-encrypted.
+
+If you deploy OpenShift without proper certificates, then you will automatically
+have self-signed certificates. In this case it is required to disable e.g.
+hostname validation later on. This deployment guide assumes that you have
+proper certificates set up, and will try to assist if that is not the case.
+
+{{% note title="Let's encrypt" %}}
+As [Let's encrypt](https://letsencrypt.org/) now supports wildcard certificates,
+having proper certificates may one be a few commands away for you.
+{{% /note %}}
+
+In general, `curl` commands require the parameter `--insecure` in order to
+work with self-signed certificates.
+
+{{% warning title="Mac OS X 10.13+" %}}
+The `curl` binary on Mac OS X before 10.13 suffers from an issue with TLS SNI.
+Also see: https://github.com/curl/curl/issues/1533
+
+As the use of SNI is required for Kubernetes/OpenShift, when it comes to routing
+requests to services, it is not possible to use the provided version of
+`curl` on Mac OS X before 10.13.
+
+You can install a working `curl` version using in those Mac OS X released with
+the following commands:
+
+    brew install curl --with-openssl
+
+Or upgrade your existing installation using:
+
+    brew reinstall curl --with-openssl
+
+Or use proper certificates.
+
+{{% /warning %}}
+
 ## Clone the Hono repository
 
 In order to have access to some of the requires scripts and resource of this
@@ -219,14 +245,19 @@ directory `hono-site/content/deployment/openshift_s2i`.
 
 ## Setting up EnMasse
 
+This section describes how to install EnMasse, the messaging layer which
+Hono makes use of.
+
+### Installation
+
 Start by creating a new project using:
 
     oc new-project enmasse --display-name='EnMasse Instance'
 
 Then download and unpack EnMasse:
 
-    curl -LO https://github.com/EnMasseProject/enmasse/releases/download/0.21.0/enmasse-0.21.0.tgz
-    tar xzf enmasse-0.21.0.tgz
+    curl -LO https://github.com/EnMasseProject/enmasse/releases/download/0.22.0/enmasse-0.22.0.tgz
+    tar xzf enmasse-0.22.0.tgz
 
 {{% note title="Newer versions" %}}
 Newer versions of EnMasse might work as well, or might require some changes to
@@ -234,7 +265,7 @@ the deployment guide. Unless you explicitly want to try out a different version
 it is recommended to stick to the version mentioned in this tutorial.
 {{% /note %}}
 
-    ./enmasse-0.21.0/deploy.sh -n enmasse
+    ./enmasse-0.22.0/deploy.sh -n enmasse
 
 Wait for the admin console to completely start up. You can check this with
 the following command:
@@ -246,9 +277,40 @@ Verify that the "AVAILABLE" column shows "1":
     NAME         DESIRED   CURRENT   UP-TO-DATE   AVAILABLE   AGE
     api-server   1         1         1            1           1m
 
+### Cluster certificate
+
+After the service is ready, we need to reconfigure the routes of EnMasse
+to use the cluster wide certificate instead its self-signed.
+
+First extract the certificates so that we can use this for the OpenShift routes
+to validate the endpoints:
+
+    mkdir -p certs/{console,messaging,api-server}
+    oc extract secret/external-certs-console --to=certs/console --confirm
+    oc extract secret/external-certs-messaging --to=certs/messaging --confirm
+    oc extract secret/api-server-cert --to=certs/api-server --confirm
+
+Now delete and re-creates the routes, re-encrypting the traffic. This will use
+the certificates extracted above to validate the connection from the
+OpenShift router to the endpoint, and then re-encrypt the traffic to the outside
+using the cluster wide certificate:
+
+    oc delete route/restapi route/console route/messaging route/amqp-wss
+    oc create route reencrypt console --service=console --dest-ca-cert=certs/console/ca.crt
+    oc create route reencrypt restapi --service=api-server --dest-ca-cert=certs/api-server/tls.crt
+    oc create route reencrypt amqp-wss --service=messaging --port=https  --dest-ca-cert=certs/messaging/ca.crt
+
+**Note:** You may want to skip this step if you prefer to use the EnMasse
+generated certificates.
+
+### Create messaging resources
+
 Next you will need to configure EnMasse to provide the required resources:
 
-    curl -X POST --insecure -T addresses.json -H "content-type: application/json" https://$(oc -n enmasse get route restapi -o jsonpath='{.spec.host}')/apis/enmasse.io/v1alpha1/namespaces/enmasse/addressspaces/default/addresses
+    curl -X POST -T addresses.json -H "content-type: application/json" https://$(oc -n enmasse get route restapi -o jsonpath='{.spec.host}')/apis/enmasse.io/v1alpha1/namespaces/enmasse/addressspaces/default/addresses
+
+This will create messaging resources for the `DEFAULT_TENANT` only. If you
+need more tenants, then adapt the file `addresses.json` accordingly.
 
 ## Setting up Hono
 
@@ -365,11 +427,11 @@ In order to upload telemetry data to Hono, the device needs to be registered
 with the system. You can register the device using the *Device Registry* by
 running the following command (i.e. for a device with ID `4711`):
 
-    curl -X POST -i -H 'Content-Type: application/json' -d '{"device-id": "4711"}' http://$(oc get -n hono route hono-service-device-registry-http --template='{{.spec.host}}')/registration/DEFAULT_TENANT
+    curl -X POST -i -H 'Content-Type: application/json' -d '{"device-id": "4711"}' https://$(oc get -n hono route hono-service-device-registry-https --template='{{.spec.host}}')/registration/DEFAULT_TENANT
 
 ### Uploading Telemetry with HTTP
 
 After having the device registered, uploading telemetry is just a simple
 HTTP POST command to the *HTTP Adapter*:
 
-    curl -X POST -i -u sensor1@DEFAULT_TENANT:hono-secret -H 'Content-Type: application/json' --data-binary '{"temp": 5}' http://$(oc get route hono-adapter-http-vertx --template='{{.spec.host}}')/telemetry
+    curl -X POST -i -u sensor1@DEFAULT_TENANT:hono-secret -H 'Content-Type: application/json' --data-binary '{"temp": 5}' https://$(oc get route hono-adapter-http-vertx-sec --template='{{.spec.host}}')/telemetry
