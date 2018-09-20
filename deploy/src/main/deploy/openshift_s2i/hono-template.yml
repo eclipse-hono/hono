@@ -447,6 +447,8 @@ objects:
           nativeTlsRequired: true
         messaging:
           name: 'Hono MQTT Adapter'
+        command:
+          name: 'Hono MQTT Adapter'
         registration:
           name: 'Hono MQTT Adapter'
           port: 5671
@@ -572,6 +574,16 @@ objects:
                 name: hono-configuration
                 key: downstream.host
           - name: HONO_MESSAGING_PORT
+            valueFrom:
+              configMapKeyRef:
+                name: hono-configuration
+                key: downstream.port
+          - name: HONO_COMMAND_HOST
+            valueFrom:
+              configMapKeyRef:
+                name: hono-configuration
+                key: downstream.host
+          - name: HONO_COMMAND_PORT
             valueFrom:
               configMapKeyRef:
                 name: hono-configuration
@@ -788,6 +800,8 @@ objects:
           nativeTlsRequired: true
         messaging:
           name: 'Hono HTTP Adapter'
+        command:
+          name: 'Hono MQTT Adapter'
         registration:
           name: 'Hono HTTP Adapter'
           port: 5671
@@ -913,6 +927,16 @@ objects:
                 name: hono-configuration
                 key: downstream.host
           - name: HONO_MESSAGING_PORT
+            valueFrom:
+              configMapKeyRef:
+                name: hono-configuration
+                key: downstream.port
+          - name: HONO_COMMAND_HOST
+            valueFrom:
+              configMapKeyRef:
+                name: hono-configuration
+                key: downstream.host
+          - name: HONO_COMMAND_PORT
             valueFrom:
               configMapKeyRef:
                 name: hono-configuration
