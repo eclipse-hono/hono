@@ -54,6 +54,21 @@ public class CommandConnectionImpl extends HonoClientImpl implements CommandConn
     }
 
     /**
+     * Creates a new client for a set of configuration properties.
+     * <p>
+     * This constructor creates a connection factory using
+     * {@link ConnectionFactory#newConnectionFactory(Vertx, ClientConfigProperties)}.
+     *
+     * @param vertx The Vert.x instance to execute the client on, if {@code null} a new Vert.x instance is used.
+     * @param connectionFactory Factory to invoke for a new connection.
+     * @param clientConfigProperties The configuration properties to use.
+     * @throws NullPointerException if clientConfigProperties is {@code null}
+     */
+    public CommandConnectionImpl(final Vertx vertx, final ConnectionFactory connectionFactory, final ClientConfigProperties clientConfigProperties) {
+        super(vertx, connectionFactory, clientConfigProperties);
+    }
+
+    /**
      * {@inheritDoc}
      */
     @Override
