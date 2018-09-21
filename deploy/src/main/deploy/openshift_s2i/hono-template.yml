@@ -189,10 +189,10 @@ objects:
     tags:
     - from:
         kind: DockerImage
-        name: fabric8/s2i-java:2.2
+        name: fabric8/s2i-java:2.3
       importPolicy:
         scheduled: true
-      name: "2.2"
+      name: "2.3"
       referencePolicy:
         type: Source
 
@@ -222,12 +222,12 @@ objects:
         dockerfilePath: deploy/src/main/deploy/openshift_s2i/containers/custom-base/Dockerfile
         from:
           kind: ImageStreamTag
-          name: fabric8-s2i-java:2.2
+          name: fabric8-s2i-java:2.3
     postCommit:
     output: 
       to:
         kind: ImageStreamTag
-        name: fabric8-s2i-java-custom:2.2
+        name: fabric8-s2i-java-custom:2.3
 
 # InfluxDB
 
@@ -393,7 +393,7 @@ objects:
       sourceStrategy:
         from:
           kind: ImageStreamTag
-          name: fabric8-s2i-java-custom:2.2
+          name: fabric8-s2i-java-custom:2.3
         env:
         - name: MAVEN_ARGS_APPEND
           value: -B -pl org.eclipse.hono:hono-adapter-mqtt-vertx --also-make -Pnetty-tcnative
@@ -745,7 +745,7 @@ objects:
       sourceStrategy:
         from:
           kind: ImageStreamTag
-          name: fabric8-s2i-java-custom:2.2
+          name: fabric8-s2i-java-custom:2.3
         env:
         - name: MAVEN_ARGS_APPEND
           value: -B -pl org.eclipse.hono:hono-adapter-http-vertx --also-make -Pnetty-tcnative
@@ -1078,7 +1078,7 @@ objects:
       sourceStrategy:
         from:
           kind: ImageStreamTag
-          name: fabric8-s2i-java-custom:2.2
+          name: fabric8-s2i-java-custom:2.3
         env:
         - name: MAVEN_ARGS_APPEND
           value: -B -pl org.eclipse.hono:hono-service-device-registry --also-make -Pnetty-tcnative
@@ -1408,7 +1408,7 @@ objects:
       sourceStrategy:
         from:
           kind: ImageStreamTag
-          name: fabric8-s2i-java-custom:2.2
+          name: fabric8-s2i-java-custom:2.3
         env:
         - name: MAVEN_ARGS_APPEND
           value: -B -pl org.eclipse.hono:hono-service-auth --also-make -Pnetty-tcnative
