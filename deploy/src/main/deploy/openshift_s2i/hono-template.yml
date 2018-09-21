@@ -74,15 +74,9 @@ objects:
 - kind: Secret
   apiVersion: v1
   metadata:
-    name: hono-shared-signing-secret
+    name: hono-secrets
   stringData:
-    sharedSecret: ${SIGNING_SHARED_SECRET}
-
-- kind: Secret
-  apiVersion: v1
-  metadata:
-    name: jolokia-shared-secrets
-  stringData:
+    shared.signing.secret: ${SIGNING_SHARED_SECRET}
     jolokia.password: ${JOLOKIA_PASSWORD}
 
 - kind: ConfigMap
@@ -419,7 +413,10 @@ objects:
     labels:
         app: hono-adapter
   stringData:
-    credentials.properties: |-
+    downstream.properties: |-
+      username: mqtt
+      password: mqtt-secret
+    registry.properties: |-
       username: mqtt-adapter@HONO
       password: mqtt-secret
 
@@ -443,36 +440,31 @@ objects:
           keyPath: /etc/tls/tls.key
           certPath: /etc/tls/tls.crt
           keyFormat: PEM
-          credentialsPath: /etc/secrets/credentials.properties
           nativeTlsRequired: true
         messaging:
           name: 'Hono MQTT Adapter'
+          credentialsPath: /etc/secrets/downstream.properties
         command:
           name: 'Hono MQTT Adapter'
+          credentialsPath: /etc/secrets/downstream.properties
         registration:
           name: 'Hono MQTT Adapter'
           port: 5671
-          username: mqtt-adapter@HONO
-          password: mqtt-secret
           trustStorePath: /var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt
           trustStoreFormat: PEM
-          credentialsPath: /etc/secrets/credentials.properties
+          credentialsPath: /etc/secrets/registry.properties
         credentials:
           name: 'Hono MQTT Adapter'
           port: 5671
-          username: mqtt-adapter@HONO
-          password: mqtt-secret
           trustStorePath: /var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt
           trustStoreFormat: PEM
-          credentialsPath: /etc/secrets/credentials.properties
+          credentialsPath: /etc/secrets/registry.properties
         tenant:
           name: 'Hono MQTT Adapter'
           port: 5671
-          username: mqtt-adapter@HONO
-          password: mqtt-secret
           trustStorePath: /var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt
           trustStoreFormat: PEM
-          credentialsPath: /etc/secrets/credentials.properties
+          credentialsPath: /etc/secrets/registry.properties
         metric:
           reporter:
             graphite:
@@ -603,7 +595,7 @@ objects:
           - name: AB_JOLOKIA_PASSWORD
             valueFrom:
               secretKeyRef:
-                name: jolokia-shared-secrets
+                name: hono-secrets
                 key: jolokia.password
           readinessProbe:
             httpGet:
@@ -773,7 +765,10 @@ objects:
     labels:
         app: hono-adapter
   stringData:
-    credentials.properties: |-
+    downstream.properties: |-
+      username: http
+      password: http-secret
+    registry.properties: |-
       username: http-adapter@HONO
       password: http-secret
 
@@ -800,32 +795,28 @@ objects:
           nativeTlsRequired: true
         messaging:
           name: 'Hono HTTP Adapter'
+          credentialsPath: /etc/secrets/downstream.properties
         command:
-          name: 'Hono MQTT Adapter'
+          name: 'Hono HTTP Adapter'
+          credentialsPath: /etc/secrets/downstream.properties
         registration:
           name: 'Hono HTTP Adapter'
           port: 5671
-          username: http-adapter@HONO
-          password: http-secret
           trustStorePath: /var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt
           trustStoreFormat: PEM
-          credentialsPath: /etc/secrets/credentials.properties
+          credentialsPath: /etc/secrets/registry.properties
         credentials:
           name: 'Hono HTTP Adapter'
           port: 5671
-          username: http-adapter@HONO
-          password: http-secret
           trustStorePath: /var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt
           trustStoreFormat: PEM
-          credentialsPath: /etc/secrets/credentials.properties
+          credentialsPath: /etc/secrets/registry.properties
         tenant:
           name: 'Hono HTTP Adapter'
           port: 5671
-          username: http-adapter@HONO
-          password: http-secret
           trustStorePath: /var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt
           trustStoreFormat: PEM
-          credentialsPath: /etc/secrets/credentials.properties
+          credentialsPath: /etc/secrets/registry.properties
         metric:
           reporter:
             graphite:
@@ -956,7 +947,7 @@ objects:
           - name: AB_JOLOKIA_PASSWORD
             valueFrom:
               secretKeyRef:
-                name: jolokia-shared-secrets
+                name: hono-secrets
                 key: jolokia.password
           readinessProbe:
             httpGet:
@@ -1273,13 +1264,13 @@ objects:
           - name: HONO_REGISTRY_SVC_SIGNING_SHARED_SECRET
             valueFrom:
               secretKeyRef:
-                name: hono-shared-signing-secret
-                key: sharedSecret
+                name: hono-secrets
+                key: shared.signing.secret
           - name: HONO_AUTH_VALIDATION_SHARED_SECRET
             valueFrom:
               secretKeyRef:
-                name: hono-shared-signing-secret
-                key: sharedSecret
+                name: hono-secrets
+                key: shared.signing.secret
           - name: AB_JOLOKIA_USER
             value: jolokia
           - name: AB_JOLOKIA_PASSWORD_RANDOM
@@ -1287,7 +1278,7 @@ objects:
           - name: AB_JOLOKIA_PASSWORD
             valueFrom:
               secretKeyRef:
-                name: jolokia-shared-secrets
+                name: hono-secrets
                 key: jolokia.password
           readinessProbe:
             httpGet:
@@ -1630,13 +1621,13 @@ objects:
           - name: HONO_AUTH_SVC_SIGNING_SHARED_SECRET
             valueFrom:
               secretKeyRef:
-                name: hono-shared-signing-secret
-                key: sharedSecret
+                name: hono-secrets
+                key: shared.signing.secret
           - name: HONO_AUTH_SVC_VALIDATION_SHARED_SECRET
             valueFrom:
               secretKeyRef:
-                name: hono-shared-signing-secret
-                key: sharedSecret
+                name: hono-secrets
+                key: shared.signing.secret
           - name: KUBERNETES_NAMESPACE
             valueFrom:
               fieldRef:
@@ -1648,7 +1639,7 @@ objects:
           - name: AB_JOLOKIA_PASSWORD
             valueFrom:
               secretKeyRef:
-                name: jolokia-shared-secrets
+                name: hono-secrets
                 key: jolokia.password
           livenessProbe:
             initialDelaySeconds: 25

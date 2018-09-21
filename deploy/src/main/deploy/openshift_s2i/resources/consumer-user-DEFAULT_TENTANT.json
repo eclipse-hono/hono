@@ -1,0 +1,34 @@
+{
+  "apiVersion": "user.enmasse.io/v1alpha1",
+  "kind": "MessagingUser",
+  "metadata": {
+    "name": "default.client1"
+  },
+  "spec": {
+    "username": "client1",
+    "authentication": {
+      "type": "password",
+      "password": "aG9uby1zZWNyZXQ="
+    },
+    "authorization": [
+      {
+        "addresses": [
+          "telemetry/DEFAULT_TENANT",
+          "event/DEFAULT_TENANT"
+        ],
+        "operations": [
+          "recv"
+        ]
+       },
+       {
+        "addresses": [
+          "*"
+        ],
+        "operations": [
+          "send",
+          "recv"
+        ]
+      }
+    ]
+  }
+}

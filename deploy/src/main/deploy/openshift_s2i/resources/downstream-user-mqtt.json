@@ -1,0 +1,25 @@
+{
+  "apiVersion": "user.enmasse.io/v1alpha1",
+  "kind": "MessagingUser",
+  "metadata": {
+    "name": "default.mqtt"
+  },
+  "spec": {
+    "username": "mqtt",
+    "authentication": {
+      "type": "password",
+      "password": "bXF0dC1zZWNyZXQ="
+    },
+    "authorization": [
+      {
+        "addresses": [
+          "*"
+        ],
+        "operations": [
+          "send",
+          "recv"
+        ]
+      }
+    ]
+  }
+}

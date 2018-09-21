@@ -3,8 +3,8 @@ title = "OpenShift with source-to-image (S2I)"
 weight = 476
 +++
 
-This guide described how Eclipse Hono™ can be deployed on OpenShift with
-EnMasse using the source-to-image (S2I) way. Using this approach it is possible
+This guide describes how Eclipse Hono™ can be deployed on OpenShift with
+EnMasse, using the source-to-image (S2I) way. Using this approach, it is possible
 to customize and refresh the base images where Hono runs in. It also uses
 a more complex, multi-project setup and separates EnMasse and Grafana from
 the core Hono project.
@@ -17,7 +17,6 @@ it still is missing some important aspects, so please do use this only as a
 base for your setup or as a demo setup. The following topics are currently
 not covered by this example deployment:
 
-* Running EnMasse with full authentication enabled
 * Integration between EnMasse and Hono authentication
 * Configuring and supporting multi-tenancy in both platforms
 * Use your own versions of the device registry and authorization service
@@ -265,7 +264,12 @@ the deployment guide. Unless you explicitly want to try out a different version
 it is recommended to stick to the version mentioned in this tutorial.
 {{% /note %}}
 
-    ./enmasse-0.22.0/deploy.sh -n enmasse
+    ./enmasse-0.22.0/deploy.sh -n enmasse -a standard
+
+Fix the memory settings of keycloak:
+
+    oc set resources deploy/keycloak --limits=memory=4Gi --requests=memory=4Gi
+    oc set env deploy/keycloak "JAVA_OPTS=-Dvertx.cacheDirBase=/tmp -Djboss.bind.address=0.0.0.0 -Djava.net.preferIPv4Stack=true -Xms512m -Xmx3072m"
 
 Wait for the admin console to completely start up. You can check this with
 the following command:
@@ -298,7 +302,7 @@ using the cluster wide certificate:
     oc delete route/restapi route/console route/messaging route/amqp-wss
     oc create route reencrypt console --service=console --dest-ca-cert=certs/console/ca.crt
     oc create route reencrypt restapi --service=api-server --dest-ca-cert=certs/api-server/tls.crt
-    oc create route reencrypt amqp-wss --service=messaging --port=https  --dest-ca-cert=certs/messaging/ca.crt
+    oc create route reencrypt amqp-wss --service=messaging --port=https --dest-ca-cert=certs/messaging/ca.crt
 
 **Note:** You may want to skip this step if you prefer to use the EnMasse
 generated certificates.
@@ -311,6 +315,10 @@ Next you will need to configure EnMasse to provide the required resources:
 
 This will create messaging resources for the `DEFAULT_TENANT` only. If you
 need more tenants, then adapt the file `addresses.json` accordingly.
+
+    curl -X POST -T resources/consumer-user-DEFAULT_TENTANT.json -H "content-type: application/json" https://$(oc -n enmasse get route restapi -o jsonpath='{.spec.host}')/apis/user.enmasse.io/v1alpha1/namespaces/enmasse/messagingusers
+    curl -X POST -T resources/downstream-user-http.json -H "content-type: application/json" https://$(oc -n enmasse get route restapi -o jsonpath='{.spec.host}')/apis/user.enmasse.io/v1alpha1/namespaces/enmasse/messagingusers
+    curl -X POST -T resources/downstream-user-mqtt.json -H "content-type: application/json" https://$(oc -n enmasse get route restapi -o jsonpath='{.spec.host}')/apis/user.enmasse.io/v1alpha1/namespaces/enmasse/messagingusers
 
 ## Setting up Hono
 
@@ -434,4 +442,4 @@ running the following command (i.e. for a device with ID `4711`):
 After having the device registered, uploading telemetry is just a simple
 HTTP POST command to the *HTTP Adapter*:
 
-    curl -X POST -i -u sensor1@DEFAULT_TENANT:hono-secret -H 'Content-Type: application/json' --data-binary '{"temp": 5}' https://$(oc get route hono-adapter-http-vertx-sec --template='{{.spec.host}}')/telemetry
+    curl -X POST -i -u sensor1@DEFAULT_TENANT:hono-secret -H 'Content-Type: application/json' --data-binary '{"temp": 5}' https://$(oc -n hono get route hono-adapter-http-vertx-sec --template='{{.spec.host}}')/telemetry
