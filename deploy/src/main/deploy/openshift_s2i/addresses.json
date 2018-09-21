@@ -4,6 +4,13 @@
     "items": [
       {
         "spec": {
+          "address": "control/DEFAULT_TENANT",
+          "type": "anycast",
+          "plan": "standard-anycast"
+        }
+      },
+      {
+        "spec": {
           "address": "event/DEFAULT_TENANT",
           "type": "queue",
           "plan": "pooled-queue"
