@@ -56,7 +56,9 @@ public class HonoCommander extends AbstractClient {
     private final AtomicLong bytesSent = new AtomicLong(0);
     private final AtomicLong bytesReceived = new AtomicLong(0);
     private final AtomicLong sampleStart = new AtomicLong(0);
-
+    private final String tenant;
+    private final int commandTimeoutInMs;
+    private final String triggerType;
     private final transient Object lock = new Object();
 
     /**
@@ -76,6 +78,9 @@ public class HonoCommander extends AbstractClient {
         clientConfig.setPassword(sampler.getPwd());
         clientConfig.setTrustStorePath(sampler.getTrustStorePath());
         clientConfig.setReconnectAttempts(sampler.getReconnectAttemptsAsInt());
+        tenant = sampler.getTenant();
+        commandTimeoutInMs = sampler.getCommandTimeoutAsInt();
+        triggerType = sampler.getTriggerType();
         client = new HonoClientImpl(vertx, clientConfig);
     }
 
@@ -113,7 +118,7 @@ public class HonoCommander extends AbstractClient {
                 result.sampleStart();
                 devicesReadyToReceiveCommands
                         .parallelStream()
-                        .forEach(device -> sendCommandAndReceiveResponse(sampler.getTenant(), device));
+                        .forEach(device -> sendCommandAndReceiveResponse(tenant, device));
                 result.sampleEnd();
             }
             final int noOfErrors = errorCount.getAndSet(0);
@@ -161,17 +166,16 @@ public class HonoCommander extends AbstractClient {
 
     private Future<MessageConsumer> createMessageConsumers() {
         return client
-                .createEventConsumer(sampler.getTenant(),
+                .createEventConsumer(tenant,
                         getConsumer(message -> handleMessage("Event", message),
                                 this::handleCommandReadinessNotification),
                         closeHook -> LOG.error("remotely detached consumer link"))
-                .compose(consumer -> client.createTelemetryConsumer(sampler.getTenant(),
+                .compose(consumer -> client.createTelemetryConsumer(tenant,
                         getConsumer(message -> handleMessage("Telemetry", message),
                                 this::handleCommandReadinessNotification),
                         closeHook -> LOG.error("remotely detached consumer link")))
                 .map(consumer -> {
-                    LOG.info("Ready to receive command readiness notifications for tenant [{}]",
-                            sampler.getTenant());
+                    LOG.info("Ready to receive command readiness notifications for tenant [{}]", tenant);
                     return consumer;
                 })
                 .recover(Future::failedFuture);
@@ -186,17 +190,17 @@ public class HonoCommander extends AbstractClient {
         if (notification.getMillisecondsUntilExpiry() == 0) {
             LOG.trace("Device [{}:{}] not ready to receive commands.", notification.getTenantId(),
                     notification.getDeviceId());
-            if ("sampler".equals(sampler.getTriggerType())) {
+            if ("sampler".equals(triggerType)) {
                 devicesReadyToReceiveCommands.remove(notification.getDeviceId());
             }
         } else {
-            if ("device".equals(sampler.getTriggerType())) {
+            if ("device".equals(triggerType)) {
                 LOG.debug("Sending command to device [{}:{}]", notification.getTenantId(), notification.getDeviceId());
                 setSampleStartIfNotSetYet(System.currentTimeMillis());
                 sendCommandAndReceiveResponse(notification.getTenantId(), notification.getDeviceId());
             } else {
                 LOG.debug("A device [{}] got registered with trigger type [{}]", notification.getDeviceId(),
-                        sampler.getTriggerType());
+                        triggerType);
                 devicesReadyToReceiveCommands.add(notification.getDeviceId());
             }
         }
@@ -221,18 +225,19 @@ public class HonoCommander extends AbstractClient {
                         })
                         .map(x -> closeCommandClient(commandClient, tenantId, deviceId))
                         .recover(error -> {
-                            if (sampler.getTriggerType().equals("device")
+                            if (triggerType.equals("device")
                                     || devicesReadyToReceiveCommands.contains(deviceId)) {
                                 errorCount.incrementAndGet();
                             }
-                            LOG.error("Error processing command: {}", error.getMessage());
+                            LOG.error("Error processing command [{}] to device [{}:{}]", error.getMessage(), tenantId,
+                                    deviceId);
                             closeCommandClient(commandClient, tenantId, deviceId);
                             return Future.failedFuture(error);
                         }));
     }
 
     private CommandClient setCommandTimeOut(final CommandClient commandClient) {
-        commandClient.setRequestTimeout(sampler.getCommandTimeoutAsInt());
+        commandClient.setRequestTimeout(commandTimeoutInMs);
         return commandClient;
     }
 
