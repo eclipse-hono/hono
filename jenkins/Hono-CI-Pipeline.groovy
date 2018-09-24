@@ -27,6 +27,7 @@ node {
         utils.checkOutHonoRepoMaster()
         utils.build()
         utils.aggregateJunitResults()
+        utils.captureCodeCoverageReport()
         currentBuild.result = 'SUCCESS'
     } catch (err) {
         currentBuild.result = 'FAILURE'

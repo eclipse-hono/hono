@@ -70,9 +70,24 @@ void notifyBuildStatus() {
               notifyEveryUnstableBuild: true,
               recipients              : 'hono-dev@eclipse.org',
               sendToIndividuals       : false])
-    } catch (err) {
-        echo "Error sending mail"
-        echo err.getMessage()
+    } catch (error) {
+        echo "Error notifying build status via Email"
+        echo error.getMessage()
+        throw error
+    }
+}
+
+/**
+ * Capture code coverage reports using Jacoco jenkins plugin.
+ *
+ */
+void captureCodeCoverageReport() {
+    stage('Capture Code Coverage Report') {
+        step([$class       : 'JacocoPublisher',
+              execPattern  : '**/**.exec',
+              classPattern : '**/classes',
+              sourcePattern: '**/src/main/java'
+        ])
     }
 }
 
