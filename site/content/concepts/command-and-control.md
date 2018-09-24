@@ -33,15 +33,15 @@ The HTTP Adapter gets the command and writes it in the response of the devices `
 
 | Response Header         | Description         |
 | :---------------------  |  :----------------- |
-| `hono-cmd`              | The command, which should be executed by the device. It could need further data from the payload. |
-| `hono-cmd-req-id`       | Id, which is needed in the command response to correlate the response to the request.       |
+| `hono-cmd`             | The name of the command to execute. Any input data required will be contained in the response body. |
+| `hono-cmd-req-id`     | The unique identifier of the command. This identifier is used to correlate the device's response to the command with the request. |
 
  The `hono-cmd` is the command that should be executed by the device. Typically this command needs to be known by the device and the payload may contain additional details of the command. The `hono-cmd-req-id` is needed for the command response to correlate it. It has to be sent back from the device to the adapter in a following operation (5). 
  
-The device needs to respond to the command (5), to inform the business application about the success. For this purpose 
+The device needs to respond to the command (5), to inform the business application about the outcome of executing the command. For this purpose 
 specific URIs are defined in [HTTP Adapter]({{< relref "user-guide/http-adapter.md#sending-a-response-to-a-previously-received-command" >}}).
 
-The URI contains the `hono-cmd-req-id` and a status that contains the outcome of the command.
+The URI contains the `hono-cmd-req-id` and a status code indicating the outcome of executing the command.
 
 The HTTP Adapter will send the payload of the response back to the Business Application (6) by using the receiver link
 that was opened by the application. If the response reached the application, the response request will be replied with
@@ -51,7 +51,7 @@ that was opened by the application. If the response reached the application, the
 
 When the device is connected to the MQTT Adapter it receives commands on the topic:
 
-* `control/[tenant]/[device-id]/req/<req-id>/<command>`
+* `control/[${tenant}]/[${device-id}]/req/${req-id}/${command}`
 
 Authenticated devices typically subscribe to
 
@@ -61,7 +61,7 @@ while unauthenticated devices have to fully specify their `tenant` and `device-i
 
 The response of the command will be sent by the device to 
 
-* `control/[tenant]/[device-id]/res/<req-id>/<status>`
+* `control/[${tenant}]/[${device-id}]/res/${req-id}/${status}`
 
 If the device is authenticated, the `tenant` and `device-id` are left empty (resulting in 3 subsequent `/`s).
 
