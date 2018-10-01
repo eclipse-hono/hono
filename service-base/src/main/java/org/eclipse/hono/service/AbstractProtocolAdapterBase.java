@@ -29,7 +29,6 @@ import org.eclipse.hono.config.AbstractConfig;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.auth.ValidityBasedTrustOptions;
 import org.eclipse.hono.service.auth.device.Device;
-import org.eclipse.hono.service.command.Command;
 import org.eclipse.hono.service.command.CommandConnection;
 import org.eclipse.hono.service.command.CommandContext;
 import org.eclipse.hono.service.command.CommandResponse;
@@ -555,36 +554,6 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
                     }
                     return Future.failedFuture(t);
                 });
-    }
-
-    /**
-     * Forwards a response message indicating a failure to the sender of the command.
-     * <p>
-     * This method may be used by protocol adapters if they have not been able to
-     * forward the command to the device. A reasonable status code to use in this
-     * case is {@code 503 Unavailable}.
-     * 
-     * @param command The failed command. If {@code null}, no message will be sent.
-     * @param statusCode The status code indicating the reason for failure.
-     * @param context The currently active OpenTracing span. An implementation
-     *         should use this as the parent for any span it creates for tracing
-     *         the execution of this operation.
-     * @return A future indicating the outcome of the attempt to send
-     *         the message.
-     */
-    protected final Future<ProtonDelivery> failCommand(
-            final Command command,
-            final int statusCode,
-            final SpanContext context) {
-
-        if (command == null) {
-            return Future.succeededFuture();
-        } else {
-            return sendCommandResponse(
-                    command.getTenant(),
-                    CommandResponse.from(command.getRequestId(), command.getDeviceId(), statusCode),
-                    context);
-        }
     }
 
     /**

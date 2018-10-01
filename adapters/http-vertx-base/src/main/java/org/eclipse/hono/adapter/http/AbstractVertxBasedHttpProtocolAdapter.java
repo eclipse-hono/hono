@@ -30,6 +30,7 @@ import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
 import org.eclipse.hono.service.auth.device.Device;
 import org.eclipse.hono.service.command.Command;
+import org.eclipse.hono.service.command.CommandContext;
 import org.eclipse.hono.service.command.CommandResponse;
 import org.eclipse.hono.service.http.DefaultFailureHandler;
 import org.eclipse.hono.service.http.HttpUtils;
@@ -617,42 +618,49 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                     }
                 }).compose(delivery -> {
 
-                    // the command consumer is always used for a single request only
-                    closeCommandConsumer(tenant, deviceId);
-
                     if (!ctx.response().closed()) {
-                        final Command command = Command.get(ctx);
-                        setResponsePayload(ctx.response(), command, currentSpan);
+                        final CommandContext commandContext = CommandContext.get(ctx);
+                        setResponsePayload(ctx.response(), commandContext, currentSpan);
                         ctx.addBodyEndHandler(ok -> {
                             LOG.trace("successfully processed [{}] message for device [tenantId: {}, deviceId: {}]",
                                     endpointName, tenant, deviceId);
                             metrics.incrementProcessedMessages(endpointName, tenant);
                             metrics.incrementProcessedPayload(endpointName, tenant, messagePayloadSize(ctx));
-                            if (command != null) {
+                            if (commandContext != null) {
+                                commandContext.accept();
                                 metrics.incrementCommandDeliveredToDevice(tenant);
                             }
                             currentSpan.finish();
+                            // the command consumer is always used for a single request only
+                            closeCommandConsumer(tenant, deviceId);
                         });
                         ctx.response().exceptionHandler(t -> {
                             currentSpan.log("failed to send HTTP response to device");
                             LOG.debug("failed to send http response for [{}] message from device [tenantId: {}, deviceId: {}]",
                                     endpointName, tenant, deviceId, t);
-                            failCommand(command, HttpURLConnection.HTTP_UNAVAILABLE, currentSpan.context());
+                            if (commandContext != null) {
+                                commandContext.release();
+                            }
                             TracingHelper.logError(currentSpan, t);
                             currentSpan.finish();
+                            // the command consumer is always used for a single request only
+                            closeCommandConsumer(tenant, deviceId);
                         });
                         ctx.response().end();
                     }
+
                     return Future.succeededFuture();
 
                 }).recover(t -> {
 
-                    // the command consumer is always used for a single request only
-                    closeCommandConsumer(tenant, deviceId);
-
                     LOG.debug("cannot process [{}] message from device [tenantId: {}, deviceId: {}]",
                             endpointName, tenant, deviceId, t);
-                    failCommand(Command.get(ctx), HttpURLConnection.HTTP_UNAVAILABLE, currentSpan.context());
+                    final CommandContext commandContext = CommandContext.get(ctx);
+                    if (commandContext != null) {
+                        commandContext.release();
+                    }
+                    // the command consumer is always used for a single request only
+                    closeCommandConsumer(tenant, deviceId);
 
                     if (ClientErrorException.class.isInstance(t)) {
                         final ClientErrorException e = (ClientErrorException) t;
@@ -713,10 +721,11 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
         }
     }
 
-    private void setResponsePayload(final HttpServerResponse response, final Command command, final Span currentSpan) {
-        if (command == null) {
+    private void setResponsePayload(final HttpServerResponse response, final CommandContext commandContext, final Span currentSpan) {
+        if (commandContext == null) {
             response.setStatusCode(HttpURLConnection.HTTP_ACCEPTED);
         } else {
+            final Command command = commandContext.getCommand();
             currentSpan.setTag(Constants.HEADER_COMMAND, command.getName());
             currentSpan.setTag(Constants.HEADER_COMMAND_REQUEST_ID, command.getRequestId());
             LOG.trace("adding command [name: {}, request-id: {}] to response for device [tenant-id: {}, device-id: {}]",
@@ -785,14 +794,8 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                                 // the timer has already fired, release the command
                                 commandContext.release();
                             } else {
-                                // put command to routing context and notify
-                                command.put(ctx);
-                                // we accept the message before sending it to the
-                                // device in order to provide a consistent behavior
-                                // across all protocol adapters, i.e. accepting
-                                // the message only means that the message contains
-                                // a valid command which we are willing to deliver
-                                commandContext.accept();
+                                // put command context to routing context and notify
+                                commandContext.put(ctx);
                                 cancelCommandReceptionTimer(ctx);
                                 responseReady.tryComplete();
                             }

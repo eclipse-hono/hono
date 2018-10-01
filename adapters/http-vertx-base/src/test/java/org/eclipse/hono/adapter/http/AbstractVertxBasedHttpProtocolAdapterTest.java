@@ -34,9 +34,9 @@ import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.TenantClient;
-import org.eclipse.hono.service.command.Command;
 import org.eclipse.hono.service.command.CommandConnection;
 import org.eclipse.hono.service.command.CommandConsumer;
+import org.eclipse.hono.service.command.CommandContext;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
@@ -425,7 +425,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         when(ctx.request()).thenReturn(request);
         when(ctx.get(TracingHandler.CURRENT_SPAN)).thenReturn(mock(Span.class));
         when(ctx.vertx()).thenReturn(vertx);
-        when(ctx.get(Command.KEY_COMMAND)).thenReturn(null);
+        when(ctx.get(CommandContext.KEY_COMMAND_CONTEXT)).thenReturn(null);
         return ctx;
     }
 

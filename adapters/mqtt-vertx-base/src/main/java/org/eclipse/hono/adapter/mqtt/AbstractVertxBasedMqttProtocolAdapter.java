@@ -37,6 +37,7 @@ import org.eclipse.hono.service.auth.device.HonoClientBasedAuthProvider;
 import org.eclipse.hono.service.auth.device.UsernamePasswordAuthProvider;
 import org.eclipse.hono.service.auth.device.UsernamePasswordCredentials;
 import org.eclipse.hono.service.command.Command;
+import org.eclipse.hono.service.command.CommandContext;
 import org.eclipse.hono.service.command.CommandResponse;
 import org.eclipse.hono.service.command.CommandSubscription;
 import org.eclipse.hono.tracing.TracingHelper;
@@ -674,18 +675,12 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
                     Tags.COMPONENT.set(commandContext.getCurrentSpan(), getTypeName());
                     final Command command = commandContext.getCommand();
                     if (command.isValid()) {
-                        // we accept the message before sending it to the
-                        // device in order to provide a consistent behavior
-                        // across all protocol adapters, i.e. accepting
-                        // the message only means that the message contains
-                        // a valid command which we are willing to deliver
-                        commandContext.accept(); 
-                        onCommandReceived(mqttEndpoint, sub, command, commandContext.getCurrentSpan());
+                        onCommandReceived(mqttEndpoint, sub, commandContext);
                     } else {
                         commandContext.reject(new ErrorCondition(Constants.AMQP_BAD_REQUEST, "malformed command message"));
+                        // issue credit so that application(s) can send the next command
+                        commandContext.flow(1);
                     }
-                    // issue credit so that application(s) can send the next command
-                    commandContext.flow(1);
                 },
                 close -> {
                     LOG.debug("command receiver link closed remotely for [tenant-id: {}, device-id: {}]",
@@ -1192,15 +1187,17 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
      *
      * @param endpoint The device that the command should be delivered to.
      * @param subscription The device's command subscription.
-     * @param command The command to be delivered.
-     * @param currentSpan The OpenTracing span used to trace the delivery of
-     *                    the command.
+     * @param commandContext The command to be delivered.
+     * @throws NullPointerException if any of the parameters are {@code null}.
      */
     protected final void onCommandReceived(
             final MqttEndpoint endpoint,
             final CommandSubscription subscription,
-            final Command command,
-            final Span currentSpan) {
+            final CommandContext commandContext) {
+
+        Objects.requireNonNull(endpoint);
+        Objects.requireNonNull(subscription);
+        Objects.requireNonNull(commandContext);
 
         // we always publish the message using QoS 0
         final MqttQoS qos = MqttQoS.AT_MOST_ONCE;
@@ -1211,19 +1208,22 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
             // i.e. publish to control///req/xyz/light
             tenantId = deviceId = "";
         }
-        TracingHelper.TAG_CLIENT_ID.set(currentSpan, endpoint.clientIdentifier());
+        TracingHelper.TAG_CLIENT_ID.set(commandContext.getCurrentSpan(), endpoint.clientIdentifier());
+        final Command command = commandContext.getCommand();
         // example: control/DEFAULT_TENANT/4711/req/xyz/light
         final String topic = String.format("%s/%s/%s/%s/%s/%s", subscription.getEndpoint(), tenantId, deviceId,
                 subscription.getRequestPart(), command.getRequestId(), command.getName());
         endpoint.publish(topic, command.getPayload(), qos, false, false);
         metrics.incrementCommandDeliveredToDevice(subscription.getTenant());
+        commandContext.accept();
+        commandContext.flow(1);
         LOG.trace("command published to device [tenant-id: {}, device-id: {}, MQTT client-id: {}]",
                 subscription.getTenant(), subscription.getDeviceId(), endpoint.clientIdentifier());
         final Map<String, String> items = new HashMap<>(3);
         items.put(Fields.EVENT, "command published to device");
         items.put(Tags.MESSAGE_BUS_DESTINATION.getKey(), topic);
         items.put(TracingHelper.TAG_QOS.getKey(), qos.toString());
-        currentSpan.log(items);
+        commandContext.getCurrentSpan().log(items);
     }
 
     private static void addRetainAnnotation(final MqttContext context, final Message downstreamMessage, final Span currentSpan) {

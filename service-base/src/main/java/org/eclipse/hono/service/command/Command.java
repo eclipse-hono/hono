@@ -23,18 +23,12 @@ import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
 
 import io.vertx.core.buffer.Buffer;
-import io.vertx.ext.web.RoutingContext;
 
 /**
  * A wrapper around an AMQP 1.0 message representing a command.
  *
  */
 public final class Command {
-
-    /**
-     * The key under which the current Command is stored.
-     */
-    public static final String KEY_COMMAND = "command";
 
     private final boolean valid;
     private final Message message;
@@ -154,27 +148,6 @@ public final class Command {
      */
     public boolean isValid() {
         return valid;
-    }
-
-    /**
-     * Retrieves the command associated with a request.
-     *
-     * @param ctx The routing context for the request.
-     * @return The command or {@code null} if the request has no command associated with it.
-     * @throws NullPointerException if context is {@code null}.
-     */
-    public static Command get(final RoutingContext ctx) {
-        return Objects.requireNonNull(ctx).get(KEY_COMMAND);
-    }
-
-    /**
-     * Associates this command with a request.
-     *
-     * @param ctx The routing context for the request.
-     * @throws NullPointerException if context is {@code null}.
-     */
-    public void put(final RoutingContext ctx) {
-        Objects.requireNonNull(ctx).put(KEY_COMMAND, this);
     }
 
     /**
