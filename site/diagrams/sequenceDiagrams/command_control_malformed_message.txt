@@ -1,0 +1,14 @@
+participant AMQP 1.0 Network
+participant Business Application
+
+Business Application->AMQP 1.0 Network: transfer("control/${tenant_id}/${device_id}", command)
+note over AMQP 1.0 Network
+command is malformed
+end note
+AMQP 1.0 Network->Business Application: disposition("rejected")
+
+note over Business Application
+may want to close
+response link
+(if scoped to command)
+end note over

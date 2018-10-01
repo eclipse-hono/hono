@@ -1,7 +1,0 @@
-title Send command response (Success)
-
-participant AMQP 1.0 Network
-participant Business Application
-
-AMQP 1.0 Network->Business Application: transfer("control/${tenant_id}/${reply-id}", status, command-reply)
-Business Application->AMQP 1.0 Network: disposition("Accepted")
