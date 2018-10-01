@@ -1,0 +1,18 @@
+participant AMQP 1.0 Network
+participant Business Application
+
+Business Application->AMQP 1.0 Network: transfer("control/${tenant_id}/${device_id}", command)
+note over AMQP 1.0 Network
+forward command
+to device
+end note
+AMQP 1.0 Network->Business Application: disposition("accepted")
+note over AMQP 1.0 Network
+wait for response
+from device
+end note
+AMQP 1.0 Network->Business Application: transfer("control/${tenant_id}/${reply_id}", status)
+note over Business Application
+process response
+end note
+Business Application->AMQP 1.0 Network: disposition("accepted")

@@ -2,6 +2,4 @@ participant AMQP 1.0 Network
 participant Business Application
 
 Business Application->AMQP 1.0 Network: attach("receiver","control/${tenant_id}/${reply-id}")
-activate Business Application
 AMQP 1.0 Network->Business Application: attach("sender","control/${tenant_id}/${reply-id}")
-deactivate Business Application
