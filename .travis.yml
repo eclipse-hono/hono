@@ -4,7 +4,7 @@ language: java
 
 jdk:
   - openjdk8
-  - oraclejdk10
+  - openjdk11
 
 script:
   - mvn install verify -B -Dtest.env=true -DcreateJavadoc=true -Ddocker.host=unix:///var/run/docker.sock -Pbuild-docker-image,run-tests -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn
