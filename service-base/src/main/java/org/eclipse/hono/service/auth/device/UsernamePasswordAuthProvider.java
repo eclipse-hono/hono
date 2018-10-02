@@ -13,12 +13,18 @@
 
 package org.eclipse.hono.service.auth.device;
 
+import java.net.HttpURLConnection;
 import java.util.Objects;
 
+import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.config.ServiceConfigProperties;
+import org.eclipse.hono.util.CredentialsObject;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import io.vertx.core.Context;
+import io.vertx.core.Future;
+import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 
 
@@ -72,4 +78,25 @@ public final class UsernamePasswordAuthProvider extends CredentialsApiAuthProvid
         }
     }
 
+    @Override
+    protected Future<Device> validateCredentials(
+            final DeviceCredentials deviceCredentials,
+            final CredentialsObject credentialsOnRecord) {
+
+        final Context currentContext = Vertx.currentContext();
+        if (currentContext == null) {
+            return Future.failedFuture(new IllegalStateException("not running on vert.x Context"));
+        } else {
+            final Future<Device> resultHandler = Future.future();
+            currentContext.executeBlocking(blockingCodeHandler -> {
+                log.debug("validating password hash on vert.x worker thread [{}]", Thread.currentThread().getName());
+                if (deviceCredentials.validate(credentialsOnRecord)) {
+                    blockingCodeHandler.complete(new Device(deviceCredentials.getTenantId(), credentialsOnRecord.getDeviceId()));
+                } else {
+                    blockingCodeHandler.fail(new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED, "bad credentials"));
+                }
+            }, false, resultHandler);
+            return resultHandler;
+        }
+    }
 }

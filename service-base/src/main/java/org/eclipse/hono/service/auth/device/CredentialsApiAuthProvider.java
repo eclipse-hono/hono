@@ -94,10 +94,9 @@ public abstract class CredentialsApiAuthProvider implements HonoClientBasedAuthP
 
         Objects.requireNonNull(deviceCredentials);
         Objects.requireNonNull(resultHandler);
-        final Future<Device> validationResult = Future.future();
-        validationResult.setHandler(resultHandler);
 
-        getCredentialsForDevice(deviceCredentials).recover(t -> {
+        getCredentialsForDevice(deviceCredentials)
+        .recover(t -> {
 
             if (!(t instanceof ServiceInvocationException)) {
                 return Future.failedFuture(t);
@@ -110,13 +109,37 @@ public abstract class CredentialsApiAuthProvider implements HonoClientBasedAuthP
             } else {
                 return Future.failedFuture(t);
             }
-        }).map(credentialsOnRecord -> {
-            if (deviceCredentials.validate(credentialsOnRecord)) {
-                return new Device(deviceCredentials.getTenantId(), credentialsOnRecord.getDeviceId());
-            } else {
-                 throw new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED, "bad credentials");
-            }
-        }).setHandler(resultHandler);
+        }).compose(credentialsOnRecord -> validateCredentials(deviceCredentials, credentialsOnRecord))
+        .setHandler(resultHandler);
+    }
+
+    /**
+     * Verifies that the credentials provided by a device during the authentication
+     * process match the credentials on record for that device.
+     * <p>
+     * This default implementation simply invokes the {@link DeviceCredentials#validate(CredentialsObject)}
+     * method in order to validate the credentials.
+     * <p>
+     * Subclasses may override this method in order to perform more specific checks
+     * for certain types of credentials.
+     * 
+     * @param deviceCredentials The credentials provided by the device.
+     * @param credentialsOnRecord The credentials on record.
+     * @return A future that is succeeded with the authenticated device if the
+     *         credentials have been validated successfully. Otherwise, the
+     *         future is failed with a {@link ServiceInvocationException}.
+     */
+    protected Future<Device> validateCredentials(
+            final DeviceCredentials deviceCredentials,
+            final CredentialsObject credentialsOnRecord) {
+
+        final Future<Device> result = Future.future();
+        if (deviceCredentials.validate(credentialsOnRecord)) {
+            result.complete(new Device(deviceCredentials.getTenantId(), credentialsOnRecord.getDeviceId()));
+        } else {
+            result.fail(new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED, "bad credentials"));
+        }
+        return result;
     }
 
     @Override
