@@ -31,6 +31,11 @@ public class ClientConfigProperties extends AbstractConfig {
      */
     public static final long DEFAULT_FLOW_LATENCY = 20L; //ms
     /**
+     * The default amount of milliseconds to wait for the remote peer's <em>attach</em>
+     * frame during link establishment.
+     */
+    public static final long DEFAULT_LINK_ESTABLISHMENT_TIMEOUT = 500L; //ms
+    /**
      * The default number of credits issued by the receiver side of a link.
      */
     public static final int  DEFAULT_INITIAL_CREDITS = 200;
@@ -47,6 +52,7 @@ public class ClientConfigProperties extends AbstractConfig {
     private String credentialsPath;
     private String amqpHostname;
     private long flowLatency = DEFAULT_FLOW_LATENCY;
+    private long linkEstablishmentTimeout = DEFAULT_LINK_ESTABLISHMENT_TIMEOUT;
     private int initialCredits = DEFAULT_INITIAL_CREDITS;
     private long requestTimeoutMillis = DEFAULT_REQUEST_TIMEOUT;
     private boolean hostnameVerificationRequired = true;
@@ -314,6 +320,49 @@ public class ClientConfigProperties extends AbstractConfig {
             throw new IllegalArgumentException("latency must not be negative");
         } else {
             this.flowLatency = latency;
+        }
+    }
+
+    /**
+     * Gets the maximum amount of time that a client waits for the establishment of a link
+     * with a peer.
+     * <p>
+     * The AMQP 1.0 protocol defines that a link is established once both peers have exchanged their
+     * <em>attach</em> frames. The value of this property defines how long the client should wait for
+     * the peer's attach frame before considering the attempt to establish the link failed.
+     * <p>
+     * This property can be used to <em>tune</em> the time period to wait according to the network
+     * latency involved with the communication link between the client and the service.
+     * <p>
+     * The default value of this property is {@link #DEFAULT_LINK_ESTABLISHMENT_TIMEOUT}.
+     *
+     * @return The number of milliseconds to wait.
+     */
+    public final long getLinkEstablishmentTimeout() {
+        return linkEstablishmentTimeout;
+    }
+
+    /**
+     * Sets the maximum amount of time that a client should wait for the establishment of a link
+     * with a peer.
+     * <p>
+     * The AMQP 1.0 protocol defines that a link is established once both peers have exchanged their
+     * <em>attach</em> frames. The value of this property defines how long the client should wait for
+     * the peer's attach frame before considering the attempt to establish the link failed.
+     * <p>
+     * This property can be used to <em>tune</em> the time period to wait according to the network
+     * latency involved with the communication link between the client and the service.
+     * <p>
+     * The default value of this property is {@link #DEFAULT_FLOW_LATENCY}.
+     * 
+     * @param latency The number of milliseconds to wait.
+     * @throws IllegalArgumentException if latency is negative.
+     */
+    public final void setLinkEstablishmentTimeout(final long latency) {
+        if (latency < 0) {
+            throw new IllegalArgumentException("latency must not be negative");
+        } else {
+            this.linkEstablishmentTimeout = latency;
         }
     }
 

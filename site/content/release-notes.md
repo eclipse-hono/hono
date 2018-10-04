@@ -2,18 +2,24 @@
 title = "Release Notes"
 +++
 
+## 0.8-M2
+
+### Fixes & Enhancements
+
+* HonoClientImpl now waits a limited amount of time for the peer's *attach* frame during link establishment before considering the attempt to have failed. The time-out value (default is 500ms) can be configured using the *linkEstablishmentTimeout* property of `org.eclipse.hono.config.ClientConfigProperties`. See [Hono Client Configuration]({{< ref "/admin-guide/hono-client-configuration.md" >}}) for details.
+
 ## 0.8-M1_1
 
 Since 0.8-M1 missed an important artifact, the first 0.8 milestone is available as 0.8-M1_1.
 
 ### New Features
 
-* A new message exchange pattern - called **notification commands** - is fully specified for the [Command and Control API]({{< relref "/api/Command-And-Control-API.md" >}}).
+* A new message exchange pattern - called **notification commands** - is fully specified for the [Command and Control API]({{< ref "/api/Command-And-Control-API.md" >}}).
   Note that currently there is no implementation included, this is planned for the following milestone.
 
 ### Fixes & Enhancements
 
-* Hono-cli extends support to Command & Control. Using command line, users can send commands to devices and receive command responses.  See [Using Cli for command & control]({{< relref "getting-started.md#using-cli-command-line-interface-to-send-commands-and-receive-command-responses" >}}) for more information.
+* Hono-cli now supports Command & Control. Using command line, users can send commands to devices and receive command responses.  See [Using CLI for Command & Control]({{< ref "/getting-started.md#using-cli-command-line-interface-to-send-commands-and-receive-command-responses" >}}) for more information.
 * The command client now enables the setting of application properties for command messages. This can be helpful if custom protocol adapters want to react to specifically annotated commands sent by an application. The standard protocol adapters of Hono do not further exploit these properties.
 * The command consumer (typically used in protocol adapters) allows access to the application properties of command messages.
 

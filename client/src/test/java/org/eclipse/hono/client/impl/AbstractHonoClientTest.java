@@ -13,9 +13,12 @@
 
 package org.eclipse.hono.client.impl;
 
+import static org.hamcrest.CoreMatchers.is;
+import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyString;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 import java.net.HttpURLConnection;
@@ -27,6 +30,7 @@ import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.engine.Record;
 import org.apache.qpid.proton.engine.impl.RecordImpl;
 import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.junit.Before;
@@ -39,6 +43,7 @@ import org.mockito.ArgumentCaptor;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Vertx;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.proton.ProtonConnection;
@@ -60,6 +65,7 @@ public class AbstractHonoClientTest {
     @Rule
     public final Timeout timeout = Timeout.seconds(5);
 
+    private Vertx vertx;
     private Context context;
     private ClientConfigProperties props;
 
@@ -69,6 +75,7 @@ public class AbstractHonoClientTest {
     @SuppressWarnings("unchecked")
     @Before
     public void setUp() {
+        vertx = mock(Vertx.class);
         props = new ClientConfigProperties();
         context = mock(Context.class);
         doAnswer(invocation -> {
@@ -76,6 +83,7 @@ public class AbstractHonoClientTest {
             handler.handle(null);
             return null;
         }).when(context).runOnContext(any(Handler.class));
+        when(context.owner()).thenReturn(vertx);
     }
 
     /**
@@ -122,11 +130,44 @@ public class AbstractHonoClientTest {
         final Future<ProtonSender> result = AbstractHonoClient.createSender(context, props, con,
                 "target", ProtonQoS.AT_LEAST_ONCE, null);
 
+        verify(vertx).setTimer(eq(props.getLinkEstablishmentTimeout()), any(Handler.class));
         final ArgumentCaptor<Handler> openHandler = ArgumentCaptor.forClass(Handler.class);
         verify(sender).openHandler(openHandler.capture());
         openHandler.getValue().handle(Future.failedFuture(new IllegalStateException()));
         assertTrue(result.failed());
         assertTrue(failureAssertion.test(result.cause()));
+    }
+
+    /**
+     * Verifies that the attempt to create a sender fails with a
+     * {@code ServerErrorException} if the remote peer doesn't
+     * send its attach frame in time.
+     * 
+     * @param ctx The vert.x test context.
+     */
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testCreateSenderFailsOnTimeout(final TestContext ctx) {
+
+        final Record attachments = new RecordImpl();
+        final ProtonSender sender = mock(ProtonSender.class);
+        when(sender.attachments()).thenReturn(attachments);
+        final ProtonConnection con = mock(ProtonConnection.class);
+        when(con.createSender(anyString())).thenReturn(sender);
+        // run any timer immediately
+        doAnswer(invocation -> {
+            final Handler<Void> handler = invocation.getArgument(1);
+            handler.handle(null);
+            return 1L;
+        }).when(vertx).setTimer(anyLong(), any(Handler.class));
+
+        final Future<ProtonSender> result = AbstractHonoClient.createSender(context, props, con,
+                "target", ProtonQoS.AT_LEAST_ONCE, null);
+        assertTrue(result.failed());
+        assertThat(((ServerErrorException) result.cause()).getErrorCode(), is(HttpURLConnection.HTTP_UNAVAILABLE));
+        verify(sender).open();
+        verify(sender).close();
+        verify(sender).free();
     }
 
     /**
@@ -173,10 +214,44 @@ public class AbstractHonoClientTest {
         final Future<ProtonReceiver> result = AbstractHonoClient.createReceiver(context, props, con,
                 "source", ProtonQoS.AT_LEAST_ONCE, (delivery, msg) -> {}, null);
 
+        verify(vertx).setTimer(eq(props.getLinkEstablishmentTimeout()), any(Handler.class));
         final ArgumentCaptor<Handler> openHandler = ArgumentCaptor.forClass(Handler.class);
         verify(receiver).openHandler(openHandler.capture());
         openHandler.getValue().handle(Future.failedFuture(new IllegalStateException()));
         assertTrue(result.failed());
         assertTrue(failureAssertion.test(result.cause()));
     }
+
+    /**
+     * Verifies that the attempt to create a receiver fails with a
+     * {@code ServerErrorException} if the remote peer doesn't
+     * send its attach frame in time.
+     * 
+     * @param ctx The vert.x test context.
+     */
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testCreateReceiverFailsOnTimeout(final TestContext ctx) {
+
+        final Record attachments = new RecordImpl();
+        final ProtonReceiver receiver = mock(ProtonReceiver.class);
+        when(receiver.attachments()).thenReturn(attachments);
+        final ProtonConnection con = mock(ProtonConnection.class);
+        when(con.createReceiver(anyString())).thenReturn(receiver);
+        // run any timer immediately
+        doAnswer(invocation -> {
+            final Handler<Void> handler = invocation.getArgument(1);
+            handler.handle(null);
+            return 1L;
+        }).when(vertx).setTimer(anyLong(), any(Handler.class));
+
+        final Future<ProtonReceiver> result = AbstractHonoClient.createReceiver(context, props, con,
+                "source", ProtonQoS.AT_LEAST_ONCE, (delivery, msg) -> {}, null);
+        assertTrue(result.failed());
+        assertThat(((ServerErrorException) result.cause()).getErrorCode(), is(HttpURLConnection.HTTP_UNAVAILABLE));
+        verify(receiver).open();
+        verify(receiver).close();
+        verify(receiver).free();
+    }
+
 }

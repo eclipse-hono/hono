@@ -21,11 +21,14 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
+import javax.net.ssl.HttpsURLConnection;
+
 import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.config.ClientConfigProperties;
@@ -350,6 +353,16 @@ public abstract class AbstractHonoClient {
             HonoProtonHelper.setDetachHandler(sender, remoteDetached -> onRemoteDetach(sender, con.getRemoteContainer(), false, closeHook));
             HonoProtonHelper.setCloseHandler(sender, remoteClosed -> onRemoteDetach(sender, con.getRemoteContainer(), true, closeHook));
             sender.open();
+            ctx.owner().setTimer(clientConfig.getLinkEstablishmentTimeout(), tid -> {
+                if (!result.isComplete() && !sender.attachments().get(KEY_LINK_ESTABLISHED, Boolean.class)) {
+                    LOG.debug(
+                            "did not receive peer's attach frame after {}ms, failing attempt to establish sender link",
+                            clientConfig.getLinkEstablishmentTimeout());
+                    sender.close();
+                    sender.free();
+                    result.fail(new ServerErrorException(HttpsURLConnection.HTTP_UNAVAILABLE));
+                }
+            });
         });
     }
 
@@ -422,6 +435,16 @@ public abstract class AbstractHonoClient {
             HonoProtonHelper.setDetachHandler(receiver, remoteDetached -> onRemoteDetach(receiver, con.getRemoteContainer(), false, closeHook));
             HonoProtonHelper.setCloseHandler(receiver, remoteClosed -> onRemoteDetach(receiver, con.getRemoteContainer(), true, closeHook));
             receiver.open();
+            ctx.owner().setTimer(clientConfig.getLinkEstablishmentTimeout(), tid -> {
+                if (!result.isComplete() && !receiver.attachments().get(KEY_LINK_ESTABLISHED, Boolean.class)) {
+                    LOG.debug(
+                            "did not receive peer's attach frame after {}ms, failing attempt to establish receiver link",
+                            clientConfig.getLinkEstablishmentTimeout());
+                    receiver.close();
+                    receiver.free();
+                    result.fail(new ServerErrorException(HttpsURLConnection.HTTP_UNAVAILABLE));
+                }
+            });
         });
     }
 
