@@ -30,6 +30,8 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 
+import io.vertx.core.AsyncResult;
+import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
@@ -58,13 +60,15 @@ public class EventConsumerImplTest {
     public Timeout timeout = Timeout.seconds(5);
 
     private Vertx vertx;
+    private Context context;
 
     /**
      * Initializes fixture.
      */
     @Before
     public void setUp() {
-        vertx = Vertx.vertx();
+        vertx = mock(Vertx.class);
+        context = HonoClientUnitTestHelper.mockContext(vertx);
     }
 
     /**
@@ -81,13 +85,11 @@ public class EventConsumerImplTest {
      * 
      * @param ctx The test context.
      */
-    @SuppressWarnings({ "unchecked", "rawtypes" })
+    @SuppressWarnings({ "unchecked" })
     @Test
     public void testCreateRegistersBiConsumerAsMessageHandler(final TestContext ctx) {
 
         // GIVEN an event consumer that releases all messages
-        final Async consumerCreation = ctx.async();
-
         final BiConsumer<ProtonDelivery, Message> eventConsumer = (delivery, message) -> {
             ProtonHelper.released(delivery, true);
         };
@@ -98,27 +100,27 @@ public class EventConsumerImplTest {
         when(receiver.getSource()).thenReturn(source);
         when(receiver.attachments()).thenReturn(attachments);
         when(receiver.getRemoteQoS()).thenReturn(ProtonQoS.AT_LEAST_ONCE);
-        when(receiver.open()).then(answer -> {
-            consumerCreation.complete();
-            return receiver;
-        });
+
         final ProtonConnection con = mock(ProtonConnection.class);
         when(con.createReceiver(anyString())).thenReturn(receiver);
-        when(receiver.openHandler(any(Handler.class))).thenAnswer(invocation -> {
-            final Handler handler = invocation.getArgument(0);
-            handler.handle(Future.succeededFuture(receiver));
-            return receiver;
-        });
-        final ArgumentCaptor<ProtonMessageHandler> messageHandler = ArgumentCaptor.forClass(ProtonMessageHandler.class);
+
+        final Async consumerCreation = ctx.async();
         EventConsumerImpl.create(
-                vertx.getOrCreateContext(),
+                context,
                 new ClientConfigProperties(),
                 con,
                 "tenant",
-                eventConsumer, open -> {},
+                eventConsumer,
+                ctx.asyncAssertSuccess(rec -> consumerCreation.complete()),
                 remoteDetach -> {});
-        consumerCreation.await();
+
+        final ArgumentCaptor<ProtonMessageHandler> messageHandler = ArgumentCaptor.forClass(ProtonMessageHandler.class);
         verify(receiver).handler(messageHandler.capture());
+        // wait for peer's attach frame
+        final ArgumentCaptor<Handler<AsyncResult<ProtonReceiver>>> openHandlerCaptor = ArgumentCaptor.forClass(Handler.class);
+        verify(receiver).openHandler(openHandlerCaptor.capture());
+        openHandlerCaptor.getValue().handle(Future.succeededFuture(receiver));
+        consumerCreation.await();
 
         // WHEN an event is received
         final ProtonDelivery delivery = mock(ProtonDelivery.class);
@@ -134,7 +136,6 @@ public class EventConsumerImplTest {
      *
      * @param ctx The test context.
      */
-    @SuppressWarnings({ "unchecked" })
     @Test
     public void testCloseHandlerCallsCloseHook(final TestContext ctx) {
         testHandlerCallsCloseHook(ctx, (receiver, captor) -> verify(receiver).closeHandler(captor.capture()));
@@ -145,17 +146,17 @@ public class EventConsumerImplTest {
      *
      * @param ctx The test context.
      */
-    @SuppressWarnings({ "unchecked" })
     @Test
     public void testDetachHandlerCallsCloseHook(final TestContext ctx) {
         testHandlerCallsCloseHook(ctx, (receiver, captor) -> verify(receiver).detachHandler(captor.capture()));
     }
 
-    @SuppressWarnings({ "unchecked", "rawtypes" })
-    private void testHandlerCallsCloseHook(final TestContext ctx, final BiConsumer<ProtonReceiver, ArgumentCaptor<Handler>> handlerCaptor) {
+    @SuppressWarnings({ "unchecked" })
+    private void testHandlerCallsCloseHook(
+            final TestContext ctx,
+            final BiConsumer<ProtonReceiver, ArgumentCaptor<Handler<AsyncResult<ProtonReceiver>>>> handlerCaptor) {
 
         // GIVEN an open event consumer
-        final Async consumerCreation = ctx.async();
         final BiConsumer<ProtonDelivery, Message> eventConsumer = mock(BiConsumer.class);
         final RecordImpl attachments = new RecordImpl();
         final Source source = mock(Source.class);
@@ -164,23 +165,31 @@ public class EventConsumerImplTest {
         when(receiver.isOpen()).thenReturn(Boolean.TRUE);
         when(receiver.getSource()).thenReturn(source);
         when(receiver.attachments()).thenReturn(attachments);
-        when(receiver.open()).then(answer -> {
-            attachments.set(EventConsumerImpl.KEY_LINK_ESTABLISHED, Boolean.class, Boolean.TRUE);
-            consumerCreation.complete();
-            return receiver;
-        });
 
         final ProtonConnection con = mock(ProtonConnection.class);
         when(con.createReceiver(anyString())).thenReturn(receiver);
 
         final Handler<String> closeHook = mock(Handler.class);
-        final ArgumentCaptor<Handler> captor = ArgumentCaptor.forClass(Handler.class);
-        EventConsumerImpl.create(vertx.getOrCreateContext(), new ClientConfigProperties(), con, "source/address", eventConsumer,
-                ok->{}, closeHook );
-        consumerCreation.await();
-        handlerCaptor.accept(receiver, captor);
+        final ArgumentCaptor<Handler<AsyncResult<ProtonReceiver>>> captor = ArgumentCaptor.forClass(Handler.class);
 
-        // WHEN the receiver link is closed
+        final Async consumerCreation = ctx.async();
+        EventConsumerImpl.create(
+                context,
+                new ClientConfigProperties(),
+                con,
+                "source/address",
+                eventConsumer,
+                ctx.asyncAssertSuccess(rec -> consumerCreation.complete()),
+                closeHook);
+
+        // wait for peer's attach frame
+        final ArgumentCaptor<Handler<AsyncResult<ProtonReceiver>>> openHandlerCaptor = ArgumentCaptor.forClass(Handler.class);
+        verify(receiver).openHandler(openHandlerCaptor.capture());
+        openHandlerCaptor.getValue().handle(Future.succeededFuture(receiver));
+        consumerCreation.await();
+
+        // WHEN the peer sends a detach frame
+        handlerCaptor.accept(receiver, captor);
         captor.getValue().handle(Future.succeededFuture(receiver));
 
         // THEN the close hook is called
@@ -188,5 +197,6 @@ public class EventConsumerImplTest {
 
         // and the receiver link is closed
         verify(receiver).close();
+        verify(receiver).free();
     }
 }
