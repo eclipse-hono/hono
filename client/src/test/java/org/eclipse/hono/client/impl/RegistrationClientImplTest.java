@@ -106,7 +106,7 @@ public class RegistrationClientImplTest {
 
         // WHEN getting registration information
         final Async assertion = ctx.async();
-        client.assertRegistration("device").setHandler(ctx.asyncAssertSuccess(result -> assertion.complete()));
+        client.assertRegistration("myDevice").setHandler(ctx.asyncAssertSuccess(result -> assertion.complete()));
 
         final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
         verify(sender).send(messageCaptor.capture(), any(Handler.class));
@@ -119,7 +119,8 @@ public class RegistrationClientImplTest {
         client.handleResponse(delivery, response);
 
         // THEN the registration information has been added to the cache
-        verify(cache).put(eq(TriTuple.of("assert", "device", null)), any(RegistrationResult.class), any(Duration.class));
+        assertion.await();
+        verify(cache).put(eq(TriTuple.of("assert", "myDevice", null)), any(RegistrationResult.class), any(Duration.class));
     }
 
     /**
