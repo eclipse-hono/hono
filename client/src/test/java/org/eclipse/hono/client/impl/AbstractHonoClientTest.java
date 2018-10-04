@@ -72,18 +72,11 @@ public class AbstractHonoClientTest {
     /**
      * Sets up the fixture.
      */
-    @SuppressWarnings("unchecked")
     @Before
     public void setUp() {
         vertx = mock(Vertx.class);
         props = new ClientConfigProperties();
-        context = mock(Context.class);
-        doAnswer(invocation -> {
-            final Handler<Void> handler = invocation.getArgument(0);
-            handler.handle(null);
-            return null;
-        }).when(context).runOnContext(any(Handler.class));
-        when(context.owner()).thenReturn(vertx);
+        context = HonoClientUnitTestHelper.mockContext(vertx);
     }
 
     /**
