@@ -37,6 +37,7 @@
           The shared secret to use for creating/validating registration assertions.
          -->
         <hono.regAssertion.sharedSecret>g#aWO!BUm7aj*#%X*VGXKFhxkhNrMNj0</hono.regAssertion.sharedSecret>
+        <default-java-options>-XX:MinRAMPercentage=80 -XX:MaxRAMPercentage=80</default-java-options>
     </properties>
 
     <dependencies>

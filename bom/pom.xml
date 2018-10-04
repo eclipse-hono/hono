@@ -37,7 +37,7 @@
     <guava.version>19.0</guava.version>
     <influxdb.version>1.5.4-alpine</influxdb.version>
     <jackson.version>2.9.5</jackson.version>
-    <java-base-image.name>openjdk:8u171-jre-slim</java-base-image.name>
+    <java-base-image.name>openjdk:11-jre-slim</java-base-image.name>
     <jaxb.api.version>2.2.12</jaxb.api.version>
     <javax.annotation.api.version>1.3.2</javax.annotation.api.version>
     <jjwt.version>0.7.0</jjwt.version>

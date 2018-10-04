@@ -64,18 +64,16 @@
                   <build>
                     <from>${java-base-image.name}</from>
                     <labels>
-                      <project>Eclipse Hono</project>
                       <implemented.api.1>Authentication</implemented.api.1>
                     </labels>
                     <ports>
                       <port>5671</port>
                       <port>5672</port>
                     </ports>
-                    <entryPoint>
+                    <cmd>
                       <exec>
                         <arg>java</arg>
-                        <arg>-XX:+UnlockExperimentalVMOptions</arg>
-                        <arg>-XX:+UseCGroupMemoryLimitForHeap</arg>
+                        <arg>--illegal-access=permit</arg>
                         <arg>-Dvertx.cacheDirBase=/tmp</arg>
                         <arg>-Dloader.home=/opt/hono</arg>
                         <arg>-Dloader.path=extensions</arg>
@@ -83,7 +81,7 @@
                         <arg>/opt/hono/${project.artifactId}-${project.version}-${classifier.spring.boot.artifact}.jar</arg>
                         <arg>org.springframework.boot.loader.PropertiesLauncher</arg>
                       </exec>
-                    </entryPoint>
+                    </cmd>
                     <assembly>
                       <mode>dir</mode>
                       <basedir>/</basedir>

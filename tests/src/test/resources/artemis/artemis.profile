@@ -11,7 +11,7 @@ ARTEMIS_INSTANCE_URI='file:/opt/artemis/'
 
 
 # Java Opts
-JAVA_ARGS=" -XX:+PrintClassHistogram -XX:+UseG1GC -XX:+AggressiveOpts -XX:+UseFastAccessorMethods -Xms512M -Xmx2G"
+JAVA_ARGS=" -XX:+PrintClassHistogram -XX:+UseG1GC -XX:+AggressiveOpts -XX:+UseFastAccessorMethods -Xms256M -Xmx256M"
 
 #
 # There might be options that you only want to enable on specifc commands, like setting a JMX port

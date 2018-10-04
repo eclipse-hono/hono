@@ -33,8 +33,13 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
     <maven.source.skip>true</maven.source.skip>
     <maven.install.skip>true</maven.install.skip>
     <gpg.skip>true</gpg.skip>
-    <service.startup.timeout>90000</service.startup.timeout>
+    <service.startup.timeout>120000</service.startup.timeout>
     <max.bcrypt.iterations>10</max.bcrypt.iterations>
+    <hono.java.options>
+      -XX:MinRAMPercentage=80
+      -XX:MaxRAMPercentage=80
+      -javaagent:/opt/hono/agent/org.jacoco.agent.jar=destfile=/opt/hono/jacoco.result/jacoco.part
+    </hono.java.options>
   </properties>
 
   <dependencies>
@@ -238,11 +243,13 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <name>hono</name>
                       <alias>hono-service-auth.hono</alias>
                     </network>
+                    <memorySwap>-1</memorySwap>
+                    <memory>167772160</memory>
                     <env>
                       <LOGGING_CONFIG>file:///etc/hono/logback-spring.xml</LOGGING_CONFIG>
                       <SPRING_CONFIG_LOCATION>file:///etc/hono/</SPRING_CONFIG_LOCATION>
                       <SPRING_PROFILES_ACTIVE>authentication-impl,prod</SPRING_PROFILES_ACTIVE>
-                      <_JAVA_OPTIONS>-javaagent:/opt/hono/agent/org.jacoco.agent.jar=destfile=/opt/hono/jacoco.result/jacoco.part</_JAVA_OPTIONS>
+                      <_JAVA_OPTIONS>${hono.java.options}</_JAVA_OPTIONS>
                     </env>
                     <log>
                       <prefix>AUTH</prefix>
@@ -314,11 +321,17 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <name>hono</name>
                       <alias>hono-service-device-registry.hono</alias>
                     </network>
+                    <memorySwap>-1</memorySwap>
+                    <memory>268435456</memory>
                     <env>
                       <LOGGING_CONFIG>file:///etc/hono/logback-spring.xml</LOGGING_CONFIG>
                       <SPRING_CONFIG_LOCATION>file:///etc/hono/</SPRING_CONFIG_LOCATION>
                       <SPRING_PROFILES_ACTIVE>prod</SPRING_PROFILES_ACTIVE>
-                      <_JAVA_OPTIONS>-javaagent:/opt/hono/agent/org.jacoco.agent.jar=destfile=/opt/hono/jacoco.result/jacoco.part</_JAVA_OPTIONS>
+                      <_JAVA_OPTIONS>
+                        -XX:MinRAMPercentage=80
+                        -XX:MaxRAMPercentage=80
+                        -javaagent:/opt/hono/agent/org.jacoco.agent.jar=destfile=/opt/hono/jacoco.result/jacoco.part
+                      </_JAVA_OPTIONS>
                     </env>
                     <log>
                       <prefix>REGISTRY</prefix>
@@ -385,6 +398,8 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <name>hono</name>
                       <alias>hono-artemis.hono</alias>
                     </network>
+                    <memorySwap>-1</memorySwap>
+                    <memory>402653184</memory>
                     <env>
                       <ARTEMIS_CONFIGURATION>/etc/hono</ARTEMIS_CONFIGURATION>
                     </env>
@@ -458,6 +473,8 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <name>hono</name>
                       <alias>hono-dispatch-router.hono</alias>
                     </network>
+                    <memorySwap>-1</memorySwap>
+                    <memory>268435456</memory>
                     <log>
                       <prefix>QPID</prefix>
                       <color>blue</color>
@@ -527,12 +544,18 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <name>hono</name>
                       <alias>hono-service-messaging.hono</alias>
                     </network>
+                    <memorySwap>-1</memorySwap>
+                    <memory>268435456</memory>
                     <env>
                       <LOGGING_CONFIG>file:///etc/hono/logback-spring.xml</LOGGING_CONFIG>
                       <SPRING_CONFIG_LOCATION>file:///etc/hono/</SPRING_CONFIG_LOCATION>
                       <!--<PN_TRACE_FRM>1</PN_TRACE_FRM>-->
                       <SPRING_PROFILES_ACTIVE>qpid,prod</SPRING_PROFILES_ACTIVE>
-                      <_JAVA_OPTIONS>-javaagent:/opt/hono/agent/org.jacoco.agent.jar=destfile=/opt/hono/jacoco.result/jacoco.part</_JAVA_OPTIONS>
+                      <_JAVA_OPTIONS>
+                        -XX:MinRAMPercentage=80
+                        -XX:MaxRAMPercentage=80
+                        -javaagent:/opt/hono/agent/org.jacoco.agent.jar=destfile=/opt/hono/jacoco.result/jacoco.part
+                      </_JAVA_OPTIONS>
                     </env>
                     <log>
                       <prefix>MESSAGING</prefix>
@@ -612,13 +635,19 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <name>hono</name>
                       <alias>hono-adapter-http-vertx.hono</alias>
                     </network>
+                    <memorySwap>-1</memorySwap>
+                    <memory>268435456</memory>
                     <env>
                       <LOGGING_CONFIG>file:/etc/hono/logback-spring.xml</LOGGING_CONFIG>
                       <SPRING_CONFIG_LOCATION>file:/etc/hono/</SPRING_CONFIG_LOCATION>
                       <!--<PN_TRACE_FRM>1</PN_TRACE_FRM>-->
                       <SPRING_PROFILES_ACTIVE>prod</SPRING_PROFILES_ACTIVE>
                       <HONO_HTTP_NATIVE_TLS_REQUIRED>true</HONO_HTTP_NATIVE_TLS_REQUIRED>
-                      <_JAVA_OPTIONS>-javaagent:/opt/hono/agent/org.jacoco.agent.jar=destfile=/opt/hono/jacoco.result/jacoco.part</_JAVA_OPTIONS>
+                      <_JAVA_OPTIONS>
+                        -XX:MinRAMPercentage=80
+                        -XX:MaxRAMPercentage=80
+                        -javaagent:/opt/hono/agent/org.jacoco.agent.jar=destfile=/opt/hono/jacoco.result/jacoco.part
+                      </_JAVA_OPTIONS>
                     </env>
                     <log>
                       <prefix>HTTP</prefix>
@@ -696,13 +725,19 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <name>hono</name>
                       <alias>hono-adapter-mqtt-vertx.hono</alias>
                     </network>
+                    <memorySwap>-1</memorySwap>
+                    <memory>268435456</memory>
                     <env>
                       <LOGGING_CONFIG>file:///etc/hono/logback-spring.xml</LOGGING_CONFIG>
                       <SPRING_CONFIG_LOCATION>file:///etc/hono/</SPRING_CONFIG_LOCATION>
                       <!--<PN_TRACE_FRM>1</PN_TRACE_FRM>-->
                       <SPRING_PROFILES_ACTIVE>prod</SPRING_PROFILES_ACTIVE>
                       <HONO_MQTT_NATIVE_TLS_REQUIRED>true</HONO_MQTT_NATIVE_TLS_REQUIRED>
-                      <_JAVA_OPTIONS>-javaagent:/opt/hono/agent/org.jacoco.agent.jar=destfile=/opt/hono/jacoco.result/jacoco.part</_JAVA_OPTIONS>
+                      <_JAVA_OPTIONS>
+                        -XX:MinRAMPercentage=80
+                        -XX:MaxRAMPercentage=80
+                        -javaagent:/opt/hono/agent/org.jacoco.agent.jar=destfile=/opt/hono/jacoco.result/jacoco.part
+                      </_JAVA_OPTIONS>
                     </env>
                     <log>
                       <prefix>MQTT</prefix>
@@ -774,11 +809,17 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <name>hono</name>
                       <alias>hono-adapter-amqp-vertx.hono</alias>
                     </network>
+                    <memorySwap>-1</memorySwap>
+                    <memory>268435456</memory>
                     <env>
                       <LOGGING_CONFIG>file:///etc/hono/logback-spring.xml</LOGGING_CONFIG>
                       <SPRING_CONFIG_LOCATION>file:///etc/hono/</SPRING_CONFIG_LOCATION>
                       <SPRING_PROFILES_ACTIVE>prod</SPRING_PROFILES_ACTIVE>
-                      <_JAVA_OPTIONS>-javaagent:/opt/hono/agent/org.jacoco.agent.jar=destfile=/opt/hono/jacoco.result/jacoco.part</_JAVA_OPTIONS>
+                      <_JAVA_OPTIONS>
+                        -XX:MinRAMPercentage=80
+                        -XX:MaxRAMPercentage=80
+                        -javaagent:/opt/hono/agent/org.jacoco.agent.jar=destfile=/opt/hono/jacoco.result/jacoco.part
+                      </_JAVA_OPTIONS>
                       <!--<_JAVA_OPTIONS>-Xdebug -Xrunjdwp:transport=dt_socket,address=8000,server=y,suspend=y</_JAVA_OPTIONS>  -->
                     </env>
                     <log>

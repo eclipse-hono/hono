@@ -16,34 +16,44 @@ This is a reasonable approach when running on *bare metal* or a VM where other p
 
 As described above, a Docker container can easily be configured with a limit for memory and CPU resources that it may use during runtime. These limits are set and enforced using Linux *CGroups*. When a Java VM is run inside of such a Docker container which has been configured with a memory limit, then the result of the JVM's attempt to determine the available resources during startup will not reflect the memory limit imposed on the container. That is because the JVM by default does not consider the CGroup limit but instead queries the operating system for the overall amount of memory available. The same is true for the way that the JVM determines the number of available CPU cores.
 
+As described above, a Docker container can easily be configured with a limit for memory and CPU resources that it may use during runtime. These limits are set and enforced using Linux *CGroups*. When a pre version 9 Java VM is run inside of such a Docker container which has been configured with a memory limit, then the result of the JVM's attempt to determine the available resources during startup will not reflect the memory limit imposed on the container. That is because the JVM by default does not consider the CGroup limit but instead queries the operating system for the overall amount of memory available. The same is true for the way that the JVM determines the number of available CPU cores. Starting with version 9 Java correctly determines the amount of memory and CPUs available when running in a container.
+
 ## Limiting a Container's Memory Consumption
 
-Recent versions of OpenJDK have introduced the experimental `-XX:+UseCGroupMemoryLimitForHeap` option to make the JVM consider CGroup limits when determining the amount of available memory. Using this option it is possible to explicitly configure a JVM's memory consumption within the boundaries of the container's (limited) resources.
+### Java 8
 
-All of the Docker images provided by Hono make use of this JVM option by default, ensuring that the JVM considers any memory limits configured for the container when setting its maximum heap size during startup. However, the default algorithm will still only allocate a quarter of the (limited) amount of memory, thus leaving a lot of memory available to the container unused.
+OpenJDK 8 has introduced the experimental `-XX:+UseCGroupMemoryLimitForHeap` option to make the JVM consider CGroup limits when determining the amount of available memory. Using this option, it is possible to explicitly configure a Java 8 VM's memory consumption within the boundaries of the container's (limited) resources. However, the JVM will still only allocate a quarter of the (limited) amount of memory, thus leaving a lot of the memory available to the container unused.
 
-The following JVM options can be used in order to change this behavior:
+Either of the following JVM options can be used in Java 8 in order to change this behavior:
 
 * `-XX:MaxRAMFraction` can be used to set the fraction of total memory that may be allocated for the heap. The default value is 4 (meaning that up to a quarter of the memory will be allocated), so in order to increase the amount of memory, the value can be set to 2 (using up to 50% of the memory) or 1 (using up to 100% of the memory). Setting the option to 1 is strongly discouraged because it would leave no memory left for the JVM's other memory areas nor any additional processes run by the operating system.
 * `-Xmx` can be used to explicitly set the maximum amount of memory used for the heap. As a rule of thumb, setting this value to 60-70% of the container's (limited) amount of memory should usually work. Based on the application's memory usage characteristics, increasing the value to 80 or even 90% might also work.
+ 
+### Java 9 and later
+
+Starting with Java 9, the JVM will correctly determine the total memory and number of CPUs available when running inside of a container. All of the Docker images provided by Hono run with OpenJDK 11 by default, thus ensuring that the JVM considers any memory limits configured for the container when configuring its heap during startup. However, the default algorithm will still only allocate a quarter of the (limited) amount of memory, thus leaving a lot of memory available to the container unused.
+
+The following JVM options can be used in Java 9 and later in order to change this behavior:
+
+* `-XX:MinRAMPercentage`, `-XX:MaxRAMPercentage` and `-XX:InitialRAMPercentage` can be used to set the (minimum, maximum and initial) percentage of total memory that may be allocated for the heap. A value of 70-80% should work if no other processes are running in the same container.
 
 ### Docker Swarm
 
-As stated above, the Docker images provided by Hono already make use of the `-XX:+UseCGroupMemoryLimitForHeap` option by default. Additional options can be passed to the JVM during startup by means of setting the `_JAVA_OPTIONS` environment variable on the container. The following example from the Docker Swarm deployment script illustrates this mechanism:
+As stated above, the Docker images provided by Hono run on OpenJDK 11. Options can be passed to the JVM during startup by means of setting the `_JAVA_OPTIONS` environment variable on the container. The following example from the Docker Swarm deployment script illustrates this mechanism:
 
 ~~~sh
 $ docker service create --name hono-adapter-http-vertx -p 8080:8080 \
   --secret http-adapter.credentials \
   --secret hono-adapter-http-vertx-config.yml \
   --limit-memory 256m \
-  --env _JAVA_OPTIONS=-Xmx180m \
+  --env _JAVA_OPTIONS="-XX:MinRAMPercentage=80 -XX:MaxRAMPercentage=80" \
   --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-adapter-http-vertx-config.yml \
   --env SPRING_PROFILES_ACTIVE=dev \
   --env LOGGING_CONFIG=classpath:logback-spring.xml \
   eclipse/hono-adapter-http-vertx:0.6
 ~~~
 
-The fourth line sets a hard limit of 256 MB of total memory that the container may use. The fifth line then configures the JVM to use up to 180 MB for its heap, which corresponds to about 70% of the 256 MB total memory.
+The fourth line sets a hard limit of 256 MB of total memory that the container may use. The fifth line then configures the JVM to use 80% of the 256 MB total memory for its heap.
 
 ### Kubernetes
 
@@ -79,7 +89,7 @@ spec:
         - name: LOGGING_CONFIG
           value: classpath:logback-spring.xml
         - name: _JAVA_OPTIONS
-          value: -Xmx180m
+          value: "-XX:MinRAMPercentage=80 -XX:MaxRAMPercentage=80"
         volumeMounts:
         - mountPath: /etc/hono
           name: conf
@@ -90,4 +100,4 @@ spec:
           secretName: hono-adapter-http-vertx-conf
 ~~~
 
-The `resources` property defines the overall limit of 256 MB of memory that the pod may use. The `_JAVA_OPTIONS` environment variable is again used to configure the JVM to use up to 180 MB for its heap.
+The `resources` property defines the overall limit of 256 MB of memory that the pod may use. The `_JAVA_OPTIONS` environment variable is again used to configure the JVM to use 80% of the total memory for its heap.

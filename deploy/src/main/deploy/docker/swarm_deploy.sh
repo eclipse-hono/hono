@@ -141,7 +141,7 @@ docker service create $CREATE_OPTIONS --name hono-service-auth \
   --secret permissions.json \
   --secret hono-service-auth-config.yml \
   --limit-memory 196m \
-  --env _JAVA_OPTIONS=-Xmx150m \
+  --env _JAVA_OPTIONS="${default-java-options}" \
   --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-service-auth-config.yml \
   --env SPRING_PROFILES_ACTIVE=authentication-impl,dev \
   --env LOGGING_CONFIG=classpath:logback-spring.xml \
@@ -174,7 +174,7 @@ docker service create $CREATE_OPTIONS --name hono-service-device-registry -p 256
   --secret trusted-certs.pem \
   --secret hono-service-device-registry-config.yml \
   --limit-memory 256m \
-  --env _JAVA_OPTIONS=-Xmx180m \
+  --env _JAVA_OPTIONS="${default-java-options}" \
   --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-service-device-registry-config.yml \
   --env LOGGING_CONFIG=classpath:logback-spring.xml \
   --env SPRING_PROFILES_ACTIVE=dev \
@@ -195,7 +195,7 @@ docker service create $CREATE_OPTIONS --name hono-service-messaging -p 5671:5671
   --secret trusted-certs.pem \
   --secret hono-service-messaging-config.yml \
   --limit-memory 256m \
-  --env _JAVA_OPTIONS=-Xmx180m \
+  --env _JAVA_OPTIONS="${default-java-options}" \
   --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-service-messaging-config.yml \
   --env LOGGING_CONFIG=classpath:logback-spring.xml \
   --env SPRING_PROFILES_ACTIVE=dev \
@@ -215,7 +215,7 @@ docker service create $CREATE_OPTIONS --name hono-adapter-http-vertx -p 8080:808
   --secret http-adapter.credentials \
   --secret hono-adapter-http-vertx-config.yml \
   --limit-memory 256m \
-  --env _JAVA_OPTIONS=-Xmx180m \
+  --env _JAVA_OPTIONS="${default-java-options}" \
   --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-adapter-http-vertx-config.yml \
   --env SPRING_PROFILES_ACTIVE=dev \
   --env LOGGING_CONFIG=classpath:logback-spring.xml \
@@ -235,7 +235,7 @@ docker service create $CREATE_OPTIONS --name hono-adapter-mqtt-vertx -p 1883:188
   --secret mqtt-adapter.credentials \
   --secret hono-adapter-mqtt-vertx-config.yml \
   --limit-memory 256m \
-  --env _JAVA_OPTIONS=-Xmx180m \
+  --env _JAVA_OPTIONS="${default-java-options}" \
   --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-adapter-mqtt-vertx-config.yml \
   --env SPRING_PROFILES_ACTIVE=dev \
   --env LOGGING_CONFIG=classpath:logback-spring.xml \
@@ -255,7 +255,7 @@ docker service create $CREATE_OPTIONS --name hono-adapter-amqp-vertx -p 4040:567
   --secret amqp-adapter.credentials \
   --secret hono-adapter-amqp-vertx-config.yml \
   --limit-memory 256m \
-  --env _JAVA_OPTIONS=-Xmx180m \
+  --env _JAVA_OPTIONS="${default-java-options}" \
   --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-adapter-amqp-vertx-config.yml \
   --env SPRING_PROFILES_ACTIVE=dev \
   --env LOGGING_CONFIG=classpath:logback-spring.xml \
@@ -275,7 +275,7 @@ docker service create $CREATE_OPTIONS --name hono-adapter-kura -p 1884:1883 -p 8
   --secret kura-adapter.credentials \
   --secret hono-adapter-kura-config.yml \
   --limit-memory 256m \
-  --env _JAVA_OPTIONS=-Xmx180m \
+  --env _JAVA_OPTIONS="${default-java-options}" \
   --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-adapter-kura-config.yml \
   --env SPRING_PROFILES_ACTIVE=prod \
   --env LOGGING_CONFIG=classpath:logback-spring.xml \
@@ -297,7 +297,7 @@ docker service create $CREATE_OPTIONS --name hono-adapter-coap-vertx -p 5683:568
   --secret coap-adapter.credentials \
   --secret hono-adapter-coap-vertx-config.yml \
   --limit-memory 4096m \
-  --env _JAVA_OPTIONS=-Xmx4000m \
+  --env _JAVA_OPTIONS="${default-java-options}" \
   --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-adapter-coap-vertx-config.yml \
   --env SPRING_PROFILES_ACTIVE=prod \
   --env LOGGING_CONFIG=classpath:logback-spring.xml \

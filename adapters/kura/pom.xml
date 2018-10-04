@@ -73,8 +73,7 @@
                     <cmd>
                       <exec>
                         <arg>java</arg>
-                        <arg>-XX:+UnlockExperimentalVMOptions</arg>
-                        <arg>-XX:+UseCGroupMemoryLimitForHeap</arg>
+                        <arg>--illegal-access=permit</arg>
                         <arg>-Dvertx.cacheDirBase=/tmp</arg>
                         <arg>-Dloader.home=/opt/hono</arg>
                         <arg>-Dloader.path=extensions</arg>
