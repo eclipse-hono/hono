@@ -44,7 +44,7 @@ void checkOutHonoRepoMaster() {
  */
 void build() {
     stage('Build') {
-        withMaven(maven: 'apache-maven-latest', jdk: 'jdk1.8.0-latest') {
+        withMaven(maven: 'apache-maven-latest', jdk: 'jdk1.8.0-latest', options: [jacocoPublisher(disabled: true)]) {
             sh 'mvn -B clean install'
         }
     }
