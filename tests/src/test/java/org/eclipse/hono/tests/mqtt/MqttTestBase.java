@@ -168,8 +168,15 @@ public abstract class MqttTestBase {
             });
             return result;
         }).map(conAck -> {
+            LOGGER.info(
+                    "connection to MQTT adapter [host: {}, port: {}] established",
+                    IntegrationTestSupport.MQTT_HOST, IntegrationTestSupport.MQTT_PORT);
             this.context = Vertx.currentContext();
             return conAck;
+        }).recover(t -> {
+            LOGGER.error("failed to establish connection to MQTT adapter [host: {}, port: {}]",
+                    IntegrationTestSupport.MQTT_HOST, IntegrationTestSupport.MQTT_PORT, t);
+            return Future.failedFuture(t);
         });
 
     }
