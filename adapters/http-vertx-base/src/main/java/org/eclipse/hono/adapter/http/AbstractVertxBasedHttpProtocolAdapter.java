@@ -619,7 +619,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                 }).compose(delivery -> {
 
                     if (!ctx.response().closed()) {
-                        final CommandContext commandContext = CommandContext.get(ctx);
+                        final CommandContext commandContext = ctx.get(CommandContext.KEY_COMMAND_CONTEXT);
                         setResponsePayload(ctx.response(), commandContext, currentSpan);
                         ctx.addBodyEndHandler(ok -> {
                             LOG.trace("successfully processed [{}] message for device [tenantId: {}, deviceId: {}]",
@@ -655,7 +655,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
 
                     LOG.debug("cannot process [{}] message from device [tenantId: {}, deviceId: {}]",
                             endpointName, tenant, deviceId, t);
-                    final CommandContext commandContext = CommandContext.get(ctx);
+                    final CommandContext commandContext = ctx.get(CommandContext.KEY_COMMAND_CONTEXT);
                     if (commandContext != null) {
                         commandContext.release();
                     }
@@ -795,7 +795,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                                 commandContext.release();
                             } else {
                                 // put command context to routing context and notify
-                                commandContext.put(ctx);
+                                ctx.put(CommandContext.KEY_COMMAND_CONTEXT, commandContext);
                                 cancelCommandReceptionTimer(ctx);
                                 responseReady.tryComplete();
                             }

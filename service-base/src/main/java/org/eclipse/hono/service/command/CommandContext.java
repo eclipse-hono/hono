@@ -27,7 +27,6 @@ import org.slf4j.LoggerFactory;
 
 import io.opentracing.Span;
 import io.opentracing.log.Fields;
-import io.vertx.ext.web.RoutingContext;
 import io.vertx.proton.ProtonDelivery;
 import io.vertx.proton.ProtonHelper;
 import io.vertx.proton.ProtonReceiver;
@@ -84,28 +83,6 @@ public final class CommandContext extends MapBasedExecutionContext {
         Objects.requireNonNull(receiver);
         Objects.requireNonNull(currentSpan);
         return new CommandContext(command, delivery, receiver, currentSpan);
-    }
-
-    /**
-     * Retrieves the command context associated with a request.
-     *
-     * @param ctx The routing context for the request.
-     * @return The command context or {@code null} if the request has no command
-     * context associated with it.
-     * @throws NullPointerException if (routing) context is {@code null}.
-     */
-    public static CommandContext get(final RoutingContext ctx) {
-        return Objects.requireNonNull(ctx).get(KEY_COMMAND_CONTEXT);
-    }
-
-    /**
-     * Associates this command context with a request.
-     *
-     * @param ctx The routing context for the request.
-     * @throws NullPointerException if context is {@code null}.
-     */
-    public void put(final RoutingContext ctx) {
-        Objects.requireNonNull(ctx).put(KEY_COMMAND_CONTEXT, this);
     }
 
     /**
