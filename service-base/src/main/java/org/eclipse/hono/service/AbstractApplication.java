@@ -125,6 +125,15 @@ public class AbstractApplication implements ApplicationRunner {
             throw new IllegalStateException("no service factory has been configured");
         }
 
+        if (log.isInfoEnabled()) {
+            log.info("running on Java VM [version: {}, name: {}, vendor: {}, max memory: {}MB, processors: {}]",
+                    System.getProperty("java.version"),
+                    System.getProperty("java.vm.name"),
+                    System.getProperty("java.vm.vendor"),
+                    Runtime.getRuntime().maxMemory() >> 20,
+                    Runtime.getRuntime().availableProcessors());
+        }
+
         healthCheckServer = new HealthCheckServer(vertx, config);
 
         final Future<Void> future = deployRequiredVerticles(config.getMaxInstances())
@@ -144,7 +153,7 @@ public class AbstractApplication implements ApplicationRunner {
         final int startupTimeoutSeconds = config.getStartupTimeout();
 
         try {
-            log.debug("Waiting for {} seconds to start up", startupTimeoutSeconds);
+            log.debug("Waiting {} seconds for application to start up", startupTimeoutSeconds);
             started.get(startupTimeoutSeconds, TimeUnit.SECONDS);
         } catch (TimeoutException e) {
             log.error("startup timed out after {} seconds, shutting down ...", startupTimeoutSeconds);
