@@ -34,7 +34,7 @@ public class ClientConfigProperties extends AbstractConfig {
      * The default amount of milliseconds to wait for the remote peer's <em>attach</em>
      * frame during link establishment.
      */
-    public static final long DEFAULT_LINK_ESTABLISHMENT_TIMEOUT = 500L; //ms
+    public static final long DEFAULT_LINK_ESTABLISHMENT_TIMEOUT = 1000L; //ms
     /**
      * The default number of credits issued by the receiver side of a link.
      */

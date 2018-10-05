@@ -6,7 +6,7 @@ title = "Release Notes"
 
 ### Fixes & Enhancements
 
-* HonoClientImpl now waits a limited amount of time for the peer's *attach* frame during link establishment before considering the attempt to have failed. The time-out value (default is 500ms) can be configured using the *linkEstablishmentTimeout* property of `org.eclipse.hono.config.ClientConfigProperties`. See [Hono Client Configuration]({{< ref "/admin-guide/hono-client-configuration.md" >}}) for details.
+* HonoClientImpl now waits a limited amount of time for the peer's *attach* frame during link establishment before considering the attempt to have failed. The time-out value (default is 1000ms) can be configured using the *linkEstablishmentTimeout* property of `org.eclipse.hono.config.ClientConfigProperties`. See [Hono Client Configuration]({{< ref "/admin-guide/hono-client-configuration.md" >}}) for details.
 
 ## 0.8-M1_1
 
