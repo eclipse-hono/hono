@@ -74,31 +74,18 @@ When a device connected to the AMQP adapter wants to receive commands from the a
 * `control` for authenticated devices
 * `control/${tenant}/${device-id}` for unauthenticated devices
 
-Once the receiver link is opened, the AMQP adapter sends command messages to devices through the link. The `subject` property of the message contains the actual command to be executed on the device while the `request_id` application property contains the identifier used to correlate the command request with the response.
+Once the receiver link is opened, the AMQP adapter sends command messages to devices through the link. The `subject` property of the request message contains the actual command to be executed on the device.
 
-Devices can publish command response messages by opening an **anonymous** sender link (similar to how `telemetry` and `event` messages are published) using the following message address:
-
-* `control` (authenticated device)
-* `control/${tenant}/${device-id}` (unauthenticated device)
-
-The device should set the `request_id` application property and the `status` application property on the command response message sent over the sender link. The `status` application property should contain the outcome of executing the command on the device.
-
-**Command Request Message Properties**
-
-The following table shows the properties that are set on a command request message by the AMQP adapter.
-
-| Name            | Mandatory       | Location                 | Type        | Description |
-| :-------------- | :-------------: | :----------------------- | :---------- | :---------- |
-| *subject*       | yes             | *properties*             | *string*    | Contains the command name to be executed on a device. |
-| *request_id*    | yes             | *application-properties* | *string*    | The request identifier used to correlate the command request with the response. |
+If the command request is a *one-way command*, then the device need not publish a command response message. However, if the application expects a response, then devices should publish a response back to the application. If an **anonymous** sender link is already opened by the device (e.g for publishing `telemetry` or `events`), then the device can reuse that link to publish the command response message. Otherwise, the device should publish the response by opening an **anonymous** sender link. The device should set the message address, status and correlation-id properties of the response accordingly. Consult the table below for a list of properties that a device must set on a command response message.
 
 **Command Response Message Properties**
 
-The following table shows the properties that are set on a command response message by a client device.
+If the application expects a response (i.e the `reply-to` property is set), then the device should set the following properties on a command response message.
 
-| Name            | Mandatory       | Location                 | Type        | Description |
-| :-------------- | :-------------: | :----------------------- | :---------- | :---------- |
-| *status*        | yes             | *application-properties* | *string*    | The status code indicating the outcome of processing the command by the device. MUST be set by the device after executing the command. |
-| *request_id*    | yes             | *application-properties* | *string*    | The request identifier used to correlate the command request with the response. This identifier can be obtained from the properties of the command request message. |
+| Name              | Mandatory       | Location                 | Type        | Description |
+| :--------------   | :-------------: | :----------------------- | :---------- | :---------- |
+| *to*              | yes             | *properties*             | *string*    | MUST contain the address to which the command response should be published to, which is the value of the reply-to property of the command request message.|
+| *correlation-id*  | yes             | *properties*             | *string*    | MUST contain the identifier used to correlate the response with the original request. If the original request contains a correlation-id, then that value is used as the correlation-id for the response. Otherwise, the value of the message-id property is used instead. |
+| *status*          | yes             | *application-properties* | *string*    | The status code indicating the outcome of processing the command by the device. MUST be set by the device after executing the command. |
 
 ![Command & Control over AMQP Adapter](../command_control_concept_amqp.png) 
