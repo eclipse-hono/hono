@@ -14,8 +14,7 @@
  *******************************************************************************/
 
 /**
- * Jenkins pipeline script for nightly build of Hono master.
- * Checks GitHub repository every minute for changes.
+ * Jenkins pipeline script for nightly build (every night between 2 and 3 AM) of Hono master.
  *
  */
 
