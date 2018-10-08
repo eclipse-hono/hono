@@ -19,13 +19,41 @@ CONFIG=$SCRIPTPATH/../../config
 CERTS=$CONFIG/hono-demo-certs-jar
 NS=hono
 CREATE_OPTIONS="-l project=$NS --network $NS --detach=false"
+DEPLOY_ADAPTERS=YES
+COAP_ENABLED=NO
+
+# parse command line switches
+for i in "$@"
+do
+  case $i in
+    --no-adapter)
+    echo
+    echo "Disabling deployment of protocol adapters"
+    echo
+    DEPLOY_ADAPTERS=NO
+    ;;
+    --enable-coap)
+    if [ $DEPLOY_ADAPTERS = "YES" ] ; then
+      COAP_ENABLED=YES
+      echo
+      echo "Enabling deployment of experimental CoAP protocol adapter"
+      echo
+    else
+      echo
+      echo "Cannot enable CoAP adapter if adapters are disabled"
+      echo
+    fi
+    ;;
+    *)
+      echo "Ignoring unknown option: $i"
+    ;;
+  esac
+done
 
 # --no-adapter deployment, without adapters and optional components (e.g. grafana)
-if [ "$1" = "--no-adapter" ] ; then
-  DEPLOYMENT=0
+if [ $DEPLOY_ADAPTERS = "NO" ] ; then
   echo DEPLOYING ECLIPSE HONO WITHOUT ADAPTERS TO DOCKER SWARM
 else
-  DEPLOYMENT=1
   echo DEPLOYING ECLIPSE HONO TO DOCKER SWARM
 fi
 
@@ -82,7 +110,7 @@ echo ... done
 
 echo
 echo Deploying Qpid Dispatch Router ...
-if [ $DEPLOYMENT = "1" ]
+if [ $DEPLOY_ADAPTERS = "YES" ]
 then
 PORT_FORWARDS="-p 15671:5671 -p 15672:5672"
 else
@@ -153,7 +181,7 @@ docker service create $CREATE_OPTIONS --name hono-service-device-registry -p 256
   --mount type=volume,source=device-registry,target=/var/lib/hono/device-registry \
   ${docker.image.org-name}/hono-service-device-registry:${project.version}
 
-if [ $DEPLOYMENT = "1" ]
+if [ $DEPLOY_ADAPTERS = "YES" ]
 then
 echo
 echo Deploying Hono Messaging ...
@@ -254,6 +282,7 @@ docker service create $CREATE_OPTIONS --name hono-adapter-kura -p 1884:1883 -p 8
   ${docker.image.org-name}/hono-adapter-kura:${project.version}
 echo ... done
 
+if [ $COAP_ENABLED = "YES" ]; then
 echo
 # coap deduplicator requires currently a large heap ;-(
 echo Deploying Coap adapter ...
@@ -274,6 +303,7 @@ docker service create $CREATE_OPTIONS --name hono-adapter-coap-vertx -p 5683:568
   --env LOGGING_CONFIG=classpath:logback-spring.xml \
   ${docker.image.org-name}/hono-adapter-coap-vertx:${project.version}
 echo ... done
+fi
 
 fi
 
