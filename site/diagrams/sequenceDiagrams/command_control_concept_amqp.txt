@@ -1,0 +1,17 @@
+participant Device
+participant AMQP Adapter
+participant Application
+
+note over Device
+The device is connected and
+authenticated with TENANT/4711
+end note over
+Device->AMQP Adapter: 1. attach("receiver", "control")
+AMQP Adapter->Application: 2. transfer("event/TENANT","4711","ttd=-1")
+activate Application
+Application->AMQP Adapter: 3. transfer("control/TENANT/4711","light","ON")
+AMQP Adapter->Device: 4. "control///req/${reqId}/light":"ON"
+Device->AMQP Adapter: 5. "control///res/${reqId}/200":"lumen=100"
+AMQP Adapter->Application: 6. transfer("control/TENANT/4711/${replyId}","status=200","lumen=100")
+deactivate AMQP Adapter
+deactivate Application
