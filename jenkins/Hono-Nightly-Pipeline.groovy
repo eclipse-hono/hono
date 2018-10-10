@@ -24,7 +24,7 @@ node {
     properties([buildDiscarder(logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '1', daysToKeepStr: '', numToKeepStr: '3')),
                 pipelineTriggers([cron('TZ=Europe/Berlin \n # every night between 2 and 3 AM \n H 2 * * *')])])
     try {
-        utils.checkOutHonoRepoWithCredentials("master", "bebef3c5-da22-425c-8554-f62d0b3a9608", "ssh://git@github.com/eclipse/hono.git")
+        utils.checkOutHonoRepoMaster()
         nightlyBuild()
         utils.aggregateJunitResults()
         utils.captureCodeCoverageReport()

@@ -31,24 +31,26 @@ void checkOutHonoRepo(String branch) {
 }
 
 /**
- * Checks out the specified branch from hono github repo
- *
- * @param branch Branch to be checked out
- * @credentialsId credentailsId Id of stored login credentials
- */
-void checkOutHonoRepoWithCredentials(String branch, String credentialsId, String url) {
-    stage('Checkout') {
-        echo "Check out branch: $branch"
-        git branch: "$branch", credentialsId: "$credentialsId", url: "$url"
-    }
-}
-
-/**
  * Checks out the master branch from hono github repo
  *
  */
 void checkOutHonoRepoMaster() {
     checkOutHonoRepo("master")
+}
+
+/**
+ * Checks out the specified branch from git repo
+ *
+ * @param branch Branch to be checked out
+ * @credentialsId credentialsId Id of stored login credentials
+ * @url url of the repository
+ *
+ */
+void checkOutRepoWithCredentials(String branch, String credentialsId, String url) {
+    stage('Checkout') {
+        echo "Check out branch: $branch"
+        git branch: "$branch", credentialsId: "$credentialsId", url: "$url"
+    }
 }
 
 /**
