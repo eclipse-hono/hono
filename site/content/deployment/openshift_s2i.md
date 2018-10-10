@@ -30,7 +30,7 @@ document will be updated accordingly with the progress.
 In order to work through this example deployment you will need the OpenShift
 client tools installed. Please align the version of the client tools with
 the version of your OpenShift cluster. This guide was tested with
-OpenShift 3.9.0. It should work with older or newer versions as well, but that
+OpenShift 3.11.0. It should work with older or newer versions as well, but that
 is untested.
 
 ### Assumptions
@@ -244,76 +244,46 @@ directory `hono-site/content/deployment/openshift_s2i`.
 
 ## Setting up EnMasse
 
-This section describes how to install EnMasse, the messaging layer which
-Hono makes use of.
+This section describes how to install EnMasse, the messaging layer which Hono is
+based on.
 
-### Installation
+Start by downloading and unpacking EnMasse:
 
-Start by creating a new project using:
+    curl -LO https://github.com/EnMasseProject/enmasse/releases/download/0.24.0/enmasse-0.24.0.tgz
+    tar xzf enmasse-0.24.0.tgz
 
-    oc new-project enmasse --display-name='EnMasse Instance'
-
-Then download and unpack EnMasse:
-
-    curl -LO https://github.com/EnMasseProject/enmasse/releases/download/0.22.0/enmasse-0.22.0.tgz
-    tar xzf enmasse-0.22.0.tgz
-
-{{% note title="Newer versions" %}}
-Newer versions of EnMasse might work as well, or might require some changes to
-the deployment guide. Unless you explicitly want to try out a different version
-it is recommended to stick to the version mentioned in this tutorial.
+{{% note title="Other versions" %}}
+Other versions of EnMasse might work as well, but are untested by this deployment
+guide. Unless you explicitly want to try out a different version, it is
+recommended to use to the version documented in this tutorial.
 {{% /note %}}
 
-    ./enmasse-0.22.0/deploy.sh -n enmasse -a standard
+First switch to a user with *cluster admin* privileges, e.g.:
+
+    oc login -u admin
+
+Then create a new project:
+
+    oc new-project enmasse-infra --display-name='EnMasse'
+
+And perform the deployment:
+
+    oc apply -f enmasse-0.24.0/install/bundles/enmasse-with-standard-authservice
 
 Wait for the admin console to completely start up. You can check this with
 the following command:
 
-    oc get deploy/api-server
+    oc get deploy/api-server deploy/keycloak
 
 Verify that the "AVAILABLE" column shows "1":
 
     NAME         DESIRED   CURRENT   UP-TO-DATE   AVAILABLE   AGE
     api-server   1         1         1            1           1m
+    keycloak     1         1         1            1           1m
 
-### Cluster certificate
+Finally switch back to your normal application user:
 
-After the service is ready, we need to reconfigure the routes of EnMasse
-to use the cluster wide certificate instead its self-signed.
-
-First extract the certificates so that we can use this for the OpenShift routes
-to validate the endpoints:
-
-    mkdir -p certs/{console,messaging,api-server}
-    oc extract secret/external-certs-console --to=certs/console --confirm
-    oc extract secret/external-certs-messaging --to=certs/messaging --confirm
-    oc extract secret/api-server-cert --to=certs/api-server --confirm
-
-Now delete and re-creates the routes, re-encrypting the traffic. This will use
-the certificates extracted above to validate the connection from the
-OpenShift router to the endpoint, and then re-encrypt the traffic to the outside
-using the cluster wide certificate:
-
-    oc delete route/restapi route/console route/messaging route/amqp-wss
-    oc create route reencrypt console --service=console --dest-ca-cert=certs/console/ca.crt
-    oc create route reencrypt restapi --service=api-server --dest-ca-cert=certs/api-server/tls.crt
-    oc create route reencrypt amqp-wss --service=messaging --port=https --dest-ca-cert=certs/messaging/ca.crt
-
-**Note:** You may want to skip this step if you prefer to use the EnMasse
-generated certificates.
-
-### Create messaging resources
-
-Next you will need to configure EnMasse to provide the required resources:
-
-    curl -X POST -T addresses.json -H "content-type: application/json" https://$(oc -n enmasse get route restapi -o jsonpath='{.spec.host}')/apis/enmasse.io/v1alpha1/namespaces/enmasse/addressspaces/default/addresses
-
-This will create messaging resources for the `DEFAULT_TENANT` only. If you
-need more tenants, then adapt the file `addresses.json` accordingly.
-
-    curl -X POST -T resources/consumer-user-DEFAULT_TENTANT.json -H "content-type: application/json" https://$(oc -n enmasse get route restapi -o jsonpath='{.spec.host}')/apis/user.enmasse.io/v1alpha1/namespaces/enmasse/messagingusers
-    curl -X POST -T resources/downstream-user-http.json -H "content-type: application/json" https://$(oc -n enmasse get route restapi -o jsonpath='{.spec.host}')/apis/user.enmasse.io/v1alpha1/namespaces/enmasse/messagingusers
-    curl -X POST -T resources/downstream-user-mqtt.json -H "content-type: application/json" https://$(oc -n enmasse get route restapi -o jsonpath='{.spec.host}')/apis/user.enmasse.io/v1alpha1/namespaces/enmasse/messagingusers
+    oc login -u developer
 
 ## Setting up Hono
 
@@ -326,7 +296,22 @@ Create the InfluxDB ConfigMap from the local file:
     oc create configmap influxdb-config --from-file="../influxdb.conf"
     oc label configmap/influxdb-config app=hono-metrics
 
-Then process and execute the main Hono template:
+Next create the EnMasse address space to use:
+
+    oc create -f hono-address-space.yml
+
+Before proceeding to the next step, ensure that the address space has been
+created and is ready. Executing the following command should contain
+`Is Ready: true` in the status section:
+
+    oc describe addressspace/default
+
+You can also quickly check for `isReady` with JSON path query:
+
+    oc get addressspace/default -o jsonpath='{.status.isReady}'
+
+Then process and execute the main Hono template in order to deploy the
+Hono services:
 
     oc process -f hono-template.yml | oc create -f -
 
@@ -335,7 +320,6 @@ templates. If you want to specify template parameters from the command line
 use the following syntax:
 
     oc process -f hono-template.yml \
-      -p ENMASSE_NAMESPACE=enmasse \
       -p GIT_REPOSITORY=https://github.com/your/hono.git \
       -p GIT_BRANCH=0.7.x| oc create -f -
 
@@ -348,6 +332,22 @@ the deployment template.
 It is recommended that when you execute the guide from an alternate branch
 (e.g. `0.7.x`) that you also pass the same branch as `GIT_BRANCH` to the
 template.
+{{% /note %}}
+
+And register the template for creating new Hono tenants. This only registers
+the template, but does not create a new tenant yet:
+
+    oc create -f hono-tenant-template.yml
+
+Next you will need to create a tenant, execute the following command to create
+the *default tenant*:
+
+    oc process hono-tenant HONO_TENANT_NAME=DEFAULT_TENANT RESOURCE_NAME=defaulttenant CONSUMER_USER_NAME=consumer CONSUMER_USER_PASSWORD="$(echo -n verysecret | base64)"| oc create -f -
+
+{{% note title="Creating tenants" %}}
+Creating a new tenant using the template currently only creates the necessary
+resources in EnMasse for the tenant. It does not create the tenant in the Hono
+device registry.
 {{% /note %}}
 
 ## Setting up Grafana
@@ -392,7 +392,7 @@ to 10.000 devices per tenant:
 
     oc env -n hono dc/hono-service-device-registry HONO_REGISTRY_SVC_MAX_DEVICES_PER_TENANT=10000
 
-## Adding Jaeger support
+### Adding Jaeger support
 
 By default Hono has the capability to work with "open tracing", and it also
 provides a build profile for enabling the "Jaeger" implementation of
@@ -401,7 +401,7 @@ provides a build profile for enabling the "Jaeger" implementation of
 There are a few manual steps required to modify the default Hono deployment
 for OpenShift in order to enable this profile.
 
-### Enable the build profile
+#### Enable the build profile
 
 The Hono profile needs to be enabled, to include the Jaeger components in the
 S2I builds.
@@ -421,7 +421,7 @@ Modify the Hono templates to add the `jaeger` profile in the builds. e.g.:
 
 Be sure to trigger new builds if you already built the container images before.
 
-### Add the Jaeger agent sidecar
+#### Add the Jaeger agent sidecar
 
 In order to add capture output from the Jaeger client and forward it to the
 main Jaeger application, a Jaeger agent is required. This will be deployed
@@ -613,12 +613,12 @@ should use the Jaeger agent:
 
 The important parts are only the modifications, which add a new image stream
 trigger, and also add the additional agent container to the deployment. This
-example assumes that the jaeger collector will be available at the hostname
+example assumes that the Jaeger collector will be available at the hostname
 `jaeger-collector.jaeger.svc`. This will be true if you follow the next
 section on deploying a development-only Jaeger cluster. Should you deploy
 Jaeger differently, then this hostname and/or port may be different.
 
-### Deploy Jaeger
+#### Deploy Jaeger
 
 Setting up a full Jaeger cluster is a complicated task. However there is a good
 tutorial at the Jaeger repository at: https://github.com/jaegertracing/jaeger-openshift
@@ -631,7 +631,7 @@ oc new-project jaeger
 oc process -f https://raw.githubusercontent.com/jaegertracing/jaeger-openshift/master/all-in-one/jaeger-all-in-one-template.yml | oc create -f -
 ~~~
 
-Please be aware of the official note in this [documentation](https://github.com/jaegertracing/jaeger-openshift#development-setup):
+Please be aware of the official note in the [documentation](https://github.com/jaegertracing/jaeger-openshift#development-setup):
 
 > This template uses an in-memory storage with a limited functionality for local testing and development. Do not use this template in production environments.
 
@@ -649,14 +649,19 @@ All examples in the following sub-sections assume that you are located in the
 
 ### Extract certificates
 
-In order to connect the external consumer to EnMasse, we need to use a
-proper SSL certificate. We can extract one from the OpenShift using the
-following command:
+In order to connect the external consumer to Enmasse, we need to extract the
+certificate which messaging enpoint of EnMasse uses. This allows to validate
+the connection to the endpoint and encrypt the communication using TLS.
 
-    oc extract secret/external-certs-messaging --to=target/config/hono-demo-certs-jar -n enmasse
+The following command extracts the certificate of the endpoint (not the key):
 
-This will create two files `tls.crt` and `tls.key` in the directory
-`target/keys`.
+    oc -n hono get addressspace default -o jsonpath={.status.endpointStatuses[?(@.name==\'messaging\')].cert} | base64 -d > target/config/hono-demo-certs-jar/tls.crt
+
+This will retrieve the certificate, decode the base64 encoded string and
+store it in the file `target/config/hono-demo-certs-jar/tls.crt`. Although
+the file is a "demo cert" as the path might indicate, it still is stored in
+the same location in order to align the with the other example commands of the
+Hono documentation.
 
 ### Running consumer
 
@@ -665,7 +670,7 @@ guide, data produced by devices is usually consumed by downstream applications
 which connect directly to the router network service. You can start the client
 from the `cli` folder as follows:
 
-    mvn spring-boot:run -Drun.arguments=--hono.client.host=$(oc get -n enmasse route messaging --template='{{.spec.host}}'),--hono.client.port=443,--hono.client.username=consumer,--hono.client.password=verysecret,--hono.client.trustStorePath=target/config/hono-demo-certs-jar/tls.crt
+    mvn spring-boot:run -Drun.arguments=--hono.client.host=$(oc -n hono get addressspace default -o jsonpath={.status.endpointStatuses[?(@.name==\'messaging\')].externalHost}),--hono.client.port=443,--hono.client.username=consumer,--hono.client.password=verysecret,--hono.client.trustStorePath=target/config/hono-demo-certs-jar/tls.crt
 
 ### Register device
 

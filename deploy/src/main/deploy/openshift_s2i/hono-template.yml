@@ -36,10 +36,21 @@ parameters:
   required:        true
   generate:        expression
   from:            '[a-zA-Z0-9]{32}'
-- name:         ENMASSE_NAMESPACE
-  description:     The name of the project/namespace EnMasse is deployed to.
+- name:         ENMASSE_ADDRESS_SPACE
+  displayName:     Address space name
+  description:     The name of the EnMasse address space.
+  value:           default
   required:        true
-  value:           enmasse
+- name:         ENMASSE_ADDRESS_SPACE_PROJECT_NAME
+  displayName:     Address space project
+  description:     The name of the project which hosts the address space.
+  value:           hono
+  required:        true
+- name:         ENMASSE_PROJECT_NAME
+  displayName:     EnMasse project name
+  description:     The name of the project which runs EnMasse.
+  value:           enmasse-infra
+  required:        true
 - name:         INFLUXDB_STORAGE_SIZE
   displayName:     InfluxDB storage size
   description:     The size of the persistent volume claim for the Influx DB.
@@ -68,8 +79,8 @@ objects:
   metadata:
     name: hono-configuration
   data:
-    downstream.host: messaging.${ENMASSE_NAMESPACE}.svc
     downstream.port: "5672"
+    downstream.host: "messaging-hono-${ENMASSE_ADDRESS_SPACE}.${ENMASSE_PROJECT_NAME}.svc"
 
 - kind: Secret
   apiVersion: v1
@@ -419,6 +430,22 @@ objects:
     registry.properties: |-
       username: mqtt-adapter@HONO
       password: mqtt-secret
+
+- kind: MessagingUser
+  apiVersion: user.enmasse.io/v1alpha1
+  metadata:
+    name: ${ENMASSE_ADDRESS_SPACE}.mqtt
+  spec:
+    username: mqtt
+    authentication:
+      type: password
+      password: bXF0dC1zZWNyZXQ=
+    authorization:
+    - addresses:
+      - "*"
+      operations:
+      - send
+      - recv
 
 - kind: ConfigMap
   apiVersion: v1
@@ -771,6 +798,22 @@ objects:
     registry.properties: |-
       username: http-adapter@HONO
       password: http-secret
+
+- kind: MessagingUser
+  apiVersion: user.enmasse.io/v1alpha1
+  metadata:
+    name: ${ENMASSE_ADDRESS_SPACE}.http
+  spec:
+    username: http
+    authentication:
+      type: password
+      password: aHR0cC1zZWNyZXQ=
+    authorization:
+    - addresses:
+      - "*"
+      operations:
+      - send
+      - recv
 
 - kind: ConfigMap
   apiVersion: v1
@@ -1136,6 +1179,14 @@ objects:
           svc:
             filename: /var/lib/hono/device-registry/tenants.json
             saveToFile: true
+        metrics:
+          legacy: false
+      management:
+        metrics:
+          enabled: false
+          export:
+            graphite:
+              enabled: false
 
     logback-spring.xml: |+
         <?xml version="1.0" encoding="UTF-8"?>
@@ -1255,8 +1306,6 @@ objects:
                 fieldPath: metadata.namespace
           - name: HONO_AUTH_HOST
             value: hono-service-auth.$(KUBERNETES_NAMESPACE).svc
-          - name: MANAGEMENT_METRICS_EXPORT_GRAPHITE_HOST
-            value: influxdb.$(KUBERNETES_NAMESPACE).svc
           - name: HONO_REGISTRY_SVC_SAVE_TO_FILE
             value: "true"
           - name: HONO_REGISTRY_SVC_MAX_DEVICES_PER_TENANT
@@ -1444,6 +1493,14 @@ objects:
             insecurePortBindAddress: 0.0.0.0
         svc:
           permissionsPath: file:///etc/config/permissions.json
+        metrics:
+          legacy: false
+      management:
+        metrics:
+          enabled: false
+          export:
+            graphite:
+              enabled: false
 
     permissions.json: |+
       {
@@ -1616,8 +1673,6 @@ objects:
             value: authentication-impl
           - name: LOGGING_CONFIG
             value: file:///etc/config/logback-spring.xml
-          - name: MANAGEMENT_METRICS_EXPORT_GRAPHITE_HOST
-            value: influxdb.$(KUBERNETES_NAMESPACE).svc
           - name: HONO_AUTH_SVC_SIGNING_SHARED_SECRET
             valueFrom:
               secretKeyRef:
