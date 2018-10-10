@@ -13,15 +13,13 @@
 
 package org.eclipse.hono.tests.registry;
 
-import io.vertx.core.Vertx;
-import io.vertx.ext.unit.TestContext;
-import io.vertx.ext.unit.junit.VertxUnitRunner;
-import io.vertx.proton.ProtonClientOptions;
+import java.net.HttpURLConnection;
+import java.util.concurrent.TimeUnit;
+
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.Constants;
-import org.eclipse.hono.util.RegistrationConstants;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -30,24 +28,16 @@ import org.junit.Test;
 import org.junit.rules.Timeout;
 import org.junit.runner.RunWith;
 
-import java.net.HttpURLConnection;
-import java.util.concurrent.TimeUnit;
+import io.vertx.core.Vertx;
+import io.vertx.ext.unit.TestContext;
+import io.vertx.ext.unit.junit.VertxUnitRunner;
+import io.vertx.proton.ProtonClientOptions;
 
 /**
  * Tests verifying the behavior of the Device Registry component's Device Registration AMQP endpoint.
  */
 @RunWith(VertxUnitRunner.class)
-public class DeviceRegistrationAmqpIT {
-
-    private static final String DEVICE_ID_ENABLED = "4711";
-    private static final String DEVICE_ID_DISABLED = "disabled-device";
-    private static final String NON_EXISTING_DEVICE_ID = "non-existing-device";
-    private static final String NON_EXISTING_GATWAY_ID = "non-existing-gateway";
-    static final String DEVICE_ID_ENABLED_WITH_ENABLED_GATEWAY = "4712";
-    static final String GATEWAY_ID_ENABLED = "gw-1";
-    static final String GATEWAY_ID_ENABLED_2 = "gw-3";
-    static final String DEVICE_ID_ENABLED_WITH_DISABLED_GATEWAY = "4713";
-    static final String GATEWAY_ID_DISABLED = "gw-2";
+public class DeviceRegistrationOptionalAmqpIT {
 
     private static final Vertx vertx = Vertx.vertx();
 
@@ -98,63 +88,48 @@ public class DeviceRegistrationAmqpIT {
     }
 
     /**
-     * Verifies that the registry succeeds a request to assert a
-     * device's registration status.
+     * Verifies that the registry succeeds a request to assert the
+     * registration status of a device that is connected via a gateway.
      *
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testAssertRegistrationSucceedsForDevice(final TestContext ctx) {
-
-        deviceRegistryclient
-                .getOrCreateRegistrationClient(Constants.DEFAULT_TENANT)
-                .compose(client -> client.assertRegistration(DEVICE_ID_ENABLED))
-                .setHandler(ctx.asyncAssertSuccess(resp -> {
-                    ctx.assertEquals(DEVICE_ID_ENABLED, resp.getString(RegistrationConstants.FIELD_PAYLOAD_DEVICE_ID));
-                    ctx.assertNotNull(resp.getString(RegistrationConstants.FIELD_ASSERTION));
-                }));
-    }
-
-    /**
-     * Verifies that the registry fails to assert a non-existing device's
-     * registration status with a 404 error code.
-     *
-     * @param ctx The vert.x test context.
-     */
-    @Test
-    public void testAssertRegistrationFailsForUnknownDevice(final TestContext ctx) {
-        deviceRegistryclient.getOrCreateRegistrationClient(Constants.DEFAULT_TENANT)
-            .compose(client -> client.assertRegistration(NON_EXISTING_DEVICE_ID))
-            .setHandler(ctx.asyncAssertFailure(t -> assertErrorCode(t, HttpURLConnection.HTTP_NOT_FOUND, ctx)));
-    }
-
-    /**
-     * Verifies that the registry fails to assert a disabled device's
-     * registration status with a 404 error code.
-     *
-     * @param ctx The vert.x test context.
-     */
-    @Test
-    public void testAssertRegistrationFailsForDisabledDevice(final TestContext ctx) {
+    public void testAssertRegistrationSucceedsForGateway(final TestContext ctx) {
 
         deviceRegistryclient.getOrCreateRegistrationClient(Constants.DEFAULT_TENANT)
-            .compose(ok -> deviceRegistryclient.getOrCreateRegistrationClient(Constants.DEFAULT_TENANT))
-            .compose(client -> client.assertRegistration(DEVICE_ID_DISABLED))
-            .setHandler(ctx.asyncAssertFailure(t -> assertErrorCode(t, HttpURLConnection.HTTP_NOT_FOUND, ctx)));
+            .compose(client -> client.assertRegistration(DeviceRegistrationAmqpIT.DEVICE_ID_ENABLED_WITH_ENABLED_GATEWAY,
+                    DeviceRegistrationAmqpIT.GATEWAY_ID_ENABLED))
+            .setHandler(ctx.asyncAssertSuccess());
     }
 
     /**
-     * Verifies that the registry fails a non-existing gateway's request to assert a
+     * Verifies that the registry fails a disabled gateway's request to assert a
      * device's registration status with a 403 error code.
      *
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testAssertRegistrationFailsForNonExistingGateway(final TestContext ctx) {
+    public void testAssertRegistrationFailsForDisabledGateway(final TestContext ctx) {
 
         deviceRegistryclient.getOrCreateRegistrationClient(Constants.DEFAULT_TENANT)
-                .compose(client -> client.assertRegistration(DEVICE_ID_ENABLED, NON_EXISTING_GATWAY_ID))
-                .setHandler(ctx.asyncAssertFailure(t -> assertErrorCode(t, HttpURLConnection.HTTP_FORBIDDEN, ctx)));
+            .compose(client -> client.assertRegistration(DeviceRegistrationAmqpIT.DEVICE_ID_ENABLED_WITH_DISABLED_GATEWAY,
+                    DeviceRegistrationAmqpIT.GATEWAY_ID_DISABLED))
+            .setHandler(ctx.asyncAssertFailure(t -> assertErrorCode(t, HttpURLConnection.HTTP_FORBIDDEN, ctx)));
+    }
+
+    /**
+     * Verifies that the registry fails a gateway's request to assert a
+     * device's registration status for which it is not authorized with a 403 error code.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testAssertRegistrationFailsForUnauthorizedGateway(final TestContext ctx) {
+
+        deviceRegistryclient.getOrCreateRegistrationClient(Constants.DEFAULT_TENANT)
+            .compose(client -> client.assertRegistration(DeviceRegistrationAmqpIT.DEVICE_ID_ENABLED_WITH_ENABLED_GATEWAY,
+                    DeviceRegistrationAmqpIT.GATEWAY_ID_ENABLED_2))
+            .setHandler(ctx.asyncAssertFailure(t -> assertErrorCode(t, HttpURLConnection.HTTP_FORBIDDEN, ctx)));
     }
 
     private static void assertErrorCode(final Throwable error, final int expectedErrorCode, final TestContext ctx) {
@@ -162,4 +137,3 @@ public class DeviceRegistrationAmqpIT {
         ctx.assertEquals(expectedErrorCode, ((ServiceInvocationException) error).getErrorCode());
     }
 }
-
