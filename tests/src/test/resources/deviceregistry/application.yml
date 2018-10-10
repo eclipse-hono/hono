@@ -18,6 +18,8 @@ hono:
       insecurePortEnabled: true
       insecurePortBindAddress: 0.0.0.0
     svc:
+      filename: /etc/hono/device-identities.json
+      saveToFile: false
       signing:
         sharedSecret: sdgfsdafazufgsdafjhfgsdajfgwhriojsdafjlksdhfgsa8fg452368gdf
   credentials:
@@ -40,4 +42,4 @@ management:
     export:
       graphite:
         enabled: false
-    
+
