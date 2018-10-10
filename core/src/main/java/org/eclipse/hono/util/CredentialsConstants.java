@@ -52,9 +52,21 @@ public final class CredentialsConstants extends RequestResponseApiConstants {
     public static final String SPECIFIER_WILDCARD                = "*";
 
     /**
+     * The name of the BCrypt hash function.
+     */
+    public static final String HASH_FUNCTION_BCRYPT              = "bcrypt";
+    /**
+     * The name of the SHA-256 hash function.
+     */
+    public static final String HASH_FUNCTION_SHA256              = "sha-256";
+    /**
+     * The name of the SHA-512 hash function.
+     */
+    public static final String HASH_FUNCTION_SHA512              = "sha-512";
+    /**
      * The name of the default hash function to use for hashed passwords if not set explicitly.
      */
-    public static final String DEFAULT_HASH_FUNCTION             ="sha-256";
+    public static final String DEFAULT_HASH_FUNCTION             = HASH_FUNCTION_SHA256;
     /**
      * The vert.x event bus address to which inbound credentials messages are published.
      */

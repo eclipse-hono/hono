@@ -112,7 +112,8 @@ public class UsernamePasswordCredentialsTest {
 
         // GIVEN a secret on record that uses sha-512 as the hash function
         final byte[] salt = "TheSalt".getBytes(StandardCharsets.UTF_8);
-        final JsonObject candidateSecret = CredentialsObject.hashedPasswordSecret(TEST_PASSWORD, "sha-512", null, null, salt);
+        final JsonObject candidateSecret = CredentialsObject.hashedPasswordSecret(
+                TEST_PASSWORD, CredentialsConstants.HASH_FUNCTION_SHA512, null, null, salt);
 
         // WHEN a device provides matching credentials
         final UsernamePasswordCredentials credentials = UsernamePasswordCredentials.create(TEST_USER_OTHER_TENANT, TEST_PASSWORD, false);
@@ -150,7 +151,8 @@ public class UsernamePasswordCredentialsTest {
     public void testMatchesCredentialsFailsForNonMatchingPassword() {
 
         // GIVEN a secret on record that uses sha-512 as the hash function
-        final JsonObject candidateSecret = CredentialsObject.hashedPasswordSecret(TEST_PASSWORD, "sha-512", Instant.now(), null, null);
+        final JsonObject candidateSecret = CredentialsObject.hashedPasswordSecret(TEST_PASSWORD,
+                CredentialsConstants.HASH_FUNCTION_SHA512, Instant.now(), null, null);
 
         // WHEN a device provides non-matching credentials
         final UsernamePasswordCredentials credentials = UsernamePasswordCredentials.create(TEST_USER_OTHER_TENANT, "wrongpassword", false);

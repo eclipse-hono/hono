@@ -25,6 +25,7 @@ import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.CredentialsClient;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.config.ServiceConfigProperties;
+import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsObject;
 import org.junit.Before;
 import org.junit.Rule;
@@ -51,7 +52,7 @@ public class UsernamePasswordAuthProviderTest {
             "4711",
             "device",
             "pwd",
-            "sha-256",
+            CredentialsConstants.HASH_FUNCTION_SHA256,
             null,
             null,
             null);

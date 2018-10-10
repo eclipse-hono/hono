@@ -500,7 +500,7 @@ public class CredentialsHttpIT {
 
     private static JsonObject newHashedPasswordCredentials(final String deviceId, final String authId) {
         return JsonObject.mapFrom(CredentialsObject.fromHashedPassword(deviceId, authId,
-                "secret", "sha-512", null, null, null));
+                "secret", CredentialsConstants.HASH_FUNCTION_SHA512, null, null, null));
     }
 
     private static JsonObject newPskCredentials(final String deviceId, final String authId) {

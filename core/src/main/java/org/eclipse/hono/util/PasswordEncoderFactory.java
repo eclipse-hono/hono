@@ -26,6 +26,9 @@ import java.util.Map;
  */
 public class PasswordEncoderFactory {
 
+    /**
+     * Creates a new factory.
+     */
     protected PasswordEncoderFactory() {
     }
 
@@ -35,13 +38,13 @@ public class PasswordEncoderFactory {
      * @return delegating password encoder
      */
     public static PasswordEncoder createDelegatingPasswordEncoder() {
-        final String encodingId = "sha-256";
+        final String encodingId = CredentialsConstants.HASH_FUNCTION_SHA256;
         final Map<String, PasswordEncoder> encoders = new HashMap<String, PasswordEncoder>();
         encoders.put(encodingId, new MessageDigestPasswordEncoder("SHA-256"));
         encoders.put("pbkdf2", new Pbkdf2PasswordEncoder());
         encoders.put("scrypt", new SCryptPasswordEncoder());
-        encoders.put("bcrypt", new BCryptPasswordEncoder());
-        encoders.put("sha-512", new MessageDigestPasswordEncoder("SHA-512"));
+        encoders.put(CredentialsConstants.HASH_FUNCTION_BCRYPT, new BCryptPasswordEncoder());
+        encoders.put(CredentialsConstants.HASH_FUNCTION_SHA512, new MessageDigestPasswordEncoder("SHA-512"));
 
         return new DelegatingPasswordEncoder(encodingId, encoders);
     }

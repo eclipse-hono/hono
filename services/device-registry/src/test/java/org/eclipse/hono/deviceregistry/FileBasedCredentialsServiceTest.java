@@ -237,7 +237,7 @@ public class FileBasedCredentialsServiceTest {
         when(fileSystem.existsBlocking(FILE_NAME)).thenReturn(Boolean.TRUE);
         final Async add = ctx.async(2);
         final CredentialsObject hashedPassword = CredentialsObject.fromHashedPassword(
-                "4700", "bumlux", "secret", "sha-512", null, null, null);
+                "4700", "bumlux", "secret", CredentialsConstants.HASH_FUNCTION_SHA512, null, null, null);
         final CredentialsObject psk = CredentialsObject.fromPresharedKey(
                 "4711", "sensor1", "sharedkey".getBytes(StandardCharsets.UTF_8), null, null);
         svc.add(

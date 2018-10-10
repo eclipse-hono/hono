@@ -288,7 +288,7 @@ public class CredentialsAmqpIT {
         assertNotNull(firstSecret);
 
         final String hashFunction = firstSecret.getString(CredentialsConstants.FIELD_SECRETS_HASH_FUNCTION);
-        assertThat(hashFunction, is("sha-512"));
+        assertThat(hashFunction, is(CredentialsConstants.HASH_FUNCTION_SHA512));
 
         final String salt = firstSecret.getString(CredentialsConstants.FIELD_SECRETS_SALT);
         assertNotNull(salt);
@@ -299,7 +299,8 @@ public class CredentialsAmqpIT {
         assertNotNull(pwdHash);
         final byte[] decodedPassword = Base64.getDecoder().decode(pwdHash);
 
-        final byte[] hashedPassword = Base64.getDecoder().decode(CredentialsObject.getHashedPassword("sha-512", CREDENTIALS_PASSWORD_SALT, CREDENTIALS_USER_PASSWORD));
+        final byte[] hashedPassword = Base64.getDecoder().decode(CredentialsObject.getHashedPassword(
+                CredentialsConstants.HASH_FUNCTION_SHA512, CREDENTIALS_PASSWORD_SALT, CREDENTIALS_USER_PASSWORD));
         // check if the password is the hashed version of "hono-secret"
         assertThat(hashedPassword, is(decodedPassword));
     }

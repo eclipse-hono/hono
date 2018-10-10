@@ -630,7 +630,8 @@ public final class DeviceRegistryHttpClient {
             .compose(ok -> registerDevice(tenant.getTenantId(), deviceId, data))
             .compose(ok -> {
                 final CredentialsObject credentialsSpec =
-                        CredentialsObject.fromHashedPassword(deviceId, deviceId, password, "sha-512", null, null, null);
+                        CredentialsObject.fromHashedPassword(deviceId, deviceId, password,
+                                CredentialsConstants.HASH_FUNCTION_SHA512, null, null, null);
                 return addCredentials(tenant.getTenantId(), JsonObject.mapFrom(credentialsSpec));
             });
     }
