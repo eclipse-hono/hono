@@ -39,6 +39,21 @@ void checkOutHonoRepoMaster() {
 }
 
 /**
+ * Checks out the specified branch from git repo
+ *
+ * @param branch Branch to be checked out
+ * @credentialsId credentialsId Id of stored login credentials
+ * @url url of the repository
+ *
+ */
+void checkOutRepoWithCredentials(String branch, String credentialsId, String url) {
+    stage('Checkout') {
+        echo "Check out branch: $branch"
+        git branch: "$branch", credentialsId: "$credentialsId", url: "$url"
+    }
+}
+
+/**
  * Build with maven (with jdk1.8.0-latest and apache-maven-latest as configured in 'Global Tool Configuration' in Jenkins).
  *
  */
