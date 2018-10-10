@@ -23,6 +23,7 @@ hono:
   credentials:
     svc:
       filename: /etc/hono/credentials.json
+      maxBcryptIterations: ${max.bcrypt.iterations}
       saveToFile: false
   tenant:
     svc:

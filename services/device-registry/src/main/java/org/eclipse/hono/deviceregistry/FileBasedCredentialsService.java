@@ -574,4 +574,9 @@ public final class FileBasedCredentialsService extends CompleteBaseCredentialsSe
     public String toString() {
         return String.format("%s[filename=%s]", FileBasedCredentialsService.class.getSimpleName(), getConfig().getFilename());
     }
+
+    @Override
+    protected int getMaxBcryptIterations() {
+        return getConfig().getMaxBcryptIterations();
+    }
 }

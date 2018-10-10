@@ -13,7 +13,6 @@
 
 package org.eclipse.hono.deviceregistry;
 
-
 /**
  * Configuration properties for Hono's credentials API as own server.
  *
@@ -25,6 +24,7 @@ public final class FileBasedCredentialsConfigProperties extends AbstractFileBase
      */
     private static final String DEFAULT_CREDENTIALS_FILENAME = "/var/lib/hono/device-registry/credentials.json";
 
+    private int maxBcryptIterations = 10;
 
     /**
      * {@inheritDoc}
@@ -32,5 +32,34 @@ public final class FileBasedCredentialsConfigProperties extends AbstractFileBase
     @Override
     protected String getDefaultFileName() {
         return DEFAULT_CREDENTIALS_FILENAME;
+    }
+
+    /**
+     * Gets the maximum number of iterations to use for bcrypt
+     * password hashes.
+     * <p>
+     * The default value of this property is 10.
+     * 
+     * @return The maximum number.
+     */
+    public int getMaxBcryptIterations() {
+        return maxBcryptIterations;
+    }
+
+    /**
+     * Sets the maximum number of iterations to use for bcrypt
+     * password hashes.
+     * <p>
+     * The default value of this property is 10.
+     * 
+     * @param iterations The maximum number.
+     * @throws IllegalArgumentException if iterations is &lt; 4 or &gt; 31.
+     */
+    public void setMaxBcryptIterations(final int iterations) {
+        if (iterations < 4 || iterations > 31) {
+            throw new IllegalArgumentException("iterations must be > 3 and < 32");
+        } else {
+            maxBcryptIterations = iterations;
+        }
     }
 }

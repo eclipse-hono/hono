@@ -32,6 +32,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
 import org.junit.runner.RunWith;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
@@ -152,6 +153,33 @@ public class CredentialsHttpIT {
                 TENANT,
                 hashedPasswordCredentials,
                 "application/x-www-form-urlencoded",
+                HttpURLConnection.HTTP_BAD_REQUEST).setHandler(context.asyncAssertSuccess());
+    }
+
+    /**
+     * Verifies that the service returns a 400 status code for an add credentials request with
+     * hashed password credentials that use a BCrypt hash with more than the configured
+     * max iterations.
+     * 
+     * @param context The vert.x test context.
+     */
+    @Test
+    public void testAddCredentialsFailsForBCryptWithTooManyIterations(final TestContext context)  {
+
+        // GIVEN a hashed password using bcrypt with more than the configured max iterations
+        final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(IntegrationTestSupport.MAX_BCRYPT_ITERATIONS + 1);
+        final CredentialsObject credentials = CredentialsObject.fromHashedPassword(
+                deviceId,
+                deviceId,
+                encoder.encode("thePassword"),
+                CredentialsConstants.HASH_FUNCTION_BCRYPT,
+                null, null, null);
+
+        // WHEN adding the credentials
+        registry.addCredentials(
+                TENANT,
+                JsonObject.mapFrom(credentials),
+                // THEN the request fails with 400
                 HttpURLConnection.HTTP_BAD_REQUEST).setHandler(context.asyncAssertSuccess());
     }
 

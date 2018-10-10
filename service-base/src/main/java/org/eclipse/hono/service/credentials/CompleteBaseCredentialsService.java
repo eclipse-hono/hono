@@ -25,6 +25,8 @@ import org.eclipse.hono.util.EventBusMessage;
 import java.net.HttpURLConnection;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * A base class for implementing {@link CompleteCredentialsService}s.
@@ -35,7 +37,11 @@ import java.util.Optional;
  *
  * @param <T> The type of configuration class this service supports.
  */
-public abstract class CompleteBaseCredentialsService<T> extends BaseCredentialsService<T> implements CompleteCredentialsService {
+public abstract class CompleteBaseCredentialsService<T> extends BaseCredentialsService<T>
+    implements CompleteCredentialsService {
+
+    private static final Pattern BCRYPT_PATTERN = Pattern.compile("\\A\\$2a\\$(\\d{1,2})\\$[./0-9A-Za-z]{53}");
+    private static final int DEFAULT_MAX_BCRYPT_ITERATIONS = 10;
 
     /**
      * Processes a Credentials API request received via the vert.x event bus.
@@ -74,19 +80,85 @@ public abstract class CompleteBaseCredentialsService<T> extends BaseCredentialsS
         final CredentialsObject payload = Optional.ofNullable(request.getJsonPayload())
                 .map(json -> json.mapTo(CredentialsObject.class)).orElse(null);
 
-        if (tenantId == null || payload == null) {
-            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
-        } else if (payload.isValid()) {
-            final Future<CredentialsResult<JsonObject>> result = Future.future();
-            add(tenantId, JsonObject.mapFrom(payload), result.completer());
-            return result.map(res -> {
-                return request.getResponse(res.getStatus())
-                        .setDeviceId(payload.getDeviceId())
-                        .setCacheDirective(res.getCacheDirective());
-            });
+        if (tenantId == null) {
+            return Future.failedFuture(new ClientErrorException(
+                    HttpURLConnection.HTTP_BAD_REQUEST,
+                    "missing tenant ID"));
+        } else if (payload == null) {
+            return Future.failedFuture(new ClientErrorException(
+                    HttpURLConnection.HTTP_BAD_REQUEST,
+                    "missing payload"));
         } else {
-            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
+            try {
+                payload.checkValidity(this::checkSecret);
+                final Future<CredentialsResult<JsonObject>> result = Future.future();
+                add(tenantId, JsonObject.mapFrom(payload), result.completer());
+                return result.map(res -> {
+                    return request.getResponse(res.getStatus())
+                            .setDeviceId(payload.getDeviceId())
+                            .setCacheDirective(res.getCacheDirective());
+                });
+            } catch (IllegalStateException e) {
+                return Future.failedFuture(new ClientErrorException(
+                        HttpURLConnection.HTTP_BAD_REQUEST,
+                        e.getMessage()));
+            }
         }
+    }
+
+    private void checkSecret(final String type, final JsonObject secret) {
+        switch(type) {
+        case CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD:
+            final String hashFunction = secret.getString(CredentialsConstants.FIELD_SECRETS_HASH_FUNCTION);
+            switch(hashFunction) {
+            case CredentialsConstants.HASH_FUNCTION_BCRYPT:
+                verifyBcryptPasswordHash(secret);
+                break;
+            default:
+            }
+        default:
+        }
+    }
+
+    /**
+     * Invoked as part of payload validation when adding or updating <em>hashed password</em>
+     * credentials using the <em>bcrypt</em> hash algorithm.
+     * <p>
+     * Verifies that the hashed password matches the bcrypt hash pattern and doesn't use more
+     * than the configured maximum number of iterations as returned by {@link #getMaxBcryptIterations()}.
+     * 
+     * @param secret The secret to verify.
+     * @throws IllegalArgumentException if the password hash is invalid.
+     */
+    protected void verifyBcryptPasswordHash(final JsonObject secret) {
+
+        final String pwdHash = ((JsonObject) secret).getString(CredentialsConstants.FIELD_SECRETS_PWD_HASH);
+        final Matcher matcher = BCRYPT_PATTERN.matcher(pwdHash);
+        if (matcher.matches()) {
+            // check that hash doesn't use more iterations than configured maximum
+            final int iterations = Integer.valueOf(matcher.group(1));
+            if (iterations > getMaxBcryptIterations()) {
+                throw new IllegalArgumentException("max number of BCrypt iterations exceeded");
+            }
+        } else {
+            // not a valid bcrypt hash
+            throw new IllegalArgumentException("not a BCrypt hash");
+        }
+    }
+
+    /**
+     * Gets the maximum number of iterations that should be allowed in password hashes
+     * created using the <em>BCrypt</em> hash function.
+     * <p>
+     * This default implementation returns 10.
+     * <p>
+     * Subclasses should override this method in order to e.g. return a value determined
+     * from a configuration property.
+     * 
+     * @return The number of iterations.
+     */
+    protected int getMaxBcryptIterations() {
+        return DEFAULT_MAX_BCRYPT_ITERATIONS;
     }
 
     private Future<EventBusMessage> processUpdateRequest(final EventBusMessage request) {
@@ -95,18 +167,29 @@ public abstract class CompleteBaseCredentialsService<T> extends BaseCredentialsS
         final CredentialsObject payload = Optional.ofNullable(request.getJsonPayload())
                 .map(json -> json.mapTo(CredentialsObject.class)).orElse(null);
 
-        if (tenantId == null || payload == null) {
-            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
-        } else if (payload.isValid()) {
-            final Future<CredentialsResult<JsonObject>> result = Future.future();
-            update(tenantId, JsonObject.mapFrom(payload), result.completer());
-            return result.map(res -> {
-                return request.getResponse(res.getStatus())
-                        .setDeviceId(payload.getDeviceId())
-                        .setCacheDirective(res.getCacheDirective());
-            });
+        if (tenantId == null) {
+            return Future.failedFuture(new ClientErrorException(
+                    HttpURLConnection.HTTP_BAD_REQUEST,
+                    "missing tenant ID"));
+        } else if (payload == null) {
+            return Future.failedFuture(new ClientErrorException(
+                    HttpURLConnection.HTTP_BAD_REQUEST,
+                    "missing payload"));
         } else {
-            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
+            try {
+                payload.checkValidity(this::checkSecret);
+                final Future<CredentialsResult<JsonObject>> result = Future.future();
+                update(tenantId, JsonObject.mapFrom(payload), result.completer());
+                return result.map(res -> {
+                    return request.getResponse(res.getStatus())
+                            .setDeviceId(payload.getDeviceId())
+                            .setCacheDirective(res.getCacheDirective());
+                });
+            } catch (IllegalStateException e) {
+                return Future.failedFuture(new ClientErrorException(
+                        HttpURLConnection.HTTP_BAD_REQUEST,
+                        e.getMessage()));
+            }
         }
     }
 

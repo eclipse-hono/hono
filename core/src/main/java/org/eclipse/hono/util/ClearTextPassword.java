@@ -73,11 +73,26 @@ public class ClearTextPassword extends BasePassword {
 
     /**
      * Creates a salted hash for a password using the BCrypt hash function.
+     * <p>
+     * Invokes {@link #encodeBCrypt(String, int)} using 10 as strength.
+     * 
+     * @param password The clear text password.
+     * @return The hash value as defined by
+     * <a href="https://www.eclipse.org/hono/api/credentials-api/#hashed-password">Hono's Credentials API</a>.
+     * @throws NullPointerException if password is {@code null}.
+     */
+    public static String encodeBCrypt(final String password) {
+        return encodeBCrypt(password, 10);
+    }
+
+    /**
+     * Creates a salted hash for a password using the BCrypt hash function.
      * 
      * @param password The clear text password.
      * @param strength The number of iterations to use when creating the hash.
      * @return The hash value as defined by
      * <a href="https://www.eclipse.org/hono/api/credentials-api/#hashed-password">Hono's Credentials API</a>.
+     * @throws NullPointerException if password is {@code null}.
      * @throws IllegalArgumentException if the given strength is &lt; 4 or &gt; 31.
      */
     public static String encodeBCrypt(final String password, final int strength) {

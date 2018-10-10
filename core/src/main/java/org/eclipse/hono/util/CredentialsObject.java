@@ -24,6 +24,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -233,47 +235,129 @@ public final class CredentialsObject {
     }
 
     /**
-     * Checks if this credentials object has all mandatory properties set.
+     * Checks if this credentials object is in a consistent state.
      * 
-     * @return {@code true} if all mandatory properties are set.
+     * @throws IllegalStateException if any of the properties have invalid/inconsistent values.
+     *                  The exception's message property may contain a description of the
+     *                  problem.
      */
-    @JsonIgnore
-    public boolean isValid() {
-        return deviceId != null && authId != null && type != null && hasValidSecrets();
+    public void checkValidity() {
+
+        checkValidity((type, secret) -> {});
+    }
+
+    /**
+     * Checks if this credentials object is in a consistent state.
+     * 
+     * @param secretValidator A custom check that is performed for each secret. The validator
+     *                        should throw an exception to indicate a failure to
+     *                        validate the secret.
+     * @throws IllegalStateException if any of the properties have invalid/inconsistent values.
+     *                  The exception's message property may contain a description of the
+     *                  problem.
+     */
+    public void checkValidity(final BiConsumer<String, JsonObject> secretValidator) {
+        if (deviceId == null) {
+            throw new IllegalStateException("missing device ID");
+        } else if (authId == null) {
+            throw new IllegalStateException("missing auth ID");
+        } else if (type == null) {
+            throw new IllegalStateException("missing type");
+        }
+        checkSecrets(secretValidator);
     }
 
     /**
      * Checks if this credentials object contains secrets that comply with the Credentials
      * API specification.
      * 
-     * @return {@code true} if at least one secret is set and the secrets' not-before
-     *         and not-after properties are well formed.
+     * @throws IllegalStateException if no secrets are set or any of the secrets' not-before
+     *         and not-after properties are malformed.
      */
-    public boolean hasValidSecrets() {
+    public void checkSecrets() {
+        checkSecrets((secretType, secret) -> {});
+    }
+
+    /**
+     * Checks if this credentials object contains secrets that comply with the Credentials
+     * API specification.
+     * 
+     * @param secretValidator a custom check that is performed for each secret in addition
+     *                        to the standard checks. The validator
+     *                        should throw an exception to indicate a failure to
+     *                        validate the secret.
+     * @throws NullPointerException if the validator is {@code null}.
+     * @throws IllegalStateException if no secrets are set or any of the secrets' not-before
+     *         and not-after properties are malformed or if the given validator fails for any
+     *         of the secrets.
+     */
+    public void checkSecrets(final BiConsumer<String, JsonObject> secretValidator) {
+
+        Objects.requireNonNull(secretValidator);
 
         if (secrets == null || secrets.isEmpty()) {
 
-            return false;
+            throw new IllegalStateException("credentials object must contain at least one secret");
 
         } else {
 
-            return !secrets.stream().filter(obj -> obj instanceof JsonObject).anyMatch(obj -> {
-                final JsonObject secret = (JsonObject) obj;
-                return !containsValidTimestampIfPresentForField(secret, CredentialsConstants.FIELD_SECRETS_NOT_BEFORE)
-                        || !containsValidTimestampIfPresentForField(secret, CredentialsConstants.FIELD_SECRETS_NOT_AFTER);
-            });
+            try {
+                switch(type) {
+                case CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD:
+                    checkSecrets(getSecrets(), secret -> {
+                        checkHashedPassword(secret);
+                        secretValidator.accept(type, secret);
+                    });
+                default:
+                    checkSecrets(getSecrets(), secret -> {});
+                }
+            } catch (final Exception e) {
+                throw new IllegalStateException(e.getMessage());
+            }
         }
     }
 
-    private boolean containsValidTimestampIfPresentForField(final JsonObject secret, final String field) {
+    private static void checkSecrets(final JsonArray secrets, final Consumer<JsonObject> secretValidator) {
 
-        final Object value = secret.getValue(field);
-        if (value == null) {
-            return true;
-        } else if (String.class.isInstance(value)) {
-            return getInstant((String) value) != null;
+        secrets.stream().filter(obj -> obj instanceof JsonObject).forEach(obj -> {
+            final JsonObject secret = (JsonObject) obj;
+            checkValidityPeriod(secret);
+            secretValidator.accept(secret);
+        });
+    }
+
+    private static void checkHashedPassword(final JsonObject secret) {
+        final Object hashFunction = secret.getValue(CredentialsConstants.FIELD_SECRETS_HASH_FUNCTION);
+        if (!(hashFunction instanceof String)) {
+            throw new IllegalStateException("missing/invalid hash function");
+        }
+        final Object hashedPwd = secret.getValue(CredentialsConstants.FIELD_SECRETS_PWD_HASH);
+        if (!(hashedPwd instanceof String)) {
+            throw new IllegalStateException("missing/invalid password hash");
+        }
+    }
+
+    private static void checkValidityPeriod(final JsonObject secret) {
+
+        final Instant notBefore = getTimestampIfPresentForField(secret, CredentialsConstants.FIELD_SECRETS_NOT_BEFORE);
+        final Instant notAfter = getTimestampIfPresentForField(secret, CredentialsConstants.FIELD_SECRETS_NOT_AFTER);
+        if (notBefore != null && notAfter != null && !notBefore.isBefore(notAfter)) {
+            throw new IllegalStateException("not-before must be before not-after");
+        }
+    }
+
+    private static Instant getTimestampIfPresentForField(final JsonObject secret, final String field) {
+
+        final String timestamp = secret.getString(field);
+        if (timestamp == null) {
+            return null;
         } else {
-            return false;
+            final Instant result = getInstant(timestamp);
+            if (result == null) {
+                throw new IllegalArgumentException("invalid " + field + " property");
+            } else {
+                return result;
+            }
         }
     }
 

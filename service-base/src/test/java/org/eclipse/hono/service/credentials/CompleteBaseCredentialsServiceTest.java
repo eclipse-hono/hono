@@ -16,6 +16,7 @@ import java.net.HttpURLConnection;
 
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ServiceConfigProperties;
+import org.eclipse.hono.util.ClearTextPassword;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsObject;
 import org.eclipse.hono.util.CredentialsResult;
@@ -41,6 +42,7 @@ public class CompleteBaseCredentialsServiceTest {
     private static CompleteBaseCredentialsService<ServiceConfigProperties> service;
 
     private static final String TEST_TENANT = "dummy";
+    private static final int MAX_ITERATIONS = 10;
 
     /**
      * Time out each test after 5 seconds.
@@ -171,6 +173,71 @@ public class CompleteBaseCredentialsServiceTest {
 
     /**
      * Verifies that the base service accepts a request for adding
+     * valid bcrypt hashed password credentials.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testAddSucceedsForValidBcryptSecret(final TestContext ctx) {
+
+        final CredentialsObject credentials = CredentialsObject.fromHashedPassword(
+                "4711",
+                "theDevice",
+                ClearTextPassword.encodeBCrypt("thePassword", MAX_ITERATIONS),
+                CredentialsConstants.HASH_FUNCTION_BCRYPT,
+                null, null, null);
+
+        final EventBusMessage msg = createRequestForPayload(CredentialsConstants.CredentialsAction.add, JsonObject.mapFrom(credentials));
+        service.processRequest(msg).setHandler(ctx.asyncAssertSuccess(response -> {
+            ctx.assertEquals(HttpURLConnection.HTTP_CREATED, response.getStatus());
+        }));
+    }
+
+    /**
+     * Verifies that the base service rejects a request for adding
+     * hashed password credentials containing a malformed bcrypt hash.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testAddFailsForMalformedBcryptSecrets(final TestContext ctx) {
+
+        final JsonObject malformedSecret = new JsonObject()
+                .put(CredentialsConstants.FIELD_SECRETS_HASH_FUNCTION, CredentialsConstants.HASH_FUNCTION_BCRYPT)
+                .put(CredentialsConstants.FIELD_SECRETS_PWD_HASH, "$2y$11$malformed");
+
+        final JsonObject credentials = createValidCredentialsObject(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, malformedSecret);
+
+        final EventBusMessage msg = createRequestForPayload(CredentialsConstants.CredentialsAction.add, credentials);
+        service.processRequest(msg).setHandler(ctx.asyncAssertFailure(t -> {
+            ctx.assertEquals(HttpURLConnection.HTTP_BAD_REQUEST, ((ServiceInvocationException) t).getErrorCode());
+        }));
+    }
+
+    /**
+     * Verifies that the base service rejects a request for adding
+     * BCrypt hashed password credentials containing a hash that uses more
+     * than the configured maximum iterations.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testAddFailsForBcryptSecretsWithTooManyIterations(final TestContext ctx) {
+
+        final CredentialsObject credentials = CredentialsObject.fromHashedPassword(
+                "4711",
+                "user",
+                ClearTextPassword.encodeBCrypt("thePassword", MAX_ITERATIONS + 1),
+                CredentialsConstants.HASH_FUNCTION_BCRYPT,
+                null, null, null);
+        final EventBusMessage msg = createRequestForPayload(CredentialsConstants.CredentialsAction.add, JsonObject.mapFrom(credentials));
+        service.processRequest(msg).setHandler(ctx.asyncAssertFailure(t -> {
+            ctx.assertEquals(HttpURLConnection.HTTP_BAD_REQUEST, ((ServiceInvocationException) t).getErrorCode());
+        }));
+    }
+
+    /**
+     * Verifies that the base service accepts a request for adding
      * credentials that contain an empty secret.
      *
      * @param ctx The vert.x test context.
@@ -200,10 +267,15 @@ public class CompleteBaseCredentialsServiceTest {
 
     private static JsonObject createValidCredentialsObject(final JsonObject secret) {
 
+        return createValidCredentialsObject("someType", secret);
+    }
+
+    private static JsonObject createValidCredentialsObject(final String type, final JsonObject secret) {
+
         return JsonObject.mapFrom(new CredentialsObject()
                 .setDeviceId("someDeviceId")
                 .setAuthId("someAuthId")
-                .setType("someType")
+                .setType(type)
                 .addSecret(secret));
     }
 
@@ -219,10 +291,16 @@ public class CompleteBaseCredentialsServiceTest {
 
             @Override
             public void setConfig(final ServiceConfigProperties configuration) {
+                setSpecificConfig(configuration);
             }
 
             @Override
             public void getAll(final String tenantId, final String deviceId, final Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler){
+            }
+
+            @Override
+            protected int getMaxBcryptIterations() {
+                return MAX_ITERATIONS;
             }
         };
     }

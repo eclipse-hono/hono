@@ -7,6 +7,12 @@ title = "Release Notes"
 ### Fixes & Enhancements
 
 * HonoClientImpl now waits a limited amount of time for the peer's *attach* frame during link establishment before considering the attempt to have failed. The time-out value (default is 1000ms) can be configured using the *linkEstablishmentTimeout* property of `org.eclipse.hono.config.ClientConfigProperties`. See [Hono Client Configuration]({{< ref "/admin-guide/hono-client-configuration.md" >}}) for details.
+* The example Device Registry service now supports limiting the number of iterations that are supported in BCrypt based hashed-password credentials. This way the processing time required for verifying credentials can be effectively limited. The `org.eclipse.hono.service.credentials.CompleteBaseCredentialsService` class defines a new method `getMaxBcryptIterations` which subclasses may override to provide a reasonable default value or determine the value based on a configuration property (as `FileBasedCredentialsService` of the demo Device Registry does).
+
+### API Changes
+
+* `org.eclipse.hono.util.CredentialsObject.fromHashedPassword` now requires a password hash instead of the clear text password to be passed in. Hash values for clear text password can be computed using `ClearTextPassword`'s `encode` and `encodeBCrypt` methods.
+* `org.eclipse.hono.util.CredentialsObject.isValid` has been renamed to `checkValidity`. The method also no longer returns a boolean but instead throws an `IllegalStateException` to indicate a failure.
 
 ## 0.8-M1_1
 

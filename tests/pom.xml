@@ -34,6 +34,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
     <maven.install.skip>true</maven.install.skip>
     <gpg.skip>true</gpg.skip>
     <service.startup.timeout>90000</service.startup.timeout>
+    <max.bcrypt.iterations>10</max.bcrypt.iterations>
   </properties>
 
   <dependencies>
@@ -111,6 +112,13 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
   </dependencies>
 
   <build>
+    <resources>
+      <resource>
+        <directory>${project.basedir}/src/test/resources</directory>
+        <filtering>true</filtering>
+        <targetPath>${project.build.directory}/resources</targetPath>
+      </resource>
+    </resources>
     <plugins>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -195,7 +203,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                         <id>config</id>
                         <fileSets>
                           <fileSet>
-                            <directory>${project.basedir}/src/test/resources/auth</directory>
+                            <directory>${project.build.directory}/resources/auth</directory>
                             <outputDirectory>etc/hono</outputDirectory>
                             <includes>
                               <include>*</include>
@@ -267,7 +275,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                         <id>config</id>
                         <fileSets>
                           <fileSet>
-                            <directory>${project.basedir}/src/test/resources/deviceregistry</directory>
+                            <directory>${project.build.directory}/resources/deviceregistry</directory>
                             <outputDirectory>etc/hono</outputDirectory>
                             <includes>
                               <include>*</include>
@@ -350,7 +358,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                         <id>config</id>
                         <fileSets>
                           <fileSet>
-                            <directory>${project.basedir}/src/test/resources/artemis</directory>
+                            <directory>${project.build.directory}/resources/artemis</directory>
                             <outputDirectory>.</outputDirectory>
                             <includes>
                               <include>*</include>
@@ -423,7 +431,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                         <id>config</id>
                         <fileSets>
                           <fileSet>
-                            <directory>${project.basedir}/src/test/resources/qpid</directory>
+                            <directory>${project.build.directory}/resources/qpid</directory>
                             <outputDirectory>.</outputDirectory>
                             <includes>
                               <include>*</include>
@@ -481,7 +489,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                         <id>config</id>
                         <fileSets>
                           <fileSet>
-                            <directory>${project.basedir}/src/test/resources/messaging</directory>
+                            <directory>${project.build.directory}/resources/messaging</directory>
                             <outputDirectory>etc/hono</outputDirectory>
                             <includes>
                               <include>*</include>
@@ -566,7 +574,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                         </dependencySets>
                         <fileSets>
                           <fileSet>
-                            <directory>${project.basedir}/src/test/resources/http</directory>
+                            <directory>${project.build.directory}/resources/http</directory>
                             <outputDirectory>etc/hono</outputDirectory>
                             <includes>
                               <include>*</include>
@@ -651,7 +659,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                         </dependencySets>
                         <fileSets>
                           <fileSet>
-                            <directory>${project.basedir}/src/test/resources/mqtt</directory>
+                            <directory>${project.build.directory}/resources/mqtt</directory>
                             <outputDirectory>etc/hono</outputDirectory>
                             <includes>
                               <include>*</include>
@@ -727,7 +735,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                         <id>config</id>
                         <fileSets>
                           <fileSet>
-                            <directory>${project.basedir}/src/test/resources/amqp</directory>
+                            <directory>${project.build.directory}/resources/amqp</directory>
                             <outputDirectory>etc/hono</outputDirectory>
                             <includes>
                               <include>*</include>
@@ -900,6 +908,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                 <adapter.amqps.port>${adapter.amqps.port}</adapter.amqps.port>
                 <trust-store.path>${project.build.directory}/certs/trusted-certs.pem</trust-store.path>
                 <test.env>${test.env}</test.env>
+                <max.bcrypt.iterations>${max.bcrypt.iterations}</max.bcrypt.iterations>
                 <!-- javax.net.debug>ssl:handshake</javax.net.debug-->
               </systemProperties>
               <failIfNoSpecifiedTests>false</failIfNoSpecifiedTests>
