@@ -1,0 +1,91 @@
+apiVersion: v1
+kind: Template
+
+metadata:
+
+  name: hono-tenant
+
+  annotations:
+    description: "Create a new IoT tenant"
+    iconClass: "pficon-topology"
+    tags: "iot"
+    openshift.io/display-name: "Eclipse Hono™ Tenant"
+
+# Parameters
+
+parameters:
+- name:         HONO_TENANT_NAME
+  displayName:     Hono tenant name
+  value:           DEFAULT_TENANT
+  required:        true
+- name:         ENMASSE_ADDRESS_SPACE
+  displayName:     EnMasse address space name
+  description:     The name of the EnMasse address space to use. All tenants must
+                   use the same address space.
+  value:           default
+  required:        true
+- name:         RESOURCE_NAME
+  required:        true
+  generate:        expression
+  from:            '[a-z]{16}'
+- name:         CONSUMER_USER_NAME
+  displayName:     Name of consumer user
+  required:        true
+  value:           default-tenant-consumer
+- name:         CONSUMER_USER_PASSWORD
+  displayName:     Password of consumer user
+  description:     The password, base64 encoded, for the consumer user.
+  required:        true
+  value:           aG9uby1zZWNyZXQ=
+
+message: "The name of the client user is: ${CLIENT_USER_NAME}"
+
+objects:
+
+- kind: Address
+  apiVersion: enmasse.io/v1alpha1
+  metadata:
+    name: ${ENMASSE_ADDRESS_SPACE}.${RESOURCE_NAME}.control
+  spec:
+    address: control/${HONO_TENANT_NAME}
+    type: anycast
+    plan: standard-small-anycast
+
+- kind: Address
+  apiVersion: enmasse.io/v1alpha1
+  metadata:
+    name: ${ENMASSE_ADDRESS_SPACE}.${RESOURCE_NAME}.event
+  spec:
+    address: event/${HONO_TENANT_NAME}
+    type: queue
+    plan: standard-small-queue
+
+- kind: Address
+  apiVersion: enmasse.io/v1alpha1
+  metadata:
+    name: ${ENMASSE_ADDRESS_SPACE}.${RESOURCE_NAME}.telemetry
+  spec:
+    address: telemetry/${HONO_TENANT_NAME}
+    type: anycast
+    plan: standard-small-anycast
+
+- kind: MessagingUser
+  apiVersion: user.enmasse.io/v1alpha1
+  metadata:
+    name: ${ENMASSE_ADDRESS_SPACE}.${CONSUMER_USER_NAME}
+  spec:
+    username: ${CONSUMER_USER_NAME}
+    authentication:
+      type: password
+      password: ${CONSUMER_USER_PASSWORD}
+    authorization:
+    - addresses:
+      - telemetry/${HONO_TENANT_NAME}
+      - event/${HONO_TENANT_NAME}
+      operations:
+      - recv
+    - addresses:
+      - "*"
+      operations:
+      - send
+      - recv
