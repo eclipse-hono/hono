@@ -128,4 +128,16 @@ void publishJavaDoc() {
     }
 }
 
+/**
+ * Publish java documentation.
+ *
+ * @param javaDocDir Javadoc directory in the workspace.
+ * @param keepAll  If set to true, retain javadoc for all the successful builds.
+ */
+void publishJavaDoc(String javadocDir, boolean keepAll){
+    stage('Publish Java Documentation') {
+        step([$class: 'JavadocArchiver', javadocDir: "$javadocDir", keepAll: keepAll])
+    }
+}
+
 return this
