@@ -21,9 +21,11 @@ import java.util.Arrays;
 import java.util.Base64;
 
 /**
- * Implementation of {@link PasswordEncoder} that uses {@link MessageDigest} to encode passwords.
- * This class creates SHA-256 or SHA-512 encoded passwords according to the type <em>hashed-password</em> as defined by
- * <a href="https://www.eclipse.org/hono/api/credentials-api/#hashed-password">Hono's Credentials API</a>.
+ * A Hono specific {@code PasswordEncoder} that uses {@link MessageDigest} to encode passwords.
+ * <p>
+ * This class creates and matches password hashes based on the SHA-256 and SHA-512 algorithms as
+ * defined by <a href="https://www.eclipse.org/hono/api/credentials-api/#hashed-password">
+ * Hono's Credentials API</a>.
  */
 public class MessageDigestPasswordEncoder implements PasswordEncoder {
 
@@ -44,18 +46,24 @@ public class MessageDigestPasswordEncoder implements PasswordEncoder {
     }
 
     /**
-     *  Creates a salted hash for a password. The password is provided in {Base64(salt)}password format, where the salt is optional.
-     *  After the value is properly parsed,
+     *  Creates a hash for a clear text password.
      *
-     *  @param rawPassword Clear text password to be hashed in {Base64(salt)}password format
-     *  @return Password hash
+     *  @param rawPassword The password to hash. The password may also (optionally) be prefixed
+     *                     by <em>salt</em> that should be used for computing the hash value.
+     *                     If given, the salt needs to be provided in the form of the Base64 encoding
+     *                     of the salt bytes wrapped in curly braces:
+     *                     <em>{Base64(salt)}password</em>.
+     *  @return The Base64 encoding of the bytes resulting from applying the hash function to
+     *          the byte array consisting of the salt bytes (if a salt is used) and the UTF-8
+     *          encoding of the clear text password.
      */
     @Override
     public String encode(final CharSequence rawPassword) {
+
+        // parse given string into (optional) salt and password
         final ClearTextPassword password = new ClearTextPassword(rawPassword.toString());
 
         return Base64.getEncoder().encodeToString(digest(password.salt, password.password));
-
     }
 
     /**

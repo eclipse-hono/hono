@@ -18,6 +18,7 @@ import io.vertx.core.Handler;
 import io.vertx.core.json.JsonObject;
 import org.eclipse.hono.service.credentials.BaseCredentialsService;
 import org.eclipse.hono.util.CacheDirective;
+import org.eclipse.hono.util.ClearTextPassword;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsObject;
 import org.eclipse.hono.util.CredentialsResult;
@@ -45,8 +46,13 @@ public final class DummyCredentialsService extends BaseCredentialsService<Object
 
     @Override
     public void get(final String tenantId, final String type, final String authId, final JsonObject clientContext, final Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
-        final JsonObject result = JsonObject.mapFrom(CredentialsObject.fromHashedPassword(authId, authId,
-                "hono-secret", CredentialsConstants.HASH_FUNCTION_SHA256, null, null, null));
+
+        final JsonObject result = JsonObject.mapFrom(CredentialsObject.fromHashedPassword(
+                authId,
+                authId,
+                ClearTextPassword.encode(CredentialsConstants.HASH_FUNCTION_SHA256, null, "hono-secret"),
+                CredentialsConstants.HASH_FUNCTION_SHA256,
+                null, null, null));
         resultHandler.handle(Future.succeededFuture(
                 CredentialsResult.from(HttpURLConnection.HTTP_OK, JsonObject.mapFrom(result), CacheDirective.noCacheDirective())));
     }

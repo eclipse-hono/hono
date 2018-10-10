@@ -20,6 +20,7 @@ import java.util.UUID;
 
 import org.eclipse.hono.tests.DeviceRegistryHttpClient;
 import org.eclipse.hono.tests.IntegrationTestSupport;
+import org.eclipse.hono.util.ClearTextPassword;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsObject;
@@ -113,8 +114,7 @@ public class CredentialsHttpIT {
     }
 
     /**
-     * Verifies that the service accepts an add credentials request containing valid credentials
-     * and that the response contains a <em>Location</em> header for the created resource.
+     * Verifies that the service accepts an add credentials request containing valid credentials.
      * 
      * @param context The vert.x test context.
      */
@@ -125,8 +125,8 @@ public class CredentialsHttpIT {
     }
 
     /**
-     * Verify that a correctly filled json payload to add credentials for an already existing record is
-     * responded with {@link HttpURLConnection#HTTP_CONFLICT} and a non empty error response message.
+     * Verifies that the service rejects a request to add credentials of a type for which
+     * the device already has existing credentials with a 409.
      * 
      * @param context The vert.x test context.
      */
@@ -499,11 +499,17 @@ public class CredentialsHttpIT {
     }
 
     private static JsonObject newHashedPasswordCredentials(final String deviceId, final String authId) {
-        return JsonObject.mapFrom(CredentialsObject.fromHashedPassword(deviceId, authId,
-                "secret", CredentialsConstants.HASH_FUNCTION_SHA512, null, null, null));
+
+        return JsonObject.mapFrom(CredentialsObject.fromHashedPassword(
+                deviceId,
+                authId,
+                ClearTextPassword.encode(CredentialsConstants.HASH_FUNCTION_SHA512, null, "secret"),
+                CredentialsConstants.HASH_FUNCTION_SHA512,
+                null, null, null));
     }
 
     private static JsonObject newPskCredentials(final String deviceId, final String authId) {
+
         return JsonObject.mapFrom(CredentialsObject.fromPresharedKey(
                 deviceId, authId, "secret".getBytes(StandardCharsets.UTF_8), null, null));
     }

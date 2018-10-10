@@ -27,18 +27,30 @@ import java.util.Objects;
  *
  */
 abstract public class BasePassword {
+
     private static final String PREFIX = "{";
     private static final String SUFFIX = "}";
 
+    /**
+     * The salt used for hashing the password or {@code null}
+     * if no salt is used.
+     */
     public byte[] salt;
+    /**
+     * The password hash if this object has been created from an encoded password
+     * or the clear text password to be encoded.
+     */
     public String password;
+    /**
+     * The hash function used for creating the hash value.
+     * Defaults to {@link CredentialsConstants#DEFAULT_HASH_FUNCTION}.
+     */
     public String hashFunction =  CredentialsConstants.DEFAULT_HASH_FUNCTION;
 
     /**
      * Initializes the object from the String in {Base64(salt)}password format. The password can be in clear text or hashed format.
      *
-     *
-     * @param formattedPassword Password in the {Base64(salt)}password format
+     * @param formattedPassword Password in the {Base64(salt)}password format. The <em>{Base64(salt)}</em> is optional.
      */
     protected void parse(final String formattedPassword) {
         Objects.requireNonNull(formattedPassword);

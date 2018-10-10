@@ -25,6 +25,7 @@ import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.CredentialsClient;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.config.ServiceConfigProperties;
+import org.eclipse.hono.util.ClearTextPassword;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsObject;
 import org.junit.Before;
@@ -51,7 +52,7 @@ public class UsernamePasswordAuthProviderTest {
     private final CredentialsObject credentialsOnRecord = CredentialsObject.fromHashedPassword(
             "4711",
             "device",
-            "pwd",
+            ClearTextPassword.encode(CredentialsConstants.HASH_FUNCTION_SHA256, null, "pwd"),
             CredentialsConstants.HASH_FUNCTION_SHA256,
             null,
             null,
@@ -97,7 +98,7 @@ public class UsernamePasswordAuthProviderTest {
     }
 
     /**
-     * Verifies that the provider fails to validate credentials when not
+     * Verifies that the provider succeeds to validate matching credentials when
      * running on a vert.x Context.
      * 
      * @param ctx The vert.x test context.
@@ -114,8 +115,7 @@ public class UsernamePasswordAuthProviderTest {
     }
 
     /**
-     * Verifies that the provider fails to validate credentials when not
-     * running on a vert.x Context.
+     * Verifies that the provider fails to validate wrong credentials.
      * 
      * @param ctx The vert.x test context.
      */

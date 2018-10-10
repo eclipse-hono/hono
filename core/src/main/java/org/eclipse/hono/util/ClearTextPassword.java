@@ -12,6 +12,7 @@
  *******************************************************************************/
 package org.eclipse.hono.util;
 
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Objects;
@@ -42,27 +43,48 @@ public class ClearTextPassword extends BasePassword {
     }
 
     /**
-     * Creates a salted hash for a password.
+     * Creates a salted hash for a password using a SHA based hash function.
      * <p>
-     * Gets the password's UTF-8 bytes, prepends them with the salt (if not {@code null}
-     * and returns the output of the hash function applied to the byte array.
+     * This method supports the following algorithms:
+     * <ul>
+     * <li>sha-256</li>
+     * <li>sha-512</li>
+     * </ul>
      *
-     * @param hashFunction Hash function to use
-     * @param salt Salt in the form of byte array
-     * @param password Password to hash
-     * @return Salted hash for a password as a Base64 formatted String
+     * @param hashFunction The hash function to use.
+     * @param salt Salt in the form of byte array (may be {@code null}).
+     * @param password The clear text password.
+     * @return The salted hash as defined by
+     * <a href="https://www.eclipse.org/hono/api/credentials-api/#hashed-password">Hono's Credentials API</a>.
      */
     public static String encode(final String hashFunction, final byte[] salt, final String password) {
+
         Objects.requireNonNull(hashFunction);
         Objects.requireNonNull(password);
 
-        //TODO Delegating encoder support encoding only using default encoder. Maybe we can enhance the interface to support more hash functions
         final PasswordEncoder encoder = new MessageDigestPasswordEncoder(hashFunction);
-        // Prepare password in the "{salt}password" format as that's expected by PasswordEncoder class
         final StringBuilder passwordToEncode = new StringBuilder();
+
+        // Prepare password in the "{salt}password" format as that's expected by MessageDigestPasswordEncoder class
         append(salt, passwordToEncode);
         passwordToEncode.append(password);
         return encoder.encode(passwordToEncode.toString());
     }
 
+    /**
+     * Creates a salted hash for a password using the BCrypt hash function.
+     * 
+     * @param password The clear text password.
+     * @param strength The number of iterations to use when creating the hash.
+     * @return The hash value as defined by
+     * <a href="https://www.eclipse.org/hono/api/credentials-api/#hashed-password">Hono's Credentials API</a>.
+     * @throws IllegalArgumentException if the given strength is &lt; 4 or &gt; 31.
+     */
+    public static String encodeBCrypt(final String password, final int strength) {
+
+        Objects.requireNonNull(password);
+
+        final PasswordEncoder encoder = new BCryptPasswordEncoder(strength);
+        return encoder.encode(password);
+    }
 }

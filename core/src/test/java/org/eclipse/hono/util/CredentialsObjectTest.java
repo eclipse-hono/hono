@@ -46,19 +46,4 @@ public class CredentialsObjectTest {
         creds.addSecret(new JsonObject());
         assertTrue(creds.hasValidSecrets());
     }
-
-    /**
-     * Verifies that the SHA family of hash functions is supported.
-     */
-    @Test
-    public void testGetHashedPasswordSupportsSHA() {
-
-        final byte[] salt = new byte[] { 0x01, 0x02, 0x03 };
-        final String[] hashFunctions = new String[] {
-                                CredentialsConstants.HASH_FUNCTION_SHA256,
-                                CredentialsConstants.HASH_FUNCTION_SHA512 };
-        for (String hashFunction : hashFunctions) {
-            assertNotNull(CredentialsObject.getHashedPassword(hashFunction, salt, "thesecretpwd"));
-        }
-    }
 }

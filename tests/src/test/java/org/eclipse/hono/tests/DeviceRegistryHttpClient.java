@@ -21,6 +21,7 @@ import java.util.Optional;
 import javax.security.auth.x500.X500Principal;
 
 import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.util.ClearTextPassword;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsObject;
 import org.eclipse.hono.util.RegistrationConstants;
@@ -591,8 +592,8 @@ public final class DeviceRegistryHttpClient {
     /**
      * Creates a tenant and adds a device to it with a given password.
      * <p>
-     * This method simply invokes {@link #addDeviceForTenant(TenantObject, String, JsonObject, String)}
-     * with an empty JSON object as the device data.
+     * This method simply invokes {@link #addDeviceForTenant(TenantObject, String, String, String)}
+     * with <em>sha-512</em> as the hash algorithm.
      * 
      * @param tenant The tenant to create.
      * @param deviceId The identifier of the device to add to the tenant.
@@ -602,7 +603,29 @@ public final class DeviceRegistryHttpClient {
      */
     public Future<Void> addDeviceForTenant(final TenantObject tenant, final String deviceId, final String password) {
 
-        return addDeviceForTenant(tenant, deviceId, new JsonObject(), password);
+        return addDeviceForTenant(tenant, deviceId, password, CredentialsConstants.HASH_FUNCTION_SHA512);
+    }
+
+    /**
+     * Creates a tenant and adds a device to it with a given password.
+     * <p>
+     * This method simply invokes {@link #addDeviceForTenant(TenantObject, String, JsonObject, String, String)}
+     * with an empty JSON object as the device data.
+     * 
+     * @param tenant The tenant to create.
+     * @param deviceId The identifier of the device to add to the tenant.
+     * @param password The password to use for the device's credentials.
+     * @param hashAlgorithm The algorithm to use for creating the password hash.
+     * @return A future indicating the outcome of the operation.
+     * @throws NullPointerException if tenant is {@code null}.
+     */
+    public Future<Void> addDeviceForTenant(
+            final TenantObject tenant,
+            final String deviceId,
+            final String password,
+            final String hashAlgorithm) {
+
+        return addDeviceForTenant(tenant, deviceId, new JsonObject(), password, hashAlgorithm);
     }
 
     /**
@@ -624,14 +647,43 @@ public final class DeviceRegistryHttpClient {
             final JsonObject data,
             final String password) {
 
+        return addDeviceForTenant(tenant, deviceId, data, password, CredentialsConstants.HASH_FUNCTION_SHA512);
+    }
+
+    /**
+     * Creates a tenant and adds a device to it with a given password.
+     * <p>
+     * The password will be added as a hashed password
+     * using the device identifier as the authentication identifier.
+     * 
+     * @param tenant The tenant to create.
+     * @param deviceId The identifier of the device to add.
+     * @param data The data to register for the device.
+     * @param password The password to use for the device's credentials.
+     * @param hashAlgorithm The algorithm to use for creating the password hash.
+     * @return A future indicating the outcome of the operation.
+     * @throws NullPointerException if tenant is {@code null}.
+     */
+    public Future<Void> addDeviceForTenant(
+            final TenantObject tenant,
+            final String deviceId,
+            final JsonObject data,
+            final String password,
+            final String hashAlgorithm) {
+
         Objects.requireNonNull(tenant);
 
         return addTenant(JsonObject.mapFrom(tenant))
             .compose(ok -> registerDevice(tenant.getTenantId(), deviceId, data))
             .compose(ok -> {
+                String passwordHash = null;
+                if (CredentialsConstants.HASH_FUNCTION_BCRYPT.equals(hashAlgorithm)) {
+                    passwordHash = ClearTextPassword.encodeBCrypt(password, IntegrationTestSupport.MAX_BCRYPT_ITERATIONS);
+                } else {
+                    passwordHash = ClearTextPassword.encode(hashAlgorithm, null, password);
+                }
                 final CredentialsObject credentialsSpec =
-                        CredentialsObject.fromHashedPassword(deviceId, deviceId, password,
-                                CredentialsConstants.HASH_FUNCTION_SHA512, null, null, null);
+                        CredentialsObject.fromHashedPassword(deviceId, deviceId, passwordHash, hashAlgorithm, null, null, null);
                 return addCredentials(tenant.getTenantId(), JsonObject.mapFrom(credentialsSpec));
             });
     }

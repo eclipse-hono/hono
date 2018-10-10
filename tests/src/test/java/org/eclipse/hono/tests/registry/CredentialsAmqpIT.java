@@ -26,6 +26,7 @@ import org.eclipse.hono.client.CredentialsClient;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.tests.IntegrationTestSupport;
+import org.eclipse.hono.util.ClearTextPassword;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsObject;
@@ -295,14 +296,13 @@ public class CredentialsAmqpIT {
         final byte[] decodedSalt = Base64.getDecoder().decode(salt);
         assertThat(decodedSalt, is(CREDENTIALS_PASSWORD_SALT)); // see file, this should be the salt
 
-        final String pwdHash = firstSecret.getString(CredentialsConstants.FIELD_SECRETS_PWD_HASH);
-        assertNotNull(pwdHash);
-        final byte[] decodedPassword = Base64.getDecoder().decode(pwdHash);
+        final String pwdHashOnRecord = firstSecret.getString(CredentialsConstants.FIELD_SECRETS_PWD_HASH);
+        assertNotNull(pwdHashOnRecord);
 
-        final byte[] hashedPassword = Base64.getDecoder().decode(CredentialsObject.getHashedPassword(
-                CredentialsConstants.HASH_FUNCTION_SHA512, CREDENTIALS_PASSWORD_SALT, CREDENTIALS_USER_PASSWORD));
+        final String pwdHash = ClearTextPassword.encode(
+                CredentialsConstants.HASH_FUNCTION_SHA512, CREDENTIALS_PASSWORD_SALT, CREDENTIALS_USER_PASSWORD);
         // check if the password is the hashed version of "hono-secret"
-        assertThat(hashedPassword, is(decodedPassword));
+        assertThat(pwdHashOnRecord, is(pwdHash));
     }
 
     private void checkPayloadGetCredentialsReturnsFirstSecretWithCurrentlyActiveTimeInterval(final CredentialsObject payload) {

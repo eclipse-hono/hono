@@ -20,6 +20,7 @@ import static org.junit.Assert.assertTrue;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 
+import org.eclipse.hono.util.ClearTextPassword;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsObject;
@@ -112,8 +113,11 @@ public class UsernamePasswordCredentialsTest {
 
         // GIVEN a secret on record that uses sha-512 as the hash function
         final byte[] salt = "TheSalt".getBytes(StandardCharsets.UTF_8);
-        final JsonObject candidateSecret = CredentialsObject.hashedPasswordSecret(
-                TEST_PASSWORD, CredentialsConstants.HASH_FUNCTION_SHA512, null, null, salt);
+        final JsonObject candidateSecret = CredentialsObject.hashedPasswordSecretForPasswordHash(
+                ClearTextPassword.encode(CredentialsConstants.HASH_FUNCTION_SHA512, salt, TEST_PASSWORD),
+                CredentialsConstants.HASH_FUNCTION_SHA512,
+                null, null,
+                salt);
 
         // WHEN a device provides matching credentials
         final UsernamePasswordCredentials credentials = UsernamePasswordCredentials.create(TEST_USER_OTHER_TENANT, TEST_PASSWORD, false);
@@ -151,8 +155,11 @@ public class UsernamePasswordCredentialsTest {
     public void testMatchesCredentialsFailsForNonMatchingPassword() {
 
         // GIVEN a secret on record that uses sha-512 as the hash function
-        final JsonObject candidateSecret = CredentialsObject.hashedPasswordSecret(TEST_PASSWORD,
-                CredentialsConstants.HASH_FUNCTION_SHA512, Instant.now(), null, null);
+        final JsonObject candidateSecret = CredentialsObject.hashedPasswordSecretForPasswordHash(
+                ClearTextPassword.encode(CredentialsConstants.HASH_FUNCTION_SHA512, null, TEST_PASSWORD),
+                CredentialsConstants.HASH_FUNCTION_SHA512,
+                Instant.now(),
+                null, null);
 
         // WHEN a device provides non-matching credentials
         final UsernamePasswordCredentials credentials = UsernamePasswordCredentials.create(TEST_USER_OTHER_TENANT, "wrongpassword", false);
@@ -201,6 +208,6 @@ public class UsernamePasswordCredentialsTest {
     }
 
     private String getHashedPassword(final String hashFunction, final byte[] salt, final String password) {
-        return CredentialsObject.getHashedPassword(hashFunction, salt, password);
+        return ClearTextPassword.encode(hashFunction, salt, password);
     }
 }

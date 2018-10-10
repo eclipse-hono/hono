@@ -422,20 +422,7 @@ public final class CredentialsObject {
     }
 
     /**
-     * Uses {@link ClearTextPassword#encode(String, byte[], String)} to return salted hash for a password.
-     * 
-     * @param hashFunction The hash function to use.
-     * @param salt The salt to prepend the password bytes with.
-     * @param password The password to hash.
-     * @return The hashed password as a Base64 formatted String.
-     */
-    public static String getHashedPassword(final String hashFunction, final byte[] salt, final String password) {
-        return ClearTextPassword.encode(hashFunction, salt, password);
-    }
-
-    /**
-     * Creates a credentials object for a device based on a username
-     * and (clear text) password.
+     * Creates a credentials object for a device based on a username and password hash.
      * <p>
      * The credentials created are of type <em>hashed-password</em>.
      * The {@linkplain #setAuthId(String) authentication identifier} will be set to
@@ -443,14 +430,14 @@ public final class CredentialsObject {
      * 
      * @param deviceId The device identifier.
      * @param username The username.
-     * @param password The password.
-     * @param hashAlgorithm The algorithm to use for creating the password hash.
+     * @param passwordHash The password hash.
+     * @param hashAlgorithm The algorithm that has been used to create the password hash.
      * @param notBefore The point in time from which on the credentials are valid.
      * @param notAfter The point in time until the credentials are valid.
      * @param salt The salt to use for creating the password hash.
      * @return The credentials.
-     * @throws NullPointerException if any of device ID, authentication ID, password
-     *                              or hash algorithm is {@code null}.
+     * @throws NullPointerException if any of device ID, authentication ID, password hash
+     *                              or hash algorithm are {@code null}.
      * @throws IllegalArgumentException if the <em>not-before</em> instant does not lie
      *                                  before the <em>not after</em> instant or if the
      *                                  algorithm is not supported.
@@ -458,46 +445,18 @@ public final class CredentialsObject {
     public static CredentialsObject fromHashedPassword(
             final String deviceId,
             final String username,
-            final String password,
+            final String passwordHash,
             final String hashAlgorithm,
             final Instant notBefore,
             final Instant notAfter,
             final byte[] salt) {
 
-        Objects.requireNonNull(password);
-
-        final CredentialsObject result = new CredentialsObject(deviceId, username, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD);
-        result.addSecret(hashedPasswordSecret(password, hashAlgorithm, notBefore, notAfter, salt));
-        return result;
-    }
-
-    /**
-     * Creates a hashed-password secret for a clear text password.
-     * 
-     * @param password The (clear text) password.
-     * @param hashAlgorithm The algorithm to use for creating the password hash.
-     * @param notBefore The point in time from which on the secret is valid.
-     * @param notAfter The point in time until the secret is valid.
-     * @param salt The salt to use for creating the password hash.
-     * @return The secret.
-     * @throws NullPointerException if any of password or hash algorithm is {@code null}.
-     * @throws IllegalArgumentException if the <em>not-before</em> instant does not lie
-     *                                  before the <em>not after</em> instant or if the
-     *                                  algorithm is not supported.
-     */
-    public static JsonObject hashedPasswordSecret(
-            final String password,
-            final String hashAlgorithm,
-            final Instant notBefore,
-            final Instant notAfter,
-            final byte[] salt) {
-
-        Objects.requireNonNull(password);
+        Objects.requireNonNull(passwordHash);
         Objects.requireNonNull(hashAlgorithm);
 
-        final String encodedSalt = Optional.ofNullable(salt).map(s -> Base64.getEncoder().encodeToString(s)).orElse(null);
-        final String passwordHash = getHashedPassword(hashAlgorithm, salt, password);
-        return hashedPasswordSecretForPasswordHash(passwordHash, hashAlgorithm, notBefore, notAfter, encodedSalt);
+        final CredentialsObject result = new CredentialsObject(deviceId, username, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD);
+        result.addSecret(hashedPasswordSecretForPasswordHash(passwordHash, hashAlgorithm, notBefore, notAfter, salt));
+        return result;
     }
 
     /**
@@ -507,8 +466,7 @@ public final class CredentialsObject {
      * @param hashAlgorithm The algorithm used for creating the password hash.
      * @param notBefore The point in time from which on the secret is valid.
      * @param notAfter The point in time until the secret is valid.
-     * @param encodedSalt The Base64 encoded salt bytes used for creating the password hash or {@code null}
-     *                    if no salt has been used.
+     * @param salt The salt to use for creating the password hash.
      * @return The secret.
      * @throws NullPointerException if any of password hash or hash algorithm are {@code null}.
      * @throws IllegalArgumentException if the <em>not-before</em> instant does not lie
@@ -520,12 +478,13 @@ public final class CredentialsObject {
             final String hashAlgorithm,
             final Instant notBefore,
             final Instant notAfter,
-            final String encodedSalt) {
+            final byte[] salt) {
 
         Objects.requireNonNull(passwordHash);
         Objects.requireNonNull(hashAlgorithm);
 
         final JsonObject secret = emptySecret(notBefore, notAfter);
+        final String encodedSalt = Optional.ofNullable(salt).map(s -> Base64.getEncoder().encodeToString(s)).orElse(null);
         secret.put(CredentialsConstants.FIELD_SECRETS_HASH_FUNCTION, hashAlgorithm);
         if (encodedSalt != null) {
             secret.put(CredentialsConstants.FIELD_SECRETS_SALT, encodedSalt);

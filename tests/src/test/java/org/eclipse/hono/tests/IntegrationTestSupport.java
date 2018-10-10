@@ -52,15 +52,16 @@ import io.vertx.ext.unit.TestContext;
  */
 public final class IntegrationTestSupport {
 
-    public static final String DEFAULT_HOST = InetAddress.getLoopbackAddress().getHostAddress();
-    public static final int    DEFAULT_DOWNSTREAM_PORT = 15672;
-    public static final int    DEFAULT_DEVICEREGISTRY_AMQP_PORT = 25672;
-    public static final int    DEFAULT_DEVICEREGISTRY_HTTP_PORT = 28080;
-    public static final int    DEFAULT_HTTP_PORT = 8080;
-    public static final int    DEFAULT_HTTPS_PORT = 8443;
-    public static final int    DEFAULT_MQTT_PORT = 1883;
     public static final int    DEFAULT_AMQP_PORT = 4040;
     public static final int    DEFAULT_AMQPS_PORT = 4041;
+    public static final int    DEFAULT_DEVICEREGISTRY_AMQP_PORT = 25672;
+    public static final int    DEFAULT_DEVICEREGISTRY_HTTP_PORT = 28080;
+    public static final int    DEFAULT_DOWNSTREAM_PORT = 15672;
+    public static final String DEFAULT_HOST = InetAddress.getLoopbackAddress().getHostAddress();
+    public static final int    DEFAULT_HTTP_PORT = 8080;
+    public static final int    DEFAULT_HTTPS_PORT = 8443;
+    public static final int    DEFAULT_MAX_BCRYPT_ITERATIONS = 10;
+    public static final int    DEFAULT_MQTT_PORT = 1883;
 
     public static final String PROPERTY_AUTH_HOST = "auth.host";
     public static final String PROPERTY_AUTH_PORT = "auth.amqp.port";
@@ -84,6 +85,7 @@ public final class IntegrationTestSupport {
     public static final String PROPERTY_AMQP_PORT = "adapter.amqp.port";
     public static final String PROPERTY_AMQPS_PORT = "adapter.amqps.port";
     public static final String PROPERTY_TENANT = "tenant";
+    public static final String PROPTERY_MAX_BCRYPT_ITERATIONS = "max.bcrypt.iterations";
 
     public static final String AUTH_HOST = System.getProperty(PROPERTY_AUTH_HOST, DEFAULT_HOST);
     public static final int    AUTH_PORT = Integer.getInteger(PROPERTY_AUTH_PORT, Constants.PORT_AMQP);
@@ -115,6 +117,8 @@ public final class IntegrationTestSupport {
 
     public static final String PATH_SEPARATOR = System.getProperty("hono.pathSeparator", "/");
     public static final int    MSG_COUNT = Integer.getInteger("msg.count", 1000);
+
+    public static final int    MAX_BCRYPT_ITERATIONS = Integer.getInteger(PROPTERY_MAX_BCRYPT_ITERATIONS, DEFAULT_MAX_BCRYPT_ITERATIONS);
 
     public static final String TRUST_STORE_PATH = System.getProperty("trust-store.path");
 
