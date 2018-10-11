@@ -397,6 +397,27 @@ to 10.000 devices per tenant:
 
     oc env -n hono dc/hono-service-device-registry HONO_REGISTRY_SVC_MAX_DEVICES_PER_TENANT=10000
 
+## Adding Jaeger support
+
+By default Hono has the capability to work with "open tracing", and it also
+provides a build profile for enabling the "Jaeger" implementation of
+"open tracing".
+
+There are a few manual steps required to modify the default Hono deployment
+for OpenShift in order to enable this profile.
+
+### Enable the build profile
+
+FIXME: TBD
+
+### Add the sidecar
+
+FIXME: TBD
+
+### Deploy Jaeger
+
+FIXME: TBD
+
 ## Using the installation
 
 All following examples make use of the running Hono instance. They pretty much
