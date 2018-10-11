@@ -212,6 +212,16 @@ is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [Maven Central](http://search.maven.org/#search%7Cga%7C1%7Cg%3A%22org.springframework.boot%22%20AND%20v%3A%22${spring-boot.version}%22).
 
+### Spring Security ${spring-security-crypto.version}
+
+This product includes software developed by the [Spring project](http://spring.io) and others.
+
+Your use of *Spring Security* is subject to the terms and conditions of the Apache Software License 2.0
+and others as indicated by [NOTICE.Spring.txt](NOTICE.Spring.txt).
+A copy of the licenses is contained in the file [LICENSE.Spring.txt](LICENSE.Spring.txt).
+
+The source code is available from [Maven Central](http://search.maven.org/#search%7Cga%7C1%7Cg%3A%22org.springframework.security%22%20AND%20v%3A%22${spring-security-crypto.version}%22).
+
 ### vert.x Auth Common ${vertx.version}
 
 This product includes software developed by the [vert.x project](http://vertx.io).
