@@ -372,7 +372,7 @@ Example:
 | :--------------- | :-------: | :--------- | :-------- | :---------- |
 | *type*           | *yes*     | *string*   |           | The credential type name, always `hashed-password`. |
 | *auth-id*        | *yes*     | *string*   |           | The identity that the device should be authenticated as. |
-| *pwd-hash*       | *yes*     | *string*   |           | The Base64 encoding of the password hash (see table below for details). |
+| *pwd-hash*       | *yes*     | *string*   |           | The password hash (see table below for details). |
 | *salt*           | *no*      | *string*   |           | The Base64 encoding of the *salt* used in the password hash (see table below for details). |
 | <nobr>*hash-function*<nobr>  | *no*      | *string*   | `sha-256` | The name of the hash function used to create the password hash. The hash functions supported by Hono are described in the table below. |
 
