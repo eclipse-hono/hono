@@ -55,7 +55,7 @@
     <slf4j.version>1.7.24</slf4j.version>
     <snakeyaml.version>1.17</snakeyaml.version>
     <spring.version>4.3.19.RELEASE</spring.version>
-    <spring-boot.version>1.5.13.RELEASE</spring-boot.version>
+    <spring-boot.version>1.5.16.RELEASE</spring-boot.version>
     <spring-security-crypto.version>4.2.8.RELEASE</spring-security-crypto.version>
     <truth.version>0.28</truth.version>
     <vertx.version>3.5.4</vertx.version>
