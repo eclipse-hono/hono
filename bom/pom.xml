@@ -36,6 +36,7 @@
     <guava.version>19.0</guava.version>
     <influxdb.version>1.5.4-alpine</influxdb.version>
     <jackson.version>2.9.5</jackson.version>
+    <jaeger.version>0.31.0</jaeger.version>
     <java-base-image.name>openjdk:11-jre-slim</java-base-image.name>
     <jaxb.api.version>2.2.12</jaxb.api.version>
     <javax.annotation.api.version>1.3.2</javax.annotation.api.version>
@@ -358,6 +359,12 @@
         <artifactId>netty-tcnative</artifactId>
         <version>${netty.tcnative.version}</version>
         <scope>runtime</scope>
+      </dependency>
+      <!-- Jaeger support -->
+      <dependency>
+        <groupId>io.jaegertracing</groupId>
+        <artifactId>jaeger-client</artifactId>
+        <version>${jaeger.version}</version>
       </dependency>
     </dependencies>
   </dependencyManagement>
