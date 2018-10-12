@@ -336,7 +336,7 @@ public class HonoClientImpl implements HonoClient {
         return result;
     }
 
-    private void connect(
+    protected void connect(
             final ProtonClientOptions options,
             final Handler<AsyncResult<HonoClient>> connectionHandler,
             final Handler<ProtonConnection> disconnectHandler) {

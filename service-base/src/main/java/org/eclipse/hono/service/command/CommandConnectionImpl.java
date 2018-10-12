@@ -18,26 +18,34 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
+import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.impl.HonoClientImpl;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.connection.ConnectionFactory;
 import org.eclipse.hono.service.auth.device.Device;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
+import io.vertx.proton.ProtonClientOptions;
+import io.vertx.proton.ProtonConnection;
 
 /**
  * Implements a connection between an Adapter and the AMQP 1.0 network to receive commands and send a response.
  */
 public class CommandConnectionImpl extends HonoClientImpl implements CommandConnection {
 
+    private static final Logger LOG = LoggerFactory.getLogger(CommandConnectionImpl.class);
+
     /**
      * The consumers that can be used to receive command messages.
      * The device, which belongs to a tenant is used as the key, e.g. <em>DEFAULT_TENANT/4711</em>.
      */
-    private final Map<String, MessageConsumer> commandReceivers = new HashMap<>();
+    private final Map<String, CommandConsumer> commandReceivers = new HashMap<>();
 
     /**
      * Creates a new client for a set of configuration properties.
@@ -69,17 +77,55 @@ public class CommandConnectionImpl extends HonoClientImpl implements CommandConn
     }
 
     /**
-     * {@inheritDoc}
+     * Initiate the connection for the command Hono client with handlers that
+     * <ul>
+     *     <li>close open command consumers on a disconnect</li>
+     *     <li>call the {@link CommandConsumer#recreate(ProtonConnection)} method on a (re)connect</li>
+     * </ul>
+     * The passed handlers are wrapped and invoked after the close or recreate calls to the command consumers.
+     *
+     * @param options The options to use. If {@code null} the default properties will be used.
+     * @param connectionHandler A handler to notify when a connection is established (may be {@code null}).
+     * @param disconnectHandler A handler to notify about connection loss (may be {@code null}).
      */
     @Override
-    protected void clearState() {
-        super.clearState();
-        commandReceivers.clear();
+    protected void connect(final ProtonClientOptions options,
+                           final Handler<AsyncResult<HonoClient>> connectionHandler,
+                           final Handler<ProtonConnection> disconnectHandler) {
+        final Handler<ProtonConnection> receiverLinkAwareDisconnectHandler = con -> {
+            LOG.trace("Lost connection - found {} command receiver links to recover", commandReceivers.size());
+            commandReceivers.keySet().stream().forEach(linkAddress -> {
+                final CommandConsumer cc = commandReceivers.get(linkAddress);
+                LOG.trace("closing link to recover on reconnect: address {}, link {}", linkAddress, cc);
+                cc.close(v -> {});
+            });
+            Optional.ofNullable(disconnectHandler).map(h -> {
+                h.handle(con);
+                return con;
+            });
+        };
+        final Handler<AsyncResult<HonoClient>> connectionRecreateLinksHandler = clientAsyncResult -> {
+            if (clientAsyncResult.succeeded()) {
+                LOG.trace("Now recovering #{} command receiver links", commandReceivers.size());
+                commandReceivers.keySet().stream().forEach(linkAddress -> {
+                    final CommandConsumer cc = commandReceivers.get(linkAddress);
+                    LOG.trace("link address to recover: {}", linkAddress);
+
+                    cc.recreate(getConnection());
+                });
+            }
+            Optional.ofNullable(connectionHandler).map(h -> {
+                h.handle(clientAsyncResult);
+                return clientAsyncResult;
+            });
+        };
+
+        super.connect(options, connectionRecreateLinksHandler, receiverLinkAwareDisconnectHandler);
     }
 
     /**
      * {@inheritDoc}
-     */
+    */
     public final Future<MessageConsumer> getOrCreateCommandConsumer(
             final String tenantId,
             final String deviceId,
@@ -106,6 +152,9 @@ public class CommandConnectionImpl extends HonoClientImpl implements CommandConn
             CommandConsumer.create(context, clientConfigProperties, connection, tenantId, deviceId,
                     commandConsumer, closeHook -> {
                         closeCommandConsumer(tenantId, deviceId);
+                        if (closeHandler != null) {
+                            closeHandler.handle((Void) null);
+                        }
                     }, creation -> {
                         if (creation.succeeded()) {
                             commandReceivers.put(Device.asAddress(tenantId, deviceId), creation.result());
