@@ -9,6 +9,12 @@ title = "Release Notes"
 * HonoClientImpl now waits a limited amount of time for the peer's *attach* frame during link establishment before considering the attempt to have failed. The time-out value (default is 1000ms) can be configured using the *linkEstablishmentTimeout* property of `org.eclipse.hono.config.ClientConfigProperties`. See [Hono Client Configuration]({{< ref "/admin-guide/hono-client-configuration.md" >}}) for details.
 * The example Device Registry service now supports limiting the number of iterations that are supported in BCrypt based hashed-password credentials. This way the processing time required for verifying credentials can be effectively limited. The `org.eclipse.hono.service.credentials.CompleteBaseCredentialsService` class defines a new method `getMaxBcryptIterations` which subclasses may override to provide a reasonable default value or determine the value based on a configuration property (as `FileBasedCredentialsService` of the demo Device Registry does).
 * Hono now uses OpenJDK 11 as the JVM in the service Docker images. Because OpenJDK 11 has better support for detecting resource limits when running in a container, this also has an impact on the command line parameters passed to the JVM. See [Limiting Resource Usage]({{< ref "/deployment/resource-limitation.md" >}}) for details.
+* Instead of Dropwizard Hono now uses Micrometer. Hono still allows to produce
+  the same graphite wire format as Hono 0.7 supported. This can be enabled
+  by the use of the configuration option `hono.metrics.legacy`. For the
+  moment this value defaults to `true`. The plan is to disable the legacy
+  format for the final 0.8 release, but still support the legacy format at least
+  until one version after Hono 0.8.
 
 ### API Changes
 
