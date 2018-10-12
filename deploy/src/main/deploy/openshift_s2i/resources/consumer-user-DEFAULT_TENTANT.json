@@ -2,13 +2,13 @@
   "apiVersion": "user.enmasse.io/v1alpha1",
   "kind": "MessagingUser",
   "metadata": {
-    "name": "default.client1"
+    "name": "default.consumer"
   },
   "spec": {
-    "username": "client1",
+    "username": "consumer",
     "authentication": {
       "type": "password",
-      "password": "aG9uby1zZWNyZXQ="
+      "password": "dmVyeXNlY3JldA=="
     },
     "authorization": [
       {
