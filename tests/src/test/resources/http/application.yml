@@ -18,24 +18,28 @@ hono:
     keyPath: /etc/hono/certs/http-adapter-key.pem
     certPath: /etc/hono/certs/http-adapter-cert.pem
     trustStorePath: /etc/hono/certs/trusted-certs.pem
+    linkEstablishmentTimeout: ${link.establishment.timeout}
   registration:
     name: 'Hono HTTP Adapter'
     host: hono-service-device-registry.hono
     port: 5672
     username: http-adapter@HONO
     password: http-secret
+    linkEstablishmentTimeout: ${link.establishment.timeout}
   credentials:
     name: 'Hono HTTP Adapter'
     host: hono-service-device-registry.hono
     port: 5672
     username: http-adapter@HONO
     password: http-secret
+    linkEstablishmentTimeout: ${link.establishment.timeout}
   tenant:
     name: 'Hono HTTP Adapter'
     host: hono-service-device-registry.hono
     port: 5672
     username: http-adapter@HONO
     password: http-secret
+    linkEstablishmentTimeout: ${link.establishment.timeout}
   command:
     name: 'Hono HTTP Adapter'
     host: hono-dispatch-router.hono
@@ -44,6 +48,7 @@ hono:
     keyPath: /etc/hono/certs/http-adapter-key.pem
     certPath: /etc/hono/certs/http-adapter-cert.pem
     trustStorePath: /etc/hono/certs/trusted-certs.pem
+    linkEstablishmentTimeout: ${link.establishment.timeout}
   metric:
     reporter:
       graphite:

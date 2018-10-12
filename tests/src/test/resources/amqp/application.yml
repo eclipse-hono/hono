@@ -18,24 +18,28 @@ hono:
     keyPath: /etc/hono/certs/amqp-adapter-key.pem
     certPath: /etc/hono/certs/amqp-adapter-cert.pem
     trustStorePath: /etc/hono/certs/trusted-certs.pem
+    linkEstablishmentTimeout: ${link.establishment.timeout}
   registration:
     name: 'Hono MQTT Adapter'
     host: hono-service-device-registry.hono
     port: 5672 # AMQP port of the device registry
     username: amqp-adapter@HONO
     password: amqp-secret
+    linkEstablishmentTimeout: ${link.establishment.timeout}
   credentials:
     name: 'Hono AMQP Adapter'
     host: hono-service-device-registry.hono
     port: 5672 # AMQP port of the device registry
     username: amqp-adapter@HONO
     password: amqp-secret
+    linkEstablishmentTimeout: ${link.establishment.timeout}
   tenant:
     name: 'Hono AMQP Adapter'
     host: hono-service-device-registry.hono
     port: 5672 # AMQP port of the device registry
     username: amqp-adapter@HONO
     password: amqp-secret
+    linkEstablishmentTimeout: ${link.establishment.timeout}
   command:
     name: 'Hono AMQP Adapter'
     host: hono-dispatch-router.hono
@@ -44,6 +48,7 @@ hono:
     keyPath: /etc/hono/certs/amqp-adapter-key.pem
     certPath: /etc/hono/certs/amqp-adapter-cert.pem
     trustStorePath: /etc/hono/certs/trusted-certs.pem
+    linkEstablishmentTimeout: ${link.establishment.timeout}
   metric:
     reporter:
       graphite:

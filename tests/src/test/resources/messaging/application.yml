@@ -33,3 +33,4 @@ hono:
     keyPath: /etc/hono/certs/hono-messaging-key.pem
     certPath: /etc/hono/certs/hono-messaging-cert.pem
     trustStorePath: /etc/hono/certs/trusted-certs.pem
+    linkEstablishmentTimeout: ${link.establishment.timeout}
