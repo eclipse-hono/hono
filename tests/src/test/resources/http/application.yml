@@ -49,16 +49,16 @@ hono:
     certPath: /etc/hono/certs/http-adapter-cert.pem
     trustStorePath: /etc/hono/certs/trusted-certs.pem
     linkEstablishmentTimeout: ${link.establishment.timeout}
-  metric:
-    reporter:
-      graphite:
-        active: false
+  metrics:
+    legacy: false
 # disable spring boot actuator endpoints, enable metrics
 endpoints:
   enabled: false
   metrics:
     enabled: false
+management:
+  metrics:
+    enabled: false
 spring:
   jmx:
     enabled: false
-    
