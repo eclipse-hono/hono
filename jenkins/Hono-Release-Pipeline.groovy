@@ -33,10 +33,11 @@ node {
                     description: "The version identifier to use during development of the next version.\nExamples:\n2.0.0-SNAPSHOT\n1.1.0-SNAPSHOT",
                     name: 'NEXT_VERSION',
                     trim: true),
-            string(defaultValue: '',
-                    description: "The version identifier to use during development of the next version.\nExamples:\n2.0.0-SNAPSHOT\n1.1.0-SNAPSHOT",
+            credentials(credentialType: 'com.cloudbees.plugins.credentials.common.StandardCredentials',
+                    defaultValue: '',
+                    description: 'The credentials to use during checkout from git',
                     name: 'CREDENTIALS_ID',
-                    trim: true)])])
+                    required: true)])])
     try {
         checkOut()
         setReleaseVersionAndBuild()
