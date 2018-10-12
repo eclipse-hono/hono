@@ -18,10 +18,14 @@ hono:
     waitForDownstreamConnectionEnabled: true
     validation:
       sharedSecret: sdgfsdafazufgsdafjhfgsdajfgwhriojsdafjlksdhfgsa8fg452368gdf
+  metrics:
+    legacy: false
 spring:
   jmx:
     enabled: false
-
+management:
+  metrics:
+    enabled: false
 ---
 
 spring:

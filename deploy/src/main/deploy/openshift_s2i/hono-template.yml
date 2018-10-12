@@ -465,11 +465,6 @@ objects:
           trustStorePath: /var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt
           trustStoreFormat: PEM
           credentialsPath: /etc/secrets/registry.properties
-        metric:
-          reporter:
-            graphite:
-              active: true
-              port: 2003
       # disable spring boot actuator endpoints, enable metrics
       endpoints:
         enabled: false
@@ -591,7 +586,7 @@ objects:
             value: hono-service-device-registry.$(KUBERNETES_NAMESPACE).svc
           - name: HONO_TENANT_HOST
             value: hono-service-device-registry.$(KUBERNETES_NAMESPACE).svc
-          - name: HONO_METRIC_REPORTER_GRAPHITE_HOST
+          - name: MANAGEMENT_METRICS_EXPORT_GRAPHITE_HOST
             value: influxdb.$(KUBERNETES_NAMESPACE).svc
           - name: AB_JOLOKIA_USER
             value: jolokia
@@ -822,11 +817,6 @@ objects:
           trustStorePath: /var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt
           trustStoreFormat: PEM
           credentialsPath: /etc/secrets/registry.properties
-        metric:
-          reporter:
-            graphite:
-              active: true
-              port: 2003
       # disable spring boot actuator endpoints, enable metrics
       endpoints:
         enabled: false
@@ -948,7 +938,7 @@ objects:
             value: hono-service-device-registry.$(KUBERNETES_NAMESPACE).svc
           - name: HONO_TENANT_HOST
             value: hono-service-device-registry.$(KUBERNETES_NAMESPACE).svc
-          - name: HONO_METRIC_REPORTER_GRAPHITE_HOST
+          - name: MANAGEMENT_METRICS_EXPORT_GRAPHITE_HOST
             value: influxdb.$(KUBERNETES_NAMESPACE).svc
           - name: AB_JOLOKIA_USER
             value: jolokia
@@ -1265,7 +1255,7 @@ objects:
                 fieldPath: metadata.namespace
           - name: HONO_AUTH_HOST
             value: hono-service-auth.$(KUBERNETES_NAMESPACE).svc
-          - name: HONO_METRIC_REPORTER_GRAPHITE_HOST
+          - name: MANAGEMENT_METRICS_EXPORT_GRAPHITE_HOST
             value: influxdb.$(KUBERNETES_NAMESPACE).svc
           - name: HONO_REGISTRY_SVC_SAVE_TO_FILE
             value: "true"
@@ -1626,7 +1616,7 @@ objects:
             value: authentication-impl
           - name: LOGGING_CONFIG
             value: file:///etc/config/logback-spring.xml
-          - name: HONO_METRIC_REPORTER_GRAPHITE_HOST
+          - name: MANAGEMENT_METRICS_EXPORT_GRAPHITE_HOST
             value: influxdb.$(KUBERNETES_NAMESPACE).svc
           - name: HONO_AUTH_SVC_SIGNING_SHARED_SECRET
             valueFrom:

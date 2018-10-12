@@ -141,7 +141,8 @@
       <groupId>io.micrometer</groupId>
       <artifactId>micrometer-registry-graphite</artifactId>
       <scope>compile</scope>
-      <optional>true</optional>
+      <!-- TODO: change to "true" when "legacy" is not longer default -->
+      <optional>false</optional>
     </dependency>
 
   </dependencies>

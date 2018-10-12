@@ -36,7 +36,7 @@ import io.vertx.core.metrics.MetricsOptions;
  * Configuration for using legacy style metrics.
  */
 @Configuration
-@ConditionalOnProperty(name = "hono.metrics.legacy", havingValue = "true")
+@ConditionalOnProperty(name = "hono.metrics.legacy", havingValue = "true", matchIfMissing = true)
 @PropertySource("classpath:org/eclipse/hono/service/metric/legacy.properties")
 public class LegacyMetricsConfig {
 

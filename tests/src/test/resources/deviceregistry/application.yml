@@ -29,7 +29,11 @@ hono:
     svc:
       filename: /etc/hono/tenants.json
       saveToFile: false
+  metrics:
+    legacy: false
 spring:
   jmx:
     enabled: false
-      
+management:
+  metrics:
+    enabled: false
