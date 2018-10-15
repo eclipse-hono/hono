@@ -12,6 +12,8 @@
  *******************************************************************************/
 package org.eclipse.hono.adapter.amqp;
 
+import static org.hamcrest.core.IsEqual.equalTo;
+import static org.junit.Assert.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -19,15 +21,23 @@ import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
+
 import org.apache.qpid.proton.amqp.messaging.AmqpValue;
+import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
 import org.apache.qpid.proton.amqp.messaging.Rejected;
 import org.apache.qpid.proton.amqp.messaging.Target;
+import org.apache.qpid.proton.amqp.transport.Source;
 import org.apache.qpid.proton.engine.Record;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.HonoClient;
+import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.ServiceInvocationException;
@@ -35,7 +45,12 @@ import org.eclipse.hono.client.TenantClient;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.auth.device.Device;
 import org.eclipse.hono.service.command.CommandConnection;
+import org.eclipse.hono.service.command.CommandResponse;
+import org.eclipse.hono.service.command.CommandResponseSender;
+import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.EventConstants;
+import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.TelemetryConstants;
@@ -45,7 +60,9 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
 import org.junit.runner.RunWith;
+import org.mockito.ArgumentCaptor;
 
+import io.opentracing.SpanContext;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -57,6 +74,7 @@ import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonDelivery;
 import io.vertx.proton.ProtonQoS;
 import io.vertx.proton.ProtonReceiver;
+import io.vertx.proton.ProtonSender;
 import io.vertx.proton.ProtonServer;
 
 /**
@@ -69,7 +87,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
      * Time out all tests after five seconds.
      */
     @Rule
-    public Timeout globalTimeout = Timeout.seconds(5);
+    public Timeout globalTimeout = new Timeout(5, TimeUnit.SECONDS);
 
     /**
      * A tenant identifier used for testing.
@@ -102,6 +120,9 @@ public class VertxBasedAmqpProtocolAdapterTest {
     public void setup(final TestContext context) {
 
         tenantClient = mock(TenantClient.class);
+        when(tenantClient.get(anyString(), (SpanContext) any())).thenAnswer(invocation -> {
+           return Future.succeededFuture(TenantObject.from(invocation.getArgument(0), true));
+        });
 
         tenantServiceClient = mock(HonoClient.class);
         when(tenantServiceClient.connect(any(Handler.class))).thenReturn(Future.succeededFuture(tenantServiceClient));
@@ -117,7 +138,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
 
         registrationClient = mock(RegistrationClient.class);
         final JsonObject regAssertion = new JsonObject().put(RegistrationConstants.FIELD_ASSERTION, "assert-token");
-        when(registrationClient.assertRegistration(anyString(), any()))
+        when(registrationClient.assertRegistration(anyString(), any(), (SpanContext) any()))
                 .thenReturn(Future.succeededFuture(regAssertion));
 
         registrationServiceClient = mock(HonoClient.class);
@@ -128,6 +149,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
 
         commandConnection = mock(CommandConnection.class);
         when(commandConnection.connect(any(Handler.class))).thenReturn(Future.succeededFuture(commandConnection));
+        when(commandConnection.closeCommandConsumer(anyString(), anyString())).thenReturn(Future.succeededFuture(null));
 
         config = new ProtocolAdapterProperties();
         config.setAuthenticationRequired(false);
@@ -265,6 +287,108 @@ public class VertxBasedAmqpProtocolAdapterTest {
         verify(delivery).disposition(isA(Rejected.class), eq(true));
     }
 
+    /**
+     * Verify that if a client device opens a receiver link to receive commands, then the AMQP adapter opens a link
+     * for sending commands to the device and notifies the downstream application by sending an
+     * <em>EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION</em> event a with TTD -1. An unauthenticated device is used in
+     * this test setup to simulate the client device.
+     */
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testAdapterOpensSenderLinkAndNotifyDownstreamApplication() {
+        // GIVEN an AMQP adapter configured to use a user-defined server
+        final VertxBasedAmqpProtocolAdapter adapter = givenAnAmqpAdapter();
+        final Future<ProtonDelivery> outcome = Future.future();
+        final MessageSender eventSender = givenAnEventSender(outcome);
+
+        // WHEN an unauthenticated device opens a receiver link with a valid source address
+        when(commandConnection.getOrCreateCommandConsumer(eq(TEST_TENANT_ID), eq(TEST_DEVICE), any(Handler.class), any(Handler.class))).thenReturn(
+                Future.succeededFuture(mock(MessageConsumer.class)));
+        final String sourceAddress = String.format("%s/%s/%s", CommandConstants.COMMAND_ENDPOINT, TEST_TENANT_ID, TEST_DEVICE);
+        final ProtonSender sender = getSender(sourceAddress);
+
+        adapter.handleRemoteSenderOpenForCommands(sender, null);
+
+        // THEN the adapter opens the link upon success
+        verify(sender).open();
+
+        // AND sends an empty notification downstream (with a TTD of -1)
+        final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
+        verify(eventSender).sendAndWaitForOutcome(messageCaptor.capture(), any());
+        assertThat(messageCaptor.getValue().getContentType(), equalTo(EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION));
+        assertThat(MessageHelper.getTimeUntilDisconnect(messageCaptor.getValue()), equalTo(-1));
+    }
+
+    /**
+     * Verify that if a client device unsubscribe to receiving commands (by closing its receiver link), then the AMQP
+     * adapter sends an empty notification downstream with TTD 0 and closes the command consumer. An authenticated
+     * device is used in this test setup to simulate a client device.
+     */
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testAdapterClosesCommandConsumerWhenDeviceClosesReceiverLink() {
+        // GIVEN an AMQP adapter
+        final VertxBasedAmqpProtocolAdapter adapter = givenAnAmqpAdapter();
+        final Future<ProtonDelivery> outcome = Future.future();
+        final MessageSender eventSender = givenAnEventSender(outcome);
+
+        // WHEN a device subscribes to commands with a valid subscription address
+        when(commandConnection.getOrCreateCommandConsumer(eq(TEST_TENANT_ID), eq(TEST_DEVICE), any(Handler.class), any(Handler.class))).thenReturn(
+                Future.succeededFuture(mock(MessageConsumer.class)));
+        final String sourceAddress = String.format("%s", CommandConstants.COMMAND_ENDPOINT);
+        final ProtonSender sender = getSender(sourceAddress);
+        final Device authenticatedDevice = new Device(TEST_TENANT_ID, TEST_DEVICE);
+
+        adapter.handleRemoteSenderOpenForCommands(sender, authenticatedDevice);
+
+        final ArgumentCaptor<Handler<AsyncResult<ProtonSender>>> closeHookCaptor = ArgumentCaptor.forClass(Handler.class);
+
+        // AND the client device closes its receiver link (unsubscribe)
+        verify(sender).closeHandler(closeHookCaptor.capture());
+        closeHookCaptor.getValue().handle(null);
+
+        // THEN the adapter closes the command consumer
+        verify(commandConnection).closeCommandConsumer(TEST_TENANT_ID, TEST_DEVICE);
+
+        // AND sends an empty notification downstream
+        final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
+        verify(eventSender, times(2)).sendAndWaitForOutcome(messageCaptor.capture(), any());
+        assertThat(messageCaptor.getValue().getContentType(), equalTo(EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION));
+        assertThat(MessageHelper.getTimeUntilDisconnect(messageCaptor.getValue()), equalTo(0));
+    }
+
+    /**
+     * Verify that the AMQP adapter forwards command responses downstream.
+     */
+    @Test
+    public void testUploadCommandResponseSucceeds() {
+        // GIVEN an AMQP adapter configured to use a user-defined server
+        final VertxBasedAmqpProtocolAdapter adapter = givenAnAmqpAdapter();
+        final CommandResponseSender responseSender = givenACommandResponseSenderForAnyTenant();
+
+        // WHICH is enabled for a tenant
+        givenAConfiguredTenant(TEST_TENANT_ID, true);
+
+        // IF an unauthenticated device publishes a command response
+        final ProtonDelivery delivery = mock(ProtonDelivery.class);
+
+        final String replyToAddress = String.format("%s/%s/%s", CommandConstants.COMMAND_ENDPOINT, TEST_TENANT_ID,
+                TEST_DEVICE);
+
+        final Map<String, Object> propertyMap = new HashMap<>();
+        propertyMap.put(MessageHelper.APP_PROPERTY_STATUS, "200");
+        final ApplicationProperties props = new ApplicationProperties(propertyMap);
+        final Message message = getFakeMessage(replyToAddress);
+        when(message.getCorrelationId()).thenReturn("correlation-id");
+        when(message.getApplicationProperties()).thenReturn(props);
+
+        adapter.uploadMessage(new AmqpContext(delivery, message, null));
+
+        // THEN the adapter forwards the command response message downstream
+        verify(responseSender).sendCommandResponse((CommandResponse) any(), (SpanContext) any());
+
+    }
+
     private Target getTarget(final ResourceIdentifier resource) {
         final Target target = new Target();
         target.setAddress(resource.toString());
@@ -276,6 +400,13 @@ public class VertxBasedAmqpProtocolAdapterTest {
         when(receiver.getRemoteTarget()).thenReturn(target);
         when(receiver.getRemoteQoS()).thenReturn(qos);
         return receiver;
+    }
+
+    private ProtonSender getSender(final String sourceAddress) {
+        final ProtonSender sender = mock(ProtonSender.class);
+        when(sender.getRemoteSource()).thenReturn(mock(Source.class));
+        when(sender.getRemoteSource().getAddress()).thenReturn(sourceAddress);
+        return sender;
     }
 
     private ProtonConnection getConnection(final Device device) {
@@ -290,7 +421,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
         final TenantObject tenantConfig = TenantObject.from(tenantId, Boolean.TRUE);
         tenantConfig
                 .addAdapterConfiguration(TenantObject.newAdapterConfig(Constants.PROTOCOL_ADAPTER_TYPE_AMQP, enabled));
-        when(tenantClient.get(tenantId)).thenReturn(Future.succeededFuture(tenantConfig));
+        when(tenantClient.get(eq(tenantId), (SpanContext) any())).thenReturn(Future.succeededFuture(tenantConfig));
     }
 
     private Message getFakeMessage(final String to) {
@@ -304,6 +435,21 @@ public class VertxBasedAmqpProtocolAdapterTest {
     private MessageSender givenATelemetrySenderForAnyTenant() {
         final MessageSender sender = mock(MessageSender.class);
         when(messagingServiceClient.getOrCreateTelemetrySender(anyString())).thenReturn(Future.succeededFuture(sender));
+        return sender;
+    }
+
+    private CommandResponseSender givenACommandResponseSenderForAnyTenant() {
+        final CommandResponseSender responseSender = mock(CommandResponseSender.class);
+        when(commandConnection.getCommandResponseSender(anyString(), anyString()))
+                .thenReturn(Future.succeededFuture(responseSender));
+        return responseSender;
+    }
+
+    private MessageSender givenAnEventSender(final Future<ProtonDelivery> outcome) {
+        final MessageSender sender = mock(MessageSender.class);
+        when(sender.sendAndWaitForOutcome(any(Message.class), (SpanContext) any())).thenReturn(outcome);
+
+        when(messagingServiceClient.getOrCreateEventSender(anyString())).thenReturn(Future.succeededFuture(sender));
         return sender;
     }
 

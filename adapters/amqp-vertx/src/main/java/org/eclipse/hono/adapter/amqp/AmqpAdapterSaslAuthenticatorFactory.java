@@ -37,6 +37,7 @@ import org.eclipse.hono.service.auth.device.UsernamePasswordAuthProvider;
 import org.eclipse.hono.service.auth.device.UsernamePasswordCredentials;
 import org.eclipse.hono.service.auth.device.X509AuthProvider;
 import org.eclipse.hono.util.AuthenticationConstants;
+import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.TenantObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -200,7 +201,16 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
                     completer.handle(Future.failedFuture(new CredentialException(
                             "username does not comply with expected pattern [<authId>@<tenantId>]")));
                 } else {
-                    getUsernamePasswordAuthProvider().authenticate(credentials, completer);
+                    getTenantObject(credentials.getTenantId()).map(tenant -> {
+                        if (tenant.isAdapterEnabled(Constants.PROTOCOL_ADAPTER_TYPE_AMQP)) {
+                            getUsernamePasswordAuthProvider().authenticate(credentials, completer);
+                        } else {
+                            completer.handle(Future.failedFuture(new CredentialException(
+                                    String.format("AMQP adapter is disabled for Tenant [tenantId: {}]",
+                                            tenant.getTenantId()))));
+                        }
+                        return null;
+                    });
                 }
             } catch (CredentialException e) {
                 completer.handle(Future.failedFuture(e));
@@ -223,8 +233,16 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
                 final Future<TenantObject> tenantTracker = getTenantObject(deviceCert.getIssuerX500Principal());
                 tenantTracker
                         .compose(tenant -> {
+                            if (!tenant.isAdapterEnabled(Constants.PROTOCOL_ADAPTER_TYPE_AMQP)) {
+                                return Future.failedFuture(new CredentialException(
+                                        String.format("AMQP adapter is disabled for Tenant [tenantId: {}]",
+                                                tenant.getTenantId())));
+                            }
+                            return Future.succeededFuture();
+                        })
+                        .compose(ok -> {
                             try {
-                                final TrustAnchor trustAnchor = tenant.getTrustAnchor();
+                                final TrustAnchor trustAnchor = tenantTracker.result().getTrustAnchor();
                                 return getValidator().validate(Collections.singletonList(deviceCert), trustAnchor);
                             } catch(final GeneralSecurityException e) {
                                 return Future.failedFuture(e);
@@ -245,6 +263,11 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
         private Future<TenantObject> getTenantObject(final X500Principal issuerDn) {
             return tenantServiceClient.getOrCreateTenantClient()
                     .compose(tenantClient -> tenantClient.get(issuerDn));
+        }
+
+        private Future<TenantObject> getTenantObject(final String tenantId) {
+            return tenantServiceClient.getOrCreateTenantClient()
+                    .compose(tenantClient -> tenantClient.get(tenantId));
         }
 
         private HonoClientBasedAuthProvider getUsernamePasswordAuthProvider() {

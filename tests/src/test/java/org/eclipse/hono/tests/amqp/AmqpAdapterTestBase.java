@@ -24,7 +24,6 @@ import javax.security.auth.x500.X500Principal;
 import org.apache.qpid.proton.amqp.messaging.Accepted;
 import org.apache.qpid.proton.amqp.messaging.Rejected;
 import org.apache.qpid.proton.amqp.messaging.Target;
-import org.apache.qpid.proton.amqp.transport.AmqpError;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.MessageConsumer;
@@ -224,8 +223,8 @@ public abstract class AmqpAdapterTestBase extends ClientTestBase {
     }
 
     /**
-     * Verifies that the AMQP adapter rejects messages from a device that belongs to a tenant for which it has been
-     * disabled. This test case only considers events since telemetry senders do not wait for response from the adapter.
+     * Verifies that the AMQP adapter will not establish a connection with a client device that belongs to a tenant for
+     * which the adapter is disabled.
      * 
      * @param context The Vert.x test context.
      */
@@ -233,28 +232,21 @@ public abstract class AmqpAdapterTestBase extends ClientTestBase {
     public void testUploadMessageFailsForTenantDisabledAdapter(final TestContext context) {
         final String tenantId = helper.getRandomTenantId();
         final String deviceId = helper.getRandomDeviceId(tenantId);
+        final String username = IntegrationTestSupport.getUsername(deviceId, tenantId);
 
-        final Async setup = context.async();
-        setupProtocolAdapter(tenantId, deviceId, true).map(s -> {
-            sender = s;
-            return s;
-        }).setHandler(context.asyncAssertSuccess(ok -> setup.complete()));
-        setup.await();
-
-        final Async completionTracker = context.async();
-        final Message msg = ProtonHelper.message("some payload");
-        msg.setAddress(getEndpointName());
-
-        sender.send(msg, delivery -> {
-            context.assertTrue(Rejected.class.isInstance(delivery.getRemoteState()));
-
-            final Rejected rejected = (Rejected) delivery.getRemoteState();
-            final ErrorCondition error = rejected.getError();
-            context.assertEquals(AmqpError.UNAUTHORIZED_ACCESS, error.getCondition());
-            completionTracker.complete();
-        });
-        completionTracker.await();
-
+        // GIVEN a tenant that is disabled for the AMQP adapter
+        final TenantObject tenant = TenantObject.from(tenantId, true);
+        tenant.addAdapterConfiguration(TenantObject.newAdapterConfig(Constants.PROTOCOL_ADAPTER_TYPE_AMQP, false));
+        helper.registry
+                .addDeviceForTenant(tenant, deviceId, DEVICE_PASSWORD)
+                .compose(ok -> {
+                    // WHEN a device belonging to the tenant attempts to connect to the adapter
+                    return connectToAdapter(username, DEVICE_PASSWORD);
+                 })
+                .setHandler(context.asyncAssertFailure(t -> {
+                    // THEN the connection is not established
+                    context.assertTrue(SecurityException.class.isInstance(t));
+                }));
     }
 
     /**
@@ -392,7 +384,7 @@ public abstract class AmqpAdapterTestBase extends ClientTestBase {
      * @throws GeneralSecurityException if the tenant's trust anchor cannot be generated
      */
     @Test
-    public void testConnectFailsForFailsForNonMatchingTrustAnchor(final TestContext ctx) throws GeneralSecurityException {
+    public void testConnectFailsForNonMatchingTrustAnchor(final TestContext ctx) throws GeneralSecurityException {
 
         final String tenantId = helper.getRandomTenantId();
         final String deviceId = helper.getRandomDeviceId(tenantId);

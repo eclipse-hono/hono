@@ -48,6 +48,10 @@ public final class Command {
 
         this.valid = valid;
         this.message = message;
+        if (valid) {
+            this.message.setCorrelationId(correlationId);
+            this.message.setReplyTo(replyToId);
+        }
         this.tenantId = tenantId;
         this.deviceId = deviceId;
         this.correlationId = correlationId;
@@ -139,6 +143,15 @@ public final class Command {
                 replyToId);
 
         return result;
+    }
+
+    /**
+     * Gets the AMQP 1.0 message representing this command.
+     * 
+     * @return The command message.
+     */
+    public Message getCommandMessage() {
+        return message;
     }
 
     /**

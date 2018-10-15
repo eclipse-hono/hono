@@ -89,6 +89,15 @@ public class AmqpContext extends MapBasedExecutionContext {
     }
 
     /**
+     * Gets the AMQP 1.0 message sent by the client.
+     * 
+     * @return The AMQP 1.0 message.
+     */
+    Message getMessage() {
+        return message;
+    }
+
+    /**
      * Gets the tenant identifier for this context.
      *
      * @return The tenant identifier.
