@@ -106,18 +106,16 @@ A copy of the license is contained in the file [LICENSE](LICENSE) and is also av
 
 The source code is available from [Maven Central](http://search.maven.org/#search%7Cga%7C1%7Cg%3A%22ch.qos.logback%22%20AND%20v%3A%22${logback.version}%22).
 
-### Metrics ${dropwizard-metrics.version}
+### Micrometer ${micrometer.version}
 
-This product includes software developed by the [Metrics project](http://metrics.dropwizard.io/).
+This product includes software developed by the [Micrometer project](http://micrometer.io/).
 
-Your use of *Metrics* is subject to the terms and conditions of the Apache Software License 2.0 and others
-as indicated by the file [NOTICE.Metrics.txt](NOTICE.Metrics.txt). This file contains links to the licenses
-whose terms and conditions apply.
+Your use of *Micrometer* is subject to the terms and conditions of the Apache Software License 2.0.
 
 A copy of the Apache Software License 2.0 is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and
 is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
 
-The source code is available from [Maven Central](http://search.maven.org/#search%7Cga%7C1%7Cg%3A%22io.dropwizard.metrics%22%20AND%20v%3A%22${dropwizard-metrics.version}%22).
+The source code is available from [Maven Central](http://search.maven.org/#search%7Cga%7C1%7Cg%3A%22io.micrometer%22%20AND%20v%3A%22${micrometer.version}%22).
 
 ### Netty ${netty.version}
 
@@ -242,15 +240,15 @@ is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [Maven Central](http://search.maven.org/remotecontent?filepath=io/vertx/vertx-bridge-common/${vertx.version}/vertx-bridge-common-${vertx.version}-sources.jar).
 
-### vert.x Dropwizard Metrics ${vertx.version}
+### vert.x Micrometer Metrics ${vertx.version}
 
 This product includes software developed by the [vert.x project](http://vertx.io).
 
-Your use of *vert.x Dropwizard Metrics* is subject to the terms and conditions of the Apache Software License 2.0.
+Your use of *vert.x Micrometer Metrics* is subject to the terms and conditions of the Apache Software License 2.0.
 A copy of the Apache Software License 2.0 is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and
 is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
 
-The source code is available from [Maven Central](http://search.maven.org/remotecontent?filepath=io/vertx/vertx-dropwizard-metrics/${vertx.version}/vertx-dropwizard-metrics-${vertx.version}-sources.jar).
+The source code is available from [Maven Central](http://search.maven.org/remotecontent?filepath=io/vertx/vertx-micrometer-metrics/${vertx.version}/vertx-micrometer-metrics-${vertx.version}-sources.jar).
 
 ### vert.x Health Check ${vertx.version}
 
