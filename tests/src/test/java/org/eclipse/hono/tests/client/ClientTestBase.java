@@ -12,16 +12,18 @@
  *******************************************************************************/
 package org.eclipse.hono.tests.client;
 
+import java.net.HttpURLConnection;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Consumer;
 import java.util.function.Function;
 
+import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Vertx;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 
@@ -30,6 +32,10 @@ import io.vertx.ext.unit.TestContext;
  */
 public abstract class ClientTestBase {
 
+    /**
+     * The vert.x instance to run all tests on.
+     */
+    protected static final Vertx VERTX = Vertx.vertx();
     /**
      * A logger to be used by subclasses.
      */
@@ -49,7 +55,7 @@ public abstract class ClientTestBase {
     protected void doUploadMessages(
             final TestContext context,
             final Function<Handler<Void>, Future<Void>> receiverFactory,
-            final Consumer<String> sender) throws InterruptedException {
+            final Function<String, Future<?>> sender) throws InterruptedException {
 
         final Async remainingMessages = context.async(IntegrationTestSupport.MSG_COUNT);
         final AtomicInteger messagesSent = new AtomicInteger(0);
@@ -70,8 +76,25 @@ public abstract class ClientTestBase {
         receiverCreation.await();
 
         while (messagesSent.get() < IntegrationTestSupport.MSG_COUNT) {
-            final String payload = "temp: " + messagesSent.getAndIncrement();
-            sender.accept(payload);
+
+            final int msgNo = messagesSent.getAndIncrement();
+            final String payload = "temp: " + msgNo;
+            final Async msgSent = context.async();
+
+            sender.apply(payload).setHandler(sendAttempt -> {
+                if (sendAttempt.failed()) {
+                    if (sendAttempt.cause() instanceof ServerErrorException &&
+                            ((ServerErrorException) sendAttempt.cause()).getErrorCode() == HttpURLConnection.HTTP_UNAVAILABLE) {
+                        // no credit available
+                        // do not expect this message to be received
+                        remainingMessages.countDown();
+                    } else {
+                        log.info("error sending message no {}: {}", msgNo);
+                    }
+                }
+                msgSent.complete();
+            });
+            msgSent.await();
             if (messagesSent.get() % 200 == 0) {
                 log.info("messages sent: {}", messagesSent.get());
             }

@@ -36,10 +36,10 @@ import org.junit.Test;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
-import io.vertx.core.Vertx;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.proton.ProtonClientOptions;
+import io.vertx.proton.ProtonDelivery;
 
 /**
  * Base class for integration tests.
@@ -54,7 +54,6 @@ public abstract class MessagingClientTestBase extends ClientTestBase {
 
     private static final String TEST_TENANT_ID = System.getProperty(IntegrationTestSupport.PROPERTY_TENANT, Constants.DEFAULT_TENANT);
     private static final String CONTENT_TYPE_TEXT_PLAIN = "text/plain";
-    private static final Vertx  vertx = Vertx.vertx();
 
     /**
      * A client for connecting to Hono Messaging.
@@ -110,8 +109,8 @@ public abstract class MessagingClientTestBase extends ClientTestBase {
         downstreamProps.setUsername(IntegrationTestSupport.RESTRICTED_CONSUMER_NAME);
         downstreamProps.setPassword(IntegrationTestSupport.RESTRICTED_CONSUMER_PWD);
         downstreamClient = new HonoClientImpl(
-                vertx,
-                ConnectionFactory.newConnectionFactory(vertx, downstreamProps),
+                VERTX,
+                ConnectionFactory.newConnectionFactory(VERTX, downstreamProps),
                 downstreamProps);
 
         final ClientConfigProperties honoProps = new ClientConfigProperties();
@@ -120,8 +119,8 @@ public abstract class MessagingClientTestBase extends ClientTestBase {
         honoProps.setUsername(IntegrationTestSupport.HONO_USER);
         honoProps.setPassword(IntegrationTestSupport.HONO_PWD);
         honoClient = new HonoClientImpl(
-                vertx,
-                ConnectionFactory.newConnectionFactory(vertx, honoProps),
+                VERTX,
+                ConnectionFactory.newConnectionFactory(VERTX, honoProps),
                 honoProps);
 
         final ClientConfigProperties registryProps = new ClientConfigProperties();
@@ -130,8 +129,8 @@ public abstract class MessagingClientTestBase extends ClientTestBase {
         registryProps.setUsername(IntegrationTestSupport.HONO_USER);
         registryProps.setPassword(IntegrationTestSupport.HONO_PWD);
         honoDeviceRegistryClient = new HonoClientImpl(
-                vertx,
-                ConnectionFactory.newConnectionFactory(vertx, registryProps),
+                VERTX,
+                ConnectionFactory.newConnectionFactory(VERTX, registryProps),
                 registryProps);
 
         final ProtonClientOptions options = new ProtonClientOptions();
@@ -247,26 +246,38 @@ public abstract class MessagingClientTestBase extends ClientTestBase {
         }).setHandler(ok -> setup.complete());
         setup.await();
 
-        final Function<Handler<Void>, Future<Void>> receiver = callback -> {
+        final Function<Handler<Void>, Future<Void>> receiverFactory = msgConsumer -> {
             return createConsumer(TEST_TENANT_ID, msg -> {
                 assertMessageProperties(ctx, msg);
                 assertAdditionalMessageProperties(ctx, msg);
-                callback.handle(null);
+                msgConsumer.handle(null);
             }).map(c -> {
                 consumer = c;
                 return null;
             });
         };
 
-        doUploadMessages(ctx, receiver, payload -> {
-            final Async sending = ctx.async();
-            sender.send(
-                    DEVICE_ID,
-                    payload,
-                    CONTENT_TYPE_TEXT_PLAIN,
-                    registrationAssertion.get(),
-                    creditAvailable -> sending.complete());
-            sending.await();
+        doUploadMessages(ctx, receiverFactory, payload -> {
+
+            final Future<ProtonDelivery> result = Future.future();
+            final Handler<Long> sendMsg = go -> {
+                sender.send(
+                        DEVICE_ID,
+                        payload,
+                        CONTENT_TYPE_TEXT_PLAIN,
+                        registrationAssertion.get()).setHandler(result);
+            };
+
+            VERTX.runOnContext(doSend -> {
+                if (sender.getCredit() <= 0) {
+                    // wait a little for credits from peer
+                    VERTX.setTimer(100, sendMsg);
+                } else {
+                    // send message immediately
+                    sendMsg.handle(0L);
+                }
+            });
+            return result;
         });
     }
 

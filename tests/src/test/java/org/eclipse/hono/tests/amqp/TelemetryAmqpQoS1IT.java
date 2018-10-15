@@ -19,21 +19,20 @@ import org.eclipse.hono.client.MessageConsumer;
 import org.junit.runner.RunWith;
 
 import io.vertx.core.Future;
-import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.proton.ProtonQoS;
 
 /**
- * An Event based integration test for the AMQP adapter.
+ * A Telemetry based integration test for the AMQP adapter.
  */
 @RunWith(VertxUnitRunner.class)
-public class EventAmqpIT extends AmqpAdapterTestBase {
+public class TelemetryAmqpQoS1IT extends AmqpAdapterTestBase {
 
-    private static final String EVENT_ENDPOINT = "event";
+    private static final String TELEMETRY_ENDPOINT = "telemetry";
 
     @Override
     protected Future<MessageConsumer> createConsumer(final String tenantId, final Consumer<Message> messageConsumer) {
-        return helper.honoClient.createEventConsumer(tenantId, messageConsumer, close -> {});
+        return helper.honoClient.createTelemetryConsumer(tenantId, messageConsumer, close -> {});
     }
 
     @Override
@@ -43,12 +42,7 @@ public class EventAmqpIT extends AmqpAdapterTestBase {
 
     @Override
     protected String getEndpointName() {
-        return EVENT_ENDPOINT;
+        return TELEMETRY_ENDPOINT;
     }
 
-    @Override
-    protected void assertAdditionalMessageProperties(final TestContext ctx, final Message msg) {
-        // assert that events are marked as "durable"
-        ctx.assertTrue(msg.isDurable());
-    }
 }

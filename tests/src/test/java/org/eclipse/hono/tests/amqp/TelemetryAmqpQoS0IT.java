@@ -20,18 +20,24 @@ import org.junit.runner.RunWith;
 
 import io.vertx.core.Future;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
+import io.vertx.proton.ProtonQoS;
 
 /**
  * A Telemetry based integration test for the AMQP adapter.
  */
 @RunWith(VertxUnitRunner.class)
-public class TelemetryAmqpIT extends AmqpAdapterTestBase {
+public class TelemetryAmqpQoS0IT extends AmqpAdapterTestBase {
 
     private static final String TELEMETRY_ENDPOINT = "telemetry";
 
     @Override
     protected Future<MessageConsumer> createConsumer(final String tenantId, final Consumer<Message> messageConsumer) {
         return helper.honoClient.createTelemetryConsumer(tenantId, messageConsumer, close -> {});
+    }
+
+    @Override
+    protected ProtonQoS getProducerQoS() {
+        return ProtonQoS.AT_MOST_ONCE;
     }
 
     @Override

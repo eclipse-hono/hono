@@ -88,7 +88,6 @@ public abstract class AmqpAdapterTestBase extends ClientTestBase {
     private ProtonSender sender;
     private MessageConsumer consumer;
 
-    private static Vertx vertx;
     private Context context;
 
     private static ProtonClientOptions defaultOptions;
@@ -131,8 +130,7 @@ public abstract class AmqpAdapterTestBase extends ClientTestBase {
      */
     @BeforeClass
     public static void setup(final TestContext ctx) {
-        vertx = Vertx.vertx();
-        helper = new IntegrationTestSupport(vertx);
+        helper = new IntegrationTestSupport(VERTX);
         helper.init(ctx);
 
         defaultOptions = new ProtonClientOptions()
@@ -428,10 +426,11 @@ public abstract class AmqpAdapterTestBase extends ClientTestBase {
     //------------------------------------------< private methods >---
 
     private void testUploadMessages(final String tenantId, final TestContext ctx) throws InterruptedException {
+
         final Function<Handler<Void>, Future<Void>> receiver = callback -> {
             return createConsumer(tenantId, msg -> {
-                callback.handle(null);
                 assertAdditionalMessageProperties(ctx, msg);
+                callback.handle(null);
             }).map(c -> {
                 consumer = c;
                 return null;
@@ -439,16 +438,27 @@ public abstract class AmqpAdapterTestBase extends ClientTestBase {
         };
 
         doUploadMessages(ctx, receiver, payload -> {
-            final Async sendingComplete = ctx.async();
+
             final Message msg = ProtonHelper.message(payload);
             msg.setAddress(getEndpointName());
-            context.runOnContext(go -> {
-                sender.send(msg, delivery -> {
-                    ctx.assertTrue(Accepted.class.isInstance(delivery.getRemoteState()));
-                    sendingComplete.complete();
+            final Future<?> sendingComplete = Future.future();
+            final Handler<ProtonSender> sendMsgHandler = replenishedSender -> {
+                replenishedSender.send(msg, delivery -> {
+                    if (Accepted.class.isInstance(delivery.getRemoteState())) {
+                        sendingComplete.complete();
+                    } else {
+                        sendingComplete.fail(new IllegalStateException("peer did not accept message"));
+                    }
                 });
+            };
+            context.runOnContext(go -> {
+                if (sender.getCredit() <= 0) {
+                    sender.sendQueueDrainHandler(sendMsgHandler);
+                } else {
+                    sendMsgHandler.handle(sender);
+                }
             });
-            sendingComplete.await();
+            return sendingComplete;
         });
     }
 
@@ -482,6 +492,13 @@ public abstract class AmqpAdapterTestBase extends ClientTestBase {
         });
         return result;
     }
+
+    /**
+     * Gets the QoS to use for sending messages.
+     * 
+     * @return The QoS
+     */
+    abstract protected ProtonQoS getProducerQoS();
 
     /**
      * Sets up the protocol adapter by doing the following:
@@ -518,7 +535,7 @@ public abstract class AmqpAdapterTestBase extends ClientTestBase {
     private Future<ProtonConnection> connectToAdapter(final String username, final String password) {
 
         final Future<ProtonConnection> result = Future.future();
-        final ProtonClient client = ProtonClient.create(vertx);
+        final ProtonClient client = ProtonClient.create(VERTX);
 
         defaultOptions.addEnabledSaslMechanism(ProtonSaslPlainImpl.MECH_NAME);
         client.connect(
@@ -534,7 +551,7 @@ public abstract class AmqpAdapterTestBase extends ClientTestBase {
     private Future<ProtonConnection> connectToAdapter(final SelfSignedCertificate clientCertificate) {
 
         final Future<ProtonConnection> result = Future.future();
-        final ProtonClient client = ProtonClient.create(vertx);
+        final ProtonClient client = ProtonClient.create(VERTX);
 
         final ProtonClientOptions secureOptions = new ProtonClientOptions(defaultOptions);
         secureOptions.setKeyCertOptions(clientCertificate.keyCertOptions());
