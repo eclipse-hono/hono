@@ -15,9 +15,9 @@ package org.eclipse.hono.service.command;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.impl.AbstractConsumer;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.tracing.MessageAnnotationsExtractAdapter;
@@ -49,6 +49,11 @@ import io.vertx.proton.ProtonReceiver;
 public class CommandConsumer extends AbstractConsumer {
 
     private static final Logger LOG = LoggerFactory.getLogger(CommandConsumer.class);
+    /**
+     * A handler that may be called when the consumer is considered to be recreated (e.g. after a connection loss). Must be explicitly set, the default value is {@code null}.
+     */
+    private Handler<ProtonConnection> recreateHandler;
+    private Boolean markedForRecreation = false;
 
     private CommandConsumer(
             final Context context,
@@ -57,6 +62,40 @@ public class CommandConsumer extends AbstractConsumer {
             final Tracer tracer) {
 
         super(context, config, protonReceiver, tracer);
+    }
+
+    /**
+     * Call the recreate handler of the command consumer, if the receiver link is found to be closed and if no other call to this method is currently processed.
+     *
+     * @param con The connection for which the link is recreated.
+     */
+    public final void recreate(final ProtonConnection con) {
+        if (!markedForRecreation) {
+            markedForRecreation = true;
+
+            Optional.ofNullable(this.recreateHandler).map(rh -> {
+                context.owner().setTimer(Constants.DEFAULT_RECONNECT_INTERVAL_MILLIS, id -> {
+                    try {
+                        if (!this.receiver.isOpen()) {
+                            LOG.debug("found receiver link closed for link {}, now recreating it.",
+                                    this.receiver.getSource().getAddress());
+                            this.recreateHandler.handle(con);
+                        }
+                    } finally {
+                        // by all means reset the recreation flag
+                        markedForRecreation = false;
+                    }
+                });
+                LOG.debug("recreate done for link {}.", this.receiver.getSource().getAddress());
+                return rh;
+            }).orElseGet(() -> {
+                LOG.trace("no recreate handler found for link {}.", this.receiver.getSource().getAddress());
+                markedForRecreation = false;
+                return null;
+            });
+        } else {
+            LOG.trace("recreate receiver link already in progress - ignoring: {}", this.receiver.getSource().getAddress());
+        }
     }
 
     /**
@@ -90,7 +129,7 @@ public class CommandConsumer extends AbstractConsumer {
             final String deviceId,
             final Handler<CommandContext> commandHandler,
             final Handler<String> receiverCloseHook,
-            final Handler<AsyncResult<MessageConsumer>> creationHandler,
+            final Handler<AsyncResult<CommandConsumer>> creationHandler,
             final Tracer tracer) {
 
         Objects.requireNonNull(context);
@@ -148,18 +187,38 @@ public class CommandConsumer extends AbstractConsumer {
                         currentSpan.finish();
                     }
                 },
-                receiverCloseHook).setHandler(s -> {
+                receiverCloseHook).map(receiver -> {
+                    LOG.debug("successfully created command consumer [tenant-id: {}, device-id: {}]", tenantId, deviceId);
+                    receiverRef.set(receiver);
+                    receiver.flow(1); // allow sender to sender one command
+                    final CommandConsumer commandConsumer = new CommandConsumer(context, props, receiver, tracer);
+                    commandConsumer.setRecreateHandler(newConnection -> {
+                        LOG.debug("Recreating command receiver link : [tenant-id: {}, device-id: {}]", tenantId, deviceId);
 
-                    if (s.succeeded()) {
-                        final ProtonReceiver receiver = s.result();
-                        LOG.debug("successfully created command consumer [tenant-id: {}, device-id: {}]", tenantId, deviceId);
-                        receiverRef.set(receiver);
-                        receiver.flow(1); // allow sender to sender one command
-                        creationHandler.handle(Future.succeededFuture(new CommandConsumer(context, props, receiver, tracer)));
-                    } else {
-                        LOG.debug("failed to create command consumer [tenant-id: {}, device-id: {}]", tenantId, deviceId, s.cause());
-                        creationHandler.handle(Future.failedFuture(s.cause()));
-                    }
-                });
+                        create(context,  clientConfig,
+                                newConnection,
+                                tenantId,
+                                deviceId,
+                                commandHandler,
+                                receiverCloseHook,
+                                creation -> {
+                                    if (creation.succeeded()) {
+                                        LOG.debug("Successfully recreated command consumer  [tenant-id: {}, device-id: {}]", tenantId, deviceId);
+                                    }
+                                },
+                                tracer);
+                    });
+                    LOG.trace("recreate handler set for command consumer [tenant-id: {}, device-id: {}]", tenantId, deviceId);
+                    creationHandler.handle(Future.succeededFuture(commandConsumer));
+                    return receiver;
+            }).recover(t -> {
+                LOG.debug("failed to create command consumer [tenant-id: {}, device-id: {}]", tenantId, deviceId, t);
+                creationHandler.handle(Future.failedFuture(t));
+                return null;
+            });
+    }
+
+    protected final void setRecreateHandler(final Handler<ProtonConnection> recreateHandler) {
+        this.recreateHandler = recreateHandler;
     }
 }
