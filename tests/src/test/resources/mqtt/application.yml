@@ -56,6 +56,12 @@ endpoints:
   enabled: false
   metrics:
     enabled: false
+management:
+  metrics:
+    enabled: false
+    export:
+      graphite:
+        enabled: false
 spring:
   jmx:
     enabled: false

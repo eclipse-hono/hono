@@ -37,3 +37,7 @@ spring:
 management:
   metrics:
     enabled: false
+    export:
+      graphite:
+        enabled: false
+    
