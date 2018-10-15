@@ -83,7 +83,7 @@ public final class CommandResponse {
                 final boolean addDeviceIdToReply = "1".equals(requestId.substring(0, 1));
                 final int lengthStringOne = Integer.parseInt(requestId.substring(1, 3), 16);
                 final String replyId = requestId.substring(3 + lengthStringOne);
-                return new CommandResponse(
+                return from(
                         payload,
                         contentType,
                         status,
@@ -96,7 +96,31 @@ public final class CommandResponse {
     }
 
     /**
-     * Gets the reply-to identifier that has bee extracted from the request ID.
+     * Creates a command response for a reply-to ID, correlation ID and status.
+     * 
+     * @param payload The command response payload.
+     * @param contentType The content-type of the response payload.
+     * @param status The HTTP status code indicating the outcome of executing the command on the device.
+     * @param correlationId The identifier used to correlate this response with the command request.
+     * @param replyTo The reply-to ID of the command response.
+     * 
+     * @return The command response or {@code null} if any of correlationId, replyTo and status is null or if the
+     *         status code is &lt; 200 or &gt;= 600.
+     */
+    public static CommandResponse from(final Buffer payload, final String contentType, final Integer status,
+            final String correlationId, final String replyTo) {
+
+        if (correlationId == null || replyTo == null || status == null) {
+            return null;
+        } else if (INVALID_STATUS_CODE.test(status)) {
+            return null;
+        } else {
+            return new CommandResponse(payload, contentType, status, correlationId, replyTo);
+        }
+    }
+
+    /**
+     * Gets the reply-to identifier that has been extracted from the request ID.
      * 
      * @return The identifier or {@code null} if the request ID could not be parsed.
      */

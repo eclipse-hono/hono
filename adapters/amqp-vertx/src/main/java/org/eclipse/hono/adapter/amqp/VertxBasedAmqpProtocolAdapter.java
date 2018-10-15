@@ -14,20 +14,33 @@ package org.eclipse.hono.adapter.amqp;
 
 import java.net.HttpURLConnection;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.qpid.proton.amqp.transport.AmqpError;
+import org.apache.qpid.proton.amqp.Binary;
+import org.apache.qpid.proton.amqp.messaging.Accepted;
+import org.apache.qpid.proton.amqp.messaging.Data;
+import org.apache.qpid.proton.amqp.messaging.Rejected;
+import org.apache.qpid.proton.amqp.transport.DeliveryState;
+import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.MessageSender;
+import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
 import org.eclipse.hono.service.auth.device.Device;
+import org.eclipse.hono.service.command.Command;
+import org.eclipse.hono.service.command.CommandContext;
+import org.eclipse.hono.service.command.CommandResponse;
+import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EndpointType;
 import org.eclipse.hono.util.HonoProtonHelper;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
+import org.eclipse.hono.util.Strings;
 import org.eclipse.hono.util.TenantObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,9 +51,10 @@ import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonDelivery;
-import io.vertx.proton.ProtonHelper;
+import io.vertx.proton.ProtonLink;
 import io.vertx.proton.ProtonQoS;
 import io.vertx.proton.ProtonReceiver;
+import io.vertx.proton.ProtonSender;
 import io.vertx.proton.ProtonServer;
 import io.vertx.proton.ProtonServerOptions;
 import io.vertx.proton.ProtonSession;
@@ -235,13 +249,9 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             handleRemoteReceiverOpen(receiver, connRequest);
         });
         connRequest.senderOpenHandler(sender -> {
-            HonoProtonHelper.setDefaultCloseHandler(sender);
-            // this should not happen -> no request-response for device clients.
-            LOG.debug("client [container: {}] wants to open a link [address: {}] for receiving messages",
-                    connRequest.getRemoteContainer(), sender.getRemoteSource());
-            sender.setCondition(ProtonHelper.condition(AmqpError.NOT_ALLOWED,
-                    "this adapter only forwards message to downstream applications"));
-            sender.close();
+            final Device authenticatedDevice = connRequest.attachments()
+                    .get(AmqpAdapterConstants.KEY_CLIENT_DEVICE, Device.class);
+            handleRemoteSenderOpenForCommands(sender, authenticatedDevice);
         });
     }
 
@@ -304,7 +314,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
     }
 
     /**
-     * This method is invoked when an AMQP Attach frame is received by this server. If the receiver link contains
+     * This method is invoked when an AMQP Attach frame (in role = receiver) is received by this server. If the receiver link contains
      * a target address, this method simply closes the link, otherwise, it accept and open the link.
      * 
      * @param receiver The receiver link for receiving the data.
@@ -315,10 +325,8 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             if (!receiver.getRemoteTarget().getAddress().isEmpty()) {
                 LOG.debug("Closing link due to the present of Target [address : {}]", receiver.getRemoteTarget().getAddress());
             }
-            receiver.setCondition(
-                    AmqpContext.getErrorCondition(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
-                            "This adapter does not accept a target address on receiver links")));
-            receiver.close();
+            closeLinkWithError(receiver, new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
+                    "This adapter does not accept a target address on receiver links"));
         } else {
             final Device authenticatedDevice = conn.attachments().get(AmqpAdapterConstants.KEY_CLIENT_DEVICE,
                     Device.class);
@@ -354,6 +362,150 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
     }
 
     /**
+     * This method is invoked when this server receives an AMQP Attach frame (in role = sender) to establish a link
+     * for sending commands to devices.
+     * 
+     * The link for sending commands will be closed if:
+     * <ul>
+     *  <li> The device does not specify a source address for its receive link. </li>
+     *  <li> The source address cannot be parsed or does not point to a command endpoint. </li>
+     *  <li> The tenant that the device belongs to is disabled for the AMQP adapter. </li>
+     * </ul>
+     * 
+     * @param sender The link to use for sending commands to devices.
+     * @param authenticatedDevice The authenticated device or {@code null} if the device is not authenticated.
+     */
+    protected void handleRemoteSenderOpenForCommands(final ProtonSender sender, final Device authenticatedDevice) {
+        if (sender.getRemoteSource() == null || Strings.isNullOrEmpty(sender.getRemoteSource().getAddress())) {
+            // source address is required
+            closeLinkWithError(sender,
+                    new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "Missing source address"));
+        } else {
+            try {
+                final ResourceIdentifier address = ResourceIdentifier.fromString(sender.getRemoteSource().getAddress());
+                validateAddress(address, authenticatedDevice).compose(validAddress -> {
+                    if (!CommandConstants.isCommandEndpoint(validAddress.getEndpoint())) {
+                        closeLinkWithError(sender, new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
+                                "Only the command endpoint is supported"));
+                    } else {
+                        openCommandSenderLink(sender, validAddress, authenticatedDevice);
+                    }
+                    return Future.succeededFuture(null);
+                }).recover(t -> {
+                    closeLinkWithError(sender,
+                            new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "Invalid source address"));
+                    return Future.failedFuture(t);
+                });
+            } catch (IllegalArgumentException e) {
+                // could not parse source address
+                closeLinkWithError(sender,
+                        new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "Invalid source address"));
+            }
+        }
+    }
+
+    private void openCommandSenderLink(final ProtonSender sender, final ResourceIdentifier address, final Device authenticatedDevice) {
+        createCommandConsumer(sender, address, authenticatedDevice).map(consumer -> {
+
+            final String tenantId = address.getTenantId();
+            final String deviceId = address.getResourceId();
+            sender.setSource(sender.getRemoteSource());
+
+            sender.setQoS(ProtonQoS.AT_LEAST_ONCE);
+            HonoProtonHelper.setCloseHandler(sender, remoteDetach -> {
+                sendDisconnectedTtdEvent(tenantId, deviceId, authenticatedDevice);
+                closeCommandConsumer(tenantId, deviceId);
+                onLinkDetach(sender);
+            });
+            sender.open();
+
+            // At this point, the remote peer's receiver link is successfully opened and is ready to receive
+            // commands. Send "device ready for command" notification downstream.
+            LOG.debug("Established sender link at [address: {}] to send commands to a device", address);
+
+            sendConnectedTtdEvent(tenantId, deviceId, authenticatedDevice);
+            return Future.succeededFuture();
+        }).otherwise(t -> {
+            // Fail to create a CommandConsumer -> close remote peer's receiver link.
+            closeLinkWithError(sender, new ServerErrorException(HttpURLConnection.HTTP_INTERNAL_ERROR,
+                    "Internal Server error (no command consumer exist)"));
+            return Future.failedFuture(t);
+        });
+    }
+
+    private Future<MessageConsumer> createCommandConsumer(final ProtonSender sender, final ResourceIdentifier sourceAddress, final Device authenticatedDevice) {
+        return createCommandConsumer(
+                sourceAddress.getTenantId(),
+                sourceAddress.getResourceId(),
+                commandContext -> {
+                    final Command command = commandContext.getCommand();
+                    if (!command.isValid()) {
+                        commandContext.reject(new ErrorCondition(Constants.AMQP_BAD_REQUEST, "malformed command message"));
+                    } else if (!sender.isOpen()) {
+                        commandContext.release();
+                    } else {
+                        onCommandReceived(sender, commandContext);
+                    }
+                }, closeHandler -> {
+                    LOG.debug("command receiver link remotely closed for [tenant-id: {}, device-id: {}]",
+                            sourceAddress.getTenantId(), sourceAddress.getResourceId());
+                    closeCommandConsumer(sourceAddress.getTenantId(), sourceAddress.getResourceId());
+                    // close the command sender link
+                    onLinkDetach(sender);
+                });
+    }
+
+    /**
+     * Deliver the given command to the device.
+     *
+     * @param sender The link for sending the command to the device.
+     * @param commandContext The context in which the adapter receives the command message.
+     */
+    protected void onCommandReceived(final ProtonSender sender, final CommandContext commandContext) {
+
+        final Command command = commandContext.getCommand();
+        final Message request = command.getCommandMessage();
+        request.setSubject(command.getName());
+        Optional.ofNullable(command.getPayload())
+                .ifPresent(value -> request.setBody(new Data(new Binary(value.getBytes()))));
+
+        sender.send(request, delivery -> {
+            // release the command message when the device either
+            // rejects or does not settle the command request message.
+            final DeliveryState remoteState = delivery.getRemoteState();
+            if (delivery.remotelySettled()) {
+                if (Accepted.class.isInstance(remoteState)) {
+                    LOG.trace("Device accepted command message [command: {}, remote state: {}]", command.getName(),
+                            remoteState);
+                    commandContext.accept();
+                } else if (Rejected.class.isInstance(remoteState)) {
+                    LOG.debug("Device rejected command message [command: {}, remote state: {}]", command.getName(),
+                            remoteState);
+                    commandContext.release();
+                }
+            } else {
+                LOG.warn("peer did not settle command message [command: {}, remote state: {}]", command.getName(),
+                        remoteState);
+                commandContext.release();
+            }
+
+            // in any case, flow one (1) credit for the application to (re)send another command
+            commandContext.flow(1);
+        });
+    }
+
+    /**
+     * Closes the specified link using the given throwable to set the local ErrorCondition object for the link.
+     *
+     * @param link The link to close.
+     * @param t The throwable to use to determine the error condition object.
+     */
+    private <T extends ProtonLink<T>> void closeLinkWithError(final ProtonLink<T> link, final Throwable t) {
+        link.setCondition(AmqpContext.getErrorCondition(t));
+        link.close();
+    }
+
+    /**
      * Forwards a message received from a device to downstream consumers.
      *
      * @param context The context that the message has been received in.
@@ -378,6 +530,9 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             case EVENT:
                 LOG.trace("Received request to upload events to endpoint [with name: {}]", context.getEndpoint());
                 return doUploadMessage(context, getEventSender(context.getTenantId()));
+            case CONTROL:
+                LOG.trace("Received request to upload Command Response to endpoint [with name: {}]", context.getEndpoint());
+                return doUploadCommandResponseMessage(context);
             default:
                 return Future
                         .failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "unknown endpoint"));
@@ -392,12 +547,11 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
 
     }
 
-    @SuppressWarnings("deprecation")
     private Future<Void> doUploadMessage(final AmqpContext context, final Future<MessageSender> senderFuture) {
 
         final Future<JsonObject> tokenFuture = getRegistrationAssertion(context.getTenantId(), context.getDeviceId(),
-                context.getAuthenticatedDevice());
-        final Future<TenantObject> tenantConfigFuture = getTenantConfiguration(context.getTenantId());
+                context.getAuthenticatedDevice(), null);
+        final Future<TenantObject> tenantConfigFuture = getTenantConfiguration(context.getTenantId(), null);
 
         return CompositeFuture.all(tenantConfigFuture, tokenFuture, senderFuture).compose(ok -> {
             final TenantObject tenantObject = tenantConfigFuture.result();
@@ -447,14 +601,61 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         });
     }
 
+    private Future<Void> doUploadCommandResponseMessage(final AmqpContext context) {
+
+        final String replyTo = context.getMessage().getAddress();
+        final String correlationId = Optional.ofNullable(context.getMessage().getCorrelationId())
+                .map(id -> {
+                    if (id instanceof String) {
+                        return (String) id;
+                    } else {
+                        return null;
+                    }
+                }).orElse(null);
+
+        final String status = MessageHelper.getApplicationProperty(context.getMessage().getApplicationProperties(),
+                MessageHelper.APP_PROPERTY_STATUS, String.class);
+
+        try {
+            final Integer statusCode = Integer.parseInt(status);
+            final CommandResponse commandResponse = CommandResponse.from(context.getMessagePayload(),
+                    context.getMessageContentType(), statusCode, correlationId, replyTo);
+
+            if (commandResponse == null) {
+                return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
+                        "malformed command response address"));
+            } else {
+                return sendCommandResponse(context.getTenantId(), commandResponse, null)
+                        .map(delivery -> {
+                            LOG.trace(
+                                    "successfully forwarded command response from device [tenant-id: {}, device-id: {}]",
+                                    context.getTenantId(), context.getDeviceId());
+                            context.updateDelivery(delivery);
+                            return (Void) null;
+                        }).recover(t -> {
+                            LOG.debug(
+                                    "Failed to forward command response from Device [tenantId: {}, deviceId: {}, endpoint: {}]",
+                                    context.getTenantId(),
+                                    context.getDeviceId(),
+                                    context.getEndpoint(), t);
+
+                            return Future.failedFuture(t);
+                        });
+            }
+        } catch (NumberFormatException e) {
+            return Future
+                    .failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "invalid status code"));
+        }
+    }
+
     /**
      * Closes the specified receiver link.
      * 
-     * @param receiver The link to close.
+     * @param link The link to close.
      */
-    private void onLinkDetach(final ProtonReceiver receiver) {
-        LOG.debug("closing link [{}]", receiver.getName());
-        receiver.close();
+    private <T extends ProtonLink<T>> void onLinkDetach(final ProtonLink<T> link) {
+        LOG.debug("closing link [{}]", link.getName());
+        link.close();
     }
 
     /**
@@ -486,6 +687,10 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             } else {
                 result.complete(resource);
             }
+            break;
+        case CONTROL:
+            // for publishing a response to a command
+            result.complete(resource);
             break;
         default:
             LOG.error("Endpoint with [name: {}] is not supported by this adapter ",

@@ -785,7 +785,6 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <port>+adapter.amqp.ip:adapter.amqp.port:5672</port>
                       <port>+adapter.amqps.ip:adapter.amqps.port:5671</port>
                       <port>+adapter.amqp.ip:adapter.amqp.health.port:8088</port>
-                      <port>8000:8000</port>
                     </ports>
                     <network>
                       <mode>custom</mode>
@@ -799,7 +798,6 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <SPRING_CONFIG_LOCATION>file:///etc/hono/</SPRING_CONFIG_LOCATION>
                       <SPRING_PROFILES_ACTIVE>prod</SPRING_PROFILES_ACTIVE>
                       <_JAVA_OPTIONS>${default.java.options}</_JAVA_OPTIONS>
-                      <!--<_JAVA_OPTIONS>-Xdebug -Xrunjdwp:transport=dt_socket,address=8000,server=y,suspend=y</_JAVA_OPTIONS>  -->
                     </env>
                     <log>
                       <prefix>AMQP</prefix>
