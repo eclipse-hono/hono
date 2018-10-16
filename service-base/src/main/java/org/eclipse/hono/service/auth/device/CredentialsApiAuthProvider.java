@@ -16,10 +16,12 @@ package org.eclipse.hono.service.auth.device;
 import java.net.HttpURLConnection;
 import java.util.Objects;
 
+import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.CredentialsClient;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.util.CredentialsObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -90,7 +92,7 @@ public abstract class CredentialsApiAuthProvider implements HonoClientBasedAuthP
     @Override
     public final void authenticate(
             final DeviceCredentials deviceCredentials,
-            final Handler<AsyncResult<Device>> resultHandler) {
+            final Handler<AsyncResult<DeviceUser>> resultHandler) {
 
         Objects.requireNonNull(deviceCredentials);
         Objects.requireNonNull(resultHandler);
@@ -110,6 +112,7 @@ public abstract class CredentialsApiAuthProvider implements HonoClientBasedAuthP
                 return Future.failedFuture(t);
             }
         }).compose(credentialsOnRecord -> validateCredentials(deviceCredentials, credentialsOnRecord))
+        .compose(d -> Future.succeededFuture(new DeviceUser(d.getTenantId(), d.getDeviceId())))
         .setHandler(resultHandler);
     }
 

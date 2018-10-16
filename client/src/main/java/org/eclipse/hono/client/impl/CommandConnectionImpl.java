@@ -11,18 +11,21 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package org.eclipse.hono.service.command;
+package org.eclipse.hono.client.impl;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
+import org.eclipse.hono.client.CommandConnection;
+import org.eclipse.hono.client.CommandResponseSender;
 import org.eclipse.hono.client.MessageConsumer;
-import org.eclipse.hono.client.impl.HonoClientImpl;
+import org.eclipse.hono.client.CommandConsumer;
+import org.eclipse.hono.client.CommandContext;
+import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.connection.ConnectionFactory;
-import org.eclipse.hono.service.auth.device.Device;
 
 import io.vertx.core.Future;
 import io.vertx.core.Handler;

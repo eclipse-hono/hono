@@ -20,7 +20,7 @@ import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
-import org.eclipse.hono.service.auth.device.Device;
+import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MapBasedExecutionContext;
 import org.eclipse.hono.util.MessageHelper;

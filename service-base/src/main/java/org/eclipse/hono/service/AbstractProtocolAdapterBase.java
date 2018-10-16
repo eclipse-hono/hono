@@ -25,14 +25,15 @@ import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.TenantClient;
+import org.eclipse.hono.client.CommandConnection;
+import org.eclipse.hono.client.CommandConsumer;
+import org.eclipse.hono.client.CommandContext;
+import org.eclipse.hono.client.CommandResponse;
+import org.eclipse.hono.client.CommandResponseSender;
+import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.config.AbstractConfig;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.auth.ValidityBasedTrustOptions;
-import org.eclipse.hono.service.auth.device.Device;
-import org.eclipse.hono.service.command.CommandConnection;
-import org.eclipse.hono.service.command.CommandContext;
-import org.eclipse.hono.service.command.CommandResponse;
-import org.eclipse.hono.service.command.CommandResponseSender;
 import org.eclipse.hono.service.monitoring.ConnectionEventProducer;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
@@ -1065,7 +1066,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     }
 
     /**
-     * This method may be set as the close handler of the {@link org.eclipse.hono.service.command.CommandConsumer}.
+     * This method may be set as the close handler of the {@link CommandConsumer}.
      * <p>
      * The implementation only logs that the link was closed and does not try to reopen it. Any other functionality must be
      * implemented by overwriting the method in a subclass.

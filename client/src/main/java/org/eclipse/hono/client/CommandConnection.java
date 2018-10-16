@@ -11,13 +11,13 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package org.eclipse.hono.service.command;
-
-import org.eclipse.hono.client.HonoClient;
-import org.eclipse.hono.client.MessageConsumer;
+package org.eclipse.hono.client;
 
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Vertx;
+import org.eclipse.hono.client.impl.CommandConnectionImpl;
+import org.eclipse.hono.config.ClientConfigProperties;
 
 /**
  * A bidirectional connection between an Adapter and the AMQP 1.0 network to receive commands and send a response.
@@ -65,4 +65,17 @@ public interface CommandConnection extends HonoClient {
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
     Future<CommandResponseSender> getCommandResponseSender(String tenantId, String replyId);
+
+    /**
+     * Creates a new client for a set of configuration properties.
+     *
+     * @param vertx The Vert.x instance to execute the client on, if {@code null} a new Vert.x instance is used.
+     * @param clientConfigProperties The configuration properties to use.
+     *
+     * @return CommandConnection The client that was created.
+     * @throws NullPointerException if clientConfigProperties is {@code null}
+     */
+    static CommandConnection newConnection(final Vertx vertx, final ClientConfigProperties clientConfigProperties) {
+        return new CommandConnectionImpl(vertx, clientConfigProperties);
+    }
 }

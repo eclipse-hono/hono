@@ -11,7 +11,7 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package org.eclipse.hono.service.command;
+package org.eclipse.hono.client.impl;
 
 import static org.junit.Assert.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
@@ -26,9 +26,11 @@ import java.util.Objects;
 
 import org.apache.qpid.proton.engine.impl.RecordImpl;
 import org.eclipse.hono.client.MessageConsumer;
+import org.eclipse.hono.client.CommandConnection;
+import org.eclipse.hono.client.CommandContext;
+import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.connection.ConnectionFactory;
-import org.eclipse.hono.service.auth.device.Device;
 import org.eclipse.hono.util.Constants;
 import org.junit.Before;
 import org.junit.BeforeClass;

@@ -13,7 +13,7 @@
 
 package org.eclipse.hono.tests.auth;
 
-import org.eclipse.hono.client.impl.AuthenticationServerClient;
+import org.eclipse.hono.client.AuthenticationServerClient;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.connection.ConnectionFactory;
 import org.eclipse.hono.connection.impl.ConnectionFactoryImpl;

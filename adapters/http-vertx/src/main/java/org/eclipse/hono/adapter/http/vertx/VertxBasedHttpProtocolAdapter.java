@@ -22,7 +22,7 @@ import org.eclipse.hono.adapter.http.HonoBasicAuthHandler;
 import org.eclipse.hono.adapter.http.HttpProtocolAdapterProperties;
 import org.eclipse.hono.adapter.http.X509AuthHandler;
 import org.eclipse.hono.client.ClientErrorException;
-import org.eclipse.hono.service.auth.device.Device;
+import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.service.auth.device.HonoChainAuthHandler;
 import org.eclipse.hono.service.auth.device.HonoClientBasedAuthProvider;
 import org.eclipse.hono.service.auth.device.UsernamePasswordAuthProvider;

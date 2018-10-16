@@ -11,7 +11,7 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package org.eclipse.hono.service.auth.device;
+package org.eclipse.hono.auth;
 
 import java.util.HashSet;
 import java.util.Objects;
@@ -22,12 +22,7 @@ import org.eclipse.hono.util.CredentialsConstants;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jws;
 import io.jsonwebtoken.RequiredTypeException;
-import io.vertx.core.AsyncResult;
-import io.vertx.core.Future;
-import io.vertx.core.Handler;
 import io.vertx.core.json.JsonObject;
-import io.vertx.ext.auth.AuthProvider;
-import io.vertx.ext.auth.User;
 
 
 /**
@@ -35,7 +30,7 @@ import io.vertx.ext.auth.User;
  * <p>
  * The device's identity and authorities are contained in a Java Web Token.
  */
-public class Device implements User {
+public class Device {
 
     private final JsonObject principal;
     private final Set<Object> authorities = new HashSet<>();
@@ -87,38 +82,26 @@ public class Device implements User {
      * <li>not be expired</li>
      * <li>contain the given authorities in its <em>aut</em> claim</li>
      * </ul>
-     * 
+     *
      * @param authority The authority to check for.
-     * @param resultHandler The handler to notify about the outcome of the check.
+     * @return {@code true} if the device has the given authority, {@code false} otherwise.
      */
-    @Override
-    public User isAuthorized(final String authority, final Handler<AsyncResult<Boolean>> resultHandler) {
+    protected final Boolean checkAuthorization(final String authority) {
         for (final Object item : authorities) {
             if (authority.equals(item)) {
-                resultHandler.handle(Future.succeededFuture(Boolean.TRUE));
-                return this;
+                return true;
             }
         }
-        resultHandler.handle(Future.succeededFuture(Boolean.FALSE));
-        return this;
-    }
-
-    @Override
-    public JsonObject principal() {
-        return principal;
-    }
-
-    @Override
-    public void setAuthProvider(final AuthProvider authProvider) {
-        // NOOP, JWT is self contained
+        return false;
     }
 
     /**
-     * This method does nothing.
+     * Get the underlying principal of the device.
+     *
+     * @return JSON representation of the Principal.
      */
-    @Override
-    public User clearCache() {
-        return this;
+    public final JsonObject principal() {
+        return principal;
     }
 
     /**
@@ -126,7 +109,7 @@ public class Device implements User {
      * 
      * @return The identifier.
      */
-    public String getTenantId() {
+    public final String getTenantId() {
         return principal.getString(CredentialsConstants.FIELD_PAYLOAD_TENANT_ID);
     }
 
@@ -135,12 +118,12 @@ public class Device implements User {
      * 
      * @return The identifier.
      */
-    public String getDeviceId() {
+    public final String getDeviceId() {
         return principal.getString(CredentialsConstants.FIELD_PAYLOAD_DEVICE_ID);
     }
 
     @Override
-    public String toString() {
+    public final String toString() {
         return String.format("device [%s: %s, %s: %s]",
                 CredentialsConstants.FIELD_PAYLOAD_DEVICE_ID,
                 getDeviceId(),
@@ -155,16 +138,17 @@ public class Device implements User {
      * @param deviceId The id of the device.
      * @return tenantId and deviceId as an address.
      */
-    public static String asAddress(final String tenantId, final String deviceId) {
+    public static final String asAddress(final String tenantId, final String deviceId) {
         return String.format("%s/%s", tenantId, deviceId);
     }
 
     /**
      * Gets the device id in an address structure.
+     *
      * @param device The device.
      * @return tenantId and deviceId as an address.
      */
-    public static String asAddress(final Device device) {
+    public static final String asAddress(final Device device) {
         return String.format("%s/%s", device.getTenantId(), device.getDeviceId());
     }
 }

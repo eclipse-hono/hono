@@ -11,9 +11,9 @@
  * SPDX-License-Identifier: EPL-2.0
  */
 
-package org.eclipse.hono.service.command;
+package org.eclipse.hono.client;
 
-import org.eclipse.hono.service.auth.device.Device;
+import org.eclipse.hono.auth.Device;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.junit.MockitoJUnitRunner;

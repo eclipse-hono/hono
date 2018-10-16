@@ -10,12 +10,9 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
-package org.eclipse.hono.service.command;
+package org.eclipse.hono.client;
 
 import java.util.Map;
-
-import org.eclipse.hono.client.MessageSender;
-import org.eclipse.hono.client.ServiceInvocationException;
 
 import io.opentracing.SpanContext;
 import io.vertx.core.Future;

@@ -16,6 +16,7 @@ package org.eclipse.hono.service.auth.device;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
 import io.vertx.ext.auth.AuthProvider;
+import org.eclipse.hono.service.auth.DeviceUser;
 
 
 /**
@@ -37,5 +38,5 @@ public interface HonoClientBasedAuthProvider extends AuthProvider {
      *                      the result contains an object representing the authenticated device.
      * @throws NullPointerException if credentials or result handler are {@code null}.
      */
-    void authenticate(DeviceCredentials credentials, Handler<AsyncResult<Device>> resultHandler);
+    void authenticate(DeviceCredentials credentials, Handler<AsyncResult<DeviceUser>> resultHandler);
 }

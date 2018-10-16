@@ -33,13 +33,13 @@ import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.TenantClient;
-import org.eclipse.hono.service.auth.device.Device;
+import org.eclipse.hono.client.Command;
+import org.eclipse.hono.client.CommandConnection;
+import org.eclipse.hono.client.CommandContext;
+import org.eclipse.hono.client.CommandResponse;
+import org.eclipse.hono.client.CommandResponseSender;
+import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.service.auth.device.HonoClientBasedAuthProvider;
-import org.eclipse.hono.service.command.Command;
-import org.eclipse.hono.service.command.CommandConnection;
-import org.eclipse.hono.service.command.CommandContext;
-import org.eclipse.hono.service.command.CommandResponse;
-import org.eclipse.hono.service.command.CommandResponseSender;
 import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
@@ -658,7 +658,7 @@ public class VertxBasedHttpProtocolAdapterTest {
     private static void mockSuccessfulAuthentication(final String tenantId, final String deviceId) {
         doAnswer(invocation -> {
             final Handler<AsyncResult<User>> resultHandler = invocation.getArgument(1);
-            resultHandler.handle(Future.succeededFuture(new Device(tenantId, deviceId)));
+            resultHandler.handle(Future.succeededFuture(new DeviceUser(tenantId, deviceId)));
             return null;
         }).when(usernamePasswordAuthProvider).authenticate(any(JsonObject.class), any(Handler.class));
     }

@@ -10,14 +10,13 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
-package org.eclipse.hono.service.command;
+package org.eclipse.hono.client;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.impl.AbstractConsumer;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.tracing.MessageAnnotationsExtractAdapter;

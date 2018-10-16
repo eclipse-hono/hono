@@ -2,6 +2,23 @@
 title = "Release Notes"
 +++
 
+## 0.8 (not released yet)
+
+### API Changes
+
+* The `hono-client` module now contains all classes necessary to implement Command and Control in protocol adapters.
+  Previously this has only been the case for the sending of a command, as it is typically done by an application, while
+  the classes to receive commands, typically used by protocol adapters, were located in the `hono-service-base` module.
+  Additionally, the package structure was reworked to allow for implementing protocol adapters that run in an OSGi 
+  environment, so several classes are not in the same package anymore.
+  Custom protocol adapters thus may need to be slightly refactored to import the Command classes
+  from their new packages - the functionality has not changed.
+  The only exception to this is the `Device` class that was moved to `hono-core` with a specific
+  subclass `DeviceUser`. This subclass is needed in code lines that implement the authentication as defined by the `vertx-auth-common` 
+  module, so for this class there might be some very few changes to the custom code necessary (the adapted standard protocol
+  adapters may serve as a blue-print for this). You may want to refer to the method `getAuthenticatedDevice` in the 
+  `AbstractVertxBasedHttpProtocolAdapter` class as an example.
+
 ## 0.8-M2
 
 ### Fixes & Enhancements

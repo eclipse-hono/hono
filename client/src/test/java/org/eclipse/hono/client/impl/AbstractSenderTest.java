@@ -19,6 +19,8 @@ import static org.mockito.Mockito.*;
 
 import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.client.impl.AbstractSender;
+import org.eclipse.hono.client.impl.HonoClientUnitTestHelper;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
