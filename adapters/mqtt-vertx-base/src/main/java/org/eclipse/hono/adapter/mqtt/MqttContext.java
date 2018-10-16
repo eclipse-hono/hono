@@ -16,7 +16,7 @@ package org.eclipse.hono.adapter.mqtt;
 import java.util.Objects;
 import java.util.Optional;
 
-import org.eclipse.hono.service.auth.device.Device;
+import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.util.MapBasedExecutionContext;
 import org.eclipse.hono.util.ResourceIdentifier;
 

@@ -18,7 +18,7 @@ import java.util.function.BiFunction;
 
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageSender;
-import org.eclipse.hono.service.auth.device.Device;
+import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.springframework.context.MessageSource;

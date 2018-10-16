@@ -11,14 +11,14 @@
  * SPDX-License-Identifier: EPL-2.0
  */
 
-package org.eclipse.hono.service.command;
+package org.eclipse.hono.client;
 
-import org.eclipse.hono.service.auth.device.Device;
+import java.util.Objects;
+
+import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.util.CommandConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.Objects;
 
 /**
  * The MQTT subscription of devices, to get commands.

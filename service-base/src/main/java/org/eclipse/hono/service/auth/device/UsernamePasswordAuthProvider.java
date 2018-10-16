@@ -16,6 +16,7 @@ package org.eclipse.hono.service.auth.device;
 import java.net.HttpURLConnection;
 import java.util.Objects;
 
+import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.config.ServiceConfigProperties;

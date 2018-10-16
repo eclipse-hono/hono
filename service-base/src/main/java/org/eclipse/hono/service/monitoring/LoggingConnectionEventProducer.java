@@ -12,7 +12,7 @@
  *******************************************************************************/
 package org.eclipse.hono.service.monitoring;
 
-import org.eclipse.hono.service.auth.device.Device;
+import org.eclipse.hono.auth.Device;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

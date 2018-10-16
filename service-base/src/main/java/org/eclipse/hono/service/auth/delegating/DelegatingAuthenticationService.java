@@ -16,7 +16,7 @@ package org.eclipse.hono.service.auth.delegating;
 import java.util.Objects;
 
 import org.eclipse.hono.auth.HonoUser;
-import org.eclipse.hono.client.impl.AuthenticationServerClient;
+import org.eclipse.hono.client.AuthenticationServerClient;
 import org.eclipse.hono.connection.ConnectionFactory;
 import org.eclipse.hono.service.HealthCheckProvider;
 import org.eclipse.hono.service.auth.AbstractHonoAuthenticationService;

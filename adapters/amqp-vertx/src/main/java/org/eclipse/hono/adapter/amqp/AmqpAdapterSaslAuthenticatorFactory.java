@@ -27,8 +27,9 @@ import org.apache.qpid.proton.engine.Sasl;
 import org.apache.qpid.proton.engine.Sasl.SaslOutcome;
 import org.apache.qpid.proton.engine.Transport;
 import org.eclipse.hono.client.HonoClient;
+import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
-import org.eclipse.hono.service.auth.device.Device;
+import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.service.auth.device.DeviceCertificateValidator;
 import org.eclipse.hono.service.auth.device.DeviceCredentials;
 import org.eclipse.hono.service.auth.device.HonoClientBasedAuthProvider;
@@ -153,7 +154,7 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
                         remoteMechanism, sasl.getHostname(), sasl.getState());
 
                 final Context currentContext = Vertx.currentContext();
-                final Future<Device> deviceAuthTracker = Future.future();
+                final Future<DeviceUser> deviceAuthTracker = Future.future();
                 deviceAuthTracker.setHandler(outcome -> {
                     if (outcome.succeeded()) {
 
@@ -189,7 +190,7 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
             return succeeded;
         }
 
-        private void verifyPlain(final byte[] saslResponse, final Handler<AsyncResult<Device>> completer) {
+        private void verifyPlain(final byte[] saslResponse, final Handler<AsyncResult<DeviceUser>> completer) {
 
             try {
                 final String[] fields = AuthenticationConstants.parseSaslResponse(saslResponse);
@@ -217,7 +218,7 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
             }
         }
 
-        private void verifyExternal(final Handler<AsyncResult<Device>> completer) {
+        private void verifyExternal(final Handler<AsyncResult<DeviceUser>> completer) {
             if (peerCertificateChain == null) {
                 completer.handle(Future.failedFuture(new CredentialException("Missing client certificate")));
             } else if (!X509Certificate.class.isInstance(peerCertificateChain[0])) {

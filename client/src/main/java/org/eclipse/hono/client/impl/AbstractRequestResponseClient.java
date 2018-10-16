@@ -105,7 +105,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      *                 client should not be scoped to a tenant.
      * @throws NullPointerException if any of context or configuration are {@code null}.
      */
-    AbstractRequestResponseClient(final Context context, final ClientConfigProperties config, final String tenantId) {
+    protected AbstractRequestResponseClient(final Context context, final ClientConfigProperties config, final String tenantId) {
         this(context, config, (Tracer) null, tenantId);
     }
 
@@ -132,7 +132,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      *                 client should not be scoped to a tenant.
      * @throws NullPointerException if any of context or configuration are {@code null}.
      */
-    AbstractRequestResponseClient(
+    protected AbstractRequestResponseClient(
             final Context context,
             final ClientConfigProperties config,
             final Tracer tracer,
@@ -164,7 +164,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      * @param replyId The replyId to use in the reply-to address.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
-    AbstractRequestResponseClient(
+    protected AbstractRequestResponseClient(
             final Context context,
             final ClientConfigProperties config,
             final String tenantId,
@@ -197,7 +197,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      * @param replyId The replyId to use in the reply-to address.
      * @throws NullPointerException if any of the parameters other than tracer are {@code null}.
      */
-    AbstractRequestResponseClient(
+    protected AbstractRequestResponseClient(
             final Context context,
             final ClientConfigProperties config,
             final Tracer tracer,
@@ -227,7 +227,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      * @param receiver The AMQP 1.0 link to use for receiving responses from the peer.
      * @throws NullPointerException if any of the parameters other than tenant are {@code null}.
      */
-    AbstractRequestResponseClient(
+    protected AbstractRequestResponseClient(
             final Context context,
             final ClientConfigProperties config,
             final String tenantId,
@@ -251,7 +251,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      * @throws NullPointerException if any of the parameters other than tracer or tenant
      *                              are {@code null}.
      */
-    AbstractRequestResponseClient(
+    protected AbstractRequestResponseClient(
             final Context context,
             final ClientConfigProperties config,
             final Tracer tracer,

@@ -23,7 +23,7 @@ import org.eclipse.hono.adapter.coap.AbstractVertxBasedCoapAdapter;
 import org.eclipse.hono.adapter.coap.CoapAdapterProperties;
 import org.eclipse.hono.adapter.coap.CoapAuthenticationHandler;
 import org.eclipse.hono.adapter.coap.CoapErrorResponse;
-import org.eclipse.hono.service.auth.device.Device;
+import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.ResourceIdentifier;

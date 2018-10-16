@@ -12,7 +12,7 @@
  */
 package org.eclipse.hono.adapter.coap.vertx;
 
-import org.eclipse.hono.service.auth.device.Device;
+import org.eclipse.hono.auth.Device;
 
 /**
  * Extended hono device.

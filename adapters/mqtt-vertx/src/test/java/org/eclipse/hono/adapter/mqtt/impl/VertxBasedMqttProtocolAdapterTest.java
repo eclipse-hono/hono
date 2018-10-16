@@ -21,8 +21,8 @@ import static org.mockito.Mockito.when;
 
 import org.eclipse.hono.adapter.mqtt.MqttContext;
 import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
-import org.eclipse.hono.service.auth.device.Device;
 import org.eclipse.hono.util.EndpointType;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.ResourceIdentifier;

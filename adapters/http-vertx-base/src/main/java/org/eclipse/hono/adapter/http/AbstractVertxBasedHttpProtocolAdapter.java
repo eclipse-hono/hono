@@ -27,11 +27,12 @@ import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.ServerErrorException;
+import org.eclipse.hono.client.Command;
+import org.eclipse.hono.client.CommandContext;
+import org.eclipse.hono.client.CommandResponse;
+import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
-import org.eclipse.hono.service.auth.device.Device;
-import org.eclipse.hono.service.command.Command;
-import org.eclipse.hono.service.command.CommandContext;
-import org.eclipse.hono.service.command.CommandResponse;
+import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.service.http.DefaultFailureHandler;
 import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.tracing.TracingHelper;
@@ -343,7 +344,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
     protected final Device getAuthenticatedDevice(final RoutingContext ctx) {
 
         return Optional.ofNullable(ctx.user()).map(user -> {
-            if (Device.class.isInstance(user)) {
+            if (DeviceUser.class.isInstance(user)) {
                 return (Device) user;
             } else {
                 return null;

@@ -40,12 +40,12 @@ import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.TenantClient;
+import org.eclipse.hono.client.CommandConnection;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
-import org.eclipse.hono.service.auth.device.Device;
+import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.service.auth.device.DeviceCredentials;
 import org.eclipse.hono.service.auth.device.HonoClientBasedAuthProvider;
 import org.eclipse.hono.service.auth.device.UsernamePasswordCredentials;
-import org.eclipse.hono.service.command.CommandConnection;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
@@ -98,7 +98,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
      * Global timeout for all test cases.
      */
     @Rule
-    public Timeout globalTimeout = new Timeout(5, TimeUnit.SECONDS);
+    public Timeout globalTimeout = new Timeout(5000, TimeUnit.SECONDS);
 
     private HonoClient tenantServiceClient;
     private HonoClient credentialsServiceClient;
@@ -344,8 +344,8 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         final AbstractVertxBasedMqttProtocolAdapter<ProtocolAdapterProperties> adapter = getAdapter(server);
         forceClientMocksToConnected();
         doAnswer(invocation -> {
-            final Handler<AsyncResult<Device>> resultHandler = invocation.getArgument(1);
-            resultHandler.handle(Future.succeededFuture(new Device("DEFAULT_TENANT", "4711")));
+            final Handler<AsyncResult<DeviceUser>> resultHandler = invocation.getArgument(1);
+            resultHandler.handle(Future.succeededFuture(new DeviceUser("DEFAULT_TENANT", "4711")));
             return null;
         }).when(usernamePasswordAuthProvider).authenticate(any(DeviceCredentials.class), any(Handler.class));
 
@@ -897,8 +897,8 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
 
         forceClientMocksToConnected();
         doAnswer(invocation -> {
-            final Handler<AsyncResult<Device>> resultHandler = invocation.getArgument(1);
-            resultHandler.handle(Future.succeededFuture(new Device("DEFAULT_TENANT", "4711")));
+            final Handler<AsyncResult<DeviceUser>> resultHandler = invocation.getArgument(1);
+            resultHandler.handle(Future.succeededFuture(new DeviceUser("DEFAULT_TENANT", "4711")));
             return null;
         }).when(usernamePasswordAuthProvider).authenticate(any(DeviceCredentials.class), any(Handler.class));
 
