@@ -224,6 +224,10 @@ public class HonoConsumerBase {
      * Notifications for the same device that are received before the timer expired, will overwrite the original notification.
      * By this an <em>event flickering</em> (like it could occur when starting the app while several notifications were persisted
      * in the AMQP network) is handled correctly.
+     * <p>
+     * If the contained <em>ttd</em> is set to -1, a command will be sent periodically every
+     * {@link HonoExampleConstants#COMMAND_INTERVAL_FOR_DEVICES_CONNECTED_WITH_UNLIMITED_EXPIRY} seconds to the device
+     * until a new notification was received with a <em>ttd</em> set to 0.
      *
      * @param notification The notification of a permanently connected device to handle.
      */
@@ -247,7 +251,24 @@ public class HonoConsumerBase {
                 Optional.ofNullable(pendingTtdNotification.remove(keyForDevice)).map(notificationToHandle -> {
                     if (notificationToHandle.getTtd() == -1) {
                         LOG.info("Device notified as being ready to receive a command until further notice : [{}].", notificationToHandle.toString());
+
+                        // cancel a still existing timer for this device (if found)
+                        cancelPeriodicCommandSender(notification);
+                        // immediately send the first command
                         createCommandClientAndSendCommand(notificationToHandle);
+
+                        // for devices that stay connected, start a periodic timer now that repeatedly sends a command
+                        // to the device
+                        vertx.setPeriodic(
+                                HonoExampleConstants.COMMAND_INTERVAL_FOR_DEVICES_CONNECTED_WITH_UNLIMITED_EXPIRY
+                                        * 1000,
+                                id -> {
+                                    createCommandClientAndSendCommand(notificationToHandle).map(commandClient -> {
+                                        // register a canceler for this timer directly after it was created
+                                        setPeriodicCommandSenderTimerCanceler(id, notification, commandClient);
+                                        return null;
+                                    });
+                                });
                     } else {
                         LOG.info("Device notified as not being ready to receive a command (anymore) : [{}].", notification.toString());
                         cancelPeriodicCommandSender(notificationToHandle);
@@ -264,38 +285,15 @@ public class HonoConsumerBase {
     /**
      * Create a command client for the device for that a {@link TimeUntilDisconnectNotification} was received, if no such
      * command client is already active.
-     * <p>
-     * If the contained <em>ttd</em> is set to -1, a command will be sent periodically every
-     * {@link HonoExampleConstants#COMMAND_INTERVAL_FOR_DEVICES_CONNECTED_WITH_UNLIMITED_EXPIRY} seconds to the device
-     * until a new notification was received with a <em>ttd</em> set to 0. See {@link #handleCommandReadinessNotification(TimeUntilDisconnectNotification)}
-     * that cancels the periodic timer again.
      * @param notification The notification that was received for the device.
      */
-    private void createCommandClientAndSendCommand(final TimeUntilDisconnectNotification notification) {
-        honoClient.getOrCreateCommandClient(notification.getTenantId(), notification.getDeviceId())
+    private Future<CommandClient> createCommandClientAndSendCommand(final TimeUntilDisconnectNotification notification) {
+        return honoClient.getOrCreateCommandClient(notification.getTenantId(), notification.getDeviceId())
                 .map(commandClient -> {
                     commandClient.setRequestTimeout(calculateCommandTimeout(notification));
 
                     // send the command upstream to the device
-                    if (notification.getTtd() == -1) {
-                        // cancel a still existing timer for this device (if found)
-                        cancelPeriodicCommandSender(notification);
-
-                        sendCommandToAdapter(commandClient, notification);
-
-                        // for devices that stay connected, start a periodic timer now that repeatedly sends a command
-                        // to the device
-                        final long timerId = vertx.setPeriodic(
-                                HonoExampleConstants.COMMAND_INTERVAL_FOR_DEVICES_CONNECTED_WITH_UNLIMITED_EXPIRY
-                                        * 1000,
-                                id -> {
-                                    sendCommandToAdapter(commandClient, notification);
-                                });
-                        // register a canceler for this timer directly after it was created
-                        setPeriodicCommandSenderTimerCanceler(timerId, notification, commandClient);
-                    } else {
-                        sendCommandToAdapter(commandClient, notification);
-                    }
+                    sendCommandToAdapter(commandClient, notification);
                     return commandClient;
                 }).otherwise(t -> {
                     LOG.error("Could not create command client", t);
@@ -370,15 +368,7 @@ public class HonoConsumerBase {
 
             if (notification.getTtd() != -1) {
                 // do not close the command client if device stays connected
-                commandClient.close(v -> {
-                    if (LOG.isDebugEnabled()) {
-                        LOG.trace("Closed commandClient for [{}].", notification.getTenantAndDeviceId());
-                    }
-                });
-            } else {
-                // cancel periodic timer and send a command again
-                cancelPeriodicCommandSender(notification);
-                createCommandClientAndSendCommand(notification);
+                closeCommandClient(commandClient, notification);
             }
             return result;
         }).otherwise(t -> {
@@ -391,13 +381,17 @@ public class HonoConsumerBase {
 
             if (notification.getTtd() != -1) {
                 // do not close the command client if device stays connected
-                commandClient.close(v -> {
-                    if (LOG.isDebugEnabled()) {
-                        LOG.trace("Closed commandClient for [{}].", notification.getTenantAndDeviceId());
-                    }
-                });
+                closeCommandClient(commandClient, notification);
             }
             return null;
+        });
+    }
+
+    private void closeCommandClient(final CommandClient commandClient, final TimeUntilDisconnectNotification notification) {
+        commandClient.close(v -> {
+            if (LOG.isDebugEnabled()) {
+                LOG.trace("Closed commandClient for [{}].", notification.getTenantAndDeviceId());
+            }
         });
     }
 
