@@ -50,6 +50,7 @@
     <opentracing.version>0.31.0</opentracing.version>
     <opentracing-resolver.version>0.1.4</opentracing-resolver.version>
     <opentracing-vertx-web.version>0.1.0</opentracing-vertx-web.version>
+    <jaeger.version>0.31.0</jaeger.version>
     <proton.version>0.25.0</proton.version>
     <qpid-jms.version>0.31.0</qpid-jms.version>
     <slf4j.version>1.7.24</slf4j.version>
@@ -352,6 +353,11 @@
         <groupId>io.opentracing.contrib</groupId>
         <artifactId>opentracing-tracerresolver</artifactId>
         <version>${opentracing-resolver.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.jaegertracing</groupId>
+        <artifactId>jaeger-client</artifactId>
+        <version>${jaeger.version}</version>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
