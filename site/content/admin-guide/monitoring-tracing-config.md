@@ -48,6 +48,8 @@ In order to address this problem, Hono's service components are instrumented usi
 
 ### Configuring a Tracer
 
+**Hint**: The description in this chapter applies to any compatible OpenTracing implementation. For an easier approach to configure usage of [Jaeger tracing](https://www.jaegertracing.io/), see the next chapter.
+
 Hono's components use the [OpenTracing Tracer Resolver](https://github.com/opentracing-contrib/java-tracerresolver) mechanism to find and initialize a concrete OpenTracing implementation during startup of the component. The discovery mechanism is using Java's [ServiceLoader](http://download.java.net/java/jdk9/docs/api/java/util/ServiceLoader.html) and as such relies on the required resources to be available on the class path.
 
 When starting up any of Hono's Docker images as a container, the JVM will look for additional jar files to include in its class path in the container's `/opt/hono/extensions` folder. Thus, using a specific implementation of OpenTracing is just a matter of configuring the container to mount a volume or binding a host folder at that location and putting the implementation's jar files and resources into the corresponding volume or host folder.
@@ -83,3 +85,15 @@ Using a Docker *volume* instead of a *bind mount* works the same way but require
     
 All jar files can then be found in the directory `target/dependency`.    
 
+## Configuring usage of Jaeger tracing (included in Docker images)
+
+In case [Jaeger tracing](https://www.jaegertracing.io/) shall be used, there is an alternative to putting the jar files in the container's `/opt/hono/extensions` folder as described above.
+This is to have the Jaeger tracing jar files be included in the Hono Docker images by using the `jaeger-tracing` maven profile when building Hono.
+
+For example, building the HTTP adapter image with the Jaeger client included:
+
+   ```bash
+   ~/hono/adapters/http-vertx$ mvn clean install -Pbuild-docker-image,jaeger-tracing
+   ```
+
+Note that when running the created docker image, the environment variables for configuring the Jaeger client still need to be set. Please refer to the [Jaeger documentation](https://github.com/jaegertracing/jaeger-client-java/blob/master/jaeger-core/README.md) for details.
