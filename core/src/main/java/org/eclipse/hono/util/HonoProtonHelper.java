@@ -21,6 +21,8 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.proton.ProtonLink;
+import io.vertx.proton.ProtonReceiver;
+import io.vertx.proton.ProtonSender;
 import io.vertx.proton.ProtonSession;
 
 /**
@@ -133,6 +135,22 @@ public final class HonoProtonHelper {
             session.close();
             session.free();
         });
+    }
+
+    /**
+     * Checks if a link is established.
+     * 
+     * @param link The link to check.
+     * @return {@code true} if the link has been established.
+     */
+    public static boolean isLinkEstablished(final ProtonLink<?> link) {
+        if (link instanceof ProtonSender) {
+            return link.getRemoteTarget() != null && link.getRemoteTarget().getAddress() != null;
+        } else if (link instanceof ProtonReceiver) {
+            return link.getRemoteSource() != null && link.getRemoteSource().getAddress() != null;
+        } else {
+            return false;
+        }
     }
 
     /**

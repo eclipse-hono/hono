@@ -62,11 +62,6 @@ import io.vertx.proton.ProtonSender;
  */
 public abstract class AbstractHonoClient {
 
-    /**
-     * The key under which the link status is stored in the link's attachments.
-     */
-    protected static final String KEY_LINK_ESTABLISHED = "linkEstablished";
-
     private static final Logger LOG = LoggerFactory.getLogger(AbstractHonoClient.class);
 
     /**
@@ -318,17 +313,30 @@ public abstract class AbstractHonoClient {
         return HonoProtonHelper.executeOrRunOnContext(ctx, result -> {
 
             final ProtonSender sender = con.createSender(targetAddress);
-            sender.attachments().set(KEY_LINK_ESTABLISHED, Boolean.class, Boolean.FALSE);
             sender.setQoS(qos);
             sender.setAutoSettle(true);
             sender.openHandler(senderOpen -> {
+
                 // we only "try" to complete/fail the result future because
                 // it may already have been failed if the connection broke
                 // away after we have sent our attach frame but before we have
                 // received the peer's attach frame
-                if (senderOpen.succeeded()) {
+
+                if (senderOpen.failed()) {
+                    // this means that we have received the peer's attach
+                    // and the subsequent detach frame in one TCP read
+                    final ErrorCondition error = sender.getRemoteCondition();
+                    if (error == null) {
+                        LOG.debug("opening sender [{}] failed", targetAddress, senderOpen.cause());
+                        result.tryFail(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND, "cannot open sender", senderOpen.cause()));
+                    } else {
+                        LOG.debug("opening sender [{}] failed: {} - {}", targetAddress, error.getCondition(), error.getDescription());
+                        result.tryFail(StatusCodeMapper.from(error));
+                    }
+
+                } else if (HonoProtonHelper.isLinkEstablished(sender)) {
+
                     LOG.debug("sender open [target: {}, sendQueueFull: {}]", targetAddress, sender.sendQueueFull());
-                    sender.attachments().set(KEY_LINK_ESTABLISHED, Boolean.class, Boolean.TRUE);
                     // wait on credits a little time, if not already given
                     if (sender.getCredit() <= 0) {
                         ctx.owner().setTimer(clientConfig.getFlowLatency(), timerID -> {
@@ -339,30 +347,19 @@ public abstract class AbstractHonoClient {
                     } else {
                         result.tryComplete(sender);
                     }
+
                 } else {
-                    final ErrorCondition error = sender.getRemoteCondition();
-                    if (error == null) {
-                        LOG.debug("opening sender [{}] failed", targetAddress, senderOpen.cause());
-                        result.tryFail(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND, "cannot open sender", senderOpen.cause()));
-                    } else {
-                        LOG.debug("opening sender [{}] failed: {} - {}", targetAddress, error.getCondition(), error.getDescription());
-                        result.tryFail(StatusCodeMapper.from(error));
-                    }
+                    // this means that the peer did not create a local terminus for the link
+                    // and will send a detach frame for closing the link very shortly
+                    // see AMQP 1.0 spec section 2.6.3
+                    LOG.debug("peer did not create terminus for target [{}] and will detach the link", targetAddress);
+                    result.tryFail(new ServerErrorException(HttpsURLConnection.HTTP_UNAVAILABLE));
                 }
             });
             HonoProtonHelper.setDetachHandler(sender, remoteDetached -> onRemoteDetach(sender, con.getRemoteContainer(), false, closeHook));
             HonoProtonHelper.setCloseHandler(sender, remoteClosed -> onRemoteDetach(sender, con.getRemoteContainer(), true, closeHook));
             sender.open();
-            ctx.owner().setTimer(clientConfig.getLinkEstablishmentTimeout(), tid -> {
-                if (!result.isComplete() && !sender.attachments().get(KEY_LINK_ESTABLISHED, Boolean.class)) {
-                    LOG.debug(
-                            "did not receive peer's attach frame after {}ms, failing attempt to establish sender link",
-                            clientConfig.getLinkEstablishmentTimeout());
-                    sender.close();
-                    sender.free();
-                    result.fail(new ServerErrorException(HttpsURLConnection.HTTP_UNAVAILABLE));
-                }
-            });
+            ctx.owner().setTimer(clientConfig.getLinkEstablishmentTimeout(), tid -> onTimeOut(sender, clientConfig, result));
         });
     }
 
@@ -400,7 +397,6 @@ public abstract class AbstractHonoClient {
 
         return HonoProtonHelper.executeOrRunOnContext(ctx, result -> {
             final ProtonReceiver receiver = con.createReceiver(sourceAddress);
-            receiver.attachments().set(KEY_LINK_ESTABLISHED, Boolean.class, Boolean.FALSE);
             receiver.setAutoAccept(true);
             receiver.setQoS(qos);
             receiver.setPrefetch(clientConfig.getInitialCredits());
@@ -413,15 +409,15 @@ public abstract class AbstractHonoClient {
                 }
             });
             receiver.openHandler(recvOpen -> {
+
                 // we only "try" to complete/fail the result future because
                 // it may already have been failed if the connection broke
                 // away after we have sent our attach frame but before we have
                 // received the peer's attach frame
-                if (recvOpen.succeeded()) {
-                    LOG.debug("receiver open [source: {}]", sourceAddress);
-                    receiver.attachments().set(KEY_LINK_ESTABLISHED, Boolean.class, Boolean.TRUE);
-                    result.tryComplete(recvOpen.result());
-                } else {
+
+                if (recvOpen.failed()) {
+                    // this means that we have received the peer's attach
+                    // and the subsequent detach frame in one TCP read
                     final ErrorCondition error = receiver.getRemoteCondition();
                     if (error == null) {
                         LOG.debug("opening receiver [{}] failed", sourceAddress, recvOpen.cause());
@@ -430,22 +426,35 @@ public abstract class AbstractHonoClient {
                         LOG.debug("opening receiver [{}] failed: {} - {}", sourceAddress, error.getCondition(), error.getDescription());
                         result.tryFail(StatusCodeMapper.from(error));
                     }
+                } else if (HonoProtonHelper.isLinkEstablished(receiver)) {
+                    LOG.debug("receiver open [source: {}]", sourceAddress);
+                    result.tryComplete(recvOpen.result());
+                } else {
+                    // this means that the peer did not create a local terminus for the link
+                    // and will send a detach frame for closing the link very shortly
+                    // see AMQP 1.0 spec section 2.6.3
+                    LOG.debug("peer did not create terminus for source [{}] and will detach the link", sourceAddress);
+                    result.tryFail(new ServerErrorException(HttpsURLConnection.HTTP_UNAVAILABLE));
                 }
             });
             HonoProtonHelper.setDetachHandler(receiver, remoteDetached -> onRemoteDetach(receiver, con.getRemoteContainer(), false, closeHook));
             HonoProtonHelper.setCloseHandler(receiver, remoteClosed -> onRemoteDetach(receiver, con.getRemoteContainer(), true, closeHook));
             receiver.open();
-            ctx.owner().setTimer(clientConfig.getLinkEstablishmentTimeout(), tid -> {
-                if (!result.isComplete() && !receiver.attachments().get(KEY_LINK_ESTABLISHED, Boolean.class)) {
-                    LOG.debug(
-                            "did not receive peer's attach frame after {}ms, failing attempt to establish receiver link",
-                            clientConfig.getLinkEstablishmentTimeout());
-                    receiver.close();
-                    receiver.free();
-                    result.fail(new ServerErrorException(HttpsURLConnection.HTTP_UNAVAILABLE));
-                }
-            });
+            ctx.owner().setTimer(clientConfig.getLinkEstablishmentTimeout(), tid -> onTimeOut(receiver, clientConfig, result));
         });
+    }
+
+    private static void onTimeOut(
+            final ProtonLink<?> link,
+            final ClientConfigProperties clientConfig,
+            final Future<?> result) {
+
+        if (link.isOpen() && !HonoProtonHelper.isLinkEstablished(link)) {
+            LOG.debug("link establishment timed out after {}ms", clientConfig.getLinkEstablishmentTimeout());
+            link.close();
+            link.free();
+            result.tryFail(new ServerErrorException(HttpsURLConnection.HTTP_UNAVAILABLE));
+        }
     }
 
     private static void onRemoteDetach(
@@ -466,8 +475,7 @@ public abstract class AbstractHonoClient {
                     type, address, closed, remoteContainer, error.getCondition(), error.getDescription());
         }
         link.close();
-        final boolean linkEstablished = link.attachments().get(KEY_LINK_ESTABLISHED, Boolean.class);
-        if (linkEstablished && closeHook != null) {
+        if (HonoProtonHelper.isLinkEstablished(link) && closeHook != null) {
             closeHook.handle(address);
         }
     }

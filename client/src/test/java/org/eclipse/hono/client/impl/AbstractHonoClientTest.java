@@ -19,7 +19,12 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.net.HttpURLConnection;
 import java.util.function.Predicate;
@@ -27,8 +32,6 @@ import java.util.function.Supplier;
 
 import org.apache.qpid.proton.amqp.transport.AmqpError;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
-import org.apache.qpid.proton.engine.Record;
-import org.apache.qpid.proton.engine.impl.RecordImpl;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
@@ -68,15 +71,18 @@ public class AbstractHonoClientTest {
     private Vertx vertx;
     private Context context;
     private ClientConfigProperties props;
+    private Handler<String> closeHook;
 
     /**
      * Sets up the fixture.
      */
+    @SuppressWarnings("unchecked")
     @Before
     public void setUp() {
         vertx = mock(Vertx.class);
         props = new ClientConfigProperties();
         context = HonoClientUnitTestHelper.mockContext(vertx);
+        closeHook = mock(Handler.class);
     }
 
     /**
@@ -113,15 +119,13 @@ public class AbstractHonoClientTest {
     @SuppressWarnings({ "unchecked", "rawtypes" })
     private void testCreateSenderFails(final Supplier<ErrorCondition> errorSupplier, final Predicate<Throwable> failureAssertion) {
 
-        final Record attachments = new RecordImpl();
         final ProtonSender sender = mock(ProtonSender.class);
         when(sender.getRemoteCondition()).thenReturn(errorSupplier.get());
-        when(sender.attachments()).thenReturn(attachments);
         final ProtonConnection con = mock(ProtonConnection.class);
         when(con.createSender(anyString())).thenReturn(sender);
 
         final Future<ProtonSender> result = AbstractHonoClient.createSender(context, props, con,
-                "target", ProtonQoS.AT_LEAST_ONCE, null);
+                "target", ProtonQoS.AT_LEAST_ONCE, closeHook);
 
         verify(vertx).setTimer(eq(props.getLinkEstablishmentTimeout()), any(Handler.class));
         final ArgumentCaptor<Handler> openHandler = ArgumentCaptor.forClass(Handler.class);
@@ -129,6 +133,7 @@ public class AbstractHonoClientTest {
         openHandler.getValue().handle(Future.failedFuture(new IllegalStateException()));
         assertTrue(result.failed());
         assertTrue(failureAssertion.test(result.cause()));
+        verify(closeHook, never()).handle(anyString());
     }
 
     /**
@@ -142,9 +147,8 @@ public class AbstractHonoClientTest {
     @Test
     public void testCreateSenderFailsOnTimeout(final TestContext ctx) {
 
-        final Record attachments = new RecordImpl();
         final ProtonSender sender = mock(ProtonSender.class);
-        when(sender.attachments()).thenReturn(attachments);
+        when(sender.isOpen()).thenReturn(Boolean.TRUE);
         final ProtonConnection con = mock(ProtonConnection.class);
         when(con.createSender(anyString())).thenReturn(sender);
         // run any timer immediately
@@ -155,12 +159,13 @@ public class AbstractHonoClientTest {
         }).when(vertx).setTimer(anyLong(), any(Handler.class));
 
         final Future<ProtonSender> result = AbstractHonoClient.createSender(context, props, con,
-                "target", ProtonQoS.AT_LEAST_ONCE, null);
+                "target", ProtonQoS.AT_LEAST_ONCE, closeHook);
         assertTrue(result.failed());
         assertThat(((ServerErrorException) result.cause()).getErrorCode(), is(HttpURLConnection.HTTP_UNAVAILABLE));
         verify(sender).open();
         verify(sender).close();
         verify(sender).free();
+        verify(closeHook, never()).handle(anyString());
     }
 
     /**
@@ -197,15 +202,13 @@ public class AbstractHonoClientTest {
     @SuppressWarnings({ "unchecked", "rawtypes" })
     private void testCreateReceiverFails(final Supplier<ErrorCondition> errorSupplier, final Predicate<Throwable> failureAssertion) {
 
-        final Record attachments = new RecordImpl();
         final ProtonReceiver receiver = mock(ProtonReceiver.class);
         when(receiver.getRemoteCondition()).thenReturn(errorSupplier.get());
-        when(receiver.attachments()).thenReturn(attachments);
         final ProtonConnection con = mock(ProtonConnection.class);
         when(con.createReceiver(anyString())).thenReturn(receiver);
 
         final Future<ProtonReceiver> result = AbstractHonoClient.createReceiver(context, props, con,
-                "source", ProtonQoS.AT_LEAST_ONCE, (delivery, msg) -> {}, null);
+                "source", ProtonQoS.AT_LEAST_ONCE, (delivery, msg) -> {}, closeHook);
 
         verify(vertx).setTimer(eq(props.getLinkEstablishmentTimeout()), any(Handler.class));
         final ArgumentCaptor<Handler> openHandler = ArgumentCaptor.forClass(Handler.class);
@@ -213,6 +216,7 @@ public class AbstractHonoClientTest {
         openHandler.getValue().handle(Future.failedFuture(new IllegalStateException()));
         assertTrue(result.failed());
         assertTrue(failureAssertion.test(result.cause()));
+        verify(closeHook, never()).handle(anyString());
     }
 
     /**
@@ -226,9 +230,8 @@ public class AbstractHonoClientTest {
     @Test
     public void testCreateReceiverFailsOnTimeout(final TestContext ctx) {
 
-        final Record attachments = new RecordImpl();
         final ProtonReceiver receiver = mock(ProtonReceiver.class);
-        when(receiver.attachments()).thenReturn(attachments);
+        when(receiver.isOpen()).thenReturn(Boolean.TRUE);
         final ProtonConnection con = mock(ProtonConnection.class);
         when(con.createReceiver(anyString())).thenReturn(receiver);
         // run any timer immediately
@@ -239,12 +242,13 @@ public class AbstractHonoClientTest {
         }).when(vertx).setTimer(anyLong(), any(Handler.class));
 
         final Future<ProtonReceiver> result = AbstractHonoClient.createReceiver(context, props, con,
-                "source", ProtonQoS.AT_LEAST_ONCE, (delivery, msg) -> {}, null);
+                "source", ProtonQoS.AT_LEAST_ONCE, (delivery, msg) -> {}, closeHook);
         assertTrue(result.failed());
         assertThat(((ServerErrorException) result.cause()).getErrorCode(), is(HttpURLConnection.HTTP_UNAVAILABLE));
         verify(receiver).open();
         verify(receiver).close();
         verify(receiver).free();
+        verify(closeHook, never()).handle(anyString());
     }
 
 }

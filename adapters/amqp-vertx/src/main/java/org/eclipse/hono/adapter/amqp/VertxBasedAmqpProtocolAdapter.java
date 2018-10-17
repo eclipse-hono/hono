@@ -325,7 +325,8 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             LOG.debug("Established receiver link at [address: {}]",
                     (receiver.getRemoteTarget() != null) ? receiver.getRemoteTarget().getAddress() : null);
 
-            receiver.setTarget(null);
+            receiver.setTarget(receiver.getRemoteTarget());
+            receiver.setSource(receiver.getRemoteSource());
             receiver.setQoS(receiver.getRemoteQoS());
             if (ProtonQoS.AT_LEAST_ONCE.equals(receiver.getRemoteQoS())) {
                 // disable auto-accept for this transfer model.

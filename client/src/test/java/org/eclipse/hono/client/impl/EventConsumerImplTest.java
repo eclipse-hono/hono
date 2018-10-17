@@ -20,7 +20,6 @@ import java.util.function.BiConsumer;
 import io.vertx.ext.unit.junit.Timeout;
 import org.apache.qpid.proton.amqp.messaging.Released;
 import org.apache.qpid.proton.amqp.transport.Source;
-import org.apache.qpid.proton.engine.impl.RecordImpl;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.junit.After;
@@ -93,12 +92,11 @@ public class EventConsumerImplTest {
         final BiConsumer<ProtonDelivery, Message> eventConsumer = (delivery, message) -> {
             ProtonHelper.released(delivery, true);
         };
-        final RecordImpl attachments = new RecordImpl();
         final Source source = mock(Source.class);
-        when(source.toString()).thenReturn("event/tenant");
+        when(source.getAddress()).thenReturn("event/tenant");
         final ProtonReceiver receiver = mock(ProtonReceiver.class);
         when(receiver.getSource()).thenReturn(source);
-        when(receiver.attachments()).thenReturn(attachments);
+        when(receiver.getRemoteSource()).thenReturn(source);
         when(receiver.getRemoteQoS()).thenReturn(ProtonQoS.AT_LEAST_ONCE);
 
         final ProtonConnection con = mock(ProtonConnection.class);
@@ -158,13 +156,12 @@ public class EventConsumerImplTest {
 
         // GIVEN an open event consumer
         final BiConsumer<ProtonDelivery, Message> eventConsumer = mock(BiConsumer.class);
-        final RecordImpl attachments = new RecordImpl();
         final Source source = mock(Source.class);
         when(source.getAddress()).thenReturn("source/address");
         final ProtonReceiver receiver = mock(ProtonReceiver.class);
         when(receiver.isOpen()).thenReturn(Boolean.TRUE);
         when(receiver.getSource()).thenReturn(source);
-        when(receiver.attachments()).thenReturn(attachments);
+        when(receiver.getRemoteSource()).thenReturn(source);
 
         final ProtonConnection con = mock(ProtonConnection.class);
         when(con.createReceiver(anyString())).thenReturn(receiver);

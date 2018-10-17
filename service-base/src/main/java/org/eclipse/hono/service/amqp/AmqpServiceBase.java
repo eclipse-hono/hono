@@ -516,6 +516,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
                     getAuthorizationService().isAuthorized(user, targetResource, Activity.WRITE).setHandler(authAttempt -> {
                         if (authAttempt.succeeded() && authAttempt.result()) {
                             Constants.copyProperties(con, receiver);
+                            receiver.setSource(receiver.getRemoteSource());
                             receiver.setTarget(receiver.getRemoteTarget());
                             endpoint.onLinkAttach(con, receiver, targetResource);
                         } else {
@@ -554,6 +555,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
                     if (authAttempt.succeeded() && authAttempt.result()) {
                         Constants.copyProperties(con, sender);
                         sender.setSource(sender.getRemoteSource());
+                        sender.setTarget(sender.getRemoteTarget());
                         endpoint.onLinkAttach(con, sender, targetResource);
                     } else {
                         LOG.debug("subject [{}] is not authorized to READ from [{}]", user.getName(), targetResource);
