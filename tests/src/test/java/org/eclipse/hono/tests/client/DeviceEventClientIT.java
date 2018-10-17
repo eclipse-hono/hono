@@ -31,8 +31,8 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
 public class DeviceEventClientIT extends MessagingClientTestBase {
 
     @Override
-    protected Future<MessageSender> createProducer(final String tenantId) {
-        return honoClient.getOrCreateEventSender(tenantId, DEVICE_ID);
+    protected Future<MessageSender> createProducer(final String tenantId, final String deviceId) {
+        return honoClient.getOrCreateEventSender(tenantId, deviceId);
     }
 
     @Override

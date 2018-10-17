@@ -37,8 +37,8 @@ public class EventClientIT extends MessagingClientTestBase {
     }
 
     @Override
-    protected Future<MessageSender> createProducer(final String tenantId) {
-        return honoClient.getOrCreateEventSender(tenantId);
+    protected Future<MessageSender> createProducer(final String tenantId, final String deviceId) {
+        return honoClient.getOrCreateEventSender(tenantId, deviceId);
     }
 
     @Override

@@ -17,7 +17,6 @@ import java.util.function.Consumer;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.MessageConsumer;
-import org.eclipse.hono.client.MessageSender;
 import org.junit.runner.RunWith;
 
 import io.vertx.core.Future;
@@ -33,11 +32,5 @@ public class TelemetryClientIT extends MessagingClientTestBase {
     @Override
     protected Future<MessageConsumer> createConsumer(final String tenantId, final Consumer<Message> messageConsumer) {
         return downstreamClient.createTelemetryConsumer(tenantId, messageConsumer, close -> {});
-    }
-
-    @Override
-    protected Future<MessageSender> createProducer(final String tenantId) {
-
-        return honoClient.getOrCreateTelemetrySender(tenantId);
     }
 }

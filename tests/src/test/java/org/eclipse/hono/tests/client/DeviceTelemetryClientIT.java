@@ -17,7 +17,6 @@ import java.util.function.Consumer;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.MessageConsumer;
-import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.util.MessageHelper;
 import org.junit.runner.RunWith;
 
@@ -31,11 +30,6 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
  */
 @RunWith(VertxUnitRunner.class)
 public class DeviceTelemetryClientIT extends MessagingClientTestBase {
-
-    @Override
-    protected Future<MessageSender> createProducer(final String tenantId) {
-        return honoClient.getOrCreateTelemetrySender(tenantId, DEVICE_ID);
-    }
 
     @Override
     protected Future<MessageConsumer> createConsumer(final String tenantId, final Consumer<Message> messageConsumer) {

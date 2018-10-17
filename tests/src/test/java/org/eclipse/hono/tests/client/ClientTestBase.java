@@ -66,13 +66,7 @@ public abstract class ClientTestBase {
             if (remainingMessages.count() % 200 == 0) {
                 log.info("messages received: {}", IntegrationTestSupport.MSG_COUNT - remainingMessages.count());
             }
-        }).map(ok -> {
-            receiverCreation.complete();
-            return null;
-        }).otherwise(t -> {
-            context.fail(t);
-            return null;
-        });
+        }).setHandler(context.asyncAssertSuccess(ok -> receiverCreation.complete()));
         receiverCreation.await();
 
         while (messagesSent.get() < IntegrationTestSupport.MSG_COUNT) {
