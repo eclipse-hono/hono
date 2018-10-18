@@ -33,12 +33,12 @@ public class EventClientIT extends MessagingClientTestBase {
 
     @Override
     protected Future<MessageConsumer> createConsumer(final String tenantId, final Consumer<Message> messageConsumer) {
-        return downstreamClient.createEventConsumer(tenantId, messageConsumer, close -> {});
+        return helper.honoClient.createEventConsumer(tenantId, messageConsumer, close -> {});
     }
 
     @Override
     protected Future<MessageSender> createProducer(final String tenantId, final String deviceId) {
-        return honoClient.getOrCreateEventSender(tenantId, deviceId);
+        return honoMessagingClient.getOrCreateEventSender(tenantId, deviceId);
     }
 
     @Override
