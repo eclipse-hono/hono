@@ -164,16 +164,32 @@ public final class IntegrationTestSupport {
      */
     public void init(final TestContext ctx) {
 
-        initRegistryClient(ctx);
-
         final ClientConfigProperties downstreamProps = new ClientConfigProperties();
         downstreamProps.setHost(IntegrationTestSupport.DOWNSTREAM_HOST);
         downstreamProps.setPort(IntegrationTestSupport.DOWNSTREAM_PORT);
         downstreamProps.setUsername(IntegrationTestSupport.DOWNSTREAM_USER);
         downstreamProps.setPassword(IntegrationTestSupport.DOWNSTREAM_PWD);
+        init(ctx, downstreamProps);
+    }
+
+    /**
+     * Connects to the AMQP 1.0 Messaging Network.
+     * <p>
+     * Also creates an HTTP client for accessing the Device Registry.
+     * 
+     * @param ctx The vert.x test context.
+     * @param downstreamProps The properties for connecting to the AMQP Messaging
+     *                           Network.
+     */
+    public void init(final TestContext ctx, final ClientConfigProperties downstreamProps) {
+
+        initRegistryClient(ctx);
+
         honoClient = new IntegrationTestHonoClient(vertx, downstreamProps);
 
-        honoClient.connect().setHandler(ctx.asyncAssertSuccess());
+        honoClient.connect().setHandler(ctx.asyncAssertSuccess(ok -> {
+            LOGGER.info("connected to AMQP Messaging Network [{}:{}]", downstreamProps.getHost(), downstreamProps.getPort());
+        }));
     }
 
     /**
@@ -224,9 +240,9 @@ public final class IntegrationTestSupport {
      */
     public void disconnect(final TestContext ctx) {
 
-        final Async shutdown = ctx.async();
-        honoClient.shutdown(attempt -> shutdown.complete());
-        shutdown.await();
+        honoClient.shutdown(ctx.asyncAssertSuccess(ok -> {
+            LOGGER.info("connection to AMQP Messaging Network closed");
+        }));
     }
 
     /**

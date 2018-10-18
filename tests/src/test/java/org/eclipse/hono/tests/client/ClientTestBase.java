@@ -35,7 +35,7 @@ public abstract class ClientTestBase {
     /**
      * The vert.x instance to run all tests on.
      */
-    protected static final Vertx VERTX = Vertx.vertx();
+    protected static Vertx VERTX;
     /**
      * A logger to be used by subclasses.
      */
@@ -73,6 +73,7 @@ public abstract class ClientTestBase {
 
             final int msgNo = messagesSent.getAndIncrement();
             final String payload = "temp: " + msgNo;
+
             final Async msgSent = context.async();
 
             sender.apply(payload).setHandler(sendAttempt -> {
@@ -81,9 +82,10 @@ public abstract class ClientTestBase {
                             ((ServerErrorException) sendAttempt.cause()).getErrorCode() == HttpURLConnection.HTTP_UNAVAILABLE) {
                         // no credit available
                         // do not expect this message to be received
+                        log.info("skipping message no {}, no credit", msgNo);
                         remainingMessages.countDown();
                     } else {
-                        log.info("error sending message no {}: {}", msgNo);
+                        log.info("error sending message no {}", msgNo, sendAttempt.cause());
                     }
                 }
                 msgSent.complete();

@@ -35,8 +35,10 @@ import org.junit.Test;
 import org.junit.rules.TestName;
 
 import io.vertx.core.CompositeFuture;
+import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Vertx;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.proton.ProtonClientOptions;
@@ -61,23 +63,22 @@ public abstract class MessagingClientTestBase extends ClientTestBase {
      * for managing tenants/devices/credentials.
      */
     protected static IntegrationTestSupport helper;
+    /**
+     * A client for connecting to Hono Messaging.
+     */
+    protected static HonoClient honoMessagingClient;
+    /**
+     * The vert.x context to use for interacting with Hono Messaging.
+     */
+    protected static Context honoMessagingContext;
+
+    private static HonoClient honoDeviceRegistryClient;
 
     /**
      * Support outputting current test's name.
      */
     @Rule
     public TestName testName = new TestName();
-
-    /**
-     * A client for connecting to Hono Messaging.
-     */
-    protected static HonoClient honoClient;
-    /**
-     * A client for connecting to the AMQP Messaging Network.
-     */
-    protected static HonoClient downstreamClient;
-
-    private static HonoClient honoDeviceRegistryClient;
 
     /**
      * Creates a test specific message consumer.
@@ -96,7 +97,7 @@ public abstract class MessagingClientTestBase extends ClientTestBase {
      * @return A future succeeding with the created sender.
      */
     protected Future<MessageSender> createProducer(final String tenantId, final String deviceId) {
-        return honoClient.getOrCreateTelemetrySender(tenantId, deviceId);
+        return honoMessagingClient.getOrCreateTelemetrySender(tenantId, deviceId);
     }
 
     /**
@@ -114,8 +115,7 @@ public abstract class MessagingClientTestBase extends ClientTestBase {
     @BeforeClass
     public static void init(final TestContext ctx) {
 
-        helper = new IntegrationTestSupport(VERTX);
-        helper.init(ctx);
+        VERTX = Vertx.vertx();
 
         final ClientConfigProperties downstreamProps = new ClientConfigProperties();
         downstreamProps.setHost(IntegrationTestSupport.DOWNSTREAM_HOST);
@@ -123,14 +123,17 @@ public abstract class MessagingClientTestBase extends ClientTestBase {
         downstreamProps.setPathSeparator(IntegrationTestSupport.PATH_SEPARATOR);
         downstreamProps.setUsername(IntegrationTestSupport.RESTRICTED_CONSUMER_NAME);
         downstreamProps.setPassword(IntegrationTestSupport.RESTRICTED_CONSUMER_PWD);
-        downstreamClient = HonoClient.newClient(VERTX, downstreamProps);
+        downstreamProps.setInitialCredits(100);
+
+        helper = new IntegrationTestSupport(VERTX);
+        helper.init(ctx, downstreamProps);
 
         final ClientConfigProperties honoProps = new ClientConfigProperties();
         honoProps.setHost(IntegrationTestSupport.HONO_HOST);
         honoProps.setPort(IntegrationTestSupport.HONO_PORT);
         honoProps.setUsername(IntegrationTestSupport.HONO_USER);
         honoProps.setPassword(IntegrationTestSupport.HONO_PWD);
-        honoClient = HonoClient.newClient(VERTX, honoProps);
+        honoMessagingClient = HonoClient.newClient(VERTX, honoProps);
 
         final ClientConfigProperties registryProps = new ClientConfigProperties();
         registryProps.setHost(IntegrationTestSupport.HONO_DEVICEREGISTRY_HOST);
@@ -143,11 +146,13 @@ public abstract class MessagingClientTestBase extends ClientTestBase {
 
         final Async connectionEstablished = ctx.async();
 
-        CompositeFuture.all(
-                downstreamClient.connect(options),
-                honoClient.connect(options),
-                honoDeviceRegistryClient.connect(options)).setHandler(
-                        ctx.asyncAssertSuccess(ok -> connectionEstablished.complete()));
+        honoMessagingContext = VERTX.getOrCreateContext();
+        honoMessagingContext.runOnContext(connect -> {
+            CompositeFuture.all(
+                    honoMessagingClient.connect(options),
+                    honoDeviceRegistryClient.connect(options)).setHandler(
+                            ctx.asyncAssertSuccess(ok -> connectionEstablished.complete()));
+        });
         connectionEstablished.await(DEFAULT_TEST_TIMEOUT);
     }
 
@@ -185,32 +190,30 @@ public abstract class MessagingClientTestBase extends ClientTestBase {
     public static void disconnect(final TestContext ctx) {
 
         helper.disconnect(ctx);
-        final Future<Void> registryTracker = Future.future();
-        if (honoDeviceRegistryClient == null) {
-            registryTracker.complete();
-        } else {
-            honoDeviceRegistryClient.shutdown(registryTracker);
-        }
+        final Async closing = ctx.async();
 
-        final Future<Void> honoTracker = Future.future();
-        if (honoClient == null) {
-            honoTracker.complete();
-        } else {
-            honoClient.shutdown(honoTracker);
-        }
+        honoMessagingContext.runOnContext(disconnect -> {
+            final Future<Void> registryTracker = Future.future();
+            if (honoDeviceRegistryClient == null) {
+                registryTracker.complete();
+            } else {
+                honoDeviceRegistryClient.shutdown(registryTracker);
+            }
 
-        final Future<Void> qpidTracker = Future.future();
-        if (downstreamClient == null) {
-            qpidTracker.complete();
-        } else {
-            downstreamClient.shutdown(qpidTracker);
-        }
+            final Future<Void> honoTracker = Future.future();
+            if (honoMessagingClient == null) {
+                honoTracker.complete();
+            } else {
+                honoMessagingClient.shutdown(honoTracker);
+            }
 
-        final Async shutdown = ctx.async();
-        CompositeFuture.all(honoTracker, qpidTracker, registryTracker).setHandler(r -> {
-            shutdown.complete();
+            CompositeFuture.all(honoTracker, registryTracker).setHandler(r -> {
+                closing.complete();
+            });
         });
-        shutdown.await(2000);
+        closing.await(DEFAULT_TEST_TIMEOUT);
+        honoMessagingContext = null;
+        VERTX.close();
     }
 
     /**
@@ -227,31 +230,37 @@ public abstract class MessagingClientTestBase extends ClientTestBase {
         final String deviceId = helper.getRandomDeviceId(TEST_TENANT_ID);
 
         final Async setup = ctx.async();
-        helper.registry.registerDevice(TEST_TENANT_ID, deviceId)
-        .compose(ok -> honoDeviceRegistryClient.getOrCreateRegistrationClient(TEST_TENANT_ID))
-        .compose(registrationClient -> registrationClient.assertRegistration(deviceId))
-        .map(assertionResult -> {
-            registrationAssertion.set(assertionResult.getString(RegistrationConstants.FIELD_ASSERTION));
-            return assertionResult;
-        }).setHandler(ctx.asyncAssertSuccess(ok -> setup.complete()));
+        honoMessagingContext.runOnContext(getAssertion -> {
+            helper.registry.registerDevice(TEST_TENANT_ID, deviceId)
+            .compose(ok -> honoDeviceRegistryClient.getOrCreateRegistrationClient(TEST_TENANT_ID))
+            .compose(registrationClient -> registrationClient.assertRegistration(deviceId))
+            .map(assertionResult -> {
+                registrationAssertion.set(assertionResult.getString(RegistrationConstants.FIELD_ASSERTION));
+                return assertionResult;
+            }).setHandler(ctx.asyncAssertSuccess(ok -> setup.complete()));
+        });
         setup.await();
 
         final Function<Handler<Void>, Future<Void>> receiverFactory = msgConsumer -> {
-            return createConsumer(TEST_TENANT_ID, msg -> {
-                assertMessageProperties(ctx, msg);
-                assertAdditionalMessageProperties(ctx, msg);
-                msgConsumer.handle(null);
-            }).map(c -> null);
+            final Future<Void> result = Future.future();
+            honoMessagingContext.runOnContext(go -> {
+                createConsumer(TEST_TENANT_ID, msg -> {
+                    assertMessageProperties(ctx, msg);
+                    assertAdditionalMessageProperties(ctx, msg);
+                    msgConsumer.handle(null);
+                }).map(c -> (Void) null).setHandler(result);
+            });
+            return result;
         };
 
         doUploadMessages(ctx, receiverFactory, payload -> {
 
             final Future<ProtonDelivery> result = Future.future();
 
-            VERTX.runOnContext(doSend -> {
+            honoMessagingContext.runOnContext(send -> {
                 createProducer(TEST_TENANT_ID, deviceId)
                 .map(sender -> {
-                    final Handler<Long> sendMsg = go -> {
+                    final Handler<Void> msgSender = s -> {
                         sender.send(
                                 deviceId,
                                 payload,
@@ -259,11 +268,9 @@ public abstract class MessagingClientTestBase extends ClientTestBase {
                                 registrationAssertion.get()).setHandler(result);
                     };
                     if (sender.getCredit() <= 0) {
-                        // wait a little for credits from peer
-                        VERTX.setTimer(100, sendMsg);
+                        sender.sendQueueDrainHandler(msgSender);
                     } else {
-                        // send message immediately
-                        sendMsg.handle(0L);
+                        msgSender.handle(null);
                     }
                     return sender;
                 }).otherwise(t -> {

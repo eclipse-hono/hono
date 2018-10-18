@@ -33,7 +33,7 @@ public class DeviceTelemetryClientIT extends MessagingClientTestBase {
 
     @Override
     protected Future<MessageConsumer> createConsumer(final String tenantId, final Consumer<Message> messageConsumer) {
-        return downstreamClient.createTelemetryConsumer(tenantId, messageConsumer, close -> {});
+        return helper.honoClient.createTelemetryConsumer(tenantId, messageConsumer, close -> {});
     }
 
     @Override
