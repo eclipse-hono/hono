@@ -14,16 +14,16 @@
 
   ["sslProfile", {
     "name": "external",
-    "certDb": "${secret.path}/trusted-certs.pem",
+    "caCertFile": "${secret.path}/trusted-certs.pem",
     "certFile": "${secret.path}/qdrouter-cert.pem",
-    "keyFile": "${secret.path}/qdrouter-key.pem"
+    "privateKeyFile": "${secret.path}/qdrouter-key.pem"
   }],
 
   ["sslProfile", {
     "name": "internal",
-    "certDb": "${secret.path}/trusted-certs.pem",
+    "caCertFile": "${secret.path}/trusted-certs.pem",
     "certFile": "${secret.path}/qdrouter-cert.pem",
-    "keyFile": "${secret.path}/qdrouter-key.pem",
+    "privateKeyFile": "${secret.path}/qdrouter-key.pem",
     "uidFormat": "oun"
   }],
 
@@ -66,13 +66,13 @@
 
   ["linkRoute", {
     "prefix": "event/",
-    "dir": "in",
+    "direction": "in",
     "connection": "broker"
   }],
 
   ["linkRoute", {
     "prefix": "event/",
-    "dir": "out",
+    "direction": "out",
     "connection": "broker"
   }],
 
@@ -88,7 +88,7 @@
   }],
 
   ["vhost", {
-      "id": "hono",
+      "hostname": "hono",
       "maxConnections": 500,
       "maxConnectionsPerUser": 20,
       "maxConnectionsPerHost": 10,
@@ -102,7 +102,7 @@
   }],
 
   ["vhost", {
-      "id": "hono-internal",
+      "hostname": "hono-internal",
       "maxConnections": 9,
       "groups": {
         "Hono": {
@@ -119,7 +119,7 @@
   }],
 
   ["vhost", {
-    "id": "hono-kura-internal",
+    "hostname": "hono-kura-internal",
     "maxConnections": 30,
     "groups": {
       "Hono": {
@@ -133,7 +133,7 @@
   }],
 
   ["vhost", {
-    "id": "hono-mqtt-internal",
+    "hostname": "hono-mqtt-internal",
     "maxConnections": 30,
     "groups": {
       "Hono": {
@@ -147,7 +147,7 @@
   }],
 
   ["vhost", {
-    "id": "hono-amqp-internal",
+    "hostname": "hono-amqp-internal",
     "maxConnections": 30,
     "groups": {
       "Hono": {
@@ -161,7 +161,7 @@
   }],
 
   ["vhost", {
-    "id": "hono-http-internal",
+    "hostname": "hono-http-internal",
     "maxConnections": 30,
     "groups": {
       "Hono": {
@@ -175,7 +175,7 @@
   }],
 
   ["vhost", {
-    "id": "hono-coap-internal",
+    "hostname": "hono-coap-internal",
     "maxConnections": 30,
     "groups": {
       "Hono": {

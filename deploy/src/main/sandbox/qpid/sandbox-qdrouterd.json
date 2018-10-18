@@ -14,14 +14,14 @@
 
   ["sslProfile", {
     "name": "internal",
-    "certDb": "/run/secrets/trusted-certs.pem"
+    "caCertFile": "/run/secrets/trusted-certs.pem"
   }],
 
   ["sslProfile", {
     "name": "external",
-    "certDb": "/run/secrets/trusted-certs.pem",
+    "caCertFile": "/run/secrets/trusted-certs.pem",
     "certFile": "/run/secrets/hono.eclipse.org-cert.pem",
-    "keyFile": "/run/secrets/hono.eclipse.org-key.pem"
+    "privateKeyFile": "/run/secrets/hono.eclipse.org-key.pem"
   }],
 
   ["listener", {
@@ -66,13 +66,13 @@
 
   ["linkRoute", {
     "prefix": "event/",
-    "dir": "in",
+    "direction": "in",
     "connection": "broker"
   }],
 
   ["linkRoute", {
     "prefix": "event/",
-    "dir": "out",
+    "direction": "out",
     "connection": "broker"
   }],
 
@@ -83,7 +83,7 @@
   }],
 
   ["vhost", {
-      "id": "hono",
+      "hostname": "hono",
       "maxConnections": 200,
       "maxConnectionsPerUser": 200,
       "maxConnectionsPerHost": 50,
@@ -97,7 +97,7 @@
   }],
 
   ["vhost", {
-      "id": "hono-internal",
+      "hostname": "hono-internal",
       "maxConnections": 20,
       "allowUnknownUser": true,
       "groups": {

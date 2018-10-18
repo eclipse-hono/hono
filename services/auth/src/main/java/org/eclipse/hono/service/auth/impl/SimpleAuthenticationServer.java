@@ -14,9 +14,11 @@
 package org.eclipse.hono.service.auth.impl;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -48,6 +50,10 @@ public final class SimpleAuthenticationServer extends AmqpServiceBase<ServiceCon
     private static final Symbol CAPABILITY_ADDRESS_AUTHZ = Symbol.valueOf("ADDRESS-AUTHZ");
     private static final Symbol PROPERTY_ADDRESS_AUTHZ = Symbol.valueOf("address-authz");
     private static final Symbol PROPERTY_AUTH_IDENTITY = Symbol.valueOf("authenticated-identity");
+
+    private static final int IDX_MAJOR_VERSION = 0;
+    private static final int IDX_MINOR_VERSION = 1;
+    private static final int IDX_PATCH_VERSION = 2;
 
     @Autowired
     @Override
@@ -118,15 +124,63 @@ public final class SimpleAuthenticationServer extends AmqpServiceBase<ServiceCon
      */
     private void processAddressAuthzCapability(final ProtonConnection connection) {
 
+        if (LOG.isDebugEnabled()) {
+            final Map<Symbol, Object> remoteProperties = connection.getRemoteProperties();
+            if (remoteProperties != null) {
+                final String props = remoteProperties.entrySet().stream().map(entry -> {
+                    return String.format("[%s: %s]", entry.getKey(), entry.getValue().toString());
+                }).collect(Collectors.joining(", "));
+                LOG.debug("client connection [container: {}] includes properties: {}", connection.getRemoteContainer(), props);
+            }
+        }
         final HonoUser clientPrincipal = Constants.getClientPrincipal(connection);
         final Map<String, String[]> permissions = getPermissionsFromAuthorities(clientPrincipal.getAuthorities());
-        LOG.debug("transfering {} permissions of client [container: {}, user: {}] in open frame",
-                permissions.size(), connection.getRemoteContainer(), clientPrincipal.getName());
         final Map<Symbol, Object> properties = new HashMap<>();
-        properties.put(PROPERTY_AUTH_IDENTITY, clientPrincipal.getName());
+        final boolean isLegacy = isLegacyClient(connection);
+        if (isLegacy) {
+            properties.put(PROPERTY_AUTH_IDENTITY, clientPrincipal.getName());
+        } else {
+            properties.put(PROPERTY_AUTH_IDENTITY, Collections.singletonMap("sub", clientPrincipal.getName()));
+        }
         properties.put(PROPERTY_ADDRESS_AUTHZ, permissions);
         connection.setProperties(properties);
         connection.setOfferedCapabilities(new Symbol[] { CAPABILITY_ADDRESS_AUTHZ });
+        LOG.debug("transfering {} permissions of client [container: {}, user: {}] in open frame [legacy format: {}]",
+                permissions.size(), connection.getRemoteContainer(), clientPrincipal.getName(), isLegacy);
+    }
+
+    private boolean isLegacyClient(final ProtonConnection con) {
+
+        return Optional.ofNullable(con.getRemoteProperties()).map(props -> {
+            final Object obj = props.get(Symbol.getSymbol("version"));
+            if (obj instanceof String) {
+                final int[] version = parseVersionString((String) obj);
+                return version[IDX_MAJOR_VERSION] == 1 && version[IDX_MINOR_VERSION] < 4;
+            } else {
+                return false;
+            }
+        }).orElse(false);
+    }
+
+    private int[] parseVersionString(final String version) {
+
+        final int[] result = new int[] { 0, 0, 0 };
+        final String[] versionNumbers = version.split(".", 3);
+        try {
+            switch(versionNumbers.length) {
+            case 1:
+                result[IDX_MAJOR_VERSION] = Integer.parseInt(versionNumbers[IDX_MAJOR_VERSION]);
+            case 2:
+                result[IDX_MINOR_VERSION] = Integer.parseInt(versionNumbers[IDX_MINOR_VERSION]);
+            case 3:
+                result[IDX_PATCH_VERSION] = Integer.parseInt(versionNumbers[IDX_PATCH_VERSION]);
+            default:
+                // return 0.0.0
+            }
+        } catch (NumberFormatException e) {
+            // return 0.0.0
+        }
+        return result;
     }
 
     private Map<String, String[]> getPermissionsFromAuthorities(final Authorities authorities) {

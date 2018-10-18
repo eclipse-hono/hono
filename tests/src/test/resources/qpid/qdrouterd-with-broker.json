@@ -13,16 +13,16 @@
 
   ["sslProfile", {
     "name": "external",
-    "certDb": "/etc/hono/trusted-certs.pem",
+    "caCertFile": "/etc/hono/trusted-certs.pem",
     "certFile": "/etc/hono/qdrouter-cert.pem",
-    "keyFile": "/etc/hono/qdrouter-key.pem"
+    "privateKeyFile": "/etc/hono/qdrouter-key.pem"
   }],
 
   ["sslProfile", {
     "name": "internal",
-    "certDb": "/etc/hono/trusted-certs.pem",
+    "caCertFile": "/etc/hono/trusted-certs.pem",
     "certFile": "/etc/hono/qdrouter-cert.pem",
-    "keyFile": "/etc/hono/qdrouter-key.pem",
+    "privateKeyFile": "/etc/hono/qdrouter-key.pem",
     "uidFormat": "oun"
   }],
 
@@ -66,13 +66,13 @@
 
   ["linkRoute", {
     "prefix": "event/",
-    "dir": "in",
+    "direction": "in",
     "connection": "broker"
   }],
 
   ["linkRoute", {
     "prefix": "event/",
-    "dir": "out",
+    "direction": "out",
     "connection": "broker"
   }],
 
