@@ -48,8 +48,15 @@ void checkOutHonoRepoMaster() {
  */
 void checkOutRepoWithCredentials(String branch, String credentialsId, String url) {
     stage('Checkout') {
-        echo "Check out branch: $branch"
-        git branch: "$branch", credentialsId: "$credentialsId", url: "$url"
+        echo "Check out branch: [$branch] from repository [$url] with provided credentials"
+        checkout([$class                           : 'GitSCM',
+                  branches                         : [[name: "$branch"]],
+                  doGenerateSubmoduleConfigurations: false,
+                  extensions                       : [[$class: 'WipeWorkspace']],
+                  userRemoteConfigs                : [[credentialsId: "$credentialsId",
+                                                       name         : 'origin',
+                                                       refspec      : '+refs/heads/*:refs/remotes/origin/*',
+                                                       url          : "$url"]]])
     }
 }
 
