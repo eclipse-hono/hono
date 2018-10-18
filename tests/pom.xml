@@ -395,8 +395,6 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <name>hono</name>
                       <alias>hono-artemis.hono</alias>
                     </network>
-                    <memorySwap>-1</memorySwap>
-                    <memory>402653184</memory>
                     <env>
                       <ARTEMIS_CONFIGURATION>/etc/hono</ARTEMIS_CONFIGURATION>
                     </env>
