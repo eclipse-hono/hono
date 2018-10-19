@@ -36,4 +36,12 @@ hono:
     svc:
       filename: /var/lib/hono/device-registry/tenants.json
       saveToFile: true
+  metrics:
+    legacy: true
 
+management:
+  metrics:
+    export:
+      graphite:
+        host: influxdb.hono
+        port: 2003
