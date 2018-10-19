@@ -61,33 +61,34 @@ public interface MessageSender {
     boolean sendQueueFull();
 
     /**
-     * Sets a handler to be notified once this sender has capacity available to send or
-     * buffer a message.
+     * Sets a handler to be notified once this sender has capacity available to send a message.
      * <p>
      * The handler registered using this method will be invoked <em>exactly once</em> when
-     * this sender is replenished with more credit from the server. For subsequent notifications
+     * this sender is replenished with more credit from the peer. For subsequent notifications
      * to be received, a new handler must be registered.
      * <p>
-     * Client code should register a handler after it has checked this sender's capacity to send
-     * messages using the <em>sendQueueFull</em> method, e.g.
+     * Client code can use this method to register a handler after it has checked this sender's
+     * capacity to send messages using {@link #getCredit()}, e.g.
      * <pre>
      * MessageSender sender;
      * ...
+     * 
      * sender.send(msg);
-     * if (sender.sendQueueFull()) {
+     * if (sender.getCredit() &lt;= 0) {
      *     sender.sendQueueDrainHandler(replenished -&gt; {
-     *         // send more messages
+     *         sender.send(msg);
      *     });
+     * } else {
+     *     sender.send(msg);
      * }
      * </pre>
+     * <p>
+     * Note that all the <em>send</em> methods fail if no credit is available.
      * 
      * @param handler The handler to invoke when this sender has been replenished with credit.
      * @throws IllegalStateException if there already is a handler registered. Note that this means
      *                               that this sender is already waiting for credit.
-     * @deprecated Explicitly check availability of credit using {@link #getCredit()} and then
-     *             use one of the <em>send</em> methods not requiring a drain handler.
      */
-    @Deprecated
     void sendQueueDrainHandler(Handler<Void> handler);
 
     /**
