@@ -217,12 +217,14 @@ public final class TelemetrySenderImpl extends AbstractSender {
                         } else {
                             LOG.debug("message [message ID: {}] rejected by peer: {}, {}", messageId,
                                     rejected.getError().getCondition(), rejected.getError().getDescription());
-                            events.put(Fields.MESSAGE, rejected.getError().getDescription());
+                            events.put(Fields.MESSAGE, String.format("message rejected by peer: %s, %s",
+                                    rejected.getError().getCondition(), rejected.getError().getDescription()));
                         }
                     } else {
-                        LOG.debug("message [message ID: {}] not accepted by peer: {}",
+                        LOG.debug("message [message ID: {}] not accepted by peer, remote state: {}",
                                 messageId, remoteState.getClass().getSimpleName());
                         Tags.HTTP_STATUS.set(currentSpan, HttpURLConnection.HTTP_UNAVAILABLE);
+                        events.put(Fields.MESSAGE, "message not accepted by peer");
                     }
                     TracingHelper.logError(currentSpan, events);
                 }
