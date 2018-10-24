@@ -138,7 +138,7 @@ public final class TracingHelper {
     public static void logError(final Span span, final Map<String, ?> items) {
         if (span != null) {
             Tags.ERROR.set(span, Boolean.TRUE);
-            if (items != null) {
+            if (items != null && !items.isEmpty()) {
                 span.log(items);
                 final Object event = items.get(Fields.EVENT);
                 if (event == null || !Tags.ERROR.getKey().equals(event)) {
