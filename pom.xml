@@ -212,6 +212,7 @@
             </execution>
           </executions>
           <configuration>
+            <imagePullPolicy>Always</imagePullPolicy>
             <images>
               <image>
                 <name>${docker.image.org-name}/%a:%v</name>
