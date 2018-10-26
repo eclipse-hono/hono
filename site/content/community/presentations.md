@@ -7,6 +7,12 @@ On this page you can find links to arbitrary material covering Eclipse Hono whic
 and meet-ups or are available online.
 <!--more-->
 
+## "Eclipse Hono: Command and Control" (Talk at eclipsecon Europe October 2018)
+
+* [Talk description](https://www.eclipsecon.org/europe2018/sessions/command-and-control-using-eclipse-hono-connect-and-control-your-devices) (October 23, 2018)
+* Speaker : Karsten Frank (Bosch Software Innovations)
+* [Slides](https://www.slideshare.net/KarstenFrank1/eclipse-hono-command-and-control) 
+
 ## "Using multi-tenancy in Eclipse Hono" (Blog post April 2018)
 
 * Author : Kai Hudalla (Bosch Software Innovations)
