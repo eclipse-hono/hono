@@ -49,7 +49,7 @@ public class CommandConsumer extends AbstractConsumer {
 
     private static final Logger LOG = LoggerFactory.getLogger(CommandConsumer.class);
 
-    private CommandConsumer(
+    protected CommandConsumer(
             final Context context,
             final ClientConfigProperties config,
             final ProtonReceiver protonReceiver,
@@ -89,7 +89,7 @@ public class CommandConsumer extends AbstractConsumer {
             final String deviceId,
             final Handler<CommandContext> commandHandler,
             final Handler<String> receiverCloseHook,
-            final Handler<AsyncResult<MessageConsumer>> creationHandler,
+            final Handler<AsyncResult<CommandConsumer>> creationHandler,
             final Tracer tracer) {
 
         Objects.requireNonNull(context);

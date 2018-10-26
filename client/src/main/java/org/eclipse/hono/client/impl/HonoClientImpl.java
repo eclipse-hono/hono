@@ -336,7 +336,42 @@ public class HonoClientImpl implements HonoClient {
         return result;
     }
 
-    private void connect(
+    /**
+     * Connects to the Hono server using given options.
+     * <p>
+     * The client will try to establish a TCP connection to the peer based on the values of the
+     * <em>connectTimeout</em>, <em>reconnectAttempts</em> and <em>reconnectInterval</em> properties
+     * of the given options. Note that each connection attempt is made using the same IP
+     * address that has been resolved when the method was initially invoked.
+     * <p>
+     * Once a TCP connection is established, the client performs a SASL handshake (if requested by the
+     * peer) using the credentials set in the {@link ClientConfigProperties}. Finally, the client
+     * opens the AMQP connection to the peer, based on the negotiated parameters.
+     * <p>
+     * The number of times that the client should try to establish the AMQP connection with the peer
+     * can be configured by means of the <em>connectAttempts</em> property of the
+     * {@code ClientConfigProperties} passed in to the {@link #newClient(Vertx, ClientConfigProperties)}
+     * method.
+     * <p>
+     * When an established connection to the peer fails, the given disconnect handler will be invoked.
+     * Note that the client will <em>not</em> automatically try to re-connect to the peer in this case.
+     * If the disconnect handler is {@code null}, the client will automatically try to re-connect
+     * to the peer using the same options and behavior as used for establishing the initial connection.
+     *
+     * @param options The options to use. If {@code null} the default properties will be used.
+     * @param connectionHandler A handler to notify when the connection is successfully established.
+     * @param disconnectHandler A handler to notify about connection loss (may be {@code null}).
+     * @return A future that will succeed with the connected client once the connection has been established. The future
+     *         will fail with a {@link ServiceInvocationException} if the connection cannot be established, e.g. because
+     *         <ul>
+     *         <li>authentication of the client failed, or</li>
+     *         <li>one of the client's <em>shutdown</em> methods has been invoked before the connection could be
+     *         established, or</li>
+     *         <li>the maximum number of (unsuccessful) (re-)connection attempts have been made.</li>
+     *         </ul>
+     * @throws {@link NullPointerException} if the connectionHandler is {@code null}.
+     */
+    protected void connect(
             final ProtonClientOptions options,
             final Handler<AsyncResult<HonoClient>> connectionHandler,
             final Handler<ProtonConnection> disconnectHandler) {

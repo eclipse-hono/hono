@@ -40,7 +40,7 @@ public class CommandConnectionImpl extends HonoClientImpl implements CommandConn
      * The consumers that can be used to receive command messages.
      * The device, which belongs to a tenant is used as the key, e.g. <em>DEFAULT_TENANT/4711</em>.
      */
-    private final Map<String, MessageConsumer> commandReceivers = new HashMap<>();
+    protected final Map<String, CommandConsumer> commandReceivers = new HashMap<>();
 
     /**
      * Creates a new client for a set of configuration properties.
@@ -98,7 +98,7 @@ public class CommandConnectionImpl extends HonoClientImpl implements CommandConn
         }
     }
 
-    private Future<MessageConsumer> newCommandConsumer(
+    protected Future<MessageConsumer> newCommandConsumer(
             final String tenantId,
             final String deviceId,
             final Handler<CommandContext> commandConsumer,
