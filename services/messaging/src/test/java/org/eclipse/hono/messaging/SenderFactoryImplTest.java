@@ -13,10 +13,15 @@
 
 package org.eclipse.hono.messaging;
 
-import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.util.function.BiConsumer;
 
+import org.apache.qpid.proton.amqp.transport.Target;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.TelemetryConstants;
@@ -26,7 +31,6 @@ import org.mockito.ArgumentCaptor;
 
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
-import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.proton.ProtonConnection;
@@ -67,20 +71,21 @@ public class SenderFactoryImplTest {
     }
 
     @SuppressWarnings({ "unchecked", "rawtypes" })
-    private void testNewSenderIsClosedOnRemoteDetachOrClose(final TestContext ctx,
+    private void testNewSenderIsClosedOnRemoteDetachOrClose(
+            final TestContext ctx,
             final BiConsumer<ProtonSender, ArgumentCaptor<Handler>> handlerCaptor) {
+
         // GIVEN a sender created by the factory
-        final Async senderCreation = ctx.async();
+        final ResourceIdentifier address = ResourceIdentifier.from(TelemetryConstants.TELEMETRY_ENDPOINT,
+                Constants.DEFAULT_TENANT, null);
+        final Target target = mock(Target.class);
+        when(target.getAddress()).thenReturn(address.getBasePath());
         final ProtonSender sender = mock(ProtonSender.class);
-        when(sender.open()).then(answer -> {
-            senderCreation.complete();
-            return sender;
-        });
+        when(sender.getTarget()).thenReturn(target);
+        when(sender.getRemoteTarget()).thenReturn(target);
         final ProtonConnection con = mock(ProtonConnection.class);
         final ProtonSession session = mock(ProtonSession.class);
         when(session.createSender(anyString())).thenReturn(sender);
-        final ResourceIdentifier address = ResourceIdentifier.from(TelemetryConstants.TELEMETRY_ENDPOINT,
-                Constants.DEFAULT_TENANT, null);
         final Handler<String> closeHook = mock(Handler.class);
         final SenderFactoryImpl factory = new SenderFactoryImpl();
         final ArgumentCaptor<Handler> captor = ArgumentCaptor.forClass(Handler.class);

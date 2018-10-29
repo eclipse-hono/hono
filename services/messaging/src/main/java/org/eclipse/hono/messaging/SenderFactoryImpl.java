@@ -15,6 +15,7 @@ package org.eclipse.hono.messaging;
 
 import java.util.Objects;
 
+import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.HonoProtonHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
@@ -26,6 +27,7 @@ import org.springframework.stereotype.Component;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.proton.ProtonConnection;
+import io.vertx.proton.ProtonLink;
 import io.vertx.proton.ProtonQoS;
 import io.vertx.proton.ProtonSender;
 import io.vertx.proton.ProtonSession;
@@ -85,9 +87,9 @@ public class SenderFactoryImpl implements SenderFactory {
         } else {
             LOG.debug("creating new session for sending {} data downstream", targetAddress.getEndpoint());
             session = con.createSession();
-            con.attachments().set(targetAddress.getEndpoint(), ProtonSession.class, session);
             session.openHandler(remoteOpen -> {
                 if (remoteOpen.succeeded()) {
+                    con.attachments().set(targetAddress.getEndpoint(), ProtonSession.class, remoteOpen.result());
                     result.complete(remoteOpen.result());
                 } else {
                     result.fail(remoteOpen.cause());
@@ -111,6 +113,20 @@ public class SenderFactoryImpl implements SenderFactory {
         sender.setQoS(qos);
         sender.setAutoSettle(true);
         sender.sendQueueDrainHandler(sendQueueDrainHandler);
+        HonoProtonHelper.setCloseHandler(sender, closed ->
+            onRemoteDetach(
+                    sender,
+                    address,
+                    connection.getRemoteContainer(),
+                    true,
+                    closeHook));
+        HonoProtonHelper.setDetachHandler(sender, detached -> 
+            onRemoteDetach(
+                    sender,
+                    address,
+                    connection.getRemoteContainer(),
+                    false,
+                    closeHook));
         sender.openHandler(openAttempt -> {
             if (openAttempt.succeeded()) {
                 LOG.debug(
@@ -125,32 +141,6 @@ public class SenderFactoryImpl implements SenderFactory {
                 result.fail(openAttempt.cause());
             }
         });
-        HonoProtonHelper.setCloseHandler(sender, closed -> {
-            if (closed.succeeded()) {
-                LOG.debug("sender [{}] for container [{}] closed", address,
-                        connection.getRemoteContainer());
-            } else {
-                LOG.debug("sender [{}] for container [{}] closed: {}", address,
-                        connection.getRemoteContainer(), closed.cause().getMessage());
-            }
-            sender.close();
-            if (closeHook != null) {
-                closeHook.handle(address.getResourceId());
-            }
-        });
-        HonoProtonHelper.setDetachHandler(sender, detached -> {
-            if (detached.succeeded()) {
-                LOG.debug("sender [{}] detached (with closed=false) by peer [{}]", address,
-                        connection.getRemoteContainer());
-            } else {
-                LOG.debug("sender [{}] detached (with closed=false) by peer [{}]: {}", address,
-                        connection.getRemoteContainer(), detached.cause().getMessage());
-            }
-            sender.close();
-            if (closeHook != null) {
-                closeHook.handle(address.getResourceId());
-            }
-        });
         sender.open();
         return result;
     }
@@ -158,5 +148,29 @@ public class SenderFactoryImpl implements SenderFactory {
     private String getTenantOnlyTargetAddress(final ResourceIdentifier id) {
         final String pathSeparator = config == null ? Constants.DEFAULT_PATH_SEPARATOR : config.getPathSeparator();
         return String.format("%s%s%s", id.getEndpoint(), pathSeparator, id.getTenantId());
+    }
+
+    private static void onRemoteDetach(
+            final ProtonLink<?> link,
+            final ResourceIdentifier targetAddress,
+            final String remoteContainer,
+            final boolean closed,
+            final Handler<String> closeHook) {
+
+        final ErrorCondition error = link.getRemoteCondition();
+        final String type = link instanceof ProtonSender ? "sender" : "receiver";
+        final String address = link instanceof ProtonSender ? link.getTarget().getAddress() :
+            link.getSource().getAddress();
+        if (error == null) {
+            LOG.debug("{} [{}] detached (with closed={}) by peer [{}]",
+                    type, address, closed, remoteContainer);
+        } else {
+            LOG.debug("{} [{}] detached (with closed={}) by peer [{}]: {} - {}",
+                    type, address, closed, remoteContainer, error.getCondition(), error.getDescription());
+        }
+        link.close();
+        if (HonoProtonHelper.isLinkEstablished(link) && closeHook != null) {
+            closeHook.handle(targetAddress.getResourceId());
+        }
     }
 }
