@@ -49,7 +49,7 @@
     "requireSsl": true,
     "host": "0.0.0.0",
     "port": 5673,
-    "maxSessionFrames": 100,
+    "maxSessionFrames": 10000,
     "authenticatePeer": true,
     "saslMechanisms": "EXTERNAL"
   }],
