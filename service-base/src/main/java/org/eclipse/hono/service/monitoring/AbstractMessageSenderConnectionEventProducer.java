@@ -33,16 +33,6 @@ import io.vertx.core.json.JsonObject;
 public abstract class AbstractMessageSenderConnectionEventProducer implements ConnectionEventProducer {
 
     /**
-     * The client to use for contacting the device registry.
-     */
-    private final HonoClient deviceRegistryClient;
-
-    /**
-     * The client to use for sending out events.
-     */
-    private final HonoClient messageSenderClient;
-
-    /**
      * The function to derive the {@link MessageSource} from the provided <em>Message Sender Client</em>.
      */
     private final BiFunction<HonoClient, String, Future<MessageSender>> messageSenderSource;
@@ -50,38 +40,31 @@ public abstract class AbstractMessageSenderConnectionEventProducer implements Co
     /**
      * A {@link ConnectionEventProducer} which will send events using a provided {@link MessageSender}.
      * 
-     * @param deviceRegistryClient The client for contacting the device registry.
-     * @param messageSenderClient The client used for sending events.
      * @param messageSenderSource A function to get the {@link MessageSender} of the {@code messageSenderClient} which
      *            should be used for actually sending the events.
      */
     protected AbstractMessageSenderConnectionEventProducer(
-            final HonoClient deviceRegistryClient, final HonoClient messageSenderClient,
             final BiFunction<HonoClient, String, Future<MessageSender>> messageSenderSource) {
 
-        Objects.requireNonNull(deviceRegistryClient);
-        Objects.requireNonNull(messageSenderClient);
         Objects.requireNonNull(messageSenderSource);
 
-        this.deviceRegistryClient = deviceRegistryClient;
-        this.messageSenderClient = messageSenderClient;
         this.messageSenderSource = messageSenderSource;
     }
 
     @Override
-    public Future<?> connected(final String remoteId, final String protocolAdapter, final Device authenticatedDevice,
-            final JsonObject data) {
-        return sendNotificationEvent(authenticatedDevice, protocolAdapter, remoteId, "connected", data);
+    public Future<?> connected(final Context context, final String remoteId, final String protocolAdapter,
+            final Device authenticatedDevice, final JsonObject data) {
+        return sendNotificationEvent(context, authenticatedDevice, protocolAdapter, remoteId, "connected", data);
     }
 
     @Override
-    public Future<?> disconnected(final String remoteId, final String protocolAdapter,
+    public Future<?> disconnected(final Context context, final String remoteId, final String protocolAdapter,
             final Device authenticatedDevice, final JsonObject data) {
-        return sendNotificationEvent(authenticatedDevice, protocolAdapter, remoteId, "disconnected", data);
+        return sendNotificationEvent(context, authenticatedDevice, protocolAdapter, remoteId, "disconnected", data);
     }
 
-    private Future<?> sendNotificationEvent(final Device authenticatedDevice, final String protocolAdapter,
-            final String remoteId, final String cause, final JsonObject data) {
+    private Future<?> sendNotificationEvent(final Context context, final Device authenticatedDevice,
+            final String protocolAdapter, final String remoteId, final String cause, final JsonObject data) {
 
         if (authenticatedDevice == null) {
             // we only handle authenticated devices
@@ -90,7 +73,7 @@ public abstract class AbstractMessageSenderConnectionEventProducer implements Co
 
         // get an assertion
 
-        final Future<String> assertionFuture = this.deviceRegistryClient
+        final Future<String> assertionFuture = context.getDeviceRegistryClient()
                 .getOrCreateRegistrationClient(authenticatedDevice.getTenantId())
                 .compose(registrationClient -> {
                     return registrationClient.assertRegistration(authenticatedDevice.getDeviceId())
@@ -101,7 +84,8 @@ public abstract class AbstractMessageSenderConnectionEventProducer implements Co
 
         // get a sender
 
-        final Future<MessageSender> senderFuture = getOrCreateSender(authenticatedDevice);
+        final Future<MessageSender> senderFuture = getOrCreateSender(context.getMessageSenderClient(),
+                authenticatedDevice);
 
         // send message with assertion and sender
 
@@ -127,8 +111,8 @@ public abstract class AbstractMessageSenderConnectionEventProducer implements Co
                 });
     }
 
-    private Future<MessageSender> getOrCreateSender(final Device device) {
-        return messageSenderSource.apply(this.messageSenderClient, device.getTenantId());
+    private Future<MessageSender> getOrCreateSender(final HonoClient messageSenderClient, final Device device) {
+        return messageSenderSource.apply(messageSenderClient, device.getTenantId());
     }
 
 }

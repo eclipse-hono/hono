@@ -18,6 +18,12 @@ title = "Release Notes"
   module, so for this class there might be some very few changes to the custom code necessary (the adapted standard protocol
   adapters may serve as a blue-print for this). You may want to refer to the method `getAuthenticatedDevice` in the 
   `AbstractVertxBasedHttpProtocolAdapter` class as an example.
+* The interface `ConnectionEventProducer` has been modified to support
+  passing along a context object of type `ConnectionEventProducer.Context`
+  which allows the producer implementation to re-use the pre-initialized
+  Hono clients from the current protocol adapter instance, in the same threading
+  context. The default implementation of the *connection events* still defaults
+  to the logging producer.
 
 ## 0.8-M2
 

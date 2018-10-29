@@ -84,6 +84,20 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
 
     private ConnectionEventProducer connectionEventProducer;
 
+    private final ConnectionEventProducer.Context connectionEventProducerContext = new ConnectionEventProducer.Context() {
+
+        @Override
+        public HonoClient getDeviceRegistryClient() {
+            return AbstractProtocolAdapterBase.this.registrationServiceClient;
+        }
+
+        @Override
+        public HonoClient getMessageSenderClient() {
+            return AbstractProtocolAdapterBase.this.messagingClient;
+        }
+
+    };
+
     /**
      * Sets the configuration by means of Spring dependency injection.
      * <p>
@@ -930,16 +944,18 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
 
     /**
      * Trigger the creation of a <em>connected</em> event.
+     * 
      * @param remoteId The remote ID.
      * @param authenticatedDevice The (optional) authenticated device.
-     * @return A failed future if an event producer is set but the event
-     *         could not be published. Otherwise, a succeeded event.
+     * @return A failed future if an event producer is set but the event could not be published. Otherwise, a succeeded
+     *         event.
      * @see ConnectionEventProducer
-     * @see ConnectionEventProducer#connected(String, String, Device, JsonObject)
+     * @see ConnectionEventProducer#connected(ConnectionEventProducer.Context, String, String, Device, JsonObject)
      */
     protected Future<?> sendConnectedEvent(final String remoteId, final Device authenticatedDevice) {
         if (this.connectionEventProducer != null) {
-            return this.connectionEventProducer.connected(remoteId, getTypeName(), authenticatedDevice, null);
+            return this.connectionEventProducer.connected(connectionEventProducerContext, remoteId, getTypeName(),
+                    authenticatedDevice, null);
         } else {
             return Future.succeededFuture();
         }
@@ -950,14 +966,15 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      *
      * @param remoteId The remote ID.
      * @param authenticatedDevice The (optional) authenticated device.
-     * @return A failed future if an event producer is set but the event
-     *         could not be published. Otherwise, a succeeded event.
+     * @return A failed future if an event producer is set but the event could not be published. Otherwise, a succeeded
+     *         event.
      * @see ConnectionEventProducer
-     * @see ConnectionEventProducer#disconnected(String, String, Device, JsonObject)
+     * @see ConnectionEventProducer#disconnected(ConnectionEventProducer.Context, String, String, Device, JsonObject)
      */
     protected Future<?> sendDisconnectedEvent(final String remoteId, final Device authenticatedDevice) {
         if (this.connectionEventProducer != null) {
-            return this.connectionEventProducer.disconnected(remoteId, getTypeName(), authenticatedDevice, null);
+            return this.connectionEventProducer.disconnected(connectionEventProducerContext, remoteId, getTypeName(),
+                    authenticatedDevice, null);
         } else {
             return Future.succeededFuture();
         }

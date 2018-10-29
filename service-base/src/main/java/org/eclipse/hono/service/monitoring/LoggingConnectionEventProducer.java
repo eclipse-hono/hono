@@ -29,16 +29,16 @@ public class LoggingConnectionEventProducer implements ConnectionEventProducer {
     private static final Logger logger = LoggerFactory.getLogger(LoggingConnectionEventProducer.class);
 
     @Override
-    public Future<?> connected(final String remoteId, final String protocolAdapter, final Device authenticatedDevice,
-            final JsonObject data) {
+    public Future<?> connected(final Context context, final String remoteId, final String protocolAdapter,
+            final Device authenticatedDevice, final JsonObject data) {
         logger.info("   Connected - ID: {}, Protocol Adapter: {}, Device: {}, Data: {}", remoteId, protocolAdapter,
                 authenticatedDevice, data);
         return Future.succeededFuture();
     }
 
     @Override
-    public Future<?> disconnected(final String remoteId, final String protocolAdapter, final Device authenticatedDevice,
-            final JsonObject data) {
+    public Future<?> disconnected(final Context context, final String remoteId, final String protocolAdapter,
+            final Device authenticatedDevice, final JsonObject data) {
         logger.info("Disconnected - ID: {}, Protocol Adapter: {}, Device: {}, Data: {}", remoteId, protocolAdapter,
                 authenticatedDevice, data);
         return Future.succeededFuture();
