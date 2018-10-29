@@ -141,8 +141,7 @@
       <groupId>io.micrometer</groupId>
       <artifactId>micrometer-registry-graphite</artifactId>
       <scope>compile</scope>
-      <!-- TODO: change to "true" when "legacy" is not longer default -->
-      <optional>false</optional>
+      <optional>true</optional>
     </dependency>
 
   </dependencies>
@@ -181,47 +180,4 @@
       </plugin>
     </plugins>
   </build>
-
-  <profiles>
-    <profile>
-      <id>netty-tcnative</id>
-      <dependencies>
-        <dependency>
-          <groupId>io.netty</groupId>
-          <artifactId>netty-tcnative</artifactId>
-        </dependency>
-      </dependencies>
-    </profile>
-
-    <profile>
-      <id>metrics-graphite</id>
-      <dependencies>
-        <dependency>
-          <groupId>io.micrometer</groupId>
-          <artifactId>micrometer-registry-graphite</artifactId>
-        </dependency>
-      </dependencies>
-    </profile>
-
-    <profile>
-      <id>metrics-influxdb</id>
-      <dependencies>
-        <dependency>
-          <groupId>io.micrometer</groupId>
-          <artifactId>micrometer-registry-influx</artifactId>
-        </dependency>
-      </dependencies>
-    </profile>
-
-    <profile>
-      <id>metrics-prometheus</id>
-      <dependencies>
-        <dependency>
-          <groupId>io.micrometer</groupId>
-          <artifactId>micrometer-registry-prometheus</artifactId>
-        </dependency>
-      </dependencies>
-    </profile>
-
-  </profiles>
 </project>

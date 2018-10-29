@@ -41,16 +41,3 @@ hono:
     keyPath: ${secret.path}/kura-adapter-key.pem
     certPath: ${secret.path}/kura-adapter-cert.pem
     trustStorePath: ${secret.path}/trusted-certs.pem
-  metrics:
-    legacy: true
-
-# disable spring boot actuator endpoints
-endpoints:
-  enabled: false
-
-management:
-  metrics:
-    export:
-      graphite:
-        host: influxdb.hono
-        port: 2003

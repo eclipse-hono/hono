@@ -30,7 +30,7 @@ document will be updated accordingly with the progress.
 In order to work through this example deployment you will need the OpenShift
 client tools installed. Please align the version of the client tools with
 the version of your OpenShift cluster. This guide was tested with
-OpenShift 3.11.0. It should work with older or newer versions as well, but that
+OpenShift 3.11.0. It might work with older or newer versions as well, but that
 is untested.
 
 ### Assumptions
@@ -43,6 +43,13 @@ the following instructions:
 * The name of your OpenShift user is `developer`
 * All scripts and paths are relative to the folder
   `deploy/src/main/deploy/openshift_s2i`
+* Some parts of this tutorial may need *cluster admin* privileges. When cluster
+  admin privileges are required, the tutorial will indicate this by the command
+  `oc login -u admin`. It will indicate the end of a section requiring cluster
+  admin privileges by the command `oc login -u developer`.
+  
+  **Note:** Those command may be different on your installation. They only act
+  as an example.
 
 ### Linux like environment
 
@@ -86,16 +93,48 @@ command:
 
     minishift console --url
 
+Some of the operations may require *cluster admin* privileges. For minishift
+an admin user can be created by executing the following commands, having a
+running minishift instance:
+
+    minishift addons apply admin-user
+
+This will create a user named `admin`, with a password of `admin`, that has
+cluster admin privileges.
+
+### Operator Lifecycle Manager
+
+A simple way to install additional operators in your cluster is via the
+[Operator Lifecycle Manager](https://github.com/operator-framework/operator-lifecycle-manager) (aka OLM).
+It can be enabled in OpenShift 3.11+ by setting `openshift_enable_olm=true`
+in the Ansible inventory file.
+
+For Minishift, it can be enabled by execute the following commands as
+cluster admin:
+
+    git clone https://github.com/operator-framework/operator-lifecycle-manager
+    cd operator-lifecycle-manager
+    
+    oc login -u admin
+    oc new-project operator-lifecycle-manager
+    oc create -f deploy/okd/manifests/latest/
+    oc login -u developer
+
+See also: https://github.com/operator-framework/operator-lifecycle-manager/blob/master/Documentation/install/install.md
+
+This guide will use OLM in order to install the optional
+[Prometheus Operator](https://github.com/coreos/prometheus-operator),
+which enables the aggregation of metrics from different Hono components.
+
 ### Persistent volumes
 
-You will need three persistent volumes for this deployment. The default
+You will need two persistent volumes for this deployment. The default
 required volumes are:
 
 | Name        | Size       | Purpose                             |
 | ----------- | ----------:| ----------------------------------- |
 | hono-pv     | 128 Mi     | Storing device registry information |
 | grafana-pv  | 1 Gi       | Grafana configuration database      |
-| influxdb-pv | 20 Gi      | Hono interal metrics storage        |
 
 In the folder `admin/storage` you will find a set of sub folders containing
 YAML files for setting up the persistent volumes (PVs). As there are multiple
@@ -110,7 +149,6 @@ has cluster wide privileges:
 
     oc create -f admin/storage/<type>/grafana-pv.yml
     oc create -f admin/storage/<type>/hono-pv.yml
-    oc create -f admin/storage/<type>/influxdb-pv.yml
 
 #### Minishift
 
@@ -291,12 +329,7 @@ Start by creating a new project using:
 
     oc new-project hono --display-name='Eclipse Hono™'
 
-Create the InfluxDB ConfigMap from the local file:
-
-    oc create configmap influxdb-config --from-file="../influxdb.conf"
-    oc label configmap/influxdb-config app=hono-metrics
-
-Next create the EnMasse address space to use:
+Then create the EnMasse address space to use:
 
     oc create -f hono-address-space.yml
 
@@ -306,7 +339,7 @@ created and is ready. Executing the following command should contain
 
     oc describe addressspace/default
 
-You can also quickly check for `isReady` with JSON path query:
+You can also quickly check for `isReady` with a JSON path query:
 
     oc get addressspace/default -o jsonpath='{.status.isReady}'
 
@@ -350,7 +383,28 @@ resources in EnMasse for the tenant. It does not create the tenant in the Hono
 device registry.
 {{% /note %}}
 
-## Setting up Grafana
+## Enabling metrics
+
+The default OpenShift deployment of Hono does support the use of Prometheus as
+a metrics backend. However it is still required to deploy an instance of
+Prometheus and Grafana to your installation in order to actually gather and
+visualize the metrics.
+
+### Adding Prometheus support
+
+This section will explain how to set up Prometheus via the OLM and the
+Prometheus Operator. This is only an example, it is possible to install
+Prometheus in different ways. Or skip the installation of Prometheus, if you
+want to use a different metrics backend.
+
+Run the following commands to register the prometheus operator and create a
+new instance:
+
+    oc project hono
+    oc create -f prometheus/operator.yml
+    oc create -f prometheus/instance.yml
+
+### Setting up Grafana
 
 Start by creating a new project using:
 
@@ -380,8 +434,8 @@ use the following syntax:
 
 ## Configuring the installation
 
-There are a few ways to configure the deployment. The following sub-sections
-will give you an introduction.
+The default installation of Hono can be tweaked in a few ways. The following
+sub-sections describe a few aspects that can be modified.
 
 ### Configure maximum number of devices per tenant
 
@@ -390,7 +444,7 @@ devices to 100 per tenant. If this is not enough for your setup you can change
 the setting by executing the following command, which will increase the number
 to 10.000 devices per tenant:
 
-    oc env -n hono dc/hono-service-device-registry HONO_REGISTRY_SVC_MAX_DEVICES_PER_TENANT=10000
+    oc set env -n hono dc/hono-service-device-registry HONO_REGISTRY_SVC_MAX_DEVICES_PER_TENANT=10000
 
 ### Adding Jaeger support
 

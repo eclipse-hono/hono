@@ -31,16 +31,9 @@ hono:
     svc:
       filename: /etc/hono/tenants.json
       saveToFile: false
-  metrics:
-    legacy: false
   vertx:
     maxEventLoopExecuteTime: ${max.event-loop.execute-time}
+
 spring:
   jmx:
     enabled: false
-management:
-  metrics:
-    export:
-      graphite:
-        enabled: false
-

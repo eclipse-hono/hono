@@ -35,16 +35,3 @@ hono:
     name: 'Hono MQTT Adapter'
     host: messaging.hono
     port: 5672
-  metrics:
-    legacy: true
-
-# disable spring boot actuator endpoints
-endpoints:
-  enabled: false
-
-management:
-  metrics:
-    export:
-      graphite:
-        host: influxdb.hono
-        port: 2003

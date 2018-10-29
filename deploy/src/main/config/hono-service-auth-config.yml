@@ -11,13 +11,3 @@ hono:
       insecurePortEnabled: true
     svc:
       permissionsPath: file://${secret.path}/permissions.json
-  metrics:
-    legacy: true
-
-management:
-  metrics:
-    export:
-      graphite:
-        host: influxdb.hono
-        port: 2003
-
