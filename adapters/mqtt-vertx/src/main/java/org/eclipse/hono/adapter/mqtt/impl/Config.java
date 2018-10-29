@@ -20,8 +20,10 @@ import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.AbstractAdapterConfig;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.service.monitoring.ConnectionEventProducer;
+import org.eclipse.hono.service.monitoring.HonoEventConnectionEventProducer;
 import org.eclipse.hono.service.monitoring.LoggingConnectionEventProducer;
 import org.springframework.beans.factory.config.ObjectFactoryCreatingFactoryBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -117,14 +119,26 @@ public class Config extends AbstractAdapterConfig {
     }
 
     /**
-     * Exposes the connection event producer implementation.
+     * Configure the connection events producer based on the logging backend.
      * <p>
-     * This defaults to a {@link LoggingConnectionEventProducer} which logs to the default level.
+     * This is the default implementation.
      * 
-     * @return The connection event producer.
+     * @return The connection event producer based on {@link LoggingConnectionEventProducer}.
      */
     @Bean
-    public ConnectionEventProducer connectionEventProducer() {
+    @ConditionalOnProperty(value = "hono.connectionEvents.producer", havingValue = "logging", matchIfMissing = true)
+    public ConnectionEventProducer connectionEventProducerLogging() {
         return new LoggingConnectionEventProducer();
+    }
+
+    /**
+     * Configure the connection events producer based on the events backend.
+     * 
+     * @return The connection event producer based on {@link HonoEventConnectionEventProducer}.
+     */
+    @Bean
+    @ConditionalOnProperty(value = "hono.connectionEvents.producer", havingValue = "events")
+    public ConnectionEventProducer connectionEventProducerEvents() {
+        return new HonoEventConnectionEventProducer();
     }
 }

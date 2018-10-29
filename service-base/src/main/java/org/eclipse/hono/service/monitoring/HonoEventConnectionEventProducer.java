@@ -20,16 +20,10 @@ import org.eclipse.hono.client.HonoClient;
 public class HonoEventConnectionEventProducer extends AbstractMessageSenderConnectionEventProducer {
 
     /**
-     * Create a new instance from a HonoClient instance.
-     * 
-     * @param deviceRegistryClient The client instance to use for contacting the device registry. Must not be
-     *            {@code null}.
-     * @param messageSenderClient The client instance to use for sending events. Must not be {@code null}.
-     * @throws NullPointerException in the case any client is {@code null}.
+     * Create a new <em>connection event producer</em> based on the Hono <em>Event API</em>.
      */
-    public HonoEventConnectionEventProducer(final HonoClient deviceRegistryClient,
-            final HonoClient messageSenderClient) {
-        super(deviceRegistryClient, messageSenderClient, HonoClient::getOrCreateEventSender);
+    public HonoEventConnectionEventProducer() {
+        super(HonoClient::getOrCreateEventSender);
     }
 
 }
