@@ -1,0 +1,20 @@
+# Endpoint configuration for prometheus
+
+## Disable global server
+
+server:
+  port: -1
+
+## Enable management server
+
+management:
+  port: 8081
+  security:
+    enabled: false
+
+## Disable all but the promtheus endpoint
+
+endpoints:
+  enabled: false
+  prometheus:
+    enabled: true

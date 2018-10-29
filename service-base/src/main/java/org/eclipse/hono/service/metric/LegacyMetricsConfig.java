@@ -27,7 +27,7 @@ import io.micrometer.core.instrument.config.MeterFilter;
  * Configuration for using legacy style metrics.
  */
 @Configuration
-@ConditionalOnProperty(name = "hono.metrics.legacy", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(name = "hono.metrics.legacy", havingValue = "true")
 @PropertySource("classpath:org/eclipse/hono/service/metric/legacy.properties")
 public class LegacyMetricsConfig extends AbstractLegacyMetricsConfig {
 

@@ -240,140 +240,6 @@ objects:
         kind: ImageStreamTag
         name: fabric8-s2i-java-custom:2.3
 
-# InfluxDB
-
-- kind: ImageStream
-  apiVersion: v1
-  metadata:
-    name: influxdb
-    labels:
-      app: hono-metrics
-  spec:
-    tags:
-    - from:
-        kind: DockerImage
-        name: influxdb:1.4-alpine
-      importPolicy:
-        scheduled: true
-      name: "1.4"
-      referencePolicy:
-        type: Source
-
-- kind: PersistentVolumeClaim
-  apiVersion: v1
-  metadata:
-    name: influxdb-pvc
-    labels:
-      app: hono-metrics
-  spec:
-    accessModes:
-    - ReadWriteOnce
-    resources:
-      requests:
-        storage: ${INFLUXDB_STORAGE_SIZE}
-    storageClassName: ${VOLUME_STORAGE_CLASS}
-
-- kind: DeploymentConfig
-  apiVersion: v1
-  metadata:
-    name: influxdb
-    labels:
-      app: hono-metrics
-      deploymentconfig: influxdb
-  spec:
-    replicas: 1
-    selector:
-      app: hono-metrics
-      deploymentconfig: influxdb
-    strategy:
-      type: Recreate
-      recreateParams:
-        timeoutSeconds: 3600
-    triggers:
-      - type: ConfigChange
-      - type: ImageChange
-        imageChangeParams:
-          automatic: true
-          containerNames:
-            - eclipsehono-influxdb
-          from:
-            kind: ImageStreamTag
-            name: influxdb:1.4
-    template:
-      metadata:
-        labels:
-          app: hono-metrics
-          deploymentconfig: influxdb
-      spec:
-        containers:
-        - name: eclipsehono-influxdb
-          image: influxdb
-          imagePullPolicy: Always
-          args:
-          - -config
-          - /etc/config/influxdb.conf
-          readinessProbe:
-            initialDelaySeconds: 5
-            periodSeconds: 5
-            tcpSocket:
-              port: 2003
-            timeoutSeconds: 1
-          livenessProbe:
-            initialDelaySeconds: 20
-            periodSeconds: 9
-            tcpSocket:
-              port: 2003
-            timeoutSeconds: 1
-          ports:
-          - containerPort: 8086
-            name: api
-            protocol: TCP
-          - containerPort: 8083
-            name: admin
-            protocol: TCP
-          - containerPort: 2003
-            name: graphite
-            protocol: TCP
-          resources:
-            limits:
-              memory: 2Gi
-          volumeMounts:
-          - mountPath: /var/lib/influxdb
-            name: influxdb-storage
-          - mountPath: /etc/config
-            name: conf
-        volumes:
-        - name: influxdb-storage
-          persistentVolumeClaim:
-            claimName: influxdb-pvc
-        - name: conf
-          configMap:
-            name: influxdb-config
-
-- kind: Service
-  apiVersion: v1
-  metadata:
-    labels:
-      app: hono-metrics
-      deploymentconfig: influxdb
-    name: influxdb
-  spec:
-    ports:
-    - name: graphite
-      port: 2003
-      protocol: TCP
-      targetPort: 2003
-    - name: admin
-      port: 8083
-      protocol: TCP
-      targetPort: 8083
-    - name: api
-      port: 8086
-      protocol: TCP
-      targetPort: 8086
-    selector:
-      app: hono-metrics
-      deploymentconfig: influxdb
 
 # hono-adapter-amqp-vertx
 
@@ -407,7 +273,7 @@ objects:
           name: fabric8-s2i-java-custom:2.3
         env:
         - name: MAVEN_ARGS_APPEND
-          value: -B -pl org.eclipse.hono:hono-adapter-amqp-vertx --also-make -Pnetty-tcnative -Dmaven.test.skip=true
+          value: -B -pl org.eclipse.hono:hono-adapter-amqp-vertx --also-make -Pnetty-tcnative -Pmetrics-prometheus -Dmaven.test.skip=true
         - name: ARTIFACT_DIR
           value: adapters/amqp-vertx/target
         - name: ARTIFACT_COPY_ARGS
@@ -492,16 +358,6 @@ objects:
           trustStorePath: /var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt
           trustStoreFormat: PEM
           credentialsPath: /etc/secrets/registry.properties
-      # disable spring boot actuator endpoints, enable metrics
-      endpoints:
-        enabled: false
-        metrics:
-          enabled: true
-      management:
-        metrics:
-          export:
-            graphite:
-              port: 2003
 
     logback-spring.xml: |+
         <?xml version="1.0" encoding="UTF-8"?>
@@ -580,7 +436,7 @@ objects:
           - name: SPRING_CONFIG_LOCATION
             value: file:///etc/config/
           - name: SPRING_PROFILES_ACTIVE
-            value: 
+            value: prometheus
           - name: LOGGING_CONFIG
             value: file:///etc/config/logback-spring.xml
           - name: KUBERNETES_NAMESPACE
@@ -642,6 +498,9 @@ objects:
           ports:
           - containerPort: 8778
             name: jolokia
+          - containerPort: 8081
+            name: actuator
+            protocol: TCP
           - containerPort: 8088
             name: radan-http
             protocol: TCP
@@ -678,6 +537,7 @@ objects:
     labels:
       app: hono-adapter
       deploymentconfig: hono-adapter-amqp-vertx
+      hono-metrics: prometheus
     annotations:
       service.alpha.openshift.io/serving-cert-secret-name: hono-adapter-amqp-vertx-tls
   spec:
@@ -689,6 +549,10 @@ objects:
       - name: amqps
         port: 5671
         targetPort: 5671
+        protocol: TCP
+      - name: actuator
+        port: 8081
+        targetPort: 8081
         protocol: TCP
     selector:
       app: hono-adapter
@@ -708,7 +572,6 @@ objects:
     to:
       kind: Service
       name: hono-adapter-amqp-vertx
-
 
 # hono-adapter-mqtt-vertx
 
@@ -742,7 +605,7 @@ objects:
           name: fabric8-s2i-java-custom:2.3
         env:
         - name: MAVEN_ARGS_APPEND
-          value: -B -pl org.eclipse.hono:hono-adapter-mqtt-vertx --also-make -Pnetty-tcnative -Dmaven.test.skip=true
+          value: -B -pl org.eclipse.hono:hono-adapter-mqtt-vertx --also-make -Pnetty-tcnative -Pmetrics-prometheus -Dmaven.test.skip=true
         - name: ARTIFACT_DIR
           value: adapters/mqtt-vertx/target
         - name: ARTIFACT_COPY_ARGS
@@ -827,16 +690,6 @@ objects:
           trustStorePath: /var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt
           trustStoreFormat: PEM
           credentialsPath: /etc/secrets/registry.properties
-      # disable spring boot actuator endpoints, enable metrics
-      endpoints:
-        enabled: false
-        metrics:
-          enabled: true
-      management:
-        metrics:
-          export:
-            graphite:
-              port: 2003
 
     logback-spring.xml: |+
         <?xml version="1.0" encoding="UTF-8"?>
@@ -915,7 +768,7 @@ objects:
           - name: SPRING_CONFIG_LOCATION
             value: file:///etc/config/
           - name: SPRING_PROFILES_ACTIVE
-            value: 
+            value: prometheus
           - name: LOGGING_CONFIG
             value: file:///etc/config/logback-spring.xml
           - name: KUBERNETES_NAMESPACE
@@ -948,8 +801,6 @@ objects:
             value: hono-service-device-registry.$(KUBERNETES_NAMESPACE).svc
           - name: HONO_TENANT_HOST
             value: hono-service-device-registry.$(KUBERNETES_NAMESPACE).svc
-          - name: MANAGEMENT_METRICS_EXPORT_GRAPHITE_HOST
-            value: influxdb.$(KUBERNETES_NAMESPACE).svc
           - name: AB_JOLOKIA_USER
             value: jolokia
           - name: AB_JOLOKIA_PASSWORD_RANDOM
@@ -977,6 +828,9 @@ objects:
           ports:
           - containerPort: 8778 
             name: jolokia
+          - containerPort: 8081
+            name: actuator
+            protocol: TCP
           - containerPort: 8088
             name: radan-http
             protocol: TCP
@@ -1015,6 +869,7 @@ objects:
     labels:
       app: hono-adapter
       deploymentconfig: hono-adapter-mqtt-vertx
+      hono-metrics: prometheus
     annotations:
       service.alpha.openshift.io/serving-cert-secret-name: hono-adapter-mqtt-vertx-tls
   spec:
@@ -1027,6 +882,9 @@ objects:
         port: 8883
         targetPort: 8883
         protocol: TCP
+      - name: actuator
+        port: 8081
+        targetPort: 8081
     selector:
       app: hono-adapter
       deploymentconfig: hono-adapter-mqtt-vertx
@@ -1110,7 +968,7 @@ objects:
           name: fabric8-s2i-java-custom:2.3
         env:
         - name: MAVEN_ARGS_APPEND
-          value: -B -pl org.eclipse.hono:hono-adapter-http-vertx --also-make -Pnetty-tcnative -Dmaven.test.skip=true
+          value: -B -pl org.eclipse.hono:hono-adapter-http-vertx --also-make -Pnetty-tcnative -Pmetrics-prometheus -Dmaven.test.skip=true
         - name: ARTIFACT_DIR
           value: adapters/http-vertx/target
         - name: ARTIFACT_COPY_ARGS
@@ -1195,16 +1053,6 @@ objects:
           trustStorePath: /var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt
           trustStoreFormat: PEM
           credentialsPath: /etc/secrets/registry.properties
-      # disable spring boot actuator endpoints, enable metrics
-      endpoints:
-        enabled: false
-        metrics:
-          enabled: true
-      management:
-        metrics:
-          export:
-            graphite:
-              port: 2003
 
     logback-spring.xml: |+
         <?xml version="1.0" encoding="UTF-8"?>
@@ -1283,7 +1131,7 @@ objects:
           - name: SPRING_CONFIG_LOCATION
             value: file:///etc/config/
           - name: SPRING_PROFILES_ACTIVE
-            value: 
+            value: prometheus
           - name: LOGGING_CONFIG
             value: file:///etc/config/logback-spring.xml
           - name: KUBERNETES_NAMESPACE
@@ -1316,8 +1164,6 @@ objects:
             value: hono-service-device-registry.$(KUBERNETES_NAMESPACE).svc
           - name: HONO_TENANT_HOST
             value: hono-service-device-registry.$(KUBERNETES_NAMESPACE).svc
-          - name: MANAGEMENT_METRICS_EXPORT_GRAPHITE_HOST
-            value: influxdb.$(KUBERNETES_NAMESPACE).svc
           - name: AB_JOLOKIA_USER
             value: jolokia
           - name: AB_JOLOKIA_PASSWORD_RANDOM
@@ -1351,6 +1197,9 @@ objects:
           - containerPort: 8080
             name: http-alt
             protocol: TCP
+          - containerPort: 8081
+            name: actuator
+            protocol: TCP
           - containerPort: 8443
             name: pcsync-https
             protocol: TCP
@@ -1383,6 +1232,7 @@ objects:
     labels:
       app: hono-adapter
       deploymentconfig: hono-adapter-http-vertx
+      hono-metrics: prometheus
     annotations:
       service.alpha.openshift.io/serving-cert-secret-name: hono-adapter-http-vertx-tls
   spec:
@@ -1395,6 +1245,9 @@ objects:
         port: 8443
         targetPort: 8443
         protocol: TCP
+      - name: actuator
+        port: 8081
+        targetPort: 8081
     selector:
       app: hono-adapter
       deploymentconfig: hono-adapter-http-vertx
@@ -1459,7 +1312,7 @@ objects:
           name: fabric8-s2i-java-custom:2.3
         env:
         - name: MAVEN_ARGS_APPEND
-          value: -B -pl org.eclipse.hono:hono-service-device-registry --also-make -Pnetty-tcnative -Dmaven.test.skip=true
+          value: -B -pl org.eclipse.hono:hono-service-device-registry --also-make -Pnetty-tcnative -Pmetrics-prometheus -Dmaven.test.skip=true
         - name: ARTIFACT_DIR
           value: services/device-registry/target
         - name: ARTIFACT_COPY_ARGS
@@ -1632,7 +1485,7 @@ objects:
           - name: SPRING_CONFIG_LOCATION
             value: file:///etc/config/
           - name: SPRING_PROFILES_ACTIVE
-            value: 
+            value: prometheus
           - name: LOGGING_CONFIG
             value: file:///etc/config/logback-spring.xml
           - name: KUBERNETES_NAMESPACE
@@ -1685,6 +1538,9 @@ objects:
           - containerPort: 8080
             name: http-alt
             protocol: TCP
+          - containerPort: 8081
+            name: actuator
+            protocol: TCP
           - containerPort: 8443
             name: pcsync-https
             protocol: TCP
@@ -1728,6 +1584,7 @@ objects:
     labels:
       app: hono-service
       deploymentconfig: hono-service-device-registry
+      hono-metrics: prometheus
     annotations:
       service.alpha.openshift.io/serving-cert-secret-name: hono-service-device-registry-tls
   spec:
@@ -1744,6 +1601,9 @@ objects:
       port: 8443
       protocol: TCP
       targetPort: 8443
+    - name: actuator
+      port: 8081
+      targetPort: 8081
     selector:
       app: hono-service
       deploymentconfig: hono-service-device-registry
@@ -1795,7 +1655,7 @@ objects:
           name: fabric8-s2i-java-custom:2.3
         env:
         - name: MAVEN_ARGS_APPEND
-          value: -B -pl org.eclipse.hono:hono-service-auth --also-make -Pnetty-tcnative -Dmaven.test.skip=true
+          value: -B -pl org.eclipse.hono:hono-service-auth --also-make -Pnetty-tcnative -Pmetrics-prometheus -Dmaven.test.skip=true
         - name: ARTIFACT_DIR
           value: services/auth/target
         - name: ARTIFACT_COPY_ARGS
@@ -2010,7 +1870,7 @@ objects:
           - name: SPRING_CONFIG_LOCATION
             value: file:///etc/config/
           - name: SPRING_PROFILES_ACTIVE
-            value: authentication-impl
+            value: authentication-impl,prometheus
           - name: LOGGING_CONFIG
             value: file:///etc/config/logback-spring.xml
           - name: HONO_AUTH_SVC_SIGNING_SHARED_SECRET
@@ -2054,6 +1914,9 @@ objects:
           ports:
           - containerPort: 8778 
             name: jolokia
+          - containerPort: 8081
+            name: actuator
+            protocol: TCP
           - containerPort: 5671
             name: amqps
             protocol: TCP
@@ -2081,6 +1944,7 @@ objects:
     labels:
       app: hono-service
       deploymentconfig: hono-service-auth
+      hono-metrics: prometheus
     annotations:
       service.alpha.openshift.io/serving-cert-secret-name: hono-service-auth-tls
   spec:
@@ -2089,6 +1953,9 @@ objects:
       port: 5671
       protocol: TCP
       targetPort: 5671
+    - name: actuator
+      port: 8081
+      targetPort: 8081
     selector:
       app: hono-service
       deploymentconfig: hono-service-auth

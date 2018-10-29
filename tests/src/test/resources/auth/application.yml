@@ -11,13 +11,7 @@ hono:
       permissionsPath: file:///etc/hono/permissions.json
   vertx:
     maxEventLoopExecuteTime: ${max.event-loop.execute-time}
-  metrics:
-    legacy: false
-management:
-  metrics:
-    export:
-      graphite:
-        enabled: false
+
 spring:
   jmx:
     enabled: false

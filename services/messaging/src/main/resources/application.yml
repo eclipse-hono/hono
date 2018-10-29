@@ -15,9 +15,3 @@ hono:
       graphite:
         active: false
         period: 5000
-
-# disable spring boot actuator endpoints, enable metrics
-endpoints:
-  enabled: false
-  metrics:
-    enabled: true

@@ -1,0 +1,8 @@
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: prometheus
+spec:
+  channel: preview
+  name: prometheus
+  source: rh-operators

@@ -18,18 +18,13 @@ hono:
     waitForDownstreamConnectionEnabled: true
     validation:
       sharedSecret: sdgfsdafazufgsdafjhfgsdajfgwhriojsdafjlksdhfgsa8fg452368gdf
-  metrics:
-    legacy: false
   vertx:
     maxEventLoopExecuteTime: ${max.event-loop.execute-time}
+
 spring:
   jmx:
     enabled: false
-management:
-  metrics:
-    export:
-      graphite:
-        enabled: false
+
 ---
 
 spring:
