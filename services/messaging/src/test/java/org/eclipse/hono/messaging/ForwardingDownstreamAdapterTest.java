@@ -56,7 +56,8 @@ public class ForwardingDownstreamAdapterTest {
 
     private static final Vertx vertx = Vertx.vertx();
 
-    private final ResourceIdentifier          targetAddress = ResourceIdentifier.from(TelemetryConstants.TELEMETRY_ENDPOINT, "myTenant", null);
+    private final ResourceIdentifier targetAddress = ResourceIdentifier.from(TelemetryConstants.TELEMETRY_ENDPOINT, "myTenant", null);
+
     private ForwardingDownstreamAdapter adapter;
     private ConnectionFactory           connectionFactory;
     private Record                      attachments;
@@ -158,6 +159,29 @@ public class ForwardingDownstreamAdapterTest {
     }
 
     /**
+     * Verifies that a corresponding sender link to the downstream container gets closed when
+     * an upstream client detaches its link.
+     */
+    @Test
+    public void testOnClientDetachClosesDownstreamSender() {
+
+        final UpstreamReceiver client = newClient("link-id", "upstream-connection-id");
+        final ProtonSender downstreamSender = newMockSender(false);
+
+        givenADownstreamAdapter(downstreamSender);
+        adapter.setDownstreamConnectionFactory(connectionFactory);
+        adapter.start(Future.future());
+        adapter.addSender(client, downstreamSender);
+
+        // WHEN the upstream client disconnects
+        adapter.onClientDetach(client);
+
+        // THEN the downstream sender is closed and removed from the sender list
+        verify(downstreamSender).close();
+        verify(downstreamSender).free();
+    }
+
+    /**
      * Verifies that corresponding sender links to the downstream container are closed when
      * a connection to an upstream client is lost/closed.
      */
@@ -179,6 +203,7 @@ public class ForwardingDownstreamAdapterTest {
 
         // THEN the downstream sender is closed and removed from the sender list
         verify(downstreamSender).close();
+        verify(downstreamSender).free();
         assertTrue(adapter.isActiveSendersEmpty());
         assertTrue(adapter.isSendersPerConnectionEmpty());
     }

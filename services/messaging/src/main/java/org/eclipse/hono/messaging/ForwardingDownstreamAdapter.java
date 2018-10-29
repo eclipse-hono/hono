@@ -454,7 +454,10 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
             logger.info("closing downstream sender [con: {}, link: {}]", link.getConnectionId(), link.getLinkId());
             metrics.decrementDownstreamSenders(link.getTargetAddress());
             metrics.submitDownstreamLinkCredits(link.getTargetAddress(), 0);
+            sender.closeHandler(null);
+            sender.detachHandler(null);
             sender.close();
+            sender.free();
         }
     }
 
