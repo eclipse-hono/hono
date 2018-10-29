@@ -14,6 +14,7 @@
 package org.eclipse.hono.messaging;
 
 import org.eclipse.hono.config.ApplicationConfigProperties;
+import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.connection.ConnectionFactory;
 import org.eclipse.hono.connection.impl.ConnectionFactoryImpl;
 import org.eclipse.hono.service.metric.MetricsTags;
@@ -129,9 +130,10 @@ public class HonoMessagingApplicationConfig {
      * @return The connection properties.
      */
     @Bean
+    @Qualifier(Constants.QUALIFIER_DOWNSTREAM)
     @ConfigurationProperties(prefix = "hono.downstream")
-    public DownstreamClientConfigProperties downstreamConnectionProperties() {
-        final DownstreamClientConfigProperties props = new DownstreamClientConfigProperties();
+    public ClientConfigProperties downstreamConnectionProperties() {
+        final ClientConfigProperties props = new ClientConfigProperties();
         if (props.getAmqpHostname() == null) {
             props.setAmqpHostname("hono-internal");
         }

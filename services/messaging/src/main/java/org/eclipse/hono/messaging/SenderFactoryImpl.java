@@ -15,17 +15,24 @@ package org.eclipse.hono.messaging;
 
 import java.util.Objects;
 
+import javax.net.ssl.HttpsURLConnection;
+
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
+import org.eclipse.hono.client.ServerErrorException;
+import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.HonoProtonHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
+import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Vertx;
 import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonLink;
 import io.vertx.proton.ProtonQoS;
@@ -39,7 +46,9 @@ import io.vertx.proton.ProtonSession;
 public class SenderFactoryImpl implements SenderFactory {
 
     private static final Logger LOG = LoggerFactory.getLogger(SenderFactoryImpl.class);
+
     private HonoMessagingConfigProperties config;
+    private ClientConfigProperties downstreamProperties;
 
     /**
      * Sets the configuration properties.
@@ -50,6 +59,18 @@ public class SenderFactoryImpl implements SenderFactory {
     @Autowired(required = false)
     public void setConfiguration(final HonoMessagingConfigProperties config) {
         this.config = Objects.requireNonNull(config);
+    }
+
+    /**
+     * Sets the configuration properties for the downstream connection.
+     * 
+     * @param properties The configuration properties.
+     * @throws NullPointerException if properties is {@code null}.
+     */
+    @Autowired
+    @Qualifier(Constants.QUALIFIER_DOWNSTREAM)
+    public void setDownstreamProperties(final ClientConfigProperties properties) {
+        this.downstreamProperties = Objects.requireNonNull(properties);
     }
 
     /**
@@ -142,6 +163,12 @@ public class SenderFactoryImpl implements SenderFactory {
             }
         });
         sender.open();
+        final Context ctx = Vertx.currentContext();
+        if (ctx != null) {
+            ctx.owner().setTimer(
+                    downstreamProperties.getLinkEstablishmentTimeout(),
+                    tid -> onTimeOut(sender, downstreamProperties.getLinkEstablishmentTimeout(), result));
+        }
         return result;
     }
 
@@ -171,6 +198,19 @@ public class SenderFactoryImpl implements SenderFactory {
         link.close();
         if (HonoProtonHelper.isLinkEstablished(link) && closeHook != null) {
             closeHook.handle(targetAddress.getResourceId());
+        }
+    }
+
+    private static void onTimeOut(
+            final ProtonLink<?> link,
+            final long timeout,
+            final Future<?> result) {
+
+        if (link.isOpen() && !HonoProtonHelper.isLinkEstablished(link)) {
+            LOG.debug("sender link establishment timed out after {}ms", timeout);
+            link.close();
+            link.free();
+            result.tryFail(new ServerErrorException(HttpsURLConnection.HTTP_UNAVAILABLE));
         }
     }
 }
