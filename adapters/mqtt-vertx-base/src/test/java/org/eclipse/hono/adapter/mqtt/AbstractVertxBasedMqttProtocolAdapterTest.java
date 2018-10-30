@@ -699,9 +699,10 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         subscriptions.add(newMockTopicSubsription("bumlux/+/+/#", MqttQoS.AT_MOST_ONCE));
         subscriptions.add(newMockTopicSubsription("bumlux/+/+/#", MqttQoS.AT_MOST_ONCE));
         // and for subscribing to commands
-        when(commandConnection.getOrCreateCommandConsumer(eq("tenant"), eq("deviceId"), any(Handler.class), any(Handler.class))).thenReturn(
+        when(commandConnection.getOrCreateCommandConsumer(eq("tenant-1"), eq("device-A"), any(Handler.class), any(Handler.class))).thenReturn(
                 Future.succeededFuture(mock(MessageConsumer.class)));
-        subscriptions.add(newMockTopicSubsription("control/tenant/deviceId/req/#", MqttQoS.AT_MOST_ONCE));
+        subscriptions.add(newMockTopicSubsription("control/tenant-1/device-A/req/#", MqttQoS.AT_MOST_ONCE));
+        subscriptions.add(newMockTopicSubsription("control/tenant-1/device-B/req/#", MqttQoS.EXACTLY_ONCE));
         final MqttSubscribeMessage msg = mock(MqttSubscribeMessage.class);
         when(msg.messageId()).thenReturn(15);
         when(msg.topicSubscriptions()).thenReturn(subscriptions);
@@ -709,17 +710,19 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         adapter.onSubscribe(endpoint, null, msg);
 
         // THEN the adapter sends a SUBACK packet to the device
-        // which contains a failure status code for each filter
+        // which contains a failure status code for each unsupported filter
         final ArgumentCaptor<List<MqttQoS>> codeCaptor = ArgumentCaptor.forClass(List.class);
         verify(endpoint).subscribeAcknowledge(eq(15), codeCaptor.capture());
-        assertThat(codeCaptor.getValue().size(), is(4));
+        assertThat(codeCaptor.getValue().size(), is(5));
         assertThat(codeCaptor.getValue().get(0), is(MqttQoS.FAILURE));
         assertThat(codeCaptor.getValue().get(1), is(MqttQoS.FAILURE));
         assertThat(codeCaptor.getValue().get(2), is(MqttQoS.FAILURE));
         assertThat(codeCaptor.getValue().get(3), is(MqttQoS.AT_MOST_ONCE));
+        assertThat(codeCaptor.getValue().get(2), is(MqttQoS.FAILURE)); // QoS 2 is not supported
         // and sends an empty notification downstream with TTD -1
         final ArgumentCaptor<Message> msgCaptor = ArgumentCaptor.forClass(Message.class);
         verify(sender).sendAndWaitForOutcome(msgCaptor.capture(), any());
+        assertThat(MessageHelper.getDeviceId(msgCaptor.getValue()), is("device-A"));
         assertThat(msgCaptor.getValue().getContentType(), is(EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION));
         assertThat(MessageHelper.getTimeUntilDisconnect(msgCaptor.getValue()), is(-1));
 

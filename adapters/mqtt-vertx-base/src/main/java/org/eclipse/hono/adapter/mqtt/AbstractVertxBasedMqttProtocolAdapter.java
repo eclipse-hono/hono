@@ -514,12 +514,16 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
      * @param authenticatedDevice The authenticated identity of the device or {@code null}
      *                            if the device has not been authenticated.
      * @param subscribeMsg The subscribe request received from the device.
+     * @throws NullPointerException if any of endpoint or subscribe message are {@code null}.
      */
     @SuppressWarnings("rawtypes")
     protected final void onSubscribe(
             final MqttEndpoint endpoint,
             final Device authenticatedDevice,
             final MqttSubscribeMessage subscribeMsg) {
+
+        Objects.requireNonNull(endpoint);
+        Objects.requireNonNull(subscribeMsg);
 
         final Map<String, Future> topicFilters = new HashMap<>();
         final List<Future> subscriptionOutcome = new ArrayList<>(subscribeMsg.topicSubscriptions().size());
@@ -541,11 +545,13 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
 
             Future result = topicFilters.get(subscription.topicName());
             if (result != null) {
+
                 // according to the MQTT 3.1.1 spec (section 3.8.4) we need to
                 // make sure that we process multiple filters as if they had been
                 // submitted using multiple separate SUBSCRIBE packets
                 // we therefore always return the same result for duplicate topic filters
                 subscriptionOutcome.add(result);
+
             } else {
 
                 // we currently only support subscriptions for receiving commands
@@ -555,6 +561,9 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
                     LOG.debug("cannot create subscription [filter: {}, requested QoS: {}]: unsupported topic filter",
                             subscription.topicName(), subscription.qualityOfService());
                     result = Future.failedFuture(new IllegalArgumentException("unsupported topic filter"));
+                } else if (MqttQoS.EXACTLY_ONCE.equals(subscription.qualityOfService())) {
+                    // we do not support subscribing to commands using QoS 2
+                    result = Future.failedFuture(new IllegalArgumentException("QoS 2 not supported for command subscription"));
                 } else {
                     result = createCommandConsumer(endpoint, cmdSub).map(consumer -> {
                         // make sure that we close the consumer and notify downstream
