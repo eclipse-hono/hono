@@ -266,11 +266,6 @@ it is recommended to stick to the version mentioned in this tutorial.
 
     ./enmasse-0.22.0/deploy.sh -n enmasse -a standard
 
-Fix the memory settings of keycloak:
-
-    oc set resources deploy/keycloak --limits=memory=4Gi --requests=memory=4Gi
-    oc set env deploy/keycloak "JAVA_OPTS=-Dvertx.cacheDirBase=/tmp -Djboss.bind.address=0.0.0.0 -Djava.net.preferIPv4Stack=true -Xms512m -Xmx3072m"
-
 Wait for the admin console to completely start up. You can check this with
 the following command:
 
