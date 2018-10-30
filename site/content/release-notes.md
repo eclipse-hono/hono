@@ -25,6 +25,13 @@ title = "Release Notes"
   context. The default implementation of the *connection events* still defaults
   to the logging producer.
 
+### Deprecations
+
+* The Kura protocol adapter is being deprecated with 0.8. It will still be part
+  of Hono 0.8, but may be removed in a future version. Starting with Kura 4.0
+  and Hono 0.8, both projects can now be used together, without the need for
+  a special version of the Hono MQTT protocol adapter.
+
 ## 0.8-M2
 
 ### Fixes & Enhancements
