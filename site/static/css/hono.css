@@ -12,13 +12,19 @@
   margin-top: 0;
 }
 
-.copyright div.logo {
+.copyright div.incubation {
   float: right;
-  width: 20%;
+  width: 11%;
+}
+
+.copyright div.logo {
+  margin-top: 45px;
+	float: right;
+  width: 16%;
 }
 
 .copyright p.notice {
-	margin-top: 27px;
+	margin-top: 60px;
 }
 
 .copyright .quickLinks a {
