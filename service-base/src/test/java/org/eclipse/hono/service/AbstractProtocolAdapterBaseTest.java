@@ -36,13 +36,16 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
 import org.junit.runner.RunWith;
+import org.mockito.ArgumentCaptor;
 
+import io.opentracing.SpanContext;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
+import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonHelper;
 
 
@@ -124,7 +127,8 @@ public class AbstractProtocolAdapterBaseTest {
 
     /**
      * Verifies that the adapter connects to required services during
-     * startup and invokes the <em>doStart</em> method.
+     * startup and invokes the <em>onCommandConnectionEstablished</em> and
+     * <em>doStart</em> methods.
      * 
      * @param ctx The vert.x test context.
      */
@@ -135,12 +139,9 @@ public class AbstractProtocolAdapterBaseTest {
         // GIVEN an adapter configured with service clients
         // that can connect to the corresponding services
         final Handler<Void> startupHandler = mock(Handler.class);
-        adapter = newProtocolAdapter(properties, "test", startupHandler);
-        adapter.setCredentialsServiceClient(credentialsService);
-        adapter.setHonoMessagingClient(messagingService);
-        adapter.setRegistrationServiceClient(registrationService);
-        adapter.setTenantServiceClient(tenantService);
-        adapter.setCommandConnection(commandConnection);
+        final Handler<Void> commandConnectionHandler = mock(Handler.class);
+        final Handler<Void> commandConnectionLostHandler = mock(Handler.class);
+        givenAnAdapterConfiguredWithServiceClients(startupHandler, commandConnectionHandler, commandConnectionLostHandler);
 
         // WHEN starting the adapter
         adapter.startInternal().setHandler(ctx.asyncAssertSuccess(ok -> {
@@ -151,7 +152,51 @@ public class AbstractProtocolAdapterBaseTest {
             verify(credentialsService).connect(any(Handler.class));
             verify(commandConnection).connect(any(Handler.class));
             verify(startupHandler).handle(null);
+            verify(commandConnectionHandler).handle(null);
+            verify(commandConnectionLostHandler, never()).handle(null);
         }));
+    }
+
+    /**
+     * Verifies that the <em>onCommandConnectionLost</em> and
+     * <em>onCommandConnectionEstablished</em> hooks are invoked
+     * when the command connection is re-established.
+     * 
+     * @param ctx The vert.x test context.
+     */
+    @SuppressWarnings("unchecked")
+    public void testCallbacksInvokedOnReconnect(final TestContext ctx) {
+
+        // GIVEN an adapter connected to Hono services
+        final Handler<Void> commandConnectionEstablishedHandler = mock(Handler.class);
+        final Handler<Void> commandConnectionLostHandler = mock(Handler.class);
+        givenAnAdapterConfiguredWithServiceClients(mock(Handler.class), commandConnectionEstablishedHandler, commandConnectionLostHandler);
+        adapter.startInternal().setHandler(ctx.asyncAssertSuccess(ok -> {
+            final ArgumentCaptor<Handler<ProtonConnection>> disconnectHandlerCaptor = ArgumentCaptor.forClass(Handler.class);
+            verify(commandConnection.connect(disconnectHandlerCaptor.capture()));
+            // WHEN the command connection is lost
+            disconnectHandlerCaptor.getValue().handle(mock(ProtonConnection.class));
+            // THEN the onCommandConnectionLost hook is being invoked,
+            verify(commandConnectionLostHandler).handle(null);
+            // the connection is re-established and
+            verify(commandConnection, times(2)).connect(any(Handler.class));
+            // the onCommandConnectionEstablished hook is being invoked
+            verify(commandConnectionEstablishedHandler).handle(null);
+        }));
+    }
+
+    private void givenAnAdapterConfiguredWithServiceClients(
+            final Handler<Void> startupHandler,
+            final Handler<Void> commandConnectionEstablishedHandler,
+            final Handler<Void> commandConnectionLostHandler) {
+
+        adapter = newProtocolAdapter(properties, "test", startupHandler,
+                commandConnectionEstablishedHandler, commandConnectionLostHandler);
+        adapter.setCredentialsServiceClient(credentialsService);
+        adapter.setHonoMessagingClient(messagingService);
+        adapter.setRegistrationServiceClient(registrationService);
+        adapter.setTenantServiceClient(tenantService);
+        adapter.setCommandConnection(commandConnection);
     }
 
     /**
@@ -251,7 +296,7 @@ public class AbstractProtocolAdapterBaseTest {
             // THEN the result contains the registration assertion
             ctx.assertEquals(assertionResult, result);
         }));
-        adapter.getRegistrationAssertion("tenant", "device", null, null).setHandler(ctx.asyncAssertSuccess(result -> {
+        adapter.getRegistrationAssertion("tenant", "device", null, mock(SpanContext.class)).setHandler(ctx.asyncAssertSuccess(result -> {
             // THEN the result contains the registration assertion
             ctx.assertEquals(assertionResult, result);
         }));
@@ -277,7 +322,7 @@ public class AbstractProtocolAdapterBaseTest {
             // THEN the request fails with a 404
             ctx.assertEquals(HttpURLConnection.HTTP_NOT_FOUND, ((ServiceInvocationException) t).getErrorCode());
         }));
-        adapter.getRegistrationAssertion("tenant", "non-existent", null, null).setHandler(ctx.asyncAssertFailure(t -> {
+        adapter.getRegistrationAssertion("tenant", "non-existent", null, mock(SpanContext.class)).setHandler(ctx.asyncAssertFailure(t -> {
             // THEN the request fails with a 404
             ctx.assertEquals(HttpURLConnection.HTTP_NOT_FOUND, ((ServiceInvocationException) t).getErrorCode());
         }));
@@ -299,7 +344,8 @@ public class AbstractProtocolAdapterBaseTest {
         adapter.getRegistrationAssertion(
                 "tenant A",
                 "device",
-                new Device("tenant B", "gateway")).setHandler(ctx.asyncAssertFailure(t -> {
+                new Device("tenant B", "gateway"),
+                mock(SpanContext.class)).setHandler(ctx.asyncAssertFailure(t -> {
                     // THEN the request fails with a 403 Forbidden error
                     ctx.assertEquals(HttpURLConnection.HTTP_FORBIDDEN, ((ClientErrorException) t).getErrorCode());
                 }));
@@ -318,6 +364,15 @@ public class AbstractProtocolAdapterBaseTest {
             final ProtocolAdapterProperties props,
             final String typeName,
             final Handler<Void> startupHandler) {
+        return newProtocolAdapter(props, typeName, startupHandler, null, null);
+    }
+
+    private AbstractProtocolAdapterBase<ProtocolAdapterProperties> newProtocolAdapter(
+            final ProtocolAdapterProperties props,
+            final String typeName,
+            final Handler<Void> startupHandler,
+            final Handler<Void> commandConnectionEstablishedHandler,
+            final Handler<Void> commandConnectionLostHandler) {
 
         final AbstractProtocolAdapterBase<ProtocolAdapterProperties> result = new AbstractProtocolAdapterBase<ProtocolAdapterProperties>() {
 
@@ -350,6 +405,20 @@ public class AbstractProtocolAdapterBaseTest {
             protected void doStart(final Future<Void> startFuture) {
                 startupHandler.handle(null);
                 startFuture.complete();
+            }
+
+            @Override
+            protected void onCommandConnectionEstablished(final HonoClient connectedClient) {
+                if (commandConnectionEstablishedHandler != null) {
+                    commandConnectionEstablishedHandler.handle(null);
+                }
+            }
+
+            @Override
+            protected void onCommandConnectionLost(final HonoClient commandConnection) {
+                if (commandConnectionLostHandler != null) {
+                    commandConnectionLostHandler.handle(null);
+                }
             }
         };
         result.setConfig(props);
