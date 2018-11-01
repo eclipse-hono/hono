@@ -306,7 +306,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         } else if (tenantServiceClient == null) {
             result.fail(new IllegalStateException("Tenant service client must be set"));
         } else if (messagingClient == null) {
-            result.fail(new IllegalStateException("Hono Messaging client must be set"));
+            result.fail(new IllegalStateException("AMQP Messaging Network client must be set"));
         } else if (registrationServiceClient == null) {
             result.fail(new IllegalStateException("Device Registration service client must be set"));
         } else if (credentialsServiceClient == null) {
@@ -315,10 +315,14 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
             result.fail(new IllegalStateException("Command & Control service client must be set"));
         } else {
             connectToService(tenantServiceClient, "Tenant service");
-            connectToService(messagingClient, "Messaging");
+            connectToService(messagingClient, "AMQP Messaging Network");
             connectToService(registrationServiceClient, "Device Registration service");
             connectToService(credentialsServiceClient, "Credentials service");
-            connectToService(commandConnection, "Command and Control service");
+            connectToService(
+                    commandConnection,
+                    "Command and Control service",
+                    this::onCommandConnectionEstablished,
+                    this::onCommandConnectionLost);
             doStart(result);
         }
         return result;
@@ -400,42 +404,94 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * @throws IllegalArgumentException if client is {@code null}.
      */
     protected final Future<HonoClient> connectToService(final HonoClient client, final String serviceName) {
-
-        Objects.requireNonNull(serviceName);
-
-        if (client == null) {
-            return Future.failedFuture(new IllegalArgumentException(String.format("Hono %s client not set", serviceName)));
-        } else {
-            final Handler<ProtonConnection> disconnectHandler = getHandlerForDisconnectHonoService(client, serviceName);
-
-            return client.connect(disconnectHandler).map(connectedClient -> {
-                LOG.info("connected to {}", serviceName);
-                return connectedClient;
-            }).recover(t -> {
-                LOG.warn("failed to connect to {}", serviceName, t);
-                return Future.failedFuture(t);
-            });
-        }
+        return connectToService(client, serviceName, onConnect -> {}, onConnectionLost -> {});
     }
 
     /**
-     * Gets a handler that attempts a reconnect for a Hono service client after
-     * {@link Constants#DEFAULT_RECONNECT_INTERVAL_MILLIS} milliseconds.
+     * Connects to a Hono Service component using the configured client.
      *
      * @param client The Hono client for the service that is to be connected.
      * @param serviceName The name of the service that is to be connected (used for logging).
-     * @return A handler that attempts the reconnect.
+     * @param connectionEstablishedHandler A handler to invoke once the connection is established.
+     * @param connectionLostHandler A handler to invoke when the connection is lost unexpectedly.
+     * @return A future that will succeed once the connection has been established. The future will fail if the
+     *         connection cannot be established.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
-    private Handler<ProtonConnection> getHandlerForDisconnectHonoService(final HonoClient client,
-            final String serviceName) {
+    protected final Future<HonoClient> connectToService(
+            final HonoClient client,
+            final String serviceName,
+            final Handler<HonoClient> connectionEstablishedHandler,
+            final Handler<HonoClient> connectionLostHandler) {
+
+        Objects.requireNonNull(client);
+        Objects.requireNonNull(serviceName);
+        Objects.requireNonNull(connectionEstablishedHandler);
+        Objects.requireNonNull(connectionLostHandler);
+
+        final Handler<ProtonConnection> disconnectHandler = getHandlerForDisconnectHonoService(client, serviceName,
+                connectionEstablishedHandler, connectionLostHandler);
+
+        return client.connect(disconnectHandler).map(connectedClient -> {
+            LOG.info("connected to {}", serviceName);
+            connectionEstablishedHandler.handle(connectedClient);
+            return connectedClient;
+        }).recover(t -> {
+            LOG.warn("failed to connect to {}", serviceName, t);
+            return Future.failedFuture(t);
+        });
+    }
+
+    /**
+     * Invoked when a connection for receiving commands and sending responses has been
+     * unexpectedly lost.
+     * <p>
+     * Subclasses may override this method in order to perform housekeeping and/or clear
+     * state that is associated with the connection. Implementors <em>must not</em> try
+     * to re-establish the connection, the adapter will try to re-establish the connection
+     * by default.
+     * <p>
+     * This default implementation does nothing.
+     * 
+     * @param commandConnection The lost connection.
+     */
+    protected void onCommandConnectionLost(final HonoClient commandConnection) {
+        // empty by default
+    }
+
+    /**
+     * Invoked when a connection for receiving commands and sending responses has been
+     * established.
+     * <p>
+     * Note that this method is invoked once the initial connection has been established
+     * but also when the connection has been re-established after a connection loss.
+     * <p>
+     * Subclasses may override this method in order to e.g. re-establish device specific
+     * links for receiving commands or to create a permanent link for receiving commands
+     * for all devices.
+     * <p>
+     * This default implementation does nothing.
+     * 
+     * @param commandConnection The (re-)established connection.
+     */
+    protected void onCommandConnectionEstablished(final HonoClient commandConnection) {
+        // empty by default
+    }
+
+    private Handler<ProtonConnection> getHandlerForDisconnectHonoService(
+            final HonoClient client,
+            final String serviceName,
+            final Handler<HonoClient> connectHandler,
+            final Handler<HonoClient> connectionLostHandler) {
 
         return (connection) -> {
+            connectionLostHandler.handle(client);
             vertx.setTimer(Constants.DEFAULT_RECONNECT_INTERVAL_MILLIS, reconnect -> {
                 LOG.info("attempting to reconnect to {}", serviceName);
-                client.connect(getHandlerForDisconnectHonoService(client, serviceName)).setHandler(connectAttempt -> {
+                client.connect(getHandlerForDisconnectHonoService(client, serviceName, connectHandler, connectionLostHandler)).setHandler(connectAttempt -> {
                     if (connectAttempt.succeeded()) {
                         LOG.info("reconnected to {}", serviceName);
+                        connectHandler.handle(connectAttempt.result());
                     } else {
                         LOG.debug("cannot reconnect to {}: {}", serviceName, connectAttempt.cause().getMessage());
                     }
@@ -1092,10 +1148,12 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * @param deviceId The id of the device for that a command may be received.
      * @param commandMessageConsumer The Handler that will be called for each command to the device.
      */
-    protected void onCloseCommandConsumer(final String tenant, final String deviceId,
-                                        final BiConsumer<ProtonDelivery, Message> commandMessageConsumer
-                                        ) {
-        LOG.debug("Command consumer was closed for [tenantId: {}, deviceId: {}] - no command will be received for this request anymore.",
+    protected void onCloseCommandConsumer(
+            final String tenant,
+            final String deviceId,
+            final BiConsumer<ProtonDelivery, Message> commandMessageConsumer) {
+
+        LOG.debug("command consumer closed [tenantId: {}, deviceId: {}] - no command will be received for this device anymore",
                 tenant, deviceId);
     }
 
