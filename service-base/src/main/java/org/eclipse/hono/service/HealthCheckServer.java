@@ -15,10 +15,13 @@ package org.eclipse.hono.service;
 
 import java.util.Objects;
 
+import javax.annotation.PostConstruct;
+
 import org.eclipse.hono.config.ApplicationConfigProperties;
 import org.eclipse.hono.util.Constants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
@@ -53,22 +56,28 @@ public final class HealthCheckServer implements Lifecycle {
     private HealthCheckHandler livenessHandler;
 
     private final Vertx vertx;
-    private final ApplicationConfigProperties config;
+    private ApplicationConfigProperties config = new ApplicationConfigProperties();
     private Router router;
 
     /**
-     * Create a new HealthCheckServer for the given Vertx and configuration.
+     * Create a new HealthCheckServer for the given Vertx.
      *
      * @param vertx The vertx instance.
-     * @param config The application configuration instance.
      * @throws NullPointerException if vertx is {@code null}.
-     * @throws NullPointerException if config is {@code null}.
      */
-    public HealthCheckServer(final Vertx vertx, final ApplicationConfigProperties config) {
+    public HealthCheckServer(final Vertx vertx) {
         this.vertx = Objects.requireNonNull(vertx);
-        this.config = Objects.requireNonNull(config);
+    }
 
-        prepareHealthCheck();
+    /**
+     * Sets the application configuration properties to use for the HealthCheckServer.
+     *
+     * @param config The properties.
+     * @throws NullPointerException if the properties are {@code null}.
+     */
+    @Autowired(required = false)
+    public void setApplicationConfiguration(final ApplicationConfigProperties config) {
+        this.config = Objects.requireNonNull(config);
     }
 
     /**
@@ -76,6 +85,7 @@ public final class HealthCheckServer implements Lifecycle {
      * Configures router and healthCheckHandlers.
      *
      */
+    @PostConstruct
     private void prepareHealthCheck() {
         if (config.getHealthCheckPort() != Constants.PORT_UNCONFIGURED) {
             readinessHandler = HealthCheckHandler.create(vertx);

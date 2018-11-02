@@ -17,6 +17,7 @@ import org.eclipse.hono.config.ApplicationConfigProperties;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.connection.ConnectionFactory;
 import org.eclipse.hono.connection.impl.ConnectionFactoryImpl;
+import org.eclipse.hono.service.HealthCheckServer;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelper;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelperImpl;
@@ -202,5 +203,15 @@ public class HonoMessagingApplicationConfig {
         return r -> r.config().commonTags(
                 MetricsTags.forService(MetricsTags.VALUE_SERVICE_MESSAGING));
 
+    }
+
+    /**
+     * Exposes the health check server as a Spring bean.
+     *
+     * @return the health check server.
+     */
+    @Bean
+    public HealthCheckServer healthCheckServer() {
+        return new HealthCheckServer(vertx());
     }
 }

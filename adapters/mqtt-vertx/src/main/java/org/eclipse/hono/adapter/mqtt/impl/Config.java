@@ -18,6 +18,7 @@ import org.eclipse.hono.config.ApplicationConfigProperties;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.AbstractAdapterConfig;
+import org.eclipse.hono.service.HealthCheckServer;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.service.monitoring.ConnectionEventProducer;
 import org.eclipse.hono.service.monitoring.HonoEventConnectionEventProducer;
@@ -140,5 +141,15 @@ public class Config extends AbstractAdapterConfig {
     @ConditionalOnProperty(value = "hono.connectionEvents.producer", havingValue = "events")
     public ConnectionEventProducer connectionEventProducerEvents() {
         return new HonoEventConnectionEventProducer();
+    }
+
+    /**
+     * Exposes the health check server as a Spring bean.
+     *
+     * @return the health check server.
+     */
+    @Bean
+    public HealthCheckServer healthCheckServer() {
+        return new HealthCheckServer(vertx());
     }
 }
