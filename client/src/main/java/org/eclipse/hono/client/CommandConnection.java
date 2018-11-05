@@ -20,7 +20,9 @@ import org.eclipse.hono.client.impl.CommandConnectionImpl;
 import org.eclipse.hono.config.ClientConfigProperties;
 
 /**
- * A bidirectional connection between an Adapter and the AMQP 1.0 network to receive commands and send a response.
+ * A bidirectional connection between a <em>Protocol Adapter</em> and the
+ * <em>AMQP 1.0 Messaging Network</em> to receive commands and send
+ * responses.
  */
 public interface CommandConnection extends HonoClient {
 
@@ -29,7 +31,7 @@ public interface CommandConnection extends HonoClient {
      * <p>
      * Implementations may choose to cache consumers for devices and
      * return a cached instance instead of creating a new consumer on
-     * each instantiation.
+     * each invocation.
      * 
      * @param tenantId The tenant to consume commands from.
      * @param deviceId The device for which the consumer will be created.
