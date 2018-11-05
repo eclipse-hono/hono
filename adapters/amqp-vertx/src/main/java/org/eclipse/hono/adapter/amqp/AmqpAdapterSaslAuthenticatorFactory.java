@@ -207,7 +207,7 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
                             getUsernamePasswordAuthProvider().authenticate(credentials, completer);
                         } else {
                             completer.handle(Future.failedFuture(new CredentialException(
-                                    String.format("AMQP adapter is disabled for Tenant [tenantId: {}]",
+                                    String.format("AMQP adapter is disabled for Tenant [tenantId: %s]",
                                             tenant.getTenantId()))));
                         }
                         return null;
@@ -236,7 +236,7 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
                         .compose(tenant -> {
                             if (!tenant.isAdapterEnabled(Constants.PROTOCOL_ADAPTER_TYPE_AMQP)) {
                                 return Future.failedFuture(new CredentialException(
-                                        String.format("AMQP adapter is disabled for Tenant [tenantId: {}]",
+                                        String.format("AMQP adapter is disabled for Tenant [tenantId: %s]",
                                                 tenant.getTenantId())));
                             }
                             return Future.succeededFuture();
