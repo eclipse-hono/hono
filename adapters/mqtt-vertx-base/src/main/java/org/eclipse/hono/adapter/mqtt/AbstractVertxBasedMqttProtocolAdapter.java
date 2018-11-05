@@ -19,7 +19,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
@@ -672,7 +671,6 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
 
     private Future<MessageConsumer> createCommandConsumer(final MqttEndpoint mqttEndpoint, final CommandSubscription sub) {
 
-        final AtomicReference<MessageConsumer> consumerRef = new AtomicReference<>();
         return createCommandConsumer(
                 sub.getTenant(),
                 sub.getDeviceId(),
@@ -691,11 +689,8 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
                     LOG.debug("command receiver link closed remotely for [tenant-id: {}, device-id: {}]",
                             sub.getTenant(), sub.getDeviceId());
                     closeCommandConsumer(sub.getTenant(), sub.getDeviceId());
-                    // close the MQTT connection, so the device will reconnect (happens if e.g. the dispatch router is killed)
+                    // close the MQTT connection, so the device will reconnect
                     close(mqttEndpoint, new Device(sub.getTenant(), sub.getDeviceId()));
-                }).map(consumer -> {
-                    consumerRef.set(consumer);
-                    return consumer;
                 });
     }
 
