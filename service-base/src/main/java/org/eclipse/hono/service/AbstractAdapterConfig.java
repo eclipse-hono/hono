@@ -345,4 +345,14 @@ public abstract class AbstractAdapterConfig {
 
         return new SpringCacheProvider(manager);
     }
+
+    /**
+     * Exposes the health check server as a Spring bean.
+     *
+     * @return the health check server.
+     */
+    @Bean
+    public HealthCheckServer healthCheckServer() {
+        return new HealthCheckServer(vertx());
+    }
 }
