@@ -403,15 +403,237 @@ for OpenShift in order to enable this profile.
 
 ### Enable the build profile
 
-FIXME: TBD
+The Hono profile needs to be enabled, to include the Jaeger components in the
+S2I builds.
 
-### Add the sidecar
+Modify the Hono templates to add the `jaeger` profile in the builds. e.g.:
 
-FIXME: TBD
+~~~diff
+           name: fabric8-s2i-java-custom:2.3
+         env:
+         - name: MAVEN_ARGS_APPEND
+-          value: -B -pl org.eclipse.hono:hono-adapter-mqtt-vertx --also-make -Pnetty-tcnative
++          value: -B -pl org.eclipse.hono:hono-adapter-mqtt-vertx --also-make -Pnetty-tcnative -Pjaeger
+         - name: ARTIFACT_DIR
+           value: adapters/mqtt-vertx/target
+         - name: ARTIFACT_COPY_ARGS
+~~~
+
+Be sure to trigger new builds if you already built the container images before.
+
+### Add the Jaeger agent sidecar
+
+In order to add capture output from the Jaeger client and forward it to the
+main Jaeger application, a Jaeger agent is required. This will be deployed
+alongside each Hono service, as a dedicated container, but in the same pod
+(aka sidecar).
+
+This requires a new image stream:
+
+~~~yml
+kind: ImageStream
+apiVersion: v1
+metadata:
+  name: jaeger-agent
+spec:
+  lookupPolicy:
+    local: false
+  tags:
+  - name: "latest"
+    from:
+      kind: DockerImage
+      name: docker.io/jaegertracing/jaeger-agent:latest
+    importPolicy:
+      scheduled: true
+    referencePolicy:
+      type: Source
+~~~
+
+Then you need to modify the deployment configuration for each Hono service that
+should use the Jaeger agent:
+
+~~~diff
+ - kind: DeploymentConfig
+   apiVersion: v1
+   metadata:
+     name: hono-adapter-mqtt-vertx
+     labels:
+       app: hono-adapter
+       deploymentconfig: hono-adapter-mqtt-vertx
+   spec:
+     replicas: 1
+     selector:
+       app: hono-adapter
+       deploymentconfig: hono-adapter-mqtt-vertx
+     strategy:
+       type: Rolling
+       rollingParams:
+         timeoutSeconds: 3600
+     triggers:
+       - type: ConfigChange
+       - type: ImageChange
+         imageChangeParams:
+           automatic: true
+           containerNames:
+             - eclipsehono-hono-adapter-mqtt-vertx
+           from:
+             kind: ImageStreamTag
+             name: hono-adapter-mqtt-vertx:latest
++      - type: ImageChange
++        imageChangeParams:
++          automatic: true
++          containerNames:
++            - jaeger-agent
++          from:
++            kind: ImageStreamTag
++            name: jaeger-agent:latest
+     template:
+       metadata:
+         labels:
+           app: hono-adapter
+           deploymentconfig: hono-adapter-mqtt-vertx
+       spec:
+         containers:
+         - name: eclipsehono-hono-adapter-mqtt-vertx
+           image: hono-adapter-mqtt-vertx
+           imagePullPolicy: Always
+           env:
+           - name: SPRING_CONFIG_LOCATION
+             value: file:///etc/config/
+           - name: SPRING_PROFILES_ACTIVE
+             value: 
+           - name: LOGGING_CONFIG
+             value: file:///etc/config/logback-spring.xml
+           - name: KUBERNETES_NAMESPACE
+             valueFrom:
+               fieldRef:
+                 fieldPath: metadata.namespace
+           - name: HONO_MESSAGING_HOST
+             valueFrom:
+               configMapKeyRef:
+                 name: hono-configuration
+                 key: downstream.host
+           - name: HONO_MESSAGING_PORT
+             valueFrom:
+               configMapKeyRef:
+                 name: hono-configuration
+                 key: downstream.port
+           - name: HONO_COMMAND_HOST
+             valueFrom:
+               configMapKeyRef:
+                 name: hono-configuration
+                 key: downstream.host
+           - name: HONO_COMMAND_PORT
+             valueFrom:
+               configMapKeyRef:
+                 name: hono-configuration
+                 key: downstream.port
+           - name: HONO_REGISTRATION_HOST
+             value: hono-service-device-registry.$(KUBERNETES_NAMESPACE).svc
+           - name: HONO_CREDENTIALS_HOST
+             value: hono-service-device-registry.$(KUBERNETES_NAMESPACE).svc
+           - name: HONO_TENANT_HOST
+             value: hono-service-device-registry.$(KUBERNETES_NAMESPACE).svc
+           - name: MANAGEMENT_METRICS_EXPORT_GRAPHITE_HOST
+             value: influxdb.$(KUBERNETES_NAMESPACE).svc
+           - name: AB_JOLOKIA_USER
+             value: jolokia
+           - name: AB_JOLOKIA_PASSWORD_RANDOM
+             value: "false"
+           - name: AB_JOLOKIA_PASSWORD
+             valueFrom:
+               secretKeyRef:
+                 name: hono-secrets
+                 key: jolokia.password
+           readinessProbe:
+             httpGet:
+               path: /readiness
+               port: 8088
+               scheme: HTTP
+             initialDelaySeconds: 10
+           livenessProbe:
+             httpGet:
+               path: /liveness
+               port: 8088
+               scheme: HTTP
+             initialDelaySeconds: 180
+           resources:
+             limits:
+               memory: 512Mi
+           ports:
+           - containerPort: 8778 
+             name: jolokia
+           - containerPort: 8088
+             name: radan-http
+             protocol: TCP
+           - containerPort: 8883
+             name: secure-mqtt
+             protocol: TCP
+           - containerPort: 1883
+             name: mqtt
+             protocol: TCP
+           securityContext:
+             privileged: false
+           volumeMounts:
+           - mountPath: /etc/config
+             name: conf
+           - mountPath: /etc/secrets
+             name: secrets
+             readOnly: true
+           - mountPath: /etc/tls
+             name: tls
+             readOnly: true
++        - image: jaeger-agent
++          name: jaeger-agent
++          ports:
++          - containerPort: 5775
++            protocol: UDP
++          - containerPort: 5778
++          - containerPort: 6831
++            protocol: UDP
++          - containerPort: 6832
++            protocol: UDP
++          command:
++            - "/go/bin/agent-linux"
++            - "--collector.host-port=jaeger-collector.jaeger.svc:14267"
++          env:
++            - name: JAEGER_SERVICE_NAME
++              value: hono-adapter-mqtt
+         volumes:
+         - name: conf
+           configMap:
+             name: hono-adapter-mqtt-vertx-config
+         - name: secrets
+           secret:
+             secretName: hono-mqtt-secrets
+         - name: tls
+           secret:
+             secretName: hono-adapter-mqtt-vertx-tls
+~~~
+
+The important parts are only the modifications, which add a new image stream
+trigger, and also add the additional agent container to the deployment. This
+example assumes that the jaeger collector will be available at the hostname
+`jaeger-collector.jaeger.svc`. This will be true if you follow the next
+section on deploying a development-only Jaeger cluster. Should you deploy
+Jaeger differently, then this hostname and/or port may be different.
 
 ### Deploy Jaeger
 
-FIXME: TBD
+Setting up a full Jaeger cluster is a complicated task. However there is a good
+tutorial at the Jaeger repository at: https://github.com/jaegertracing/jaeger-openshift
+
+A simple deployment, for testing purposes only, can be performed by running
+the development setup template of Jaeger for OpenShift:
+
+~~~
+oc new-project jaeger
+oc process -f https://raw.githubusercontent.com/jaegertracing/jaeger-openshift/master/all-in-one/jaeger-all-in-one-template.yml | oc create -f -
+~~~
+
+Please be aware of the official note in this [documentation](https://github.com/jaegertracing/jaeger-openshift#development-setup):
+
+> This template uses an in-memory storage with a limited functionality for local testing and development. Do not use this template in production environments.
 
 ## Using the installation
 
