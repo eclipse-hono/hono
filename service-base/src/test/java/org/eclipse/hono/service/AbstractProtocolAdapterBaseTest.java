@@ -20,6 +20,10 @@ import static org.mockito.Mockito.*;
 
 import java.net.HttpURLConnection;
 
+import io.vertx.core.Context;
+import io.vertx.core.Vertx;
+import io.vertx.core.eventbus.DeliveryOptions;
+import io.vertx.core.eventbus.EventBus;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.HonoClient;
@@ -69,6 +73,9 @@ public class AbstractProtocolAdapterBaseTest {
     private HonoClient credentialsService;
     private HonoClient messagingService;
     private CommandConnection commandConnection;
+    private Context context;
+    private Vertx vertx;
+    private EventBus eventBus;
 
     /**
      * Sets up the fixture.
@@ -94,6 +101,13 @@ public class AbstractProtocolAdapterBaseTest {
 
         commandConnection = mock(CommandConnection.class);
         when(commandConnection.connect(any(Handler.class))).thenReturn(Future.succeededFuture(commandConnection));
+
+        context = mock(Context.class);
+        vertx = mock(Vertx.class);
+
+        eventBus = mock(EventBus.class);
+        when(eventBus.send(anyString(), any(), any(DeliveryOptions.class))).thenReturn(eventBus);
+        when(vertx.eventBus()).thenReturn(eventBus);
 
         properties = new ProtocolAdapterProperties();
         adapter = newProtocolAdapter(properties);
@@ -141,6 +155,7 @@ public class AbstractProtocolAdapterBaseTest {
         adapter.setRegistrationServiceClient(registrationService);
         adapter.setTenantServiceClient(tenantService);
         adapter.setCommandConnection(commandConnection);
+        adapter.init(vertx, context);
 
         // WHEN starting the adapter
         adapter.startInternal().setHandler(ctx.asyncAssertSuccess(ok -> {

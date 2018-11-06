@@ -12,7 +12,9 @@
  *******************************************************************************/
 package org.eclipse.hono.service;
 
+import java.time.Instant;
 import java.util.Objects;
+import java.util.UUID;
 
 import org.eclipse.hono.config.AbstractConfig;
 import org.eclipse.hono.config.ServiceConfigProperties;
@@ -26,12 +28,14 @@ import io.netty.handler.ssl.OpenSsl;
 import io.opentracing.Tracer;
 import io.opentracing.noop.NoopTracerFactory;
 import io.vertx.core.Future;
+import io.vertx.core.eventbus.DeliveryOptions;
 import io.vertx.core.http.ClientAuth;
 import io.vertx.core.net.KeyCertOptions;
 import io.vertx.core.net.NetServerOptions;
 import io.vertx.core.net.OpenSSLEngineOptions;
 import io.vertx.core.net.TrustOptions;
 import io.vertx.ext.healthchecks.HealthCheckHandler;
+import io.vertx.ext.healthchecks.Status;
 
 /**
  * A base class for implementing services binding to a secure and/or a non-secure port.
@@ -39,6 +43,9 @@ import io.vertx.ext.healthchecks.HealthCheckHandler;
  * @param <T> The type of configuration properties used by this service.
  */
 public abstract class AbstractServiceBase<T extends ServiceConfigProperties> extends ConfigurationSupportingVerticle<T> implements HealthCheckProvider {
+
+    // TODO make configurable
+    protected static final long HEARTBEAT_RATE_MILIIS = HealthCheckServer.LIVENESS_TIMEOUT_SECONDS * 500;
 
     /**
      * A logger to be shared with subclasses.
@@ -49,6 +56,11 @@ public abstract class AbstractServiceBase<T extends ServiceConfigProperties> ext
      * The OpenTracing {@code Tracer} for tracking processing of requests.
      */
     protected Tracer tracer = NoopTracerFactory.create();
+
+    /**
+     * Uniquely idetifies this verticle instance.
+     */
+    protected final UUID instanceID = UUID.randomUUID();
 
     /**
      * Sets the OpenTracing {@code Tracer} to use for tracking the processing
@@ -75,7 +87,44 @@ public abstract class AbstractServiceBase<T extends ServiceConfigProperties> ext
      */
     @Override
     public final void start(final Future<Void> startFuture) {
+
+        reportLiveness();
+
         startInternal().setHandler(startFuture.completer());
+    }
+
+    protected void reportLiveness() {
+        vertx.setPeriodic(HEARTBEAT_RATE_MILIIS, id -> updateLiveness("heartbeat", Status.OK()));
+    }
+
+    protected void updateReadiness(final String procedureName, final Status status) {
+
+        final Instant now = Instant.now();
+
+        final DeliveryOptions options = getDeliveryOptions(procedureName, now);
+
+        status.getData().put(HealthCheckServer.MSG_FIELD_LAST_SEEN, now.toString());
+
+        vertx.eventBus().send(HealthCheckServer.EVENT_BUS_ADDRESS_HEALTH_READINESS, status.toJson(), options);
+    }
+
+    protected void updateLiveness(final String procedureName, final Status status) {
+
+        final Instant now = Instant.now();
+
+        final DeliveryOptions options = getDeliveryOptions(procedureName, now);
+
+        status.getData().put(HealthCheckServer.MSG_FIELD_LAST_SEEN, now.toString());
+
+        vertx.eventBus().send(HealthCheckServer.EVENT_BUS_ADDRESS_HEALTH_LIVENESS, status.toJson(), options);
+    }
+
+    protected final DeliveryOptions getDeliveryOptions(final String procedureName, final Instant now) {
+        return new DeliveryOptions()
+                .addHeader(HealthCheckServer.MSG_FIELD_VERTICLE_NAME, this.getClass().getName())
+                .addHeader(HealthCheckServer.MSG_FIELD_VERTICLE_INSTANCE_ID, instanceID.toString())
+                .addHeader(HealthCheckServer.MSG_FIELD_PROCEDURE_NAME, procedureName)
+                .addHeader(HealthCheckServer.MSG_FIELD_LAST_SEEN, String.valueOf(now.getEpochSecond()));
     }
 
     /**

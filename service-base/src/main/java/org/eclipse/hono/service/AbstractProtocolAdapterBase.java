@@ -76,6 +76,8 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      */
     protected static final String CONTENT_TYPE_OCTET_STREAM = "application/octet-stream";
 
+    protected static final String PROCEDURE_NAME_CONNECTED_TO_SERVICE = "connected to ";
+
     private HonoClient messagingClient;
     private HonoClient registrationServiceClient;
     private HonoClient tenantServiceClient;
@@ -408,14 +410,22 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         } else {
             final Handler<ProtonConnection> disconnectHandler = getHandlerForDisconnectHonoService(client, serviceName);
 
+            updateReadiness(procedureNameConnectedTo(serviceName), Status.KO()); // initially not ready
+
             return client.connect(disconnectHandler).map(connectedClient -> {
                 LOG.info("connected to {}", serviceName);
+                updateReadiness(procedureNameConnectedTo(serviceName), Status.OK());
                 return connectedClient;
             }).recover(t -> {
                 LOG.warn("failed to connect to {}", serviceName, t);
+                updateReadiness(procedureNameConnectedTo(serviceName), Status.KO());
                 return Future.failedFuture(t);
             });
         }
+    }
+
+    private String procedureNameConnectedTo(final String serviceName) {
+        return PROCEDURE_NAME_CONNECTED_TO_SERVICE + serviceName;
     }
 
     /**
@@ -436,8 +446,10 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
                 client.connect(getHandlerForDisconnectHonoService(client, serviceName)).setHandler(connectAttempt -> {
                     if (connectAttempt.succeeded()) {
                         LOG.info("reconnected to {}", serviceName);
+                        updateReadiness(procedureNameConnectedTo(serviceName), Status.OK());
                     } else {
                         LOG.debug("cannot reconnect to {}: {}", serviceName, connectAttempt.cause().getMessage());
+                        updateReadiness(procedureNameConnectedTo(serviceName), Status.KO());
                     }
                 });
             });

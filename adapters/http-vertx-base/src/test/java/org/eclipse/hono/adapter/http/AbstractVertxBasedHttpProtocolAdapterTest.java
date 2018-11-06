@@ -28,6 +28,8 @@ import static org.mockito.Mockito.when;
 
 import java.net.HttpURLConnection;
 
+import io.vertx.core.eventbus.DeliveryOptions;
+import io.vertx.core.eventbus.EventBus;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.HonoClient;
@@ -97,6 +99,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
     private Vertx                         vertx;
     private Context                       context;
     private HttpAdapterMetrics            metrics;
+    private EventBus                      eventBus;
 
     /**
      * Sets up common fixture.
@@ -148,6 +151,11 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         commandConsumer = mock(CommandConsumer.class);
         when(commandConnection.getOrCreateCommandConsumer(anyString(), anyString(), any(Handler.class), any(Handler.class)))
             .thenReturn(Future.succeededFuture(commandConsumer));
+
+
+        eventBus = mock(EventBus.class);
+        when(eventBus.send(anyString(), any(), any(DeliveryOptions.class))).thenReturn(eventBus);
+        when(vertx.eventBus()).thenReturn(eventBus);
     }
 
     /**

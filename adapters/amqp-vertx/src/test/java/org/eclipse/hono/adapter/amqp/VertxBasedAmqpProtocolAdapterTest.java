@@ -29,6 +29,10 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
+import io.vertx.core.Context;
+import io.vertx.core.Vertx;
+import io.vertx.core.eventbus.DeliveryOptions;
+import io.vertx.core.eventbus.EventBus;
 import org.apache.qpid.proton.amqp.messaging.AmqpValue;
 import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
 import org.apache.qpid.proton.amqp.messaging.Rejected;
@@ -110,6 +114,10 @@ public class VertxBasedAmqpProtocolAdapterTest {
 
     private ProtocolAdapterProperties config;
 
+    private Context ctx;
+    private Vertx vertx;
+    private EventBus eventBus;
+
     /**
      * Setups the protocol adapter.
      * 
@@ -151,6 +159,13 @@ public class VertxBasedAmqpProtocolAdapterTest {
         when(commandConnection.connect(any(Handler.class))).thenReturn(Future.succeededFuture(commandConnection));
         when(commandConnection.closeCommandConsumer(anyString(), anyString())).thenReturn(Future.succeededFuture(null));
 
+        ctx = mock(Context.class);
+        vertx = mock(Vertx.class);
+
+        eventBus = mock(EventBus.class);
+        when(eventBus.send(anyString(), any(), any(DeliveryOptions.class))).thenReturn(eventBus);
+        when(vertx.eventBus()).thenReturn(eventBus);
+
         config = new ProtocolAdapterProperties();
         config.setAuthenticationRequired(false);
         config.setInsecurePort(4040);
@@ -175,6 +190,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
         startupTracker.setHandler(ctx.asyncAssertSuccess(result -> {
             startup.complete();
         }));
+        adapter.init(vertx, this.ctx);
         adapter.start(startupTracker);
 
         // THEN the client provided server is started
