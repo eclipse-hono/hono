@@ -13,6 +13,8 @@
 
 package org.eclipse.hono.adapter.mqtt;
 
+import static io.netty.handler.codec.mqtt.MqttConnectReturnCode.CONNECTION_REFUSED_NOT_AUTHORIZED;
+import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -274,6 +276,11 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
                 .put(TenantConstants.FIELD_ADAPTERS_TYPE, ADAPTER_TYPE)
                 .put(TenantConstants.FIELD_ENABLED, false));
         when(tenantClient.get(eq("my-tenant"), (SpanContext) any())).thenReturn(Future.succeededFuture(myTenantConfig));
+        doAnswer(invocation -> {
+            final Handler<AsyncResult<DeviceUser>> resultHandler = invocation.getArgument(1);
+            resultHandler.handle(Future.succeededFuture(new DeviceUser("my-tenant", "4711")));
+            return null;
+        }).when(usernamePasswordAuthProvider).authenticate(any(DeviceCredentials.class), any(Handler.class));
         final AbstractVertxBasedMqttProtocolAdapter<ProtocolAdapterProperties> adapter = getAdapter(server);
         forceClientMocksToConnected();
 
@@ -284,7 +291,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         adapter.handleEndpointConnection(endpoint);
 
         // THEN the connection is not established
-        verify(endpoint).reject(MqttConnectReturnCode.CONNECTION_REFUSED_NOT_AUTHORIZED);
+        verify(endpoint).reject(CONNECTION_REFUSED_NOT_AUTHORIZED);
     }
 
     /**
@@ -364,6 +371,41 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
     }
 
     /**
+     * Verifies that unregistered devices with valid credentials cannot establish connection.
+     */
+    @SuppressWarnings({ "unchecked" })
+    @Test
+    public void testAuthenticatedMqttAdapterRejectsMessageHandlersForDeletedDevices() {
+
+        // Device registration asserts that the given device is not available
+        when(regClient.assertRegistration(eq("9999"), (String) any(), (SpanContext) any()))
+                .thenThrow(new ClientErrorException(
+                        HTTP_NOT_FOUND, "device unknown or disabled"));
+        // GIVEN an adapter
+        final MqttServer server = getMqttServer(false);
+        final AbstractVertxBasedMqttProtocolAdapter<ProtocolAdapterProperties> adapter = getAdapter(server);
+        forceClientMocksToConnected();
+        doAnswer(invocation -> {
+            final Handler<AsyncResult<DeviceUser>> resultHandler = invocation.getArgument(1);
+            resultHandler.handle(Future.succeededFuture(new DeviceUser("DEFAULT_TENANT", "9999")));
+            return null;
+        }).when(usernamePasswordAuthProvider).authenticate(any(DeviceCredentials.class), any(Handler.class));
+
+        // WHEN a device tries to connect with valid credentials
+        final MqttEndpoint endpoint = getMqttEndpointAuthenticated();
+        adapter.handleEndpointConnection(endpoint);
+
+        final ArgumentCaptor<DeviceCredentials> credentialsCaptor = ArgumentCaptor.forClass(DeviceCredentials.class);
+        verify(usernamePasswordAuthProvider).authenticate(credentialsCaptor.capture(), any(Handler.class));
+        assertThat(credentialsCaptor.getValue().getAuthId(), is("sensor1"));
+        final ArgumentCaptor<MqttConnectReturnCode> mqttConnectReturnCodeArgumentCaptor = ArgumentCaptor
+                .forClass(MqttConnectReturnCode.class);
+        verify(endpoint).reject(mqttConnectReturnCodeArgumentCaptor.capture());
+        // Connection is refused
+        assertThat(mqttConnectReturnCodeArgumentCaptor.getValue(), is(CONNECTION_REFUSED_NOT_AUTHORIZED));
+    }
+
+    /**
      * Verifies that the adapter registers message handlers on client connections when device authentication is
      * disabled.
      */
@@ -431,7 +473,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
 
         // WHEN an unknown device publishes a telemetry message
         when(regClient.assertRegistration(eq("unknown"), any(), any())).thenReturn(
-                Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND)));
+                Future.failedFuture(new ClientErrorException(HTTP_NOT_FOUND)));
         final MessageSender sender = mock(MessageSender.class);
         when(messagingClient.getOrCreateTelemetrySender(anyString())).thenReturn(Future.succeededFuture(sender));
 
@@ -445,7 +487,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
                     // THEN the message has not been sent downstream
                     verify(sender, never()).send(any(Message.class));
                     // because the device's registration status could not be asserted
-                    ctx.assertEquals(HttpURLConnection.HTTP_NOT_FOUND,
+                    ctx.assertEquals(HTTP_NOT_FOUND,
                             ((ClientErrorException) t).getErrorCode());
                     // and the message has not been reported as processed
                     verify(metrics, never()).incrementProcessedMessages(anyString(), anyString());
