@@ -14,6 +14,7 @@
 package org.eclipse.hono.config;
 
 import io.vertx.core.VertxOptions;
+import io.vertx.core.metrics.MetricsOptions;
 
 /**
  * Vertx properties.
@@ -23,15 +24,37 @@ public class VertxProperties {
     private boolean preferNative = VertxOptions.DEFAULT_PREFER_NATIVE_TRANSPORT;
 
     /**
-     * Prefer to use native networking or not.
+     * Prefer to use native networking, or not.
      * <p>
      * Also see {@link VertxOptions#setPreferNativeTransport(boolean)}.
+     * </p>
+     * <p>
+     * The default is to not prefer native networking.
      * </p>
      * 
      * @param preferNative {@code true} to prefer native networking, {@code false} otherwise.
      */
     public void setPreferNative(final boolean preferNative) {
         this.preferNative = preferNative;
+    }
+
+    private boolean enableMetrics = MetricsOptions.DEFAULT_METRICS_ENABLED;
+
+    /**
+     * Enable the vert.x metrics system, or not.
+     * 
+     * <p>
+     * This decides if the vert.x metrics system will be enabled. Hono uses the Spring Boot integration with Micrometer,
+     * so enabling the vert.x metrics will only enable the contribution of vert.x internal metrics to this system.
+     * </p>
+     * <p>
+     * The default is to not enable vert.x metrics.
+     * </p>
+     * 
+     * @param enableMetrics {@code true} to enable the metrics system, {@code false} otherwise.
+     */
+    public void setEnableMetrics(final boolean enableMetrics) {
+        this.enableMetrics = enableMetrics;
     }
 
     /**
@@ -42,6 +65,10 @@ public class VertxProperties {
     public void configureVertx(final VertxOptions options) {
 
         options.setPreferNativeTransport(this.preferNative);
+
+        if (this.enableMetrics) {
+            options.setMetricsOptions(new MetricsOptions().setEnabled(true));
+        }
 
     }
 
