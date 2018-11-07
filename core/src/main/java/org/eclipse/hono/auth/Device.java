@@ -137,8 +137,11 @@ public class Device {
      * @param tenantId The id of the tenant.
      * @param deviceId The id of the device.
      * @return tenantId and deviceId as an address.
+     * @throws NullPointerException if any of the parameters are {@code null}.
      */
     public static final String asAddress(final String tenantId, final String deviceId) {
+        Objects.requireNonNull(tenantId);
+        Objects.requireNonNull(deviceId);
         return String.format("%s/%s", tenantId, deviceId);
     }
 
@@ -147,6 +150,7 @@ public class Device {
      *
      * @param device The device.
      * @return tenantId and deviceId as an address.
+     * @throws NullPointerException if device is {@code null}.
      */
     public static final String asAddress(final Device device) {
         return String.format("%s/%s", device.getTenantId(), device.getDeviceId());
