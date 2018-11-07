@@ -82,8 +82,10 @@ import io.vertx.proton.ProtonDelivery;
  */
 public class HonoClientImpl implements HonoClient {
 
-    private static final Logger LOG = LoggerFactory.getLogger(HonoClientImpl.class);
-
+    /**
+     * A logger to be shared with subclasses.
+     */
+    protected final Logger log = LoggerFactory.getLogger(HonoClientImpl.class);
     /**
      * The configuration properties for this client.
      */
@@ -184,7 +186,7 @@ public class HonoClientImpl implements HonoClient {
      */
     @Autowired(required = false)
     public final void setTracer(final Tracer opentracingTracer) {
-        LOG.info("using OpenTracing implementation [{}]", opentracingTracer.getClass().getName());
+        log.info("using OpenTracing implementation [{}]", opentracingTracer.getClass().getName());
         this.tracer = Objects.requireNonNull(opentracingTracer);
     }
 
@@ -342,14 +344,14 @@ public class HonoClientImpl implements HonoClient {
             final Handler<ProtonConnection> disconnectHandler) {
 
         context = vertx.getOrCreateContext();
-        LOG.trace("running on vert.x context [event-loop context: {}]", context.isEventLoopContext());
+        log.trace("running on vert.x context [event-loop context: {}]", context.isEventLoopContext());
 
         // context cannot be null thus it is safe to
         // ignore the Future returned by executeOrRunContext
         executeOrRunOnContext(ignore -> {
 
             if (isConnectedInternal()) {
-                LOG.debug("already connected to server [{}:{}]", connectionFactory.getHost(),
+                log.debug("already connected to server [{}:{}]", connectionFactory.getHost(),
                         connectionFactory.getPort());
                 connectionHandler.handle(Future.succeededFuture(this));
             } else if (connecting.compareAndSet(false, true)) {
@@ -365,7 +367,7 @@ public class HonoClientImpl implements HonoClient {
                     clientOptions = options;
                 }
 
-                LOG.debug("starting attempt [#{}] to connect to server [{}:{}]",
+                log.debug("starting attempt [#{}] to connect to server [{}:{}]",
                         connectAttempts.get() + 1, connectionFactory.getHost(), connectionFactory.getPort());
                 connectionFactory.connect(
                         clientOptions,
@@ -395,7 +397,7 @@ public class HonoClientImpl implements HonoClient {
                             }
                         });
             } else {
-                LOG.debug("already trying to connect to server ...");
+                log.debug("already trying to connect to server ...");
                 connectionHandler.handle(Future.failedFuture(
                         new ClientErrorException(HttpURLConnection.HTTP_CONFLICT, "already connecting to server")));
             }
@@ -406,10 +408,10 @@ public class HonoClientImpl implements HonoClient {
             final Handler<ProtonConnection> connectionLossHandler) {
 
         if (remoteClose.failed()) {
-            LOG.info("remote server [{}:{}] closed connection with error condition: {}",
+            log.info("remote server [{}:{}] closed connection with error condition: {}",
                     connectionFactory.getHost(), connectionFactory.getPort(), remoteClose.cause().getMessage());
         } else {
-            LOG.info("remote server [{}:{}] closed connection", connectionFactory.getHost(),
+            log.info("remote server [{}:{}] closed connection", connectionFactory.getHost(),
                     connectionFactory.getPort());
         }
         connection.disconnectHandler(null);
@@ -420,9 +422,9 @@ public class HonoClientImpl implements HonoClient {
     private void onRemoteDisconnect(final ProtonConnection con, final Handler<ProtonConnection> connectionLossHandler) {
 
         if (con != connection) {
-            LOG.warn("cannot handle failure of unknown connection");
+            log.warn("cannot handle failure of unknown connection");
         } else {
-            LOG.debug("lost connection to server [{}:{}]", connectionFactory.getHost(), connectionFactory.getPort());
+            log.debug("lost connection to server [{}:{}]", connectionFactory.getHost(), connectionFactory.getPort());
             handleConnectionLoss(connectionLossHandler);
         }
     }
@@ -479,7 +481,7 @@ public class HonoClientImpl implements HonoClient {
             // no need to try to re-connect
             connectionHandler.handle(Future.failedFuture(new IllegalStateException("client is shut down")));
         } else if (clientConfigProperties.getReconnectAttempts() - connectAttempts.getAndIncrement() == 0) {
-            LOG.debug("max number of attempts [{}] to re-connect to peer [{}:{}] have been made, giving up",
+            log.debug("max number of attempts [{}] to re-connect to peer [{}:{}] have been made, giving up",
                     clientConfigProperties.getReconnectAttempts(), connectionFactory.getHost(), connectionFactory.getPort());
             clearState();
             if (connectionFailureCause == null) {
@@ -497,9 +499,9 @@ public class HonoClientImpl implements HonoClient {
 
         } else {
             if (connectionFailureCause != null) {
-                LOG.debug("connection attempt failed", connectionFailureCause);
+                log.debug("connection attempt failed", connectionFailureCause);
             }
-            LOG.trace("scheduling new connection attempt in {}ms ...", clientOptions.getReconnectInterval());
+            log.trace("scheduling new connection attempt in {}ms ...", clientOptions.getReconnectInterval());
             // give Vert.x some time to clean up NetClient
             vertx.setTimer(clientOptions.getReconnectInterval(), tid -> {
                 connect(clientOptions, connectionHandler, disconnectHandler);
@@ -608,7 +610,7 @@ public class HonoClientImpl implements HonoClient {
 
         final MessageSender sender = activeSenders.get(key);
         if (sender != null && sender.isOpen()) {
-            LOG.debug("reusing existing message sender [target: {}, credit: {}]", key, sender.getCredit());
+            log.debug("reusing existing message sender [target: {}, credit: {}]", key, sender.getCredit());
             result.tryComplete(sender);
         } else if (!creationLocks.computeIfAbsent(key, k -> Boolean.FALSE)) {
             // register a handler to be notified if the underlying connection to the server fails
@@ -621,25 +623,25 @@ public class HonoClientImpl implements HonoClient {
             };
             creationRequests.add(connectionFailureHandler);
             creationLocks.put(key, Boolean.TRUE);
-            LOG.debug("creating new message sender for {}", key);
+            log.debug("creating new message sender for {}", key);
 
             newSenderSupplier.get().setHandler(creationAttempt -> {
                 creationLocks.remove(key);
                 creationRequests.remove(connectionFailureHandler);
                 if (creationAttempt.succeeded()) {
                     final MessageSender newSender = creationAttempt.result();
-                    LOG.debug("successfully created new message sender for {}", key);
+                    log.debug("successfully created new message sender for {}", key);
                     activeSenders.put(key, newSender);
                     result.complete(newSender);
                 } else {
-                    LOG.debug("failed to create new message sender for {}", key, creationAttempt.cause());
+                    log.debug("failed to create new message sender for {}", key, creationAttempt.cause());
                     activeSenders.remove(key);
                     result.tryFail(creationAttempt.cause());
                 }
             });
 
         } else {
-            LOG.debug("already trying to create a message sender for {}", key);
+            log.debug("already trying to create a message sender for {}", key);
             result.tryFail(new ServerErrorException(
                     HttpURLConnection.HTTP_UNAVAILABLE, "no connection to service"));
         }
@@ -815,7 +817,7 @@ public class HonoClientImpl implements HonoClient {
         if (client != null) {
             client.close(s -> {
             });
-            LOG.debug("closed and removed client for [{}]", targetAddress);
+            log.debug("closed and removed client for [{}]", targetAddress);
         }
     }
 
@@ -957,7 +959,7 @@ public class HonoClientImpl implements HonoClient {
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(replyId);
 
-        LOG.debug("get or create command client for [tenantId: {}, deviceId: {}, replyId: {}]", tenantId, deviceId,
+        log.debug("get or create command client for [tenantId: {}, deviceId: {}, replyId: {}]", tenantId, deviceId,
                 replyId);
         return getOrCreateRequestResponseClient(
                 ResourceIdentifier.from(CommandConstants.COMMAND_ENDPOINT, tenantId, deviceId).toString(),
@@ -1001,7 +1003,7 @@ public class HonoClientImpl implements HonoClient {
 
         final RequestResponseClient client = activeRequestResponseClients.get(key);
         if (client != null && client.isOpen()) {
-            LOG.debug("reusing existing client [target: {}]", key);
+            log.debug("reusing existing client [target: {}]", key);
             result.complete(client);
         } else if (!creationLocks.computeIfAbsent(key, k -> Boolean.FALSE)) {
 
@@ -1014,15 +1016,15 @@ public class HonoClientImpl implements HonoClient {
             };
             creationRequests.add(connectionFailureHandler);
             creationLocks.put(key, Boolean.TRUE);
-            LOG.debug("creating new client [target: {}]", key);
+            log.debug("creating new client [target: {}]", key);
 
             clientSupplier.get().setHandler(creationAttempt -> {
                 if (creationAttempt.succeeded()) {
-                    LOG.debug("successfully created new client [target: {}]", key);
+                    log.debug("successfully created new client [target: {}]", key);
                     activeRequestResponseClients.put(key, creationAttempt.result());
                     result.tryComplete(creationAttempt.result());
                 } else {
-                    LOG.debug("failed to create new client [target: {}]", key, creationAttempt.cause());
+                    log.debug("failed to create new client [target: {}]", key, creationAttempt.cause());
                     activeRequestResponseClients.remove(key);
                     result.tryFail(creationAttempt.cause());
                 }
@@ -1031,7 +1033,7 @@ public class HonoClientImpl implements HonoClient {
             });
 
         } else {
-            LOG.debug("already trying to create a client [target: {}]", key);
+            log.debug("already trying to create a client [target: {}]", key);
             result.fail(new ServerErrorException(
                     HttpURLConnection.HTTP_UNAVAILABLE, "no connection to service"));
         }
@@ -1048,12 +1050,12 @@ public class HonoClientImpl implements HonoClient {
             if (done.succeeded()) {
                 latch.countDown();
             } else {
-                LOG.error("could not close connection to server", done.cause());
+                log.error("could not close connection to server", done.cause());
             }
         });
         try {
             if (!latch.await(5, TimeUnit.SECONDS)) {
-                LOG.error("shutdown of client timed out after 5 seconds");
+                log.error("shutdown of client timed out after 5 seconds");
             }
         } catch (final InterruptedException e) {
             Thread.currentThread().interrupt();
@@ -1082,15 +1084,15 @@ public class HonoClientImpl implements HonoClient {
         final CountDownLatch countDown = new CountDownLatch(1);
         disconnect(disconnectResult -> {
             if (disconnectResult.succeeded()) {
-                LOG.info("successfully disconnected from the server [{}:{}]", connectionFactory.getHost(), connectionFactory.getPort());
+                log.info("successfully disconnected from the server [{}:{}]", connectionFactory.getHost(), connectionFactory.getPort());
                 countDown.countDown();
             } else {
-                LOG.error("could not disconnect from the server [{}:{}]", connectionFactory.getHost(), connectionFactory.getPort());
+                log.error("could not disconnect from the server [{}:{}]", connectionFactory.getHost(), connectionFactory.getPort());
             }
         });
         try {
             if (!countDown.await(5, TimeUnit.SECONDS)) {
-                LOG.error("Disconnecting from the server [{}:{}] timed out after 5 seconds",
+                log.error("Disconnecting from the server [{}:{}] timed out after 5 seconds",
                         connectionFactory.getHost(), connectionFactory.getPort());
             }
         } catch (final InterruptedException e) {
@@ -1128,15 +1130,15 @@ public class HonoClientImpl implements HonoClient {
         synchronized (connectionLock) {
             if (isConnectedInternal()) {
                 executeOrRunOnContext(r -> {
-                    LOG.info("closing connection to server [{}:{}]...", connectionFactory.getHost(), connectionFactory.getPort());
+                    log.info("closing connection to server [{}:{}]...", connectionFactory.getHost(), connectionFactory.getPort());
                     final ProtonConnection connectionToClose = connection;
                     connectionToClose.disconnectHandler(null); // make sure we are not trying to re-connect
                     connectionToClose.closeHandler(closedCon -> {
                         if (closedCon.succeeded()) {
-                            LOG.info("closed connection to server [{}:{}]", connectionFactory.getHost(),
+                            log.info("closed connection to server [{}:{}]", connectionFactory.getHost(),
                                     connectionFactory.getPort());
                         } else {
-                            LOG.info("closed connection to server [{}:{}]", connectionFactory.getHost(),
+                            log.info("closed connection to server [{}:{}]", connectionFactory.getHost(),
                                     connectionFactory.getPort(), closedCon.cause());
                         }
                         connectionToClose.disconnect();
@@ -1146,7 +1148,7 @@ public class HonoClientImpl implements HonoClient {
                     r.complete();
                 }).setHandler(handler);
             } else {
-                LOG.info("connection to server [{}:{}] already closed", connectionFactory.getHost(), connectionFactory.getPort());
+                log.info("connection to server [{}:{}] already closed", connectionFactory.getHost(), connectionFactory.getPort());
                 handler.handle(Future.succeededFuture());
             }
         }

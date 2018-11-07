@@ -17,8 +17,6 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.*;
 
 import java.net.HttpURLConnection;
-import java.util.Objects;
-import java.util.concurrent.CountDownLatch;
 
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.MessageSender;
@@ -27,8 +25,6 @@ import org.eclipse.hono.client.RequestResponseClient;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ClientConfigProperties;
-import org.eclipse.hono.connection.ConnectionFactory;
-import org.eclipse.hono.util.Constants;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -37,9 +33,7 @@ import org.junit.Test;
 import org.junit.rules.Timeout;
 import org.junit.runner.RunWith;
 
-import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
-import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
@@ -531,132 +525,5 @@ public class HonoClientImplTest {
 
         // THEN reconnect gets stopped, i.e. connection fails
         connectionHandlerInvocation.await();
-    }
-
-    /**
-     * A connection factory that provides access to the disconnect handler registered with
-     * a connection created by the factory.
-     *
-     */
-    private static class DisconnectHandlerProvidingConnectionFactory implements ConnectionFactory {
-
-        private final ProtonConnection connectionToCreate;
-
-        private Handler<ProtonConnection> disconnectHandler;
-        private Handler<AsyncResult<ProtonConnection>> closeHandler;
-        private CountDownLatch expectedSucceedingConnectionAttempts;
-        private CountDownLatch expectedFailingConnectionAttempts;
-        private Throwable causeForFailure;
-
-        DisconnectHandlerProvidingConnectionFactory(final ProtonConnection conToCreate) {
-            this.connectionToCreate = Objects.requireNonNull(conToCreate);
-            failWith(new IllegalStateException("connection refused"));
-            setExpectedFailingConnectionAttempts(0);
-            setExpectedSucceedingConnectionAttempts(1);
-        }
-
-        @Override
-        public void connect(
-                final ProtonClientOptions options,
-                final Handler<AsyncResult<ProtonConnection>> closeHandler,
-                final Handler<ProtonConnection> disconnectHandler,
-                final Handler<AsyncResult<ProtonConnection>> connectionResultHandler) {
-            connect(options, null, null, closeHandler, disconnectHandler, connectionResultHandler);
-        }
-
-        @Override
-        public void connect(
-                final ProtonClientOptions options,
-                final String username,
-                final String password,
-                final Handler<AsyncResult<ProtonConnection>> closeHandler,
-                final Handler<ProtonConnection> disconnectHandler,
-                final Handler<AsyncResult<ProtonConnection>> connectionResultHandler) {
-
-            this.closeHandler = closeHandler;
-            this.disconnectHandler = disconnectHandler;
-            if (expectedFailingConnectionAttempts.getCount() > 0) {
-                connectionResultHandler.handle(Future.failedFuture(causeForFailure));
-                expectedFailingConnectionAttempts.countDown();
-            } else {
-                connectionResultHandler.handle(Future.succeededFuture(connectionToCreate));
-                expectedSucceedingConnectionAttempts.countDown();
-            }
-        }
-
-        @Override
-        public String getName() {
-            return "client";
-        }
-
-        @Override
-        public String getHost() {
-            return "server";
-        }
-
-        @Override
-        public int getPort() {
-            return Constants.PORT_AMQP;
-        }
-
-        @Override
-        public String getPathSeparator() {
-            return Constants.DEFAULT_PATH_SEPARATOR;
-        }
-
-        public Handler<ProtonConnection> getDisconnectHandler() {
-            return disconnectHandler;
-        }
-
-        public Handler<AsyncResult<ProtonConnection>> getCloseHandler() {
-            return closeHandler;
-        }
-
-        public DisconnectHandlerProvidingConnectionFactory setExpectedFailingConnectionAttempts(final int attempts) {
-            expectedFailingConnectionAttempts = new CountDownLatch(attempts);
-            return this;
-        }
-
-        public DisconnectHandlerProvidingConnectionFactory setExpectedSucceedingConnectionAttempts(final int attempts) {
-            expectedSucceedingConnectionAttempts = new CountDownLatch(attempts);
-            return this;
-        }
-
-        public DisconnectHandlerProvidingConnectionFactory failWith(final Throwable cause) {
-            this.causeForFailure = Objects.requireNonNull(cause);
-            return this;
-        }
-
-        /**
-         * Waits for the expected number of succeeding connection attempts to
-         * occur.
-         * 
-         * @return {@code true} if the expected number of attempts have succeeded.
-         */
-        public boolean await() {
-            try {
-                expectedSucceedingConnectionAttempts.await();
-                return true;
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                return false;
-            }
-        }
-
-        /**
-         * Waits for the expected number of failing connection attempts to
-         * occur.
-         *  
-         * @return {@code true} if the expected number of attempts have failed.
-         */
-        public boolean awaitFailure() {
-            try {
-                expectedFailingConnectionAttempts.await();
-                return true;
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                return false;
-            }
-        }
     }
 }

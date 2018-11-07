@@ -88,8 +88,14 @@ public class CommandConnectionImpl extends HonoClientImpl implements CommandConn
             final String deviceId,
             final Handler<CommandContext> commandConsumer,
             final Handler<Void> closeHandler) {
+
+        Objects.requireNonNull(tenantId);
+        Objects.requireNonNull(deviceId);
+        Objects.requireNonNull(commandConsumer);
+
         final MessageConsumer messageConsumer = commandReceivers.get(Device.asAddress(tenantId, deviceId));
         if (messageConsumer != null) {
+            log.debug("reusing existing command consumer [tenant: {}, device-id: {}]", tenantId, deviceId);
             return Future.succeededFuture(messageConsumer);
         } else {
             return createConsumer(
@@ -107,15 +113,11 @@ public class CommandConnectionImpl extends HonoClientImpl implements CommandConn
         return checkConnected().compose(con -> {
             final Future<MessageConsumer> result = Future.future();
             CommandConsumer.create(context, clientConfigProperties, connection, tenantId, deviceId,
-                    commandConsumer, closeHook -> {
-                        closeCommandConsumer(tenantId, deviceId);
-                    }, creation -> {
-                        if (creation.succeeded()) {
-                            commandReceivers.put(Device.asAddress(tenantId, deviceId), creation.result());
-                        }
-                        result.complete(creation.result());
-                    }, getTracer());
-            return result;
+                    commandConsumer, remoteClose -> closeCommandConsumer(tenantId, deviceId), result, getTracer());
+            return result.map(consumer -> {
+                commandReceivers.put(Device.asAddress(tenantId, deviceId), consumer);
+                return consumer;
+            });
         });
     }
 

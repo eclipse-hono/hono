@@ -13,37 +13,33 @@
 
 package org.eclipse.hono.client.impl;
 
-import static org.junit.Assert.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.util.Objects;
+import java.net.HttpURLConnection;
 
-import org.apache.qpid.proton.engine.impl.RecordImpl;
-import org.eclipse.hono.client.MessageConsumer;
+import org.apache.qpid.proton.amqp.transport.Source;
 import org.eclipse.hono.client.CommandConnection;
 import org.eclipse.hono.client.CommandContext;
-import org.eclipse.hono.auth.Device;
+import org.eclipse.hono.client.MessageConsumer;
+import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ClientConfigProperties;
-import org.eclipse.hono.connection.ConnectionFactory;
-import org.eclipse.hono.util.Constants;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
 import org.junit.runner.RunWith;
+import org.mockito.ArgumentCaptor;
 
 import io.vertx.core.AsyncResult;
+import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
-import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.proton.ProtonClientOptions;
@@ -64,128 +60,99 @@ public class CommandConnectionImplTest {
     @Rule
     public Timeout timeout = Timeout.seconds(3);
 
-    private static Vertx vertx;
+    private Vertx vertx;
+    private Context context;
     private ClientConfigProperties props;
     private ProtonConnection con;
 
     private CommandConnection commandConnection;
-    private ConnectionFactory connectionFactory;
+    private DisconnectHandlerProvidingConnectionFactory connectionFactory;
     private ProtonReceiver receiver;
-
-    /**
-     * Sets up vertx.
-     */
-    @BeforeClass
-    public static void setUpVertx() {
-        vertx = Vertx.vertx();
-    }
 
     /**
      * Sets up fixture.
      */
+    @SuppressWarnings("unchecked")
     @Before
     public void setUp() {
+
+        vertx = mock(Vertx.class);
+        context = mock(Context.class);
+        when(vertx.getOrCreateContext()).thenReturn(context);
+        when(context.owner()).thenReturn(vertx);
+        doAnswer(invocation -> {
+            final Handler<Void> handler = invocation.getArgument(0);
+            handler.handle(null);
+            return null;
+        }).when(context).runOnContext(any(Handler.class));
+
         props = new ClientConfigProperties();
 
         receiver = mock(ProtonReceiver.class);
-        when(receiver.attachments()).thenReturn(new RecordImpl());
-        doAnswer(invocationOnMock -> {
-            final Handler<AsyncResult<ProtonReceiver>> receiverHandler = invocationOnMock.getArgument(0);
-            receiverHandler.handle(Future.succeededFuture(receiver));
-            return receiver;
-        }).when(receiver).openHandler(any(Handler.class));
-
         con = mock(ProtonConnection.class);
-        when(con.isDisconnected()).thenReturn(Boolean.FALSE);
         when(con.createReceiver(anyString())).thenReturn(receiver);
 
-        connectionFactory = new ConnectionResultHandlerProvidingConnectionFactory(con);
+        connectionFactory = new DisconnectHandlerProvidingConnectionFactory(con);
         commandConnection = new CommandConnectionImpl(vertx, connectionFactory, props);
     }
 
     /**
-     * Verifies that a command consumer can be created for a tenant and deviceId and opens a receiver link
-     * that is scoped to the device.
+     * Verifies that an attempt to open a command consumer fails if the peer
+     * rejects to open a receiver link.
      *
      * @param ctx The test context.
      */
+    @SuppressWarnings("unchecked")
     @Test
-    public void testCreateCommandConsumerSucceedsAndOpensReceiverLink(final TestContext ctx) {
+    public void testCreateCommandConsumerFailsIfPeerRejectsLink(final TestContext ctx) {
 
         final Handler<CommandContext> commandHandler = mock(Handler.class);
         final Handler<Void> closeHandler = mock(Handler.class);
+        final Source source = mock(Source.class);
+        when(source.getAddress()).thenReturn(null);
+        when(receiver.getRemoteSource()).thenReturn(source);
 
-        final Async connected = ctx.async();
-
-        commandConnection.connect(new ProtonClientOptions()).setHandler(ctx.asyncAssertSuccess(ok -> connected.complete()));
-        connected.await();
-
-        final Future<MessageConsumer> messageConsumerFuture =
-                commandConnection.getOrCreateCommandConsumer("theTenant", "theDevice", commandHandler, closeHandler);
-        assertNotNull(messageConsumerFuture);
-
-        final Async consumerCreated = ctx.async();
-        messageConsumerFuture.setHandler(ctx.asyncAssertSuccess(ok ->
-                consumerCreated.complete()));
-        consumerCreated.await();
-
-        verify(receiver).open();
-        verify(con).createReceiver(contains(Device.asAddress("theTenant", "theDevice")));
+        commandConnection.connect(new ProtonClientOptions())
+            .compose(c -> {
+                final ArgumentCaptor<Handler<AsyncResult<ProtonReceiver>>> linkOpenHandler = ArgumentCaptor.forClass(Handler.class);
+                final Future<MessageConsumer> consumer = commandConnection.getOrCreateCommandConsumer("theTenant", "theDevice", commandHandler, closeHandler);
+                verify(con).createReceiver("control/theTenant/theDevice");
+                verify(receiver).openHandler(linkOpenHandler.capture());
+                verify(receiver).open();
+                linkOpenHandler.getValue().handle(Future.succeededFuture());
+                return consumer;
+            }).setHandler(ctx.asyncAssertFailure(t -> {
+                ctx.assertEquals(HttpURLConnection.HTTP_UNAVAILABLE, ((ServiceInvocationException) t).getErrorCode());
+            }));
     }
-
 
     /**
-     * A connection factory that provides access to the connection result handler registered with
-     * a connection passed to the factory.
+     * Verifies that an attempt to open a command consumer for a
+     * tenant and device Id succeeds if the peer agrees to open a
+     * corresponding receiver link that is scoped to the device.
+     *
+     * @param ctx The test context.
      */
-    private static class ConnectionResultHandlerProvidingConnectionFactory implements ConnectionFactory {
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testCreateCommandConsumerSucceeds(final TestContext ctx) {
 
-        private final ProtonConnection connectionToCreate;
+        final String address = "control/theTenant/theDevice";
+        final Handler<CommandContext> commandHandler = mock(Handler.class);
+        final Handler<Void> closeHandler = mock(Handler.class);
+        final Source source = mock(Source.class);
+        when(source.getAddress()).thenReturn(address);
+        when(receiver.getRemoteSource()).thenReturn(source);
 
-        ConnectionResultHandlerProvidingConnectionFactory(final ProtonConnection conToCreate) {
-            this.connectionToCreate = Objects.requireNonNull(conToCreate);
-        }
-
-        @Override
-        public void connect(
-                final ProtonClientOptions options,
-                final Handler<AsyncResult<ProtonConnection>> closeHandler,
-                final Handler<ProtonConnection> disconnectHandler,
-                final Handler<AsyncResult<ProtonConnection>> connectionResultHandler) {
-            connect(options, null, null, closeHandler, disconnectHandler, connectionResultHandler);
-        }
-
-        @Override
-        public void connect(
-                final ProtonClientOptions options,
-                final String username,
-                final String password,
-                final Handler<AsyncResult<ProtonConnection>> closeHandler,
-                final Handler<ProtonConnection> disconnectHandler,
-                final Handler<AsyncResult<ProtonConnection>> connectionResultHandler) {
-
-            connectionResultHandler.handle(Future.succeededFuture(connectionToCreate));
-        }
-
-        @Override
-        public String getName() {
-            return "client";
-        }
-
-        @Override
-        public String getHost() {
-            return "server";
-        }
-
-        @Override
-        public int getPort() {
-            return Constants.PORT_AMQP;
-        }
-
-        @Override
-        public String getPathSeparator() {
-            return Constants.DEFAULT_PATH_SEPARATOR;
-        }
+        commandConnection.connect(new ProtonClientOptions())
+            .compose(c -> {
+                final ArgumentCaptor<Handler<AsyncResult<ProtonReceiver>>> linkOpenHandler = ArgumentCaptor.forClass(Handler.class);
+                final Future<MessageConsumer> consumer = commandConnection.getOrCreateCommandConsumer("theTenant", "theDevice", commandHandler, closeHandler);
+                verify(con).createReceiver(address);
+                verify(receiver).openHandler(linkOpenHandler.capture());
+                verify(receiver).open();
+                linkOpenHandler.getValue().handle(Future.succeededFuture(receiver));
+                return consumer;
+            }).setHandler(ctx.asyncAssertSuccess());
     }
-
 }
