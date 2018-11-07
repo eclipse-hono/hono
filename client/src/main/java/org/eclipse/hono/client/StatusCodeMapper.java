@@ -100,6 +100,8 @@ public abstract class StatusCodeMapper {
             return new ClientErrorException(HttpURLConnection.HTTP_FORBIDDEN, error.getDescription());
         } else if (AmqpError.UNAUTHORIZED_ACCESS.equals(error.getCondition())) {
             return new ClientErrorException(HttpURLConnection.HTTP_FORBIDDEN, error.getDescription());
+        } else if (AmqpError.INTERNAL_ERROR.equals(error.getCondition())) {
+            return new ServerErrorException(HttpURLConnection.HTTP_INTERNAL_ERROR, error.getDescription());
         } else {
             return new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND, error.getDescription());
         }

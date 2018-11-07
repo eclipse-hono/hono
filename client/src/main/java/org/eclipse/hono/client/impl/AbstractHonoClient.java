@@ -366,7 +366,7 @@ public abstract class AbstractHonoClient {
      * @param sourceAddress The address to receive messages from.
      * @param qos The quality of service to use for the link.
      * @param messageHandler The handler to invoke with every message received.
-     * @param closeHook The handler to invoke when the link is closed by the peer (may be {@code null}).
+     * @param remoteCloseHook The handler to invoke when the link is closed at the peer's request (may be {@code null}).
      * @return A future for the created link. The future will be completed once the link is open.
      *         The future will fail with a {@link ServiceInvocationException} if the link cannot be opened.
      * @throws NullPointerException if any of the arguments other than close hook is {@code null}.
@@ -378,7 +378,7 @@ public abstract class AbstractHonoClient {
             final String sourceAddress,
             final ProtonQoS qos,
             final ProtonMessageHandler messageHandler,
-            final Handler<String> closeHook) {
+            final Handler<String> remoteCloseHook) {
 
         Objects.requireNonNull(ctx);
         Objects.requireNonNull(clientConfig);
@@ -429,8 +429,8 @@ public abstract class AbstractHonoClient {
                     result.tryFail(new ServerErrorException(HttpsURLConnection.HTTP_UNAVAILABLE));
                 }
             });
-            HonoProtonHelper.setDetachHandler(receiver, remoteDetached -> onRemoteDetach(receiver, con.getRemoteContainer(), false, closeHook));
-            HonoProtonHelper.setCloseHandler(receiver, remoteClosed -> onRemoteDetach(receiver, con.getRemoteContainer(), true, closeHook));
+            HonoProtonHelper.setDetachHandler(receiver, remoteDetached -> onRemoteDetach(receiver, con.getRemoteContainer(), false, remoteCloseHook));
+            HonoProtonHelper.setCloseHandler(receiver, remoteClosed -> onRemoteDetach(receiver, con.getRemoteContainer(), true, remoteCloseHook));
             receiver.open();
             ctx.owner().setTimer(clientConfig.getLinkEstablishmentTimeout(), tid -> onTimeOut(receiver, clientConfig, result));
         });

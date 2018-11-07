@@ -80,7 +80,7 @@ public class CommandConsumer extends AbstractConsumer {
      *                     the link has been closed but <em>before</em> the handler that has been
      *                     passed into the <em>close</em> method is invoked.
      * @param remoteCloseHandler A handler to be invoked after the link has been closed
-     *                     on the remote peer's request. The handler will be invoked with the
+     *                     at the remote peer's request. The handler will be invoked with the
      *                     link's source address.
      * @param creationHandler The handler to invoke with the outcome of the creation attempt.
      * @param tracer The tracer to use for tracking the processing of received
@@ -155,7 +155,11 @@ public class CommandConsumer extends AbstractConsumer {
                         currentSpan.finish();
                     }
                 },
-                remoteCloseHandler).setHandler(s -> {
+                sourceAddress -> {
+                    LOG.debug("command receiver link [tenant-id: {}, device-id: {}] closed remotely",
+                            tenantId, deviceId);
+                    remoteCloseHandler.handle(sourceAddress);
+                }).setHandler(s -> {
 
                     if (s.succeeded()) {
                         final ProtonReceiver receiver = s.result();
@@ -163,7 +167,11 @@ public class CommandConsumer extends AbstractConsumer {
                         receiverRef.set(receiver);
                         receiver.flow(1); // allow sender to send one command
                         final CommandConsumer consumer = new CommandConsumer(context, props, receiver, tracer);
-                        consumer.setLocalCloseHandler(localCloseHandler);
+                        consumer.setLocalCloseHandler(sourceAddress -> {
+                            LOG.debug("command receiver link [tenant-id: {}, device-id: {}] closed locally",
+                                    tenantId, deviceId);
+                            localCloseHandler.handle(sourceAddress);
+                        });
                         creationHandler.handle(Future.succeededFuture(consumer));
                     } else {
                         LOG.debug("failed to create command consumer [tenant-id: {}, device-id: {}]", tenantId, deviceId, s.cause());
