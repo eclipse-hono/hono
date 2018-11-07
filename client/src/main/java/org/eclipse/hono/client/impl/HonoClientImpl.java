@@ -95,6 +95,10 @@ public class HonoClientImpl implements HonoClient {
      * The target address is used as the key, e.g. <em>telemetry/DEFAULT_TENANT</em>.
      */
     protected final Map<String, MessageSender> activeSenders = new HashMap<>();
+    /**
+     * The vert.x instance to run on.
+     */
+    protected final Vertx vertx;
 
     /**
      * The AMQP connection to the peer.
@@ -112,7 +116,6 @@ public class HonoClientImpl implements HonoClient {
     private final AtomicBoolean shuttingDown = new AtomicBoolean(false);
     private final AtomicBoolean disconnecting = new AtomicBoolean(false);
     private final ConnectionFactory connectionFactory;
-    private final Vertx vertx;
     private final Object connectionLock = new Object();
 
     private ProtonClientOptions clientOptions;
@@ -252,8 +255,27 @@ public class HonoClientImpl implements HonoClient {
         }
     }
 
-    private boolean isConnectedInternal() {
+    /**
+     * Checks if this client is currently connected to the server.
+     * <p>
+     * Note that the result returned by this method is only meaningful
+     * if running on the vert.x event loop context that this client has been
+     * created on.
+     * 
+     * @return {@code true} if the connection is established.
+     */
+    protected boolean isConnectedInternal() {
         return connection != null && !connection.isDisconnected();
+    }
+
+    /**
+     * Checks if this client is shut down.
+     * 
+     * @return {@code true} if this client is shut down already or is
+     *         in the process of shutting down.
+     */
+    protected final boolean isShutdown() {
+        return shuttingDown.get();
     }
 
     /**
