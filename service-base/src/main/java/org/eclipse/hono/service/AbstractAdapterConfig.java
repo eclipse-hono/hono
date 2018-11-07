@@ -29,7 +29,6 @@ import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.TenantConstants;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.cache.guava.GuavaCacheManager;
@@ -38,21 +37,17 @@ import org.springframework.context.annotation.Scope;
 
 import com.google.common.cache.CacheBuilder;
 
-import io.micrometer.core.instrument.MeterRegistry;
 import io.opentracing.Tracer;
 import io.opentracing.contrib.tracerresolver.TracerResolver;
 import io.opentracing.noop.NoopTracerFactory;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
 import io.vertx.core.dns.AddressResolverOptions;
-import io.vertx.core.metrics.MetricsOptions;
 
 /**
  * Minimum Spring Boot configuration class defining beans required by protocol adapters.
  */
 public abstract class AbstractAdapterConfig {
-
-    private MetricsOptions metricsOptions;
 
     /**
      * Exposes an OpenTracing {@code Tracer} as a Spring Bean.
@@ -71,16 +66,6 @@ public abstract class AbstractAdapterConfig {
     }
 
     /**
-     * Vert.x metrics options, if configured.
-     *
-     * @param metricsOptions Vert.x metrics options
-     */
-    @Autowired(required = false)
-    public void setMetricsOptions(final MetricsOptions metricsOptions) {
-        this.metricsOptions = metricsOptions;
-    }
-
-    /**
      * Exposes a Vert.x instance as a Spring bean.
      *
      * @return The Vert.x instance.
@@ -94,36 +79,9 @@ public abstract class AbstractAdapterConfig {
                         .setCacheMaxTimeToLive(0) // support DNS based service resolution
                         .setQueryTimeout(1000));
 
-        configureMetrics(options);
-
         vertxProperties().configureVertx(options);
 
         return Vertx.vertx(options);
-    }
-
-    /**
-     * Configure metrics system of vertx.
-     * <p>
-     * This method will apply the configured metrics options. If no metrics options are configured, then metrics will be
-     * enabled without further configuration. When vertx-micrometer support is found, then this will trigger the use of
-     * the global {@link MeterRegistry}.
-     * </p>
-     * 
-     * @param options The options object used to configure the vertx instance.
-     */
-    protected void configureMetrics(final VertxOptions options) {
-
-        if (this.metricsOptions != null) {
-
-            options.setMetricsOptions(this.metricsOptions);
-
-        } else {
-
-            options.setMetricsOptions(
-                    new MetricsOptions()
-                            .setEnabled(true));
-
-        }
     }
 
     /**
