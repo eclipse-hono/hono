@@ -34,15 +34,16 @@ hono:
     host: hono-dispatch-router.hono
     port: 5673
     amqpHostname: hono-internal
-  metric:
-    reporter:
-      graphite:
-        active: true
-        host: influxdb.hono
-        port: 2003
-# disable spring boot actuator endpoints, enable metrics
+  metrics:
+    legacy: true
+
+# disable spring boot actuator endpoints
 endpoints:
   enabled: false
-  metrics:
-    enabled: true
 
+management:
+  metrics:
+    export:
+      graphite:
+        host: influxdb.hono
+        port: 2003

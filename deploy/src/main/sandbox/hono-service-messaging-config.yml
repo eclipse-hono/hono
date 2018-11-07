@@ -23,9 +23,16 @@ hono:
     maxSessionWindow: 2000000
     validation:
       sharedSecret: ${hono.regAssertion.sharedSecret}
-  metric:
-    reporter:
+  metrics:
+    legacy: true
+
+# disable spring boot actuator endpoints
+endpoints:
+  enabled: false
+
+management:
+  metrics:
+    export:
       graphite:
-        active: true
         host: influxdb.hono
         port: 2003
