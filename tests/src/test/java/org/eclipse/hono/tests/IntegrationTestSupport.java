@@ -169,6 +169,7 @@ public final class IntegrationTestSupport {
         downstreamProps.setPort(IntegrationTestSupport.DOWNSTREAM_PORT);
         downstreamProps.setUsername(IntegrationTestSupport.DOWNSTREAM_USER);
         downstreamProps.setPassword(IntegrationTestSupport.DOWNSTREAM_PWD);
+        downstreamProps.setFlowLatency(200);
         init(ctx, downstreamProps);
     }
 

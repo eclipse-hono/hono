@@ -212,9 +212,15 @@ public class VertxBasedHttpProtocolAdapterTest {
         when(tenantServiceClient.getOrCreateTenantClient()).thenReturn(Future.succeededFuture(tenantClient));
 
         final MessageConsumer commandConsumer = mock(MessageConsumer.class);
-        when(commandConnection.getOrCreateCommandConsumer(anyString(), anyString(), any(Handler.class), any(Handler.class))).
+        doAnswer(invocation -> {
+            final Handler<AsyncResult<Void>> resultHandler = invocation.getArgument(0);
+            if (resultHandler != null) {
+                resultHandler.handle(Future.succeededFuture());
+            }
+            return null;
+        }).when(commandConsumer).close(any(Handler.class));
+        when(commandConnection.createCommandConsumer(anyString(), anyString(), any(Handler.class), any(Handler.class))).
                 thenReturn(Future.succeededFuture(commandConsumer));
-        when(commandConnection.closeCommandConsumer(anyString(), anyString())).thenReturn(Future.succeededFuture());
 
         telemetrySender = mock(MessageSender.class);
         when(telemetrySender.send(any(Message.class), (SpanContext) any())).thenReturn(Future.succeededFuture(mock(ProtonDelivery.class)));
@@ -479,16 +485,12 @@ public class VertxBasedHttpProtocolAdapterTest {
         final Command pendingCommand = Command.from(msg, "DEFAULT_TENANT", "device_1");
         final CommandContext commandContext = CommandContext.from(pendingCommand, mock(ProtonDelivery.class), mock(ProtonReceiver.class), mock(Span.class));
         final MessageConsumer commandConsumer = mock(MessageConsumer.class);
-        when(commandConnection.getOrCreateCommandConsumer(eq("DEFAULT_TENANT"), eq("device_1"), any(Handler.class), any(Handler.class))).
+        when(commandConnection.createCommandConsumer(eq("DEFAULT_TENANT"), eq("device_1"), any(Handler.class), any(Handler.class))).
                 thenAnswer(invocation -> {
                     final Handler<CommandContext> consumer = invocation.getArgument(2);
                     consumer.handle(commandContext);
                     return Future.succeededFuture(commandConsumer);
                 });
-        when(commandConnection.closeCommandConsumer(eq("DEFAULT_TENANT"), eq("device_1"))).then(invocation -> {
-            commandConsumer.close(closeAttempt -> {});
-            return Future.succeededFuture();
-        });
 
         // WHEN the device posts a telemetry message including a TTD
         httpClient.post("/telemetry?hono-ttd=3")
@@ -500,10 +502,10 @@ public class VertxBasedHttpProtocolAdapterTest {
                     ctx.assertEquals(HttpURLConnection.HTTP_OK, response.statusCode());
                     ctx.assertEquals("doThis", response.getHeader(Constants.HEADER_COMMAND));
                     ctx.assertNotNull(response.getHeader(Constants.HEADER_COMMAND_REQUEST_ID));
-                    verify(commandConnection).getOrCreateCommandConsumer(eq("DEFAULT_TENANT"), eq("device_1"),
+                    verify(commandConnection).createCommandConsumer(eq("DEFAULT_TENANT"), eq("device_1"),
                             any(Handler.class), any(Handler.class));
                     // and the command consumer has been closed again
-                    verify(commandConsumer).close(any(Handler.class));
+                    verify(commandConsumer).close(any());
                     async.complete();
                 }).exceptionHandler(ctx::fail).end(new JsonObject().encode());
     }

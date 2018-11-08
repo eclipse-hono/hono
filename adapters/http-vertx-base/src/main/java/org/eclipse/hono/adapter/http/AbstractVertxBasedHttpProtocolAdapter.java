@@ -26,6 +26,7 @@ import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.MessageSender;
+import org.eclipse.hono.client.ResourceConflictException;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.Command;
 import org.eclipse.hono.client.CommandContext;
@@ -626,8 +627,10 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                                 metrics.incrementCommandDeliveredToDevice(tenant);
                             }
                             currentSpan.finish();
-                            // the command consumer is always used for a single request only
-                            closeCommandConsumer(tenant, deviceId);
+                            // the command consumer is used for a single request only
+                            // we can close the consumer only AFTER we have accepted a
+                            // potential command
+                            Optional.ofNullable(commandConsumerTracker.result()).ifPresent(consumer -> consumer.close(null));
                         });
                         ctx.response().exceptionHandler(t -> {
                             currentSpan.log("failed to send HTTP response to device");
@@ -638,8 +641,10 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                             }
                             TracingHelper.logError(currentSpan, t);
                             currentSpan.finish();
-                            // the command consumer is always used for a single request only
-                            closeCommandConsumer(tenant, deviceId);
+                            // the command consumer is used for a single request only
+                            // we can close the consumer only AFTER we have released a
+                            // potential command
+                            Optional.ofNullable(commandConsumerTracker.result()).ifPresent(consumer -> consumer.close(null));
                         });
                         ctx.response().end();
                     }
@@ -654,8 +659,10 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                     if (commandContext != null) {
                         commandContext.release();
                     }
-                    // the command consumer is always used for a single request only
-                    closeCommandConsumer(tenant, deviceId);
+                    // the command consumer is used for a single request only
+                    // we can close the consumer only AFTER we have released a
+                    // potential command
+                    Optional.ofNullable(commandConsumerTracker.result()).ifPresent(consumer -> consumer.close(null));
 
                     if (ClientErrorException.class.isInstance(t)) {
                         final ClientErrorException e = (ClientErrorException) t;
@@ -689,9 +696,10 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
     }
 
     /**
-     * Adds a handler for tidying up when a device closes the HTTP connection before a response could be sent.
+     * Adds a handler for tidying up when a device closes the HTTP connection before
+     * a response could be sent.
      * <p>
-     * The handler increases the metric for expired TTDs.
+     * The handler will close the message consumer and increment the metric for expired TTDs.
      * 
      * @param ctx The context to retrieve cookies and the HTTP response from.
      * @param messageConsumer The message consumer to receive a command. If {@code null}, no handler is added.
@@ -707,9 +715,10 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
         if (messageConsumer != null) {
             if (!ctx.response().closed()) {
                 ctx.response().closeHandler(v -> {
-                    LOG.debug("device [tenantId: {}, deviceId: {}] closed connection before response could be sent ",
+                    LOG.debug("device [tenant: {}, device-id: {}] closed connection before response could be sent",
                             tenantId, deviceId);
                     cancelCommandReceptionTimer(ctx);
+                    messageConsumer.close(null);
                     metrics.incrementNoCommandReceivedAndTTDExpired(tenantId);
                 });
             }
@@ -749,10 +758,13 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
      *              </ul>
      * @param currentSpan The OpenTracing Span to use for tracking the processing
      *                       of the request.
-     * @return A future indicating the outcome.
-     *         The future will be completed with the created message consumer or it will
-     *         be failed with a {@code ServiceInvocationException} if the consumer
-     *         could not be created.
+     * @return A future indicating the outcome of the operation.
+     *         <p>
+     *         The future will be completed with the created message consumer or {@code null}, if
+     *         the response can be sent back to the device without waiting for a command.
+     *         <p>
+     *         The future will be failed with a {@code ServiceInvocationException} if the
+     *         message consumer could not be created.
      * @throws NullPointerException if any of the parameters other than TTD are {@code null}.
      */
     protected final Future<MessageConsumer> createCommandConsumer(
@@ -775,9 +787,6 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
             return Future.succeededFuture();
         } else {
             currentSpan.setTag(MessageHelper.APP_PROPERTY_DEVICE_TTD, ttdSecs);
-            // get or create a command consumer - if there is one command consumer existing already, it is reused.
-            // This prevents that receiver links are opened massively if a device is misbehaving by sending a huge number
-            // of downstream messages with a ttd value set.
             return createCommandConsumer(
                     tenantId,
                     deviceId,
@@ -806,43 +815,51 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                         // command consumer is closed by closeHandler, no explicit close necessary here
                     }).map(consumer -> {
                         if (!responseReady.isComplete()) {
-                            // if the request was not responded already, add a timer for closing the command consumer
-                            addCommandReceptionTimer(ctx, tenantId, deviceId, responseReady, ttdSecs);
+                            // if the request was not responded already, add a timer for triggering an empty response
+                            addCommandReceptionTimer(ctx, responseReady, ttdSecs);
                         }
                         return consumer;
+                    }).recover(t -> {
+                        if (t instanceof ResourceConflictException) {
+                            // another request from the same device that contains
+                            // a TTD value is already being processed
+                            // let the other request handle the command (if any)
+                            responseReady.tryComplete();
+                            return Future.succeededFuture();
+                        } else {
+                            return Future.failedFuture(t);
+                        }
                     });
         }
     }
 
     /**
-     * Adds a timer that closes the command connection after a given delay.
-     * In this case it additionally completes the <em>responseReady</em> Future.
+     * Sets a timer to trigger the sending of a (empty) response to a device
+     * if no command has been received from an application within a
+     * given amount of time.
      * <p>
      * The created timer's ID is put to the routing context using key {@link #KEY_TIMER_ID}.
      *
      * @param ctx The device's currently executing HTTP request.
-     * @param tenantId The tenant that the device belongs to.
-     * @param deviceId The identifier of the device.
-     * @param responseReady A future to complete when the timer fires.
-     * @param delaySecs The number of seconds after which the timer should fire.
+     * @param responseReady The future to complete when the time has expired.
+     * @param delaySecs The number of seconds to wait for a command.
      */
     private void addCommandReceptionTimer(
             final RoutingContext ctx,
-            final String tenantId,
-            final String deviceId,
             final Future<Void> responseReady,
             final long delaySecs) {
 
         final Long timerId = ctx.vertx().setTimer(delaySecs * 1000L, id -> {
 
-            LOG.trace("command reception timer [id: {}] fired", id);
+            LOG.trace("time to wait [{}s] for command expired [timer id: {}]", delaySecs, id);
 
             if (responseReady.isComplete()) {
+                // a command has been sent to the device already
                 LOG.trace("response already sent, nothing to do ...");
             } else {
-                // the response hasn't been sent yet
-                responseReady.tryComplete();
-                closeCommandConsumer(tenantId, deviceId);
+                // no command to be sent,
+                // send empty response
+                responseReady.complete();
             }
         });
 

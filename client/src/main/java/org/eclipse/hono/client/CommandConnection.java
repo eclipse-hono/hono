@@ -27,22 +27,35 @@ import org.eclipse.hono.config.ClientConfigProperties;
 public interface CommandConnection extends HonoClient {
 
     /**
-     * Gets a command consumer for a device.
+     * Creates a command consumer for a device.
      * <p>
-     * Implementations may choose to cache consumers for devices and
-     * return a cached instance instead of creating a new consumer on
-     * each invocation.
+     * For each device only one command consumer may be active at any given time.
+     * It is the responsibility of the calling code to properly close a consumer
+     * once it is no longer needed. The preferred way of doing so is to invoke the
+     * instance's {@link CommandConsumer#close(Handler)} method. Alternatively, if
+     * no reference to the instance is held, the {@link #closeCommandConsumer(String, String)}
+     * method can be used instead.
      * 
      * @param tenantId The tenant to consume commands from.
      * @param deviceId The device for which the consumer will be created.
      * @param commandHandler The handler to invoke with every command received.
      * @param remoteCloseHandler A handler to be invoked after the link has been closed
      *                     at the peer's request.
-     * @return A future that will complete with the consumer once the link has been established. The future will fail if
-     *         the link cannot be established, e.g. because this client is not connected.
-     * @throws NullPointerException if tenantId, deviceId or messageConsumer is {@code null}.
+     * @return A future indicating the outcome of the operation.
+     *         <p>
+     *         The future will be completed with the newly created consumer once the link
+     *         has been established.
+     *         <p>
+     *         The future will be failed with
+     *         <ul>
+     *         <li>a {@link ResourceConflictException} if there already is
+     *         a command consumer active for the given device</li>
+     *         <li>a {@link ServiceInvocationException} with an error code indicating
+     *         the cause of the failure</li>
+     *         </ul>
+     * @throws NullPointerException if any of tenant, device ID or message consumer are {@code null}.
      */
-    Future<MessageConsumer> getOrCreateCommandConsumer(
+    Future<MessageConsumer> createCommandConsumer(
             String tenantId,
             String deviceId,
             Handler<CommandContext> commandHandler,
@@ -60,10 +73,15 @@ public interface CommandConnection extends HonoClient {
 
     /**
      * Gets a sender for sending command responses to a business application.
+     * <p>
+     * It is the responsibility of the calling code to properly close the
+     * link by invoking {@link CommandResponseSender#close(Handler)}
+     * once the sender is no longer needed anymore.
      * 
      * @param tenantId The ID of the tenant to send the command responses for.
      * @param replyId The ID used to build the reply address as {@code control/tenantId/replyId}.
-     * @return A future that will complete with the sender once the link has been established. The future will fail if
+     * @return A future that will complete with the sender once the link has been established.
+     *         The future will be failed with a {@link ServiceInvocationException} if
      *         the link cannot be established, e.g. because this client is not connected.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
