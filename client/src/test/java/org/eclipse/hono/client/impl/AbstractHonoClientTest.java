@@ -14,6 +14,8 @@
 package org.eclipse.hono.client.impl;
 
 import static org.hamcrest.CoreMatchers.is;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -27,16 +29,18 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.net.HttpURLConnection;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
+import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
 import org.apache.qpid.proton.amqp.transport.AmqpError;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
+import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
-import org.eclipse.hono.client.impl.AbstractHonoClient;
-import org.eclipse.hono.client.impl.HonoClientUnitTestHelper;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.junit.Before;
 import org.junit.Rule;
@@ -253,4 +257,58 @@ public class AbstractHonoClientTest {
         verify(closeHook, never()).handle(anyString());
     }
 
+    /**
+     * Verifies that the given application properties are propagated to
+     * the message.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testApplicationPropertiesAreSetAtTheMessage(final TestContext ctx) {
+
+        final Message msg = mock(Message.class);
+        final Map<String, Object> applicationProps = new HashMap<>();
+        applicationProps.put("key", "value");
+        applicationProps.put("filterIt", "otherValue");
+
+        final ArgumentCaptor<ApplicationProperties> applicationPropsCaptor = ArgumentCaptor.forClass(ApplicationProperties.class);
+
+        AbstractHonoClient.setApplicationProperties(msg, applicationProps);
+
+        verify(msg).setApplicationProperties(applicationPropsCaptor.capture());
+        assertNotNull(applicationPropsCaptor.getValue());
+        assertNotNull(applicationPropsCaptor.getValue().getValue());
+        assertTrue(applicationPropsCaptor.getValue().getValue().size() == 2);
+        assertEquals(applicationPropsCaptor.getValue().getValue().get("key"), "value");
+        assertEquals(applicationPropsCaptor.getValue().getValue().get("filterIt"), "otherValue");
+
+    }
+
+    /**
+     * Verifies that a predicate based filter for application properties determines which properties are propagated to
+     * the message.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testPredicateBasedFilterForSettingApplicationPropertiesAtTheMessage(final TestContext ctx) {
+
+        final Message msg = mock(Message.class);
+        final Map<String, Object> applicationProps = new HashMap<>();
+        applicationProps.put("key", "value");
+        applicationProps.put("filterIt", "otherValue");
+
+        final ArgumentCaptor<ApplicationProperties> applicationPropsCaptor = ArgumentCaptor.forClass(ApplicationProperties.class);
+
+        AbstractHonoClient.setApplicationProperties(msg, applicationProps, key -> !key.equals("filterIt"));
+
+        verify(msg).setApplicationProperties(applicationPropsCaptor.capture());
+        assertNotNull(applicationPropsCaptor.getValue());
+        assertNotNull(applicationPropsCaptor.getValue().getValue());
+        assertTrue(applicationPropsCaptor.getValue().getValue().size() == 1);
+        assertEquals(applicationPropsCaptor.getValue().getValue().get("key"), "value");
+
+    }
 }

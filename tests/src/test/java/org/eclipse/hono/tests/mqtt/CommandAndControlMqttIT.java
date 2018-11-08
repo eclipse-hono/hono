@@ -230,13 +230,5 @@ public class CommandAndControlMqttIT extends MqttTestBase {
         sender.get().sendAndWaitForOutcome(messageWithoutId).setHandler(ctx.asyncAssertFailure(t -> {
             ctx.assertTrue(t instanceof ClientErrorException);
         }));
-
-        // send a message without reply-to address
-        final Message messageWithoutReplyTo = ProtonHelper.message("input data");
-        messageWithoutReplyTo.setSubject("setValue");
-        messageWithoutReplyTo.setMessageId("message-id");
-        sender.get().sendAndWaitForOutcome(messageWithoutReplyTo).setHandler(ctx.asyncAssertFailure(t -> {
-            ctx.assertTrue(t instanceof ClientErrorException);
-        }));
     }
 }

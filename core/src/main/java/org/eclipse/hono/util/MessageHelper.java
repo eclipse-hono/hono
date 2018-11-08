@@ -16,6 +16,7 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -105,6 +106,11 @@ public final class MessageHelper {
      * reported the data belongs to.
      */
     public static final String APP_PROPERTY_TENANT_ID = "tenant_id";
+
+    /**
+     * The name of the AMQP 1.0 message application property denoting that a request does not expect a response.
+     */
+    public static final String APP_PROPERTY_ONE_WAY_REQUEST = "one_way_req";
 
     /**
      * The AMQP 1.0 <em>absolute-expiry-time</em> message property.
@@ -478,6 +484,22 @@ public final class MessageHelper {
      */
     public static Integer getTimeUntilDisconnect(final Message msg) {
         return getApplicationProperty(msg.getApplicationProperties(), APP_PROPERTY_DEVICE_TTD, Integer.class);
+    }
+
+    /**
+     * Returns {@code true} if the given property map contains the key for declaring the message to be
+     * <em>one-way</em>, i.e. that no response is expected.
+     * @param appProperties The application properties for the message (that may contain a {@link #APP_PROPERTY_ONE_WAY_REQUEST} property). The map may be null.
+     *
+     * @return {@code true} if the one-way property is found, {@code false} otherwise.
+     */
+    public static boolean isOneWay(final Map<String, Object> appProperties) {
+        return Optional.ofNullable(appProperties).
+                map(v ->
+                        Optional.ofNullable(appProperties.get(APP_PROPERTY_ONE_WAY_REQUEST)).
+                                map(val -> (Boolean) val).
+                                orElse(false)
+        ).orElse(false);
     }
 
     /**

@@ -16,11 +16,15 @@ package org.eclipse.hono.util;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 
 import org.apache.qpid.proton.message.Message;
 import org.junit.Test;
 
 import io.vertx.proton.ProtonHelper;
+
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Tests MessageHelper.
@@ -79,4 +83,19 @@ public class MessageHelperTest {
         assertNull(msg.getApplicationProperties());
     }
 
+    /**
+     * Verifies that the helper detects a one-way message by the appropriate application property key.
+     */
+    @Test
+    public void testOneWayMessageIsDetected() {
+
+        assertTrue(!MessageHelper.isOneWay(null));
+
+        final Map<String, Object> appProperties = new HashMap<>();
+        assertTrue(!MessageHelper.isOneWay(appProperties));
+        appProperties.put(MessageHelper.APP_PROPERTY_ONE_WAY_REQUEST, Boolean.TRUE);
+        assertTrue(MessageHelper.isOneWay(appProperties));
+        appProperties.put(MessageHelper.APP_PROPERTY_ONE_WAY_REQUEST, Boolean.FALSE);
+        assertTrue(!MessageHelper.isOneWay(appProperties));
+    }
 }

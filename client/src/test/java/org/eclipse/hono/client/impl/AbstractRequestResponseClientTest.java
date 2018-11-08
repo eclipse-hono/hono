@@ -23,9 +23,11 @@ import static org.mockito.Mockito.*;
 import java.net.HttpURLConnection;
 import java.time.Duration;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 
 import io.vertx.core.buffer.Buffer;
+import org.apache.qpid.proton.amqp.messaging.Accepted;
 import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.amqp.messaging.Rejected;
 import org.apache.qpid.proton.amqp.transport.Target;
@@ -33,9 +35,6 @@ import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.cache.ExpiringValueCache;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.client.ServerErrorException;
-import org.eclipse.hono.client.impl.AbstractRequestResponseClient;
-import org.eclipse.hono.client.impl.HonoClientUnitTestHelper;
-import org.eclipse.hono.client.impl.SimpleRequestResponseResult;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.MessageHelper;
@@ -417,6 +416,40 @@ public class AbstractRequestResponseClientTest  {
         // THEN the response is not put to the cache
         invocation.await();
         verify(cache, never()).put(eq("cacheKey"), any(SimpleRequestResponseResult.class), any(Duration.class));
+    }
+
+    /**
+     * Verifies that the client succeeds the result handler if the peer accepts
+     * the request message for a one-way request.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    @Test
+    public void testCreateAndSendOneWayRequestSucceedsOnAcceptedMessage(final TestContext ctx) {
+
+        // GIVEN a request-response client that times out requests after 200 ms
+        client.setRequestTimeout(200);
+
+        // WHEN sending a one-way request message with some headers and payload
+        final Async sendSuccess = ctx.async();
+        final JsonObject payload = new JsonObject().put("key", "value");
+        final Map<String, Object> applicationProps = new HashMap<>();
+        applicationProps.put(MessageHelper.APP_PROPERTY_ONE_WAY_REQUEST, Boolean.TRUE);
+
+        client.createAndSendRequest("get", applicationProps, payload.toBuffer(), ctx.asyncAssertSuccess(t -> {
+            sendSuccess.complete();
+        }));
+        // and the peer accepts the message
+        final Accepted accepted = new Accepted();
+        final ProtonDelivery delivery = mock(ProtonDelivery.class);
+        when(delivery.getRemoteState()).thenReturn(accepted);
+        final ArgumentCaptor<Handler> dispositionHandlerCaptor = ArgumentCaptor.forClass(Handler.class);
+        verify(sender).send(any(Message.class), dispositionHandlerCaptor.capture());
+        dispositionHandlerCaptor.getValue().handle(delivery);
+
+        // THEN the result handler is succeeded
+        sendSuccess.await();
     }
 
     private AbstractRequestResponseClient<SimpleRequestResponseResult> getClient(final String tenant, final ProtonSender sender, final ProtonReceiver receiver) {

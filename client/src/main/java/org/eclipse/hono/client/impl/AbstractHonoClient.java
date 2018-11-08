@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Predicate;
 
 import javax.net.ssl.HttpsURLConnection;
 
@@ -252,9 +253,11 @@ public abstract class AbstractHonoClient {
         });
         res.setHandler(closeHandler);
     }
+
     /**
      * Set the application properties for a Proton Message but do a check for all properties first if they only contain
-     * values that the AMQP 1.0 spec allows.
+     * values that the AMQP 1.0 spec allows. By providing an (optional) predicate the keys to use as application
+     * property can be filtered.
      *
      * @param msg The Proton message. Must not be null.
      * @param properties The map containing application properties.
@@ -262,6 +265,23 @@ public abstract class AbstractHonoClient {
      * @throws IllegalArgumentException if the properties contain any value that AMQP 1.0 disallows.
      */
     protected static final void setApplicationProperties(final Message msg, final Map<String, ?> properties) {
+        setApplicationProperties(msg, properties, null);
+    }
+
+    /**
+     * Set the application properties for a Proton Message but do a check for all properties first if they only contain
+     * values that the AMQP 1.0 spec allows. By providing an (optional) predicate the keys to use as application
+     * property can be filtered.
+     *
+     * @param msg The Proton message. Must not be null.
+     * @param properties The map containing application properties.
+     * @param propertiesToInclude An optional predicate that returns {@code true} for all keys from the properties map
+     *                            that shall be set as application property.
+     *                            If not present, all property keys are set as application properties.
+     * @throws NullPointerException if the message passed in is null.
+     * @throws IllegalArgumentException if the properties contain any value that AMQP 1.0 disallows.
+     */
+    protected static final void setApplicationProperties(final Message msg, final Map<String, ?> properties, final Predicate<String> propertiesToInclude) {
         if (properties != null) {
             final Map<String, Object> propsToAdd = new HashMap<>();
             // check the three types not allowed by AMQP 1.0 spec for application properties (list, map and array)
@@ -275,7 +295,9 @@ public abstract class AbstractHonoClient {
                         throw new IllegalArgumentException(String.format("Application property %s can't be an Array", entry.getKey()));
                     }
                 }
-                propsToAdd.put(entry.getKey(), entry.getValue());
+                if (Optional.ofNullable(propertiesToInclude).map(predicate -> predicate.test(entry.getKey())).orElse(true)) {
+                    propsToAdd.put(entry.getKey(), entry.getValue());
+                }
             }
 
             final ApplicationProperties applicationProperties = new ApplicationProperties(propsToAdd);

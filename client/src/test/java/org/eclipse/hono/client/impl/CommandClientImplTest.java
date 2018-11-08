@@ -15,7 +15,9 @@ package org.eclipse.hono.client.impl;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -41,7 +43,6 @@ import io.vertx.proton.ProtonSender;
 
 import java.util.HashMap;
 import java.util.Map;
-
 
 /**
  * Tests verifying behavior of {@link CommandClientImpl}.
@@ -112,6 +113,41 @@ public class CommandClientImplTest {
         assertThat(messageCaptor.getValue().getContentType(), is("text/plain"));
         assertThat(messageCaptor.getValue().getReplyTo(),
                 is(String.format("%s/%s/%s/%s", client.getName(), Constants.DEFAULT_TENANT, DEVICE_ID, REPLY_ID)));
+        assertNotNull(messageCaptor.getValue().getApplicationProperties());
+        assertThat(messageCaptor.getValue().getApplicationProperties().getValue().get("appKey"), is("appValue"));
+    }
+
+    /**
+     * Verifies that a one-way command sends a message with an empty reply-to property and a UUID as correlationId.
+     *
+     * <ul>
+     * <li>subject set to given command</li>
+     * <li>message-id not null</li>
+     * <li>content-type set to given type</li>
+     * <li>reply-to address set to {@code null}</li>
+     * <li>correlationId set to a UUID</li>
+     * </ul>
+     *
+     * @param ctx The vert.x test context.
+     */
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testSendOneWayCommandSetsCorrelationIdAndEmptyReplyTo(final TestContext ctx) {
+        final Map<String, Object> applicationProperties = new HashMap<String, Object>();
+        applicationProperties.put("appKey", "appValue");
+
+        client.sendOneWayCommand("doSomething", "text/plain", Buffer.buffer("payload"), applicationProperties);
+        final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
+        verify(sender).send(messageCaptor.capture(), any(Handler.class));
+        assertThat(messageCaptor.getValue().getSubject(), is("doSomething"));
+        assertNotNull(messageCaptor.getValue().getMessageId());
+        assertThat(messageCaptor.getValue().getContentType(), is("text/plain"));
+        assertNull(messageCaptor.getValue().getReplyTo());
+        final Object correlationId = messageCaptor.getValue().getCorrelationId();
+        assertNotNull(correlationId);
+        assertTrue(correlationId instanceof String);
+        // assume a minimal length of 8 for a UUID...
+        assertTrue(((String) correlationId).length() > 7);
         assertNotNull(messageCaptor.getValue().getApplicationProperties());
         assertThat(messageCaptor.getValue().getApplicationProperties().getValue().get("appKey"), is("appValue"));
     }

@@ -68,4 +68,44 @@ public interface CommandClient extends RequestResponseClient {
      * @see RequestResponseClient#setRequestTimeout(long)
      */
     Future<BufferResult> sendCommand(String command, String contentType, Buffer data, Map<String, Object> properties);
+
+    /**
+     * Sends a <em>one-way command</em> to a device, i.e. there is no response expected from the device.
+     * <p>
+     * A device needs to be (successfully) registered before a client can upload
+     * any data for it. The device also needs to be connected for a successful delivery.
+     *
+     * @param command The one-way command name.
+     * @param data The command data to send to the device or {@code null} if the one-way command has no input data.
+     * @return A future indicating the result of the operation.
+     *         <p>
+     *         The future will succeed with the status code from the protocol adapter that received the one-way command.
+     *         <p>
+     *         If the one-way command could not be processed by the protocol adapter, the future will fail with a {@link ServiceInvocationException} containing
+     *         the (error) status code. Status codes are defined at <a href="https://www.eclipse.org/hono/api/command-and-control-api">Command and Control API</a>.
+     * @throws NullPointerException if command is {@code null}.
+     * @see RequestResponseClient#setRequestTimeout(long)
+     */
+    Future<Integer> sendOneWayCommand(String command, Buffer data);
+
+    /**
+     * Sends a <em>one-way command</em> to a device, i.e. there is no response from the device expected.
+     * <p>
+     * A device needs to be (successfully) registered before a client can upload
+     * any data for it. The device also needs to be connected for a successful delivery.
+     *
+     * @param command The one-way command name.
+     * @param contentType The type of the data submitted as part of the one-way command or {@code null} if unknown.
+     * @param data The command data to send to the device or {@code null} if the command has no input data.
+     * @param properties The headers to include in the one-way command message as AMQP application properties.
+     * @return A future indicating the result of the operation.
+     *         <p>
+     *         The future will succeed with the status code from the protocol adapter that received the one-way command.
+     *         <p>
+     *         If the one-way command could not be processed by the protocol adapter, the future will fail with a {@link ServiceInvocationException} containing
+     *         the (error) status code. Status codes are defined at <a href="https://www.eclipse.org/hono/api/command-and-control-api">Command and Control API</a>.
+     * @throws NullPointerException if oneWayCommand is {@code null}.
+     * @see RequestResponseClient#setRequestTimeout(long)
+     */
+    Future<Integer> sendOneWayCommand(String command, String contentType, Buffer data, Map<String, Object> properties);
 }

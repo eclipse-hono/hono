@@ -20,6 +20,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Predicate;
 
 import org.apache.qpid.proton.amqp.messaging.Accepted;
 import org.apache.qpid.proton.amqp.messaging.Rejected;
@@ -63,8 +64,20 @@ import io.vertx.proton.ProtonSender;
  * <p>
  * Subclasses only need to implement some abstract helper methods (see the method descriptions) and their own
  * API specific methods. This allows for implementation classes that focus on the API specific code.
- * 
- * @param <R> The type of result this client expects the peer to return.
+ * <p>
+ * A response consists of
+ * <ul>
+ *     <li>a payload</li>
+ *     <li>a status code (denoting the outcome of the request)</li>
+ * </ul>
+ *
+ * If there is no response expected from the peer, there will be only the status code and the payload will be empty.
+ * A request that does not expect a response from the peer can be invoked by providing a specific application property {@link MessageHelper#APP_PROPERTY_ONE_WAY_REQUEST}
+ * when sending a request. This particular property will not be transfered as application property - the <em>reply-to</em>
+ * system property is left empty instead. The status code will be purely based on the success of the delivery of the
+ * request then.
+ *
+ * @param <R> The type of result this client expects the peer to return (if the request is not a <em>one-way</em> request).
  *
  */
 public abstract class AbstractRequestResponseClient<R extends RequestResponseResult<?>>
@@ -502,15 +515,24 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      * @return The Proton message constructed from the provided parameters.
      * @throws NullPointerException if the subject is {@code null}.
      * @throws IllegalArgumentException if the application properties contain not AMQP 1.0 compatible values
-     *                  (see {@link AbstractHonoClient#setApplicationProperties(Message, Map)}
+     *                  (see {@link AbstractHonoClient#setApplicationProperties(Message, Map, Predicate)})
      */
     private Message createMessage(final String subject, final Map<String, Object> appProperties) {
 
         Objects.requireNonNull(subject);
         final Message msg = ProtonHelper.message();
+
+        if (MessageHelper.isOneWay(appProperties)) {
+            // set a unique correlationId for one-way requests, since there is no unique reply-id
+            msg.setCorrelationId(UUID.randomUUID().toString());
+        } else {
+            msg.setReplyTo(replyToAddress);
+        }
+
+        // do not propagate the ony way key to application properties, since the empty reply-to property already provides this information
+        AbstractHonoClient.setApplicationProperties(msg, appProperties, propKey -> !propKey.equals(MessageHelper.APP_PROPERTY_ONE_WAY_REQUEST));
+
         final String messageId = createMessageId();
-        AbstractHonoClient.setApplicationProperties(msg, appProperties);
-        msg.setReplyTo(replyToAddress);
         msg.setMessageId(messageId);
         msg.setSubject(subject);
         return msg;
@@ -590,7 +612,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      *                      for sending the request or the request timed out.
      * @throws NullPointerException if action or result handler are {@code null}.
      * @throws IllegalArgumentException if the properties contain any non-primitive typed values.
-     * @see AbstractHonoClient#setApplicationProperties(Message, Map)
+     * @see AbstractHonoClient#setApplicationProperties(Message, Map, Predicate)
      */
     protected final void createAndSendRequest(
             final String action,
@@ -618,7 +640,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      * @param cacheKey The key to use for caching the response (if the service allows caching).
      * @throws NullPointerException if action or result handler are {@code null}.
      * @throws IllegalArgumentException if the properties contain any non-primitive typed values.
-     * @see AbstractHonoClient#setApplicationProperties(Message, Map)
+     * @see AbstractHonoClient#setApplicationProperties(Message, Map, Predicate)
      */
     protected final void createAndSendRequest(
             final String action,
@@ -649,7 +671,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      * @param cacheKey The key to use for caching the response (if the service allows caching).
      * @throws NullPointerException if action or result handler are {@code null}.
      * @throws IllegalArgumentException if the properties contain any non-primitive typed values.
-     * @see AbstractHonoClient#setApplicationProperties(Message, Map)
+     * @see AbstractHonoClient#setApplicationProperties(Message, Map, Predicate)
      */
     protected final void createAndSendRequest(
             final String action,
@@ -681,7 +703,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      * @param currentSpan The <em>Opentracing</em> span used to trace the request execution.
      * @throws NullPointerException if any of action or result handler is {@code null}.
      * @throws IllegalArgumentException if the properties contain any non-primitive typed values.
-     * @see AbstractHonoClient#setApplicationProperties(Message, Map)
+     * @see AbstractHonoClient#setApplicationProperties(Message, Map, Predicate)
      */
     protected final void createAndSendRequest(
             final String action,
@@ -770,6 +792,12 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
                         LOG.trace("service has accepted request [target address: {}, subject: {}, correlation ID: {}]",
                                 targetAddress, request.getSubject(), correlationId);
                         currentSpan.log("request accepted by peer");
+                        // if no reply-to is set, the request is assumed to be one-way (no response is expected)
+                        if (request.getReplyTo() == null) {
+                            Tags.HTTP_STATUS.set(currentSpan, HttpURLConnection.HTTP_ACCEPTED);
+                            replyMap.remove(correlationId);
+                            resultHandler.handle(Future.succeededFuture());
+                        }
                     } else {
                         LOG.debug("service did not accept request [target address: {}, subject: {}, correlation ID: {}]: {}",
                                 targetAddress, request.getSubject(), correlationId, remoteState);

@@ -13,8 +13,11 @@
 
 package org.eclipse.hono.client.impl;
 
+import java.net.HttpURLConnection;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 
 import org.eclipse.hono.client.CommandClient;
 import org.eclipse.hono.client.StatusCodeMapper;
@@ -22,6 +25,7 @@ import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.BufferResult;
+import org.eclipse.hono.util.MessageHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -119,10 +123,24 @@ public class CommandClientImpl extends AbstractRequestResponseClient<BufferResul
     }
 
     /**
+     * Create application property that declares to send a <em>one-way</em> command.
+     *
+     * @param properties The headers to include in the one-way command message provided by the client.
+     * @return The application property map.
+     */
+    private static Map<String, Object> createOneWayCommandProperties(final Map<String, Object> properties) {
+        final Map<String, Object> oneWayCommandProperties =
+                Optional.ofNullable(properties).orElse(new HashMap<>(1));
+
+        oneWayCommandProperties.put(MessageHelper.APP_PROPERTY_ONE_WAY_REQUEST, Boolean.TRUE);
+        return oneWayCommandProperties;
+    }
+
+    /**
      * {@inheritDoc}
      * <p>
      * This method simply invokes {@link #sendCommand(String, String, Buffer, Map)} with
-     * {@code null} as the *content-type* and {@code null} as  *application properties*.
+     * {@code null} as the *content-type* and {@code null} as *application properties*.
      */
     @Override
     public Future<BufferResult> sendCommand(final String command, final Buffer data) {
@@ -150,6 +168,24 @@ public class CommandClientImpl extends AbstractRequestResponseClient<BufferResul
                 throw StatusCodeMapper.from(response);
             }
         });
+    }
+
+    @Override
+    public Future<Integer> sendOneWayCommand(final String command, final Buffer data) {
+        return sendOneWayCommand(command, null, data, null);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public Future<Integer> sendOneWayCommand(final String command, final String contentType, final Buffer data, final Map<String, Object> properties) {
+        Objects.requireNonNull(command);
+
+        final Future<BufferResult> responseTracker = Future.future();
+
+        createAndSendRequest(command, createOneWayCommandProperties(properties), data, contentType, responseTracker.completer(), null);
+        return responseTracker.map(result -> HttpURLConnection.HTTP_ACCEPTED);
     }
 
     /**
