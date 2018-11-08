@@ -72,7 +72,12 @@ public abstract class StatusCodeMapper {
         if (200 <= statusCode && statusCode < 300) {
             throw new IllegalArgumentException("status code " + statusCode + " does not represent an error");
         } else if (400 <= statusCode && statusCode < 500) {
-            return new ClientErrorException(statusCode, detailMessage);
+            switch(statusCode) {
+            case HttpURLConnection.HTTP_CONFLICT:
+                return new ResourceConflictException(detailMessage);
+            default:
+                return new ClientErrorException(statusCode, detailMessage);
+            }
         } else if (500 <= statusCode && statusCode < 600) {
             return new ServerErrorException(statusCode, detailMessage);
         } else {
