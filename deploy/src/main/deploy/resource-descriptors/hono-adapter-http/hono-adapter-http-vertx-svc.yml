@@ -6,6 +6,7 @@ metadata:
     app: hono-adapter-http-vertx
     version: "${project.version}"
     group: ${project.groupId}
+    hono-metrics: prometheus
   name: hono-adapter-http-vertx
 spec:
   ports:
@@ -19,6 +20,8 @@ spec:
     port: 8443
     protocol: TCP
     targetPort: 8443
+  - name: actuator
+    port: 8081
   selector:
     app: hono-adapter-http-vertx
     group: ${project.groupId}

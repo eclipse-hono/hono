@@ -6,6 +6,7 @@ metadata:
     app: hono-adapter-mqtt-vertx
     version: "${project.version}"
     group: ${project.groupId}
+    hono-metrics: prometheus
   name: hono-adapter-mqtt-vertx
 spec:
   ports:
@@ -19,6 +20,8 @@ spec:
     port: 8883
     protocol: TCP
     targetPort: 8883
+  - name: actuator
+    port: 8081
   selector:
     app: hono-adapter-mqtt-vertx
     group: ${project.groupId}

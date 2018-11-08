@@ -10,14 +10,14 @@ to communicate with each other.
 
 ## Prerequisites
 
-The main prerequisite for this kind of deployment is to have an available Kubernetes cluster. For a local development, it's pretty simple having such cluster using Minikube 
+The main prerequisite for this kind of deployment is to have an available Kubernetes cluster, running version 1.11.x or newer. For a local development, it's pretty simple having such cluster using Minikube 
 which is a tool that helps you run Kubernetes locally by running a single-node Kubernetes cluster inside a VM. Follow [this guide](https://kubernetes.io/docs/getting-started-guides/minikube/)
 for installing and having Minikube up and running.
 
 The other prerequisite is to have the Kubectl command line tool for interacting with the Kubernetes cluster. Follow [this guide](https://kubernetes.io/docs/tasks/tools/install-kubectl/) 
 for installing and configuring such a tool.
 
-After launching Minikube and before building the Eclipse Hono images, it's necessary to execute the following command :
+After launching Minikube and before building the Eclipse Hono images, it's necessary to execute the following command:
 
 ~~~sh
 $ eval $(minikube docker-env)
@@ -27,7 +27,7 @@ In this way, the `DOCKER_HOST` environment variable is set to the Docker daemon 
 such daemon will be used and the final images will be available inside the Minikube VM, ready for the deployment.
 
 ~~~sh
-~/hono$ mvn clean install -Pbuild-docker-image
+~/hono$ mvn clean install -Pbuild-docker-image,metrics-prometheus
 ~~~
 
 ## Script based Deployment

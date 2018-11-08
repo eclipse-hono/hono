@@ -6,6 +6,7 @@ metadata:
     app: hono-adapter-kura
     version: "${project.version}"
     group: ${project.groupId}
+    hono-metrics: prometheus
   name: hono-adapter-kura
 spec:
   ports:
@@ -19,6 +20,8 @@ spec:
     port: 8883
     protocol: TCP
     targetPort: 8883
+  - name: actuator
+    port: 8081
   selector:
     app: hono-adapter-kura
     group: ${project.groupId}
