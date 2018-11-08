@@ -32,7 +32,7 @@ If you do not already have a working Maven installation on your system, please f
 
 Then run the following from the project's root folder
 
-    ~/hono$ mvn clean install -Ddocker.host=tcp://${host}:${port} -Pbuild-docker-image
+    ~/hono$ mvn clean install -Ddocker.host=tcp://${host}:${port} -Pbuild-docker-image,metrics-prometheus
 
 with `${host}` and `${port}` reflecting the name/IP address and port of the host where Docker is running on. This will build all libraries, Docker images and example code. If you are running on Linux and Docker is installed locally or you have set the `DOCKER_HOST` environment variable, you can omit the `-Ddocker.host` property definition.
 
@@ -105,7 +105,7 @@ In order to receive and log both telemetry and event messages, run the client fr
 
 ~~~sh
 ~/hono/cli$ mvn spring-boot:run -Drun.arguments=--hono.client.host=localhost,--hono.client.username=consumer@HONO,--hono.client.password=verysecret
-~~~ 
+~~~
 
 {{% warning %}}
 Replace *localhost* with the name or IP address of the host that Docker is running on.

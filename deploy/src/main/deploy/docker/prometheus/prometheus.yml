@@ -1,0 +1,17 @@
+
+global:
+  scrape_interval: 5s
+
+scrape_configs:
+
+- job_name: hono
+  metrics_path: /prometheus
+  static_configs:
+    - targets:
+      - hono-service-auth:8081
+      - hono-service-device-registry:8081
+      - hono-adapter-amqp-vertx:8081
+      - hono-adapter-coap-vertx:8081
+      - hono-adapter-http-vertx:8081
+      - hono-adapter-mqtt-vertx:8081
+      - hono-adapter-kura:8081

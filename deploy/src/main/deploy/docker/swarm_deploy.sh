@@ -63,13 +63,21 @@ docker network create --label project=$NS --driver overlay $NS
 docker secret create -l project=$NS trusted-certs.pem $CERTS/trusted-certs.pem
 
 echo
-echo Deploying Influx DB and Grafana ...
-docker secret create -l project=$NS influxdb.conf $SCRIPTPATH/../influxdb.conf
-docker service create $CREATE_OPTIONS --name influxdb -p 8086:8086 \
-  --secret influxdb.conf \
-  --limit-memory 256m \
-  influxdb:${influxdb.version} -config /run/secrets/influxdb.conf
+echo Deploying Prometheus ...
+docker secret create -l project=$NS prometheus.yml $SCRIPTPATH/prometheus/prometheus.yml
+docker service create $CREATE_OPTIONS --name prometheus-operated \
+  -p 9090:9090 \
+  --limit-memory 512m \
+  --secret prometheus.yml \
+  --entrypoint "/bin/prometheus" \
+  ${prometheus.image.name} \
+  --config.file=/run/secrets/prometheus.yml \
+  --storage.tsdb.path=/prometheus \
+  --storage.tsdb.retention=8h
+echo ... done
 
+echo
+echo Deploying Grafana ...
 docker config create -l project=$NS filesystem-provisioner.yaml $SCRIPTPATH/grafana/provisioning/dashboards/filesystem-provisioner.yaml
 docker config create -l project=$NS grafana_dashboard.json $SCRIPTPATH/grafana/dashboard-definitions/grafana_dashboard.json
 docker config create -l project=$NS influxdb.yaml $SCRIPTPATH/grafana/provisioning/datasources/influxdb.yaml
@@ -143,7 +151,7 @@ docker service create $CREATE_OPTIONS --name hono-service-auth \
   --limit-memory 196m \
   --env _JAVA_OPTIONS="${default-java-options}" \
   --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-service-auth-config.yml \
-  --env SPRING_PROFILES_ACTIVE=authentication-impl,dev \
+  --env SPRING_PROFILES_ACTIVE=authentication-impl,dev,prometheus \
   --env LOGGING_CONFIG=classpath:logback-spring.xml \
   ${docker.image.org-name}/hono-service-auth:${project.version}
 echo ... done
@@ -177,7 +185,7 @@ docker service create $CREATE_OPTIONS --name hono-service-device-registry -p 256
   --env _JAVA_OPTIONS="${default-java-options}" \
   --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-service-device-registry-config.yml \
   --env LOGGING_CONFIG=classpath:logback-spring.xml \
-  --env SPRING_PROFILES_ACTIVE=dev \
+  --env SPRING_PROFILES_ACTIVE=dev,prometheus \
   --mount type=volume,source=device-registry,target=/var/lib/hono/device-registry \
   ${docker.image.org-name}/hono-service-device-registry:${project.version}
 
@@ -198,7 +206,7 @@ docker service create $CREATE_OPTIONS --name hono-service-messaging -p 5671:5671
   --env _JAVA_OPTIONS="${default-java-options}" \
   --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-service-messaging-config.yml \
   --env LOGGING_CONFIG=classpath:logback-spring.xml \
-  --env SPRING_PROFILES_ACTIVE=dev \
+  --env SPRING_PROFILES_ACTIVE=dev,prometheus \
   ${docker.image.org-name}/hono-service-messaging:${project.version}
 echo ... done
 
@@ -217,7 +225,7 @@ docker service create $CREATE_OPTIONS --name hono-adapter-http-vertx -p 8080:808
   --limit-memory 256m \
   --env _JAVA_OPTIONS="${default-java-options}" \
   --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-adapter-http-vertx-config.yml \
-  --env SPRING_PROFILES_ACTIVE=dev \
+  --env SPRING_PROFILES_ACTIVE=dev,prometheus \
   --env LOGGING_CONFIG=classpath:logback-spring.xml \
   ${docker.image.org-name}/hono-adapter-http-vertx:${project.version}
 echo ... done
@@ -237,7 +245,7 @@ docker service create $CREATE_OPTIONS --name hono-adapter-mqtt-vertx -p 1883:188
   --limit-memory 256m \
   --env _JAVA_OPTIONS="${default-java-options}" \
   --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-adapter-mqtt-vertx-config.yml \
-  --env SPRING_PROFILES_ACTIVE=dev \
+  --env SPRING_PROFILES_ACTIVE=dev,prometheus \
   --env LOGGING_CONFIG=classpath:logback-spring.xml \
   ${docker.image.org-name}/hono-adapter-mqtt-vertx:${project.version}
 echo ... done
@@ -257,7 +265,7 @@ docker service create $CREATE_OPTIONS --name hono-adapter-amqp-vertx -p 4040:567
   --limit-memory 256m \
   --env _JAVA_OPTIONS="${default-java-options}" \
   --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-adapter-amqp-vertx-config.yml \
-  --env SPRING_PROFILES_ACTIVE=dev \
+  --env SPRING_PROFILES_ACTIVE=dev,prometheus \
   --env LOGGING_CONFIG=classpath:logback-spring.xml \
   ${docker.image.org-name}/hono-adapter-amqp-vertx:${project.version}
 echo ... done
@@ -277,7 +285,7 @@ docker service create $CREATE_OPTIONS --name hono-adapter-kura -p 1884:1883 -p 8
   --limit-memory 256m \
   --env _JAVA_OPTIONS="${default-java-options}" \
   --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-adapter-kura-config.yml \
-  --env SPRING_PROFILES_ACTIVE=prod \
+  --env SPRING_PROFILES_ACTIVE=prod,prometheus \
   --env LOGGING_CONFIG=classpath:logback-spring.xml \
   ${docker.image.org-name}/hono-adapter-kura:${project.version}
 echo ... done
@@ -299,7 +307,7 @@ docker service create $CREATE_OPTIONS --name hono-adapter-coap-vertx -p 5683:568
   --limit-memory 4096m \
   --env _JAVA_OPTIONS="${default-java-options}" \
   --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-adapter-coap-vertx-config.yml \
-  --env SPRING_PROFILES_ACTIVE=prod \
+  --env SPRING_PROFILES_ACTIVE=prod,prometheus \
   --env LOGGING_CONFIG=classpath:logback-spring.xml \
   ${docker.image.org-name}/hono-adapter-coap-vertx:${project.version}
 echo ... done

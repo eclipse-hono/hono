@@ -102,8 +102,8 @@ docker config rm \
   grafana_dashboard.json \
   influxdb.yaml
 
-docker service rm influxdb
-docker secret rm influxdb.conf
+docker service rm prometheus
+docker secret rm prometheus.yml
 
 docker secret rm trusted-certs.pem
 
