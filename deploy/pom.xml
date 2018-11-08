@@ -38,6 +38,9 @@
          -->
         <hono.regAssertion.sharedSecret>g#aWO!BUm7aj*#%X*VGXKFhxkhNrMNj0</hono.regAssertion.sharedSecret>
         <default-java-options>-XX:MinRAMPercentage=80 -XX:MaxRAMPercentage=80</default-java-options>
+
+        <!-- This is only used by the Docker Swarm deployment -->
+        <prometheus.image.name>prom/prometheus:v2.3.1</prometheus.image.name>
     </properties>
 
     <dependencies>
