@@ -51,6 +51,7 @@ import org.junit.rules.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.MultiMap;
 import io.vertx.core.Vertx;
@@ -668,8 +669,102 @@ public abstract class HttpTestBase {
     }
 
     /**
-     * Verifies that the HTTP adapter returns empty responses when uploading
-     * telemetry data or events with a TTD but no command is pending for the device.
+     * Verifies that the HTTP adapter returns a command in response to an initial upload request containing a TTD
+     * and immediately returns a 202 in response to consecutive upload requests which include a TTD value
+     * and which are sent before the command response to the empty notification request has been received.
+     * 
+     * @param ctx The test context.
+     */
+    @Test
+    public void testConcurrentTelemetryUploadReturnsImmediately(final TestContext ctx) {
+
+        final TenantObject tenant = TenantObject.from(tenantId, true);
+
+        // GIVEN a registered device
+        final Async setup = ctx.async();
+        final Async piggybackedRequestsReceived = ctx.async(2);
+        helper.registry.addDeviceForTenant(tenant, deviceId, PWD)
+        .compose(ok -> createConsumer(tenantId, msg -> {
+            logger.trace("received message: {}", msg);
+            TimeUntilDisconnectNotification.fromMessage(msg).ifPresent(notification -> {
+                final Integer ttd = MessageHelper.getTimeUntilDisconnect(msg);
+                logger.debug("processing piggy backed message [ttd: {}]", ttd);
+                ctx.assertEquals(tenantId, notification.getTenantId());
+                ctx.assertEquals(deviceId, notification.getDeviceId());
+                piggybackedRequestsReceived.countDown();
+            });
+        }))
+        .compose(c -> {
+            // we need to send an initial request to trigger establishment
+            // of links required for processing requests in the HTTP adapter
+            // otherwise, the second of the two consecutive upload requests
+            // might fail immediately because the links have not been established yet
+            return httpClient.create(
+                getEndpointUri(),
+                Buffer.buffer("trigger msg"),
+                MultiMap.caseInsensitiveMultiMap()
+                    .add(HttpHeaders.CONTENT_TYPE, "text/plain")
+                    .add(HttpHeaders.AUTHORIZATION, authorization)
+                    .add(HttpHeaders.ORIGIN, ORIGIN_URI)
+                    .add(Constants.HEADER_QOS_LEVEL, "1"),
+                response -> response.statusCode() >= 200 && response.statusCode() < 300);
+        })
+        .setHandler(ctx.asyncAssertSuccess(ok -> setup.complete()));
+        setup.await();
+
+        // WHEN the device sends a first upload request
+        final MultiMap requestHeaders = MultiMap.caseInsensitiveMultiMap()
+                .add(HttpHeaders.CONTENT_TYPE, "text/plain")
+                .add(HttpHeaders.AUTHORIZATION, authorization)
+                .add(HttpHeaders.ORIGIN, ORIGIN_URI)
+                .add(Constants.HEADER_TIME_TIL_DISCONNECT, "10");
+
+        final Future<MultiMap> firstRequest = httpClient.create(
+                getEndpointUri(),
+                Buffer.buffer("hello one"),
+                requestHeaders,
+                response -> response.statusCode() >= 200 && response.statusCode() < 300);
+        logger.debug("sent first request");
+        // immediately followed by a second request
+        final Future<MultiMap> secondRequest = httpClient.create(
+                getEndpointUri(),
+                Buffer.buffer("hello two"),
+                requestHeaders,
+                response -> response.statusCode() >= 200 && response.statusCode() < 300);
+        logger.debug("sent second request");
+        // wait for messages having been received
+        piggybackedRequestsReceived.await();
+        // send command but do not wait for response
+        final JsonObject inputData = new JsonObject().put(COMMAND_JSON_KEY, (int) (Math.random() * 100));
+        helper.sendCommand(tenantId, deviceId, COMMAND_TO_SEND, "application/json", inputData.toBuffer(), null, 3000);
+        logger.debug("sent command to device");
+
+        // THEN both requests succeed
+        CompositeFuture.all(firstRequest, secondRequest).map(ok -> {
+
+            // and the response to the first request contains a command
+            final MultiMap responseHeaders = firstRequest.result();
+            ctx.assertEquals(COMMAND_TO_SEND, responseHeaders.get(Constants.HEADER_COMMAND));
+            ctx.assertEquals("application/json", responseHeaders.get(HttpHeaders.CONTENT_TYPE));
+            ctx.assertNotNull(responseHeaders.get(Constants.HEADER_COMMAND_REQUEST_ID));
+
+            return null;
+
+        }).map(ok -> {
+
+            // while the response to the second request is empty
+            final MultiMap responseHeaders = secondRequest.result();
+            ctx.assertNull(responseHeaders.get(Constants.HEADER_COMMAND));
+            ctx.assertNull(responseHeaders.get(Constants.HEADER_COMMAND_REQUEST_ID));
+            ctx.assertEquals(responseHeaders.get(HttpHeaders.CONTENT_LENGTH), "0");
+            return null;
+
+        }).setHandler(ctx.asyncAssertSuccess());
+    }
+
+    /**
+     * Verifies that the HTTP adapter returns empty responses when sending consecutive requests
+     * for uploading telemetry data or events with a TTD but no command is pending for the device.
      * 
      * @param ctx The test context.
      * @throws InterruptedException if the test fails.
@@ -691,7 +786,7 @@ public abstract class HttpTestBase {
         testUploadMessages(ctx, tenantId,
                 msg -> {
                     final Integer ttd = MessageHelper.getTimeUntilDisconnect(msg);
-                    logger.trace("received telemetry message [ttd: {}]", ttd);
+                    logger.trace("received message [ttd: {}]", ttd);
                     ctx.assertNotNull(ttd);
                     final Optional<TimeUntilDisconnectNotification> notificationOpt = TimeUntilDisconnectNotification.fromMessage(msg);
                     ctx.assertTrue(notificationOpt.isPresent());
@@ -748,7 +843,7 @@ public abstract class HttpTestBase {
         testUploadMessages(ctx, tenantId,
                 msg -> {
                     final Integer ttd = MessageHelper.getTimeUntilDisconnect(msg);
-                    logger.trace("piggy backed telemetry message received: {}, ttd = {}", msg, ttd);
+                    logger.trace("piggy backed message received: {}, ttd = {}", msg, ttd);
                     final Optional<TimeUntilDisconnectNotification> notificationOpt = TimeUntilDisconnectNotification.fromMessage(msg);
                     ctx.assertTrue(notificationOpt.isPresent());
                     final TimeUntilDisconnectNotification notification = notificationOpt.get();

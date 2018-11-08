@@ -108,7 +108,7 @@ public class CommandConnectionImplTest {
         commandConnection.connect(new ProtonClientOptions())
             .compose(c -> {
                 final ArgumentCaptor<Handler<AsyncResult<ProtonReceiver>>> linkOpenHandler = ArgumentCaptor.forClass(Handler.class);
-                final Future<MessageConsumer> consumer = commandConnection.getOrCreateCommandConsumer("theTenant", "theDevice", commandHandler, closeHandler);
+                final Future<MessageConsumer> consumer = commandConnection.createCommandConsumer("theTenant", "theDevice", commandHandler, closeHandler);
                 verify(con).createReceiver("control/theTenant/theDevice");
                 verify(receiver).openHandler(linkOpenHandler.capture());
                 verify(receiver).open();
@@ -140,7 +140,7 @@ public class CommandConnectionImplTest {
         commandConnection.connect(new ProtonClientOptions())
             .compose(c -> {
                 final ArgumentCaptor<Handler<AsyncResult<ProtonReceiver>>> linkOpenHandler = ArgumentCaptor.forClass(Handler.class);
-                final Future<MessageConsumer> consumer = commandConnection.getOrCreateCommandConsumer("theTenant", "theDevice", commandHandler, closeHandler);
+                final Future<MessageConsumer> consumer = commandConnection.createCommandConsumer("theTenant", "theDevice", commandHandler, closeHandler);
                 verify(con).createReceiver(address);
                 verify(receiver).openHandler(linkOpenHandler.capture());
                 verify(receiver).open();
@@ -171,7 +171,7 @@ public class CommandConnectionImplTest {
         // has been registered
         commandConnection.connect(new ProtonClientOptions())
             .compose(c -> {
-                final Future<MessageConsumer> consumer = commandConnection.getOrCreateCommandConsumer("theTenant", "theDevice", commandHandler, closeHandler);
+                final Future<MessageConsumer> consumer = commandConnection.createCommandConsumer("theTenant", "theDevice", commandHandler, closeHandler);
                 verify(con).createReceiver(address);
                 final ArgumentCaptor<Handler<AsyncResult<ProtonReceiver>>> linkOpenHandler = ArgumentCaptor.forClass(Handler.class);
                 verify(receiver).openHandler(linkOpenHandler.capture());
@@ -210,7 +210,7 @@ public class CommandConnectionImplTest {
         // GIVEN a command consumer
         commandConnection.connect(new ProtonClientOptions())
             .compose(client -> {
-                final Future<MessageConsumer> consumer = commandConnection.getOrCreateCommandConsumer("theTenant", "theDevice", commandHandler, null);
+                final Future<MessageConsumer> consumer = commandConnection.createCommandConsumer("theTenant", "theDevice", commandHandler, null);
                 verify(con).createReceiver(address);
                 final ArgumentCaptor<Handler<AsyncResult<ProtonReceiver>>> linkOpenHandler = ArgumentCaptor.forClass(Handler.class);
                 verify(receiver).closeHandler(any(Handler.class));
@@ -231,7 +231,7 @@ public class CommandConnectionImplTest {
                 return localCloseHandler;
             }).map(ok -> {
                 // THEN the next attempt to create a command consumer for the same address
-                final Future<MessageConsumer> newConsumer = commandConnection.getOrCreateCommandConsumer("theTenant", "theDevice", commandHandler, null);
+                final Future<MessageConsumer> newConsumer = commandConnection.createCommandConsumer("theTenant", "theDevice", commandHandler, null);
                 // results in a new link to be opened
                 verify(con, times(2)).createReceiver(address);
                 final ArgumentCaptor<Handler<AsyncResult<ProtonReceiver>>> linkOpenHandler = ArgumentCaptor.forClass(Handler.class);

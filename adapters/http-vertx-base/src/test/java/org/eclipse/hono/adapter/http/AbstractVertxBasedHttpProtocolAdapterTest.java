@@ -21,6 +21,7 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -142,11 +143,17 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         when(registrationServiceClient.connect(any(Handler.class))).thenReturn(Future.succeededFuture(registrationServiceClient));
         when(registrationServiceClient.getOrCreateRegistrationClient(anyString())).thenReturn(Future.succeededFuture(regClient));
 
+        commandConsumer = mock(CommandConsumer.class);
+        doAnswer(invocation -> {
+            final Handler<AsyncResult<Void>> resultHandler = invocation.getArgument(0);
+            if (resultHandler != null) {
+                resultHandler.handle(Future.succeededFuture());
+            }
+            return null;
+        }).when(commandConsumer).close(any(Handler.class));
         commandConnection = mock(CommandConnection.class);
         when(commandConnection.connect(any(Handler.class))).thenReturn(Future.succeededFuture(commandConnection));
-        when(commandConnection.closeCommandConsumer(anyString(), anyString())).thenReturn(Future.succeededFuture());
-        commandConsumer = mock(CommandConsumer.class);
-        when(commandConnection.getOrCreateCommandConsumer(anyString(), anyString(), any(Handler.class), any(Handler.class)))
+        when(commandConnection.createCommandConsumer(anyString(), anyString(), any(Handler.class), any(Handler.class)))
             .thenReturn(Future.succeededFuture(commandConsumer));
     }
 
@@ -381,9 +388,8 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
 
         // WHEN a device publishes a telemetry message that belongs to a tenant with
         // a max TTD of 20 secs
-        when(tenantClient.get(eq("tenant"), (SpanContext) any())).thenAnswer(invocation -> {
-            return Future.succeededFuture(TenantObject.from("tenant", true).setProperty(TenantConstants.FIELD_MAX_TTD, 20));
-        });
+        when(tenantClient.get(eq("tenant"), (SpanContext) any())).thenReturn(
+            Future.succeededFuture(TenantObject.from("tenant", true).setProperty(TenantConstants.FIELD_MAX_TTD, 20)));
 
         // and includes a TTD value of 40 in its request
         final Buffer payload = Buffer.buffer("some payload");

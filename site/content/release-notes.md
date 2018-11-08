@@ -24,6 +24,13 @@ title = "Release Notes"
   Hono clients from the current protocol adapter instance, in the same threading
   context. The default implementation of the *connection events* still defaults
   to the logging producer.
+* The `CommandConnection.getOrCreateCommandConsumer` method has been renamed to `createCommandConsumer`. The new name
+  also reflects a change in the method's semantics. The method will no longer return an already existing instance of a command
+  consumer for a given device but will instead fail the returned future with a `org.eclipse.hono.client.ResourceConflictException`
+  to indicate that a consumer for the given device is already in use. The original behavior allowed an implementation to return
+  a consumer that was scoped to another message handler than the one passed into the method as an argument. However, client code
+  had no chance to determine whether it got back a newly created instance or an existing one. This has been resolved with the
+  new method semantics.
 
 ### Deprecations
 

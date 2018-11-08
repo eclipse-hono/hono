@@ -694,7 +694,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         final MqttEndpoint endpoint = mockEndpoint();
 
         // WHEN a device subscribes to commands
-        when(commandConnection.getOrCreateCommandConsumer(eq("tenant"), eq("deviceId"), any(Handler.class), any(Handler.class))).thenReturn(
+        when(commandConnection.createCommandConsumer(eq("tenant"), eq("deviceId"), any(Handler.class), any(Handler.class))).thenReturn(
                 Future.succeededFuture(mock(MessageConsumer.class)));
         final List<MqttTopicSubscription> subscriptions = Collections.singletonList(
                 newMockTopicSubsription("control/tenant/deviceId/req/#", MqttQoS.AT_MOST_ONCE));
@@ -741,7 +741,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         subscriptions.add(newMockTopicSubsription("bumlux/+/+/#", MqttQoS.AT_MOST_ONCE));
         subscriptions.add(newMockTopicSubsription("bumlux/+/+/#", MqttQoS.AT_MOST_ONCE));
         // and for subscribing to commands
-        when(commandConnection.getOrCreateCommandConsumer(eq("tenant-1"), eq("device-A"), any(Handler.class), any(Handler.class))).thenReturn(
+        when(commandConnection.createCommandConsumer(eq("tenant-1"), eq("device-A"), any(Handler.class), any(Handler.class))).thenReturn(
                 Future.succeededFuture(mock(MessageConsumer.class)));
         subscriptions.add(newMockTopicSubsription("control/tenant-1/device-A/req/#", MqttQoS.AT_MOST_ONCE));
         subscriptions.add(newMockTopicSubsription("control/tenant-1/device-B/req/#", MqttQoS.EXACTLY_ONCE));

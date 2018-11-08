@@ -18,12 +18,13 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
+import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.CommandConnection;
-import org.eclipse.hono.client.CommandResponseSender;
-import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.CommandConsumer;
 import org.eclipse.hono.client.CommandContext;
-import org.eclipse.hono.auth.Device;
+import org.eclipse.hono.client.CommandResponseSender;
+import org.eclipse.hono.client.MessageConsumer;
+import org.eclipse.hono.client.ResourceConflictException;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.connection.ConnectionFactory;
 
@@ -83,7 +84,7 @@ public class CommandConnectionImpl extends HonoClientImpl implements CommandConn
     /**
      * {@inheritDoc}
      */
-    public final Future<MessageConsumer> getOrCreateCommandConsumer(
+    public final Future<MessageConsumer> createCommandConsumer(
             final String tenantId,
             final String deviceId,
             final Handler<CommandContext> commandConsumer,
@@ -97,8 +98,8 @@ public class CommandConnectionImpl extends HonoClientImpl implements CommandConn
             final String key = Device.asAddress(tenantId, deviceId);
             final MessageConsumer messageConsumer = commandReceivers.get(key);
             if (messageConsumer != null) {
-                log.debug("reusing existing command consumer [tenant: {}, device-id: {}]", tenantId, deviceId);
-                result.complete(messageConsumer);
+                log.debug("cannot create concurrent command consumer [tenant: {}, device-id: {}]", tenantId, deviceId);
+                result.fail(new ResourceConflictException("message consumer already in use"));
             } else {
                 createConsumer(
                         tenantId,

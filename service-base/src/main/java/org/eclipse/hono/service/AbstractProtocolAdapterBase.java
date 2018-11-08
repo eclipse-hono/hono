@@ -555,7 +555,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
             final Handler<CommandContext> commandConsumer,
             final Handler<Void> closeHandler) {
 
-        return commandConnection.getOrCreateCommandConsumer(tenantId, deviceId, commandConsumer, closeHandler);
+        return commandConnection.createCommandConsumer(tenantId, deviceId, commandConsumer, closeHandler);
     }
 
     /**

@@ -301,8 +301,8 @@ public class VertxBasedAmqpProtocolAdapterTest {
 
         // WHEN an unauthenticated device opens a receiver link with a valid source address
         final ProtonConnection deviceConnection = mock(ProtonConnection.class);
-        when(commandConnection.getOrCreateCommandConsumer(eq(TEST_TENANT_ID), eq(TEST_DEVICE), any(Handler.class), any(Handler.class))).thenReturn(
-                Future.succeededFuture(mock(MessageConsumer.class)));
+        when(commandConnection.createCommandConsumer(eq(TEST_TENANT_ID), eq(TEST_DEVICE), any(Handler.class), any(Handler.class)))
+            .thenReturn(Future.succeededFuture(mock(MessageConsumer.class)));
         final String sourceAddress = String.format("%s/%s/%s", CommandConstants.COMMAND_ENDPOINT, TEST_TENANT_ID, TEST_DEVICE);
         final ProtonSender sender = getSender(sourceAddress);
 
@@ -335,7 +335,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
         // and a device that wants to receive commands
         final ProtonConnection deviceConnection = mock(ProtonConnection.class);
         final MessageConsumer commandConsumer = mock(MessageConsumer.class);
-        when(commandConnection.getOrCreateCommandConsumer(eq(TEST_TENANT_ID), eq(TEST_DEVICE), any(Handler.class), any(Handler.class))).thenReturn(
+        when(commandConnection.createCommandConsumer(eq(TEST_TENANT_ID), eq(TEST_DEVICE), any(Handler.class), any(Handler.class))).thenReturn(
                 Future.succeededFuture(commandConsumer));
         final String sourceAddress = String.format("%s", CommandConstants.COMMAND_ENDPOINT);
         final ProtonSender sender = getSender(sourceAddress);
@@ -426,7 +426,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
 
         // that wants to receive commands
         final MessageConsumer commandConsumer = mock(MessageConsumer.class);
-        when(commandConnection.getOrCreateCommandConsumer(eq(TEST_TENANT_ID), eq(TEST_DEVICE), any(Handler.class), any(Handler.class)))
+        when(commandConnection.createCommandConsumer(eq(TEST_TENANT_ID), eq(TEST_DEVICE), any(Handler.class), any(Handler.class)))
             .thenReturn(Future.succeededFuture(commandConsumer));
         final String sourceAddress = CommandConstants.COMMAND_ENDPOINT;
         final ProtonSender sender = getSender(sourceAddress);
@@ -436,9 +436,6 @@ public class VertxBasedAmqpProtocolAdapterTest {
 
         // WHEN the connection to the device is lost
         connectionLossTrigger.handle(deviceConnection);
-//        final ArgumentCaptor<Handler<ProtonConnection>> disconnectHandler = ArgumentCaptor.forClass(Handler.class);
-//        verify(deviceConnection).disconnectHandler(disconnectHandler.capture());
-//        disconnectHandler.getValue().handle(deviceConnection);
 
         // THEN the adapter closes the command consumer
         verify(commandConsumer).close(any());
