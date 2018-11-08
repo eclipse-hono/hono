@@ -6,6 +6,7 @@ metadata:
     app: hono-adapter-amqp-vertx
     version: "${project.version}"
     group: ${project.groupId}
+    hono-metrics: prometheus
   name: hono-adapter-amqp-vertx
 spec:
   ports:
@@ -19,6 +20,8 @@ spec:
     port: 5671
     protocol: TCP
     targetPort: 5671
+  - name: actuator
+    port: 8081
   selector:
     app: hono-adapter-amqp-vertx
     group: ${project.groupId}

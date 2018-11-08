@@ -18,5 +18,6 @@ echo UNDEPLOYING ECLIPSE HONO FROM KUBERNETES
 
 # deleting Hono namespace (and implicitly all services, deployments etc)
 kubectl delete namespace $NS
+kubectl delete namespace olm
 
 echo ECLIPSE HONO UNDEPLOYED FROM KUBERNETES

@@ -6,6 +6,7 @@ metadata:
     app: hono-service-device-registry
     version: "${project.version}"
     group: ${project.groupId}
+    hono-metrics: prometheus
   name: hono-service-device-registry
 spec:
   ports:
@@ -24,6 +25,8 @@ spec:
     port: 8443
     protocol: TCP
     targetPort: 8443
+  - name: actuator
+    port: 8081
   selector:
     app: hono-service-device-registry
     group: ${project.groupId}

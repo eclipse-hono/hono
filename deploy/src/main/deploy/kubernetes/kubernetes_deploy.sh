@@ -22,16 +22,28 @@ NS=hono
 
 echo DEPLOYING ECLIPSE HONO TO KUBERNETES
 
+echo
+echo "Deploying OLM ..."
+test -d operator-lifecycle-manager || git clone https://github.com/operator-framework/operator-lifecycle-manager.git
+kubectl create -f operator-lifecycle-manager/deploy/upstream/manifests/latest/
+sleep 5 # delay and retry CRD
+kubectl create -f operator-lifecycle-manager/deploy/upstream/manifests/latest/*rh-operators.catalogsource.yaml
+sleep 5 # delay before installing Hono
+echo ... done
+
 # creating Hono namespace
 kubectl create namespace $NS
 
 echo
-echo "Deploying influxDB & Grafana ..."
+echo "Creating Prometheus operator and instance"
+kubectl create -f $RESOURCES/prometheus/operator.yml --namespace $NS
+sleep 20
+kubectl create -f $RESOURCES/prometheus/instance.yml --namespace $NS
+echo ... done
 
-kubectl create secret generic influxdb-conf \
-  --from-file=$SCRIPTPATH/../influxdb.conf \
-  --namespace $NS
-kubectl create -f $RESOURCES/influx --namespace $NS
+echo
+echo "Deploying Grafana ..."
+
 kubectl create configmap grafana-provisioning-datasources \
   --from-file=$SCRIPTPATH/grafana/provisioning/datasources \
   --namespace $NS

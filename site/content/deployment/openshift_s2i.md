@@ -401,8 +401,8 @@ Run the following commands to register the prometheus operator and create a
 new instance:
 
     oc project hono
-    oc create -f prometheus/operator.yml
-    oc create -f prometheus/instance.yml
+    oc create -f ../resource-descriptors/prometheus/operator.yml
+    oc create -f ../resource-descriptors/prometheus/instance.yml
 
 ### Setting up Grafana
 
