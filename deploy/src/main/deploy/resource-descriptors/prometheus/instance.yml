@@ -37,6 +37,8 @@ apiVersion: monitoring.coreos.com/v1
 kind: Prometheus
 metadata:
   name: prometheus
+  labels:
+    app: hono-metrics
 spec:
   serviceAccountName: prometheus
   serviceMonitorSelector:
@@ -53,6 +55,7 @@ metadata:
   name: hono
   labels:
     metrics: hono-actuator-services
+    app: hono-metrics
 spec:
   selector:
     matchLabels:
