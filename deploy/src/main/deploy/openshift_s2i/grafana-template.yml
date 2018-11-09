@@ -25,7 +25,7 @@ parameters:
 - name:           GRAFANA_VERSION
   displayName:      Grafana version
   description:      The version of Grafana to use
-  value:            5.1.4
+  value:            5.3.2
   required:         true
 - name:           VOLUME_SIZE
   displayName:      Volume Size
