@@ -28,6 +28,8 @@ import org.eclipse.hono.config.ClientConfigProperties;
  */
 public abstract class AbstractConsumer extends AbstractHonoClient implements MessageConsumer {
 
+    private Handler<String> localCloseHandler;
+
     /**
      * Creates an abstract message consumer.
      *
@@ -59,6 +61,16 @@ public abstract class AbstractConsumer extends AbstractHonoClient implements Mes
         this.receiver = receiver;
     }
 
+    /**
+     * Sets a handler which will be invoked after this consumer has been
+     * locally closed.
+     * 
+     * @param handler The handler.
+     */
+    protected void setLocalCloseHandler(final Handler<String> handler) {
+        this.localCloseHandler = handler;
+    }
+
     @Override
     public int getRemainingCredit() {
         return receiver.getCredit() - receiver.getQueued();
@@ -73,6 +85,9 @@ public abstract class AbstractConsumer extends AbstractHonoClient implements Mes
     public void close(final Handler<AsyncResult<Void>> closeHandler) {
 
         closeLinks(ok -> {
+            if (localCloseHandler != null) {
+                localCloseHandler.handle(receiver.getSource().getAddress());
+            }
             if (closeHandler != null) {
                 closeHandler.handle(Future.succeededFuture());
             }

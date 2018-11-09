@@ -74,7 +74,14 @@ public class CommandConsumer extends AbstractConsumer {
      * @param tenantId The tenant to consume commands from.
      * @param deviceId The device for which the commands should be consumed.
      * @param commandHandler The handler to invoke for each command received.
-     * @param receiverCloseHook A handler to invoke if the peer closes the receiver link unexpectedly.
+     * @param localCloseHandler A handler to be invoked after the link has been closed
+     *                     at this peer's request using the {@link #close(Handler)} method.
+     *                     The handler will be invoked with the link's source address <em>after</em>
+     *                     the link has been closed but <em>before</em> the handler that has been
+     *                     passed into the <em>close</em> method is invoked.
+     * @param remoteCloseHandler A handler to be invoked after the link has been closed
+     *                     on the remote peer's request. The handler will be invoked with the
+     *                     link's source address.
      * @param creationHandler The handler to invoke with the outcome of the creation attempt.
      * @param tracer The tracer to use for tracking the processing of received
      *               messages. If {@code null}, OpenTracing's {@code NoopTracer} will
@@ -88,7 +95,8 @@ public class CommandConsumer extends AbstractConsumer {
             final String tenantId,
             final String deviceId,
             final Handler<CommandContext> commandHandler,
-            final Handler<String> receiverCloseHook,
+            final Handler<String> localCloseHandler,
+            final Handler<String> remoteCloseHandler,
             final Handler<AsyncResult<MessageConsumer>> creationHandler,
             final Tracer tracer) {
 
@@ -98,7 +106,7 @@ public class CommandConsumer extends AbstractConsumer {
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(commandHandler);
-        Objects.requireNonNull(receiverCloseHook);
+        Objects.requireNonNull(remoteCloseHandler);
         Objects.requireNonNull(creationHandler);
 
         LOG.trace("creating new command consumer [tenant-id: {}, device-id: {}]", tenantId, deviceId);
@@ -147,14 +155,16 @@ public class CommandConsumer extends AbstractConsumer {
                         currentSpan.finish();
                     }
                 },
-                receiverCloseHook).setHandler(s -> {
+                remoteCloseHandler).setHandler(s -> {
 
                     if (s.succeeded()) {
                         final ProtonReceiver receiver = s.result();
                         LOG.debug("successfully created command consumer [tenant-id: {}, device-id: {}]", tenantId, deviceId);
                         receiverRef.set(receiver);
                         receiver.flow(1); // allow sender to sender one command
-                        creationHandler.handle(Future.succeededFuture(new CommandConsumer(context, props, receiver, tracer)));
+                        final CommandConsumer consumer = new CommandConsumer(context, props, receiver, tracer);
+                        consumer.setLocalCloseHandler(localCloseHandler);
+                        creationHandler.handle(Future.succeededFuture(consumer));
                     } else {
                         LOG.debug("failed to create command consumer [tenant-id: {}, device-id: {}]", tenantId, deviceId, s.cause());
                         creationHandler.handle(Future.failedFuture(s.cause()));

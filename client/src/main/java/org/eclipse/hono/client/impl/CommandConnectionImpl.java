@@ -121,6 +121,9 @@ public class CommandConnectionImpl extends HonoClientImpl implements CommandConn
                     commandConsumer,
                     sourceAddress -> {
                         commandReceivers.remove(Device.asAddress(tenantId, deviceId));
+                    },
+                    sourceAddress -> {
+                        commandReceivers.remove(Device.asAddress(tenantId, deviceId));
                         remoteCloseHandler.handle(null);
                     },
                     result,

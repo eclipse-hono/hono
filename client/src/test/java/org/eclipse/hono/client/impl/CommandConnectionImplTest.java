@@ -14,7 +14,9 @@
 package org.eclipse.hono.client.impl;
 
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -184,6 +186,58 @@ public class CommandConnectionImplTest {
                 // THEN the close handler is invoked
                 verify(closeHandler).handle(null);
                 return c;
+            }).setHandler(ctx.asyncAssertSuccess());
+    }
+
+    /**
+     * Verifies that a command consumer's underlying link is closed
+     * and the consumer is removed from the cache when its
+     * <em>close</em> method is invoked.
+     *
+     * @param ctx The test context.
+     */
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testLocalCloseRemovesCommandConsumerFromCache(final TestContext ctx) {
+
+        final String address = "control/theTenant/theDevice";
+        final Handler<CommandContext> commandHandler = mock(Handler.class);
+        final Source source = mock(Source.class);
+        when(source.getAddress()).thenReturn(address);
+        when(receiver.getSource()).thenReturn(source);
+        when(receiver.getRemoteSource()).thenReturn(source);
+
+        // GIVEN a command consumer
+        commandConnection.connect(new ProtonClientOptions())
+            .compose(client -> {
+                final Future<MessageConsumer> consumer = commandConnection.getOrCreateCommandConsumer("theTenant", "theDevice", commandHandler, null);
+                verify(con).createReceiver(address);
+                final ArgumentCaptor<Handler<AsyncResult<ProtonReceiver>>> linkOpenHandler = ArgumentCaptor.forClass(Handler.class);
+                verify(receiver).closeHandler(any(Handler.class));
+                verify(receiver).openHandler(linkOpenHandler.capture());
+                verify(receiver).open();
+                linkOpenHandler.getValue().handle(Future.succeededFuture(receiver));
+                when(receiver.isOpen()).thenReturn(Boolean.TRUE);
+                return consumer;
+            }).map(consumer -> {
+                // WHEN closing the link locally
+                final Future<Void> localCloseHandler = Future.future();
+                consumer.close(localCloseHandler);
+                final ArgumentCaptor<Handler<AsyncResult<ProtonReceiver>>> closeHandler = ArgumentCaptor.forClass(Handler.class);
+                verify(receiver, times(2)).closeHandler(closeHandler.capture());
+                verify(receiver).close();
+                // and the peer sends its detach frame
+                closeHandler.getValue().handle(Future.succeededFuture(receiver));
+                return localCloseHandler;
+            }).map(ok -> {
+                // THEN the next attempt to create a command consumer for the same address
+                final Future<MessageConsumer> newConsumer = commandConnection.getOrCreateCommandConsumer("theTenant", "theDevice", commandHandler, null);
+                // results in a new link to be opened
+                verify(con, times(2)).createReceiver(address);
+                final ArgumentCaptor<Handler<AsyncResult<ProtonReceiver>>> linkOpenHandler = ArgumentCaptor.forClass(Handler.class);
+                verify(receiver, times(2)).openHandler(linkOpenHandler.capture());
+                linkOpenHandler.getValue().handle(Future.succeededFuture(receiver));
+                return newConsumer;
             }).setHandler(ctx.asyncAssertSuccess());
     }
 }
