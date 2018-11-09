@@ -17,6 +17,7 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -55,6 +56,25 @@ public class CommandTest {
         assertThat(cmd.getName(), is("doThis"));
         assertThat(cmd.getReplyToId(), is(String.format("4711/%s", replyToId)));
         assertThat(cmd.getCorrelationId(), is(correlationId));
+        assertFalse(cmd.isOneWay());
+    }
+
+    /**
+     * Verifies that a command can be created from a valid message that has an empty reply-to property.
+     * Verifies that the replyToId is {@code null} and the command reports that it is a one-way command.
+     */
+    @Test
+    public void testFromMessageSucceedsWithoutReplyTo() {
+        final String correlationId = "the-correlation-id";
+        final Message message = mock(Message.class);
+        when(message.getSubject()).thenReturn("doThis");
+        when(message.getCorrelationId()).thenReturn(correlationId);
+        final Command cmd = Command.from(message, Constants.DEFAULT_TENANT, "4711");
+        assertTrue(cmd.isValid());
+        assertThat(cmd.getName(), is("doThis"));
+        assertThat(cmd.getCorrelationId(), is(correlationId));
+        assertNull(cmd.getReplyToId());
+        assertTrue(cmd.isOneWay());
     }
 
     /**
@@ -114,19 +134,6 @@ public class CommandTest {
         when(message.getSubject()).thenReturn("doThis");
         when(message.getReplyTo()).thenReturn(String.format("%s/%s/%s/%s",
                 CommandConstants.COMMAND_ENDPOINT, Constants.DEFAULT_TENANT, "4711", replyToId));
-        assertFalse(Command.from(message, Constants.DEFAULT_TENANT, "4711").isValid());
-    }
-
-    /**
-     * Verifies that a command cannot be created from a message that does not
-     * contain a reply-to address.
-     */
-    @Test
-    public void testFromMessageFailsForMissingReplyToAddress() {
-        final String correlationId = "the-correlation-id";
-        final Message message = mock(Message.class);
-        when(message.getSubject()).thenReturn("doThis");
-        when(message.getCorrelationId()).thenReturn(correlationId);
         assertFalse(Command.from(message, Constants.DEFAULT_TENANT, "4711").isValid());
     }
 

@@ -13,15 +13,22 @@
 
 package org.eclipse.hono.client.impl;
 
+import java.net.HttpURLConnection;
 import java.util.Map;
 import java.util.Objects;
 
+import io.opentracing.Span;
+import io.vertx.proton.ProtonHelper;
+import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.CommandClient;
+import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.config.ClientConfigProperties;
+import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.BufferResult;
+import org.eclipse.hono.util.MessageHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -122,7 +129,7 @@ public class CommandClientImpl extends AbstractRequestResponseClient<BufferResul
      * {@inheritDoc}
      * <p>
      * This method simply invokes {@link #sendCommand(String, String, Buffer, Map)} with
-     * {@code null} as the *content-type* and {@code null} as  *application properties*.
+     * {@code null} as the *content-type* and {@code null} as *application properties*.
      */
     @Override
     public Future<BufferResult> sendCommand(final String command, final Buffer data) {
@@ -150,6 +157,42 @@ public class CommandClientImpl extends AbstractRequestResponseClient<BufferResul
                 throw StatusCodeMapper.from(response);
             }
         });
+    }
+
+    @Override
+    public Future<Void> sendOneWayCommand(final String command, final Buffer data) {
+        return sendOneWayCommand(command, null, data, null);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public Future<Void> sendOneWayCommand(final String command, final String contentType, final Buffer data, final Map<String, Object> properties) {
+        Objects.requireNonNull(command);
+
+        final Span currentSpan = newChildSpan(null, command);
+
+        if (sender.isOpen()) {
+            final Future<BufferResult> responseTracker = Future.future();
+            final Message request = ProtonHelper.message();
+
+            AbstractHonoClient.setApplicationProperties(request, properties);
+
+            final String messageId = createMessageId();
+            request.setMessageId(messageId);
+            request.setSubject(command);
+
+            MessageHelper.setPayload(request, contentType, data);
+            sendRequest(request, responseTracker.completer(), null, currentSpan);
+
+            return responseTracker.map(ignore -> null);
+        } else {
+            TracingHelper.logError(currentSpan, "sender link is not open");
+
+            return Future.failedFuture(new ServerErrorException(
+                    HttpURLConnection.HTTP_UNAVAILABLE, "sender link is not open"));
+        }
     }
 
     /**

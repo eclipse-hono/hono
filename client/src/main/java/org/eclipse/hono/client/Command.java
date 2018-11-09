@@ -107,9 +107,7 @@ public final class Command {
 
         String replyToId = null;
 
-        if (message.getReplyTo() == null) {
-            valid = false;
-        } else {
+        if (message.getReplyTo() != null) {
             try {
                 final ResourceIdentifier replyTo = ResourceIdentifier.fromString(message.getReplyTo());
                 if (!CommandConstants.COMMAND_ENDPOINT.equals(replyTo.getEndpoint())) {
@@ -148,6 +146,15 @@ public final class Command {
      */
     public Message getCommandMessage() {
         return message;
+    }
+
+    /**
+     * Checks if this command is a <em>one-way</em> command (meaning there is no response expected).
+     *
+     * @return {@code true} if this is a valid command.
+     */
+    public boolean isOneWay() {
+        return replyToId == null;
     }
 
     /**
@@ -293,11 +300,11 @@ public final class Command {
      * @param correlationId The identifier to use for correlating the response with the request.
      * @param replyToId An arbitrary identifier to encode into the request ID.
      * @param deviceId The target of the command.
-     * @return The request identifier or {@code null} if any of the parameters are {@code null}.
+     * @return The request identifier or {@code null} if any the correlationId or the deviceId is {@code null}.
      */
     public static String getRequestId(final String correlationId, final String replyToId, final String deviceId) {
 
-        if (correlationId == null || replyToId == null || deviceId == null) {
+        if (correlationId == null || deviceId == null) {
             return null;
         }
 
