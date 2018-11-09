@@ -87,7 +87,7 @@ public class CommandConnectionImpl extends HonoClientImpl implements CommandConn
             final String tenantId,
             final String deviceId,
             final Handler<CommandContext> commandConsumer,
-            final Handler<Void> closeHandler) {
+            final Handler<Void> remoteCloseHandler) {
 
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
@@ -100,7 +100,7 @@ public class CommandConnectionImpl extends HonoClientImpl implements CommandConn
         } else {
             return createConsumer(
                     tenantId,
-                    () -> newCommandConsumer(tenantId, deviceId, commandConsumer, closeHandler));
+                    () -> newCommandConsumer(tenantId, deviceId, commandConsumer, remoteCloseHandler));
         }
     }
 
@@ -108,12 +108,23 @@ public class CommandConnectionImpl extends HonoClientImpl implements CommandConn
             final String tenantId,
             final String deviceId,
             final Handler<CommandContext> commandConsumer,
-            final Handler<Void> closeHandler) {
+            final Handler<Void> remoteCloseHandler) {
 
         return checkConnected().compose(con -> {
             final Future<MessageConsumer> result = Future.future();
-            CommandConsumer.create(context, clientConfigProperties, connection, tenantId, deviceId,
-                    commandConsumer, remoteClose -> closeCommandConsumer(tenantId, deviceId), result, getTracer());
+            CommandConsumer.create(
+                    context,
+                    clientConfigProperties,
+                    connection,
+                    tenantId,
+                    deviceId,
+                    commandConsumer,
+                    sourceAddress -> {
+                        commandReceivers.remove(Device.asAddress(tenantId, deviceId));
+                        remoteCloseHandler.handle(null);
+                    },
+                    result,
+                    getTracer());
             return result.map(consumer -> {
                 commandReceivers.put(Device.asAddress(tenantId, deviceId), consumer);
                 return consumer;

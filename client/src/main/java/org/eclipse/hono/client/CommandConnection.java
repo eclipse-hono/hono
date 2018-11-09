@@ -36,7 +36,8 @@ public interface CommandConnection extends HonoClient {
      * @param tenantId The tenant to consume commands from.
      * @param deviceId The device for which the consumer will be created.
      * @param commandHandler The handler to invoke with every command received.
-     * @param closeHandler The handler invoked when the peer detaches the link.
+     * @param remoteCloseHandler A handler to be invoked after the link has been closed
+     *                     at the peer's request.
      * @return A future that will complete with the consumer once the link has been established. The future will fail if
      *         the link cannot be established, e.g. because this client is not connected.
      * @throws NullPointerException if tenantId, deviceId or messageConsumer is {@code null}.
@@ -45,7 +46,7 @@ public interface CommandConnection extends HonoClient {
             String tenantId,
             String deviceId,
             Handler<CommandContext> commandHandler,
-            Handler<Void> closeHandler);
+            Handler<Void> remoteCloseHandler);
 
     /**
      * Closes the command consumer for a given device.

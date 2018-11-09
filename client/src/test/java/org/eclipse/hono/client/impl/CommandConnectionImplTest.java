@@ -13,9 +13,7 @@
 
 package org.eclipse.hono.client.impl;
 
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -72,19 +70,12 @@ public class CommandConnectionImplTest {
     /**
      * Sets up fixture.
      */
-    @SuppressWarnings("unchecked")
     @Before
     public void setUp() {
 
         vertx = mock(Vertx.class);
-        context = mock(Context.class);
+        context = HonoClientUnitTestHelper.mockContext(vertx);
         when(vertx.getOrCreateContext()).thenReturn(context);
-        when(context.owner()).thenReturn(vertx);
-        doAnswer(invocation -> {
-            final Handler<Void> handler = invocation.getArgument(0);
-            handler.handle(null);
-            return null;
-        }).when(context).runOnContext(any(Handler.class));
 
         props = new ClientConfigProperties();
 
@@ -153,6 +144,46 @@ public class CommandConnectionImplTest {
                 verify(receiver).open();
                 linkOpenHandler.getValue().handle(Future.succeededFuture(receiver));
                 return consumer;
+            }).setHandler(ctx.asyncAssertSuccess());
+    }
+
+    /**
+     * Verifies that the close handler passed as an argument when creating
+     * a command consumer is invoked when the peer closes the link.
+     *
+     * @param ctx The test context.
+     */
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testCreateCommandConsumerSetsRemoteCloseHandler(final TestContext ctx) {
+
+        final String address = "control/theTenant/theDevice";
+        final Handler<CommandContext> commandHandler = mock(Handler.class);
+        final Handler<Void> closeHandler = mock(Handler.class);
+        final Source source = mock(Source.class);
+        when(source.getAddress()).thenReturn(address);
+        when(receiver.getSource()).thenReturn(source);
+        when(receiver.getRemoteSource()).thenReturn(source);
+
+        // GIVEN a command consumer for which a close handler
+        // has been registered
+        commandConnection.connect(new ProtonClientOptions())
+            .compose(c -> {
+                final Future<MessageConsumer> consumer = commandConnection.getOrCreateCommandConsumer("theTenant", "theDevice", commandHandler, closeHandler);
+                verify(con).createReceiver(address);
+                final ArgumentCaptor<Handler<AsyncResult<ProtonReceiver>>> linkOpenHandler = ArgumentCaptor.forClass(Handler.class);
+                verify(receiver).openHandler(linkOpenHandler.capture());
+                verify(receiver).open();
+                linkOpenHandler.getValue().handle(Future.succeededFuture(receiver));
+                return consumer;
+            }).map(c -> {
+                final ArgumentCaptor<Handler<AsyncResult<ProtonReceiver>>> remoteCloseHandler = ArgumentCaptor.forClass(Handler.class);
+                verify(receiver).closeHandler(remoteCloseHandler.capture());
+                // WHEN the peer closes the link
+                remoteCloseHandler.getValue().handle(Future.succeededFuture(receiver));
+                // THEN the close handler is invoked
+                verify(closeHandler).handle(null);
+                return c;
             }).setHandler(ctx.asyncAssertSuccess());
     }
 }
