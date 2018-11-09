@@ -106,7 +106,7 @@ oc create secret generic hono-adapter-kura-conf \
   --from-file=$CERTS/kura-adapter-cert.pem \
   --from-file=$CERTS/trusted-certs.pem \
   --from-file=$SCRIPTPATH/../kura-adapter.credentials \
-  --from-file=application.yml=$SCRIPTPATH/hono-adapter-kura-config.yml
+  --from-file=application.yml=$SCRIPTPATH/hono-adapter-kura-config-enmasse.yml
 oc create -f $RESOURCES/hono-adapter-kura
 echo ... done
 

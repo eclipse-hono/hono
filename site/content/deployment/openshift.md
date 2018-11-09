@@ -200,7 +200,7 @@ the project `hono` cannot be created because it already (still) exists.
 
 In order to connect the external consumer to EnMasse, we need to use a
 proper SSL certificate. We can extract one from the OpenShift using the
-following command (from the `example` directory):
+following command (from the `cli` directory):
 
 ~~~sh
 ~hono/deploy$ oc extract secret/external-certs-messaging --to=target/config/hono-demo-certs-jar/ -n hono

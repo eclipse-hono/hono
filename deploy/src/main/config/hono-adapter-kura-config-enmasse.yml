@@ -3,36 +3,36 @@ hono:
     maxInstances: 1
     healthCheckPort: 8088
     healthCheckBindAddress: 0.0.0.0
-  mqtt:
+  kura:
     bindAddress: 0.0.0.0
     insecurePortBindAddress: 0.0.0.0
     insecurePortEnabled: true
-    keyPath: ${secret.path}/mqtt-adapter-key.pem
-    certPath: ${secret.path}/mqtt-adapter-cert.pem
+    keyPath: ${secret.path}/kura-adapter-key.pem
+    certPath: ${secret.path}/kura-adapter-cert.pem
   messaging:
-    name: 'Hono MQTT Adapter'
+    name: 'Hono Kura Adapter'
     host: messaging.hono
     port: 5672
   registration:
-    name: 'Hono MQTT Adapter'
+    name: 'Hono Kura Adapter'
     host: ${hono.registration.host}
     port: 5671
-    credentialsPath: ${secret.path}/mqtt-adapter.credentials
+    credentialsPath: ${secret.path}/kura-adapter.credentials
     trustStorePath: ${secret.path}/trusted-certs.pem
   credentials:
-    name: 'Hono MQTT Adapter'
+    name: 'Hono Kura Adapter'
     host: ${hono.registration.host}
     port: 5671
-    credentialsPath: ${secret.path}/mqtt-adapter.credentials
+    credentialsPath: ${secret.path}/kura-adapter.credentials
     trustStorePath: ${secret.path}/trusted-certs.pem
   tenant:
-    name: 'Hono MQTT Adapter'
+    name: 'Hono Kura Adapter'
     host: ${hono.registration.host}
     port: 5671
-    credentialsPath: ${secret.path}/mqtt-adapter.credentials
+    credentialsPath: ${secret.path}/kura-adapter.credentials
     trustStorePath: ${secret.path}/trusted-certs.pem
   command:
-    name: 'Hono MQTT Adapter'
+    name: 'Hono Kura Adapter'
     host: messaging.hono
     port: 5672
   metrics:
