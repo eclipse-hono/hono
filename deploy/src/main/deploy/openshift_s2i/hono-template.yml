@@ -375,6 +375,341 @@ objects:
       app: hono-metrics
       deploymentconfig: influxdb
 
+# hono-adapter-amqp-vertx
+
+- kind: ImageStream
+  apiVersion: v1
+  metadata:
+    name: hono-adapter-amqp-vertx
+    labels:
+      app: hono-adapter
+
+- kind: BuildConfig
+  apiVersion: v1
+  metadata:
+    name: hono-adapter-amqp-vertx-build
+    labels:
+      app: hono-adapter
+  spec:
+    triggers: 
+      - type: ImageChange
+      - type: ConfigChange
+    source: 
+      type: Git
+      git:
+        uri: ${GIT_REPOSITORY}
+        ref: ${GIT_BRANCH}
+    strategy: 
+      type: source
+      sourceStrategy:
+        from:
+          kind: ImageStreamTag
+          name: fabric8-s2i-java-custom:2.3
+        env:
+        - name: MAVEN_ARGS_APPEND
+          value: -B -pl org.eclipse.hono:hono-adapter-amqp-vertx --also-make -Pnetty-tcnative
+        - name: ARTIFACT_DIR
+          value: adapters/amqp-vertx/target
+        - name: ARTIFACT_COPY_ARGS
+          value: "*-exec.jar"
+    output:
+      to:
+        kind: ImageStreamTag
+        name: hono-adapter-amqp-vertx:latest
+
+- kind: Secret
+  apiVersion: v1
+  metadata:
+    name: hono-amqp-secrets
+    labels:
+        app: hono-adapter
+  stringData:
+    downstream.properties: |-
+      username: amqp
+      password: amqp-secret
+    registry.properties: |-
+      username: amqp-adapter@HONO
+      password: amqp-secret
+
+- kind: MessagingUser
+  apiVersion: user.enmasse.io/v1alpha1
+  metadata:
+    name: ${ENMASSE_ADDRESS_SPACE}.amqp
+  spec:
+    username: amqp
+    authentication:
+      type: password
+      password: YW1xcC1zZWNyZXQ=
+    authorization:
+    - addresses:
+      - "*"
+      operations:
+      - send
+      - recv
+
+- kind: ConfigMap
+  apiVersion: v1
+  metadata:
+    name: hono-adapter-amqp-vertx-config
+    labels:
+      app: hono-adapter
+  data:
+    application.yml: |+
+      hono:
+        app:
+          maxInstances: 1
+          healthCheckPort: 8088
+          healthCheckBindAddress: 0.0.0.0
+        amqp:
+          bindAddress: 0.0.0.0
+          insecurePortBindAddress: 0.0.0.0
+          insecurePortEnabled: true
+          keyPath: /etc/tls/tls.key
+          certPath: /etc/tls/tls.crt
+          keyFormat: PEM
+          nativeTlsRequired: true
+        messaging:
+          name: 'Hono AMQP Adapter'
+          credentialsPath: /etc/secrets/downstream.properties
+        command:
+          name: 'Hono AMQP Adapter'
+          credentialsPath: /etc/secrets/downstream.properties
+        registration:
+          name: 'Hono AMQP Adapter'
+          port: 5671
+          trustStorePath: /var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt
+          trustStoreFormat: PEM
+          credentialsPath: /etc/secrets/registry.properties
+        credentials:
+          name: 'Hono AMQP Adapter'
+          port: 5671
+          trustStorePath: /var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt
+          trustStoreFormat: PEM
+          credentialsPath: /etc/secrets/registry.properties
+        tenant:
+          name: 'Hono AMQP Adapter'
+          port: 5671
+          trustStorePath: /var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt
+          trustStoreFormat: PEM
+          credentialsPath: /etc/secrets/registry.properties
+      # disable spring boot actuator endpoints, enable metrics
+      endpoints:
+        enabled: false
+        metrics:
+          enabled: true
+      management:
+        metrics:
+          export:
+            graphite:
+              port: 2003
+
+    logback-spring.xml: |+
+        <?xml version="1.0" encoding="UTF-8"?>
+        <!DOCTYPE xml>
+        
+        <configuration>
+        
+          <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+            <!-- encoders are assigned the type
+                 ch.qos.logback.classic.encoder.PatternLayoutEncoder by default -->
+            <encoder>
+              <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+            </encoder>
+          </appender>
+        
+          <root level="INFO">
+            <appender-ref ref="STDOUT" />
+          </root>
+        
+          <springProfile name="dev">
+            <logger name="org.eclipse.hono.adapter" level="DEBUG"/>
+            <logger name="org.eclipse.hono.client" level="DEBUG"/>
+            <logger name="org.eclipse.hono.client.impl.AbstractRequestResponseClient" level="DEBUG"/>
+            <logger name="org.eclipse.hono.connection" level="DEBUG"/>
+            <logger name="org.eclipse.hono.service.auth.device" level="DEBUG"/>
+          </springProfile>
+        
+          <springProfile name="prod">
+            <logger name="org.eclipse.hono" level="INFO"/>
+          </springProfile>
+        
+          <logger name="io.netty.handler.logging.LoggingHandler" level="INFO"/>
+        
+          <logger name="io.vertx.proton.impl" level="INFO"/>
+          <logger name="io.vertx.core.net.impl" level="INFO"/>
+        
+        </configuration>
+
+- kind: DeploymentConfig
+  apiVersion: v1
+  metadata:
+    name: hono-adapter-amqp-vertx
+    labels:
+      app: hono-adapter
+      deploymentconfig: hono-adapter-amqp-vertx
+  spec:
+    replicas: 1
+    selector:
+      app: hono-adapter
+      deploymentconfig: hono-adapter-amqp-vertx
+    strategy:
+      type: Rolling
+      rollingParams:
+        timeoutSeconds: 3600
+    triggers:
+      - type: ConfigChange
+      - type: ImageChange
+        imageChangeParams:
+          automatic: true
+          containerNames:
+            - eclipsehono-hono-adapter-amqp-vertx
+          from:
+            kind: ImageStreamTag
+            name: hono-adapter-amqp-vertx:latest
+    template:
+      metadata:
+        labels:
+          app: hono-adapter
+          deploymentconfig: hono-adapter-amqp-vertx
+      spec:
+        containers:
+        - name: eclipsehono-hono-adapter-amqp-vertx
+          image: hono-adapter-amqp-vertx
+          imagePullPolicy: Always
+          env:
+          - name: SPRING_CONFIG_LOCATION
+            value: file:///etc/config/
+          - name: SPRING_PROFILES_ACTIVE
+            value: 
+          - name: LOGGING_CONFIG
+            value: file:///etc/config/logback-spring.xml
+          - name: KUBERNETES_NAMESPACE
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
+          - name: HONO_MESSAGING_HOST
+            valueFrom:
+              configMapKeyRef:
+                name: hono-configuration
+                key: downstream.host
+          - name: HONO_MESSAGING_PORT
+            valueFrom:
+              configMapKeyRef:
+                name: hono-configuration
+                key: downstream.port
+          - name: HONO_COMMAND_HOST
+            valueFrom:
+              configMapKeyRef:
+                name: hono-configuration
+                key: downstream.host
+          - name: HONO_COMMAND_PORT
+            valueFrom:
+              configMapKeyRef:
+                name: hono-configuration
+                key: downstream.port
+          - name: HONO_REGISTRATION_HOST
+            value: hono-service-device-registry.$(KUBERNETES_NAMESPACE).svc
+          - name: HONO_CREDENTIALS_HOST
+            value: hono-service-device-registry.$(KUBERNETES_NAMESPACE).svc
+          - name: HONO_TENANT_HOST
+            value: hono-service-device-registry.$(KUBERNETES_NAMESPACE).svc
+          - name: MANAGEMENT_METRICS_EXPORT_GRAPHITE_HOST
+            value: influxdb.$(KUBERNETES_NAMESPACE).svc
+          - name: AB_JOLOKIA_USER
+            value: jolokia
+          - name: AB_JOLOKIA_PASSWORD_RANDOM
+            value: "false"
+          - name: AB_JOLOKIA_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: hono-secrets
+                key: jolokia.password
+          readinessProbe:
+            httpGet:
+              path: /readiness
+              port: 8088
+              scheme: HTTP
+            initialDelaySeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /liveness
+              port: 8088
+              scheme: HTTP
+            initialDelaySeconds: 180
+          resources:
+            limits:
+              memory: 512Mi
+          ports:
+          - containerPort: 8778
+            name: jolokia
+          - containerPort: 8088
+            name: radan-http
+            protocol: TCP
+          - containerPort: 5671
+            name: amqps
+            protocol: TCP
+          - containerPort: 5672
+            name: amqp
+            protocol: TCP
+          volumeMounts:
+          - mountPath: /etc/config
+            name: conf
+          - mountPath: /etc/secrets
+            name: secrets
+            readOnly: true
+          - mountPath: /etc/tls
+            name: tls
+            readOnly: true
+        volumes:
+        - name: conf
+          configMap:
+            name: hono-adapter-amqp-vertx-config
+        - name: secrets
+          secret:
+            secretName: hono-amqp-secrets
+        - name: tls
+          secret:
+            secretName: hono-adapter-amqp-vertx-tls
+
+- apiVersion: v1
+  kind: Service
+  metadata:
+    name: hono-adapter-amqp-vertx
+    labels:
+      app: hono-adapter
+      deploymentconfig: hono-adapter-amqp-vertx
+    annotations:
+      service.alpha.openshift.io/serving-cert-secret-name: hono-adapter-amqp-vertx-tls
+  spec:
+    ports:
+      - name: amqp
+        port: 5672
+        targetPort: 5672
+        protocol: TCP
+      - name: amqps
+        port: 5671
+        targetPort: 5671
+        protocol: TCP
+    selector:
+      app: hono-adapter
+      deploymentconfig: hono-adapter-amqp-vertx
+
+- kind: Route
+  apiVersion: v1
+  metadata:
+    labels:
+      app: hono-adapter
+    name: hono-adapter-amqp-vertx-sec
+  spec:
+    port:
+      targetPort: 5671
+    tls:
+      termination: passthrough
+    to:
+      kind: Service
+      name: hono-adapter-amqp-vertx
+
+
 # hono-adapter-mqtt-vertx
 
 - kind: ImageStream
@@ -1491,8 +1826,8 @@ objects:
             trustStoreFormat: PEM
             insecurePortEnabled: true
             insecurePortBindAddress: 0.0.0.0
-        svc:
-          permissionsPath: file:///etc/config/permissions.json
+          svc:
+            permissionsPath: file:///etc/config/permissions.json
         metrics:
           legacy: false
       management:
@@ -1561,6 +1896,11 @@ objects:
           ]
         },
         "users": {
+          "amqp-adapter@HONO": {
+            "mechanism": "PLAIN",
+            "password": "amqp-secret",
+            "authorities": [ "hono-component", "protocol-adapter" ]
+          },
           "http-adapter@HONO": {
             "mechanism": "PLAIN",
             "password": "http-secret",
