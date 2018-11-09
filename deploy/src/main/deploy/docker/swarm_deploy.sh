@@ -80,11 +80,11 @@ echo
 echo Deploying Grafana ...
 docker config create -l project=$NS filesystem-provisioner.yaml $SCRIPTPATH/grafana/provisioning/dashboards/filesystem-provisioner.yaml
 docker config create -l project=$NS grafana_dashboard.json $SCRIPTPATH/grafana/dashboard-definitions/grafana_dashboard.json
-docker config create -l project=$NS influxdb.yaml $SCRIPTPATH/grafana/provisioning/datasources/influxdb.yaml
+docker config create -l project=$NS prometheus.yaml $SCRIPTPATH/grafana/provisioning/datasources/prometheus.yaml
 docker service create $CREATE_OPTIONS --name grafana -p 3000:3000 \
   --config source=filesystem-provisioner.yaml,target=/etc/grafana/provisioning/dashboards/filesystem-provisioner.yaml \
   --config source=grafana_dashboard.json,target=/etc/grafana/dashboard-definitions/grafana_dashboard.json \
-  --config source=influxdb.yaml,target=/etc/grafana/provisioning/datasources/influxdb.yaml \
+  --config source=prometheus.yaml,target=/etc/grafana/provisioning/datasources/prometheus.yaml \
   --limit-memory 64m \
   grafana/grafana:${grafana.version}
 echo ... done

@@ -124,13 +124,12 @@ objects:
       apiVersion: 1
       
       datasources:
-      - name: hono_data
+      - name: hono_metrics
         version: 1
-        type: influxdb
+        type: prometheus
         access: proxy
         orgId: 1
-        url: http://influxdb.${HONO_NAMESPACE}.svc:8086
-        database: graphite
+        url: http://prometheus-operated.${HONO_NAMESPACE}.svc:9090
         basicAuth: false
         isDefault: false
         editable: true
