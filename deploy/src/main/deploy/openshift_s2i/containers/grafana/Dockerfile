@@ -2,8 +2,10 @@ FROM centos:7
 
 # The GRAFANA_VERSION will be overridden by the OpenShift build
 
+ARG GRAFANA_VERSION
+
 ENV \
-    GRAFANA_VERSION=5.1.4 \
+    GRAFANA_VERSION=${GRAFANA_VERSION:-5.1.4} \
     CONF_FILE=/etc/grafana/grafana.ini \
     DATA_DIR=/var/lib/grafana \
     LOG_DIR=/var/log/grafana \
