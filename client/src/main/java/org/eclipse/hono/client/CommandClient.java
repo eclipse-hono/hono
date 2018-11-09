@@ -68,4 +68,42 @@ public interface CommandClient extends RequestResponseClient {
      * @see RequestResponseClient#setRequestTimeout(long)
      */
     Future<BufferResult> sendCommand(String command, String contentType, Buffer data, Map<String, Object> properties);
+
+    /**
+     * Sends a <em>one-way command</em> to a device, i.e. there is no response expected from the device.
+     * <p>
+     * A device needs to be (successfully) registered before a client can upload
+     * any data for it. The device also needs to be connected for a successful delivery.
+     *
+     * @param command The one-way command name.
+     * @param data The command data to send to the device or {@code null} if the one-way command has no input data.
+     * @return A future indicating the result of the operation.
+     *         <p>
+     *         If the one-way command was accepted, the future will succeed.
+     *         <p>
+     *         The future will fail with a {@link ServiceInvocationException} if the one-way command could not be forwarded to the device.
+     * @throws NullPointerException if command is {@code null}.
+     * @see RequestResponseClient#setRequestTimeout(long)
+     */
+    Future<Void> sendOneWayCommand(String command, Buffer data);
+
+    /**
+     * Sends a <em>one-way command</em> to a device, i.e. there is no response from the device expected.
+     * <p>
+     * A device needs to be (successfully) registered before a client can upload
+     * any data for it. The device also needs to be connected for a successful delivery.
+     *
+     * @param command The one-way command name.
+     * @param contentType The type of the data submitted as part of the one-way command or {@code null} if unknown.
+     * @param data The command data to send to the device or {@code null} if the command has no input data.
+     * @param properties The headers to include in the one-way command message as AMQP application properties.
+     * @return A future indicating the result of the operation:
+     *         <p>
+     *         If the one-way command was accepted, the future will succeed.
+     *         <p>
+     *         The future will fail with a {@link ServiceInvocationException} if the one-way command could not be forwarded to the device.
+     * @throws NullPointerException if command is {@code null}.
+     * @see RequestResponseClient#setRequestTimeout(long)
+     */
+    Future<Void> sendOneWayCommand(String command, String contentType, Buffer data, Map<String, Object> properties);
 }

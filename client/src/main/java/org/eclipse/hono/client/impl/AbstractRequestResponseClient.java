@@ -719,7 +719,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      * @param cacheKey The key to use for caching the response (if the service allows caching).
      * @param currentSpan The <em>Opentracing</em> span used to trace the request execution.
      */
-    private void sendRequest(
+    protected final void sendRequest(
             final Message request,
             final Handler<AsyncResult<R>> resultHandler,
             final Object cacheKey,
@@ -770,6 +770,12 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
                         LOG.trace("service has accepted request [target address: {}, subject: {}, correlation ID: {}]",
                                 targetAddress, request.getSubject(), correlationId);
                         currentSpan.log("request accepted by peer");
+                        // if no reply-to is set, the request is assumed to be one-way (no response is expected)
+                        if (request.getReplyTo() == null) {
+                            Tags.HTTP_STATUS.set(currentSpan, HttpURLConnection.HTTP_ACCEPTED);
+                            replyMap.remove(correlationId);
+                            resultHandler.handle(Future.succeededFuture());
+                        }
                     } else {
                         LOG.debug("service did not accept request [target address: {}, subject: {}, correlation ID: {}]: {}",
                                 targetAddress, request.getSubject(), correlationId, remoteState);
