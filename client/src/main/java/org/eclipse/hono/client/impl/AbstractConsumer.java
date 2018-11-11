@@ -16,8 +16,10 @@ package org.eclipse.hono.client.impl;
 import io.opentracing.Tracer;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
+import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.proton.ProtonReceiver;
+
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.config.ClientConfigProperties;
 
@@ -69,7 +71,11 @@ public abstract class AbstractConsumer extends AbstractHonoClient implements Mes
 
     @Override
     public void close(final Handler<AsyncResult<Void>> closeHandler) {
-        closeLinks(closeHandler);
-    }
 
+        closeLinks(ok -> {
+            if (closeHandler != null) {
+                closeHandler.handle(Future.succeededFuture());
+            }
+        });
+    }
 }

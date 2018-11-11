@@ -43,7 +43,6 @@ import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.opentracing.noop.NoopTracerFactory;
 import io.opentracing.tag.Tags;
-import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -227,31 +226,19 @@ public abstract class AbstractHonoClient {
      * Closes this client's sender and receiver links to Hono.
      * Link resources will be freed after the links are closed.
      *
-     * @param closeHandler the handler to be notified about the outcome.
+     * @param closeHandler The handler to notify once the link has been closed.
      * @throws NullPointerException if the given handler is {@code null}.
      */
-    protected final void closeLinks(final Handler<AsyncResult<Void>> closeHandler) {
+    protected final void closeLinks(final Handler<Void> closeHandler) {
 
-        final Future<Void> res = executeOrRunOnContext(result -> {
+        Objects.requireNonNull(closeHandler);
 
-            final Future<Void> senderCloseHandler = Future.future();
-            if (sender == null) {
-                senderCloseHandler.complete();
-            } else {
-                HonoProtonHelper.closeAndFree(context, sender, senderCloseHandler);
-            }
-
-            senderCloseHandler.compose(closedSender -> {
-                if (receiver == null) {
-                    result.complete((Void) null);
-                } else {
-                    HonoProtonHelper.closeAndFree(context, receiver, result);
-                }
-
-            }, result);
-        });
-        res.setHandler(closeHandler);
+        HonoProtonHelper.closeAndFree(context, sender, senderClosed -> 
+            HonoProtonHelper.closeAndFree(context, receiver, receiverClosed -> {
+                closeHandler.handle(null);
+            }));
     }
+
     /**
      * Set the application properties for a Proton Message but do a check for all properties first if they only contain
      * values that the AMQP 1.0 spec allows.

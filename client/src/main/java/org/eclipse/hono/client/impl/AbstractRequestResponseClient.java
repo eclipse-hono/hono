@@ -816,9 +816,12 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
     @Override
     public final void close(final Handler<AsyncResult<Void>> closeHandler) {
 
-        Objects.requireNonNull(closeHandler);
         LOG.debug("closing request-response client ...");
-        closeLinks(closeHandler);
+        closeLinks(ok -> {
+            if (closeHandler != null) {
+                closeHandler.handle(Future.succeededFuture());
+            }
+        });
     }
 
     /**

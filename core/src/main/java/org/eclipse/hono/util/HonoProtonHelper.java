@@ -13,7 +13,6 @@
 package org.eclipse.hono.util;
 
 import java.util.Objects;
-import java.util.concurrent.atomic.AtomicLong;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
@@ -190,58 +189,89 @@ public final class HonoProtonHelper {
     }
 
     /**
-     * Close the passed link and later call its {@link ProtonLink#free()} method in an attached closeHandler.
+     * Closes an AMQP link and frees up its allocated resources.
      * <p>
-     * Additionally supervise if this handler is called in the number of {@link #DEFAULT_FREE_LINK_AFTER_CLOSE_INTERVAL_MILLIS}
-     * milliseconds. If not, the timer is triggered and the link will be freed inside the timer code.
+     * This method simply invokes {@link #closeAndFree(Context, ProtonLink, long, Handler)} with
+     * the {@linkplain #DEFAULT_FREE_LINK_AFTER_CLOSE_INTERVAL_MILLIS default time-out value}.
      *
-     * @param context The context to run the timer code on.
-     * @param link The link to close and free.
-     * @param closeHandler The handler to invoke after the link was freed.
+     * @param context The vert.x context to run on.
+     * @param link The link to close. If {@code null}, the given handler is invoked immediately.
+     * @param closeHandler The handler to notify once the link has been closed.
+     * @throws NullPointerException if context or close handler are {@code null}.
      */
-    public static void closeAndFree(final Context context, final ProtonLink<?> link,
-                                    final Future<Void> closeHandler) {
+    public static void closeAndFree(
+            final Context context,
+            final ProtonLink<?> link,
+            final Handler<Void> closeHandler) {
+
         closeAndFree(context, link, DEFAULT_FREE_LINK_AFTER_CLOSE_INTERVAL_MILLIS, closeHandler);
     }
 
     /**
-     * Close the passed link and later call its {@link ProtonLink#free()} method in an attached closeHandler.
+     * Closes an AMQP link and frees up its allocated resources.
      * <p>
-     * Additionally supervise if this handler is called in the number of milliseconds being passed.
-     * If not, the timer is triggered and the link will be freed inside the timer code.
+     * This method will invoke the given handler as soon as
+     * <ul>
+     * <li>the the peer's <em>detach</em> frame has been received or</li>
+     * <li>the given number of milliseconds have passed</li>
+     * </ul>
+     * After that the link's resources are freed up.
+     * <p>
      *
-     * @param context The context to run the timer code on.
-     * @param link The link to close and free.
-     * @param timeoutToInvokeCloseHandler The timeout in milliseconds that is used for the supervision timer.
-     * @param closeHandler The handler to invoke after the link was freed.
+     * @param context The vert.x context to run on.
+     * @param link The link to close. If {@code null}, the given handler is invoked immediately.
+     * @param detachTimeOut The maximum number of milliseconds to wait for the peer's
+     *                      detach frame or 0, if this method should wait indefinitely
+     *                      for the peer's detach frame.
+     * @param closeHandler The handler to notify once the link has been closed.
+     * @throws NullPointerException if context or close handler are {@code null}.
+     * @throws IllegalArgumentException if detach time-out is &lt; 0.
      */
-    public static void closeAndFree(final Context context, final ProtonLink<?> link,
-            final long timeoutToInvokeCloseHandler,
-                                    final Future<Void> closeHandler) {
-        final AtomicLong closeSenderTimerId = new AtomicLong(-1);
+    public static void closeAndFree(
+            final Context context,
+            final ProtonLink<?> link,
+            final long detachTimeOut,
+            final Handler<Void> closeHandler) {
 
-        final Handler<Void> freeLinkHandler = v -> {
-            closeHandler.complete();
-            link.free();
-        };
-
-        // if sender gets remote peer detach close -> complete senderCloseHandler
-        link.closeHandler(closeAttempt -> {
-            context.owner().cancelTimer(closeSenderTimerId.get());
-            executeOrRunOnContext(context, v -> freeLinkHandler.handle(null));
-        });
-
-        if (link.isOpen()) {
-            // start a timer to free resources if peer should not detach after following close
-            closeSenderTimerId.set(context.owner().setTimer(timeoutToInvokeCloseHandler, timerId -> {
-                executeOrRunOnContext(context, v -> freeLinkHandler.handle(null));
-            }));
-            // close the link and wait for peer's detach frame to trigger the close handler
-            link.close();
-        } else {
-            // trigger handler manually to make sure that
-            // resources are freed up
-            executeOrRunOnContext(context, v -> freeLinkHandler.handle(null));
+        Objects.requireNonNull(context);
+        Objects.requireNonNull(closeHandler);
+        if (detachTimeOut < 0) {
+            throw new IllegalArgumentException("detach time-out must be > 0");
         }
+
+        executeOrRunOnContext(context, result -> {
+
+            if (link == null) {
+                closeHandler.handle(null);
+            } else if (link.isOpen()) {
+
+                final long timerId = context.owner().setTimer(detachTimeOut, tid -> {
+                    // from the local peer's point of view
+                    // the closing of the link is always successful
+                    // even if the peer did not send a detach frame
+                    // at all
+                    result.tryComplete();
+                });
+
+                // if sender gets remote peer detach close -> complete senderCloseHandler
+                link.closeHandler(remoteDetach -> {
+                    context.owner().cancelTimer(timerId);
+                    // we do not care if the peer's detahc
+                    // frame contains an error because there
+                    // is nothing we can do about it anyway
+                    result.tryComplete();
+                });
+
+                // close the link and wait for peer's detach frame to trigger the close handler
+                link.close();
+            } else {
+                // link is already closed,
+                // nothing to do
+                result.complete();
+            }
+        }).setHandler(closeAttempt -> {
+            closeHandler.handle(null);
+            link.free();
+        });
     }
 }

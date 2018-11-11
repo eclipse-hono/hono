@@ -153,7 +153,7 @@ abstract public class AbstractSender extends AbstractHonoClient implements Messa
     public final void close(final Handler<AsyncResult<Void>> closeHandler) {
         Objects.requireNonNull(closeHandler);
         LOG.debug("closing sender ...");
-        closeLinks(closeHandler);
+        closeLinks(ok -> closeHandler.handle(Future.succeededFuture()));
     }
 
     @Override
