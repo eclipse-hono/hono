@@ -3,6 +3,7 @@
 **/*.iml
 **/bin/
 **/.vertx/
+**/.factorypath
 
 # Eclipse files
 **/.classpath
