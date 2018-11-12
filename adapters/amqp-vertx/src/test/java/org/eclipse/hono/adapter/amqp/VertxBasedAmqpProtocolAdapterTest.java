@@ -149,7 +149,6 @@ public class VertxBasedAmqpProtocolAdapterTest {
 
         commandConnection = mock(CommandConnection.class);
         when(commandConnection.connect(any(Handler.class))).thenReturn(Future.succeededFuture(commandConnection));
-        when(commandConnection.closeCommandConsumer(anyString(), anyString())).thenReturn(Future.succeededFuture(null));
 
         config = new ProtocolAdapterProperties();
         config.setAuthenticationRequired(false);
@@ -327,28 +326,29 @@ public class VertxBasedAmqpProtocolAdapterTest {
     @SuppressWarnings("unchecked")
     @Test
     public void testAdapterClosesCommandConsumerWhenDeviceClosesReceiverLink() {
+
         // GIVEN an AMQP adapter
         final VertxBasedAmqpProtocolAdapter adapter = givenAnAmqpAdapter();
         final Future<ProtonDelivery> outcome = Future.future();
         final MessageSender eventSender = givenAnEventSender(outcome);
 
-        // WHEN a device subscribes to commands with a valid subscription address
+        // and a device that wants to receive commands
+        final MessageConsumer commandConsumer = mock(MessageConsumer.class);
         when(commandConnection.getOrCreateCommandConsumer(eq(TEST_TENANT_ID), eq(TEST_DEVICE), any(Handler.class), any(Handler.class))).thenReturn(
-                Future.succeededFuture(mock(MessageConsumer.class)));
+                Future.succeededFuture(commandConsumer));
         final String sourceAddress = String.format("%s", CommandConstants.COMMAND_ENDPOINT);
         final ProtonSender sender = getSender(sourceAddress);
         final Device authenticatedDevice = new Device(TEST_TENANT_ID, TEST_DEVICE);
 
         adapter.handleRemoteSenderOpenForCommands(sender, authenticatedDevice);
 
+        // WHEN the client device closes its receiver link (unsubscribe)
         final ArgumentCaptor<Handler<AsyncResult<ProtonSender>>> closeHookCaptor = ArgumentCaptor.forClass(Handler.class);
-
-        // AND the client device closes its receiver link (unsubscribe)
         verify(sender).closeHandler(closeHookCaptor.capture());
         closeHookCaptor.getValue().handle(null);
 
         // THEN the adapter closes the command consumer
-        verify(commandConnection).closeCommandConsumer(TEST_TENANT_ID, TEST_DEVICE);
+        verify(commandConsumer).close(any());
 
         // AND sends an empty notification downstream
         final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
