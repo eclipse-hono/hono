@@ -423,18 +423,22 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
 
         final Future<DeviceCredentials> credentialsTracker = getCredentials(endpoint);
         return credentialsTracker
-                .compose(credentials -> authenticateCredentials(credentials))
+                .compose(credentials -> authenticate(credentials, currentSpan))
                 .compose(device -> CompositeFuture.all(
                         getTenantConfiguration(device.getTenantId(), currentSpan.context())
                                 .compose(tenant -> isAdapterEnabled(tenant)),
-                        isDeviceRegistered(device, credentialsTracker.result(), currentSpan))
+                        isDeviceRegistered(device, currentSpan))
                         .map(result -> device))
-                .compose(device -> createLink(endpoint, device, currentSpan))
+                .compose(device -> createLink(device, currentSpan))
+                .compose(device -> registerHandlers(endpoint, device))
                 .recover(t -> {
                     if (credentialsTracker.result() != null) {
                         LOG.debug("cannot establish connection with device [tenant-id: {}, auth-id: {}]",
                                 credentialsTracker.result().getTenantId(), credentialsTracker.result().getAuthId(), t);
+                    } else {
+                        LOG.debug("Error establishing connection with device", t);
                     }
+
                     if (t instanceof MqttConnectionException) {
                         return rejected(((MqttConnectionException) t).code());
                     }
@@ -1207,53 +1211,59 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
         }
     }
 
-    private Future<DeviceUser> authenticateCredentials(final DeviceCredentials credentials) {
+    private Future<DeviceUser> authenticate(final DeviceCredentials credentials, final Span currentSpan) {
         final Future<DeviceUser> result = Future.future();
-        usernamePasswordAuthProvider.authenticate(credentials, result.completer());
+        usernamePasswordAuthProvider.authenticate(credentials, handler -> {
+            if (handler.succeeded()) {
+                final DeviceUser authenticatedDevice = handler.result();
+                currentSpan.log("device authenticated");
+                LOG.debug("successfully authenticated device [tenant-id: {}, auth-id: {}, device-id: {}]",
+                        authenticatedDevice.getTenantId(), credentials.getAuthId(),
+                        authenticatedDevice.getDeviceId());
+                result.complete(authenticatedDevice);
+            } else {
+                LOG.debug("Failed to authenticate device [tenant-id: {}, auth-id: {}] ",
+                        credentials.getTenantId(), credentials.getAuthId(), handler.cause());
+                result.fail(handler.cause());
+            }
+        });
         return result;
     }
 
-    private Future<Device> isDeviceRegistered(final Device authenticatedDevice, final DeviceCredentials credentials,
-            final Span currentSpan) {
-        currentSpan.log(String.format("device authenticated"));
-        LOG.debug("successfully authenticated device [tenant-id: {}, auth-id: {}, device-id: {}]",
-                authenticatedDevice.getTenantId(), credentials.getAuthId(),
-                authenticatedDevice.getDeviceId());
+    private Future<Device> isDeviceRegistered(final Device authenticatedDevice, final Span currentSpan) {
         return getRegistrationAssertion(authenticatedDevice.getTenantId(),
                 authenticatedDevice.getDeviceId(),
                 authenticatedDevice, currentSpan.context())
                         .compose(ok -> {
-                            currentSpan.log(String.format("device registration verified"));
+                            currentSpan.log("device registration verified");
                             LOG.debug("verified device registration [tenant-id: {}, device-id: {}]",
                                     authenticatedDevice.getTenantId(), authenticatedDevice.getDeviceId());
                             return accepted(authenticatedDevice);
                         });
     }
 
-    private Future<Device> createLink(final MqttEndpoint endpoint, final Device authenticatedDevice,
-            final Span currentSpan) {
+    private Future<Device> createLink(final Device authenticatedDevice, final Span currentSpan) {
         final Future<MessageSender> telemetrySender = getTelemetrySender(authenticatedDevice.getTenantId());
         final Future<MessageSender> eventSender = getEventSender(authenticatedDevice.getTenantId());
-
         return CompositeFuture
-                .all(getRegistrationClient(authenticatedDevice.getTenantId()), telemetrySender, eventSender)
-                .map(ok -> {
-                    currentSpan.log(String.format("opened downstream links"));
+                .all(telemetrySender, eventSender)
+                .compose(ok -> {
+                    currentSpan.log("opened downstream links");
                     LOG.debug(
                             "providently opened downstream links [credit telemetry: {}, credit event: {}] for tenant [{}]",
                             telemetrySender.result().getCredit(), eventSender.result().getCredit(),
                             authenticatedDevice.getTenantId());
-                    onAuthenticationSuccess(endpoint, authenticatedDevice);
-                    return null;
-                }).compose(ok -> accepted(authenticatedDevice));
+                    return accepted(authenticatedDevice);
+                });
     }
 
-    private void onAuthenticationSuccess(final MqttEndpoint endpoint, final Device authenticatedDevice) {
+    private Future<Device> registerHandlers(final MqttEndpoint endpoint, final Device authenticatedDevice) {
         endpoint.closeHandler(v -> close(endpoint, authenticatedDevice));
         endpoint.publishHandler(
                 message -> handlePublishedMessage(new MqttContext(message, endpoint, authenticatedDevice)));
         endpoint.subscribeHandler(subscribeMsg -> onSubscribe(endpoint, authenticatedDevice, subscribeMsg));
         endpoint.unsubscribeHandler(unsubscribeMsg -> onUnsubscribe(endpoint, authenticatedDevice, unsubscribeMsg));
         metrics.incrementConnections(authenticatedDevice.getTenantId());
+        return accepted(authenticatedDevice);
     }
 }
