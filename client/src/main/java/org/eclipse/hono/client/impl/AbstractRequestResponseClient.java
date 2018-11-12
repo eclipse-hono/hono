@@ -81,6 +81,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
     };
 
     private final Map<Object, TriTuple<Handler<AsyncResult<R>>, Object, Span>> replyMap = new HashMap<>();
+    private Handler<Void> drainHandler;
     private final String replyToAddress;
     private final String targetAddress;
     private final String tenantId;
@@ -318,6 +319,33 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
             throw new IllegalArgumentException("request timeout must be >= 0");
         } else {
             this.requestTimeoutMillis = timoutMillis;
+        }
+    }
+
+    @Override
+    public int getCredit() {
+        if (sender == null) {
+            return 0;
+        } else {
+            return sender.getCredit();
+        }
+    }
+
+    @Override
+    public void sendQueueDrainHandler(final Handler<Void> handler) {
+        if (this.drainHandler != null) {
+            throw new IllegalStateException("already waiting for replenishment with credit");
+        } else {
+            this.drainHandler = Objects.requireNonNull(handler);
+            sender.sendQueueDrainHandler(replenishedSender -> {
+                LOG.trace("command client has received FLOW [credits: {}, queued:{}]", replenishedSender.getCredit(),
+                        replenishedSender.getQueued());
+                final Handler<Void> currentHandler = this.drainHandler;
+                this.drainHandler = null;
+                if (currentHandler != null) {
+                    currentHandler.handle(null);
+                }
+            });
         }
     }
 

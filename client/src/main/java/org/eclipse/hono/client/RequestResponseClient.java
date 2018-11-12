@@ -18,7 +18,7 @@ import io.vertx.core.Handler;
 /**
  * Interface for common methods that all clients that follow the request response pattern need to implement.
  */
-public interface RequestResponseClient {
+public interface RequestResponseClient extends CreditBasedSender {
     /**
      * Closes the AMQP link(s) with the Hono server this client is configured to use.
      * <p>

@@ -13,14 +13,13 @@
 
 package org.eclipse.hono.client.impl;
 
+import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.message.Message;
-import org.eclipse.hono.client.impl.AbstractSender;
-import org.eclipse.hono.client.impl.HonoClientUnitTestHelper;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
@@ -123,6 +122,20 @@ public class AbstractSenderTest {
         // THEN the message is not sent
         assertFalse(result.succeeded());
         verify(protonSender, never()).send(any(Message.class));
+    }
+
+    /**
+     * Verifies credits available.
+     *
+     */
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testCredits() {
+        final AbstractSender sender = newSender("tenant", "endpoint");
+        when(protonSender.getCredit()).thenReturn(10);
+        assertThat(sender.getCredit(), is(10));
+        when(protonSender.getCredit()).thenReturn(0);
+        assertThat(sender.getCredit(), is(0));
     }
 
     private AbstractSender newSender(final String tenantId, final String targetAddress) {

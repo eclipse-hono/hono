@@ -132,7 +132,6 @@ abstract public class AbstractSender extends AbstractHonoClient implements Messa
     }
 
     @Override
-    @Deprecated
     public final void sendQueueDrainHandler(final Handler<Void> handler) {
         if (this.drainHandler != null) {
             throw new IllegalStateException("already waiting for replenishment with credit");
