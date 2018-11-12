@@ -1,21 +1,10 @@
 +++
 title = "AMQP Adapter"
-weight = 215
+weight = 220
 +++
 
-The AMQP protocol adapter allows clients (devices or gateway components) supporting the AMQP 1.0 protocol to publish telemetry messages and events to Eclipse Hono&trade;'s Telemetry and Event endpoints. 
+The AMQP protocol adapter allows clients (devices or gateway components) supporting the AMQP 1.0 protocol to publish messages to Eclipse Hono&trade;'s Telemetry, Event and Command & Control endpoints.
 <!--more-->
-
-Clients can publish Telemetry messages using either `AT_MOST_ONCE` (presettled) or `AT_LEAST_ONCE` (unsettled) quality of service while Event messages can be published using only `AT_LEAST_ONCE` quality of service. 
-
-`AT_MOST_ONCE` QoS means that the client does not wait for the message to be accepted and settled by the downstream consumer while with `AT_LEAST_ONCE`, the client sends the message and wait for the message to be delivered. If the message cannot be delivered due to a failure, the client will be notified.
-
-The AMQP adapter distinguishes between two types of failures when a message is published using `AT_LEAST_ONCE` QoS:
-
-* A failure caused by a client-side error (e.g invalid message address, content-type, adapter disabled for tenant, etc).
-* A failure caused by a server-side error (e.g sender queue full, no credit available yet to send the message, etc).
-
-For a client-side error, the adapter **rejects** the message and provides a reason why it was rejected. In the case of a server-side error, the adapter **releases** the message, indicating to the client that the message was OK but it cannot be delivered due to a failure beyond the control of the client. In this case, the client should attempt to redeliver the message again.
 
 ## Device Authentication
 
@@ -48,7 +37,24 @@ When a device uses a client certificate for authentication, the TLS handshake is
 
 NB: The AMQP adapter needs to be configured for TLS in order to support this mechanism.
 
+## Link Establishment
+
+Clients can publish all types of messages to the AMQP adapter via a single *anonymous* sender link. Using *AT MOST ONCE* delivery semantics, the client will not wait for the message to be accepted and settled by the downstream consumer. However, with *AT LEAST ONCE*, the client sends the message and waits for the message to be delivered to and accepted by the downstream consumer. If the message cannot be delivered due to a failure, the client will be notified.
+
+The client indicates its preferred message delivery mode by means of the *snd-settle-mode* and *rcv-settle-mode* fields of its *attach* frame during link establishment. Clients should use `mixed` as the *snd-settle-mode* and `first` as the *rcv-settle-mode* in order to be able to use the same link for sending all types of messages using different delivery semantics as described in the following sections.
+
+## Error Handling
+
+The AMQP adapter distinguishes between two types of errors when a message is published using *at least once*:
+
+* An error caused by the client side, e.g invalid message address, content-type, adapter disabled for tenant etc.
+* An error caused by the server side, e.g no downstream consumers registered, downstream connection loss etc.
+
+For a client side error, the adapter settles the message transfer with the *rejected* outcome and provides an error description in the corresponding disposition frame. In the case of a server-side error, the adapter settles the message with the *released* outcome, indicating to the client that the message itself was OK but it cannot be delivered due to a failure beyond the control of the client. In the latter case, a client may attempt to re-send the message unaltered.
+
+
 ## AMQP Command-line Client
+
 For purposes of demonstrating the usage of the AMQP adapter, the **Hono CLI Module** contains an AMQP command-line client for interacting with the AMQP adapter.
 
 The command-line client supports the following parameters (with default values):
@@ -76,6 +82,17 @@ After running the client, the delivery state is printed to standard output. The 
 {{% note %}}
 There are two JAR files in the hono/cli/target directory. The JAR to use for the client is the `hono-cli-0.7-SNAPSHOT-exec.jar` and not the `hono-cli-0.7-SNAPSHOT.jar` file. Running the latter will not work and will output the message: `no main manifest attribute, in hono-cli-0.7-SNAPSHOT.jar`
 {{% /note %}}
+
+## Publishing Telemetry Data
+
+The client indicates the delivery mode to use when uploading telemetry messages by means of the *settled* and *rcv-settle-mode* properties of the AMQP *transfer* frame(s) it uses for uploading the message. The AMQP adapter will accept messages using a delivery mode according to the following table:
+
+| settled                | rcv-settle-mode        | Delivery semantics |
+| :--------------------- | :--------------------- | :----------------- |
+| `false`               | `first`               | The adapter will forward the message to the downstream AMQP 1.0 Messaging Network and will forward any AMQP *disposition* frame received from the AMQP 1.0 Messaging Network to the client *as is*. It is up to the client's discretion if and how it processes the disposition frame. The adapter will accept any re-delivered message. Sending *unsettled* messages allows for clients to implement either *AT LEAST ONCE* or *AT MOST ONCE* delivery semantics, depending on whether a client actually waits for and considers the disposition frames it receives from the adapter or not. This is the recommended mode for uploading telemetry data. |
+| `true`                | `first`                | The adapter will acknowledge and settle any received message spontaneously before forwarding it to the downstream AMQP 1.0 Messaging Network. The adapter will ignore any AMQP *disposition* frames it receives from the AMQP 1.0 Messaging Network. Sending *pre-settled* messages allows for clients to implement *AT MOST ONCE* delivery semantics only. This is the fastest mode of delivery but has the drawback of less reliable end-to-end flow control and potential loss of messages without notice. |
+
+All other combinations are not supported by the adapter and will result in the message being ignored (pre-settled) or rejected (unsettled).
 
 ## Publish Telemetry Data (authenticated Device)
 
@@ -152,7 +169,7 @@ In this example, we are using the default message address: `telemetry/DEFAULT_TE
 
 ## Publishing Events
 
-The AMQP adapter supports publishing of events to Hono's Event API. Events are published using only `AT_LEAST_ONCE` delivery semantics.
+The adapter supports *AT LEAST ONCE* delivery of *Event* messages only. A client therefore MUST set the *settled* property to `true` and the *rcv-settle-mode* property to `first` in all *transfer* frame(s) it uses for uploading events. All other combinations are not supported by the adapter and result in the message being rejected.
 
 ## Publish an Event (authenticated Device)
 
@@ -210,6 +227,7 @@ Publish some JSON data for device `4711`:
     $ /hono/cli/target$ java -jar hono-cli-0.7-SNAPSHOT-exec.jar --spring.profiles.active=amqp-adapter-cli --username="" --password="" --message.address=event/DEFAULT_TENANT/4711 --payload='{"alarm": 1}'
 
 ## Publish an Event (authenticated Gateway)
+
 **Examples**
 
 A Gateway connecting to the adapter using `gw@DEFAULT_TENANT` as username and `gw-secret` as password and then publishing some JSON data for device `4711`, as shown below:
@@ -217,6 +235,45 @@ A Gateway connecting to the adapter using `gw@DEFAULT_TENANT` as username and `g
     $ /hono/cli/target$ java -jar hono-cli-0.7-SNAPSHOT-exec.jar --spring.profiles.active=amqp-adapter-cli --username="gw@DEFAULT_TENANT" --password="gw-secret" --message.address="event/DEFAULT_TENANT/4711"
 
 In this example, we are using the default message address: `telemetry/DEFAULT_TENANT/4711`, which contains the real device that the gateway is publishing the message for.
+
+## Command & Control
+
+The AMQP adapter supports devices to receive commands that have been sent by business applications by means of opening a receiver link using a device specific *source address* as described below. When a device no longer wants to receive commands anymore, it can simply close the link.
+
+When a device has successfully opened a receiver link for commands, the adapter sends an [empty notification]({{< relref "/api/Event-API.md#empty-notification" >}}) on behalf of the device to the downstream AMQP 1.0 Messaging Network with the *ttd* header set to `-1`, indicating that the device will be ready to receive commands until further notice. Analogously, the adapter sends an empty notification with the *ttd* header set to `0` when a device closes the link or disconnects.
+
+Devices send their responses to commands by means of sending an AMQP message with properties specific to the command that has been executed. The AMQP adapter accepts responses being published using either *at most once* (QoS 0) or *at least once* (QoS 1) delivery semantics. The device must send the command response messages using the same (sender) link that it uses for sending telemetry data and events.
+
+### Receiving Commands
+
+A device MUST use the following source address in its *attach* frame to open a link for receiving commands:
+
+* `control` (authenticated device)
+* `control/${tenant}/${device-id}` (unauthenticated device)
+
+The adapter supports *AT LEAST ONCE* delivery of command messages only. A client therefore MUST use `unsettled` for the *snd-settle-mode* and `first` for the *rcv-settle-mode* fields of its *attach* frame during link establishment. All other combinations are not supported and result in the termination of the link.
+
+Once the link has been established, the adapter will send command messages having the following properties:
+
+| Name              | Mandatory       | Location                 | Type        | Description |
+| :--------------   | :-------------: | :----------------------- | :---------- | :---------- |
+| *subject*         | yes             | *properties*             | *string*    | Contains the name of the command to be executed. |
+| *reply-to*        | no              | *properties*             | *string*    | Contains the address to which the command response should be sent. This property will be empty for *one-way* commands. |
+| *correlation-id*  | no              | *properties*             | *string*    | This property will be empty for *one-way* commands, otherwise it will contain the identifier used to correlate the response with the command request. |
+
+### Sending a Response to a Command
+
+A device only needs to respond to commands that contain a *reply-to* address and a *correlation-id*. However, if the application expects a response, then devices must publish a response back to the application. Devices may use the same anonymous sender link for this purpose that they also use for sending telemetry data and events.
+
+The adapter supports *AT LEAST ONCE* delivery of command response messages only. A client therefore MUST set the *settled* property to `true` and the *rcv-settle-mode* property to `first` in all *transfer* frame(s) it uses for uploading command responses. All other combinations are not supported by the adapter and result in the message being rejected.
+
+The table below provides an overview of the properties that must be set on a command response message:
+
+ Name              | Mandatory       | Location                 | Type        | Description |
+| :--------------  | :-------------: | :----------------------- | :---------- | :---------- |
+| *to*             | yes             | *properties*             | *string*    | MUST contain the value of the *reply-to* property of the command request message. |
+| *correlation-id* | yes             | *properties*             | *string*    | MUST contain the value of the *correlation-id* property of the command request message. |
+| *status*         | yes             | *application-properties* | *string*    | MUST contain a status code indicating the outcome of processing the command at the device (see [Command & Control API]({{< ref "/api/Command-And-Control-API.md" >}}) for details). |
 
 ## Downstream Meta Data
 
