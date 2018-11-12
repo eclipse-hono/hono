@@ -212,7 +212,7 @@ public class HonoClientImpl implements HonoClient {
      *         be failed with a {@link ServerErrorException} if the <em>context</em>
      *         property is {@code null}.
      */
-    private <T> Future<T> executeOrRunOnContext(final Handler<Future<T>> codeToRun) {
+    protected final <T> Future<T> executeOrRunOnContext(final Handler<Future<T>> codeToRun) {
 
         if (context == null) {
             // this means that the connection to the peer is not established (yet)

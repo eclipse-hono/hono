@@ -93,15 +93,23 @@ public class CommandConnectionImpl extends HonoClientImpl implements CommandConn
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(commandConsumer);
 
-        final MessageConsumer messageConsumer = commandReceivers.get(Device.asAddress(tenantId, deviceId));
-        if (messageConsumer != null) {
-            log.debug("reusing existing command consumer [tenant: {}, device-id: {}]", tenantId, deviceId);
-            return Future.succeededFuture(messageConsumer);
-        } else {
-            return createConsumer(
-                    tenantId,
-                    () -> newCommandConsumer(tenantId, deviceId, commandConsumer, remoteCloseHandler));
-        }
+        return executeOrRunOnContext(result -> {
+            final String key = Device.asAddress(tenantId, deviceId);
+            final MessageConsumer messageConsumer = commandReceivers.get(key);
+            if (messageConsumer != null) {
+                log.debug("reusing existing command consumer [tenant: {}, device-id: {}]", tenantId, deviceId);
+                result.complete(messageConsumer);
+            } else {
+                createConsumer(
+                        tenantId,
+                        () -> newCommandConsumer(tenantId, deviceId, commandConsumer, remoteCloseHandler))
+                .map(consumer -> {
+                    commandReceivers.put(key, consumer);
+                    return consumer;
+                })
+                .setHandler(result);
+            }
+        });
     }
 
     private Future<MessageConsumer> newCommandConsumer(
@@ -112,6 +120,7 @@ public class CommandConnectionImpl extends HonoClientImpl implements CommandConn
 
         return checkConnected().compose(con -> {
             final Future<MessageConsumer> result = Future.future();
+            final String key = Device.asAddress(tenantId, deviceId);
             CommandConsumer.create(
                     context,
                     clientConfigProperties,
@@ -120,18 +129,15 @@ public class CommandConnectionImpl extends HonoClientImpl implements CommandConn
                     deviceId,
                     commandConsumer,
                     sourceAddress -> {
-                        commandReceivers.remove(Device.asAddress(tenantId, deviceId));
+                        commandReceivers.remove(key);
                     },
                     sourceAddress -> {
-                        commandReceivers.remove(Device.asAddress(tenantId, deviceId));
+                        commandReceivers.remove(key);
                         remoteCloseHandler.handle(null);
                     },
                     result,
                     getTracer());
-            return result.map(consumer -> {
-                commandReceivers.put(Device.asAddress(tenantId, deviceId), consumer);
-                return consumer;
-            });
+            return result;
         });
     }
 
@@ -143,15 +149,12 @@ public class CommandConnectionImpl extends HonoClientImpl implements CommandConn
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
 
-        final Future<Void> result = Future.future();
-        final String deviceAddress = Device.asAddress(tenantId, deviceId);
-
-        Optional.ofNullable(commandReceivers.remove(deviceAddress)).map(commandReceiverLink -> {
-            commandReceiverLink.close(result);
-            return commandReceiverLink;
+        return executeOrRunOnContext(result -> {
+            final String deviceAddress = Device.asAddress(tenantId, deviceId);
+            Optional.ofNullable(commandReceivers.remove(deviceAddress)).ifPresent(consumer -> {
+                consumer.close(result);
+            });
         });
-
-        return result;
     }
 
     /**
@@ -165,13 +168,18 @@ public class CommandConnectionImpl extends HonoClientImpl implements CommandConn
 
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(replyId);
-        return checkConnected().compose(connected -> {
-            final Future<CommandResponseSender> result = Future.future();
-            CommandResponseSenderImpl.create(context, clientConfigProperties, connection, tenantId, replyId,
-                    onSenderClosed -> {},
-                    result.completer(),
-                    getTracer());
-            return result;
+
+        return executeOrRunOnContext(result -> {
+            checkConnected().setHandler(check -> {
+                if (check.succeeded()) {
+                    CommandResponseSenderImpl.create(context, clientConfigProperties, connection, tenantId, replyId,
+                            onSenderClosed -> {},
+                            result,
+                            getTracer());
+                } else {
+                    result.fail(check.cause());
+                }
+            });
         });
     }
 }
