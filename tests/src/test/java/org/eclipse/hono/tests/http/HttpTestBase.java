@@ -76,7 +76,7 @@ public abstract class HttpTestBase {
 
     private static final String ORIGIN_WILDCARD = "*";
     private static final Vertx VERTX = Vertx.vertx();
-    private static final long  TEST_TIMEOUT = 10000; // ms
+    private static final long  TEST_TIMEOUT_MILLIS = 20000; // 20 seconds
     private static final int MESSAGES_TO_SEND = 60;
 
     /**
@@ -98,10 +98,10 @@ public abstract class HttpTestBase {
     private static HttpClientOptions defaultOptions;
 
     /**
-     * Time out each test after five seconds.
+     * Time out each test after 20 seconds.
      */
     @Rule
-    public final Timeout timeout = Timeout.millis(TEST_TIMEOUT);
+    public final Timeout timeout = Timeout.millis(TEST_TIMEOUT_MILLIS);
     /**
      * Provide test name to unit tests.
      */
@@ -414,7 +414,7 @@ public abstract class HttpTestBase {
             sending.await();
         }
 
-        final long timeToWait = Math.max(TEST_TIMEOUT - 1000, Math.round(numberOfMessages * 20));
+        final long timeToWait = Math.max(TEST_TIMEOUT_MILLIS - 1000, Math.round(numberOfMessages * 20));
         if (!received.await(timeToWait, TimeUnit.MILLISECONDS)) {
             logger.info("sent {} and received {} messages after {} milliseconds",
                     messageCount, numberOfMessages - received.getCount(), System.currentTimeMillis() - start);
@@ -671,12 +671,12 @@ public abstract class HttpTestBase {
     /**
      * Verifies that the HTTP adapter returns a command in response to an initial upload request containing a TTD
      * and immediately returns a 202 in response to consecutive upload requests which include a TTD value
-     * and which are sent before the command response to the empty notification request has been received.
+     * and which are sent before the command response to the initial request has been received.
      * 
      * @param ctx The test context.
      */
     @Test
-    public void testConcurrentTelemetryUploadReturnsImmediately(final TestContext ctx) {
+    public void testHandleConcurrentUploadWithTtd(final TestContext ctx) {
 
         final TenantObject tenant = TenantObject.from(tenantId, true);
 
@@ -717,27 +717,35 @@ public abstract class HttpTestBase {
                 .add(HttpHeaders.CONTENT_TYPE, "text/plain")
                 .add(HttpHeaders.AUTHORIZATION, authorization)
                 .add(HttpHeaders.ORIGIN, ORIGIN_URI)
-                .add(Constants.HEADER_TIME_TIL_DISCONNECT, "10");
+                .add(Constants.HEADER_TIME_TIL_DISCONNECT, "5");
 
         final Future<MultiMap> firstRequest = httpClient.create(
                 getEndpointUri(),
                 Buffer.buffer("hello one"),
                 requestHeaders,
-                response -> response.statusCode() >= 200 && response.statusCode() < 300);
-        logger.debug("sent first request");
+                response -> response.statusCode() >= 200 && response.statusCode() < 300)
+                .map(headers -> {
+                    logger.info("received response to first request");
+                    return headers;
+                });
+        logger.info("sent first request");
         // immediately followed by a second request
         final Future<MultiMap> secondRequest = httpClient.create(
                 getEndpointUri(),
                 Buffer.buffer("hello two"),
                 requestHeaders,
-                response -> response.statusCode() >= 200 && response.statusCode() < 300);
-        logger.debug("sent second request");
+                response -> response.statusCode() >= 200 && response.statusCode() < 300)
+                .map(headers -> {
+                    logger.info("received response to second request");
+                    return headers;
+                });
+        logger.info("sent second request");
         // wait for messages having been received
         piggybackedRequestsReceived.await();
         // send command but do not wait for response
         final JsonObject inputData = new JsonObject().put(COMMAND_JSON_KEY, (int) (Math.random() * 100));
         helper.sendCommand(tenantId, deviceId, COMMAND_TO_SEND, "application/json", inputData.toBuffer(), null, 3000);
-        logger.debug("sent command to device");
+        logger.info("sent command to device");
 
         // THEN both requests succeed
         CompositeFuture.all(firstRequest, secondRequest).map(ok -> {
