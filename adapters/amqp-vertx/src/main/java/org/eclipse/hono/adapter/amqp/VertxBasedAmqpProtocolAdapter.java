@@ -69,6 +69,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
     // These values should be made configurable.
     private static final int DEFAULT_MAX_FRAME_SIZE = 32 * 1024; // 32 KB
     private static final int DEFAULT_MAX_SESSION_WINDOW = 100 * DEFAULT_MAX_FRAME_SIZE;
+    private static final long DEFAULT_COMMAND_CONSUMER_CHECK_INTERVAL_MILLIS = 10000; // 10 seconds
 
     /**
      * The AMQP server instance that maps to a secure port.
@@ -509,7 +510,8 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                     } else {
                         onCommandReceived(sender, commandContext);
                     }
-                }, closeHandler -> {});
+                }, closeHandler -> {},
+                DEFAULT_COMMAND_CONSUMER_CHECK_INTERVAL_MILLIS);
     }
 
     /**
