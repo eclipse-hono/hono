@@ -13,6 +13,7 @@
 
 package org.eclipse.hono.tests.mqtt;
 
+import java.util.Optional;
 import java.util.function.Supplier;
 
 import org.eclipse.hono.client.MessageConsumer;
@@ -34,6 +35,7 @@ import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.mqtt.MqttClient;
 import io.vertx.mqtt.MqttClientOptions;
+import io.vertx.mqtt.MqttConnectionException;
 import io.vertx.mqtt.messages.MqttConnAckMessage;
 
 /**
@@ -144,7 +146,8 @@ public abstract class MqttTestBase {
      * @param deviceId The identifier of the device.
      * @param password The password to use for authentication.
      * @param consumerFactory The factory for creating the consumer of messages
-     *                   published by the device.
+     *                   published by the device or {@code null} if no consumer
+     *                   should be created.
      * @return A future that will be completed with the CONNACK packet received
      *         from the adapter or failed if the connection could not be established. 
      */
@@ -156,28 +159,45 @@ public abstract class MqttTestBase {
 
         return helper.registry
         .addDeviceForTenant(tenant, deviceId, password)
-        .compose(ok -> consumerFactory.get())
-        .compose(ok -> {
-            final Future<MqttConnAckMessage> result = Future.future();
-            VERTX.runOnContext(connect -> {
-                final MqttClientOptions options = new MqttClientOptions()
-                        .setUsername(IntegrationTestSupport.getUsername(deviceId, tenant.getTenantId()))
-                        .setPassword(password);
-                mqttClient = MqttClient.create(VERTX, options);
-                mqttClient.connect(IntegrationTestSupport.MQTT_PORT, IntegrationTestSupport.MQTT_HOST, result.completer());
-            });
-            return result;
-        }).map(conAck -> {
-            LOGGER.info(
-                    "connection to MQTT adapter [host: {}, port: {}] established",
-                    IntegrationTestSupport.MQTT_HOST, IntegrationTestSupport.MQTT_PORT);
-            this.context = Vertx.currentContext();
-            return conAck;
-        }).recover(t -> {
-            LOGGER.error("failed to establish connection to MQTT adapter [host: {}, port: {}]",
+        .compose(ok -> Optional.ofNullable(consumerFactory)
+                .map(factory -> factory.get())
+                .orElse(Future.succeededFuture()))
+        .compose(ok -> connectToAdapter(IntegrationTestSupport.getUsername(deviceId, tenant.getTenantId()), password))
+        .recover(t -> {
+            LOGGER.debug("failed to establish connection to MQTT adapter [host: {}, port: {}]",
                     IntegrationTestSupport.MQTT_HOST, IntegrationTestSupport.MQTT_PORT, t);
             return Future.failedFuture(t);
         });
 
+    }
+
+    /**
+     * Opens a connection to the MQTT adapter using given credentials.
+     * 
+     * @param username The username to use for authentication.
+     * @param password The password to use for authentication.
+     * @return A future that will be completed with the CONNACK packet received
+     *         from the adapter or failed with a {@link MqttConnectionException}
+     *         if the connection could not be established.
+     */
+    protected final Future<MqttConnAckMessage> connectToAdapter(
+            final String username,
+            final String password) {
+
+        final Future<MqttConnAckMessage> result = Future.future();
+        VERTX.runOnContext(connect -> {
+            final MqttClientOptions options = new MqttClientOptions()
+                    .setUsername(username)
+                    .setPassword(password);
+            mqttClient = MqttClient.create(VERTX, options);
+            mqttClient.connect(IntegrationTestSupport.MQTT_PORT, IntegrationTestSupport.MQTT_HOST, result.completer());
+        });
+        return result.map(conAck -> {
+            LOGGER.debug(
+                    "connection to MQTT adapter [host: {}, port: {}] established",
+                    IntegrationTestSupport.MQTT_HOST, IntegrationTestSupport.MQTT_PORT);
+            this.context = Vertx.currentContext();
+            return conAck;
+        });
     }
 }

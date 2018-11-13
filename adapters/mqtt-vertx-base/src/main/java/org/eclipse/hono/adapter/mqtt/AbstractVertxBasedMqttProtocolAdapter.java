@@ -26,7 +26,6 @@ import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.MessageSender;
-import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.Command;
 import org.eclipse.hono.client.CommandContext;
@@ -432,24 +431,14 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
                 .compose(device -> createLink(device, currentSpan))
                 .compose(device -> registerHandlers(endpoint, device))
                 .recover(t -> {
-                    if (credentialsTracker.result() != null) {
+                    if (credentialsTracker.result() == null) {
+                        LOG.debug("Error establishing connection with device", t);
+                    } else {
                         LOG.debug("cannot establish connection with device [tenant-id: {}, auth-id: {}]",
                                 credentialsTracker.result().getTenantId(), credentialsTracker.result().getAuthId(), t);
-                    } else {
-                        LOG.debug("Error establishing connection with device", t);
                     }
 
-                    if (t instanceof MqttConnectionException) {
-                        return rejected(((MqttConnectionException) t).code());
-                    }
-
-                    if (t instanceof ServerErrorException) {
-                        // one of the services we depend on might not be available (yet)
-                        return rejected(MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE);
-                    } else {
-                        // validation of credentials has failed
-                        return rejected(MqttConnectReturnCode.CONNECTION_REFUSED_NOT_AUTHORIZED);
-                    }
+                    return rejected(getConnectReturnCode(t));
                 });
     }
 
@@ -1265,5 +1254,24 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
         endpoint.unsubscribeHandler(unsubscribeMsg -> onUnsubscribe(endpoint, authenticatedDevice, unsubscribeMsg));
         metrics.incrementConnections(authenticatedDevice.getTenantId());
         return accepted(authenticatedDevice);
+    }
+
+    private static MqttConnectReturnCode getConnectReturnCode(final Throwable e) {
+
+        if (e instanceof MqttConnectionException) {
+            return ((MqttConnectionException) e).code();
+        } else if (e instanceof ServiceInvocationException) {
+            switch (((ServiceInvocationException) e).getErrorCode()) {
+            case HttpURLConnection.HTTP_UNAUTHORIZED:
+            case HttpURLConnection.HTTP_NOT_FOUND:
+                return MqttConnectReturnCode.CONNECTION_REFUSED_BAD_USER_NAME_OR_PASSWORD;
+            case HttpURLConnection.HTTP_UNAVAILABLE:
+                return MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE;
+            default:
+                return MqttConnectReturnCode.CONNECTION_REFUSED_NOT_AUTHORIZED;
+            }
+        } else {
+            return MqttConnectReturnCode.CONNECTION_REFUSED_NOT_AUTHORIZED;
+        }
     }
 }

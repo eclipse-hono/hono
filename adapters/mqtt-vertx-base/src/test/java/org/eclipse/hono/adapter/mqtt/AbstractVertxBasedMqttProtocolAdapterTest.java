@@ -265,6 +265,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
      * Verifies that an adapter rejects a connection attempt from a device that belongs to a tenant for which the
      * adapter is disabled.
      */
+    @SuppressWarnings("unchecked")
     @Test
     public void testEndpointHandlerRejectsDeviceOfDisabledTenant() {
 
@@ -375,34 +376,33 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
      */
     @SuppressWarnings({ "unchecked" })
     @Test
-    public void testAuthenticatedMqttAdapterRejectsMessageHandlersForDeletedDevices() {
+    public void testAuthenticatedMqttAdapterRejectsConnectionForNonExistingDevice() {
 
-        // Device registration asserts that the given device is not available
-        when(regClient.assertRegistration(eq("9999"), (String) any(), (SpanContext) any()))
-                .thenThrow(new ClientErrorException(
-                        HTTP_NOT_FOUND, "device unknown or disabled"));
         // GIVEN an adapter
         final MqttServer server = getMqttServer(false);
         final AbstractVertxBasedMqttProtocolAdapter<ProtocolAdapterProperties> adapter = getAdapter(server);
         forceClientMocksToConnected();
+        // which is connected to a Credentials service that has credentials on record for device 9999
         doAnswer(invocation -> {
             final Handler<AsyncResult<DeviceUser>> resultHandler = invocation.getArgument(1);
             resultHandler.handle(Future.succeededFuture(new DeviceUser("DEFAULT_TENANT", "9999")));
             return null;
         }).when(usernamePasswordAuthProvider).authenticate(any(DeviceCredentials.class), any(Handler.class));
+        // but for which no registration information is available
+        when(regClient.assertRegistration(eq("9999"), (String) any(), (SpanContext) any()))
+                .thenReturn(Future.failedFuture(new ClientErrorException(
+                        HTTP_NOT_FOUND, "device unknown or disabled")));
 
         // WHEN a device tries to connect with valid credentials
         final MqttEndpoint endpoint = getMqttEndpointAuthenticated();
         adapter.handleEndpointConnection(endpoint);
 
+        // THEN the device's credentials are verified successfully
         final ArgumentCaptor<DeviceCredentials> credentialsCaptor = ArgumentCaptor.forClass(DeviceCredentials.class);
         verify(usernamePasswordAuthProvider).authenticate(credentialsCaptor.capture(), any(Handler.class));
         assertThat(credentialsCaptor.getValue().getAuthId(), is("sensor1"));
-        final ArgumentCaptor<MqttConnectReturnCode> mqttConnectReturnCodeArgumentCaptor = ArgumentCaptor
-                .forClass(MqttConnectReturnCode.class);
-        verify(endpoint).reject(mqttConnectReturnCodeArgumentCaptor.capture());
-        // Connection is refused
-        assertThat(mqttConnectReturnCodeArgumentCaptor.getValue(), is(CONNECTION_REFUSED_NOT_AUTHORIZED));
+        // but the connection is refused
+        verify(endpoint).reject(MqttConnectReturnCode.CONNECTION_REFUSED_BAD_USER_NAME_OR_PASSWORD);
     }
 
     /**
