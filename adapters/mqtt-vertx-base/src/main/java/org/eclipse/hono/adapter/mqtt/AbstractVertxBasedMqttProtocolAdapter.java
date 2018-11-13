@@ -514,9 +514,11 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
                         // make sure that we close the consumer and notify downstream
                         // applications when the connection is closed
                         endpoint.closeHandler(c -> {
-                            sendDisconnectedTtdEvent(cmdSub.getTenant(), cmdSub.getDeviceId(), authenticatedDevice);
-                            closeCommandConsumer(cmdSub.getTenant(), cmdSub.getDeviceId());
-                            close(endpoint, authenticatedDevice);
+                            sendDisconnectedTtdEvent(cmdSub.getTenant(), cmdSub.getDeviceId(), authenticatedDevice)
+                            .setHandler(sendAttempt -> {
+                                consumer.close(null);
+                                close(endpoint, authenticatedDevice);
+                            });
                         });
                         span.log(String.format("accepting subscription [filter: %s, requested QoS: %s, granted QoS: %s]",
                                 subscription.topicName(), subscription.qualityOfService(), MqttQoS.AT_MOST_ONCE));
@@ -617,7 +619,11 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
 
     private Future<MessageConsumer> createCommandConsumer(final MqttEndpoint mqttEndpoint, final CommandSubscription sub) {
 
-        return createCommandConsumer(
+        // if a device does not specify a keep alive in its CONNECT packet then
+        // the default value of the CommandConnection will be used
+        final long livenessCheckInterval = mqttEndpoint.keepAliveTimeSeconds() * 1000 / 2;
+
+        return getCommandConnection().createCommandConsumer(
                 sub.getTenant(),
                 sub.getDeviceId(),
                 commandContext -> {
@@ -631,13 +637,8 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
                         commandContext.flow(1);
                     }
                 },
-                close -> {
-                    LOG.debug("command receiver link closed remotely for [tenant-id: {}, device-id: {}]",
-                            sub.getTenant(), sub.getDeviceId());
-                    closeCommandConsumer(sub.getTenant(), sub.getDeviceId());
-                    // close the MQTT connection, so the device will reconnect
-                    close(mqttEndpoint, new Device(sub.getTenant(), sub.getDeviceId()));
-                });
+                remoteClose -> {},
+                livenessCheckInterval);
     }
 
     void handlePublishedMessage(final MqttContext context) {
@@ -1136,7 +1137,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
 
     /**
      * Called for a command to be delivered to a device.
-     *
+     * 
      * @param endpoint The device that the command should be delivered to.
      * @param subscription The device's command subscription.
      * @param commandContext The command to be delivered.
