@@ -19,6 +19,7 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
@@ -677,8 +678,9 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
     }
 
     /**
-     * Verifies that the adapter registers a hook to close the command consumer
-     * created for a device's command subscription.
+     * Verifies that the adapter creates a command consumer that is checked periodically
+     * for a subscription and registers a hook to close the command consumer
+     * when the connection to the device is closed.
      * 
      * @param ctx The vert.x test context.
      */
@@ -692,24 +694,28 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         final MqttServer server = getMqttServer(false);
         final AbstractVertxBasedMqttProtocolAdapter<ProtocolAdapterProperties> adapter = getAdapter(server);
         final MqttEndpoint endpoint = mockEndpoint();
+        when(endpoint.keepAliveTimeSeconds()).thenReturn(10); // 10 seconds
 
         // WHEN a device subscribes to commands
-        when(commandConnection.createCommandConsumer(eq("tenant"), eq("deviceId"), any(Handler.class), any(Handler.class))).thenReturn(
-                Future.succeededFuture(mock(MessageConsumer.class)));
+        final MessageConsumer commandConsumer = mock(MessageConsumer.class);
+        when(commandConnection.createCommandConsumer(eq("tenant"), eq("deviceId"), any(Handler.class), any(Handler.class), anyLong()))
+            .thenReturn(Future.succeededFuture(commandConsumer));
         final List<MqttTopicSubscription> subscriptions = Collections.singletonList(
-                newMockTopicSubsription("control/tenant/deviceId/req/#", MqttQoS.AT_MOST_ONCE));
+                newMockTopicSubscription("control/tenant/deviceId/req/#", MqttQoS.AT_MOST_ONCE));
         final MqttSubscribeMessage msg = mock(MqttSubscribeMessage.class);
         when(msg.messageId()).thenReturn(15);
         when(msg.topicSubscriptions()).thenReturn(subscriptions);
 
         adapter.onSubscribe(endpoint, null, msg);
 
-        // THEN the adapter registers a hook for closing the command consumer for the device
+        // THEN the adapter creates a command consumer that is checked periodically
+        verify(commandConnection).createCommandConsumer(eq("tenant"), eq("deviceId"), any(Handler.class), any(Handler.class), anyLong());
+        // and the adapter registers a hook on the connection to the device
         final ArgumentCaptor<Handler<Void>> closeHookCaptor = ArgumentCaptor.forClass(Handler.class);
         verify(endpoint).closeHandler(closeHookCaptor.capture());
-        // which closes the command consumer when the connection is closed
+        // which closes the command consumer when the device disconnects
         closeHookCaptor.getValue().handle(null);
-        verify(commandConnection).closeCommandConsumer("tenant", "deviceId");
+        verify(commandConsumer).close(any());
         // and sends an empty notification downstream with TTD 0
         final ArgumentCaptor<Message> msgCaptor = ArgumentCaptor.forClass(Message.class);
         verify(sender, times(2)).sendAndWaitForOutcome(msgCaptor.capture(), any());
@@ -737,14 +743,14 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
 
         // WHEN a device sends a SUBSCRIBE packet for several unsupported filters
         final List<MqttTopicSubscription> subscriptions = new ArrayList<>();
-        subscriptions.add(newMockTopicSubsription("unsupported/#", MqttQoS.AT_LEAST_ONCE));
-        subscriptions.add(newMockTopicSubsription("bumlux/+/+/#", MqttQoS.AT_MOST_ONCE));
-        subscriptions.add(newMockTopicSubsription("bumlux/+/+/#", MqttQoS.AT_MOST_ONCE));
+        subscriptions.add(newMockTopicSubscription("unsupported/#", MqttQoS.AT_LEAST_ONCE));
+        subscriptions.add(newMockTopicSubscription("bumlux/+/+/#", MqttQoS.AT_MOST_ONCE));
+        subscriptions.add(newMockTopicSubscription("bumlux/+/+/#", MqttQoS.AT_MOST_ONCE));
         // and for subscribing to commands
-        when(commandConnection.createCommandConsumer(eq("tenant-1"), eq("device-A"), any(Handler.class), any(Handler.class))).thenReturn(
-                Future.succeededFuture(mock(MessageConsumer.class)));
-        subscriptions.add(newMockTopicSubsription("control/tenant-1/device-A/req/#", MqttQoS.AT_MOST_ONCE));
-        subscriptions.add(newMockTopicSubsription("control/tenant-1/device-B/req/#", MqttQoS.EXACTLY_ONCE));
+        when(commandConnection.createCommandConsumer(eq("tenant-1"), eq("device-A"), any(Handler.class), any(Handler.class), anyLong()))
+            .thenReturn(Future.succeededFuture(mock(MessageConsumer.class)));
+        subscriptions.add(newMockTopicSubscription("control/tenant-1/device-A/req/#", MqttQoS.AT_MOST_ONCE));
+        subscriptions.add(newMockTopicSubscription("control/tenant-1/device-B/req/#", MqttQoS.EXACTLY_ONCE));
         final MqttSubscribeMessage msg = mock(MqttSubscribeMessage.class);
         when(msg.messageId()).thenReturn(15);
         when(msg.topicSubscriptions()).thenReturn(subscriptions);
@@ -770,7 +776,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
 
     }
 
-    private static MqttTopicSubscription newMockTopicSubsription(final String filter, final MqttQoS qos) {
+    private static MqttTopicSubscription newMockTopicSubscription(final String filter, final MqttQoS qos) {
         final MqttTopicSubscription result = mock(MqttTopicSubscription.class);
         when(result.qualityOfService()).thenReturn(qos);
         when(result.topicName()).thenReturn(filter);
