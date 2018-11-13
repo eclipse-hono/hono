@@ -233,10 +233,15 @@ public abstract class AbstractHonoClient {
 
         Objects.requireNonNull(closeHandler);
 
-        HonoProtonHelper.closeAndFree(context, sender, senderClosed -> 
-            HonoProtonHelper.closeAndFree(context, receiver, receiverClosed -> {
-                closeHandler.handle(null);
-            }));
+        if (sender != null) {
+            LOG.debug("locally closing sender link [{}]", sender.getTarget().getAddress());
+        }
+        HonoProtonHelper.closeAndFree(context, sender, senderClosed -> {
+            if (receiver != null) {
+                LOG.debug("locally closing receiver link [{}]", receiver.getSource().getAddress());
+            }
+            HonoProtonHelper.closeAndFree(context, receiver, receiverClosed -> closeHandler.handle(null));
+        });
     }
 
     /**
