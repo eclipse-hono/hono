@@ -35,6 +35,7 @@ import org.apache.qpid.proton.amqp.messaging.Rejected;
 import org.apache.qpid.proton.amqp.messaging.Target;
 import org.apache.qpid.proton.amqp.transport.Source;
 import org.apache.qpid.proton.engine.Record;
+import org.apache.qpid.proton.engine.impl.RecordImpl;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.CommandResponse;
 import org.eclipse.hono.client.CommandResponseSender;
@@ -186,7 +187,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
      * Verifies that the AMQP Adapter rejects (closes) AMQP links that contains a target address.
      */
     @Test
-    public void testAnonymousRelayRequired() {
+    public void testAdapterAcceptsAnonymousRelayReceiverOnly() {
         // GIVEN an AMQP adapter with a configured server.
         final ProtonServer server = getAmqpServer();
         final VertxBasedAmqpProtocolAdapter adapter = getAdapter(server);
@@ -202,10 +203,8 @@ public class VertxBasedAmqpProtocolAdapterTest {
     }
 
     /**
-     * Verifies that a request to upload a "settled" telemetry message results in the sender sending the message
-     * without waiting for a response from the downstream peer.
-     * 
-     * AT_MOST_ONCE delivery semantics
+     * Verifies that a request to upload a pre-settled telemetry message results
+     * in the downstream sender not waiting for the consumer's acknowledgment.
      */
     @Test
     public void uploadTelemetryMessageWithSettledDeliverySemantics() {
@@ -301,12 +300,13 @@ public class VertxBasedAmqpProtocolAdapterTest {
         final MessageSender eventSender = givenAnEventSender(outcome);
 
         // WHEN an unauthenticated device opens a receiver link with a valid source address
+        final ProtonConnection deviceConnection = mock(ProtonConnection.class);
         when(commandConnection.getOrCreateCommandConsumer(eq(TEST_TENANT_ID), eq(TEST_DEVICE), any(Handler.class), any(Handler.class))).thenReturn(
                 Future.succeededFuture(mock(MessageConsumer.class)));
         final String sourceAddress = String.format("%s/%s/%s", CommandConstants.COMMAND_ENDPOINT, TEST_TENANT_ID, TEST_DEVICE);
         final ProtonSender sender = getSender(sourceAddress);
 
-        adapter.handleRemoteSenderOpenForCommands(sender, null);
+        adapter.handleRemoteSenderOpenForCommands(deviceConnection, sender, null);
 
         // THEN the adapter opens the link upon success
         verify(sender).open();
@@ -319,9 +319,9 @@ public class VertxBasedAmqpProtocolAdapterTest {
     }
 
     /**
-     * Verify that if a client device unsubscribe to receiving commands (by closing its receiver link), then the AMQP
-     * adapter sends an empty notification downstream with TTD 0 and closes the command consumer. An authenticated
-     * device is used in this test setup to simulate a client device.
+     * Verify that if a client device closes the link for receiving commands, then the AMQP
+     * adapter sends an empty notification downstream with TTD 0 and closes the command
+     * consumer.
      */
     @SuppressWarnings("unchecked")
     @Test
@@ -333,6 +333,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
         final MessageSender eventSender = givenAnEventSender(outcome);
 
         // and a device that wants to receive commands
+        final ProtonConnection deviceConnection = mock(ProtonConnection.class);
         final MessageConsumer commandConsumer = mock(MessageConsumer.class);
         when(commandConnection.getOrCreateCommandConsumer(eq(TEST_TENANT_ID), eq(TEST_DEVICE), any(Handler.class), any(Handler.class))).thenReturn(
                 Future.succeededFuture(commandConsumer));
@@ -340,7 +341,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
         final ProtonSender sender = getSender(sourceAddress);
         final Device authenticatedDevice = new Device(TEST_TENANT_ID, TEST_DEVICE);
 
-        adapter.handleRemoteSenderOpenForCommands(sender, authenticatedDevice);
+        adapter.handleRemoteSenderOpenForCommands(deviceConnection, sender, authenticatedDevice);
 
         // WHEN the client device closes its receiver link (unsubscribe)
         final ArgumentCaptor<Handler<AsyncResult<ProtonSender>>> closeHookCaptor = ArgumentCaptor.forClass(Handler.class);
@@ -353,6 +354,97 @@ public class VertxBasedAmqpProtocolAdapterTest {
         // AND sends an empty notification downstream
         final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
         verify(eventSender, times(2)).sendAndWaitForOutcome(messageCaptor.capture(), any());
+        assertThat(messageCaptor.getValue().getContentType(), equalTo(EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION));
+        assertThat(MessageHelper.getTimeUntilDisconnect(messageCaptor.getValue()), equalTo(0));
+    }
+
+    /**
+     * Verifies that the adapter closes a corresponding command consumer if
+     * the device closes the connection to the adapter.
+     * 
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testAdapterClosesCommandConsumerWhenDeviceClosesConnection(final TestContext ctx) {
+
+        final Handler<ProtonConnection> trigger = deviceConnection -> {
+            @SuppressWarnings("unchecked")
+            final ArgumentCaptor<Handler<AsyncResult<ProtonConnection>>> closeHandler = ArgumentCaptor.forClass(Handler.class);
+            verify(deviceConnection).closeHandler(closeHandler.capture());
+            closeHandler.getValue().handle(Future.succeededFuture(deviceConnection));
+        };
+        testAdapterClosesCommandConsumer(ctx, trigger);
+    }
+
+    /**
+     * Verifies that the adapter closes a corresponding command consumer if
+     * the connection to a device fails unexpectedly.
+     * 
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testAdapterClosesCommandConsumerWhenConnectionToDeviceIsLost(final TestContext ctx) {
+
+        final Handler<ProtonConnection> trigger = deviceConnection -> {
+            @SuppressWarnings("unchecked")
+            final ArgumentCaptor<Handler<ProtonConnection>> disconnectHandler = ArgumentCaptor.forClass(Handler.class);
+            verify(deviceConnection).disconnectHandler(disconnectHandler.capture());
+            disconnectHandler.getValue().handle(deviceConnection);
+        };
+        testAdapterClosesCommandConsumer(ctx, trigger);
+    }
+
+    /**
+     * Verifies that the adapter closes a corresponding command consumer if
+     * the connection to a device fails unexpectedly.
+     * 
+     * @param ctx The vert.x test context.
+     */
+    @SuppressWarnings("unchecked")
+    private void testAdapterClosesCommandConsumer(final TestContext ctx, final Handler<ProtonConnection> connectionLossTrigger) {
+
+        // GIVEN an AMQP adapter
+        final MessageSender downstreamEventSender = givenAnEventSender(Future.succeededFuture());
+        final ProtonServer server = getAmqpServer();
+        final VertxBasedAmqpProtocolAdapter adapter = getAdapter(server);
+
+        final Async startup = ctx.async();
+        final Future<Void> startupTracker = Future.future();
+        startupTracker.setHandler(ctx.asyncAssertSuccess(ok -> {
+            startup.complete();
+        }));
+        adapter.start(startupTracker);
+        startup.await();
+
+        // to which a device is connected
+        final ArgumentCaptor<Handler<ProtonConnection>> connectHandler = ArgumentCaptor.forClass(Handler.class);
+        verify(server).connectHandler(connectHandler.capture());
+        final ProtonConnection deviceConnection = mock(ProtonConnection.class);
+        final Record record = new RecordImpl();
+        when(deviceConnection.attachments()).thenReturn(record);
+        connectHandler.getValue().handle(deviceConnection);
+
+        // that wants to receive commands
+        final MessageConsumer commandConsumer = mock(MessageConsumer.class);
+        when(commandConnection.getOrCreateCommandConsumer(eq(TEST_TENANT_ID), eq(TEST_DEVICE), any(Handler.class), any(Handler.class)))
+            .thenReturn(Future.succeededFuture(commandConsumer));
+        final String sourceAddress = CommandConstants.COMMAND_ENDPOINT;
+        final ProtonSender sender = getSender(sourceAddress);
+        final Device authenticatedDevice = new Device(TEST_TENANT_ID, TEST_DEVICE);
+
+        adapter.handleRemoteSenderOpenForCommands(deviceConnection, sender, authenticatedDevice);
+
+        // WHEN the connection to the device is lost
+        connectionLossTrigger.handle(deviceConnection);
+//        final ArgumentCaptor<Handler<ProtonConnection>> disconnectHandler = ArgumentCaptor.forClass(Handler.class);
+//        verify(deviceConnection).disconnectHandler(disconnectHandler.capture());
+//        disconnectHandler.getValue().handle(deviceConnection);
+
+        // THEN the adapter closes the command consumer
+        verify(commandConsumer).close(any());
+        // and sends an empty event with TTD = 0 downstream
+        final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
+        verify(downstreamEventSender, times(2)).sendAndWaitForOutcome(messageCaptor.capture(), any());
         assertThat(messageCaptor.getValue().getContentType(), equalTo(EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION));
         assertThat(MessageHelper.getTimeUntilDisconnect(messageCaptor.getValue()), equalTo(0));
     }
@@ -470,6 +562,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
      * @return The AMQP adapter instance.
      */
     private VertxBasedAmqpProtocolAdapter getAdapter(final ProtonServer server) {
+
         final VertxBasedAmqpProtocolAdapter adapter = new VertxBasedAmqpProtocolAdapter();
 
         adapter.setConfig(config);
@@ -483,18 +576,18 @@ public class VertxBasedAmqpProtocolAdapterTest {
     }
 
     /**
-     * Creates and sets up a ProtonServer instance.
+     * Creates and sets up a ProtonServer mock.
      *
      * @return The configured server instance.
      */
     @SuppressWarnings("unchecked")
     private ProtonServer getAmqpServer() {
+
         final ProtonServer server = mock(ProtonServer.class);
-        when(server.actualPort()).thenReturn(0, 4040);
+        when(server.actualPort()).thenReturn(0, Constants.PORT_AMQP);
         when(server.connectHandler(any(Handler.class))).thenReturn(server);
         when(server.listen(any(Handler.class))).then(invocation -> {
-            final Handler<AsyncResult<ProtonServer>> handler = (Handler<AsyncResult<ProtonServer>>) invocation
-                    .getArgument(0);
+            final Handler<AsyncResult<ProtonServer>> handler = invocation.getArgument(0);
             handler.handle(Future.succeededFuture(server));
             return server;
         });

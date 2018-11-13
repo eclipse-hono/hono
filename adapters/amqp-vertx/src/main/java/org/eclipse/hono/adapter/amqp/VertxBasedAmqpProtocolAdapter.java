@@ -15,7 +15,6 @@ package org.eclipse.hono.adapter.amqp;
 import java.net.HttpURLConnection;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.qpid.proton.amqp.Binary;
 import org.apache.qpid.proton.amqp.messaging.Accepted;
@@ -32,6 +31,7 @@ import org.eclipse.hono.client.CommandResponse;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.ServerErrorException;
+import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
 import org.eclipse.hono.util.CommandConstants;
@@ -48,6 +48,7 @@ import org.slf4j.LoggerFactory;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
+import io.vertx.core.Handler;
 import io.vertx.core.json.JsonObject;
 import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonDelivery;
@@ -71,16 +72,6 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
     private static final int DEFAULT_MAX_SESSION_WINDOW = 100 * DEFAULT_MAX_FRAME_SIZE;
 
     /**
-     * The default insecure port that this adapter binds to for unencrypted connections.
-     */
-    private static final int DEFAULT_INSECURE_PORT = 5672;
-
-    /**
-     * The default secure port that this adapter binds to for TLS based secure connections.
-     */
-    private static final int DEFAULT_SECURE_PORT = 5671;
-
-    /**
      * The AMQP server instance that maps to a secure port.
      */
     private ProtonServer secureServer;
@@ -89,8 +80,6 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
      * The AMQP server instance that listens for incoming request from an insecure port.
      */
     private ProtonServer insecureServer;
-
-    private AtomicBoolean secureListening = new AtomicBoolean(false);
 
     /**
      * This adapter's custom SASL authenticator factory for handling the authentication process for devices.
@@ -147,7 +136,6 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         if (secureServer != null) {
 
             LOG.info("Shutting down secure server");
-            secureListening.compareAndSet(Boolean.TRUE, Boolean.FALSE);
             secureServer.close(result.completer());
 
         } else {
@@ -167,7 +155,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             insecureServer = createServer(insecureServer, options);
             insecureServer.connectHandler(this::connectionRequestHandler).listen(ar -> {
                 if (ar.succeeded()) {
-                    LOG.info("insecure amqp server listening on [{}:{}]", getConfig().getInsecurePortBindAddress(), getActualInsecurePort());
+                    LOG.info("insecure AMQP server listening on [{}:{}]", getConfig().getInsecurePortBindAddress(), getActualInsecurePort());
                     result.complete();
                 } else {
                     result.fail(ar.cause());
@@ -193,8 +181,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             secureServer = createServer(secureServer, options);
             secureServer.connectHandler(this::connectionRequestHandler).listen(ar -> {
                 if (ar.succeeded()) {
-                    secureListening.getAndSet(Boolean.TRUE);
-                    LOG.info("secure amqp server listening on {}:{}", getConfig().getBindAddress(), getActualPort());
+                    LOG.info("secure AMQP server listening on {}:{}", getConfig().getBindAddress(), getActualPort());
                     result.complete();
                 } else {
                     LOG.error("cannot bind to secure port", ar.cause());
@@ -218,36 +205,36 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         return createdServer;
     }
 
-    private void connectionRequestHandler(final ProtonConnection connRequest) {
+    private void connectionRequestHandler(final ProtonConnection con) {
 
-        LOG.debug("received connection request from device [container: {}]", connRequest.getRemoteContainer());
+        LOG.debug("received connection request from device [container: {}]", con.getRemoteContainer());
 
-        if (secureListening.get()) {
-            connRequest.setContainer(String.format("%s-%s:%d", getTypeName(), getBindAddress(), getActualPort()));
-        } else {
-            connRequest.setContainer(String.format("%s-%s:%d", getTypeName(), getInsecurePortBindAddress(), getActualInsecurePort()));
-        }
-        connRequest.disconnectHandler(conn -> {
-            LOG.debug("device [container: {}] has disconnected", conn.getRemoteContainer());
+        con.setContainer(getTypeName());
+        con.disconnectHandler(lostConnection -> {
+            LOG.debug("lost connection to device [container: {}]", con.getRemoteContainer());
+            Optional.ofNullable(getConnectionLossHandler(con)).ifPresent(handler -> handler.handle(null));
         });
-        connRequest.closeHandler(remoteClose -> handleRemoteConnectionClose(connRequest, remoteClose));
+        con.closeHandler(remoteClose -> {
+            handleRemoteConnectionClose(con, remoteClose);
+            Optional.ofNullable(getConnectionLossHandler(con)).ifPresent(handler -> handler.handle(null));
+        });
 
         // when a BEGIN frame is received
-        connRequest.sessionOpenHandler(session -> {
+        con.sessionOpenHandler(session -> {
             HonoProtonHelper.setDefaultCloseHandler(session);
-            handleSessionOpen(connRequest, session);
+            handleSessionOpen(con, session);
         });
         // when an Attach frame is received
-        connRequest.receiverOpenHandler(receiver -> {
+        con.receiverOpenHandler(receiver -> {
             HonoProtonHelper.setDefaultCloseHandler(receiver);
-            handleRemoteReceiverOpen(receiver, connRequest);
+            handleRemoteReceiverOpen(receiver, con);
         });
-        connRequest.senderOpenHandler(sender -> {
-            final Device authenticatedDevice = connRequest.attachments()
+        con.senderOpenHandler(sender -> {
+            final Device authenticatedDevice = con.attachments()
                     .get(AmqpAdapterConstants.KEY_CLIENT_DEVICE, Device.class);
-            handleRemoteSenderOpenForCommands(sender, authenticatedDevice);
+            handleRemoteSenderOpenForCommands(con, sender, authenticatedDevice);
         });
-        connRequest.open();
+        con.open();
     }
 
     /**
@@ -289,10 +276,9 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         session.setIncomingCapacity(DEFAULT_MAX_SESSION_WINDOW);
         session.open();
     }
+
     /**
      * Invoked when a client closes the connection with this server.
-     * <p>
-     * Copied from AmqpServiceBase#handleRemoteConnectionClose.
      * 
      * @param con The connection to close.
      * @param res The client's close frame.
@@ -365,49 +351,59 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
     /**
      * This method is invoked when a device wants to open a link for receiving commands.
      * <p>
-     * The link will be closed if
+     * The link will be closed immediately if
      * <ul>
      *  <li>the device does not specify a source address for its receive link or</li>
      *  <li>the source address cannot be parsed or does not point to the command endpoint or</li>
      *  <li>the AMQP adapter is disabled for the tenant that the device belongs to.</li>
      * </ul>
      * 
+     * @param connection The AMQP connection to the device.
      * @param sender The link to use for sending commands to the device.
      * @param authenticatedDevice The authenticated device or {@code null} if the device is not authenticated.
      */
-    protected void handleRemoteSenderOpenForCommands(final ProtonSender sender, final Device authenticatedDevice) {
+    protected void handleRemoteSenderOpenForCommands(
+            final ProtonConnection connection,
+            final ProtonSender sender,
+            final Device authenticatedDevice) {
 
         if (sender.getRemoteSource() == null || Strings.isNullOrEmpty(sender.getRemoteSource().getAddress())) {
             // source address is required
             closeLinkWithError(sender,
                     new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "source address is required"));
         } else {
-            try {
-                final ResourceIdentifier address = ResourceIdentifier.fromString(sender.getRemoteSource().getAddress());
-                validateAddress(address, authenticatedDevice).map(validAddress -> {
-                    if (!CommandConstants.isCommandEndpoint(validAddress.getEndpoint())) {
-                        closeLinkWithError(sender, new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND,
-                                "no such node"));
-                    } else {
-                        openCommandSenderLink(sender, validAddress, authenticatedDevice);
-                    }
-                    return null;
-                }).otherwise(t -> {
+            getResourceIdentifier(sender.getRemoteSource().getAddress())
+            .compose(address -> validateAddress(address, authenticatedDevice))
+            .map(validAddress -> {
+                // validAddress ALWAYS contains the tenant and device ID
+                if (CommandConstants.isCommandEndpoint(validAddress.getEndpoint())) {
+                    return openCommandSenderLink(sender, validAddress, authenticatedDevice).map(consumer -> {
+                        addConnectionLossHandler(connection, connectionLost -> {
+                            sendDisconnectedTtdEvent(validAddress.getTenantId(), validAddress.getResourceId(), authenticatedDevice)
+                            .setHandler(sendAttempt -> {
+                                consumer.close(null);
+                            });
+                        });
+                        return consumer;
+                    });
+                } else {
+                    throw new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND, "no such node");
+                }
+            }).otherwise(t -> {
+                if (t instanceof ServiceInvocationException) {
+                    closeLinkWithError(sender, t);
+                } else {
                     closeLinkWithError(sender,
                             new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "Invalid source address"));
-                    return null;
-                });
-            } catch (IllegalArgumentException e) {
-                // could not parse source address
-                closeLinkWithError(sender,
-                        new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "Invalid source address"));
-            }
+                }
+                return null;
+            });
         }
     }
 
-    private void openCommandSenderLink(final ProtonSender sender, final ResourceIdentifier address, final Device authenticatedDevice) {
+    private Future<MessageConsumer> openCommandSenderLink(final ProtonSender sender, final ResourceIdentifier address, final Device authenticatedDevice) {
 
-        createCommandConsumer(sender, address, authenticatedDevice).map(consumer -> {
+        return createCommandConsumer(sender, address, authenticatedDevice).map(consumer -> {
 
             final String tenantId = address.getTenantId();
             final String deviceId = address.getResourceId();
@@ -424,15 +420,12 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
 
             // At this point, the remote peer's receiver link is successfully opened and is ready to receive
             // commands. Send "device ready for command" notification downstream.
-            LOG.debug("Established sender link at [address: {}] to send commands to a device", address);
+            LOG.debug("established link [address: {}] for sending commands to device", address);
 
             sendConnectedTtdEvent(tenantId, deviceId, authenticatedDevice);
             return consumer;
         }).otherwise(t -> {
-            // Fail to create a CommandConsumer -> close remote peer's receiver link.
-            closeLinkWithError(sender, new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE,
-                    "cannot create command consumer"));
-            return null;
+            throw new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "cannot create command consumer");
         });
     }
 
@@ -738,13 +731,33 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         return result;
     }
 
+    private static Future<ResourceIdentifier> getResourceIdentifier(final String resource) {
+        try {
+            return Future.succeededFuture(ResourceIdentifier.fromString(resource));
+        } catch (Throwable e) {
+            return Future.failedFuture(e);
+        }
+    }
+
+    private static void addConnectionLossHandler(final ProtonConnection con, final Handler<Void> handler) {
+
+        con.attachments().set("connectionLossHandler", Handler.class, handler);
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Handler<Void> getConnectionLossHandler(final ProtonConnection con) {
+
+        return con.attachments().get("connectionLossHandler", Handler.class);
+    }
+
     // -------------------------------------------< AbstractServiceBase >---
+
     /**
      * {@inheritDoc}
      */
     @Override
     public int getPortDefaultValue() {
-        return DEFAULT_SECURE_PORT;
+        return Constants.PORT_AMQPS;
     }
 
     /**
@@ -752,7 +765,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
      */
     @Override
     public int getInsecurePortDefaultValue() {
-        return DEFAULT_INSECURE_PORT;
+        return Constants.PORT_AMQP;
     }
 
     /**
