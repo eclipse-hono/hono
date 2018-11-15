@@ -36,7 +36,7 @@
     <guava.version>19.0</guava.version>
     <influxdb.version>1.5.4-alpine</influxdb.version>
     <jackson.version>2.9.5</jackson.version>
-    <jaeger.version>0.31.0</jaeger.version>
+    <jaeger.version>0.32.0</jaeger.version>
     <java-base-image.name>openjdk:11-jre-slim</java-base-image.name>
     <jaxb.api.version>2.2.12</jaxb.api.version>
     <javax.annotation.api.version>1.3.2</javax.annotation.api.version>
@@ -49,7 +49,7 @@
     <netty.version>4.1.19.Final</netty.version>
     <netty.tcnative.version>2.0.10.Final</netty.tcnative.version>
     <opentracing.version>0.31.0</opentracing.version>
-    <opentracing-resolver.version>0.1.4</opentracing-resolver.version>
+    <opentracing-resolver.version>0.1.5</opentracing-resolver.version>
     <opentracing-vertx-web.version>0.1.0</opentracing-vertx-web.version>
     <proton.version>0.25.0</proton.version>
     <qpid-jms.version>0.31.0</qpid-jms.version>
