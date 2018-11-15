@@ -269,11 +269,11 @@ The adapter supports *AT LEAST ONCE* delivery of command response messages only.
 
 The table below provides an overview of the properties that must be set on a command response message:
 
- Name              | Mandatory       | Location                 | Type        | Description |
-| :--------------  | :-------------: | :----------------------- | :---------- | :---------- |
-| *to*             | yes             | *properties*             | *string*    | MUST contain the value of the *reply-to* property of the command request message. |
-| *correlation-id* | yes             | *properties*             | *string*    | MUST contain the value of the *correlation-id* property of the command request message. |
-| *status*         | yes             | *application-properties* | *string*    | MUST contain a status code indicating the outcome of processing the command at the device (see [Command & Control API]({{< ref "/api/Command-And-Control-API.md" >}}) for details). |
+ Name              | Mandatory       | Location                 | Type         | Description |
+| :--------------  | :-------------: | :----------------------- | :----------- | :---------- |
+| *to*             | yes             | *properties*             | *string*     | MUST contain the value of the *reply-to* property of the command request message. |
+| *correlation-id* | yes             | *properties*             | *string*     | MUST contain the value of the *correlation-id* property of the command request message. |
+| *status*         | yes             | *application-properties* | *integer*    | MUST contain a status code indicating the outcome of processing the command at the device (see [Command & Control API]({{< ref "/api/Command-And-Control-API.md" >}}) for details). |
 
 ## Downstream Meta Data
 

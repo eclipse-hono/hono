@@ -286,7 +286,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
     }
 
     /**
-     * Verify that if a client device opens a receiver link to receive commands, then the AMQP adapter opens a link
+     * Verifies that if a client device opens a receiver link to receive commands, then the AMQP adapter opens a link
      * for sending commands to the device and notifies the downstream application by sending an
      * <em>EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION</em> event a with TTD -1. An unauthenticated device is used in
      * this test setup to simulate the client device.
@@ -451,21 +451,21 @@ public class VertxBasedAmqpProtocolAdapterTest {
      */
     @Test
     public void testUploadCommandResponseSucceeds() {
-        // GIVEN an AMQP adapter configured to use a user-defined server
+
+        // GIVEN an AMQP adapter
         final VertxBasedAmqpProtocolAdapter adapter = givenAnAmqpAdapter();
         final CommandResponseSender responseSender = givenACommandResponseSenderForAnyTenant();
-
-        // WHICH is enabled for a tenant
+        // which is enabled for the test tenant
         givenAConfiguredTenant(TEST_TENANT_ID, true);
 
-        // IF an unauthenticated device publishes a command response
+        // WHEN an unauthenticated device publishes a command response
         final ProtonDelivery delivery = mock(ProtonDelivery.class);
 
         final String replyToAddress = String.format("%s/%s/%s", CommandConstants.COMMAND_ENDPOINT, TEST_TENANT_ID,
                 TEST_DEVICE);
 
         final Map<String, Object> propertyMap = new HashMap<>();
-        propertyMap.put(MessageHelper.APP_PROPERTY_STATUS, "200");
+        propertyMap.put(MessageHelper.APP_PROPERTY_STATUS, 200);
         final ApplicationProperties props = new ApplicationProperties(propertyMap);
         final Message message = getFakeMessage(replyToAddress);
         when(message.getCorrelationId()).thenReturn("correlation-id");
@@ -515,7 +515,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
 
     private Message getFakeMessage(final String to) {
         final Message message = mock(Message.class);
-        when(message.getContentType()).thenReturn("application/text");
+        when(message.getContentType()).thenReturn("text/plain");
         when(message.getBody()).thenReturn(new AmqpValue("some payload"));
         when(message.getAddress()).thenReturn(to);
         return message;

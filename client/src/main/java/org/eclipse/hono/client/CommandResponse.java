@@ -15,6 +15,8 @@ package org.eclipse.hono.client;
 
 import java.util.function.Predicate;
 
+import org.eclipse.hono.util.ResourceIdentifier;
+
 import io.vertx.core.buffer.Buffer;
 
 /**
@@ -30,14 +32,14 @@ public final class CommandResponse {
     private final Buffer payload;
     private final String contentType;
     private final int status;
-    private final String replyTo;
+    private final String replyToId;
     private final String correlationId;
 
-    private CommandResponse(final Buffer payload, final String contentType, final int status, final String correlationId, final String replyTo) {
+    private CommandResponse(final Buffer payload, final String contentType, final int status, final String correlationId, final String replyToId) {
         this.payload = payload;
         this.contentType = contentType;
         this.status = status;
-        this.replyTo = replyTo;
+        this.replyToId = replyToId;
         this.correlationId = correlationId;
     }
 
@@ -83,7 +85,7 @@ public final class CommandResponse {
                 final boolean addDeviceIdToReply = "1".equals(requestId.substring(0, 1));
                 final int lengthStringOne = Integer.parseInt(requestId.substring(1, 3), 16);
                 final String replyId = requestId.substring(3 + lengthStringOne);
-                return from(
+                return new CommandResponse(
                         payload,
                         contentType,
                         status,
@@ -102,20 +104,20 @@ public final class CommandResponse {
      * @param contentType The content-type of the response payload.
      * @param status The HTTP status code indicating the outcome of executing the command on the device.
      * @param correlationId The identifier used to correlate this response with the command request.
-     * @param replyTo The reply-to ID of the command response.
+     * @param address The address that the command response is to be sent to.
      * 
      * @return The command response or {@code null} if any of correlationId, replyTo and status is null or if the
      *         status code is &lt; 200 or &gt;= 600.
      */
     public static CommandResponse from(final Buffer payload, final String contentType, final Integer status,
-            final String correlationId, final String replyTo) {
+            final String correlationId, final ResourceIdentifier address) {
 
-        if (correlationId == null || replyTo == null || status == null) {
+        if (correlationId == null || address == null || status == null) {
             return null;
         } else if (INVALID_STATUS_CODE.test(status)) {
             return null;
         } else {
-            return new CommandResponse(payload, contentType, status, correlationId, replyTo);
+            return new CommandResponse(payload, contentType, status, correlationId, address.getPathWithoutBase());
         }
     }
 
@@ -125,7 +127,7 @@ public final class CommandResponse {
      * @return The identifier or {@code null} if the request ID could not be parsed.
      */
     public String getReplyToId() {
-        return replyTo;
+        return replyToId;
     }
 
     /**

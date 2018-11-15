@@ -48,10 +48,6 @@ public final class Command {
 
         this.valid = valid;
         this.message = message;
-        if (valid) {
-            this.message.setCorrelationId(correlationId);
-            this.message.setReplyTo(replyToId);
-        }
         this.tenantId = tenantId;
         this.deviceId = deviceId;
         this.correlationId = correlationId;
