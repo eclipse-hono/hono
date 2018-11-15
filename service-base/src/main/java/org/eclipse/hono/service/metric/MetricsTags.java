@@ -36,8 +36,9 @@ public final class MetricsTags {
     public static final String VALUE_PROTOCOL_HTTP = "http";
     public static final String VALUE_PROTOCOL_MQTT = "mqtt";
 
-    public static final String VALUE_SERVICE_REGISTRY = "registry";
+    public static final String VALUE_SERVICE_AUTH = "auth";
     public static final String VALUE_SERVICE_MESSAGING = "messaging";
+    public static final String VALUE_SERVICE_REGISTRY = "registry";
 
     private MetricsTags() {
     }
