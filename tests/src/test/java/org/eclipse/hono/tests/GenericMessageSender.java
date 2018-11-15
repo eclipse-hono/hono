@@ -18,6 +18,7 @@ import java.net.HttpURLConnection;
 import java.util.Objects;
 
 import org.apache.qpid.proton.amqp.messaging.Accepted;
+import org.apache.qpid.proton.amqp.messaging.Released;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServerErrorException;
@@ -114,6 +115,8 @@ public class GenericMessageSender extends AbstractHonoClient {
                 sender.send(message, updatedDelivery -> {
                     if (updatedDelivery.getRemoteState() instanceof Accepted) {
                         result.complete(updatedDelivery);
+                    } else if (updatedDelivery.getRemoteState() instanceof Released) {
+                        result.fail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE));
                     } else {
                         result.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
                     }

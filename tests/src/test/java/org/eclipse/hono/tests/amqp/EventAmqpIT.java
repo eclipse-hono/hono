@@ -27,7 +27,7 @@ import io.vertx.proton.ProtonQoS;
  * An Event based integration test for the AMQP adapter.
  */
 @RunWith(VertxUnitRunner.class)
-public class EventAmqpIT extends AmqpAdapterTestBase {
+public class EventAmqpIT extends AmqpUploadTestBase {
 
     private static final String EVENT_ENDPOINT = "event";
 

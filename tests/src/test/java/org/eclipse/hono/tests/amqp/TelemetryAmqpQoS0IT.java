@@ -26,7 +26,7 @@ import io.vertx.proton.ProtonQoS;
  * A Telemetry based integration test for the AMQP adapter.
  */
 @RunWith(VertxUnitRunner.class)
-public class TelemetryAmqpQoS0IT extends AmqpAdapterTestBase {
+public class TelemetryAmqpQoS0IT extends AmqpUploadTestBase {
 
     private static final String TELEMETRY_ENDPOINT = "telemetry";
 
