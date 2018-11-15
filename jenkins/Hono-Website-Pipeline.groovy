@@ -50,14 +50,6 @@ def build() {
            '''
     }
 
-    stage('Cloning Hono web site repository') {
-        echo "cloning Hono web site repository..."
-        sh ''' 
-           echo "cloning Hono web site repository..."
-           git clone /gitroot/www.eclipse.org/hono.git $WORKSPACE/hono-web-site
-           '''
-    }
-
     stage('Cloning Hugo Material Docs theme') {
         echo "cloning Hugo Material Docs theme..."
         sh '''
@@ -67,6 +59,16 @@ def build() {
             cd $WORKSPACE/hono/site/themes/hugo-material-docs
             git checkout 194c497216c8389e02e9719381168a668a0ffb05
            '''
+    }
+
+    stage('Cloning Hono web site repository') {
+        sshagent(['67bd9855-4241-478b-8b98-82e66060f56d']) {
+            echo "cloning Hono web site repository..."
+            sh ''' 
+               echo "cloning Hono web site repository..."
+               git clone ssh://genie.hono@git.eclipse.org:29418/www.eclipse.org/hono $WORKSPACE/hono-web-site
+               '''
+        }
     }
 
     stage('Building web site using Hugo') {
@@ -82,13 +84,17 @@ def build() {
     }
 
     stage('Commit and push') {
-        sh '''
-            #!/bin/sh
-            cd $WORKSPACE/hono-web-site && 
-            git add -A && 
-            git commit -m "latest web site changes" && 
-            git push origin HEAD:refs/heads/master
-            echo "Done" 
-         '''
+        sshagent(['67bd9855-4241-478b-8b98-82e66060f56d']) {
+            sh '''
+                #!/bin/sh
+                cd $WORKSPACE/hono-web-site && 
+                git config --global user.email "hono-bot@eclipse.org" &&
+                git config --global user.name "hono Bot" &&
+                git add -A && 
+                git commit -m "latest web site changes" && 
+                git push origin HEAD:refs/heads/master
+                echo "Done" 
+            '''
+        }
     }
 }
