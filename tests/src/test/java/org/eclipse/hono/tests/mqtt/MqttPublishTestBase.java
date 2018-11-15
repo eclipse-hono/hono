@@ -43,7 +43,7 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
     protected static final int MESSAGES_TO_SEND = 200;
 
     /**
-     * Sends a message on behalf of a device to the HTTP adapter.
+     * Sends a message on behalf of a device to the MQTT adapter.
      * 
      * @param tenantId The tenant that the device belongs to.
      * @param deviceId The identifier of the device.
