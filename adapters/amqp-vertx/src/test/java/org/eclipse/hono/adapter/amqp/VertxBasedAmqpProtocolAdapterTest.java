@@ -196,7 +196,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
         final ResourceIdentifier targetAddress = ResourceIdentifier.from(TelemetryConstants.TELEMETRY_ENDPOINT, TEST_TENANT_ID, TEST_DEVICE);
         final ProtonReceiver link = getReceiver(ProtonQoS.AT_LEAST_ONCE, getTarget(targetAddress));
 
-        adapter.handleRemoteReceiverOpen(link, getConnection(null));
+        adapter.handleRemoteReceiverOpen(getConnection(null), link);
 
         // THEN the adapter closes the link.
         verify(link).close();
@@ -301,12 +301,13 @@ public class VertxBasedAmqpProtocolAdapterTest {
 
         // WHEN an unauthenticated device opens a receiver link with a valid source address
         final ProtonConnection deviceConnection = mock(ProtonConnection.class);
+        when(deviceConnection.attachments()).thenReturn(mock(Record.class));
         when(commandConnection.createCommandConsumer(eq(TEST_TENANT_ID), eq(TEST_DEVICE), any(Handler.class), any(Handler.class)))
             .thenReturn(Future.succeededFuture(mock(MessageConsumer.class)));
         final String sourceAddress = String.format("%s/%s/%s", CommandConstants.COMMAND_ENDPOINT, TEST_TENANT_ID, TEST_DEVICE);
         final ProtonSender sender = getSender(sourceAddress);
 
-        adapter.handleRemoteSenderOpenForCommands(deviceConnection, sender, null);
+        adapter.handleRemoteSenderOpenForCommands(deviceConnection, sender);
 
         // THEN the adapter opens the link upon success
         verify(sender).open();
@@ -333,15 +334,17 @@ public class VertxBasedAmqpProtocolAdapterTest {
         final MessageSender eventSender = givenAnEventSender(outcome);
 
         // and a device that wants to receive commands
-        final ProtonConnection deviceConnection = mock(ProtonConnection.class);
         final MessageConsumer commandConsumer = mock(MessageConsumer.class);
         when(commandConnection.createCommandConsumer(eq(TEST_TENANT_ID), eq(TEST_DEVICE), any(Handler.class), any(Handler.class))).thenReturn(
                 Future.succeededFuture(commandConsumer));
         final String sourceAddress = String.format("%s", CommandConstants.COMMAND_ENDPOINT);
         final ProtonSender sender = getSender(sourceAddress);
         final Device authenticatedDevice = new Device(TEST_TENANT_ID, TEST_DEVICE);
-
-        adapter.handleRemoteSenderOpenForCommands(deviceConnection, sender, authenticatedDevice);
+        final ProtonConnection deviceConnection = mock(ProtonConnection.class);
+        final Record attachments = mock(Record.class);
+        when(attachments.get(AmqpAdapterConstants.KEY_CLIENT_DEVICE, Device.class)).thenReturn(authenticatedDevice);
+        when(deviceConnection.attachments()).thenReturn(attachments);
+        adapter.handleRemoteSenderOpenForCommands(deviceConnection, sender);
 
         // WHEN the client device closes its receiver link (unsubscribe)
         final ArgumentCaptor<Handler<AsyncResult<ProtonSender>>> closeHookCaptor = ArgumentCaptor.forClass(Handler.class);
@@ -419,8 +422,10 @@ public class VertxBasedAmqpProtocolAdapterTest {
         // to which a device is connected
         final ArgumentCaptor<Handler<ProtonConnection>> connectHandler = ArgumentCaptor.forClass(Handler.class);
         verify(server).connectHandler(connectHandler.capture());
+        final Device authenticatedDevice = new Device(TEST_TENANT_ID, TEST_DEVICE);
         final ProtonConnection deviceConnection = mock(ProtonConnection.class);
         final Record record = new RecordImpl();
+        record.set(AmqpAdapterConstants.KEY_CLIENT_DEVICE, Device.class, authenticatedDevice);
         when(deviceConnection.attachments()).thenReturn(record);
         connectHandler.getValue().handle(deviceConnection);
 
@@ -430,9 +435,8 @@ public class VertxBasedAmqpProtocolAdapterTest {
             .thenReturn(Future.succeededFuture(commandConsumer));
         final String sourceAddress = CommandConstants.COMMAND_ENDPOINT;
         final ProtonSender sender = getSender(sourceAddress);
-        final Device authenticatedDevice = new Device(TEST_TENANT_ID, TEST_DEVICE);
 
-        adapter.handleRemoteSenderOpenForCommands(deviceConnection, sender, authenticatedDevice);
+        adapter.handleRemoteSenderOpenForCommands(deviceConnection, sender);
 
         // WHEN the connection to the device is lost
         connectionLossTrigger.handle(deviceConnection);

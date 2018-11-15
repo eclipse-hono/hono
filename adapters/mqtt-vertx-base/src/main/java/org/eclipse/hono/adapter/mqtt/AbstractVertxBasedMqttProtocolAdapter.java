@@ -426,8 +426,8 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
                 .compose(device -> CompositeFuture.all(
                         getTenantConfiguration(device.getTenantId(), currentSpan.context())
                                 .compose(tenant -> isAdapterEnabled(tenant)),
-                        isDeviceRegistered(device, currentSpan))
-                        .map(result -> device))
+                        checkDeviceRegistration(device, currentSpan))
+                        .map(ok -> device))
                 .compose(device -> createLink(device, currentSpan))
                 .compose(device -> registerHandlers(endpoint, device))
                 .recover(t -> {
@@ -1187,19 +1187,6 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
         }
     }
 
-    private Future<TenantObject> isAdapterEnabled(final TenantObject tenantConfig) {
-        if (tenantConfig.isAdapterEnabled(getTypeName())) {
-            LOG.debug("protocol adapter [{}] is enabled for tenant [{}]",
-                    getTypeName(), tenantConfig.getTenantId());
-            return Future.succeededFuture(tenantConfig);
-        } else {
-            LOG.debug("protocol adapter [{}] is disabled for tenant [{}]",
-                    getTypeName(), tenantConfig.getTenantId());
-            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_FORBIDDEN,
-                    "adapter disabled for tenant"));
-        }
-    }
-
     private Future<DeviceUser> authenticate(final DeviceCredentials credentials, final Span currentSpan) {
         final Future<DeviceUser> result = Future.future();
         usernamePasswordAuthProvider.authenticate(credentials, handler -> {
@@ -1217,18 +1204,6 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
             }
         });
         return result;
-    }
-
-    private Future<Device> isDeviceRegistered(final Device authenticatedDevice, final Span currentSpan) {
-        return getRegistrationAssertion(authenticatedDevice.getTenantId(),
-                authenticatedDevice.getDeviceId(),
-                authenticatedDevice, currentSpan.context())
-                        .compose(ok -> {
-                            currentSpan.log("device registration verified");
-                            LOG.debug("verified device registration [tenant-id: {}, device-id: {}]",
-                                    authenticatedDevice.getTenantId(), authenticatedDevice.getDeviceId());
-                            return accepted(authenticatedDevice);
-                        });
     }
 
     private Future<Device> createLink(final Device authenticatedDevice, final Span currentSpan) {

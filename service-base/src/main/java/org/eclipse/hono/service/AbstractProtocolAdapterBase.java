@@ -47,6 +47,7 @@ import org.eclipse.hono.util.TenantObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 
+import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Context;
@@ -391,6 +392,56 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     protected void doStop(final Future<Void> stopFuture) {
         // to be overridden by subclasses
         stopFuture.complete();
+    }
+
+    /**
+     * Checks if this adapter is enabled for a given tenant.
+     * 
+     * @param tenantConfig The tenant to check for.
+     * @return A succeeded future if this adapter is enabled for the tenant.
+     *         Otherwise the future will be failed with a {@link ClientErrorException}.
+     */
+    protected final Future<TenantObject> isAdapterEnabled(final TenantObject tenantConfig) {
+        if (tenantConfig.isAdapterEnabled(getTypeName())) {
+            LOG.debug("protocol adapter [{}] is enabled for tenant [{}]",
+                    getTypeName(), tenantConfig.getTenantId());
+            return Future.succeededFuture(tenantConfig);
+        } else {
+            LOG.debug("protocol adapter [{}] is disabled for tenant [{}]",
+                    getTypeName(), tenantConfig.getTenantId());
+            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_FORBIDDEN,
+                    "adapter disabled for tenant"));
+        }
+    }
+
+    /**
+     * Checks whether a given device is registered and enabled.
+     * 
+     * @param device The device to check.
+     * @param currentSpan The currently active OpenTracing span that is used to
+     *                    trace the retrieval of the assertion or {@code null}
+     *                    if no span is currently active.
+     * @return A future indicating the outcome.
+     *         The future will be succeeded if the device is registered and enabled.
+     *         Otherwise, the future will be failed with a {@link ServiceInvocationException}.
+     */
+    protected final Future<Device> checkDeviceRegistration(final Device device, final Span currentSpan) {
+
+        Objects.requireNonNull(device);
+
+        return getRegistrationAssertion(
+                device.getTenantId(),
+                device.getDeviceId(),
+                null,
+                Optional.ofNullable(currentSpan).map(span -> span.context()).orElse(null))
+                        .map(assertion -> {
+                            LOG.debug("device [tenant-id: {}, device-id: {}] is registered and enabled",
+                                    device.getTenantId(), device.getDeviceId());
+                            if (currentSpan != null) {
+                                currentSpan.log("device is registered and enabled");
+                            }
+                            return device;
+                        });
     }
 
     /**
