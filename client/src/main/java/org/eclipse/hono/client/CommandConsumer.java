@@ -159,9 +159,9 @@ public class CommandConsumer extends AbstractConsumer {
 
                     if (s.succeeded()) {
                         final ProtonReceiver receiver = s.result();
-                        LOG.debug("successfully created command consumer [tenant-id: {}, device-id: {}]", tenantId, deviceId);
+                        LOG.debug("successfully created command consumer [{}]", address);
                         receiverRef.set(receiver);
-                        receiver.flow(1); // allow sender to sender one command
+                        receiver.flow(1); // allow sender to send one command
                         final CommandConsumer consumer = new CommandConsumer(context, props, receiver, tracer);
                         consumer.setLocalCloseHandler(localCloseHandler);
                         creationHandler.handle(Future.succeededFuture(consumer));
