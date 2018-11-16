@@ -425,7 +425,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      *         The future will be succeeded if the device is registered and enabled.
      *         Otherwise, the future will be failed with a {@link ServiceInvocationException}.
      */
-    protected final Future<Device> checkDeviceRegistration(final Device device, final Span currentSpan) {
+    protected final Future<Void> checkDeviceRegistration(final Device device, final Span currentSpan) {
 
         Objects.requireNonNull(device);
 
@@ -440,7 +440,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
                             if (currentSpan != null) {
                                 currentSpan.log("device is registered and enabled");
                             }
-                            return device;
+                            return null;
                         });
     }
 

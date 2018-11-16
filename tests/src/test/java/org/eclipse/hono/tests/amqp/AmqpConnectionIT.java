@@ -18,6 +18,7 @@ import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantObject;
 import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -31,6 +32,15 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
  */
 @RunWith(VertxUnitRunner.class)
 public class AmqpConnectionIT extends AmqpAdapterTestBase {
+
+    /**
+     * Logs the currently executing test method name.
+     */
+    @Before
+    public void setup() {
+
+        log.info("running {}", testName.getMethodName());
+    }
 
     /**
      * Closes the connection to the adapter.

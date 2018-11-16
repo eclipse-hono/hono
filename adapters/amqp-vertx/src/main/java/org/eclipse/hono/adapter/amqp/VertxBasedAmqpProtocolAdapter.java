@@ -217,16 +217,10 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                 connectAuthorizationCheck.fail(new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED));
             } else {
                 LOG.trace("received connection request from {}", authenticatedDevice);
-                // device will already have been successfully authenticated
-                // in a SASL handshake
+                // the SASL handshake will already have authenticated the device
+                // and will have verified that the adapter is enabled for the tenant
                 // we still need to check if the device/gateway exists and is enabled
-                // and if the AMQP adapter is enabled for the device's tenant
-                CompositeFuture.all(
-                        getTenantConfiguration(authenticatedDevice.getTenantId(), null)
-                                .compose(tenant -> isAdapterEnabled(tenant)),
-                        checkDeviceRegistration(authenticatedDevice, null))
-                        .map(ok -> (Void) null)
-                        .setHandler(connectAuthorizationCheck);
+                checkDeviceRegistration(authenticatedDevice, null).setHandler(connectAuthorizationCheck);
             }
 
         } else {
@@ -240,7 +234,6 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             con.open();
             return null;
         }).otherwise(t -> {
-//            con.open();
             con.setCondition(AmqpContext.getErrorCondition(t));
             con.close();
             return null;
