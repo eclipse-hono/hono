@@ -64,6 +64,7 @@ import org.junit.rules.Timeout;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 
+import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
@@ -222,10 +223,10 @@ public class VertxBasedAmqpProtocolAdapterTest {
 
         final String to = ResourceIdentifier.from(TelemetryConstants.TELEMETRY_ENDPOINT, TEST_TENANT_ID, TEST_DEVICE).toString();
 
-        adapter.uploadMessage(new AmqpContext(delivery, getFakeMessage(to), null));
+        adapter.uploadMessage(new AmqpContext(delivery, getFakeMessage(to), null), mock(Span.class));
 
         // THEN the adapter sends the message and does not wait for response from the peer.
-        verify(telemetrySender).send(any(Message.class));
+        verify(telemetrySender).send(any(Message.class), (SpanContext) any());
     }
 
     /**
@@ -249,10 +250,10 @@ public class VertxBasedAmqpProtocolAdapterTest {
 
         final String to = ResourceIdentifier.from(TelemetryConstants.TELEMETRY_ENDPOINT, TEST_TENANT_ID, TEST_DEVICE).toString();
 
-        adapter.uploadMessage(new AmqpContext(delivery, getFakeMessage(to), null));
+        adapter.uploadMessage(new AmqpContext(delivery, getFakeMessage(to), null), mock(Span.class));
 
         // THEN the sender sends the message and waits for the outcome from the downstream peer
-        verify(telemetrySender).sendAndWaitForOutcome(any(Message.class));
+        verify(telemetrySender).sendAndWaitForOutcome(any(Message.class), (SpanContext) any());
     }
 
     /**
@@ -275,11 +276,11 @@ public class VertxBasedAmqpProtocolAdapterTest {
         final String to = ResourceIdentifier.from(TelemetryConstants.TELEMETRY_ENDPOINT, TEST_TENANT_ID, TEST_DEVICE).toString();
 
         final AmqpContext context = spy(new AmqpContext(delivery, getFakeMessage(to), null));
-        adapter.uploadMessage(context);
+        adapter.uploadMessage(context, mock(Span.class));
 
         // THEN the adapter does not send the message (regardless of the delivery mode).
-        verify(telemetrySender, never()).send(any(Message.class));
-        verify(telemetrySender, never()).sendAndWaitForOutcome(any(Message.class));
+        verify(telemetrySender, never()).send(any(Message.class), (SpanContext) any());
+        verify(telemetrySender, never()).sendAndWaitForOutcome(any(Message.class), (SpanContext) any());
 
         // AND notifies the device by sending back a REJECTED disposition
         verify(context).handleFailure(any(ServiceInvocationException.class));
@@ -476,7 +477,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
         when(message.getCorrelationId()).thenReturn("correlation-id");
         when(message.getApplicationProperties()).thenReturn(props);
 
-        adapter.uploadMessage(new AmqpContext(delivery, message, null));
+        adapter.uploadMessage(new AmqpContext(delivery, message, null), mock(Span.class));
 
         // THEN the adapter forwards the command response message downstream
         verify(responseSender).sendCommandResponse((CommandResponse) any(), (SpanContext) any());

@@ -13,6 +13,8 @@
 package org.eclipse.hono.adapter.amqp;
 
 import java.net.HttpURLConnection;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -21,6 +23,7 @@ import org.apache.qpid.proton.amqp.messaging.Rejected;
 import org.apache.qpid.proton.amqp.messaging.Released;
 import org.apache.qpid.proton.amqp.transport.DeliveryState;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
+import org.apache.qpid.proton.amqp.transport.Source;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
@@ -33,6 +36,7 @@ import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
+import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EndpointType;
@@ -44,6 +48,8 @@ import org.eclipse.hono.util.TenantObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.opentracing.Span;
+import io.opentracing.log.Fields;
 import io.opentracing.tag.Tags;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.CompositeFuture;
@@ -104,7 +110,15 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         checkPortConfiguration()
                 .compose(success -> {
                     if (authenticatorFactory == null && getConfig().isAuthenticationRequired()) {
-                        authenticatorFactory = new AmqpAdapterSaslAuthenticatorFactory(getTenantServiceClient(), getCredentialsServiceClient(), getConfig());
+                        authenticatorFactory = new AmqpAdapterSaslAuthenticatorFactory(
+                                getTenantServiceClient(),
+                                getCredentialsServiceClient(),
+                                getConfig(),
+                                () -> tracer.buildSpan("open connection")
+                                    .ignoreActiveSpan()
+                                    .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_SERVER)
+                                    .withTag(Tags.COMPONENT.getKey(), getTypeName())
+                                    .start());
                     }
                     return Future.succeededFuture();
                 }).compose(succcess -> {
@@ -208,8 +222,19 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
 
     private void onConnectRequest(final ProtonConnection con) {
 
+        final Span span = Optional
+                // try to pick up span that has been created during SASL handshake
+                .ofNullable(con.attachments().get(AmqpAdapterConstants.KEY_CURRENT_SPAN, Span.class))
+                // or create a fresh one if no SASL handshake has been performed
+                .orElse(tracer.buildSpan("open connection")
+                    .ignoreActiveSpan()
+                    .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_SERVER)
+                    .withTag(Tags.COMPONENT.getKey(), getTypeName())
+                    .start());
+
         final Device authenticatedDevice = con.attachments()
                 .get(AmqpAdapterConstants.KEY_CLIENT_DEVICE, Device.class);
+        TracingHelper.TAG_AUTHENTICATED.set(span, authenticatedDevice != null);
 
         final Future<Void> connectAuthorizationCheck = Future.future();
 
@@ -222,7 +247,14 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                 // the SASL handshake will already have authenticated the device
                 // and will have verified that the adapter is enabled for the tenant
                 // we still need to check if the device/gateway exists and is enabled
-                checkDeviceRegistration(authenticatedDevice, null).setHandler(connectAuthorizationCheck);
+                checkDeviceRegistration(authenticatedDevice, span.context())
+                .map(ok -> {
+                    LOG.debug("device [tenant-id: {}, device-id: {}] is registered and enabled",
+                            authenticatedDevice.getTenantId(), authenticatedDevice.getDeviceId());
+                    span.log("device is registered and enabled");
+                    return (Void) null;
+                })
+                .setHandler(connectAuthorizationCheck);
             }
 
         } else {
@@ -234,11 +266,19 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             con.setContainer(getTypeName());
             setConnectionHandlers(con);
             con.open();
+            if (authenticatedDevice != null) {
+                span.setTag(MessageHelper.APP_PROPERTY_TENANT_ID, authenticatedDevice.getTenantId());
+                span.setTag(MessageHelper.APP_PROPERTY_DEVICE_ID, authenticatedDevice.getDeviceId());
+            }
+            span.log("connection accepted");
             return null;
         }).otherwise(t -> {
             con.setCondition(AmqpContext.getErrorCondition(t));
             con.close();
+            TracingHelper.logError(span, t);
             return null;
+        }).setHandler(conAttempt -> {
+            span.finish();
         });
     }
 
@@ -341,21 +381,38 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
      */
     protected void handleRemoteReceiverOpen(final ProtonConnection conn, final ProtonReceiver receiver) {
 
+        final Device authenticatedDevice = conn.attachments().get(AmqpAdapterConstants.KEY_CLIENT_DEVICE,
+                Device.class);
+
+        final Span span = tracer.buildSpan("attach anonymous sender")
+                .ignoreActiveSpan()
+                .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_SERVER)
+                .withTag(Tags.COMPONENT.getKey(), getTypeName())
+                .withTag(TracingHelper.TAG_AUTHENTICATED.getKey(), authenticatedDevice != null)
+                .start();
+
+        if (authenticatedDevice != null) {
+            span.setTag(MessageHelper.APP_PROPERTY_TENANT_ID, authenticatedDevice.getTenantId());
+            span.setTag(MessageHelper.APP_PROPERTY_DEVICE_ID, authenticatedDevice.getDeviceId());
+        }
+
         if (ProtonQoS.AT_MOST_ONCE.equals(receiver.getRemoteQoS())) {
             // the device needs to send all types of message over this link
             // so we must make sure that it does not allow for pre-settled messages
             // to be sent only
-            closeLinkWithError(receiver, new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
-                    "link must not use snd-settle-mode 'settled'"));
+            final Exception ex = new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
+                    "link must not use snd-settle-mode 'settled'");
+            TracingHelper.logError(span, ex);
+            closeLinkWithError(receiver, ex);
         } else  if (receiver.getRemoteTarget() != null && receiver.getRemoteTarget().getAddress() != null) {
             if (!receiver.getRemoteTarget().getAddress().isEmpty()) {
                 LOG.debug("Closing link due to the present of Target [address : {}]", receiver.getRemoteTarget().getAddress());
             }
-            closeLinkWithError(receiver, new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
-                    "this adapter supports anonymous relay mode only"));
+            final Exception ex = new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
+                    "this adapter supports anonymous relay mode only");
+            TracingHelper.logError(span, ex);
+            closeLinkWithError(receiver, ex);
         } else {
-            final Device authenticatedDevice = conn.attachments().get(AmqpAdapterConstants.KEY_CLIENT_DEVICE,
-                    Device.class);
 
             receiver.setTarget(receiver.getRemoteTarget());
             receiver.setSource(receiver.getRemoteSource());
@@ -367,6 +424,22 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             HonoProtonHelper.setDetachHandler(receiver, remoteDetach -> onLinkDetach(receiver));
             receiver.handler((delivery, message) -> {
 
+                final Span msgSpan = tracer.buildSpan("upload message")
+                        .ignoreActiveSpan()
+                        .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_SERVER)
+                        .withTag(Tags.COMPONENT.getKey(), getTypeName())
+                        .withTag(TracingHelper.TAG_AUTHENTICATED.getKey(), authenticatedDevice != null)
+                        .start();
+
+                if (authenticatedDevice != null) {
+                    msgSpan.setTag(MessageHelper.APP_PROPERTY_TENANT_ID, authenticatedDevice.getTenantId());
+                    msgSpan.setTag(MessageHelper.APP_PROPERTY_DEVICE_ID, authenticatedDevice.getDeviceId());
+                }
+
+                final Map<String, Object> items = new HashMap<>(1);
+                items.put(Tags.MESSAGE_BUS_DESTINATION.getKey(), message.getAddress());
+                msgSpan.log(items);
+
                 validateEndpoint(message.getAddress(), delivery)
                 .compose(address -> validateAddress(address, authenticatedDevice))
                 .recover(t -> {
@@ -375,9 +448,13 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                     return Future.failedFuture(t);
                 })
                 .map(validatedAddress -> createContext(validatedAddress, delivery, message, authenticatedDevice))
-                .map(context -> {
-                    uploadMessage(context);
+                .compose(context -> uploadMessage(context, msgSpan))
+                .otherwise(t -> {
+                    TracingHelper.logError(msgSpan, t);
                     return null;
+                })
+                .setHandler(s -> {
+                    msgSpan.finish();
                 });
             });
             receiver.open();
@@ -388,7 +465,9 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                 LOG.debug("established link for receiving messages from device [tenant: {}, device-id: {}]]",
                         authenticatedDevice.getTenantId(), authenticatedDevice.getDeviceId());
             }
+            span.log("link established");
         }
+        span.finish();
     }
 
     private AmqpContext createContext(
@@ -422,48 +501,71 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             final ProtonConnection connection,
             final ProtonSender sender) {
 
-        if (sender.getRemoteSource() == null || Strings.isNullOrEmpty(sender.getRemoteSource().getAddress())) {
-            // source address is required
-            closeLinkWithError(sender,
-                    new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "source address is required"));
-        } else {
+        final Device authenticatedDevice = connection.attachments().get(AmqpAdapterConstants.KEY_CLIENT_DEVICE,
+                Device.class);
 
-            final Device authenticatedDevice = connection.attachments().get(AmqpAdapterConstants.KEY_CLIENT_DEVICE,
-                    Device.class);
+        final Span span = tracer.buildSpan("attach Command receiver")
+                .ignoreActiveSpan()
+                .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_SERVER)
+                .withTag(Tags.COMPONENT.getKey(), getTypeName())
+                .withTag(TracingHelper.TAG_AUTHENTICATED.getKey(), authenticatedDevice != null)
+                .start();
 
-            getResourceIdentifier(sender.getRemoteSource().getAddress())
-            .compose(address -> validateAddress(address, authenticatedDevice))
-            .map(validAddress -> {
-                // validAddress ALWAYS contains the tenant and device ID
-                if (CommandConstants.isCommandEndpoint(validAddress.getEndpoint())) {
-                    return openCommandSenderLink(sender, validAddress, authenticatedDevice).map(consumer -> {
-                        addConnectionLossHandler(connection, connectionLost -> {
-                            sendDisconnectedTtdEvent(validAddress.getTenantId(), validAddress.getResourceId(), authenticatedDevice, null)
-                            .setHandler(sendAttempt -> {
-                                consumer.close(null);
-                            });
-                        });
-                        return consumer;
-                    });
-                } else {
-                    throw new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND, "no such node");
-                }
-            }).otherwise(t -> {
-                if (t instanceof ServiceInvocationException) {
-                    closeLinkWithError(sender, t);
-                } else {
-                    closeLinkWithError(sender,
-                            new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "Invalid source address"));
-                }
-                return null;
-            });
+        if (authenticatedDevice != null) {
+            span.setTag(MessageHelper.APP_PROPERTY_TENANT_ID, authenticatedDevice.getTenantId());
+            span.setTag(MessageHelper.APP_PROPERTY_DEVICE_ID, authenticatedDevice.getDeviceId());
         }
+
+        getResourceIdentifier(sender.getRemoteSource())
+        .compose(address -> validateAddress(address, authenticatedDevice))
+        .map(validAddress -> {
+            // validAddress ALWAYS contains the tenant and device ID
+            if (CommandConstants.isCommandEndpoint(validAddress.getEndpoint())) {
+                return openCommandSenderLink(sender, validAddress, authenticatedDevice, span)
+                        .map(consumer -> {
+                            addConnectionLossHandler(connection, connectionLost -> {
+                                // do not use the current span for sending the disconnected event
+                                // because that span will (usually) be finished long before the
+                                // connection is closed/lost
+                                sendDisconnectedTtdEvent(
+                                        validAddress.getTenantId(),
+                                        validAddress.getResourceId(),
+                                        authenticatedDevice,
+                                        null)
+                                .setHandler(sendAttempt -> {
+                                    consumer.close(null);
+                                });
+                            });
+                            return consumer;
+                        });
+            } else {
+                throw new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND, "no such node");
+            }
+        })
+        .map(consumer -> {
+            span.log("link established");
+            return consumer;
+        })
+        .otherwise(t -> {
+            TracingHelper.logError(span, t);
+            if (t instanceof ServiceInvocationException) {
+                closeLinkWithError(sender, t);
+            } else {
+                closeLinkWithError(sender,
+                        new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "Invalid source address"));
+            }
+            return null;
+        })
+        .setHandler(s -> {
+            span.finish();
+        });
     }
 
     private Future<MessageConsumer> openCommandSenderLink(
             final ProtonSender sender,
             final ResourceIdentifier address,
-            final Device authenticatedDevice) {
+            final Device authenticatedDevice,
+            final Span span) {
 
         return createCommandConsumer(sender, address).map(consumer -> {
 
@@ -486,7 +588,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             // commands. Send "device ready for command" notification downstream.
             LOG.debug("established link [address: {}] for sending commands to device", address);
 
-            sendConnectedTtdEvent(tenantId, deviceId, authenticatedDevice, null);
+            sendConnectedTtdEvent(tenantId, deviceId, authenticatedDevice, span.context());
             return consumer;
         }).otherwise(t -> {
             throw new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "cannot create command consumer");
@@ -544,24 +646,42 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             // release the command message when the device either
             // rejects or does not settle the command request message.
             final DeliveryState remoteState = delivery.getRemoteState();
+            final Map<String, Object> logItems = new HashMap<>(2);
             if (delivery.remotelySettled()) {
                 if (Accepted.class.isInstance(remoteState)) {
                     LOG.trace("device accepted command message [command: {}]", command.getName());
+                    logItems.put(Fields.EVENT, "device accepted command");
+                    commandContext.getCurrentSpan().log(logItems);
                     commandContext.accept(1);
                 } else if (Rejected.class.isInstance(remoteState)) {
                     final ErrorCondition error = ((Rejected) remoteState).getError();
                     LOG.debug("device rejected command message [command: {}, error: {}]", command.getName(), error);
+                    logItems.put(Fields.EVENT, "device rejected command");
+                    commandContext.getCurrentSpan().log(logItems);
                     commandContext.reject(error, 1);
                 } else if (Released.class.isInstance(remoteState)) {
                     LOG.debug("device released command message [command: {}]", command.getName());
+                    logItems.put(Fields.EVENT, "device released command");
+                    commandContext.getCurrentSpan().log(logItems);
                     commandContext.release(1);
                 }
             } else {
-                LOG.warn("device did not settle command message [command: {}, remote state: {}]", command.getName(),
-                        remoteState);
+                LOG.debug("device did not settle command message [command: {}, remote state: {}]", command.getName(),
+                        remoteState.getClass().getSimpleName());
+                logItems.put(Fields.EVENT, "device did not settle command");
+                logItems.put("remote state", remoteState.getClass().getSimpleName());
+                commandContext.getCurrentSpan().log(logItems);
                 commandContext.release(1);
             }
         });
+        final Map<String, Object> items = new HashMap<>(4);
+        items.put(Fields.EVENT, "command sent to device");
+        if (sender.getRemoteTarget() != null) {
+            items.put(Tags.MESSAGE_BUS_DESTINATION.getKey(), sender.getRemoteTarget().getAddress());
+        }
+        items.put(TracingHelper.TAG_QOS.getKey(), sender.getQoS().name());
+        items.put(TracingHelper.TAG_CREDIT.getKey(), sender.getCredit());
+        commandContext.getCurrentSpan().log(items);
     }
 
     /**
@@ -581,8 +701,11 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
      * This method also handles disposition updates.
      * 
      * @param context The context that the message has been received in.
+     * @param currentSpan The currently active OpenTracing span that is used to
+     *                    trace the forwarding of the message.
+     * @return A future indicating the outcome.
      */
-    protected void uploadMessage(final AmqpContext context) {
+    protected Future<Void> uploadMessage(final AmqpContext context, final Span currentSpan) {
 
         final Future<Void> contentTypeCheck = Future.future();
 
@@ -593,17 +716,17 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                     "empty notifications must not contain payload"));
         }
 
-        contentTypeCheck.compose(ok -> {
+        return contentTypeCheck.compose(ok -> {
             switch (EndpointType.fromString(context.getEndpoint())) {
             case TELEMETRY:
                 LOG.trace("forwarding telemetry data");
-                return doUploadMessage(context, getTelemetrySender(context.getTenantId()));
+                return doUploadMessage(context, getTelemetrySender(context.getTenantId()), currentSpan);
             case EVENT:
                 LOG.trace("forwarding event");
-                return doUploadMessage(context, getEventSender(context.getTenantId()));
+                return doUploadMessage(context, getEventSender(context.getTenantId()), currentSpan);
             case CONTROL:
                 LOG.trace("forwarding command response");
-                return doUploadCommandResponseMessage(context);
+                return doUploadCommandResponseMessage(context, currentSpan);
             default:
                 return Future
                         .failedFuture(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND, "unknown endpoint"));
@@ -611,20 +734,23 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         })
         .map(downstreamDelivery -> {
             context.accept();
-            return null;
+            return (Void) null;
         })
-        .otherwise(t -> {
+        .recover(t -> {
             context.handleFailure(t);
-            return null;
+            return Future.failedFuture(t);
         });
 
     }
 
-    private Future<ProtonDelivery> doUploadMessage(final AmqpContext context, final Future<MessageSender> senderFuture) {
+    private Future<ProtonDelivery> doUploadMessage(
+            final AmqpContext context,
+            final Future<MessageSender> senderFuture,
+            final Span currentSpan) {
 
         final Future<JsonObject> tokenFuture = getRegistrationAssertion(context.getTenantId(), context.getDeviceId(),
-                context.getAuthenticatedDevice(), null);
-        final Future<TenantObject> tenantConfigFuture = getTenantConfiguration(context.getTenantId(), null);
+                context.getAuthenticatedDevice(), currentSpan.context());
+        final Future<TenantObject> tenantConfigFuture = getTenantConfiguration(context.getTenantId(), currentSpan.context());
 
         return CompositeFuture.all(tenantConfigFuture, tokenFuture, senderFuture)
                 .compose(ok -> {
@@ -639,10 +765,10 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
 
                         if (context.isRemotelySettled()) {
                             // client uses AT_MOST_ONCE delivery semantics -> fire and forget
-                            return sender.send(downstreamMessage);
+                            return sender.send(downstreamMessage, currentSpan.context());
                         } else {
                             // client uses AT_LEAST_ONCE delivery semantics
-                            return sender.sendAndWaitForOutcome(downstreamMessage);
+                            return sender.sendAndWaitForOutcome(downstreamMessage, currentSpan.context());
                         }
                     } else {
                         // this adapter is not enabled for tenant
@@ -660,7 +786,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                 });
     }
 
-    private Future<ProtonDelivery> doUploadCommandResponseMessage(final AmqpContext context) {
+    private Future<ProtonDelivery> doUploadCommandResponseMessage(final AmqpContext context, final Span currentSpan) {
 
         final String correlationId = Optional.ofNullable(context.getMessage().getCorrelationId())
                 .map(id -> {
@@ -674,6 +800,11 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         final Integer statusCode = MessageHelper.getApplicationProperty(context.getMessage().getApplicationProperties(),
                 MessageHelper.APP_PROPERTY_STATUS, Integer.class);
 
+        final Map<String, Object> items = new HashMap<>(2);
+        items.put(MessageHelper.APP_PROPERTY_STATUS, statusCode);
+        items.put(TracingHelper.TAG_CORRELATION_ID.getKey(), correlationId);
+        currentSpan.log(items);
+
         LOG.debug("creating command response [status: {}, correlation-id: {}, reply-to: {}]",
                 statusCode, correlationId, context.getResourceIdentifier().toString());
         final CommandResponse commandResponse = CommandResponse.from(context.getMessagePayload(),
@@ -683,7 +814,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
                     "malformed command response message"));
         } else {
-            return sendCommandResponse(context.getTenantId(), commandResponse, null)
+            return sendCommandResponse(context.getTenantId(), commandResponse, currentSpan.context())
                     .map(delivery -> {
                         LOG.trace("forwarded command response from device [tenant: {}, device-id: {}]",
                                 context.getTenantId(), context.getDeviceId());
@@ -775,13 +906,22 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         return result;
     }
 
+    private static Future<ResourceIdentifier> getResourceIdentifier(final Source source) {
+
+        if (source == null) {
+            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND, "no such node"));
+        } else {
+            return getResourceIdentifier(source.getAddress());
+        }
+    }
+
     private static Future<ResourceIdentifier> getResourceIdentifier(final String resource) {
 
         final Future<ResourceIdentifier> result = Future.future();
         try {
             if (Strings.isNullOrEmpty(resource)) {
-                result.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
-                        "address must not be null or empty"));
+                result.fail(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND,
+                        "no such node"));
             } else {
                 result.complete(ResourceIdentifier.fromString(resource));
             }

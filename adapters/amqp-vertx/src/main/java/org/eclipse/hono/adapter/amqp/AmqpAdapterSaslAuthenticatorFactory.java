@@ -17,7 +17,10 @@ import java.security.cert.Certificate;
 import java.security.cert.TrustAnchor;
 import java.security.cert.X509Certificate;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
+import java.util.function.Supplier;
 
 import javax.net.ssl.SSLPeerUnverifiedException;
 import javax.security.auth.login.CredentialException;
@@ -37,12 +40,16 @@ import org.eclipse.hono.service.auth.device.SubjectDnCredentials;
 import org.eclipse.hono.service.auth.device.UsernamePasswordAuthProvider;
 import org.eclipse.hono.service.auth.device.UsernamePasswordCredentials;
 import org.eclipse.hono.service.auth.device.X509AuthProvider;
+import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.AuthenticationConstants;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.CredentialsConstants;
+import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.TenantObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.opentracing.Span;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
@@ -60,42 +67,44 @@ import io.vertx.proton.sasl.ProtonSaslAuthenticatorFactory;
  * the Credentials service) is stored in the attachments record of the {@code ProtonConnection} under key
  * {@link AmqpAdapterConstants#KEY_CLIENT_DEVICE}. The credentials supplied by the client is verified against the credentials that
  * the credentials service has on record for the device.
- *
  * <p>
- * Verification of the credentials supplied by the device is delegated to an authentication provider. For now, this
- * factory only supports the SASL PLAIN mechanism for authenticating devices and thus the verification of the
- * credentials is delegated to the {@link UsernamePasswordAuthProvider}.
- * 
- * <p>
- * TODO: Extend this authenticator to support certificate authentication of devices to the adapter.
+ * This factory supports the SASL PLAIN and SASL EXTERNAL mechanisms for authenticating devices.
  */
 public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthenticatorFactory {
 
     private final ProtocolAdapterProperties config;
     private final HonoClient tenantServiceClient;
     private final HonoClient credentialsServiceClient;
+    private final Supplier<Span> spanFactory;
 
     /**
      * Creates a new SASL authenticator factory for an authentication provider. If the AMQP adapter supports
      * multi-tenancy, then the authentication identifier contained in the SASL response should have the pattern
      * {@code [<authId>@<tenantId>]}.
      *
-     * @param tenantServiceClient The Tenant Service client of the SASL authenticator.
-     * @param credentialsServiceClient The Credentials servicec client of the SASL authenticator.
+     * @param tenantServiceClient The service client to use for determining the device's tenant.
+     * @param credentialsServiceClient The service client to use for verifying credentials.
      * @param config The protocol adapter configuration object.
+     * @param spanFactory The factory to use for creating and starting an OpenTracing span to
+     *                    trace the authentication of the device.
      *
-     * @throws NullPointerException if any of the parameters is null.
+     * @throws NullPointerException if any of the parameters are null.
      */
-    public AmqpAdapterSaslAuthenticatorFactory(final HonoClient tenantServiceClient, final HonoClient credentialsServiceClient,
-            final ProtocolAdapterProperties config) {
+    public AmqpAdapterSaslAuthenticatorFactory(
+            final HonoClient tenantServiceClient,
+            final HonoClient credentialsServiceClient,
+            final ProtocolAdapterProperties config,
+            final Supplier<Span> spanFactory) {
+
         this.tenantServiceClient = Objects.requireNonNull(tenantServiceClient, "Tenant client cannot be null");
         this.credentialsServiceClient = Objects.requireNonNull(credentialsServiceClient, "Credentials client cannot be null");
         this.config = Objects.requireNonNull(config, "configuration cannot be null");
+        this.spanFactory = Objects.requireNonNull(spanFactory);
     }
 
     @Override
     public ProtonSaslAuthenticator create() {
-        return new AmqpAdapterSaslAuthenticator(tenantServiceClient, credentialsServiceClient, config);
+        return new AmqpAdapterSaslAuthenticator(tenantServiceClient, credentialsServiceClient, config, spanFactory.get());
     }
 
     /**
@@ -108,6 +117,7 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
         private final ProtocolAdapterProperties config;
         private final HonoClient tenantServiceClient;
         private final HonoClient credentialsServiceClient;
+        private final Span currentSpan;
 
         private Sasl sasl;
         private boolean succeeded;
@@ -117,10 +127,16 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
         private HonoClientBasedAuthProvider clientCertAuthProvider;
         private DeviceCertificateValidator certValidator;
 
-        AmqpAdapterSaslAuthenticator(final HonoClient tenantServiceClient, final HonoClient credentialsServiceClient, final ProtocolAdapterProperties config) {
+        AmqpAdapterSaslAuthenticator(
+                final HonoClient tenantServiceClient,
+                final HonoClient credentialsServiceClient,
+                final ProtocolAdapterProperties config,
+                final Span currentSpan) {
+
             this.tenantServiceClient = tenantServiceClient;
             this.credentialsServiceClient = credentialsServiceClient;
             this.config = config;
+            this.currentSpan = currentSpan;
         }
 
         @Override
@@ -157,7 +173,10 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
                 final Future<DeviceUser> deviceAuthTracker = Future.future();
                 deviceAuthTracker.setHandler(outcome -> {
                     if (outcome.succeeded()) {
-
+                        currentSpan.log("credentials verified successfully");
+                        // add span to connection so that it can be used during the
+                        // remaining connection establishment process
+                        protonConnection.attachments().set(AmqpAdapterConstants.KEY_CURRENT_SPAN, Span.class, currentSpan);
                         final Device authenticatedDevice = outcome.result();
                         protonConnection.attachments().set(AmqpAdapterConstants.KEY_CLIENT_DEVICE, Device.class,
                                 authenticatedDevice);
@@ -165,6 +184,8 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
                         sasl.done(SaslOutcome.PN_SASL_OK);
 
                     } else {
+                        TracingHelper.logError(currentSpan, outcome.cause());
+                        currentSpan.finish();
                         LOG.debug("validation of credentials failed: " + outcome.cause().getMessage());
                         sasl.done(SaslOutcome.PN_SASL_AUTH);
 
@@ -192,6 +213,7 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
 
         private void verifyPlain(final byte[] saslResponse, final Handler<AsyncResult<DeviceUser>> completer) {
 
+            currentSpan.log("authenticating device using SASL PLAIN");
             try {
                 final String[] fields = AuthenticationConstants.parseSaslResponse(saslResponse);
                 final DeviceCredentials credentials = UsernamePasswordCredentials
@@ -202,6 +224,12 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
                     completer.handle(Future.failedFuture(new CredentialException(
                             "username does not comply with expected pattern [<authId>@<tenantId>]")));
                 } else {
+
+                    final Map<String, Object> items = new HashMap<>(2);
+                    items.put(MessageHelper.APP_PROPERTY_TENANT_ID, credentials.getTenantId());
+                    items.put("auth_id", credentials.getAuthId());
+                    currentSpan.log(items);
+
                     getTenantObject(credentials.getTenantId()).map(tenant -> {
                         if (tenant.isAdapterEnabled(Constants.PROTOCOL_ADAPTER_TYPE_AMQP)) {
                             getUsernamePasswordAuthProvider().authenticate(credentials, completer);
@@ -214,11 +242,15 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
                     });
                 }
             } catch (CredentialException e) {
+                TracingHelper.logError(currentSpan, e);
                 completer.handle(Future.failedFuture(e));
             }
         }
 
         private void verifyExternal(final Handler<AsyncResult<DeviceUser>> completer) {
+
+            currentSpan.log("authenticating device using SASL EXTERNAL");
+
             if (peerCertificateChain == null) {
                 completer.handle(Future.failedFuture(new CredentialException("Missing client certificate")));
             } else if (!X509Certificate.class.isInstance(peerCertificateChain[0])) {
@@ -226,10 +258,9 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
             } else {
 
                 final X509Certificate deviceCert = (X509Certificate) peerCertificateChain[0];
-                if (LOG.isDebugEnabled()) {
-                    final String subjectDn = deviceCert.getSubjectX500Principal().getName(X500Principal.RFC2253);
-                    LOG.debug("Authenticating client certificate [Subject DN: {}]", subjectDn);
-                }
+                final String subjectDn = deviceCert.getSubjectX500Principal().getName(X500Principal.RFC2253);
+                LOG.debug("authenticating client certificate [Subject DN: {}]", subjectDn);
+                currentSpan.log(Collections.singletonMap(CredentialsConstants.FIELD_PAYLOAD_SUBJECT_DN, subjectDn));
 
                 final Future<TenantObject> tenantTracker = getTenantObject(deviceCert.getIssuerX500Principal());
                 tenantTracker
@@ -263,12 +294,12 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
 
         private Future<TenantObject> getTenantObject(final X500Principal issuerDn) {
             return tenantServiceClient.getOrCreateTenantClient()
-                    .compose(tenantClient -> tenantClient.get(issuerDn));
+                    .compose(tenantClient -> tenantClient.get(issuerDn, currentSpan.context()));
         }
 
         private Future<TenantObject> getTenantObject(final String tenantId) {
             return tenantServiceClient.getOrCreateTenantClient()
-                    .compose(tenantClient -> tenantClient.get(tenantId));
+                    .compose(tenantClient -> tenantClient.get(tenantId, currentSpan.context()));
         }
 
         private HonoClientBasedAuthProvider getUsernamePasswordAuthProvider() {

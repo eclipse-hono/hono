@@ -6,6 +6,9 @@ title = "Release Notes"
 
 ### Fixes & Enhancements
 
+* The AMQP adapter has been instrumented using OpenTracing. It now collects traces when a device connects to the adapter,
+  opens a link for uploading messages and for each message sent by the device. It also adds information to traces created
+  for command messages to be sent to a device.
 * The AMQP adapter command line client now uses property names that match those of the HonoClient.
 
 ### API Changes

@@ -22,6 +22,11 @@ public final class AmqpAdapterConstants {
      * is stored under in a {@code ProtonConnection}'s attachments.
      */
     public static final String KEY_CLIENT_DEVICE = "CLIENT_DEVICE";
+    /**
+     * They key that an OpenTracing span created by the AMQP Adapter's SASL authenticator
+     * is stored under in a {@code ProtonConnection}'s attachments.
+     */
+    public static final String KEY_CURRENT_SPAN = "CURRENT_SPAN";
 
     private AmqpAdapterConstants() {
         // avoid instantiation
