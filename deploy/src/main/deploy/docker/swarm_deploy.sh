@@ -79,11 +79,15 @@ echo ... done
 echo
 echo Deploying Grafana ...
 docker config create -l project=$NS filesystem-provisioner.yaml $SCRIPTPATH/grafana/provisioning/dashboards/filesystem-provisioner.yaml
-docker config create -l project=$NS grafana_dashboard.json $SCRIPTPATH/grafana/dashboard-definitions/grafana_dashboard.json
+docker config create -l project=$NS overview.json $SCRIPTPATH/grafana/dashboard-definitions/overview.json
+docker config create -l project=$NS message-details.json $SCRIPTPATH/grafana/dashboard-definitions/message-details.json
+docker config create -l project=$NS jvm-details.json $SCRIPTPATH/grafana/dashboard-definitions/jvm-details.json
 docker config create -l project=$NS prometheus.yaml $SCRIPTPATH/grafana/provisioning/datasources/prometheus.yaml
 docker service create $CREATE_OPTIONS --name grafana -p 3000:3000 \
   --config source=filesystem-provisioner.yaml,target=/etc/grafana/provisioning/dashboards/filesystem-provisioner.yaml \
-  --config source=grafana_dashboard.json,target=/etc/grafana/dashboard-definitions/grafana_dashboard.json \
+  --config source=overview.json,target=/etc/grafana/dashboard-definitions/overview.json \
+  --config source=jvm-details.json,target=/etc/grafana/dashboard-definitions/jvm-details.json \
+  --config source=nessage-details.json,target=/etc/grafana/dashboard-definitions/message-details.json \
   --config source=prometheus.yaml,target=/etc/grafana/provisioning/datasources/prometheus.yaml \
   --limit-memory 64m \
   grafana/grafana:${grafana.version}
