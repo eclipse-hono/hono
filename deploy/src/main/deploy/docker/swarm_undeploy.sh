@@ -99,8 +99,10 @@ docker secret rm \
 docker service rm grafana
 docker config rm \
   filesystem-provisioner.yaml \
-  grafana_dashboard.json \
-  influxdb.yaml
+  overview.json \
+  jvm-details.json \
+  message-details.json \
+  prometheus.yaml
 
 docker service rm prometheus
 docker secret rm prometheus.yml
