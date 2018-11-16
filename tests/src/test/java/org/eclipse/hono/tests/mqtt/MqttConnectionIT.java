@@ -150,38 +150,39 @@ public class MqttConnectionIT extends MqttTestBase {
 
 
     /**
-     * Verifies that the adapter rejects connection attempts from devices
-     * that belong to a tenant for which the adapter has been disabled.
+     * Verifies that the adapter rejects connection attempts from devices that belong to a disabled tenant.
      *
      * @param ctx The test context
      */
     @Test
     public void testConnectFailsForDisabledTenant(final TestContext ctx) {
 
-        // GIVEN a tenant for which the HTTP adapter is disabled
+        // Given a disabled tenant for which the MQTT adapter is enabled
         final String tenantId = helper.getRandomTenantId();
         final String deviceId = helper.getRandomDeviceId(tenantId);
         final String password = "secret";
         final JsonObject adapterDetailsMqtt = new JsonObject()
                 .put(TenantConstants.FIELD_ADAPTERS_TYPE, Constants.PROTOCOL_ADAPTER_TYPE_MQTT)
-                .put(TenantConstants.FIELD_ENABLED, Boolean.FALSE);
-        final TenantObject tenant = TenantObject.from(tenantId, true);
+                .put(TenantConstants.FIELD_ENABLED, Boolean.TRUE);
+
+        final TenantObject tenant = TenantObject.from(tenantId, false);
         tenant.addAdapterConfiguration(adapterDetailsMqtt);
 
         helper.registry.addDeviceForTenant(tenant, deviceId, password)
                 .recover(t -> Future.failedFuture(t)).compose(ok -> {
-            final Future<MqttConnAckMessage> result = Future.future();
-            final MqttClientOptions options = new MqttClientOptions()
-                    .setUsername(IntegrationTestSupport.getUsername(deviceId, tenantId))
-                    .setPassword(password);
-            mqttClient = MqttClient.create(VERTX, options);
-            // WHEN a device that belongs to the tenant tries to connect to the adapter
-            mqttClient.connect(IntegrationTestSupport.MQTT_PORT, IntegrationTestSupport.MQTT_HOST, result);
-            return result;
-        }).setHandler(ctx.asyncAssertFailure(t -> {
-            ctx.assertTrue(t instanceof MqttConnectionException);
-            // THEN the connection is refused with a NOT_AUTHORIZED code
-            ctx.assertEquals(((MqttConnectionException) t).code(), MqttConnectReturnCode.CONNECTION_REFUSED_NOT_AUTHORIZED);
-        }));
+                    final Future<MqttConnAckMessage> result = Future.future();
+                    final MqttClientOptions options = new MqttClientOptions()
+                            .setUsername(IntegrationTestSupport.getUsername(deviceId, tenantId))
+                            .setPassword(password);
+                    mqttClient = MqttClient.create(VERTX, options);
+                    // WHEN a device that belongs to the disabled tenant tries to connect to the adapter
+                    mqttClient.connect(IntegrationTestSupport.MQTT_PORT, IntegrationTestSupport.MQTT_HOST, result);
+                    return result;
+                }).setHandler(ctx.asyncAssertFailure(t -> {
+                    ctx.assertTrue(t instanceof MqttConnectionException);
+                    // THEN the connection is refused with a NOT_AUTHORIZED code
+                    ctx.assertEquals(((MqttConnectionException) t).code(),
+                            MqttConnectReturnCode.CONNECTION_REFUSED_NOT_AUTHORIZED);
+                }));
     }
 }
