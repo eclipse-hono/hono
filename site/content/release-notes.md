@@ -32,12 +32,17 @@ title = "Release Notes"
   had no chance to determine whether it got back a newly created instance or an existing one. This has been resolved with the
   new method semantics.
 
-### Deprecations
+### Depreciations
 
 * The Kura protocol adapter is being deprecated with 0.8. It will still be part
   of Hono 0.8, but may be removed in a future version. Starting with Kura 4.0
   and Hono 0.8, both projects can now be used together, without the need for
   a special version of the Hono MQTT protocol adapter.
+* The `openshift` deployment is being deprecated with 0.8 and is planned to be
+  removed in 0.9, in favor of the `openshift_s2i` deployment. While the
+  `openshift` deployment still works, it hasn't been updated for more recent
+  OpenShift and EnMasse versions. The main focus now is on the *S2I* variant,
+  which will become the default *OpenShift*" deployment in Hono 0.9.
 
 ## 0.8-M2
 
