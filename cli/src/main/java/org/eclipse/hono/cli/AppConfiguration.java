@@ -16,8 +16,6 @@ package org.eclipse.hono.cli;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.impl.HonoClientImpl;
 import org.eclipse.hono.config.ClientConfigProperties;
-import org.eclipse.hono.connection.ConnectionFactory;
-import org.eclipse.hono.connection.impl.ConnectionFactoryImpl;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -70,22 +68,12 @@ public class AppConfiguration {
     }
 
     /**
-     * Exposes a factory for connections to the Hono as a Spring bean.
-     *
-     * @return The connection factory.
-     */
-    @Bean
-    public ConnectionFactory honoConnectionFactory() {
-        return new ConnectionFactoryImpl(vertx(), honoClientConfig());
-    }
-
-    /**
      * Exposes a {@code HonoClient} as a Spring bean.
      *
      * @return The Hono client.
      */
     @Bean
     public HonoClient honoClient() {
-        return new HonoClientImpl(vertx(), honoConnectionFactory(), honoClientConfig());
+        return new HonoClientImpl(vertx(), honoClientConfig());
     }
 }

@@ -50,18 +50,15 @@ hono:
 spring:
   profiles: amqp-adapter-cli
 
-amqp:
-  host: 127.0.0.1
-  port: 4040
+hono:
+  client:
+    port: 5672
+    username: sensor1@DEFAULT_TENANT
+    password: hono-secret
 
 message:
   address: telemetry/DEFAULT_TENANT/4711
-
-username: sensor1@DEFAULT_TENANT
-
-password: hono-secret
-
-payload: '{"temp": 5}'
+  payload: '{"temp": 5}'
 
 ---
 

@@ -16,8 +16,6 @@ package org.eclipse.hono.cli;
 import java.util.Objects;
 
 import org.eclipse.hono.client.HonoClient;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 
@@ -27,8 +25,6 @@ import org.springframework.beans.factory.annotation.Value;
  */
 abstract class AbstractClient extends AbstractCliClient {
 
-    protected final Logger LOG = LoggerFactory.getLogger(getClass());
-
     @Value(value = "${tenant.id}")
     protected String tenantId;
     @Value(value = "${device.id}")
@@ -36,12 +32,6 @@ abstract class AbstractClient extends AbstractCliClient {
     @Value(value = "${connection.retryInterval}")
     protected int connectionRetryInterval;
     protected HonoClient client;
-
-    /**
-     * Empty default constructor.
-     */
-    protected AbstractClient() {
-    }
 
     @Autowired
     public final void setHonoClient(final HonoClient client) {

@@ -34,7 +34,7 @@ public class Application {
 
     @PostConstruct
     private void start() throws Exception {
-        LOG.info("Starting example client in role {}", profiles);
+        LOG.info("running command line client in role(s): {}", profiles);
     }
 
     /**

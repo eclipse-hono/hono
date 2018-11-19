@@ -33,7 +33,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Receiver that connects to the Hono, waits for incoming messages and logs the message payload if anything is received.
+ * A client that connects to Hono's northbound Telemetry and/or Event API,
+ * waits for incoming messages and logs any received messages to the console.
  * <p>
  * Note that this example intentionally does not support Command and Control and rather is the most simple version of a
  * receiver for downstream data. Please refer to the documentation of Command and Control for the example that supports
@@ -46,6 +47,9 @@ public class Receiver extends AbstractClient {
     private static final String TYPE_TELEMETRY = "telemetry";
     private static final String TYPE_EVENT = "event";
     private static final String TYPE_ALL = "all";
+    /**
+     * The type of messages to create a consumer for.
+     */
     @Value(value = "${message.type}")
     protected String messageType;
 

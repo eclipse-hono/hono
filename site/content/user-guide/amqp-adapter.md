@@ -59,28 +59,28 @@ For purposes of demonstrating the usage of the AMQP adapter, the **Hono CLI Modu
 
 The command-line client supports the following parameters (with default values):
 
-* `--message.address`: The AMQP 1.0 message address (default: `telemetry/DEFAULT_TENANT/4711`)
-* `--amqp.host`: The hostname that the AMQP adapter is running on (default: `localhost`)
-* `--amqp.port`: The port that the adapter is listening for incoming connections (default: `4040`)
-* `--username`: The username to authenticate to the adapter (default: `sensor1@DEFAULT_TENANT`)
-* `--password`: The password to authenticate to the adapter (default: `hono-secret`)
-* `--payload`: The message payload body (default: `'{"temp": 5}'`)
 * `--spring.profiles.active=amqp-adapter-cli`: Tells Hono CLI to activate the AMQP command-line client.
+* `--message.address`: The AMQP 1.0 message address (default: `telemetry/DEFAULT_TENANT/4711`)
+* `--message.payload`: The message payload body (default: `'{"temp": 5}'`)
+* `--hono.client.host`: The hostname that the AMQP adapter is running on (default: `localhost`)
+* `--hono.client.port`: The port that the adapter is listening for incoming connections (default: `5672`)
+* `--hono.client.username`: The username to use for authenticating to the adpter (default: `sensor1@DEFAULT_TENANT`)
+* `--hono.client.password`: The password to use for authenticating to the adapter (default: `hono-secret`)
 
 To run the client using the above default values, open a terminal and execute the following:
 
-    $ /hono/cli/target$ java -jar hono-cli-0.7-SNAPSHOT-exec.jar --spring.profiles.active=amqp-adapter-cli
+    $ /hono/cli/target$ java -jar hono-cli-0.8-SNAPSHOT-exec.jar --spring.profiles.active=amqp-adapter-cli
 
 To run the client with a different value for the message address, username, password and payload body, do the following:
 
-    $ /hono/cli/target$ java -jar hono-cli-0.7-SNAPSHOT-exec.jar --spring.profiles.active=amqp-adapter-cli --username=sensor20@DEFAULT_TENANT --password=my-secret --message.address=event/DEFAULT_TENANT/4710 --payload='{"alarm": 1}'
+    $ /hono/cli/target$ java -jar hono-cli-0.8-SNAPSHOT-exec.jar --spring.profiles.active=amqp-adapter-cli --hono.client.username=sensor20@DEFAULT_TENANT --hono.client.password=my-secret --message.address=event/DEFAULT_TENANT/4710 --message.payload='{"alarm": 1}'
     
     Accepted{}
 
 After running the client, the delivery state is printed to standard output. The output shown above shows that the request to upload a telemetry message succeeded and `accepted` disposition frame is printed to standard output. 
 
 {{% note %}}
-There are two JAR files in the hono/cli/target directory. The JAR to use for the client is the `hono-cli-0.7-SNAPSHOT-exec.jar` and not the `hono-cli-0.7-SNAPSHOT.jar` file. Running the latter will not work and will output the message: `no main manifest attribute, in hono-cli-0.7-SNAPSHOT.jar`
+There are two JAR files in the hono/cli/target directory. The JAR to use for the client is the `hono-cli-$VERSION-exec.jar` and not the `hono-cli-$VERSION.jar` file. Running the latter will not work and will output the message: `no main manifest attribute, in hono-cli-$VERSION.jar`
 {{% /note %}}
 
 ## Publishing Telemetry Data

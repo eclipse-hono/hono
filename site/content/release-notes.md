@@ -4,6 +4,10 @@ title = "Release Notes"
 
 ## 0.8 (not released yet)
 
+### Fixes & Enhancements
+
+* The AMQP adapter command line client now uses property names that match those of the HonoClient.
+
 ### API Changes
 
 * The `hono-client` module now contains all classes necessary to implement Command and Control in protocol adapters.
