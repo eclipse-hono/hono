@@ -323,6 +323,7 @@ public class RegistrationClientImpl extends AbstractRequestResponseClient<Regist
 
         final TriTuple<String, String, String> key = TriTuple.of(RegistrationConstants.ACTION_ASSERT, deviceId, gatewayId);
         final Span span = newChildSpan(parent, "assert Device Registration");
+        span.setTag(MessageHelper.APP_PROPERTY_TENANT_ID, getTenantId());
         span.setTag(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId);
         span.setTag(MessageHelper.APP_PROPERTY_GATEWAY_ID, gatewayId);
         final AtomicBoolean cacheHit = new AtomicBoolean(true);
