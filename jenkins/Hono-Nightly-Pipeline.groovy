@@ -42,12 +42,12 @@ node {
 }
 
 /**
- * Nightly build with maven (with jdk1.9.0-latest and apache-maven-latest as configured in 'Global Tool Configuration' in Jenkins).
+ * Nightly build with maven (with jdk9-latest and apache-maven-latest as configured in 'Global Tool Configuration' in Jenkins).
  *
  */
 def nightlyBuild() {
     stage('Build') {
-        withMaven(maven: 'apache-maven-latest', jdk: 'jdk1.9.0-latest', options: [jacocoPublisher(disabled: true), artifactsPublisher(disabled: true)]) {
+        withMaven(maven: 'apache-maven-latest', jdk: 'jdk9-latest', options: [jacocoPublisher(disabled: true), artifactsPublisher(disabled: true)]) {
             sh 'mvn clean package javadoc:aggregate'
             sh 'mvn --projects :hono-service-auth,:hono-service-messaging,:hono-service-device-registry,:hono-adapter-http-vertx,:hono-adapter-mqtt-vertx,:hono-adapter-kura,:hono-adapter-amqp-vertx,:hono-adapter-coap-vertx,:hono-example -am deploy -DcreateJavadoc=true -DenableEclipseJarSigner=true'
         }

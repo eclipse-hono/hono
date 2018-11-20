@@ -57,7 +57,7 @@ node {
 def buildAndDeploy() {
     stage('Build and deploy to maven central') {
         withMaven(maven: 'apache-maven-latest',
-                jdk: 'jdk1.9.0-latest',
+                jdk: 'jdk9-latest',
                 mavenLocalRepo: '.repository',
                 mavenSettingsFilePath: "${params.MAVEN_SETTINGS_FILE}",
                 options: [jacocoPublisher(disabled: true), artifactsPublisher(disabled: true)]) {
