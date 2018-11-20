@@ -240,7 +240,7 @@ public class CommandConnectionImplTest {
             }).map(consumer -> {
                 // WHEN closing the link locally
                 final Future<Void> localCloseHandler = Future.future();
-                consumer.close(localCloseHandler);
+                consumer.close(localCloseHandler.completer());
                 final ArgumentCaptor<Handler<AsyncResult<ProtonReceiver>>> closeHandler = ArgumentCaptor.forClass(Handler.class);
                 verify(receiver, times(2)).closeHandler(closeHandler.capture());
                 verify(receiver).close();
