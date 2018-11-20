@@ -104,7 +104,7 @@
         "$default": {
           "remoteHosts": "*",
           "allowUserIdProxy": true,
-          "targets": "telemetry/*, event/*",
+          "targets": "telemetry/*, event/*, control/*",
           "sources": "control/*"
         }
       }
