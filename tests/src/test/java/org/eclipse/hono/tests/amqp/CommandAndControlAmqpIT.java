@@ -253,14 +253,6 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
         sender.get().sendAndWaitForOutcome(messageWithoutId).setHandler(ctx.asyncAssertFailure(t -> {
             ctx.assertTrue(t instanceof ClientErrorException);
         }));
-
-        log.debug("sending command message lacking reply-to address");
-        final Message messageWithoutReplyTo = ProtonHelper.message("input data");
-        messageWithoutReplyTo.setSubject("setValue");
-        messageWithoutReplyTo.setMessageId("message-id");
-        sender.get().sendAndWaitForOutcome(messageWithoutReplyTo).setHandler(ctx.asyncAssertFailure(t -> {
-            ctx.assertTrue(t instanceof ClientErrorException);
-        }));
     }
 
     /**
