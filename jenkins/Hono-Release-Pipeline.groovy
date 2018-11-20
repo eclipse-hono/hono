@@ -79,7 +79,7 @@ def checkOut() {
  */
 def setReleaseVersionAndBuild() {
     stage('Build') {
-        withMaven(maven: 'apache-maven-latest', jdk: 'jdk1.8.0-latest', options: [jacocoPublisher(disabled: true), artifactsPublisher(disabled: true)]) {
+        withMaven(maven: 'apache-maven-latest', jdk: 'jdk1.9.0-latest', options: [jacocoPublisher(disabled: true), artifactsPublisher(disabled: true)]) {
             sh "mvn versions:set -DgenerateBackupPoms=false -DnewVersion=${RELEASE_VERSION}"
             sh 'mvn clean install javadoc:aggregate -Dmaven.test.failure.ignore=false -DenableEclipseJarSigner=true -DsnapshotDependencyAllowed=false -Ddocker.skip.build=true'
         }
@@ -107,7 +107,7 @@ def commitAndTag() {
  */
 def setNextVersion() {
     stage("Set next version") {
-        withMaven(maven: 'apache-maven-latest', jdk: 'jdk1.8.0-latest', options: [jacocoPublisher(disabled: true), artifactsPublisher(disabled: true)]) {
+        withMaven(maven: 'apache-maven-latest', jdk: 'jdk1.9.0-latest', options: [jacocoPublisher(disabled: true), artifactsPublisher(disabled: true)]) {
             sh "mvn versions:set -DallowSnapshots=true -DgenerateBackupPoms=false -DnewVersion=${NEXT_VERSION}"
         }
     }

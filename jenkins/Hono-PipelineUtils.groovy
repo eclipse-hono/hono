@@ -61,12 +61,12 @@ void checkOutRepoWithCredentials(String branch, String credentialsId, String url
 }
 
 /**
- * Build with maven (with jdk1.8.0-latest and apache-maven-latest as configured in 'Global Tool Configuration' in Jenkins).
+ * Build with maven (with jdk1.9.0-latest and apache-maven-latest as configured in 'Global Tool Configuration' in Jenkins).
  *
  */
 void build() {
     stage('Build') {
-        withMaven(maven: 'apache-maven-latest', jdk: 'jdk1.8.0-latest', options: [jacocoPublisher(disabled: true)]) {
+        withMaven(maven: 'apache-maven-latest', jdk: 'jdk1.9.0-latest', options: [jacocoPublisher(disabled: true)]) {
             sh 'mvn -B clean install'
         }
     }

@@ -53,7 +53,7 @@ node {
 def buildAndDeploy() {
     stage('Build and deploy to maven central') {
         withMaven(maven: 'apache-maven-latest',
-                jdk: 'jdk1.8.0-latest',
+                jdk: 'jdk1.9.0-latest',
                 mavenLocalRepo: '.repository',
                 options: [jacocoPublisher(disabled: true), artifactsPublisher(disabled: true)]) {
             sh "mvn --projects :hono-service-auth,:hono-service-messaging,:hono-service-device-registry,:hono-adapter-http-vertx,:hono-adapter-mqtt-vertx,:hono-adapter-kura,:hono-adapter-amqp-vertx,:hono-example,:hono-cli -am deploy -DskipTests=true -DcreateJavadoc=true -DenableEclipseJarSigner=true -DskipStaging=true"
