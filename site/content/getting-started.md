@@ -261,9 +261,9 @@ If you do not run Docker on localhost, replace *localhost* in the link with the 
 
 ## Using Command & Control
 
-Command & Control is fully implemented in Hono but is currently considered a *technical preview*. 
+Command & Control is fully implemented in Hono 0.8 (and newer).
 
-The following walk-through example shows how to try it out.
+The following walk-through example shows how to use it.
 
 ### Starting the example application
 
@@ -307,15 +307,18 @@ The response to the `curl` command contains the command from the example applica
     
 The example application sets the `brightness` to a random value between 0 and 100 on each invocation. It also generates a unique correlation identifier for each new command to be sent to the device. The device will need to include this identifier in its response to the command so that the application can properly correlate the response with the request.
 
+**NB:** If the application would send a *one-way command* instead (see [Command and Control Concepts]({{< relref "concepts/command-and-control.md" >}})), the `hono-cmd-req-id` response header would be missing.
+
 {{% note %}}
 If you are running Hono on another node than the application, e.g. using *Docker Machine*, *Minikube* or *Minishift*, and the clock of that node is not in sync with the node that your (example) application is running on, then the application might consider the *time til disconnect* indicated by the device in its *hono-ttd* parameter to already have expired. This will happen if the application node's clock is ahead of the clock on the HTTP protocol adapter node. Consequently, this will result in the application **not** sending any command to the device.
 
 Thus, you need to make sure that the clocks of the node running the application and the node running the HTTP protocol adapter are synchronized (you may want to search the internet for several solutions to this problem).
 {{% /note %}}
 
+
 ### Sending the Response to the Command
 
-After the device has received the command and has processed it, it needs to inform the application about the outcome. For this purpose the device uploads the result to the HTTP adapter using a new HTTP request. The following command simulates the device uploading some JSON payload indicating a successful result:
+If the received command was *not* a *one-way command*, and the device has received the command and has processed it, it needs to inform the application about the outcome. For this purpose the device uploads the result to the HTTP adapter using a new HTTP request. The following command simulates the device uploading some JSON payload indicating a successful result:
 
     $ curl -i -X POST -u sensor1@DEFAULT_TENANT:hono-secret -H 'Content-Type: application/json' \
     -H 'hono-cmd-status: 200' --data-binary '{"success": true}' \

@@ -7,7 +7,8 @@ activate HTTP Adapter
 HTTP Adapter->Application: 2. transfer("event/TENANT","4711","ttd=30")
 activate Application
 Application->HTTP Adapter: 3. transfer("control/TENANT/4711","light","ON")
-HTTP Adapter->Device: 4. HTTP response ("200", "hono-cmd=light, hono-cmd-req-id=${reqId})", "ON")
+HTTP Adapter->Device: 4. HTTP response (("200", "hono-cmd=light", "hono-cmd-req-id=${reqId}"), "ON")
+HTTP Adapter->Application: disposition("accepted")
 deactivate HTTP Adapter
 note over Device
 Command response in next operation

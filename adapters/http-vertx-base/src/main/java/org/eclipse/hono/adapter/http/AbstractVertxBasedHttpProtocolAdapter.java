@@ -730,14 +730,16 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
             response.setStatusCode(HttpURLConnection.HTTP_ACCEPTED);
         } else {
             final Command command = commandContext.getCommand();
+            response.putHeader(Constants.HEADER_COMMAND, command.getName());
             currentSpan.setTag(Constants.HEADER_COMMAND, command.getName());
-            currentSpan.setTag(Constants.HEADER_COMMAND_REQUEST_ID, command.getRequestId());
             LOG.trace("adding command [name: {}, request-id: {}] to response for device [tenant-id: {}, device-id: {}]",
                     command.getName(), command.getRequestId(), command.getTenant(), command.getDeviceId());
-            response.setStatusCode(HttpURLConnection.HTTP_OK);
-            response.putHeader(Constants.HEADER_COMMAND, command.getName());
-            response.putHeader(Constants.HEADER_COMMAND_REQUEST_ID, command.getRequestId());
+            if (!command.isOneWay()) {
+                response.putHeader(Constants.HEADER_COMMAND_REQUEST_ID, command.getRequestId());
+                currentSpan.setTag(Constants.HEADER_COMMAND_REQUEST_ID, command.getRequestId());
+            }
 
+            response.setStatusCode(HttpURLConnection.HTTP_OK);
             HttpUtils.setResponseBody(response, command.getPayload(), command.getContentType());
         }
     }
