@@ -33,11 +33,10 @@ import java.util.Optional;
 import java.util.Scanner;
 import java.util.concurrent.TimeUnit;
 
-import static java.lang.String.*;
-
 /**
- * Command application that connects to the Hono, get commands from the user using System.in, send those commands to devices
- * and logs command responses if any.
+ * A command line client for sending <em>commands</em> to devices connected to Hono.
+ * <p>
+ * The client connects to Hono and reads commands from System.in.
  */
 @Component
 @Profile("command")
@@ -45,7 +44,7 @@ public class Commander extends AbstractClient {
 
     private final Scanner scanner = new Scanner(System.in);
     @Value(value = "${command.timeoutInSeconds}")
-    protected int requestTimeoutInSecs;
+    private int requestTimeoutInSecs;
     private WorkerExecutor workerExecutor;
 
     /**
@@ -67,17 +66,33 @@ public class Commander extends AbstractClient {
     }
 
     private Future<Void> processCommand(final Command command) {
-        LOG.info("Command sent to device... [Command request will timeout in {} seconds]", requestTimeoutInSecs);
-        return client.getOrCreateCommandClient(tenantId, deviceId)
+
+        LOG.info("Command sent to device... [request will timeout in {} seconds]", requestTimeoutInSecs);
+
+        final Future<CommandClient> commandClient = client.getOrCreateCommandClient(tenantId, deviceId);
+        return commandClient
                 .map(this::setRequestTimeOut)
-                .compose(commandClient -> commandClient
-                        .sendCommand(command.getCommand(), Buffer.buffer(command.getPayload()))
-                        .map(this::printResponse)
-                        .map(x -> closeCommandClient(commandClient))
-                        .otherwise(error -> {
-                            LOG.error("Error: {}", error.getMessage());
-                            return closeCommandClient(commandClient);
-                        }));
+                .compose(c -> {
+                    if (command.isOneWay()) {
+                        return c
+                                .sendOneWayCommand(command.getName(), command.getContentType(), Buffer.buffer(command.getPayload()), null)
+                                .map(ok -> c);
+                    } else {
+                        return c
+                                .sendCommand(command.getName(), command.getContentType(), Buffer.buffer(command.getPayload()), null)
+                                .map(this::printResponse)
+                                .map(ok -> c);
+                    }
+                })
+                .map(this::closeCommandClient)
+                .otherwise(error -> {
+                    LOG.error("Error sending command: {}", error.getMessage());
+                    if (commandClient.succeeded()) {
+                        return closeCommandClient(commandClient.result());
+                    } else {
+                        return null;
+                    }
+                });
     }
 
     private CommandClient setRequestTimeOut(final CommandClient commandClient) {
@@ -101,22 +116,19 @@ public class Commander extends AbstractClient {
     private Future<Command> getCommandFromUser() {
         final Future<Command> commandFuture = Future.future();
         workerExecutor.executeBlocking(userInputFuture -> {
-            System.out.print(
-                    format(">>>>>>>>> Enter command for device [%s:%s] <then press Enter, hit ctrl-c to exit >: ",
-                            tenantId, deviceId));
+            System.out.println();
+            System.out.println();
+            System.out.printf(">>>>>>>>> Enter name of command for device [%s:%s] (prefix with 'ow:' to send one-way command):",
+                    tenantId, deviceId);
+            System.out.println();
             final String honoCmd = scanner.nextLine();
-            System.out.print(
-                    format(">>>>>>>>> Enter command payload for device [%s:%s] <then press Enter, hit ctrl-c to exit>: ",
-                            tenantId, deviceId));
+            System.out.println(">>>>>>>>> Enter command payload:");
             final String honoPayload = scanner.nextLine();
-            userInputFuture.complete(new Command(honoCmd, honoPayload));
-        }, result -> {
-            if (result.succeeded()) {
-                commandFuture.complete((Command) result.result());
-            } else {
-                commandFuture.fail(result.cause());
-            }
-        });
+            System.out.println(">>>>>>>>> Enter content type:");
+            final String honoContentType = scanner.nextLine();
+            System.out.println();
+            userInputFuture.complete(new Command(honoCmd, honoPayload, honoContentType));
+        }, commandFuture);
         return commandFuture;
     }
 
@@ -142,21 +154,37 @@ public class Commander extends AbstractClient {
      */
     private class Command {
 
-        private final String command;
+        private final String name;
         private final String payload;
+        private final String contentType;
+        private final boolean oneWay;
 
-        Command(final String command, final String payload) {
-            this.command = command;
+        Command(final String command, final String payload, final String contentType) {
+
+            oneWay = command.startsWith("ow:");
+            if (oneWay) {
+                name = command.substring(3);
+            } else {
+                name = command;
+            }
             this.payload = payload;
+            this.contentType = contentType;
         }
 
-        private String getCommand() {
-            return command;
+        private boolean isOneWay() {
+            return oneWay;
+        }
+
+        private String getName() {
+            return name;
         }
 
         private String getPayload() {
             return payload;
         }
 
+        private String getContentType() {
+            return contentType;
+        }
     }
 }

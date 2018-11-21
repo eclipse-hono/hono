@@ -329,36 +329,45 @@ If the received command was *not* a *one-way command*, and the device has receiv
 
 **NB** Make sure to issue the command above before the application gives up on waiting for the response. By default, the example application will wait for as long as indicated in the `hono-ttd` parameter of the uploaded telemetry message. Also make sure to use the actual value of the `hono-cmd-req-id` header from the HTTP response that contained the command.
 
-### Using CLI (command line interface) to send commands and receive command responses
-`cli` module has an example that demonstrates how to send commands to devices and receive command responses from devices. 
-If you want to send commands to any device, run the client from the `cli` folder as follows:
+### Using CLI (command line interface) to send Commands and receive Command responses
+
+The command line client from the `cli` module supports the interactive sending of commands to connected devices.
+In order to do so, the client needs to be run with the `command` profile as follows:
  
 ~~~sh
 ~/hono/cli$ mvn spring-boot:run -Drun.arguments=--hono.client.host=localhost,--hono.client.username=consumer@HONO,--hono.client.password=verysecret -Drun.profiles=command,ssl
 ~~~
 
-The client will prompt for user input as below. You can enter the command and payload that you would like to send to a device. For more information about command and payload refer to [Command and Control Concepts]({{< relref "concepts/command-and-control.md" >}}).
+The client will prompt the user to enter the command's name, the payload to send and the payload's content type. For more information about command and payload refer to [Command and Control Concepts]({{< relref "concepts/command-and-control.md" >}}).
 
-    >>>>>>>>> Enter command for device [<TenantId>:<DeviceId>] <then press Enter, hit ctrl-c to exit >:
-    >>>>>>>>> Enter command payload for device [<TenantId>:<DeviceId>] <then press Enter, hit ctrl-c to exit>:
+The example below illustrates how a command to set the volume with a JSON payload is sent to device `4711`.
+
+    >>>>>>>>> Enter name of command for device [<TenantId>:<DeviceId>] (prefix with 'ow:' to send one-way command):
+    setVolume
+    >>>>>>>>> Enter command payload:
+    {"level": 50}
+    >>>>>>>>> Enter content type:
+    application/json
     
-Below example shows that a command `setVolume` with payload `{"level": 50}` is sent to a device with device-id `4711`.
-
-    >>>>>>>>> Enter command for device [DEFAULT_TENANT:4711] <then press Enter, hit ctrl-c to exit >: setVolume
-    >>>>>>>>> Enter command payload for device [DEFAULT_TENANT:4711] <then press Enter, hit ctrl-c to exit>: {"level": 50}
     INFO  org.eclipse.hono.cli.Commander - Command sent to device... [Command request will timeout in 60 seconds]
 
-In the above example, the CLI waits for 60 seconds for the response from the device before the request get timed out. 
+In the above example, the client waits up to 60 seconds for the response from the device before giving up.
 For more information on how to connect devices, receive commands and send responses refer to [Commands using HTTP]({{< relref "user-guide/http-adapter.md#specifying-the-time-a-device-will-wait-for-a-response" >}}) and [Commands using MQTT]({{< relref "user-guide/mqtt-adapter.md#command-control" >}}).
 
 The received command response `{"result":"success"}` is displayed as shown in the below example. 
 
     INFO  org.eclipse.hono.cli.Commander - Received Command response : {"result":"success"}
- 
- The command line argument `command.timeoutInSeconds` can be used to modify the command timeout interval, default is 60 seconds. The command line arguments `device.id` and `tenant.id` provide the deviceId and tenantId of the device that you want to send commands.
+
+{{% note %}}
+The command line client also supports sending of *one-way* commands to a device, i.e. commands for which no response is expected from the device.
+In order to send a one-way command, the command name needs to be prefixed with `ow:`, e.g. `ow:setVolume`. The client will then not wait for
+a response from the device but will consider the sending of the command successful as soon as the command message has been accepted by Hono.
+{{% /note %}}
+
+ The command line argument `command.timeoutInSeconds` can be used to set the timeout period (default is 60 seconds). The command line arguments `device.id` and `tenant.id` provide the device and tenant ID of the device that you want to send commands to.
 
 ~~~sh
-~/hono/cli$ mvn spring-boot:run -Drun.arguments=--hono.client.host=localhost,--hono.client.username=consumer@HONO,--hono.client.password=verysecret,--command.timeoutInSeconds=50,--device.id=4711,--tenant.id=DEFAULT_TENANT -Drun.profiles=command,ssl
+~/hono/cli$ mvn spring-boot:run -Drun.arguments=--hono.client.host=localhost,--hono.client.username=consumer@HONO,--hono.client.password=verysecret,--command.timeoutInSeconds=10,--device.id=4711,--tenant.id=DEFAULT_TENANT -Drun.profiles=command,ssl
 ~~~
 
 ### Summary
