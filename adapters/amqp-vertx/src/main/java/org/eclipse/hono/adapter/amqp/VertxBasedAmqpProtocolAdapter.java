@@ -44,6 +44,7 @@ import org.eclipse.hono.util.TenantObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.opentracing.tag.Tags;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
@@ -500,13 +501,15 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                 sourceAddress.getTenantId(),
                 sourceAddress.getResourceId(),
                 commandContext -> {
+
+                    Tags.COMPONENT.set(commandContext.getCurrentSpan(), getTypeName());
                     final Command command = commandContext.getCommand();
+
                     if (!command.isValid()) {
-                        commandContext.reject(new ErrorCondition(Constants.AMQP_BAD_REQUEST, "malformed command message"));
-                        commandContext.flow(1);
+                        final Exception ex = new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "malformed command message");
+                        commandContext.reject(AmqpContext.getErrorCondition(ex), 1);
                     } else if (!sender.isOpen()) {
-                        commandContext.release();
-                        commandContext.flow(1);
+                        commandContext.release(1);
                     } else {
                         onCommandReceived(sender, commandContext);
                     }
@@ -544,23 +547,20 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             if (delivery.remotelySettled()) {
                 if (Accepted.class.isInstance(remoteState)) {
                     LOG.trace("device accepted command message [command: {}]", command.getName());
-                    commandContext.accept();
+                    commandContext.accept(1);
                 } else if (Rejected.class.isInstance(remoteState)) {
                     final ErrorCondition error = ((Rejected) remoteState).getError();
                     LOG.debug("device rejected command message [command: {}, error: {}]", command.getName(), error);
-                    commandContext.reject(error);
+                    commandContext.reject(error, 1);
                 } else if (Released.class.isInstance(remoteState)) {
                     LOG.debug("device released command message [command: {}]", command.getName());
-                    commandContext.release();
+                    commandContext.release(1);
                 }
             } else {
                 LOG.warn("device did not settle command message [command: {}, remote state: {}]", command.getName(),
                         remoteState);
-                commandContext.release();
+                commandContext.release(1);
             }
-
-            // in any case, flow one (1) credit for the application to (re)send another command
-            commandContext.flow(1);
         });
     }
 

@@ -150,11 +150,7 @@ public class CommandConsumer extends AbstractConsumer {
                         items.put("content-type", command.getContentType());
                     }
                     currentSpan.log(items);
-                    try {
-                        commandHandler.handle(CommandContext.from(command, delivery, receiverRef.get(), currentSpan));
-                    } finally {
-                        currentSpan.finish();
-                    }
+                    commandHandler.handle(CommandContext.from(command, delivery, receiverRef.get(), currentSpan));
                 },
                 sourceAddress -> {
                     LOG.debug("command receiver link [tenant-id: {}, device-id: {}] closed remotely",

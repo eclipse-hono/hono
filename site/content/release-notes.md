@@ -10,7 +10,7 @@ title = "Release Notes"
 
 ### API Changes
 
-* The `hono-client` module now contains all classes necessary to implement Command and Control in protocol adapters.
+* The `hono-client` module now contains all classes necessary to implement Command & Control in protocol adapters.
   Previously this has only been the case for the sending of a command, as it is typically done by an application, while
   the classes to receive commands, typically used by protocol adapters, were located in the `hono-service-base` module.
   Additionally, the package structure was reworked to allow for implementing protocol adapters that run in an OSGi 
@@ -35,6 +35,9 @@ title = "Release Notes"
   a consumer that was scoped to another message handler than the one passed into the method as an argument. However, client code
   had no chance to determine whether it got back a newly created instance or an existing one. This has been resolved with the
   new method semantics.
+* The `CommandContext.flow()` method has been made private. Client code should instead use the newly introduced variants of the `accept(int)`,
+  `release(int)` and `reject(ErrorCondition, int)` methods which all accept an integer indicating the number of credits to flow to the sender.
+  These methods will also finish the OpenTracing span contained in the `CommandContext` implicitly.
 
 ### Depreciations
 

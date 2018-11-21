@@ -17,6 +17,7 @@ package org.eclipse.hono.client;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 
 import org.apache.qpid.proton.amqp.messaging.Rejected;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
@@ -27,6 +28,7 @@ import org.slf4j.LoggerFactory;
 
 import io.opentracing.Span;
 import io.opentracing.log.Fields;
+import io.opentracing.tag.Tags;
 import io.vertx.proton.ProtonDelivery;
 import io.vertx.proton.ProtonHelper;
 import io.vertx.proton.ProtonReceiver;
@@ -105,37 +107,112 @@ public final class CommandContext extends MapBasedExecutionContext {
 
     /**
      * Settles the command message with the <em>accepted</em> outcome.
+     * <p>
+     * This method simply invokes {@link CommandContext#accept(int)} with
+     * 0 credits.
      */
     public void accept() {
 
+        accept(0);
+    }
+
+    /**
+     * Settles the command message with the <em>accepted</em> outcome
+     * and flows credit to the peer.
+     * <p>
+     * This method also finishes the OpenTracing span returned by
+     * {@link #getCurrentSpan()}.
+     * 
+     * @param credit The number of credits to flow to the peer.
+     * @throws IllegalArgumentException if credit is negative.
+     */
+    public void accept(final int credit) {
+
+        if (credit < 0) {
+            throw new IllegalArgumentException("credit must be >= 0");
+        }
         LOG.trace("accepting command message [{}]", getCommand());
         ProtonHelper.accepted(delivery, true);
-        currentSpan.log("accepted command for delivery to device");
+        currentSpan.log("accepted command for device");
+        if (credit > 0) {
+            flow(credit);
+        }
+        currentSpan.finish();
     }
 
     /**
      * Settles the command message with the <em>released</em> outcome.
+     * <p>
+     * This method simply invokes {@link CommandContext#release(int)} with
+     * 0 credits.
      */
     public void release() {
+        release(0);
+    }
+
+    /**
+     * Settles the command message with the <em>released</em> outcome
+     * and flows credit to the peer.
+     * <p>
+     * This method also finishes the OpenTracing span returned by
+     * {@link #getCurrentSpan()}.
+     * 
+     * @param credit The number of credits to flow to the peer.
+     * @throws IllegalArgumentException if credit is negative.
+     */
+    public void release(final int credit) {
+
+        if (credit < 0) {
+            throw new IllegalArgumentException("credit must be >= 0");
+        }
         ProtonHelper.released(delivery, true);
-        TracingHelper.logError(currentSpan, "cannot process command");
+        currentSpan.log("released command for device");
+        currentSpan.log(Tags.ERROR.getKey());
+        if (credit > 0) {
+            flow(credit);
+        }
+        currentSpan.finish();
     }
 
     /**
      * Settles the command message with the <em>rejected</em> outcome.
+     * <p>
+     * This method simply invokes {@link CommandContext#reject(ErrorCondition, int)}
+     * with 0 credits.
      * 
      * @param errorCondition The error condition to send in the disposition frame (may be {@code null}).
      */
     public void reject(final ErrorCondition errorCondition) {
+
+        reject(errorCondition, 0);
+    }
+
+    /**
+     * Settles the command message with the <em>rejected</em> outcome
+     * and flows credit to the peer.
+     * <p>
+     * This method also finishes the OpenTracing span returned by
+     * {@link #getCurrentSpan()}.
+     * 
+     * @param errorCondition The error condition to send in the disposition frame (may be {@code null}).
+     * @param credit The number of credits to flow to the peer.
+     * @throws IllegalArgumentException if credit is negative.
+     */
+    public void reject(final ErrorCondition errorCondition, final int credit) {
+
         final Rejected rejected = new Rejected();
-        final Map<String, String> items = new HashMap<>(2);
-        items.put(Fields.EVENT, "cannot process command");
+        final Map<String, Object> items = new HashMap<>(2);
+        items.put(Fields.EVENT, "rejected command for device");
         if (errorCondition != null) {
-            items.put(Fields.MESSAGE, errorCondition.getDescription());
             rejected.setError(errorCondition);
+            Optional.ofNullable(errorCondition.getDescription()).ifPresent(s -> items.put(Fields.MESSAGE, s));
         }
-        delivery.disposition(rejected, true);
         TracingHelper.logError(currentSpan, items);
+        delivery.disposition(rejected, true);
+        if (credit > 0) {
+            flow(credit);
+        }
+        currentSpan.finish();
     }
 
     /**
@@ -144,12 +221,11 @@ public final class CommandContext extends MapBasedExecutionContext {
      * @param credits The number of credits.
      * @throws IllegalArgumentException if credits is &lt; 1
      */
-    public void flow(final int credits) {
+    private void flow(final int credits) {
         if (credits < 1) {
             throw new IllegalArgumentException("credits must be positve");
         }
         currentSpan.log(String.format("flowing %d credits to sender", credits));
         receiver.flow(credits);
     }
-
 }

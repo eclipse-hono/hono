@@ -632,9 +632,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
                     if (command.isValid()) {
                         onCommandReceived(mqttEndpoint, sub, commandContext);
                     } else {
-                        commandContext.reject(new ErrorCondition(Constants.AMQP_BAD_REQUEST, "malformed command message"));
-                        // issue credit so that application(s) can send the next command
-                        commandContext.flow(1);
+                        commandContext.reject(new ErrorCondition(Constants.AMQP_BAD_REQUEST, "malformed command message"), 1);
                     }
                 },
                 remoteClose -> {},
@@ -1168,8 +1166,6 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
                 subscription.getRequestPart(), command.getRequestId(), command.getName());
         endpoint.publish(topic, command.getPayload(), qos, false, false);
         metrics.incrementCommandDeliveredToDevice(subscription.getTenant());
-        commandContext.accept();
-        commandContext.flow(1);
         LOG.trace("command published to device [tenant-id: {}, device-id: {}, MQTT client-id: {}]",
                 subscription.getTenant(), subscription.getDeviceId(), endpoint.clientIdentifier());
         final Map<String, String> items = new HashMap<>(3);
@@ -1177,6 +1173,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
         items.put(Tags.MESSAGE_BUS_DESTINATION.getKey(), topic);
         items.put(TracingHelper.TAG_QOS.getKey(), qos.toString());
         commandContext.getCurrentSpan().log(items);
+        commandContext.accept(1);
     }
 
     private static void addRetainAnnotation(final MqttContext context, final Message downstreamMessage,
