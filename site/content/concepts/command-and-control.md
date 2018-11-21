@@ -9,19 +9,22 @@ Since Hono 0.6 *Business applications* can send commands to devices following th
 
 This concept refers to the current implementation of Command & Control that will be extended in the future.
 
-{{% note %}}
-This feature is available now as a fully working version but is considered to possibly have some unknown issues that may not make it
-fully production ready yet.
-{{% /note %}}
-
 You can try the implementation directly by following the [Getting Started]({{< ref "getting-started" >}}) guide.
 
 
 ## Command & Control over HTTP Adapter
 
-The following sequence diagram gives an overview of a device connecting via HTTP, which gets a command from the business application in the response to a downstream message - being an arbitrary event in this example. The application and the adapter connect to the AMQP Network, which forwards the transfer - for clarity this is not shown in the diagram. 
+Commands can be sent following a *request/response* pattern or being *one-way*. For *Request/Response* commands, there is always a response expected from the device.
+
+The following sequence diagrams give an overview of a device connecting via HTTP, which gets a command from the business application in the response to a downstream message - being an arbitrary event in this example. The application and the adapter connect to the AMQP Network, which forwards the transfer - for clarity this is not shown in the diagram. 
+
+**(Request/Response) command over HTTP:**
  
 ![Command & Control over HTTP Adapter](../command_control_concept_http.png) 
+
+**One-way command over HTTP:**
+
+![One-way Command & Control over HTTP Adapter](../command_control_concept_one_way_http.png) 
 
 With the *hono-ttd* request parameter in (1) the device indicates it will stay connected for max. 30 seconds. In the shown example this means that it can handle the response to the HTTP request for up to 30 seconds before considering the request being expired. 
 
@@ -33,9 +36,14 @@ The HTTP Adapter gets the command and writes it in the response of the devices `
 | Response Header         | Description         |
 | :---------------------  |  :----------------- |
 | *hono-cmd*              | The name of the command to execute. Any input data required will be contained in the response body. |
-| *hono-cmd-req-id*       | The unique identifier of the command. This identifier is used to correlate the device's response to the command with the request. |
+| *hono-cmd-req-id*       | Only set for **Request/Response commands** : The unique identifier of the command. This identifier is used to correlate the device's response to the command with the request. |
 
-The *hono-cmd* is the command that should be executed by the device. Typically this command needs to be known by the device and the payload may contain additional details of the command. The *hono-cmd-req-id* is needed for the command response to correlate it. It has to be sent back from the device to the adapter in a following operation (5). 
+The *hono-cmd* is the command that should be executed by the device. Typically this command needs to be known by the device and the payload may contain additional details of the command. 
+
+
+**For Request/Response commands**:
+
+The *hono-cmd-req-id* is needed for the command response to correlate it. It has to be sent back from the device to the adapter in a following operation (5). 
  
 The device needs to respond to the command (5), to inform the business application about the outcome of executing the command. For this purpose 
 specific URIs are defined in [HTTP Adapter]({{< relref "user-guide/http-adapter.md#sending-a-response-to-a-previously-received-command" >}}).
