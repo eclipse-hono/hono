@@ -3,18 +3,16 @@ title = "Command & Control"
 weight = 196
 +++
 
-Since Hono 0.6 *Business applications* can send commands to devices following the [Command & Control API]({{< ref "/api/Command-And-Control-API.md" >}}). This concept page describes how this API is used by applications to send commands to devices that connected to one of Hono's protocol adapters. These commands follow a request-response pattern and expect an immediate confirmation of their result.
+*Business applications* can send commands to devices following the [Command & Control API]({{< ref "/api/Command-And-Control-API.md" >}}). This concept page describes how this API is used by applications to send commands to devices that connected to one of Hono's protocol adapters.
  
 <!--more-->
 
-This concept refers to the current implementation of Command & Control that will be extended in the future.
+Commands can be sent following a *request/response* or a *one-way* pattern. For *Request/Response* commands, there is always a response expected from the device.
 
 You can try the implementation directly by following the [Getting Started]({{< ref "getting-started" >}}) guide.
 
 
 ## Command & Control over HTTP Adapter
-
-Commands can be sent following a *request/response* pattern or being *one-way*. For *Request/Response* commands, there is always a response expected from the device.
 
 The following sequence diagrams give an overview of a device connecting via HTTP, which gets a command from the business application in the response to a downstream message - being an arbitrary event in this example. The application and the adapter connect to the AMQP Network, which forwards the transfer - for clarity this is not shown in the diagram. 
 
@@ -56,9 +54,13 @@ that was opened by the application. If the response reached the application, the
 
 ## Command & Control over MQTT Adapter
 
-When the device is connected to the MQTT Adapter it receives commands on the topic:
+When the device is connected to the MQTT Adapter it receives *Request/Response* commands on the topic:
 
 * `control/[${tenant}]/[${device-id}]/req/${req-id}/${command}`
+
+and *one-way* commands on the topic:
+
+* `control/[${tenant}]/[${device-id}]/req//${command}`
 
 Authenticated devices typically subscribe to
 
@@ -72,7 +74,15 @@ The response of the command will be sent by the device to
 
 If the device is authenticated, the `${tenant}` and `${device-id}` are left empty (resulting in 3 subsequent `/`s).
 
-![Command & Control over MQTT Adapter](../command_control_concept_mqtt.png) 
+The following diagrams show the message flow for commands over the MQTT adapter:
+
+**Request/Response commands** :
+
+![Request/Response Command over MQTT Adapter](../command_control_concept_mqtt.png) 
+
+**one-way commands** :
+
+![One-way Command over MQTT Adapter](../command_control_concept_one_way_mqtt.png) 
 
 ## Command & Control over AMQP Adapter
 

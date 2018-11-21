@@ -1146,8 +1146,10 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
         TracingHelper.TAG_CLIENT_ID.set(commandContext.getCurrentSpan(), endpoint.clientIdentifier());
         final Command command = commandContext.getCommand();
         // example: control/DEFAULT_TENANT/4711/req/xyz/light
+        // one-way commands have an empty requestId, like control/DEFAULT_TENANT/4711/req//light
+        final String commandRequestId = (command.isOneWay() ? "" : command.getRequestId());
         final String topic = String.format("%s/%s/%s/%s/%s/%s", subscription.getEndpoint(), tenantId, deviceId,
-                subscription.getRequestPart(), command.getRequestId(), command.getName());
+                subscription.getRequestPart(), commandRequestId, command.getName());
         endpoint.publish(topic, command.getPayload(), qos, false, false);
         metrics.incrementCommandDeliveredToDevice(subscription.getTenant());
         LOG.trace("command published to device [tenant-id: {}, device-id: {}, MQTT client-id: {}]",
