@@ -20,8 +20,8 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.eclipse.hono.client.impl.AbstractConsumer;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.tracing.MessageAnnotationsExtractAdapter;
+import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CommandConstants;
-import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.slf4j.Logger;
@@ -141,10 +141,11 @@ public class CommandConsumer extends AbstractConsumer {
                             .withTag(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId)
                             .start();
 
-                    final Map<String, String> items = new HashMap<>(3);
+                    final Map<String, String> items = new HashMap<>(4);
                     items.put(Fields.EVENT, "received command message");
                     if (command.isValid()) {
-                        currentSpan.setTag(Constants.HEADER_COMMAND_REQUEST_ID, command.getRequestId());
+                        TracingHelper.TAG_CORRELATION_ID.set(currentSpan, command.getCorrelationId());
+                        items.put("reply-to", command.getCommandMessage().getReplyTo());
                         items.put("name", command.getName());
                         items.put("content-type", command.getContentType());
                     }
