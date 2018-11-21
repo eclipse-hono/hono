@@ -323,7 +323,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
     }
 
     @Override
-    public int getCredit() {
+    public final int getCredit() {
         if (sender == null) {
             return 0;
         } else {
@@ -332,7 +332,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
     }
 
     @Override
-    public void sendQueueDrainHandler(final Handler<Void> handler) {
+    public final void sendQueueDrainHandler(final Handler<Void> handler) {
         if (this.drainHandler != null) {
             throw new IllegalStateException("already waiting for replenishment with credit");
         } else {

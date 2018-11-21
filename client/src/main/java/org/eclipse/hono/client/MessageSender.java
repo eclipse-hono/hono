@@ -27,7 +27,7 @@ import io.vertx.proton.ProtonDelivery;
  * A client for publishing messages to Hono.
  *
  */
-public interface MessageSender extends CreditBasedSender{
+public interface MessageSender extends CreditBasedSender {
 
     /**
      * Gets the name of the endpoint this sender sends messages to.
