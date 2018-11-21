@@ -152,7 +152,9 @@ The MQTT adapter supports devices to receive commands that have been sent by bus
 
 When a device has successfully subscribed, the adapter sends an [empty notification]({{< relref "/api/Event-API.md#empty-notification" >}}) on behalf of the device to the downstream AMQP 1.0 Messaging Network with the *ttd* header set to `-1`, indicating that the device will be ready to receive commands until further notice. Analogously, the adapter sends an empty notification with the *ttd* header set to `0` when a device unsubcribes from commands.
 
-Devices send their responses to commands by means of sending an MQTT *PUBLISH* message to a topic that is specific to the command that has been executed. The MQTT adapter accepts responses being published using either QoS 0 or QoS 1.
+Commands can be sent following a *request/response* pattern or being *one-way*. 
+
+For *Request/Response* commands, devices send their responses to commands by means of sending an MQTT *PUBLISH* message to a topic that is specific to the command that has been executed. The MQTT adapter accepts responses being published using either QoS 0 or QoS 1.
 
 The following sections define the topic filters/names to use for subscribing to and responding to commands. The following *shorthand* versions of topic path segments are supported:
 
@@ -162,9 +164,9 @@ The following sections define the topic filters/names to use for subscribing to 
 
 The following variables are used:
 
-* `${command}` is an arbitrary string that indicates the command to execute, e.g. `setBrightness`. The command is provided by the application that sends the command.
-* `${req-id}` denotes the unique identifier of the command execution request and is passed to the device as part of the name of the topic that the command is published to. The device needs to publish its response to the command to a topic which includes this identifier, thus allowing the adapter to correlate the response with the request.
-* `${status}` is the HTTP status code indicating the outcome of executing the command. This status code is passed on to the application in the AMQP message's *status* header.
+* `${command}` : is an arbitrary string that indicates the command to execute, e.g. `setBrightness`. The command is provided by the application that sends the command.
+* `${req-id}` (only for *Request/Response* commands) : denotes the unique identifier of the command execution request and is passed to the device as part of the name of the topic that the command is published to. The device needs to publish its response to the command to a topic which includes this identifier, thus allowing the adapter to correlate the response with the request.
+* `${status}` : is the HTTP status code indicating the outcome of executing the command. This status code is passed on to the application in the AMQP message's *status* header.
 
 The `property-bag` is an optional collection of properties intended for the receiver of the message. A property bag is only allowed at the very end of a topic. It always starts with a `?` character, followed by pairs of URL encoded property names and values that are separated by `&`. The following example shows a property bag that contains two properties *seqNo* and *importance*:
 
@@ -184,15 +186,24 @@ An authenticated device MUST use the following topic filter to subscribe to comm
 
 The adapter will then publish commands for the device to topic:
 
-* `control///req/${req-id}/${command}[/*][/property-bag]`
+* for *Request/Response* commands: `control///req/${req-id}/${command}[/*][/property-bag]`
+* for *one-way* commands: `control///req//${command}[/*][/property-bag]`
+
 
 **Example**
 
 For example, if the [HonoExampleApplication]({{< relref "dev-guide/java_client_consumer.md" >}}) was started, after the `ttd` event requested by the subscription of mosquitto_sub, it layers a command that arrives as follows:  
 
-    $ c///q/1010f8ab0b53-bd96-4d99-9d9c-56b868474a6a/setBrightness {
+    $ control///q/1010f8ab0b53-bd96-4d99-9d9c-56b868474a6a/setBrightness {
        "brightness" : 79
     }
+
+If the command is a *one-way* command, it will arrive as follows:
+
+    $ control///q//setBrightness {
+       "brightness" : 79
+    }
+
 
 ### Receiving Commands (unauthenticated Device)
 
@@ -204,9 +215,13 @@ An unauthenticated device MUST use the following topic filter to subscribe to co
 
     $ mosquitto_sub -v -t control/DEFAULT_TENANT/4711/req/#
 
-The adapter will then publish commands for the device to topic:
+The adapter will then publish *Request/Response* commands for the device to topic:
 
 * `control/${tenant-id}/${device-id}/req/${req-id}/${command}[/*][/property-bag]`
+
+and *one-way* commands to the topic:
+
+* `control/${tenant-id}/${device-id}/req//${command}[/*][/property-bag]`
 
 (For an example of the incoming command see above at authenticated device)
 
