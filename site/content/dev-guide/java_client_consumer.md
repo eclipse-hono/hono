@@ -46,11 +46,11 @@ The application waits for messages until you press any key or kill it.
 
 It is started by
 
-`$ mvn exec:java -Dexec.mainClass=org.eclipse.hono.vertx.example.HonoConsumer`
+`$ mvn exec:java -Dexec.mainClass=org.eclipse.hono.vertx.example.HonoExampleApplication`
 
 or - if e.g. the host of the AMQP network should be changed - 
  
-`$ mvn exec:java -Dexec.mainClass=org.eclipse.hono.vertx.example.HonoConsumer -Dconsumer.host=192.168.99.100`
+`$ mvn exec:java -Dexec.mainClass=org.eclipse.hono.vertx.example.HonoExampleApplication -Dconsumer.host=192.168.99.100`
 
 
 ### Telemetry and Event messages

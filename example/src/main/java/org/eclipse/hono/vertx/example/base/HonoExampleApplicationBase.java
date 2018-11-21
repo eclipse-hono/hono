@@ -48,7 +48,7 @@ import org.slf4j.LoggerFactory;
  * The code consumes data until it receives
  * any input on it's console (which finishes it and closes vertx).
  */
-public class HonoConsumerBase {
+public class HonoExampleApplicationBase {
     public static final Boolean USE_PLAIN_CONNECTION = Boolean.valueOf(System.getProperty("plain.connection", "false"));
     public static final String HONO_CLIENT_USER = System.getProperty("username", "consumer@HONO");
     public static final String HONO_CLIENT_PASSWORD = System.getProperty("password", "verysecret");
@@ -72,7 +72,7 @@ public class HonoConsumerBase {
      */
     private final Map<String, TimeUntilDisconnectNotification> pendingTtdNotification = new HashMap<>();
 
-    private static final Logger LOG = LoggerFactory.getLogger(HonoConsumerBase.class);
+    private static final Logger LOG = LoggerFactory.getLogger(HonoExampleApplicationBase.class);
     /**
      * The consumer needs one connection to the AMQP 1.0 messaging network from which it can consume data.
      * <p>
@@ -81,7 +81,7 @@ public class HonoConsumerBase {
      * NB: if you want to integrate this code with your own software, it might be necessary to copy the truststore to
      * your project as well and adopt the file path.
      */
-    public HonoConsumerBase() {
+    public HonoExampleApplicationBase() {
 
         final ClientConfigProperties props = new ClientConfigProperties();
         props.setHost(HonoExampleConstants.HONO_AMQP_CONSUMER_HOST);

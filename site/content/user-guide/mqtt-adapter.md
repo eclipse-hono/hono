@@ -188,7 +188,7 @@ The adapter will then publish commands for the device to topic:
 
 **Example**
 
-For example, if the [HonoConsumer]({{< relref "dev-guide/java_client_consumer.md" >}}) was started, after the `ttd` event requested by the subscription of mosquitto_sub, it layers a command that arrives as follows:  
+For example, if the [HonoExampleApplication]({{< relref "dev-guide/java_client_consumer.md" >}}) was started, after the `ttd` event requested by the subscription of mosquitto_sub, it layers a command that arrives as follows:  
 
     $ c///q/1010f8ab0b53-bd96-4d99-9d9c-56b868474a6a/setBrightness {
        "brightness" : 79

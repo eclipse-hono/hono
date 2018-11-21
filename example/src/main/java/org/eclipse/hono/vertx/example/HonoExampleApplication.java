@@ -13,7 +13,7 @@
 
 package org.eclipse.hono.vertx.example;
 
-import org.eclipse.hono.vertx.example.base.HonoConsumerBase;
+import org.eclipse.hono.vertx.example.base.HonoExampleApplicationBase;
 
 /**
  * Example class with minimal dependencies for consuming data from Hono and sending commands
@@ -22,13 +22,13 @@ import org.eclipse.hono.vertx.example.base.HonoConsumerBase;
  * Please refer to {@link org.eclipse.hono.vertx.example.base.HonoExampleConstants} to configure where Hono's
  * microservices are reachable.
  */
-public class HonoConsumer extends HonoConsumerBase {
+public class HonoExampleApplication extends HonoExampleApplicationBase {
 
     public static void main(final String[] args) throws Exception {
 
         System.out.println("Starting consumer...");
-        final HonoConsumer honoConsumer = new HonoConsumer();
-        honoConsumer.consumeData();
+        final HonoExampleApplication honoExampleApplication = new HonoExampleApplication();
+        honoExampleApplication.consumeData();
         System.out.println("Finishing consumer.");
     }
 }
