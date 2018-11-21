@@ -146,16 +146,16 @@ public class X509AuthHandler extends HonoAuthHandler {
         Objects.requireNonNull(handler);
 
         if (context.request().isSSL()) {
-            final SpanContext currentSpan = TracingHandler.serverSpanContext(context);
-            final Span span = tracer.buildSpan("verify device certificate")
-                    .asChildOf(currentSpan)
-                    .ignoreActiveSpan()
-                    .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CLIENT)
-                    .withTag(Tags.COMPONENT.getKey(), getClass().getSimpleName())
-                    .start();
-
             try {
                 final Certificate[] path = context.request().sslSession().getPeerCertificates();
+
+                final SpanContext currentSpan = TracingHandler.serverSpanContext(context);
+                final Span span = tracer.buildSpan("verify device certificate")
+                        .asChildOf(currentSpan)
+                        .ignoreActiveSpan()
+                        .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CLIENT)
+                        .withTag(Tags.COMPONENT.getKey(), getClass().getSimpleName())
+                        .start();
 
                 getX509CertificatePath(path).compose(x509chain -> {
 
@@ -190,8 +190,7 @@ public class X509AuthHandler extends HonoAuthHandler {
                 });
             } catch (SSLPeerUnverifiedException e) {
                 // client certificate has not been validated
-                TracingHelper.logError(span, e);
-                span.finish();
+                LOG.debug("could not get client certificates: {}", e.getMessage());
                 handler.handle(Future.failedFuture(UNAUTHORIZED));
             }
         } else {
