@@ -10,6 +10,7 @@ title = "Release Notes"
   opens a link for uploading messages and for each message sent by the device. It also adds information to traces created
   for command messages to be sent to a device.
 * The AMQP adapter command line client now uses property names that match those of the HonoClient.
+* The Command client now has the provision to check the available credits before sending any commands using `getCredit()`. Also a handler can be set using `sendQueueDrainHandler(Handler<Void> handler)`, so that the client is notified when credits are replenished. 
 
 ### API Changes
 

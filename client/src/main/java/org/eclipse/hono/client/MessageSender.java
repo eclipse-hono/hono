@@ -27,7 +27,7 @@ import io.vertx.proton.ProtonDelivery;
  * A client for publishing messages to Hono.
  *
  */
-public interface MessageSender {
+public interface MessageSender extends CreditBasedSender {
 
     /**
      * Gets the name of the endpoint this sender sends messages to.
@@ -35,19 +35,10 @@ public interface MessageSender {
      * The name returned is implementation specific, e.g. an implementation
      * that can be used to upload telemetry data to Hono will return
      * the value <em>telemetry</em>.
-     * 
+     *
      * @return The endpoint name.
      */
     String getEndpoint();
-
-    /**
-     * Gets the number of messages this sender can send based on its current number of credits.
-     * <p>
-     * Note that the value returned is valid during execution of the current vert.x handler only.
-     * 
-     * @return The number of messages.
-     */
-    int getCredit();
 
     /**
      * Checks if this sender can send or buffer (and send later) a message.
@@ -55,41 +46,10 @@ public interface MessageSender {
      * Note that the value returned is valid during execution of the current vert.x handler only.
      * 
      * @return {@code true} if a message can not be sent or buffered at the moment.
-     * @deprecated Explicitly check availability of credit using {@link #getCredit()}.
+     * @deprecated Explicitly check availability of credit using {@link CreditBasedSender#getCredit()}.
      */
     @Deprecated
     boolean sendQueueFull();
-
-    /**
-     * Sets a handler to be notified once this sender has capacity available to send a message.
-     * <p>
-     * The handler registered using this method will be invoked <em>exactly once</em> when
-     * this sender is replenished with more credit from the peer. For subsequent notifications
-     * to be received, a new handler must be registered.
-     * <p>
-     * Client code can use this method to register a handler after it has checked this sender's
-     * capacity to send messages using {@link #getCredit()}, e.g.
-     * <pre>
-     * MessageSender sender;
-     * ...
-     * 
-     * sender.send(msg);
-     * if (sender.getCredit() &lt;= 0) {
-     *     sender.sendQueueDrainHandler(replenished -&gt; {
-     *         sender.send(msg);
-     *     });
-     * } else {
-     *     sender.send(msg);
-     * }
-     * </pre>
-     * <p>
-     * Note that all the <em>send</em> methods fail if no credit is available.
-     * 
-     * @param handler The handler to invoke when this sender has been replenished with credit.
-     * @throws IllegalStateException if there already is a handler registered. Note that this means
-     *                               that this sender is already waiting for credit.
-     */
-    void sendQueueDrainHandler(Handler<Void> handler);
 
     /**
      * Closes the AMQP link with the Hono server this sender is using.
@@ -402,7 +362,7 @@ public interface MessageSender {
      *         depending on the reason for the failure to process the message.
      * @throws NullPointerException if the message is {@code null}.
      * @deprecated Use {@link #send(Message)} instead, optionally checking availability of credit
-     *             first using {@link #getCredit()}.
+     *             first using {@link CreditBasedSender#getCredit()}.
      */
     @Deprecated
     Future<ProtonDelivery> send(Message message, Handler<Void> capacityAvailableHandler);
@@ -448,7 +408,7 @@ public interface MessageSender {
      * @throws NullPointerException if any of device id, payload, content type or registration assertion is {@code null}.
      * @throws IllegalArgumentException if the content type specifies an unsupported character set.
      * @deprecated Use {@link #send(String, String, String, String)} instead, optionally checking
-     *             availability of credit first using {@link #getCredit()}.
+     *             availability of credit first using {@link CreditBasedSender#getCredit()}.
      */
     @Deprecated
     Future<ProtonDelivery> send(
@@ -496,7 +456,7 @@ public interface MessageSender {
      * @throws NullPointerException if any of device id, payload, content type or registration assertion is {@code null}.
      * @throws IllegalArgumentException if the content type specifies an unsupported character set.
      * @deprecated Use {@link #send(String, byte[], String, String)} instead, optionally checking
-     *             availability of credit first using {@link #getCredit()}.
+     *             availability of credit first using {@link CreditBasedSender#getCredit()}.
      */
     @Deprecated
     Future<ProtonDelivery> send(
@@ -550,7 +510,7 @@ public interface MessageSender {
      * @throws NullPointerException if any of device id, payload, content type or registration assertion is {@code null}.
      * @throws IllegalArgumentException if the content type specifies an unsupported character set.
      * @deprecated Use {@link #send(String, Map, String, String, String)} instead, optionally checking
-     *             availability of credit first using {@link #getCredit()}.
+     *             availability of credit first using {@link CreditBasedSender#getCredit()}.
      */
     @Deprecated
     Future<ProtonDelivery> send(
@@ -602,7 +562,7 @@ public interface MessageSender {
      * @throws NullPointerException if any of device id, payload, content type or registration assertion is {@code null}.
      * @throws IllegalArgumentException if the content type specifies an unsupported character set.
      * @deprecated Use {@link #send(String, Map, byte[], String, String)} instead, optionally checking
-     *             availability of credit first using {@link #getCredit()}.
+     *             availability of credit first using {@link CreditBasedSender#getCredit()}.
      */
     @Deprecated
     Future<ProtonDelivery> send(

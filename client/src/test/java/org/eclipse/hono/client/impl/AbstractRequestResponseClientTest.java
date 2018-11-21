@@ -484,4 +484,17 @@ public class AbstractRequestResponseClientTest  {
             }
         };
     }
+
+    /**
+     * Verifies credits available.
+     *
+     */
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testCredits() {
+        when(sender.getCredit()).thenReturn(10);
+        assertThat(client.getCredit(), is(10));
+        when(sender.getCredit()).thenReturn(0);
+        assertThat(client.getCredit(), is(0));
+    }
 }
