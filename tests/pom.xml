@@ -33,7 +33,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
     <maven.source.skip>true</maven.source.skip>
     <maven.install.skip>true</maven.install.skip>
     <gpg.skip>true</gpg.skip>
-    <service.startup.timeout>120000</service.startup.timeout>
+    <service.startup.timeout>160000</service.startup.timeout>
     <link.establishment.timeout>5000</link.establishment.timeout>
     <max.bcrypt.iterations>10</max.bcrypt.iterations>
     <default.java.options>

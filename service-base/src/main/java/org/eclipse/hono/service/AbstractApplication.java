@@ -136,10 +136,10 @@ public class AbstractApplication implements ApplicationRunner {
 
         healthCheckServer = new HealthCheckServer(vertx, config);
 
-        final Future<Void> future = deployRequiredVerticles(config.getMaxInstances())
+        final Future<Void> future = healthCheckServer.start()
+             .compose(s -> deployRequiredVerticles(config.getMaxInstances()))
              .compose(s -> deployServiceVerticles())
-             .compose(s -> postRegisterServiceVerticles())
-             .compose(s -> healthCheckServer.start());
+             .compose(s -> postRegisterServiceVerticles());
 
         final CompletableFuture<Void> started = new CompletableFuture<>();
         future.setHandler(result -> {
