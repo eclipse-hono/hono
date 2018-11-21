@@ -31,7 +31,12 @@ import io.vertx.core.Verticle;
  * <p>
  * This class configures and wires up the Messaging service's components (Verticles).
  */
-@ComponentScan(basePackages = "org.eclipse.hono")
+@ComponentScan(basePackages = {
+                        "org.eclipse.hono.messaging",
+                        "org.eclipse.hono.telemetry",
+                        "org.eclipse.hono.event",
+                        "org.eclipse.hono.service.auth",
+                        "org.eclipse.hono.service.metric" })
 @Configuration
 @EnableAutoConfiguration
 public class HonoMessagingApplication extends AbstractApplication {
