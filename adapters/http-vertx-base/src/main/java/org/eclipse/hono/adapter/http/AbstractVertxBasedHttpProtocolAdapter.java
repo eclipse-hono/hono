@@ -23,15 +23,15 @@ import java.util.Optional;
 
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.client.Command;
+import org.eclipse.hono.client.CommandContext;
+import org.eclipse.hono.client.CommandResponse;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.ResourceConflictException;
 import org.eclipse.hono.client.ServerErrorException;
-import org.eclipse.hono.client.Command;
-import org.eclipse.hono.client.CommandContext;
-import org.eclipse.hono.client.CommandResponse;
-import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
 import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.service.http.DefaultFailureHandler;
@@ -623,6 +623,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                             metrics.incrementProcessedMessages(endpointName, tenant);
                             metrics.incrementProcessedPayload(endpointName, tenant, messagePayloadSize(ctx));
                             if (commandContext != null) {
+                                commandContext.getCurrentSpan().log("forwarded command to device in HTTP response body");
                                 commandContext.accept();
                                 metrics.incrementCommandDeliveredToDevice(tenant);
                             }
@@ -633,12 +634,14 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                             Optional.ofNullable(commandConsumerTracker.result()).ifPresent(consumer -> consumer.close(null));
                         });
                         ctx.response().exceptionHandler(t -> {
-                            currentSpan.log("failed to send HTTP response to device");
                             LOG.debug("failed to send http response for [{}] message from device [tenantId: {}, deviceId: {}]",
                                     endpointName, tenant, deviceId, t);
                             if (commandContext != null) {
+                                commandContext.getCurrentSpan().log("failed to forward command to device in HTTP response body");
+                                TracingHelper.logError(commandContext.getCurrentSpan(), t);
                                 commandContext.release();
                             }
+                            currentSpan.log("failed to send HTTP response to device");
                             TracingHelper.logError(currentSpan, t);
                             currentSpan.finish();
                             // the command consumer is used for a single request only
@@ -789,10 +792,11 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
             return Future.succeededFuture();
         } else {
             currentSpan.setTag(MessageHelper.APP_PROPERTY_DEVICE_TTD, ttdSecs);
-            return createCommandConsumer(
+            return getCommandConnection().createCommandConsumer(
                     tenantId,
                     deviceId,
                     commandContext -> {
+
                         Tags.COMPONENT.set(commandContext.getCurrentSpan(), getTypeName());
                         final Command command = commandContext.getCommand();
                         if (command.isValid()) {
