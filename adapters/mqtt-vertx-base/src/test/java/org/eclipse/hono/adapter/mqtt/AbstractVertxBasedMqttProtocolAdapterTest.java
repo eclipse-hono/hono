@@ -225,17 +225,21 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
     // TODO: startup fail test
 
     /**
-     * Verifies that a connection attempt from a device is refused if the adapter is not connected to all of the
-     * services it depends on.
+     * Verifies that a connection attempt from a device is refused if
+     * the adapter is not connected to all of the services it depends on.
      */
     @Test
     public void testEndpointHandlerFailsWithoutConnect() {
 
-        // GIVEN an endpoint
-        final MqttEndpoint endpoint = mockEndpoint();
-
+        // GIVEN an adapter that is not connected to
+        // all of its required services
         final MqttServer server = getMqttServer(false);
         final AbstractVertxBasedMqttProtocolAdapter<ProtocolAdapterProperties> adapter = getAdapter(server);
+
+        // WHEN a client tries to connect
+        final MqttAuth deviceCredentials = new MqttAuth("device@my-tenant", "irrelevant");
+        final MqttEndpoint endpoint = mockEndpoint();
+        when(endpoint.auth()).thenReturn(deviceCredentials);
 
         adapter.handleEndpointConnection(endpoint);
         verify(endpoint).reject(MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE);

@@ -273,37 +273,6 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
     }
 
     /**
-     * Create a future indicating a rejected connection.
-     * 
-     * @param returnCode The error code to return.
-     * @param <T> The type of the returned future.
-     * @return A future indicating a rejected connection.
-     */
-    protected static <T> Future<T> rejected(final MqttConnectReturnCode returnCode) {
-        return Future.failedFuture(new MqttConnectionException(
-                returnCode != null ? returnCode : MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE));
-    }
-
-    /**
-     * Create a future indicating an accepted connection with an authenticated device.
-     * 
-     * @param authenticatedDevice The device that was authenticated, may be {@code null}
-     * @return A future indicating an accepted connection.
-     */
-    protected static Future<Device> accepted(final Device authenticatedDevice) {
-        return Future.succeededFuture(authenticatedDevice);
-    }
-
-    /**
-     * Create a future indicating an accepted connection without an authenticated device.
-     * 
-     * @return A future indicating an accepted connection.
-     */
-    protected static Future<Device> accepted() {
-        return Future.succeededFuture(null);
-    }
-
-    /**
      * Invoked when a client sends its <em>CONNECT</em> packet.
      * <p>
      * Authenticates the client (if required) and registers handlers for processing messages published by the client.
@@ -375,20 +344,15 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
 
         } else {
 
-            TracingHelper.TAG_AUTHENTICATED.set(currentSpan, false);
-
             final Throwable t = authenticationAttempt.cause();
-            if (t instanceof MqttConnectionException) {
-                final MqttConnectReturnCode code = ((MqttConnectionException) t).code();
-                LOG.debug("connection request from client [clientId: {}] rejected with code: {}",
-                        endpoint.clientIdentifier(), code);
-                endpoint.reject(code);
-            } else {
-                LOG.debug("connection request from client [clientId: {}] rejected: {}",
-                        endpoint.clientIdentifier(), MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE);
-                endpoint.reject(MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE);
-            }
-            TracingHelper.logError(currentSpan, t);
+            TracingHelper.TAG_AUTHENTICATED.set(currentSpan, false);
+            LOG.debug("connection request from client [clientId: {}] rejected: ",
+                    endpoint.clientIdentifier(), t.getMessage());
+
+            final MqttConnectReturnCode code = getConnectReturnCode(t);
+            endpoint.reject(code);
+            currentSpan.log("connection rejected");
+            TracingHelper.logError(currentSpan, authenticationAttempt.cause());
         }
         currentSpan.finish();
     }
@@ -414,7 +378,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
 
         LOG.debug("unauthenticated device [clientId: {}] connected", endpoint.clientIdentifier());
         metrics.incrementUnauthenticatedConnections();
-        return accepted();
+        return Future.succeededFuture();
     }
 
     private Future<Device> handleEndpointConnectionWithAuthentication(final MqttEndpoint endpoint,
@@ -428,17 +392,16 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
                                 .compose(tenant -> isAdapterEnabled(tenant)),
                         checkDeviceRegistration(device, currentSpan.context()))
                         .map(ok -> device))
-                .compose(device -> createLink(device, currentSpan))
+                .compose(device -> createLinks(device, currentSpan))
                 .compose(device -> registerHandlers(endpoint, device))
                 .recover(t -> {
                     if (credentialsTracker.result() == null) {
-                        LOG.debug("Error establishing connection with device", t);
+                        LOG.debug("error establishing connection with device", t);
                     } else {
                         LOG.debug("cannot establish connection with device [tenant-id: {}, auth-id: {}]",
                                 credentialsTracker.result().getTenantId(), credentialsTracker.result().getAuthId(), t);
                     }
-
-                    return rejected(getConnectReturnCode(t));
+                    return Future.failedFuture(t);
                 });
     }
 
@@ -514,21 +477,32 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
                         // make sure that we close the consumer and notify downstream
                         // applications when the connection is closed
                         endpoint.closeHandler(c -> {
+                            // do not use the current span for sending the disconnected event
+                            // because that span will (usually) be finished long before the
+                            // connection is closed
                             sendDisconnectedTtdEvent(cmdSub.getTenant(), cmdSub.getDeviceId(), authenticatedDevice, null)
                             .setHandler(sendAttempt -> {
                                 consumer.close(null);
                                 close(endpoint, authenticatedDevice);
                             });
                         });
-                        span.log(String.format("accepting subscription [filter: %s, requested QoS: %s, granted QoS: %s]",
-                                subscription.topicName(), subscription.qualityOfService(), MqttQoS.AT_MOST_ONCE));
+                        final Map<String, Object> items = new HashMap<>(4);
+                        items.put(Fields.EVENT, "accepting subscription");
+                        items.put("filter", subscription.topicName());
+                        items.put("requested QoS", subscription.qualityOfService());
+                        items.put("granted QoS", MqttQoS.AT_MOST_ONCE);
+                        span.log(items);
                         LOG.debug("created subscription [tenant: {}, device: {}, filter: {}, requested QoS: {}, granted QoS: {}]",
                                 cmdSub.getTenant(), cmdSub.getDeviceId(), subscription.topicName(),
                                 subscription.qualityOfService(), MqttQoS.AT_MOST_ONCE);
                         return cmdSub;
                     }).recover(t -> {
-                        TracingHelper.logError(span, String.format("error creating subscription [filter: %s, requested QoS: %s]: %s",
-                                subscription.topicName(), subscription.qualityOfService(), t.getMessage()));
+                        final Map<String, Object> items = new HashMap<>(4);
+                        items.put(Fields.EVENT, "rejecting subscription");
+                        items.put("filter", subscription.topicName());
+                        items.put("requested QoS", subscription.qualityOfService());
+                        items.put(Fields.MESSAGE, t.getMessage());
+                        TracingHelper.logError(span, items);
                         LOG.debug("cannot create subscription [tenant: {}, device: {}, filter: {}, requested QoS: {}]",
                                 cmdSub.getTenant(), cmdSub.getDeviceId(), subscription.topicName(),
                                 subscription.qualityOfService(), t);
@@ -599,12 +573,18 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
         unsubscribeMsg.topics().forEach(topic -> {
             final CommandSubscription cmdSub = CommandSubscription.fromTopic(topic, authenticatedDevice);
             if (cmdSub == null) {
-                span.log(String.format("ignoring unsupported topic filter [%s]", topic));
+                final Map<String, Object> items = new HashMap<>(2);
+                items.put(Fields.EVENT, "ignoring unsupported topic filter");
+                items.put("filter", topic);
+                span.log(items);
                 LOG.debug("ignoring unsubscribe request for unsupported topic filter [{}]", topic);
             } else {
                 final String tenantId = cmdSub.getTenant();
                 final String deviceId = cmdSub.getDeviceId();
-                span.log(String.format("unsubscribing device from topic [filter: %s]", topic));
+                final Map<String, Object> items = new HashMap<>(2);
+                items.put(Fields.EVENT, "unsubscribing device from topic");
+                items.put("filter", topic);
+                span.log(items);
                 LOG.debug("unsubscribing device [tenant-id: {}, device-id: {}] from topic [{}]",
                         tenantId, deviceId, topic);
                 closeCommandConsumer(tenantId, deviceId);
@@ -627,11 +607,13 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
                 sub.getTenant(),
                 sub.getDeviceId(),
                 commandContext -> {
+
                     Tags.COMPONENT.set(commandContext.getCurrentSpan(), getTypeName());
                     final Command command = commandContext.getCommand();
                     if (command.isValid()) {
                         onCommandReceived(mqttEndpoint, sub, commandContext);
                     } else {
+                        // issue credit so that application(s) can send the next command
                         commandContext.reject(new ErrorCondition(Constants.AMQP_BAD_REQUEST, "malformed command message"), 1);
                     }
                 },
@@ -1042,29 +1024,31 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
      * by {@link UsernamePasswordCredentials}.
      *
      * @param endpoint The MQTT endpoint representing the client.
-     * @return A future indicating a retrieved credentials.
+     * @return A future indicating the outcome of the operation.
+     *         The future will succeed with the client's credentials extracted from the CONNECT packet
+     *         or it will fail with a {@link ServiceInvocationException} indicating the cause of the failure.
      */
-    protected Future<DeviceCredentials> getCredentials(final MqttEndpoint endpoint) {
+    protected final Future<DeviceCredentials> getCredentials(final MqttEndpoint endpoint) {
+
         if (endpoint.auth() == null) {
-            LOG.debug("connection request from device [clientId: {}] rejected: {}",
-                    endpoint.clientIdentifier(), "device did not provide credentials in CONNECT packet");
-            return rejected(MqttConnectReturnCode.CONNECTION_REFUSED_BAD_USER_NAME_OR_PASSWORD);
+            return Future.failedFuture(new ClientErrorException(
+                    HttpURLConnection.HTTP_UNAUTHORIZED,
+                    "device did not provide credentials in CONNECT packet"));
         }
 
         if (endpoint.auth().userName() == null || endpoint.auth().password() == null) {
-            LOG.debug("connection request from device [clientId: {}] rejected: {}",
-                    endpoint.clientIdentifier(), "device provided malformed credentials in CONNECT packet");
-            return rejected(MqttConnectReturnCode.CONNECTION_REFUSED_BAD_USER_NAME_OR_PASSWORD);
+            return Future.failedFuture(new ClientErrorException(
+                    HttpURLConnection.HTTP_UNAUTHORIZED,
+                    "device provided malformed credentials in CONNECT packet"));
         }
 
         final UsernamePasswordCredentials credentials = UsernamePasswordCredentials
-                .create(endpoint.auth().userName(), endpoint.auth().password(),
-                        getConfig().isSingleTenant());
+                .create(endpoint.auth().userName(), endpoint.auth().password(), getConfig().isSingleTenant());
 
         if (credentials == null) {
-            LOG.debug("connection request from device [clientId: {}] rejected: {}",
-                    endpoint.clientIdentifier(), "device provided malformed credentials in CONNECT packet");
-            return rejected(MqttConnectReturnCode.CONNECTION_REFUSED_BAD_USER_NAME_OR_PASSWORD);
+            return Future.failedFuture(new ClientErrorException(
+                    HttpURLConnection.HTTP_UNAUTHORIZED,
+                    "device provided malformed credentials in CONNECT packet"));
         } else {
             return Future.succeededFuture(credentials);
         }
@@ -1204,9 +1188,11 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
         return result;
     }
 
-    private Future<Device> createLink(final Device authenticatedDevice, final Span currentSpan) {
+    private Future<Device> createLinks(final Device authenticatedDevice, final Span currentSpan) {
+
         final Future<MessageSender> telemetrySender = getTelemetrySender(authenticatedDevice.getTenantId());
         final Future<MessageSender> eventSender = getEventSender(authenticatedDevice.getTenantId());
+
         return CompositeFuture
                 .all(telemetrySender, eventSender)
                 .compose(ok -> {
@@ -1215,18 +1201,19 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
                             "providently opened downstream links [credit telemetry: {}, credit event: {}] for tenant [{}]",
                             telemetrySender.result().getCredit(), eventSender.result().getCredit(),
                             authenticatedDevice.getTenantId());
-                    return accepted(authenticatedDevice);
+                    return Future.succeededFuture(authenticatedDevice);
                 });
     }
 
     private Future<Device> registerHandlers(final MqttEndpoint endpoint, final Device authenticatedDevice) {
+
         endpoint.closeHandler(v -> close(endpoint, authenticatedDevice));
         endpoint.publishHandler(
                 message -> handlePublishedMessage(new MqttContext(message, endpoint, authenticatedDevice)));
         endpoint.subscribeHandler(subscribeMsg -> onSubscribe(endpoint, authenticatedDevice, subscribeMsg));
         endpoint.unsubscribeHandler(unsubscribeMsg -> onUnsubscribe(endpoint, authenticatedDevice, unsubscribeMsg));
         metrics.incrementConnections(authenticatedDevice.getTenantId());
-        return accepted(authenticatedDevice);
+        return Future.succeededFuture(authenticatedDevice);
     }
 
     private static MqttConnectReturnCode getConnectReturnCode(final Throwable e) {
