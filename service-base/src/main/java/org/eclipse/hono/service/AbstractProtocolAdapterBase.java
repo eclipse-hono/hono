@@ -18,19 +18,20 @@ import java.util.Optional;
 import java.util.function.BiConsumer;
 
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
-import org.eclipse.hono.client.HonoClient;
-import org.eclipse.hono.client.MessageConsumer;
-import org.eclipse.hono.client.MessageSender;
-import org.eclipse.hono.client.RegistrationClient;
-import org.eclipse.hono.client.ServiceInvocationException;
-import org.eclipse.hono.client.TenantClient;
 import org.eclipse.hono.client.CommandConnection;
 import org.eclipse.hono.client.CommandConsumer;
 import org.eclipse.hono.client.CommandContext;
 import org.eclipse.hono.client.CommandResponse;
 import org.eclipse.hono.client.CommandResponseSender;
-import org.eclipse.hono.auth.Device;
+import org.eclipse.hono.client.HonoClient;
+import org.eclipse.hono.client.MessageConsumer;
+import org.eclipse.hono.client.MessageSender;
+import org.eclipse.hono.client.RegistrationClient;
+import org.eclipse.hono.client.ServerErrorException;
+import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.client.TenantClient;
 import org.eclipse.hono.config.AbstractConfig;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.auth.ValidityBasedTrustOptions;
@@ -47,8 +48,8 @@ import org.eclipse.hono.util.TenantObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 
-import io.opentracing.Span;
 import io.opentracing.SpanContext;
+import io.opentracing.tag.Tags;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
@@ -418,14 +419,14 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * Checks whether a given device is registered and enabled.
      * 
      * @param device The device to check.
-     * @param currentSpan The currently active OpenTracing span that is used to
+     * @param context The currently active OpenTracing span that is used to
      *                    trace the retrieval of the assertion or {@code null}
      *                    if no span is currently active.
      * @return A future indicating the outcome.
      *         The future will be succeeded if the device is registered and enabled.
      *         Otherwise, the future will be failed with a {@link ServiceInvocationException}.
      */
-    protected final Future<Void> checkDeviceRegistration(final Device device, final Span currentSpan) {
+    protected final Future<Void> checkDeviceRegistration(final Device device, final SpanContext context) {
 
         Objects.requireNonNull(device);
 
@@ -433,15 +434,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
                 device.getTenantId(),
                 device.getDeviceId(),
                 null,
-                Optional.ofNullable(currentSpan).map(span -> span.context()).orElse(null))
-                        .map(assertion -> {
-                            LOG.debug("device [tenant-id: {}, device-id: {}] is registered and enabled",
-                                    device.getTenantId(), device.getDeviceId());
-                            if (currentSpan != null) {
-                                currentSpan.log("device is registered and enabled");
-                            }
-                            return null;
-                        });
+                context).map(assertion -> null);
     }
 
     /**
@@ -572,27 +565,30 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
 
         final Future<Void> tenantCheck = Optional.ofNullable(tenantServiceClient)
                 .map(client -> client.isConnected())
-                .orElse(Future.failedFuture(new IllegalStateException("Tenant service client is not set")));
+                .orElse(Future.failedFuture(new ServerErrorException(
+                        HttpURLConnection.HTTP_UNAVAILABLE, "Tenant service client is not set")));
         final Future<Void> registrationCheck = Optional.ofNullable(registrationServiceClient)
                 .map(client -> client.isConnected())
                 .orElse(Future
-                        .failedFuture(new IllegalStateException("Device Registration service client is not set")));
+                        .failedFuture(new ServerErrorException(
+                                HttpURLConnection.HTTP_UNAVAILABLE, "Device Registration service client is not set")));
         final Future<Void> credentialsCheck = Optional.ofNullable(credentialsServiceClient)
                 .map(client -> client.isConnected())
-                .orElse(Future.failedFuture(new IllegalStateException("Credentials service client is not set")));
+                .orElse(Future.failedFuture(new ServerErrorException(
+                        HttpURLConnection.HTTP_UNAVAILABLE, "Credentials service client is not set")));
         final Future<Void> messagingCheck = Optional.ofNullable(messagingClient)
                 .map(client -> client.isConnected())
-                .orElse(Future.failedFuture(new IllegalStateException("Messaging client is not set")));
+                .orElse(Future.failedFuture(new ServerErrorException(
+                        HttpURLConnection.HTTP_UNAVAILABLE, "Messaging client is not set")));
         final Future<Void> commandCheck = Optional.ofNullable(commandConnection)
                 .map(client -> client.isConnected())
-                .orElse(Future.failedFuture(new IllegalStateException("Command & Control client is not set")));
-        return CompositeFuture.all(tenantCheck, registrationCheck, credentialsCheck, messagingCheck, commandCheck).compose(ok -> {
-            return Future.succeededFuture();
-        });
+                .orElse(Future.failedFuture(new ServerErrorException(
+                        HttpURLConnection.HTTP_UNAVAILABLE, "Command & Control client is not set")));
+        return CompositeFuture.all(tenantCheck, registrationCheck, credentialsCheck, messagingCheck, commandCheck).map(ok -> null);
     }
 
     /**
-     * Create a command consumer for a specific device.
+     * Creates a command consumer for a specific device.
      *
      * @param tenantId The tenant of the command receiver.
      * @param deviceId The device of the command receiver.
@@ -606,7 +602,14 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
             final Handler<CommandContext> commandConsumer,
             final Handler<Void> closeHandler) {
 
-        return commandConnection.createCommandConsumer(tenantId, deviceId, commandConsumer, closeHandler);
+        return commandConnection.createCommandConsumer(
+                tenantId,
+                deviceId,
+                commandContext -> {
+                    Tags.COMPONENT.set(commandContext.getCurrentSpan(), getTypeName());
+                    commandConsumer.handle(commandContext);
+                },
+                closeHandler);
     }
 
     /**
@@ -1091,8 +1094,8 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * Sends an <em>empty notification</em> event for a device that will remain
      * connected for an indeterminate amount of time.
      * <p>
-     * This method invokes {@link #sendTtdEvent(String, String, Device, Integer)} with
-     * a TTD of {@code -1}.
+     * This method invokes {@link #sendTtdEvent(String, String, Device, Integer, SpanContext)}
+     * with a TTD of {@code -1}.
      * 
      * @param tenant The tenant that the device belongs to, who owns the device.
      * @param deviceId The device for which the TTD is reported.
@@ -1101,19 +1104,49 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      *         succeeded if the TTD event has been sent downstream successfully.
      *         Otherwise, it will be failed with a {@link ServiceInvocationException}.
      * @throws NullPointerException if any of tenant or device ID are {@code null}.
+     * @deprecated Use {@link #sendConnectedTtdEvent(String, String, Device, SpanContext)} instead.
      */
-    protected final Future<ProtonDelivery> sendConnectedTtdEvent(final String tenant, final String deviceId,
+    @Deprecated
+    protected final Future<ProtonDelivery> sendConnectedTtdEvent(
+            final String tenant,
+            final String deviceId,
             final Device authenticatedDevice) {
 
-        return sendTtdEvent(tenant, deviceId, authenticatedDevice, -1);
+        return sendConnectedTtdEvent(tenant, deviceId, authenticatedDevice, null);
+    }
+
+    /**
+     * Sends an <em>empty notification</em> event for a device that will remain
+     * connected for an indeterminate amount of time.
+     * <p>
+     * This method invokes {@link #sendTtdEvent(String, String, Device, Integer, SpanContext)}
+     * with a TTD of {@code -1}.
+     * 
+     * @param tenant The tenant that the device belongs to, who owns the device.
+     * @param deviceId The device for which the TTD is reported.
+     * @param authenticatedDevice The authenticated device or {@code null}.
+     * @param context The currently active OpenTracing span that is used to
+     *                trace the sending of the event.
+     * @return A future indicating the outcome of the operation. The future will be
+     *         succeeded if the TTD event has been sent downstream successfully.
+     *         Otherwise, it will be failed with a {@link ServiceInvocationException}.
+     * @throws NullPointerException if any of tenant or device ID are {@code null}.
+     */
+    protected final Future<ProtonDelivery> sendConnectedTtdEvent(
+            final String tenant,
+            final String deviceId,
+            final Device authenticatedDevice,
+            final SpanContext context) {
+
+        return sendTtdEvent(tenant, deviceId, authenticatedDevice, -1, context);
     }
 
     /**
      * Sends an <em>empty notification</em> event for a device that has disconnected
      * from a protocol adapter.
      * <p>
-     * This method invokes {@link #sendTtdEvent(String, String, Device, Integer)} with
-     * a TTD of {@code 0}.
+     * This method invokes {@link #sendTtdEvent(String, String, Device, Integer, SpanContext)}
+     * with a TTD of {@code 0}.
      * 
      * @param tenant The tenant that the device belongs to, who owns the device.
      * @param deviceId The device for which the TTD is reported.
@@ -1122,11 +1155,41 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      *         succeeded if the TTD event has been sent downstream successfully.
      *         Otherwise, it will be failed with a {@link ServiceInvocationException}.
      * @throws NullPointerException if any of tenant or device ID are {@code null}.
+     * @deprecated Use {@link #sendDisconnectedTtdEvent(String, String, Device, SpanContext)} instead.
      */
-    protected final Future<ProtonDelivery> sendDisconnectedTtdEvent(final String tenant, final String deviceId,
+    @Deprecated
+    protected final Future<ProtonDelivery> sendDisconnectedTtdEvent(
+            final String tenant,
+            final String deviceId,
             final Device authenticatedDevice) {
 
-        return sendTtdEvent(tenant, deviceId, authenticatedDevice, 0);
+        return sendDisconnectedTtdEvent(tenant, deviceId, authenticatedDevice, null);
+    }
+
+    /**
+     * Sends an <em>empty notification</em> event for a device that has disconnected
+     * from a protocol adapter.
+     * <p>
+     * This method invokes {@link #sendTtdEvent(String, String, Device, Integer, SpanContext)}
+     * with a TTD of {@code 0}.
+     * 
+     * @param tenant The tenant that the device belongs to, who owns the device.
+     * @param deviceId The device for which the TTD is reported.
+     * @param authenticatedDevice The authenticated device or {@code null}.
+     * @param context The currently active OpenTracing span that is used to
+     *                trace the sending of the event.
+     * @return A future indicating the outcome of the operation. The future will be
+     *         succeeded if the TTD event has been sent downstream successfully.
+     *         Otherwise, it will be failed with a {@link ServiceInvocationException}.
+     * @throws NullPointerException if any of tenant or device ID are {@code null}.
+     */
+    protected final Future<ProtonDelivery> sendDisconnectedTtdEvent(
+            final String tenant,
+            final String deviceId,
+            final Device authenticatedDevice,
+            final SpanContext context) {
+
+        return sendTtdEvent(tenant, deviceId, authenticatedDevice, 0, context);
     }
 
     /**
@@ -1141,16 +1204,46 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      *         succeeded if the TTD event has been sent downstream successfully.
      *         Otherwise, it will be failed with a {@link ServiceInvocationException}.
      * @throws NullPointerException if any of tenant, device ID or TTD are {@code null}.
+     * @deprecated Use {@link #sendTtdEvent(String, String, Device, Integer, SpanContext)} instead.
      */
-    protected final Future<ProtonDelivery> sendTtdEvent(final String tenant, final String deviceId, final Device authenticatedDevice,
+    @Deprecated
+    protected final Future<ProtonDelivery> sendTtdEvent(
+            final String tenant,
+            final String deviceId,
+            final Device authenticatedDevice,
             final Integer ttd) {
+
+        return sendTtdEvent(tenant, deviceId, authenticatedDevice, ttd, null);
+    }
+
+    /**
+     * Sends an <em>empty notification</em> containing a given <em>time until disconnect</em> for
+     * a device.
+     *
+     * @param tenant The tenant that the device belongs to, who owns the device.
+     * @param deviceId The device for which the TTD is reported.
+     * @param authenticatedDevice The authenticated device or {@code null}.
+     * @param ttd The time until disconnect (seconds).
+     * @param context The currently active OpenTracing span that is used to
+     *                trace the sending of the event.
+     * @return A future indicating the outcome of the operation. The future will be
+     *         succeeded if the TTD event has been sent downstream successfully.
+     *         Otherwise, it will be failed with a {@link ServiceInvocationException}.
+     * @throws NullPointerException if any of tenant, device ID or TTD are {@code null}.
+     */
+    protected final Future<ProtonDelivery> sendTtdEvent(
+            final String tenant,
+            final String deviceId,
+            final Device authenticatedDevice,
+            final Integer ttd,
+            final SpanContext context) {
 
         Objects.requireNonNull(tenant);
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(ttd);
 
-        final Future<JsonObject> tokenTracker = getRegistrationAssertion(tenant, deviceId, authenticatedDevice, null);
-        final Future<TenantObject> tenantConfigTracker = getTenantConfiguration(tenant, null);
+        final Future<JsonObject> tokenTracker = getRegistrationAssertion(tenant, deviceId, authenticatedDevice, context);
+        final Future<TenantObject> tenantConfigTracker = getTenantConfiguration(tenant, context);
         final Future<MessageSender> senderTracker = getEventSender(tenant);
 
         return CompositeFuture.all(tokenTracker, tenantConfigTracker, senderTracker).compose(ok -> {
@@ -1164,7 +1257,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
                         null,
                         tokenTracker.result(),
                         ttd);
-                return sender.sendAndWaitForOutcome(msg, (SpanContext) null);
+                return sender.sendAndWaitForOutcome(msg, context);
             } else {
                 // this adapter is not enabled for the tenant
                 return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_FORBIDDEN));

@@ -437,7 +437,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                 if (CommandConstants.isCommandEndpoint(validAddress.getEndpoint())) {
                     return openCommandSenderLink(sender, validAddress, authenticatedDevice).map(consumer -> {
                         addConnectionLossHandler(connection, connectionLost -> {
-                            sendDisconnectedTtdEvent(validAddress.getTenantId(), validAddress.getResourceId(), authenticatedDevice)
+                            sendDisconnectedTtdEvent(validAddress.getTenantId(), validAddress.getResourceId(), authenticatedDevice, null)
                             .setHandler(sendAttempt -> {
                                 consumer.close(null);
                             });
@@ -473,7 +473,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
 
             sender.setQoS(ProtonQoS.AT_LEAST_ONCE);
             final Handler<AsyncResult<ProtonSender>> detachHandler = link -> {
-                sendDisconnectedTtdEvent(tenantId, deviceId, authenticatedDevice);
+                sendDisconnectedTtdEvent(tenantId, deviceId, authenticatedDevice, null);
                 consumer.close(null);
                 onLinkDetach(sender);
             };
@@ -485,7 +485,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             // commands. Send "device ready for command" notification downstream.
             LOG.debug("established link [address: {}] for sending commands to device", address);
 
-            sendConnectedTtdEvent(tenantId, deviceId, authenticatedDevice);
+            sendConnectedTtdEvent(tenantId, deviceId, authenticatedDevice, null);
             return consumer;
         }).otherwise(t -> {
             throw new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "cannot create command consumer");

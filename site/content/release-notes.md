@@ -47,6 +47,9 @@ title = "Release Notes"
   `openshift` deployment still works, it hasn't been updated for more recent
   OpenShift and EnMasse versions. The main focus now is on the *S2I* variant,
   which will become the default *OpenShift*" deployment in Hono 0.9.
+* New variants of the `AbstractProtocolAdapterBase.sendConnectedTtdEvent`, `AbstractProtocolAdapterBase.sendDisconnectedTtdEvent`
+  and `AbstractProtocolAdapterBase.sendTtdEvent`have been added which also accept an OpenTracing span as a parameter.
+  The original variants have been deprecated.
 
 ## 0.8-M2
 

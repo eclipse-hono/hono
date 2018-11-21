@@ -426,7 +426,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
                 .compose(device -> CompositeFuture.all(
                         getTenantConfiguration(device.getTenantId(), currentSpan.context())
                                 .compose(tenant -> isAdapterEnabled(tenant)),
-                        checkDeviceRegistration(device, currentSpan))
+                        checkDeviceRegistration(device, currentSpan.context()))
                         .map(ok -> device))
                 .compose(device -> createLink(device, currentSpan))
                 .compose(device -> registerHandlers(endpoint, device))
@@ -514,7 +514,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
                         // make sure that we close the consumer and notify downstream
                         // applications when the connection is closed
                         endpoint.closeHandler(c -> {
-                            sendDisconnectedTtdEvent(cmdSub.getTenant(), cmdSub.getDeviceId(), authenticatedDevice)
+                            sendDisconnectedTtdEvent(cmdSub.getTenant(), cmdSub.getDeviceId(), authenticatedDevice, null)
                             .setHandler(sendAttempt -> {
                                 consumer.close(null);
                                 close(endpoint, authenticatedDevice);
@@ -558,7 +558,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
             topicFilters.values().forEach(f -> {
                 if (f.succeeded() && f.result() instanceof CommandSubscription) {
                     final CommandSubscription s = (CommandSubscription) f.result();
-                    sendConnectedTtdEvent(s.getTenant(), s.getDeviceId(), authenticatedDevice);
+                    sendConnectedTtdEvent(s.getTenant(), s.getDeviceId(), authenticatedDevice, span.context());
                 }
             });
             span.finish();
@@ -608,7 +608,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
                 LOG.debug("unsubscribing device [tenant-id: {}, device-id: {}] from topic [{}]",
                         tenantId, deviceId, topic);
                 closeCommandConsumer(tenantId, deviceId);
-                sendDisconnectedTtdEvent(tenantId, deviceId, authenticatedDevice);
+                sendDisconnectedTtdEvent(tenantId, deviceId, authenticatedDevice, span.context());
             }
         });
         if (endpoint.isConnected()) {
