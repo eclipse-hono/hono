@@ -55,6 +55,8 @@ public class HonoConsumerBase {
 
     protected final int DEFAULT_CONNECT_TIMEOUT_MILLIS = 1000;
 
+    public static final Boolean SEND_ONE_WAY_COMMANDS = Boolean.valueOf(System.getProperty("sendOneWayCommands", "false"));
+
     private final Vertx vertx = Vertx.vertx();
     private final HonoClient honoClient;
 
@@ -293,7 +295,11 @@ public class HonoConsumerBase {
                     commandClient.setRequestTimeout(calculateCommandTimeout(notification));
 
                     // send the command upstream to the device
-                    sendCommandToAdapter(commandClient, notification);
+                    if (SEND_ONE_WAY_COMMANDS) {
+                        sendOneWayCommandToAdapter(commandClient, notification);
+                    } else {
+                        sendCommandToAdapter(commandClient, notification);
+                    }
                     return commandClient;
                 }).otherwise(t -> {
                     LOG.error("Could not create command client", t);
@@ -318,15 +324,11 @@ public class HonoConsumerBase {
         }
     }
 
-    private void setPeriodicCommandSenderTimerCanceler(final Long timerId, final TimeUntilDisconnectNotification notification, final CommandClient commandClient) {
-        this.periodicCommandSenderTimerCancelerMap.put(notification.getTenantAndDeviceId(), v -> {
-            commandClient.close(ignore -> {
-                if (LOG.isDebugEnabled()) {
-                    LOG.trace("Closed commandClient for [{}].", notification.getTenantAndDeviceId());
-                }
-            });
+    private void setPeriodicCommandSenderTimerCanceler(final Long timerId, final TimeUntilDisconnectNotification ttdNotification, final CommandClient commandClient) {
+        this.periodicCommandSenderTimerCancelerMap.put(ttdNotification.getTenantAndDeviceId(), v -> {
+            closeCommandClient(commandClient, ttdNotification);
             vertx.cancelTimer(timerId);
-            periodicCommandSenderTimerCancelerMap.remove(notification.getTenantAndDeviceId());
+            periodicCommandSenderTimerCancelerMap.remove(ttdNotification.getTenantAndDeviceId());
         });
     }
 
@@ -351,13 +353,13 @@ public class HonoConsumerBase {
      * If the contained <em>ttd</em> is set to a value @gt; 0, the commandClient will be closed after a response was received.
      * If the contained <em>ttd</em> is set to -1, the commandClient will remain open for further commands to be sent.
      * @param commandClient The command client to be used for sending the command to the device.
-     * @param notification The notification that was received for the device.
+     * @param ttdNotification The ttd notification that was received for the device.
      */
-    private void sendCommandToAdapter(final CommandClient commandClient, final TimeUntilDisconnectNotification notification) {
+    private void sendCommandToAdapter(final CommandClient commandClient, final TimeUntilDisconnectNotification ttdNotification) {
         final Buffer commandBuffer = buildCommandPayload();
         final String command = "setBrightness";
         if (LOG.isDebugEnabled()) {
-            LOG.debug("Sending command [{}] to [{}].", command, notification.getTenantAndDeviceId());
+            LOG.debug("Sending command [{}] to [{}].", command, ttdNotification.getTenantAndDeviceId());
         }
 
         commandClient.sendCommand(command, "application/json", commandBuffer, buildCommandProperties()).map(result -> {
@@ -366,9 +368,9 @@ public class HonoConsumerBase {
                 LOG.debug("And received response: [{}].", Optional.ofNullable(result.getPayload()).orElse(Buffer.buffer()).toString());
             }
 
-            if (notification.getTtd() != -1) {
+            if (ttdNotification.getTtd() != -1) {
                 // do not close the command client if device stays connected
-                closeCommandClient(commandClient, notification);
+                closeCommandClient(commandClient, ttdNotification);
             }
             return result;
         }).otherwise(t -> {
@@ -379,18 +381,61 @@ public class HonoConsumerBase {
                 LOG.debug("Could not send command : {}.", t.getMessage());
             }
 
-            if (notification.getTtd() != -1) {
+            if (ttdNotification.getTtd() != -1) {
                 // do not close the command client if device stays connected
-                closeCommandClient(commandClient, notification);
+                closeCommandClient(commandClient, ttdNotification);
             }
             return null;
         });
     }
 
-    private void closeCommandClient(final CommandClient commandClient, final TimeUntilDisconnectNotification notification) {
+    /**
+     * Send a one way command to the device for which a {@link TimeUntilDisconnectNotification} was received.
+     * <p>
+     * If the contained <em>ttd</em> is set to a value @gt; 0, the commandClient will be closed after a response was received.
+     * If the contained <em>ttd</em> is set to -1, the commandClient will remain open for further commands to be sent.
+     * @param commandClient The command client to be used for sending the notification command to the device.
+     * @param ttdNotification The ttd notification that was received for the device.
+     */
+    private void sendOneWayCommandToAdapter(final CommandClient commandClient, final TimeUntilDisconnectNotification ttdNotification) {
+        final Buffer commandBuffer = buildOneWayCommandPayload();
+        final String command = "sendLifecycleInfo";
+
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("Sending one-way command [{}] to [{}].", command, ttdNotification.getTenantAndDeviceId());
+        }
+
+        commandClient.sendOneWayCommand(command, commandBuffer).map(statusResult -> {
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Successfully sent one-way command payload: [{}] and received status [{}].", commandBuffer.toString(), statusResult);
+            }
+
+            if (ttdNotification.getTtd() != -1) {
+                // do not close the command client if device stays connected
+                closeCommandClient(commandClient, ttdNotification);
+            }
+            return statusResult;
+        }).otherwise(t -> {
+            if (t instanceof ServiceInvocationException) {
+                final int errorCode = ((ServiceInvocationException) t).getErrorCode();
+                LOG.debug("One-way command was replied with error code [{}].", errorCode);
+            } else {
+                LOG.debug("Could not send one-way command : {}.", t.getMessage());
+            }
+
+            if (ttdNotification.getTtd() != -1) {
+                // do not close the command client if device stays connected
+                closeCommandClient(commandClient, ttdNotification);
+            }
+            return null;
+        });
+    }
+
+    private void closeCommandClient(final CommandClient commandClient, final TimeUntilDisconnectNotification ttdNotification) {
+        // do not close the command client if device stays connected
         commandClient.close(v -> {
             if (LOG.isDebugEnabled()) {
-                LOG.trace("Closed commandClient for [{}].", notification.getTenantAndDeviceId());
+                LOG.trace("Closed commandClient for [{}].", ttdNotification.getTenantAndDeviceId());
             }
         });
     }
@@ -411,6 +456,10 @@ public class HonoConsumerBase {
         return Buffer.buffer(jsonCmd.encodePrettily());
     }
 
+    private Buffer buildOneWayCommandPayload() {
+        final JsonObject jsonCmd = new JsonObject().put("info", "app restarted.");
+        return Buffer.buffer(jsonCmd.encodePrettily());
+    }
     /**
      * Handler method for a Message from Hono that was received as telemetry data.
      * <p>
