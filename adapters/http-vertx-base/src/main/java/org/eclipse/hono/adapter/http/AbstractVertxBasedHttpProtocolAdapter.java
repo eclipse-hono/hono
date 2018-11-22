@@ -936,22 +936,40 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                     .withTag(TracingHelper.TAG_AUTHENTICATED.getKey(), authenticatedDevice != null)
                     .start();
 
-            // send response message to application via sender link
-            sendCommandResponse(tenant, commandResponse, currentSpan.context())
-            .map(delivery -> {
-                metrics.incrementCommandResponseDeliveredToApplication(tenant);
-                LOG.trace("delivered command response [command-request-id: {}] to application", commandRequestId);
-                currentSpan.log("delivered command response to application");
-                ctx.response().setStatusCode(HttpURLConnection.HTTP_ACCEPTED);
-                ctx.response().end();
-                return delivery;
+            getTenantConfiguration(tenant, currentSpan.context()).compose(tenantObj -> {
+                if (tenantObj.isAdapterEnabled(getTypeName())) {
+                    return Future.succeededFuture();
+                } else {
+                    return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_FORBIDDEN,
+                            "adapter is not enabled for tenant"));
+                }
+            }).compose(ok -> {
+                // send response message to application via sender link
+                sendCommandResponse(tenant, commandResponse, currentSpan.context())
+                        .map(delivery -> {
+                            metrics.incrementCommandResponseDeliveredToApplication(tenant);
+                            LOG.trace("delivered command response [command-request-id: {}] to application",
+                                    commandRequestId);
+                            currentSpan.log("delivered command response to application");
+                            ctx.response().setStatusCode(HttpURLConnection.HTTP_ACCEPTED);
+                            ctx.response().end();
+                            return delivery;
+                        }).otherwise(t -> {
+                    LOG.debug("could not send command response [command-request-id: {}] to application",
+                            commandRequestId, t);
+                    TracingHelper.logError(currentSpan, t);
+                    ctx.fail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, t));
+                    return null;
+                }).setHandler(c -> {
+                    currentSpan.finish();
+                });
+
+                return Future.succeededFuture();
             }).otherwise(t -> {
-                LOG.debug("could not send command response [command-request-id: {}] to application", commandRequestId, t);
                 TracingHelper.logError(currentSpan, t);
-                ctx.fail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, t));
-                return null;
-            }).setHandler(c -> {
                 currentSpan.finish();
+                ctx.fail(t);
+                return null;
             });
         }
     }
