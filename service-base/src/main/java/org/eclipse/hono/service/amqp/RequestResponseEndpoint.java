@@ -17,6 +17,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+
 import org.apache.qpid.proton.amqp.transport.AmqpError;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.auth.HonoUser;
@@ -35,6 +36,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 
+import io.opentracing.Tracer;
+import io.opentracing.noop.NoopTracerFactory;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.MessageConsumer;
@@ -62,6 +65,11 @@ public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties>
     private final Multimap<ProtonConnection, MessageConsumer<?>> replyConsumerMap = HashMultimap.create();
     private final Multimap<ProtonConnection, String> replyAddressMap = HashMultimap.create();
     private final Set<String> replyAddresses = new HashSet<>();
+
+    /**
+     * The OpenTracing {@code Tracer} for tracking processing of requests.
+     */
+    protected Tracer tracer = NoopTracerFactory.create();
 
     /**
      * Creates an endpoint for a Vertx instance.
@@ -112,6 +120,21 @@ public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties>
     @Autowired(required = false)
     public final void setAuthorizationService(final AuthorizationService authService) {
         this.authorizationService = authService;
+    }
+
+    /**
+     * Sets the OpenTracing {@code Tracer} to use for tracking the processing
+     * of requests.
+     * <p>
+     * If not set explicitly, the {@code NoopTracer} from OpenTracing will
+     * be used.
+     *
+     * @param opentracingTracer The tracer.
+     */
+    @Autowired(required = false)
+    public final void setTracer(final Tracer opentracingTracer) {
+        logger.info("using OpenTracing Tracer implementation [{}]", opentracingTracer.getClass().getName());
+        this.tracer = Objects.requireNonNull(opentracingTracer);
     }
 
     /**

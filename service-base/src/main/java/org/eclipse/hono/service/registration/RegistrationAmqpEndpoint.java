@@ -59,6 +59,7 @@ public class RegistrationAmqpEndpoint extends RequestResponseEndpoint<ServiceCon
                 .setTenant(targetAddress.getTenantId())
                 .setDeviceId(msg)
                 .setGatewayId(msg)
+                .setSpanContext(msg, tracer)
                 .setJsonPayload(msg);
 
         vertx.eventBus().send(RegistrationConstants.EVENT_BUS_ADDRESS_REGISTRATION_IN, registrationMsg.toJson());

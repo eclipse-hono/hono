@@ -136,6 +136,7 @@ public class TenantAmqpEndpoint extends RequestResponseEndpoint<ServiceConfigPro
                 .setAppCorrelationId(msg)
                 .setCorrelationId(msg)
                 .setTenant(msg)
+                .setSpanContext(msg, tracer)
                 .setJsonPayload(msg);
 
         vertx.eventBus().send(TenantConstants.EVENT_BUS_ADDRESS_TENANT_IN, request.toJson());

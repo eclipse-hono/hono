@@ -21,7 +21,13 @@ import java.util.UUID;
 import org.apache.qpid.proton.amqp.Binary;
 import org.apache.qpid.proton.amqp.UnsignedLong;
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.tracing.JsonObjectExtractAdapter;
+import org.eclipse.hono.tracing.JsonObjectInjectAdapter;
+import org.eclipse.hono.tracing.MessageAnnotationsExtractAdapter;
 
+import io.opentracing.SpanContext;
+import io.opentracing.Tracer;
+import io.opentracing.propagation.Format;
 import io.vertx.core.json.JsonObject;
 
 /**
@@ -33,6 +39,7 @@ public class EventBusMessage {
 
     private static final String FIELD_CORRELATION_ID = "correlation-id";
     private static final String FIELD_CORRELATION_ID_TYPE = "correlation-id-type";
+    private static final String FIELD_SPAN_CONTEXT = "span-context";
 
     private final JsonObject json;
 
@@ -152,7 +159,7 @@ public class EventBusMessage {
     /**
      * Gets the operation to invoke.
      * 
-     * @return The operation of {@code null} if this is a response message.
+     * @return The operation or {@code null} if this is a response message.
      */
     public String getOperation() {
         return getProperty(MessageHelper.SYS_PROPERTY_SUBJECT);
@@ -480,6 +487,31 @@ public class EventBusMessage {
     }
 
     /**
+     * Adds a property for the {@code SpanContext} extracted from the given message.
+     *
+     * @param message The message to extract the {@code SpanContext} from. 
+     * @param tracer The {@code Tracer} instance to use for extracting the {@code SpanContext}.
+     * @return This message for chaining.
+     */
+    public EventBusMessage setSpanContext(final Message message, final Tracer tracer) {
+        final SpanContext spanContext = tracer.extract(Format.Builtin.TEXT_MAP, new MessageAnnotationsExtractAdapter(message));
+        if (spanContext != null) {
+            tracer.inject(spanContext, Format.Builtin.TEXT_MAP, new JsonObjectInjectAdapter(json, FIELD_SPAN_CONTEXT));
+        }
+        return this;
+    }
+
+    /**
+     * Gets the {@code SpanContext} serialized in this message.
+     *
+     * @param tracer The {@code Tracer} instance to use for creating the {@code SpanContext}.
+     * @return {@code SpanContext} or {@code null}.
+     */
+    public SpanContext getSpanContext(final Tracer tracer) {
+        return tracer.extract(Format.Builtin.TEXT_MAP, new JsonObjectExtractAdapter(json, FIELD_SPAN_CONTEXT));
+    }
+
+    /**
      * Adds a property with a value.
      * <p>
      * The property will only be added if the value is not {@code null}.
@@ -541,7 +573,7 @@ public class EventBusMessage {
      * The {@link #fromJson(JsonObject)} method can be used to create
      * a {@code EventBusMethod} from its JSON representation.
      * 
-     * @return The JSOn object.
+     * @return The JSON object.
      */
     public JsonObject toJson() {
         return json.copy();

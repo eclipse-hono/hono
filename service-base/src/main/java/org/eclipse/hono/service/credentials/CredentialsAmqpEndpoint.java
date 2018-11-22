@@ -59,6 +59,7 @@ public class CredentialsAmqpEndpoint extends RequestResponseEndpoint<ServiceConf
                 .setAppCorrelationId(msg)
                 .setCorrelationId(msg)
                 .setTenant(targetAddress.getTenantId())
+                .setSpanContext(msg, tracer)
                 .setJsonPayload(msg);
 
         vertx.eventBus().send(CredentialsConstants.EVENT_BUS_ADDRESS_CREDENTIALS_IN, credentialsMsg.toJson());
