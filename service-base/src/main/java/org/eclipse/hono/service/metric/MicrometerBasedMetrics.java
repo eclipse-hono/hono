@@ -27,6 +27,9 @@ import io.micrometer.core.instrument.Tags;
  */
 public abstract class MicrometerBasedMetrics implements Metrics {
 
+    /**
+     * The meter registry.
+     */
     protected final MeterRegistry registry;
 
     private final Map<String, AtomicLong> authenticatedConnections = new ConcurrentHashMap<>();

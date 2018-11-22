@@ -27,14 +27,16 @@ import org.springframework.beans.factory.config.ObjectFactoryCreatingFactoryBean
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Scope;
 
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Tags;
+import io.micrometer.core.instrument.config.MeterFilter;
 import io.micrometer.spring.autoconfigure.MeterRegistryCustomizer;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
 import io.vertx.core.dns.AddressResolverOptions;
 import io.vertx.core.metrics.MetricsOptions;
-import org.springframework.context.annotation.Scope;
 
 /**
  * Spring bean definitions required by the Hono application.
@@ -199,9 +201,11 @@ public class HonoMessagingApplicationConfig {
     @Bean
     public MeterRegistryCustomizer<MeterRegistry> commonTags() {
 
-        return r -> r.config().commonTags(
-                MetricsTags.forService(MetricsTags.VALUE_SERVICE_MESSAGING)
-                .and(MetricsTags.TAG_PROTOCOL, "messaging"));
-
+        return r -> r.config()
+                .commonTags(MetricsTags.forService(MetricsTags.VALUE_SERVICE_MESSAGING)
+                        .and(Tags.of(MetricsTags.TAG_PROTOCOL, "messaging")))
+                // Hono Messaging does not have any connections to devices
+                .meterFilter(MeterFilter.denyNameStartsWith("hono.connections.authenticated"))
+                .meterFilter(MeterFilter.denyNameStartsWith("hono.connections.unauthenticated"));
     }
 }
