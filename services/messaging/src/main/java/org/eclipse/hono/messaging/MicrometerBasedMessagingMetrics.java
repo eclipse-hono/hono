@@ -134,7 +134,7 @@ public class MicrometerBasedMessagingMetrics extends MicrometerBasedMetrics impl
 
     }
 
-    protected <T extends Number> T gaugeForAddress(final String name, final Map<String, T> map, final String address,
+    private <T extends Number> T gaugeForAddress(final String name, final Map<String, T> map, final String address,
             final Supplier<T> instanceSupplier) {
 
         return gaugeForKey(name, map, address, Tags.of("address", normalizeAddress(address)), instanceSupplier);
