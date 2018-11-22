@@ -22,7 +22,10 @@ import org.eclipse.hono.util.EventBusMessage;
 import org.eclipse.hono.util.RequestResponseApiConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 
+import io.opentracing.Tracer;
+import io.opentracing.noop.NoopTracerFactory;
 import io.vertx.core.Future;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.eventbus.MessageConsumer;
@@ -43,6 +46,26 @@ public abstract class EventBusService<C> extends ConfigurationSupportingVerticle
      */
     protected final Logger log = LoggerFactory.getLogger(getClass());
     private MessageConsumer<JsonObject> requestConsumer;
+
+    /**
+     * The OpenTracing {@code Tracer} for tracking processing of requests.
+     */
+    protected Tracer tracer = NoopTracerFactory.create();
+
+    /**
+     * Sets the OpenTracing {@code Tracer} to use for tracking the processing
+     * of requests.
+     * <p>
+     * If not set explicitly, the {@code NoopTracer} from OpenTracing will
+     * be used.
+     *
+     * @param opentracingTracer The tracer.
+     */
+    @Autowired(required = false)
+    public final void setTracer(final Tracer opentracingTracer) {
+        log.info("using OpenTracing Tracer implementation [{}]", opentracingTracer.getClass().getName());
+        this.tracer = Objects.requireNonNull(opentracingTracer);
+    }
 
     /**
      * Starts up this service.
