@@ -10,63 +10,83 @@ interface. This section describes the semantics and format of the metrics, how t
 and how to interpret actual values.
 <!--more-->
 
-{{%note title="Other metrics"%}}
-Hono currently maintains metrics in addition to the ones described below. However, these are
-not considered part of Hono's external interface and thus may be changed or removed without notice.
-{{%/note%}}
-
 ## Reported Metrics
 
-Hono uses the [Micrometer](https://micrometer.io) framework for reporting metrics in its components.
-In Micrometer a metric always is of a specific type (e.g. a *meter*, *counter* or *gauge*), has a name and associated *tags*
-(or *dimensions*). For example the HTTP adapter mentioned above reports the number of processed messages by means of
-a metric of type *counter* having name *hono.messages.processed* and tags
+Hono uses [Micrometer](https://micrometer.io/) in combination with Spring Boot
+to internally collect metrics. Those metrics can be exported using the different
+backends, see [Configuring metrics](/hono/admin-guide/monitoring-tracing-config/#configuring-metrics) on how to enable those.
 
-* *host* - containing the host name of the HTTP adapter instance that reported the value,
-* *type* - indicating if the message contains an event or telemetry data,
-* *tenant* - containing the ID of the tenant that the device that sent the message belongs to and
-* *protocol* - containing the name of the transport protocol that the message has been received over (`http` in this case).
+The default Micrometer backend in the deployment examples is based on [Prometheus](https://prometheus.io/).
 
-The metrics reported by Hono's components can be transmitted to or collected by external monitoring systems like
-[Prometheus](https://prometheus.io/) or [InfluxDB](https://https://www.influxdata.com/) by means of plug-ins.
-Please refer to the [Micrometer documentation](https://micrometer.io/docs) for details.
+The Prometheus scraper, especially when run inside of Kubernetes/OpenShift,
+might add additional tags like *pod*, etc. However those tags are not part of
+the Hono metrics definition.
 
-As indicated above, the metrics collected via Micrometer have a type, a name and zero or more tags associated with them.
-Most of the tags are used with multiple metrics because they contain information that is relevant to all of these metrics.
+Hono applications provide additional metrics as well as the ones described here,
+for example is it possible to get information about the internal JVM state, like
+memory and garbage collector. However those metrics are not part of of the Hono
+metrics definition. Especially for the Hono services, like device registry and
+the messaging component, no further metrics are defined. However all metrics
+will still support the tags as described.
 
-The table below provides an overview of the tags used with metrics in Hono:
+### Common metrics
 
-| Tag        | Value                    | Description |
-| :--------- | :----------------------- | :---------- |
-| *host*     | arbitrary string         | The name of the host that the service reporting the value is running on. |
-| *type*     | `telemetry`, `event`   | The type of message that the metric is being reported for. |
-| *tenant*   | arbitrary string         | The name of the tenant that the metric is being reported for. |
-| *protocol* | `http`, `mqtt`, `amqp` | The protocol used for transmitting the message that the metric is being reported for. |
+Tags for common metrics are:
 
-The table below provides an overview of the metrics that are reported by Hono's components.
+| Tag        | Applied to  | Description |
+| ---------- | ----------- | ----------- |
+| *host*     | All metrics | The name of the host that the service reporting the metric is running on. |
+| *component*| All metrics | The application component type (either `adapter`, `service`) |
 
-| Name                                 | Type        | Tags                                 | Description |
-| :----------------------------------- | :---------- | ------------------------------------ | ----------- |
-| *hono.commands.device.delivered*     | *counter*   | *host*, *tenant*, *protocol*         | Commands delivered to devices. Total count since application start. |
-| *hono.commands.response.delivered*   | *counter*   | *host*, *tenant*, *protocol*         | Command responses delivered to applications. Total count since application startup. |
-| *hono.commands.ttd.expired*          | *counter*   | *host*, *tenant*, *protocol*         | Messages containing a TTD that expired with no pending command(s). Total count since application startup. |
-| *hono.connections.authenticated*     | *gauge*     | *host*, *tenant*, *protocol*         | Current number of connections with authenticated devices. **NB** This metric is only reported by protocol adapters that maintain *connection state* with authenticated devices. In particular, the HTTP adapter does not report this metric. |
-| *hono.connections.unauthenticated*   | *gauge*     | *host*, *protocol*                   | Current number of connections with unauthenticated devices. **NB** This metric is only reported by protocol adapters that maintain *connection state* with unauthenticated devices. In particular, the HTTP adapter does not report this metric. |
-| *hono.messages.processed*            | *counter*   | *host*, *type*, *tenant*, *protocol* | Messages successfully processed by a protocol adapter. Total count since application startup. |
-| *hono.messages.processed.payload*    | *counter*   | *host*, *type*, *tenant*, *protocol* | Accumulated payload size of messages successfully processed by a protocol adapter. Total number of bytes since application startup. |
-| *hono.messages.undeliverable*        | *counter*   | *host*, *type*, *tenant*, *protocol* | Messages that could not be forwarded downstream by a protocol adapter. Total count since application startup. |
+### Protocol adapter metrics
 
+Additional tags for protocols adapter are:
 
-## InfluxDB
+| Tag        | Applied to  | Description |
+| ---------- | ----------- | ----------- |
+| *protocol* | All metrics | An ID of the protocol (either `amqp`, `coap`, `http`, `mqtt`) |
+| *tenant*   | Metrics related to a tenant | The name of the tenant |
+| *type*     | Metrics related to a message type | The message type (either `telemetry`, `event` |
 
-In the [deployment examples](/hono/deployment) an InfluxDB is used for collecting
-metrics reported by Hono's service components. For this purpose, some of the services are
-configured to use Micrometer's *Graphite reporter* to transmit metrics to the InfluxDB instance
-using the Graphite wire format.
+Metrics provided by the protocol adapters are:
 
-The Graphite reporter and the names of the transmitted metrics are not considered part
-of Hono's external interface. This means that future versions of Hono might use
-different mechanisms to report metrics.
+| Metric                             | Type    | Tags | Description |
+| ---------------------------------- | ------- | ---- | ----------- |
+| *hono.connections.unauthenticated* | Gauge   | *host*, *component*, *protocol*                   | Current number of connected, unauthenticated devices. <br/> **NB** This metric is only supported by protocol adapters that maintain *connection state* with authenticated devices. In particular, the HTTP adapter does not support this metric. |
+| *hono.connections.authenticated*   | Gauge   | *host*, *component*, *protocol*, *tenant*         | Current number of connected, authenticated devices. <br/> **NB** This metric is only supported by protocol adapters that maintain *connection state* with authenticated devices. In particular, the HTTP adapter does not support this metric. |
+| *hono.messages.undeliverable*      | Counter | *host*, *component*, *protocol*, *tenant*, *type* | Total number of undeliverable messages |
+| *hono.messages.processed*          | Counter | *host*, *component*, *protocol*, *tenant*, *type* | Total number of processed messages |
+| *hono.messages.processed.payload*  | Counter | *host*, *component*, *protocol*, *tenant*, *type* | Total number of processed payload bytes |
+| *hono.commands.device.delivered*   | Counter | *host*, *component*, *protocol*, *tenant*         | Total number of delivered commands |
+| *hono.commands.ttd.expired*        | Counter | *host*, *component*, *protocol*, *tenant*         | Total number of expired TTDs |
+| *hono.commands.response.delivered* | Counter | *host*, *component*, *protocol*, *tenant*         | Total number of delivered responses to commands |
+
+### Service metrics
+
+Additional tags for services are:
+
+| Tag        | Applied to  | Description |
+| ---------- | ----------- | ----------- |
+| *service*  | All metrics | An ID of the service (either `auth`, `registry`, `messaging`) |
+
+No metrics are defined as part of the Hono metrics definition.
+
+## Legacy metrics
+
+{{%note title="Deprecated"%}}
+This metrics configuration is still supported in Hono, but is considered
+deprecated and will be removed in a future version of Hono.
+
+The legacy metrics support needs to be specifically enabled, starting with
+Hono 0.9. See [Legacy support](/hono/admin-guide/monitoring-tracing-config#legacy-metrics-support) 
+for more information.
+{{%/note%}}
+
+Enabling the legacy support sets up internal support for exporting the metrics
+in the pre-0.8 format, using the Graphite Micrometer backend, but with a
+custom (legacy) naming scheme. It still is possible to use the InfluxDB Micrometer
+backend as well, however this will export metrics in the new format, and not
+on the legacy format.
 
 Some users have started to build custom dash boards on top of the names of the metrics and
 associated tags that end up in the example InfluxDB. Hono will try to support such users
@@ -91,7 +111,7 @@ extracting the following *tags* from metric names transmitted via the Graphite r
 
 The following sections describe which of these tags are extracted for which metrics specifically.
 
-### Generic Metrics
+### Common Metrics
 
 The following table contains metrics that are collected for all protocol adapters (if applicable to the underlying transport protocol).
 
@@ -140,5 +160,4 @@ The following table contains metrics that are collected specifically for the MQT
 | *meter.hono.mqtt.messages.processed.m5_rate*         | *host*, *tenant*, *type* | Messages processed by the MQTT protocol adapter. Five minute, exponentially weighted, moving average. |
 | *meter.hono.mqtt.messages.processed.m15_rate*        | *host*, *tenant*, *type* | Messages processed by the MQTT protocol adapter. Fifteen minute, exponentially weighted, moving average. |
 | *meter.hono.mqtt.messages.processed.mean_rate*       | *host*, *tenant*, *type* | Messages processed by the MQTT protocol adapter. Mean rate of messages since the application start. |
-
 
