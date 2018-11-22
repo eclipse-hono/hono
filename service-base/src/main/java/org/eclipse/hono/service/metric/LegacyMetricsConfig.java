@@ -96,7 +96,7 @@ public class LegacyMetricsConfig {
 
                 if ("connections.authenticated".equals(name)
                         || "connections.unauthenticated".equals(name)
-                        || "messages.underliverable".equals(name)) {
+                        || "messages.undeliverable".equals(name)) {
 
                     newTags.add(Tag.of("meterType", "counter"));
                     newTags.add(Tag.of("typeSuffix", "count"));

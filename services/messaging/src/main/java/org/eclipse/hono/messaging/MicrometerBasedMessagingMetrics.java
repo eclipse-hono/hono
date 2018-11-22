@@ -127,7 +127,7 @@ public class MicrometerBasedMessagingMetrics extends MicrometerBasedMetrics impl
     @Override
     public final void incrementUndeliverableMessages(final String address) {
 
-        this.registry.counter("hono.messages.underliverable",
+        this.registry.counter("hono.messages.undeliverable",
                 Tags
                         .of("address", normalizeAddress(address)))
                 .increment();
