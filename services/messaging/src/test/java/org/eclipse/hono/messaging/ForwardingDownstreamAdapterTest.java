@@ -86,7 +86,7 @@ public class ForwardingDownstreamAdapterTest {
 
         final UpstreamReceiver client = newClient();
 
-        when(client.getTargetAddress()).thenReturn(targetAddress.toString());
+        when(client.getTargetAddress()).thenReturn(targetAddress);
 
         // GIVEN an adapter with a connection to the downstream container
         givenADownstreamAdapter();
@@ -109,7 +109,7 @@ public class ForwardingDownstreamAdapterTest {
     public void testHandleFlowForwardsDrainRequestUpstream() {
 
         final UpstreamReceiver client = newClient();
-        when(client.getTargetAddress()).thenReturn(targetAddress.toString());
+        when(client.getTargetAddress()).thenReturn(targetAddress);
         final ProtonSender drainingSender = newMockSender(true);
 
         // GIVEN an adapter with a connection to the downstream container and a client attached
@@ -136,7 +136,7 @@ public class ForwardingDownstreamAdapterTest {
 
         final UpstreamReceiver client = newClient();
 
-        when(client.getTargetAddress()).thenReturn(targetAddress.toString());
+        when(client.getTargetAddress()).thenReturn(targetAddress);
         when(client.getConnectionId()).thenReturn("CON_ID");
 
         // GIVEN an adapter without connection to the downstream container
@@ -351,7 +351,7 @@ public class ForwardingDownstreamAdapterTest {
 
         when(con.isDisconnected()).thenReturn(Boolean.FALSE);
         final UpstreamReceiver client = newClient();
-        when(client.getTargetAddress()).thenReturn(targetAddress.toString());
+        when(client.getTargetAddress()).thenReturn(targetAddress);
         final HandlerCapturingConnectionFactory factory = new HandlerCapturingConnectionFactory(con);
         final SenderFactory senderFactory = (con, address, qos, drainHandler, closeHook) -> {
             final Future<ProtonSender> result = Future.future();

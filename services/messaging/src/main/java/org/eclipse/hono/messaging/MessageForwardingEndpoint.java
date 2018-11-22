@@ -161,7 +161,7 @@ public abstract class MessageForwardingEndpoint<T extends HonoMessagingConfigPro
                         // client has closed link -> inform TelemetryAdapter about client detach
                         onLinkDetach(link);
                         downstreamAdapter.onClientDetach(link);
-                        metrics.decrementUpstreamLinks(targetAddress.toString());
+                        metrics.decrementUpstreamLinks(targetAddress);
                     });
                     receiver.handler((delivery, message) -> {
                         if (passesFormalVerification(targetAddress, message)) {
@@ -172,7 +172,7 @@ public abstract class MessageForwardingEndpoint<T extends HonoMessagingConfigPro
                     });
                     receiver.open();
                     logger.debug("establishing link with client [{}]", con.getRemoteContainer());
-                    metrics.incrementUpstreamLinks(targetAddress.toString());
+                    metrics.incrementUpstreamLinks(targetAddress);
                 } else {
                     // we cannot connect to downstream container, reject client
                     link.close(condition(AmqpError.PRECONDITION_FAILED, "no consumer available for target"));

@@ -27,6 +27,7 @@ import org.eclipse.hono.messaging.UpstreamReceiver;
 import org.eclipse.hono.service.auth.AuthenticationService;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.util.ResourceIdentifier;
 import org.mockito.ArgumentCaptor;
 
 import io.vertx.core.AsyncResult;
@@ -156,7 +157,7 @@ public final class TestSupport {
      * Creates a new mock upstream client for a link and connection ID.
      * 
      * @param linkId The client's link ID.
-     * @param connectionId The client's conenction ID.
+     * @param connectionId The client's connection ID.
      * @return The new client.
      */
     public static UpstreamReceiver newClient(final String linkId, final String connectionId) {
@@ -164,7 +165,7 @@ public final class TestSupport {
         final UpstreamReceiver client = mock(UpstreamReceiver.class);
         when(client.getLinkId()).thenReturn(linkId);
         when(client.getConnectionId()).thenReturn(connectionId);
-        when(client.getTargetAddress()).thenReturn(DEFAULT_ADDRESS);
+        when(client.getTargetAddress()).thenReturn(ResourceIdentifier.fromString(DEFAULT_ADDRESS));
         return client;
     }
 

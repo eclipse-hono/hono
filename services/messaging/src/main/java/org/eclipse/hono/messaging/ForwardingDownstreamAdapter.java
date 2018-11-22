@@ -328,8 +328,7 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
                 resultHandler.handle(attempt);
             });
 
-            final ResourceIdentifier targetAddress = ResourceIdentifier.fromString(client.getTargetAddress());
-            createSender(targetAddress, replenishedSender -> handleFlow(replenishedSender, client), closeHook -> {
+            createSender(client.getTargetAddress(), replenishedSender -> handleFlow(replenishedSender, client), closeHook -> {
                 removeSender(client);
                 closeReceiver(client);
             }).compose(createdSender -> {
@@ -482,25 +481,25 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
                     logger.debug("no downstream credit available for link [{}], discarding message [{}]",
                             client.getLinkId(), msg.getMessageId());
                     ProtonHelper.accepted(upstreamDelivery, true);
-                    metrics.incrementDiscardedMessages(sender.getTarget().getAddress());
+                    metrics.incrementDiscardedMessages(client.getTargetAddress());
                 } else {
                     // sender needs to be informed that we cannot process the message
                     logger.debug("no downstream credit available for link [{}], releasing message [{}]",
                             client.getLinkId(), msg.getMessageId());
                     ProtonHelper.released(upstreamDelivery, true);
-                    metrics.incrementUndeliverableMessages(sender.getTarget().getAddress());
+                    metrics.incrementUndeliverableMessages(client.getTargetAddress());
                 }
             } else {
                 logger.trace("forwarding message [id: {}, to: {}, content-type: {}] to downstream container [{}], credit available: {}, queued: {}",
                         msg.getMessageId(), msg.getAddress(), msg.getContentType(), getDownstreamContainer(), sender.getCredit(), sender.getQueued());
                 forwardMessage(sender, msg, upstreamDelivery);
-                metrics.incrementProcessedMessages(sender.getTarget().getAddress());
+                metrics.incrementProcessedMessages(client.getTargetAddress());
             }
         } else {
             logger.warn("downstream sender for link [{}] is not open, discarding message and closing link with client", client.getLinkId());
             client.close(ErrorConditions.ERROR_NO_DOWNSTREAM_CONSUMER);
             onClientDetach(client);
-            metrics.incrementDiscardedMessages(sender.getTarget().getAddress());
+            metrics.incrementDiscardedMessages(client.getTargetAddress());
         }
     }
 

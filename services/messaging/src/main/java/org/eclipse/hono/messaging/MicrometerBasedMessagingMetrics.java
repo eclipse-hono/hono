@@ -19,7 +19,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
 
+import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.service.metric.MicrometerBasedMetrics;
+import org.eclipse.hono.util.ResourceIdentifier;
 import org.springframework.stereotype.Component;
 
 import com.google.common.util.concurrent.AtomicDouble;
@@ -33,9 +35,9 @@ import io.micrometer.core.instrument.Tags;
 @Component
 public class MicrometerBasedMessagingMetrics extends MicrometerBasedMetrics implements MessagingMetrics {
 
-    private final Map<String, AtomicDouble> downstreamLinkCredits = new ConcurrentHashMap<>();
-    private final Map<String, AtomicLong> downstreamSenders = new ConcurrentHashMap<>();
-    private final Map<String, AtomicLong> upstreamLinks = new ConcurrentHashMap<>();
+    private final Map<ResourceIdentifier, AtomicDouble> downstreamLinkCredits = new ConcurrentHashMap<>();
+    private final Map<ResourceIdentifier, AtomicLong> downstreamSenders = new ConcurrentHashMap<>();
+    private final Map<ResourceIdentifier, AtomicLong> upstreamLinks = new ConcurrentHashMap<>();
 
     private final AtomicLong downstreamConnections;
 
@@ -65,7 +67,7 @@ public class MicrometerBasedMessagingMetrics extends MicrometerBasedMetrics impl
     }
 
     @Override
-    public final void submitDownstreamLinkCredits(final String address, final double credits) {
+    public final void submitDownstreamLinkCredits(final ResourceIdentifier address, final double credits) {
 
         gaugeForAddress("hono.link.downstream.credits", this.downstreamLinkCredits, address, AtomicDouble::new)
                 .set(credits);
@@ -73,7 +75,7 @@ public class MicrometerBasedMessagingMetrics extends MicrometerBasedMetrics impl
     }
 
     @Override
-    public final void incrementDownstreamSenders(final String address) {
+    public final void incrementDownstreamSenders(final ResourceIdentifier address) {
 
         gaugeForAddress("hono.senders.downstream", this.downstreamSenders, address, AtomicLong::new)
                 .incrementAndGet();
@@ -81,7 +83,7 @@ public class MicrometerBasedMessagingMetrics extends MicrometerBasedMetrics impl
     }
 
     @Override
-    public final void decrementDownstreamSenders(final String address) {
+    public final void decrementDownstreamSenders(final ResourceIdentifier address) {
 
         gaugeForAddress("hono.senders.downstream", this.downstreamSenders, address, AtomicLong::new)
                 .decrementAndGet();
@@ -89,7 +91,7 @@ public class MicrometerBasedMessagingMetrics extends MicrometerBasedMetrics impl
     }
 
     @Override
-    public final void incrementUpstreamLinks(final String address) {
+    public final void incrementUpstreamLinks(final ResourceIdentifier address) {
 
         gaugeForAddress("hono.receivers.upstream.links", this.upstreamLinks, address, AtomicLong::new)
                 .incrementAndGet();
@@ -97,7 +99,7 @@ public class MicrometerBasedMessagingMetrics extends MicrometerBasedMetrics impl
     }
 
     @Override
-    public final void decrementUpstreamLinks(final String address) {
+    public final void decrementUpstreamLinks(final ResourceIdentifier address) {
 
         gaugeForAddress("hono.receivers.upstream.links", this.upstreamLinks, address, AtomicLong::new)
                 .decrementAndGet();
@@ -105,44 +107,38 @@ public class MicrometerBasedMessagingMetrics extends MicrometerBasedMetrics impl
     }
 
     @Override
-    public final void incrementDiscardedMessages(final String address) {
+    public final void incrementDiscardedMessages(final ResourceIdentifier address) {
 
-        this.registry.counter("hono.messages.discarded",
-                Tags
-                        .of("address", normalizeAddress(address)))
-                .increment();
-
+        this.registry.counter(
+                "hono.messages.discarded",
+                Tags.of(MetricsTags.TAG_TYPE, address.getEndpoint()).and(MetricsTags.TAG_TENANT, address.getTenantId()))
+        .increment();
     }
 
     @Override
-    public final void incrementProcessedMessages(final String address) {
+    public final void incrementProcessedMessages(final ResourceIdentifier address) {
 
-        this.registry.counter("hono.messages.processed",
-                Tags
-                        .of("address", normalizeAddress(address)))
-                .increment();
-
+        incrementProcessedMessages(address.getEndpoint(), address.getTenantId());
     }
 
     @Override
-    public final void incrementUndeliverableMessages(final String address) {
+    public final void incrementUndeliverableMessages(final ResourceIdentifier address) {
 
-        this.registry.counter("hono.messages.undeliverable",
-                Tags
-                        .of("address", normalizeAddress(address)))
-                .increment();
-
+        this.registry.counter(
+                "hono.messages.undeliverable",
+                Tags.of(MetricsTags.TAG_TYPE, address.getEndpoint()).and(MetricsTags.TAG_TENANT, address.getTenantId()))
+        .increment();
     }
 
-    private <T extends Number> T gaugeForAddress(final String name, final Map<String, T> map, final String address,
+    private <T extends Number> T gaugeForAddress(
+            final String name,
+            final Map<ResourceIdentifier, T> map,
+            final ResourceIdentifier address,
             final Supplier<T> instanceSupplier) {
 
-        return gaugeForKey(name, map, address, Tags.of("address", normalizeAddress(address)), instanceSupplier);
+        final Tags tags = Tags.of(MetricsTags.TAG_TYPE, address.getEndpoint())
+                .and(MetricsTags.TAG_TENANT, address.getTenantId());
+        return gaugeForKey(name, map, address, tags, instanceSupplier);
 
     }
-
-    private static String normalizeAddress(final String address) {
-        return address.replace('/', '.');
-    }
-
 }

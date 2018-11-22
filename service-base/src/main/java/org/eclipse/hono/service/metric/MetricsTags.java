@@ -27,6 +27,8 @@ public final class MetricsTags {
     public static final String TAG_COMPONENT = "component";
     public static final String TAG_PROTOCOL = "protocol";
     public static final String TAG_SERVICE = "service";
+    public static final String TAG_TENANT = "tenant";
+    public static final String TAG_TYPE = "type";
 
     public static final String VALUE_COMPONENT_ADAPTER = "adapter";
     public static final String VALUE_COMPONENT_SERVICE = "service";

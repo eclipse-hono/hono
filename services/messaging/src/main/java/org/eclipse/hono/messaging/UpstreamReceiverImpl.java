@@ -18,6 +18,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.ResourceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,12 +39,17 @@ public class UpstreamReceiverImpl implements UpstreamReceiver {
     private final AtomicBoolean drainFlag = new AtomicBoolean(false);
     private final ProtonReceiver link;
     private final String id;
+    private final ResourceIdentifier targetAddress;
 
     UpstreamReceiverImpl(final String linkId, final ProtonReceiver receiver) {
         this.id = Objects.requireNonNull(linkId);
         this.link = Objects.requireNonNull(receiver);
+        if (receiver.getTarget() == null) {
+            throw new IllegalArgumentException("receiver has no target");
+        }
         this.link.setAutoAccept(false);
         this.link.setPrefetch(0);
+        this.targetAddress = ResourceIdentifier.fromString(receiver.getTarget().getAddress());
     }
 
     @Override
@@ -93,8 +99,8 @@ public class UpstreamReceiverImpl implements UpstreamReceiver {
     }
 
     @Override
-    public String getTargetAddress() {
-        return link.getTarget().getAddress();
+    public ResourceIdentifier getTargetAddress() {
+        return targetAddress;
     }
 
     @Override

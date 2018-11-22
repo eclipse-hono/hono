@@ -25,6 +25,7 @@ import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.amqp.messaging.Rejected;
 import org.apache.qpid.proton.amqp.transport.AmqpError;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
+import org.apache.qpid.proton.amqp.transport.Target;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelper;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelperImpl;
@@ -76,7 +77,10 @@ public class MessageForwardingEndpointTest {
         final ResourceIdentifier targetAddress = ResourceIdentifier.fromString("telemetry/tenant");
         final ProtonConnection connection = mock(ProtonConnection.class);
         when(connection.getRemoteContainer()).thenReturn("test-client");
+        final Target target = mock(Target.class);
+        when(target.getAddress()).thenReturn(targetAddress.toString());
         final ProtonReceiver receiver = mock(ProtonReceiver.class);
+        when(receiver.getTarget()).thenReturn(target);
         when(receiver.getRemoteQoS()).thenReturn(ProtonQoS.AT_MOST_ONCE);
         final DownstreamAdapter adapter = mock(DownstreamAdapter.class);
         doAnswer(invocation -> {
@@ -117,7 +121,10 @@ public class MessageForwardingEndpointTest {
 
         final ResourceIdentifier targetAddress = ResourceIdentifier.fromString("telemetry/tenant");
         final ProtonConnection connection = mock(ProtonConnection.class);
+        final Target target = mock(Target.class);
+        when(target.getAddress()).thenReturn(targetAddress.toString());
         final ProtonReceiver receiver = mock(ProtonReceiver.class);
+        when(receiver.getTarget()).thenReturn(target);
         when(receiver.getRemoteQoS()).thenReturn(ProtonQoS.AT_MOST_ONCE);
         final DownstreamAdapter adapter = mock(DownstreamAdapter.class);
         doAnswer(invocation -> {
@@ -144,7 +151,10 @@ public class MessageForwardingEndpointTest {
         // GIVEN an endpoint without a connection to the downstream messaging network
         final ResourceIdentifier targetAddress = ResourceIdentifier.fromString("telemetry/tenant");
         final ProtonConnection connection = mock(ProtonConnection.class);
+        final Target target = mock(Target.class);
+        when(target.getAddress()).thenReturn(targetAddress.toString());
         final ProtonReceiver receiver = mock(ProtonReceiver.class);
+        when(receiver.getTarget()).thenReturn(target);
         when(receiver.getRemoteQoS()).thenReturn(ProtonQoS.AT_MOST_ONCE);
         final DownstreamAdapter adapter = mock(DownstreamAdapter.class);
         doAnswer(invocation -> {

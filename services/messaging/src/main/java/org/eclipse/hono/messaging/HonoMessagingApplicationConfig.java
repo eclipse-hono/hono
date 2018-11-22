@@ -200,7 +200,8 @@ public class HonoMessagingApplicationConfig {
     public MeterRegistryCustomizer<MeterRegistry> commonTags() {
 
         return r -> r.config().commonTags(
-                MetricsTags.forService(MetricsTags.VALUE_SERVICE_MESSAGING));
+                MetricsTags.forService(MetricsTags.VALUE_SERVICE_MESSAGING)
+                .and(MetricsTags.TAG_PROTOCOL, "messaging"));
 
     }
 }

@@ -14,6 +14,7 @@
 package org.eclipse.hono.messaging;
 
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
+import org.eclipse.hono.util.ResourceIdentifier;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
@@ -85,5 +86,5 @@ public interface UpstreamReceiver {
      * 
      * @return The address.
      */
-    String getTargetAddress();
+    ResourceIdentifier getTargetAddress();
 }

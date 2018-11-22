@@ -14,6 +14,7 @@
 package org.eclipse.hono.messaging;
 
 import org.eclipse.hono.service.metric.Metrics;
+import org.eclipse.hono.util.ResourceIdentifier;
 import org.springframework.stereotype.Component;
 
 /**
@@ -39,7 +40,7 @@ public interface MessagingMetrics extends Metrics {
      * @param address The link's target address.
      * @param credits The number of credits.
      */
-    void submitDownstreamLinkCredits(String address, double credits);
+    void submitDownstreamLinkCredits(ResourceIdentifier address, double credits);
 
     /**
      * Reports a newly established sender link to the downstream
@@ -47,7 +48,7 @@ public interface MessagingMetrics extends Metrics {
      * 
      * @param address The link's target address.
      */
-    void incrementDownstreamSenders(String address);
+    void incrementDownstreamSenders(ResourceIdentifier address);
 
     /**
      * Reports a sender link to the downstream AMQP 1.0 Messaging Network
@@ -55,7 +56,7 @@ public interface MessagingMetrics extends Metrics {
      * 
      * @param address The link's target address.
      */
-    void decrementDownstreamSenders(String address);
+    void decrementDownstreamSenders(ResourceIdentifier address);
 
     /**
      * Reports a newly established receiver link to an upstream protocol
@@ -63,7 +64,7 @@ public interface MessagingMetrics extends Metrics {
      * 
      * @param address The link's target address.
      */
-    void incrementUpstreamLinks(String address);
+    void incrementUpstreamLinks(ResourceIdentifier address);
 
     /**
      * Reports a receiver link to an upstream protocol adapter
@@ -71,26 +72,26 @@ public interface MessagingMetrics extends Metrics {
      * 
      * @param address The link's target address.
      */
-    void decrementUpstreamLinks(String address);
+    void decrementUpstreamLinks(ResourceIdentifier address);
 
     /**
      * Reports a message having been discarded.
      * 
      * @param address The message's address.
      */
-    void incrementDiscardedMessages(String address);
+    void incrementDiscardedMessages(ResourceIdentifier address);
 
     /**
      * Reports a message having been processed.
      * 
      * @param address The message's address.
      */
-    void incrementProcessedMessages(String address);
+    void incrementProcessedMessages(ResourceIdentifier address);
 
     /**
      * Reports a message as being <em>undeliverable</em>.
      * 
      * @param address The message's address.
      */
-    void incrementUndeliverableMessages(String address);
+    void incrementUndeliverableMessages(ResourceIdentifier address);
 }

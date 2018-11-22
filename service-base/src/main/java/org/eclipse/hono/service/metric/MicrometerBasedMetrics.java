@@ -141,8 +141,8 @@ public abstract class MicrometerBasedMetrics implements Metrics {
 
     }
 
-    protected <T extends Number> T gaugeForKey(final String name, final Map<String, T> map, final String key,
-            final Tags tags, final Supplier<T> instanceSupplier) {
+    protected <K, V extends Number> V gaugeForKey(final String name, final Map<K, V> map, final K key,
+            final Tags tags, final Supplier<V> instanceSupplier) {
 
         return map.computeIfAbsent(key, a -> {
 
@@ -152,8 +152,8 @@ public abstract class MicrometerBasedMetrics implements Metrics {
 
     }
 
-    protected <T extends Number> T gaugeForTenant(final String name, final Map<String, T> map, final String tenant,
-            final Supplier<T> instanceSupplier) {
+    protected <V extends Number> V gaugeForTenant(final String name, final Map<String, V> map, final String tenant,
+            final Supplier<V> instanceSupplier) {
 
         return gaugeForKey(name, map, tenant, Tags.of("tenant", tenant), instanceSupplier);
 
