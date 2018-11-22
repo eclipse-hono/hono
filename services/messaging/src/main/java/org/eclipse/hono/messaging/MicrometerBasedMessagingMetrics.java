@@ -53,7 +53,7 @@ public class MicrometerBasedMessagingMetrics extends MicrometerBasedMetrics impl
 
         Objects.requireNonNull(registry);
 
-        this.downstreamConnections = registry.gauge("connections.downstream", new AtomicLong());
+        this.downstreamConnections = registry.gauge("hono.connections.downstream", new AtomicLong());
     }
 
     @Override

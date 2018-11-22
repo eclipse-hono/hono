@@ -10,11 +10,12 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
-package org.eclipse.hono.service.metric;
+package org.eclipse.hono.messaging;
 
 import java.util.ArrayList;
 import java.util.List;
 
+import org.eclipse.hono.service.metric.AbstractLegacyMetricsConfig;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.PropertySource;
@@ -31,7 +32,15 @@ import io.micrometer.core.instrument.config.MeterFilter;
 @PropertySource("classpath:org/eclipse/hono/service/metric/legacy.properties")
 public class LegacyMetricsConfig extends AbstractLegacyMetricsConfig {
 
+    /**
+     * Creates a filter that adds tags to metrics reported by Hono Messaging
+     * which are required for creating the hierarchical Graphite meter name.
+     * 
+     * @return The filter.
+     */
+    @Override
     protected MeterFilter meterTypeMapper() {
+
         return new MeterFilter() {
 
             @Override
@@ -48,9 +57,9 @@ public class LegacyMetricsConfig extends AbstractLegacyMetricsConfig {
                 final List<Tag> newTags = new ArrayList<>(id.getTags());
                 newTags.add(Tag.of(TAG_HONO, "hono"));
 
-                if ("connections.authenticated".equals(name)
-                        || "connections.unauthenticated".equals(name)
-                        || "messages.undeliverable".equals(name)) {
+                if ("receivers.upstream.links".equals(name)
+                        || "senders.downstream".equals(name)
+                        || "connections.downstream".equals(name)) {
 
                     newTags.add(Tag.of(TAG_METER_TYPE, "counter"));
                     // we need to add the type suffix because the underlying
@@ -59,7 +68,11 @@ public class LegacyMetricsConfig extends AbstractLegacyMetricsConfig {
                     // itself
                     newTags.add(Tag.of(TAG_TYPE_SUFFIX, "count"));
 
-                } else if (name.startsWith("messages.")) {
+                } else if ("link.downstream.credits".equals(name)) {
+
+                    newTags.add(Tag.of(TAG_METER_TYPE, "gauge"));
+
+                } else if ("messages.processed".equals(name)) {
 
                     newTags.add(Tag.of(TAG_METER_TYPE, "meter"));
                     // extract the "sub-name" into a separate tag
@@ -70,16 +83,16 @@ public class LegacyMetricsConfig extends AbstractLegacyMetricsConfig {
                     newTags.add(Tag.of(TAG_SUB_NAME, name.substring("messages.".length())));
                     name = "messages";
 
-                } else if (name.startsWith("payload.")
-                        || name.startsWith("command.")) {
+                } else if (name.startsWith("messages.")) {
 
-                    newTags.add(Tag.of(TAG_METER_TYPE, "meter"));
+                    newTags.add(Tag.of(TAG_METER_TYPE, "counter"));
+                    newTags.add(Tag.of(TAG_SUB_NAME, name.substring("messages.".length())));
+                    name = "messages";
 
                 }
 
                 return new Meter.Id(name, newTags, id.getBaseUnit(), id.getDescription(),
                         id.getType());
-
             }
         };
     }

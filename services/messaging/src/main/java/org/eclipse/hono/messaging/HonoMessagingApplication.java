@@ -35,8 +35,7 @@ import io.vertx.core.Verticle;
                         "org.eclipse.hono.messaging",
                         "org.eclipse.hono.telemetry",
                         "org.eclipse.hono.event",
-                        "org.eclipse.hono.service.auth",
-                        "org.eclipse.hono.service.metric" })
+                        "org.eclipse.hono.service.auth" })
 @Configuration
 @EnableAutoConfiguration
 public class HonoMessagingApplication extends AbstractApplication {
