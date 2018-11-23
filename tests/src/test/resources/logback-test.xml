@@ -42,6 +42,7 @@
   <logger name="org.eclipse.hono.tests.client" level="INFO"/>
   <logger name="org.eclipse.hono.tests.http" level="INFO"/>
   <logger name="org.eclipse.hono.tests.jms" level="INFO"/>
+  <logger name="org.eclipse.hono.tests.mqtt" level="INFO"/>
 
   <logger name="org.apache.qpid.jms" level="INFO"/>
   <!-- 

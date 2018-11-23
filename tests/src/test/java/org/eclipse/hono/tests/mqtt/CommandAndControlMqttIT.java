@@ -20,6 +20,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ClientErrorException;
@@ -93,6 +94,32 @@ public class CommandAndControlMqttIT extends MqttTestBase {
     }
 
     /**
+     * Verifies that the adapter forwards on-way commands from
+     * an application to a device.
+     * 
+     * @param ctx The vert.x test context.
+     * @throws InterruptedException if not all commands and responses are exchanged in time.
+     */
+    @Test
+    public void testSendOneWayCommandSucceeds(final TestContext ctx) throws InterruptedException {
+
+        final int commandsToSend = 60;
+        final Async commandsReceived = ctx.async(commandsToSend);
+        testSendCommandSucceeds(ctx, msg -> {
+            final ResourceIdentifier topic = ResourceIdentifier.fromString(msg.topicName());
+            ctx.assertEquals(CommandConstants.COMMAND_ENDPOINT, topic.getEndpoint());
+            // extract command
+            final String command = topic.getResourcePath()[5];
+            LOGGER.trace("received one-way command [name: {}]", command);
+            ctx.assertEquals("setValue", command);
+            commandsReceived.countDown();
+        }, payload -> {
+            return helper.sendOneWayCommand(tenantId, deviceId, "setValue", "text/plain", payload, null, 1000);
+        }, commandsToSend);
+        commandsReceived.await();
+    }
+
+    /**
      * Verifies that the adapter forwards commands and response hence and forth between
      * an application and a device.
      * 
@@ -102,19 +129,7 @@ public class CommandAndControlMqttIT extends MqttTestBase {
     @Test
     public void testSendCommandSucceeds(final TestContext ctx) throws InterruptedException {
 
-        final Async setup = ctx.async();
-        final Async notificationReceived = ctx.async();
-
-        connectToAdapter(tenant, deviceId, password, () -> createConsumer(tenantId, msg -> {
-            // expect empty notification with TTD -1
-            ctx.assertEquals(EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION, msg.getContentType());
-            final TimeUntilDisconnectNotification notification = TimeUntilDisconnectNotification.fromMessage(msg).orElse(null);
-            LOGGER.info("received notification [{}]", notification);
-            ctx.assertNotNull(notification);
-            if (notification.getTtd() == -1) {
-                notificationReceived.complete();
-            }
-        })).compose(conAck -> subscribeToCommands(msg -> {
+        testSendCommandSucceeds(ctx, msg -> {
             final ResourceIdentifier topic = ResourceIdentifier.fromString(msg.topicName());
             if (CommandConstants.COMMAND_ENDPOINT.equals(topic.getEndpoint())) {
                 // extract command and request ID
@@ -131,28 +146,59 @@ public class CommandAndControlMqttIT extends MqttTestBase {
                         false,
                         false);
             }
-        })).setHandler(ctx.asyncAssertSuccess(ok -> setup.complete()));
+        }, payload -> {
+            return helper.sendCommand(tenantId, deviceId, "setValue", "text/plain", payload, null, 200);
+        }, 60);
+    }
+
+    /**
+     * Verifies that the adapter forwards commands and response hence and forth between
+     * an application and a device.
+     * 
+     * @param ctx The vert.x test context.
+     * @throws InterruptedException if not all commands and responses are exchanged in time.
+     */
+    private void testSendCommandSucceeds(
+            final TestContext ctx,
+            final Handler<MqttPublishMessage> commandConsumer,
+            final Function<Buffer, Future<?>> commandSender,
+            final int totalNoOfCommandsToSend) throws InterruptedException {
+
+        final Async setup = ctx.async();
+        final Async notificationReceived = ctx.async();
+
+        connectToAdapter(tenant, deviceId, password, () -> createConsumer(tenantId, msg -> {
+            // expect empty notification with TTD -1
+            ctx.assertEquals(EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION, msg.getContentType());
+            final TimeUntilDisconnectNotification notification = TimeUntilDisconnectNotification.fromMessage(msg).orElse(null);
+            LOGGER.info("received notification [{}]", notification);
+            ctx.assertNotNull(notification);
+            if (notification.getTtd() == -1) {
+                notificationReceived.complete();
+            }
+        }))
+        .compose(conAck -> subscribeToCommands(commandConsumer))
+        .setHandler(ctx.asyncAssertSuccess(ok -> setup.complete()));
         setup.await();
         notificationReceived.await();
 
-        final int totalNoOfcommandsToSend = 60;
-        final CountDownLatch responsesReceived = new CountDownLatch(totalNoOfcommandsToSend);
+        final CountDownLatch commandsSucceeded = new CountDownLatch(totalNoOfCommandsToSend);
         final AtomicInteger commandsSent = new AtomicInteger(0);
         final AtomicLong lastReceivedTimestamp = new AtomicLong();
         final long start = System.currentTimeMillis();
 
-        while (commandsSent.get() < totalNoOfcommandsToSend) {
+        while (commandsSent.get() < totalNoOfCommandsToSend) {
             final Async commandSent = ctx.async();
             context.runOnContext(go -> {
                 final Buffer msg = Buffer.buffer("value: " + commandsSent.getAndIncrement());
-                helper.sendCommand(tenantId, deviceId, "setValue", "text/plain", msg, null, 200).setHandler(sendAttempt -> {
+                commandSender.apply(msg).setHandler(sendAttempt -> {
                     if (sendAttempt.failed()) {
                         LOGGER.debug("error sending command {}", commandsSent.get(), sendAttempt.cause());
                     } else {
                         lastReceivedTimestamp.set(System.currentTimeMillis());
-                        responsesReceived.countDown();
-                        if (responsesReceived.getCount() % 20 == 0) {
-                            LOGGER.info("responses received: {}", totalNoOfcommandsToSend - responsesReceived.getCount());
+                        commandsSucceeded.countDown();
+                        if (commandsSucceeded.getCount() % 20 == 0) {
+                            LOGGER.info("commands succeeded: {}", totalNoOfCommandsToSend - commandsSucceeded.getCount());
                         }
                     }
                     if (commandsSent.get() % 20 == 0) {
@@ -165,15 +211,15 @@ public class CommandAndControlMqttIT extends MqttTestBase {
             commandSent.await();
         }
 
-        final long timeToWait = totalNoOfcommandsToSend * 200;
-        if (!responsesReceived.await(timeToWait, TimeUnit.MILLISECONDS)) {
-            LOGGER.info("Timeout of {} milliseconds reached, stop waiting to receive command responses.", timeToWait);
+        final long timeToWait = totalNoOfCommandsToSend * 200;
+        if (!commandsSucceeded.await(timeToWait, TimeUnit.MILLISECONDS)) {
+            LOGGER.info("Timeout of {} milliseconds reached, stop waiting for commands to succeed", timeToWait);
         }
-        final long messagesReceived = totalNoOfcommandsToSend - responsesReceived.getCount();
-        LOGGER.info("sent {} commands and received {} responses in {} milliseconds",
-                commandsSent.get(), messagesReceived, lastReceivedTimestamp.get() - start);
-        if (messagesReceived != commandsSent.get()) {
-            ctx.fail("did not receive a response for each command sent");
+        final long commandsCompleted = totalNoOfCommandsToSend - commandsSucceeded.getCount();
+        LOGGER.info("commands sent: {}, commands succeeded: {} after {} milliseconds",
+                commandsSent.get(), commandsCompleted, lastReceivedTimestamp.get() - start);
+        if (commandsCompleted != commandsSent.get()) {
+            ctx.fail("did not complete all commands sent");
         }
     }
 
