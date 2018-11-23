@@ -20,10 +20,13 @@ In order to enable *Swarm Mode* on your *Docker Engine* run the following comman
 Please refer to the [Docker Swarm Mode documentation](https://docs.docker.com/engine/swarm/swarm-mode/) for details.
 
 {{% warning %}}
-You will need at least Docker Engine version 1.13.1 in order to run the example in this guide. By the time of writing, the latest released version of Docker was 18.05.0.
+You will need at least Docker Engine version 1.13.1 in order to run the example in this guide. By the time of writing, the latest released version of Docker was 18.09.0.
 {{% /warning %}}
 
 ### Compiling
+
+Recently released versions of OpenJDK 1.8.0 and 10 contain several bugs that prevent Hono from being compiled successfully using any of these JDKs.
+It is therefore recommended to use OpenJDK 9 or 11.0.1 instead. Note that using any of these JDKs for compiling the source code will still result in class files that can be run on any JVM >= 1.8.0.
 
 If you do not already have a working Maven installation on your system, please follow the [installation instructions on the Maven home page](https://maven.apache.org/).
 

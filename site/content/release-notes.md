@@ -2,11 +2,13 @@
 title = "Release Notes"
 +++
 
-## 0.8 (not released yet)
+## 0.8
 
 ### New Features
 
-* The already specified new message exchange pattern - called *one-way commands* - is now available to *business applications*. Therefore the `CommandClient` class was extended by a method `sendOneWayCommand` that does not expect a response from the device. See the `HonoExampleApplicationBase` class for how to use this new command pattern.
+* The already specified new message exchange pattern - called *one-way commands* - is now available to *business applications*.
+  Therefore the `CommandClient` class was extended by a method `sendOneWayCommand` that does not expect a response from the device.
+  See the `HonoExampleApplicationBase` class for how to use this new command pattern.
   On the adapter side, this pattern is supported by the HTTP, MQTT and AMQP adapter so far.
 
 ### Fixes & Enhancements
@@ -15,8 +17,10 @@ title = "Release Notes"
   opens a link for uploading messages and for each message sent by the device. It also adds information to traces created
   for command messages to be sent to a device.
 * The AMQP adapter command line client now uses property names that match those of the HonoClient.
-* The Command client now has the provision to check the available credits before sending any commands using `getCredit()`. Also a handler can be set using `sendQueueDrainHandler(Handler<Void> handler)`, so that the client is notified when credits are replenished. 
-* The example application `HonoExampleApplication` can now be configured to only send `one-way commands` in response to downstream messages by setting the new system property `sendOneWayCommands`. 
+* The Command client now has the provision to check the available credits before sending any commands using `getCredit()`.
+  Also a handler can be set using `sendQueueDrainHandler(Handler<Void> handler)`, so that the client is notified when credits are replenished. 
+* The example application `HonoExampleApplication` can now be configured to only send `one-way commands` in response to
+  downstream messages by setting the new system property `sendOneWayCommands`. 
 
 ### API Changes
 
