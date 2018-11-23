@@ -1,6 +1,6 @@
 +++
 title = "Hono Messaging Configuration"
-weight = 310
+weight = 360
 +++
 
 The Hono Messaging component exposes service endpoints implementing the *south bound* part of Eclipse Hono&trade;'s [Telemetry]({{< ref "Telemetry-API.md" >}}) and [Event]({{< ref "Event-API.md" >}}) APIs.
