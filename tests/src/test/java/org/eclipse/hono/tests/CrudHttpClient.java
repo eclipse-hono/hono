@@ -13,6 +13,7 @@
 
 package org.eclipse.hono.tests;
 
+import java.net.HttpURLConnection;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Predicate;
@@ -124,7 +125,7 @@ public final class CrudHttpClient {
                         if (successPredicate.test(response.statusCode())) {
                             result.complete(response.headers());
                         } else {
-                            result.fail(new ServiceInvocationException(response.statusCode()));
+                            result.fail(newServiceInvocationException(response.statusCode()));
                         }
                     }).exceptionHandler(result::fail);
 
@@ -239,7 +240,7 @@ public final class CrudHttpClient {
                         if (successPredicate.test(response)) {
                             result.complete(response.headers());
                         } else {
-                            result.fail(new ServiceInvocationException(response.statusCode()));
+                            result.fail(newServiceInvocationException(response.statusCode()));
                         }
                     }).exceptionHandler(result::fail);
 
@@ -356,7 +357,7 @@ public final class CrudHttpClient {
                         if (successPredicate.test(response.statusCode())) {
                             result.complete(response.headers());
                         } else {
-                            result.fail(new ServiceInvocationException(response.statusCode()));
+                            result.fail(newServiceInvocationException(response.statusCode()));
                         }
                     }).exceptionHandler(result::fail);
 
@@ -409,7 +410,7 @@ public final class CrudHttpClient {
                 if (successPredicate.test(response.statusCode())) {
                     response.bodyHandler(body -> result.complete(body));
                 } else {
-                    result.fail(new ServiceInvocationException(response.statusCode()));
+                    result.fail(newServiceInvocationException(response.statusCode()));
                 }
             }).exceptionHandler(result::fail).end();
 
@@ -453,12 +454,17 @@ public final class CrudHttpClient {
                 if (successPredicate.test(response.statusCode())) {
                     result.complete();
                 } else {
-                    result.fail(new ServiceInvocationException(response.statusCode()));
+                    result.fail(newServiceInvocationException(response.statusCode()));
                 }
             }).exceptionHandler(result::fail).end();
         });
 
         return result;
+    }
+
+    private static ServiceInvocationException newServiceInvocationException(final int statusCode) {
+        final int errorCode = statusCode >= 400 ? statusCode : HttpURLConnection.HTTP_PRECON_FAILED;
+        return new ServiceInvocationException(errorCode);
     }
 
     @Override
