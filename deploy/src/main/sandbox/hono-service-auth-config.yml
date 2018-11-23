@@ -9,3 +9,15 @@ hono:
       trustStorePath: /run/secrets/trusted-certs.pem
     svc:
       permissionsPath: file:///run/secrets/sandbox-permissions.json
+  metrics:
+    legacy: true
+
+# disable spring boot actuator endpoints, enable metrics
+endpoints:
+  enabled: false
+management:
+  metrics:
+    export:
+      graphite:
+        host: influxdb.hono
+        port: 2003
