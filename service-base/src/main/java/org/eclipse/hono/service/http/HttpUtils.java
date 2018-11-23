@@ -30,6 +30,7 @@ import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.EventConstants;
 
 /**
  * A collection of utility methods for processing HTTP requests.
@@ -211,6 +212,18 @@ public final class HttpUtils {
     public static String getContentType(final RoutingContext ctx) {
 
         return Objects.requireNonNull(ctx).parsedHeaders().contentType().value();
+    }
+
+    /**
+     * Checks if a given request contains an empty notification.
+     * 
+     * @param ctx The routing context containing the HTTP request.
+     * @return {@code true} if the request contains an empty notification.
+     */
+    public static boolean isEmptyNotification(final RoutingContext ctx) {
+
+        return Optional.ofNullable(getContentType(ctx)).map(type -> EventConstants.isEmptyNotificationType(type))
+                .orElse(false);
     }
 
     /**

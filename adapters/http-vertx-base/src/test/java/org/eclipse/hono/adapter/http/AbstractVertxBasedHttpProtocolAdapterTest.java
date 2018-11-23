@@ -15,6 +15,7 @@ package org.eclipse.hono.adapter.http;
 
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.is;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -31,14 +32,16 @@ import java.net.HttpURLConnection;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ClientErrorException;
-import org.eclipse.hono.client.HonoClient;
-import org.eclipse.hono.client.MessageSender;
-import org.eclipse.hono.client.RegistrationClient;
-import org.eclipse.hono.client.TenantClient;
 import org.eclipse.hono.client.CommandConnection;
 import org.eclipse.hono.client.CommandConsumer;
 import org.eclipse.hono.client.CommandContext;
+import org.eclipse.hono.client.HonoClient;
+import org.eclipse.hono.client.MessageSender;
+import org.eclipse.hono.client.RegistrationClient;
+import org.eclipse.hono.client.ResourceConflictException;
+import org.eclipse.hono.client.TenantClient;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.TenantConstants;
@@ -67,6 +70,8 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
+import io.vertx.ext.web.MIMEHeader;
+import io.vertx.ext.web.ParsedHeaderValues;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.proton.ProtonDelivery;
@@ -287,14 +292,14 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         // WHEN a device publishes an event
         final Buffer payload = Buffer.buffer("some payload");
         final HttpServerResponse response = mock(HttpServerResponse.class);
-        final RoutingContext ctx = newRoutingContext(payload, response);
+        final RoutingContext ctx = newRoutingContext(payload, "application/text", mock(HttpServerRequest.class), response);
         when(ctx.addBodyEndHandler(any(Handler.class))).thenAnswer(invocation -> {
             final Handler<Void> handler = invocation.getArgument(0);
             handler.handle(null);
             return 0;
         });
 
-        adapter.uploadEventMessage(ctx, "tenant", "device", payload, "application/text");
+        adapter.uploadEventMessage(ctx, "tenant", "device");
 
         // THEN the device does not get a response
         verify(response, never()).end();
@@ -354,14 +359,14 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         // WHEN a device publishes a telemetry message
         final Buffer payload = Buffer.buffer("some payload");
         final HttpServerResponse response = mock(HttpServerResponse.class);
-        final RoutingContext ctx = newRoutingContext(payload, response);
+        final RoutingContext ctx = newRoutingContext(payload, "application/text", mock(HttpServerRequest.class), response);
         when(ctx.addBodyEndHandler(any(Handler.class))).thenAnswer(invocation -> {
             final Handler<Void> handler = invocation.getArgument(0);
             handler.handle(null);
             return 0;
         });
 
-        adapter.uploadTelemetryMessage(ctx, "tenant", "device", payload, "application/text");
+        adapter.uploadTelemetryMessage(ctx, "tenant", "device");
 
         // THEN the device receives a 202 response immediately
         verify(response).setStatusCode(202);
@@ -372,6 +377,70 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
     }
 
     /**
+     * Verifies that the adapter does not include a TTD value provided by a device
+     * in the downstream message if the Command consumer for the device is already
+     * in use.
+     */
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testUploadTelemetryRemovesTtdIfCommandConsumerIsInUse() {
+
+        // GIVEN an adapter with a downstream telemetry consumer attached
+        final HttpServer server = getHttpServer(false);
+        final AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> adapter = getAdapter(server, null);
+        final MessageSender sender = givenATelemetrySenderForOutcome(Future.succeededFuture());
+
+        // WHEN a device publishes a telemetry message with a TTD
+        final Buffer payload = Buffer.buffer("some payload");
+        final HttpServerResponse response = mock(HttpServerResponse.class);
+        final HttpServerRequest request = mock(HttpServerRequest.class);
+        when(request.getHeader(eq(Constants.HEADER_TIME_TIL_DISCONNECT))).thenReturn("10");
+        final RoutingContext ctx = newRoutingContext(payload, "text/plain", request, response);
+        // and the Command consumer for the device is already in use
+        when(commandConnection.createCommandConsumer(eq("tenant"), eq("device"), any(Handler.class), any()))
+            .thenReturn(Future.failedFuture(new ResourceConflictException("consumer in use")));
+        adapter.uploadTelemetryMessage(ctx, "tenant", "device");
+
+        // THEN the device receives a 202 response immediately
+        verify(response).setStatusCode(202);
+        verify(response).end();
+        // and the downstream message does not contain any TTD value
+        final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
+        verify(sender).send(messageCaptor.capture(), (SpanContext) any());
+        assertNull(MessageHelper.getTimeUntilDisconnect(messageCaptor.getValue()));
+    }
+
+    /**
+     * Verifies that the adapter does not forward an empty notification if the Command consumer
+     * for the device is already in use.
+     */
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testUploadEmptyNotificationSucceedsIfCommandConsumerIsInUse() {
+
+        // GIVEN an adapter with a downstream event consumer attached
+        final HttpServer server = getHttpServer(false);
+        final AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> adapter = getAdapter(server, null);
+        final MessageSender sender = givenAnEventSenderForOutcome(Future.succeededFuture());
+
+        // WHEN a device publishes an empty notification event with a TTD
+        final HttpServerResponse response = mock(HttpServerResponse.class);
+        final HttpServerRequest request = mock(HttpServerRequest.class);
+        when(request.getHeader(eq(Constants.HEADER_TIME_TIL_DISCONNECT))).thenReturn("10");
+        final RoutingContext ctx = newRoutingContext(null, EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION, request, response);
+        // and the Command consumer for the device is already in use
+        when(commandConnection.createCommandConsumer(eq("tenant"), eq("device"), any(Handler.class), any()))
+            .thenReturn(Future.failedFuture(new ResourceConflictException("consumer in use")));
+        adapter.uploadEventMessage(ctx, "tenant", "device");
+
+        // THEN the device receives a 202 response immediately
+        verify(response).setStatusCode(202);
+        verify(response).end();
+        // and no message is being sent downstream
+        verify(sender, never()).sendAndWaitForOutcome(any(Message.class), (SpanContext) any());
+    }
+
+    /**
      * Verifies that the adapter uses the max TTD configured for the adapter if a device provides
      * a TTD value that is greater than the max value.
      */
@@ -379,9 +448,6 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
     public void testUploadTelemetryUsesConfiguredMaxTtd() {
 
         // GIVEN an adapter with a downstream telemetry consumer attached
-        final Future<ProtonDelivery> outcome = Future.succeededFuture(mock(ProtonDelivery.class));
-        givenATelemetrySenderForOutcome(outcome);
-
         final HttpServer server = getHttpServer(false);
         final AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> adapter = getAdapter(server, null);
         final MessageSender sender = givenATelemetrySenderForOutcome(Future.succeededFuture());
@@ -396,9 +462,9 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         final HttpServerResponse response = mock(HttpServerResponse.class);
         final HttpServerRequest request = mock(HttpServerRequest.class);
         when(request.getHeader(eq(Constants.HEADER_TIME_TIL_DISCONNECT))).thenReturn("40");
-        final RoutingContext ctx = newRoutingContext(payload, request, response);
+        final RoutingContext ctx = newRoutingContext(payload, "application/text", request, response);
 
-        adapter.uploadTelemetryMessage(ctx, "tenant", "device", payload, "application/text");
+        adapter.uploadTelemetryMessage(ctx, "tenant", "device");
 
         // THEN the device receives a 202 response immediately
         verify(response).setStatusCode(202);
@@ -422,8 +488,18 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
             final HttpServerRequest request,
             final HttpServerResponse response) {
 
+        return newRoutingContext(payload, null, request, response);
+    }
+
+    private RoutingContext newRoutingContext(
+            final Buffer payload,
+            final String contentType,
+            final HttpServerRequest request,
+            final HttpServerResponse response) {
+
         when(response.setStatusCode(anyInt())).thenReturn(response);
         when(response.closed()).thenReturn(false);
+
 
         final RoutingContext ctx = mock(RoutingContext.class, Mockito.RETURNS_SMART_NULLS);
         when(ctx.getBody()).thenReturn(payload);
@@ -432,6 +508,14 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         when(ctx.get(TracingHandler.CURRENT_SPAN)).thenReturn(mock(Span.class));
         when(ctx.vertx()).thenReturn(vertx);
         when(ctx.get(CommandContext.KEY_COMMAND_CONTEXT)).thenReturn(null);
+
+        if (contentType != null) {
+            final MIMEHeader headerContentType = mock(MIMEHeader.class);
+            when(headerContentType.value()).thenReturn(contentType);
+            final ParsedHeaderValues headers = mock(ParsedHeaderValues.class);
+            when(headers.contentType()).thenReturn(headerContentType);
+            when(ctx.parsedHeaders()).thenReturn(headers);
+        }
         return ctx;
     }
 

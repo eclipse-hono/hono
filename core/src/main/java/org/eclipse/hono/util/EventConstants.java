@@ -32,12 +32,21 @@ public final class EventConstants {
      */
     public static final String EVENT_CONNECTION_NOTIFICATION_CONTENT_TYPE = "application/vnd.eclipse-hono-dc-notification+json";
 
-    private EventConstants() {
-    }
-
     /**
      * The content type that is defined for empty events without any payload.
      */
     public static final String CONTENT_TYPE_EMPTY_NOTIFICATION = "application/vnd.eclipse-hono-empty-notification";
 
+    private EventConstants() {
+    }
+
+    /**
+     * Checks if a given content type is the empty notification type.
+     * 
+     * @param contentType The content type to check.
+     * @return {@code true} if the given type is the empty notification type.
+     */
+    public static boolean isEmptyNotificationType(final String contentType) {
+        return CONTENT_TYPE_EMPTY_NOTIFICATION.equals(contentType);
+    }
 }

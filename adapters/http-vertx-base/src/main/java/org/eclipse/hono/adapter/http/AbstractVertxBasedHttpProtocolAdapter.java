@@ -589,6 +589,9 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
 
                     if (tenantConfigTracker.result().isAdapterEnabled(getTypeName())) {
                         final MessageSender sender = senderTracker.result();
+
+                        final Integer ttd = Optional.ofNullable(commandConsumerTracker.result()).map(c -> ttdTracker.result())
+                                .orElse(null);
                         final Message downstreamMessage = newMessage(
                                 ResourceIdentifier.from(endpointName, tenant, deviceId),
                                 sender.isRegistrationAssertionRequired(),
@@ -596,23 +599,40 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                                 contentType,
                                 payload,
                                 tokenTracker.result(),
-                                ttdTracker.result());
+                                ttd);
                         customizeDownstreamMessage(downstreamMessage, ctx);
 
                         addConnectionCloseHandler(ctx, commandConsumerTracker.result(), tenant, deviceId);
 
                         if (qos == null) {
-                            return CompositeFuture.all(sender.send(downstreamMessage, currentSpan.context()), responseReady);
+                            return CompositeFuture.all(
+                                    sender.send(downstreamMessage, currentSpan.context()),
+                                    responseReady)
+                                    .map(s -> (Void) null);
                         } else {
                             currentSpan.setTag(Constants.HEADER_QOS_LEVEL, qosHeaderValue);
-                            return CompositeFuture.all(sender.sendAndWaitForOutcome(downstreamMessage, currentSpan.context()), responseReady);
+                            return CompositeFuture.all(
+                                    sender.sendAndWaitForOutcome(downstreamMessage, currentSpan.context()),
+                                    responseReady)
+                                    .map(s -> (Void) null);
                         }
                     } else {
                         // this adapter is not enabled for the tenant
                         return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_FORBIDDEN,
                                 "adapter is not enabled for tenant"));
                     }
-                }).compose(delivery -> {
+                })
+                .recover(t -> {
+                    if (t instanceof ResourceConflictException) {
+                        // simply return an empty response
+                        LOG.debug("ignoring empty notification [tenant: {}, device-id: {}], command consumer is already in use",
+                                tenant, deviceId);
+                        return Future.succeededFuture();
+                    } else {
+                        return Future.failedFuture(t);
+                    }
+                })
+                .compose(proceed -> {
 
                     if (!ctx.response().closed()) {
                         final CommandContext commandContext = ctx.get(CommandContext.KEY_COMMAND_CONTEXT);
@@ -654,7 +674,8 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
 
                     return Future.succeededFuture();
 
-                }).recover(t -> {
+                })
+                .recover(t -> {
 
                     LOG.debug("cannot process [{}] message from device [tenantId: {}, deviceId: {}]",
                             endpointName, tenant, deviceId, t);
@@ -770,6 +791,9 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
      *         <p>
      *         The future will be failed with a {@code ServiceInvocationException} if the
      *         message consumer could not be created.
+     *         The future will be failed with a {@code ResourceConflictException} if the
+     *         message consumer for the device is already in use and the request contains
+     *         an empty notification (which does not need to be forwarded downstream).
      * @throws NullPointerException if any of the parameters other than TTD are {@code null}.
      */
     protected final Future<MessageConsumer> createCommandConsumer(
@@ -829,9 +853,14 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                         if (t instanceof ResourceConflictException) {
                             // another request from the same device that contains
                             // a TTD value is already being processed
-                            // let the other request handle the command (if any)
-                            responseReady.tryComplete();
-                            return Future.succeededFuture();
+                            if (HttpUtils.isEmptyNotification(ctx)) {
+                                // no need to forward message downstream
+                                return Future.failedFuture(t);
+                            } else {
+                                // let the other request handle the command (if any)
+                                responseReady.tryComplete();
+                                return Future.succeededFuture();
+                            }
                         } else {
                             return Future.failedFuture(t);
                         }

@@ -682,7 +682,7 @@ public abstract class HttpTestBase {
 
         // GIVEN a registered device
         final Async setup = ctx.async();
-        final Async piggybackedRequestsReceived = ctx.async(2);
+        final Async messagesReceived = ctx.async(2);
         helper.registry.addDeviceForTenant(tenant, deviceId, PWD)
         .compose(ok -> createConsumer(tenantId, msg -> {
             logger.trace("received message: {}", msg);
@@ -691,11 +691,14 @@ public abstract class HttpTestBase {
                 logger.debug("processing piggy backed message [ttd: {}]", ttd);
                 ctx.assertEquals(tenantId, notification.getTenantId());
                 ctx.assertEquals(deviceId, notification.getDeviceId());
-                piggybackedRequestsReceived.countDown();
             });
+            if ("text/plain".equals(msg.getContentType())) {
+                // this is one of the "relevant" messages
+                messagesReceived.countDown();
+            }
         }))
         .compose(c -> {
-            // we need to send an initial request to trigger establishment
+            // we need to send an initial request with QoS 1 to trigger establishment
             // of links required for processing requests in the HTTP adapter
             // otherwise, the second of the two consecutive upload requests
             // might fail immediately because the links have not been established yet
@@ -703,7 +706,7 @@ public abstract class HttpTestBase {
                 getEndpointUri(),
                 Buffer.buffer("trigger msg"),
                 MultiMap.caseInsensitiveMultiMap()
-                    .add(HttpHeaders.CONTENT_TYPE, "text/plain")
+                    .add(HttpHeaders.CONTENT_TYPE, "application/trigger")
                     .add(HttpHeaders.AUTHORIZATION, authorization)
                     .add(HttpHeaders.ORIGIN, ORIGIN_URI)
                     .add(Constants.HEADER_QOS_LEVEL, "1"),
@@ -741,10 +744,10 @@ public abstract class HttpTestBase {
                 });
         logger.info("sent second request");
         // wait for messages having been received
-        piggybackedRequestsReceived.await();
-        // send command but do not wait for response
+        messagesReceived.await();
+        // send command
         final JsonObject inputData = new JsonObject().put(COMMAND_JSON_KEY, (int) (Math.random() * 100));
-        helper.sendCommand(tenantId, deviceId, COMMAND_TO_SEND, "application/json", inputData.toBuffer(), null, 3000);
+        helper.sendOneWayCommand(tenantId, deviceId, COMMAND_TO_SEND, "application/json", inputData.toBuffer(), null, 3000);
         logger.info("sent command to device");
 
         // THEN both requests succeed
@@ -753,8 +756,6 @@ public abstract class HttpTestBase {
             // and the response to the first request contains a command
             final MultiMap responseHeaders = firstRequest.result();
             ctx.assertEquals(COMMAND_TO_SEND, responseHeaders.get(Constants.HEADER_COMMAND));
-            ctx.assertEquals("application/json", responseHeaders.get(HttpHeaders.CONTENT_TYPE));
-            ctx.assertNotNull(responseHeaders.get(Constants.HEADER_COMMAND_REQUEST_ID));
 
             return null;
 
@@ -763,8 +764,6 @@ public abstract class HttpTestBase {
             // while the response to the second request is empty
             final MultiMap responseHeaders = secondRequest.result();
             ctx.assertNull(responseHeaders.get(Constants.HEADER_COMMAND));
-            ctx.assertNull(responseHeaders.get(Constants.HEADER_COMMAND_REQUEST_ID));
-            ctx.assertEquals(responseHeaders.get(HttpHeaders.CONTENT_LENGTH), "0");
             return null;
 
         }).setHandler(ctx.asyncAssertSuccess());
@@ -850,20 +849,19 @@ public abstract class HttpTestBase {
 
         testUploadMessages(ctx, tenantId,
                 msg -> {
-                    final Integer ttd = MessageHelper.getTimeUntilDisconnect(msg);
-                    logger.trace("piggy backed message received: {}, ttd = {}", msg, ttd);
-                    final Optional<TimeUntilDisconnectNotification> notificationOpt = TimeUntilDisconnectNotification.fromMessage(msg);
-                    ctx.assertTrue(notificationOpt.isPresent());
-                    final TimeUntilDisconnectNotification notification = notificationOpt.get();
-                    ctx.assertEquals(tenantId, notification.getTenantId());
-                    ctx.assertEquals(deviceId, notification.getDeviceId());
-                    // now ready to send a command
-                    final JsonObject inputData = new JsonObject().put(COMMAND_JSON_KEY, (int) (Math.random() * 100));
-                    helper
-                        .sendCommand(notification, COMMAND_TO_SEND, "application/json", inputData.toBuffer(), null)
-                        .setHandler(ctx.asyncAssertSuccess(response -> {
-                            ctx.assertEquals("text/plain", response.getContentType());
-                        }));
+
+                    TimeUntilDisconnectNotification.fromMessage(msg).ifPresent(notification -> {
+                        logger.trace("received piggy backed message [ttd: {}]: {}", notification.getTtd(), msg);
+                        ctx.assertEquals(tenantId, notification.getTenantId());
+                        ctx.assertEquals(deviceId, notification.getDeviceId());
+                        // now ready to send a command
+                        final JsonObject inputData = new JsonObject().put(COMMAND_JSON_KEY, (int) (Math.random() * 100));
+                        helper
+                            .sendCommand(notification, COMMAND_TO_SEND, "application/json", inputData.toBuffer(), null)
+                            .setHandler(ctx.asyncAssertSuccess(response -> {
+                                ctx.assertEquals("text/plain", response.getContentType());
+                            }));
+                    });
                 },
                 count -> {
                     return httpClient.create(
