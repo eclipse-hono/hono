@@ -68,7 +68,7 @@ public class ServiceInvocationException extends RuntimeException {
     public ServiceInvocationException(final int errorCode, final String msg, final Throwable cause) {
         super(providedOrDefaultMessage(errorCode, msg), cause);
         if (errorCode < 400 || errorCode >= 600) {
-            throw new IllegalArgumentException("status code must be >= 400 and < 600");
+            throw new IllegalArgumentException(String.format("illegal error code [%d], must be >= 400 and < 600", errorCode));
         } else {
             this.errorCode = errorCode;
         }
