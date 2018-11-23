@@ -894,6 +894,77 @@ public abstract class HttpTestBase {
                 });
     }
 
+    /**
+     * Verifies that the HTTP adapter delivers a command to a device and accepts the corresponding
+     * response from the device.
+     * 
+     * @param ctx The test context.
+     * @throws InterruptedException if the test fails.
+     */
+    @Test
+    public void testUploadMessagesWithTtdThatReplyWithOneWayCommand(final TestContext ctx) throws InterruptedException {
+
+        final Async setup = ctx.async();
+        final TenantObject tenant = TenantObject.from(tenantId, true);
+
+        final MultiMap requestHeaders = MultiMap.caseInsensitiveMultiMap()
+                .add(HttpHeaders.CONTENT_TYPE, "text/plain")
+                .add(HttpHeaders.AUTHORIZATION, authorization)
+                .add(HttpHeaders.ORIGIN, ORIGIN_URI)
+                .add(Constants.HEADER_TIME_TIL_DISCONNECT, "2");
+
+        helper.registry.addDeviceForTenant(tenant, deviceId, PWD).setHandler(ctx.asyncAssertSuccess(ok -> setup.complete()));
+        setup.await();
+
+        testUploadMessages(ctx, tenantId,
+                msg -> {
+                    TimeUntilDisconnectNotification.fromMessage(msg).ifPresent(notification -> {
+
+                        logger.trace("received piggy backed message [ttd: {}]: {}", notification.getTtd(), msg);
+                        ctx.assertEquals(tenantId, notification.getTenantId());
+                        ctx.assertEquals(deviceId, notification.getDeviceId());
+                        // now ready to send a command
+                        final JsonObject inputData = new JsonObject().put(COMMAND_JSON_KEY, (int) (Math.random() * 100));
+                        helper
+                            .sendOneWayCommand(notification, COMMAND_TO_SEND, "application/json", inputData.toBuffer(), null)
+                            .setHandler(ctx.asyncAssertSuccess());
+                    });
+                },
+                count -> {
+                    final Buffer payload = Buffer.buffer("hello " + count);
+                    return httpClient.create(
+                            getEndpointUri(),
+                            payload,
+                            requestHeaders,
+                            response -> response.statusCode() == HttpURLConnection.HTTP_OK)
+                    .recover(t -> {
+
+                        // we probably sent the request before the
+                        // HTTP adapter was able to close the command
+                        // consumer for the previous request
+                        // wait a little and try again
+                        final Future<MultiMap> retryResult = Future.future();
+                        VERTX.setTimer(100, retry -> {
+                            logger.info("re-trying last request [{}]", count);
+                            httpClient.create(
+                                    getEndpointUri(),
+                                    payload,
+                                    requestHeaders,
+                                    response -> response.statusCode() == HttpURLConnection.HTTP_OK)
+                            .setHandler(retryResult);
+                        });
+                        return retryResult;
+                    })
+                    .map(responseHeaders -> {
+                        // assert that the response contains a one-way command
+                        ctx.assertEquals(COMMAND_TO_SEND, responseHeaders.get(Constants.HEADER_COMMAND));
+                        ctx.assertEquals("application/json", responseHeaders.get(HttpHeaders.CONTENT_TYPE));
+                        ctx.assertNull(responseHeaders.get(Constants.HEADER_COMMAND_REQUEST_ID));
+                        return responseHeaders;
+                    });
+                });
+    }
+
     private static String getCommandResponseUri(final String commandRequestId) {
         return String.format(COMMAND_RESPONSE_URI_TEMPLATE, commandRequestId);
     }
