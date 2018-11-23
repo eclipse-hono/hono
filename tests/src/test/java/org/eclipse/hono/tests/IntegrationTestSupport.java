@@ -39,6 +39,7 @@ import org.slf4j.LoggerFactory;
 
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
+import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonArray;
@@ -327,19 +328,103 @@ public final class IntegrationTestSupport {
         return honoClient.getOrCreateCommandClient(tenantId, deviceId).compose(commandClient -> {
 
             commandClient.setRequestTimeout(requestTimeout);
+            final Future<BufferResult> result = Future.future();
+            final Handler<Void> send = s -> {
+                // send the command upstream to the device
+                LOGGER.trace("sending command [name: {}, contentType: {}, payload: {}]", command, contentType, payload);
+                commandClient.sendCommand(command, contentType, payload, properties).map(responsePayload -> {
+                    LOGGER.debug("successfully sent command [name: {}, payload: {}] and received response [payload: {}]",
+                            command, payload, responsePayload);
+                    commandClient.close(v -> {});
+                    return responsePayload;
+                }).recover(t -> {
+                    LOGGER.debug("could not send command or did not receive a response: {}", t.getMessage());
+                    commandClient.close(v -> {});
+                    return Future.failedFuture(t);
+                }).setHandler(result);
+            };
+            if (commandClient.getCredit() == 0) {
+                commandClient.sendQueueDrainHandler(send);
+            } else {
+                send.handle(null);
+            }
+            return result;
+        });
+    }
 
-            // send the command upstream to the device
-            LOGGER.trace("sending command [name: {}, contentType: {}, payload: {}]", command, contentType, payload);
-            return commandClient.sendCommand(command, contentType, payload, properties).map(responsePayload -> {
-                LOGGER.debug("successfully sent command [name: {}, payload: {}] and received response [payload: {}]",
-                        command, payload, responsePayload);
-                commandClient.close(v -> {});
-                return responsePayload;
-            }).recover(t -> {
-                LOGGER.debug("could not send command or did not receive a response: {}", t.getMessage());
-                commandClient.close(v -> {});
-                return Future.failedFuture(t);
-            });
+    /**
+     * Sends a one-way command to a device.
+     * 
+     * @param notification The empty notification indicating the device's readiness to receive a command.
+     * @param command The name of the command to send.
+     * @param contentType The type of the command's input data.
+     * @param payload The command's input data to send to the device.
+     * @param properties The headers to include in the command message as AMQP application properties.
+     * @return A future that is either succeeded if the command has been sent to the device or
+     *         failed with a {@link ServiceInvocationException}.
+     */
+    public Future<Void> sendOneWayCommand(
+            final TimeUntilDisconnectNotification notification,
+            final String command,
+            final String contentType,
+            final Buffer payload,
+            final Map<String, Object> properties) {
+
+        return sendOneWayCommand(
+                notification.getTenantId(),
+                notification.getDeviceId(),
+                command,
+                contentType,
+                payload,
+                properties,
+                notification.getMillisecondsUntilExpiry());
+    }
+
+    /**
+     * Sends a one-way command to a device.
+     * 
+     * @param tenantId The tenant that the device belongs to.
+     * @param deviceId The identifier of the device.
+     * @param command The name of the command to send.
+     * @param contentType The type of the command's input data.
+     * @param payload The command's input data to send to the device.
+     * @param properties The headers to include in the command message as AMQP application properties.
+     * @param requestTimeout The number of milliseconds to wait for the command being sent to the device.
+     * @return A future that is either succeeded if the command has been sent to the device or
+     *         failed with a {@link ServiceInvocationException}.
+     */
+    public Future<Void> sendOneWayCommand(
+            final String tenantId,
+            final String deviceId,
+            final String command,
+            final String contentType,
+            final Buffer payload,
+            final Map<String, Object> properties,
+            final long requestTimeout) {
+
+        return honoClient.getOrCreateCommandClient(tenantId, deviceId).compose(commandClient -> {
+
+            commandClient.setRequestTimeout(requestTimeout);
+            final Future<Void> result = Future.future();
+            final Handler<Void> send = s -> {
+                // send the command upstream to the device
+                LOGGER.trace("sending one-way command [name: {}, contentType: {}, payload: {}]", command, contentType, payload);
+                commandClient.sendOneWayCommand(command, contentType, payload, properties).map(ok -> {
+                    LOGGER.debug("successfully sent one-way command [name: {}, payload: {}]", command, payload);
+                    commandClient.close(v -> {});
+                    return (Void) null;
+                }).recover(t -> {
+                    LOGGER.debug("could not send one-way command: {}", t.getMessage());
+                    commandClient.close(v -> {});
+                    return Future.failedFuture(t);
+                }).setHandler(result);
+            };
+            if (commandClient.getCredit() == 0) {
+                commandClient.sendQueueDrainHandler(send);
+            } else {
+                send.handle(null);
+            }
+            return result;
         });
     }
 
