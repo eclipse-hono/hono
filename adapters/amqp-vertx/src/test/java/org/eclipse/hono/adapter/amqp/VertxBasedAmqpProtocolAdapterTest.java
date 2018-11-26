@@ -38,6 +38,8 @@ import org.apache.qpid.proton.amqp.transport.Source;
 import org.apache.qpid.proton.engine.Record;
 import org.apache.qpid.proton.engine.impl.RecordImpl;
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.auth.Device;
+import org.eclipse.hono.client.CommandConnection;
 import org.eclipse.hono.client.CommandResponse;
 import org.eclipse.hono.client.CommandResponseSender;
 import org.eclipse.hono.client.HonoClient;
@@ -46,9 +48,6 @@ import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.TenantClient;
-import org.eclipse.hono.client.CommandConnection;
-import org.eclipse.hono.auth.Device;
-import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
@@ -111,7 +110,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
     private RegistrationClient registrationClient;
     private TenantClient tenantClient;
 
-    private ProtocolAdapterProperties config;
+    private AmqpAdapterProperties config;
 
     /**
      * Setups the protocol adapter.
@@ -153,7 +152,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
         commandConnection = mock(CommandConnection.class);
         when(commandConnection.connect(any(Handler.class))).thenReturn(Future.succeededFuture(commandConnection));
 
-        config = new ProtocolAdapterProperties();
+        config = new AmqpAdapterProperties();
         config.setAuthenticationRequired(false);
         config.setInsecurePort(4040);
     }

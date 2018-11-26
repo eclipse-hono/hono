@@ -18,6 +18,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
+import org.apache.qpid.proton.amqp.UnsignedLong;
 import org.apache.qpid.proton.amqp.messaging.Accepted;
 import org.apache.qpid.proton.amqp.messaging.Rejected;
 import org.apache.qpid.proton.amqp.messaging.Released;
@@ -34,7 +35,6 @@ import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
-import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CommandConstants;
@@ -70,12 +70,10 @@ import io.vertx.proton.sasl.ProtonSaslAuthenticatorFactory;
 /**
  * A Vert.x based Hono protocol adapter for publishing messages to Hono's Telemetry and Event APIs using AMQP.
  */
-public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapterBase<ProtocolAdapterProperties> {
+public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapterBase<AmqpAdapterProperties> {
 
     private static final Logger LOG = LoggerFactory.getLogger(VertxBasedAmqpProtocolAdapter.class);
     // These values should be made configurable.
-    private static final int DEFAULT_MAX_FRAME_SIZE = 32 * 1024; // 32 KB
-    private static final int DEFAULT_MAX_SESSION_WINDOW = 100 * DEFAULT_MAX_FRAME_SIZE;
     private static final long DEFAULT_COMMAND_CONSUMER_CHECK_INTERVAL_MILLIS = 10000; // 10 seconds
 
     /**
@@ -164,7 +162,8 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             final ProtonServerOptions options =
                     new ProtonServerOptions()
                     .setHost(getConfig().getInsecurePortBindAddress())
-                    .setPort(determineInsecurePort());
+                    .setPort(determineInsecurePort())
+                    .setMaxFrameSize(getConfig().getMaxFrameSize());
 
             final Future<Void> result = Future.future();
             insecureServer = createServer(insecureServer, options);
@@ -188,7 +187,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                     new ProtonServerOptions()
                     .setHost(getConfig().getBindAddress())
                     .setPort(determineSecurePort())
-                    .setMaxFrameSize(DEFAULT_MAX_FRAME_SIZE);
+                    .setMaxFrameSize(getConfig().getMaxFrameSize());
             addTlsKeyCertOptions(options);
             addTlsTrustOptions(options);
 
@@ -283,6 +282,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
     }
 
     private void setConnectionHandlers(final ProtonConnection con) {
+
         con.disconnectHandler(lostConnection -> {
             LOG.debug("lost connection to device [container: {}]", con.getRemoteContainer());
             Optional.ofNullable(getConnectionLossHandler(con)).ifPresent(handler -> handler.handle(null));
@@ -301,6 +301,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         // uploading messages
         con.receiverOpenHandler(receiver -> {
             HonoProtonHelper.setDefaultCloseHandler(receiver);
+            receiver.setMaxMessageSize(UnsignedLong.valueOf(getConfig().getMaxPayloadSize()));
             handleRemoteReceiverOpen(con, receiver);
         });
         // when the device wants to open a link for
@@ -346,7 +347,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
      */
     private void handleSessionOpen(final ProtonConnection conn, final ProtonSession session) {
         LOG.debug("opening new session with client [container: {}]", conn.getRemoteContainer());
-        session.setIncomingCapacity(DEFAULT_MAX_SESSION_WINDOW);
+        session.setIncomingCapacity(getConfig().getMaxSessionWindowSize());
         session.open();
     }
 
@@ -691,7 +692,9 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
      * @param t The throwable to use to determine the error condition object.
      */
     private <T extends ProtonLink<T>> void closeLinkWithError(final ProtonLink<T> link, final Throwable t) {
-        link.setCondition(AmqpContext.getErrorCondition(t));
+        final ErrorCondition ec = AmqpContext.getErrorCondition(t);
+        LOG.debug("closing link with error condition [symbol: {}, description: {}]", ec.getCondition(), ec.getDescription());
+        link.setCondition(ec);
         link.close();
     }
 

@@ -15,7 +15,6 @@ package org.eclipse.hono.adapter.amqp;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.config.ApplicationConfigProperties;
 import org.eclipse.hono.config.ClientConfigProperties;
-import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.AbstractAdapterConfig;
 import org.eclipse.hono.service.monitoring.ConnectionEventProducer;
 import org.eclipse.hono.service.monitoring.LoggingConnectionEventProducer;
@@ -91,8 +90,8 @@ public class Config extends AbstractAdapterConfig {
      */
     @Bean
     @ConfigurationProperties(prefix = "hono.amqp")
-    public ProtocolAdapterProperties adapterProperties() {
-        final ProtocolAdapterProperties config = new ProtocolAdapterProperties();
+    public AmqpAdapterProperties adapterProperties() {
+        final AmqpAdapterProperties config = new AmqpAdapterProperties();
         return config;
     }
 
