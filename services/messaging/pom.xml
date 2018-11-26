@@ -42,6 +42,11 @@
       <groupId>org.eclipse.hono</groupId>
       <artifactId>hono-service-base</artifactId>
     </dependency>
+    <dependency>
+      <groupId>io.micrometer</groupId>
+      <artifactId>micrometer-registry-graphite</artifactId>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <build>
