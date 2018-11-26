@@ -29,6 +29,7 @@ public final class CredentialsConstants extends RequestResponseApiConstants {
 
     /* secrets fields */
     public static final String FIELD_SECRETS_PWD_HASH            = "pwd-hash";
+    public static final String FIELD_SECRETS_PWD_PLAIN           = "pwd-plain";
     public static final String FIELD_SECRETS_SALT                = "salt";
     public static final String FIELD_SECRETS_HASH_FUNCTION       = "hash-function";
     public static final String FIELD_SECRETS_KEY                 = "key";
@@ -45,6 +46,8 @@ public final class CredentialsConstants extends RequestResponseApiConstants {
      * The type name that indicates a hashed password secret.
      */
     public static final String SECRETS_TYPE_HASHED_PASSWORD      = "hashed-password";
+
+    public static final String SECRETS_TYPE_PLAIN_PASSWORD       = "plain-password";
     /**
      * The type name that indicates a pre-shared key secret.
      */
