@@ -2,6 +2,13 @@
 title = "Release Notes"
 +++
 
+## 0.9-M1 (not released yet)
+
+### New Features
+
+* The default Micrometer backend is now Prometheus, the new dashboards are also
+  using Prometheus as a backend
+
 ## 0.8
 
 ### New Features
