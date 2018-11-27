@@ -251,6 +251,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <SPRING_CONFIG_LOCATION>file:///etc/hono/</SPRING_CONFIG_LOCATION>
                       <SPRING_PROFILES_ACTIVE>authentication-impl,prod</SPRING_PROFILES_ACTIVE>
                       <_JAVA_OPTIONS>${default.java.options}</_JAVA_OPTIONS>
+                      <PN_TRACE_FRM>0</PN_TRACE_FRM>
                     </env>
                     <log>
                       <prefix>AUTH</prefix>
@@ -329,6 +330,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <SPRING_CONFIG_LOCATION>file:///etc/hono/</SPRING_CONFIG_LOCATION>
                       <SPRING_PROFILES_ACTIVE>prod</SPRING_PROFILES_ACTIVE>
                       <_JAVA_OPTIONS>${default.java.options}</_JAVA_OPTIONS>
+                      <PN_TRACE_FRM>0</PN_TRACE_FRM>
                     </env>
                     <log>
                       <prefix>REGISTRY</prefix>
@@ -397,6 +399,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     </network>
                     <env>
                       <ARTEMIS_CONFIGURATION>/etc/hono</ARTEMIS_CONFIGURATION>
+                      <PN_TRACE_FRM>0</PN_TRACE_FRM>
                     </env>
                     <log>
                       <prefix>ARTEMIS</prefix>
@@ -409,11 +412,6 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                         <ports><port>5671</port></ports>
                       </tcp>
                     </wait>
-                    <!--
-                    <env>
-                       <PN_TRACE_FRM>1</PN_TRACE_FRM>
-                    </env>
-                    -->
                   </run>
                 </image>
                 <!-- ##### Qpid Dispatch Router ##### -->
@@ -481,11 +479,9 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                         <ports><port>5672</port></ports>
                       </tcp>
                     </wait>
-                    <!--
                     <env>
-                       <PN_TRACE_FRM>1</PN_TRACE_FRM>
+                      <PN_TRACE_FRM>0</PN_TRACE_FRM>
                     </env>
-                    -->
                   </run>
                 </image>
                 <!-- ##### Messaging service ##### -->
@@ -544,9 +540,9 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     <env>
                       <LOGGING_CONFIG>file:///etc/hono/logback-spring.xml</LOGGING_CONFIG>
                       <SPRING_CONFIG_LOCATION>file:///etc/hono/</SPRING_CONFIG_LOCATION>
-                      <!--<PN_TRACE_FRM>1</PN_TRACE_FRM>-->
                       <SPRING_PROFILES_ACTIVE>qpid,prod</SPRING_PROFILES_ACTIVE>
                       <_JAVA_OPTIONS>${default.java.options}</_JAVA_OPTIONS>
+                      <PN_TRACE_FRM>0</PN_TRACE_FRM>
                     </env>
                     <log>
                       <prefix>MESSAGING</prefix>
@@ -631,10 +627,9 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     <env>
                       <LOGGING_CONFIG>file:/etc/hono/logback-spring.xml</LOGGING_CONFIG>
                       <SPRING_CONFIG_LOCATION>file:/etc/hono/</SPRING_CONFIG_LOCATION>
-                      <!--<PN_TRACE_FRM>1</PN_TRACE_FRM>-->
                       <SPRING_PROFILES_ACTIVE>prod</SPRING_PROFILES_ACTIVE>
-                      <HONO_HTTP_NATIVE_TLS_REQUIRED>true</HONO_HTTP_NATIVE_TLS_REQUIRED>
                       <_JAVA_OPTIONS>${default.java.options}</_JAVA_OPTIONS>
+                      <PN_TRACE_FRM>0</PN_TRACE_FRM>
                     </env>
                     <log>
                       <prefix>HTTP</prefix>
@@ -717,10 +712,9 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     <env>
                       <LOGGING_CONFIG>file:///etc/hono/logback-spring.xml</LOGGING_CONFIG>
                       <SPRING_CONFIG_LOCATION>file:///etc/hono/</SPRING_CONFIG_LOCATION>
-                      <!--<PN_TRACE_FRM>1</PN_TRACE_FRM>-->
                       <SPRING_PROFILES_ACTIVE>prod</SPRING_PROFILES_ACTIVE>
-                      <HONO_MQTT_NATIVE_TLS_REQUIRED>true</HONO_MQTT_NATIVE_TLS_REQUIRED>
                       <_JAVA_OPTIONS>${default.java.options}</_JAVA_OPTIONS>
+                      <PN_TRACE_FRM>0</PN_TRACE_FRM>
                     </env>
                     <log>
                       <prefix>MQTT</prefix>
@@ -798,6 +792,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <SPRING_CONFIG_LOCATION>file:///etc/hono/</SPRING_CONFIG_LOCATION>
                       <SPRING_PROFILES_ACTIVE>prod</SPRING_PROFILES_ACTIVE>
                       <_JAVA_OPTIONS>${default.java.options}</_JAVA_OPTIONS>
+                      <PN_TRACE_FRM>0</PN_TRACE_FRM>
                     </env>
                     <log>
                       <prefix>AMQP</prefix>
