@@ -16,10 +16,12 @@ package org.eclipse.hono.util;
 
 import static org.junit.Assert.assertTrue;
 
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
-import org.apache.qpid.proton.amqp.messaging.Section;
+import org.apache.qpid.proton.amqp.Binary;
+import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.message.Message;
 import org.junit.Test;
 
@@ -97,10 +99,12 @@ public class MessageTapTest {
         assertTrue(messageConsumerCalled.get());
     }
 
-    private Message createTestMessage(final String contentEncoding, final String payload) {
+    private Message createTestMessage(final String contentType, final String payload) {
         final Message msg = createTestMessageWithoutBody(payload);
-        msg.setBody(new Section() {});
-        msg.setContentEncoding(contentEncoding);
+        if (payload != null) {
+            msg.setBody(new Data(new Binary(payload.getBytes(StandardCharsets.UTF_8))));
+        }
+        msg.setContentType(contentType);
         MessageHelper.setJsonPayload(msg, payload);
         return msg;
     }
