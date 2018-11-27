@@ -15,6 +15,7 @@ package org.eclipse.hono.service.auth.impl;
 
 import org.eclipse.hono.config.ApplicationConfigProperties;
 import org.eclipse.hono.config.ServiceConfigProperties;
+import org.eclipse.hono.config.VertxProperties;
 import org.eclipse.hono.service.auth.AuthTokenHelper;
 import org.eclipse.hono.service.auth.AuthTokenHelperImpl;
 import org.eclipse.hono.service.metric.MetricsTags;
@@ -24,13 +25,13 @@ import org.springframework.beans.factory.config.ObjectFactoryCreatingFactoryBean
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Scope;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.spring.autoconfigure.MeterRegistryCustomizer;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
 import io.vertx.core.dns.AddressResolverOptions;
-import org.springframework.context.annotation.Scope;
 
 /**
  * Spring Boot configuration for the simple authentication server application.
@@ -49,12 +50,24 @@ public class ApplicationConfig {
     @Bean
     public Vertx vertx() {
         final VertxOptions options = new VertxOptions()
-                .setWarningExceptionTime(1500000000)
                 .setAddressResolverOptions(new AddressResolverOptions()
                         .setCacheNegativeTimeToLive(0) // discard failed DNS lookup results immediately
                         .setCacheMaxTimeToLive(0) // support DNS based service resolution
                         .setQueryTimeout(1000));
+
+        vertxProperties().configureVertx(options);
         return Vertx.vertx(options);
+    }
+
+    /**
+     * Exposes configuration options for vertx.
+     * 
+     * @return The Properties.
+     */
+    @ConfigurationProperties("hono.vertx")
+    @Bean
+    public VertxProperties vertxProperties() {
+        return new VertxProperties();
     }
 
     /**

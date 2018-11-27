@@ -51,14 +51,11 @@ hono:
     linkEstablishmentTimeout: ${link.establishment.timeout}
   metrics:
     legacy: false
+  vertx:
+    maxEventLoopExecuteTime: ${max.event-loop.execute-time}
 # disable spring boot actuator endpoints, enable metrics
-endpoints:
-  enabled: false
-  metrics:
-    enabled: false
 management:
   metrics:
-    enabled: false
     export:
       graphite:
         enabled: false

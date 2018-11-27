@@ -22,6 +22,8 @@ import io.vertx.core.metrics.MetricsOptions;
 public class VertxProperties {
 
     private boolean preferNative = VertxOptions.DEFAULT_PREFER_NATIVE_TRANSPORT;
+    private boolean enableMetrics = MetricsOptions.DEFAULT_METRICS_ENABLED;
+    private long maxEventLoopExecuteTimeMillis = 2000L;
 
     /**
      * Prefer to use native networking, or not.
@@ -37,8 +39,6 @@ public class VertxProperties {
     public void setPreferNative(final boolean preferNative) {
         this.preferNative = preferNative;
     }
-
-    private boolean enableMetrics = MetricsOptions.DEFAULT_METRICS_ENABLED;
 
     /**
      * Enable the vert.x metrics system, or not.
@@ -58,6 +58,22 @@ public class VertxProperties {
     }
 
     /**
+     * Sets the maximum number of milliseconds that a task on the event loop may
+     * run without being considered to block the event loop.
+     * <p>
+     * The default value of this property is 2000 milliseconds.
+     * 
+     * @param executeTime The number of milliseconds.
+     * @throws IllegalArgumentException if execute time is less than 1.
+     */
+    public void setMaxEventLoopExecuteTime(final long executeTime) {
+        if (executeTime < 1) {
+            throw new IllegalArgumentException("maxEventLoopExecuteTime must be > 0");
+          }
+        this.maxEventLoopExecuteTimeMillis = executeTime;
+    }
+
+    /**
      * Configure the Vertx options according to our settings.
      * 
      * @param options The options to configure.
@@ -70,6 +86,8 @@ public class VertxProperties {
             options.setMetricsOptions(new MetricsOptions().setEnabled(true));
         }
 
+        options.setMaxEventLoopExecuteTime(maxEventLoopExecuteTimeMillis * 1000000L);
+        options.setWarningExceptionTime(maxEventLoopExecuteTimeMillis * 1500000L);
     }
 
 }

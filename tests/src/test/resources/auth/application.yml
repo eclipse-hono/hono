@@ -9,14 +9,12 @@ hono:
       certPath: /etc/hono/certs/auth-server-cert.pem
     svc:
       permissionsPath: file:///etc/hono/permissions.json
-
-endpoints:
-  enabled: false
+  vertx:
+    maxEventLoopExecuteTime: ${max.event-loop.execute-time}
   metrics:
-    enabled: false
+    legacy: false
 management:
   metrics:
-    enabled: false
     export:
       graphite:
         enabled: false

@@ -15,6 +15,7 @@ package org.eclipse.hono.messaging;
 
 import org.eclipse.hono.config.ApplicationConfigProperties;
 import org.eclipse.hono.config.ClientConfigProperties;
+import org.eclipse.hono.config.VertxProperties;
 import org.eclipse.hono.connection.ConnectionFactory;
 import org.eclipse.hono.connection.impl.ConnectionFactoryImpl;
 import org.eclipse.hono.service.metric.MetricsTags;
@@ -66,15 +67,25 @@ public class HonoMessagingApplicationConfig {
     @Bean
     public Vertx vertx() {
         final VertxOptions options = new VertxOptions()
-                .setWarningExceptionTime(1500000000)
                 .setAddressResolverOptions(new AddressResolverOptions()
                         .setCacheNegativeTimeToLive(0) // discard failed DNS lookup results immediately
                         .setCacheMaxTimeToLive(0) // support DNS based service resolution
                         .setQueryTimeout(1000));
 
         configureMetrics(options);
-
+        vertxProperties().configureVertx(options);
         return Vertx.vertx(options);
+    }
+
+    /**
+     * Exposes configuration options for vertx.
+     * 
+     * @return The Properties.
+     */
+    @ConfigurationProperties("hono.vertx")
+    @Bean
+    public VertxProperties vertxProperties() {
+        return new VertxProperties();
     }
 
     /**

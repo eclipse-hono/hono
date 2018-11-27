@@ -73,7 +73,6 @@ public abstract class AbstractAdapterConfig {
     @Bean
     public Vertx vertx() {
         final VertxOptions options = new VertxOptions()
-                .setWarningExceptionTime(1500000000)
                 .setAddressResolverOptions(new AddressResolverOptions()
                         .setCacheNegativeTimeToLive(0) // discard failed DNS lookup results immediately
                         .setCacheMaxTimeToLive(0) // support DNS based service resolution
