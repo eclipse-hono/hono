@@ -365,7 +365,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
             if (server == null) {
                 server = vertx.createHttpServer(getHttpServerOptions());
             }
-            server.requestHandler(router::accept).listen(done -> {
+            server.requestHandler(router).listen(done -> {
                 if (done.succeeded()) {
                     LOG.info("secure http server listening on {}:{}", bindAddress, server.actualPort());
                     result.complete(done.result());
@@ -388,7 +388,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
             if (insecureServer == null) {
                 insecureServer = vertx.createHttpServer(getInsecureHttpServerOptions());
             }
-            insecureServer.requestHandler(router::accept).listen(done -> {
+            insecureServer.requestHandler(router).listen(done -> {
                 if (done.succeeded()) {
                     LOG.info("insecure http server listening on {}:{}", bindAddress, insecureServer.actualPort());
                     result.complete(done.result());

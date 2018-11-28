@@ -19,6 +19,7 @@ import java.util.Base64;
 import java.util.UUID;
 
 import javax.security.auth.x500.X500Principal;
+import javax.security.sasl.SaslException;
 
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.Constants;
@@ -93,7 +94,7 @@ public class AmqpConnectionIT extends AmqpAdapterTestBase {
         connectToAdapter(IntegrationTestSupport.getUsername("non-existing", Constants.DEFAULT_TENANT), "secret")
         .setHandler(ctx.asyncAssertFailure(t -> {
             // THEN the connection is refused
-            ctx.assertTrue(t instanceof SecurityException);
+            ctx.assertTrue(t instanceof SaslException);
         }));
     }
 
@@ -118,7 +119,7 @@ public class AmqpConnectionIT extends AmqpAdapterTestBase {
         .compose(ok -> connectToAdapter(IntegrationTestSupport.getUsername(deviceId, tenantId), "wrong password"))
         .setHandler(ctx.asyncAssertFailure(t -> {
             // THEN the connection is refused
-            ctx.assertTrue(t instanceof SecurityException);
+            ctx.assertTrue(t instanceof SaslException);
         }));
     }
 
@@ -145,7 +146,7 @@ public class AmqpConnectionIT extends AmqpAdapterTestBase {
         .compose(ok -> connectToAdapter(IntegrationTestSupport.getUsername(deviceId, tenantId), password))
         .setHandler(ctx.asyncAssertFailure(t -> {
                 // THEN the connection is refused
-            ctx.assertTrue(t instanceof SecurityException);
+            ctx.assertTrue(t instanceof SaslException);
          }));
     }
 
@@ -192,7 +193,7 @@ public class AmqpConnectionIT extends AmqpAdapterTestBase {
         .compose(ok -> connectToAdapter(deviceId, "secret"))
         .setHandler(context.asyncAssertFailure(t -> {
             // THEN the SASL handshake fails
-            context.assertTrue(t instanceof SecurityException);
+            context.assertTrue(t instanceof SaslException);
         }));
     }
 
@@ -233,7 +234,7 @@ public class AmqpConnectionIT extends AmqpAdapterTestBase {
         })
         .setHandler(ctx.asyncAssertFailure(t -> {
             // THEN the connection is not established
-            ctx.assertTrue(t instanceof SecurityException);
+            ctx.assertTrue(t instanceof SaslException);
         }));
     }
 
@@ -270,7 +271,7 @@ public class AmqpConnectionIT extends AmqpAdapterTestBase {
         })
         .setHandler(ctx.asyncAssertFailure(t -> {
             // THEN the connection is not established
-            ctx.assertTrue(t instanceof SecurityException);
+            ctx.assertTrue(t instanceof SaslException);
         }));
     }
 }

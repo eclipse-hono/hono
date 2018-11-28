@@ -35,7 +35,7 @@
     <grafana.version>5.3.2</grafana.version>
     <guava.version>25.0-jre</guava.version>
     <influxdb.version>1.5.4-alpine</influxdb.version>
-    <jackson.version>2.9.5</jackson.version>
+    <jackson.version>2.9.7</jackson.version>
     <jaeger.version>0.32.0</jaeger.version>
     <java-base-image.name>openjdk:11-jre-slim</java-base-image.name>
     <jaxb.api.version>2.2.12</jaxb.api.version>
@@ -46,20 +46,20 @@
     <logback.version>1.2.3</logback.version>
     <micrometer.version>1.0.6</micrometer.version>
     <mockito.version>2.19.0</mockito.version>
-    <netty.version>4.1.19.Final</netty.version>
-    <netty.tcnative.version>2.0.10.Final</netty.tcnative.version>
+    <netty.version>4.1.30.Final</netty.version>
+    <netty.tcnative.version>2.0.17.Final</netty.tcnative.version>
     <opentracing.version>0.31.0</opentracing.version>
     <opentracing-resolver.version>0.1.5</opentracing-resolver.version>
     <opentracing-vertx-web.version>0.1.0</opentracing-vertx-web.version>
-    <proton.version>0.25.0</proton.version>
-    <qpid-jms.version>0.31.0</qpid-jms.version>
+    <proton.version>0.31.0</proton.version>
+    <qpid-jms.version>0.38.0</qpid-jms.version>
     <slf4j.version>1.7.24</slf4j.version>
     <snakeyaml.version>1.17</snakeyaml.version>
     <spring.version>4.3.19.RELEASE</spring.version>
     <spring-boot.version>1.5.16.RELEASE</spring-boot.version>
     <spring-security-crypto.version>4.2.8.RELEASE</spring-security-crypto.version>
     <truth.version>0.28</truth.version>
-    <vertx.version>3.5.4</vertx.version>
+    <vertx.version>3.6.2</vertx.version>
   </properties>
 
   <dependencyManagement>
@@ -99,11 +99,6 @@
         <groupId>io.vertx</groupId>
         <artifactId>vertx-proton</artifactId>
         <version>${vertx.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.qpid</groupId>
-        <artifactId>proton-j</artifactId>
-        <version>${proton.version}</version>
       </dependency>
       <dependency>
         <groupId>org.springframework.boot</groupId>

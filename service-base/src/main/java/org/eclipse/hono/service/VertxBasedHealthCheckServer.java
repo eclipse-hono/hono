@@ -103,7 +103,7 @@ public final class VertxBasedHealthCheckServer implements HealthCheckServer {
         router.get(URI_READINESS_PROBE).handler(readinessHandler);
         router.get(URI_LIVENESS_PROBE).handler(livenessHandler);
 
-        server.requestHandler(router::accept).listen(startAttempt -> {
+        server.requestHandler(router).listen(startAttempt -> {
             if (startAttempt.succeeded()) {
                 LOG.info("readiness probe available at http://{}:{}{}", options.getHost(), options.getPort(),
                         URI_READINESS_PROBE);

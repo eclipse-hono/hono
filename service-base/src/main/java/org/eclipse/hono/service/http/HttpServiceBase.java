@@ -239,7 +239,7 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
             if (server == null) {
                 server = vertx.createHttpServer(getHttpServerOptions());
             }
-            server.requestHandler(router::accept).listen(bindAttempt -> {
+            server.requestHandler(router).listen(bindAttempt -> {
                 if (bindAttempt.succeeded()) {
                     if (getPort() == getPortDefaultValue()) {
                         LOG.info("server listens on standard secure port [{}:{}]", bindAddress, server.actualPort());
@@ -267,7 +267,7 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
             if (insecureServer == null) {
                 insecureServer = vertx.createHttpServer(getInsecureHttpServerOptions());
             }
-            insecureServer.requestHandler(router::accept).listen(bindAttempt -> {
+            insecureServer.requestHandler(router).listen(bindAttempt -> {
                 if (bindAttempt.succeeded()) {
                     if (getInsecurePort() == getInsecurePortDefaultValue()) {
                         LOG.info("server listens on standard insecure port [{}:{}]", bindAddress, insecureServer.actualPort());
