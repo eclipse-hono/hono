@@ -19,13 +19,11 @@ import java.util.Objects;
 import io.vertx.core.http.HttpHeaders;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.http.AbstractHttpEndpoint;
-import org.eclipse.hono.util.ClearTextPassword;
+import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.EventBusMessage;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import io.vertx.core.Context;
-import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
@@ -44,8 +42,6 @@ public final class CredentialsHttpEndpoint extends AbstractHttpEndpoint<ServiceC
     // path parameters for capturing parts of the URI path
     private static final String PARAM_TYPE = "type";
     private static final String PARAM_AUTH_ID = "auth_id";
-    private static final String DEFAULT_HASH_FUNCTION = System.getProperty("pwd-hash-function",
-            CredentialsConstants.HASH_FUNCTION_BCRYPT);
 
     /**
      * Creates an endpoint for a Vertx instance.
@@ -78,7 +74,7 @@ public final class CredentialsHttpEndpoint extends AbstractHttpEndpoint<ServiceC
         // add credentials
         router.post(pathWithTenant).handler(bodyHandler);
         router.post(pathWithTenant).handler(this::extractRequiredJsonPayload);
-        router.post(pathWithTenant).handler(this::hashPasswordIfPLain);
+        router.post(pathWithTenant).handler(this::hashPlainPasswords);
         router.post(pathWithTenant).handler(this::addCredentials);
 
         // get credentials by auth-id and type
@@ -89,6 +85,7 @@ public final class CredentialsHttpEndpoint extends AbstractHttpEndpoint<ServiceC
         // update credentials by auth-id and type
         router.put(pathWithTenantAndAuthIdAndType).handler(bodyHandler);
         router.put(pathWithTenantAndAuthIdAndType).handler(this::extractRequiredJsonPayload);
+        router.put(pathWithTenantAndAuthIdAndType).handler(this::hashPlainPasswords);
         router.put(pathWithTenantAndAuthIdAndType).handler(this::updateCredentials);
 
         // remove credentials by auth-id and type
@@ -247,50 +244,33 @@ public final class CredentialsHttpEndpoint extends AbstractHttpEndpoint<ServiceC
                 null));
     }
 
-    private void hashPasswordIfPLain(final RoutingContext ctx) {
+    private void hashPlainPasswords(final RoutingContext ctx) {
         final JsonObject payload = (JsonObject) ctx.get(KEY_REQUEST_BODY);
 
-        if (CredentialsConstants.SECRETS_TYPE_PLAIN_PASSWORD.equals(payload.getString(CredentialsConstants.FIELD_TYPE))) {
-            final JsonObject payloadHashedPwd = payload.copy();
+        if (CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD
+                .equals(payload.getString(CredentialsConstants.FIELD_TYPE))) {
             vertx.executeBlocking(blockingCodeHandler -> {
                 logger.debug("hashing password on vert.x worker thread [{}]", Thread.currentThread().getName());
-                blockingCodeHandler.complete(hashPwdAndUpdateSecrets(payloadHashedPwd));
+                payload.getJsonArray(CredentialsConstants.FIELD_SECRETS).forEach(
+                        secret -> CredentialsPlainPasswordHelper.hashPwdAndUpdateSecret((JsonObject) secret));
+                blockingCodeHandler.complete(payload);
             }, ar -> {
-                ctx.put(KEY_REQUEST_BODY, ar.result());
+                if (ar.succeeded()) {
+                    ctx.put(KEY_REQUEST_BODY, ar.result());
+                } else {
+                    final Throwable cause = ar.cause();
+                    final String message = cause.getMessage();
+                    if (cause instanceof IllegalArgumentException) {
+                        HttpUtils.badRequest(ctx, message);
+                    }
+                    logger.error(message, cause);
+                }
                 ctx.next();
             });
 
         } else {
             ctx.next();
         }
-    }
-
-    private JsonObject hashPwdAndUpdateSecrets(final JsonObject payload) {
-        payload.put(CredentialsConstants.FIELD_TYPE, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD);
-        payload.getJsonArray(CredentialsConstants.FIELD_SECRETS).forEach(
-                s -> {
-                    final JsonObject secret = (JsonObject) s;
-                    final String pwdHash = hashPassWord(secret);
-                    updateSecretWithPwdHash(secret, pwdHash);
-                });
-        return payload;
-    }
-
-    private String hashPassWord(final JsonObject secret) {
-        final String pwd = secret.getString(CredentialsConstants.FIELD_SECRETS_PWD_PLAIN);
-
-        if (DEFAULT_HASH_FUNCTION.equals(CredentialsConstants.HASH_FUNCTION_BCRYPT)) {
-            return ClearTextPassword.encodeBCrypt(pwd);
-        } else {
-            final byte[] salt = secret.getBinary(CredentialsConstants.FIELD_SECRETS_SALT);
-            return ClearTextPassword.encode(DEFAULT_HASH_FUNCTION, salt, pwd);
-        }
-    }
-
-    private void updateSecretWithPwdHash(final JsonObject secret, final String pwdHash) {
-        secret.put(CredentialsConstants.FIELD_SECRETS_PWD_HASH, pwdHash);
-        secret.put(CredentialsConstants.FIELD_SECRETS_HASH_FUNCTION, DEFAULT_HASH_FUNCTION);
-        secret.remove(CredentialsConstants.FIELD_SECRETS_PWD_PLAIN);
     }
 
 }

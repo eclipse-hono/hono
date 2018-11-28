@@ -263,16 +263,17 @@ Please refer to the [Credentials API]({{< relref "api/Credentials-API.md" >}}) f
 The following command adds some `hashed-password` credentials from a given plain text password for device `4710` using authentication identifier `sensor10`: 
 
     $ curl -i -X POST -H 'Content-Type: application/json' --data-binary '{
-        "device-id": "4710",
-        "type": "plain-password",
-        "auth-id": "sensor10",
-        "secrets": [{
-            "pwd-plain": "mylittlesecret"
-        }]
-      }' http://localhost:28080/credentials/DEFAULT_TENANT
+      "device-id": "4710",
+      "type": "hashed-password",
+      "auth-id": "sensor10",
+      "secrets": [{
+          "hash-function": "bcrypt",
+          "pwd-plain": "mylittlesecret"
+      }]
+    }' http://localhost:28080/credentials/DEFAULT_TENANT
       
     HTTP/1.1 201 Created
-    Location: /credentials/DEFAULT_TENANT/sensor20/hashed-password
+    Location: /credentials/DEFAULT_TENANT/sensor10/hashed-password
     Content-Length: 0
     
 This uses a convenient option which lets the Device Registry do the hashing of the password. The following command retrieves the credentials that are stored by the Device Registry as a result of the command above: 
