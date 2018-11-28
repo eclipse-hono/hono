@@ -15,15 +15,13 @@ package org.eclipse.hono.service.credentials;
 
 import io.vertx.core.json.JsonObject;
 import org.eclipse.hono.util.CredentialsConstants;
+import org.junit.Assert;
 import org.junit.Test;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 
-import static org.eclipse.hono.service.credentials.CredentialsPlainPasswordHelper.hashPwdAndUpdateSecret;
-import static org.eclipse.hono.service.credentials.CredentialsPlainPasswordHelper.hashWithSha;
-import static org.junit.Assert.*;
 
 /**
  * Unit tests for {@link CredentialsPlainPasswordHelper}.
@@ -34,29 +32,31 @@ public class CredentialsPlainPasswordHelperTest {
     private static final byte[] SALT = "saltnpepper".getBytes(StandardCharsets.UTF_8);
 
     /**
-     * Tests that password is correctly hashed with sha-256.
+     * Verifies that password is correctly hashed with sha-256.
      */
     @Test
     public void testHashWithSha256() {
 
-        final String hash = hashWithSha(CredentialsConstants.HASH_FUNCTION_SHA256, PASSWORD, SALT);
+        final String hash = CredentialsPlainPasswordHelper.hashWithSha(CredentialsConstants.HASH_FUNCTION_SHA256,
+                PASSWORD, SALT);
 
-        assertEquals("xj4mcF0CA/kkdgRuVciXZoKJsM09uS1/6VaeowMfvaQ=", hash);
+        Assert.assertEquals("xj4mcF0CA/kkdgRuVciXZoKJsM09uS1/6VaeowMfvaQ=", hash);
     }
 
     /**
-     * Tests that password is correctly hashed with sha-256.
+     * Verifies that password is correctly hashed with sha-256.
      */
     @Test
     public void testHashWithSha512() {
-        final String hash = hashWithSha(CredentialsConstants.HASH_FUNCTION_SHA512, PASSWORD, SALT);
+        final String hash = CredentialsPlainPasswordHelper.hashWithSha(CredentialsConstants.HASH_FUNCTION_SHA512,
+                PASSWORD, SALT);
 
-        assertEquals("yENeU2Brk8BVZrsuraeIo2v6TZWOadn1HnvNZlNMD5M6wcZKz7eF5DfZV0/0w+8t9n/ocBFyLnUU8Yn2eCnfxA==",
+        Assert.assertEquals("yENeU2Brk8BVZrsuraeIo2v6TZWOadn1HnvNZlNMD5M6wcZKz7eF5DfZV0/0w+8t9n/ocBFyLnUU8Yn2eCnfxA==",
                 hash);
     }
 
     /**
-     * Tests that a secret with an already hashed password remains unchanged.
+     * Verifies that a secret with an already hashed password remains unchanged.
      */
     @Test
     public void alreadyHashedSecretsAreUnchanged() {
@@ -64,13 +64,13 @@ public class CredentialsPlainPasswordHelperTest {
         expected.put(CredentialsConstants.FIELD_SECRETS_HASH_FUNCTION, CredentialsConstants.HASH_FUNCTION_BCRYPT);
         expected.put(CredentialsConstants.FIELD_SECRETS_PWD_HASH, "abc");
 
-        final JsonObject actual = hashPwdAndUpdateSecret(expected.copy());
+        final JsonObject actual = CredentialsPlainPasswordHelper.hashPwdAndUpdateSecret(expected.copy());
 
-        assertEquals(expected, actual);
+        Assert.assertEquals(expected, actual);
     }
 
     /**
-     * Tests that the secret is correctly updated when hashed with bcrypt.
+     * Verifies that the secret is correctly updated when hashed with bcrypt.
      */
     @Test
     public void secretIsUpdatedForBcrypt() {
@@ -78,17 +78,19 @@ public class CredentialsPlainPasswordHelperTest {
 
         final JsonObject secret = newPlainPwdSecret(hashFunction);
 
-        hashPwdAndUpdateSecret(secret);
+        CredentialsPlainPasswordHelper.hashPwdAndUpdateSecret(secret);
 
-        assertNull(secret.getString(CredentialsConstants.FIELD_SECRETS_PWD_PLAIN));
-        assertNotNull(secret.getString(CredentialsConstants.FIELD_SECRETS_PWD_HASH));
-        assertNull(secret.getString(CredentialsConstants.FIELD_SECRETS_SALT));
+        Assert.assertNull(secret.getString(CredentialsConstants.FIELD_SECRETS_PWD_PLAIN));
+        Assert.assertNotNull(secret.getString(CredentialsConstants.FIELD_SECRETS_PWD_HASH));
 
-        assertEquals(hashFunction, secret.getString(CredentialsConstants.FIELD_SECRETS_HASH_FUNCTION));
+        // the pwd hash contains the salt for bcrypt
+        Assert.assertNull(secret.getString(CredentialsConstants.FIELD_SECRETS_SALT));
+
+        Assert.assertEquals(hashFunction, secret.getString(CredentialsConstants.FIELD_SECRETS_HASH_FUNCTION));
     }
 
     /**
-     * Tests that the secret is correctly updated when hashed with sha.
+     * Verifies that the secret is correctly updated when hashed with sha.
      */
     @Test
     public void secretIsUpdatedForSha() {
@@ -96,31 +98,31 @@ public class CredentialsPlainPasswordHelperTest {
 
         final JsonObject secret = newPlainPwdSecret(hashFunction);
 
-        hashPwdAndUpdateSecret(secret);
+        CredentialsPlainPasswordHelper.hashPwdAndUpdateSecret(secret);
 
-        assertNull(secret.getString(CredentialsConstants.FIELD_SECRETS_PWD_PLAIN));
-        assertNotNull(secret.getString(CredentialsConstants.FIELD_SECRETS_PWD_HASH));
-        assertNotNull(secret.getString(CredentialsConstants.FIELD_SECRETS_SALT));
+        Assert.assertNull(secret.getString(CredentialsConstants.FIELD_SECRETS_PWD_PLAIN));
+        Assert.assertNotNull(secret.getString(CredentialsConstants.FIELD_SECRETS_PWD_HASH));
+        Assert.assertNotNull(secret.getString(CredentialsConstants.FIELD_SECRETS_SALT));
 
-        assertEquals(hashFunction, secret.getString(CredentialsConstants.FIELD_SECRETS_HASH_FUNCTION));
+        Assert.assertEquals(hashFunction, secret.getString(CredentialsConstants.FIELD_SECRETS_HASH_FUNCTION));
     }
 
     /**
-     * Tests that a if no hashing function is provided in secret, then bcrypt is used.
+     * Verifies that a if no hashing function is provided in secret, then bcrypt is used.
      */
     @Test
     public void noHashFunctionIsGiven() {
 
         final JsonObject secret = new JsonObject().put(CredentialsConstants.FIELD_SECRETS_PWD_PLAIN, PASSWORD);
 
-        hashPwdAndUpdateSecret(secret);
+        CredentialsPlainPasswordHelper.hashPwdAndUpdateSecret(secret);
 
-        assertTrue(new BCryptPasswordEncoder(10).matches(PASSWORD,
+        Assert.assertTrue(new BCryptPasswordEncoder(10).matches(PASSWORD,
                 secret.getString(CredentialsConstants.FIELD_SECRETS_PWD_HASH)));
     }
 
     /**
-     * Tests that the plain password inside the secret is correctly hashed with bcrypt.
+     * Verifies that the plain password inside the secret is correctly hashed with bcrypt.
      */
     @Test
     public void hashIsAppliedForBcrypt() {
@@ -128,15 +130,15 @@ public class CredentialsPlainPasswordHelperTest {
 
         final JsonObject secret = newPlainPwdSecret(hashFunction);
 
-        hashPwdAndUpdateSecret(secret);
+        CredentialsPlainPasswordHelper.hashPwdAndUpdateSecret(secret);
 
-        assertTrue(new BCryptPasswordEncoder(10).matches(PASSWORD,
+        Assert.assertTrue(new BCryptPasswordEncoder(10).matches(PASSWORD,
                 secret.getString(CredentialsConstants.FIELD_SECRETS_PWD_HASH)));
 
     }
 
     /**
-     * Tests that the plain password inside the secret is correctly hashed with sha-256.
+     * Verifies that the plain password inside the secret is correctly hashed with sha-256.
      */
     @Test
     public void hashIsAppliedForSha256() {
@@ -144,17 +146,18 @@ public class CredentialsPlainPasswordHelperTest {
 
         final JsonObject secretActual = newPlainPwdSecret(hashFunction);
 
-        hashPwdAndUpdateSecret(secretActual);
+        CredentialsPlainPasswordHelper.hashPwdAndUpdateSecret(secretActual);
 
         final String salt = secretActual.getString(CredentialsConstants.FIELD_SECRETS_SALT);
 
-        final String hashExpected = hashWithSha(hashFunction, PASSWORD, Base64.getDecoder().decode(salt));
+        final String hashExpected = CredentialsPlainPasswordHelper.hashWithSha(hashFunction, PASSWORD, Base64
+                .getDecoder().decode(salt));
 
-        assertEquals(hashExpected, secretActual.getString(CredentialsConstants.FIELD_SECRETS_PWD_HASH));
+        Assert.assertEquals(hashExpected, secretActual.getString(CredentialsConstants.FIELD_SECRETS_PWD_HASH));
     }
 
     /**
-     * Tests that the plain password inside the secret is correctly hashed with sha-512.
+     * Verifies that the plain password inside the secret is correctly hashed with sha-512.
      */
     @Test
     public void hashIsAppliedForSha512() {
@@ -162,13 +165,14 @@ public class CredentialsPlainPasswordHelperTest {
 
         final JsonObject secretActual = newPlainPwdSecret(hashFunction);
 
-        hashPwdAndUpdateSecret(secretActual);
+        CredentialsPlainPasswordHelper.hashPwdAndUpdateSecret(secretActual);
 
         final String salt = secretActual.getString(CredentialsConstants.FIELD_SECRETS_SALT);
 
-        final String hashExpected = hashWithSha(hashFunction, PASSWORD, Base64.getDecoder().decode(salt));
+        final String hashExpected = CredentialsPlainPasswordHelper.hashWithSha(hashFunction, PASSWORD, Base64
+                .getDecoder().decode(salt));
 
-        assertEquals(hashExpected, secretActual.getString(CredentialsConstants.FIELD_SECRETS_PWD_HASH));
+        Assert.assertEquals(hashExpected, secretActual.getString(CredentialsConstants.FIELD_SECRETS_PWD_HASH));
     }
 
     private JsonObject newPlainPwdSecret(final String hashFunction) {
