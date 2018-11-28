@@ -19,6 +19,24 @@
  */
 
 /**
+ * Provides JDK version to be used for the build, which should be already configured in 'Global Tool Configuration' in Jenkins.
+ *
+ * @return returns the jdk version to be used for the build.
+ */
+String getJDKVersion() {
+    return "jdk9-latest"
+}
+
+/**
+ * Provides maven version to be used for the build, which should be already configured in 'Global Tool Configuration' in Jenkins.
+ *
+ * @return returns the maven version to be used for the build.
+ */
+String getMavenVersion() {
+    return "apache-maven-latest"
+}
+
+/**
  * Checks out the specified branch from hono github repo
  *
  * @param branch Branch to be checked out
@@ -61,12 +79,12 @@ void checkOutRepoWithCredentials(String branch, String credentialsId, String url
 }
 
 /**
- * Build with maven (with jdk9-latest and apache-maven-latest as configured in 'Global Tool Configuration' in Jenkins).
+ * Build with maven (with maven and jdk versions defined in {@link #getMavenVersion()} and {@link #getJDKVersion()}.
  *
  */
 void build() {
     stage('Build') {
-        withMaven(maven: 'apache-maven-latest', jdk: 'jdk9-latest', options: [jacocoPublisher(disabled: true)]) {
+        withMaven(maven: getMavenVersion(), jdk: getJDKVersion(), options: [jacocoPublisher(disabled: true)]) {
             sh 'mvn -B clean install'
         }
     }

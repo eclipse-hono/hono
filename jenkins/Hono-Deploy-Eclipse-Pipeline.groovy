@@ -34,7 +34,7 @@ node {
     ])])
     try {
         utils.checkOutRepoWithCredentials("${params.RELEASE_VERSION}", "${params.CREDENTIALS_ID}", "ssh://github.com/eclipse/hono.git")
-        buildAndDeploy()
+        buildAndDeploy(utils)
         currentBuild.result = 'SUCCESS'
     } catch (err) {
         currentBuild.result = 'FAILURE'
@@ -49,11 +49,12 @@ node {
 /**
  * Build and deploy with maven.
  *
+ * @param utils An instance of the Hono-PipelineUtils containing utility methods to build pipelines.
  */
-def buildAndDeploy() {
+def buildAndDeploy(def utils) {
     stage('Build and deploy to maven central') {
-        withMaven(maven: 'apache-maven-latest',
-                jdk: 'jdk9-latest',
+        withMaven(maven: utils.getMavenVersion(),
+                jdk: utils.getJDKVersion(),
                 mavenLocalRepo: '.repository',
                 options: [jacocoPublisher(disabled: true), artifactsPublisher(disabled: true)]) {
             sh "mvn --projects :hono-service-auth,:hono-service-messaging,:hono-service-device-registry,:hono-adapter-http-vertx,:hono-adapter-mqtt-vertx,:hono-adapter-kura,:hono-adapter-amqp-vertx,:hono-example,:hono-cli -am deploy -DskipTests=true -DcreateJavadoc=true -DenableEclipseJarSigner=true -DskipStaging=true"

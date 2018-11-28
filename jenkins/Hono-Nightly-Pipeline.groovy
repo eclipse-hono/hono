@@ -25,7 +25,7 @@ node {
                 pipelineTriggers([cron('TZ=Europe/Berlin \n # every night between 2 and 3 AM \n H 2 * * *')])])
     try {
         utils.checkOutHonoRepoMaster()
-        nightlyBuild()
+        nightlyBuild(utils)
         utils.aggregateJunitResults()
         utils.captureCodeCoverageReport()
         utils.publishJavaDoc()
@@ -42,12 +42,13 @@ node {
 }
 
 /**
- * Nightly build with maven (with jdk9-latest and apache-maven-latest as configured in 'Global Tool Configuration' in Jenkins).
+ * Nightly build with maven (with maven and jdk versions defined in {@link Hono-PipelineUtils#getMavenVersion()} and {@link Hono-PipelineUtils#getJDKVersion()}).
  *
+ * @param utils An instance of the Hono-PipelineUtils containing utility methods to build pipelines.
  */
-def nightlyBuild() {
+def nightlyBuild(def utils) {
     stage('Build') {
-        withMaven(maven: 'apache-maven-latest', jdk: 'jdk9-latest', options: [jacocoPublisher(disabled: true), artifactsPublisher(disabled: true)]) {
+        withMaven(maven: utils.getMavenVersion(), jdk: utils.getJDKVersion(), options: [jacocoPublisher(disabled: true), artifactsPublisher(disabled: true)]) {
             sh 'mvn clean package javadoc:aggregate'
             sh 'mvn --projects :hono-service-auth,:hono-service-messaging,:hono-service-device-registry,:hono-adapter-http-vertx,:hono-adapter-mqtt-vertx,:hono-adapter-kura,:hono-adapter-amqp-vertx,:hono-adapter-coap-vertx,:hono-example -am deploy -DcreateJavadoc=true -DenableEclipseJarSigner=true'
         }

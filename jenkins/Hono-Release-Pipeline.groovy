@@ -40,9 +40,9 @@ node {
                     required: true)])])
     try {
         checkOut()
-        setReleaseVersionAndBuild()
+        setReleaseVersionAndBuild(utils)
         commitAndTag()
-        setNextVersion()
+        setNextVersion(utils)
         commitAndPush()
         copyArtifacts()
         utils.publishJavaDoc('target/site/apidocs', true)
@@ -76,10 +76,11 @@ def checkOut() {
 /**
  * Set version to RELEASE_VERSION and build using maven
  *
+ * @param utils An instance of the Hono-PipelineUtils containing utility methods to build pipelines.
  */
-def setReleaseVersionAndBuild() {
+def setReleaseVersionAndBuild(def utils) {
     stage('Build') {
-        withMaven(maven: 'apache-maven-latest', jdk: 'jdk9-latest', options: [jacocoPublisher(disabled: true), artifactsPublisher(disabled: true)]) {
+        withMaven(maven: utils.getMavenVersion(), jdk: utils.getJDKVersion(), options: [jacocoPublisher(disabled: true), artifactsPublisher(disabled: true)]) {
             sh "mvn versions:set -DgenerateBackupPoms=false -DnewVersion=${RELEASE_VERSION}"
             sh 'mvn clean install javadoc:aggregate -Dmaven.test.failure.ignore=false -DenableEclipseJarSigner=true -DsnapshotDependencyAllowed=false -Ddocker.skip.build=true'
         }
@@ -104,10 +105,11 @@ def commitAndTag() {
 /**
  * Set version to NEXT_VERSION using maven
  *
+ * @param utils An instance of the Hono-PipelineUtils containing utility methods to build pipelines.
  */
-def setNextVersion() {
+def setNextVersion(def utils) {
     stage("Set next version") {
-        withMaven(maven: 'apache-maven-latest', jdk: 'jdk9-latest', options: [jacocoPublisher(disabled: true), artifactsPublisher(disabled: true)]) {
+        withMaven(maven: utils.getMavenVersion(), jdk: utils.getJDKVersion(), options: [jacocoPublisher(disabled: true), artifactsPublisher(disabled: true)]) {
             sh "mvn versions:set -DallowSnapshots=true -DgenerateBackupPoms=false -DnewVersion=${NEXT_VERSION}"
         }
     }
