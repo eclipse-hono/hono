@@ -12,15 +12,10 @@
  *******************************************************************************/
 package org.eclipse.hono.tests.amqp;
 import java.net.HttpURLConnection;
-import java.security.GeneralSecurityException;
-import java.security.KeyPair;
-import java.util.Base64;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Function;
-
-import javax.security.auth.x500.X500Principal;
 
 import org.apache.qpid.proton.amqp.messaging.Accepted;
 import org.apache.qpid.proton.amqp.messaging.Rejected;
@@ -31,7 +26,6 @@ import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
-import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantObject;
 import org.junit.After;
 import org.junit.Before;
@@ -40,7 +34,6 @@ import org.junit.Test;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
-import io.vertx.core.json.JsonObject;
 import io.vertx.core.net.SelfSignedCertificate;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
@@ -59,7 +52,6 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
 
     private ProtonSender sender;
     private MessageConsumer consumer;
-    private SelfSignedCertificate deviceCert;
 
     /**
      * Perform additional checks on a received message.
@@ -96,7 +88,6 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
     @Before
     public void before() {
         log.info("running {}", testName.getMethodName());
-        deviceCert = SelfSignedCertificate.create(UUID.randomUUID().toString());
     }
 
     /**
@@ -108,9 +99,6 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
     @After
     public void after(final TestContext context) {
         helper.deleteObjects(context);
-        if (deviceCert != null) {
-            deviceCert.delete();
-        }
         close(context);
     }
 
@@ -147,48 +135,6 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
             completionTracker.complete();
         });
         completionTracker.await();
-    }
-
-    /**
-     * Verifies that the AMQP Adapter will fail to authenticate a device whose username does not match the expected pattern
-     * {@code [<authId>@<tenantId>]}.
-     * 
-     * @param context The Vert.x test context.
-     */
-    @Test
-    public void testConnectFailsForInvalidUsernamePattern(final TestContext context) {
-        connectToAdapter("invalidaUsername", DEVICE_PASSWORD)
-        .setHandler(context.asyncAssertFailure(t -> {
-            // SASL handshake failed
-            context.assertTrue(SecurityException.class.isInstance(t));
-        }));
-    }
-
-    /**
-     * Verifies that the AMQP adapter will not establish a connection with a client device that belongs to a tenant for
-     * which the adapter is disabled.
-     * 
-     * @param context The Vert.x test context.
-     */
-    @Test
-    public void testConnectFailsForTenantDisabledAdapter(final TestContext context) {
-        final String tenantId = helper.getRandomTenantId();
-        final String deviceId = helper.getRandomDeviceId(tenantId);
-        final String username = IntegrationTestSupport.getUsername(deviceId, tenantId);
-
-        // GIVEN a tenant that is disabled for the AMQP adapter
-        final TenantObject tenant = TenantObject.from(tenantId, true);
-        tenant.addAdapterConfiguration(TenantObject.newAdapterConfig(Constants.PROTOCOL_ADAPTER_TYPE_AMQP, false));
-        helper.registry
-                .addDeviceForTenant(tenant, deviceId, DEVICE_PASSWORD)
-                .compose(ok -> {
-                    // WHEN a device belonging to the tenant attempts to connect to the adapter
-                    return connectToAdapter(username, DEVICE_PASSWORD);
-                 })
-                .setHandler(context.asyncAssertFailure(t -> {
-                    // THEN the connection is not established
-                    context.assertTrue(SecurityException.class.isInstance(t));
-                }));
     }
 
     /**
@@ -256,6 +202,8 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
         final String tenantId = helper.getRandomTenantId();
         final String deviceId = helper.getRandomDeviceId(tenantId);
 
+        final SelfSignedCertificate deviceCert = SelfSignedCertificate.create(UUID.randomUUID().toString());
+
         helper.getCertificate(deviceCert.certificatePath()).compose(cert -> {
             final TenantObject tenant = TenantObject.from(tenantId, true);
             tenant.setTrustAnchor(cert.getPublicKey(), cert.getSubjectX500Principal());
@@ -269,82 +217,6 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
         setup.await();
 
         testUploadMessages(tenantId, ctx);
-    }
-
-    /**
-     * Verifies that the adapter fails to authorize a device using a client certificate
-     * if the public key that is registered for the tenant that the device belongs to can
-     * not be parsed into a trust anchor.
-     * 
-     * @param ctx The vert.x test context.
-     */
-    @Test
-    public void testUploadFailsForMalformedCaPublicKey(final TestContext ctx) {
-
-        final String tenantId = helper.getRandomTenantId();
-        final String deviceId = helper.getRandomDeviceId(tenantId);
-        final TenantObject tenant = TenantObject.from(tenantId, true);
-
-        // GIVEN a tenant configured with an invalid Base64 encoding of the
-        // trust anchor public key
-        helper.getCertificate(deviceCert.certificatePath())
-        .compose(cert -> {
-            tenant.setProperty(
-                    TenantConstants.FIELD_PAYLOAD_TRUSTED_CA,
-                    new JsonObject()
-                        .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, cert.getIssuerX500Principal().getName(X500Principal.RFC2253))
-                        .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, "notBase64"));
-            return helper.registry.addDeviceForTenant(tenant, deviceId, cert);
-        })
-        .compose(ok -> {
-            // WHEN a device tries to connect to the adapter
-            // using a client certificate
-            return connectToAdapter(deviceCert);
-        })
-        .setHandler(ctx.asyncAssertFailure(t -> {
-            // THEN the connection is not established
-            ctx.assertTrue(t instanceof SecurityException);
-        }));
-    }
-
-    /**
-     * Verifies that the adapter fails to authenticate a device if the device's client
-     * certificate's signature cannot be validated using the trust anchor that is registered
-     * for the tenant that the device belongs to.
-     *
-     * @param ctx The test context.
-     * @throws GeneralSecurityException if the tenant's trust anchor cannot be generated
-     */
-    @Test
-    public void testConnectFailsForNonMatchingTrustAnchor(final TestContext ctx) throws GeneralSecurityException {
-
-        final String tenantId = helper.getRandomTenantId();
-        final String deviceId = helper.getRandomDeviceId(tenantId);
-        final TenantObject tenant = TenantObject.from(tenantId, true);
-
-        final KeyPair keyPair = helper.newEcKeyPair();
-
-        // GIVEN a tenant configured with a trust anchor
-        helper.getCertificate(deviceCert.certificatePath())
-        .compose(cert -> {
-            tenant.setProperty(
-                    TenantConstants.FIELD_PAYLOAD_TRUSTED_CA,
-                    new JsonObject()
-                        .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, cert.getIssuerX500Principal().getName(X500Principal.RFC2253))
-                        .put(TenantConstants.FIELD_ADAPTERS_TYPE, "EC")
-                        .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, Base64.getEncoder().encodeToString(keyPair.getPublic().getEncoded())));
-            return helper.registry.addDeviceForTenant(tenant, deviceId, cert);
-        })
-        .compose(ok -> {
-            // WHEN a device tries to connect to the adapter
-            // using a client certificate that cannot be validated
-            // using the trust anchor registered for the device's tenant
-            return connectToAdapter(deviceCert);
-        })
-        .setHandler(ctx.asyncAssertFailure(t -> {
-            // THEN the connection is not established
-            ctx.assertTrue(t instanceof SecurityException);
-        }));
     }
 
     //------------------------------------------< private methods >---
