@@ -159,6 +159,9 @@ public class Application extends AbstractApplication {
         if (HealthCheckProvider.class.isInstance(registrationService)) {
             registerHealthchecks((HealthCheckProvider) registrationService);
         }
+        if (HealthCheckProvider.class.isInstance(tenantService)) {
+            registerHealthchecks((HealthCheckProvider) tenantService);
+        }
         return Future.succeededFuture();
     }
 
