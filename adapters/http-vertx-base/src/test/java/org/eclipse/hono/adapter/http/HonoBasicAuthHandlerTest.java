@@ -11,7 +11,7 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package org.eclipse.hono.service.auth.device;
+package org.eclipse.hono.adapter.http;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -41,13 +41,13 @@ import io.vertx.ext.web.RoutingContext;
 
 
 /**
- * Tests verifying behavior of {@link HonoAuthHandler}.
+ * Tests verifying behavior of {@link HonoBasicAuthHandler}.
  *
  */
 @RunWith(VertxUnitRunner.class)
-public class HonoAuthHandlerImplTest {
+public class HonoBasicAuthHandlerTest {
 
-    private HonoAuthHandler authHandler;
+    private HonoBasicAuthHandler authHandler;
     private AuthProvider authProvider;
 
     /**
@@ -56,7 +56,7 @@ public class HonoAuthHandlerImplTest {
     @Before
     public void setUp() {
         authProvider = mock(AuthProvider.class);
-        authHandler = new HonoAuthHandler(authProvider) {
+        authHandler = new HonoBasicAuthHandler(authProvider, "test") {
 
             @Override
             public void parseCredentials(final RoutingContext context, final Handler<AsyncResult<JsonObject>> handler) {
@@ -67,7 +67,7 @@ public class HonoAuthHandlerImplTest {
 
     /**
      * Verifies that the handler returns the status code conveyed in a
-     * failed @{@code AuthProvider} invocation in the response.
+     * failed {@code AuthProvider} invocation in the response.
      */
     @SuppressWarnings({ "unchecked", "rawtypes" })
     @Test

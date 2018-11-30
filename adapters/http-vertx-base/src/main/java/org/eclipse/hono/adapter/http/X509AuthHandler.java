@@ -30,9 +30,9 @@ import javax.security.auth.x500.X500Principal;
 
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.service.auth.device.DeviceCertificateValidator;
-import org.eclipse.hono.service.auth.device.HonoAuthHandler;
 import org.eclipse.hono.service.auth.device.HonoClientBasedAuthProvider;
 import org.eclipse.hono.service.auth.device.SubjectDnCredentials;
+import org.eclipse.hono.service.http.AuthHandlerTools;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.RequestResponseApiConstants;
@@ -51,6 +51,7 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.RoutingContext;
+import io.vertx.ext.web.handler.impl.AuthHandlerImpl;
 import io.vertx.ext.web.handler.impl.HttpStatusException;
 
 
@@ -68,7 +69,7 @@ import io.vertx.ext.web.handler.impl.HttpStatusException;
  * to retrieve X.509 credentials for the device in order to determine the device identifier. 
  *
  */
-public class X509AuthHandler extends HonoAuthHandler {
+public class X509AuthHandler extends AuthHandlerImpl {
 
     private static final Logger LOG = LoggerFactory.getLogger(X509AuthHandler.class);
     private static final HttpStatusException UNAUTHORIZED = new HttpStatusException(HttpURLConnection.HTTP_UNAUTHORIZED);
@@ -175,7 +176,7 @@ public class X509AuthHandler extends HonoAuthHandler {
                                     final TrustAnchor trustAnchor = tenant.getTrustAnchor();
                                     return certPathValidator.validate(chainToValidate, trustAnchor);
                                 } catch (final GeneralSecurityException e) {
-                                    return Future.failedFuture(e);
+                                    return Future.failedFuture(UNAUTHORIZED);
                                 }
                             }).compose(ok -> getCredentials(x509chain, tenantTracker.result()));
                 }).setHandler(verificationAttempt -> {
@@ -185,7 +186,8 @@ public class X509AuthHandler extends HonoAuthHandler {
                     } else {
                         LOG.debug("verification of client certificate failed: {}", verificationAttempt.cause().getMessage());
                         TracingHelper.logError(span, verificationAttempt.cause());
-                        handler.handle(Future.failedFuture(UNAUTHORIZED));
+                        handler.handle(Future.failedFuture(
+                                new HttpStatusException(HttpURLConnection.HTTP_UNAUTHORIZED, verificationAttempt.cause())));
                     }
                     span.finish();
                 });
@@ -250,5 +252,23 @@ public class X509AuthHandler extends HonoAuthHandler {
         return Future.succeededFuture(new JsonObject()
                 .put(CredentialsConstants.FIELD_PAYLOAD_SUBJECT_DN, subjectDn)
                 .put(CredentialsConstants.FIELD_PAYLOAD_TENANT_ID, tenant.getTenantId()));
+    }
+
+    /**
+     * Fails the context with the error code determined from an exception.
+     * <p>
+     * This method invokes {@link AuthHandlerTools#processException(RoutingContext, Throwable, String)}.
+     * 
+     * @param ctx The routing context.
+     * @param exception The cause of failure to process the request.
+     */
+    @Override
+    protected void processException(final RoutingContext ctx, final Throwable exception) {
+
+        if (ctx.response().ended()) {
+            return;
+        }
+
+        AuthHandlerTools.processException(ctx, exception, null);
     }
 }

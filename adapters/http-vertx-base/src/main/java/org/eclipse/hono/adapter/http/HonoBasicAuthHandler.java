@@ -1,135 +1,59 @@
-/*
- * Copyright 2014 Red Hat, Inc. and others.
+/*******************************************************************************
+ * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
  *
- *  All rights reserved. This program and the accompanying materials
- *  are made available under the terms of the Eclipse Public License v1.0
- *  and Apache License v2.0 which accompanies this distribution.
+ * See the NOTICE file(s) distributed with this work for additional
+ * information regarding copyright ownership.
  *
- *  The Eclipse Public License is available at
- *  http://www.eclipse.org/legal/epl-v10.html
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License 2.0 which is available at
+ * http://www.eclipse.org/legal/epl-2.0
  *
- *  The Apache License v2.0 is available at
- *  http://www.opensource.org/licenses/apache2.0.php
- *
- *  You may elect to redistribute this code under either of these licenses.
- */
+ * SPDX-License-Identifier: EPL-2.0
+ *******************************************************************************/
 
 package org.eclipse.hono.adapter.http;
 
-import java.util.Base64;
+import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.service.http.AuthHandlerTools;
 
-import org.eclipse.hono.service.auth.device.HonoAuthHandler;
-
-import io.vertx.core.AsyncResult;
-import io.vertx.core.Future;
-import io.vertx.core.Handler;
-import io.vertx.core.http.HttpHeaders;
-import io.vertx.core.http.HttpServerRequest;
-import io.vertx.core.json.JsonObject;
 import io.vertx.ext.auth.AuthProvider;
 import io.vertx.ext.web.RoutingContext;
+import io.vertx.ext.web.handler.impl.BasicAuthHandlerImpl;
 
 
 /**
  * A Hono specific version of vert.x web's standard {@code BasicAuthHandlerImpl}
- * that does not swallow the root exception which caused an authentication failure.
- * <p>
- * This class is a combination of
- * {@code io.vertx.ext.web.handler.impl.BasicAuthHandlerImpl} and
- * {@code io.vertx.ext.web.handler.impl.AuthorizationAuthHandler}.
- *
+ * that extracts and handles a {@link ServiceInvocationException} conveyed as the
+ * root cause in an {@code HttpStatusException} when an authentication failure
+ * occurs.
  */
-public class HonoBasicAuthHandler extends HonoAuthHandler {
+public class HonoBasicAuthHandler extends BasicAuthHandlerImpl {
 
     /**
-     * Creates a new handler for an authentication provider and a security realm.
+     * Creates a new handler for an auth provider and a realm name.
      * 
-     * @param authProvider The provider to use for verifying credentials.
-     * @param realm The security realm.
+     * @param authProvider The provider to use for validating credentials.
+     * @param realm The realm name.
      */
     public HonoBasicAuthHandler(final AuthProvider authProvider, final String realm) {
         super(authProvider, realm);
-    }
-
-    @Override
-    public void parseCredentials(final RoutingContext context, final Handler<AsyncResult<JsonObject>> handler) {
-
-      parseAuthorization(context, false, parseAuthorization -> {
-        if (parseAuthorization.failed()) {
-          handler.handle(Future.failedFuture(parseAuthorization.cause()));
-          return;
-        }
-
-        final String suser;
-        final String spass;
-
-        try {
-          // decode the payload
-            final String decoded = new String(Base64.getDecoder().decode(parseAuthorization.result()));
-
-            final int colonIdx = decoded.indexOf(':');
-          if (colonIdx != -1) {
-            suser = decoded.substring(0, colonIdx);
-            spass = decoded.substring(colonIdx + 1);
-          } else {
-            suser = decoded;
-            spass = null;
-          }
-        } catch (RuntimeException e) {
-          // IllegalArgumentException includes PatternSyntaxException
-          context.fail(e);
-          return;
-        }
-
-        handler.handle(Future.succeededFuture(new JsonObject().put("username", suser).put("password", spass)));
-      });
-    }
-
-    @Override
-    protected String authenticateHeader(final RoutingContext context) {
-      return "Basic realm=\"" + realm + "\"";
-    }
+      }
 
     /**
-     * Extracts authentication information from the <em>Authorization</em>
-     * header of an HTTP request.
+     * Fails the context with the error code determined from an exception.
+     * <p>
+     * This method invokes {@link AuthHandlerTools#processException(RoutingContext, Throwable, String)}.
      * 
-     * @param ctx The routing context that contains the HTTP request.
-     * @param optional Indicates whether the authorization header is mandatory.
-     * @param handler The handler to invoke with the authentication info.
+     * @param ctx The routing context.
+     * @param exception The cause of failure to process the request.
      */
-    protected final void parseAuthorization(final RoutingContext ctx, final boolean optional,
-            final Handler<AsyncResult<String>> handler) {
+    @Override
+    protected void processException(final RoutingContext ctx, final Throwable exception) {
 
-        final HttpServerRequest request = ctx.request();
-        final String authorization = request.headers().get(HttpHeaders.AUTHORIZATION);
-
-        if (authorization == null) {
-          if (optional) {
-            // this is allowed
-            handler.handle(Future.succeededFuture());
-          } else {
-            handler.handle(Future.failedFuture(UNAUTHORIZED));
-          }
-          return;
+        if (ctx.response().ended()) {
+            return;
         }
 
-        try {
-          final int idx = authorization.indexOf(' ');
-
-          if (idx <= 0) {
-            handler.handle(Future.failedFuture(BAD_REQUEST));
-            return;
-          }
-
-          if (!"Basic".equalsIgnoreCase(authorization.substring(0, idx))) {
-            handler.handle(Future.failedFuture(UNAUTHORIZED));
-            return;
-          }
-
-          handler.handle(Future.succeededFuture(authorization.substring(idx + 1)));
-        } catch (RuntimeException e) {
-          handler.handle(Future.failedFuture(e));
-        }
-      }
+        AuthHandlerTools.processException(ctx, exception, authenticateHeader(ctx));
+    }
 }
