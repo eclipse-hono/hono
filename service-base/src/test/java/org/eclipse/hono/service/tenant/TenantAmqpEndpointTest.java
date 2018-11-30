@@ -30,6 +30,7 @@ import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
 
 import io.vertx.core.Vertx;
+import io.vertx.core.eventbus.DeliveryOptions;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.json.JsonObject;
 import io.vertx.proton.ProtonHelper;
@@ -72,6 +73,6 @@ public class TenantAmqpEndpointTest {
 
         endpoint.processRequest(msg, resource, Constants.PRINCIPAL_ANONYMOUS);
 
-        verify(eventBus).send(eq(TenantConstants.EVENT_BUS_ADDRESS_TENANT_IN), any(JsonObject.class));
+        verify(eventBus).send(eq(TenantConstants.EVENT_BUS_ADDRESS_TENANT_IN), any(JsonObject.class), any(DeliveryOptions.class));
     }
 }

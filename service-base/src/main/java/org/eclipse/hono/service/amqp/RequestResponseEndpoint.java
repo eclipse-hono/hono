@@ -17,6 +17,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+
 import org.apache.qpid.proton.amqp.transport.AmqpError;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.auth.HonoUser;
@@ -24,6 +25,8 @@ import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.auth.AuthorizationService;
 import org.eclipse.hono.service.auth.ClaimsBasedAuthorizationService;
+import org.eclipse.hono.tracing.MessageAnnotationsExtractAdapter;
+import org.eclipse.hono.tracing.MultiMapInjectAdapter;
 import org.eclipse.hono.util.AmqpErrorException;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventBusMessage;
@@ -35,9 +38,17 @@ import org.springframework.beans.factory.annotation.Autowired;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 
+import io.opentracing.SpanContext;
+import io.opentracing.Tracer;
+import io.opentracing.noop.NoopSpanContext;
+import io.opentracing.noop.NoopTracerFactory;
+import io.opentracing.propagation.Format;
 import io.vertx.core.Future;
+import io.vertx.core.MultiMap;
 import io.vertx.core.Vertx;
+import io.vertx.core.eventbus.DeliveryOptions;
 import io.vertx.core.eventbus.MessageConsumer;
+import io.vertx.core.http.CaseInsensitiveHeaders;
 import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonObject;
 import io.vertx.proton.ProtonConnection;
@@ -62,6 +73,11 @@ public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties>
     private final Multimap<ProtonConnection, MessageConsumer<?>> replyConsumerMap = HashMultimap.create();
     private final Multimap<ProtonConnection, String> replyAddressMap = HashMultimap.create();
     private final Set<String> replyAddresses = new HashSet<>();
+
+    /**
+     * The OpenTracing {@code Tracer} for tracking processing of requests.
+     */
+    protected Tracer tracer = NoopTracerFactory.create();
 
     /**
      * Creates an endpoint for a Vertx instance.
@@ -112,6 +128,21 @@ public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties>
     @Autowired(required = false)
     public final void setAuthorizationService(final AuthorizationService authService) {
         this.authorizationService = authService;
+    }
+
+    /**
+     * Sets the OpenTracing {@code Tracer} to use for tracking the processing
+     * of requests.
+     * <p>
+     * If not set explicitly, the {@code NoopTracer} from OpenTracing will
+     * be used.
+     *
+     * @param opentracingTracer The tracer.
+     */
+    @Autowired(required = false)
+    public final void setTracer(final Tracer opentracingTracer) {
+        logger.info("using OpenTracing Tracer implementation [{}]", opentracingTracer.getClass().getName());
+        this.tracer = Objects.requireNonNull(opentracingTracer);
     }
 
     /**
@@ -495,5 +526,34 @@ public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties>
         } else {
             return replyToAddress.getResourcePath().length >= 3;
         }
+    }
+
+    /**
+     * Creates {@code DeliveryOptions} that contain the given {@code SpanContext}.
+     * <p>
+     * To be used when sending a message on the vert.x event bus.
+     *  
+     * @param spanContext The {@code SpanContext} (may be {@code null}).
+     * @return The {@code DeliveryOptions}.
+     */
+    protected final DeliveryOptions createEventBusMessageDeliveryOptions(final SpanContext spanContext) {
+        final DeliveryOptions deliveryOptions = new DeliveryOptions();
+        if (spanContext != null && !(spanContext instanceof NoopSpanContext)) {
+            final MultiMap multiMap = new CaseInsensitiveHeaders();
+            tracer.inject(spanContext, Format.Builtin.TEXT_MAP, new MultiMapInjectAdapter(multiMap));
+            deliveryOptions.setHeaders(multiMap);
+        }
+        return deliveryOptions;
+    }
+
+    /**
+     * Extracts a {@code SpanContext} out of the delivery annotations of the given {@code Message}.
+     * 
+     * @param message The AMQP message.
+     * @return The extracted {@code SpanContext} (may be {@code null}).
+     * @throws NullPointerException if the message is {@code null}.
+     */
+    protected final SpanContext extractSpanContext(final Message message) {
+        return tracer.extract(Format.Builtin.TEXT_MAP, new MessageAnnotationsExtractAdapter(message));
     }
 }

@@ -29,6 +29,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
+import io.vertx.core.eventbus.DeliveryOptions;
 
 /**
  * An {@code AmqpEndpoint} for managing tenant information.
@@ -138,7 +139,8 @@ public class TenantAmqpEndpoint extends RequestResponseEndpoint<ServiceConfigPro
                 .setTenant(msg)
                 .setJsonPayload(msg);
 
-        vertx.eventBus().send(TenantConstants.EVENT_BUS_ADDRESS_TENANT_IN, request.toJson());
+        final DeliveryOptions options = createEventBusMessageDeliveryOptions(extractSpanContext(msg));
+        vertx.eventBus().send(TenantConstants.EVENT_BUS_ADDRESS_TENANT_IN, request.toJson(), options);
     }
 
     @Override

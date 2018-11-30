@@ -24,6 +24,7 @@ import org.eclipse.hono.util.ResourceIdentifier;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import io.vertx.core.Vertx;
+import io.vertx.core.eventbus.DeliveryOptions;
 
 /**
  * An {@code AmqpEndpoint} for managing device registration information.
@@ -61,7 +62,8 @@ public class RegistrationAmqpEndpoint extends RequestResponseEndpoint<ServiceCon
                 .setGatewayId(msg)
                 .setJsonPayload(msg);
 
-        vertx.eventBus().send(RegistrationConstants.EVENT_BUS_ADDRESS_REGISTRATION_IN, registrationMsg.toJson());
+        final DeliveryOptions options = createEventBusMessageDeliveryOptions(extractSpanContext(msg));
+        vertx.eventBus().send(RegistrationConstants.EVENT_BUS_ADDRESS_REGISTRATION_IN, registrationMsg.toJson(), options);
     }
 
     @Override

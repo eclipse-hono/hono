@@ -24,6 +24,7 @@ import org.eclipse.hono.util.ResourceIdentifier;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import io.vertx.core.Vertx;
+import io.vertx.core.eventbus.DeliveryOptions;
 
 /**
  * An {@code AmqpEndpoint} for managing device credential information.
@@ -61,7 +62,8 @@ public class CredentialsAmqpEndpoint extends RequestResponseEndpoint<ServiceConf
                 .setTenant(targetAddress.getTenantId())
                 .setJsonPayload(msg);
 
-        vertx.eventBus().send(CredentialsConstants.EVENT_BUS_ADDRESS_CREDENTIALS_IN, credentialsMsg.toJson());
+        final DeliveryOptions options = createEventBusMessageDeliveryOptions(extractSpanContext(msg));
+        vertx.eventBus().send(CredentialsConstants.EVENT_BUS_ADDRESS_CREDENTIALS_IN, credentialsMsg.toJson(), options);
     }
 
     @Override
