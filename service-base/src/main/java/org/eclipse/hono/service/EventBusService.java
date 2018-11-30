@@ -17,6 +17,7 @@ import java.util.Objects;
 import java.util.Optional;
 
 import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.tracing.MultiMapExtractAdapter;
 import org.eclipse.hono.util.ConfigurationSupportingVerticle;
 import org.eclipse.hono.util.EventBusMessage;
 import org.eclipse.hono.util.RequestResponseApiConstants;
@@ -24,8 +25,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.opentracing.noop.NoopTracerFactory;
+import io.opentracing.propagation.Format;
 import io.vertx.core.Future;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.eventbus.MessageConsumer;
@@ -150,6 +153,8 @@ public abstract class EventBusService<C> extends ConfigurationSupportingVerticle
         }
 
         final EventBusMessage request = EventBusMessage.fromJson(msg.body());
+        final SpanContext spanContext = tracer.extract(Format.Builtin.TEXT_MAP, new MultiMapExtractAdapter(msg.headers()));
+        request.setSpanContext(spanContext);
         processRequest(request).recover(t -> {
             log.debug("cannot process request [operation: {}]: {}", request.getOperation(), t.getMessage());
             final int status = ServiceInvocationException.extractStatusCode(t);

@@ -22,6 +22,7 @@ import org.apache.qpid.proton.amqp.Binary;
 import org.apache.qpid.proton.amqp.UnsignedLong;
 import org.apache.qpid.proton.message.Message;
 
+import io.opentracing.SpanContext;
 import io.vertx.core.json.JsonObject;
 
 /**
@@ -35,6 +36,7 @@ public class EventBusMessage {
     private static final String FIELD_CORRELATION_ID_TYPE = "correlation-id-type";
 
     private final JsonObject json;
+    private transient SpanContext spanContext;
 
     private EventBusMessage(final String operation) {
         Objects.requireNonNull(operation);
@@ -533,6 +535,34 @@ public class EventBusMessage {
         } catch (final ClassCastException e) {
             return null;
         }
+    }
+
+    /**
+     * Sets an <em>OpenTracing</em> {@code SpanContext} on this message.
+     * <p>
+     * This may be the tracing context associated with the (request) message for which this {@code EventBusMessage} was
+     * created. The span context should be used as the parent context of each OpenTracing {@code Span} that is created
+     * as part of processing this event bus message.
+     * <p>
+     * Note: the span context instance will not get serialized when sending this event bus message over the vert.x event
+     * bus!
+     * 
+     * @param spanContext The {@code SpanContext} to set (may be null).
+     */
+    public void setSpanContext(final SpanContext spanContext) {
+        this.spanContext = spanContext;
+    }
+
+    /**
+     * Gets the <em>OpenTracing</em> {@code SpanContext} that has been set on this message.
+     * <p>
+     * The span context should be used as the parent context of each OpenTracing {@code Span} that is created as part of
+     * processing this event bus message.
+     * 
+     * @return {@code SpanContext} or {@code null}.
+     */
+    public SpanContext getSpanContext() {
+        return spanContext;
     }
 
     /**
