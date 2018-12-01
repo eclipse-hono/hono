@@ -48,7 +48,7 @@ hono:
 ---
 
 spring:
-  profiles: amqp-adapter-cli
+  profiles: amqp-send,amqp-command
 
 hono:
   client:

@@ -15,53 +15,29 @@ package org.eclipse.hono.cli;
 import java.io.PrintWriter;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.concurrent.CancellationException;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 
-import javax.annotation.PostConstruct;
 
-import org.apache.qpid.proton.amqp.messaging.Rejected;
-import org.apache.qpid.proton.amqp.transport.DeliveryState;
-import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.util.Strings;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Profile;
-import org.springframework.stereotype.Component;
 
 import io.vertx.core.Future;
 import io.vertx.proton.ProtonClient;
 import io.vertx.proton.ProtonClientOptions;
 import io.vertx.proton.ProtonConnection;
-import io.vertx.proton.ProtonDelivery;
-import io.vertx.proton.ProtonHelper;
 import io.vertx.proton.ProtonSender;
 import io.vertx.proton.sasl.impl.ProtonSaslPlainImpl;
 
 /**
- * A simple command-line client for interacting with the AMQP adapter.
+ * Abstract base CLI client for interacting with the AMQP adapter.
  */
-@Component
-@Profile("amqp-adapter-cli")
-public class AmqpSend extends AbstractCliClient {
+public abstract class AmqpCliClient extends AbstractCliClient {
+
+    protected PrintWriter writer = new PrintWriter(System.out);
+
+    protected ProtonConnection adapterConnection;
 
     private ClientConfigProperties properties = new ClientConfigProperties();
-
-    /**
-     * The address to set on the message being sent.
-     */
-    @Value(value = "${message.address}")
-    private String messageAddress;
-
-    /**
-     * The payload to send.
-     */
-    @Value(value = "${message.payload}")
-    private String payload;
-
-    private ProtonConnection adapterConnection;
 
     /**
      * Sets the configuration properties to use for connecting
@@ -75,71 +51,17 @@ public class AmqpSend extends AbstractCliClient {
         this.properties = Objects.requireNonNull(props);
     }
 
-    @PostConstruct
-    void start() {
-
-        final CompletableFuture<ProtonDelivery> messageSent = new CompletableFuture<>();
-        final Message message = ProtonHelper.message(messageAddress, payload);
-
-        ctx.runOnContext(go -> {
-            connectToAdapter()
-            .compose(con -> {
-                adapterConnection = con;
-                final Future<ProtonSender> senderTracker = Future.future();
-                final ProtonSender sender = adapterConnection.createSender(null);
-                sender.openHandler(senderTracker);
-                sender.open();
-                return senderTracker;
-            })
-            .map(sender -> {
-                sender.send(message, delivery -> {
-                    adapterConnection.close();
-                    messageSent.complete(delivery);
-                });
-                return sender;
-            })
-            .otherwise(t -> {
-                messageSent.completeExceptionally(t);
-                return null;
-            });
-        });
-
-        final PrintWriter pw = new PrintWriter(System.out);
-
-        try {
-            final ProtonDelivery delivery = messageSent.join();
-            // Logs the delivery state to the console
-            pw.println();
-            printDelivery(delivery, pw);
-        } catch (CompletionException e) {
-            pw.println(e.getCause());
-            pw.flush();
-        } catch (CancellationException e) {
-            // do-nothing
-        }
-        System.exit(0);
-    }
-
-    private void printDelivery(final ProtonDelivery delivery, final PrintWriter pw) {
-
-        final DeliveryState state = delivery.getRemoteState();
-        pw.println(state.getType());
-        switch(state.getType()) {
-        case Rejected:
-            final Rejected rejected = (Rejected) state;
-            if (rejected.getError() != null) {
-                pw.println(rejected.getError().getCondition() + ": " + rejected.getError().getDescription());
-            }
-            break;
-        default:
-            break;
-        }
-        pw.flush();
+    protected Future<ProtonSender> createSender() {
+        final Future<ProtonSender> senderTracker = Future.future();
+        final ProtonSender sender = adapterConnection.createSender(null);
+        sender.openHandler(senderTracker);
+        sender.open();
+        return senderTracker;
     }
 
     // ----------------------------------< Vertx-proton >---
 
-    private Future<ProtonConnection> connectToAdapter() {
+    protected Future<ProtonConnection> connectToAdapter() {
 
         final Future<ProtonConnection> connectAttempt = Future.future();
         final ProtonClientOptions options = new ProtonClientOptions();
