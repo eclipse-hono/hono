@@ -523,7 +523,7 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
      * @return {@code true} if there are.
      */
     protected final boolean isActiveSendersEmpty() {
-        return activeSenders != null && activeSenders.isEmpty();
+        return activeSenders.isEmpty();
     }
 
     /**
@@ -532,7 +532,7 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
      * @return {@code true} if there are.
      */
     protected final boolean isSendersPerConnectionEmpty() {
-        return receiversPerConnection != null && receiversPerConnection.isEmpty();
+        return receiversPerConnection.isEmpty();
     }
 
     /**

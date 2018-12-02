@@ -21,16 +21,14 @@ import org.eclipse.hono.adapter.http.AbstractVertxBasedHttpProtocolAdapter;
 import org.eclipse.hono.adapter.http.HonoBasicAuthHandler;
 import org.eclipse.hono.adapter.http.HttpProtocolAdapterProperties;
 import org.eclipse.hono.adapter.http.X509AuthHandler;
-import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.auth.Device;
+import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.service.auth.device.HonoChainAuthHandler;
 import org.eclipse.hono.service.auth.device.HonoClientBasedAuthProvider;
 import org.eclipse.hono.service.auth.device.UsernamePasswordAuthProvider;
 import org.eclipse.hono.service.auth.device.X509AuthProvider;
 import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.util.Constants;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import io.vertx.core.Handler;
 import io.vertx.core.http.HttpHeaders;
@@ -46,10 +44,12 @@ import io.vertx.ext.web.handler.CorsHandler;
  */
 public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> {
 
-    private static final Logger LOG = LoggerFactory.getLogger(VertxBasedHttpProtocolAdapter.class);
     private static final String PARAM_TENANT = "tenant";
     private static final String PARAM_DEVICE_ID = "device_id";
     private static final String PARAM_COMMAND_REQUEST_ID = "cmd_req_id";
+
+    private static final String ROUTE_TELEMETRY_ENDPOINT = "/telemetry";
+    private static final String ROUTE_EVENT_ENDPOINT = "/event";
 
     private HonoClientBasedAuthProvider usernamePasswordAuthProvider;
     private HonoClientBasedAuthProvider clientCertAuthProvider;
@@ -133,7 +133,7 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
         if (getConfig().isAuthenticationRequired()) {
 
             // support CORS headers for POSTing telemetry
-            router.route("/telemetry").handler(CorsHandler.create(getConfig().getCorsAllowedOrigin())
+            router.route(ROUTE_TELEMETRY_ENDPOINT).handler(CorsHandler.create(getConfig().getCorsAllowedOrigin())
                     .allowedMethod(HttpMethod.POST)
                     .allowedHeader(Constants.HEADER_QOS_LEVEL)
                     .allowedHeader(Constants.HEADER_TIME_TIL_DISCONNECT)
@@ -141,11 +141,11 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
                     .allowedHeader(HttpHeaders.CONTENT_TYPE.toString()));
 
             // require auth for POSTing telemetry
-            router.route(HttpMethod.POST, "/telemetry").handler(authHandler);
+            router.route(HttpMethod.POST, ROUTE_TELEMETRY_ENDPOINT).handler(authHandler);
 
             // route for posting telemetry data using tenant and device ID determined as part of
             // device authentication
-            router.route(HttpMethod.POST, "/telemetry").handler(this::handlePostTelemetry);
+            router.route(HttpMethod.POST, ROUTE_TELEMETRY_ENDPOINT).handler(this::handlePostTelemetry);
 
             // require auth for PUTing telemetry
             router.route(HttpMethod.PUT, "/telemetry/*").handler(authHandler);
@@ -171,18 +171,18 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
         if (getConfig().isAuthenticationRequired()) {
 
             // support CORS headers for POSTing events
-            router.route("/event").handler(CorsHandler.create(getConfig().getCorsAllowedOrigin())
+            router.route(ROUTE_EVENT_ENDPOINT).handler(CorsHandler.create(getConfig().getCorsAllowedOrigin())
                     .allowedMethod(HttpMethod.POST)
                     .allowedHeader(Constants.HEADER_TIME_TIL_DISCONNECT)
                     .allowedHeader(HttpHeaders.AUTHORIZATION.toString())
                     .allowedHeader(HttpHeaders.CONTENT_TYPE.toString()));
 
             // require auth for POSTing events
-            router.route(HttpMethod.POST, "/event").handler(authHandler);
+            router.route(HttpMethod.POST, ROUTE_EVENT_ENDPOINT).handler(authHandler);
 
             // route for posting events using tenant and device ID determined as part of
             // device authentication
-            router.route(HttpMethod.POST, "/event").handler(this::handlePostEvent);
+            router.route(HttpMethod.POST, ROUTE_EVENT_ENDPOINT).handler(this::handlePostEvent);
 
             // require auth for PUTing events
             router.route(HttpMethod.PUT, "/event/*").handler(authHandler);

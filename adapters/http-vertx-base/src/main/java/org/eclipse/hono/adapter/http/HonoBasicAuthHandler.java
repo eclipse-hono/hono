@@ -67,7 +67,7 @@ public class HonoBasicAuthHandler extends HonoAuthHandler {
           // decode the payload
             final String decoded = new String(Base64.getDecoder().decode(parseAuthorization.result()));
 
-            final int colonIdx = decoded.indexOf(":");
+            final int colonIdx = decoded.indexOf(':');
           if (colonIdx != -1) {
             suser = decoded.substring(0, colonIdx);
             spass = decoded.substring(colonIdx + 1);

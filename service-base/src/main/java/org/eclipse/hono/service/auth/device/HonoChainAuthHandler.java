@@ -16,6 +16,7 @@
 
 package org.eclipse.hono.service.auth.device;
 
+import java.net.HttpURLConnection;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -106,10 +107,10 @@ public class HonoChainAuthHandler extends HonoAuthHandler implements ChainAuthHa
           if (res.cause() instanceof HttpStatusException) {
             final HttpStatusException exception = (HttpStatusException) res.cause();
             switch (exception.getStatusCode()) {
-              case 302:
-              case 400:
-              case 401:
-              case 403:
+              case HttpURLConnection.HTTP_MOVED_TEMP:
+              case HttpURLConnection.HTTP_BAD_REQUEST:
+              case HttpURLConnection.HTTP_UNAUTHORIZED:
+              case HttpURLConnection.HTTP_FORBIDDEN:
                 // try again with next provider since we know what kind of error it is
                 iterate(idx + 1, ctx, exception, handler);
                 return;

@@ -15,8 +15,6 @@ package org.eclipse.hono.messaging;
 import org.eclipse.hono.service.AbstractApplication;
 import org.eclipse.hono.service.HealthCheckProvider;
 import org.eclipse.hono.service.auth.AuthenticationService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
@@ -39,8 +37,6 @@ import io.vertx.core.Verticle;
 @Configuration
 @EnableAutoConfiguration
 public class HonoMessagingApplication extends AbstractApplication {
-
-    private static final Logger LOG = LoggerFactory.getLogger(HonoMessagingApplication.class);
 
     private AuthenticationService authenticationService;
 
@@ -78,7 +74,7 @@ public class HonoMessagingApplication extends AbstractApplication {
         if (!Verticle.class.isInstance(authenticationService)) {
             result.fail("authentication service is not a verticle");
         } else {
-            LOG.info("Starting authentication service {}", authenticationService);
+            log.info("Starting authentication service {}", authenticationService);
             getVertx().deployVerticle((Verticle) authenticationService, result.completer());
         }
         return result;
