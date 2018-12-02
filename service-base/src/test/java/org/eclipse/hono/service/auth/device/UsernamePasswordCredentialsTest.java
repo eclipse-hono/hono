@@ -46,10 +46,10 @@ public class UsernamePasswordCredentialsTest {
 
         final UsernamePasswordCredentials mqttUsernamePassword = UsernamePasswordCredentials.create(TEST_USER_OTHER_TENANT, TEST_PASSWORD, false);
 
-        assertEquals(mqttUsernamePassword.getType(), CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD);
-        assertEquals(mqttUsernamePassword.getTenantId(), TEST_OTHER_TENANT);
-        assertEquals(mqttUsernamePassword.getAuthId(), TEST_USER);
-        assertEquals(mqttUsernamePassword.getPassword(), TEST_PASSWORD);
+        assertEquals(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, mqttUsernamePassword.getType());
+        assertEquals(TEST_OTHER_TENANT, mqttUsernamePassword.getTenantId());
+        assertEquals(TEST_USER, mqttUsernamePassword.getAuthId());
+        assertEquals(TEST_PASSWORD, mqttUsernamePassword.getPassword());
     }
 
     /**
@@ -80,10 +80,10 @@ public class UsernamePasswordCredentialsTest {
 
         final UsernamePasswordCredentials mqttUsernamePassword = UsernamePasswordCredentials.create(TEST_USER, TEST_PASSWORD, true);
 
-        assertEquals(mqttUsernamePassword.getType(), CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD);
-        assertEquals(mqttUsernamePassword.getTenantId(), Constants.DEFAULT_TENANT);
-        assertEquals(mqttUsernamePassword.getAuthId(), TEST_USER);
-        assertEquals(mqttUsernamePassword.getPassword(), TEST_PASSWORD);
+        assertEquals(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, mqttUsernamePassword.getType());
+        assertEquals(Constants.DEFAULT_TENANT, mqttUsernamePassword.getTenantId());
+        assertEquals(TEST_USER, mqttUsernamePassword.getAuthId());
+        assertEquals(TEST_PASSWORD, mqttUsernamePassword.getPassword());
     }
 
     /**

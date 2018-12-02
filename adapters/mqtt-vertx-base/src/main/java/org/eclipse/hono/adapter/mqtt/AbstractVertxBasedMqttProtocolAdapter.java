@@ -23,15 +23,15 @@ import java.util.stream.Collectors;
 
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
-import org.eclipse.hono.client.MessageConsumer;
-import org.eclipse.hono.client.MessageSender;
-import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.Command;
 import org.eclipse.hono.client.CommandContext;
 import org.eclipse.hono.client.CommandResponse;
 import org.eclipse.hono.client.CommandSubscription;
-import org.eclipse.hono.auth.Device;
+import org.eclipse.hono.client.MessageConsumer;
+import org.eclipse.hono.client.MessageSender;
+import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
 import org.eclipse.hono.service.auth.DeviceUser;
@@ -49,8 +49,6 @@ import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.TelemetryConstants;
 import org.eclipse.hono.util.TenantObject;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import io.netty.handler.codec.mqtt.MqttConnectReturnCode;
@@ -87,11 +85,6 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
 
     private static final int IANA_MQTT_PORT = 1883;
     private static final int IANA_SECURE_MQTT_PORT = 8883;
-
-    /**
-     * A logger to be used by concrete subclasses.
-     */
-    protected final Logger LOG = LoggerFactory.getLogger(getClass());
 
     private MqttAdapterMetrics metrics = MqttAdapterMetrics.NOOP;
 
@@ -346,7 +339,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
 
             final Throwable t = authenticationAttempt.cause();
             TracingHelper.TAG_AUTHENTICATED.set(currentSpan, false);
-            LOG.debug("connection request from client [clientId: {}] rejected: ",
+            LOG.debug("connection request from client [clientId: {}] rejected due to {} ",
                     endpoint.clientIdentifier(), t.getMessage());
 
             final MqttConnectReturnCode code = getConnectReturnCode(t);

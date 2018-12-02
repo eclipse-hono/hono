@@ -147,6 +147,7 @@ public final class HttpUtils {
      * @throws NullPointerException if routing context is {@code null}.
      * @deprecated Use {@link #failWithHeaders(RoutingContext, ServiceInvocationException, Map)} instead.
      */
+    @Deprecated
     public static void failWithStatus(
             final RoutingContext ctx,
             final int status,

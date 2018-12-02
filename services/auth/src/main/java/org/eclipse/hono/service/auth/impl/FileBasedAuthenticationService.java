@@ -58,6 +58,7 @@ public final class FileBasedAuthenticationService extends AbstractHonoAuthentica
     private static final String FIELD_ACTIVITIES = "activities";
     private static final String FIELD_AUTHORITIES = "authorities";
     private static final String FIELD_MECHANISM = "mechanism";
+    private static final String UNAUTHORIZED = "unauthorized";
 
     private static final Map<String, Authorities> roles = new HashMap<>();
     private static final Map<String, JsonObject> users = new HashMap<>();
@@ -228,12 +229,12 @@ public final class FileBasedAuthenticationService extends AbstractHonoAuthentica
             final JsonObject user = getUser(username, AuthenticationConstants.MECHANISM_PLAIN);
             if (user == null) {
                 log.debug("no such user [{}]", username);
-                authenticationResultHandler.handle(Future.failedFuture("unauthorized"));
+                authenticationResultHandler.handle(Future.failedFuture(UNAUTHORIZED));
             } else if (password.equals(user.getString("password"))) {
                 verify(username, user, authzid, authenticationResultHandler);
             } else {
                 log.debug("password mismatch");
-                authenticationResultHandler.handle(Future.failedFuture("unauthorized"));
+                authenticationResultHandler.handle(Future.failedFuture(UNAUTHORIZED));
             }
         }
     }
@@ -250,7 +251,7 @@ public final class FileBasedAuthenticationService extends AbstractHonoAuthentica
             } else {
                 final JsonObject user = getUser(commonName, AuthenticationConstants.MECHANISM_EXTERNAL);
                 if (user == null) {
-                    authenticationResultHandler.handle(Future.failedFuture("unauthorized"));
+                    authenticationResultHandler.handle(Future.failedFuture(UNAUTHORIZED));
                 } else {
                     verify(commonName, user, authzid, authenticationResultHandler);
                 }

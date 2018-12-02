@@ -43,8 +43,6 @@ import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.TelemetryConstants;
 import org.eclipse.hono.util.TenantObject;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import io.opentracing.Span;
@@ -74,8 +72,6 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
      * Default file uploads directory used by Vert.x Web.
      */
     protected static final String DEFAULT_UPLOADS_DIRECTORY = "/tmp";
-
-    private static final Logger LOG = LoggerFactory.getLogger(AbstractVertxBasedHttpProtocolAdapter.class);
 
     private static final int AT_LEAST_ONCE = 1;
     private static final int HEADER_QOS_INVALID = -1;
@@ -736,16 +732,14 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
             final String tenantId,
             final String deviceId) {
 
-        if (messageConsumer != null) {
-            if (!ctx.response().closed()) {
-                ctx.response().closeHandler(v -> {
-                    LOG.debug("device [tenant: {}, device-id: {}] closed connection before response could be sent",
-                            tenantId, deviceId);
-                    cancelCommandReceptionTimer(ctx);
-                    messageConsumer.close(null);
-                    metrics.incrementNoCommandReceivedAndTTDExpired(tenantId);
-                });
-            }
+        if (messageConsumer != null && !ctx.response().closed()) {
+            ctx.response().closeHandler(v -> {
+                LOG.debug("device [tenant: {}, device-id: {}] closed connection before response could be sent",
+                        tenantId, deviceId);
+                cancelCommandReceptionTimer(ctx);
+                messageConsumer.close(null);
+                metrics.incrementNoCommandReceivedAndTTDExpired(tenantId);
+            });
         }
     }
 

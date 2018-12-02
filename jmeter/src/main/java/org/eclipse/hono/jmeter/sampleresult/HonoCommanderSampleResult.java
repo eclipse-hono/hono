@@ -25,10 +25,12 @@ public class HonoCommanderSampleResult extends SampleResult {
 
     private int errorCount = 0;
 
+    @Override
     public int getErrorCount() {
         return errorCount;
     }
 
+    @Override
     public void setErrorCount(final int errorCount) {
         this.errorCount = errorCount;
     }

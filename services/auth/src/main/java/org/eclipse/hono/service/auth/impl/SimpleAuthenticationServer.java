@@ -16,6 +16,7 @@ package org.eclipse.hono.service.auth.impl;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -59,6 +60,7 @@ public final class SimpleAuthenticationServer extends AmqpServiceBase<ServiceCon
         return "Hono-Auth";
     }
 
+    @Override
     protected void setRemoteConnectionOpenHandler(final ProtonConnection connection) {
         connection.sessionOpenHandler(remoteOpenSession -> handleSessionOpen(connection, remoteOpenSession));
         connection.senderOpenHandler(remoteOpenSender -> handleSenderOpen(connection, remoteOpenSender));
@@ -147,7 +149,7 @@ public final class SimpleAuthenticationServer extends AmqpServiceBase<ServiceCon
             default:
                 return null;
             }
-        }).filter(s -> s != null).collect(Collectors.toSet());
+        }).filter(Objects::nonNull).collect(Collectors.toSet());
         return result.toArray(new String[result.size()]);
     }
 

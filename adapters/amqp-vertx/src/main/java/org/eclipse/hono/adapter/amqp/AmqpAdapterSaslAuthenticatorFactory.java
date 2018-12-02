@@ -110,7 +110,7 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
     /**
      * Manage the SASL authentication process for the AMQP adapter.
      */
-    final static class AmqpAdapterSaslAuthenticator implements ProtonSaslAuthenticator {
+    static final class AmqpAdapterSaslAuthenticator implements ProtonSaslAuthenticator {
 
         private static final Logger LOG = LoggerFactory.getLogger(AmqpAdapterSaslAuthenticator.class);
 
