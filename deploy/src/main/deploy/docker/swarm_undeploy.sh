@@ -104,7 +104,7 @@ docker config rm \
   message-details.json \
   prometheus.yaml
 
-docker service rm prometheus
+docker service rm prometheus-operated
 docker secret rm prometheus.yml
 
 docker secret rm trusted-certs.pem

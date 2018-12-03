@@ -87,7 +87,7 @@ docker service create $CREATE_OPTIONS --name grafana -p 3000:3000 \
   --config source=filesystem-provisioner.yaml,target=/etc/grafana/provisioning/dashboards/filesystem-provisioner.yaml \
   --config source=overview.json,target=/etc/grafana/dashboard-definitions/overview.json \
   --config source=jvm-details.json,target=/etc/grafana/dashboard-definitions/jvm-details.json \
-  --config source=nessage-details.json,target=/etc/grafana/dashboard-definitions/message-details.json \
+  --config source=message-details.json,target=/etc/grafana/dashboard-definitions/message-details.json \
   --config source=prometheus.yaml,target=/etc/grafana/provisioning/datasources/prometheus.yaml \
   --limit-memory 64m \
   grafana/grafana:${grafana.version}
