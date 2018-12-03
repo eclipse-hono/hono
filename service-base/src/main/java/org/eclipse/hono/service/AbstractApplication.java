@@ -117,6 +117,7 @@ public class AbstractApplication implements ApplicationRunner {
      * 
      * @param args The command line arguments provided to the application.
      */
+    @Override
     public void run(final ApplicationArguments args) {
 
         if (vertx == null) {
@@ -136,7 +137,7 @@ public class AbstractApplication implements ApplicationRunner {
 
         healthCheckServer = new HealthCheckServer(vertx, config);
 
-        final Future<Void> future = deployRequiredVerticles(config.getMaxInstances())
+        final Future<?> future = deployRequiredVerticles(config.getMaxInstances())
              .compose(s -> deployServiceVerticles())
              .compose(s -> postRegisterServiceVerticles())
              .compose(s -> healthCheckServer.start());
@@ -155,26 +156,26 @@ public class AbstractApplication implements ApplicationRunner {
         try {
             log.debug("Waiting {} seconds for application to start up", startupTimeoutSeconds);
             started.get(startupTimeoutSeconds, TimeUnit.SECONDS);
-        } catch (TimeoutException e) {
+        } catch (final TimeoutException e) {
             log.error("startup timed out after {} seconds, shutting down ...", startupTimeoutSeconds);
             shutdown();
-        } catch (InterruptedException e) {
+        } catch (final InterruptedException e) {
             log.error("startup process has been interrupted, shutting down ...");
             Thread.currentThread().interrupt();
             shutdown();
-        } catch (ExecutionException e) {
+        } catch (final ExecutionException e) {
             log.error("exception occurred during startup, shutting down ...", e);
             shutdown();
         }
     }
 
-    private CompositeFuture deployServiceVerticles() {
+    private Future<?> deployServiceVerticles() {
         final int maxInstances = config.getMaxInstances();
 
         @SuppressWarnings("rawtypes")
         final List<Future> deploymentTracker = new ArrayList<>();
 
-        for (ObjectFactory<? extends AbstractServiceBase<?>> serviceFactory : serviceFactories) {
+        for (final ObjectFactory<? extends AbstractServiceBase<?>> serviceFactory : serviceFactories) {
 
             AbstractServiceBase<?> serviceInstance = serviceFactory.getObject();
 
@@ -208,7 +209,7 @@ public class AbstractApplication implements ApplicationRunner {
      * @return A future indicating success. Application start-up fails if the
      *         returned future fails.
      */
-    protected Future<Void> deployRequiredVerticles(final int maxInstances) {
+    protected Future<?> deployRequiredVerticles(final int maxInstances) {
         return Future.succeededFuture();
     }
 
@@ -259,7 +260,7 @@ public class AbstractApplication implements ApplicationRunner {
                 log.error("shut down timed out, aborting...");
                 shutdownHandler.handle(Boolean.FALSE);
             }
-        } catch (InterruptedException e) {
+        } catch (final InterruptedException e) {
             log.error("application shut down has been interrupted, aborting...");
             Thread.currentThread().interrupt();
             shutdownHandler.handle(Boolean.FALSE);
@@ -285,7 +286,7 @@ public class AbstractApplication implements ApplicationRunner {
      * @return A future indicating success. Application start-up fails if the
      *         returned future fails.
      */
-    protected Future<Void> postRegisterServiceVerticles() {
+    protected Future<?> postRegisterServiceVerticles() {
         return Future.succeededFuture();
     }
 
