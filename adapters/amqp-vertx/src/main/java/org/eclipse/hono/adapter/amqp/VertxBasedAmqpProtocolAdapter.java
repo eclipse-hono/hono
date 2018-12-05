@@ -64,6 +64,7 @@ import io.vertx.proton.ProtonServer;
 import io.vertx.proton.ProtonServerOptions;
 import io.vertx.proton.ProtonSession;
 import io.vertx.proton.sasl.ProtonSaslAuthenticatorFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * A Vert.x based Hono protocol adapter for publishing messages to Hono's Telemetry and Event APIs using AMQP.
@@ -88,6 +89,8 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
      */
     private ProtonSaslAuthenticatorFactory authenticatorFactory;
 
+    private AmqpAdapterMetrics metrics = AmqpAdapterMetrics.NOOP;
+
     // -----------------------------------------< AbstractProtocolAdapterBase >---
     /**
      * {@inheritDoc}
@@ -95,6 +98,16 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
     @Override
     protected String getTypeName() {
         return Constants.PROTOCOL_ADAPTER_TYPE_AMQP;
+    }
+
+    /**
+     * Sets the metrics for this service.
+     *
+     * @param metrics The metrics
+     */
+    @Autowired
+    public void setMetrics(final AmqpAdapterMetrics metrics) {
+        this.metrics = metrics;
     }
 
     /**
@@ -217,7 +230,6 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
     }
 
     private void onConnectRequest(final ProtonConnection con) {
-
         final Span span = Optional
                 // try to pick up span that has been created during SASL handshake
                 .ofNullable(con.attachments().get(AmqpAdapterConstants.KEY_CURRENT_SPAN, Span.class))
@@ -260,13 +272,14 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
 
         connectAuthorizationCheck.map(ok -> {
             con.setContainer(getTypeName());
-            setConnectionHandlers(con);
+            setConnectionHandlers(con, authenticatedDevice);
             con.open();
             if (authenticatedDevice != null) {
                 span.setTag(MessageHelper.APP_PROPERTY_TENANT_ID, authenticatedDevice.getTenantId());
                 span.setTag(MessageHelper.APP_PROPERTY_DEVICE_ID, authenticatedDevice.getDeviceId());
             }
             span.log("connection accepted");
+            incrementConnections(authenticatedDevice);
             return null;
         }).otherwise(t -> {
             con.setCondition(AmqpContext.getErrorCondition(t));
@@ -278,14 +291,16 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         });
     }
 
-    private void setConnectionHandlers(final ProtonConnection con) {
+    private void setConnectionHandlers(final ProtonConnection con, final Device device) {
 
         con.disconnectHandler(lostConnection -> {
             LOG.debug("lost connection to device [container: {}]", con.getRemoteContainer());
+            decrementConnections(device);
             Optional.ofNullable(getConnectionLossHandler(con)).ifPresent(handler -> handler.handle(null));
         });
         con.closeHandler(remoteClose -> {
-            handleRemoteConnectionClose(con, remoteClose);
+            handleRemoteConnectionClose(con, remoteClose, device);
+            decrementConnections(device);
             Optional.ofNullable(getConnectionLossHandler(con)).ifPresent(handler -> handler.handle(null));
         });
 
@@ -354,7 +369,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
      * @param con The connection to close.
      * @param res The client's close frame.
      */
-    private void handleRemoteConnectionClose(final ProtonConnection con, final AsyncResult<ProtonConnection> res) {
+    private void handleRemoteConnectionClose(final ProtonConnection con, final AsyncResult<ProtonConnection> res, final Device device) {
         if (res.succeeded()) {
             LOG.debug("client [container: {}] closed connection", con.getRemoteContainer());
         } else {
@@ -674,6 +689,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         });
         final Map<String, Object> items = new HashMap<>(4);
         items.put(Fields.EVENT, "command sent to device");
+        metrics.incrementCommandDeliveredToDevice(command.getTenant());
         if (sender.getRemoteTarget() != null) {
             items.put(Tags.MESSAGE_BUS_DESTINATION.getKey(), sender.getRemoteTarget().getAddress());
         }
@@ -734,14 +750,26 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         })
         .map(downstreamDelivery -> {
             context.accept();
+            metrics.incrementProcessedMessages(context.getEndpoint(), context.getTenantId());
+            metrics.incrementProcessedPayload(context.getEndpoint(), context.getTenantId(),
+                    messagePayloadSize(context));
             return (Void) null;
         })
         .recover(t -> {
+            metrics.incrementUndeliverableMessages(context.getEndpoint(), context.getTenantId());
             context.handleFailure(t);
             return Future.failedFuture(t);
         });
 
     }
+
+    private long messagePayloadSize(final AmqpContext ctx) {
+        if (ctx == null || ctx.getMessagePayload() == null) {
+            return 0L;
+        }
+        return ctx.getMessagePayload().length();
+    }
+
 
     private Future<ProtonDelivery> doUploadMessage(
             final AmqpContext context,
@@ -818,6 +846,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                     .map(delivery -> {
                         LOG.trace("forwarded command response from device [tenant: {}, device-id: {}]",
                                 context.getTenantId(), context.getDeviceId());
+                        metrics.incrementCommandResponseDeliveredToApplication(context.getTenantId());
                         return delivery;
                     }).recover(t -> {
                         LOG.debug("cannot process command response from device [tenant: {}, device-id: {}]",
@@ -938,7 +967,6 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
 
     @SuppressWarnings("unchecked")
     private static Handler<Void> getConnectionLossHandler(final ProtonConnection con) {
-
         return con.attachments().get("connectionLossHandler", Handler.class);
     }
 
@@ -976,4 +1004,23 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         return insecureServer != null ? insecureServer.actualPort() : Constants.PORT_UNCONFIGURED;
     }
 
+    private void incrementConnections(final Device device) {
+        if (device != null) {
+            LOG.debug("Connection to device [{}:{}] established", device.getTenantId(), device.getDeviceId());
+            metrics.incrementConnections(device.getTenantId());
+        } else {
+            LOG.debug("Connection to unauthenticated device established");
+            metrics.incrementUnauthenticatedConnections();
+        }
+    }
+
+    private void decrementConnections(final Device device) {
+        if (device != null) {
+            LOG.debug("Connection to device [{}:{}] lost", device.getTenantId(), device.getDeviceId());
+            metrics.decrementConnections(device.getTenantId());
+        } else {
+            LOG.debug("Connection to unauthenticated device lost");
+            metrics.decrementUnauthenticatedConnections();
+        }
+    }
 }

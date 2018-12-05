@@ -109,8 +109,8 @@ public class VertxBasedAmqpProtocolAdapterTest {
 
     private RegistrationClient registrationClient;
     private TenantClient tenantClient;
-
     private AmqpAdapterProperties config;
+    private AmqpAdapterMetrics metrics;
 
     /**
      * Setups the protocol adapter.
@@ -152,6 +152,8 @@ public class VertxBasedAmqpProtocolAdapterTest {
         commandConnection = mock(CommandConnection.class);
         when(commandConnection.connect(any(Handler.class))).thenReturn(Future.succeededFuture(commandConnection));
 
+        metrics = mock(AmqpAdapterMetrics.class);
+
         config = new AmqpAdapterProperties();
         config.setAuthenticationRequired(false);
         config.setInsecurePort(4040);
@@ -182,6 +184,77 @@ public class VertxBasedAmqpProtocolAdapterTest {
         startup.await();
         verify(server).connectHandler(any(Handler.class));
         verify(server).listen(any(Handler.class));
+    }
+
+    /**
+     * Verifies the metrics corresponding to the connections of authenticated devices.
+     *
+     * @param ctx The test context to use for running asynchronous tests.
+     */
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testConnectionMetricsForAuthenticatedDevices(final TestContext ctx) {
+        final Async startup = ctx.async();
+        final ProtonServer server = getAmqpServer();
+        final VertxBasedAmqpProtocolAdapter adapter = getAdapter(server);
+        final ProtonConnection deviceConnection = mock(ProtonConnection.class);
+        final Device authenticatedDevice = new Device(TEST_TENANT_ID, TEST_DEVICE);
+        final Record attachments = mock(Record.class);
+
+        when(attachments.get(AmqpAdapterConstants.KEY_CLIENT_DEVICE, Device.class)).thenReturn(authenticatedDevice);
+        when(deviceConnection.attachments()).thenReturn(attachments);
+
+        // Start adapter
+        final Future<Void> startupTracker = Future.future();
+        startupTracker.setHandler(ctx.asyncAssertSuccess(result -> startup.complete()));
+        adapter.start(startupTracker);
+        startup.await();
+
+        // Trigger connectHandler and check increment in connections
+        final ArgumentCaptor<Handler> connectHandlerArgumentCaptor = ArgumentCaptor.forClass(Handler.class);
+        verify(server).connectHandler(connectHandlerArgumentCaptor.capture());
+        connectHandlerArgumentCaptor.getValue().handle(deviceConnection);
+        verify(metrics).incrementConnections(TEST_TENANT_ID);
+
+        // Trigger disconnectHandler and check decrement in connections
+        final ArgumentCaptor<Handler> disconnectHandlerArgumentCaptor = ArgumentCaptor.forClass(Handler.class);
+        verify(deviceConnection).disconnectHandler(disconnectHandlerArgumentCaptor.capture());
+        disconnectHandlerArgumentCaptor.getValue().handle(deviceConnection);
+        verify(metrics).decrementConnections(TEST_TENANT_ID);
+    }
+
+    /**
+     * Verifies the metrics corresponding to the connections of unauthenticated devices.
+     *
+     * @param ctx The test context to use for running asynchronous tests.
+     */
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testConnectionMetricsForUnAuthenticatedDevices(final TestContext ctx) {
+        final Async startup = ctx.async();
+        final ProtonServer server = getAmqpServer();
+        final VertxBasedAmqpProtocolAdapter adapter = getAdapter(server);
+        final ProtonConnection deviceConnection = mock(ProtonConnection.class);
+        final Record attachments = mock(Record.class);
+
+        when(deviceConnection.attachments()).thenReturn(attachments);
+        // Start adapter
+        final Future<Void> startupTracker = Future.future();
+        startupTracker.setHandler(ctx.asyncAssertSuccess(result -> startup.complete()));
+        adapter.start(startupTracker);
+        startup.await();
+
+        // Trigger connectHandler and check increment in connections
+        final ArgumentCaptor<Handler> connectHandlerArgumentCaptor = ArgumentCaptor.forClass(Handler.class);
+        verify(server).connectHandler(connectHandlerArgumentCaptor.capture());
+        connectHandlerArgumentCaptor.getValue().handle(deviceConnection);
+        verify(metrics).incrementUnauthenticatedConnections();
+
+        // Trigger disconnectHandler and check decrement in connections
+        final ArgumentCaptor<Handler> disconnectHandlerArgumentCaptor = ArgumentCaptor.forClass(Handler.class);
+        verify(deviceConnection).disconnectHandler(disconnectHandlerArgumentCaptor.capture());
+        disconnectHandlerArgumentCaptor.getValue().handle(deviceConnection);
+        verify(metrics).decrementUnauthenticatedConnections();
     }
 
     /**
@@ -222,10 +295,43 @@ public class VertxBasedAmqpProtocolAdapterTest {
 
         final String to = ResourceIdentifier.from(TelemetryConstants.TELEMETRY_ENDPOINT, TEST_TENANT_ID, TEST_DEVICE).toString();
 
+        when(telemetrySender.send(any(Message.class), (SpanContext) any()))
+                .thenAnswer(answer -> Future.succeededFuture(mock(ProtonDelivery.class)));
         adapter.uploadMessage(new AmqpContext(delivery, getFakeMessage(to), null), mock(Span.class));
 
         // THEN the adapter sends the message and does not wait for response from the peer.
         verify(telemetrySender).send(any(Message.class), (SpanContext) any());
+        verify(metrics).incrementProcessedMessages(eq(TelemetryConstants.TELEMETRY_ENDPOINT), eq(TEST_TENANT_ID));
+        verify(metrics).incrementProcessedPayload(eq(TelemetryConstants.TELEMETRY_ENDPOINT), eq(TEST_TENANT_ID), anyLong());
+    }
+
+
+    /**
+     * Verifies that when sending of a telemetry message fails, then the metrics corresponding to the undeliverable messages get
+     * incremented.
+     */
+    @Test
+    public void uploadTelemetryMessageFails() {
+        //Given an AMQP adapter with a configured server
+        final VertxBasedAmqpProtocolAdapter adapter = givenAnAmqpAdapter();
+        final MessageSender telemetrySender = givenATelemetrySenderForAnyTenant();
+
+        // which is enabled for a tenant
+        givenAConfiguredTenant(TEST_TENANT_ID, true);
+
+        // IF a device sends a 'fire and forget' telemetry message
+        final ProtonDelivery delivery = mock(ProtonDelivery.class);
+        when(delivery.remotelySettled()).thenReturn(true);
+
+        final String to = ResourceIdentifier.from(TelemetryConstants.TELEMETRY_ENDPOINT, TEST_TENANT_ID, TEST_DEVICE)
+                .toString();
+
+        when(telemetrySender.send(any(Message.class), (SpanContext) any()))
+                .thenAnswer(answer -> Future.failedFuture("error"));
+        adapter.uploadMessage(new AmqpContext(delivery, getFakeMessage(to), null), mock(Span.class));
+
+        verify(telemetrySender).send(any(Message.class), (SpanContext) any());
+        verify(metrics).incrementUndeliverableMessages(eq(TelemetryConstants.TELEMETRY_ENDPOINT), eq(TEST_TENANT_ID));
     }
 
     /**
@@ -476,10 +582,13 @@ public class VertxBasedAmqpProtocolAdapterTest {
         when(message.getCorrelationId()).thenReturn("correlation-id");
         when(message.getApplicationProperties()).thenReturn(props);
 
+        when(responseSender.sendCommandResponse((CommandResponse) any(), (SpanContext) any()))
+                .thenAnswer(answer -> Future.succeededFuture(mock(ProtonDelivery.class)));
         adapter.uploadMessage(new AmqpContext(delivery, message, null), mock(Span.class));
 
         // THEN the adapter forwards the command response message downstream
         verify(responseSender).sendCommandResponse((CommandResponse) any(), (SpanContext) any());
+        verify(metrics).incrementCommandResponseDeliveredToApplication(TEST_TENANT_ID);
 
     }
 
@@ -568,6 +677,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
         final VertxBasedAmqpProtocolAdapter adapter = new VertxBasedAmqpProtocolAdapter();
 
         adapter.setConfig(config);
+        adapter.setMetrics(metrics);
         adapter.setInsecureAmqpServer(server);
         adapter.setTenantServiceClient(tenantServiceClient);
         adapter.setHonoMessagingClient(messagingServiceClient);
