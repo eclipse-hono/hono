@@ -128,7 +128,9 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
                 .allowedHeader(Constants.HEADER_QOS_LEVEL)
                 .allowedHeader(Constants.HEADER_TIME_TIL_DISCONNECT)
                 .allowedHeader(HttpHeaders.AUTHORIZATION.toString())
-                .allowedHeader(HttpHeaders.CONTENT_TYPE.toString()));
+                .allowedHeader(HttpHeaders.CONTENT_TYPE.toString())
+                .exposedHeader(Constants.HEADER_COMMAND)
+                .exposedHeader(Constants.HEADER_COMMAND_REQUEST_ID));
 
         if (getConfig().isAuthenticationRequired()) {
 
@@ -138,7 +140,9 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
                     .allowedHeader(Constants.HEADER_QOS_LEVEL)
                     .allowedHeader(Constants.HEADER_TIME_TIL_DISCONNECT)
                     .allowedHeader(HttpHeaders.AUTHORIZATION.toString())
-                    .allowedHeader(HttpHeaders.CONTENT_TYPE.toString()));
+                    .allowedHeader(HttpHeaders.CONTENT_TYPE.toString())
+                    .exposedHeader(Constants.HEADER_COMMAND)
+                    .exposedHeader(Constants.HEADER_COMMAND_REQUEST_ID));
 
             // require auth for POSTing telemetry
             router.route(HttpMethod.POST, "/telemetry").handler(authHandler);
@@ -166,7 +170,9 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
                 .allowedMethod(HttpMethod.PUT)
                 .allowedHeader(Constants.HEADER_TIME_TIL_DISCONNECT)
                 .allowedHeader(HttpHeaders.AUTHORIZATION.toString())
-                .allowedHeader(HttpHeaders.CONTENT_TYPE.toString()));
+                .allowedHeader(HttpHeaders.CONTENT_TYPE.toString())
+                .exposedHeader(Constants.HEADER_COMMAND)
+                .exposedHeader(Constants.HEADER_COMMAND_REQUEST_ID));
 
         if (getConfig().isAuthenticationRequired()) {
 
@@ -175,7 +181,9 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
                     .allowedMethod(HttpMethod.POST)
                     .allowedHeader(Constants.HEADER_TIME_TIL_DISCONNECT)
                     .allowedHeader(HttpHeaders.AUTHORIZATION.toString())
-                    .allowedHeader(HttpHeaders.CONTENT_TYPE.toString()));
+                    .allowedHeader(HttpHeaders.CONTENT_TYPE.toString())
+                    .exposedHeader(Constants.HEADER_COMMAND)
+                    .exposedHeader(Constants.HEADER_COMMAND_REQUEST_ID));
 
             // require auth for POSTing events
             router.route(HttpMethod.POST, "/event").handler(authHandler);
