@@ -687,7 +687,11 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
             final Handler<AsyncResult<R>> resultHandler,
             final Object cacheKey) {
 
-        createAndSendRequest(action, properties, payload, contentType, resultHandler, cacheKey, newChildSpan(null, action));
+        final Span currentSpan = newChildSpan(null, action);
+        createAndSendRequest(action, properties, payload, contentType, ar -> {
+            currentSpan.finish();
+            resultHandler.handle(ar);
+        }, cacheKey, currentSpan);
     }
 
     /**
