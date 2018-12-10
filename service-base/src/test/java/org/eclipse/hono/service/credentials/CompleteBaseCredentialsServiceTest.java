@@ -29,6 +29,7 @@ import org.junit.runner.RunWith;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
@@ -301,6 +302,11 @@ public class CompleteBaseCredentialsServiceTest {
             @Override
             protected int getMaxBcryptIterations() {
                 return MAX_ITERATIONS;
+            }
+
+            @Override
+            public Vertx getVertx() {
+                return Vertx.vertx();
             }
         };
     }
