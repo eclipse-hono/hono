@@ -200,10 +200,10 @@ objects:
     tags:
     - from:
         kind: DockerImage
-        name: fabric8/s2i-java:2.3
+        name: fabric8/s2i-java:3.0-java11
       importPolicy:
         scheduled: true
-      name: "2.3"
+      name: "3.0"
       referencePolicy:
         type: Source
 
@@ -233,13 +233,12 @@ objects:
         dockerfilePath: deploy/src/main/deploy/openshift_s2i/containers/custom-base/Dockerfile
         from:
           kind: ImageStreamTag
-          name: fabric8-s2i-java:2.3
+          name: fabric8-s2i-java:3.0
     postCommit:
     output: 
       to:
         kind: ImageStreamTag
-        name: fabric8-s2i-java-custom:2.3
-
+        name: fabric8-s2i-java-custom:3.0
 
 # hono-adapter-amqp-vertx
 
@@ -270,10 +269,10 @@ objects:
       sourceStrategy:
         from:
           kind: ImageStreamTag
-          name: fabric8-s2i-java-custom:2.3
+          name: fabric8-s2i-java-custom:3.0
         env:
         - name: MAVEN_ARGS_APPEND
-          value: -B -pl org.eclipse.hono:hono-adapter-amqp-vertx --also-make -Pnetty-tcnative -Pmetrics-prometheus -Dmaven.test.skip=true
+          value: -B -pl org.eclipse.hono:hono-adapter-amqp-vertx --also-make -Pnetty-tcnative -Pmetrics-prometheus
         - name: ARTIFACT_DIR
           value: adapters/amqp-vertx/target
         - name: ARTIFACT_COPY_ARGS
@@ -602,10 +601,10 @@ objects:
       sourceStrategy:
         from:
           kind: ImageStreamTag
-          name: fabric8-s2i-java-custom:2.3
+          name: fabric8-s2i-java-custom:3.0
         env:
         - name: MAVEN_ARGS_APPEND
-          value: -B -pl org.eclipse.hono:hono-adapter-mqtt-vertx --also-make -Pnetty-tcnative -Pmetrics-prometheus -Dmaven.test.skip=true
+          value: -B -pl org.eclipse.hono:hono-adapter-mqtt-vertx --also-make -Pnetty-tcnative -Pmetrics-prometheus
         - name: ARTIFACT_DIR
           value: adapters/mqtt-vertx/target
         - name: ARTIFACT_COPY_ARGS
@@ -965,10 +964,10 @@ objects:
       sourceStrategy:
         from:
           kind: ImageStreamTag
-          name: fabric8-s2i-java-custom:2.3
+          name: fabric8-s2i-java-custom:3.0
         env:
         - name: MAVEN_ARGS_APPEND
-          value: -B -pl org.eclipse.hono:hono-adapter-http-vertx --also-make -Pnetty-tcnative -Pmetrics-prometheus -Dmaven.test.skip=true
+          value: -B -pl org.eclipse.hono:hono-adapter-http-vertx --also-make -Pnetty-tcnative -Pmetrics-prometheus
         - name: ARTIFACT_DIR
           value: adapters/http-vertx/target
         - name: ARTIFACT_COPY_ARGS
@@ -1309,10 +1308,10 @@ objects:
       sourceStrategy:
         from:
           kind: ImageStreamTag
-          name: fabric8-s2i-java-custom:2.3
+          name: fabric8-s2i-java-custom:3.0
         env:
         - name: MAVEN_ARGS_APPEND
-          value: -B -pl org.eclipse.hono:hono-service-device-registry --also-make -Pnetty-tcnative -Pmetrics-prometheus -Dmaven.test.skip=true
+          value: -B -pl org.eclipse.hono:hono-service-device-registry --also-make -Pnetty-tcnative -Pmetrics-prometheus
         - name: ARTIFACT_DIR
           value: services/device-registry/target
         - name: ARTIFACT_COPY_ARGS
@@ -1652,10 +1651,10 @@ objects:
       sourceStrategy:
         from:
           kind: ImageStreamTag
-          name: fabric8-s2i-java-custom:2.3
+          name: fabric8-s2i-java-custom:3.0
         env:
         - name: MAVEN_ARGS_APPEND
-          value: -B -pl org.eclipse.hono:hono-service-auth --also-make -Pnetty-tcnative -Pmetrics-prometheus -Dmaven.test.skip=true
+          value: -B -pl org.eclipse.hono:hono-service-auth --also-make -Pnetty-tcnative -Pmetrics-prometheus
         - name: ARTIFACT_DIR
           value: services/auth/target
         - name: ARTIFACT_COPY_ARGS
