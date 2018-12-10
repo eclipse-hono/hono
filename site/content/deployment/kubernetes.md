@@ -30,6 +30,21 @@ such daemon will be used and the final images will be available inside the Minik
 ~/hono$ mvn clean install -Pbuild-docker-image,metrics-prometheus
 ~~~
 
+### OLM deployment
+
+The Hono deployment requires the OLM to be deployed in the Kubernetes cluster if
+you want to use the Prometheus deployment provided by Hono. This can be done by
+executing the `olm_deploy.sh` script. This step is only required once for a
+cluster. You may skip this step if you don't want to use Prometheus based
+metrics, or want to deploy Prometheus yourself.
+
+From the directory `deploy/target/deploy/kubernetes` run:
+
+~~~sh
+~hono/deploy/target/deploy/kubernetes$ chmod +x *.sh
+~hono/deploy/target/deploy/kubernetes$ ./olm_deploy.sh
+~~~
+
 ## Script based Deployment
 
 In order to deploy Eclipse Hono on Kubernetes, a bunch of steps are needed as explained in the next chapter. If you want to avoid to do them manually, a _one click_ deployment
