@@ -60,6 +60,7 @@ import io.opentracing.SpanContext;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.MultiMap;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.http.HttpClientOptions;
@@ -313,7 +314,7 @@ public class VertxBasedHttpProtocolAdapterTest {
                 .putHeader(HttpHeaders.ORIGIN, "hono.eclipse.org")
                 .handler(response -> {
                     ctx.assertEquals(HttpURLConnection.HTTP_ACCEPTED, response.statusCode());
-                    ctx.assertEquals("*", response.getHeader(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN));
+                    assertCorsHeaders(ctx, response.headers());
                     async.complete();
                 }).exceptionHandler(ctx::fail).end(new JsonObject().encode());
     }
@@ -339,7 +340,7 @@ public class VertxBasedHttpProtocolAdapterTest {
                 .putHeader(HttpHeaders.ORIGIN, "hono.eclipse.org")
                 .handler(response -> {
                     ctx.assertEquals(HttpURLConnection.HTTP_ACCEPTED, response.statusCode());
-                    ctx.assertEquals("*", response.getHeader(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN));
+                    assertCorsHeaders(ctx, response.headers());
                     async.complete();
                 }).exceptionHandler(ctx::fail).end(new JsonObject().encodePrettily());
     }
@@ -384,9 +385,12 @@ public class VertxBasedHttpProtocolAdapterTest {
         httpClient.post("/telemetry")
                 .putHeader(HttpHeaders.CONTENT_TYPE, HttpUtils.CONTENT_TYPE_JSON)
                 .putHeader(HttpHeaders.AUTHORIZATION, authHeader)
+                .putHeader(HttpHeaders.ORIGIN, "hono.eclipse.org")
                 .putHeader(Constants.HEADER_QOS_LEVEL, String.valueOf(1))
                 .handler(response -> {
                     ctx.assertEquals(HttpURLConnection.HTTP_ACCEPTED, response.statusCode());
+                    assertCorsHeaders(ctx, response.headers());
+                    verify(telemetrySender).sendAndWaitForOutcome(any(Message.class), any(SpanContext.class));
                     async.complete();
                 }).exceptionHandler(ctx::fail).end(new JsonObject().encode());
 
@@ -413,7 +417,7 @@ public class VertxBasedHttpProtocolAdapterTest {
                 .putHeader(HttpHeaders.ORIGIN, "hono.eclipse.org")
                 .handler(response -> {
                     ctx.assertEquals(HttpURLConnection.HTTP_ACCEPTED, response.statusCode());
-                    ctx.assertEquals("*", response.getHeader(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN));
+                    assertCorsHeaders(ctx, response.headers());
                     async.complete();
                 }).exceptionHandler(ctx::fail).end(new JsonObject().encode());
     }
@@ -437,6 +441,7 @@ public class VertxBasedHttpProtocolAdapterTest {
                 .putHeader(HttpHeaders.ORIGIN, "hono.eclipse.org")
                 .handler(response -> {
                     ctx.assertEquals(HttpURLConnection.HTTP_ACCEPTED, response.statusCode());
+                    assertCorsHeaders(ctx, response.headers());
                     verify(telemetrySender).send(any(Message.class), any(SpanContext.class));
                     async.complete();
                 }).exceptionHandler(ctx::fail).end(new JsonObject().encode());
@@ -461,6 +466,7 @@ public class VertxBasedHttpProtocolAdapterTest {
                 .putHeader(HttpHeaders.ORIGIN, "hono.eclipse.org")
                 .handler(response -> {
                     ctx.assertEquals(HttpURLConnection.HTTP_ACCEPTED, response.statusCode());
+                    assertCorsHeaders(ctx, response.headers());
                     verify(eventSender).send(any(Message.class), any(SpanContext.class));
                     async.complete();
                 }).exceptionHandler(ctx::fail).end(new JsonObject().encode());
@@ -500,6 +506,7 @@ public class VertxBasedHttpProtocolAdapterTest {
                 .handler(response -> {
                     // THEN the response contains the pending command
                     ctx.assertEquals(HttpURLConnection.HTTP_OK, response.statusCode());
+                    assertCorsHeaders(ctx, response.headers());
                     ctx.assertEquals("doThis", response.getHeader(Constants.HEADER_COMMAND));
                     ctx.assertNotNull(response.getHeader(Constants.HEADER_COMMAND_REQUEST_ID));
                     verify(commandConnection).createCommandConsumer(eq("DEFAULT_TENANT"), eq("device_1"),
@@ -663,6 +670,14 @@ public class VertxBasedHttpProtocolAdapterTest {
             resultHandler.handle(Future.succeededFuture(new DeviceUser(tenantId, deviceId)));
             return null;
         }).when(usernamePasswordAuthProvider).authenticate(any(JsonObject.class), any(Handler.class));
+    }
+
+    private void assertCorsHeaders(final TestContext ctx, final MultiMap headers) {
+        final String exposedHeaders = headers.get(HttpHeaders.ACCESS_CONTROL_EXPOSE_HEADERS);
+        ctx.assertNotNull(exposedHeaders);
+        ctx.assertTrue(exposedHeaders.contains(Constants.HEADER_COMMAND));
+        ctx.assertTrue(exposedHeaders.contains(Constants.HEADER_COMMAND_REQUEST_ID));
+        ctx.assertEquals("*", headers.get(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN));
     }
 }
 

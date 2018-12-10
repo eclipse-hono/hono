@@ -250,7 +250,8 @@ public abstract class HttpTestBase {
                             getEndpointUri(),
                             Buffer.buffer("hello " + count),
                             requestHeaders,
-                            response -> response.statusCode() == HttpURLConnection.HTTP_ACCEPTED);
+                            response -> response.statusCode() == HttpURLConnection.HTTP_ACCEPTED
+                                && hasAccessControlExposedHeaders(response.headers()));
                 });
     }
 
@@ -287,7 +288,8 @@ public abstract class HttpTestBase {
                             getEndpointUri(),
                             Buffer.buffer("hello " + count),
                             requestHeaders,
-                            response -> response.statusCode() == HttpURLConnection.HTTP_ACCEPTED);
+                            response -> response.statusCode() == HttpURLConnection.HTTP_ACCEPTED
+                                    && hasAccessControlExposedHeaders(response.headers()));
                 });
     }
 
@@ -320,7 +322,8 @@ public abstract class HttpTestBase {
                     getEndpointUri(),
                     Buffer.buffer("hello " + count),
                     requestHeaders,
-                    response -> response.statusCode() == HttpURLConnection.HTTP_ACCEPTED);
+                    response -> response.statusCode() == HttpURLConnection.HTTP_ACCEPTED
+                            && hasAccessControlExposedHeaders(response.headers()));
         });
     }
 
@@ -977,6 +980,13 @@ public abstract class HttpTestBase {
         assertAdditionalMessageProperties(ctx, msg);
     }
 
+    private boolean hasAccessControlExposedHeaders(final MultiMap responseHeaders) {
+        final String exposedHeaders = responseHeaders.get(HttpHeaders.ACCESS_CONTROL_EXPOSE_HEADERS);
+        return exposedHeaders != null
+                && exposedHeaders.contains(Constants.HEADER_COMMAND)
+                && exposedHeaders.contains(Constants.HEADER_COMMAND_REQUEST_ID);
+    }
+
     /**
      * Performs additional checks on a received message.
      * <p>
@@ -990,24 +1000,23 @@ public abstract class HttpTestBase {
         // empty
     }
 
-    private Future<Void> assertHttpResponse(final MultiMap responseHeaders) {
+    private Future<?> assertHttpResponse(final MultiMap responseHeaders) {
 
-        final Future<Void> result = Future.future();
+        final Future<?> result = Future.future();
         final String allowedOrigin = responseHeaders.get(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN);
         final boolean hasValidOrigin = allowedOrigin != null
                 && (allowedOrigin.equals(ORIGIN_WILDCARD) || allowedOrigin.equals(ORIGIN_URI));
 
-
-        if (hasValidOrigin) {
-            result.complete();
-        } else {
+        if (!hasValidOrigin) {
             result.fail(new IllegalArgumentException("response contains invalid allowed origin: " + allowedOrigin));
+        } else {
+            result.complete();
         }
         return result;
     }
 
     /**
-     * Creates an HTTP Basic auth header value for a device.
+     * Creates an HTTP Basic Authorization header value for a device.
      * 
      * @param tenant The tenant that the device belongs to.
      * @param deviceId The device identifier.
