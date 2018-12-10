@@ -31,7 +31,6 @@ import org.eclipse.hono.client.CommandResponse;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.ResourceConflictException;
-import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
 import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.service.http.DefaultFailureHandler;
@@ -966,29 +965,18 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                     return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_FORBIDDEN,
                             "adapter is not enabled for tenant"));
                 }
-            }).compose(ok -> {
-                // send response message to application via sender link
-                sendCommandResponse(tenant, commandResponse, currentSpan.context())
-                        .map(delivery -> {
-                            metrics.incrementCommandResponseDeliveredToApplication(tenant);
-                            LOG.trace("delivered command response [command-request-id: {}] to application",
-                                    commandRequestId);
-                            currentSpan.log("delivered command response to application");
-                            ctx.response().setStatusCode(HttpURLConnection.HTTP_ACCEPTED);
-                            ctx.response().end();
-                            return delivery;
-                        }).otherwise(t -> {
-                    LOG.debug("could not send command response [command-request-id: {}] to application",
-                            commandRequestId, t);
-                    TracingHelper.logError(currentSpan, t);
-                    ctx.fail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, t));
-                    return null;
-                }).setHandler(c -> {
-                    currentSpan.finish();
-                });
-
-                return Future.succeededFuture();
+            }).compose(ok -> sendCommandResponse(tenant, commandResponse, currentSpan.context()))
+            .map(delivery -> {
+                metrics.incrementCommandResponseDeliveredToApplication(tenant);
+                LOG.trace("delivered command response [command-request-id: {}] to application",
+                        commandRequestId);
+                currentSpan.log("delivered command response to application");
+                ctx.response().setStatusCode(HttpURLConnection.HTTP_ACCEPTED);
+                ctx.response().end();
+                return delivery;
             }).otherwise(t -> {
+                LOG.debug("could not send command response [command-request-id: {}] to application",
+                        commandRequestId, t);
                 TracingHelper.logError(currentSpan, t);
                 currentSpan.finish();
                 ctx.fail(t);

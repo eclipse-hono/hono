@@ -35,6 +35,8 @@ import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.CommandConnection;
 import org.eclipse.hono.client.CommandConsumer;
 import org.eclipse.hono.client.CommandContext;
+import org.eclipse.hono.client.CommandResponse;
+import org.eclipse.hono.client.CommandResponseSender;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.RegistrationClient;
@@ -84,6 +86,7 @@ import io.vertx.proton.ProtonDelivery;
 public class AbstractVertxBasedHttpProtocolAdapterTest {
 
     private static final String ADAPTER_TYPE = "http";
+    private static final String CMD_REQ_ID = "12fcmd-client-c925910f-ea2a-455c-a3f9-a339171f335474f48a55-c60d-4b99-8950-a2fbb9e8f1b6";
 
     /**
      * Global timeout for all test cases.
@@ -342,6 +345,99 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
     }
 
     /**
+     * Verifies that the adapter waits for a command response being settled and accepted
+     * by a downstream peer before responding with a 202 status to the device.
+     */
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testUploadCommandResponseWaitsForAcceptedOutcome() {
+
+        // GIVEN an adapter with a downstream application attached
+        final Future<ProtonDelivery> outcome = Future.future();
+        givenACommandResponseSenderForOutcome(outcome);
+
+        final HttpServer server = getHttpServer(false);
+        final AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> adapter = getAdapter(server, null);
+
+        // WHEN a device publishes a command response
+        final Buffer payload = Buffer.buffer("some payload");
+        final HttpServerResponse response = mock(HttpServerResponse.class);
+        final RoutingContext ctx = newRoutingContext(payload, "application/text", mock(HttpServerRequest.class), response);
+        when(ctx.addBodyEndHandler(any(Handler.class))).thenAnswer(invocation -> {
+            final Handler<Void> handler = invocation.getArgument(0);
+            handler.handle(null);
+            return 0;
+        });
+
+        adapter.uploadCommandResponseMessage(ctx, "tenant", "device", CMD_REQ_ID, 200);
+
+        // THEN the device does not get a response
+        verify(response, never()).end();
+        // and the message is not reported as being processed
+        verify(metrics, never()).incrementCommandResponseDeliveredToApplication(eq("tenant"));
+
+        // until the command response has been accepted by the application
+        outcome.complete(mock(ProtonDelivery.class));
+        verify(response).setStatusCode(202);
+        verify(response).end();
+        verify(metrics).incrementCommandResponseDeliveredToApplication(eq("tenant"));
+    }
+
+    /**
+     * Verifies that the adapter fails the upload of a command response with a 403
+     * if the adapter is disabled for the device's tenant.
+     */
+    @Test
+    public void testUploadCommandResponseFailsForDisabledTenant() {
+
+        // GIVEN an adapter that is not enabled for a device's tenant
+        final TenantObject to = TenantObject.from("tenant", true);
+        to.addAdapterConfiguration(TenantObject.newAdapterConfig(Constants.PROTOCOL_ADAPTER_TYPE_HTTP, false));
+        when(tenantClient.get(eq("tenant"), (SpanContext) any())).thenReturn(Future.succeededFuture(to));
+
+        final HttpServer server = getHttpServer(false);
+        final AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> adapter = getAdapter(server, null);
+
+        // WHEN a device publishes a command response
+        final Buffer payload = Buffer.buffer("some payload");
+        final RoutingContext ctx = newRoutingContext(payload, "application/text", mock(HttpServerRequest.class), mock(HttpServerResponse.class));
+
+        adapter.uploadCommandResponseMessage(ctx, "tenant", "device", CMD_REQ_ID, 200);
+
+        // THEN the device gets a 403
+        assertContextFailedWithClientError(ctx, HttpURLConnection.HTTP_FORBIDDEN);
+        // and has not been reported as processed
+        verify(metrics, never()).incrementCommandResponseDeliveredToApplication(eq("tenant"));
+    }
+
+    /**
+     * Verifies that the adapter fails the upload of a command response with a 400
+     * result if it is rejected by the downstream peer.
+     */
+    @Test
+    public void testUploadCommandResponseFailsForRejectedOutcome() {
+
+        // GIVEN an adapter with a downstream application attached
+        final Future<ProtonDelivery> outcome = Future.future();
+        givenACommandResponseSenderForOutcome(outcome);
+
+        final HttpServer server = getHttpServer(false);
+        final AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> adapter = getAdapter(server, null);
+
+        // WHEN a device publishes a command response that is not accepted by the application
+        final Buffer payload = Buffer.buffer("some payload");
+        final RoutingContext ctx = newRoutingContext(payload, "application/text", mock(HttpServerRequest.class), mock(HttpServerResponse.class));
+
+        adapter.uploadCommandResponseMessage(ctx, "tenant", "device", CMD_REQ_ID, 200);
+        outcome.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "malformed message"));
+
+        // THEN the device gets a 400
+        assertContextFailedWithClientError(ctx, HttpURLConnection.HTTP_BAD_REQUEST);
+        // and has not been reported as processed
+        verify(metrics, never()).incrementCommandResponseDeliveredToApplication(eq("tenant"));
+    }
+
+    /**
      * Verifies that the adapter does not wait for a telemetry message being settled and accepted
      * by a downstream peer before responding with a 202 status to the device.
      */
@@ -579,6 +675,15 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         adapter.setCommandConnection(commandConnection);
 
         return adapter;
+    }
+
+    private CommandResponseSender givenACommandResponseSenderForOutcome(final Future<ProtonDelivery> outcome) {
+
+        final CommandResponseSender sender = mock(CommandResponseSender.class);
+        when(sender.sendCommandResponse(any(CommandResponse.class), (SpanContext) any())).thenReturn(outcome);
+
+        when(commandConnection.getCommandResponseSender(anyString(), anyString())).thenReturn(Future.succeededFuture(sender));
+        return sender;
     }
 
     private MessageSender givenAnEventSenderForOutcome(final Future<ProtonDelivery> outcome) {
