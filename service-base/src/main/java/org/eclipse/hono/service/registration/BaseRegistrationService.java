@@ -17,14 +17,20 @@ import java.util.Objects;
 
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.service.EventBusService;
+import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.EventBusMessage;
+import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.RegistrationResult;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 
+import io.opentracing.References;
+import io.opentracing.Span;
 import io.opentracing.SpanContext;
+import io.opentracing.Tracer;
+import io.opentracing.tag.Tags;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
@@ -212,16 +218,21 @@ public abstract class BaseRegistrationService<T> extends EventBusService<T> impl
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(resultHandler);
 
+        final Span currentSpan = newChildSpan("assert Device Registration", spanContext, tenantId, deviceId, null);
+
         final Future<RegistrationResult> getResultTracker = Future.future();
         getDevice(tenantId, deviceId, getResultTracker.completer());
 
         getResultTracker.map(result -> {
             if (isDeviceEnabled(result)) {
+                currentSpan.finish();
                 return RegistrationResult.from(
                         HttpURLConnection.HTTP_OK,
                         getAssertionPayload(tenantId, deviceId, result.getPayload().getJsonObject(RegistrationConstants.FIELD_DATA)),
                         CacheDirective.maxAgeDirective(assertionFactory.getAssertionLifetime()));
             } else {
+                TracingHelper.logError(currentSpan, "device not enabled");
+                currentSpan.finish();
                 return RegistrationResult.from(HttpURLConnection.HTTP_NOT_FOUND);
             }
         }).setHandler(resultHandler);
@@ -256,6 +267,8 @@ public abstract class BaseRegistrationService<T> extends EventBusService<T> impl
         Objects.requireNonNull(gatewayId);
         Objects.requireNonNull(resultHandler);
 
+        final Span currentSpan = newChildSpan("assert Device Registration", spanContext, tenantId, deviceId, gatewayId);
+
         final Future<RegistrationResult> deviceInfoTracker = Future.future();
         final Future<RegistrationResult> gatewayInfoTracker = Future.future();
 
@@ -267,25 +280,64 @@ public abstract class BaseRegistrationService<T> extends EventBusService<T> impl
             final RegistrationResult deviceResult = deviceInfoTracker.result();
             final RegistrationResult gatewayResult = gatewayInfoTracker.result();
 
+            final Future<RegistrationResult> returnFuture;
             if (!isDeviceEnabled(deviceResult)) {
-                return Future.succeededFuture(RegistrationResult.from(HttpURLConnection.HTTP_NOT_FOUND));
+                TracingHelper.logError(currentSpan, "device not enabled");
+                returnFuture = Future.succeededFuture(RegistrationResult.from(HttpURLConnection.HTTP_NOT_FOUND));
             } else if (!isDeviceEnabled(gatewayResult)) {
-                return Future.succeededFuture(RegistrationResult.from(HttpURLConnection.HTTP_FORBIDDEN));
+                TracingHelper.logError(currentSpan, "gateway not enabled");
+                returnFuture = Future.succeededFuture(RegistrationResult.from(HttpURLConnection.HTTP_FORBIDDEN));
             } else {
 
                 final JsonObject deviceData = deviceResult.getPayload().getJsonObject(RegistrationConstants.FIELD_DATA, new JsonObject());
                 final JsonObject gatewayData = gatewayResult.getPayload().getJsonObject(RegistrationConstants.FIELD_DATA, new JsonObject());
 
                 if (isGatewayAuthorized(gatewayId, gatewayData, deviceId, deviceData)) {
-                    return Future.succeededFuture(RegistrationResult.from(
+                    returnFuture = Future.succeededFuture(RegistrationResult.from(
                         HttpURLConnection.HTTP_OK,
                         getAssertionPayload(tenantId, deviceId, deviceData),
                         CacheDirective.maxAgeDirective(assertionFactory.getAssertionLifetime())));
                 } else {
-                    return Future.succeededFuture(RegistrationResult.from(HttpURLConnection.HTTP_FORBIDDEN));
+                    TracingHelper.logError(currentSpan, "gateway not authorized");
+                    returnFuture = Future.succeededFuture(RegistrationResult.from(HttpURLConnection.HTTP_FORBIDDEN));
                 }
             }
+            currentSpan.finish();
+            return returnFuture;
         }).setHandler(resultHandler);
+    }
+
+    /**
+     * Creates a new <em>OpenTracing</em> span for tracing the execution of a registration service operation.
+     * <p>
+     * The returned span will already contain tags for the given tenant, device and gateway ids (if either is not {code null}).
+     * 
+     * @param operationName The operation name that the span should be created for.
+     * @param spanContext Existing span context.
+     * @param tenantId The tenant id.
+     * @param deviceId The device id.
+     * @param gatewayId The gateway id.
+     * @return The new {@code Span}.
+     */
+    protected final Span newChildSpan(final String operationName, final SpanContext spanContext, final String tenantId,
+            final String deviceId, final String gatewayId) {
+        // we set the component tag to the class name because we have no access to
+        // the name of the enclosing component we are running in
+        final Tracer.SpanBuilder spanBuilder = tracer.buildSpan(operationName)
+                .addReference(References.CHILD_OF, spanContext)
+                .ignoreActiveSpan()
+                .withTag(Tags.COMPONENT.getKey(), getClass().getSimpleName())
+                .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_SERVER);
+        if (tenantId != null) {
+            spanBuilder.withTag(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId);
+        }
+        if (deviceId != null) {
+            spanBuilder.withTag(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId);
+        }
+        if (gatewayId != null) {
+            spanBuilder.withTag(MessageHelper.APP_PROPERTY_GATEWAY_ID, gatewayId);
+        }
+        return spanBuilder.start();
     }
 
     /**
