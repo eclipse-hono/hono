@@ -102,7 +102,7 @@ public class BaseRegistrationServiceTest {
         registrationService.setRegistrationAssertionFactory(RegistrationAssertionHelperImpl.forSigning(vertx, props));
 
         // WHEN trying to assert the device's registration status
-        registrationService.assertRegistration(Constants.DEFAULT_TENANT, "4711", ctx.asyncAssertSuccess(result -> {
+        registrationService.assertRegistration(Constants.DEFAULT_TENANT, "4711", null, ctx.asyncAssertSuccess(result -> {
             ctx.assertEquals(result.getStatus(), HttpURLConnection.HTTP_OK);
             final JsonObject payload = result.getPayload();
             ctx.assertNotNull(payload);
@@ -129,7 +129,7 @@ public class BaseRegistrationServiceTest {
         registrationService.setRegistrationAssertionFactory(RegistrationAssertionHelperImpl.forSigning(vertx, props));
 
         // WHEN trying to assert the device's registration status
-        registrationService.assertRegistration(Constants.DEFAULT_TENANT, "4712", ctx.asyncAssertSuccess(result -> {
+        registrationService.assertRegistration(Constants.DEFAULT_TENANT, "4712", null, ctx.asyncAssertSuccess(result -> {
             // THEN the response does not contain a JWT token
             ctx.assertEquals(result.getStatus(), HttpURLConnection.HTTP_NOT_FOUND);
             ctx.assertNull(result.getPayload());
@@ -149,7 +149,7 @@ public class BaseRegistrationServiceTest {
         registrationService.setRegistrationAssertionFactory(RegistrationAssertionHelperImpl.forSigning(vertx, props));
 
         // WHEN trying to assert a device's registration status
-        registrationService.assertRegistration(Constants.DEFAULT_TENANT, "non-existent", ctx.asyncAssertSuccess(result -> {
+        registrationService.assertRegistration(Constants.DEFAULT_TENANT, "non-existent", null, ctx.asyncAssertSuccess(result -> {
             // THEN the response does not contain a JWT token
             ctx.assertEquals(result.getStatus(), HttpURLConnection.HTTP_NOT_FOUND);
             ctx.assertNull(result.getPayload());
@@ -170,7 +170,7 @@ public class BaseRegistrationServiceTest {
         registrationService.setRegistrationAssertionFactory(RegistrationAssertionHelperImpl.forSigning(vertx, props));
 
         // WHEN trying to assert the device's registration status for a gateway
-        registrationService.assertRegistration(Constants.DEFAULT_TENANT, "4711", "gw-1", ctx.asyncAssertSuccess(result -> {
+        registrationService.assertRegistration(Constants.DEFAULT_TENANT, "4711", "gw-1", null, ctx.asyncAssertSuccess(result -> {
             // THEN the response contains a 200 status
             ctx.assertEquals(HttpURLConnection.HTTP_OK, result.getStatus());
             final JsonObject payload = result.getPayload();
@@ -193,7 +193,7 @@ public class BaseRegistrationServiceTest {
         registrationService.setRegistrationAssertionFactory(RegistrationAssertionHelperImpl.forSigning(vertx, props));
 
         // WHEN trying to assert the device's registration status for a gateway
-        registrationService.assertRegistration(Constants.DEFAULT_TENANT, "4711", "non-existent-gw", ctx.asyncAssertSuccess(result -> {
+        registrationService.assertRegistration(Constants.DEFAULT_TENANT, "4711", "non-existent-gw", null, ctx.asyncAssertSuccess(result -> {
             // THEN the response contains a 403 status
             ctx.assertEquals(result.getStatus(), HttpURLConnection.HTTP_FORBIDDEN);
             // and does not contain a JWT token
@@ -216,7 +216,7 @@ public class BaseRegistrationServiceTest {
         registrationService.setRegistrationAssertionFactory(RegistrationAssertionHelperImpl.forSigning(vertx, props));
 
         // WHEN trying to assert the device's registration status for a gateway
-        registrationService.assertRegistration(Constants.DEFAULT_TENANT, "4713", "gw-3", ctx.asyncAssertSuccess(result -> {
+        registrationService.assertRegistration(Constants.DEFAULT_TENANT, "4713", "gw-3", null, ctx.asyncAssertSuccess(result -> {
             // THEN the response contains a 403 status
             ctx.assertEquals(result.getStatus(), HttpURLConnection.HTTP_FORBIDDEN);
             // and does not contain a JWT token
@@ -240,7 +240,7 @@ public class BaseRegistrationServiceTest {
         registrationService.setRegistrationAssertionFactory(RegistrationAssertionHelperImpl.forSigning(vertx, props));
 
         // WHEN trying to assert the device's registration status for the wrong gateway
-        registrationService.assertRegistration(Constants.DEFAULT_TENANT, "4711", "gw-2", ctx.asyncAssertSuccess(result -> {
+        registrationService.assertRegistration(Constants.DEFAULT_TENANT, "4711", "gw-2", null, ctx.asyncAssertSuccess(result -> {
             // THEN the response contains a 403 status
             ctx.assertEquals(result.getStatus(), HttpURLConnection.HTTP_FORBIDDEN);
             // and does not contain a JWT token

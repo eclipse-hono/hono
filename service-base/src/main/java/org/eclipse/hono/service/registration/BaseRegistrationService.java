@@ -24,6 +24,7 @@ import org.eclipse.hono.util.RegistrationResult;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 
+import io.opentracing.SpanContext;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
@@ -38,7 +39,7 @@ import io.vertx.core.json.JsonObject;
  * query parameters contained in the request message.
  * <p>
  * <em>NB</em> This class provides a basic implementation for asserting a device's registration
- * status. Subclasses may override the {@link #assertRegistration(String, String, String, Handler)}
+ * status. Subclasses may override the {@link #assertRegistration(String, String, String, SpanContext, Handler)}
  * method in order to implement a more sophisticated assertion method.
  * <p>
  * The default implementation of <em>assertRegistration</em> relies on {@link #getDevice(String, String, Handler)}
@@ -121,13 +122,14 @@ public abstract class BaseRegistrationService<T> extends EventBusService<T> impl
         final String tenantId = request.getTenant();
         final String deviceId = request.getDeviceId();
         final String gatewayId = request.getGatewayId();
+        final SpanContext spanContext = request.getSpanContext();
 
         if (tenantId == null || deviceId == null) {
             return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
         } else if (gatewayId == null) {
             log.debug("asserting registration of device [{}] with tenant [{}]", deviceId, tenantId);
             final Future<RegistrationResult> result = Future.future();
-            assertRegistration(tenantId, deviceId, result.completer());
+            assertRegistration(tenantId, deviceId, spanContext, result.completer());
             return result.map(res -> {
                 return request.getResponse(res.getStatus())
                         .setDeviceId(deviceId)
@@ -138,7 +140,7 @@ public abstract class BaseRegistrationService<T> extends EventBusService<T> impl
             log.debug("asserting registration of device [{}] with tenant [{}] for gateway [{}]",
                     deviceId, tenantId, gatewayId);
             final Future<RegistrationResult> result = Future.future();
-            assertRegistration(tenantId, deviceId, gatewayId, result.completer());
+            assertRegistration(tenantId, deviceId, gatewayId, spanContext, result.completer());
             return result.map(res -> {
                 return request.getResponse(res.getStatus())
                         .setDeviceId(deviceId)
@@ -168,7 +170,7 @@ public abstract class BaseRegistrationService<T> extends EventBusService<T> impl
     /**
      * Gets device registration data by device ID.
      * <p>
-     * This method is invoked by {@link #assertRegistration(String, String, String, Handler)} to retrieve
+     * This method is invoked by {@link #assertRegistration(String, String, String, SpanContext, Handler)} to retrieve
      * device registration information from the persistent store.
      * <p>
      * This default implementation simply returns an empty result with status code 501 (Not Implemented).
@@ -195,6 +197,7 @@ public abstract class BaseRegistrationService<T> extends EventBusService<T> impl
     public void assertRegistration(
             final String tenantId,
             final String deviceId,
+            final SpanContext spanContext,
             final Handler<AsyncResult<RegistrationResult>> resultHandler) {
 
         Objects.requireNonNull(tenantId);
@@ -228,6 +231,7 @@ public abstract class BaseRegistrationService<T> extends EventBusService<T> impl
             final String tenantId,
             final String deviceId,
             final String gatewayId,
+            final SpanContext spanContext,
             final Handler<AsyncResult<RegistrationResult>> resultHandler) {
 
         Objects.requireNonNull(tenantId);

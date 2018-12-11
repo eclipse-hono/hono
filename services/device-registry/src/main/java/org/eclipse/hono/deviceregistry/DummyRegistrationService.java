@@ -12,16 +12,18 @@
  *******************************************************************************/
 package org.eclipse.hono.deviceregistry;
 
-import io.vertx.core.AsyncResult;
-import io.vertx.core.Future;
-import io.vertx.core.Handler;
-import io.vertx.core.json.JsonObject;
+import java.net.HttpURLConnection;
+
 import org.eclipse.hono.service.registration.BaseRegistrationService;
 import org.eclipse.hono.util.RegistrationResult;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
-import java.net.HttpURLConnection;
+import io.opentracing.SpanContext;
+import io.vertx.core.AsyncResult;
+import io.vertx.core.Future;
+import io.vertx.core.Handler;
+import io.vertx.core.json.JsonObject;
 
 /**
  *
@@ -36,12 +38,14 @@ public class DummyRegistrationService extends BaseRegistrationService<Object> {
     }
 
     @Override
-    public void assertRegistration(final String tenantId, final String deviceId, final Handler<AsyncResult<RegistrationResult>> resultHandler) {
-        assertRegistration(tenantId, deviceId, null, resultHandler);
+    public void assertRegistration(final String tenantId, final String deviceId, final SpanContext spanContext,
+            final Handler<AsyncResult<RegistrationResult>> resultHandler) {
+        assertRegistration(tenantId, deviceId, null, spanContext, resultHandler);
     }
 
     @Override
-    public void assertRegistration(final String tenantId, final String deviceId, final String gatewayId, final Handler<AsyncResult<RegistrationResult>> resultHandler) {
+    public void assertRegistration(final String tenantId, final String deviceId, final String gatewayId,
+            final SpanContext spanContext, final Handler<AsyncResult<RegistrationResult>> resultHandler) {
        final JsonObject deviceData = new JsonObject();
 
         resultHandler.handle(Future.succeededFuture(RegistrationResult.from(
