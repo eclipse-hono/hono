@@ -341,7 +341,7 @@ public class FileBasedTenantServiceTest {
     @Test
     public void testGetTenantFailsForNonExistingTenant(final TestContext ctx) {
 
-        svc.get("notExistingTenant" , ctx.asyncAssertSuccess(s -> {
+        svc.get("notExistingTenant" , null, ctx.asyncAssertSuccess(s -> {
                     assertThat(s.getStatus(), is(HttpURLConnection.HTTP_NOT_FOUND));
                 }));
     }
@@ -355,7 +355,7 @@ public class FileBasedTenantServiceTest {
     public void testGetTenantSucceedsForExistingTenants(final TestContext ctx) {
 
         addTenant("tenant").map(ok -> {
-            svc.get("tenant", ctx.asyncAssertSuccess(s -> {
+            svc.get("tenant", null, ctx.asyncAssertSuccess(s -> {
                 assertThat(s.getStatus(), is(HttpURLConnection.HTTP_OK));
                 assertThat(s.getPayload().getString(TenantConstants.FIELD_PAYLOAD_TENANT_ID), is("tenant"));
                 assertThat(s.getPayload().getBoolean(TenantConstants.FIELD_ENABLED), is(Boolean.TRUE));
@@ -381,7 +381,7 @@ public class FileBasedTenantServiceTest {
             .put(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, trustedCa);
 
         addTenant("tenant", tenant).map(ok -> {
-            svc.get(subjectDn, ctx.asyncAssertSuccess(s -> {
+            svc.get(subjectDn, null, ctx.asyncAssertSuccess(s -> {
                 assertThat(s.getStatus(), is(HttpURLConnection.HTTP_OK));
                 final TenantObject obj = s.getPayload().mapTo(TenantObject.class);
                 assertThat(obj.getTenantId(), is("tenant"));
@@ -410,7 +410,7 @@ public class FileBasedTenantServiceTest {
             .put(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, trustedCa);
 
         addTenant("tenant", tenant).map(ok -> {
-            svc.get(unknownSubjectDn, ctx.asyncAssertSuccess(s -> {
+            svc.get(unknownSubjectDn, null, ctx.asyncAssertSuccess(s -> {
                 assertThat(s.getStatus(), is(HttpURLConnection.HTTP_NOT_FOUND));
             }));
             return null;
@@ -471,7 +471,7 @@ public class FileBasedTenantServiceTest {
         }).compose(updateResult -> {
             ctx.assertEquals(HttpURLConnection.HTTP_NO_CONTENT, updateResult.getStatus());
             final Future<TenantResult<JsonObject>> getResult = Future.future();
-            svc.get("tenant", getResult.completer());
+            svc.get("tenant", null, getResult.completer());
             return getResult;
         }).setHandler(ctx.asyncAssertSuccess(getResult -> {
             assertThat(getResult.getStatus(), is(HttpURLConnection.HTTP_OK));
@@ -532,14 +532,14 @@ public class FileBasedTenantServiceTest {
 
     private static void assertTenantExists(final TenantService svc, final String tenant, final TestContext ctx) {
 
-        svc.get(tenant, ctx.asyncAssertSuccess(t -> {
+        svc.get(tenant, null, ctx.asyncAssertSuccess(t -> {
             assertThat(t.getStatus(), is(HttpURLConnection.HTTP_OK));
         }));
     }
 
     private static void assertTenantDoesNotExist(final TenantService svc, final String tenant, final TestContext ctx) {
 
-        svc.get(tenant, ctx.asyncAssertSuccess(t -> {
+        svc.get(tenant, null, ctx.asyncAssertSuccess(t -> {
             assertThat(t.getStatus(), is(HttpURLConnection.HTTP_NOT_FOUND));
         }));
     }

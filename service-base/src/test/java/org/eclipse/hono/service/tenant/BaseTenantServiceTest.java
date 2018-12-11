@@ -27,6 +27,7 @@ import org.junit.Test;
 import org.junit.rules.Timeout;
 import org.junit.runner.RunWith;
 
+import io.opentracing.SpanContext;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -130,7 +131,8 @@ public class BaseTenantServiceTest {
         return new BaseTenantService<ServiceConfigProperties>() {
 
             @Override
-            public void get(final String tenantId, final Handler<AsyncResult<TenantResult<JsonObject>>> resultHandler) {
+            public void get(final String tenantId, final SpanContext spanContext,
+                    final Handler<AsyncResult<TenantResult<JsonObject>>> resultHandler) {
 
                 final TenantObject tenant = TenantObject.from(tenantId, true);
                 tenant.setProperty("operation", "getById");
@@ -138,7 +140,7 @@ public class BaseTenantServiceTest {
             }
 
             @Override
-            public void get(final X500Principal subjectDn,
+            public void get(final X500Principal subjectDn, final SpanContext spanContext,
                     final Handler<AsyncResult<TenantResult<JsonObject>>> resultHandler) {
 
                 final TenantObject tenant = TenantObject.from(subjectDn.getName(X500Principal.RFC2253), true);
