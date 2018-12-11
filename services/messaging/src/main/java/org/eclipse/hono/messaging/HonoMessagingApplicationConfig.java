@@ -18,6 +18,7 @@ import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.config.VertxProperties;
 import org.eclipse.hono.connection.ConnectionFactory;
 import org.eclipse.hono.connection.impl.ConnectionFactoryImpl;
+import org.eclipse.hono.service.HealthCheckServer;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelper;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelperImpl;
@@ -218,5 +219,15 @@ public class HonoMessagingApplicationConfig {
                 // Hono Messaging does not have any connections to devices
                 .meterFilter(MeterFilter.denyNameStartsWith("hono.connections.authenticated"))
                 .meterFilter(MeterFilter.denyNameStartsWith("hono.connections.unauthenticated"));
+    }
+
+    /**
+     * Exposes the health check server as a Spring bean.
+     *
+     * @return the health check server.
+     */
+    @Bean
+    public HealthCheckServer healthCheckServer() {
+        return new HealthCheckServer(vertx());
     }
 }

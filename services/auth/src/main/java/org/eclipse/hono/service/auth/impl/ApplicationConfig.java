@@ -16,6 +16,7 @@ package org.eclipse.hono.service.auth.impl;
 import org.eclipse.hono.config.ApplicationConfigProperties;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.config.VertxProperties;
+import org.eclipse.hono.service.HealthCheckServer;
 import org.eclipse.hono.service.auth.AuthTokenHelper;
 import org.eclipse.hono.service.auth.AuthTokenHelperImpl;
 import org.eclipse.hono.service.metric.MetricsTags;
@@ -161,6 +162,16 @@ public class ApplicationConfig {
             serviceProps.getValidation().setCertPath(amqpProps.getCertPath());
         }
         return AuthTokenHelperImpl.forValidating(vertx(), serviceProps.getValidation());
+    }
+
+    /**
+     * Exposes the health check server as a Spring bean.
+     *
+     * @return the health check server.
+     */
+    @Bean
+    public HealthCheckServer healthCheckServer() {
+        return new HealthCheckServer(vertx());
     }
 
     /**
