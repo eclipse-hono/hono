@@ -957,31 +957,38 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                     .withTag(Constants.HEADER_COMMAND_REQUEST_ID, commandRequestId)
                     .withTag(TracingHelper.TAG_AUTHENTICATED.getKey(), authenticatedDevice != null)
                     .start();
-
-            getTenantConfiguration(tenant, currentSpan.context()).compose(tenantObj -> {
-                if (tenantObj.isAdapterEnabled(getTypeName())) {
-                    return Future.succeededFuture();
-                } else {
-                    return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_FORBIDDEN,
-                            "adapter is not enabled for tenant"));
-                }
-            }).compose(ok -> sendCommandResponse(tenant, commandResponse, currentSpan.context()))
-            .map(delivery -> {
-                metrics.incrementCommandResponseDeliveredToApplication(tenant);
-                LOG.trace("delivered command response [command-request-id: {}] to application",
-                        commandRequestId);
-                currentSpan.log("delivered command response to application");
-                ctx.response().setStatusCode(HttpURLConnection.HTTP_ACCEPTED);
-                ctx.response().end();
-                return delivery;
-            }).otherwise(t -> {
-                LOG.debug("could not send command response [command-request-id: {}] to application",
-                        commandRequestId, t);
-                TracingHelper.logError(currentSpan, t);
-                currentSpan.finish();
-                ctx.fail(t);
-                return null;
-            });
+            final Future<JsonObject> deviceRegistrationTracker = getRegistrationAssertion(
+                    tenant,
+                    deviceId,
+                    authenticatedDevice,
+                    currentSpan.context());
+            final Future<Void> tenantEnabledTracker = getTenantConfiguration(tenant, currentSpan.context())
+                    .compose(tenantObj -> {
+                        if (tenantObj.isAdapterEnabled(getTypeName())) {
+                            return Future.succeededFuture();
+                        } else {
+                            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_FORBIDDEN,
+                                    "adapter is not enabled for tenant"));
+                        }
+                    });
+            CompositeFuture.all(deviceRegistrationTracker, tenantEnabledTracker)
+                    .compose(ok -> sendCommandResponse(tenant, commandResponse, currentSpan.context()))
+                    .map(delivery -> {
+                        metrics.incrementCommandResponseDeliveredToApplication(tenant);
+                        LOG.trace("delivered command response [command-request-id: {}] to application",
+                                commandRequestId);
+                        currentSpan.log("delivered command response to application");
+                        ctx.response().setStatusCode(HttpURLConnection.HTTP_ACCEPTED);
+                        ctx.response().end();
+                        return delivery;
+                    }).otherwise(t -> {
+                        LOG.debug("could not send command response [command-request-id: {}] to application",
+                                commandRequestId, t);
+                        TracingHelper.logError(currentSpan, t);
+                        currentSpan.finish();
+                        ctx.fail(t);
+                        return null;
+                    });
         }
     }
 
