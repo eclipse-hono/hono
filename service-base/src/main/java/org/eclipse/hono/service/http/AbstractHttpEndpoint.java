@@ -18,6 +18,7 @@ import java.util.Objects;
 import java.util.function.BiConsumer;
 import java.util.function.Predicate;
 
+import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.service.AbstractEndpoint;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
@@ -102,23 +103,19 @@ public abstract class AbstractHttpEndpoint<T> extends AbstractEndpoint implement
 
         final MIMEHeader contentType = ctx.parsedHeaders().contentType();
         if (contentType == null) {
-            ctx.response().setStatusMessage("Missing Content-Type header");
-            ctx.fail(HttpURLConnection.HTTP_BAD_REQUEST);
+            ctx.fail(new ServiceInvocationException(HttpURLConnection.HTTP_BAD_REQUEST, "Missing Content-Type header"));
         } else if (!HttpUtils.CONTENT_TYPE_JSON.equalsIgnoreCase(contentType.value())) {
-            ctx.response().setStatusMessage("Unsupported Content-Type");
-            ctx.fail(HttpURLConnection.HTTP_BAD_REQUEST);
+            ctx.fail(new ServiceInvocationException(HttpURLConnection.HTTP_BAD_REQUEST, "Unsupported Content-Type"));
         } else {
             try {
                 if (ctx.getBody() != null) {
                     ctx.put(KEY_REQUEST_BODY, ctx.getBodyAsJson());
                     ctx.next();
                 } else {
-                    ctx.response().setStatusMessage("Empty body");
-                    ctx.fail(HttpURLConnection.HTTP_BAD_REQUEST);
+                    ctx.fail(new ServiceInvocationException(HttpURLConnection.HTTP_BAD_REQUEST, "Empty body"));
                 }
             } catch (final DecodeException e) {
-                ctx.response().setStatusMessage("Invalid JSON");
-                ctx.fail(HttpURLConnection.HTTP_BAD_REQUEST);
+                ctx.fail(new ServiceInvocationException(HttpURLConnection.HTTP_BAD_REQUEST, "Invalid JSON"));
             }
         }
     }

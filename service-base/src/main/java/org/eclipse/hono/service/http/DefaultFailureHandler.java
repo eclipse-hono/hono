@@ -70,7 +70,7 @@ public class DefaultFailureHandler implements Handler<RoutingContext> {
                         sendError(ctx.response(), HttpURLConnection.HTTP_INTERNAL_ERROR, ctx.failure().getMessage());
                     }
                 } else if (ctx.statusCode() != -1) {
-                    sendError(ctx.response(), ctx.statusCode(), ctx.response().getStatusMessage());
+                    sendError(ctx.response(), ctx.statusCode(), null);
                 } else {
                     sendError(ctx.response(), HttpURLConnection.HTTP_INTERNAL_ERROR, "Internal Server Error");
                 }

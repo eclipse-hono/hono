@@ -13,21 +13,25 @@
 
 package org.eclipse.hono.service.http;
 
-import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.*;
-import static org.mockito.Mockito.*;
-
-import java.net.HttpURLConnection;
-
+import io.vertx.core.buffer.Buffer;
+import io.vertx.core.http.HttpServerRequest;
+import io.vertx.core.http.HttpServerResponse;
+import io.vertx.ext.web.RoutingContext;
 import org.eclipse.hono.client.ClientErrorException;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
-import io.vertx.core.buffer.Buffer;
-import io.vertx.core.http.HttpServerRequest;
-import io.vertx.core.http.HttpServerResponse;
-import io.vertx.ext.web.RoutingContext;
+import java.net.HttpURLConnection;
+
+import static org.hamcrest.CoreMatchers.is;
+import static org.junit.Assert.assertThat;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.anyInt;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 
 /**
@@ -137,4 +141,28 @@ public class DefaultFailureHandlerTest {
         verify(response).end();
     }
 
+    /**
+     * Verifies that the handler writes the status code and the status message to the response in case of failure and
+     * ctx.failure() returns null.
+     */
+    @Test
+    public void testHandlerWithFailedContextAndEmptyFailure() {
+        final RoutingContext ctx = mock(RoutingContext.class);
+        final HttpServerRequest request = mock(HttpServerRequest.class, Mockito.RETURNS_MOCKS);
+        final HttpServerResponse response = mock(HttpServerResponse.class, Mockito.RETURNS_MOCKS);
+
+        when(response.ended()).thenReturn(false);
+        when(ctx.request()).thenReturn(request);
+        when(ctx.response()).thenReturn(response);
+        when(ctx.failed()).thenReturn(true);
+        when(ctx.failure()).thenReturn(null);
+        when(ctx.statusCode()).thenReturn(HttpURLConnection.HTTP_UNAUTHORIZED);
+
+        final DefaultFailureHandler handler = new DefaultFailureHandler();
+        handler.handle(ctx);
+
+        verify(response).setStatusCode(HttpURLConnection.HTTP_UNAUTHORIZED);
+        verify(response, never()).write(any(Buffer.class));
+        verify(response).end();
+    }
 }
