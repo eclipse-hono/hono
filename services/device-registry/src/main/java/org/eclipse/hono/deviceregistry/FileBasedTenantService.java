@@ -28,6 +28,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Repository;
 
+import io.opentracing.SpanContext;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -204,7 +205,7 @@ public final class FileBasedTenantService extends CompleteBaseTenantService<File
     }
 
     @Override
-    public void get(final String tenantId, final Handler<AsyncResult<TenantResult<JsonObject>>> resultHandler) {
+    public void get(final String tenantId, final SpanContext spanContext, final Handler<AsyncResult<TenantResult<JsonObject>>> resultHandler) {
 
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(resultHandler);
@@ -227,7 +228,7 @@ public final class FileBasedTenantService extends CompleteBaseTenantService<File
     }
 
     @Override
-    public void get(final X500Principal subjectDn,
+    public void get(final X500Principal subjectDn, final SpanContext spanContext,
             final Handler<AsyncResult<TenantResult<JsonObject>>> resultHandler) {
 
         Objects.requireNonNull(subjectDn);

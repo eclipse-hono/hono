@@ -22,10 +22,10 @@ import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.service.EventBusService;
 import org.eclipse.hono.util.EventBusMessage;
-
 import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantResult;
 
+import io.opentracing.SpanContext;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -108,7 +108,7 @@ public abstract class BaseTenantService<T> extends EventBusService<T> implements
     private Future<EventBusMessage> processGetByIdRequest(final EventBusMessage request, final String tenantId) {
 
         final Future<TenantResult<JsonObject>> getResult = Future.future();
-        get(tenantId, getResult.completer());
+        get(tenantId, request.getSpanContext(), getResult.completer());
         return getResult.map(tr -> {
             return request.getResponse(tr.getStatus())
                     .setJsonPayload(tr.getPayload())
@@ -123,7 +123,7 @@ public abstract class BaseTenantService<T> extends EventBusService<T> implements
             final X500Principal dn = new X500Principal(subjectDn);
             log.debug("retrieving tenant [subject DN: {}]", subjectDn);
             final Future<TenantResult<JsonObject>> getResult = Future.future();
-            get(dn, getResult.completer());
+            get(dn, request.getSpanContext(), getResult.completer());
             return getResult.map(tr -> {
                 final EventBusMessage response = request.getResponse(tr.getStatus())
                         .setJsonPayload(tr.getPayload())
@@ -158,15 +158,9 @@ public abstract class BaseTenantService<T> extends EventBusService<T> implements
         return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
     }
 
-    /**
-     * {@inheritDoc}
-     *
-     * This default implementation simply returns an empty result with status code 501 (Not Implemented).
-     * Subclasses should override this method in order to provide a reasonable implementation.
-     */
     @Override
-    public void get(final String tenantId, final Handler<AsyncResult<TenantResult<JsonObject>>> resultHandler) {
-        handleUnimplementedOperation(resultHandler);
+    public final void get(final String tenantId, final Handler<AsyncResult<TenantResult<JsonObject>>> resultHandler) {
+        get(tenantId, null, resultHandler);
     }
 
     /**
@@ -176,7 +170,25 @@ public abstract class BaseTenantService<T> extends EventBusService<T> implements
      * Subclasses should override this method in order to provide a reasonable implementation.
      */
     @Override
-    public void get(final X500Principal subjectDn,
+    public void get(final String tenantId, final SpanContext spanContext,
+            final Handler<AsyncResult<TenantResult<JsonObject>>> resultHandler) {
+        handleUnimplementedOperation(resultHandler);
+    }
+
+    @Override
+    public final void get(final X500Principal subjectDn,
+            final Handler<AsyncResult<TenantResult<JsonObject>>> resultHandler) {
+        get(subjectDn, null, resultHandler);
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * This default implementation simply returns an empty result with status code 501 (Not Implemented).
+     * Subclasses should override this method in order to provide a reasonable implementation.
+     */
+    @Override
+    public void get(final X500Principal subjectDn, final SpanContext spanContext,
             final Handler<AsyncResult<TenantResult<JsonObject>>> resultHandler) {
         handleUnimplementedOperation(resultHandler);
     }
