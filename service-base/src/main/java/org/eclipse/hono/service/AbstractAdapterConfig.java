@@ -21,6 +21,7 @@ import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.client.CommandConnection;
 import org.eclipse.hono.client.impl.CommandConnectionImpl;
 import org.eclipse.hono.client.impl.HonoClientImpl;
+import org.eclipse.hono.config.ApplicationConfigProperties;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.config.VertxProperties;
 import org.eclipse.hono.service.cache.SpringCacheProvider;
@@ -344,5 +345,26 @@ public abstract class AbstractAdapterConfig {
         manager.setCacheBuilder(builder);
 
         return new SpringCacheProvider(manager);
+    }
+
+    /**
+     * Exposes properties for configuring the application properties as a Spring bean.
+     *
+     * @return The application configuration properties.
+     */
+    @Bean
+    @ConfigurationProperties(prefix = "hono.app")
+    public ApplicationConfigProperties applicationConfigProperties() {
+        return new ApplicationConfigProperties();
+    }
+
+    /**
+     * Exposes the health check server as a Spring bean.
+     *
+     * @return The health check server.
+     */
+    @Bean
+    public HealthCheckRegistration healthCheckServer() {
+        return new HealthCheckServer(vertx(), applicationConfigProperties());
     }
 }

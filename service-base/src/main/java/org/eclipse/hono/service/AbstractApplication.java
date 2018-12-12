@@ -35,6 +35,7 @@ import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 
 import io.vertx.core.CompositeFuture;
+import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
@@ -56,7 +57,7 @@ public class AbstractApplication implements ApplicationRunner {
     private ApplicationConfigProperties config = new ApplicationConfigProperties();
     private Vertx vertx;
 
-    private HealthCheckServer healthCheckServer;
+    private HealthCheckRegistration healthCheckServer  = new NoopHealthCheckServer();
 
     /**
      * Sets the Vert.x instance to deploy the service to.
@@ -105,6 +106,17 @@ public class AbstractApplication implements ApplicationRunner {
     }
 
     /**
+     * Sets the HealthCheckRegistration for this application.
+     * 
+     * @param healthCheckServer The HealthCheckRegistration.
+     * @throws NullPointerException if healthCheckServer is {@code null}.
+     */
+    @Autowired(required = false)
+    public void setHealthCheckServer(final HealthCheckRegistration healthCheckServer) {
+        this.healthCheckServer = Objects.requireNonNull(healthCheckServer);
+    }
+
+    /**
      * Starts up this application.
      * <p>
      * The start up process entails the following steps:
@@ -134,8 +146,6 @@ public class AbstractApplication implements ApplicationRunner {
                     Runtime.getRuntime().maxMemory() >> 20,
                     Runtime.getRuntime().availableProcessors());
         }
-
-        healthCheckServer = new HealthCheckServer(vertx, config);
 
         final Future<?> future = deployRequiredVerticles(config.getMaxInstances())
              .compose(s -> deployServiceVerticles())
@@ -170,28 +180,17 @@ public class AbstractApplication implements ApplicationRunner {
     }
 
     private Future<?> deployServiceVerticles() {
-        final int maxInstances = config.getMaxInstances();
+        final DeploymentOptions deploymentOptions = new DeploymentOptions();
+        deploymentOptions.setInstances(config.getMaxInstances());
 
         @SuppressWarnings("rawtypes")
         final List<Future> deploymentTracker = new ArrayList<>();
 
         for (final ObjectFactory<? extends AbstractServiceBase<?>> serviceFactory : serviceFactories) {
 
-            AbstractServiceBase<?> serviceInstance = serviceFactory.getObject();
-
-            healthCheckServer.registerHealthCheckResources(serviceInstance);
-
             final Future<String> deployTracker = Future.future();
-            vertx.deployVerticle(serviceInstance, deployTracker.completer());
+            vertx.deployVerticle(serviceFactory::getObject, deploymentOptions, deployTracker.completer());
             deploymentTracker.add(deployTracker);
-
-            for (int i = 1; i < maxInstances; i++) { // first instance has already been deployed
-                serviceInstance = serviceFactory.getObject();
-                log.debug("created new instance of service: {}", serviceInstance);
-                final Future<String> tracker = Future.future();
-                vertx.deployVerticle(serviceInstance, tracker.completer());
-                deploymentTracker.add(tracker);
-            }
         }
 
         return CompositeFuture.all(deploymentTracker);
@@ -268,11 +267,7 @@ public class AbstractApplication implements ApplicationRunner {
     }
 
     private Future<Void> stopHealthCheckServer() {
-        if (healthCheckServer != null) {
-            return healthCheckServer.stop();
-        } else {
-            return Future.succeededFuture();
-        }
+        return healthCheckServer.stop();
     }
 
     /**

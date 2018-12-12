@@ -15,7 +15,6 @@ package org.eclipse.hono.adapter.coap.vertx;
 
 import org.eclipse.hono.adapter.coap.CoapAdapterProperties;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
-import org.eclipse.hono.config.ApplicationConfigProperties;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.service.AbstractAdapterConfig;
 import org.eclipse.hono.service.metric.MetricsTags;
@@ -67,17 +66,6 @@ public class Config extends AbstractAdapterConfig {
         if (props.getName() == null) {
             props.setName(CONTAINER_ID_HONO_COAP_ADAPTER);
         }
-    }
-
-    /**
-     * Exposes properties for configuring the application properties as a Spring bean.
-     *
-     * @return The application configuration properties.
-     */
-    @Bean
-    @ConfigurationProperties(prefix = "hono.app")
-    public ApplicationConfigProperties applicationConfigProperties() {
-        return new ApplicationConfigProperties();
     }
 
     /**
