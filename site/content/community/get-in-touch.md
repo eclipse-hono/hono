@@ -8,7 +8,7 @@ Wanna tell us what you think about Eclipse Hono&trade;? What we can improve? Whi
 
 ## Ask a Question
 
-We would be delighted to answer your questions regarding the usage of Hono on [StackOverflow](https://stackoverflow.com/). Make sure to add the *eclipse-hono* tag to your question so that we can easily find (and answer) it.
+We would be delighted to answer your questions regarding the usage of Hono on [StackOverflow](https://stackoverflow.com/questions/tagged/eclipse-hono). Make sure to add the *eclipse-hono* tag to your question so that we can easily find (and answer) it.
 
 ## Report an Issue
 
