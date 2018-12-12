@@ -284,6 +284,8 @@ public class CompleteBaseCredentialsServiceTest {
 
         return new CompleteBaseCredentialsService<ServiceConfigProperties>() {
 
+            private final Vertx vertx = Vertx.vertx();
+
             @Override
             public void add(final String tenantId, final JsonObject credentialsObject,
                             final Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
@@ -306,7 +308,7 @@ public class CompleteBaseCredentialsServiceTest {
 
             @Override
             public Vertx getVertx() {
-                return Vertx.vertx();
+                return vertx;
             }
         };
     }

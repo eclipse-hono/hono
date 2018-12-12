@@ -191,6 +191,12 @@ public abstract class CompleteBaseCredentialsService<T> extends BaseCredentialsS
 
     /**
      * Gets the hash function to be used to hash plaintext passwords.
+     * <p>
+     * This default implementation returns "bcrypt".
+     * <p>
+     * Subclasses should override this method in order to e.g. return a value determined from a configuration property.
+     * For supported values see {@link CredentialsObject#hashPwdAndUpdateSecret(JsonObject, String)}.
+     * <p>
      * 
      * @return The name of the hash function.
      */

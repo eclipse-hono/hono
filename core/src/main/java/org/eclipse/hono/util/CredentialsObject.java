@@ -680,6 +680,13 @@ public final class CredentialsObject {
     /**
      * Hashes a plain text password in the field {@link CredentialsConstants#FIELD_SECRETS_PWD_PLAIN} in the given
      * secret if present and updates the secret accordingly.
+     * <p>
+     * Supported hash functions are:
+     * <ul>
+     *     <li>sha-256</li>
+     *     <li>sha-512</li>
+     *     <li>bcrypt</li>
+     * </ul>
      *
      * @param secret The secret to be updated.
      * @param hashFunction The name of the hash function to use.
