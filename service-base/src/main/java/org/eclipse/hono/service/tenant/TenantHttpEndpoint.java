@@ -21,7 +21,7 @@ import java.util.function.Predicate;
 import io.vertx.core.Handler;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpServerResponse;
-import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.http.AbstractHttpEndpoint;
 import org.eclipse.hono.util.EventBusMessage;
@@ -105,10 +105,10 @@ public final class TenantHttpEndpoint extends AbstractHttpEndpoint<ServiceConfig
         final Object tenantId = payload.getValue(TenantConstants.FIELD_PAYLOAD_TENANT_ID);
 
         if (tenantId == null) {
-            ctx.fail(new ServiceInvocationException(HttpURLConnection.HTTP_BAD_REQUEST,
+            ctx.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
                     String.format("'%s' param is required", TenantConstants.FIELD_PAYLOAD_TENANT_ID)));
         } else if (!(tenantId instanceof String)) {
-            ctx.fail(new ServiceInvocationException(HttpURLConnection.HTTP_BAD_REQUEST,
+            ctx.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
                     String.format(String.format("'%s' must be a string", TenantConstants.FIELD_PAYLOAD_TENANT_ID))));
         }
         ctx.next();
