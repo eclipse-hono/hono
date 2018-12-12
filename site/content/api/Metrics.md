@@ -29,31 +29,31 @@ metrics definition. Especially for the Hono services, like device registry and
 the messaging component, no further metrics are defined. However all metrics
 will still support the tags as described.
 
-### Common metrics
+### Common Metrics
 
 Tags for common metrics are:
 
-| Tag        | Applied to  | Description |
-| ---------- | ----------- | ----------- |
-| *host*     | All metrics | The name of the host that the service reporting the metric is running on. |
-| *component*| All metrics | The application component type (either `adapter`, `service`) |
+| Tag         | Value                              | Description |
+| ----------- | ---------------------------------- | ----------- |
+| *host*      | *string*                           | The name of the host that the component reporting the metric is running on |
+| *component* | `adapter`, `service`             | The type of component reporting the metric |
 
-### Protocol adapter metrics
+### Protocol Adapter Metrics
 
 Additional tags for protocols adapter are:
 
-| Tag        | Applied to  | Description |
-| ---------- | ----------- | ----------- |
-| *protocol* | All metrics | An ID of the protocol (either `amqp`, `coap`, `http`, `mqtt`) |
-| *tenant*   | Metrics related to a tenant | The name of the tenant |
-| *type*     | Metrics related to a message type | The message type (either `telemetry`, `event` |
+| Tag        | Value                              | Description |
+| ---------- | ---------------------------------- | ----------- |
+| *protocol* | `amqp`, `coap`, `http`, `mqtt`  | The name of the protocol that the protocol adapter supports |
+| *tenant*   | *string*                           | The name of the tenant that the metric is being reported for |
+| *type*     | `telemetry`, `event`             | The type of message that the metric is being reported for |
 
 Metrics provided by the protocol adapters are:
 
-| Metric                             | Type    | Tags | Description |
-| ---------------------------------- | ------- | ---- | ----------- |
-| *hono.connections.unauthenticated* | Gauge   | *host*, *component*, *protocol*                   | Current number of connected, unauthenticated devices. <br/> **NB** This metric is only supported by protocol adapters that maintain *connection state* with authenticated devices. In particular, the HTTP adapter does not support this metric. |
+| Metric                             | Type    | Tags                                              | Description |
+| ---------------------------------- | ------- | ------------------------------------------------- | ----------- |
 | *hono.connections.authenticated*   | Gauge   | *host*, *component*, *protocol*, *tenant*         | Current number of connected, authenticated devices. <br/> **NB** This metric is only supported by protocol adapters that maintain *connection state* with authenticated devices. In particular, the HTTP adapter does not support this metric. |
+| *hono.connections.unauthenticated* | Gauge   | *host*, *component*, *protocol*                   | Current number of connected, unauthenticated devices. <br/> **NB** This metric is only supported by protocol adapters that maintain *connection state* with authenticated devices. In particular, the HTTP adapter does not support this metric. |
 | *hono.messages.undeliverable*      | Counter | *host*, *component*, *protocol*, *tenant*, *type* | Total number of undeliverable messages |
 | *hono.messages.processed*          | Counter | *host*, *component*, *protocol*, *tenant*, *type* | Total number of processed messages |
 | *hono.messages.processed.payload*  | Counter | *host*, *component*, *protocol*, *tenant*, *type* | Total number of processed payload bytes |
@@ -61,15 +61,15 @@ Metrics provided by the protocol adapters are:
 | *hono.commands.ttd.expired*        | Counter | *host*, *component*, *protocol*, *tenant*         | Total number of expired TTDs |
 | *hono.commands.response.delivered* | Counter | *host*, *component*, *protocol*, *tenant*         | Total number of delivered responses to commands |
 
-### Service metrics
+### Service Metrics
 
 Additional tags for services are:
 
-| Tag        | Applied to  | Description |
-| ---------- | ----------- | ----------- |
-| *service*  | All metrics | An ID of the service (either `auth`, `registry`, `messaging`) |
+| Tag        | Value                              | Description |
+| ---------- | ---------------------------------- | ----------- |
+| *service*  | `auth`, `registry`, `messaging` | The identifier of the service reporting the metric |
 
-No metrics are defined as part of the Hono metrics definition.
+Hono's service components do not report any metrics at the moment.
 
 ## Legacy metrics
 
