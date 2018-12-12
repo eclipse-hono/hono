@@ -42,6 +42,7 @@ import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.ResourceConflictException;
 import org.eclipse.hono.client.TenantClient;
+import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
@@ -411,6 +412,42 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
     }
 
     /**
+     * Verifies that the adapter fails the upload of a command response with a 404 if the device is not registered and
+     * the valid credentials for the device is available.
+     */
+    @Test
+    public void testUploadCommandResponseFailsForNonExistingDevice() {
+
+        final HttpServer server = getHttpServer(false);
+        final AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> adapter = getAdapter(server, null);
+        final Buffer payload = Buffer.buffer("some payload");
+        final RoutingContext ctx = newRoutingContext(payload, "application/text", mock(HttpServerRequest.class),
+                mock(HttpServerResponse.class));
+        final TenantObject to = TenantObject.from("tenant", true);
+
+        // Given an adapter that is enabled for a device's tenant
+        to.addAdapterConfiguration(new JsonObject()
+                .put(TenantConstants.FIELD_ADAPTERS_TYPE, ADAPTER_TYPE)
+                .put(TenantConstants.FIELD_ENABLED, true));
+        when(tenantClient.get(eq("tenant"), (SpanContext) any())).thenReturn(Future.succeededFuture(to));
+
+        // which is connected to a Credentials service that has credentials on record for device 9999
+        when(adapter.getAuthenticatedDevice(ctx)).thenReturn(new DeviceUser("tenant", "9999"));
+
+        // but for which no registration information is available
+        when(regClient.assertRegistration((String) any(), (String) any(), (SpanContext) any()))
+                .thenReturn(Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND,
+                        "cannot publish data for device of other tenant")));
+
+        adapter.uploadCommandResponseMessage(ctx, "tenant", "device", CMD_REQ_ID, 200);
+
+        // Then the device gets a 404
+        assertContextFailedWithClientError(ctx, HttpURLConnection.HTTP_NOT_FOUND);
+        // and has not been reported as processed
+        verify(metrics, never()).incrementCommandResponseDeliveredToApplication(eq("tenant"));
+    }
+
+    /**
      * Verifies that the adapter fails the upload of a command response with a 400
      * result if it is rejected by the downstream peer.
      */
@@ -673,7 +710,6 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         adapter.setRegistrationServiceClient(registrationServiceClient);
         adapter.setCredentialsServiceClient(credentialsServiceClient);
         adapter.setCommandConnection(commandConnection);
-
         return adapter;
     }
 
