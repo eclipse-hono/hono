@@ -13,11 +13,13 @@
 
 package org.eclipse.hono.service.credentials;
 
+import org.eclipse.hono.util.CredentialsResult;
+
+import io.opentracing.Span;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
 import io.vertx.core.Verticle;
 import io.vertx.core.json.JsonObject;
-import org.eclipse.hono.util.CredentialsResult;
 
 /**
  * A service for keeping record of device credentials.
@@ -47,6 +49,33 @@ public interface CredentialsService extends Verticle {
     void get(String tenantId, String type, String authId, Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler);
 
     /**
+     * Gets credentials for a device.
+     * <p>
+     * This default implementation simply returns the result of {@link #get(String, String, String, Handler)}.
+     * 
+     * @param tenantId The tenant the device belongs to.
+     * @param type The type of credentials to get.
+     * @param authId The authentication identifier of the device to get credentials for (may be {@code null}).
+     * @param span The active OpenTracing span for this operation. It is not to be closed in this method!
+     *            An implementation should log (error) events on this span and it may set tags and use this span as the
+     *            parent for any spans created in this method.
+     * @param resultHandler The handler to invoke with the result of the operation.
+     *         The <em>status</em> will be
+     *         <ul>
+     *         <li><em>200 OK</em> if credentials of the given type and authentication identifier have been found. The
+     *         <em>payload</em> will contain the credentials.</li>
+     *         <li><em>404 Not Found</em> if no credentials matching the criteria exist.</li>
+     *         </ul>
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     * @see <a href="https://www.eclipse.org/hono/api/credentials-api/#get-credentials">
+     *      Credentials API - Get Credentials</a>
+     */
+    default void get(final String tenantId, final String type, final String authId, final Span span,
+            final Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
+        get(tenantId, type, authId, resultHandler);
+    }
+
+    /**
      * Gets credentials for a device, providing additional client connection context.
      *
      * @param tenantId The tenant the device belongs to.
@@ -65,4 +94,33 @@ public interface CredentialsService extends Verticle {
      *      Credentials API - Get Credentials</a>
      */
     void get(String tenantId, String type, String authId, JsonObject clientContext, Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler);
+
+    /**
+     * Gets credentials for a device, providing additional client connection context.
+     * <p>
+     * This default implementation simply returns the result of {@link #get(String, String, String, JsonObject, Handler)}.
+     *
+     * @param tenantId The tenant the device belongs to.
+     * @param type The type of credentials to get.
+     * @param authId The authentication identifier of the device to get credentials for (may be {@code null}).
+     * @param clientContext Optional bag of properties that can be used to identify the device
+     * @param span The active OpenTracing span for this operation. It is not to be closed in this method!
+     *            An implementation should log (error) events on this span and it may set tags and use this span as the
+     *            parent for any spans created in this method.
+     * @param resultHandler The handler to invoke with the result of the operation.
+     *         The <em>status</em> will be
+     *         <ul>
+     *         <li><em>200 OK</em> if credentials of the given type and authentication identifier have been found. The
+     *         <em>payload</em> will contain the credentials.</li>
+     *         <li><em>404 Not Found</em> if no credentials matching the criteria exist.</li>
+     *         </ul>
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     * @see <a href="https://www.eclipse.org/hono/api/credentials-api/#get-credentials">
+     *      Credentials API - Get Credentials</a>
+     */
+    default void get(final String tenantId, final String type, final String authId, final JsonObject clientContext,
+            final Span span,
+            final Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
+        get(tenantId, type, authId, clientContext, resultHandler);
+    }
 }

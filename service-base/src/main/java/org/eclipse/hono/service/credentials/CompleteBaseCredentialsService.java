@@ -24,6 +24,7 @@ import org.eclipse.hono.util.CredentialsObject;
 import org.eclipse.hono.util.CredentialsResult;
 import org.eclipse.hono.util.EventBusMessage;
 
+import io.opentracing.noop.NoopSpan;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -203,6 +204,12 @@ public abstract class CompleteBaseCredentialsService<T> extends BaseCredentialsS
                 return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
             }
         }
+    }
+
+    @Override
+    public final void getAll(final String tenantId, final String deviceId,
+                             final Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
+        getAll(tenantId, deviceId, NoopSpan.INSTANCE, resultHandler);
     }
 
     /**

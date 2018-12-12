@@ -26,6 +26,7 @@ import org.eclipse.hono.util.CredentialsResult;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
+import io.opentracing.Span;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -46,12 +47,14 @@ public final class DummyCredentialsService extends BaseCredentialsService<Object
     }
 
     @Override
-    public void get(final String tenantId, final String type, final String authId, final Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
-        get(tenantId, type, authId, null, resultHandler);
+    public void get(final String tenantId, final String type, final String authId, final Span span,
+            final Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
+        get(tenantId, type, authId, null, span, resultHandler);
     }
 
     @Override
-    public void get(final String tenantId, final String type, final String authId, final JsonObject clientContext, final Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
+    public void get(final String tenantId, final String type, final String authId, final JsonObject clientContext,
+            final Span span, final Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
 
         final JsonObject result = JsonObject.mapFrom(CredentialsObject.fromHashedPassword(
                 authId,
@@ -65,8 +68,9 @@ public final class DummyCredentialsService extends BaseCredentialsService<Object
     }
 
     @Override
-    public void getAll(final String tenantId, final String deviceId, final Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
-        get(tenantId, null, null, resultHandler);
+    public void getAll(final String tenantId, final String deviceId, final Span span,
+            final Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
+        get(tenantId, null, null, span, resultHandler);
     }
 
     private static String getBase64EncodedSha256HashForPassword(final String password) {

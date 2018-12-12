@@ -25,6 +25,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.eclipse.hono.auth.HonoPasswordEncoder;
 import org.eclipse.hono.service.credentials.CompleteBaseCredentialsService;
+import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsResult;
@@ -32,6 +33,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Repository;
 
+import io.opentracing.Span;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -249,8 +251,9 @@ public final class FileBasedCredentialsService extends CompleteBaseCredentialsSe
      * The result object will include a <em>no-cache</em> directive.
      */
     @Override
-    public void get(final String tenantId, final String type, final String authId, final Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
-        get(tenantId, type, authId, null, resultHandler);
+    public void get(final String tenantId, final String type, final String authId, final Span span,
+            final Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
+        get(tenantId, type, authId, null, span, resultHandler);
     }
 
     /**
@@ -264,6 +267,7 @@ public final class FileBasedCredentialsService extends CompleteBaseCredentialsSe
             final String type,
             final String authId,
             final JsonObject clientContext,
+            final Span span,
             final Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
 
         Objects.requireNonNull(tenantId);
@@ -271,7 +275,7 @@ public final class FileBasedCredentialsService extends CompleteBaseCredentialsSe
         Objects.requireNonNull(authId);
         Objects.requireNonNull(resultHandler);
 
-        final JsonObject data = getSingleCredentials(tenantId, authId, type, clientContext);
+        final JsonObject data = getSingleCredentials(tenantId, authId, type, clientContext, span);
         if (data == null) {
             resultHandler.handle(Future.succeededFuture(CredentialsResult.from(HttpURLConnection.HTTP_NOT_FOUND)));
         } else {
@@ -286,7 +290,8 @@ public final class FileBasedCredentialsService extends CompleteBaseCredentialsSe
      * The result object will include a <em>no-cache</em> directive.
      */
     @Override
-    public void getAll(final String tenantId, final String deviceId, final Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
+    public void getAll(final String tenantId, final String deviceId, final Span span,
+            final Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
 
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
@@ -294,6 +299,7 @@ public final class FileBasedCredentialsService extends CompleteBaseCredentialsSe
 
         final Map<String, JsonArray> credentialsForTenant = credentials.get(tenantId);
         if (credentialsForTenant == null) {
+            TracingHelper.logError(span, "no credentials found for tenant");
             resultHandler.handle(Future.succeededFuture(CredentialsResult.from(HttpURLConnection.HTTP_NOT_FOUND)));
         } else {
             final JsonArray matchingCredentials = new JsonArray();
@@ -302,6 +308,7 @@ public final class FileBasedCredentialsService extends CompleteBaseCredentialsSe
                 findCredentialsForDevice(credentialsForAuthId, deviceId, matchingCredentials);
             }
             if (matchingCredentials.isEmpty()) {
+                TracingHelper.logError(span, "no credentials found for device");
                 resultHandler.handle(Future.succeededFuture(CredentialsResult.from(HttpURLConnection.HTTP_NOT_FOUND)));
             } else {
                 final JsonObject result = new JsonObject()
@@ -334,9 +341,11 @@ public final class FileBasedCredentialsService extends CompleteBaseCredentialsSe
      * @param tenantId The id of the tenant the credentials belong to.
      * @param authId The authentication identifier to look up credentials for.
      * @param type The type of credentials to look up.
+     * @param span The active OpenTracing span for this operation.
      * @return The credentials object of the given type or {@code null} if no matching credentials exist.
      */
-    private JsonObject getSingleCredentials(final String tenantId, final String authId, final String type, final JsonObject clientContext) {
+    private JsonObject getSingleCredentials(final String tenantId, final String authId, final String type,
+            final JsonObject clientContext, final Span span) {
 
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(authId);
@@ -368,7 +377,16 @@ public final class FileBasedCredentialsService extends CompleteBaseCredentialsSe
                         return authIdCredential;
                     }
                 }
+                if (clientContext != null) {
+                    TracingHelper.logError(span, "no credentials found with matching type and client context");
+                } else {
+                    TracingHelper.logError(span, "no credentials found with matching type");
+                }
+            } else {
+                TracingHelper.logError(span, "no credentials found for auth-id");
             }
+        } else {
+            TracingHelper.logError(span, "no credentials found for tenant");
         }
         return null;
     }
