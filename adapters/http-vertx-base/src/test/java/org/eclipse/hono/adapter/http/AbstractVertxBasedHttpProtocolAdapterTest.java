@@ -412,7 +412,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
     }
 
     /**
-     * Verifies that the adapter fails the upload of a command response with a 403 if the device is not registered and
+     * Verifies that the adapter fails the upload of a command response with a 404 if the device is not registered and
      * the valid credentials for the device is available.
      */
     @Test
@@ -441,7 +441,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
 
         adapter.uploadCommandResponseMessage(ctx, "tenant", "device", CMD_REQ_ID, 200);
 
-        // Then the device gets a 403
+        // Then the device gets a 404
         assertContextFailedWithClientError(ctx, HttpURLConnection.HTTP_NOT_FOUND);
         // and has not been reported as processed
         verify(metrics, never()).incrementCommandResponseDeliveredToApplication(eq("tenant"));
