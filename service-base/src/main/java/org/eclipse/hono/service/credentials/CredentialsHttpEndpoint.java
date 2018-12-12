@@ -17,6 +17,7 @@ import java.net.HttpURLConnection;
 import java.util.Objects;
 
 import io.vertx.core.http.HttpHeaders;
+import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.http.AbstractHttpEndpoint;
 import org.eclipse.hono.util.CredentialsConstants;
@@ -140,11 +141,11 @@ public final class CredentialsHttpEndpoint extends AbstractHttpEndpoint<ServiceC
 
         // auth-id and type from URI must match payload
         if (!authIdFromUri.equals(authId)) {
-            ctx.response().setStatusMessage("Non-matching authentication identifier");
-            ctx.fail(HttpURLConnection.HTTP_BAD_REQUEST);
+            ctx.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
+                    "Non-matching authentication identifier"));
         } else if (!typeFromUri.equals(type)) {
-            ctx.response().setStatusMessage("Non-matching credentials type");
-            ctx.fail(HttpURLConnection.HTTP_BAD_REQUEST);
+            ctx.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
+                    "Non-matching credentials type"));
         } else {
             logger.debug("updating credentials [tenant: {}, device-id: {}, auth-id: {}, type: {}]", tenantId, deviceId, authId, type);
 
