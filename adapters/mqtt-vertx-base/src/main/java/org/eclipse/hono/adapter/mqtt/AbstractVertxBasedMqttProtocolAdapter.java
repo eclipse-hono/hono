@@ -921,8 +921,8 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
             try {
                 final Integer status = Integer.parseInt(addressPath[CommandConstants.TOPIC_POSITION_RESPONSE_STATUS]);
                 final String reqId = addressPath[CommandConstants.TOPIC_POSITION_RESPONSE_REQ_ID];
-                final CommandResponse commandResponse = CommandResponse.from(
-                        reqId, targetAddress.getResourceId(), ctx.message().payload(), ctx.contentType(), status);
+                final CommandResponse commandResponse = CommandResponse.from(reqId, targetAddress.getTenantId(),
+                        targetAddress.getResourceId(), ctx.message().payload(), ctx.contentType(), status);
 
                 if (commandResponse == null) {
                     return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "malformed topic name"));

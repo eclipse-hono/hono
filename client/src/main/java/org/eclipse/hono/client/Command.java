@@ -120,6 +120,9 @@ public final class Command {
                     replyToId = replyTo.getPathWithoutBase();
                     if (replyToId == null) {
                         valid = false;
+                    } else {
+                        message.setReplyTo(
+                                String.format("%s/%s", replyTo.getBasePath(), processForDeviceId(replyToId, deviceId)));
                     }
                 }
             } catch (IllegalArgumentException e) {
@@ -141,7 +144,7 @@ public final class Command {
 
     /**
      * Gets the AMQP 1.0 message representing this command.
-     * 
+     *
      * @return The command message.
      */
     public Message getCommandMessage() {
@@ -326,5 +329,12 @@ public final class Command {
         } else {
             return "Invalid Command";
         }
+    }
+
+    private static String processForDeviceId(final String replyToId, final String deviceId) {
+        if (replyToId.startsWith(deviceId + "/")) {
+            return replyToId.replaceFirst(deviceId + "/", deviceId + "/0");
+        }
+        return String.format("%s/1%s", deviceId, replyToId);
     }
 }
