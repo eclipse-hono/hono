@@ -772,32 +772,19 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
 
     private Future<ProtonDelivery> doUploadCommandResponseMessage(final AmqpContext context, final Span currentSpan) {
 
-        final String correlationId = Optional.ofNullable(context.getMessage().getCorrelationId())
-                .map(id -> {
-                    if (id instanceof String) {
-                        return (String) id;
-                    } else {
-                        return null;
-                    }
-                }).orElse(null);
-
-        final Integer statusCode = MessageHelper.getApplicationProperty(context.getMessage().getApplicationProperties(),
-                MessageHelper.APP_PROPERTY_STATUS, Integer.class);
-
-        final Map<String, Object> items = new HashMap<>(2);
-        items.put(MessageHelper.APP_PROPERTY_STATUS, statusCode);
-        items.put(TracingHelper.TAG_CORRELATION_ID.getKey(), correlationId);
-        currentSpan.log(items);
-
-        LOG.debug("creating command response [status: {}, correlation-id: {}, reply-to: {}]",
-                statusCode, correlationId, context.getResourceIdentifier().toString());
-        final CommandResponse commandResponse = CommandResponse.from(context.getMessagePayload(),
-                context.getMessageContentType(), statusCode, correlationId, context.getResourceIdentifier());
-
+        final CommandResponse commandResponse = CommandResponse.from(context.getMessage());
         if (commandResponse == null) {
             return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
                     "malformed command response message"));
         } else {
+            LOG.trace("sending command response [device-id: {}, status: {}, correlation-id: {}, reply-to: {}]",
+                    context.getDeviceId(), commandResponse.getStatus(), commandResponse.getCorrelationId(),
+                    commandResponse.getReplyToId());
+            final Map<String, Object> items = new HashMap<>(3);
+            items.put(Fields.EVENT, "sending command response");
+            items.put(TracingHelper.TAG_CORRELATION_ID.getKey(), commandResponse.getCorrelationId());
+            items.put(MessageHelper.APP_PROPERTY_STATUS, commandResponse.getStatus());
+            currentSpan.log(items);
             return sendCommandResponse(context.getTenantId(), commandResponse, currentSpan.context())
                     .map(delivery -> {
                         LOG.trace("forwarded command response from device [tenant: {}, device-id: {}]",

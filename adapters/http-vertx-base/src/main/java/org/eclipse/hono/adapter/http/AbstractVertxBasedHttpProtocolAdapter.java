@@ -973,7 +973,8 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
         LOG.debug("processing response to command [tenantId: {}, deviceId: {}, cmd-req-id: {}, status code: {}]",
                 tenant, deviceId, commandRequestId, responseStatus);
 
-        final CommandResponse commandResponse = CommandResponse.from(commandRequestId, deviceId, payload, contentType, responseStatus);
+        final CommandResponse commandResponse = CommandResponse.from(commandRequestId, tenant, deviceId, payload,
+                contentType, responseStatus);
 
         if (commandResponse == null) {
             HttpUtils.badRequest(

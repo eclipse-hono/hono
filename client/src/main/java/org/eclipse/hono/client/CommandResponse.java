@@ -13,8 +13,13 @@
 
 package org.eclipse.hono.client;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
 import java.util.function.Predicate;
 
+import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
 
 import io.vertx.core.buffer.Buffer;
@@ -34,19 +39,24 @@ public final class CommandResponse {
     private final int status;
     private final String replyToId;
     private final String correlationId;
+    private final Map<String, Object> properties = new HashMap<>();
 
-    private CommandResponse(final Buffer payload, final String contentType, final int status, final String correlationId, final String replyToId) {
+    private CommandResponse(final String tenantId, final String deviceId, final Buffer payload,
+            final String contentType, final int status, final String correlationId, final String replyToId) {
         this.payload = payload;
         this.contentType = contentType;
         this.status = status;
         this.replyToId = replyToId;
         this.correlationId = correlationId;
+        this.properties.put(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId);
+        this.properties.put(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId);
     }
 
     /**
      * Creates a response for a request ID.
      * 
      * @param requestId The request ID of the command that this is the response for.
+     * @param tenantId The tenant ID of the device sending the response.
      * @param deviceId The device ID of the device sending the response.
      * @param payload The payload of the response.
      * @param contentType The contentType of the response. Maybe {@code null} since it is not required.
@@ -56,6 +66,7 @@ public final class CommandResponse {
      */
     public static CommandResponse from(
             final String requestId,
+            final String tenantId,
             final String deviceId,
             final Buffer payload,
             final String contentType,
@@ -73,7 +84,7 @@ public final class CommandResponse {
                 final int lengthStringOne = Integer.parseInt(requestId.substring(1, 3), 16);
                 final String replyId = requestId.substring(3 + lengthStringOne);
                 return new CommandResponse(
-                        payload,
+                        tenantId, deviceId, payload,
                         contentType,
                         status,
                         requestId.substring(3, 3 + lengthStringOne), // correlation ID
@@ -85,26 +96,43 @@ public final class CommandResponse {
     }
 
     /**
-     * Creates a command response for a reply-to ID, correlation ID and status.
-     * 
-     * @param payload The command response payload.
-     * @param contentType The content-type of the response payload.
-     * @param status The HTTP status code indicating the outcome of executing the command on the device.
-     * @param correlationId The identifier used to correlate this response with the command request.
-     * @param address The address that the command response is to be sent to.
-     * 
-     * @return The command response or {@code null} if any of correlationId, replyTo and status is null or if the
-     *         status code is &lt; 200 or &gt;= 600.
+     * Creates a command response from a given message.
+     *
+     * @param message The command response message.
+     *
+     * @return The command response or {@code null} if message or any of correlationId, address and status is null or if
+     *         the status code is &lt; 200 or &gt;= 600.
      */
-    public static CommandResponse from(final Buffer payload, final String contentType, final Integer status,
-            final String correlationId, final ResourceIdentifier address) {
+    public static CommandResponse from(final Message message) {
+        if (message == null) {
+            return null;
+        }
 
-        if (correlationId == null || address == null || status == null) {
+        final String correlationId = Optional.ofNullable(message.getCorrelationId())
+                .map(id -> {
+                    if (id instanceof String) {
+                        return (String) id;
+                    } else {
+                        return null;
+                    }
+                }).orElse(null);
+
+        final Integer status = MessageHelper.getApplicationProperty(message.getApplicationProperties(),
+                MessageHelper.APP_PROPERTY_STATUS, Integer.class);
+
+        if (correlationId == null || message.getAddress() == null || status == null) {
             return null;
         } else if (INVALID_STATUS_CODE.test(status)) {
             return null;
         } else {
-            return new CommandResponse(payload, contentType, status, correlationId, address.getPathWithoutBase());
+            try {
+                final ResourceIdentifier resource = ResourceIdentifier.fromString(message.getAddress());
+                return new CommandResponse(resource.getTenantId(), resource.getResourceId(),
+                        MessageHelper.getPayload(message), message.getContentType(), status, correlationId,
+                        getReplyId(resource));
+            } catch (NullPointerException | IllegalArgumentException e) {
+                return null;
+            }
         }
     }
 
@@ -152,5 +180,24 @@ public final class CommandResponse {
      */
     public int getStatus() {
         return status;
+    }
+
+    /**
+     * Gets a map of the properties to include in the message as application properties.
+     *
+     * @return The properties.
+     */
+    public Map<String, Object> getProperties() {
+        return properties;
+    }
+
+    private static String getReplyId(final ResourceIdentifier resource) {
+        final String deviceId = resource.getResourceId();
+        final String pathWithoutBase = resource.getPathWithoutBase();
+        if (pathWithoutBase.startsWith(deviceId + "/1")) {
+            return pathWithoutBase.replaceFirst(deviceId + "/1", "");
+        } else {
+            return pathWithoutBase.replaceFirst(deviceId + "/0", deviceId + "/");
+        }
     }
 }

@@ -17,6 +17,7 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
@@ -26,6 +27,7 @@ import static org.mockito.Mockito.when;
 import java.util.HashMap;
 import java.util.Map;
 
+import io.vertx.proton.ProtonHelper;
 import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.util.CommandConstants;
@@ -57,6 +59,52 @@ public class CommandTest {
         assertThat(cmd.getReplyToId(), is(String.format("4711/%s", replyToId)));
         assertThat(cmd.getCorrelationId(), is(correlationId));
         assertFalse(cmd.isOneWay());
+    }
+
+    /**
+     * Verifies that a command can be created from a valid message having no device-id as part of the reply-to address.
+     * Verifies that the reply-to address contains the device-id and the reply-id is prefixed with flag 1.
+     */
+    @Test
+    public void testForReplyToWithoutDeviceId() {
+        final String replyToId = "the-reply-to-id";
+        final String correlationId = "the-correlation-id";
+        final Message message = ProtonHelper.message("input data");
+        message.setReplyTo(replyToId);
+        message.setSubject("doThis");
+        message.setCorrelationId(correlationId);
+        message.setReplyTo(String.format("%s/%s/%s",
+                CommandConstants.COMMAND_ENDPOINT, Constants.DEFAULT_TENANT, replyToId));
+        final Command cmd = Command.from(message, Constants.DEFAULT_TENANT, "4711");
+        assertTrue(cmd.isValid());
+        assertThat(cmd.getReplyToId(), is(replyToId));
+        assertNotNull(cmd.getCommandMessage());
+        assertNotNull(cmd.getCommandMessage().getReplyTo());
+        assertThat(cmd.getCommandMessage().getReplyTo(), is(String.format("%s/%s/%s/1%s",
+                CommandConstants.COMMAND_ENDPOINT, Constants.DEFAULT_TENANT, "4711", replyToId)));
+    }
+
+    /**
+     * Verifies that a command can be created from a valid message having device-id as part of the reply-to address.
+     * Verifies that the reply-to address contains the device-id and the reply-id is prefixed with flag 0.
+     */
+    @Test
+    public void testForReplyToWithDeviceId() {
+        final String replyToId = "the-reply-to-id";
+        final String correlationId = "the-correlation-id";
+        final Message message = ProtonHelper.message("input data");
+        message.setReplyTo(replyToId);
+        message.setSubject("doThis");
+        message.setCorrelationId(correlationId);
+        message.setReplyTo(String.format("%s/%s/%s/%s",
+                CommandConstants.COMMAND_ENDPOINT, Constants.DEFAULT_TENANT, "4711", replyToId));
+        final Command cmd = Command.from(message, Constants.DEFAULT_TENANT, "4711");
+        assertTrue(cmd.isValid());
+        assertThat(cmd.getReplyToId(), is(String.format("4711/%s", replyToId)));
+        assertNotNull(cmd.getCommandMessage());
+        assertNotNull(cmd.getCommandMessage().getReplyTo());
+        assertThat(cmd.getCommandMessage().getReplyTo(), is(String.format("%s/%s/%s/0%s",
+                CommandConstants.COMMAND_ENDPOINT, Constants.DEFAULT_TENANT, "4711", replyToId)));
     }
 
     /**
