@@ -17,7 +17,7 @@ import javax.security.auth.x500.X500Principal;
 
 import org.eclipse.hono.util.TenantResult;
 
-import io.opentracing.SpanContext;
+import io.opentracing.Span;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
 import io.vertx.core.Verticle;
@@ -55,9 +55,9 @@ public interface TenantService extends Verticle {
      * This default implementation simply returns the result of {@link #get(String, Handler)}.
      *
      * @param tenantId The identifier of the tenant.
-     * @param spanContext The currently active OpenTracing span (may be {@code null}). An implementation
-     *                    should use this as the parent for any span it creates for tracing
-     *                    the execution of this operation.
+     * @param span The active OpenTracing span for this operation. It is not to be closed in this method!
+     *            An implementation should log (error) events on this span and it may set tags and use this span as the
+     *            parent for any spans created in this method.
      * @param resultHandler The handler to invoke with the result of the operation.
      *             The <em>status</em> will be
      *             <ul>
@@ -65,11 +65,11 @@ public interface TenantService extends Verticle {
      *             The <em>payload</em> will contain the tenant's configuration information.</li>
      *             <li><em>404 Not Found</em> if no tenant with the given identifier exists.</li>
      *             </ul>
-     * @throws NullPointerException if any of the parameters (except spanContext) are {@code null}.
+     * @throws NullPointerException if any of the parameters are {@code null}.
      * @see <a href="https://www.eclipse.org/hono/api/tenant-api/#get-tenant-information">
      *      Tenant API - Get Tenant Information</a>
      */
-    default void get(final String tenantId, final SpanContext spanContext,
+    default void get(final String tenantId, final Span span,
             final Handler<AsyncResult<TenantResult<JsonObject>>> resultHandler) {
         get(tenantId, resultHandler);
     }
@@ -109,9 +109,9 @@ public interface TenantService extends Verticle {
      * 
      * @param subjectDn The <em>subject DN</em> of the trusted CA certificate
      *                  that has been configured for the tenant.
-     * @param spanContext The currently active OpenTracing span (may be {@code null}). An implementation
-     *                    should use this as the parent for any span it creates for tracing
-     *                    the execution of this operation.
+     * @param span The active OpenTracing span for this operation. It is not to be closed in this method!
+     *            An implementation should log (error) events on this span and it may set tags and use this span as the
+     *            parent for any spans created in this method.
      * @param resultHandler The handler to invoke with the result of the operation.
      *             The <em>status</em> will be
      *             <ul>
@@ -119,11 +119,11 @@ public interface TenantService extends Verticle {
      *             The <em>payload</em> will contain the tenant's configuration information.</li>
      *             <li><em>404 Not Found</em> if no matching tenant exists.</li>
      *             </ul>
-     * @throws NullPointerException if any of the parameters (except spanContext) are {@code null}.
+     * @throws NullPointerException if any of the parameters are {@code null}.
      * @see <a href="https://www.eclipse.org/hono/api/tenant-api/#get-tenant-information">
      *      Tenant API - Get Tenant Information</a>
      */
-    default void get(final X500Principal subjectDn, final SpanContext spanContext,
+    default void get(final X500Principal subjectDn, final Span span,
             final Handler<AsyncResult<TenantResult<JsonObject>>> resultHandler) {
         get(subjectDn, resultHandler);
     }

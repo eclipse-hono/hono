@@ -21,11 +21,18 @@ import javax.security.auth.x500.X500Principal;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.service.EventBusService;
+import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.EventBusMessage;
+import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantResult;
 
+import io.opentracing.References;
+import io.opentracing.Span;
 import io.opentracing.SpanContext;
+import io.opentracing.Tracer;
+import io.opentracing.noop.NoopSpan;
+import io.opentracing.tag.Tags;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -41,6 +48,10 @@ import io.vertx.core.json.JsonObject;
  * @param <T> The type of configuration properties this service requires.
  */
 public abstract class BaseTenantService<T> extends EventBusService<T> implements TenantService {
+
+    private static final String SPAN_NAME_GET_TENANT = "get Tenant";
+
+    private static final String TAG_SUBJECT_DN_NAME = "subject_dn_name";
 
     @Override
     protected final String getEventBusAddress() {
@@ -75,8 +86,10 @@ public abstract class BaseTenantService<T> extends EventBusService<T> implements
         final String tenantId = request.getTenant();
         final JsonObject payload = request.getJsonPayload();
 
+        final Span span = newChildSpan(SPAN_NAME_GET_TENANT, request.getSpanContext(), tenantId);
         if (tenantId == null && payload == null) {
-
+            TracingHelper.logError(span, "request does not contain any query parameters");
+            span.finish();
             log.debug("request does not contain any query parameters");
             return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
 
@@ -84,7 +97,9 @@ public abstract class BaseTenantService<T> extends EventBusService<T> implements
 
             // deprecated API
             log.debug("retrieving tenant [{}] using deprecated variant of get tenant request", tenantId);
-            return processGetByIdRequest(request, tenantId);
+            span.log("using deprecated variant of get tenant request");
+            // span will be finished in processGetByIdRequest
+            return processGetByIdRequest(request, tenantId, span);
 
         } else {
 
@@ -94,51 +109,113 @@ public abstract class BaseTenantService<T> extends EventBusService<T> implements
                     TenantConstants.FIELD_PAYLOAD_SUBJECT_DN);
 
             if (tenantIdFromPayload == null && subjectDn == null) {
+                TracingHelper.logError(span, "request does not contain any query parameters");
+                span.finish();
                 log.debug("payload does not contain any query parameters");
                 return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
             } else if (tenantIdFromPayload != null) {
                 log.debug("retrieving tenant [id: {}]", tenantIdFromPayload);
-                return processGetByIdRequest(request, tenantIdFromPayload);
+                span.setTag(MessageHelper.APP_PROPERTY_TENANT_ID, tenantIdFromPayload);
+                // span will be finished in processGetByIdRequest
+                return processGetByIdRequest(request, tenantIdFromPayload, span);
             } else {
-                return processGetByCaRequest(request, subjectDn);
+                span.setTag(TAG_SUBJECT_DN_NAME, subjectDn);
+                // span will be finished in processGetByCaRequest
+                return processGetByCaRequest(request, subjectDn, span);
             }
         }
     }
 
-    private Future<EventBusMessage> processGetByIdRequest(final EventBusMessage request, final String tenantId) {
+    /**
+     * The given span will be finished here.
+     */
+    private Future<EventBusMessage> processGetByIdRequest(final EventBusMessage request, final String tenantId,
+            final Span span) {
 
         final Future<TenantResult<JsonObject>> getResult = Future.future();
-        get(tenantId, request.getSpanContext(), getResult.completer());
+        get(tenantId, span, getResult.completer());
         return getResult.map(tr -> {
+            Tags.HTTP_STATUS.set(span, tr.getStatus());
+            if (tr.isError()) {
+                Tags.ERROR.set(span, true);
+            }
+            span.finish();
             return request.getResponse(tr.getStatus())
                     .setJsonPayload(tr.getPayload())
                     .setTenant(tenantId)
                     .setCacheDirective(tr.getCacheDirective());
+        }).recover(t -> {
+            TracingHelper.logError(span, t);
+            span.finish();
+            return Future.failedFuture(t);
         });
     }
 
-    private Future<EventBusMessage> processGetByCaRequest(final EventBusMessage request, final String subjectDn) {
+    /**
+     * The given span will be finished here.
+     */
+    private Future<EventBusMessage> processGetByCaRequest(final EventBusMessage request, final String subjectDn,
+            final Span span) {
 
         try {
             final X500Principal dn = new X500Principal(subjectDn);
             log.debug("retrieving tenant [subject DN: {}]", subjectDn);
             final Future<TenantResult<JsonObject>> getResult = Future.future();
-            get(dn, request.getSpanContext(), getResult.completer());
+            get(dn, span, getResult.completer());
             return getResult.map(tr -> {
                 final EventBusMessage response = request.getResponse(tr.getStatus())
                         .setJsonPayload(tr.getPayload())
                         .setCacheDirective(tr.getCacheDirective());
                 if (tr.isOk() && tr.getPayload() != null) {
-                    response.setTenant(getTypesafeValueForField(String.class, tr.getPayload(),
-                            TenantConstants.FIELD_PAYLOAD_TENANT_ID));
+                    final String tenantId = getTypesafeValueForField(String.class, tr.getPayload(),
+                            TenantConstants.FIELD_PAYLOAD_TENANT_ID);
+                    span.setTag(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId);
+                    response.setTenant(tenantId);
                 }
+                Tags.HTTP_STATUS.set(span, tr.getStatus());
+                if (tr.isError()) {
+                    Tags.ERROR.set(span, true);
+                }
+                span.finish();
                 return response;
+            }).recover(t -> {
+                TracingHelper.logError(span, t);
+                span.finish();
+                return Future.failedFuture(t);
             });
         } catch (final IllegalArgumentException e) {
+            TracingHelper.logError(span, "illegal subject DN provided by client: " + subjectDn);
+            span.finish();
             // the given subject DN is invalid
             log.debug("cannot parse subject DN [{}] provided by client", subjectDn);
             return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
         }
+    }
+
+    /**
+     * Creates a new <em>OpenTracing</em> span for tracing the execution of a tenant service operation.
+     * <p>
+     * The returned span will already contain a tag for the given tenant (if it is not {code null}).
+     *
+     * @param operationName The operation name that the span should be created for.
+     * @param spanContext Existing span context.
+     * @param tenantId The tenant id.
+     * @return The new {@code Span}.
+     * @throws NullPointerException if operationName is {@code null}.
+     */
+    protected final Span newChildSpan(final String operationName, final SpanContext spanContext, final String tenantId) {
+        Objects.requireNonNull(operationName);
+        // we set the component tag to the class name because we have no access to
+        // the name of the enclosing component we are running in
+        final Tracer.SpanBuilder spanBuilder = tracer.buildSpan(operationName)
+                .addReference(References.CHILD_OF, spanContext)
+                .ignoreActiveSpan()
+                .withTag(Tags.COMPONENT.getKey(), getClass().getSimpleName())
+                .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_SERVER);
+        if (tenantId != null) {
+            spanBuilder.withTag(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId);
+        }
+        return spanBuilder.start();
     }
 
     /**
@@ -160,7 +237,7 @@ public abstract class BaseTenantService<T> extends EventBusService<T> implements
 
     @Override
     public final void get(final String tenantId, final Handler<AsyncResult<TenantResult<JsonObject>>> resultHandler) {
-        get(tenantId, null, resultHandler);
+        get(tenantId, NoopSpan.INSTANCE, resultHandler);
     }
 
     /**
@@ -170,7 +247,7 @@ public abstract class BaseTenantService<T> extends EventBusService<T> implements
      * Subclasses should override this method in order to provide a reasonable implementation.
      */
     @Override
-    public void get(final String tenantId, final SpanContext spanContext,
+    public void get(final String tenantId, final Span span,
             final Handler<AsyncResult<TenantResult<JsonObject>>> resultHandler) {
         handleUnimplementedOperation(resultHandler);
     }
@@ -178,7 +255,7 @@ public abstract class BaseTenantService<T> extends EventBusService<T> implements
     @Override
     public final void get(final X500Principal subjectDn,
             final Handler<AsyncResult<TenantResult<JsonObject>>> resultHandler) {
-        get(subjectDn, null, resultHandler);
+        get(subjectDn, NoopSpan.INSTANCE, resultHandler);
     }
 
     /**
@@ -188,7 +265,7 @@ public abstract class BaseTenantService<T> extends EventBusService<T> implements
      * Subclasses should override this method in order to provide a reasonable implementation.
      */
     @Override
-    public void get(final X500Principal subjectDn, final SpanContext spanContext,
+    public void get(final X500Principal subjectDn, final Span span,
             final Handler<AsyncResult<TenantResult<JsonObject>>> resultHandler) {
         handleUnimplementedOperation(resultHandler);
     }

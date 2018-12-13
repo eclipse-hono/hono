@@ -11,10 +11,11 @@ title = "Release Notes"
 
 ### API Changes
 
-* New variants of the `RegistrationService.assertRegistration` methods have been added which also accept an OpenTracing 
-  span as a parameter. The default implementations of these methods still default to the previously existing methods.
-  In `RegistrationService` implementations based on `BaseRegistrationService` an OpenTracing span will be created, 
-  passed on to the `assertRegistration` method and finished eventually.
+* New variants of the `RegistrationService.assertRegistration` and `TenantService.get` methods have been added which also
+  accept an OpenTracing span as a parameter. The default implementations of these methods still default to the previously existing methods.
+  In `RegistrationService` implementations based on `BaseRegistrationService` an OpenTracing span will be created,
+  passed on to the `assertRegistration` method and finished eventually. The same applies to `TenantService` implementations
+  based on `BaseTenantService` concerning the `get` method.
 
 ## 0.8
 
