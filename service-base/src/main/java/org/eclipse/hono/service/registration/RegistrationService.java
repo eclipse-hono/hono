@@ -15,7 +15,7 @@ package org.eclipse.hono.service.registration;
 
 import org.eclipse.hono.util.RegistrationResult;
 
-import io.opentracing.SpanContext;
+import io.opentracing.Span;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
 import io.vertx.core.Verticle;
@@ -55,9 +55,9 @@ public interface RegistrationService extends Verticle {
      *
      * @param tenantId The tenant the device belongs to.
      * @param deviceId The ID of the device to get the assertion for.
-     * @param spanContext The currently active OpenTracing span (may be {@code null}). An implementation
-     *                    should use this as the parent for any span it creates for tracing
-     *                    the execution of this operation.
+     * @param span The active OpenTracing span for this operation. It is not to be closed in this method!
+     *            An implementation should log (error) events on this span and it may set tags and use this span as the
+     *            parent for any spans created in this method.
      * @param resultHandler The handler to invoke with the result of the operation.
      *             The <em>status</em> will be
      *             <ul>
@@ -67,11 +67,11 @@ public interface RegistrationService extends Verticle {
      *             <li><em>404 Not Found</em> if no device with the given identifier is
      *             registered for the tenant or its <em>enabled</em> property is {@code false}.</li>
      *             </ul>
-     * @throws NullPointerException if any of the parameters (except spanContext) is {@code null}.
+     * @throws NullPointerException if any of the parameters is {@code null}.
      * @see <a href="https://www.eclipse.org/hono/api/device-registration-api/#assert-device-registration">
      *      Device Registration API - Assert Device Registration</a>
      */
-    default void assertRegistration(final String tenantId, final String deviceId, final SpanContext spanContext,
+    default void assertRegistration(final String tenantId, final String deviceId, final Span span,
             final Handler<AsyncResult<RegistrationResult>> resultHandler) {
         assertRegistration(tenantId, deviceId, resultHandler);
     }
@@ -121,9 +121,9 @@ public interface RegistrationService extends Verticle {
      * @param tenantId The tenant the device belongs to.
      * @param deviceId The ID of the device to get the assertion for.
      * @param gatewayId The gateway that wants to act on behalf of the device.
-     * @param spanContext The currently active OpenTracing span (may be {@code null}). An implementation
-     *                    should use this as the parent for any span it creates for tracing
-     *                    the execution of this operation.
+     * @param span The active OpenTracing span for this operation. It is not to be closed in this method!
+     *            An implementation should log (error) events on this span and it may set tags and use this span as the
+     *            parent for any spans created in this method.
      * @param resultHandler The handler to invoke with the result of the operation.
      *             The <em>status</em> will be
      *             <ul>
@@ -135,12 +135,12 @@ public interface RegistrationService extends Verticle {
      *             <li><em>404 Not Found</em> if no device with the given identifier is
      *             registered for the tenant or its <em>enabled</em> property is {@code false}.</li>
      *             </ul>
-     * @throws NullPointerException if any of the parameters (except spanContext) is {@code null}.
+     * @throws NullPointerException if any of the parameters is {@code null}.
      * @see <a href="https://www.eclipse.org/hono/api/device-registration-api/#assert-device-registration">
      *      Device Registration API - Assert Device Registration</a>
      */
     default void assertRegistration(final String tenantId, final String deviceId, final String gatewayId,
-            final SpanContext spanContext,
+            final Span span,
             final Handler<AsyncResult<RegistrationResult>> resultHandler) {
         assertRegistration(tenantId, deviceId, gatewayId, resultHandler);
     }
