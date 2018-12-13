@@ -94,32 +94,32 @@ public abstract class CompleteBaseCredentialsService<T> extends BaseCredentialsS
                     HttpURLConnection.HTTP_BAD_REQUEST,
                     "missing payload"));
         } else {
-            final Future<EventBusMessage> requestTracker = Future.future();
+            final Future<CredentialsObject> hashingTracker = Future.future();
             getVertx().executeBlocking(blockingCodeHandler -> {
                 log.debug("hashing password on vert.x worker thread [{}]", Thread.currentThread().getName());
                 hashPlainPasswords(payload);
-                try {
-                    payload.checkValidity(this::checkSecret);
-                    final Future<CredentialsResult<JsonObject>> result = Future.future();
-                    add(tenantId, JsonObject.mapFrom(payload), result.completer());
-                    blockingCodeHandler.complete(result.map(res -> {
-                        return request.getResponse(res.getStatus())
-                                .setDeviceId(payload.getDeviceId())
-                                .setCacheDirective(res.getCacheDirective());
-                    }));
-                } catch (IllegalStateException e) {
-                    throw new ClientErrorException(
-                            HttpURLConnection.HTTP_BAD_REQUEST,
-                            e.getMessage());
-                }
-            }, ar -> {
-                if (ar.succeeded()) {
-                    requestTracker.complete(((Future<EventBusMessage>) ar.result()).result());
-                } else {
-                    requestTracker.fail(ar.cause());
-                }
+                blockingCodeHandler.complete(payload);
+            }, hashingTracker);
+
+            return hashingTracker.compose(credentials -> doAdd(request, tenantId, credentials));
+        }
+    }
+
+    private Future<EventBusMessage> doAdd(final EventBusMessage request, final String tenantId,
+            final CredentialsObject payload) {
+        try {
+            payload.checkValidity(this::checkSecret);
+            final Future<CredentialsResult<JsonObject>> result = Future.future();
+            add(tenantId, JsonObject.mapFrom(payload), result.completer());
+            return result.map(res -> {
+                return request.getResponse(res.getStatus())
+                        .setDeviceId(payload.getDeviceId())
+                        .setCacheDirective(res.getCacheDirective());
             });
-            return requestTracker;
+        } catch (IllegalStateException e) {
+            return Future.failedFuture(new ClientErrorException(
+                    HttpURLConnection.HTTP_BAD_REQUEST,
+                    e.getMessage()));
         }
     }
 
@@ -219,32 +219,32 @@ public abstract class CompleteBaseCredentialsService<T> extends BaseCredentialsS
                     HttpURLConnection.HTTP_BAD_REQUEST,
                     "missing payload"));
         } else {
-            final Future<EventBusMessage> requestTracker = Future.future();
+            final Future<CredentialsObject> hashingTracker = Future.future();
             getVertx().executeBlocking(blockingCodeHandler -> {
                 log.debug("hashing password on vert.x worker thread [{}]", Thread.currentThread().getName());
                 hashPlainPasswords(payload);
-                try {
-                    payload.checkValidity(this::checkSecret);
-                    final Future<CredentialsResult<JsonObject>> result = Future.future();
-                    update(tenantId, JsonObject.mapFrom(payload), result.completer());
-                    blockingCodeHandler.complete(result.map(res -> {
-                        return request.getResponse(res.getStatus())
-                                .setDeviceId(payload.getDeviceId())
-                                .setCacheDirective(res.getCacheDirective());
-                    }));
-                } catch (IllegalStateException e) {
-                    throw new ClientErrorException(
-                            HttpURLConnection.HTTP_BAD_REQUEST,
-                            e.getMessage());
-                }
-            }, ar -> {
-                if (ar.succeeded()) {
-                    requestTracker.complete(((Future<EventBusMessage>) ar.result()).result());
-                } else {
-                    requestTracker.fail(ar.cause());
-                }
+                blockingCodeHandler.complete(payload);
+            }, hashingTracker);
+
+            return hashingTracker.compose(credentials -> doUpdate(request, tenantId, credentials));
+        }
+    }
+
+    private Future<EventBusMessage> doUpdate(final EventBusMessage request, final String tenantId,
+            final CredentialsObject payload) {
+        try {
+            payload.checkValidity(this::checkSecret);
+            final Future<CredentialsResult<JsonObject>> result = Future.future();
+            update(tenantId, JsonObject.mapFrom(payload), result.completer());
+            return result.map(res -> {
+                return request.getResponse(res.getStatus())
+                        .setDeviceId(payload.getDeviceId())
+                        .setCacheDirective(res.getCacheDirective());
             });
-            return requestTracker;
+        } catch (IllegalStateException e) {
+            return Future.failedFuture(new ClientErrorException(
+                    HttpURLConnection.HTTP_BAD_REQUEST,
+                    e.getMessage()));
         }
     }
 
