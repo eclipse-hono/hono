@@ -18,8 +18,8 @@ import io.vertx.core.dns.AddressResolverOptions;
 import org.eclipse.hono.config.ApplicationConfigProperties;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.config.VertxProperties;
-import org.eclipse.hono.service.HealthCheckRegistration;
 import org.eclipse.hono.service.HealthCheckServer;
+import org.eclipse.hono.service.VertxBasedHealthCheckServer;
 import org.eclipse.hono.service.credentials.CredentialsAmqpEndpoint;
 import org.eclipse.hono.service.credentials.CredentialsHttpEndpoint;
 import org.eclipse.hono.service.metric.MetricsTags;
@@ -305,7 +305,7 @@ public class ApplicationConfig {
      * @return The health check server.
      */
     @Bean
-    public HealthCheckRegistration healthCheckServer() {
-        return new HealthCheckServer(vertx(), applicationConfigProperties());
+    public HealthCheckServer healthCheckServer() {
+        return new VertxBasedHealthCheckServer(vertx(), applicationConfigProperties());
     }
 }

@@ -364,7 +364,7 @@ public abstract class AbstractAdapterConfig {
      * @return The health check server.
      */
     @Bean
-    public HealthCheckRegistration healthCheckServer() {
-        return new HealthCheckServer(vertx(), applicationConfigProperties());
+    public HealthCheckServer healthCheckServer() {
+        return new VertxBasedHealthCheckServer(vertx(), applicationConfigProperties());
     }
 }

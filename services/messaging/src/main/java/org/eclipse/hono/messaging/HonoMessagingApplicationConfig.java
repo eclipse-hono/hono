@@ -18,8 +18,8 @@ import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.config.VertxProperties;
 import org.eclipse.hono.connection.ConnectionFactory;
 import org.eclipse.hono.connection.impl.ConnectionFactoryImpl;
-import org.eclipse.hono.service.HealthCheckRegistration;
 import org.eclipse.hono.service.HealthCheckServer;
+import org.eclipse.hono.service.VertxBasedHealthCheckServer;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelper;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelperImpl;
@@ -228,7 +228,7 @@ public class HonoMessagingApplicationConfig {
      * @return The health check server.
      */
     @Bean
-    public HealthCheckRegistration healthCheckServer() {
-        return new HealthCheckServer(vertx(), applicationConfigProperties());
+    public HealthCheckServer healthCheckServer() {
+        return new VertxBasedHealthCheckServer(vertx(), applicationConfigProperties());
     }
 }

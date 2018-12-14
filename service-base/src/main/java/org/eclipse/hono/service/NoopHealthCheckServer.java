@@ -21,7 +21,7 @@ import io.vertx.core.Future;
 /**
  * A no-op implementation for the health check.
  */
-public class NoopHealthCheckServer implements HealthCheckRegistration {
+public class NoopHealthCheckServer implements HealthCheckServer {
 
     private static final Logger LOG = LoggerFactory.getLogger(NoopHealthCheckServer.class);
 
@@ -32,7 +32,7 @@ public class NoopHealthCheckServer implements HealthCheckRegistration {
     @Override
     public Future<Void> start() {
         LOG.warn("No health check configured. To get a health check, provide a bean of type '{}'.",
-                HealthCheckServer.class.getTypeName());
+                VertxBasedHealthCheckServer.class.getTypeName());
         return Future.succeededFuture();
     }
 

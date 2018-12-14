@@ -57,7 +57,7 @@ public class AbstractApplication implements ApplicationRunner {
     private ApplicationConfigProperties config = new ApplicationConfigProperties();
     private Vertx vertx;
 
-    private HealthCheckRegistration healthCheckServer  = new NoopHealthCheckServer();
+    private HealthCheckServer healthCheckServer  = new NoopHealthCheckServer();
 
     /**
      * Sets the Vert.x instance to deploy the service to.
@@ -106,13 +106,13 @@ public class AbstractApplication implements ApplicationRunner {
     }
 
     /**
-     * Sets the HealthCheckRegistration for this application.
+     * Sets the health check server for this application.
      * 
-     * @param healthCheckServer The HealthCheckRegistration.
+     * @param healthCheckServer The health check server.
      * @throws NullPointerException if healthCheckServer is {@code null}.
      */
     @Autowired(required = false)
-    public void setHealthCheckServer(final HealthCheckRegistration healthCheckServer) {
+    public void setHealthCheckServer(final HealthCheckServer healthCheckServer) {
         this.healthCheckServer = Objects.requireNonNull(healthCheckServer);
     }
 
