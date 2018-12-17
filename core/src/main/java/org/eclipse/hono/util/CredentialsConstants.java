@@ -29,6 +29,7 @@ public final class CredentialsConstants extends RequestResponseApiConstants {
 
     /* secrets fields */
     public static final String FIELD_SECRETS_PWD_HASH            = "pwd-hash";
+    public static final String FIELD_SECRETS_PWD_PLAIN           = "pwd-plain";
     public static final String FIELD_SECRETS_SALT                = "salt";
     public static final String FIELD_SECRETS_HASH_FUNCTION       = "hash-function";
     public static final String FIELD_SECRETS_KEY                 = "key";

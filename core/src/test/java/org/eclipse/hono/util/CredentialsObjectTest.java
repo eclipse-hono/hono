@@ -13,9 +13,14 @@
 
 package org.eclipse.hono.util;
 
+import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import io.vertx.core.json.JsonObject;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+
+import java.util.Base64;
 
 
 /**
@@ -107,5 +112,125 @@ public class CredentialsObjectTest {
         creds.setType(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD);
         creds.addSecret(new JsonObject().put(CredentialsConstants.FIELD_SECRETS_HASH_FUNCTION, CredentialsConstants.HASH_FUNCTION_SHA256));
         creds.checkSecrets();
+    }
+
+    /**
+     * Verifies that a secret with an already hashed password remains unchanged.
+     */
+    @Test
+    public void alreadyHashedSecretsAreUnchanged() {
+        final JsonObject expected = new JsonObject();
+        expected.put(CredentialsConstants.FIELD_SECRETS_HASH_FUNCTION, CredentialsConstants.HASH_FUNCTION_BCRYPT);
+        expected.put(CredentialsConstants.FIELD_SECRETS_PWD_HASH, "abc");
+
+        final JsonObject actual = CredentialsObject.hashPwdAndUpdateSecret(expected.copy(), "doesnotmatter");
+
+        Assert.assertEquals(expected, actual);
+    }
+
+    /**
+     * Verifies that the secret is correctly updated when hashed with bcrypt.
+     */
+    @Test
+    @Ignore
+    // Fails because Apache logger not found
+    public void secretIsUpdatedForBcrypt() {
+        final String hashFunction = CredentialsConstants.HASH_FUNCTION_BCRYPT;
+
+        final JsonObject secret = new JsonObject().put(CredentialsConstants.FIELD_SECRETS_PWD_PLAIN, "mylittlesecret");
+
+        CredentialsObject.hashPwdAndUpdateSecret(secret, hashFunction);
+
+        Assert.assertNull(secret.getString(CredentialsConstants.FIELD_SECRETS_PWD_PLAIN));
+        Assert.assertNotNull(secret.getString(CredentialsConstants.FIELD_SECRETS_PWD_HASH));
+
+        // the pwd hash contains the salt for bcrypt
+        Assert.assertNull(secret.getString(CredentialsConstants.FIELD_SECRETS_SALT));
+
+        Assert.assertEquals(hashFunction, secret.getString(CredentialsConstants.FIELD_SECRETS_HASH_FUNCTION));
+    }
+
+    /**
+     * Verifies that the secret is correctly updated when hashed with sha.
+     */
+    @Test
+    public void secretIsUpdatedForSha() {
+        final String hashFunction = CredentialsConstants.HASH_FUNCTION_SHA256;
+
+        final JsonObject secret = new JsonObject().put(CredentialsConstants.FIELD_SECRETS_PWD_PLAIN, "mylittlesecret");
+
+        CredentialsObject.hashPwdAndUpdateSecret(secret, hashFunction);
+
+        Assert.assertNull(secret.getString(CredentialsConstants.FIELD_SECRETS_PWD_PLAIN));
+        Assert.assertNotNull(secret.getString(CredentialsConstants.FIELD_SECRETS_PWD_HASH));
+        Assert.assertNotNull(secret.getString(CredentialsConstants.FIELD_SECRETS_SALT));
+
+        Assert.assertEquals(hashFunction, secret.getString(CredentialsConstants.FIELD_SECRETS_HASH_FUNCTION));
+    }
+
+    /**
+     * Verifies that a if an unknown hash function is configured, an error is produced.
+     */
+    @Test(expected = IllegalArgumentException.class)
+    public void unknownHashFunctionIsGiven() {
+        final String hashFunction = "bumlux";
+
+        final JsonObject secret = new JsonObject().put(CredentialsConstants.FIELD_SECRETS_PWD_PLAIN, "mylittlesecret");
+
+        CredentialsObject.hashPwdAndUpdateSecret(secret, hashFunction);
+    }
+
+    /**
+     * Verifies that the plain password inside the secret is correctly hashed with bcrypt.
+     */
+    @Test
+    @Ignore
+    // Fails because Apache logger not found
+    public void hashIsAppliedForBcrypt() {
+
+        final JsonObject secret = new JsonObject().put(CredentialsConstants.FIELD_SECRETS_PWD_PLAIN, "mylittlesecret");
+
+        CredentialsObject.hashPwdAndUpdateSecret(secret, CredentialsConstants.HASH_FUNCTION_BCRYPT);
+
+        Assert.assertTrue(new BCryptPasswordEncoder(10).matches("mylittlesecret",
+                secret.getString(CredentialsConstants.FIELD_SECRETS_PWD_HASH)));
+
+    }
+
+    /**
+     * Verifies that the plain password inside the secret is correctly hashed with sha-256.
+     */
+    @Test
+    public void hashIsAppliedForSha256() {
+        final String hashFunction = CredentialsConstants.HASH_FUNCTION_SHA256;
+
+        final JsonObject secretActual = new JsonObject().put(CredentialsConstants.FIELD_SECRETS_PWD_PLAIN,
+                "mylittlesecret");
+
+        CredentialsObject.hashPwdAndUpdateSecret(secretActual, hashFunction);
+
+        final byte[] salt = Base64.getDecoder().decode(secretActual.getString(CredentialsConstants.FIELD_SECRETS_SALT));
+
+        final String hashExpected = ClearTextPassword.encode(hashFunction, salt, "mylittlesecret");
+
+        Assert.assertEquals(hashExpected, secretActual.getString(CredentialsConstants.FIELD_SECRETS_PWD_HASH));
+    }
+
+    /**
+     * Verifies that the plain password inside the secret is correctly hashed with sha-512.
+     */
+    @Test
+    public void hashIsAppliedForSha512() {
+        final String hashFunction = CredentialsConstants.HASH_FUNCTION_SHA512;
+        final JsonObject secretActual = new JsonObject().put(CredentialsConstants.FIELD_SECRETS_PWD_PLAIN,
+                "mylittlesecret");
+
+        CredentialsObject.hashPwdAndUpdateSecret(secretActual, hashFunction);
+
+        final byte[] salt = Base64.getDecoder().decode(secretActual.getString(CredentialsConstants.FIELD_SECRETS_SALT));
+
+        final String hashExpected = ClearTextPassword.encode(hashFunction, salt, "mylittlesecret");
+
+        Assert.assertEquals(hashExpected, secretActual.getString(CredentialsConstants.FIELD_SECRETS_PWD_HASH));
     }
 }

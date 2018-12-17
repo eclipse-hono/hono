@@ -42,6 +42,11 @@ public abstract class CompleteBaseCredentialsService<T> extends BaseCredentialsS
 
     private static final Pattern BCRYPT_PATTERN = Pattern.compile("\\A\\$2a\\$(\\d{1,2})\\$[./0-9A-Za-z]{53}");
     private static final int DEFAULT_MAX_BCRYPT_ITERATIONS = 10;
+    /**
+     * The default hash function for hashing plain text passwords.
+     */
+    // TODO make configurable.
+    public static final String DEFAULT_HASH_FUNCTION = CredentialsConstants.HASH_FUNCTION_BCRYPT; 
 
     /**
      * Processes a Credentials API request received via the vert.x event bus.
@@ -89,20 +94,32 @@ public abstract class CompleteBaseCredentialsService<T> extends BaseCredentialsS
                     HttpURLConnection.HTTP_BAD_REQUEST,
                     "missing payload"));
         } else {
-            try {
-                payload.checkValidity(this::checkSecret);
-                final Future<CredentialsResult<JsonObject>> result = Future.future();
-                add(tenantId, JsonObject.mapFrom(payload), result.completer());
-                return result.map(res -> {
-                    return request.getResponse(res.getStatus())
-                            .setDeviceId(payload.getDeviceId())
-                            .setCacheDirective(res.getCacheDirective());
-                });
-            } catch (IllegalStateException e) {
-                return Future.failedFuture(new ClientErrorException(
-                        HttpURLConnection.HTTP_BAD_REQUEST,
-                        e.getMessage()));
-            }
+            final Future<CredentialsObject> hashingTracker = Future.future();
+            getVertx().executeBlocking(blockingCodeHandler -> {
+                log.debug("hashing password on vert.x worker thread [{}]", Thread.currentThread().getName());
+                hashPlainPasswords(payload);
+                blockingCodeHandler.complete(payload);
+            }, hashingTracker);
+
+            return hashingTracker.compose(credentials -> doAdd(request, tenantId, credentials));
+        }
+    }
+
+    private Future<EventBusMessage> doAdd(final EventBusMessage request, final String tenantId,
+            final CredentialsObject payload) {
+        try {
+            payload.checkValidity(this::checkSecret);
+            final Future<CredentialsResult<JsonObject>> result = Future.future();
+            add(tenantId, JsonObject.mapFrom(payload), result.completer());
+            return result.map(res -> {
+                return request.getResponse(res.getStatus())
+                        .setDeviceId(payload.getDeviceId())
+                        .setCacheDirective(res.getCacheDirective());
+            });
+        } catch (IllegalStateException e) {
+            return Future.failedFuture(new ClientErrorException(
+                    HttpURLConnection.HTTP_BAD_REQUEST,
+                    e.getMessage()));
         }
     }
 
@@ -117,6 +134,17 @@ public abstract class CompleteBaseCredentialsService<T> extends BaseCredentialsS
             default:
             }
         default:
+        }
+    }
+
+    /**
+     * Hashes plaintext passwords in the given {@link CredentialsObject} if present.
+     *
+     * @param credentialsObject The credentials to be updated with hashed passwords.
+     */
+    private void hashPlainPasswords(final CredentialsObject credentialsObject) {
+        if (CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD.equals(credentialsObject.getType())) {
+            credentialsObject.hashPlainPasswords(getHashFunction());
         }
     }
 
@@ -161,6 +189,21 @@ public abstract class CompleteBaseCredentialsService<T> extends BaseCredentialsS
         return DEFAULT_MAX_BCRYPT_ITERATIONS;
     }
 
+    /**
+     * Gets the hash function to be used to hash plaintext passwords.
+     * <p>
+     * This default implementation returns "bcrypt".
+     * <p>
+     * Subclasses should override this method in order to e.g. return a value determined from a configuration property.
+     * For supported values see {@link CredentialsObject#hashPwdAndUpdateSecret(JsonObject, String)}.
+     * <p>
+     * 
+     * @return The name of the hash function.
+     */
+    protected String getHashFunction() {
+        return DEFAULT_HASH_FUNCTION;
+    }
+
     private Future<EventBusMessage> processUpdateRequest(final EventBusMessage request) {
 
         final String tenantId = request.getTenant();
@@ -176,20 +219,32 @@ public abstract class CompleteBaseCredentialsService<T> extends BaseCredentialsS
                     HttpURLConnection.HTTP_BAD_REQUEST,
                     "missing payload"));
         } else {
-            try {
-                payload.checkValidity(this::checkSecret);
-                final Future<CredentialsResult<JsonObject>> result = Future.future();
-                update(tenantId, JsonObject.mapFrom(payload), result.completer());
-                return result.map(res -> {
-                    return request.getResponse(res.getStatus())
-                            .setDeviceId(payload.getDeviceId())
-                            .setCacheDirective(res.getCacheDirective());
-                });
-            } catch (IllegalStateException e) {
-                return Future.failedFuture(new ClientErrorException(
-                        HttpURLConnection.HTTP_BAD_REQUEST,
-                        e.getMessage()));
-            }
+            final Future<CredentialsObject> hashingTracker = Future.future();
+            getVertx().executeBlocking(blockingCodeHandler -> {
+                log.debug("hashing password on vert.x worker thread [{}]", Thread.currentThread().getName());
+                hashPlainPasswords(payload);
+                blockingCodeHandler.complete(payload);
+            }, hashingTracker);
+
+            return hashingTracker.compose(credentials -> doUpdate(request, tenantId, credentials));
+        }
+    }
+
+    private Future<EventBusMessage> doUpdate(final EventBusMessage request, final String tenantId,
+            final CredentialsObject payload) {
+        try {
+            payload.checkValidity(this::checkSecret);
+            final Future<CredentialsResult<JsonObject>> result = Future.future();
+            update(tenantId, JsonObject.mapFrom(payload), result.completer());
+            return result.map(res -> {
+                return request.getResponse(res.getStatus())
+                        .setDeviceId(payload.getDeviceId())
+                        .setCacheDirective(res.getCacheDirective());
+            });
+        } catch (IllegalStateException e) {
+            return Future.failedFuture(new ClientErrorException(
+                    HttpURLConnection.HTTP_BAD_REQUEST,
+                    e.getMessage()));
         }
     }
 

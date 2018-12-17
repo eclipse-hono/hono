@@ -260,6 +260,49 @@ Please refer to the [Credentials API]({{< relref "api/Credentials-API.md" >}}) f
 
 **Example**
 
+The following command adds some `hashed-password` credentials from a given plain text password for device `4710` using authentication identifier `sensor10`: 
+
+    $ curl -i -X POST -H 'Content-Type: application/json' --data-binary '{
+      "device-id": "4710",
+      "type": "hashed-password",
+      "auth-id": "sensor10",
+      "secrets": [{
+          "pwd-plain": "mylittlesecret"
+      }]
+    }' http://localhost:28080/credentials/DEFAULT_TENANT
+      
+    HTTP/1.1 201 Created
+    Location: /credentials/DEFAULT_TENANT/sensor10/hashed-password
+    Content-Length: 0
+    
+This uses a convenient option which lets the Device Registry do the hashing of the password. The following command retrieves the credentials that are stored by the Device Registry as a result of the command above: 
+    
+    
+    $ curl -i http://localhost:28080/credentials/DEFAULT_TENANT/4710
+    
+    HTTP/1.1 200 OK
+    Content-Type: application/json; charset=utf-8
+    Content-Length: 222
+
+    {
+      "total": 1,
+      "credentials": [
+        {
+          "device-id": "4710",
+          "type": "hashed-password",
+          "auth-id": "sensor10",
+          "enabled": true,
+          "secrets": [
+            {
+              "pwd-hash": "$2a$10$uc.qVDwXeDRE1DWa1sM9iOaY9wuevjfALGMtXmHKP.SJDEqg0q7M6",
+              "hash-function": "bcrypt"
+            }
+          ]
+        }
+      ]
+    }
+    
+    
 The following commands add some `hashed-password` credentials for device `4720` using authentication identifier `sensor20`:
 
     $ PWD_HASH=$(echo -n "mylittlesecret" | openssl dgst -binary -sha512 | base64 -w 0)

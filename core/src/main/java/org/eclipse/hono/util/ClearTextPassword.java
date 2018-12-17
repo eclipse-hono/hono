@@ -15,6 +15,8 @@ package org.eclipse.hono.util;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
 import java.util.Objects;
 
 /**
@@ -32,6 +34,20 @@ import java.util.Objects;
  * </pre>
  */
 public class ClearTextPassword extends BasePassword {
+
+    /**
+     * The cryptographically maximal strong salt for SHA-256 in bytes.
+     */
+    private static final int SALT_LENGTH_SHA256 = 32;
+    /**
+     * The cryptographically maximal strong salt for SHA-512 in bytes.
+     */
+    private static final int SALT_LENGTH_SHA512 = 64;
+
+    /**
+     * The random generator for hashing passwords. Lazily initialized because it could be expensive.
+     */
+    private static SecureRandom secureRandom;
 
     /**
      * Creates an instance from the {Base64(salt)}password formatted String.
@@ -101,5 +117,59 @@ public class ClearTextPassword extends BasePassword {
 
         final PasswordEncoder encoder = new BCryptPasswordEncoder(strength);
         return encoder.encode(password);
+    }
+
+    /**
+     * Generates a random salt in the maximal length for the given hash function. This method supports the following
+     * algorithms:
+     * <ul>
+     * <li>sha-256</li>
+     * <li>sha-512</li>
+     * </ul>
+     * 
+     * For "bcrypt" {@code null} is returned
+     *
+     * @param hashFunction The hash function to use.
+     * @return The random salt or {@code null} if hashFunction is "bcrypt".
+     * @throws IllegalArgumentException if the given is unknown.
+     */
+    public static byte[] randomSaltFor(final String hashFunction) {
+        final byte[] salt;
+
+        switch (hashFunction) {
+        case CredentialsConstants.HASH_FUNCTION_BCRYPT:
+            salt = null; // encodeBCrypt() already computes a salt
+            break;
+        case CredentialsConstants.HASH_FUNCTION_SHA256:
+            salt = randomSalt(SALT_LENGTH_SHA256);
+            break;
+        case CredentialsConstants.HASH_FUNCTION_SHA512:
+            salt = randomSalt(SALT_LENGTH_SHA512);
+            break;
+        default:
+            throw new IllegalArgumentException("Unknown hash function [" + hashFunction + "].");
+        }
+        return salt;
+    }
+
+    private static byte[] randomSalt(final int length) {
+        final byte[] salt = new byte[length];
+        getSecureRandom().nextBytes(salt);
+        return salt;
+    }
+
+    private static SecureRandom getSecureRandom() {
+        // this rather complicated setup is intended to prevent blocking, which is especially an issue in containers
+        // see: https://hackernoon.com/hack-how-to-use-securerandom-with-kubernetes-and-docker-a375945a7b21
+        // and: https://tersesystems.com/blog/2015/12/17/the-right-way-to-use-securerandom/
+
+        if (secureRandom == null) {
+            try {
+                secureRandom = SecureRandom.getInstance("NativePRNGNonBlocking"); // non-blocking UNIX
+            } catch (NoSuchAlgorithmException e) {
+                secureRandom = new SecureRandom(); // might block
+            }
+        }
+        return secureRandom;
     }
 }
