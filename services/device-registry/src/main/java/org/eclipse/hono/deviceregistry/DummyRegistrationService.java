@@ -19,7 +19,7 @@ import org.eclipse.hono.util.RegistrationResult;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
-import io.opentracing.SpanContext;
+import io.opentracing.Span;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -38,14 +38,14 @@ public class DummyRegistrationService extends BaseRegistrationService<Object> {
     }
 
     @Override
-    public void assertRegistration(final String tenantId, final String deviceId, final SpanContext spanContext,
+    public void assertRegistration(final String tenantId, final String deviceId, final Span span,
             final Handler<AsyncResult<RegistrationResult>> resultHandler) {
-        assertRegistration(tenantId, deviceId, null, spanContext, resultHandler);
+        assertRegistration(tenantId, deviceId, null, span, resultHandler);
     }
 
     @Override
     public void assertRegistration(final String tenantId, final String deviceId, final String gatewayId,
-            final SpanContext spanContext, final Handler<AsyncResult<RegistrationResult>> resultHandler) {
+            final Span span, final Handler<AsyncResult<RegistrationResult>> resultHandler) {
        final JsonObject deviceData = new JsonObject();
 
         resultHandler.handle(Future.succeededFuture(RegistrationResult.from(

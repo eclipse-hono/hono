@@ -9,6 +9,13 @@ title = "Release Notes"
 * The default Micrometer backend is now Prometheus, the new dashboards are also
   using Prometheus as a backend
 
+### API Changes
+
+* New variants of the `RegistrationService.assertRegistration` methods have been added which also accept an OpenTracing 
+  span as a parameter. The default implementations of these methods still default to the previously existing methods.
+  In `RegistrationService` implementations based on `BaseRegistrationService` an OpenTracing span will be created, 
+  passed on to the `assertRegistration` method and finished eventually.
+
 ## 0.8
 
 ### New Features

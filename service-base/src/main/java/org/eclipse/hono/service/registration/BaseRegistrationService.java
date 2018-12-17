@@ -17,14 +17,21 @@ import java.util.Objects;
 
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.service.EventBusService;
+import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.EventBusMessage;
+import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.RegistrationResult;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 
+import io.opentracing.References;
+import io.opentracing.Span;
 import io.opentracing.SpanContext;
+import io.opentracing.Tracer;
+import io.opentracing.noop.NoopSpan;
+import io.opentracing.tag.Tags;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
@@ -39,7 +46,7 @@ import io.vertx.core.json.JsonObject;
  * query parameters contained in the request message.
  * <p>
  * <em>NB</em> This class provides a basic implementation for asserting a device's registration
- * status. Subclasses may override the {@link #assertRegistration(String, String, String, SpanContext, Handler)}
+ * status. Subclasses may override the {@link #assertRegistration(String, String, String, Span, Handler)}
  * method in order to implement a more sophisticated assertion method.
  * <p>
  * The default implementation of <em>assertRegistration</em> relies on {@link #getDevice(String, String, Handler)}
@@ -56,6 +63,8 @@ public abstract class BaseRegistrationService<T> extends EventBusService<T> impl
      * the identifier of the gateway that it is connected to.
      */
     public static final String PROPERTY_VIA = "via";
+
+    private static final String SPAN_NAME_ASSERT_DEVICE_REGISTRATION = "assert Device Registration";
 
     private RegistrationAssertionHelper assertionFactory;
 
@@ -124,28 +133,35 @@ public abstract class BaseRegistrationService<T> extends EventBusService<T> impl
         final String gatewayId = request.getGatewayId();
         final SpanContext spanContext = request.getSpanContext();
 
+        final Span span = newChildSpan(SPAN_NAME_ASSERT_DEVICE_REGISTRATION, spanContext, tenantId, deviceId, gatewayId);
         if (tenantId == null || deviceId == null) {
+            TracingHelper.logError(span, "missing tenant and/or device");
+            span.finish();
             return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
-        } else if (gatewayId == null) {
-            log.debug("asserting registration of device [{}] with tenant [{}]", deviceId, tenantId);
-            final Future<RegistrationResult> result = Future.future();
-            assertRegistration(tenantId, deviceId, spanContext, result.completer());
-            return result.map(res -> {
-                return request.getResponse(res.getStatus())
-                        .setDeviceId(deviceId)
-                        .setJsonPayload(res.getPayload())
-                        .setCacheDirective(res.getCacheDirective());
-            });
         } else {
-            log.debug("asserting registration of device [{}] with tenant [{}] for gateway [{}]",
-                    deviceId, tenantId, gatewayId);
             final Future<RegistrationResult> result = Future.future();
-            assertRegistration(tenantId, deviceId, gatewayId, spanContext, result.completer());
+            if (gatewayId == null) {
+                log.debug("asserting registration of device [{}] with tenant [{}]", deviceId, tenantId);
+                assertRegistration(tenantId, deviceId, span, result.completer());
+            } else {
+                log.debug("asserting registration of device [{}] with tenant [{}] for gateway [{}]",
+                        deviceId, tenantId, gatewayId);
+                assertRegistration(tenantId, deviceId, gatewayId, span, result.completer());
+            }
             return result.map(res -> {
+                Tags.HTTP_STATUS.set(span, res.getStatus());
+                if (res.isError()) {
+                    Tags.ERROR.set(span, true);
+                }
+                span.finish();
                 return request.getResponse(res.getStatus())
                         .setDeviceId(deviceId)
                         .setJsonPayload(res.getPayload())
                         .setCacheDirective(res.getCacheDirective());
+            }).recover(t -> {
+                TracingHelper.logError(span, t);
+                span.finish();
+                return Future.failedFuture(t);
             });
         }
     }
@@ -170,7 +186,7 @@ public abstract class BaseRegistrationService<T> extends EventBusService<T> impl
     /**
      * Gets device registration data by device ID.
      * <p>
-     * This method is invoked by {@link #assertRegistration(String, String, String, SpanContext, Handler)} to retrieve
+     * This method is invoked by {@link #assertRegistration(String, String, String, Span, Handler)} to retrieve
      * device registration information from the persistent store.
      * <p>
      * This default implementation simply returns an empty result with status code 501 (Not Implemented).
@@ -191,7 +207,7 @@ public abstract class BaseRegistrationService<T> extends EventBusService<T> impl
             final String tenantId,
             final String deviceId,
             final Handler<AsyncResult<RegistrationResult>> resultHandler) {
-        assertRegistration(tenantId, deviceId, (SpanContext) null, resultHandler);
+        assertRegistration(tenantId, deviceId, NoopSpan.INSTANCE, resultHandler);
     }
 
     /**
@@ -205,11 +221,12 @@ public abstract class BaseRegistrationService<T> extends EventBusService<T> impl
     public void assertRegistration(
             final String tenantId,
             final String deviceId,
-            final SpanContext spanContext,
+            final Span span,
             final Handler<AsyncResult<RegistrationResult>> resultHandler) {
 
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
+        Objects.requireNonNull(span);
         Objects.requireNonNull(resultHandler);
 
         final Future<RegistrationResult> getResultTracker = Future.future();
@@ -222,6 +239,7 @@ public abstract class BaseRegistrationService<T> extends EventBusService<T> impl
                         getAssertionPayload(tenantId, deviceId, result.getPayload().getJsonObject(RegistrationConstants.FIELD_DATA)),
                         CacheDirective.maxAgeDirective(assertionFactory.getAssertionLifetime()));
             } else {
+                TracingHelper.logError(span, "device not enabled");
                 return RegistrationResult.from(HttpURLConnection.HTTP_NOT_FOUND);
             }
         }).setHandler(resultHandler);
@@ -233,7 +251,7 @@ public abstract class BaseRegistrationService<T> extends EventBusService<T> impl
             final String deviceId,
             final String gatewayId,
             final Handler<AsyncResult<RegistrationResult>> resultHandler) {
-        assertRegistration(tenantId, deviceId, gatewayId, (SpanContext) null, resultHandler);
+        assertRegistration(tenantId, deviceId, gatewayId, NoopSpan.INSTANCE, resultHandler);
     }
 
     /**
@@ -248,12 +266,13 @@ public abstract class BaseRegistrationService<T> extends EventBusService<T> impl
             final String tenantId,
             final String deviceId,
             final String gatewayId,
-            final SpanContext spanContext,
+            final Span span,
             final Handler<AsyncResult<RegistrationResult>> resultHandler) {
 
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(gatewayId);
+        Objects.requireNonNull(span);
         Objects.requireNonNull(resultHandler);
 
         final Future<RegistrationResult> deviceInfoTracker = Future.future();
@@ -268,8 +287,10 @@ public abstract class BaseRegistrationService<T> extends EventBusService<T> impl
             final RegistrationResult gatewayResult = gatewayInfoTracker.result();
 
             if (!isDeviceEnabled(deviceResult)) {
+                TracingHelper.logError(span, "device not enabled");
                 return Future.succeededFuture(RegistrationResult.from(HttpURLConnection.HTTP_NOT_FOUND));
             } else if (!isDeviceEnabled(gatewayResult)) {
+                TracingHelper.logError(span, "gateway not enabled");
                 return Future.succeededFuture(RegistrationResult.from(HttpURLConnection.HTTP_FORBIDDEN));
             } else {
 
@@ -282,10 +303,44 @@ public abstract class BaseRegistrationService<T> extends EventBusService<T> impl
                         getAssertionPayload(tenantId, deviceId, deviceData),
                         CacheDirective.maxAgeDirective(assertionFactory.getAssertionLifetime())));
                 } else {
+                    TracingHelper.logError(span, "gateway not authorized");
                     return Future.succeededFuture(RegistrationResult.from(HttpURLConnection.HTTP_FORBIDDEN));
                 }
             }
         }).setHandler(resultHandler);
+    }
+
+    /**
+     * Creates a new <em>OpenTracing</em> span for tracing the execution of a registration service operation.
+     * <p>
+     * The returned span will already contain tags for the given tenant, device and gateway ids (if either is not {code null}).
+     * 
+     * @param operationName The operation name that the span should be created for.
+     * @param spanContext Existing span context.
+     * @param tenantId The tenant id.
+     * @param deviceId The device id.
+     * @param gatewayId The gateway id.
+     * @return The new {@code Span}.
+     */
+    protected final Span newChildSpan(final String operationName, final SpanContext spanContext, final String tenantId,
+            final String deviceId, final String gatewayId) {
+        // we set the component tag to the class name because we have no access to
+        // the name of the enclosing component we are running in
+        final Tracer.SpanBuilder spanBuilder = tracer.buildSpan(operationName)
+                .addReference(References.CHILD_OF, spanContext)
+                .ignoreActiveSpan()
+                .withTag(Tags.COMPONENT.getKey(), getClass().getSimpleName())
+                .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_SERVER);
+        if (tenantId != null) {
+            spanBuilder.withTag(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId);
+        }
+        if (deviceId != null) {
+            spanBuilder.withTag(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId);
+        }
+        if (gatewayId != null) {
+            spanBuilder.withTag(MessageHelper.APP_PROPERTY_GATEWAY_ID, gatewayId);
+        }
+        return spanBuilder.start();
     }
 
     /**
