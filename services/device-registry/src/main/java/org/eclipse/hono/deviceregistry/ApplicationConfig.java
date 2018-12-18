@@ -15,6 +15,9 @@ package org.eclipse.hono.deviceregistry;
 
 import io.vertx.core.VertxOptions;
 import io.vertx.core.dns.AddressResolverOptions;
+
+import java.util.Optional;
+
 import org.eclipse.hono.config.ApplicationConfigProperties;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.config.VertxProperties;
@@ -38,6 +41,9 @@ import org.springframework.context.annotation.Configuration;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.spring.autoconfigure.MeterRegistryCustomizer;
+import io.opentracing.Tracer;
+import io.opentracing.contrib.tracerresolver.TracerResolver;
+import io.opentracing.noop.NoopTracerFactory;
 import io.vertx.core.Vertx;
 import org.springframework.context.annotation.Scope;
 
@@ -67,6 +73,22 @@ public class ApplicationConfig {
         vertxProperties().configureVertx(options);
 
         return Vertx.vertx(options);
+    }
+
+    /**
+     * Exposes an OpenTracing {@code Tracer} as a Spring Bean.
+     * <p>
+     * The Tracer will be resolved by means of a Java service lookup.
+     * If no tracer can be resolved this way, the {@code NoopTracer} is
+     * returned.
+     * 
+     * @return The tracer.
+     */
+    @Bean
+    public Tracer getTracer() {
+
+        return Optional.ofNullable(TracerResolver.resolveTracer())
+                .orElse(NoopTracerFactory.create());
     }
 
     /**
