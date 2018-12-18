@@ -40,6 +40,8 @@ import io.vertx.ext.healthchecks.HealthCheckHandler;
  */
 public abstract class AbstractServiceBase<T extends ServiceConfigProperties> extends ConfigurationSupportingVerticle<T> implements HealthCheckProvider {
 
+    private HealthCheckServer healthCheckServer = new NoopHealthCheckServer();
+
     /**
      * A logger to be shared with subclasses.
      */
@@ -66,6 +68,17 @@ public abstract class AbstractServiceBase<T extends ServiceConfigProperties> ext
     }
 
     /**
+     * Sets the health check server for this application.
+     *
+     * @param healthCheckServer The health check server.
+     * @throws NullPointerException if healthCheckServer is {@code null}.
+     */
+    @Autowired(required = false)
+    public void setHealthCheckServer(final HealthCheckServer healthCheckServer) {
+        this.healthCheckServer = Objects.requireNonNull(healthCheckServer);
+    }
+
+    /**
      * Starts up this component.
      * <ol>
      * <li>invokes {@link #startInternal()}</li>
@@ -75,6 +88,7 @@ public abstract class AbstractServiceBase<T extends ServiceConfigProperties> ext
      */
     @Override
     public final void start(final Future<Void> startFuture) {
+        healthCheckServer.registerHealthCheckResources(this);
         startInternal().setHandler(startFuture.completer());
     }
 

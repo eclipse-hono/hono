@@ -14,7 +14,6 @@
 package org.eclipse.hono.adapter.mqtt.impl;
 
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
-import org.eclipse.hono.config.ApplicationConfigProperties;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.AbstractAdapterConfig;
@@ -71,17 +70,6 @@ public class Config extends AbstractAdapterConfig {
         if (props.getName() == null) {
             props.setName(CONTAINER_ID_HONO_MQTT_ADAPTER);
         }
-    }
-
-    /**
-     * Exposes properties for configuring the application properties as a Spring bean.
-     *
-     * @return The application configuration properties.
-     */
-    @Bean
-    @ConfigurationProperties(prefix = "hono.app")
-    public ApplicationConfigProperties applicationConfigProperties() {
-        return new ApplicationConfigProperties();
     }
 
     /**
