@@ -12,21 +12,23 @@
  *******************************************************************************/
 package org.eclipse.hono.service.credentials;
 
-import io.vertx.core.AsyncResult;
-import io.vertx.core.Future;
-import io.vertx.core.Handler;
-import io.vertx.core.json.JsonObject;
+import java.net.HttpURLConnection;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import org.eclipse.hono.auth.HonoPasswordEncoder;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsObject;
 import org.eclipse.hono.util.CredentialsResult;
 import org.eclipse.hono.util.EventBusMessage;
 
-import java.net.HttpURLConnection;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import io.vertx.core.AsyncResult;
+import io.vertx.core.Future;
+import io.vertx.core.Handler;
+import io.vertx.core.json.JsonObject;
 
 /**
  * A base class for implementing {@link CompleteCredentialsService}s.
@@ -42,11 +44,18 @@ public abstract class CompleteBaseCredentialsService<T> extends BaseCredentialsS
 
     private static final Pattern BCRYPT_PATTERN = Pattern.compile("\\A\\$2a\\$(\\d{1,2})\\$[./0-9A-Za-z]{53}");
     private static final int DEFAULT_MAX_BCRYPT_ITERATIONS = 10;
+
+    private HonoPasswordEncoder pwdEncoder;
+
     /**
-     * The default hash function for hashing plain text passwords.
+     * Creates a new service instance for a password encoder.
+     * 
+     * @param pwdEncoder The encoder to use for hashing clear text passwords.
+     * @throws NullPointerException if encoder is {@code null}.
      */
-    // TODO make configurable.
-    public static final String DEFAULT_HASH_FUNCTION = CredentialsConstants.HASH_FUNCTION_BCRYPT; 
+    protected CompleteBaseCredentialsService(final HonoPasswordEncoder pwdEncoder) {
+        this.pwdEncoder = Objects.requireNonNull(pwdEncoder);
+    }
 
     /**
      * Processes a Credentials API request received via the vert.x event bus.
@@ -94,14 +103,7 @@ public abstract class CompleteBaseCredentialsService<T> extends BaseCredentialsS
                     HttpURLConnection.HTTP_BAD_REQUEST,
                     "missing payload"));
         } else {
-            final Future<CredentialsObject> hashingTracker = Future.future();
-            getVertx().executeBlocking(blockingCodeHandler -> {
-                log.debug("hashing password on vert.x worker thread [{}]", Thread.currentThread().getName());
-                hashPlainPasswords(payload);
-                blockingCodeHandler.complete(payload);
-            }, hashingTracker);
-
-            return hashingTracker.compose(credentials -> doAdd(request, tenantId, credentials));
+            return hashPlainPasswords(payload).compose(credentials -> doAdd(request, tenantId, credentials));
         }
     }
 
@@ -123,87 +125,6 @@ public abstract class CompleteBaseCredentialsService<T> extends BaseCredentialsS
         }
     }
 
-    private void checkSecret(final String type, final JsonObject secret) {
-        switch(type) {
-        case CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD:
-            final String hashFunction = secret.getString(CredentialsConstants.FIELD_SECRETS_HASH_FUNCTION);
-            switch(hashFunction) {
-            case CredentialsConstants.HASH_FUNCTION_BCRYPT:
-                verifyBcryptPasswordHash(secret);
-                break;
-            default:
-            }
-        default:
-        }
-    }
-
-    /**
-     * Hashes plaintext passwords in the given {@link CredentialsObject} if present.
-     *
-     * @param credentialsObject The credentials to be updated with hashed passwords.
-     */
-    private void hashPlainPasswords(final CredentialsObject credentialsObject) {
-        if (CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD.equals(credentialsObject.getType())) {
-            credentialsObject.hashPlainPasswords(getHashFunction());
-        }
-    }
-
-    /**
-     * Invoked as part of payload validation when adding or updating <em>hashed password</em>
-     * credentials using the <em>bcrypt</em> hash algorithm.
-     * <p>
-     * Verifies that the hashed password matches the bcrypt hash pattern and doesn't use more
-     * than the configured maximum number of iterations as returned by {@link #getMaxBcryptIterations()}.
-     * 
-     * @param secret The secret to verify.
-     * @throws IllegalArgumentException if the password hash is invalid.
-     */
-    protected void verifyBcryptPasswordHash(final JsonObject secret) {
-
-        final String pwdHash = ((JsonObject) secret).getString(CredentialsConstants.FIELD_SECRETS_PWD_HASH);
-        final Matcher matcher = BCRYPT_PATTERN.matcher(pwdHash);
-        if (matcher.matches()) {
-            // check that hash doesn't use more iterations than configured maximum
-            final int iterations = Integer.valueOf(matcher.group(1));
-            if (iterations > getMaxBcryptIterations()) {
-                throw new IllegalArgumentException("max number of BCrypt iterations exceeded");
-            }
-        } else {
-            // not a valid bcrypt hash
-            throw new IllegalArgumentException("not a BCrypt hash");
-        }
-    }
-
-    /**
-     * Gets the maximum number of iterations that should be allowed in password hashes
-     * created using the <em>BCrypt</em> hash function.
-     * <p>
-     * This default implementation returns 10.
-     * <p>
-     * Subclasses should override this method in order to e.g. return a value determined
-     * from a configuration property.
-     * 
-     * @return The number of iterations.
-     */
-    protected int getMaxBcryptIterations() {
-        return DEFAULT_MAX_BCRYPT_ITERATIONS;
-    }
-
-    /**
-     * Gets the hash function to be used to hash plaintext passwords.
-     * <p>
-     * This default implementation returns "bcrypt".
-     * <p>
-     * Subclasses should override this method in order to e.g. return a value determined from a configuration property.
-     * For supported values see {@link CredentialsObject#hashPwdAndUpdateSecret(JsonObject, String)}.
-     * <p>
-     * 
-     * @return The name of the hash function.
-     */
-    protected String getHashFunction() {
-        return DEFAULT_HASH_FUNCTION;
-    }
-
     private Future<EventBusMessage> processUpdateRequest(final EventBusMessage request) {
 
         final String tenantId = request.getTenant();
@@ -219,14 +140,7 @@ public abstract class CompleteBaseCredentialsService<T> extends BaseCredentialsS
                     HttpURLConnection.HTTP_BAD_REQUEST,
                     "missing payload"));
         } else {
-            final Future<CredentialsObject> hashingTracker = Future.future();
-            getVertx().executeBlocking(blockingCodeHandler -> {
-                log.debug("hashing password on vert.x worker thread [{}]", Thread.currentThread().getName());
-                hashPlainPasswords(payload);
-                blockingCodeHandler.complete(payload);
-            }, hashingTracker);
-
-            return hashingTracker.compose(credentials -> doUpdate(request, tenantId, credentials));
+            return hashPlainPasswords(payload).compose(credentials -> doUpdate(request, tenantId, credentials));
         }
     }
 
@@ -335,5 +249,101 @@ public abstract class CompleteBaseCredentialsService<T> extends BaseCredentialsS
     @Override
     public void removeAll(final String tenantId, final String deviceId, final Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
         handleUnimplementedOperation(resultHandler);
+    }
+
+    private void checkSecret(final String type, final JsonObject secret) {
+        switch(type) {
+        case CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD:
+            final String hashFunction = secret.getString(CredentialsConstants.FIELD_SECRETS_HASH_FUNCTION);
+            switch(hashFunction) {
+            case CredentialsConstants.HASH_FUNCTION_BCRYPT:
+                verifyBcryptPasswordHash(secret);
+                break;
+            default:
+            }
+        default:
+        }
+    }
+
+    /**
+     * Gets the maximum number of iterations that should be allowed in password hashes
+     * created using the <em>BCrypt</em> hash function.
+     * <p>
+     * This default implementation returns 10.
+     * <p>
+     * Subclasses should override this method in order to e.g. return a value determined
+     * from a configuration property.
+     * 
+     * @return The number of iterations.
+     */
+    protected int getMaxBcryptIterations() {
+        return DEFAULT_MAX_BCRYPT_ITERATIONS;
+    }
+
+    /**
+     * Hashes clear text passwords contained in a {@link CredentialsObject}.
+     *
+     * @param credentials The credentials to be updated with hashed passwords.
+     * @return A future containing the (updated) credentials.
+     */
+    protected final Future<CredentialsObject> hashPlainPasswords(final CredentialsObject credentials) {
+
+        if (CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD.equals(credentials.getType())) {
+            final Future<CredentialsObject> result = Future.future();
+            getVertx().executeBlocking(blockingCodeHandler -> {
+                log.debug("hashing password on vert.x worker thread [{}]", Thread.currentThread().getName());
+                credentials.getSecrets().forEach(secret -> hashPwdAndUpdateSecret((JsonObject) secret));
+                blockingCodeHandler.complete(credentials);
+            }, result);
+            return result;
+        } else {
+            return Future.succeededFuture(credentials);
+        }
+    }
+
+    private JsonObject hashPwdAndUpdateSecret(final JsonObject secret) {
+
+        final String pwd = Optional.ofNullable(secret.remove(CredentialsConstants.FIELD_SECRETS_PWD_PLAIN))
+                .map(o -> {
+                    if (o instanceof String) {
+                        return (String) o;
+                    } else {
+                        return "";
+                    }
+                }).orElse("");
+
+        if (pwd.isEmpty()) {
+            return secret;
+        }
+
+        final JsonObject encodedPwd = pwdEncoder.encode(pwd);
+        secret.mergeIn(encodedPwd);
+        return secret;
+    }
+
+    /**
+     * Invoked as part of payload validation when adding or updating <em>hashed password</em>
+     * credentials using the <em>bcrypt</em> hash algorithm.
+     * <p>
+     * Verifies that the hashed password matches the bcrypt hash pattern and doesn't use more
+     * than the configured maximum number of iterations as returned by {@link #getMaxBcryptIterations()}.
+     * 
+     * @param secret The secret to verify.
+     * @throws IllegalArgumentException if the password hash is invalid.
+     */
+    protected void verifyBcryptPasswordHash(final JsonObject secret) {
+
+        final String pwdHash = ((JsonObject) secret).getString(CredentialsConstants.FIELD_SECRETS_PWD_HASH);
+        final Matcher matcher = BCRYPT_PATTERN.matcher(pwdHash);
+        if (matcher.matches()) {
+            // check that hash doesn't use more iterations than configured maximum
+            final int iterations = Integer.valueOf(matcher.group(1));
+            if (iterations > getMaxBcryptIterations()) {
+                throw new IllegalArgumentException("max number of BCrypt iterations exceeded");
+            }
+        } else {
+            // not a valid bcrypt hash
+            throw new IllegalArgumentException("not a BCrypt hash");
+        }
     }
 }

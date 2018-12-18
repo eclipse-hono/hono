@@ -6,16 +6,22 @@ title = "Release Notes"
 
 ### New Features
 
-* The default Micrometer backend is now Prometheus, the new dashboards are also
-  using Prometheus as a backend
-
-### API Changes
-
-* New variants of the `RegistrationService.assertRegistration` and `TenantService.get` methods have been added which also
-  accept an OpenTracing span as a parameter. The default implementations of these methods still default to the previously existing methods.
+* The default Micrometer back end is now Prometheus, the Grafana dash boards have been updated
+  to retrieve data from Prometheus instead of the old InfluxDB.
+* The base classes for implementing the Device Registration and Tenant APIs have been instrumented
+  with OpenTracing. New variants of the `RegistrationService.assertRegistration` and `TenantService.get`
+  methods have been added which also accept an OpenTracing span as a parameter.
+  The default implementations of these methods still default to the previously existing methods.
   In `RegistrationService` implementations based on `BaseRegistrationService` an OpenTracing span will be created,
   passed on to the `assertRegistration` method and finished eventually. The same applies to `TenantService` implementations
   based on `BaseTenantService` concerning the `get` method.
+
+### API Changes
+
+* The `org.eclipse.hono.service.credentials.CompleteBaseCredentialsService` class now requires an
+  `org.eclipse.hono.auth.HonoPasswordEncoder` to be passed into its constructor.
+  The `org.eclipse.hono.auth.SpringBasedHonoPasswordEncoder` has been added as a default implementation for
+  this purpose.
 
 ## 0.8
 

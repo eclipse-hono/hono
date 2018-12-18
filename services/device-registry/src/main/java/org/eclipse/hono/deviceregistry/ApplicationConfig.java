@@ -18,6 +18,8 @@ import io.vertx.core.dns.AddressResolverOptions;
 
 import java.util.Optional;
 
+import org.eclipse.hono.auth.HonoPasswordEncoder;
+import org.eclipse.hono.auth.SpringBasedHonoPasswordEncoder;
 import org.eclipse.hono.config.ApplicationConfigProperties;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.config.VertxProperties;
@@ -329,5 +331,16 @@ public class ApplicationConfig {
     @Bean
     public HealthCheckServer healthCheckServer() {
         return new VertxBasedHealthCheckServer(vertx(), applicationConfigProperties());
+    }
+
+    /**
+     * Exposes a password encoder to use for encoding clear text passwords
+     * and for matching password hashes.
+     * 
+     * @return The encoder.
+     */
+    @Bean
+    public HonoPasswordEncoder passwordEncoder() {
+        return new SpringBasedHonoPasswordEncoder();
     }
 }

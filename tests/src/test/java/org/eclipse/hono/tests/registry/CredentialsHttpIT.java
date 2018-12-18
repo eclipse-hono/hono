@@ -20,7 +20,6 @@ import java.util.UUID;
 
 import org.eclipse.hono.tests.DeviceRegistryHttpClient;
 import org.eclipse.hono.tests.IntegrationTestSupport;
-import org.eclipse.hono.util.ClearTextPassword;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsObject;
@@ -531,8 +530,8 @@ public class CredentialsHttpIT {
         return JsonObject.mapFrom(CredentialsObject.fromHashedPassword(
                 deviceId,
                 authId,
-                ClearTextPassword.encode(CredentialsConstants.HASH_FUNCTION_SHA512, null, "secret"),
-                CredentialsConstants.HASH_FUNCTION_SHA512,
+                "$2a$10$UK9lmSMlYmeXqABkTrDRsu1nlZRnAmGnBdPIWZoDajtjyxX18Dry.", // "thePassword"
+                CredentialsConstants.HASH_FUNCTION_BCRYPT,
                 null, null, null));
     }
 

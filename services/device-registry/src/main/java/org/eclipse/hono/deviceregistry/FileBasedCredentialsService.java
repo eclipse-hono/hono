@@ -23,6 +23,7 @@ import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.eclipse.hono.auth.HonoPasswordEncoder;
 import org.eclipse.hono.service.credentials.CompleteBaseCredentialsService;
 import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.CredentialsConstants;
@@ -64,6 +65,17 @@ public final class FileBasedCredentialsService extends CompleteBaseCredentialsSe
     private final Map<String, Map<String, JsonArray>> credentials = new HashMap<>();
     private boolean running = false;
     private boolean dirty = false;
+
+    /**
+     * Creates a new service instance for a password encoder.
+     * 
+     * @param pwdEncoder The encoder to use for hashing clear text passwords.
+     * @throws NullPointerException if encoder is {@code null}.
+     */
+    @Autowired
+    public FileBasedCredentialsService(final HonoPasswordEncoder pwdEncoder) {
+        super(pwdEncoder);
+    }
 
     @Autowired
     @Override

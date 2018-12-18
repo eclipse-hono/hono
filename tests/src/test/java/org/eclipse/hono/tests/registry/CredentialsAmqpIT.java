@@ -13,7 +13,11 @@
 package org.eclipse.hono.tests.registry;
 
 import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 
 import java.net.HttpURLConnection;
 import java.nio.charset.StandardCharsets;
@@ -26,7 +30,6 @@ import org.eclipse.hono.client.CredentialsClient;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.tests.IntegrationTestSupport;
-import org.eclipse.hono.util.ClearTextPassword;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsObject;
@@ -299,8 +302,10 @@ public class CredentialsAmqpIT {
         final String pwdHashOnRecord = CredentialsConstants.getPasswordHash(firstSecret);
         assertNotNull(pwdHashOnRecord);
 
-        final String pwdHash = ClearTextPassword.encode(
-                CredentialsConstants.HASH_FUNCTION_SHA512, CREDENTIALS_PASSWORD_SALT, CREDENTIALS_USER_PASSWORD);
+        final String pwdHash = IntegrationTestSupport.getBase64EncodedDigestPasswordHash(
+                CredentialsConstants.HASH_FUNCTION_SHA512,
+                CREDENTIALS_PASSWORD_SALT,
+                CREDENTIALS_USER_PASSWORD);
         // check if the password is the hashed version of "hono-secret"
         assertThat(pwdHashOnRecord, is(pwdHash));
     }
@@ -343,4 +348,5 @@ public class CredentialsAmqpIT {
 
         return payload.isEnabled();
     }
+
 }

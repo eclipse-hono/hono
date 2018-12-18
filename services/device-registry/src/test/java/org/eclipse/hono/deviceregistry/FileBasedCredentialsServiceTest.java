@@ -15,15 +15,18 @@ package org.eclipse.hono.deviceregistry;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.eq;
-import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.net.HttpURLConnection;
 import java.nio.charset.StandardCharsets;
 
+import org.eclipse.hono.auth.HonoPasswordEncoder;
 import org.eclipse.hono.service.credentials.CompleteCredentialsService;
-import org.eclipse.hono.util.ClearTextPassword;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsObject;
@@ -80,7 +83,7 @@ public class FileBasedCredentialsServiceTest {
         when(vertx.fileSystem()).thenReturn(fileSystem);
 
         props = new FileBasedCredentialsConfigProperties();
-        svc = new FileBasedCredentialsService();
+        svc = new FileBasedCredentialsService(mock(HonoPasswordEncoder.class));
         svc.setConfig(props);
         svc.init(vertx, ctx);
     }
@@ -240,8 +243,8 @@ public class FileBasedCredentialsServiceTest {
         final CredentialsObject hashedPassword = CredentialsObject.fromHashedPassword(
                 "4700",
                 "bumlux",
-                ClearTextPassword.encode(CredentialsConstants.HASH_FUNCTION_SHA512, null, "secret"),
-                CredentialsConstants.HASH_FUNCTION_SHA512,
+                "$2a$10$UK9lmSMlYmeXqABkTrDRsu1nlZRnAmGnBdPIWZoDajtjyxX18Dry.",
+                CredentialsConstants.HASH_FUNCTION_BCRYPT,
                 null, null, null);
         final CredentialsObject psk = CredentialsObject.fromPresharedKey(
                 "4711", "sensor1", "sharedkey".getBytes(StandardCharsets.UTF_8), null, null);

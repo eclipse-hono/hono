@@ -22,15 +22,14 @@ import java.util.Objects;
 import java.util.Optional;
 
 import org.eclipse.hono.util.CredentialsConstants;
-import org.eclipse.hono.util.EncodedPassword;
-import org.eclipse.hono.util.MessageDigestPasswordEncoder;
+import org.eclipse.hono.util.CredentialsObject;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import io.vertx.core.json.JsonObject;
 
 /**
- * A Spring Security based password matcher.
+ * A Spring Security based password encoder.
  * <p>
  * The encoder supports matching of password hashes that have been created
  * using one of the following hash functions:
@@ -39,6 +38,8 @@ import io.vertx.core.json.JsonObject;
  * <li>sha-512</li>
  * <li>bcrypt using the <em>2a</em> salt format</li>
  * </ul>
+ * <p>
+ * The encoder uses BCrypt for encoding passwords with a reasonable number of iterations.
  */
 public class SpringBasedHonoPasswordEncoder implements HonoPasswordEncoder {
 
@@ -53,7 +54,7 @@ public class SpringBasedHonoPasswordEncoder implements HonoPasswordEncoder {
      * Creates a new encoder.
      * <p>
      * This constructor will create a new {@code SecureRandom}
-     * as follows
+     * as follows:
      * <ol>
      * <li>try to create a SecureRandom using algorithm <em>NativePRNGNonBlocking</em></li>
      * <li>if that fails, create a default SecureRandom, i.e. without specifying an
@@ -81,10 +82,22 @@ public class SpringBasedHonoPasswordEncoder implements HonoPasswordEncoder {
         encoders.put(idForEncode, encoderForEncode);
         encoders.put(
                 CredentialsConstants.HASH_FUNCTION_SHA256,
-                new MessageDigestPasswordEncoder(CredentialsConstants.HASH_FUNCTION_SHA256));
+                new MessageDigestPasswordEncoder(CredentialsConstants.HASH_FUNCTION_SHA256, secureRandom));
         encoders.put(
                 CredentialsConstants.HASH_FUNCTION_SHA512,
-                new MessageDigestPasswordEncoder(CredentialsConstants.HASH_FUNCTION_SHA512));
+                new MessageDigestPasswordEncoder(CredentialsConstants.HASH_FUNCTION_SHA512, secureRandom));
+    }
+
+    @Override
+    public JsonObject encode(final String rawPassword) {
+
+        final EncodedPassword encodedPwd = new EncodedPassword(encoderForEncode.encode(rawPassword));
+        return CredentialsObject.hashedPasswordSecretForPasswordHash(
+                encodedPwd.password,
+                idForEncode,
+                null,
+                null,
+                encodedPwd.salt);
     }
 
     @Override

@@ -12,21 +12,29 @@
  *******************************************************************************/
 package org.eclipse.hono.service.credentials;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
 import java.net.HttpURLConnection;
 
+import org.eclipse.hono.auth.HonoPasswordEncoder;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ServiceConfigProperties;
-import org.eclipse.hono.util.ClearTextPassword;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsObject;
 import org.eclipse.hono.util.CredentialsResult;
 import org.eclipse.hono.util.EventBusMessage;
-import org.junit.BeforeClass;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.rules.Timeout;
 import org.junit.runner.RunWith;
 
 import io.vertx.core.AsyncResult;
+import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
@@ -40,8 +48,6 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
 @RunWith(VertxUnitRunner.class)
 public class CompleteBaseCredentialsServiceTest {
 
-    private static CompleteBaseCredentialsService<ServiceConfigProperties> service;
-
     private static final String TEST_TENANT = "dummy";
     private static final int MAX_ITERATIONS = 10;
 
@@ -50,12 +56,38 @@ public class CompleteBaseCredentialsServiceTest {
      */
     public Timeout timeout = Timeout.seconds(5);
 
+    private CompleteBaseCredentialsService<ServiceConfigProperties> service;
+    private HonoPasswordEncoder pwdEncoder;
+    private Vertx vertx;
+    private Context context;
+
     /**
      * Sets up the fixture.
      */
-    @BeforeClass
-    public static void setUp() {
-        service = createCompleteBaseCredentialsService();
+    @SuppressWarnings("unchecked")
+    @Before
+    public void setUp() {
+        context = mock(Context.class);
+        vertx = mock(Vertx.class);
+        doAnswer(i -> {
+            final Handler<Future<Object>> handler = i.getArgument(0);
+            final Handler<AsyncResult<Object>> resultHandler = i.getArgument(1);
+            final Future<Object> blockingCodeHandler = Future.future();
+            blockingCodeHandler.setHandler(resultHandler);
+            handler.handle(blockingCodeHandler);
+            return null;
+        }).when(vertx).executeBlocking(any(Handler.class), any(Handler.class));
+        pwdEncoder = mock(HonoPasswordEncoder.class);
+        // return bcrypted password "thePassword"
+        // https://www.dailycred.com/article/bcrypt-calculator
+        when(pwdEncoder.encode(anyString())).thenReturn(
+                CredentialsObject.hashedPasswordSecretForPasswordHash(
+                        "$2a$10$UK9lmSMlYmeXqABkTrDRsu1nlZRnAmGnBdPIWZoDajtjyxX18Dry.",
+                        CredentialsConstants.HASH_FUNCTION_BCRYPT,
+                        null, null,
+                        (String) null));
+        service = createCompleteBaseCredentialsService(pwdEncoder);
+        service.init(vertx, context);
     }
 
     /**
@@ -181,16 +213,38 @@ public class CompleteBaseCredentialsServiceTest {
     @Test
     public void testAddSucceedsForValidBcryptSecret(final TestContext ctx) {
 
+        // see https://www.dailycred.com/article/bcrypt-calculator
         final CredentialsObject credentials = CredentialsObject.fromHashedPassword(
                 "4711",
                 "theDevice",
-                ClearTextPassword.encodeBCrypt("thePassword", MAX_ITERATIONS),
+                "$2a$10$UK9lmSMlYmeXqABkTrDRsu1nlZRnAmGnBdPIWZoDajtjyxX18Dry.",
                 CredentialsConstants.HASH_FUNCTION_BCRYPT,
                 null, null, null);
 
         final EventBusMessage msg = createRequestForPayload(CredentialsConstants.CredentialsAction.add, JsonObject.mapFrom(credentials));
         service.processRequest(msg).setHandler(ctx.asyncAssertSuccess(response -> {
             ctx.assertEquals(HttpURLConnection.HTTP_CREATED, response.getStatus());
+        }));
+    }
+
+    /**
+     * Verifies that the base service accepts a request for adding clear text
+     * hashed password credentials.
+     * 
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testAddSucceedsForClearTextPassword(final TestContext ctx) {
+
+        final JsonObject secret = new JsonObject().put(CredentialsConstants.FIELD_SECRETS_PWD_PLAIN, "mysecret");
+        final JsonObject credentials = createValidCredentialsObject(
+                CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD,
+                secret);
+
+        final EventBusMessage msg = createRequestForPayload(CredentialsConstants.CredentialsAction.add, credentials);
+        service.processRequest(msg).setHandler(ctx.asyncAssertSuccess(response -> {
+            ctx.assertEquals(HttpURLConnection.HTTP_CREATED, response.getStatus());
+            verify(pwdEncoder).encode("mysecret");
         }));
     }
 
@@ -225,32 +279,19 @@ public class CompleteBaseCredentialsServiceTest {
     @Test
     public void testAddFailsForBcryptSecretsWithTooManyIterations(final TestContext ctx) {
 
+        // GIVEN a bcrypted password using more than the configured max iterations
+        // see https://www.dailycred.com/article/bcrypt-calculator
         final CredentialsObject credentials = CredentialsObject.fromHashedPassword(
                 "4711",
                 "user",
-                ClearTextPassword.encodeBCrypt("thePassword", MAX_ITERATIONS + 1),
+                "$2a$11$gYh52ApJeJcLvKrXHkGm5.xtLf7PVJySmXrt0EvFfLjCfLdIdvoay",
                 CredentialsConstants.HASH_FUNCTION_BCRYPT,
                 null, null, null);
         final EventBusMessage msg = createRequestForPayload(CredentialsConstants.CredentialsAction.add, JsonObject.mapFrom(credentials));
+        // WHEN a client tries to add hashed password credentials
         service.processRequest(msg).setHandler(ctx.asyncAssertFailure(t -> {
+            // THEN the request fails
             ctx.assertEquals(HttpURLConnection.HTTP_BAD_REQUEST, ((ServiceInvocationException) t).getErrorCode());
-        }));
-    }
-
-    /**
-     * Verifies that the base service accepts a request for adding
-     * credentials that contain an empty secret.
-     *
-     * @param ctx The vert.x test context.
-     */
-    @Test
-    public void testCredentialsAddWithEmptySecret(final TestContext ctx) {
-
-        final JsonObject testData = createValidCredentialsObject(new JsonObject());
-
-        final EventBusMessage msg = createRequestForPayload(CredentialsConstants.CredentialsAction.add, testData);
-        service.processRequest(msg).setHandler(ctx.asyncAssertSuccess(response -> {
-            ctx.assertEquals(HttpURLConnection.HTTP_CREATED, response.getStatus());
         }));
     }
 
@@ -280,11 +321,10 @@ public class CompleteBaseCredentialsServiceTest {
                 .addSecret(secret));
     }
 
-    private static CompleteBaseCredentialsService<ServiceConfigProperties> createCompleteBaseCredentialsService() {
+    private static CompleteBaseCredentialsService<ServiceConfigProperties> createCompleteBaseCredentialsService(
+            final HonoPasswordEncoder pwdEncoder) {
 
-        return new CompleteBaseCredentialsService<ServiceConfigProperties>() {
-
-            private final Vertx vertx = Vertx.vertx();
+        return new CompleteBaseCredentialsService<ServiceConfigProperties>(pwdEncoder) {
 
             @Override
             public void add(final String tenantId, final JsonObject credentialsObject,
@@ -304,11 +344,6 @@ public class CompleteBaseCredentialsServiceTest {
             @Override
             protected int getMaxBcryptIterations() {
                 return MAX_ITERATIONS;
-            }
-
-            @Override
-            public Vertx getVertx() {
-                return vertx;
             }
         };
     }

@@ -21,7 +21,6 @@ import java.util.Optional;
 import javax.security.auth.x500.X500Principal;
 
 import org.eclipse.hono.client.ServiceInvocationException;
-import org.eclipse.hono.util.ClearTextPassword;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsObject;
 import org.eclipse.hono.util.RegistrationConstants;
@@ -678,9 +677,12 @@ public final class DeviceRegistryHttpClient {
             .compose(ok -> {
                 String passwordHash = null;
                 if (CredentialsConstants.HASH_FUNCTION_BCRYPT.equals(hashAlgorithm)) {
-                    passwordHash = ClearTextPassword.encodeBCrypt(password, IntegrationTestSupport.MAX_BCRYPT_ITERATIONS);
+                    passwordHash = IntegrationTestSupport.getBcryptHash(password);
                 } else {
-                    passwordHash = ClearTextPassword.encode(hashAlgorithm, null, password);
+                    passwordHash = IntegrationTestSupport.getBase64EncodedDigestPasswordHash(
+                            hashAlgorithm,
+                            null,
+                            password);
                 }
                 final CredentialsObject credentialsSpec =
                         CredentialsObject.fromHashedPassword(deviceId, deviceId, passwordHash, hashAlgorithm, null, null, null);

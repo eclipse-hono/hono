@@ -362,17 +362,6 @@ public final class CredentialsObject {
     }
 
     /**
-     * Hashes all plaintext passwords in the secrets with the given hash function.
-     * 
-     * Not to called in an event loop thread, because it blocks for a while.
-     * 
-     * @param hashFunction The name of the hash function to use.
-     */
-    public void hashPlainPasswords(final String hashFunction) {
-        secrets.forEach(secret -> hashPwdAndUpdateSecret((JsonObject) secret, hashFunction));
-    }
-
-    /**
      * Filters the currently valid secrets from the secrets on record.
      * <p>
      * A secret is considered valid if the current instant of time falls
@@ -575,11 +564,42 @@ public final class CredentialsObject {
             final Instant notAfter,
             final byte[] salt) {
 
+        return hashedPasswordSecretForPasswordHash(
+                passwordHash,
+                hashAlgorithm,
+                notBefore,
+                notAfter,
+                Optional.ofNullable(salt)
+                    .map(s -> Base64.getEncoder().encodeToString(s))
+                    .orElse(null));
+    }
+
+    /**
+     * Creates a hashed-password secret for a password hash.
+     * 
+     * @param passwordHash The Base64 encoded password hash.
+     * @param hashAlgorithm The algorithm used for creating the password hash.
+     * @param notBefore The point in time from which on the secret is valid.
+     * @param notAfter The point in time until the secret is valid.
+     * @param encodedSalt The Base64 encoded salt to use for creating the password hash or {@code null}
+     *                    if the password has been hashed without a salt.
+     * @return The secret.
+     * @throws NullPointerException if any of password hash or hash algorithm are {@code null}.
+     * @throws IllegalArgumentException if the <em>not-before</em> instant does not lie
+     *                                  before the <em>not after</em> instant or if the
+     *                                  algorithm is not supported.
+     */
+    public static JsonObject hashedPasswordSecretForPasswordHash(
+            final String passwordHash,
+            final String hashAlgorithm,
+            final Instant notBefore,
+            final Instant notAfter,
+            final String encodedSalt) {
+
         Objects.requireNonNull(passwordHash);
         Objects.requireNonNull(hashAlgorithm);
 
         final JsonObject secret = emptySecret(notBefore, notAfter);
-        final String encodedSalt = Optional.ofNullable(salt).map(s -> Base64.getEncoder().encodeToString(s)).orElse(null);
         secret.put(CredentialsConstants.FIELD_SECRETS_HASH_FUNCTION, hashAlgorithm);
         if (encodedSalt != null) {
             secret.put(CredentialsConstants.FIELD_SECRETS_SALT, encodedSalt);
@@ -676,52 +696,4 @@ public final class CredentialsObject {
         result.addSecret(secret);
         return result;
     }
-
-    /**
-     * Hashes a plain text password in the field {@link CredentialsConstants#FIELD_SECRETS_PWD_PLAIN} in the given
-     * secret if present and updates the secret accordingly.
-     * <p>
-     * Supported hash functions are:
-     * <ul>
-     *     <li>sha-256</li>
-     *     <li>sha-512</li>
-     *     <li>bcrypt</li>
-     * </ul>
-     *
-     * @param secret The secret to be updated.
-     * @param hashFunction The name of the hash function to use.
-     * @return The updated secret.
-     * @throws IllegalArgumentException if the hash function is unknown.
-     */
-    public static JsonObject hashPwdAndUpdateSecret(final JsonObject secret, final String hashFunction) {
-
-        final String pwd = secret.getString(CredentialsConstants.FIELD_SECRETS_PWD_PLAIN, "");
-        if (pwd.isEmpty()) {
-            return secret;
-        }
-
-        final byte[] salt;
-        final String pwdHash;
-
-        switch (hashFunction) {
-        case CredentialsConstants.HASH_FUNCTION_BCRYPT:
-            pwdHash = ClearTextPassword.encodeBCrypt(pwd);
-            break;
-        case CredentialsConstants.HASH_FUNCTION_SHA256:
-        case CredentialsConstants.HASH_FUNCTION_SHA512:
-            salt = ClearTextPassword.randomSaltFor(hashFunction);
-            pwdHash = ClearTextPassword.encode(hashFunction, salt, pwd);
-            secret.put(CredentialsConstants.FIELD_SECRETS_SALT, salt);
-            break;
-        default:
-            throw new IllegalArgumentException("Unknown hash function [" + hashFunction + "].");
-        }
-
-        secret.put(CredentialsConstants.FIELD_SECRETS_PWD_HASH, pwdHash);
-        secret.put(CredentialsConstants.FIELD_SECRETS_HASH_FUNCTION, hashFunction);
-        secret.remove(CredentialsConstants.FIELD_SECRETS_PWD_PLAIN);
-
-        return secret;
-    }
-
 }

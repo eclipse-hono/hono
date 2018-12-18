@@ -17,11 +17,22 @@ package org.eclipse.hono.auth;
 import io.vertx.core.json.JsonObject;
 
 /**
- * A helper for matching passwords against credentials
+ * A helper for encoding and matching passwords against credentials
  * managed by a Hono <a href="https://www.eclipse.org/hono/api/credentials-api/">
  * Credentials</a> service implementation.
  */
 public interface HonoPasswordEncoder {
+
+    /**
+     * Computes a hash for a raw password.
+     * 
+     * @param rawPassword The clear text password to encode.
+     * @return A <em>secret</em> as defined by Hono's
+     *         <a href="https://www.eclipse.org/hono/api/credentials-api/#hashed-password">
+     *         hashed-password credentials type</a>. The secret contains the name of the hash
+     *         function, (optional) salt and the password hash.
+     */
+    JsonObject encode(String rawPassword);
 
     /**
      * Matches a given password against credentials on record.

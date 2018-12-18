@@ -16,11 +16,15 @@ package org.eclipse.hono.tests;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.net.InetAddress;
+import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -36,6 +40,7 @@ import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.TimeUntilDisconnectNotification;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
@@ -132,6 +137,9 @@ public final class IntegrationTestSupport {
      */
     public static final String TENANT_HTTP_ONLY = "HTTP_ONLY";
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(IntegrationTestSupport.class);
+    private static final BCryptPasswordEncoder bcryptPwdEncoder = new BCryptPasswordEncoder(4);
+
     /**
      * A client for managing tenants/devices/credentials.
      */
@@ -141,8 +149,6 @@ public final class IntegrationTestSupport {
      * This can be used for downstream <em>or</em> upstream messages.
      */
     public IntegrationTestHonoClient honoClient;
-
-    private static final Logger LOGGER = LoggerFactory.getLogger(IntegrationTestSupport.class);
 
     private final Set<String> tenantsToDelete = new HashSet<>();
     private final Map<String, Set<String>> devicesToDelete = new HashMap<>();
@@ -544,6 +550,36 @@ public final class IntegrationTestSupport {
      */
     public static String getUsername(final String deviceId, final String tenant) {
         return String.format("%s@%s", deviceId, tenant);
+    }
+
+    /**
+     * Gets a hash for a password using a given digest based hash function.
+     * 
+     * @param hashFunction The hash function.
+     * @param salt The salt.
+     * @param clearTextPassword The password.
+     * @return The Base64 encoded password hash.
+     */
+    public static String getBase64EncodedDigestPasswordHash(final String hashFunction, final byte[] salt, final String clearTextPassword) {
+        try {
+            final MessageDigest digest = MessageDigest.getInstance(hashFunction);
+            if (salt != null) {
+                digest.update(salt);
+            }
+            return Base64.getEncoder().encodeToString(digest.digest(clearTextPassword.getBytes(StandardCharsets.UTF_8)));
+        } catch (NoSuchAlgorithmException e) {
+            return "hash function not supported";
+        }
+    }
+
+    /**
+     * Gets a hash for a password using the bcrypt hash function.
+     * 
+     * @param clearTextPassword The password.
+     * @return The hashed password.
+     */
+    public static String getBcryptHash(final String clearTextPassword) {
+        return bcryptPwdEncoder.encode(clearTextPassword);
     }
 
     /**
