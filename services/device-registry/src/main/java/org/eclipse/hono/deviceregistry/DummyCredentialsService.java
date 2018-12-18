@@ -12,20 +12,24 @@
  *******************************************************************************/
 package org.eclipse.hono.deviceregistry;
 
-import io.vertx.core.AsyncResult;
-import io.vertx.core.Future;
-import io.vertx.core.Handler;
-import io.vertx.core.json.JsonObject;
+import java.net.HttpURLConnection;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.Base64;
+
 import org.eclipse.hono.service.credentials.BaseCredentialsService;
 import org.eclipse.hono.util.CacheDirective;
-import org.eclipse.hono.util.ClearTextPassword;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsObject;
 import org.eclipse.hono.util.CredentialsResult;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
-import java.net.HttpURLConnection;
+import io.vertx.core.AsyncResult;
+import io.vertx.core.Future;
+import io.vertx.core.Handler;
+import io.vertx.core.json.JsonObject;
 
 /**
  *
@@ -33,6 +37,8 @@ import java.net.HttpURLConnection;
 @Service
 @ConditionalOnProperty(name = "hono.app.type", havingValue = "dummy")
 public final class DummyCredentialsService extends BaseCredentialsService<Object> {
+
+    private static final String PWD_HASH = getBase64EncodedSha256HashForPassword("hono-secret");
 
     @Override
     public void setConfig(final Object configuration) {
@@ -50,9 +56,10 @@ public final class DummyCredentialsService extends BaseCredentialsService<Object
         final JsonObject result = JsonObject.mapFrom(CredentialsObject.fromHashedPassword(
                 authId,
                 authId,
-                ClearTextPassword.encode(CredentialsConstants.HASH_FUNCTION_SHA256, null, "hono-secret"),
+                PWD_HASH,
                 CredentialsConstants.HASH_FUNCTION_SHA256,
-                null, null, null));
+                null, null,
+                null));
         resultHandler.handle(Future.succeededFuture(
                 CredentialsResult.from(HttpURLConnection.HTTP_OK, JsonObject.mapFrom(result), CacheDirective.noCacheDirective())));
     }
@@ -62,4 +69,12 @@ public final class DummyCredentialsService extends BaseCredentialsService<Object
         get(tenantId, null, null, resultHandler);
     }
 
+    private static String getBase64EncodedSha256HashForPassword(final String password) {
+        try {
+            final MessageDigest digest = MessageDigest.getInstance(CredentialsConstants.HASH_FUNCTION_SHA256);
+            return Base64.getEncoder().encodeToString(digest.digest(password.getBytes(StandardCharsets.UTF_8)));
+        } catch (NoSuchAlgorithmException e) {
+            return null;
+        }
+    }
 }
