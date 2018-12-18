@@ -92,6 +92,15 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
     }
 
     /**
+     * Gets the metrics for this service.
+     *
+     * @return The metrics
+     */
+    protected final HttpAdapterMetrics getMetrics() {
+        return metrics;
+    }
+
+    /**
      * @return 8443
      */
     @Override
