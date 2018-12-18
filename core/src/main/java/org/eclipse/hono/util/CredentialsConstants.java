@@ -13,6 +13,7 @@
 package org.eclipse.hono.util;
 
 import java.util.Objects;
+import java.util.Optional;
 
 import io.vertx.core.json.JsonObject;
 
@@ -147,5 +148,67 @@ public final class CredentialsConstants extends RequestResponseApiConstants {
                 .toJson();
     }
 
+    /**
+     * Gets the hash function of a hashed-password secret.
+     * 
+     * @param secret The secret.
+     * @return The hash function.
+     * @throws NullPointerException if secret is {@code null}.
+     * @throws IllegalArgumentException if the secret contains a non-string valued
+     *                                  hash function property.
+     */
+    public static String getHashFunction(final JsonObject secret) {
+
+        Objects.requireNonNull(secret);
+        return Optional.ofNullable(secret.getValue(FIELD_SECRETS_HASH_FUNCTION)).map(o -> {
+            if (o instanceof String) {
+                return (String) o;
+            } else {
+                throw new IllegalArgumentException("secret contains invalid hash function value");
+            }
+        }).orElse(DEFAULT_HASH_FUNCTION);
+    }
+
+    /**
+     * Gets the password hash of a hashed-password secret.
+     * 
+     * @param secret The secret.
+     * @return The Base64 encoded password hash.
+     * @throws NullPointerException if secret is {@code null}.
+     * @throws IllegalArgumentException if the secret does not contain a
+     *                                  password hash property.
+     */
+    public static String getPasswordHash(final JsonObject secret) {
+
+        Objects.requireNonNull(secret);
+        return Optional.ofNullable(secret.getValue(FIELD_SECRETS_PWD_HASH)).map(o -> {
+            if (o instanceof String) {
+                return (String) o;
+            } else {
+                throw new IllegalArgumentException("secret contains invalid hash function value");
+            }
+        }).orElseThrow(() -> new IllegalArgumentException("secret does not contain password hash"));
+    }
+
+    /**
+     * Gets the password salt of a hashed-password secret.
+     * 
+     * @param secret The secret.
+     * @return The Base64 encoded password salt or {@code null} if no salt is used.
+     * @throws NullPointerException if secret is {@code null}.
+     * @throws IllegalArgumentException if the secret contains a non-string
+     *                                  valued password salt property.
+     */
+    public static String getPasswordSalt(final JsonObject secret) {
+
+        Objects.requireNonNull(secret);
+        return Optional.ofNullable(secret.getValue(FIELD_SECRETS_SALT)).map(o -> {
+            if (o instanceof String) {
+                return (String) o;
+            } else {
+                throw new IllegalArgumentException("secret contains invalid salt value");
+            }
+        }).orElse(null);
+    }
 }
 

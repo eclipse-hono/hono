@@ -19,7 +19,9 @@ import java.util.Base64;
 import java.util.Objects;
 
 /**
- * Encoded password representation. It's used to parse Strings in the form of {Base64(salt)}password-hash into the value object, like
+ * Encoded password representation.
+ * <p>
+ * Helps with parsing strings in the form of {Base64(salt)}password-hash into a value object, like
  *
  * <pre>
  * EncodedPassword password = new EncodedPassword("{VGhlU2FsdA==}1L/qmnQ8kbgckAodOCbtyJAhoiK4k0rBtBBN+WD+TIE=");
@@ -44,6 +46,12 @@ import java.util.Objects;
 public class EncodedPassword extends BasePassword {
 
     /**
+     * Creates an empty instance.
+     */
+    private EncodedPassword() {
+    }
+
+    /**
      * Creates an instance from the {Base64(salt)}password-hash formatted String.
      *
      * @param formattedPassword Password hash in the {Base64(salt)}password-hash format
@@ -53,34 +61,28 @@ public class EncodedPassword extends BasePassword {
     }
 
     /**
-     * Creates an empty instance.
-     */
-    public EncodedPassword() {
-    }
-
-    /**
      * Creates a new instance from Hono Secret.
-     *
+     * <p>
      * The secret is expected to be of type <em>hashed-password</em> as defined by
      * <a href="https://www.eclipse.org/hono/api/credentials-api/#hashed-password">Hono's Credentials API</a>.
      *
-     * @param honoSecret JSON object that contains hono-formatted secret
-     * @return Encoded password
-     * @throws IllegalArgumentException if candidate hashed-password secret does not contain a password hash
+     * @param secret JSON object that contains the Hono-formatted secret.
+     * @return The password value object.
+     * @throws NullPointerException if secret is {@code null}.
+     * @throws IllegalArgumentException if the secret does not contain a password hash
+     *               or if the salt is not valid Base64 schema.
      */
-    public static EncodedPassword fromHonoSecret(final JsonObject honoSecret) throws IllegalArgumentException {
-        Objects.requireNonNull(honoSecret);
+    public static EncodedPassword fromHonoSecret(final JsonObject secret) throws IllegalArgumentException {
 
-        final String pwdHash = honoSecret.getString(CredentialsConstants.FIELD_SECRETS_PWD_HASH);
+        Objects.requireNonNull(secret);
+
+        final String pwdHash = CredentialsConstants.getPasswordHash(secret);
         if (pwdHash == null) {
-            throw new IllegalArgumentException("candidate hashed-password secret does not contain a pwd hash");
+            throw new IllegalArgumentException("hashed-password secret does not contain a pwd hash");
         }
 
-        final String hashFunction = honoSecret.getString(
-                CredentialsConstants.FIELD_SECRETS_HASH_FUNCTION,
-                CredentialsConstants.DEFAULT_HASH_FUNCTION);
-
-        final String encodedSalt = honoSecret.getString(CredentialsConstants.FIELD_SECRETS_SALT);
+        final String hashFunction = CredentialsConstants.getHashFunction(secret);
+        final String encodedSalt = CredentialsConstants.getPasswordSalt(secret);
         final EncodedPassword encodedPassword = new EncodedPassword();
         encodedPassword.hashFunction = hashFunction;
         encodedPassword.password = pwdHash;

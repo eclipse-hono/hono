@@ -288,15 +288,15 @@ public class CredentialsAmqpIT {
         final JsonObject firstSecret = pickFirstSecretFromPayload(payload);
         assertNotNull(firstSecret);
 
-        final String hashFunction = firstSecret.getString(CredentialsConstants.FIELD_SECRETS_HASH_FUNCTION);
+        final String hashFunction = CredentialsConstants.getHashFunction(firstSecret);
         assertThat(hashFunction, is(CredentialsConstants.HASH_FUNCTION_SHA512));
 
-        final String salt = firstSecret.getString(CredentialsConstants.FIELD_SECRETS_SALT);
+        final String salt = CredentialsConstants.getPasswordSalt(firstSecret);
         assertNotNull(salt);
         final byte[] decodedSalt = Base64.getDecoder().decode(salt);
         assertThat(decodedSalt, is(CREDENTIALS_PASSWORD_SALT)); // see file, this should be the salt
 
-        final String pwdHashOnRecord = firstSecret.getString(CredentialsConstants.FIELD_SECRETS_PWD_HASH);
+        final String pwdHashOnRecord = CredentialsConstants.getPasswordHash(firstSecret);
         assertNotNull(pwdHashOnRecord);
 
         final String pwdHash = ClearTextPassword.encode(
