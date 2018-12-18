@@ -13,20 +13,11 @@
 package org.eclipse.hono.service.auth.device;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
 
-import java.nio.charset.StandardCharsets;
-import java.time.Instant;
-
-import org.eclipse.hono.util.ClearTextPassword;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
-import org.eclipse.hono.util.CredentialsObject;
 import org.junit.Test;
-
-import io.vertx.core.json.JsonObject;
 
 /**
   * Tests verifying behavior of {@link UsernamePasswordCredentials}.
@@ -84,130 +75,5 @@ public class UsernamePasswordCredentialsTest {
         assertEquals(Constants.DEFAULT_TENANT, mqttUsernamePassword.getTenantId());
         assertEquals(TEST_USER, mqttUsernamePassword.getAuthId());
         assertEquals(TEST_PASSWORD, mqttUsernamePassword.getPassword());
-    }
-
-    /**
-     * Verifies that credentials can be successfully verified using the default hash function
-     * (sha-256) if the secret on record does not explicitly specify a hash function.
-     */
-    @Test
-    public void testMatchesCredentialsUsesDefaultHashFunction() {
-
-        // GIVEN a secret on record that does not explicitly define a hash function
-        final String hashedPassword = getHashedPassword(CredentialsConstants.DEFAULT_HASH_FUNCTION, null, TEST_PASSWORD);
-        final JsonObject candidateSecret = new JsonObject().put(CredentialsConstants.FIELD_SECRETS_PWD_HASH, hashedPassword);
-
-        // WHEN a device provides matching credentials
-        final UsernamePasswordCredentials credentials = UsernamePasswordCredentials.create(TEST_USER_OTHER_TENANT, TEST_PASSWORD, false);
-
-        // THEN verification of the credentials succeeds
-        assertTrue(credentials.matchesCredentials(candidateSecret));
-    }
-
-    /**
-     * Verifies that credentials can be successfully verified using the hash function
-     * specified for the secret.
-     */
-    @Test
-    public void testMatchesCredentialsSucceedsForMatchingPassword() {
-
-        // GIVEN a secret on record that uses sha-512 as the hash function
-        final byte[] salt = "TheSalt".getBytes(StandardCharsets.UTF_8);
-        final JsonObject candidateSecret = CredentialsObject.hashedPasswordSecretForPasswordHash(
-                ClearTextPassword.encode(CredentialsConstants.HASH_FUNCTION_SHA512, salt, TEST_PASSWORD),
-                CredentialsConstants.HASH_FUNCTION_SHA512,
-                null, null,
-                salt);
-
-        // WHEN a device provides matching credentials
-        final UsernamePasswordCredentials credentials = UsernamePasswordCredentials.create(TEST_USER_OTHER_TENANT, TEST_PASSWORD, false);
-
-        // THEN verification of the credentials succeeds
-        assertTrue(credentials.matchesCredentials(candidateSecret));
-    }
-
-    /**
-     * Verifies that credentials support Bcrypt hash function.
-     */
-    @Test
-    public void testMatchesCredentialsSucceedsForMatchingBCryptPassword() {
-
-        // GIVEN a secret on record that uses the bcrypt hash function (with salt version 2a)
-        // see https://www.dailycred.com/article/bcrypt-calculator
-        final JsonObject candidateSecret = CredentialsObject.hashedPasswordSecretForPasswordHash(
-                "$2a$12$rcrgLZrGHkEMAMfP5atLGe4HOvI0ZdclQdWDt/6DfUcgNEphwK27i",
-                "bcrypt",
-                null,
-                null,
-                null);
-
-        // WHEN a device provides matching credentials
-        final UsernamePasswordCredentials credentials = UsernamePasswordCredentials.create(TEST_USER_OTHER_TENANT, "kapua-password", false);
-
-        // THEN verification of the credentials succeeds
-        assertTrue(credentials.matchesCredentials(candidateSecret));
-    }
-
-    /**
-     * Verifies that credentials are rejected if they do not match the secret on record.
-     */
-    @Test
-    public void testMatchesCredentialsFailsForNonMatchingPassword() {
-
-        // GIVEN a secret on record that uses sha-512 as the hash function
-        final JsonObject candidateSecret = CredentialsObject.hashedPasswordSecretForPasswordHash(
-                ClearTextPassword.encode(CredentialsConstants.HASH_FUNCTION_SHA512, null, TEST_PASSWORD),
-                CredentialsConstants.HASH_FUNCTION_SHA512,
-                Instant.now(),
-                null, null);
-
-        // WHEN a device provides non-matching credentials
-        final UsernamePasswordCredentials credentials = UsernamePasswordCredentials.create(TEST_USER_OTHER_TENANT, "wrongpassword", false);
-
-        // THEN verification of the credentials fails
-        assertFalse(credentials.matchesCredentials(candidateSecret));
-    }
-
-    /**
-     * Verifies that credentials are rejected if the password hash on record contains
-     * illegal Base64 characters.
-     */
-    @Test
-    public void testMatchesCredentialsFailsForMalformedPwdHash() {
-
-        // GIVEN a candidate secret that contains illegal characters in the password hash
-        final JsonObject candidateSecret = new JsonObject()
-                .put(CredentialsConstants.FIELD_TYPE, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD)
-                .put(CredentialsConstants.FIELD_SECRETS_PWD_HASH, "!NOT_BASE64!");
-
-        // WHEN a device provides credentials
-        final UsernamePasswordCredentials credentials = UsernamePasswordCredentials.create(TEST_USER_OTHER_TENANT, "password", false);
-
-        // THEN verification of the credentials fails but doesn't throw an exception
-        assertFalse(credentials.matchesCredentials(candidateSecret));
-    }
-
-    /**
-     * Verifies that credentials are rejected if the password salt on record contains
-     * illegal Base64 characters.
-     */
-    @Test
-    public void testMatchesCredentialsFailsForMalformedSalt() {
-
-        // GIVEN a candidate secret that contains illegal characters in the password salt
-        final JsonObject candidateSecret = new JsonObject()
-                .put(CredentialsConstants.FIELD_TYPE, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD)
-                .put(CredentialsConstants.FIELD_SECRETS_PWD_HASH, "secret".getBytes(StandardCharsets.UTF_8))
-                .put(CredentialsConstants.FIELD_SECRETS_SALT, "!NOT_BASE64!");
-
-        // WHEN a device provides credentials
-        final UsernamePasswordCredentials credentials = UsernamePasswordCredentials.create(TEST_USER_OTHER_TENANT, "password", false);
-
-        // THEN verification of the credentials fails but doesn't throw an exception
-        assertFalse(credentials.matchesCredentials(candidateSecret));
-    }
-
-    private String getHashedPassword(final String hashFunction, final byte[] salt, final String password) {
-        return ClearTextPassword.encode(hashFunction, salt, password);
     }
 }

@@ -35,7 +35,6 @@ import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
 import org.eclipse.hono.service.auth.DeviceUser;
-import org.eclipse.hono.service.auth.device.DeviceCredentials;
 import org.eclipse.hono.service.auth.device.HonoClientBasedAuthProvider;
 import org.eclipse.hono.service.auth.device.UsernamePasswordAuthProvider;
 import org.eclipse.hono.service.auth.device.UsernamePasswordCredentials;
@@ -90,7 +89,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
 
     private MqttServer server;
     private MqttServer insecureServer;
-    private HonoClientBasedAuthProvider usernamePasswordAuthProvider;
+    private HonoClientBasedAuthProvider<UsernamePasswordCredentials> usernamePasswordAuthProvider;
 
     /**
      * Sets the provider to use for authenticating devices based on a username and password.
@@ -98,7 +97,8 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
      * @param provider The provider to use.
      * @throws NullPointerException if provider is {@code null}.
      */
-    public final void setUsernamePasswordAuthProvider(final HonoClientBasedAuthProvider provider) {
+    public final void setUsernamePasswordAuthProvider(
+            final HonoClientBasedAuthProvider<UsernamePasswordCredentials> provider) {
         this.usernamePasswordAuthProvider = Objects.requireNonNull(provider);
     }
 
@@ -386,7 +386,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
     private Future<Device> handleEndpointConnectionWithAuthentication(final MqttEndpoint endpoint,
             final Span currentSpan) {
 
-        final Future<DeviceCredentials> credentialsTracker = getCredentials(endpoint);
+        final Future<UsernamePasswordCredentials> credentialsTracker = getCredentials(endpoint);
         return credentialsTracker
                 .compose(credentials -> authenticate(credentials, currentSpan))
                 .compose(device -> CompositeFuture.all(
@@ -1030,7 +1030,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
      *         The future will succeed with the client's credentials extracted from the CONNECT packet
      *         or it will fail with a {@link ServiceInvocationException} indicating the cause of the failure.
      */
-    protected final Future<DeviceCredentials> getCredentials(final MqttEndpoint endpoint) {
+    protected final Future<UsernamePasswordCredentials> getCredentials(final MqttEndpoint endpoint) {
 
         if (endpoint.auth() == null) {
             return Future.failedFuture(new ClientErrorException(
@@ -1173,7 +1173,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
         }
     }
 
-    private Future<DeviceUser> authenticate(final DeviceCredentials credentials, final Span currentSpan) {
+    private Future<DeviceUser> authenticate(final UsernamePasswordCredentials credentials, final Span currentSpan) {
         final Future<DeviceUser> result = Future.future();
         usernamePasswordAuthProvider.authenticate(credentials, handler -> {
             if (handler.succeeded()) {

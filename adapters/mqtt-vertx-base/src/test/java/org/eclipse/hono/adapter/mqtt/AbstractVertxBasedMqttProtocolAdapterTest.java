@@ -38,15 +38,14 @@ import java.util.function.BiConsumer;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.client.CommandConnection;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.TenantClient;
-import org.eclipse.hono.client.CommandConnection;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.auth.DeviceUser;
-import org.eclipse.hono.service.auth.device.DeviceCredentials;
 import org.eclipse.hono.service.auth.device.HonoClientBasedAuthProvider;
 import org.eclipse.hono.service.auth.device.UsernamePasswordCredentials;
 import org.eclipse.hono.util.EventConstants;
@@ -109,7 +108,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
     private HonoClient deviceRegistrationServiceClient;
     private RegistrationClient regClient;
     private TenantClient tenantClient;
-    private HonoClientBasedAuthProvider usernamePasswordAuthProvider;
+    private HonoClientBasedAuthProvider<UsernamePasswordCredentials> usernamePasswordAuthProvider;
     private ProtocolAdapterProperties config;
     private MqttAdapterMetrics metrics;
     private CommandConnection commandConnection;
@@ -286,7 +285,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
             final Handler<AsyncResult<DeviceUser>> resultHandler = invocation.getArgument(1);
             resultHandler.handle(Future.succeededFuture(new DeviceUser("my-tenant", "4711")));
             return null;
-        }).when(usernamePasswordAuthProvider).authenticate(any(DeviceCredentials.class), any(Handler.class));
+        }).when(usernamePasswordAuthProvider).authenticate(any(UsernamePasswordCredentials.class), any(Handler.class));
         final AbstractVertxBasedMqttProtocolAdapter<ProtocolAdapterProperties> adapter = getAdapter(server);
         forceClientMocksToConnected();
 
@@ -360,7 +359,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
             final Handler<AsyncResult<DeviceUser>> resultHandler = invocation.getArgument(1);
             resultHandler.handle(Future.succeededFuture(new DeviceUser("DEFAULT_TENANT", "4711")));
             return null;
-        }).when(usernamePasswordAuthProvider).authenticate(any(DeviceCredentials.class), any(Handler.class));
+        }).when(usernamePasswordAuthProvider).authenticate(any(UsernamePasswordCredentials.class), any(Handler.class));
 
         // WHEN a device tries to connect with valid credentials
         final MqttEndpoint endpoint = getMqttEndpointAuthenticated();
@@ -368,7 +367,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
 
         // THEN the device's logical ID is successfully established and corresponding handlers
         // are registered
-        final ArgumentCaptor<DeviceCredentials> credentialsCaptor = ArgumentCaptor.forClass(DeviceCredentials.class);
+        final ArgumentCaptor<UsernamePasswordCredentials> credentialsCaptor = ArgumentCaptor.forClass(UsernamePasswordCredentials.class);
         verify(usernamePasswordAuthProvider).authenticate(credentialsCaptor.capture(), any(Handler.class));
         assertThat(credentialsCaptor.getValue().getAuthId(), is("sensor1"));
         verify(endpoint).accept(false);
@@ -392,7 +391,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
             final Handler<AsyncResult<DeviceUser>> resultHandler = invocation.getArgument(1);
             resultHandler.handle(Future.succeededFuture(new DeviceUser("DEFAULT_TENANT", "9999")));
             return null;
-        }).when(usernamePasswordAuthProvider).authenticate(any(DeviceCredentials.class), any(Handler.class));
+        }).when(usernamePasswordAuthProvider).authenticate(any(UsernamePasswordCredentials.class), any(Handler.class));
         // but for which no registration information is available
         when(regClient.assertRegistration(eq("9999"), (String) any(), (SpanContext) any()))
                 .thenReturn(Future.failedFuture(new ClientErrorException(
@@ -403,7 +402,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         adapter.handleEndpointConnection(endpoint);
 
         // THEN the device's credentials are verified successfully
-        final ArgumentCaptor<DeviceCredentials> credentialsCaptor = ArgumentCaptor.forClass(DeviceCredentials.class);
+        final ArgumentCaptor<UsernamePasswordCredentials> credentialsCaptor = ArgumentCaptor.forClass(UsernamePasswordCredentials.class);
         verify(usernamePasswordAuthProvider).authenticate(credentialsCaptor.capture(), any(Handler.class));
         assertThat(credentialsCaptor.getValue().getAuthId(), is("sensor1"));
         // but the connection is refused
@@ -430,7 +429,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         adapter.handleEndpointConnection(endpoint);
 
         // THEN the connection is established and handlers are registered
-        verify(usernamePasswordAuthProvider, never()).authenticate(any(DeviceCredentials.class), any(Handler.class));
+        verify(usernamePasswordAuthProvider, never()).authenticate(any(UsernamePasswordCredentials.class), any(Handler.class));
         verify(endpoint).publishHandler(any(Handler.class));
         verify(endpoint).closeHandler(any(Handler.class));
         verify(endpoint).accept(false);
@@ -955,7 +954,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
             final Handler<AsyncResult<DeviceUser>> resultHandler = invocation.getArgument(1);
             resultHandler.handle(Future.succeededFuture(new DeviceUser("DEFAULT_TENANT", "4711")));
             return null;
-        }).when(usernamePasswordAuthProvider).authenticate(any(DeviceCredentials.class), any(Handler.class));
+        }).when(usernamePasswordAuthProvider).authenticate(any(UsernamePasswordCredentials.class), any(Handler.class));
 
         final MqttEndpoint endpoint = getMqttEndpointAuthenticated();
         adapter.handleEndpointConnection(endpoint);

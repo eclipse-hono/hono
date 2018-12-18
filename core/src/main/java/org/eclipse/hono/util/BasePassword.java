@@ -68,12 +68,13 @@ abstract public class BasePassword {
     }
 
     /**
-     * Formats the password to {hashFunction}{Base64(salt)}{passwordHash} format which is used by Spring Security password encoders.
+     * Creates a string representation of this password that is compatible with
+     * Spring Security password encoders.
      *
-     * @return Value of this object formatted as {hashFunction}{Base64(salt)}{passwordHash} String
+     * @return The value of this object formatted as {Base64(salt)}password.
      */
     public String format() {
-        final StringBuilder result = new StringBuilder(PREFIX).append(hashFunction).append(SUFFIX);
+        final StringBuilder result = new StringBuilder();
         append(salt, result);
         result.append(password);
 

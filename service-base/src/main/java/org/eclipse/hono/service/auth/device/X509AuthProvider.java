@@ -16,12 +16,15 @@ package org.eclipse.hono.service.auth.device;
 import java.util.Objects;
 import java.util.Optional;
 
+import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
+import org.eclipse.hono.util.CredentialsObject;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 
 
@@ -30,7 +33,7 @@ import io.vertx.core.json.JsonObject;
  * Hono's <em>Credentials</em> API.
  *
  */
-public class X509AuthProvider extends CredentialsApiAuthProvider {
+public class X509AuthProvider extends CredentialsApiAuthProvider<SubjectDnCredentials> {
 
     private final ServiceConfigProperties config;
 
@@ -62,7 +65,7 @@ public class X509AuthProvider extends CredentialsApiAuthProvider {
      * @throws NullPointerException if the authentication info is {@code null}.
      */
     @Override
-    protected DeviceCredentials getCredentials(final JsonObject authInfo) {
+    protected SubjectDnCredentials getCredentials(final JsonObject authInfo) {
 
         Objects.requireNonNull(authInfo);
         try {
@@ -83,5 +86,12 @@ public class X509AuthProvider extends CredentialsApiAuthProvider {
         } catch (ClassCastException e) {
             return null;
         }
+    }
+
+    @Override
+    protected Future<Device> doValidateCredentials(
+            final SubjectDnCredentials deviceCredentials,
+            final CredentialsObject credentialsOnRecord) {
+        return Future.succeededFuture(new Device(deviceCredentials.getTenantId(), credentialsOnRecord.getDeviceId()));
     }
 }

@@ -19,8 +19,6 @@ import javax.security.auth.x500.X500Principal;
 
 import org.eclipse.hono.util.CredentialsConstants;
 
-import io.vertx.core.json.JsonObject;
-
 
 /**
  * Helper class to generate an authentication ID for an X.509 certificate provided by
@@ -74,11 +72,5 @@ public class SubjectDnCredentials extends AbstractDeviceCredentials {
     @Override
     public String getType() {
         return CredentialsConstants.SECRETS_TYPE_X509_CERT;
-    }
-
-    @Override
-    public boolean matchesCredentials(final JsonObject candidateSecret) {
-        // nothing to check
-        return true;
     }
 }

@@ -17,7 +17,6 @@ import java.util.Objects;
 import org.eclipse.hono.service.auth.device.DeviceCredentials;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
-import org.eclipse.hono.util.CredentialsObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -142,11 +141,5 @@ public class PreSharedKeyDeviceIdentity implements DeviceCredentials {
     @Override
     public String getType() {
         return CredentialsConstants.SECRETS_TYPE_PRESHARED_KEY;
-    }
-
-    @Override
-    public boolean validate(final CredentialsObject credentialsOnRecord) {
-        // Identities doesn't validate
-        return false;
     }
 }

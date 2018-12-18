@@ -17,6 +17,8 @@ import java.net.HttpURLConnection;
 import java.util.Objects;
 
 import org.eclipse.hono.auth.Device;
+import org.eclipse.hono.auth.HonoPasswordEncoder;
+import org.eclipse.hono.auth.SpringBasedHonoPasswordEncoder;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.config.ServiceConfigProperties;
@@ -32,11 +34,11 @@ import io.vertx.core.json.JsonObject;
 /**
  * An authentication provider that verifies username/password credentials using
  * Hono's <em>Credentials</em> API.
- *
  */
-public final class UsernamePasswordAuthProvider extends CredentialsApiAuthProvider {
+public final class UsernamePasswordAuthProvider extends CredentialsApiAuthProvider<UsernamePasswordCredentials> {
 
     private final ServiceConfigProperties config;
+    private final HonoPasswordEncoder pwdEncoder;
 
     /**
      * Creates a new provider for a given configuration.
@@ -47,8 +49,26 @@ public final class UsernamePasswordAuthProvider extends CredentialsApiAuthProvid
      */
     @Autowired
     public UsernamePasswordAuthProvider(final HonoClient credentialsServiceClient, final ServiceConfigProperties config) {
+        this(credentialsServiceClient, new SpringBasedHonoPasswordEncoder(), config);
+    }
+
+    /**
+     * Creates a new provider for a given configuration.
+     * 
+     * @param credentialsServiceClient The client.
+     * @param pwdEncoder The object to use for validating hashed passwords.
+     * @param config The configuration.
+     * @throws NullPointerException if any of the parameters are {@code null}.
+     */
+    @Autowired
+    public UsernamePasswordAuthProvider(
+            final HonoClient credentialsServiceClient,
+            final HonoPasswordEncoder pwdEncoder,
+            final ServiceConfigProperties config) {
+
         super(credentialsServiceClient);
         this.config = Objects.requireNonNull(config);
+        this.pwdEncoder = Objects.requireNonNull(pwdEncoder);
     }
 
     /**
@@ -64,7 +84,7 @@ public final class UsernamePasswordAuthProvider extends CredentialsApiAuthProvid
      * @throws NullPointerException if the auth info is {@code null}.
      */
     @Override
-    protected DeviceCredentials getCredentials(final JsonObject authInfo) {
+    protected UsernamePasswordCredentials getCredentials(final JsonObject authInfo) {
 
         try {
             final String username = authInfo.getString("username");
@@ -80,24 +100,26 @@ public final class UsernamePasswordAuthProvider extends CredentialsApiAuthProvid
     }
 
     @Override
-    protected Future<Device> validateCredentials(
-            final DeviceCredentials deviceCredentials,
+    protected Future<Device> doValidateCredentials(
+            final UsernamePasswordCredentials deviceCredentials,
             final CredentialsObject credentialsOnRecord) {
 
         final Context currentContext = Vertx.currentContext();
         if (currentContext == null) {
             return Future.failedFuture(new IllegalStateException("not running on vert.x Context"));
         } else {
-            final Future<Device> resultHandler = Future.future();
+            final Future<Device> result = Future.future();
             currentContext.executeBlocking(blockingCodeHandler -> {
                 log.debug("validating password hash on vert.x worker thread [{}]", Thread.currentThread().getName());
-                if (deviceCredentials.validate(credentialsOnRecord)) {
+                final boolean isValid = credentialsOnRecord.getCandidateSecrets().stream()
+                        .anyMatch(candidateSecret -> pwdEncoder.matches(deviceCredentials.getPassword(), candidateSecret));
+                if (isValid) {
                     blockingCodeHandler.complete(new Device(deviceCredentials.getTenantId(), credentialsOnRecord.getDeviceId()));
                 } else {
                     blockingCodeHandler.fail(new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED, "bad credentials"));
                 }
-            }, false, resultHandler);
-            return resultHandler;
+            }, false, result);
+            return result;
         }
     }
 }

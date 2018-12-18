@@ -12,14 +12,12 @@
  *******************************************************************************/
 package org.eclipse.hono.service.auth.device;
 
-import io.vertx.core.json.JsonObject;
+import java.util.Objects;
+
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
-import org.eclipse.hono.util.EncodedPassword;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.Objects;
 
 /**
  * Helper class to parse username/password credentials provided by devices during authentication into
@@ -97,34 +95,4 @@ public class UsernamePasswordCredentials extends AbstractDeviceCredentials {
     public final String getPassword() {
         return password;
     }
-
-    /**
-     * Matches the credentials against a given secret.
-     * <p>
-     * The secret is expected to be of type <em>hashed-password</em> as defined by
-     * <a href="https://www.eclipse.org/hono/api/credentials-api/#hashed-password">Hono's Credentials API</a>.
-     * 
-     * @param candidateSecret The secret to match against.
-     * @return {@code true} if the credentials match the secret.
-     */
-    @Override
-    public boolean matchesCredentials(final JsonObject candidateSecret) {
-        try {
-            final EncodedPassword encodedPassword = EncodedPassword.fromHonoSecret(candidateSecret);
-            return encodedPassword.matches(getPassword());
-        } catch (final IllegalArgumentException e) {
-            if (LOG.isDebugEnabled()) {
-                LOG.debug("cannot decode malformed Base64 encoded property", e);
-            }
-            return false;
-        } catch (final ClassCastException e) {
-            // one or more of the properties are not of expected type
-            if (LOG.isDebugEnabled()) {
-                LOG.debug("cannot process malformed candidate hashed-password secret returned by Credentials service [{}]",
-                        candidateSecret.encodePrettily());
-            }
-            return false;
-        }
-    }
-
 }

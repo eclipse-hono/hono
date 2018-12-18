@@ -19,12 +19,15 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.net.HttpURLConnection;
+import java.time.Instant;
 import java.util.concurrent.TimeUnit;
 
+import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.CredentialsClient;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.ServerErrorException;
+import org.eclipse.hono.util.CredentialsObject;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -44,7 +47,7 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
 @RunWith(VertxUnitRunner.class)
 public class CredentialsApiAuthProviderTest {
 
-    private CredentialsApiAuthProvider provider;
+    private CredentialsApiAuthProvider<AbstractDeviceCredentials> provider;
     private HonoClient honoClient;
     private CredentialsClient credentialsClient;
 
@@ -61,16 +64,10 @@ public class CredentialsApiAuthProviderTest {
     public void setUp() {
 
         credentialsClient = mock(CredentialsClient.class);
+        when(credentialsClient.isOpen()).thenReturn(Boolean.TRUE);
         honoClient = mock(HonoClient.class);
         when(honoClient.getOrCreateCredentialsClient(anyString())).thenReturn(Future.succeededFuture(credentialsClient));
-
-        provider = new CredentialsApiAuthProvider(honoClient) {
-
-            @Override
-            protected DeviceCredentials getCredentials(final JsonObject authInfo) {
-                return null;
-            }
-        };
+        provider = getProvider(getDeviceCredentials("type", "TENANT", "user"));
     }
 
     /**
@@ -83,9 +80,8 @@ public class CredentialsApiAuthProviderTest {
     public void testAuthenticateFailsWithExceptionReportedByCredentialsClient(final TestContext ctx) {
 
         final ServerErrorException reportedException = new ServerErrorException(503);
-        when(credentialsClient.isOpen()).thenReturn(Boolean.TRUE);
         when(credentialsClient.get(anyString(), anyString())).thenReturn(Future.failedFuture(reportedException));
-        provider.authenticate(UsernamePasswordCredentials.create("user@TENANT", "pwd", false), ctx.asyncAssertFailure(t -> {
+        provider.authenticate(new JsonObject(), ctx.asyncAssertFailure(t -> {
             ctx.assertEquals(t, reportedException);
         }));
     }
@@ -101,8 +97,8 @@ public class CredentialsApiAuthProviderTest {
 
         // WHEN trying to authenticate using malformed credentials
         // that do not contain a tenant
-        final JsonObject authInfo = new JsonObject().put("username", "no-tenant").put("password", "secret");
-        provider.authenticate(authInfo, ctx.asyncAssertFailure(t -> {
+        provider = getProvider(null);
+        provider.authenticate(new JsonObject(), ctx.asyncAssertFailure(t -> {
             // THEN authentication fails with a 401 client error
             ctx.assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED, ((ClientErrorException) t).getErrorCode());
         }));
@@ -119,13 +115,68 @@ public class CredentialsApiAuthProviderTest {
     public void testAuthenticateFailsWith401ForNonExistingAuthId(final TestContext ctx) {
 
         // WHEN trying to authenticate using an auth-id that is not known
-        final JsonObject authInfo = new JsonObject().put("username", "unknown@TENANT").put("password", "secret");
-        when(credentialsClient.isOpen()).thenReturn(Boolean.TRUE);
-        when(credentialsClient.get(anyString(), eq("unknown"))).thenReturn(Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND)));
-        provider.authenticate(authInfo, ctx.asyncAssertFailure(t -> {
+        when(credentialsClient.get(anyString(), eq("user"))).thenReturn(Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND)));
+        provider.authenticate(new JsonObject(), ctx.asyncAssertFailure(t -> {
             // THEN authentication fails with a 401 client error
             ctx.assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED, ((ClientErrorException) t).getErrorCode());
         }));
+    }
+
+    /**
+     * Verifies that credentials validation fails if the credentials on record are disabled.
+     * 
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testValidateFailsIfCredentialsAreDisabled(final TestContext ctx) {
+
+        // WHEN trying to authenticate a disabled device
+        final AbstractDeviceCredentials creds = getDeviceCredentials("type", "tenant", "identity");
+        final CredentialsObject credentialsOnRecord = getCredentialsObject("type", "identity", "device", false)
+                .addSecret(CredentialsObject.emptySecret(Instant.now().minusSeconds(120), null));
+        when(credentialsClient.get(eq("type"), eq("identity"))).thenReturn(Future.succeededFuture(credentialsOnRecord));
+        provider.authenticate(creds, ctx.asyncAssertFailure(t -> {
+            // THEN authentication fails with a 401 client error
+            ctx.assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED, ((ClientErrorException) t).getErrorCode());
+        }));
+    }
+
+    private CredentialsApiAuthProvider<AbstractDeviceCredentials> getProvider(final AbstractDeviceCredentials credentials) {
+
+        return new CredentialsApiAuthProvider<AbstractDeviceCredentials>(honoClient) {
+
+            @Override
+            protected AbstractDeviceCredentials getCredentials(final JsonObject authInfo) {
+                return credentials;
+            }
+
+            @Override
+            protected Future<Device> doValidateCredentials(
+                    final AbstractDeviceCredentials deviceCredentials,
+                    final CredentialsObject credentialsOnRecord) {
+                return Future.succeededFuture();
+            }
+        };
+    }
+
+    private static AbstractDeviceCredentials getDeviceCredentials(final String type, final String tenantId, final String authId) {
+
+        return new AbstractDeviceCredentials(tenantId, authId) {
+
+            @Override
+            public String getType() {
+                return type;
+            }
+        };
+    }
+
+    private static CredentialsObject getCredentialsObject(final String type, final String authId, final String deviceId, final boolean enabled) {
+
+        return new CredentialsObject()
+                .setAuthId(authId)
+                .setDeviceId(deviceId)
+                .setType(type)
+                .setEnabled(enabled);
     }
 
 }

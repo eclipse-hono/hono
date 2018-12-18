@@ -12,11 +12,10 @@
  *******************************************************************************/
 package org.eclipse.hono.util;
 
-import io.vertx.core.json.JsonObject;
-import org.springframework.security.crypto.password.PasswordEncoder;
-
 import java.util.Base64;
 import java.util.Objects;
+
+import io.vertx.core.json.JsonObject;
 
 /**
  * Encoded password representation.
@@ -27,21 +26,6 @@ import java.util.Objects;
  * EncodedPassword password = new EncodedPassword("{VGhlU2FsdA==}1L/qmnQ8kbgckAodOCbtyJAhoiK4k0rBtBBN+WD+TIE=");
  * System.out.println(password.salt + " " + password.password);
  * </pre>
- *
- * You can also use it to match passwords, like
- *
- * <pre>
- * password.matches("ThePassword");
- * </pre>
- *
- * This class also support matching passwords encrypted using BCrypt hashing function
- *
- * <pre>
- * EncodedPassword password = new EncodedPassword("$2a$12$BjLeC/gqcnEyk.XNo2qorul.a/v4HDuOUlfmojdSZXRSFTjymPdVm");
- * password.hashFunction = "bcrypt";
- * password.matches("kapua-password");
- * </pre>
- *
  */
 public class EncodedPassword extends BasePassword {
 
@@ -91,17 +75,4 @@ public class EncodedPassword extends BasePassword {
         }
         return encodedPassword;
     }
-
-    /**
-     * Checks if provided password (in clear text form) matches this encoded password.
-     *
-     * @param password Password to match
-     * @return {@code true} if the password matches the stored secret.
-     */
-    public boolean matches(final String password) {
-        Objects.requireNonNull(password);
-        final PasswordEncoder encoder = PasswordEncoderFactory.createDelegatingPasswordEncoder();
-        return encoder.matches(password, format());
-    }
-
 }

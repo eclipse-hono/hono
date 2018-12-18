@@ -20,6 +20,7 @@ import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.CredentialsClient;
 import org.eclipse.hono.client.HonoClient;
+import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.util.CredentialsObject;
@@ -37,8 +38,9 @@ import io.vertx.ext.auth.User;
  * A base class for implementing authentication providers that verify credentials provided by devices
  * against information on record retrieved using Hono's <em>Credentials</em> API.
  *
+ * @param <T> The type of credentials this provider can validate.
  */
-public abstract class CredentialsApiAuthProvider implements HonoClientBasedAuthProvider {
+public abstract class CredentialsApiAuthProvider<T extends AbstractDeviceCredentials> implements HonoClientBasedAuthProvider<T> {
 
     /**
      * A logger to be used by subclasses.
@@ -91,7 +93,7 @@ public abstract class CredentialsApiAuthProvider implements HonoClientBasedAuthP
 
     @Override
     public final void authenticate(
-            final DeviceCredentials deviceCredentials,
+            final T deviceCredentials,
             final Handler<AsyncResult<DeviceUser>> resultHandler) {
 
         Objects.requireNonNull(deviceCredentials);
@@ -132,23 +134,39 @@ public abstract class CredentialsApiAuthProvider implements HonoClientBasedAuthP
      *         credentials have been validated successfully. Otherwise, the
      *         future is failed with a {@link ServiceInvocationException}.
      */
-    protected Future<Device> validateCredentials(
-            final DeviceCredentials deviceCredentials,
+    private Future<Device> validateCredentials(
+            final T deviceCredentials,
             final CredentialsObject credentialsOnRecord) {
 
-        final Future<Device> result = Future.future();
-        if (deviceCredentials.validate(credentialsOnRecord)) {
-            result.complete(new Device(deviceCredentials.getTenantId(), credentialsOnRecord.getDeviceId()));
+        if (!deviceCredentials.getAuthId().equals(credentialsOnRecord.getAuthId())) {
+            return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_INTERNAL_ERROR));
+        } else if (!deviceCredentials.getType().equals(credentialsOnRecord.getType())) {
+            return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_INTERNAL_ERROR));
+        } else if (!credentialsOnRecord.isEnabled()) {
+            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED));
         } else {
-            result.fail(new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED, "bad credentials"));
+            return doValidateCredentials(deviceCredentials, credentialsOnRecord);
         }
-        return result;
     }
+
+    /**
+     * Verifies that the credentials provided by a device during the authentication
+     * process match the credentials on record for that device.
+     * 
+     * @param deviceCredentials The credentials provided by the device.
+     * @param credentialsOnRecord The credentials on record.
+     * @return A future that is succeeded with the authenticated device if the
+     *         credentials have been validated successfully. Otherwise, the
+     *         future is failed with a {@link ServiceInvocationException}.
+     */
+    protected abstract Future<Device> doValidateCredentials(
+            T deviceCredentials,
+            CredentialsObject credentialsOnRecord);
 
     @Override
     public final void authenticate(final JsonObject authInfo, final Handler<AsyncResult<User>> resultHandler) {
 
-        final DeviceCredentials credentials = getCredentials(Objects.requireNonNull(authInfo));
+        final T credentials = getCredentials(Objects.requireNonNull(authInfo));
         if (credentials == null) {
             resultHandler.handle(Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED, "malformed credentials")));
         } else {
@@ -174,6 +192,6 @@ public abstract class CredentialsApiAuthProvider implements HonoClientBasedAuthP
      *         the required information.
      * @throws NullPointerException if auth info is {@code null}.
      */
-    protected abstract DeviceCredentials getCredentials(JsonObject authInfo);
+    protected abstract T getCredentials(JsonObject authInfo);
 
 }

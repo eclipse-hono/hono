@@ -29,12 +29,11 @@ import javax.security.auth.x500.X500Principal;
 import org.apache.qpid.proton.engine.Sasl;
 import org.apache.qpid.proton.engine.Sasl.SaslOutcome;
 import org.apache.qpid.proton.engine.Transport;
-import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.auth.Device;
+import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.service.auth.device.DeviceCertificateValidator;
-import org.eclipse.hono.service.auth.device.DeviceCredentials;
 import org.eclipse.hono.service.auth.device.HonoClientBasedAuthProvider;
 import org.eclipse.hono.service.auth.device.SubjectDnCredentials;
 import org.eclipse.hono.service.auth.device.UsernamePasswordAuthProvider;
@@ -123,8 +122,8 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
         private boolean succeeded;
         private ProtonConnection protonConnection;
         private Certificate[] peerCertificateChain;
-        private HonoClientBasedAuthProvider usernamePasswordAuthProvider;
-        private HonoClientBasedAuthProvider clientCertAuthProvider;
+        private HonoClientBasedAuthProvider<UsernamePasswordCredentials> usernamePasswordAuthProvider;
+        private HonoClientBasedAuthProvider<SubjectDnCredentials> clientCertAuthProvider;
         private DeviceCertificateValidator certValidator;
 
         AmqpAdapterSaslAuthenticator(
@@ -216,7 +215,7 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
             currentSpan.log("authenticating device using SASL PLAIN");
             try {
                 final String[] fields = AuthenticationConstants.parseSaslResponse(saslResponse);
-                final DeviceCredentials credentials = UsernamePasswordCredentials
+                final UsernamePasswordCredentials credentials = UsernamePasswordCredentials
                         .create(fields[1], fields[2], config.isSingleTenant());
                 if (credentials == null) {
                     // adapter is configured for multi-tenancy but credentials
@@ -282,7 +281,7 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
                         })
                         .map(validPath -> {
                             final String tenantId = tenantTracker.result().getTenantId();
-                            final DeviceCredentials credentials = SubjectDnCredentials.create(tenantId, deviceCert.getSubjectX500Principal());
+                            final SubjectDnCredentials credentials = SubjectDnCredentials.create(tenantId, deviceCert.getSubjectX500Principal());
                             getCertificateAuthProvider().authenticate(credentials, completer);
                             return null;
                         }).otherwise(t -> {
@@ -302,14 +301,14 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
                     .compose(tenantClient -> tenantClient.get(tenantId, currentSpan.context()));
         }
 
-        private HonoClientBasedAuthProvider getUsernamePasswordAuthProvider() {
+        private HonoClientBasedAuthProvider<UsernamePasswordCredentials> getUsernamePasswordAuthProvider() {
             if (usernamePasswordAuthProvider == null) {
                 usernamePasswordAuthProvider = new UsernamePasswordAuthProvider(credentialsServiceClient, config);
             }
             return usernamePasswordAuthProvider;
         }
 
-        private HonoClientBasedAuthProvider getCertificateAuthProvider() {
+        private HonoClientBasedAuthProvider<SubjectDnCredentials> getCertificateAuthProvider() {
             if (clientCertAuthProvider == null) {
                 clientCertAuthProvider = new X509AuthProvider(credentialsServiceClient, config);
             }

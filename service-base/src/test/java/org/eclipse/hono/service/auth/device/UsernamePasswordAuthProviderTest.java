@@ -14,18 +14,21 @@
 
 package org.eclipse.hono.service.auth.device;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.net.HttpURLConnection;
+import java.time.Instant;
 import java.util.concurrent.TimeUnit;
 
+import org.eclipse.hono.auth.HonoPasswordEncoder;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.CredentialsClient;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.config.ServiceConfigProperties;
-import org.eclipse.hono.util.ClearTextPassword;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsObject;
 import org.junit.Before;
@@ -36,6 +39,7 @@ import org.junit.runner.RunWith;
 
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
+import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 
@@ -49,19 +53,13 @@ public class UsernamePasswordAuthProviderTest {
 
     private static final Vertx vertx = Vertx.vertx();
 
-    private final CredentialsObject credentialsOnRecord = CredentialsObject.fromHashedPassword(
-            "4711",
-            "device",
-            ClearTextPassword.encode(CredentialsConstants.HASH_FUNCTION_SHA256, null, "pwd"),
-            CredentialsConstants.HASH_FUNCTION_SHA256,
-            null,
-            null,
-            null);
+    private CredentialsObject credentialsOnRecord;
 
-    private DeviceCredentials deviceCredentials = UsernamePasswordCredentials.create("device@DEFAULT_TENANT", "pwd", false);
+    private UsernamePasswordCredentials deviceCredentials = UsernamePasswordCredentials.create("device@DEFAULT_TENANT", "pwd", false);
     private UsernamePasswordAuthProvider provider;
     private HonoClient credentialsServiceClient;
     private CredentialsClient credentialsClient;
+    private HonoPasswordEncoder pwdEncoder;
 
     /**
      * Time out all test after 2 seconds.
@@ -75,12 +73,20 @@ public class UsernamePasswordAuthProviderTest {
     @Before
     public void setUp() {
 
+        credentialsOnRecord = new CredentialsObject()
+                .setAuthId("device")
+                .setDeviceId("4711")
+                .setType(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD)
+                .setEnabled(true);
         credentialsClient = mock(CredentialsClient.class);
         when(credentialsClient.get(anyString(), anyString())).thenReturn(Future.succeededFuture(credentialsOnRecord));
         credentialsServiceClient = mock(HonoClient.class);
         when(credentialsServiceClient.getOrCreateCredentialsClient(anyString())).thenReturn(Future.succeededFuture(credentialsClient));
+        pwdEncoder = mock(HonoPasswordEncoder.class);
+        when(pwdEncoder.matches(anyString(), any(JsonObject.class))).thenReturn(true);
 
-        provider = new UsernamePasswordAuthProvider(credentialsServiceClient, new ServiceConfigProperties());
+
+        provider = new UsernamePasswordAuthProvider(credentialsServiceClient, pwdEncoder, new ServiceConfigProperties());
     }
 
     /**
@@ -122,6 +128,8 @@ public class UsernamePasswordAuthProviderTest {
     @Test
     public void testAuthenticateFailsForWrongCredentials(final TestContext ctx) {
 
+        when(pwdEncoder.matches(eq("wrong_pwd"), any(JsonObject.class))).thenReturn(false);
+
         deviceCredentials = UsernamePasswordCredentials.create("device@DEFAULT_TENANT", "wrong_pwd", false);
         vertx.runOnContext(go -> {
             provider.authenticate(deviceCredentials, ctx.asyncAssertFailure(e -> {
@@ -131,4 +139,39 @@ public class UsernamePasswordAuthProviderTest {
         });
     }
 
+    /**
+     * Verifies that credentials validation fails if none of the secrets on record are
+     * valid any more.
+     * 
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testAuthenticateFailsIfNoSecretsAreValidAnymore(final TestContext ctx) {
+
+        credentialsOnRecord.addSecret(CredentialsObject.emptySecret(null, Instant.now().minusSeconds(120)));
+        vertx.runOnContext(go -> {
+            provider.authenticate(deviceCredentials, ctx.asyncAssertFailure(t -> {
+                // THEN authentication fails with a 401 client error
+                ctx.assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED, ((ClientErrorException) t).getErrorCode());
+            }));
+        });
+    }
+
+    /**
+     * Verifies that credentials validation fails if none of the secrets on record are
+     * valid yet.
+     * 
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testAuthenticateFailsIfNoSecretsAreValidYet(final TestContext ctx) {
+
+        credentialsOnRecord.addSecret(CredentialsObject.emptySecret(Instant.now().plusSeconds(120), null));
+        vertx.runOnContext(go -> {
+            provider.authenticate(deviceCredentials, ctx.asyncAssertFailure(t -> {
+                // THEN authentication fails with a 401 client error
+                ctx.assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED, ((ClientErrorException) t).getErrorCode());
+            }));
+        });
+    }
 }

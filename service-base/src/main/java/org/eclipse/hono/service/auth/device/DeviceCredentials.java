@@ -13,8 +13,6 @@
 
 package org.eclipse.hono.service.auth.device;
 
-import org.eclipse.hono.util.CredentialsObject;
-
 /**
  * A wrapper around credentials provided by a device for authentication.
  *
@@ -41,15 +39,4 @@ public interface DeviceCredentials {
      * @return The tenant.
      */
     String getTenantId();
-
-    /**
-     * Verifies that the credentials provided by the device match the credentials
-     * that are on record for the device.
-     * 
-     * @param credentialsOnRecord The credentials for the device as returned by the
-     *                            <em>Credentials</em> API.
-     * @return {@code true} if the credentials provided by the device have been validated successfully.
-     * @throws IllegalArgumentException if the credentials on record do not contain any secrets.
-     */
-    boolean validate(CredentialsObject credentialsOnRecord);
 }

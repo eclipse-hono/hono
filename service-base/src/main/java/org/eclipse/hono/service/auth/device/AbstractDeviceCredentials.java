@@ -13,12 +13,6 @@
 
 package org.eclipse.hono.service.auth.device;
 
-import java.util.Objects;
-
-import org.eclipse.hono.util.CredentialsObject;
-
-import io.vertx.core.json.JsonObject;
-
 /**
  * A base class providing utility methods for verifying credentials.
  *
@@ -54,27 +48,4 @@ public abstract class AbstractDeviceCredentials implements DeviceCredentials {
     public final String getTenantId() {
         return tenantId;
     }
-
-    @Override
-    public final boolean validate(final CredentialsObject credentialsOnRecord) {
-
-        Objects.requireNonNull(credentialsOnRecord);
-        if (!getAuthId().equals(credentialsOnRecord.getAuthId())) {
-            return false;
-        } else if (!getType().equals(credentialsOnRecord.getType())) {
-            return false;
-        } else if (!credentialsOnRecord.isEnabled()) {
-            return false;
-        } else {
-            return credentialsOnRecord.getCandidateSecrets().stream().anyMatch(candidateSecret -> matchesCredentials(candidateSecret));
-        }
-    }
-
-    /**
-     * Checks if the credentials provided by the device match a secret on record for the device.
-     * 
-     * @param candidateSecret The secret to match against.
-     * @return {@code true} if the credentials match.
-     */
-    public abstract boolean matchesCredentials(JsonObject candidateSecret);
 }

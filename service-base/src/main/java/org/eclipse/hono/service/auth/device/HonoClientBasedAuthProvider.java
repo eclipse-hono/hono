@@ -23,8 +23,9 @@ import org.eclipse.hono.service.auth.DeviceUser;
  * An authentication provider for verifying credentials that also supports monitoring by
  * means of health checks.
  *
+ * @param <T> The type of credentials that this provider can validate.
  */
-public interface HonoClientBasedAuthProvider extends AuthProvider {
+public interface HonoClientBasedAuthProvider<T extends AbstractDeviceCredentials> extends AuthProvider {
 
     /**
      * Validates credentials provided by a device against the credentials on record
@@ -38,5 +39,5 @@ public interface HonoClientBasedAuthProvider extends AuthProvider {
      *                      the result contains an object representing the authenticated device.
      * @throws NullPointerException if credentials or result handler are {@code null}.
      */
-    void authenticate(DeviceCredentials credentials, Handler<AsyncResult<DeviceUser>> resultHandler);
+    void authenticate(T credentials, Handler<AsyncResult<DeviceUser>> resultHandler);
 }
