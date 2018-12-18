@@ -133,6 +133,15 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
     }
 
     /**
+     * Gets the metrics for this service.
+     *
+     * @return The metrics
+     */
+    protected final MqttAdapterMetrics getMetrics() {
+        return metrics;
+    }
+
+    /**
      * Sets the MQTT server to use for handling secure MQTT connections.
      * 
      * @param server The server.
