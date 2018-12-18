@@ -20,7 +20,7 @@ import org.eclipse.hono.util.TenantResult;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
-import io.opentracing.SpanContext;
+import io.opentracing.Span;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -38,7 +38,7 @@ public class DummyTenantService extends BaseTenantService<Object> {
     }
 
     @Override
-    public void get(final String tenantId, final SpanContext spanContext,
+    public void get(final String tenantId, final Span span,
             final Handler<AsyncResult<TenantResult<JsonObject>>> resultHandler) {
         final TenantObject tenant = new TenantObject();
         tenant.setTenantId(tenantId);

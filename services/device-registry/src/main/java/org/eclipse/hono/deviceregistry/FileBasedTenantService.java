@@ -21,6 +21,7 @@ import java.util.Objects;
 import javax.security.auth.x500.X500Principal;
 
 import org.eclipse.hono.service.tenant.CompleteBaseTenantService;
+import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.TenantObject;
 import org.eclipse.hono.util.TenantResult;
@@ -28,7 +29,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Repository;
 
-import io.opentracing.SpanContext;
+import io.opentracing.Span;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -205,19 +206,20 @@ public final class FileBasedTenantService extends CompleteBaseTenantService<File
     }
 
     @Override
-    public void get(final String tenantId, final SpanContext spanContext, final Handler<AsyncResult<TenantResult<JsonObject>>> resultHandler) {
+    public void get(final String tenantId, final Span span, final Handler<AsyncResult<TenantResult<JsonObject>>> resultHandler) {
 
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(resultHandler);
 
-        resultHandler.handle(Future.succeededFuture(getTenantResult(tenantId)));
+        resultHandler.handle(Future.succeededFuture(getTenantResult(tenantId, span)));
     }
 
-    TenantResult<JsonObject> getTenantResult(final String tenantId) {
+    TenantResult<JsonObject> getTenantResult(final String tenantId, final Span span) {
 
         final TenantObject tenant = tenants.get(tenantId);
 
         if (tenant == null) {
+            TracingHelper.logError(span, "tenant not found");
             return TenantResult.from(HttpURLConnection.HTTP_NOT_FOUND);
         } else {
             return TenantResult.from(
@@ -228,23 +230,25 @@ public final class FileBasedTenantService extends CompleteBaseTenantService<File
     }
 
     @Override
-    public void get(final X500Principal subjectDn, final SpanContext spanContext,
+    public void get(final X500Principal subjectDn, final Span span,
             final Handler<AsyncResult<TenantResult<JsonObject>>> resultHandler) {
 
         Objects.requireNonNull(subjectDn);
         Objects.requireNonNull(resultHandler);
 
-        resultHandler.handle(Future.succeededFuture(getForCertificateAuthority(subjectDn)));
+        resultHandler.handle(Future.succeededFuture(getForCertificateAuthority(subjectDn, span)));
     }
 
-    private TenantResult<JsonObject> getForCertificateAuthority(final X500Principal subjectDn) {
+    private TenantResult<JsonObject> getForCertificateAuthority(final X500Principal subjectDn, final Span span) {
 
         if (subjectDn == null) {
+            TracingHelper.logError(span, "missing subject DN");
             return TenantResult.from(HttpURLConnection.HTTP_BAD_REQUEST);
         } else {
             final TenantObject tenant = getByCa(subjectDn);
 
             if (tenant == null) {
+                TracingHelper.logError(span, "no tenant found for subject DN");
                 return TenantResult.from(HttpURLConnection.HTTP_NOT_FOUND);
             } else {
                 return TenantResult.from(HttpURLConnection.HTTP_OK, JsonObject.mapFrom(tenant), CacheDirective.maxAgeDirective(MAX_AGE_GET_TENANT));
