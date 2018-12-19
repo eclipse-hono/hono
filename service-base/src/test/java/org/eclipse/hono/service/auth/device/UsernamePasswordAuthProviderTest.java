@@ -32,6 +32,7 @@ import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsObject;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
@@ -51,10 +52,9 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
 @RunWith(VertxUnitRunner.class)
 public class UsernamePasswordAuthProviderTest {
 
-    private static final Vertx vertx = Vertx.vertx();
+    private static Vertx vertx;
 
     private CredentialsObject credentialsOnRecord;
-
     private UsernamePasswordCredentials deviceCredentials = UsernamePasswordCredentials.create("device@DEFAULT_TENANT", "pwd", false);
     private UsernamePasswordAuthProvider provider;
     private HonoClient credentialsServiceClient;
@@ -66,6 +66,14 @@ public class UsernamePasswordAuthProviderTest {
      */
     @Rule
     public Timeout globalTimeout = new Timeout(2, TimeUnit.SECONDS);
+
+    /**
+     * Initializes vert.x.
+     */
+    @BeforeClass
+    public static void init() {
+        vertx = Vertx.vertx();
+    }
 
     /**
      * Sets up the fixture.
