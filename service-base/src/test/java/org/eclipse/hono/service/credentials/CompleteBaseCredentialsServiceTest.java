@@ -228,24 +228,35 @@ public class CompleteBaseCredentialsServiceTest {
     }
 
     /**
-     * Verifies that the base service accepts a request for adding clear text
+     * Verifies that the base service accepts a request for adding and updating clear text
      * hashed password credentials.
      * 
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testAddSucceedsForClearTextPassword(final TestContext ctx) {
+    public void testUpdateSucceedsForClearTextPassword(final TestContext ctx) {
 
-        final JsonObject secret = new JsonObject().put(CredentialsConstants.FIELD_SECRETS_PWD_PLAIN, "mysecret");
+        final JsonObject secret = new JsonObject().put(CredentialsConstants.FIELD_SECRETS_PWD_PLAIN, "initial");
         final JsonObject credentials = createValidCredentialsObject(
                 CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD,
                 secret);
 
         final EventBusMessage msg = createRequestForPayload(CredentialsConstants.CredentialsAction.add, credentials);
-        service.processRequest(msg).setHandler(ctx.asyncAssertSuccess(response -> {
-            ctx.assertEquals(HttpURLConnection.HTTP_CREATED, response.getStatus());
-            verify(pwdEncoder).encode("mysecret");
-        }));
+        service.processRequest(msg)
+            .compose(r -> {
+                ctx.assertEquals(HttpURLConnection.HTTP_CREATED, r.getStatus());
+                verify(pwdEncoder).encode("initial");
+                final JsonObject updatedSecret = new JsonObject().put(CredentialsConstants.FIELD_SECRETS_PWD_PLAIN, "updated");
+                final JsonObject updatedCredentials = createValidCredentialsObject(
+                        CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD,
+                        updatedSecret);
+                secret.put(CredentialsConstants.FIELD_SECRETS_PWD_PLAIN, "updated");
+                final EventBusMessage updateMsg = createRequestForPayload(CredentialsConstants.CredentialsAction.update, updatedCredentials);
+                return service.processRequest(updateMsg);
+            }).setHandler(ctx.asyncAssertSuccess(r -> {
+                ctx.assertEquals(HttpURLConnection.HTTP_NO_CONTENT, r.getStatus());
+                verify(pwdEncoder).encode("updated");
+            }));
     }
 
     /**
@@ -330,6 +341,12 @@ public class CompleteBaseCredentialsServiceTest {
             public void add(final String tenantId, final JsonObject credentialsObject,
                             final Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
                 resultHandler.handle(Future.succeededFuture(CredentialsResult.from(HttpURLConnection.HTTP_CREATED)));
+            }
+
+            @Override
+            public void update(final String tenantId, final JsonObject credentialsObject,
+                            final Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
+                resultHandler.handle(Future.succeededFuture(CredentialsResult.from(HttpURLConnection.HTTP_NO_CONTENT)));
             }
 
             @Override

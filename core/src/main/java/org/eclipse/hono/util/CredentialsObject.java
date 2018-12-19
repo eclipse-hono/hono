@@ -544,6 +544,38 @@ public final class CredentialsObject {
     }
 
     /**
+     * Creates a credentials object for a device based on a username and clear text password.
+     * <p>
+     * The credentials created are of type <em>hashed-password</em>.
+     * The {@linkplain #setAuthId(String) authentication identifier} will be set to
+     * the given username.
+     * 
+     * @param deviceId The device identifier.
+     * @param username The username.
+     * @param clearTextPassword The password.
+     * @param notBefore The point in time from which on the credentials are valid.
+     * @param notAfter The point in time until the credentials are valid.
+     * @return The credentials.
+     * @throws NullPointerException if any of device ID, authentication ID or password are {@code null}.
+     * @throws IllegalArgumentException if the <em>not-before</em> instant does not lie
+     *                                  before the <em>not after</em> instant or if the
+     *                                  algorithm is not supported.
+     */
+    public static CredentialsObject fromClearTextPassword(
+            final String deviceId,
+            final String username,
+            final String clearTextPassword,
+            final Instant notBefore,
+            final Instant notAfter) {
+
+        Objects.requireNonNull(clearTextPassword);
+
+        final CredentialsObject result = new CredentialsObject(deviceId, username, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD);
+        result.addSecret(hashedPasswordSecretForClearTextPassword(clearTextPassword, notBefore, notAfter));
+        return result;
+    }
+
+    /**
      * Creates a hashed-password secret for a password hash.
      * 
      * @param passwordHash The Base64 encoded password hash.
@@ -605,6 +637,30 @@ public final class CredentialsObject {
             secret.put(CredentialsConstants.FIELD_SECRETS_SALT, encodedSalt);
         }
         secret.put(CredentialsConstants.FIELD_SECRETS_PWD_HASH, passwordHash);
+        return secret;
+    }
+
+    /**
+     * Creates a hashed-password secret for a clear text password.
+     * 
+     * @param clearTextpassword The password.
+     * @param notBefore The point in time from which on the secret is valid.
+     * @param notAfter The point in time until the secret is valid.
+     * @return The secret.
+     * @throws NullPointerException if password is {@code null}.
+     * @throws IllegalArgumentException if the <em>not-before</em> instant does not lie
+     *                                  before the <em>not after</em> instant or if the
+     *                                  algorithm is not supported.
+     */
+    public static JsonObject hashedPasswordSecretForClearTextPassword(
+            final String clearTextpassword,
+            final Instant notBefore,
+            final Instant notAfter) {
+
+        Objects.requireNonNull(clearTextpassword);
+
+        final JsonObject secret = emptySecret(notBefore, notAfter);
+        secret.put(CredentialsConstants.FIELD_SECRETS_PWD_PLAIN, clearTextpassword);
         return secret;
     }
 

@@ -52,6 +52,7 @@ public class CredentialsHttpIT {
     private static final String TENANT = Constants.DEFAULT_TENANT;
     private static final String TEST_AUTH_ID = "sensor20";
     private static final Vertx vertx = Vertx.vertx();
+    private static final String ORIG_BCRYPT_PWD = "$2a$10$UK9lmSMlYmeXqABkTrDRsu1nlZRnAmGnBdPIWZoDajtjyxX18Dry."; // "thePassword"
 
     private static DeviceRegistryHttpClient registry;
 
@@ -122,6 +123,24 @@ public class CredentialsHttpIT {
     public void testAddCredentialsSucceeds(final TestContext context)  {
 
         registry.addCredentials(TENANT, hashedPasswordCredentials).setHandler(context.asyncAssertSuccess());
+    }
+
+    /**
+     * Verifies that the service accepts an add credentials request containing
+     * a clear text password.
+     * 
+     * @param context The vert.x test context.
+     */
+    @Test
+    public void testAddCredentialsSucceedsForClearTextPassword(final TestContext context)  {
+
+        final JsonObject credentials = JsonObject.mapFrom(CredentialsObject.fromClearTextPassword(
+                deviceId,
+                authId,
+                "thePassword",
+                null, null));
+
+        registry.addCredentials(TENANT, credentials).setHandler(context.asyncAssertSuccess());
     }
 
     /**
@@ -255,6 +274,31 @@ public class CredentialsHttpIT {
             .compose(ur -> registry.getCredentials(TENANT, authId, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD))
             .setHandler(context.asyncAssertSuccess(gr -> {
                 context.assertEquals("other-device", gr.toJsonObject().getString(CredentialsConstants.FIELD_PAYLOAD_DEVICE_ID));
+            }));
+    }
+
+    /**
+     * Verifies that the service accepts an update credentials request for existing credentials.
+     * 
+     * @param context The vert.x test context.
+     */
+    @Test
+    public void testUpdateCredentialsSucceedsForClearTextPassword(final TestContext context) {
+
+        final JsonObject credentials = JsonObject.mapFrom(CredentialsObject.fromClearTextPassword(
+                "other-device",
+                authId,
+                "newPassword",
+                null, null));
+
+        registry.addCredentials(TENANT, hashedPasswordCredentials)
+            .compose(ar -> registry.updateCredentials(TENANT, authId, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, credentials))
+            .compose(ur -> registry.getCredentials(TENANT, authId, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD))
+            .setHandler(context.asyncAssertSuccess(gr -> {
+                final CredentialsObject o = gr.toJsonObject().mapTo(CredentialsObject.class);
+                context.assertEquals("other-device", o.getDeviceId());
+                context.assertFalse(o.getCandidateSecrets(s -> CredentialsConstants.getPasswordHash(s))
+                        .stream().anyMatch(hash -> ORIG_BCRYPT_PWD.equals(hash)));
             }));
     }
 
@@ -530,7 +574,7 @@ public class CredentialsHttpIT {
         return JsonObject.mapFrom(CredentialsObject.fromHashedPassword(
                 deviceId,
                 authId,
-                "$2a$10$UK9lmSMlYmeXqABkTrDRsu1nlZRnAmGnBdPIWZoDajtjyxX18Dry.", // "thePassword"
+                ORIG_BCRYPT_PWD,
                 CredentialsConstants.HASH_FUNCTION_BCRYPT,
                 null, null, null));
     }
