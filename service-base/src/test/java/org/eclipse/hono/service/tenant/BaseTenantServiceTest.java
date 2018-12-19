@@ -118,14 +118,6 @@ public class BaseTenantServiceTest {
                 .setJsonPayload(payload);
     }
 
-    private static JsonObject createValidTenantPayload() {
-
-        final JsonObject payload = new JsonObject();
-        payload.put(TenantConstants.FIELD_ENABLED, Boolean.TRUE);
-
-        return payload;
-    }
-
     private static BaseTenantService<ServiceConfigProperties> createBaseTenantService() {
 
         return new BaseTenantService<ServiceConfigProperties>() {
