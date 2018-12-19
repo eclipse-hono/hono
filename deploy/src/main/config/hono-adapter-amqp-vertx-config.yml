@@ -37,7 +37,7 @@ hono:
     trustStorePath: ${secret.path}/trusted-certs.pem
   command:
     name: 'Hono AMQP Adapter'
-    amqpHostname: hono-amqp-internal
+    amqpHostname: hono-internal
     host: hono-dispatch-router.hono
     port: 5673
     keyPath: ${secret.path}/amqp-adapter-key.pem

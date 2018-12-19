@@ -98,7 +98,7 @@
 
   ["vhost", {
       "hostname": "hono-internal",
-      "maxConnections": 20,
+      "maxConnections": 50,
       "allowUnknownUser": true,
       "groups": {
         "$default": {

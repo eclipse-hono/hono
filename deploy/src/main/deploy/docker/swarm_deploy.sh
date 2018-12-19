@@ -271,7 +271,7 @@ docker service create $CREATE_OPTIONS --name hono-adapter-kura -p 1884:1883 -p 8
   --limit-memory 256m \
   --env _JAVA_OPTIONS="${default-java-options}" \
   --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-adapter-kura-config.yml \
-  --env SPRING_PROFILES_ACTIVE=prod,prometheus \
+  --env SPRING_PROFILES_ACTIVE=dev,prometheus \
   --env LOGGING_CONFIG=classpath:logback-spring.xml \
   ${docker.image.org-name}/hono-adapter-kura:${project.version}
 echo ... done
@@ -293,7 +293,7 @@ docker service create $CREATE_OPTIONS --name hono-adapter-coap-vertx -p 5683:568
   --limit-memory 4096m \
   --env _JAVA_OPTIONS="${default-java-options}" \
   --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-adapter-coap-vertx-config.yml \
-  --env SPRING_PROFILES_ACTIVE=prod,prometheus \
+  --env SPRING_PROFILES_ACTIVE=dev,prometheus \
   --env LOGGING_CONFIG=classpath:logback-spring.xml \
   ${docker.image.org-name}/hono-adapter-coap-vertx:${project.version}
 echo ... done

@@ -35,7 +35,7 @@ hono:
     trustStorePath: ${secret.path}/trusted-certs.pem
   command:
     name: 'Hono COAP Adapter'
-    amqpHostname: hono-coap-internal
+    amqpHostname: hono-internal
     host: hono-dispatch-router.hono
     port: 5673
     keyPath: ${secret.path}/coap-adapter-key.pem
