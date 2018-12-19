@@ -130,20 +130,27 @@ public final class TracingHelper {
      * <p>
      * This method does <em>not</em> finish the span.
      * 
-     * @param span The span to finish.
+     * @param span The span to mark.
      * @param items The items to log on the span. Note that this method will
      *               also log an item using {@code event} as key and {@code error}
      *               as the value if the items do not contain such an entry already.
+     *               A given {@code event} item with a different value will be ignored.
      */
     public static void logError(final Span span, final Map<String, ?> items) {
         if (span != null) {
             Tags.ERROR.set(span, Boolean.TRUE);
             if (items != null && !items.isEmpty()) {
-                span.log(items);
                 final Object event = items.get(Fields.EVENT);
                 if (event == null || !Tags.ERROR.getKey().equals(event)) {
-                    span.log(Tags.ERROR.getKey());
+                    final HashMap<String, Object> itemsWithErrorEvent = new HashMap<>(items.size() + 1);
+                    itemsWithErrorEvent.putAll(items);
+                    itemsWithErrorEvent.put(Fields.EVENT, Tags.ERROR.getKey());
+                    span.log(itemsWithErrorEvent);
+                } else {
+                    span.log(items);
                 }
+            } else {
+                span.log(Tags.ERROR.getKey());
             }
         }
     }
