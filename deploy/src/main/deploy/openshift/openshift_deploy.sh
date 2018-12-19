@@ -70,16 +70,6 @@ oc create secret generic hono-service-device-registry-conf \
 oc create -f $RESOURCES/hono-service-device-registry
 echo ... done
 
-echo "Deploying Hono Messaging ..."
-oc create secret generic hono-service-messaging-conf \
-  --from-file=$CERTS/hono-messaging-key.pem \
-  --from-file=$CERTS/hono-messaging-cert.pem \
-  --from-file=$CERTS/auth-server-cert.pem \
-  --from-file=$CERTS/trusted-certs.pem \
-  --from-file=application.yml=$SCRIPTPATH/hono-service-messaging-config-enmasse.yml
-oc create -f $RESOURCES/hono-service-messaging
-echo ... done
-
 echo "Deploying HTTP adapter ..."
 oc create secret generic hono-adapter-http-vertx-conf \
   --from-file=$CERTS/http-adapter-key.pem \

@@ -41,12 +41,6 @@ docker secret rm \
   mqtt-adapter.credentials \
   hono-adapter-mqtt-vertx-config.yml
 
-#docker service rm hono-service-messaging
-#docker secret rm \
-#  hono-messaging-key.pem \
-#  hono-messaging-cert.pem \
-#  hono-service-messaging-config.yml
-
 docker service rm hono-service-device-registry
 docker secret rm \
   device-registry-key.pem \

@@ -195,24 +195,6 @@ docker service create $CREATE_OPTIONS --name hono-service-device-registry -p 256
 
 if [ $DEPLOY_ADAPTERS = "YES" ]
 then
-echo
-echo Deploying Hono Messaging ...
-docker secret create -l project=$NS hono-messaging-key.pem $CERTS/hono-messaging-key.pem
-docker secret create -l project=$NS hono-messaging-cert.pem $CERTS/hono-messaging-cert.pem
-docker secret create -l project=$NS hono-service-messaging-config.yml $SCRIPTPATH/hono-service-messaging-config.yml
-docker service create $CREATE_OPTIONS --name hono-service-messaging -p 5671:5671 \
-  --secret hono-messaging-key.pem \
-  --secret hono-messaging-cert.pem \
-  --secret auth-server-cert.pem \
-  --secret trusted-certs.pem \
-  --secret hono-service-messaging-config.yml \
-  --limit-memory 256m \
-  --env _JAVA_OPTIONS="${default-java-options}" \
-  --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-service-messaging-config.yml \
-  --env LOGGING_CONFIG=classpath:logback-spring.xml \
-  --env SPRING_PROFILES_ACTIVE=dev,prometheus \
-  ${docker.image.org-name}/hono-service-messaging:${project.version}
-echo ... done
 
 echo
 echo Deploying HTTP adapter ...

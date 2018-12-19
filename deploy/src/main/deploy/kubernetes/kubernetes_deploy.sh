@@ -24,10 +24,10 @@ echo DEPLOYING ECLIPSE HONO TO KUBERNETES
 
 echo
 echo "Deploying OLM ..."
-test -d operator-lifecycle-manager || git clone https://github.com/operator-framework/operator-lifecycle-manager.git
-kubectl create -f operator-lifecycle-manager/deploy/upstream/manifests/latest/
+test -d $SCRIPTPATH/olm || git clone https://github.com/operator-framework/operator-lifecycle-manager.git $SCRIPTPATH/olm
+kubectl create -f $SCRIPTPATH/olm/deploy/upstream/manifests/latest/
 sleep 5 # delay and retry CRD
-kubectl create -f operator-lifecycle-manager/deploy/upstream/manifests/latest/*rh-operators.catalogsource.yaml
+kubectl create -f $SCRIPTPATH/olm/deploy/upstream/manifests/latest/*rh-operators.catalogsource.yaml
 sleep 5 # delay before installing Hono
 echo ... done
 
@@ -107,18 +107,6 @@ kubectl create secret generic hono-service-device-registry-conf \
   --from-file=application.yml=$SCRIPTPATH/hono-service-device-registry-config.yml \
   --namespace $NS
 kubectl create -f $RESOURCES/hono-service-device-registry --namespace $NS
-echo ... done
-
-echo
-echo "Deploying Hono Messaging ..."
-kubectl create secret generic hono-service-messaging-conf \
-  --from-file=$CERTS/hono-messaging-key.pem \
-  --from-file=$CERTS/hono-messaging-cert.pem \
-  --from-file=$CERTS/auth-server-cert.pem \
-  --from-file=$CERTS/trusted-certs.pem \
-  --from-file=application.yml=$SCRIPTPATH/hono-service-messaging-config.yml \
-  --namespace $NS
-kubectl create -f $RESOURCES/hono-service-messaging --namespace $NS
 echo ... done
 
 echo

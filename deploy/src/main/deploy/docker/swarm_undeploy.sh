@@ -55,12 +55,6 @@ docker secret rm \
   amqp-adapter-key.pem \
   amqp-adapter-cert.pem
 
-docker service rm hono-service-messaging
-docker secret rm \
-  hono-messaging-key.pem \
-  hono-messaging-cert.pem \
-  hono-service-messaging-config.yml
-
 docker service rm init-device-registry-data
 docker secret rm example-credentials.json
 docker secret rm example-tenants.json

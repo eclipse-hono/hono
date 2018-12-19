@@ -153,29 +153,6 @@ docker service create $CREATE_OPTIONS --name hono-service-device-registry -p 256
   ${docker.image.org-name}/hono-service-device-registry:$HONO_VERSION
 echo ... done
 
-# For the time being, we do not deploy Hono Messaging anymore because
-# all protocol adapters connect to Dispatch Router directly.
-# However, once we support custom adapters with the sandbox, we might
-# want to deploy Hono Messaging again.
-
-#echo
-#echo Deploying Hono Messaging ...
-#docker secret create -l project=$NS hono-messaging-key.pem $CERTS/hono-messaging-key.pem
-#docker secret create -l project=$NS hono-messaging-cert.pem $CERTS/hono-messaging-cert.pem
-#docker secret create -l project=$NS hono-service-messaging-config.yml $SCRIPTPATH/hono-service-messaging-config.yml
-#docker service create $CREATE_OPTIONS --name hono-service-messaging \
-#  --secret hono-messaging-key.pem \
-#  --secret hono-messaging-cert.pem \
-#  --secret auth-server-cert.pem \
-#  --secret trusted-certs.pem \
-#  --secret hono-service-messaging-config.yml \
-#  --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-service-messaging-config.yml \
-#  --env LOGGING_CONFIG=classpath:logback-spring.xml \
-#  --env SPRING_PROFILES_ACTIVE=prod \
-#  --env _JAVA_OPTIONS=-Xmx196m \
-#  ${docker.image.org-name}/hono-service-messaging:$HONO_VERSION
-#echo ... done
-
 echo
 echo Deploying HTTP adapter ...
 docker secret create -l project=$NS http-adapter.credentials $SCRIPTPATH/../deploy/http-adapter.credentials

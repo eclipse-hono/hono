@@ -90,10 +90,6 @@
       "password": "secret",
       "authorities": [ "protocol-adapter", "device-manager" ]
     },
-    "hono-messaging": {
-      "mechanism": "EXTERNAL",
-      "authorities": []
-    },
     "device-registry": {
       "mechanism": "EXTERNAL",
       "authorities": []
