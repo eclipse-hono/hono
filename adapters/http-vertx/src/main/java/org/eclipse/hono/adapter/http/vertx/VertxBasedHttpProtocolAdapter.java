@@ -25,7 +25,9 @@ import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.service.auth.device.HonoChainAuthHandler;
 import org.eclipse.hono.service.auth.device.HonoClientBasedAuthProvider;
+import org.eclipse.hono.service.auth.device.SubjectDnCredentials;
 import org.eclipse.hono.service.auth.device.UsernamePasswordAuthProvider;
+import org.eclipse.hono.service.auth.device.UsernamePasswordCredentials;
 import org.eclipse.hono.service.auth.device.X509AuthProvider;
 import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.util.Constants;
@@ -51,8 +53,8 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
     private static final String ROUTE_TELEMETRY_ENDPOINT = "/telemetry";
     private static final String ROUTE_EVENT_ENDPOINT = "/event";
 
-    private HonoClientBasedAuthProvider usernamePasswordAuthProvider;
-    private HonoClientBasedAuthProvider clientCertAuthProvider;
+    private HonoClientBasedAuthProvider<UsernamePasswordCredentials> usernamePasswordAuthProvider;
+    private HonoClientBasedAuthProvider<SubjectDnCredentials> clientCertAuthProvider;
 
     /**
      * Sets the provider to use for authenticating devices based on
@@ -64,7 +66,7 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
      * @param provider The provider to use.
      * @throws NullPointerException if provider is {@code null}.
      */
-    public void setUsernamePasswordAuthProvider(final HonoClientBasedAuthProvider provider) {
+    public void setUsernamePasswordAuthProvider(final HonoClientBasedAuthProvider<UsernamePasswordCredentials> provider) {
         this.usernamePasswordAuthProvider = Objects.requireNonNull(provider);
     }
 
@@ -78,7 +80,7 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
      * @param provider The provider to use.
      * @throws NullPointerException if provider is {@code null}.
      */
-    public void setClientCertAuthProvider(final HonoClientBasedAuthProvider provider) {
+    public void setClientCertAuthProvider(final HonoClientBasedAuthProvider<SubjectDnCredentials> provider) {
         this.clientCertAuthProvider = Objects.requireNonNull(provider);
     }
 

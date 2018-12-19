@@ -32,6 +32,7 @@ import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.service.auth.device.DeviceCertificateValidator;
 import org.eclipse.hono.service.auth.device.HonoAuthHandler;
 import org.eclipse.hono.service.auth.device.HonoClientBasedAuthProvider;
+import org.eclipse.hono.service.auth.device.SubjectDnCredentials;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.RequestResponseApiConstants;
@@ -86,7 +87,7 @@ public class X509AuthHandler extends HonoAuthHandler {
      * @throws NullPointerException if tenant client is {@code null}.
      */
     public X509AuthHandler(
-            final HonoClientBasedAuthProvider authProvider,
+            final HonoClientBasedAuthProvider<SubjectDnCredentials> authProvider,
             final HonoClient tenantServiceClient) {
         this(authProvider, tenantServiceClient, null);
     }
@@ -104,7 +105,7 @@ public class X509AuthHandler extends HonoAuthHandler {
      * @throws NullPointerException if tenant client is {@code null}.
      */
     public X509AuthHandler(
-            final HonoClientBasedAuthProvider authProvider,
+            final HonoClientBasedAuthProvider<SubjectDnCredentials> authProvider,
             final HonoClient tenantServiceClient,
             final Tracer tracer) {
         this(authProvider, tenantServiceClient, tracer, new DeviceCertificateValidator());
@@ -125,7 +126,7 @@ public class X509AuthHandler extends HonoAuthHandler {
      * @throws NullPointerException if tenant client or validator are {@code null}.
      */
     public X509AuthHandler(
-            final HonoClientBasedAuthProvider authProvider,
+            final HonoClientBasedAuthProvider<SubjectDnCredentials> authProvider,
             final HonoClient tenantServiceClient,
             final Tracer tracer,
             final DeviceCertificateValidator certificateValidator) {

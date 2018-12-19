@@ -41,6 +41,7 @@ import org.eclipse.hono.client.CommandResponse;
 import org.eclipse.hono.client.CommandResponseSender;
 import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.service.auth.device.HonoClientBasedAuthProvider;
+import org.eclipse.hono.service.auth.device.UsernamePasswordCredentials;
 import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
@@ -104,7 +105,7 @@ public class VertxBasedHttpProtocolAdapterTest {
     private static MessageSender telemetrySender;
     private static MessageSender eventSender;
     private static HonoClient registrationServiceClient;
-    private static HonoClientBasedAuthProvider usernamePasswordAuthProvider;
+    private static HonoClientBasedAuthProvider<UsernamePasswordCredentials> usernamePasswordAuthProvider;
     private static HttpProtocolAdapterProperties config;
     private static VertxBasedHttpProtocolAdapter httpAdapter;
     private static CommandConnection commandConnection;
