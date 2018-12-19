@@ -23,6 +23,8 @@ import java.util.Optional;
 
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
@@ -43,7 +45,8 @@ import io.vertx.core.json.JsonObject;
  */
 public class SpringBasedHonoPasswordEncoder implements HonoPasswordEncoder {
 
-    private static final int DEFAULT_BCRYPT_ITERATIONS = 10;
+    private static final Logger LOG = LoggerFactory.getLogger(SpringBasedHonoPasswordEncoder.class);
+    private static final int DEFAULT_BCRYPT_STRENGTH = 10;
 
     private final Map<String, PasswordEncoder> encoders = new HashMap<>();
     private final PasswordEncoder encoderForEncode;
@@ -60,25 +63,54 @@ public class SpringBasedHonoPasswordEncoder implements HonoPasswordEncoder {
      * <li>if that fails, create a default SecureRandom, i.e. without specifying an
      * algorithm</li>
      * </ol>
-     * and then invoke {@link #SpringBasedHonoPasswordEncoder(SecureRandom)}.
+     * and then invoke {@link #SpringBasedHonoPasswordEncoder(SecureRandom, int)}.
      * 
      * @see "https://tersesystems.com/blog/2015/12/17/the-right-way-to-use-securerandom/"
      * @see "https://hackernoon.com/hack-how-to-use-securerandom-with-kubernetes-and-docker-a375945a7b21"
      */
     public SpringBasedHonoPasswordEncoder() {
-        this(newSecureRandom());
+        this(newSecureRandom(), DEFAULT_BCRYPT_STRENGTH);
+    }
+
+    /**
+     * Creates a new encoder.
+     * <p>
+     * This constructor will create a new {@code SecureRandom}
+     * as follows:
+     * <ol>
+     * <li>try to create a SecureRandom using algorithm <em>NativePRNGNonBlocking</em></li>
+     * <li>if that fails, create a default SecureRandom, i.e. without specifying an
+     * algorithm</li>
+     * </ol>
+     * and then invoke {@link #SpringBasedHonoPasswordEncoder(SecureRandom, int)}.
+     * 
+     * @param bcryptStrength The strength to use for creating BCrypt hashes. Value must be
+     *             &gt;= 4 and &lt;= 31. Note that a higher value will increase the time
+     *             it takes to compute a hash. A value around 10 is considered a good compromise
+     *             between security and computation time.
+     * @see "https://tersesystems.com/blog/2015/12/17/the-right-way-to-use-securerandom/"
+     * @see "https://hackernoon.com/hack-how-to-use-securerandom-with-kubernetes-and-docker-a375945a7b21"
+     */
+    public SpringBasedHonoPasswordEncoder(final int bcryptStrength) {
+        this(newSecureRandom(), bcryptStrength);
     }
 
     /**
      * Creates a new encoder for a random number generator.
      * 
      * @param rng The random number generator to use.
+     * @param bcryptStrength The strength to use for creating BCrypt hashes. Value must be
+     *             &gt;= 4 and &lt;= 31. Note that a higher value will increase the time
+     *             it takes to compute a hash. A value around 10 is considered a good compromise
+     *             between security and computation time.
      * @throws NullPointerException if the RNG is {@code null}.
+     * @throws IllegalArgumentException if BCrypt strength is &lt; 4 or &gt; 31.
      */
-    public SpringBasedHonoPasswordEncoder(final SecureRandom rng) {
+    public SpringBasedHonoPasswordEncoder(final SecureRandom rng, final int bcryptStrength) {
+
         this.secureRandom = Objects.requireNonNull(rng);
+        encoderForEncode = new BCryptPasswordEncoder(bcryptStrength, secureRandom);
         idForEncode = CredentialsConstants.HASH_FUNCTION_BCRYPT;
-        encoderForEncode = new BCryptPasswordEncoder(DEFAULT_BCRYPT_ITERATIONS, secureRandom);
         encoders.put(idForEncode, encoderForEncode);
         encoders.put(
                 CredentialsConstants.HASH_FUNCTION_SHA256,
@@ -86,6 +118,8 @@ public class SpringBasedHonoPasswordEncoder implements HonoPasswordEncoder {
         encoders.put(
                 CredentialsConstants.HASH_FUNCTION_SHA512,
                 new MessageDigestPasswordEncoder(CredentialsConstants.HASH_FUNCTION_SHA512, secureRandom));
+        LOG.info("using BCrypt [strength: {}] with PRNG [{}] for encoding clear text passwords",
+                bcryptStrength, rng.getAlgorithm());
     }
 
     @Override
@@ -109,6 +143,7 @@ public class SpringBasedHonoPasswordEncoder implements HonoPasswordEncoder {
             return encoder.matches(rawPassword, encodedPassword.format());
         } catch (IllegalArgumentException e) {
             // invalid Base64 scheme
+            LOG.debug("error matching password", e);
             return false;
         }
     }

@@ -21,7 +21,6 @@ import static org.junit.Assert.fail;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.security.SecureRandom;
 import java.time.Instant;
 import java.util.Base64;
 
@@ -40,7 +39,6 @@ import io.vertx.core.json.JsonObject;
 public class SpringBasedHonoPasswordEncoderTest {
 
     private static final String TEST_PASSWORD = "password";
-    private static final SecureRandom RNG = new SecureRandom();
 
     private SpringBasedHonoPasswordEncoder encoder;
 
@@ -49,7 +47,7 @@ public class SpringBasedHonoPasswordEncoderTest {
      */
     @Before
     public void setUp() {
-        encoder = new SpringBasedHonoPasswordEncoder(RNG);
+        encoder = new SpringBasedHonoPasswordEncoder(4);
     }
 
     /**
