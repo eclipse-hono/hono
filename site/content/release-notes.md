@@ -15,6 +15,9 @@ title = "Release Notes"
   In `RegistrationService` implementations based on `BaseRegistrationService` an OpenTracing span will be created,
   passed on to the `assertRegistration` method and finished eventually. The same applies to `TenantService` implementations
   based on `BaseTenantService` concerning the `get` method.
+* The `org.eclipse.hono.service.credentials.CompleteBaseCredentialsService` class now supports the transparent
+  *on-the-fly* hashing of clear text passwords contained in *hashed-password* credentials. Please refer to the
+  [Device Registry user guide]({{< ref "/user-guide/device-registry.md#managing-credentials" >}}) for details.
 
 ### API Changes
 
