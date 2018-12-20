@@ -17,8 +17,8 @@ import java.net.HttpURLConnection;
 
 import org.eclipse.hono.adapter.mqtt.AbstractVertxBasedMqttProtocolAdapter;
 import org.eclipse.hono.adapter.mqtt.MqttContext;
+import org.eclipse.hono.adapter.mqtt.MqttProtocolAdapterProperties;
 import org.eclipse.hono.client.ClientErrorException;
-import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EndpointType;
 import org.eclipse.hono.util.ResourceIdentifier;
@@ -29,7 +29,7 @@ import io.vertx.core.Future;
 /**
  * A Vert.x based Hono protocol adapter for publishing messages to Hono's Telemetry and Event APIs using MQTT.
  */
-public final class VertxBasedMqttProtocolAdapter extends AbstractVertxBasedMqttProtocolAdapter<ProtocolAdapterProperties> {
+public final class VertxBasedMqttProtocolAdapter extends AbstractVertxBasedMqttProtocolAdapter<MqttProtocolAdapterProperties> {
 
     /**
      * {@inheritDoc}

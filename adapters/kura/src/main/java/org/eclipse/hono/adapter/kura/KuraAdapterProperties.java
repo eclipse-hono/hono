@@ -13,14 +13,14 @@
 
 package org.eclipse.hono.adapter.kura;
 
-import org.eclipse.hono.config.ProtocolAdapterProperties;
+import org.eclipse.hono.adapter.mqtt.MqttProtocolAdapterProperties;
 
 
 /**
  * Properties for configuring a the Kura adapter.
  *
  */
-public class KuraAdapterProperties extends ProtocolAdapterProperties {
+public class KuraAdapterProperties extends MqttProtocolAdapterProperties {
 
     /**
      * The content type used for Kura <em>control</em> messages.

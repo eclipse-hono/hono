@@ -4,6 +4,10 @@ title = "Release Notes"
 
 ## 0.9 (not released yet)
 
+### New Features
+
+* The MQTT adapter now supports commands to be published using QoS 1. Please refer to [MQTT adapter User Guide]({{< relref "/user-guide/mqtt-adapter.md" >}}) for details.
+
 ### Depreciations
 
 * The already deprecated Hono Messaging component has been removed altogether from Hono.
