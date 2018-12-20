@@ -59,7 +59,8 @@ The second command creates and starts up Docker Swarm *services* for all compone
 
 * Hono Instance
   * An *HTTP Adapter* instance that exposes Hono's Telemetry and Event APIs as URI resources.
-  * A *MQTT Adapter* instance that exposes Hono's Telemetry and Event APIs as an MQTT topic hierarchy.
+  * A *Kura Adapter* instance that exposes Hono's Telemetry and Event APIs as an [Eclipse Kura&trade;](https://www.eclipse.org/kura) compatible MQTT topic hierarchy.
+  * A *MQTT Adapter* instance that exposes Hono's Telemetry and Event APIs as a generic MQTT topic hierarchy.
   * An *AMQP Adapter* instance that exposes Hono's Telemetry and Event APIs as a set of AMQP 1.0 addresses.
   * A *Device Registry* instance that manages registration information and issues device registration assertions to protocol adapters.
   * An *Auth Server* instance that authenticates Hono components and issues tokens asserting identity and authorities.
@@ -67,7 +68,7 @@ The second command creates and starts up Docker Swarm *services* for all compone
   * An *Apache Qpid Dispatch Router* instance that downstream applications connect to in order to consume telemetry data and events from devices.
   * An *Apache ActiveMQ Artemis* instance serving as the persistence store for events.
 * Monitoring Infrastructure
-  * An *InfluxDB* instance for storing metrics data from the Hono Messaging component.
+  * A *Prometheus* instance for storing metrics data from services and protocol adapters.
   * A *Grafana* instance providing a dash board visualizing the collected metrics data.
 
 You can list all services by executing
@@ -75,13 +76,6 @@ You can list all services by executing
 ~~~sh
 ~/hono/deploy/target/deploy/docker$ docker service ls
 ~~~
-
-You may notice that the list also includes two additional services called `hono-adapter-kura` and `hono-service-messaging` which are not represented in the diagram above. Together, they serve as a an example of how Hono can be extended with *custom* protocol adapters in order to add support for interacting with devices using a custom communication protocol that is not supported by Hono's standard protocol adapters out of the box. The following diagram shows how such a custom protocol adapter is integrated with Hono:
-
-{{< figure src="../Hono_instance_custom_adapter.svg" title="Custom Protocol Adapter">}}
-
-* The *Kura Adapter* exposes Hono's Telemetry and Event APIs as an Eclipse Kura&trade; compatible MQTT topic hierarchy.
-* *Hono Messaging* is a service for validating a device's registration status. Custom protocol adapters must connect to this service in order to forward the data published by devices to downstream consumers. Note that Hono's standard protocol adapters connect to the AMQP Network directly (i.e. without going through Hono Messaging) because they can be trusted to validate a device's registration status themselves before sending data downstream.
 
 ## Starting a Consumer
 
@@ -230,41 +224,9 @@ or (using HTTPie):
 $ http --auth sensor1@DEFAULT_TENANT:hono-secret POST http://localhost:8080/event alarm=fire
 ~~~
 
-## Adding Tenants
-
-In the above examples, we have always used the `DEFAULT_TENANT`, which is pre-configured in the example setup.
-
-You can add more tenants to Hono by using the [Tenant management HTTP endpoints]({{< relref "user-guide/device-registry.md#managing-tenants" >}}) of the Device Registry. Each tenant you create can have its own configuration, e.g. for specifying which protocol adapters the tenant is allowed to use.
-
-## Stopping Hono
-
-The Hono instance's Docker services can be stopped and removed using the following command:
-
-~~~sh
-~/hono/deploy/target/deploy/docker$ ./swarm_undeploy.sh
-~~~
-
-Please refer to the [Docker Swarm documentation](https://docs.docker.com/engine/swarm/services/) for details regarding the management of individual services.
-
-## Restarting
-
-In order to start up the instance again:
-
-~~~sh
-~/hono/deploy/target/deploy/docker$ ./swarm_deploy.sh
-~~~
-
-## Viewing Metrics
-
-Open the [Grafana dashboard](http://localhost:3000/dashboard/db/hono?orgId=1) in a browser using `admin/admin` as login credentials.
-
-{{% warning %}}
-If you do not run Docker on localhost, replace *localhost* in the link with the correct name or IP address of the Docker host that the Grafana container is running on.
-{{% /warning %}}
-
 ## Using Command & Control
 
-Command & Control is fully implemented in Hono 0.8 (and newer).
+Command & Control is available since Hono 0.8.
 
 The following walk-through example shows how to use it.
 
@@ -319,7 +281,7 @@ Thus, you need to make sure that the clocks of the node running the application 
 {{% /note %}}
 
 
-### Sending the Response to the Command
+### Uploading the Response to the Command
 
 If the received command was *not* a *one-way command*, and the device has received the command and has processed it, it needs to inform the application about the outcome. For this purpose the device uploads the result to the HTTP adapter using a new HTTP request. The following command simulates the device uploading some JSON payload indicating a successful result:
 
@@ -386,3 +348,35 @@ The following parts of Hono are involved in the upper scenario:
 
 The [Command and Control Concepts]({{< relref "concepts/command-and-control.md" >}}) page contains sequence diagrams that
 explain this in more detail.
+
+## Adding Tenants
+
+In the above examples, we have always used the `DEFAULT_TENANT`, which is pre-configured in the example setup.
+
+You can add more tenants to Hono by using the [Tenant management HTTP endpoints]({{< relref "user-guide/device-registry.md#managing-tenants" >}}) of the Device Registry. Each tenant you create can have its own configuration, e.g. for specifying which protocol adapters the tenant is allowed to use.
+
+## Viewing Metrics
+
+Open the [Grafana dashboard](http://localhost:3000) in a browser using `admin/admin` as login credentials.
+
+{{% warning %}}
+If you do not run Docker on localhost, replace *localhost* in the link with the correct name or IP address of the Docker host that the Grafana container is running on.
+{{% /warning %}}
+
+## Stopping Hono
+
+The Hono instance's Docker services can be stopped and removed using the following command:
+
+~~~sh
+~/hono/deploy/target/deploy/docker$ ./swarm_undeploy.sh
+~~~
+
+Please refer to the [Docker Swarm documentation](https://docs.docker.com/engine/swarm/services/) for details regarding the management of individual services.
+
+## Restarting
+
+In order to start up the instance again:
+
+~~~sh
+~/hono/deploy/target/deploy/docker$ ./swarm_deploy.sh
+~~~
