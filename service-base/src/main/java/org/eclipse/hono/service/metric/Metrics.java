@@ -22,7 +22,7 @@ public interface Metrics {
      * Reports a newly established connection with an authenticated device.
      * 
      * @param tenantId The tenant that the device belongs to.
-     * @throws NullPointerException if tenant is {@code}.
+     * @throws NullPointerException if tenant is {@code null}.
      */
     void incrementConnections(String tenantId);
 
@@ -30,7 +30,7 @@ public interface Metrics {
      * Reports a connection to an authenticated device being closed.
      * 
      * @param tenantId The tenant that the device belongs to.
-     * @throws NullPointerException if tenant is {@code}.
+     * @throws NullPointerException if tenant is {@code null}.
      */
     void decrementConnections(String tenantId);
 
@@ -49,7 +49,7 @@ public interface Metrics {
      *
      * @param type The type of message received, e.g. <em>telemetry</em> or <em>event</em>.
      * @param tenantId The tenant that the device belongs to.
-     * @throws NullPointerException if any of the parameters are {@code}.
+     * @throws NullPointerException if any of the parameters are {@code null}.
      */
     void incrementProcessedMessages(String type, String tenantId);
 
@@ -63,7 +63,7 @@ public interface Metrics {
      * 
      * @param type The type of message received, e.g. <em>telemetry</em> or <em>event</em>.
      * @param tenantId The tenant that the device belongs to.
-     * @throws NullPointerException if any of the parameters are {@code}.
+     * @throws NullPointerException if any of the parameters are {@code null}.
      */
     void incrementUndeliverableMessages(String type, String tenantId);
 
@@ -74,7 +74,7 @@ public interface Metrics {
      * @param type The type of message received, e.g. <em>telemetry</em> or <em>event</em>.
      * @param tenantId The tenant that the device belongs to.
      * @param payloadSize The size of the payload in bytes.
-     * @throws NullPointerException if any of the parameters are {@code}.
+     * @throws NullPointerException if any of the parameters are {@code null}.
      */
     void incrementProcessedPayload(String type, String tenantId, long payloadSize);
 
@@ -82,7 +82,7 @@ public interface Metrics {
      * Reports a command being delivered to a device.
      * 
      * @param tenantId The tenant that the device belongs to.
-     * @throws NullPointerException if tenant is {@code}.
+     * @throws NullPointerException if tenant is {@code null}.
      */
     void incrementCommandDeliveredToDevice(String tenantId);
 
@@ -91,7 +91,7 @@ public interface Metrics {
      * to a device.
      * 
      * @param tenantId The tenant that the device belongs to.
-     * @throws NullPointerException if tenant is {@code}.
+     * @throws NullPointerException if tenant is {@code null}.
      */
     void incrementNoCommandReceivedAndTTDExpired(String tenantId);
 
@@ -100,7 +100,7 @@ public interface Metrics {
      * 
      * @param tenantId The tenant to which the device belongs from which the response
      *                 has been received.
-     * @throws NullPointerException if tenant is {@code}.
+     * @throws NullPointerException if tenant is {@code null}.
      */
     void incrementCommandResponseDeliveredToApplication(String tenantId);
 }
