@@ -13,10 +13,12 @@
 
 package org.eclipse.hono.service.credentials;
 
+import org.eclipse.hono.util.CredentialsResult;
+
+import io.opentracing.Span;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
 import io.vertx.core.json.JsonObject;
-import org.eclipse.hono.util.CredentialsResult;
 
 /**
  * A service for keeping record of device credentials.
@@ -49,7 +51,7 @@ public interface CompleteCredentialsService extends CredentialsService {
      */
     void add(String tenantId, JsonObject credentialsObject, Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler);
 
-     /**
+    /**
      * Gets all credentials registered for a device.
      *
      * @param tenantId The tenant the device belongs to.
@@ -64,6 +66,30 @@ public interface CompleteCredentialsService extends CredentialsService {
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
     void getAll(String tenantId, String deviceId, Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler);
+
+    /**
+     * Gets all credentials registered for a device.
+     * <p>
+     * This default implementation simply returns the result of {@link #getAll(String, String, Handler)}.
+     *
+     * @param tenantId The tenant the device belongs to.
+     * @param deviceId The device to get credentials for.
+     * @param span The active OpenTracing span for this operation. It is not to be closed in this method!
+     *            An implementation should log (error) events on this span and it may set tags and use this span as the
+     *            parent for any spans created in this method.
+     * @param resultHandler The handler to invoke with the result of the operation.
+     *         The <em>status</em> will be
+     *         <ul>
+     *         <li><em>200 OK</em> if credentials of the given type and authentication identifier have been found. The
+     *         <em>payload</em> will contain the credentials.</li>
+     *         <li><em>404 Not Found</em> if no credentials matching the criteria exist.</li>
+     *         </ul>
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     */
+    default void getAll(final String tenantId, final String deviceId, final Span span,
+            final Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
+        getAll(tenantId, deviceId, resultHandler);
+    }
 
     /**
      * Updates existing device credentials.

@@ -33,6 +33,7 @@ import org.junit.Test;
 import org.junit.rules.Timeout;
 import org.junit.runner.RunWith;
 
+import io.opentracing.Span;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
@@ -355,7 +356,8 @@ public class CompleteBaseCredentialsServiceTest {
             }
 
             @Override
-            public void getAll(final String tenantId, final String deviceId, final Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler){
+            public void getAll(final String tenantId, final String deviceId, final Span span,
+                    final Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
             }
 
             @Override

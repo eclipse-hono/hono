@@ -14,8 +14,6 @@ package org.eclipse.hono.service.credentials;
 
 import java.net.HttpURLConnection;
 
-import io.vertx.core.AsyncResult;
-import io.vertx.core.Handler;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.util.CredentialsConstants;
@@ -27,6 +25,9 @@ import org.junit.Test;
 import org.junit.rules.Timeout;
 import org.junit.runner.RunWith;
 
+import io.opentracing.Span;
+import io.vertx.core.AsyncResult;
+import io.vertx.core.Handler;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
@@ -118,7 +119,8 @@ public class BaseCredentialsServiceTest {
             }
 
             @Override
-            public void getAll(final String tenantId, final String deviceId, final Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler){
+            public void getAll(final String tenantId, final String deviceId, final Span span,
+                    final Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
             }
         };
     }

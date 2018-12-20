@@ -13,6 +13,7 @@
 
 package org.eclipse.hono.util;
 
+import java.net.HttpURLConnection;
 import java.util.Base64;
 import java.util.Objects;
 import java.util.Optional;
@@ -168,6 +169,21 @@ public class EventBusMessage {
      */
     public Integer getStatus() {
         return getProperty(MessageHelper.APP_PROPERTY_STATUS);
+    }
+
+    /**
+     * Checks if the status code indicating the outcome of the invocation
+     * of the operation represents an error.
+     *
+     * @return {@code true} if this is a response message and the status code represents an error.
+     */
+    public boolean hasErrorStatus() {
+        final Integer status = getStatus();
+        if (status == null) {
+            return false;
+        }
+        return status >= HttpURLConnection.HTTP_BAD_REQUEST &&
+                status < 600;
     }
 
     /**
