@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 #*******************************************************************************
 # Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
 #
@@ -20,16 +20,32 @@ RESOURCES=$SCRIPTPATH/../resource-descriptors
 CERTS=$CONFIG/hono-demo-certs-jar
 NS=hono
 
+function is_olm_deployed {
+  kubectl get deployment olm-operator -n olm &> /dev/null && echo "YES" || echo "NO"
+}
+
 echo DEPLOYING ECLIPSE HONO TO KUBERNETES
 
-echo
-echo "Deploying OLM ..."
-test -d $SCRIPTPATH/olm || git clone https://github.com/operator-framework/operator-lifecycle-manager.git $SCRIPTPATH/olm
-kubectl create -f $SCRIPTPATH/olm/deploy/upstream/manifests/latest/
-sleep 5 # delay and retry CRD
-kubectl create -f $SCRIPTPATH/olm/deploy/upstream/manifests/latest/*rh-operators.catalogsource.yaml
-sleep 5 # delay before installing Hono
-echo ... done
+if [ $(is_olm_deployed) == "NO" ]; then
+  echo
+  echo "Deploying Operator Lifecycle Manager ..."
+
+  if [ -d $SCRIPTPATH/olm ]; then
+    git -C $SCRIPTPATH/olm checkout master
+    git -C $SCRIPTPATH/olm pull origin
+  else
+    git clone https://github.com/operator-framework/operator-lifecycle-manager.git $SCRIPTPATH/olm
+  fi
+
+  kubectl create -f $SCRIPTPATH/olm/deploy/upstream/manifests/0.8.0/
+  sleep 5 # delay and retry CRD, see https://github.com/operator-framework/operator-lifecycle-manager/issues/558
+  kubectl create -f $SCRIPTPATH/olm/deploy/upstream/manifests/0.8.0/*rh-operators.catalogsource.yaml
+  sleep 5 # let installation finish before installing Hono
+  echo ... done
+else
+  echo
+  echo "Using existing Operator Lifecycle Manager ..."
+fi
 
 # creating Hono namespace
 kubectl create namespace $NS
