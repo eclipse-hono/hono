@@ -9,12 +9,13 @@ title = "Release Notes"
 * The default Micrometer back end is now Prometheus, the Grafana dash boards have been updated
   to retrieve data from Prometheus instead of the old InfluxDB.
 * The base classes for implementing the Device Registration and Tenant APIs have been instrumented
-  with OpenTracing. New variants of the `RegistrationService.assertRegistration` and `TenantService.get`
+  with OpenTracing. New variants of the `RegistrationService.assertRegistration`, `TenantService.get` and `CredentialsService.get`
   methods have been added which also accept an OpenTracing span as a parameter.
   The default implementations of these methods still default to the previously existing methods.
   In `RegistrationService` implementations based on `BaseRegistrationService` an OpenTracing span will be created,
   passed on to the `assertRegistration` method and finished eventually. The same applies to `TenantService` implementations
-  based on `BaseTenantService` concerning the `get` method.
+  based on `BaseTenantService` concerning the `get` method and to `CredentialsService` implementations based on
+  `BaseCredentialsService` concerning the `get` method.
 * The `org.eclipse.hono.service.credentials.CompleteBaseCredentialsService` class now supports the transparent
   *on-the-fly* hashing of clear text passwords contained in *hashed-password* credentials. Please refer to the
   [Device Registry user guide]({{< ref "/user-guide/device-registry.md#managing-credentials" >}}) for details.
