@@ -17,7 +17,6 @@ import java.util.Objects;
 import java.util.Optional;
 
 import org.eclipse.hono.client.ClientErrorException;
-import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.service.EventBusService;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CredentialsConstants;
@@ -121,21 +120,7 @@ public abstract class BaseCredentialsService<T> extends EventBusService<T> imple
                 resultFuture = Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
             }
         }
-        return resultFuture.compose(eventBusMessage -> {
-            Tags.HTTP_STATUS.set(span, eventBusMessage.getStatus());
-            if (eventBusMessage.hasErrorStatus()) {
-                Tags.ERROR.set(span, true);
-            }
-            span.finish();
-            return Future.succeededFuture(eventBusMessage);
-        }).recover(t -> {
-            Tags.HTTP_STATUS.set(span,
-                    t instanceof ServiceInvocationException ? ((ServiceInvocationException) t).getErrorCode()
-                            : HttpURLConnection.HTTP_INTERNAL_ERROR);
-            TracingHelper.logError(span, t);
-            span.finish();
-            return Future.failedFuture(t);
-        });
+        return finishSpanOnFutureCompletion(span, resultFuture);
     }
 
     private Future<EventBusMessage> processGetByAuthIdRequest(final EventBusMessage request, final String tenantId,

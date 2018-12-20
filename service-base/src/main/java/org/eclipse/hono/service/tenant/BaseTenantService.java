@@ -87,11 +87,11 @@ public abstract class BaseTenantService<T> extends EventBusService<T> implements
         final JsonObject payload = request.getJsonPayload();
 
         final Span span = newChildSpan(SPAN_NAME_GET_TENANT, request.getSpanContext(), tenantId);
+        final Future<EventBusMessage> resultFuture;
         if (tenantId == null && payload == null) {
             TracingHelper.logError(span, "request does not contain any query parameters");
-            span.finish();
             log.debug("request does not contain any query parameters");
-            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
+            resultFuture = Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
 
         } else if (tenantId != null) {
 
@@ -99,7 +99,7 @@ public abstract class BaseTenantService<T> extends EventBusService<T> implements
             log.debug("retrieving tenant [{}] using deprecated variant of get tenant request", tenantId);
             span.log("using deprecated variant of get tenant request");
             // span will be finished in processGetByIdRequest
-            return processGetByIdRequest(request, tenantId, span);
+            resultFuture = processGetByIdRequest(request, tenantId, span);
 
         } else {
 
@@ -110,50 +110,33 @@ public abstract class BaseTenantService<T> extends EventBusService<T> implements
 
             if (tenantIdFromPayload == null && subjectDn == null) {
                 TracingHelper.logError(span, "request does not contain any query parameters");
-                span.finish();
                 log.debug("payload does not contain any query parameters");
-                return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
+                resultFuture = Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
             } else if (tenantIdFromPayload != null) {
                 log.debug("retrieving tenant [id: {}]", tenantIdFromPayload);
                 span.setTag(MessageHelper.APP_PROPERTY_TENANT_ID, tenantIdFromPayload);
-                // span will be finished in processGetByIdRequest
-                return processGetByIdRequest(request, tenantIdFromPayload, span);
+                resultFuture = processGetByIdRequest(request, tenantIdFromPayload, span);
             } else {
                 span.setTag(TAG_SUBJECT_DN_NAME, subjectDn);
-                // span will be finished in processGetByCaRequest
-                return processGetByCaRequest(request, subjectDn, span);
+                resultFuture = processGetByCaRequest(request, subjectDn, span);
             }
         }
+        return finishSpanOnFutureCompletion(span, resultFuture);
     }
 
-    /**
-     * The given span will be finished here.
-     */
     private Future<EventBusMessage> processGetByIdRequest(final EventBusMessage request, final String tenantId,
             final Span span) {
 
         final Future<TenantResult<JsonObject>> getResult = Future.future();
         get(tenantId, span, getResult.completer());
         return getResult.map(tr -> {
-            Tags.HTTP_STATUS.set(span, tr.getStatus());
-            if (tr.isError()) {
-                Tags.ERROR.set(span, true);
-            }
-            span.finish();
             return request.getResponse(tr.getStatus())
                     .setJsonPayload(tr.getPayload())
                     .setTenant(tenantId)
                     .setCacheDirective(tr.getCacheDirective());
-        }).recover(t -> {
-            TracingHelper.logError(span, t);
-            span.finish();
-            return Future.failedFuture(t);
         });
     }
 
-    /**
-     * The given span will be finished here.
-     */
     private Future<EventBusMessage> processGetByCaRequest(final EventBusMessage request, final String subjectDn,
             final Span span) {
 
@@ -172,20 +155,10 @@ public abstract class BaseTenantService<T> extends EventBusService<T> implements
                     span.setTag(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId);
                     response.setTenant(tenantId);
                 }
-                Tags.HTTP_STATUS.set(span, tr.getStatus());
-                if (tr.isError()) {
-                    Tags.ERROR.set(span, true);
-                }
-                span.finish();
                 return response;
-            }).recover(t -> {
-                TracingHelper.logError(span, t);
-                span.finish();
-                return Future.failedFuture(t);
             });
         } catch (final IllegalArgumentException e) {
             TracingHelper.logError(span, "illegal subject DN provided by client: " + subjectDn);
-            span.finish();
             // the given subject DN is invalid
             log.debug("cannot parse subject DN [{}] provided by client", subjectDn);
             return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));

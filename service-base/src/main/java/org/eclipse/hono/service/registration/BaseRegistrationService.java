@@ -134,10 +134,10 @@ public abstract class BaseRegistrationService<T> extends EventBusService<T> impl
         final SpanContext spanContext = request.getSpanContext();
 
         final Span span = newChildSpan(SPAN_NAME_ASSERT_DEVICE_REGISTRATION, spanContext, tenantId, deviceId, gatewayId);
+        final Future<EventBusMessage> resultFuture;
         if (tenantId == null || deviceId == null) {
             TracingHelper.logError(span, "missing tenant and/or device");
-            span.finish();
-            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
+            resultFuture = Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
         } else {
             final Future<RegistrationResult> result = Future.future();
             if (gatewayId == null) {
@@ -148,22 +148,14 @@ public abstract class BaseRegistrationService<T> extends EventBusService<T> impl
                         deviceId, tenantId, gatewayId);
                 assertRegistration(tenantId, deviceId, gatewayId, span, result.completer());
             }
-            return result.map(res -> {
-                Tags.HTTP_STATUS.set(span, res.getStatus());
-                if (res.isError()) {
-                    Tags.ERROR.set(span, true);
-                }
-                span.finish();
+            resultFuture = result.map(res -> {
                 return request.getResponse(res.getStatus())
                         .setDeviceId(deviceId)
                         .setJsonPayload(res.getPayload())
                         .setCacheDirective(res.getCacheDirective());
-            }).recover(t -> {
-                TracingHelper.logError(span, t);
-                span.finish();
-                return Future.failedFuture(t);
             });
         }
+        return finishSpanOnFutureCompletion(span, resultFuture);
     }
 
     /**
