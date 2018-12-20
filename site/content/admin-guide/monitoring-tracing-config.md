@@ -17,59 +17,60 @@ Metrics usually provide insights into the past and current status of an individu
 ### Configuring Metrics
 
 Hono uses [Micrometer](http://micrometer.io/) for providing metrics. It is
-possible to drop in any micrometer compatible backend. Hono also uses the
-micrometer integration with Spring boot and Vert.x.
+possible to drop in any Micrometer compatible back end. Hono also uses the
+Micrometer integration with Spring Boot and Vert.x.
 
-#### Selecting a metrics stack
+### Selecting a Metrics Stack
 
-In order to activate a specific micrometer backend, please see the
-[micrometer documentation](http://micrometer.io/docs). In most cases, you only
-need to add the necessary backend to the dependency list and put backend
-specific configuration in the `application.yml` file.
+Please refer to In order to the [Micrometer documentation](http://micrometer.io/docs)
+for details regarding the configuration of a specific Micrometer back end.
+In most cases, you only need to add the back end specific jar files to the class path and
+add back end specific configuration to the `application.yml` file.
 
-The Hono build allows out of the box support for other metrics backends. They
+The Hono build allows out of the box support for other metrics back ends. They
 can be enabled by activating a specific Maven profile. The following build
 profiles currently exist:
 
-* `metrics-graphite` – Enables the graphite backend.
+* `metrics-graphite` – Enables the Graphite backend.
 * `metrics-influxdb` – Enables the InfluxDB backend.
 * `metrics-prometheus` – Enables the Prometheus backend.
 
-Additionally to selecting a metrics backend, you may want to configure the
-backend using Spring configuration options. See the documentation mentioned
+Additionally to selecting a metrics back end, you may want to configure the
+back end using Spring configuration options. See the documentation mentioned
 above for more information.
 
-##### Prometheus specifics
+### Prometheus
 
-For prometheus you will need to configure the Spring actuator endpoint
-`prometheus` in order to let the prometheus scraper pick up metrics data.
+For Prometheus you will need to configure the Spring actuator endpoint
+`prometheus` in order to let the Prometheus scraper pick up metrics data.
 
-This can be done manually, or it is possible to use the provided Spring Boot
+This can be done manually or it is possible to use the provided Spring Boot
 profile `prometheus`. This profile will enable the management endpoint on
-port `8081` and only expose the prometheus endpoint. It will however also
+port `8081` and only expose the Prometheus endpoint. It will, however, also
 disable security on this port, so it is not recommended to make this port
 publicly available, as it is intended to be used in a containerized environment
 only.
 
-#### Legacy metrics support
+### Legacy Metrics Support
 
-In addition to using standard micrometer backends, Hono also provides out of
-the box support for the pre-0.8 graphite format. This will configure the
-graphite adapter to output metrics in a pre-0.8 Hono format. Further
-configuration of the graphite adapter can be made using the standard
-Spring Boot configuration of Micrometer. The legacy support can be enabled
-using the following configuration switch:
+In addition to using standard Micrometer back ends, Hono also provides out of
+the box support for the pre-0.8 Graphite based format. This will configure the
+Graphite adapter to output metrics in the legacy format
+used by Hono versions before 0.8. Further configuration of the Graphite adapter
+can be made using the standard Spring Boot configuration of Micrometer.
+The legacy support can be enabled using the following configuration switch:
 
 | Environment Variable<br>Command Line Option                   | Mandatory | Default | Description |
 | :------------------------------------------------------------ | :-------: | :------ | :---------- |
-| `HONO_METRICS_LEGACY`<br><nobr>`--hono.metrics.legacy`</nobr>   | no  | `true` | Enable legacy metrics using graphite. |
+| `HONO_METRICS_LEGACY`<br><nobr>`--hono.metrics.legacy`</nobr> | no  | `false` | Enable legacy metrics using graphite. |
 
-It is also necessary to enable to build profile for graphite (`metrics-graphite`),
-as the legacy backend is based on the graphite wire format. The profile will
+It is also necessary to enable the build profile for Graphite (`metrics-graphite`),
+as the legacy back end is based on the Graphite wire format. The profile will
 add the necessary dependencies to the build. If the dependencies are missing,
 the startup of the Hono components will fail.
 
-The names and semantics of the individual metrics being reported by the components are described in the [Metrics specification]({{< relref "/api/Metrics.md" >}}).
+The names and semantics of the individual metrics being reported by the components
+are described in the [Legacy Metrics specification]({{< ref "/api/Metrics.md#legacy-metrics" >}}).
 
 ## Tracing
 

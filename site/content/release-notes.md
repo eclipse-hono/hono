@@ -19,6 +19,10 @@ title = "Release Notes"
 * The `org.eclipse.hono.service.credentials.CompleteBaseCredentialsService` class now supports the transparent
   *on-the-fly* hashing of clear text passwords contained in *hashed-password* credentials. Please refer to the
   [Device Registry user guide]({{< ref "/user-guide/device-registry.md#managing-credentials" >}}) for details.
+* The default back end for collecting metrics has been changed from Graphite to Prometheus.
+  The Graphite based legacy metrics format can still be used but requires building Hono from source and activating
+  the `metrics-graphite` Maven build profile.
+  Please refer to the [Monitoring admin guide]({{< ref "/admin-guide/monitoring-tracing-config.md" >}}) for details.
 
 ### API Changes
 

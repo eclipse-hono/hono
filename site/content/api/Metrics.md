@@ -71,7 +71,7 @@ Additional tags for services are:
 
 Hono's service components do not report any metrics at the moment.
 
-## Legacy metrics
+## Legacy Metrics
 
 {{%note title="Deprecated"%}}
 This metrics configuration is still supported in Hono, but is considered
