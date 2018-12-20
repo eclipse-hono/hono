@@ -52,6 +52,7 @@ public abstract class MicrometerBasedMetrics implements Metrics {
     @Override
     public final void incrementConnections(final String tenantId) {
 
+        Objects.requireNonNull(tenantId);
         gaugeForTenant("hono.connections.authenticated", this.authenticatedConnections, tenantId, AtomicLong::new)
                 .incrementAndGet();
 
@@ -60,6 +61,7 @@ public abstract class MicrometerBasedMetrics implements Metrics {
     @Override
     public final void decrementConnections(final String tenantId) {
 
+        Objects.requireNonNull(tenantId);
         gaugeForTenant("hono.connections.authenticated", this.authenticatedConnections, tenantId, AtomicLong::new)
                 .decrementAndGet();
 
@@ -78,6 +80,8 @@ public abstract class MicrometerBasedMetrics implements Metrics {
     @Override
     public final void incrementProcessedMessages(final String type, final String tenantId) {
 
+        Objects.requireNonNull(type);
+        Objects.requireNonNull(tenantId);
         this.registry.counter("hono.messages.processed",
                 Tags.of(MetricsTags.TAG_TENANT, tenantId).and(MetricsTags.TAG_TYPE, type))
                 .increment();
@@ -87,6 +91,8 @@ public abstract class MicrometerBasedMetrics implements Metrics {
     @Override
     public final void incrementUndeliverableMessages(final String type, final String tenantId) {
 
+        Objects.requireNonNull(type);
+        Objects.requireNonNull(tenantId);
         this.registry.counter("hono.messages.undeliverable",
                 Tags.of(MetricsTags.TAG_TENANT, tenantId).and(MetricsTags.TAG_TYPE, type))
                 .increment();
@@ -97,6 +103,8 @@ public abstract class MicrometerBasedMetrics implements Metrics {
     public final void incrementProcessedPayload(final String type, final String tenantId,
             final long payloadSize) {
 
+        Objects.requireNonNull(type);
+        Objects.requireNonNull(tenantId);
         if (payloadSize < 0) {
             // A negative size would mess up the metrics
             return;
@@ -110,6 +118,7 @@ public abstract class MicrometerBasedMetrics implements Metrics {
     @Override
     public final void incrementCommandDeliveredToDevice(final String tenantId) {
 
+        Objects.requireNonNull(tenantId);
         this.registry.counter("hono.commands.device.delivered",
                 Tags.of(MetricsTags.TAG_TENANT, tenantId))
                 .increment();
@@ -119,6 +128,7 @@ public abstract class MicrometerBasedMetrics implements Metrics {
     @Override
     public final void incrementNoCommandReceivedAndTTDExpired(final String tenantId) {
 
+        Objects.requireNonNull(tenantId);
         this.registry.counter("hono.commands.ttd.expired",
                 Tags.of(MetricsTags.TAG_TENANT, tenantId))
                 .increment();
@@ -128,6 +138,7 @@ public abstract class MicrometerBasedMetrics implements Metrics {
     @Override
     public final void incrementCommandResponseDeliveredToApplication(final String tenantId) {
 
+        Objects.requireNonNull(tenantId);
         this.registry.counter("hono.commands.response.delivered",
                 Tags.of(MetricsTags.TAG_TENANT, tenantId))
                 .increment();

@@ -129,7 +129,7 @@ public final class MqttContext extends MapBasedExecutionContext {
      * Gets the topic that the message has been published to.
      * 
      * @return The topic or {@code null} if the topic could not be
-     * parsed into a resource identifier.
+     *         parsed into a resource identifier.
      */
     public ResourceIdentifier topic() {
         return topic;
@@ -139,20 +139,30 @@ public final class MqttContext extends MapBasedExecutionContext {
      * Gets the tenant that the device belongs to that published
      * the message.
      * 
-     * @return The tenant identifier or {@code null} if the tenant cannot
-     *         be determined from the message's topic.
+     * @return The tenant identifier or {@code null} if the device is
+     *         not authenticated and the message's topic does not contain
+     *         a tenant identifier.
      */
     public String tenant() {
-        return Optional.ofNullable(topic).map(t -> t.getTenantId()).orElse(null);
+
+        if (authenticatedDevice != null) {
+            return authenticatedDevice.getTenantId();
+        } else if (topic != null) {
+            return topic.getTenantId();
+        } else {
+            return null;
+        }
     }
 
     /**
      * Gets the name of the endpoint that the message has been published to.
      * 
-     * @return The name or {@code null} if the endpoint cannot
-     *         be determined from the message's topic.
+     * @return The endpoint name or {@code null} if the message does not
+     *         contain a topic.
      */
     public String endpoint() {
-        return Optional.ofNullable(topic).map(t -> t.getEndpoint()).orElse(null);
+        return Optional.ofNullable(topic)
+                .map(t -> t.getEndpoint())
+                .orElse(null);
     }
 }

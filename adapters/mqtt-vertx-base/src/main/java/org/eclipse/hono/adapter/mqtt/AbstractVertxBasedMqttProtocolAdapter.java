@@ -1038,14 +1038,14 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
                     "device did not provide credentials in CONNECT packet"));
         }
 
-        if (endpoint.auth().userName() == null || endpoint.auth().password() == null) {
+        if (endpoint.auth().getUsername() == null || endpoint.auth().getPassword() == null) {
             return Future.failedFuture(new ClientErrorException(
                     HttpURLConnection.HTTP_UNAUTHORIZED,
                     "device provided malformed credentials in CONNECT packet"));
         }
 
         final UsernamePasswordCredentials credentials = UsernamePasswordCredentials
-                .create(endpoint.auth().userName(), endpoint.auth().password(), getConfig().isSingleTenant());
+                .create(endpoint.auth().getUsername(), endpoint.auth().getPassword(), getConfig().isSingleTenant());
 
         if (credentials == null) {
             return Future.failedFuture(new ClientErrorException(
