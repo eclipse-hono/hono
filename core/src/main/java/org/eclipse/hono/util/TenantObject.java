@@ -248,7 +248,7 @@ public final class TenantObject {
                     return (X509Certificate) factory.generateCertificate(new ByteArrayInputStream(derEncodedCert));
                 } catch (final IllegalArgumentException e) {
                     // Base64 decoding failed
-                    throw new CertificateParsingException("cannot decode Base64 encoded certificate", e);
+                    throw new CertificateParsingException("cert proptery does not contain valid Base64 scheme", e);
                 }
             } else {
                 return null;

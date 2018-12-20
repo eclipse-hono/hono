@@ -352,13 +352,15 @@ This allows for future *well-known* additions and also allows *clients* to add f
 
 The table below provides an overview of the members defined for the *trusted-ca* JSON object:
 
-| Name                     | Mandatory | Type          | Default Value | Description |
-| :------------------------| :-------: | :------------ | :------------ | :---------- |
+| Name                     | Mandatory  | Type          | Default Value | Description |
+| :------------------------| :--------: | :------------ | :------------ | :---------- |
 | *subject-dn*             | *yes*      | *string*      |               | The subject DN of the trusted root certificate in the format defined by [RFC 2253](https://www.ietf.org/rfc/rfc2253.txt). |
-| *public-key*             | *yes*      | *string*      |               | The Base64 encoded binary DER encoding of the trusted root certificate's public key. |
+| *cert*                   | *no*       | *string*      |               | The Base64 encoded binary DER encoding of the trusted root certificate. |
+| *public-key*             | *no*       | *string*      |               | The Base64 encoded binary DER encoding of the trusted root certificate's public key. |
 
-The *subject-dn* MUST be unique among all registered tenants. Implementations MUST reject requests to add or update a tenant with payload that contains a subject DN that is already configured for another tenant and return a status code of *409 Conflict*.
-
+* The *subject-dn* MUST be unique among all registered tenants.
+  * Implementations MUST reject requests to add or update a tenant with payload that contains a subject DN that is already configured for another tenant and return a status code of *409 Conflict*.
+* Either the *cert* or the *public-key* MUST be set.
 
 ## Adapter Configuration Format
 

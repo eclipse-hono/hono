@@ -140,7 +140,7 @@ public abstract class CompleteBaseTenantService<T> extends BaseTenantService<T> 
     }
 
     /**
-     * Check the request payload for validity.
+     * Checks the request payload for validity.
      *
      * @param payload The payload to check.
      * @return boolean The result of the check : {@link Boolean#TRUE} if the payload is valid, {@link Boolean#FALSE} otherwise.
@@ -148,27 +148,73 @@ public abstract class CompleteBaseTenantService<T> extends BaseTenantService<T> 
      */
     private boolean isValidRequestPayload(final JsonObject payload) {
 
+        return hasValidAdapterSpec(payload) && hasValidTrustedCaSpec(payload);
+    }
+
+    /**
+     * Checks if a payload contains a valid protocol adapter specification.
+     *
+     * @param payload The payload to check.
+     * @return boolean {@code true} if the payload is valid.
+     */
+    private boolean hasValidAdapterSpec(final JsonObject payload) {
+
         final Object adaptersObj = payload.getValue(TenantConstants.FIELD_ADAPTERS);
-        if (adaptersObj == null) {
-            // all adapters enabled with default config
-            return true;
-        } else if (adaptersObj instanceof JsonArray) {
+        if (adaptersObj instanceof JsonArray) {
 
             final JsonArray adapters = (JsonArray) adaptersObj;
             if (adapters.size() == 0) {
                 // if given, adapters config array must not be empty
                 return false;
             } else {
-                return !adapters.stream()
-                        .anyMatch(obj -> {
-                            return !(obj instanceof JsonObject) ||
-                                    !((JsonObject) obj).containsKey(TenantConstants.FIELD_ADAPTERS_TYPE);
-                        });
+                final boolean containsInvalidAdapter = adapters.stream()
+                        .anyMatch(obj -> !(obj instanceof JsonObject) ||
+                                    !((JsonObject) obj).containsKey(TenantConstants.FIELD_ADAPTERS_TYPE));
+                if (containsInvalidAdapter) {
+                    return false;
+                }
             }
-        } else {
-            // malformed payload
+        } else if (adaptersObj != null) {
             return false;
         }
+        return true;
+    }
+
+    /**
+     * Checks if a payload contains a valid trusted CA specification.
+     *
+     * @param payload The payload to check.
+     * @return boolean {@code true} if the payload is valid.
+     */
+    private boolean hasValidTrustedCaSpec(final JsonObject payload) {
+
+        final Object trustedCaObj = payload.getValue(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA);
+
+
+        if (trustedCaObj instanceof JsonObject) {
+            final JsonObject trustedCa = (JsonObject) trustedCaObj;
+            if (!(trustedCa.getValue(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN) instanceof String)) {
+                // Subject DN is mandatory
+                return false;
+            }
+            final Object cert = trustedCa.getValue(TenantConstants.FIELD_PAYLOAD_CERT);
+            final Object pk = trustedCa.getValue(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY);
+            if (cert == null && pk == null) {
+                // either one must be set
+                return false;
+            } else if (cert != null && pk != null) {
+                // only one can be set
+                return false;
+            } else if (cert != null && !(cert instanceof String)) {
+                return false;
+            } else if (pk != null && !(pk instanceof String)) {
+                return false;
+            }
+        } else if (trustedCaObj != null) {
+            return false;
+        }
+
+        return true;
     }
 
     /**

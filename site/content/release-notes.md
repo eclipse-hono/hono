@@ -22,6 +22,8 @@ title = "Release Notes"
   `org.eclipse.hono.auth.HonoPasswordEncoder` to be passed into its constructor.
   The `org.eclipse.hono.auth.SpringBasedHonoPasswordEncoder` has been added as a default implementation for
   this purpose.
+* The [Tenant API]({{< ref "/api/Tenant-API.md#trusted-ca-format" >}}) now optionally allows specifying an
+  X.509 certificate instead of a public key when defining a trusted CA.
 
 ## 0.8
 

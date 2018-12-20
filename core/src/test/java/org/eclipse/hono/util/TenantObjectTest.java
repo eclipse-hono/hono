@@ -160,7 +160,7 @@ public class TenantObjectTest {
      * a public key.
      */
     @Test
-    public void testGetTrustAnchorFailsForInvalidBase64Encoding() {
+    public void testGetTrustAnchorFailsForInvalidBase64EncodingOfPublicKey() {
 
         final TenantObject obj = TenantObject.from(Constants.DEFAULT_TENANT, Boolean.TRUE)
                 .setProperty(
@@ -168,6 +168,28 @@ public class TenantObjectTest {
                         new JsonObject()
                         .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, "CN=test")
                         .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, "noBase64"));
+
+        try {
+            obj.getTrustAnchor();
+            fail("should not have been able to read trust anchor from malformed Base64");
+        } catch (final GeneralSecurityException e) {
+            // as expected
+        }
+    }
+
+    /**
+     * Verifies that the trust anchor cannot be read from an invalid Base64 encoding of
+     * a certificate.
+     */
+    @Test
+    public void testGetTrustAnchorFailsForInvalidBase64EncodingOfCert() {
+
+        final TenantObject obj = TenantObject.from(Constants.DEFAULT_TENANT, Boolean.TRUE)
+                .setProperty(
+                        TenantConstants.FIELD_PAYLOAD_TRUSTED_CA,
+                        new JsonObject()
+                        .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, "CN=test")
+                        .put(TenantConstants.FIELD_PAYLOAD_CERT, "noBase64"));
 
         try {
             obj.getTrustAnchor();

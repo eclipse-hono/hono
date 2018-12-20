@@ -133,6 +133,106 @@ public class CompleteBaseTenantServiceTest {
         }));
     }
 
+    /**
+     * Verifies that the base service fails for a payload that defines a trusted CA
+     * without a Subject DN.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testAddFailsForTrustedCaWithoutSubjectDn(final TestContext ctx) {
+
+        final JsonObject malformedTrustedCa = new JsonObject()
+                .put(TenantConstants.FIELD_PAYLOAD_CERT, "certificate");
+        final JsonObject testPayload = createValidTenantPayload();
+        testPayload.put(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, malformedTrustedCa);
+
+        final EventBusMessage msg = createRequest(TenantConstants.TenantAction.add, testPayload);
+        tenantService.processRequest(msg).setHandler(ctx.asyncAssertFailure(t -> {
+            ctx.assertEquals(HttpURLConnection.HTTP_BAD_REQUEST, ((ServiceInvocationException) t).getErrorCode());
+        }));
+    }
+
+    /**
+     * Verifies that the base service fails for a payload that defines a trusted CA
+     * containing neither a certificate nor a public key.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testAddFailsForTrustedCaWithoutCertOrPk(final TestContext ctx) {
+
+        final JsonObject malformedTrustedCa = new JsonObject()
+                .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, "CN=test");
+        final JsonObject testPayload = createValidTenantPayload();
+        testPayload.put(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, malformedTrustedCa);
+
+        final EventBusMessage msg = createRequest(TenantConstants.TenantAction.add, testPayload);
+        tenantService.processRequest(msg).setHandler(ctx.asyncAssertFailure(t -> {
+            ctx.assertEquals(HttpURLConnection.HTTP_BAD_REQUEST, ((ServiceInvocationException) t).getErrorCode());
+        }));
+    }
+
+    /**
+     * Verifies that the base service fails for a payload that defines a trusted CA
+     * containing both a certificate and a public key.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testAddFailsForTrustedCaWithCertAndPk(final TestContext ctx) {
+
+        final JsonObject malformedTrustedCa = new JsonObject()
+                .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, "CN=test")
+                .put(TenantConstants.FIELD_PAYLOAD_CERT, "certificate")
+                .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, "key");
+        final JsonObject testPayload = createValidTenantPayload();
+        testPayload.put(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, malformedTrustedCa);
+
+        final EventBusMessage msg = createRequest(TenantConstants.TenantAction.add, testPayload);
+        tenantService.processRequest(msg).setHandler(ctx.asyncAssertFailure(t -> {
+            ctx.assertEquals(HttpURLConnection.HTTP_BAD_REQUEST, ((ServiceInvocationException) t).getErrorCode());
+        }));
+    }
+
+    /**
+     * Verifies that the base service accepts a payload that defines a trusted CA
+     * containing both a subject DN and a public key.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testAddSucceedsForTrustedCaWithSubjectDnAndPk(final TestContext ctx) {
+
+        final JsonObject malformedTrustedCa = new JsonObject()
+                .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, "CN=test")
+                .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, "key");
+        final JsonObject testPayload = createValidTenantPayload();
+        testPayload.put(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, malformedTrustedCa);
+
+        final EventBusMessage msg = createRequest(TenantConstants.TenantAction.add, testPayload);
+        tenantService.processRequest(msg).setHandler(ctx.asyncAssertSuccess());
+    }
+
+    /**
+     * Verifies that the base service accepts a payload that defines a trusted CA
+     * containing both a subject DN and a certificate.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testAddSucceedsForTrustedCaWithSubjectDnAndCert(final TestContext ctx) {
+
+        final JsonObject malformedTrustedCa = new JsonObject()
+                .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, "CN=test")
+                .put(TenantConstants.FIELD_PAYLOAD_CERT, "certificate");
+        final JsonObject testPayload = createValidTenantPayload();
+        testPayload.put(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, malformedTrustedCa);
+
+        final EventBusMessage msg = createRequest(TenantConstants.TenantAction.add, testPayload);
+        tenantService.processRequest(msg).setHandler(ctx.asyncAssertSuccess());
+    }
+
     private static EventBusMessage createRequest(final TenantConstants.TenantAction action, final JsonObject payload) {
 
         return EventBusMessage.forOperation(action.toString())
