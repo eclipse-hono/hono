@@ -13,10 +13,11 @@
 
 package org.eclipse.hono.client;
 
-import io.vertx.core.json.JsonObject;
 import org.eclipse.hono.util.CredentialsObject;
 
+import io.opentracing.SpanContext;
 import io.vertx.core.Future;
+import io.vertx.core.json.JsonObject;
 
 /**
  * A client for accessing Hono's Credentials API.
@@ -68,4 +69,32 @@ public interface CredentialsClient extends RequestResponseClient {
      * @see RequestResponseClient#setRequestTimeout(long)
      */
     Future<CredentialsObject> get(String type, String authId, JsonObject clientContext);
+
+    /**
+     * Gets credentials for a device by type and authentication identifier.
+     * <p>
+     * This default implementation simply returns the result of {@link #get(String, String, JsonObject)}.
+     *
+     * @param type The type of credentials to retrieve.
+     * @param authId The authentication identifier used in the credentials to retrieve.
+     * @param clientContext Optional bag of properties that can be used to identify the device
+     * @param spanContext The currently active OpenTracing span (may be {@code null}). An implementation
+     *                    should use this as the parent for any span it creates for tracing
+     *                    the execution of this operation.
+     * @return A future indicating the result of the operation.
+     *         <p>
+     *         The future will succeed if a response with status 200 has been received from the
+     *         credentials service. The JSON object will then contain values as defined in
+     *         <a href="https://www.eclipse.org/hono/api/credentials-api/#get-credentials">
+     *         Get Credentials</a>.
+     *         <p>
+     *         Otherwise, the future will fail with a {@link ServiceInvocationException} containing
+     *         the (error) status code returned by the service.
+     * @throws NullPointerException if any of the parameters (except spanContext) is {@code null}.
+     * @see RequestResponseClient#setRequestTimeout(long)
+     */
+    default Future<CredentialsObject> get(final String type, final String authId, final JsonObject clientContext,
+            final SpanContext spanContext) {
+        return get(type, authId, clientContext);
+    }
 }

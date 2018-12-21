@@ -19,11 +19,15 @@ import java.util.Map;
 import java.util.Objects;
 
 import io.opentracing.Span;
+import io.opentracing.SpanContext;
+import io.opentracing.Tracer;
 import io.opentracing.log.Fields;
+import io.opentracing.propagation.Format;
 import io.opentracing.tag.BooleanTag;
 import io.opentracing.tag.IntTag;
 import io.opentracing.tag.StringTag;
 import io.opentracing.tag.Tags;
+import io.vertx.core.json.JsonObject;
 
 /**
  * A helper class providing utility methods for interacting with the
@@ -74,6 +78,8 @@ public final class TracingHelper {
      * An OpenTracing tag indicating if a client's connection is secured using TLS.
      */
     public static final BooleanTag TAG_TLS = new BooleanTag("tls");
+
+    private static final String JSON_KEY_SPAN_CONTEXT = "span-context";
 
     private TracingHelper() {
         // prevent instantiation
@@ -153,5 +159,40 @@ public final class TracingHelper {
                 span.log(Tags.ERROR.getKey());
             }
         }
+    }
+
+    /**
+     * Injects a {@code SpanContext} into the given JSON object.
+     * <p>
+     * The {@code JsonObject} representing the serialized {@code SpanContext} will be put under a {@link #JSON_KEY_SPAN_CONTEXT} key.
+     *
+     * @param tracer The Tracer instance.
+     * @param spanContext The {@code SpanContext} to inject.
+     * @param jsonObject The JSON object into which to inject the {@code SpanContext}.
+     * @throws NullPointerException if spanContext or jsonObject is {@code null}.
+     */
+    public static void injectSpanContext(final Tracer tracer, final SpanContext spanContext, final JsonObject jsonObject) {
+        Objects.requireNonNull(spanContext);
+        Objects.requireNonNull(jsonObject);
+
+        final JsonObject spanContextJson = new JsonObject();
+        jsonObject.put(JSON_KEY_SPAN_CONTEXT, spanContextJson);
+        tracer.inject(spanContext, Format.Builtin.TEXT_MAP, new JsonObjectInjectAdapter(spanContextJson));
+    }
+
+    /**
+     * Extracts a {@code SpanContext} out of the given JSON object.
+     * <p>
+     * The {@code JsonObject} representing the serialized {@code SpanContext} is read from a {@link #JSON_KEY_SPAN_CONTEXT} key.
+     *
+     * @param tracer The Tracer instance.
+     * @param jsonObject The JSON object from which to extract the {@code SpanContext}.
+     * @return The extracted {@code SpanContext} or {@code null}.
+     */
+    public static SpanContext extractSpanContext(final Tracer tracer, final JsonObject jsonObject) {
+        final Object spanContextContainer = jsonObject.getValue(JSON_KEY_SPAN_CONTEXT);
+        return spanContextContainer instanceof JsonObject
+                ? tracer.extract(Format.Builtin.TEXT_MAP, new JsonObjectExtractAdapter((JsonObject) spanContextContainer))
+                : null;
     }
 }

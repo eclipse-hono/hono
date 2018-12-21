@@ -746,6 +746,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
             sendRequest(request, resultHandler, cacheKey, currentSpan);
         } else {
             TracingHelper.logError(currentSpan, "sender and/or receiver link is not open");
+            Tags.HTTP_STATUS.set(currentSpan, HttpURLConnection.HTTP_UNAVAILABLE);
             resultHandler.handle(Future.failedFuture(new ServerErrorException(
                     HttpURLConnection.HTTP_UNAVAILABLE, "sender and/or receiver link is not open")));
         }

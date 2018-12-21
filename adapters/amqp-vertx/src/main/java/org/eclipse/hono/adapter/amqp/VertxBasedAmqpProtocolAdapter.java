@@ -109,6 +109,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                                 getTenantServiceClient(),
                                 getCredentialsServiceClient(),
                                 getConfig(),
+                                tracer,
                                 () -> tracer.buildSpan("open connection")
                                     .ignoreActiveSpan()
                                     .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_SERVER)

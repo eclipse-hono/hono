@@ -810,6 +810,7 @@ public class HonoClientImpl implements HonoClient {
             CredentialsClientImpl.create(
                     context,
                     clientConfigProperties,
+                    tracer,
                     connection,
                     tenantId,
                     this::removeCredentialsClient,

@@ -24,6 +24,7 @@ import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsObject;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import io.opentracing.Tracer;
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 
@@ -42,11 +43,12 @@ public class X509AuthProvider extends CredentialsApiAuthProvider<SubjectDnCreden
      * 
      * @param credentialsServiceClient The client.
      * @param config The configuration.
+     * @param tracer The tracer instance.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
     @Autowired
-    public X509AuthProvider(final HonoClient credentialsServiceClient, final ServiceConfigProperties config) {
-        super(credentialsServiceClient);
+    public X509AuthProvider(final HonoClient credentialsServiceClient, final ServiceConfigProperties config, final Tracer tracer) {
+        super(credentialsServiceClient, tracer);
         this.config = Objects.requireNonNull(config);
     }
 

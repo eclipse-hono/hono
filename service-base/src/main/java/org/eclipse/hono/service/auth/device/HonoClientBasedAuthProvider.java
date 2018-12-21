@@ -13,10 +13,12 @@
 
 package org.eclipse.hono.service.auth.device;
 
+import org.eclipse.hono.service.auth.DeviceUser;
+
+import io.opentracing.SpanContext;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
 import io.vertx.ext.auth.AuthProvider;
-import org.eclipse.hono.service.auth.DeviceUser;
 
 
 /**
@@ -35,9 +37,10 @@ public interface HonoClientBasedAuthProvider<T extends AbstractDeviceCredentials
      *  <a href="https://www.eclipse.org/hono/api/Credentials-API/">Credentials API</a>.
      *
      * @param credentials The credentials provided by the device.
+     * @param spanContext The SpanContext (may be null).
      * @param resultHandler The handler to notify about the outcome of the validation. If validation succeeds,
      *                      the result contains an object representing the authenticated device.
      * @throws NullPointerException if credentials or result handler are {@code null}.
      */
-    void authenticate(T credentials, Handler<AsyncResult<DeviceUser>> resultHandler);
+    void authenticate(T credentials, SpanContext spanContext, Handler<AsyncResult<DeviceUser>> resultHandler);
 }
