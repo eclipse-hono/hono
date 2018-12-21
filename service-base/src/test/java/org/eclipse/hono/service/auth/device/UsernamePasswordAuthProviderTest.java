@@ -38,6 +38,7 @@ import org.junit.Test;
 import org.junit.rules.Timeout;
 import org.junit.runner.RunWith;
 
+import io.opentracing.noop.NoopTracerFactory;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
@@ -87,14 +88,14 @@ public class UsernamePasswordAuthProviderTest {
                 .setType(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD)
                 .setEnabled(true);
         credentialsClient = mock(CredentialsClient.class);
-        when(credentialsClient.get(anyString(), anyString())).thenReturn(Future.succeededFuture(credentialsOnRecord));
+        when(credentialsClient.get(anyString(), anyString(), any(JsonObject.class), any())).thenReturn(Future.succeededFuture(credentialsOnRecord));
         credentialsServiceClient = mock(HonoClient.class);
         when(credentialsServiceClient.getOrCreateCredentialsClient(anyString())).thenReturn(Future.succeededFuture(credentialsClient));
         pwdEncoder = mock(HonoPasswordEncoder.class);
         when(pwdEncoder.matches(anyString(), any(JsonObject.class))).thenReturn(true);
 
 
-        provider = new UsernamePasswordAuthProvider(credentialsServiceClient, pwdEncoder, new ServiceConfigProperties());
+        provider = new UsernamePasswordAuthProvider(credentialsServiceClient, pwdEncoder, new ServiceConfigProperties(), NoopTracerFactory.create());
     }
 
     /**
@@ -106,7 +107,7 @@ public class UsernamePasswordAuthProviderTest {
     @Test
     public void testAuthenticateRequiresVertxContext(final TestContext ctx) {
 
-        provider.authenticate(deviceCredentials, ctx.asyncAssertFailure(e -> {
+        provider.authenticate(deviceCredentials, null, ctx.asyncAssertFailure(e -> {
             ctx.assertTrue(e instanceof IllegalStateException);
         }));
     }
@@ -121,7 +122,7 @@ public class UsernamePasswordAuthProviderTest {
     public void testAuthenticateSucceedsWhenRunningOnVertxContext(final TestContext ctx) {
 
         vertx.runOnContext(go -> {
-            provider.authenticate(deviceCredentials, ctx.asyncAssertSuccess(device -> {
+            provider.authenticate(deviceCredentials, null, ctx.asyncAssertSuccess(device -> {
                 ctx.assertEquals("4711", device.getDeviceId());
                 ctx.assertEquals("DEFAULT_TENANT", device.getTenantId());
             }));
@@ -140,7 +141,7 @@ public class UsernamePasswordAuthProviderTest {
 
         deviceCredentials = UsernamePasswordCredentials.create("device@DEFAULT_TENANT", "wrong_pwd", false);
         vertx.runOnContext(go -> {
-            provider.authenticate(deviceCredentials, ctx.asyncAssertFailure(e -> {
+            provider.authenticate(deviceCredentials, null, ctx.asyncAssertFailure(e -> {
                 final ClientErrorException error = (ClientErrorException) e;
                 ctx.assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED, error.getErrorCode());
             }));
@@ -158,7 +159,7 @@ public class UsernamePasswordAuthProviderTest {
 
         credentialsOnRecord.addSecret(CredentialsObject.emptySecret(null, Instant.now().minusSeconds(120)));
         vertx.runOnContext(go -> {
-            provider.authenticate(deviceCredentials, ctx.asyncAssertFailure(t -> {
+            provider.authenticate(deviceCredentials, null, ctx.asyncAssertFailure(t -> {
                 // THEN authentication fails with a 401 client error
                 ctx.assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED, ((ClientErrorException) t).getErrorCode());
             }));
@@ -176,7 +177,7 @@ public class UsernamePasswordAuthProviderTest {
 
         credentialsOnRecord.addSecret(CredentialsObject.emptySecret(Instant.now().plusSeconds(120), null));
         vertx.runOnContext(go -> {
-            provider.authenticate(deviceCredentials, ctx.asyncAssertFailure(t -> {
+            provider.authenticate(deviceCredentials, null, ctx.asyncAssertFailure(t -> {
                 // THEN authentication fails with a 401 client error
                 ctx.assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED, ((ClientErrorException) t).getErrorCode());
             }));

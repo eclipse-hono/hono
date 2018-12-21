@@ -18,8 +18,6 @@ import java.net.HttpURLConnection;
 import java.util.Objects;
 import java.util.UUID;
 
-import io.vertx.core.buffer.Buffer;
-
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.CredentialsClient;
 import org.eclipse.hono.client.StatusCodeMapper;
@@ -28,15 +26,22 @@ import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsObject;
 import org.eclipse.hono.util.CredentialsResult;
+import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.util.RequestResponseApiConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import io.opentracing.Span;
+import io.opentracing.SpanContext;
+import io.opentracing.Tracer;
+import io.opentracing.tag.Tags;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
 import io.vertx.proton.ProtonConnection;
 
@@ -49,6 +54,9 @@ public class CredentialsClientImpl extends AbstractRequestResponseClient<Credent
     private static Logger LOG = LoggerFactory.getLogger(CredentialsClientImpl.class);
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
+    private static final String TAG_AUTH_ID = "auth_id";
+    private static final String TAG_CREDENTIALS_TYPE = "credentials_type";
+
     /**
      * Creates a new client for accessing the Credentials service.
      * 
@@ -56,8 +64,9 @@ public class CredentialsClientImpl extends AbstractRequestResponseClient<Credent
      * @param config The configuration properties.
      * @param tenantId The identifier of the tenant for which the client should be created.
      */
-    protected CredentialsClientImpl(final Context context, final ClientConfigProperties config, final String tenantId) {
-        super(context, config, tenantId);
+    protected CredentialsClientImpl(final Context context, final ClientConfigProperties config, final String tenantId,
+            final Tracer tracer) {
+        super(context, config, tracer, tenantId);
     }
 
     @Override
@@ -110,6 +119,7 @@ public class CredentialsClientImpl extends AbstractRequestResponseClient<Credent
      *
      * @param context The vert.x context to run all interactions with the server on.
      * @param clientConfig The configuration properties to use.
+     * @param tracer The tracer instance.
      * @param con The AMQP connection to the server.
      * @param tenantId The tenant for which credentials are handled.
      * @param senderCloseHook A handler to invoke if the peer closes the sender link unexpectedly.
@@ -120,6 +130,7 @@ public class CredentialsClientImpl extends AbstractRequestResponseClient<Credent
     public static final void create(
             final Context context,
             final ClientConfigProperties clientConfig,
+            final Tracer tracer,
             final ProtonConnection con,
             final String tenantId,
             final Handler<String> senderCloseHook,
@@ -127,7 +138,7 @@ public class CredentialsClientImpl extends AbstractRequestResponseClient<Credent
             final Handler<AsyncResult<CredentialsClient>> creationHandler) {
 
         LOG.debug("creating new credentials client for [{}]", tenantId);
-        final CredentialsClientImpl client = new CredentialsClientImpl(context, clientConfig, tenantId);
+        final CredentialsClientImpl client = new CredentialsClientImpl(context, clientConfig, tenantId, tracer);
         client.createLinks(con, senderCloseHook, receiverCloseHook).setHandler(s -> {
             if (s.succeeded()) {
                 LOG.debug("successfully created credentials client for [{}]", tenantId);
@@ -155,7 +166,18 @@ public class CredentialsClientImpl extends AbstractRequestResponseClient<Credent
      * on the service represented by the <em>sender</em> and <em>receiver</em> links.
      */
     @Override
-    public final Future<CredentialsObject> get(final String type, final String authId, final JsonObject clientContext) {
+    public Future<CredentialsObject> get(final String type, final String authId, final JsonObject clientContext) {
+        return get(type, authId, clientContext, null);
+    }
+
+    /**
+     * Invokes the <em>Get Credentials</em> operation of Hono's
+     * <a href="https://www.eclipse.org/hono/api/Credentials-API">Credentials API</a>
+     * on the service represented by the <em>sender</em> and <em>receiver</em> links.
+     */
+    @Override
+    public final Future<CredentialsObject> get(final String type, final String authId, final JsonObject clientContext,
+            final SpanContext spanContext) {
 
         Objects.requireNonNull(type);
         Objects.requireNonNull(authId);
@@ -166,8 +188,22 @@ public class CredentialsClientImpl extends AbstractRequestResponseClient<Credent
                 .put(CredentialsConstants.FIELD_AUTH_ID, authId)
                 .mergeIn(clientContext);
 
-        createAndSendRequest(CredentialsConstants.CredentialsAction.get.toString(), specification.toBuffer(), responseTracker.completer());
-        return responseTracker.map(response -> {
+        final Span span = newChildSpan(spanContext, "get Credentials");
+        span.setTag(MessageHelper.APP_PROPERTY_TENANT_ID, getTenantId());
+        span.setTag(TAG_CREDENTIALS_TYPE, type);
+        span.setTag(TAG_AUTH_ID, authId);
+        createAndSendRequest(CredentialsConstants.CredentialsAction.get.toString(), null, specification.toBuffer(),
+                RequestResponseApiConstants.CONTENT_TYPE_APPLICATION_JSON, responseTracker.completer(), null,
+                span);
+        return responseTracker.recover(t -> {
+            span.finish();
+            return Future.failedFuture(t);
+        }).map(response -> {
+            Tags.HTTP_STATUS.set(span, response.getStatus());
+            if (response.isError()) {
+                Tags.ERROR.set(span, Boolean.TRUE);
+            }
+            span.finish();
             switch(response.getStatus()) {
             case HttpURLConnection.HTTP_OK:
                 return response.getPayload();

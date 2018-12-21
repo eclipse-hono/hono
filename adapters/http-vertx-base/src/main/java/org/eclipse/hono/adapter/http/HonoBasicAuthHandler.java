@@ -15,7 +15,15 @@ package org.eclipse.hono.adapter.http;
 
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.service.http.AuthHandlerTools;
+import org.eclipse.hono.tracing.TracingHelper;
 
+import io.opentracing.SpanContext;
+import io.opentracing.Tracer;
+import io.opentracing.contrib.vertx.ext.web.TracingHandler;
+import io.opentracing.noop.NoopSpanContext;
+import io.vertx.core.AsyncResult;
+import io.vertx.core.Handler;
+import io.vertx.core.json.JsonObject;
 import io.vertx.ext.auth.AuthProvider;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.impl.BasicAuthHandlerImpl;
@@ -29,15 +37,19 @@ import io.vertx.ext.web.handler.impl.BasicAuthHandlerImpl;
  */
 public class HonoBasicAuthHandler extends BasicAuthHandlerImpl {
 
+    private final Tracer tracer;
+
     /**
      * Creates a new handler for an auth provider and a realm name.
      * 
      * @param authProvider The provider to use for validating credentials.
      * @param realm The realm name.
+     * @param tracer The tracer to use.
      */
-    public HonoBasicAuthHandler(final AuthProvider authProvider, final String realm) {
+    public HonoBasicAuthHandler(final AuthProvider authProvider, final String realm, final Tracer tracer) {
         super(authProvider, realm);
-      }
+        this.tracer = tracer;
+    }
 
     /**
      * Fails the context with the error code determined from an exception.
@@ -55,5 +67,18 @@ public class HonoBasicAuthHandler extends BasicAuthHandlerImpl {
         }
 
         AuthHandlerTools.processException(ctx, exception, authenticateHeader(ctx));
+    }
+
+    @Override
+    public void parseCredentials(final RoutingContext context, final Handler<AsyncResult<JsonObject>> handler) {
+        super.parseCredentials(context, ar -> {
+            if (ar.succeeded()) {
+                final SpanContext spanContext = TracingHandler.serverSpanContext(context);
+                if (spanContext != null && !(spanContext instanceof NoopSpanContext)) {
+                    TracingHelper.injectSpanContext(tracer, spanContext, ar.result());
+                }
+            }
+            handler.handle(ar);
+        });
     }
 }

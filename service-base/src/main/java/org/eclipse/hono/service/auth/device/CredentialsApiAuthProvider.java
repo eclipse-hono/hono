@@ -23,10 +23,13 @@ import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.service.auth.DeviceUser;
+import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CredentialsObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.opentracing.SpanContext;
+import io.opentracing.Tracer;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -47,15 +50,18 @@ public abstract class CredentialsApiAuthProvider<T extends AbstractDeviceCredent
      */
     protected final Logger log = LoggerFactory.getLogger(getClass());
     private final HonoClient credentialsServiceClient;
+    private final Tracer tracer;
 
     /**
      * Creates a new authentication provider for a credentials service client.
      * 
      * @param credentialsServiceClient The client.
-     * @throws NullPointerException if the client is {@code null}
+     * @param tracer The tracer instance.
+     * @throws NullPointerException if the client or the tracer is {@code null}
      */
-    public CredentialsApiAuthProvider(final HonoClient credentialsServiceClient) {
+    public CredentialsApiAuthProvider(final HonoClient credentialsServiceClient, final Tracer tracer) {
         this.credentialsServiceClient = Objects.requireNonNull(credentialsServiceClient);
+        this.tracer = Objects.requireNonNull(tracer);
     }
 
     /**
@@ -76,30 +82,33 @@ public abstract class CredentialsApiAuthProvider<T extends AbstractDeviceCredent
      * Retrieves credentials from the Credentials service.
      * 
      * @param deviceCredentials The credentials provided by the device.
+     * @param spanContext The {@code SpanContext} (may be {@code null}).
      * @return A future containing the credentials on record as retrieved from
      *         Hono's <em>Credentials</em> API.
      * @throws NullPointerException if device credentials is {@code null}.
      */
-    protected final Future<CredentialsObject> getCredentialsForDevice(final DeviceCredentials deviceCredentials) {
+    protected final Future<CredentialsObject> getCredentialsForDevice(final DeviceCredentials deviceCredentials,
+            final SpanContext spanContext) {
 
         Objects.requireNonNull(deviceCredentials);
         if (credentialsServiceClient == null) {
             return Future.failedFuture(new IllegalStateException("Credentials API client is not set"));
         } else {
             return getCredentialsClient(deviceCredentials.getTenantId()).compose(client ->
-                client.get(deviceCredentials.getType(), deviceCredentials.getAuthId()));
+                client.get(deviceCredentials.getType(), deviceCredentials.getAuthId(), new JsonObject(), spanContext));
         }
     }
 
     @Override
     public final void authenticate(
             final T deviceCredentials,
+            final SpanContext spanContext,
             final Handler<AsyncResult<DeviceUser>> resultHandler) {
 
         Objects.requireNonNull(deviceCredentials);
         Objects.requireNonNull(resultHandler);
 
-        getCredentialsForDevice(deviceCredentials)
+        getCredentialsForDevice(deviceCredentials, spanContext)
         .recover(t -> {
 
             if (!(t instanceof ServiceInvocationException)) {
@@ -170,7 +179,7 @@ public abstract class CredentialsApiAuthProvider<T extends AbstractDeviceCredent
         if (credentials == null) {
             resultHandler.handle(Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED, "malformed credentials")));
         } else {
-            authenticate(credentials, s -> {
+            authenticate(credentials, TracingHelper.extractSpanContext(tracer, authInfo), s -> {
                 if (s.succeeded()) {
                     resultHandler.handle(Future.succeededFuture(s.result()));
                 } else {

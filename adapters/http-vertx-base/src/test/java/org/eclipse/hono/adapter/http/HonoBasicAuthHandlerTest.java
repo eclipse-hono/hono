@@ -27,6 +27,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import io.opentracing.noop.NoopTracerFactory;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -56,7 +57,7 @@ public class HonoBasicAuthHandlerTest {
     @Before
     public void setUp() {
         authProvider = mock(AuthProvider.class);
-        authHandler = new HonoBasicAuthHandler(authProvider, "test") {
+        authHandler = new HonoBasicAuthHandler(authProvider, "test", NoopTracerFactory.create()) {
 
             @Override
             public void parseCredentials(final RoutingContext context, final Handler<AsyncResult<JsonObject>> handler) {

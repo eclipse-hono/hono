@@ -13,6 +13,7 @@
 
 package org.eclipse.hono.service.auth.device;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -34,6 +35,8 @@ import org.junit.Test;
 import org.junit.rules.Timeout;
 import org.junit.runner.RunWith;
 
+import io.opentracing.Tracer;
+import io.opentracing.noop.NoopTracerFactory;
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.TestContext;
@@ -67,7 +70,7 @@ public class CredentialsApiAuthProviderTest {
         when(credentialsClient.isOpen()).thenReturn(Boolean.TRUE);
         honoClient = mock(HonoClient.class);
         when(honoClient.getOrCreateCredentialsClient(anyString())).thenReturn(Future.succeededFuture(credentialsClient));
-        provider = getProvider(getDeviceCredentials("type", "TENANT", "user"));
+        provider = getProvider(getDeviceCredentials("type", "TENANT", "user"), NoopTracerFactory.create());
     }
 
     /**
@@ -80,7 +83,7 @@ public class CredentialsApiAuthProviderTest {
     public void testAuthenticateFailsWithExceptionReportedByCredentialsClient(final TestContext ctx) {
 
         final ServerErrorException reportedException = new ServerErrorException(503);
-        when(credentialsClient.get(anyString(), anyString())).thenReturn(Future.failedFuture(reportedException));
+        when(credentialsClient.get(anyString(), anyString(), any(JsonObject.class), any())).thenReturn(Future.failedFuture(reportedException));
         provider.authenticate(new JsonObject(), ctx.asyncAssertFailure(t -> {
             ctx.assertEquals(t, reportedException);
         }));
@@ -97,7 +100,7 @@ public class CredentialsApiAuthProviderTest {
 
         // WHEN trying to authenticate using malformed credentials
         // that do not contain a tenant
-        provider = getProvider(null);
+        provider = getProvider(null, NoopTracerFactory.create());
         provider.authenticate(new JsonObject(), ctx.asyncAssertFailure(t -> {
             // THEN authentication fails with a 401 client error
             ctx.assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED, ((ClientErrorException) t).getErrorCode());
@@ -115,7 +118,7 @@ public class CredentialsApiAuthProviderTest {
     public void testAuthenticateFailsWith401ForNonExistingAuthId(final TestContext ctx) {
 
         // WHEN trying to authenticate using an auth-id that is not known
-        when(credentialsClient.get(anyString(), eq("user"))).thenReturn(Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND)));
+        when(credentialsClient.get(anyString(), eq("user"), any(JsonObject.class), any())).thenReturn(Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND)));
         provider.authenticate(new JsonObject(), ctx.asyncAssertFailure(t -> {
             // THEN authentication fails with a 401 client error
             ctx.assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED, ((ClientErrorException) t).getErrorCode());
@@ -134,16 +137,16 @@ public class CredentialsApiAuthProviderTest {
         final AbstractDeviceCredentials creds = getDeviceCredentials("type", "tenant", "identity");
         final CredentialsObject credentialsOnRecord = getCredentialsObject("type", "identity", "device", false)
                 .addSecret(CredentialsObject.emptySecret(Instant.now().minusSeconds(120), null));
-        when(credentialsClient.get(eq("type"), eq("identity"))).thenReturn(Future.succeededFuture(credentialsOnRecord));
-        provider.authenticate(creds, ctx.asyncAssertFailure(t -> {
+        when(credentialsClient.get(eq("type"), eq("identity"), any(JsonObject.class), any())).thenReturn(Future.succeededFuture(credentialsOnRecord));
+        provider.authenticate(creds, null, ctx.asyncAssertFailure(t -> {
             // THEN authentication fails with a 401 client error
             ctx.assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED, ((ClientErrorException) t).getErrorCode());
         }));
     }
 
-    private CredentialsApiAuthProvider<AbstractDeviceCredentials> getProvider(final AbstractDeviceCredentials credentials) {
+    private CredentialsApiAuthProvider<AbstractDeviceCredentials> getProvider(final AbstractDeviceCredentials credentials, final Tracer tracer) {
 
-        return new CredentialsApiAuthProvider<AbstractDeviceCredentials>(honoClient) {
+        return new CredentialsApiAuthProvider<AbstractDeviceCredentials>(honoClient, tracer) {
 
             @Override
             protected AbstractDeviceCredentials getCredentials(final JsonObject authInfo) {

@@ -25,6 +25,7 @@ import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.util.CredentialsObject;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import io.opentracing.Tracer;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
@@ -45,11 +46,12 @@ public final class UsernamePasswordAuthProvider extends CredentialsApiAuthProvid
      * 
      * @param credentialsServiceClient The client.
      * @param config The configuration.
+     * @param tracer The tracer instance.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
     @Autowired
-    public UsernamePasswordAuthProvider(final HonoClient credentialsServiceClient, final ServiceConfigProperties config) {
-        this(credentialsServiceClient, new SpringBasedHonoPasswordEncoder(), config);
+    public UsernamePasswordAuthProvider(final HonoClient credentialsServiceClient, final ServiceConfigProperties config, final Tracer tracer) {
+        this(credentialsServiceClient, new SpringBasedHonoPasswordEncoder(), config, tracer);
     }
 
     /**
@@ -58,15 +60,17 @@ public final class UsernamePasswordAuthProvider extends CredentialsApiAuthProvid
      * @param credentialsServiceClient The client.
      * @param pwdEncoder The object to use for validating hashed passwords.
      * @param config The configuration.
+     * @param tracer The tracer instance.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
     @Autowired
     public UsernamePasswordAuthProvider(
             final HonoClient credentialsServiceClient,
             final HonoPasswordEncoder pwdEncoder,
-            final ServiceConfigProperties config) {
+            final ServiceConfigProperties config,
+            final Tracer tracer) {
 
-        super(credentialsServiceClient);
+        super(credentialsServiceClient, tracer);
         this.config = Objects.requireNonNull(config);
         this.pwdEncoder = Objects.requireNonNull(pwdEncoder);
     }
