@@ -355,13 +355,6 @@
         </exclusions>
       </dependency>
       <dependency>
-        <groupId>io.vertx</groupId>
-        <artifactId>vertx-codegen</artifactId>
-        <version>${vertx.version}</version>
-        <classifier>processor</classifier>
-        <scope>provided</scope>
-      </dependency>
-      <dependency>
         <groupId>io.opentracing</groupId>
         <artifactId>opentracing-api</artifactId>
         <version>${opentracing.version}</version>
