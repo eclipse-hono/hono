@@ -21,9 +21,9 @@ eclipse-hono-deploy-0.8$ deploy/docker/swarm_deploy.sh
 
 Hono supports deployment to the following container orchestration platforms:
 
-* [Kubernetes]({{< relref "/deployment/kubernetes.md" >}})
-* [OpenShift]({{< relref "/deployment/openshift_s2i.md" >}})
-* [Docker Swarm]({{< relref "/deployment/docker-swarm.md" >}})
+* [Kubernetes]({{< ref "/deployment/kubernetes.md" >}})
+* [OpenShift]({{< ref "/deployment/openshift_s2i.md" >}})
+* [Docker Swarm]({{< ref "/deployment/docker-swarm.md" >}})
 
 A Java based command line client for consuming telemetry data and events from Hono is available for download as well:
 
@@ -37,7 +37,16 @@ $ java -jar hono-cli-0.8-exec.jar --hono.client.host=hono.eclipse.org --hono.cli
 --spring.profiles.active=receiver --tenant.id=DEFAULT_TENANT
 ~~~
 
-Please refer to the [Admin Guide]({{< relref "/admin-guide/hono-client-configuration.md" >}}) for details regarding the command line options that the client supports.
+Please refer to the [Admin Guide]({{< ref "/admin-guide/hono-client-configuration.md" >}}) for details regarding the command line options that the client supports.
+
+### Latest Milestone
+
+The newest features and bug fixes are available in *milestones* that are published every 4 -6 weeks. Please note that these milestones represent the latest
+*state of development* which also means that APIs or features may change from one milestone to the other.
+Installation works in the same way as for the latest stable release.
+
+* [Eclipse Hono 0.9-M1 Archive](https://www.eclipse.org/downloads/download.php?file=/hono/eclipse-hono-deploy-0.9-M1.tar.gz)
+* [Eclipse Hono 0.9-M1 Command Line Client](https://www.eclipse.org/downloads/download.php?file=/hono/hono-cli-0.9-M1-exec.jar)
 
 ### Older Versions
 
@@ -53,4 +62,4 @@ The source code can be cloned (using [Git](https://git-scm.com/)) or downloaded 
 
 ## Release Notes
 
-For a list of the changes in this release, take a look at the [release notes]({{< relref "/release-notes.md" >}}).
+For a list of the changes in this release, take a look at the [release notes]({{< ref "/release-notes.md" >}}).
