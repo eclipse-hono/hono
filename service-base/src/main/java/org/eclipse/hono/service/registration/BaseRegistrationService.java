@@ -321,9 +321,11 @@ public abstract class BaseRegistrationService<T> extends EventBusService<T> impl
      * @param deviceId The device id.
      * @param gatewayId The gateway id.
      * @return The new {@code Span}.
+     * @throws NullPointerException if operationName is {@code null}.
      */
     protected final Span newChildSpan(final String operationName, final SpanContext spanContext, final String tenantId,
             final String deviceId, final String gatewayId) {
+        Objects.requireNonNull(operationName);
         // we set the component tag to the class name because we have no access to
         // the name of the enclosing component we are running in
         final Tracer.SpanBuilder spanBuilder = tracer.buildSpan(operationName)

@@ -30,6 +30,7 @@ import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.RequestResponseClient;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.client.ServerErrorException;
+import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.tracing.MessageAnnotationsInjectAdapter;
@@ -457,9 +458,14 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
             final R response = getRequestResponseResult(message);
             final Span span = handler.three();
             if (response == null) {
-                LOG.debug("discarding malformed response lacking status code [reply-to: {}, correlation ID: {}]",
+                LOG.debug("discarding malformed response [reply-to: {}, correlation ID: {}]",
                         replyToAddress, message.getCorrelationId());
-                TracingHelper.logError(span, "response from peer released (no status code)");
+                if (span != null) {
+                    TracingHelper.logError(span, "malformed response from " + getName() + " endpoint");
+                    Tags.HTTP_STATUS.set(span, HttpURLConnection.HTTP_INTERNAL_ERROR);
+                }
+                handler.one().handle(Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_INTERNAL_ERROR,
+                        "malformed response from " + getName() + " endpoint")));
                 ProtonHelper.released(delivery, true);
             } else {
                 LOG.debug("received response [reply-to: {}, subject: {}, correlation ID: {}, status: {}]",
@@ -498,7 +504,11 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
             } else {
                 LOG.debug("canceling request [target: {}, correlation ID: {}]: {}",
                         targetAddress, correlationId, result.cause().getMessage());
-                TracingHelper.logError(handler.three(), result.cause());
+                final Span span = handler.three();
+                if (span != null) {
+                    TracingHelper.logError(span, result.cause());
+                    Tags.HTTP_STATUS.set(span, ServiceInvocationException.extractStatusCode(result.cause()));
+                }
                 handler.one().handle(result);
             }
         }
@@ -511,6 +521,8 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
                 MessageHelper.APP_PROPERTY_STATUS,
                 Integer.class);
         if (status == null) {
+            LOG.debug("response message has no status code application property [reply-to: {}, correlation ID: {}]",
+                    replyToAddress, message.getCorrelationId());
             return null;
         } else {
             final CacheDirective cacheDirective = CacheDirective.from(MessageHelper.getCacheDirective(message));
@@ -767,6 +779,8 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
         executeOrRunOnContext(res -> {
             if (sender.sendQueueFull()) {
                 LOG.debug("cannot send request to peer, no credit left for link [target: {}]", targetAddress);
+                Tags.HTTP_STATUS.set(currentSpan, HttpURLConnection.HTTP_UNAVAILABLE);
+                TracingHelper.logError(currentSpan, "no credit available for sending request");
                 resultHandler.handle(Future.failedFuture(new ServerErrorException(
                         HttpURLConnection.HTTP_UNAVAILABLE, "no credit available for sending request")));
             } else {
@@ -834,6 +848,8 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
             }
         }).otherwise(t -> {
             // there is no context to run on
+            Tags.HTTP_STATUS.set(currentSpan, HttpURLConnection.HTTP_UNAVAILABLE);
+            TracingHelper.logError(currentSpan, "not connected");
             resultHandler.handle(Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE,
                     "not connected")));
             return null;

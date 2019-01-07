@@ -37,6 +37,7 @@ import org.slf4j.LoggerFactory;
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
+import io.opentracing.tag.Tags;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
@@ -343,8 +344,15 @@ public class RegistrationClientImpl extends AbstractRequestResponseClient<Regist
                     key,
                     span);
             return regResult;
+        }).recover(t -> {
+            span.finish();
+            return Future.failedFuture(t);
         }).map(result -> {
             TracingHelper.TAG_CACHE_HIT.set(span, cacheHit.get());
+            Tags.HTTP_STATUS.set(span, result.getStatus());
+            if (result.isError()) {
+                Tags.ERROR.set(span, Boolean.TRUE);
+            }
             span.finish();
             switch(result.getStatus()) {
             case HttpURLConnection.HTTP_OK:

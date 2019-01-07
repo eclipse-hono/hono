@@ -18,6 +18,7 @@ import java.util.Map;
 import java.util.Objects;
 
 import io.opentracing.Span;
+import io.opentracing.tag.Tags;
 import io.vertx.proton.ProtonHelper;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.CommandClient;
@@ -186,10 +187,17 @@ public class CommandClientImpl extends AbstractRequestResponseClient<BufferResul
             MessageHelper.setPayload(request, contentType, data);
             sendRequest(request, responseTracker.completer(), null, currentSpan);
 
-            return responseTracker.map(ignore -> null);
+            return responseTracker.recover(t -> {
+                currentSpan.finish();
+                return Future.failedFuture(t);
+            }).map(ignore -> {
+                currentSpan.finish();
+                return null;
+            });
         } else {
+            Tags.HTTP_STATUS.set(currentSpan, HttpURLConnection.HTTP_UNAVAILABLE);
             TracingHelper.logError(currentSpan, "sender link is not open");
-
+            currentSpan.finish();
             return Future.failedFuture(new ServerErrorException(
                     HttpURLConnection.HTTP_UNAVAILABLE, "sender link is not open"));
         }
