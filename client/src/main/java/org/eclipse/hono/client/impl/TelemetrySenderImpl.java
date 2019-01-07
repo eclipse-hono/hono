@@ -214,6 +214,7 @@ public final class TelemetrySenderImpl extends AbstractSender {
                         Tags.HTTP_STATUS.set(currentSpan, HttpURLConnection.HTTP_BAD_REQUEST);
                         if (rejected.getError() == null) {
                             LOG.debug("message [message ID: {}] rejected by peer", messageId);
+                            events.put(Fields.MESSAGE, "message rejected by peer");
                         } else {
                             LOG.debug("message [message ID: {}] rejected by peer: {}, {}", messageId,
                                     rejected.getError().getCondition(), rejected.getError().getDescription());
