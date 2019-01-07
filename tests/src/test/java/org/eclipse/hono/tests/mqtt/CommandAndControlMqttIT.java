@@ -26,6 +26,7 @@ import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.tests.GenericMessageSender;
+import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.ResourceIdentifier;
@@ -167,7 +168,10 @@ public class CommandAndControlMqttIT extends MqttTestBase {
         final Async setup = ctx.async();
         final Async notificationReceived = ctx.async();
 
-        connectToAdapter(tenant, deviceId, password, () -> createConsumer(tenantId, msg -> {
+        helper.registry
+        .addDeviceForTenant(tenant, deviceId, password)
+        .compose(ok -> connectToAdapter(IntegrationTestSupport.getUsername(deviceId, tenantId), password))
+        .compose(ok -> createConsumer(tenantId, msg -> {
             // expect empty notification with TTD -1
             ctx.assertEquals(EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION, msg.getContentType());
             final TimeUntilDisconnectNotification notification = TimeUntilDisconnectNotification.fromMessage(msg).orElse(null);
@@ -235,7 +239,10 @@ public class CommandAndControlMqttIT extends MqttTestBase {
         final Async setup = ctx.async();
         final Async notificationReceived = ctx.async();
 
-        connectToAdapter(tenant, deviceId, password, () -> createConsumer(tenantId, msg -> {
+        helper.registry
+        .addDeviceForTenant(tenant, deviceId, password)
+        .compose(ok -> connectToAdapter(IntegrationTestSupport.getUsername(deviceId, tenantId), password))
+        .compose(ok -> createConsumer(tenantId, msg -> {
             // expect empty notification with TTD -1
             ctx.assertEquals(EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION, msg.getContentType());
             final TimeUntilDisconnectNotification notification = TimeUntilDisconnectNotification.fromMessage(msg).orElse(null);

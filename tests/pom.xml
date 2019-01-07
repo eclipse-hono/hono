@@ -701,6 +701,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                   <run>
                     <ports>
                       <port>+mqtt.ip:mqtt.port:1883</port>
+                      <port>mqtts.port:8883</port>
                       <port>+mqtt.ip:mqtt.health.port:8088</port>
                     </ports>
                     <network>
@@ -917,6 +918,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                 <https.port>${https.port}</https.port>
                 <mqtt.host>${mqtt.ip}</mqtt.host>
                 <mqtt.port>${mqtt.port}</mqtt.port>
+                <mqtts.port>${mqtts.port}</mqtts.port>
                 <adapter.amqp.host>${adapter.amqp.ip}</adapter.amqp.host>
                 <adapter.amqp.port>${adapter.amqp.port}</adapter.amqp.port>
                 <adapter.amqps.port>${adapter.amqps.port}</adapter.amqps.port>

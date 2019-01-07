@@ -31,6 +31,8 @@ import org.slf4j.LoggerFactory;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
+import io.vertx.core.net.PemTrustOptions;
+import io.vertx.core.net.SelfSignedCertificate;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.mqtt.MqttClient;
@@ -48,11 +50,6 @@ public abstract class MqttTestBase {
      * The vert.xt instance to run on.
      */
     protected static final Vertx VERTX = Vertx.vertx();
-    /**
-     * The maximum number of milliseconds a test case may run before it
-     * is considered to have failed.
-     */
-    protected static final int TEST_TIMEOUT = 2000; // milliseconds
     /**
      * A helper accessing the AMQP 1.0 Messaging Network and
      * for managing tenants/devices/credentials.
@@ -194,8 +191,38 @@ public abstract class MqttTestBase {
         });
         return result.map(conAck -> {
             LOGGER.debug(
-                    "connection to MQTT adapter [host: {}, port: {}] established",
+                    "MQTT connection to adapter [host: {}, port: {}] established",
                     IntegrationTestSupport.MQTT_HOST, IntegrationTestSupport.MQTT_PORT);
+            this.context = Vertx.currentContext();
+            return conAck;
+        });
+    }
+
+    /**
+     * Opens a connection to the MQTT adapter using an X.509 client certificate.
+     * 
+     * @param cert The client certificate to use for authentication.
+     * @return A future that will be completed with the CONNACK packet received
+     *         from the adapter or failed with a {@link MqttConnectionException}
+     *         if the connection could not be established.
+     */
+    protected final Future<MqttConnAckMessage> connectToAdapter(
+            final SelfSignedCertificate cert) {
+
+        final Future<MqttConnAckMessage> result = Future.future();
+        VERTX.runOnContext(connect -> {
+            final MqttClientOptions options = new MqttClientOptions()
+                    .setTrustOptions(new PemTrustOptions().addCertPath(IntegrationTestSupport.TRUST_STORE_PATH))
+                    .setKeyCertOptions(cert.keyCertOptions())
+                    .setSsl(true);
+            options.setHostnameVerificationAlgorithm("");
+            mqttClient = MqttClient.create(VERTX, options);
+            mqttClient.connect(IntegrationTestSupport.MQTTS_PORT, IntegrationTestSupport.MQTT_HOST, result.completer());
+        });
+        return result.map(conAck -> {
+            LOGGER.debug(
+                    "MQTTS connection to adapter [host: {}, port: {}] established",
+                    IntegrationTestSupport.MQTT_HOST, IntegrationTestSupport.MQTTS_PORT);
             this.context = Vertx.currentContext();
             return conAck;
         });

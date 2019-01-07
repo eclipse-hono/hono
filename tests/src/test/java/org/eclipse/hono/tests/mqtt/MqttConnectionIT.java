@@ -13,19 +13,24 @@
 
 package org.eclipse.hono.tests.mqtt;
 
-import io.vertx.core.Future;
-import io.vertx.mqtt.MqttClient;
-import io.vertx.mqtt.MqttClientOptions;
-import io.vertx.mqtt.messages.MqttConnAckMessage;
+import java.util.UUID;
+
+import javax.security.auth.x500.X500Principal;
+
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.CredentialsObject;
 import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantObject;
+import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.Timeout;
 import org.junit.runner.RunWith;
 
 import io.netty.handler.codec.mqtt.MqttConnectReturnCode;
 import io.vertx.core.json.JsonObject;
+import io.vertx.core.net.SelfSignedCertificate;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.mqtt.MqttConnectionException;
@@ -38,18 +43,62 @@ import io.vertx.mqtt.MqttConnectionException;
 public class MqttConnectionIT extends MqttTestBase {
 
     /**
+     * Time out tests after two seconds.
+     */
+    @Rule
+    public Timeout timeout = Timeout.seconds(5);
+
+    private SelfSignedCertificate deviceCert;
+    private String tenantId;
+    private String deviceId;
+    private String password;
+
+    /**
+     * Sets up the fixture.
+     */
+    @Before
+    @Override
+    public void setUp() {
+        LOGGER.info("running {}", testName.getMethodName());
+        tenantId = helper.getRandomTenantId();
+        deviceId = helper.getRandomDeviceId(tenantId);
+        password = "secret";
+        deviceCert = SelfSignedCertificate.create(UUID.randomUUID().toString());
+    }
+
+    /**
      * Verifies that the adapter opens a connection to registered devices with credentials.
      *
      * @param ctx The test context
      */
     @Test
     public void testConnectSucceedsForRegisteredDevice(final TestContext ctx) {
-        final String tenantId = helper.getRandomTenantId();
-        final String deviceId = helper.getRandomDeviceId(tenantId);
-        final String password = "secret";
+
         final TenantObject tenant = TenantObject.from(tenantId, true);
 
-        connectToAdapter(tenant, deviceId, password, null).setHandler(ctx.asyncAssertSuccess());
+        helper.registry
+        .addDeviceForTenant(tenant, deviceId, password)
+        .compose(ok -> connectToAdapter(IntegrationTestSupport.getUsername(deviceId, tenantId), password))
+        .setHandler(ctx.asyncAssertSuccess());
+    }
+
+    /**
+     * Verifies that an attempt to open a connection using a valid X.509 client certificate
+     * succeeds.
+     *
+     * @param ctx The test context
+     */
+    @Test
+    public void testConnectX509SucceedsForRegisteredDevice(final TestContext ctx) {
+
+        helper.getCertificate(deviceCert.certificatePath())
+        .compose(cert -> {
+            final TenantObject tenant = TenantObject.from(tenantId, true);
+            tenant.setTrustAnchor(cert.getPublicKey(), cert.getIssuerX500Principal());
+            return helper.registry.addDeviceForTenant(tenant, deviceId, cert);
+        }).compose(ok -> {
+            return connectToAdapter(deviceCert);
+        }).setHandler(ctx.asyncAssertSuccess());
     }
 
     /**
@@ -72,6 +121,26 @@ public class MqttConnectionIT extends MqttTestBase {
     }
 
     /**
+     * Verifies that the adapter rejects connection attempts from unknown devices
+     * trying to authenticate using a client certificate but for which neither
+     * registration information nor credentials are on record.
+     *
+     * @param ctx The test context
+     */
+    @Test
+    public void testConnectX509FailsForNonExistingDevice(final TestContext ctx) {
+
+        // GIVEN an adapter
+        // WHEN an unknown device tries to connect
+        connectToAdapter(deviceCert)
+        .setHandler(ctx.asyncAssertFailure(t -> {
+            // THEN the connection is refused
+            ctx.assertEquals(MqttConnectReturnCode.CONNECTION_REFUSED_BAD_USER_NAME_OR_PASSWORD,
+                    ((MqttConnectionException) t).code());
+        }));
+    }
+
+    /**
      * Verifies that the adapter rejects connection attempts from devices
      * using wrong credentials.
      *
@@ -81,15 +150,43 @@ public class MqttConnectionIT extends MqttTestBase {
     public void testConnectFailsForWrongCredentials(final TestContext ctx) {
 
         // GIVEN a registered device
-        final String tenantId = helper.getRandomTenantId();
-        final String deviceId = helper.getRandomDeviceId(tenantId);
-        final String password = "secret";
         final TenantObject tenant = TenantObject.from(tenantId, true);
 
         helper.registry
         .addDeviceForTenant(tenant, deviceId, password)
         // WHEN the device tries to connect using a wrong password
         .compose(ok -> connectToAdapter(IntegrationTestSupport.getUsername(deviceId, tenantId), "wrong password"))
+        .setHandler(ctx.asyncAssertFailure(t -> {
+            // THEN the connection is refused
+            ctx.assertEquals(MqttConnectReturnCode.CONNECTION_REFUSED_BAD_USER_NAME_OR_PASSWORD,
+                    ((MqttConnectionException) t).code());
+        }));
+    }
+
+    /**
+     * Verifies that the adapter rejects connection attempts from devices
+     * using a client certificate with an unknown subject DN.
+     *
+     * @param ctx The test context
+     */
+    @Test
+    public void testConnectX509FailsForUnknownSubjectDN(final TestContext ctx) {
+
+        // GIVEN a registered device
+        final TenantObject tenant = TenantObject.from(tenantId, true);
+
+        helper.getCertificate(deviceCert.certificatePath())
+        .compose(cert -> {
+            tenant.setTrustAnchor(cert.getPublicKey(), cert.getIssuerX500Principal());
+            return helper.registry.addTenant(JsonObject.mapFrom(tenant));
+        }).compose(ok -> helper.registry.registerDevice(tenant.getTenantId(), deviceId))
+        .compose(ok -> {
+            final CredentialsObject credentialsSpec =
+                    CredentialsObject.fromSubjectDn(deviceId, new X500Principal("CN=4711"), null, null);
+            return helper.registry.addCredentials(tenant.getTenantId(), JsonObject.mapFrom(credentialsSpec));
+        })
+        // WHEN the device tries to connect using a client certificate with an unknown subject DN
+        .compose(ok -> connectToAdapter(deviceCert))
         .setHandler(ctx.asyncAssertFailure(t -> {
             // THEN the connection is refused
             ctx.assertEquals(MqttConnectReturnCode.CONNECTION_REFUSED_BAD_USER_NAME_OR_PASSWORD,
@@ -106,17 +203,47 @@ public class MqttConnectionIT extends MqttTestBase {
     @Test
     public void testConnectFailsForDisabledAdapter(final TestContext ctx) {
 
-        final String tenantId = helper.getRandomTenantId();
-        final String deviceId = helper.getRandomDeviceId(tenantId);
-        final String password = "secret";
         final TenantObject tenant = TenantObject.from(tenantId, true);
         final JsonObject adapterDetailsMqtt = new JsonObject()
                 .put(TenantConstants.FIELD_ADAPTERS_TYPE, Constants.PROTOCOL_ADAPTER_TYPE_MQTT)
                 .put(TenantConstants.FIELD_ENABLED, Boolean.FALSE);
         tenant.addAdapterConfiguration(adapterDetailsMqtt);
 
-     // WHEN a device that belongs to the tenant tries to connect to the adapter
-        connectToAdapter(tenant, deviceId, password, null).setHandler(ctx.asyncAssertFailure(t -> {
+        helper.registry
+        .addDeviceForTenant(tenant, deviceId, password)
+        // WHEN a device that belongs to the tenant tries to connect to the adapter
+        .compose(ok -> connectToAdapter(IntegrationTestSupport.getUsername(deviceId, tenantId), password))
+        .setHandler(ctx.asyncAssertFailure(t -> {
+            // THEN the connection is refused with a NOT_AUTHORIZED code
+            ctx.assertEquals(MqttConnectReturnCode.CONNECTION_REFUSED_NOT_AUTHORIZED,
+                    ((MqttConnectionException) t).code());
+        }));
+    }
+
+    /**
+     * Verifies that the adapter rejects connection attempts from devices
+     * using a client certificate which belong to a tenant for which the
+     * MQTT adapter has been disabled.
+     *
+     * @param ctx The test context
+     */
+    @Test
+    public void testConnectX509FailsForDisabledAdapter(final TestContext ctx) {
+
+        final TenantObject tenant = TenantObject.from(tenantId, true);
+        final JsonObject adapterDetailsMqtt = new JsonObject()
+                .put(TenantConstants.FIELD_ADAPTERS_TYPE, Constants.PROTOCOL_ADAPTER_TYPE_MQTT)
+                .put(TenantConstants.FIELD_ENABLED, Boolean.FALSE);
+        tenant.addAdapterConfiguration(adapterDetailsMqtt);
+
+        helper.getCertificate(deviceCert.certificatePath())
+        .compose(cert -> {
+            tenant.setTrustAnchor(cert.getPublicKey(), cert.getIssuerX500Principal());
+            return helper.registry.addDeviceForTenant(tenant, deviceId, cert);
+        })
+        // WHEN a device that belongs to the tenant tries to connect to the adapter
+        .compose(ok -> connectToAdapter(deviceCert))
+        .setHandler(ctx.asyncAssertFailure(t -> {
             // THEN the connection is refused with a NOT_AUTHORIZED code
             ctx.assertEquals(MqttConnectReturnCode.CONNECTION_REFUSED_NOT_AUTHORIZED,
                     ((MqttConnectionException) t).code());
@@ -130,16 +257,17 @@ public class MqttConnectionIT extends MqttTestBase {
      * @param ctx The test context
      */
     @Test
-    public void testConnectFailsForDeletedDevices(final TestContext ctx) {
+    public void testConnectFailsForMissingRegistrationInfo(final TestContext ctx) {
 
-        final String tenantId = helper.getRandomTenantId();
-        final String deviceId = helper.getRandomDeviceId(tenantId);
-        final String password = "secret";
         final TenantObject tenant = TenantObject.from(tenantId, true);
 
         helper.registry
-            .addDeviceForTenant(tenant, deviceId, password)
-            .compose(device -> helper.registry.deregisterDevice(tenantId, deviceId))
+            .addTenant(JsonObject.mapFrom(tenant))
+            .compose(ok -> {
+                final CredentialsObject spec = CredentialsObject.fromClearTextPassword(deviceId, deviceId, password, null, null);
+                return helper.registry.addCredentials(tenantId, JsonObject.mapFrom(spec));
+            })
+            // WHEN a device connects using the correct credentials
             .compose(ok -> connectToAdapter(IntegrationTestSupport.getUsername(deviceId, tenantId), password))
             .setHandler(ctx.asyncAssertFailure(t -> {
                 // THEN the connection is refused with a NOT_AUTHORIZED code
@@ -148,6 +276,32 @@ public class MqttConnectionIT extends MqttTestBase {
             }));
     }
 
+    /**
+     * Verifies that the adapter rejects connection attempts from devices
+     * using a client certificate for which credentials exist but for which
+     * no registration assertion can be retrieved.
+     *
+     * @param ctx The test context
+     */
+    @Test
+    public void testConnectX509FailsForMissingRegistrationInfo(final TestContext ctx) {
+
+        final TenantObject tenant = TenantObject.from(tenantId, true);
+
+        helper.registry
+            .addTenant(JsonObject.mapFrom(tenant))
+            .compose(ok -> {
+                final CredentialsObject spec = CredentialsObject.fromClearTextPassword(deviceId, deviceId, password, null, null);
+                return helper.registry.addCredentials(tenantId, JsonObject.mapFrom(spec));
+            })
+            // WHEN a device connects using the correct credentials
+            .compose(ok -> connectToAdapter(IntegrationTestSupport.getUsername(deviceId, tenantId), password))
+            .setHandler(ctx.asyncAssertFailure(t -> {
+                // THEN the connection is refused with a NOT_AUTHORIZED code
+                ctx.assertEquals(MqttConnectReturnCode.CONNECTION_REFUSED_BAD_USER_NAME_OR_PASSWORD,
+                        ((MqttConnectionException) t).code());
+            }));
+    }
 
     /**
      * Verifies that the adapter rejects connection attempts from devices that belong to a disabled tenant.
@@ -158,31 +312,41 @@ public class MqttConnectionIT extends MqttTestBase {
     public void testConnectFailsForDisabledTenant(final TestContext ctx) {
 
         // Given a disabled tenant for which the MQTT adapter is enabled
-        final String tenantId = helper.getRandomTenantId();
-        final String deviceId = helper.getRandomDeviceId(tenantId);
-        final String password = "secret";
-        final JsonObject adapterDetailsMqtt = new JsonObject()
-                .put(TenantConstants.FIELD_ADAPTERS_TYPE, Constants.PROTOCOL_ADAPTER_TYPE_MQTT)
-                .put(TenantConstants.FIELD_ENABLED, Boolean.TRUE);
-
         final TenantObject tenant = TenantObject.from(tenantId, false);
-        tenant.addAdapterConfiguration(adapterDetailsMqtt);
 
-        helper.registry.addDeviceForTenant(tenant, deviceId, password)
-                .recover(t -> Future.failedFuture(t)).compose(ok -> {
-                    final Future<MqttConnAckMessage> result = Future.future();
-                    final MqttClientOptions options = new MqttClientOptions()
-                            .setUsername(IntegrationTestSupport.getUsername(deviceId, tenantId))
-                            .setPassword(password);
-                    mqttClient = MqttClient.create(VERTX, options);
-                    // WHEN a device that belongs to the disabled tenant tries to connect to the adapter
-                    mqttClient.connect(IntegrationTestSupport.MQTT_PORT, IntegrationTestSupport.MQTT_HOST, result);
-                    return result;
-                }).setHandler(ctx.asyncAssertFailure(t -> {
-                    ctx.assertTrue(t instanceof MqttConnectionException);
-                    // THEN the connection is refused with a NOT_AUTHORIZED code
-                    ctx.assertEquals(((MqttConnectionException) t).code(),
-                            MqttConnectReturnCode.CONNECTION_REFUSED_NOT_AUTHORIZED);
-                }));
+        helper.registry
+            .addDeviceForTenant(tenant, deviceId, password)
+            .compose(ok -> connectToAdapter(IntegrationTestSupport.getUsername(deviceId, tenantId), password))
+            .setHandler(ctx.asyncAssertFailure(t -> {
+                ctx.assertTrue(t instanceof MqttConnectionException);
+                // THEN the connection is refused with a NOT_AUTHORIZED code
+                ctx.assertEquals(((MqttConnectionException) t).code(),
+                        MqttConnectReturnCode.CONNECTION_REFUSED_NOT_AUTHORIZED);
+            }));
+    }
+
+    /**
+     * Verifies that the adapter rejects connection attempts from devices
+     * using a client certificate that belong to a disabled tenant.
+     *
+     * @param ctx The test context
+     */
+    @Test
+    public void testConnectX509FailsForDisabledTenant(final TestContext ctx) {
+
+        // Given a disabled tenant for which the MQTT adapter is enabled
+        helper.getCertificate(deviceCert.certificatePath())
+        .compose(cert -> {
+            final TenantObject tenant = TenantObject.from(tenantId, false);
+            tenant.setTrustAnchor(cert.getPublicKey(), cert.getIssuerX500Principal());
+            return helper.registry.addDeviceForTenant(tenant, deviceId, cert);
+        })
+        .compose(ok -> connectToAdapter(deviceCert))
+        .setHandler(ctx.asyncAssertFailure(t -> {
+            ctx.assertTrue(t instanceof MqttConnectionException);
+            // THEN the connection is refused with a NOT_AUTHORIZED code
+            ctx.assertEquals(((MqttConnectionException) t).code(),
+                    MqttConnectReturnCode.CONNECTION_REFUSED_NOT_AUTHORIZED);
+        }));
     }
 }
