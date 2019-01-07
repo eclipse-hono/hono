@@ -13,6 +13,7 @@
 
 package org.eclipse.hono.tests.mqtt;
 
+import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -21,14 +22,17 @@ import java.util.function.Consumer;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.MessageConsumer;
+import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.TenantObject;
 import org.junit.Test;
 
 import io.vertx.core.Future;
 import io.vertx.core.buffer.Buffer;
+import io.vertx.core.net.SelfSignedCertificate;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
+import io.vertx.mqtt.messages.MqttConnAckMessage;
 
 /**
  * Base class for integration tests verifying that devices can upload messages
@@ -38,9 +42,15 @@ import io.vertx.ext.unit.TestContext;
 public abstract class MqttPublishTestBase extends MqttTestBase {
 
     /**
+     * The maximum number of milliseconds a test case may run before it
+     * is considered to have failed.
+     */
+    protected static final int TEST_TIMEOUT = 2000; // milliseconds
+    /**
      * The number of messages to send as part of the test cases.
      */
     protected static final int MESSAGES_TO_SEND = 200;
+    private final String password = "secret";
 
     /**
      * Sends a message on behalf of a device to the MQTT adapter.
@@ -104,7 +114,21 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
      */
     @Test
     public void testUploadMessages(final TestContext ctx) throws InterruptedException {
-        doTestUploadMessages(ctx, false);
+
+        final String tenantId = helper.getRandomTenantId();
+        final String deviceId = helper.getRandomDeviceId(tenantId);
+        final TenantObject tenant = TenantObject.from(tenantId, true);
+        final Async setup = ctx.async();
+
+        helper.registry.addDeviceForTenant(tenant, deviceId, password)
+        .setHandler(ctx.asyncAssertSuccess(ok -> setup.complete()));
+        setup.await();
+        doTestUploadMessages(
+                ctx,
+                tenantId,
+                deviceId,
+                connectToAdapter(IntegrationTestSupport.getUsername(deviceId, tenantId), password),
+                false);
     }
 
     /**
@@ -116,22 +140,67 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
      */
     @Test
     public void testUploadMessagesUsingShortTopicNames(final TestContext ctx) throws InterruptedException {
-        doTestUploadMessages(ctx, true);
+
+        final String tenantId = helper.getRandomTenantId();
+        final String deviceId = helper.getRandomDeviceId(tenantId);
+        final TenantObject tenant = TenantObject.from(tenantId, true);
+        final Async setup = ctx.async();
+
+        helper.registry.addDeviceForTenant(tenant, deviceId, password)
+        .setHandler(ctx.asyncAssertSuccess(ok -> setup.complete()));
+        setup.await();
+        doTestUploadMessages(
+                ctx,
+                tenantId,
+                deviceId,
+                connectToAdapter(IntegrationTestSupport.getUsername(deviceId, tenantId), password),
+                true);
     }
 
-    private void doTestUploadMessages(final TestContext ctx, final boolean useShortTopicName)
+    /**
+     * Verifies that a number of messages published by a device authenticating with a
+     * client certificate can be successfully consumed via the AMQP Messaging Network.
+     * 
+     * @param ctx The test context.
+     * @throws InterruptedException if the test fails.
+     */
+    @Test
+    public void testUploadMessagesUsingClientCertificate(final TestContext ctx) throws InterruptedException {
+
+        final SelfSignedCertificate deviceCert = SelfSignedCertificate.create(UUID.randomUUID().toString());
+        final String tenantId = helper.getRandomTenantId();
+        final String deviceId = helper.getRandomDeviceId(tenantId);
+        final TenantObject tenant = TenantObject.from(tenantId, true);
+        final Async setup = ctx.async();
+
+        helper.getCertificate(deviceCert.certificatePath())
+        .compose(cert -> {
+            tenant.setTrustAnchor(cert.getPublicKey(), cert.getIssuerX500Principal());
+            return helper.registry.addDeviceForTenant(tenant, deviceId, cert);
+        }).setHandler(ctx.asyncAssertSuccess(ok -> setup.complete()));
+        setup.await();
+        doTestUploadMessages(
+                ctx,
+                tenantId,
+                deviceId,
+                connectToAdapter(deviceCert),
+                false);
+    }
+
+    private void doTestUploadMessages(
+            final TestContext ctx,
+            final String tenantId,
+            final String deviceId,
+            final Future<MqttConnAckMessage> connection,
+            final boolean useShortTopicName)
             throws InterruptedException {
 
         final CountDownLatch received = new CountDownLatch(MESSAGES_TO_SEND);
         final AtomicInteger messageCount = new AtomicInteger(0);
         final AtomicLong lastReceivedTimestamp = new AtomicLong();
-        final String tenantId = helper.getRandomTenantId();
-        final String deviceId = helper.getRandomDeviceId(tenantId);
-        final String password = "secret";
-        final TenantObject tenant = TenantObject.from(tenantId, true);
 
         final Async setup = ctx.async();
-        connectToAdapter(tenant, deviceId, password, () -> createConsumer(tenantId, msg -> {
+        connection.compose(ok -> createConsumer(tenantId, msg -> {
             LOGGER.trace("received {}", msg);
             assertMessageProperties(ctx, msg);
             assertAdditionalMessageProperties(ctx, msg);

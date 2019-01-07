@@ -68,6 +68,7 @@ public final class IntegrationTestSupport {
     public static final int    DEFAULT_HTTPS_PORT = 8443;
     public static final int    DEFAULT_MAX_BCRYPT_ITERATIONS = 10;
     public static final int    DEFAULT_MQTT_PORT = 1883;
+    public static final int    DEFAULT_MQTTS_PORT = 8883;
 
     public static final String PROPERTY_AUTH_HOST = "auth.host";
     public static final String PROPERTY_AUTH_PORT = "auth.amqp.port";
@@ -87,6 +88,7 @@ public final class IntegrationTestSupport {
     public static final String PROPERTY_HTTPS_PORT = "https.port";
     public static final String PROPERTY_MQTT_HOST = "mqtt.host";
     public static final String PROPERTY_MQTT_PORT = "mqtt.port";
+    public static final String PROPERTY_MQTTS_PORT = "mqtts.port";
     public static final String PROPERTY_AMQP_HOST = "adapter.amqp.host";
     public static final String PROPERTY_AMQP_PORT = "adapter.amqp.port";
     public static final String PROPERTY_AMQPS_PORT = "adapter.amqps.port";
@@ -117,6 +119,7 @@ public final class IntegrationTestSupport {
     public static final int    HTTPS_PORT = Integer.getInteger(PROPERTY_HTTPS_PORT, DEFAULT_HTTPS_PORT);
     public static final String MQTT_HOST = System.getProperty(PROPERTY_MQTT_HOST, DEFAULT_HOST);
     public static final int    MQTT_PORT = Integer.getInteger(PROPERTY_MQTT_PORT, DEFAULT_MQTT_PORT);
+    public static final int    MQTTS_PORT = Integer.getInteger(PROPERTY_MQTTS_PORT, DEFAULT_MQTTS_PORT);
     public static final String AMQP_HOST = System.getProperty(PROPERTY_AMQP_HOST, DEFAULT_HOST);
     public static final int    AMQP_PORT = Integer.getInteger(PROPERTY_AMQP_PORT, DEFAULT_AMQP_PORT);
     public static final int    AMQPS_PORT = Integer.getInteger(PROPERTY_AMQPS_PORT, DEFAULT_AMQPS_PORT);
