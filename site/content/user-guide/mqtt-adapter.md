@@ -17,12 +17,24 @@ The MQTT adapter is **not** a general purpose MQTT broker. In particular the ada
 
 ## Authentication
 
-The MQTT adapter by default requires clients (devices or gateway components) to authenticate during connection establishment. In order to do so, clients need to provide a *username* and a *password* in the MQTT *CONNECT* packet. The *username* must have the form *auth-id@tenant*, e.g. `sensor1@DEFAULT_TENANT`. The adapter verifies the credentials provided by the client against the credentials the [configured Credentials service]({{< relref "/admin-guide/mqtt-adapter-config.md#credentials-service-connection-configuration" >}}) has on record for the client. The adapter uses the Credentials API's *get* operation to retrieve the credentials on record with the *tenant* and *auth-id* provided by the client in the *username* and `hashed-password` as the *type* of secret as query parameters.
+The MQTT adapter by default requires clients (devices or gateway components) to authenticate during connection establishment. The adapter supports both the authentication based on the username/password provided in an MQTT CONNECT packet as well as client certificate based authentication as part of a TLS handshake for that purpose.
 
-When running the Hono example installation as described in the [Getting Started guide]({{< ref "getting-started" >}}), the demo Credentials service comes pre-configured with a `hashed-password` secret for devices `4711` and `gw-1` of tenant `DEFAULT_TENANT` having *auth-ids* `sensor1` and `gw1` and (hashed) *passwords* `hono-secret` and `gw-secret` respectively. These credentials are used in the following examples illustrating the usage of the adapter. Please refer to the [Credentials API]({{< relref "/api/Credentials-API.md#standard-credential-types" >}}) for details regarding the different types of secrets.
+The adapter tries to authenticate the device using these mechanisms in the following order
+
+### Client Certificate
+
+When a device uses a client certificate for authentication during the TLS handshake, the adapter tries to determine the tenant that the device belongs to, based on the *issuer DN* contained in the certificate. In order for the lookup to succeed, the tenant's trust anchor needs to be configured by means of [registering the trusted certificate authority]({{< ref "/api/Tenant-API.md#request-payload" >}}). The device's client certificate will then be validated using the registered trust anchor, thus implicitly establishing the tenant that the device belongs to. In a second step, the adapter then uses the Credentials API's *get* operation with the client certificate's *subject DN* as the *auth-id* and `x509-cert` as the *type* of secret as query parameters.
+
+NB: The adapter needs to be [configured for TLS]({{< ref "/admin-guide/secure_communication.md#mqtt-adapter" >}}) in order to support this mechanism.
+
+### Username/Password
+
+When a device wants to authenticate using this mechanism, it needs to provide a *username* and a *password* in the MQTT *CONNECT* packet it sends in order to initiate the connection. The *username* must have the form *auth-id@tenant*, e.g. `sensor1@DEFAULT_TENANT`. The adapter verifies the credentials provided by the client against the credentials the [configured Credentials service]({{< ref "/admin-guide/mqtt-adapter-config.md#credentials-service-connection-configuration" >}}) has on record for the client. The adapter uses the Credentials API's *get* operation to retrieve the credentials on record with the *tenant* and *auth-id* provided by the client in the *username* and `hashed-password` as the *type* of secret as query parameters.
+
+When running the Hono example installation as described in the [Getting Started guide]({{< ref "/getting-started" >}}), the demo Credentials service comes pre-configured with a `hashed-password` secret for devices `4711` and `gw-1` of tenant `DEFAULT_TENANT` having *auth-ids* `sensor1` and `gw1` and (hashed) *passwords* `hono-secret` and `gw-secret` respectively. These credentials are used in the following examples illustrating the usage of the adapter. Please refer to the [Credentials API]({{< ref "/api/Credentials-API.md#standard-credential-types" >}}) for details regarding the different types of secrets.
 
 {{% note %}}
-There is a subtle difference between the *device identifier* (*device-id*) and the *auth-id* a device uses for authentication. See [Device Identity]({{< relref "/concepts/device-identity.md" >}}) for a discussion of the concepts.
+There is a subtle difference between the *device identifier* (*device-id*) and the *auth-id* a device uses for authentication. See [Device Identity]({{< ref "/concepts/device-identity.md" >}}) for a discussion of the concepts.
 {{% /note %}}
 
 ## Publishing Telemetry Data
