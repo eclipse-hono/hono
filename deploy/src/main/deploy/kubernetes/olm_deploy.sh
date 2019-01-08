@@ -17,7 +17,31 @@ set -e
 SCRIPTPATH="$(cd "$(dirname "$0")" && pwd -P)"
 source "$SCRIPTPATH/common.sh"
 
-: ${OLM_COMMIT:=81104ffdc4fb3ac29ebf060abd375399ca8f1bea}
+RESOURCES_BASE=https://raw.githubusercontent.com/operator-framework/operator-lifecycle-manager/4370fc33c4ff7b6ba3a23def82d4db837dfcbb43/deploy/upstream/manifests/0.8.0/
+
+RESOURCES_GROUP_1="\
+	0000_30_00-namespace.yaml \
+	0000_30_01-olm-operator.serviceaccount.yaml \
+	0000_30_02-clusterserviceversion.crd.yaml \
+	0000_30_03-installplan.crd.yaml \
+	0000_30_04-subscription.crd.yaml \
+	0000_30_05-catalogsource.crd.yaml \
+	0000_30_06-rh-operators.configmap.yaml \
+	0000_30_10-olm-operator.deployment.yaml \
+	0000_30_11-catalog-operator.deployment.yaml \
+	0000_30_12-aggregated.clusterrole.yaml \
+	0000_30_13-operatorgroup.crd.yaml \
+	0000_30_14-olm-operators.configmap.yaml \
+	0000_30_15-olm-operators.catalogsource.yaml \
+	0000_30_16-operatorgroup-default.yaml \
+	0000_30_17-packageserver.subscription.yaml \
+	0000_30_18-operatorsource.crd.yaml
+"
+
+RESOURCES_GROUP_2="\
+	0000_30_09-rh-operators.catalogsource.yaml \
+	0000_30_19-operatorsource-default.yaml
+"
 
 echo DEPLOYING OPERATOR LIFECYCLE MANAGER TO KUBERNETES
 
@@ -26,30 +50,18 @@ if [ $(is_olm_deployed) == "YES" ]; then
 	exit 0
 fi
 
-
 echo
 echo "Deploying OLM ..."
-if ! test -d operator-lifecycle-manager; then
-	git clone https://github.com/operator-framework/operator-lifecycle-manager.git operator-lifecycle-manager
-	pushd operator-lifecycle-manager
-	git checkout "${OLM_COMMIT}"
-	popd
-fi
 
-kubectl create -f operator-lifecycle-manager/deploy/upstream/manifests/latest/ || true
+for i in $RESOURCES_GROUP_1; do
+	kubectl create -f "$RESOURCES_BASE/$i"
+done
 
-#
-# The next delay is necessary due to operator-framework/operator-lifecycle-manager#558
-# Sometimes it happens that in the previous step the use of a newly deployed
-# CRD fails, and so a catalog source is missing. The next steps wait "a bit"
-# and then re-register the catalog source. Which again might fail, because
-# the previous step might have been successful.
-#
+sleep 5
 
-sleep 5 # delay and retry CRD
-
-kubectl create -f operator-lifecycle-manager/deploy/upstream/manifests/latest/*rh-operators.catalogsource.yaml || true
-kubectl create -f operator-lifecycle-manager/deploy/upstream/manifests/latest/*-operatorsource-default.yaml || true
+for i in $RESOURCES_GROUP_2; do
+	kubectl create -f "$RESOURCES_BASE/$i"
+done
 
 echo ... done
 
