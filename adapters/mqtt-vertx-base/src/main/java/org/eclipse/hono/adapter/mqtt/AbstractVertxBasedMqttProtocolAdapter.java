@@ -367,7 +367,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
     private Future<Device> handleEndpointConnectionWithoutAuthentication(final MqttEndpoint endpoint) {
 
         endpoint.closeHandler(v -> close(endpoint, null));
-        endpoint.publishHandler(message -> handlePublishedMessage(new MqttContext(message, endpoint)));
+        endpoint.publishHandler(message -> handlePublishedMessage(MqttContext.fromPublishPacket(message, endpoint)));
 
         endpoint.subscribeHandler(subscribeMsg -> onSubscribe(endpoint, null, subscribeMsg));
         endpoint.unsubscribeHandler(unsubscribeMsg -> onUnsubscribe(endpoint, null, unsubscribeMsg));
@@ -1178,7 +1178,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
 
         endpoint.closeHandler(v -> close(endpoint, authenticatedDevice));
         endpoint.publishHandler(
-                message -> handlePublishedMessage(new MqttContext(message, endpoint, authenticatedDevice)));
+                message -> handlePublishedMessage(MqttContext.fromPublishPacket(message, endpoint, authenticatedDevice)));
         endpoint.subscribeHandler(subscribeMsg -> onSubscribe(endpoint, authenticatedDevice, subscribeMsg));
         endpoint.unsubscribeHandler(unsubscribeMsg -> onUnsubscribe(endpoint, authenticatedDevice, unsubscribeMsg));
         metrics.incrementConnections(authenticatedDevice.getTenantId());

@@ -30,51 +30,73 @@ import io.vertx.mqtt.messages.MqttPublishMessage;
  */
 public final class MqttContext extends MapBasedExecutionContext {
 
-    private final MqttPublishMessage message;
-    private final MqttEndpoint deviceEndpoint;
-    private final Device authenticatedDevice;
-    private final ResourceIdentifier topic;
-
+    private MqttPublishMessage message;
+    private MqttEndpoint deviceEndpoint;
+    private Device authenticatedDevice;
+    private ResourceIdentifier topic;
     private String contentType;
 
+    private MqttContext() {
+    }
+
     /**
-     * Creates a new context for a message and an endpoint.
+     * Creates a new context for a published message.
      * 
      * @param publishedMessage The MQTT message to process.
      * @param deviceEndpoint The endpoint representing the device
      *                       that has published the message.
+     * @return The context.
      * @throws NullPointerException if message or endpoint are {@code null}.
      */
-    public MqttContext(
+    public static MqttContext fromPublishPacket(
             final MqttPublishMessage publishedMessage,
             final MqttEndpoint deviceEndpoint) {
 
-        this(publishedMessage, deviceEndpoint, null);
+        return fromPublishPacket(publishedMessage, deviceEndpoint, null);
     }
 
     /**
-     * Creates a new context for a message and an endpoint.
+     * Creates a new context for a published message.
      * 
      * @param publishedMessage The published MQTT message.
      * @param deviceEndpoint The endpoint representing the device
      *                       that has published the message.
      * @param authenticatedDevice The authenticated device identity.
+     * @return The context.
      * @throws NullPointerException if message or endpoint are {@code null}.
      */
-    public MqttContext(
+    public static MqttContext fromPublishPacket(
             final MqttPublishMessage publishedMessage,
             final MqttEndpoint deviceEndpoint,
             final Device authenticatedDevice) {
 
-        this.message = Objects.requireNonNull(publishedMessage);
-        this.deviceEndpoint = Objects.requireNonNull(deviceEndpoint);
-        this.authenticatedDevice = authenticatedDevice;
+        Objects.requireNonNull(publishedMessage);
+        Objects.requireNonNull(deviceEndpoint);
+
+        final MqttContext result = new MqttContext();
+        result.message = publishedMessage;
+        result.deviceEndpoint = deviceEndpoint;
+        result.authenticatedDevice = authenticatedDevice;
         ResourceIdentifier t = null;
         try {
             t = ResourceIdentifier.fromString(publishedMessage.topicName());
         } catch (final Throwable e) {
         }
-        this.topic = t;
+        result.topic = t;
+        return result;
+    }
+
+    /**
+     * Creates a new context for a connection attempt.
+     * 
+     * @param endpoint The endpoint representing the client's connection attempt.
+     * @return The context.
+     * @throws NullPointerException if endpoint is {@code null}.
+     */
+    public static MqttContext fromConnectPacket(final MqttEndpoint endpoint) {
+        final MqttContext result = new MqttContext();
+        result.deviceEndpoint = endpoint;
+        return result;
     }
 
     /**

@@ -178,7 +178,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
     }
 
     private static MqttContext newMqttContext(final MqttPublishMessage message, final MqttEndpoint endpoint) {
-        final MqttContext result = new MqttContext(message, endpoint);
+        final MqttContext result = MqttContext.fromPublishPacket(message, endpoint);
         result.setTracingContext(mock(SpanContext.class));
         return result;
     }
