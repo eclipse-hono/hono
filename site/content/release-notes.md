@@ -4,7 +4,12 @@ title = "Release Notes"
 
 ## 0.9-M2 (not yet released)
 
-### Changes
+### New Features
+
+* The MQTT protocol adapter now supports authentication of devices using X.509 client certificates. Please refer to
+  the [MQTT adapter user guide]({{< ref "/user-guide/mqtt-adapter.md" >}}) for details regarding configuration.
+
+### Fixes & Enhancements
 
 * The OpenShift *source-to-image* (S2I) deployment is now the default
   OpenShift / OKD deployment. The old OpenShift deployment, which was deprecated

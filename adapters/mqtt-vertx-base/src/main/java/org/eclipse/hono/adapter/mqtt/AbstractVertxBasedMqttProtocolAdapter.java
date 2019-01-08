@@ -35,9 +35,12 @@ import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
 import org.eclipse.hono.service.auth.DeviceUser;
-import org.eclipse.hono.service.auth.device.HonoClientBasedAuthProvider;
+import org.eclipse.hono.service.auth.device.AuthHandler;
+import org.eclipse.hono.service.auth.device.ChainAuthHandler;
+import org.eclipse.hono.service.auth.device.TenantServiceBasedX509Authentication;
 import org.eclipse.hono.service.auth.device.UsernamePasswordAuthProvider;
 import org.eclipse.hono.service.auth.device.UsernamePasswordCredentials;
+import org.eclipse.hono.service.auth.device.X509AuthProvider;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
@@ -83,17 +86,16 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
 
     private MqttServer server;
     private MqttServer insecureServer;
-    private HonoClientBasedAuthProvider<UsernamePasswordCredentials> usernamePasswordAuthProvider;
+    private AuthHandler<MqttContext> authHandler;
 
     /**
-     * Sets the provider to use for authenticating devices based on a username and password.
+     * Sets the authentication handler to use for authenticating devices.
      * 
-     * @param provider The provider to use.
-     * @throws NullPointerException if provider is {@code null}.
+     * @param authHandler The handler to use.
+     * @throws NullPointerException if handler is {@code null}.
      */
-    public final void setUsernamePasswordAuthProvider(
-            final HonoClientBasedAuthProvider<UsernamePasswordCredentials> provider) {
-        this.usernamePasswordAuthProvider = Objects.requireNonNull(provider);
+    public final void setAuthHandler(final AuthHandler<MqttContext> authHandler) {
+        this.authHandler = Objects.requireNonNull(authHandler);
     }
 
     @Override
@@ -133,6 +135,30 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
      */
     protected final MqttAdapterMetrics getMetrics() {
         return metrics;
+    }
+
+    /**
+     * Creates the default auth handler to use for authenticating devices.
+     * <p>
+     * This default implementation creates a {@link ChainAuthHandler} consisting of
+     * an {@link X509AuthHandler} and a {@link ConnectPacketAuthHandler} instance.
+     * <p>
+     * Subclasses may either set the auth handler expicitly using
+     * {@link #setAuthHandler(AuthHandler)} or override this method in order to
+     * create a custom auth handler.
+     * 
+     * @return The handler.
+     */
+    protected AuthHandler<MqttContext> createAuthHandler() {
+
+        return new ChainAuthHandler<MqttContext>()
+                .append(new X509AuthHandler(
+                        new TenantServiceBasedX509Authentication(getTenantServiceClient(), tracer),
+                        new X509AuthProvider(getCredentialsServiceClient(), getConfig())))
+                .append(new ConnectPacketAuthHandler(
+                        new UsernamePasswordAuthProvider(
+                                getCredentialsServiceClient(),
+                                getConfig())));
     }
 
     /**
@@ -239,9 +265,8 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
             .compose(ok -> {
                 return CompositeFuture.all(bindSecureMqttServer(), bindInsecureMqttServer());
             }).compose(t -> {
-                if (usernamePasswordAuthProvider == null) {
-                    usernamePasswordAuthProvider = new UsernamePasswordAuthProvider(getCredentialsServiceClient(),
-                            getConfig());
+                if (authHandler == null) {
+                    authHandler = createAuthHandler();
                 }
                 startFuture.complete();
             }, startFuture);
@@ -380,25 +405,31 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
     private Future<Device> handleEndpointConnectionWithAuthentication(final MqttEndpoint endpoint,
             final Span currentSpan) {
 
-        final Future<UsernamePasswordCredentials> credentialsTracker = getCredentials(endpoint);
-        return credentialsTracker
-                .compose(credentials -> authenticate(credentials, currentSpan))
-                .compose(device -> CompositeFuture.all(
-                        getTenantConfiguration(device.getTenantId(), currentSpan.context())
+        final MqttContext context = MqttContext.fromConnectPacket(endpoint);
+        context.setTracingContext(currentSpan.context());
+        final Future<DeviceUser> authAttempt = authenticate(context, currentSpan);
+        return authAttempt
+                .compose(authenticatedDevice -> CompositeFuture.all(
+                            getTenantConfiguration(authenticatedDevice.getTenantId(), currentSpan.context())
                                 .compose(tenant -> isAdapterEnabled(tenant)),
-                        checkDeviceRegistration(device, currentSpan.context()))
-                        .map(ok -> device))
-                .compose(device -> createLinks(device, currentSpan))
-                .compose(device -> registerHandlers(endpoint, device))
+                            checkDeviceRegistration(authenticatedDevice, currentSpan.context()))
+                        .map(ok -> authenticatedDevice))
+                .compose(authenticatedDevice -> createLinks(authenticatedDevice, currentSpan))
+                .compose(authenticatedDevice -> registerHandlers(endpoint, authenticatedDevice))
                 .recover(t -> {
-                    if (credentialsTracker.result() == null) {
-                        LOG.debug("error establishing connection with device", t);
+                    if (authAttempt.failed()) {
+                        LOG.debug("could not authenticate device", t);
                     } else {
-                        LOG.debug("cannot establish connection with device [tenant-id: {}, auth-id: {}]",
-                                credentialsTracker.result().getTenantId(), credentialsTracker.result().getAuthId(), t);
+                        LOG.debug("cannot establish connection with device [tenant-id: {}, device-id: {}]",
+                                authAttempt.result().getTenantId(), authAttempt.result().getDeviceId(), t);
                     }
                     return Future.failedFuture(t);
                 });
+    }
+
+    private Future<DeviceUser> authenticate(final MqttContext connectContext, final Span currentSpan) {
+
+        return authHandler.authenticateDevice(connectContext);
     }
 
     /**
@@ -1136,25 +1167,6 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
             currentSpan.log("device wants to retain message");
             MessageHelper.addAnnotation(downstreamMessage, MessageHelper.ANNOTATION_X_OPT_RETAIN, Boolean.TRUE);
         }
-    }
-
-    private Future<DeviceUser> authenticate(final UsernamePasswordCredentials credentials, final Span currentSpan) {
-        final Future<DeviceUser> result = Future.future();
-        usernamePasswordAuthProvider.authenticate(credentials, handler -> {
-            if (handler.succeeded()) {
-                final DeviceUser authenticatedDevice = handler.result();
-                currentSpan.log("device authenticated");
-                LOG.debug("successfully authenticated device [tenant-id: {}, auth-id: {}, device-id: {}]",
-                        authenticatedDevice.getTenantId(), credentials.getAuthId(),
-                        authenticatedDevice.getDeviceId());
-                result.complete(authenticatedDevice);
-            } else {
-                LOG.debug("Failed to authenticate device [tenant-id: {}, auth-id: {}] ",
-                        credentials.getTenantId(), credentials.getAuthId(), handler.cause());
-                result.fail(handler.cause());
-            }
-        });
-        return result;
     }
 
     private Future<Device> createLinks(final Device authenticatedDevice, final Span currentSpan) {

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,11 +12,10 @@
  */
 
 
-package org.eclipse.hono.adapter.http;
+package org.eclipse.hono.adapter.mqtt;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.math.BigInteger;
@@ -45,18 +44,20 @@ import org.eclipse.hono.service.auth.device.SubjectDnCredentials;
 import org.eclipse.hono.service.auth.device.X509Authentication;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 
 import io.opentracing.SpanContext;
 import io.vertx.core.Future;
-import io.vertx.core.http.HttpServerRequest;
-import io.vertx.core.http.HttpServerResponse;
-import io.vertx.ext.web.RoutingContext;
+import io.vertx.ext.unit.TestContext;
+import io.vertx.ext.unit.junit.VertxUnitRunner;
+import io.vertx.mqtt.MqttEndpoint;
 
 
 /**
  * Tests verifying behavior of {@link X509AuthHandler}.
  *
  */
+@RunWith(VertxUnitRunner.class)
 public class X509AuthHandlerTest {
 
     private X509AuthHandler authHandler;
@@ -78,10 +79,11 @@ public class X509AuthHandlerTest {
      * Verifies that the handler returns the status code conveyed in a
      * failed Tenant service invocation in the response.
      * 
-     * @throws SSLPeerUnverifiedException if the client certificate cannot be validated.
+     * @param ctx The vert.x test context.
+     * @throws SSLPeerUnverifiedException if the client certificate cannot be determined.
      */
     @Test
-    public void testHandleFailsWithStatusCodeFromAuthProvider() throws SSLPeerUnverifiedException {
+    public void testHandleFailsWithStatusCodeFromAuthProvider(final TestContext ctx) throws SSLPeerUnverifiedException {
 
         // GIVEN an auth handler configured with an auth provider that
         // fails with a 503 error code during authentication
@@ -92,17 +94,15 @@ public class X509AuthHandlerTest {
         final EmptyCertificate clientCert = new EmptyCertificate("CN=device", "CN=tenant");
         final SSLSession sslSession = mock(SSLSession.class);
         when(sslSession.getPeerCertificates()).thenReturn(new X509Certificate[] { clientCert });
-        final HttpServerRequest req = mock(HttpServerRequest.class);
-        when(req.isSSL()).thenReturn(true);
-        when(req.sslSession()).thenReturn(sslSession);
-        final HttpServerResponse resp = mock(HttpServerResponse.class);
-        final RoutingContext ctx = mock(RoutingContext.class);
-        when(ctx.request()).thenReturn(req);
-        when(ctx.response()).thenReturn(resp);
-        authHandler.handle(ctx);
 
-        // THEN the request context is failed with the 503 error code
-        verify(ctx).fail(error);
+        final MqttEndpoint endpoint = mock(MqttEndpoint.class);
+        when(endpoint.isSsl()).thenReturn(true);
+        when(endpoint.sslSession()).thenReturn(sslSession);
+
+        final MqttContext context = MqttContext.fromConnectPacket(endpoint);
+        authHandler.authenticateDevice(context)
+            // THEN the request context is failed with the 503 error code
+            .setHandler(ctx.asyncAssertFailure(t -> ctx.assertEquals(error, t)));
     }
 
     /**

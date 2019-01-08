@@ -43,11 +43,11 @@ import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.RegistrationClient;
+import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.TenantClient;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.auth.DeviceUser;
-import org.eclipse.hono.service.auth.device.HonoClientBasedAuthProvider;
-import org.eclipse.hono.service.auth.device.UsernamePasswordCredentials;
+import org.eclipse.hono.service.auth.device.AuthHandler;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
@@ -107,7 +107,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
     private HonoClient deviceRegistrationServiceClient;
     private RegistrationClient regClient;
     private TenantClient tenantClient;
-    private HonoClientBasedAuthProvider<UsernamePasswordCredentials> usernamePasswordAuthProvider;
+    private AuthHandler<MqttContext> authHandler;
     private ProtocolAdapterProperties config;
     private MqttAdapterMetrics metrics;
     private CommandConnection commandConnection;
@@ -142,29 +142,36 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         });
 
         tenantServiceClient = mock(HonoClient.class);
+        when(tenantServiceClient.isConnected()).thenReturn(Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE)));
         when(tenantServiceClient.connect(any(Handler.class))).thenReturn(Future.succeededFuture(tenantServiceClient));
         when(tenantServiceClient.getOrCreateTenantClient()).thenReturn(Future.succeededFuture(tenantClient));
 
         credentialsServiceClient = mock(HonoClient.class);
+        when(credentialsServiceClient.isConnected()).thenReturn(Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE)));
         when(credentialsServiceClient.connect(any(Handler.class)))
                 .thenReturn(Future.succeededFuture(credentialsServiceClient));
 
         messagingClient = mock(HonoClient.class);
+        when(messagingClient.isConnected()).thenReturn(Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE)));
         when(messagingClient.connect(any(Handler.class))).thenReturn(Future.succeededFuture(messagingClient));
         when(messagingClient.getOrCreateEventSender(anyString())).thenReturn(Future.succeededFuture(mock(MessageSender.class)));
         when(messagingClient.getOrCreateTelemetrySender(anyString())).thenReturn(Future.succeededFuture(mock(MessageSender.class)));
 
         deviceRegistrationServiceClient = mock(HonoClient.class);
+        when(deviceRegistrationServiceClient.isConnected()).thenReturn(
+                Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE)));
         when(deviceRegistrationServiceClient.connect(any(Handler.class)))
                 .thenReturn(Future.succeededFuture(deviceRegistrationServiceClient));
         when(deviceRegistrationServiceClient.getOrCreateRegistrationClient(anyString()))
                 .thenReturn(Future.succeededFuture(regClient));
 
         commandConnection = mock(CommandConnection.class);
+        when(commandConnection.isConnected()).thenReturn(
+                Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE)));
         when(commandConnection.connect(any(Handler.class))).thenReturn(Future.succeededFuture(commandConnection));
         when(commandConnection.closeCommandConsumer(anyString(), anyString())).thenReturn(Future.succeededFuture(null));
 
-        usernamePasswordAuthProvider = mock(HonoClientBasedAuthProvider.class);
+        authHandler = mock(AuthHandler.class);
     }
 
     /**
@@ -186,6 +193,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
     @SuppressWarnings("unchecked")
     private static MqttEndpoint mockEndpoint() {
         final MqttEndpoint endpoint = mock(MqttEndpoint.class);
+        when(endpoint.clientIdentifier()).thenReturn("test-device");
         when(endpoint.subscribeHandler(any(Handler.class))).thenReturn(endpoint);
         when(endpoint.unsubscribeHandler(any(Handler.class))).thenReturn(endpoint);
         return endpoint;
@@ -225,7 +233,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
      * the adapter is not connected to all of the services it depends on.
      */
     @Test
-    public void testEndpointHandlerFailsWithoutConnect() {
+    public void testEndpointHandlerFailsWithoutDownstreamConnections() {
 
         // GIVEN an adapter that is not connected to
         // all of its required services
@@ -233,11 +241,10 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         final AbstractVertxBasedMqttProtocolAdapter<ProtocolAdapterProperties> adapter = getAdapter(server);
 
         // WHEN a client tries to connect
-        final MqttAuth deviceCredentials = new MqttAuth("device@my-tenant", "irrelevant");
         final MqttEndpoint endpoint = mockEndpoint();
-        when(endpoint.auth()).thenReturn(deviceCredentials);
-
         adapter.handleEndpointConnection(endpoint);
+
+        // THEN the connection request is rejected
         verify(endpoint).reject(MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE);
     }
 
@@ -266,7 +273,6 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
      * Verifies that an adapter rejects a connection attempt from a device that belongs to a tenant for which the
      * adapter is disabled.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void testEndpointHandlerRejectsDeviceOfDisabledTenant() {
 
@@ -278,18 +284,12 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
                 .put(TenantConstants.FIELD_ADAPTERS_TYPE, ADAPTER_TYPE)
                 .put(TenantConstants.FIELD_ENABLED, false));
         when(tenantClient.get(eq("my-tenant"), (SpanContext) any())).thenReturn(Future.succeededFuture(myTenantConfig));
-        doAnswer(invocation -> {
-            final Handler<AsyncResult<DeviceUser>> resultHandler = invocation.getArgument(1);
-            resultHandler.handle(Future.succeededFuture(new DeviceUser("my-tenant", "4711")));
-            return null;
-        }).when(usernamePasswordAuthProvider).authenticate(any(UsernamePasswordCredentials.class), any(Handler.class));
+        when(authHandler.authenticateDevice(any(MqttContext.class))).thenReturn(Future.succeededFuture(new DeviceUser("my-tenant", "4711")));
         final AbstractVertxBasedMqttProtocolAdapter<ProtocolAdapterProperties> adapter = getAdapter(server);
         forceClientMocksToConnected();
 
         // WHEN a device of "my-tenant" tries to connect
-        final MqttAuth deviceCredentials = new MqttAuth("device@my-tenant", "irrelevant");
         final MqttEndpoint endpoint = mockEndpoint();
-        when(endpoint.auth()).thenReturn(deviceCredentials);
         adapter.handleEndpointConnection(endpoint);
 
         // THEN the connection is not established
@@ -306,38 +306,40 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         // GIVEN an adapter that does require devices to authenticate
         final MqttServer server = getMqttServer(false);
         final AbstractVertxBasedMqttProtocolAdapter<ProtocolAdapterProperties> adapter = getAdapter(server);
-
+        when(authHandler.authenticateDevice(any(MqttContext.class))).thenReturn(
+                Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED)));
         forceClientMocksToConnected();
 
         // WHEN a device connects without providing proper credentials
         final MqttEndpoint endpoint = mockEndpoint();
-        when(endpoint.auth()).thenReturn(null, new MqttAuth("foo", null), new MqttAuth(null, "bar"));
         adapter.handleEndpointConnection(endpoint);
         adapter.handleEndpointConnection(endpoint);
         adapter.handleEndpointConnection(endpoint);
 
         // THEN the connection is refused
-        verify(endpoint, times(3)).reject(MqttConnectReturnCode.CONNECTION_REFUSED_BAD_USER_NAME_OR_PASSWORD);
+        verify(authHandler, times(3)).authenticateDevice(any(MqttContext.class));
     }
 
     /**
      * Verifies that an adapter retrieves credentials on record for a device connecting to the adapter.
      */
-    @SuppressWarnings("unchecked")
     @Test
-    public void testEndpointHandlerRetrievesCredentialsOnRecord() {
+    public void testEndpointHandlerTriesToAuthenticateDevice() {
 
         // GIVEN an adapter requiring devices to authenticate endpoint
         final MqttServer server = getMqttServer(false);
         config.setAuthenticationRequired(true);
         final AbstractVertxBasedMqttProtocolAdapter<ProtocolAdapterProperties> adapter = getAdapter(server);
-
         forceClientMocksToConnected();
 
+        // WHEN a device tries to establish a connection
+        when(authHandler.authenticateDevice(any(MqttContext.class))).thenReturn(
+                Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED)));
         final MqttEndpoint endpoint = getMqttEndpointAuthenticated();
         adapter.handleEndpointConnection(endpoint);
 
-        verify(usernamePasswordAuthProvider).authenticate(any(UsernamePasswordCredentials.class), any(Handler.class));
+        // THEN the adapter has tried to authenticate the device
+        verify(authHandler).authenticateDevice(any(MqttContext.class));
     }
 
     /**
@@ -352,11 +354,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         final MqttServer server = getMqttServer(false);
         final AbstractVertxBasedMqttProtocolAdapter<ProtocolAdapterProperties> adapter = getAdapter(server);
         forceClientMocksToConnected();
-        doAnswer(invocation -> {
-            final Handler<AsyncResult<DeviceUser>> resultHandler = invocation.getArgument(1);
-            resultHandler.handle(Future.succeededFuture(new DeviceUser("DEFAULT_TENANT", "4711")));
-            return null;
-        }).when(usernamePasswordAuthProvider).authenticate(any(UsernamePasswordCredentials.class), any(Handler.class));
+        when(authHandler.authenticateDevice(any(MqttContext.class))).thenReturn(Future.succeededFuture(new DeviceUser("DEFAULT_TENANT", "4711")));
 
         // WHEN a device tries to connect with valid credentials
         final MqttEndpoint endpoint = getMqttEndpointAuthenticated();
@@ -364,9 +362,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
 
         // THEN the device's logical ID is successfully established and corresponding handlers
         // are registered
-        final ArgumentCaptor<UsernamePasswordCredentials> credentialsCaptor = ArgumentCaptor.forClass(UsernamePasswordCredentials.class);
-        verify(usernamePasswordAuthProvider).authenticate(credentialsCaptor.capture(), any(Handler.class));
-        assertThat(credentialsCaptor.getValue().getAuthId(), is("sensor1"));
+        verify(authHandler).authenticateDevice(any(MqttContext.class));
         verify(endpoint).accept(false);
         verify(endpoint).publishHandler(any(Handler.class));
         verify(endpoint).closeHandler(any(Handler.class));
@@ -375,7 +371,6 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
     /**
      * Verifies that unregistered devices with valid credentials cannot establish connection.
      */
-    @SuppressWarnings({ "unchecked" })
     @Test
     public void testAuthenticatedMqttAdapterRejectsConnectionForNonExistingDevice() {
 
@@ -384,11 +379,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         final AbstractVertxBasedMqttProtocolAdapter<ProtocolAdapterProperties> adapter = getAdapter(server);
         forceClientMocksToConnected();
         // which is connected to a Credentials service that has credentials on record for device 9999
-        doAnswer(invocation -> {
-            final Handler<AsyncResult<DeviceUser>> resultHandler = invocation.getArgument(1);
-            resultHandler.handle(Future.succeededFuture(new DeviceUser("DEFAULT_TENANT", "9999")));
-            return null;
-        }).when(usernamePasswordAuthProvider).authenticate(any(UsernamePasswordCredentials.class), any(Handler.class));
+        when(authHandler.authenticateDevice(any(MqttContext.class))).thenReturn(Future.succeededFuture(new DeviceUser("DEFAULT_TENANT", "9999")));
         // but for which no registration information is available
         when(regClient.assertRegistration(eq("9999"), (String) any(), (SpanContext) any()))
                 .thenReturn(Future.failedFuture(new ClientErrorException(
@@ -399,9 +390,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         adapter.handleEndpointConnection(endpoint);
 
         // THEN the device's credentials are verified successfully
-        final ArgumentCaptor<UsernamePasswordCredentials> credentialsCaptor = ArgumentCaptor.forClass(UsernamePasswordCredentials.class);
-        verify(usernamePasswordAuthProvider).authenticate(credentialsCaptor.capture(), any(Handler.class));
-        assertThat(credentialsCaptor.getValue().getAuthId(), is("sensor1"));
+        verify(authHandler).authenticateDevice(any(MqttContext.class));
         // but the connection is refused
         verify(endpoint).reject(MqttConnectReturnCode.CONNECTION_REFUSED_BAD_USER_NAME_OR_PASSWORD);
     }
@@ -426,7 +415,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         adapter.handleEndpointConnection(endpoint);
 
         // THEN the connection is established and handlers are registered
-        verify(usernamePasswordAuthProvider, never()).authenticate(any(UsernamePasswordCredentials.class), any(Handler.class));
+        verify(authHandler, never()).authenticateDevice(any(MqttContext.class));
         verify(endpoint).publishHandler(any(Handler.class));
         verify(endpoint).closeHandler(any(Handler.class));
         verify(endpoint).accept(false);
@@ -827,6 +816,64 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
 
     }
 
+    /**
+     * Verifies the connection metrics for authenticated connections.
+     * <p>
+     * This test should check if the metrics receive a call to increment and decrement when a connection is being
+     * established and then closed.
+     */
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testConnectionMetrics() {
+
+        final MqttServer server = getMqttServer(false);
+        final AbstractVertxBasedMqttProtocolAdapter<ProtocolAdapterProperties> adapter = getAdapter(server);
+
+        forceClientMocksToConnected();
+        when(authHandler.authenticateDevice(any(MqttContext.class))).thenReturn(Future.succeededFuture(new DeviceUser("DEFAULT_TENANT", "4711")));
+
+        final MqttEndpoint endpoint = getMqttEndpointAuthenticated();
+        adapter.handleEndpointConnection(endpoint);
+
+        verify(metrics).incrementConnections("DEFAULT_TENANT");
+        final ArgumentCaptor<Handler<Void>> closeHandlerCaptor = ArgumentCaptor.forClass(Handler.class);
+        verify(endpoint).closeHandler(closeHandlerCaptor.capture());
+        closeHandlerCaptor.getValue().handle(null);
+        verify(metrics).decrementConnections("DEFAULT_TENANT");
+    }
+
+    /**
+     * Verifies the connection metrics for unauthenticated connections.
+     * <p>
+     * This test should check if the metrics receive a call to increment and decrement when a connection is being
+     * established and then closed.
+     */
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testUnauthenticatedConnectionMetrics() {
+
+        config.setAuthenticationRequired(false);
+
+        final MqttServer server = getMqttServer(false);
+        final AbstractVertxBasedMqttProtocolAdapter<ProtocolAdapterProperties> adapter = getAdapter(server);
+
+        forceClientMocksToConnected();
+
+        final MqttEndpoint endpoint = mockEndpoint();
+        adapter.handleEndpointConnection(endpoint);
+
+        // THEN the adapter does not try to authenticate the device
+        verify(authHandler, never()).authenticateDevice(any(MqttContext.class));
+        // and increments the number of unauthenticated connections
+        verify(metrics).incrementUnauthenticatedConnections();
+        // and when the device closes the connection
+        final ArgumentCaptor<Handler<Void>> closeHandlerCaptor = ArgumentCaptor.forClass(Handler.class);
+        verify(endpoint).closeHandler(closeHandlerCaptor.capture());
+        closeHandlerCaptor.getValue().handle(null);
+        // the number of unauthenticated connections is decremented again
+        verify(metrics).decrementUnauthenticatedConnections();
+    }
+
     private void forceClientMocksToConnected() {
         when(tenantServiceClient.isConnected()).thenReturn(Future.succeededFuture());
         when(messagingClient.isConnected()).thenReturn(Future.succeededFuture());
@@ -890,7 +937,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         adapter.setRegistrationServiceClient(deviceRegistrationServiceClient);
         adapter.setCredentialsServiceClient(credentialsServiceClient);
         adapter.setCommandConnection(commandConnection);
-        adapter.setUsernamePasswordAuthProvider(usernamePasswordAuthProvider);
+        adapter.setAuthHandler(authHandler);
 
         if (server != null) {
             adapter.setMqttInsecureServer(server);
@@ -931,62 +978,5 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
 
         when(messagingClient.getOrCreateTelemetrySender(anyString())).thenReturn(Future.succeededFuture(sender));
         return sender;
-    }
-
-    /**
-     * Verifies the connection metrics for authenticated connections.
-     * <p>
-     * This test should check if the metrics receive a call to increment and decrement when a connection is being
-     * established and then closed.
-     */
-    @SuppressWarnings("unchecked")
-    @Test
-    public void testConnectionMetrics() {
-
-        final MqttServer server = getMqttServer(false);
-        final AbstractVertxBasedMqttProtocolAdapter<ProtocolAdapterProperties> adapter = getAdapter(server);
-
-        forceClientMocksToConnected();
-        doAnswer(invocation -> {
-            final Handler<AsyncResult<DeviceUser>> resultHandler = invocation.getArgument(1);
-            resultHandler.handle(Future.succeededFuture(new DeviceUser("DEFAULT_TENANT", "4711")));
-            return null;
-        }).when(usernamePasswordAuthProvider).authenticate(any(UsernamePasswordCredentials.class), any(Handler.class));
-
-        final MqttEndpoint endpoint = getMqttEndpointAuthenticated();
-        adapter.handleEndpointConnection(endpoint);
-
-        verify(metrics).incrementConnections("DEFAULT_TENANT");
-        final ArgumentCaptor<Handler<Void>> closeHandlerCaptor = ArgumentCaptor.forClass(Handler.class);
-        verify(endpoint).closeHandler(closeHandlerCaptor.capture());
-        closeHandlerCaptor.getValue().handle(null);
-        verify(metrics).decrementConnections("DEFAULT_TENANT");
-    }
-
-    /**
-     * Verifies the connection metrics for unauthenticated connections.
-     * <p>
-     * This test should check if the metrics receive a call to increment and decrement when a connection is being
-     * established and then closed.
-     */
-    @SuppressWarnings("unchecked")
-    @Test
-    public void testUnauthenticatedConnectionMetrics() {
-
-        config.setAuthenticationRequired(false);
-
-        final MqttServer server = getMqttServer(false);
-        final AbstractVertxBasedMqttProtocolAdapter<ProtocolAdapterProperties> adapter = getAdapter(server);
-
-        forceClientMocksToConnected();
-
-        final MqttEndpoint endpoint = mockEndpoint();
-        adapter.handleEndpointConnection(endpoint);
-
-        verify(metrics).incrementUnauthenticatedConnections();
-        final ArgumentCaptor<Handler<Void>> closeHandlerCaptor = ArgumentCaptor.forClass(Handler.class);
-        verify(endpoint).closeHandler(closeHandlerCaptor.capture());
-        closeHandlerCaptor.getValue().handle(null);
-        verify(metrics).decrementUnauthenticatedConnections();
     }
 }

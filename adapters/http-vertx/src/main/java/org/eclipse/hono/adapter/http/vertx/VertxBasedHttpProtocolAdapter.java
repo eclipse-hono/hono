@@ -25,6 +25,7 @@ import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.service.auth.device.HonoClientBasedAuthProvider;
 import org.eclipse.hono.service.auth.device.SubjectDnCredentials;
+import org.eclipse.hono.service.auth.device.TenantServiceBasedX509Authentication;
 import org.eclipse.hono.service.auth.device.UsernamePasswordAuthProvider;
 import org.eclipse.hono.service.auth.device.UsernamePasswordCredentials;
 import org.eclipse.hono.service.auth.device.X509AuthProvider;
@@ -100,10 +101,9 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
 
             final ChainAuthHandler authHandler = ChainAuthHandler.create();
             authHandler.append(new X509AuthHandler(
+                    new TenantServiceBasedX509Authentication(getTenantServiceClient(), tracer),
                     Optional.ofNullable(clientCertAuthProvider).orElse(
-                            new X509AuthProvider(getCredentialsServiceClient(), getConfig())),
-                    getTenantServiceClient(),
-                    tracer));
+                            new X509AuthProvider(getCredentialsServiceClient(), getConfig()))));
             authHandler.append(new HonoBasicAuthHandler(
                     Optional.ofNullable(usernamePasswordAuthProvider).orElse(
                             new UsernamePasswordAuthProvider(getCredentialsServiceClient(), getConfig())),
