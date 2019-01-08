@@ -2,6 +2,14 @@
 title = "Release Notes"
 +++
 
+## 0.9-M2 (not yet released)
+
+### Changes
+
+* The OpenShift *source-to-image* (S2I) deployment is now the default
+  OpenShift / OKD deployment. The old OpenShift deployment, which was deprecated
+  in Hono 0.8, was removed.
+
 ## 0.9-M1
 
 ### New Features

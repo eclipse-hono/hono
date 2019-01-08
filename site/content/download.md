@@ -22,7 +22,7 @@ eclipse-hono-deploy-0.8$ deploy/docker/swarm_deploy.sh
 Hono supports deployment to the following container orchestration platforms:
 
 * [Kubernetes]({{< ref "/deployment/kubernetes.md" >}})
-* [OpenShift]({{< ref "/deployment/openshift_s2i.md" >}})
+* [OpenShift]({{< ref "/deployment/openshift.md" >}})
 * [Docker Swarm]({{< ref "/deployment/docker-swarm.md" >}})
 
 A Java based command line client for consuming telemetry data and events from Hono is available for download as well:
