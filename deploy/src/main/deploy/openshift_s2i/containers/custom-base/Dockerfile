@@ -11,7 +11,7 @@ MAINTAINER Jens Reimann <jreimann@redhat.com>
 LABEL maintainer "Jens Reimann <jreimann@redhat.com>"
 
 ENV \
-    NETTY_TCNATIVE_VERSION=2.0.10.Final
+    NETTY_TCNATIVE_VERSION=2.0.17.Final
 
 USER root
 
