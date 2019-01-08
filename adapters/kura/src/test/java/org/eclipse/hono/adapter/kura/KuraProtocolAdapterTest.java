@@ -228,6 +228,6 @@ public class KuraProtocolAdapterTest {
     }
 
     private static MqttContext newContext(final MqttPublishMessage message, final Device authenticatedDevice) {
-        return new MqttContext(message, mock(MqttEndpoint.class), authenticatedDevice);
+        return MqttContext.fromPublishPacket(message, mock(MqttEndpoint.class), authenticatedDevice);
     }
 }

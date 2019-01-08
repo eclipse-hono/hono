@@ -39,7 +39,7 @@ public class MqttContextTest {
         final MqttPublishMessage msg = mock(MqttPublishMessage.class);
         when(msg.topicName()).thenReturn("t");
         final Device device = new Device("tenant", "device");
-        final MqttContext context = new MqttContext(msg, mock(MqttEndpoint.class), device);
+        final MqttContext context = MqttContext.fromPublishPacket(msg, mock(MqttEndpoint.class), device);
         assertThat(context.tenant(), is("tenant"));
     }
 
@@ -51,7 +51,7 @@ public class MqttContextTest {
     public void testTenantIsRetrievedFromTopic() {
         final MqttPublishMessage msg = mock(MqttPublishMessage.class);
         when(msg.topicName()).thenReturn("t/tenant/device");
-        final MqttContext context = new MqttContext(msg, mock(MqttEndpoint.class), null);
+        final MqttContext context = MqttContext.fromPublishPacket(msg, mock(MqttEndpoint.class));
         assertThat(context.tenant(), is("tenant"));
     }
 }
