@@ -1,0 +1,12 @@
+# Default values for eclipse-hono.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+project:
+  groupId: ${project.groupId}
+
+dispatchRouter:
+  image:
+    name: ${dispatch-router.image.name}
+
+openshift: false
