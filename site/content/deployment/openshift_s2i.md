@@ -287,8 +287,8 @@ based on.
 
 Start by downloading and unpacking EnMasse:
 
-    curl -LO https://github.com/EnMasseProject/enmasse/releases/download/0.24.0/enmasse-0.24.0.tgz
-    tar xzf enmasse-0.24.0.tgz
+    curl -LO https://github.com/EnMasseProject/enmasse/releases/download/0.25.0/enmasse-0.25.0.tgz
+    tar xzf enmasse-0.25.0.tgz
 
 {{% note title="Other versions" %}}
 Other versions of EnMasse might work as well, but are untested by this deployment
@@ -306,7 +306,7 @@ Then create a new project:
 
 And perform the deployment:
 
-    oc apply -f enmasse-0.24.0/install/bundles/enmasse-with-standard-authservice
+    oc apply -f enmasse-0.25.0/install/bundles/enmasse-with-standard-authservice
 
 Wait for the admin console to completely start up. You can check this with
 the following command:
