@@ -13,6 +13,8 @@
 
 package org.eclipse.hono.util;
 
+import io.opentracing.SpanContext;
+
 /**
  * A context that can be used to pass around arbitrary key/value pairs.
  *
@@ -45,4 +47,20 @@ public interface ExecutionContext {
      * @param value The value.
      */
     void put(String key, Object value);
+
+    /**
+     * Sets the <em>OpenTracing</em> context to use for
+     * tracking the processing of this context.
+     * 
+     * @param context The context.
+     */
+    void setTracingContext(SpanContext context);
+
+    /**
+     * Gets the <em>OpenTracing</em> context that is used to
+     * track the processing of this context.
+     * 
+     * @return The context or {@code null} if no tracing context is set.
+     */
+    SpanContext getTracingContext();
 }

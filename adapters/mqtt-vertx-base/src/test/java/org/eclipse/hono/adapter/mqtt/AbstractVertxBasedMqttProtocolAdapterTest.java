@@ -65,7 +65,6 @@ import org.mockito.ArgumentCaptor;
 
 import io.netty.handler.codec.mqtt.MqttConnectReturnCode;
 import io.netty.handler.codec.mqtt.MqttQoS;
-import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
@@ -180,9 +179,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
 
     private static MqttContext newMqttContext(final MqttPublishMessage message, final MqttEndpoint endpoint) {
         final MqttContext result = new MqttContext(message, endpoint);
-        final Span currentSpan = mock(Span.class);
-        when(currentSpan.context()).thenReturn(mock(SpanContext.class));
-        result.put(AbstractVertxBasedMqttProtocolAdapter.KEY_CURRENT_SPAN, currentSpan);
+        result.setTracingContext(mock(SpanContext.class));
         return result;
     }
 

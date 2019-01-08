@@ -43,7 +43,6 @@ import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EndpointType;
 import org.eclipse.hono.util.EventConstants;
-import org.eclipse.hono.util.ExecutionContext;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.TelemetryConstants;
@@ -76,11 +75,6 @@ import io.vertx.mqtt.messages.MqttUnsubscribeMessage;
  */
 public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAdapterProperties>
         extends AbstractProtocolAdapterBase<T> {
-
-    /**
-     * The name of the property that holds the current span.
-     */
-    public static final String KEY_CURRENT_SPAN = MqttContext.class.getName() + ".serverSpan";
 
     private static final int IANA_MQTT_PORT = 1883;
     private static final int IANA_SECURE_MQTT_PORT = 8883;
@@ -635,7 +629,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
             .withTag(Tags.COMPONENT.getKey(), getTypeName())
             .withTag(TracingHelper.TAG_CLIENT_ID.getKey(), context.deviceEndpoint().clientIdentifier())
             .start();
-        context.put(KEY_CURRENT_SPAN, span);
+        context.setTracingContext(span.context());
 
         checkTopic(context)
             .compose(ok -> onPublishedMessage(context))
@@ -815,7 +809,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
                } else {
 
                    final Span currentSpan = tracer.buildSpan("upload Command response")
-                           .asChildOf(getCurrentSpan(ctx))
+                           .asChildOf(ctx.getTracingContext())
                            .ignoreActiveSpan()
                            .withTag(Tags.COMPONENT.getKey(), getTypeName())
                            .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CLIENT)
@@ -864,7 +858,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
         } else {
 
             final Span currentSpan = tracer.buildSpan("upload " + endpointName)
-                    .asChildOf(getCurrentSpan(ctx))
+                    .asChildOf(ctx.getTracingContext())
                     .ignoreActiveSpan()
                     .withTag(Tags.COMPONENT.getKey(), getTypeName())
                     .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CLIENT)
@@ -972,35 +966,6 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
             endpoint.close();
         } else {
             LOG.trace("client has already closed connection");
-        }
-    }
-
-    /**
-     * Gets the current span from an execution context.
-     * 
-     * @param ctx The context.
-     * @return The span or {@code null} if the context does not
-     *         contain a span.
-     */
-    protected final Span getCurrentSpan(final ExecutionContext ctx) {
-        if (ctx == null) {
-            return null;
-        } else {
-            return ctx.get(KEY_CURRENT_SPAN);
-        }
-    }
-
-    /**
-     * Sets the current span on an execution context.
-     * 
-     * @param ctx The context.
-     * @param span The current span.
-     */
-    protected final void setCurrentSpan(final ExecutionContext ctx, final Span span) {
-
-        Objects.requireNonNull(ctx);
-        if (span != null) {
-            ctx.put(KEY_CURRENT_SPAN, span);
         }
     }
 

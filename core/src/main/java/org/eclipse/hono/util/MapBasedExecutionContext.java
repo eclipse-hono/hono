@@ -17,6 +17,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
+import io.opentracing.SpanContext;
+
 /**
  * An execution context that stores properties in a {@code Map}.
  *
@@ -24,6 +26,7 @@ import java.util.Optional;
 public class MapBasedExecutionContext implements ExecutionContext {
 
     private Map<String, Object> data;
+    private SpanContext spanContext;
 
     /**
      * Creates an empty execution context.
@@ -62,6 +65,17 @@ public class MapBasedExecutionContext implements ExecutionContext {
     @Override
     public final void put(final String key, final Object value) {
         getData().put(key, value);
+    }
+
+
+    @Override
+    public SpanContext getTracingContext() {
+        return spanContext;
+    }
+
+    @Override
+    public void setTracingContext(final SpanContext spanContext) {
+        this.spanContext = spanContext;
     }
 
     /**
