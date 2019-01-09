@@ -18,7 +18,8 @@ import static org.hamcrest.CoreMatchers.startsWith;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Matchers.eq;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -206,7 +207,7 @@ public class TenantClientImplTest {
         // WHEN getting tenant information
         client.get("tenant").setHandler(ctx.asyncAssertFailure(t -> {
             // THEN the invocation fails and the span is marked as erroneous
-            verify(span).setTag(eq(Tags.ERROR.getKey()), eq(Boolean.TRUE));
+            verify(span, atLeast(1)).setTag(eq(Tags.ERROR.getKey()), eq(Boolean.TRUE));
             // and the span is finished
             verify(span).finish();
         }));
