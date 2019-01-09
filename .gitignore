@@ -1,6 +1,7 @@
 **/target/
 **/.idea/
 **/*.iml
+**/.vscode/
 **/bin/
 **/.vertx/
 **/.factorypath
