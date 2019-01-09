@@ -16,6 +16,7 @@ package org.eclipse.hono.service.auth.device;
 import java.security.GeneralSecurityException;
 import java.security.cert.CertPath;
 import java.security.cert.CertPathValidator;
+import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.PKIXParameters;
 import java.security.cert.TrustAnchor;
@@ -68,7 +69,11 @@ public class DeviceCertificateValidator implements X509CertificateChainValidator
         } catch (GeneralSecurityException e) {
             LOG.debug("validation of device certificate [subject DN: {}] failed",
                     chain.get(0).getSubjectX500Principal().getName(), e);
-            result.fail(e);
+            if (e instanceof CertificateException) {
+                result.fail(e);
+            } else {
+                result.fail(new CertificateException("validation of device certificate failed", e));
+            }
         }
         return result;
     }
