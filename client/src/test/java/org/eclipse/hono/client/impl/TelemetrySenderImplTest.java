@@ -26,6 +26,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import io.opentracing.Span;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -113,5 +114,32 @@ public class TelemetrySenderImplTest {
         // THEN the message is not sent
         assertFalse(result.succeeded());
         verify(sender, never()).send(any(Message.class), any(Handler.class));
+    }
+
+    /**
+     * Verifies that a timeout occurring while a message is sent doesn't cause the corresponding 
+     * OpenTracing span to stay unfinished.
+     */
+    @Test
+    public void testSendMessageFailsOnTimeout() {
+
+        // GIVEN a sender that won't receive a delivery update on sending a message 
+        // and directly triggers the timeout handler
+        when(sender.send(any(Message.class), any(Handler.class))).thenReturn(mock(ProtonDelivery.class));
+        when(vertx.setTimer(anyLong(), any(Handler.class))).thenAnswer(invocation -> {
+            final Handler<Long> handler = invocation.getArgument(1);
+            final long timerId = 1;
+            handler.handle(timerId);
+            return timerId;
+        });
+        final MessageSender messageSender = new TelemetrySenderImpl(config, sender, "tenant", "telemetry/tenant", context);
+
+        // WHEN sending a message
+        final Message message = mock(Message.class);
+        final Span span = mock(Span.class);
+        ((TelemetrySenderImpl) messageSender).sendMessage(message, span);
+
+        // THEN the given Span will nonetheless be finished.
+        verify(span).finish();
     }
 }

@@ -43,6 +43,10 @@ public class ClientConfigProperties extends AbstractConfig {
      * The default amount of time to wait for a response before a request times out.
      */
     public static final long DEFAULT_REQUEST_TIMEOUT = 200L; // ms
+    /**
+     * The default amount of time to wait for a delivery update after a message was sent.
+     */
+    public static final long DEFAULT_SEND_MESSAGE_TIMEOUT = 1000L; // ms
 
     private String name;
     private String host = "localhost";
@@ -54,6 +58,7 @@ public class ClientConfigProperties extends AbstractConfig {
     private long flowLatency = DEFAULT_FLOW_LATENCY;
     private long linkEstablishmentTimeout = DEFAULT_LINK_ESTABLISHMENT_TIMEOUT;
     private int initialCredits = DEFAULT_INITIAL_CREDITS;
+    private long sendMessageTimeoutMillis = DEFAULT_SEND_MESSAGE_TIMEOUT;
     private long requestTimeoutMillis = DEFAULT_REQUEST_TIMEOUT;
     private boolean hostnameVerificationRequired = true;
     private boolean tlsEnabled = false;
@@ -390,6 +395,35 @@ public class ClientConfigProperties extends AbstractConfig {
             throw new IllegalArgumentException("initial credits must not be negative");
         } else {
             this.initialCredits = initialCredits;
+        }
+    }
+
+    /**
+     * Gets the maximum amount of time a client should wait for a delivery update after sending an event or command message.
+     * If no delivery update is received in that time, the future with the outcome of the send operation will be failed.
+     * <p>
+     * The default value of this property is {@link #DEFAULT_SEND_MESSAGE_TIMEOUT}.
+     *
+     * @return The maximum number of milliseconds to wait.
+     */
+    public final long getSendMessageTimeout() {
+        return sendMessageTimeoutMillis;
+    }
+
+    /**
+     * Sets the maximum amount of time a client should wait for a delivery update after sending an event or command message.
+     * If no delivery update is received in that time, the future with the outcome of the send operation will be failed.
+     * <p>
+     * The default value of this property is {@link #DEFAULT_SEND_MESSAGE_TIMEOUT}.
+     *
+     * @param sendMessageTimeoutMillis The maximum number of milliseconds to wait.
+     * @throws IllegalArgumentException if timeout is negative.
+     */
+    public final void setSendMessageTimeout(final long sendMessageTimeoutMillis) {
+        if (sendMessageTimeoutMillis < 0) {
+            throw new IllegalArgumentException("sendMessageTimeout must not be negative");
+        } else {
+            this.sendMessageTimeoutMillis = sendMessageTimeoutMillis;
         }
     }
 

@@ -313,11 +313,13 @@ abstract public class AbstractSender extends AbstractHonoClient implements Messa
      *         The future will be succeeded if the message has been sent to the endpoint.
      *         The delivery contained in the future represents the delivery state at the time
      *         the future has been succeeded, i.e. for telemetry data it will be locally
-     *         <em>unsettled</em> without any outcome yet. For events it will be locally
+     *         <em>unsettled</em> without any outcome yet. For events and commands it will be locally
      *         and remotely <em>settled</em> and will contain the <em>accepted</em> outcome.
      *         <p>
      *         The future will be failed with a {@link ServiceInvocationException} if the
-     *         message could not be sent.
+     *         message could not be sent or, in the case of events or commands, if no delivery update
+     *         was received from the peer within the configured timeout period
+     *         (see {@link ClientConfigProperties#getSendMessageTimeout()}).
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
     protected abstract Future<ProtonDelivery> sendMessage(Message message, Span currentSpan);
@@ -389,7 +391,9 @@ abstract public class AbstractSender extends AbstractHonoClient implements Messa
      *         by the peer.
      *         <p>
      *         The future will be failed with a {@link ServiceInvocationException} if the
-     *         message could not be sent or has not been accepted by the peer.
+     *         message could not be sent or has not been accepted by the peer or if no delivery update
+     *         was received from the peer within the configured timeout period
+     *         (see {@link ClientConfigProperties#getSendMessageTimeout()}).
      * @throws NullPointerException if the message is {@code null}.
      */
     protected Future<ProtonDelivery> sendMessageAndWaitForOutcome(final Message message, final Span currentSpan) {
@@ -405,9 +409,27 @@ abstract public class AbstractSender extends AbstractHonoClient implements Messa
         details.put(TracingHelper.TAG_QOS.getKey(), sender.getQoS().toString());
         currentSpan.log(details);
 
+        final Long timerId = config.getSendMessageTimeout() > 0
+                ? context.owner().setTimer(config.getSendMessageTimeout(), id -> {
+                    if (!result.isComplete()) {
+                        final ServerErrorException exception = new ServerErrorException(
+                                HttpURLConnection.HTTP_UNAVAILABLE,
+                                "waiting for delivery update timed out after " + config.getSendMessageTimeout() + "ms");
+                        LOG.debug("waiting for delivery update timed out for message [message ID: {}] after {}ms",
+                                messageId, config.getSendMessageTimeout());
+                        result.fail(exception);
+                    }
+                })
+                : null;
+
         sender.send(message, deliveryUpdated -> {
+            if (timerId != null) {
+                context.owner().cancelTimer(timerId);
+            }
             final DeliveryState remoteState = deliveryUpdated.getRemoteState();
-            if (deliveryUpdated.remotelySettled()) {
+            if (result.isComplete()) {
+                LOG.debug("ignoring received delivery update for message [message ID: {}]: waiting for the update has already timed out", messageId);
+            } else if (deliveryUpdated.remotelySettled()) {
                 if (Accepted.class.isInstance(remoteState)) {
                     currentSpan.log("message accepted by peer");
                     result.complete(deliveryUpdated);
@@ -447,6 +469,7 @@ abstract public class AbstractSender extends AbstractHonoClient implements Messa
             return delivery;
         }).recover(t -> {
             TracingHelper.logError(currentSpan, t);
+            Tags.HTTP_STATUS.set(currentSpan, ServiceInvocationException.extractStatusCode(result.cause()));
             currentSpan.finish();
             return Future.failedFuture(t);
         });

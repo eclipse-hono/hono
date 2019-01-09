@@ -17,6 +17,7 @@ import java.net.HttpURLConnection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.qpid.proton.amqp.messaging.Accepted;
 import org.apache.qpid.proton.amqp.messaging.Rejected;
@@ -200,9 +201,30 @@ public final class TelemetrySenderImpl extends AbstractSender {
         details.put(TracingHelper.TAG_QOS.getKey(), sender.getQoS().toString());
         currentSpan.log(details);
 
+        final AtomicBoolean timeoutReached = new AtomicBoolean(false);
+        final Long timerId = config.getSendMessageTimeout() > 0
+                ? context.owner().setTimer(config.getSendMessageTimeout(), id -> {
+                    if (timeoutReached.compareAndSet(false, true)) {
+                        final ServerErrorException exception = new ServerErrorException(
+                                HttpURLConnection.HTTP_UNAVAILABLE,
+                                "waiting for delivery update timed out after " + config.getSendMessageTimeout() + "ms");
+                        LOG.debug("waiting for delivery update timed out for message [message ID: {}] after {}ms",
+                                messageId, config.getSendMessageTimeout());
+                        TracingHelper.logError(currentSpan, exception.getMessage());
+                        Tags.HTTP_STATUS.set(currentSpan, HttpURLConnection.HTTP_UNAVAILABLE);
+                        currentSpan.finish();
+                    }
+                })
+                : null;
+
         final ProtonDelivery result = sender.send(message, deliveryUpdated -> {
+            if (timerId != null) {
+                context.owner().cancelTimer(timerId);
+            }
             final DeliveryState remoteState = deliveryUpdated.getRemoteState();
-            if (deliveryUpdated.remotelySettled()) {
+            if (timeoutReached.get()) {
+                LOG.debug("ignoring received delivery update for message [message ID: {}]: waiting for the update has already timed out", messageId);
+            } else if (deliveryUpdated.remotelySettled()) {
                 if (Accepted.class.isInstance(remoteState)) {
                     LOG.trace("message [message ID: {}] accepted by peer", messageId);
                     currentSpan.log("message accepted by peer");

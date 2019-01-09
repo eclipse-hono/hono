@@ -18,8 +18,11 @@ import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
+import java.net.HttpURLConnection;
+
 import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
@@ -46,6 +49,7 @@ public class AbstractSenderTest {
     private ProtonSender protonSender;
     private ClientConfigProperties config;
     private Context context;
+    private Vertx vertx;
 
     /**
      * Sets up the fixture.
@@ -54,7 +58,8 @@ public class AbstractSenderTest {
     public void setUp() {
         protonSender = HonoClientUnitTestHelper.mockProtonSender();
         config = new ClientConfigProperties();
-        context = HonoClientUnitTestHelper.mockContext(mock(Vertx.class));
+        vertx = mock(Vertx.class);
+        context = HonoClientUnitTestHelper.mockContext(vertx);
     }
 
     /**
@@ -122,6 +127,35 @@ public class AbstractSenderTest {
         // THEN the message is not sent
         assertFalse(result.succeeded());
         verify(protonSender, never()).send(any(Message.class));
+    }
+
+    /**
+     * Verifies that the sender fails if a timeout occurs.
+     */
+    @Test
+    public void testSendMessageFailsOnTimeout() {
+
+        // GIVEN a sender that won't receive a delivery update on sending a message 
+        // and directly triggers the timeout handler
+        when(protonSender.send(any(Message.class), any(Handler.class))).thenReturn(mock(ProtonDelivery.class));
+        when(vertx.setTimer(anyLong(), any(Handler.class))).thenAnswer(invocation -> {
+            final Handler<Long> handler = invocation.getArgument(1);
+            final long timerId = 1;
+            handler.handle(timerId);
+            return timerId;
+        });
+        final AbstractSender sender = newSender("tenant", "endpoint");
+
+        // WHEN sending a message
+        final Message message = mock(Message.class);
+        final Span span = mock(Span.class);
+        final Future<ProtonDelivery> result = sender.sendMessageAndWaitForOutcome(message, span);
+
+        // THEN the returned result future will fail with a 503 status code.
+        assertFalse(result.succeeded());
+        assertTrue(result.cause() instanceof ServerErrorException);
+        assertEquals(HttpURLConnection.HTTP_UNAVAILABLE, ((ServerErrorException) result.cause()).getErrorCode());
+        verify(span).finish();
     }
 
     /**
