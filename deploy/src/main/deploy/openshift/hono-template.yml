@@ -501,7 +501,7 @@ objects:
             name: actuator
             protocol: TCP
           - containerPort: 8088
-            name: radan-http
+            name: health
             protocol: TCP
           - containerPort: 5671
             name: amqps
@@ -529,8 +529,8 @@ objects:
           secret:
             secretName: hono-adapter-amqp-vertx-tls
 
-- apiVersion: v1
-  kind: Service
+- kind: Service
+  apiVersion: v1
   metadata:
     name: hono-adapter-amqp-vertx
     labels:
@@ -831,7 +831,7 @@ objects:
             name: actuator
             protocol: TCP
           - containerPort: 8088
-            name: radan-http
+            name: health
             protocol: TCP
           - containerPort: 8883
             name: secure-mqtt
@@ -839,8 +839,6 @@ objects:
           - containerPort: 1883
             name: mqtt
             protocol: TCP
-          securityContext:
-            privileged: false
           volumeMounts:
           - mountPath: /etc/config
             name: conf
@@ -861,8 +859,8 @@ objects:
           secret:
             secretName: hono-adapter-mqtt-vertx-tls
 
-- apiVersion: v1
-  kind: Service
+- kind: Service
+  apiVersion: v1
   metadata:
     name: hono-adapter-mqtt-vertx
     labels:
@@ -888,8 +886,8 @@ objects:
       app: hono-adapter
       deploymentconfig: hono-adapter-mqtt-vertx
 
-- apiVersion: v1
-  kind: Service
+- kind: Service
+  apiVersion: v1
   metadata:
     name: hono-adapter-mqtt-vertx-nodeport
     labels:
@@ -1191,19 +1189,17 @@ objects:
           - containerPort: 8778 
             name: jolokia
           - containerPort: 8088
-            name: radan-http
+            name: health
             protocol: TCP
           - containerPort: 8080
-            name: http-alt
+            name: http
             protocol: TCP
           - containerPort: 8081
             name: actuator
             protocol: TCP
           - containerPort: 8443
-            name: pcsync-https
+            name: https
             protocol: TCP
-          securityContext:
-            privileged: false
           volumeMounts:
           - mountPath: /etc/config
             name: conf
@@ -1224,8 +1220,8 @@ objects:
           secret:
             secretName: hono-adapter-http-vertx-tls
 
-- apiVersion: v1
-  kind: Service
+- kind: Service
+  apiVersion: v1
   metadata:
     name: hono-adapter-http-vertx
     labels:
@@ -1532,16 +1528,16 @@ objects:
           - containerPort: 8778 
             name: jolokia
           - containerPort: 8088
-            name: radan-http
+            name: health
             protocol: TCP
           - containerPort: 8080
-            name: http-alt
+            name: http
             protocol: TCP
           - containerPort: 8081
             name: actuator
             protocol: TCP
           - containerPort: 8443
-            name: pcsync-https
+            name: https
             protocol: TCP
           - containerPort: 5671
             name: amqps
@@ -1552,8 +1548,6 @@ objects:
           resources:
             limits:
               memory: 512Mi
-          securityContext:
-            privileged: false
           volumeMounts:
           - mountPath: /var/lib/hono/device-registry
             name: registry
@@ -1576,8 +1570,8 @@ objects:
           secret:
             secretName: hono-service-device-registry-tls
 
-- apiVersion: v1
-  kind: Service
+- kind: Service
+  apiVersion: v1
   metadata:
     name: hono-service-device-registry
     labels:
@@ -1936,8 +1930,8 @@ objects:
           secret:
             secretName: hono-service-auth-tls
 
-- apiVersion: v1
-  kind: Service
+- kind: Service
+  apiVersion: v1
   metadata:
     name: hono-service-auth
     labels:

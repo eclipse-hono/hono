@@ -8,7 +8,7 @@ FROM fabric8/s2i-java:3.0-java11
 #
 
 MAINTAINER Jens Reimann <jreimann@redhat.com>
-LABEL maintainer "Jens Reimann <jreimann@redhat.com>"
+LABEL maintainer="Jens Reimann <jreimann@redhat.com>"
 
 ENV \
     NETTY_TCNATIVE_VERSION=2.0.17.Final
