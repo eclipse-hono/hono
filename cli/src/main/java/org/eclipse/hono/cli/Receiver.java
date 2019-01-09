@@ -88,7 +88,10 @@ public class Receiver extends AbstractClient {
         }
 
         if (consumerFutures.isEmpty()) {
-            consumerFutures.add(Future.failedFuture("Invalid message type. Valid types are telemetry, event or all"));
+            consumerFutures.add(Future.failedFuture(
+                    String.format(
+                            "Invalid message type [\"%s\"]. Valid types are \"telemetry\", \"event\" or \"all\"",
+                            messageType)));
         }
         return CompositeFuture.all(consumerFutures);
     }

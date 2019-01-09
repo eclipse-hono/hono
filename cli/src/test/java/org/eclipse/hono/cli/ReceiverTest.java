@@ -13,11 +13,14 @@
 
 package org.eclipse.hono.cli;
 
-import io.vertx.core.Future;
-import io.vertx.core.Handler;
-import io.vertx.core.Vertx;
-import io.vertx.ext.unit.TestContext;
-import io.vertx.ext.unit.junit.VertxUnitRunner;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
+import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
+
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageConsumer;
 import org.junit.After;
@@ -27,13 +30,12 @@ import org.junit.Test;
 import org.junit.rules.Timeout;
 import org.junit.runner.RunWith;
 
-import java.util.concurrent.TimeUnit;
-import java.util.function.Consumer;
-
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import io.vertx.core.Context;
+import io.vertx.core.Future;
+import io.vertx.core.Handler;
+import io.vertx.core.Vertx;
+import io.vertx.ext.unit.TestContext;
+import io.vertx.ext.unit.junit.VertxUnitRunner;
 
 /**
  * Test cases verifying the behavior of {@code Receiver}.
@@ -42,30 +44,36 @@ import static org.mockito.Mockito.when;
 @RunWith(VertxUnitRunner.class)
 public class ReceiverTest {
 
-    private Receiver receiver;
     /**
      * Global timeout for all test cases.
      */
     @Rule
     public Timeout globalTimeout = new Timeout(5, TimeUnit.SECONDS);
 
+    private Receiver receiver;
+
     /**
-     * Setups the receiver with mocks.
+     * Sets up the receiver with mocks.
      *
      */
     @SuppressWarnings("unchecked")
     @Before
     public void setup() {
+
+        final Vertx vertx = mock(Vertx.class);
+        when(vertx.getOrCreateContext()).thenReturn(mock(Context.class));
+
         final HonoClient client = mock(HonoClient.class);
-        receiver = new Receiver();
         when(client.connect(any(Handler.class))).thenReturn(Future.succeededFuture(client));
         when(client.connect()).thenReturn(Future.succeededFuture(client));
         when(client.createTelemetryConsumer(anyString(), any(Consumer.class), any(Handler.class)))
                 .thenReturn(Future.succeededFuture(mock(MessageConsumer.class)));
         when(client.createEventConsumer(anyString(), any(Consumer.class), any(Handler.class)))
                 .thenReturn(Future.succeededFuture(mock(MessageConsumer.class)));
-        receiver.client = client;
-        receiver.vertx = Vertx.vertx();
+
+        receiver = new Receiver();
+        receiver.setHonoClient(client);
+        receiver.setVertx(vertx);
         receiver.tenantId = "TEST_TENANT";
     }
 
@@ -89,7 +97,7 @@ public class ReceiverTest {
         receiver.messageType = "telemetry";
         receiver.start().setHandler(context.asyncAssertSuccess(result->{
             context.assertNotNull(result.list());
-            context.assertTrue(result.list().size()==1);
+            context.assertTrue(result.list().size() == 1);
         }));
     }
 
@@ -103,7 +111,7 @@ public class ReceiverTest {
         receiver.messageType = "event";
         receiver.start().setHandler(context.asyncAssertSuccess(result->{
             context.assertNotNull(result.list());
-            context.assertTrue(result.list().size()==1);
+            context.assertTrue(result.list().size() == 1);
         }));
     }
 
@@ -117,7 +125,7 @@ public class ReceiverTest {
         receiver.messageType="all";
         receiver.start().setHandler(context.asyncAssertSuccess(result->{
            context.assertNotNull(result.list());
-           context.assertTrue(result.list().size()==2);
+           context.assertTrue(result.list().size() == 2);
         }));
     }
 
