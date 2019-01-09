@@ -9,4 +9,8 @@ dispatchRouter:
   image:
     name: ${dispatch-router.image.name}
 
+artemis:
+  image:
+    name: ${artemis.image.name}
+
 openshift: false
