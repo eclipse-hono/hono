@@ -161,7 +161,7 @@ public final class KeyLoader {
         final Path path = Paths.get(pathName);
 
         if (!vertx.fileSystem().existsBlocking(pathName)) {
-            throw new IllegalArgumentException(format("%s: Private key file does not exist", path));
+            throw new IllegalArgumentException(format("%s: PEM file does not exist", path));
         }
 
         try {
