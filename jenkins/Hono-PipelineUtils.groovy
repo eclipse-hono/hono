@@ -24,7 +24,7 @@
  * @return returns the jdk version to be used for the build.
  */
 String getJDKVersion() {
-    return "jdk9-latest"
+    return "jdk11-latest"
 }
 
 /**
