@@ -24,5 +24,5 @@ Please check out the [Eclipse Hono project home page](https://www.eclipse.org/ho
 
 ## Build status
 
+- [![Jenkins Build Status](https://ci.eclipse.org/hono/buildStatus/icon?job=Hono%20CI%20Pipeline)](https://ci.eclipse.org/hono/job/Hono%20CI%20Pipeline/)
 - [![Travis Build Status](https://travis-ci.org/eclipse/hono.svg?branch=master)](https://travis-ci.org/eclipse/hono)
-- [Hudson Build Status](https://hudson.eclipse.org/hono/)
