@@ -62,10 +62,10 @@ public class UsernamePasswordAuthProviderTest {
     private HonoPasswordEncoder pwdEncoder;
 
     /**
-     * Time out all test after 2 seconds.
+     * Time out all tests.
      */
     @Rule
-    public Timeout globalTimeout = new Timeout(2, TimeUnit.SECONDS);
+    public Timeout globalTimeout = new Timeout(5, TimeUnit.SECONDS);
 
     /**
      * Initializes vert.x.
