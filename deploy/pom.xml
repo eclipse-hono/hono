@@ -186,6 +186,15 @@
                                     <targetPath>deploy/helm/config</targetPath>
                                     <filtering>true</filtering>
                                 </resource>
+                                <resource>
+                                    <directory>${project.basedir}/src/main/deploy</directory>
+                                    <targetPath>${project.build.directory}/deploy/helm/example</targetPath>
+                                    <includes>
+                                        *.json,
+                                        *.credentials
+                                    </includes>
+                                    <filtering>true</filtering>
+                                </resource>
                             </resources>
                             <filters>
                                 <filter>${project.basedir}/src/main/kubernetes-config.properties</filter>
