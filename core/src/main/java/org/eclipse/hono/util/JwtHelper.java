@@ -234,6 +234,7 @@ public abstract class JwtHelper {
         } else {
             final T result = instanceSupplier.get();
             result.tokenLifetime = Duration.ofSeconds(config.getTokenExpiration());
+            LOG.info("using token lifetime of {} seconds", result.tokenLifetime.getSeconds());
             if (config.getSharedSecret() != null) {
                 final byte[] secret = getBytes(config.getSharedSecret());
                 result.setSharedSecret(secret);
