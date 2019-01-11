@@ -15,6 +15,7 @@ hono:
   messaging:
     insecurePortEnabled: true
     insecurePortBindAddress: 0.0.0.0
+    maxSessionWindow: 1638400
     waitForDownstreamConnectionEnabled: true
     validation:
       sharedSecret: sdgfsdafazufgsdafjhfgsdajfgwhriojsdafjlksdhfgsa8fg452368gdf
