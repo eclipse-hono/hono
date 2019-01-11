@@ -13,9 +13,6 @@
 
 package org.eclipse.hono.deviceregistry;
 
-import io.vertx.core.VertxOptions;
-import io.vertx.core.dns.AddressResolverOptions;
-
 import java.util.Optional;
 
 import org.eclipse.hono.auth.HonoPasswordEncoder;
@@ -28,10 +25,10 @@ import org.eclipse.hono.service.VertxBasedHealthCheckServer;
 import org.eclipse.hono.service.credentials.CredentialsAmqpEndpoint;
 import org.eclipse.hono.service.credentials.CredentialsHttpEndpoint;
 import org.eclipse.hono.service.metric.MetricsTags;
+import org.eclipse.hono.service.registration.RegistrationAmqpEndpoint;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelper;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelperImpl;
 import org.eclipse.hono.service.registration.RegistrationHttpEndpoint;
-import org.eclipse.hono.service.registration.RegistrationAmqpEndpoint;
 import org.eclipse.hono.service.tenant.TenantAmqpEndpoint;
 import org.eclipse.hono.service.tenant.TenantHttpEndpoint;
 import org.eclipse.hono.util.Constants;
@@ -40,6 +37,7 @@ import org.springframework.beans.factory.config.ObjectFactoryCreatingFactoryBean
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Scope;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.spring.autoconfigure.MeterRegistryCustomizer;
@@ -47,7 +45,7 @@ import io.opentracing.Tracer;
 import io.opentracing.contrib.tracerresolver.TracerResolver;
 import io.opentracing.noop.NoopTracerFactory;
 import io.vertx.core.Vertx;
-import org.springframework.context.annotation.Scope;
+import io.vertx.core.VertxOptions;
 
 /**
  * Spring Boot configuration for the Device Registry application.
@@ -60,21 +58,28 @@ public class ApplicationConfig {
     private static final String BEAN_NAME_DEVICE_REGISTRY_REST_SERVER = "deviceRegistryRestServer";
 
     /**
-     * Gets the singleton Vert.x instance to be used by Hono.
+     * Exposes a Vert.x instance as a Spring bean.
+     * <p>
+     * This method creates new Vert.x default options and invokes
+     * {@link VertxProperties#configureVertx(VertxOptions)} on the object returned
+     * by {@link #vertxProperties()}.
      * 
-     * @return the instance.
+     * @return The Vert.x instance.
      */
     @Bean
     public Vertx vertx() {
-        final VertxOptions options = new VertxOptions()
-                .setAddressResolverOptions(new AddressResolverOptions()
-                        .setCacheNegativeTimeToLive(0) // discard failed DNS lookup results immediately
-                        .setCacheMaxTimeToLive(0) // support DNS based service resolution
-                        .setQueryTimeout(1000));
+        return Vertx.vertx(vertxProperties().configureVertx(new VertxOptions()));
+    }
 
-        vertxProperties().configureVertx(options);
-
-        return Vertx.vertx(options);
+    /**
+     * Exposes configuration properties for Vert.x.
+     * 
+     * @return The properties.
+     */
+    @ConfigurationProperties("hono.vertx")
+    @Bean
+    public VertxProperties vertxProperties() {
+        return new VertxProperties();
     }
 
     /**
@@ -297,17 +302,6 @@ public class ApplicationConfig {
             serviceProps.getSigning().setKeyPath(amqpProps.getKeyPath());
         }
         return RegistrationAssertionHelperImpl.forSigning(vertx(), serviceProps.getSigning());
-    }
-
-    /**
-     * Exposes configuration options for vertx.
-     * 
-     * @return The Properties.
-     */
-    @ConfigurationProperties("hono.vertx")
-    @Bean
-    public VertxProperties vertxProperties() {
-        return new VertxProperties();
     }
 
     /**

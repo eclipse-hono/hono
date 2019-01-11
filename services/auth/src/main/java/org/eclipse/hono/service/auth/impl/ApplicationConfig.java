@@ -31,7 +31,6 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.spring.autoconfigure.MeterRegistryCustomizer;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
-import io.vertx.core.dns.AddressResolverOptions;
 
 /**
  * Spring Boot configuration for the simple authentication server application.
@@ -43,26 +42,23 @@ public class ApplicationConfig {
     private static final String BEAN_NAME_SIMPLE_AUTHENTICATION_SERVER = "simpleAuthenticationServer";
 
     /**
-     * Gets the singleton Vert.x instance to be used by Hono.
+     * Exposes a Vert.x instance as a Spring bean.
+     * <p>
+     * This method creates new Vert.x default options and invokes
+     * {@link VertxProperties#configureVertx(VertxOptions)} on the object returned
+     * by {@link #vertxProperties()}.
      * 
-     * @return the instance.
+     * @return The Vert.x instance.
      */
     @Bean
     public Vertx vertx() {
-        final VertxOptions options = new VertxOptions()
-                .setAddressResolverOptions(new AddressResolverOptions()
-                        .setCacheNegativeTimeToLive(0) // discard failed DNS lookup results immediately
-                        .setCacheMaxTimeToLive(0) // support DNS based service resolution
-                        .setQueryTimeout(1000));
-
-        vertxProperties().configureVertx(options);
-        return Vertx.vertx(options);
+        return Vertx.vertx(vertxProperties().configureVertx(new VertxOptions()));
     }
 
     /**
-     * Exposes configuration options for vertx.
+     * Exposes configuration properties for Vert.x.
      * 
-     * @return The Properties.
+     * @return The properties.
      */
     @ConfigurationProperties("hono.vertx")
     @Bean

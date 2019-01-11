@@ -38,7 +38,6 @@ import io.micrometer.core.instrument.config.MeterFilter;
 import io.micrometer.spring.autoconfigure.MeterRegistryCustomizer;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
-import io.vertx.core.dns.AddressResolverOptions;
 import io.vertx.core.metrics.MetricsOptions;
 
 /**
@@ -68,14 +67,9 @@ public class HonoMessagingApplicationConfig {
      */
     @Bean
     public Vertx vertx() {
-        final VertxOptions options = new VertxOptions()
-                .setAddressResolverOptions(new AddressResolverOptions()
-                        .setCacheNegativeTimeToLive(0) // discard failed DNS lookup results immediately
-                        .setCacheMaxTimeToLive(0) // support DNS based service resolution
-                        .setQueryTimeout(1000));
 
+        final VertxOptions options = vertxProperties().configureVertx(new VertxOptions());
         configureMetrics(options);
-        vertxProperties().configureVertx(options);
         return Vertx.vertx(options);
     }
 

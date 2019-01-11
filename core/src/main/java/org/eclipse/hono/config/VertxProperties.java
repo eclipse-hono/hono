@@ -14,6 +14,7 @@
 package org.eclipse.hono.config;
 
 import io.vertx.core.VertxOptions;
+import io.vertx.core.dns.AddressResolverOptions;
 import io.vertx.core.metrics.MetricsOptions;
 
 /**
@@ -24,6 +25,7 @@ public class VertxProperties {
     private boolean preferNative = VertxOptions.DEFAULT_PREFER_NATIVE_TRANSPORT;
     private boolean enableMetrics = MetricsOptions.DEFAULT_METRICS_ENABLED;
     private long maxEventLoopExecuteTimeMillis = 2000L;
+    private long dnsQueryTimeout = 5000L;
 
     /**
      * Prefer to use native networking, or not.
@@ -74,11 +76,28 @@ public class VertxProperties {
     }
 
     /**
-     * Configure the Vertx options according to our settings.
+     * Sets the DNS query timeout, i.e the amount of time after which
+     * a DNS query is considered to be failed.
+     * <p>
+     * The default value of this property is 5000 milliseconds.
+     * 
+     * @param timeout The timeout in milliseconds.
+     * @throws IllegalArgumentException if timeout is less than 100ms.
+     */
+    public void setDnsQueryTimeout(final long timeout) {
+        if (timeout < 100) {
+            throw new IllegalArgumentException("DNS query timeout must be at least 100ms");
+          }
+        this.dnsQueryTimeout = timeout;
+    }
+
+    /**
+     * Configures the Vert.x options based on this object's property values.
      * 
      * @param options The options to configure.
+     * @return The (updated) options.
      */
-    public void configureVertx(final VertxOptions options) {
+    public VertxOptions configureVertx(final VertxOptions options) {
 
         options.setPreferNativeTransport(this.preferNative);
 
@@ -88,6 +107,11 @@ public class VertxProperties {
 
         options.setMaxEventLoopExecuteTime(maxEventLoopExecuteTimeMillis * 1000000L);
         options.setWarningExceptionTime(maxEventLoopExecuteTimeMillis * 1500000L);
+        options.setAddressResolverOptions(new AddressResolverOptions()
+                .setCacheNegativeTimeToLive(0) // discard failed DNS lookup results immediately
+                .setCacheMaxTimeToLive(0) // support DNS based service resolution
+                .setQueryTimeout(dnsQueryTimeout));
+        return options;
     }
 
 }

@@ -16,9 +16,9 @@ package org.eclipse.hono.service;
 import java.util.Optional;
 
 import org.eclipse.hono.cache.CacheProvider;
+import org.eclipse.hono.client.CommandConnection;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
-import org.eclipse.hono.client.CommandConnection;
 import org.eclipse.hono.client.impl.CommandConnectionImpl;
 import org.eclipse.hono.client.impl.HonoClientImpl;
 import org.eclipse.hono.config.ApplicationConfigProperties;
@@ -43,7 +43,6 @@ import io.opentracing.contrib.tracerresolver.TracerResolver;
 import io.opentracing.noop.NoopTracerFactory;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
-import io.vertx.core.dns.AddressResolverOptions;
 
 /**
  * Minimum Spring Boot configuration class defining beans required by protocol adapters.
@@ -68,20 +67,16 @@ public abstract class AbstractAdapterConfig {
 
     /**
      * Exposes a Vert.x instance as a Spring bean.
-     *
+     * <p>
+     * This method creates new Vert.x default options and invokes
+     * {@link VertxProperties#configureVertx(VertxOptions)} on the object returned
+     * by {@link #vertxProperties()}.
+     * 
      * @return The Vert.x instance.
      */
     @Bean
     public Vertx vertx() {
-        final VertxOptions options = new VertxOptions()
-                .setAddressResolverOptions(new AddressResolverOptions()
-                        .setCacheNegativeTimeToLive(0) // discard failed DNS lookup results immediately
-                        .setCacheMaxTimeToLive(0) // support DNS based service resolution
-                        .setQueryTimeout(1000));
-
-        vertxProperties().configureVertx(options);
-
-        return Vertx.vertx(options);
+        return Vertx.vertx(vertxProperties().configureVertx(new VertxOptions()));
     }
 
     /**
