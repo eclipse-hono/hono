@@ -39,7 +39,7 @@ spec:
         - name: LOGGING_CONFIG
           value: classpath:logback-spring.xml
         - name: _JAVA_OPTIONS
-          value: "${default-java-options}"
+          value: "{{ .Values.defaultJavaOptions }}"
         - name: KUBERNETES_NAMESPACE
           valueFrom:
             fieldRef:
