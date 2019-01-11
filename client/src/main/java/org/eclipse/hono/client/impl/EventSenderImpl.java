@@ -156,7 +156,9 @@ public final class EventSenderImpl extends AbstractSender {
      *         by the peer.
      *         <p>
      *         The future will be failed with a {@link ServiceInvocationException} if the
-     *         message could not be sent or has not been accepted by the peer.
+     *         message could not be sent or has not been accepted by the peer or if no delivery update
+     *         was received from the peer within the configured timeout period
+     *         (see {@link ClientConfigProperties#getSendMessageTimeout()}).
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
     @Override
