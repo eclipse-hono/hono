@@ -442,7 +442,8 @@ public abstract class AbstractHonoClient {
             final Future<?> result) {
 
         if (link.isOpen() && !HonoProtonHelper.isLinkEstablished(link)) {
-            LOG.debug("link establishment timed out after {}ms", clientConfig.getLinkEstablishmentTimeout());
+            LOG.info("link establishment [peer: {}] timed out after {}ms",
+                    clientConfig.getHost(), clientConfig.getLinkEstablishmentTimeout());
             link.close();
             link.free();
             result.tryFail(new ServerErrorException(HttpsURLConnection.HTTP_UNAVAILABLE));
