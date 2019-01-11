@@ -3,7 +3,7 @@ title = "Auth Server Configuration"
 weight = 305
 +++
 
-The Auth Server component exposes a service endpoint implementing Eclipse Hono&trade;'s [Authentication]({{< ref "Authentication-API.md" >}}) API. Other services use this component for authenticating clients and retrieving a token asserting the client's identity and corresponding authorities.
+The Auth Server component exposes a service endpoint implementing Eclipse Hono&trade;'s [Authentication]({{< ref "/api/Authentication-API.md" >}}) API. Other services use this component for authenticating clients and retrieving a token asserting the client's identity and corresponding authorities.
 <!--more-->
 
 This component serves as a default implementation of the *Authentication* API only. On startup, it reads in all identities and their authorities from a JSON file from the file system. All data is then kept in memory and there are no remote service APIs for managing the identities and their authorities.
@@ -36,6 +36,7 @@ The following table provides an overview of the configuration variables and corr
 | `HONO_AUTH_SVC_PERMISSIONS_PATH`<br>`--hono.auth.svc.permissionsPath` | no | `classpath:/`<br>`permissions.json` | The Spring resource URI of the JSON file defining the identities and corresponding authorities on Hono's endpoint resources. The default file bundled with the Auth Server defines authorities required by protocol adapters and downstream consumer. The default permissions file should **only be used for evaluation purposes**. |
 | `HONO_AUTH_SVC_SIGNING_KEY_PATH`<br>`--hono.auth.svc.signing.keyPath` | no  | - | The absolute path to the (PKCS8) PEM file containing the private key that the server should use for signing tokens asserting an authenticated client's identity and authorities. When using this variable, other services that need to validate the tokens issued by this service need to be configured with the corresponding certificate/public key. Alternatively, a symmetric key can be used for signing (and validating) by setting the `HONO_AUTH_SVC_SIGNING_SHARED_SECRET` variable. If none of these variables is set, the server falls back to the key indicated by the `HONO_AUTH_AMQP_KEY_PATH` variable. If that variable is also not set, startup of the server fails. |
 | `HONO_AUTH_SVC_SIGNING_SHARED_SECRET`<br>`--hono.auth.svc.signing.sharedSecret` | no  | - | A string to derive a symmetric key from that is used for signing tokens asserting an authenticated client's identity and authorities. The key is derived from the string by using the bytes of the String's UTF8 encoding. When setting the signing key using this variable, other services that need to validate the tokens issued by this service need to be configured with the same key. Alternatively, an asymmetric key pair can be used for signing (and validating) by setting the `HONO_AUTH_SVC_SIGNING_KEY_PATH` variable. If none of these variables is set, startup of the server fails. |
+| `HONO_AUTH_SVC_SIGNING_TOKEN_EXPIRATION`<br>`--hono.auth.svc.signing.tokenExpiration` | no  | 600 | The number of seconds after which the tokens created by this service for asserting an authenticated client's identity should be considered invalid. Other Hono components will close AMQP connections with clients after this period in order to force the client to authenticate again and create a new token. In closed environments it should be save to set this value to a much higher value, e.g. several hours. |
 
 The variables only need to be set if the default value does not match your environment.
 
@@ -93,7 +94,7 @@ The server may be configured to open both a secure and a non-secure port at the 
 
 ## Metrics Configuration
 
-See [Monitoring & Tracing Admin Guide]({{< ref "monitoring-tracing-config.md" >}}) for details on how to configure the reporting of metrics.
+See [Monitoring & Tracing Admin Guide]({{< ref "/admin-guide/monitoring-tracing-config.md" >}}) for details on how to configure the reporting of metrics.
 
 ## Run as a Docker Swarm Service
 
