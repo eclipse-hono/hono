@@ -1,6 +1,8 @@
 hono:
   app:
     maxInstances: 1
+    healthCheckPort: 8088
+    healthCheckBindAddress: 0.0.0.0
   auth:
     host: ${hono.auth.host}
     port: 5671
@@ -39,15 +41,3 @@ hono:
       filename: /var/lib/hono/device-registry/tenants.json
       saveToFile: true
       modificationEnabled: false
-  metrics:
-    legacy: true
-
-# disable spring boot actuator endpoints, enable metrics
-endpoints:
-  enabled: false
-management:
-  metrics:
-    export:
-      graphite:
-        host: influxdb.hono
-        port: 2003

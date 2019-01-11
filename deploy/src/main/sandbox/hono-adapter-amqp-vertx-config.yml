@@ -1,6 +1,8 @@
 hono:
   app:
     maxInstances: 1
+    healthCheckPort: 8088
+    healthCheckBindAddress: 0.0.0.0
   amqp:
     bindAddress: 0.0.0.0
     insecurePortBindAddress: 0.0.0.0
@@ -32,16 +34,3 @@ hono:
     amqpHostname: hono-internal
     host: hono-dispatch-router.hono
     port: 5673
-  metrics:
-    legacy: true
-
-# disable spring boot actuator endpoints, enable metrics
-endpoints:
-  enabled: false
-
-management:
-  metrics:
-    export:
-      graphite:
-        host: influxdb.hono
-        port: 2003
