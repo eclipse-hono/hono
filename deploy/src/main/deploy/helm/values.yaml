@@ -13,4 +13,6 @@ artemis:
   image:
     name: ${artemis.image.name}
 
+defaultJavaOptions: ${default-java-options}
+
 openshift: false

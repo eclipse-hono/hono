@@ -1,0 +1,15 @@
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  labels:
+    app: hono-service-device-registry
+    version: {{ .Chart.AppVersion }}
+    group: {{ .Values.project.groupId }}
+  name: registry
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Mi
