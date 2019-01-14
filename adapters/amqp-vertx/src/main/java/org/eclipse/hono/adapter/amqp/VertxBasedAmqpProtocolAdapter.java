@@ -383,17 +383,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         final Device authenticatedDevice = conn.attachments().get(AmqpAdapterConstants.KEY_CLIENT_DEVICE,
                 Device.class);
 
-        final Span span = tracer.buildSpan("attach anonymous sender")
-                .ignoreActiveSpan()
-                .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_SERVER)
-                .withTag(Tags.COMPONENT.getKey(), getTypeName())
-                .withTag(TracingHelper.TAG_AUTHENTICATED.getKey(), authenticatedDevice != null)
-                .start();
-
-        if (authenticatedDevice != null) {
-            span.setTag(MessageHelper.APP_PROPERTY_TENANT_ID, authenticatedDevice.getTenantId());
-            span.setTag(MessageHelper.APP_PROPERTY_DEVICE_ID, authenticatedDevice.getDeviceId());
-        }
+        final Span span = newSpan("attach anonymous sender", authenticatedDevice);
 
         if (ProtonQoS.AT_MOST_ONCE.equals(receiver.getRemoteQoS())) {
             // the device needs to send all types of message over this link
@@ -423,17 +413,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             HonoProtonHelper.setDetachHandler(receiver, remoteDetach -> onLinkDetach(receiver));
             receiver.handler((delivery, message) -> {
 
-                final Span msgSpan = tracer.buildSpan("upload message")
-                        .ignoreActiveSpan()
-                        .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_SERVER)
-                        .withTag(Tags.COMPONENT.getKey(), getTypeName())
-                        .withTag(TracingHelper.TAG_AUTHENTICATED.getKey(), authenticatedDevice != null)
-                        .start();
-
-                if (authenticatedDevice != null) {
-                    msgSpan.setTag(MessageHelper.APP_PROPERTY_TENANT_ID, authenticatedDevice.getTenantId());
-                    msgSpan.setTag(MessageHelper.APP_PROPERTY_DEVICE_ID, authenticatedDevice.getDeviceId());
-                }
+                final Span msgSpan = newSpan("upload message", authenticatedDevice);
 
                 final Map<String, Object> items = new HashMap<>(1);
                 items.put(Tags.MESSAGE_BUS_DESTINATION.getKey(), message.getAddress());
@@ -503,17 +483,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         final Device authenticatedDevice = connection.attachments().get(AmqpAdapterConstants.KEY_CLIENT_DEVICE,
                 Device.class);
 
-        final Span span = tracer.buildSpan("attach Command receiver")
-                .ignoreActiveSpan()
-                .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_SERVER)
-                .withTag(Tags.COMPONENT.getKey(), getTypeName())
-                .withTag(TracingHelper.TAG_AUTHENTICATED.getKey(), authenticatedDevice != null)
-                .start();
-
-        if (authenticatedDevice != null) {
-            span.setTag(MessageHelper.APP_PROPERTY_TENANT_ID, authenticatedDevice.getTenantId());
-            span.setTag(MessageHelper.APP_PROPERTY_DEVICE_ID, authenticatedDevice.getDeviceId());
-        }
+        final Span span = newSpan("attach Command receiver", authenticatedDevice);
 
         getResourceIdentifier(sender.getRemoteSource())
         .compose(address -> validateAddress(address, authenticatedDevice))
@@ -560,6 +530,21 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         });
     }
 
+    private Span newSpan(final String operationName, final Device authenticatedDevice) {
+        final Span span = tracer.buildSpan(operationName)
+                .ignoreActiveSpan()
+                .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_SERVER)
+                .withTag(Tags.COMPONENT.getKey(), getTypeName())
+                .withTag(TracingHelper.TAG_AUTHENTICATED.getKey(), authenticatedDevice != null)
+                .start();
+
+        if (authenticatedDevice != null) {
+            span.setTag(MessageHelper.APP_PROPERTY_TENANT_ID, authenticatedDevice.getTenantId());
+            span.setTag(MessageHelper.APP_PROPERTY_DEVICE_ID, authenticatedDevice.getDeviceId());
+        }
+        return span;
+    }
+
     private Future<MessageConsumer> openCommandSenderLink(
             final ProtonSender sender,
             final ResourceIdentifier address,
@@ -575,9 +560,11 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
 
             sender.setQoS(ProtonQoS.AT_LEAST_ONCE);
             final Handler<AsyncResult<ProtonSender>> detachHandler = link -> {
-                sendDisconnectedTtdEvent(tenantId, deviceId, authenticatedDevice, null);
+                final Span detachHandlerSpan = newSpan("detach Command receiver", authenticatedDevice);
+                sendDisconnectedTtdEvent(tenantId, deviceId, authenticatedDevice, detachHandlerSpan.context());
                 consumer.close(null);
                 onLinkDetach(sender);
+                detachHandlerSpan.finish();
             };
             HonoProtonHelper.setCloseHandler(sender, detachHandler);
             HonoProtonHelper.setDetachHandler(sender, detachHandler);
