@@ -1,0 +1,28 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    version: {{ .Chart.AppVersion }}
+    group: {{ .Values.project.groupId }}
+    group: ${project.groupId}
+    hono-metrics: prometheus
+  name: hono-adapter-http-vertx
+spec:
+  ports:
+  - name: http
+    nodePort: 30080
+    port: 8080
+    protocol: TCP
+    targetPort: 8080
+  - name: https
+    nodePort: 30443
+    port: 8443
+    protocol: TCP
+    targetPort: 8443
+  - name: actuator
+    port: 8081
+  selector:
+    app: hono-adapter-http-vertx
+    group: {{ .Values.project.groupId }}
+  type: NodePort
