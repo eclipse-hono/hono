@@ -63,9 +63,15 @@ public class CredentialsClientImpl extends AbstractRequestResponseClient<Credent
      * @param context The vert.x context to use for interacting with the service.
      * @param config The configuration properties.
      * @param tenantId The identifier of the tenant for which the client should be created.
+     * @param tracer The <em>OpenTracing</em> tracer to use for tracking the processing of
+     *               requests across process boundaries or {@code null} to disable tracing.
      */
-    protected CredentialsClientImpl(final Context context, final ClientConfigProperties config, final String tenantId,
+    protected CredentialsClientImpl(
+            final Context context,
+            final ClientConfigProperties config,
+            final String tenantId,
             final Tracer tracer) {
+
         super(context, config, tracer, tenantId);
     }
 
