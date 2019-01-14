@@ -33,6 +33,7 @@ hono:
   downstream:
     host: hono-dispatch-router.hono
     port: 5673
+    amqpHostname: hono-internal
     keyPath: /etc/hono/certs/hono-messaging-key.pem
     certPath: /etc/hono/certs/hono-messaging-cert.pem
     trustStorePath: /etc/hono/certs/trusted-certs.pem
