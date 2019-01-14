@@ -142,17 +142,20 @@ public abstract class MessagingClientTestBase extends ClientTestBase {
         registryProps.setPassword(IntegrationTestSupport.HONO_PWD);
         honoDeviceRegistryClient = HonoClient.newClient(VERTX, registryProps);
 
-        final ProtonClientOptions options = new ProtonClientOptions();
+        final ProtonClientOptions options = new ProtonClientOptions()
+                .setConnectTimeout(5000)
+                .setReconnectAttempts(1);
 
         final Async connectionEstablished = ctx.async();
 
+        final Future<HonoClient> registryClientTracker = honoDeviceRegistryClient.connect(options);
+        final Future<HonoClient> messagingClientTracker = Future.future();
         honoMessagingContext = VERTX.getOrCreateContext();
         honoMessagingContext.runOnContext(connect -> {
-            CompositeFuture.all(
-                    honoMessagingClient.connect(options),
-                    honoDeviceRegistryClient.connect(options)).setHandler(
-                            ctx.asyncAssertSuccess(ok -> connectionEstablished.complete()));
+            honoMessagingClient.connect(options).setHandler(messagingClientTracker);
         });
+        CompositeFuture.all(registryClientTracker, messagingClientTracker)
+        .setHandler(ctx.asyncAssertSuccess(ok -> connectionEstablished.complete()));
         connectionEstablished.await(DEFAULT_TEST_TIMEOUT);
     }
 
@@ -192,25 +195,25 @@ public abstract class MessagingClientTestBase extends ClientTestBase {
         helper.disconnect(ctx);
         final Async closing = ctx.async();
 
-        honoMessagingContext.runOnContext(disconnect -> {
-            final Future<Void> registryTracker = Future.future();
-            if (honoDeviceRegistryClient == null) {
-                registryTracker.complete();
-            } else {
-                honoDeviceRegistryClient.shutdown(registryTracker);
-            }
+        final Future<Void> registryTracker = Future.future();
+        if (honoDeviceRegistryClient == null) {
+            registryTracker.complete();
+        } else {
+            honoDeviceRegistryClient.shutdown(registryTracker);
+        }
 
-            final Future<Void> honoTracker = Future.future();
-            if (honoMessagingClient == null) {
-                honoTracker.complete();
-            } else {
-                honoMessagingClient.shutdown(honoTracker);
-            }
+        final Future<Void> honoTracker = Future.future();
+        if (honoMessagingClient == null) {
+            honoTracker.complete();
+        } else {
+            honoMessagingContext.runOnContext(shutdown ->
+                honoMessagingClient.shutdown(honoTracker));
+        }
 
-            CompositeFuture.all(honoTracker, registryTracker).setHandler(r -> {
-                closing.complete();
-            });
+        CompositeFuture.all(honoTracker, registryTracker).setHandler(r -> {
+            closing.complete();
         });
+
         closing.await(DEFAULT_TEST_TIMEOUT);
         honoMessagingContext = null;
         VERTX.close();
@@ -230,27 +233,21 @@ public abstract class MessagingClientTestBase extends ClientTestBase {
         final String deviceId = helper.getRandomDeviceId(TEST_TENANT_ID);
 
         final Async setup = ctx.async();
-        honoMessagingContext.runOnContext(getAssertion -> {
-            helper.registry.registerDevice(TEST_TENANT_ID, deviceId)
-            .compose(ok -> honoDeviceRegistryClient.getOrCreateRegistrationClient(TEST_TENANT_ID))
-            .compose(registrationClient -> registrationClient.assertRegistration(deviceId))
-            .map(assertionResult -> {
-                registrationAssertion.set(assertionResult.getString(RegistrationConstants.FIELD_ASSERTION));
-                return assertionResult;
-            }).setHandler(ctx.asyncAssertSuccess(ok -> setup.complete()));
-        });
+        helper.registry.registerDevice(TEST_TENANT_ID, deviceId)
+        .compose(ok -> honoDeviceRegistryClient.getOrCreateRegistrationClient(TEST_TENANT_ID))
+        .compose(registrationClient -> registrationClient.assertRegistration(deviceId))
+        .map(assertionResult -> {
+            registrationAssertion.set(assertionResult.getString(RegistrationConstants.FIELD_ASSERTION));
+            return assertionResult;
+        }).setHandler(ctx.asyncAssertSuccess(ok -> setup.complete()));
         setup.await();
 
-        final Function<Handler<Void>, Future<Void>> receiverFactory = msgConsumer -> {
-            final Future<Void> result = Future.future();
-            honoMessagingContext.runOnContext(go -> {
-                createConsumer(TEST_TENANT_ID, msg -> {
-                    assertMessageProperties(ctx, msg);
-                    assertAdditionalMessageProperties(ctx, msg);
-                    msgConsumer.handle(null);
-                }).map(c -> (Void) null).setHandler(result);
+        final Function<Handler<Void>, Future<?>> receiverFactory = msgConsumer -> {
+            return createConsumer(TEST_TENANT_ID, msg -> {
+                assertMessageProperties(ctx, msg);
+                assertAdditionalMessageProperties(ctx, msg);
+                msgConsumer.handle(null);
             });
-            return result;
         };
 
         doUploadMessages(ctx, receiverFactory, payload -> {

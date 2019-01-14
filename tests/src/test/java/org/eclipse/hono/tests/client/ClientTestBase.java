@@ -32,16 +32,17 @@ import io.vertx.ext.unit.TestContext;
  */
 public abstract class ClientTestBase {
 
+    static final long   DEFAULT_TEST_TIMEOUT = 15000; // ms
+
     /**
      * The vert.x instance to run all tests on.
      */
     protected static Vertx VERTX;
+
     /**
      * A logger to be used by subclasses.
      */
     protected final Logger log = LoggerFactory.getLogger(getClass());
-
-    static final long   DEFAULT_TEST_TIMEOUT = 15000; // ms
 
     /**
      * Upload a number of messages to Hono's Telemetry/Event APIs.
@@ -54,7 +55,7 @@ public abstract class ClientTestBase {
      */
     protected void doUploadMessages(
             final TestContext context,
-            final Function<Handler<Void>, Future<Void>> receiverFactory,
+            final Function<Handler<Void>, Future<?>> receiverFactory,
             final Function<String, Future<?>> sender) throws InterruptedException {
 
         final Async remainingMessages = context.async(IntegrationTestSupport.MSG_COUNT);
