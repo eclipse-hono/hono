@@ -156,10 +156,12 @@ public final class IntegrationTestSupport {
     private final Set<String> tenantsToDelete = new HashSet<>();
     private final Map<String, Set<String>> devicesToDelete = new HashMap<>();
     private final Vertx vertx;
+
     /**
      * Creates a new helper instance.
      * 
      * @param vertx The vert.x instance.
+     * @throws NullPointerException if vert.x is {@code null}.
      */
     public IntegrationTestSupport(final Vertx vertx) {
         this.vertx = Objects.requireNonNull(vertx);
@@ -195,12 +197,13 @@ public final class IntegrationTestSupport {
     public void init(final TestContext ctx, final ClientConfigProperties downstreamProps) {
 
         initRegistryClient(ctx);
-
+        final Async amqpNetworkConnection = ctx.async();
         honoClient = new IntegrationTestHonoClient(vertx, downstreamProps);
-
         honoClient.connect().setHandler(ctx.asyncAssertSuccess(ok -> {
             LOGGER.info("connected to AMQP Messaging Network [{}:{}]", downstreamProps.getHost(), downstreamProps.getPort());
+            amqpNetworkConnection.complete();
         }));
+        amqpNetworkConnection.await();
     }
 
     /**
@@ -251,9 +254,12 @@ public final class IntegrationTestSupport {
      */
     public void disconnect(final TestContext ctx) {
 
+        final Async shutdown = ctx.async();
         honoClient.shutdown(ctx.asyncAssertSuccess(ok -> {
             LOGGER.info("connection to AMQP Messaging Network closed");
+            shutdown.complete();
         }));
+        shutdown.await();
     }
 
     /**
