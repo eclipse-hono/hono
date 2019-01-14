@@ -162,16 +162,18 @@ public final class TracingHelper {
     }
 
     /**
-     * Injects a {@code SpanContext} into the given JSON object.
+     * Injects a {@code SpanContext} into a JSON object.
      * <p>
-     * The {@code JsonObject} representing the serialized {@code SpanContext} will be put under a {@link #JSON_KEY_SPAN_CONTEXT} key.
+     * The span context will be injected into a new JSON object under key <em>span-context</em>.
      *
-     * @param tracer The Tracer instance.
-     * @param spanContext The {@code SpanContext} to inject.
-     * @param jsonObject The JSON object into which to inject the {@code SpanContext}.
-     * @throws NullPointerException if spanContext or jsonObject is {@code null}.
+     * @param tracer The Tracer to use for injecting the context.
+     * @param spanContext The context to inject.
+     * @param jsonObject The JSON object to inject the context into.
+     * @throws NullPointerException if any of the parameters are {@code null}.
      */
     public static void injectSpanContext(final Tracer tracer, final SpanContext spanContext, final JsonObject jsonObject) {
+
+        Objects.requireNonNull(tracer);
         Objects.requireNonNull(spanContext);
         Objects.requireNonNull(jsonObject);
 
@@ -181,15 +183,20 @@ public final class TracingHelper {
     }
 
     /**
-     * Extracts a {@code SpanContext} out of the given JSON object.
+     * Extracts a {@code SpanContext} from a JSON object.
      * <p>
-     * The {@code JsonObject} representing the serialized {@code SpanContext} is read from a {@link #JSON_KEY_SPAN_CONTEXT} key.
+     * The span context will be read from a JSON object under key <em>span-context</em>.
      *
-     * @param tracer The Tracer instance.
-     * @param jsonObject The JSON object from which to extract the {@code SpanContext}.
-     * @return The extracted {@code SpanContext} or {@code null}.
+     * @param tracer The Tracer to use for extracting the context.
+     * @param jsonObject The JSON object to extract the context from.
+     * @return The context or {@code null} if the given JSON object does not contain a context.
+     * @throws NullPointerException if any of the parameters are {@code null}.
      */
     public static SpanContext extractSpanContext(final Tracer tracer, final JsonObject jsonObject) {
+
+        Objects.requireNonNull(tracer);
+        Objects.requireNonNull(jsonObject);
+
         final Object spanContextContainer = jsonObject.getValue(JSON_KEY_SPAN_CONTEXT);
         return spanContextContainer instanceof JsonObject
                 ? tracer.extract(Format.Builtin.TEXT_MAP, new JsonObjectExtractAdapter((JsonObject) spanContextContainer))
