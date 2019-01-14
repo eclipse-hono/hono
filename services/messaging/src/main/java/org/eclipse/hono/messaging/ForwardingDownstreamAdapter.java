@@ -192,7 +192,7 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
 
     private ProtonClientOptions createClientOptions() {
         return new ProtonClientOptions()
-                .setConnectTimeout(200)
+                .setConnectTimeout(5000)
                 .setReconnectAttempts(1)
                 .setReconnectInterval(Constants.DEFAULT_RECONNECT_INTERVAL_MILLIS);
     }

@@ -379,11 +379,11 @@ public class HonoClientImpl implements HonoClient {
             } else if (connecting.compareAndSet(false, true)) {
 
                 if (options == null) {
-                    // by default, try to establish the TCP connection
-                    // three times before giving up
+                    // by default, re-try to establish the TCP connection
+                    // a single time before giving up
                     clientOptions = new ProtonClientOptions()
-                            .setConnectTimeout(200)
-                            .setReconnectAttempts(3)
+                            .setConnectTimeout(5000)
+                            .setReconnectAttempts(1)
                             .setReconnectInterval(Constants.DEFAULT_RECONNECT_INTERVAL_MILLIS);
                 } else {
                     clientOptions = options;
