@@ -606,7 +606,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                                 ttd);
                         customizeDownstreamMessage(downstreamMessage, ctx);
 
-                        addConnectionCloseHandler(ctx, commandConsumerTracker.result(), tenant, deviceId);
+                        addConnectionCloseHandler(ctx, commandConsumerTracker.result(), tenant, deviceId, currentSpan);
 
                         if (qos == null) {
                             return CompositeFuture.all(
@@ -638,7 +638,12 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                 })
                 .compose(proceed -> {
 
-                    if (!ctx.response().closed()) {
+                    if (ctx.response().closed()) {
+                        LOG.debug("failed to send http response for [{}] message from device [tenantId: {}, deviceId: {}]: response already closed",
+                                endpointName, tenant, deviceId);
+                        TracingHelper.logError(currentSpan, "failed to send HTTP response to device: response already closed");
+                        currentSpan.finish();
+                    } else {
                         final CommandContext commandContext = ctx.get(CommandContext.KEY_COMMAND_CONTEXT);
                         setResponsePayload(ctx.response(), commandContext, currentSpan);
                         ctx.addBodyEndHandler(ok -> {
@@ -733,17 +738,20 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
      * @param messageConsumer The message consumer to receive a command. If {@code null}, no handler is added.
      * @param tenantId The tenant that the device belongs to.
      * @param deviceId The identifier of the device.
+     * @param currentSpan The <em>OpenTracing</em> Span used for tracking the processing of the request.
      */
     private void addConnectionCloseHandler(
             final RoutingContext ctx,
             final MessageConsumer messageConsumer,
             final String tenantId,
-            final String deviceId) {
+            final String deviceId,
+            final Span currentSpan) {
 
         if (messageConsumer != null && !ctx.response().closed()) {
             ctx.response().closeHandler(v -> {
                 LOG.debug("device [tenant: {}, device-id: {}] closed connection before response could be sent",
                         tenantId, deviceId);
+                currentSpan.log("device closed connection");
                 cancelCommandReceptionTimer(ctx);
                 messageConsumer.close(null);
                 metrics.incrementNoCommandReceivedAndTTDExpired(tenantId);
