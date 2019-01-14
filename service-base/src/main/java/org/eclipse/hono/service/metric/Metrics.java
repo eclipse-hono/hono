@@ -45,6 +45,13 @@ public interface Metrics {
     void decrementUnauthenticatedConnections();
 
     /**
+     * Gets the total number of current connections - authenticated for all tenants and unauthenticated.
+     *
+     * @return total number of connections.
+     */
+    long getNumberOfConnections();
+
+    /**
      * Reports a message received from a device as <em>processed</em>.
      *
      * @param type The type of message received, e.g. <em>telemetry</em> or <em>event</em>.

@@ -23,6 +23,7 @@ public class ProtocolAdapterProperties extends ServiceConfigProperties {
     private boolean jmsVendorPropsEnabled = false;
     private boolean defaultsEnabled = true;
     private long eventLoopBlockedCheckTimeout = 5000L;
+    private int maxConcurrentConnections = Integer.MAX_VALUE;
 
     /**
      * Checks whether the protocol adapter always authenticates devices using their provided credentials as defined
@@ -153,5 +154,30 @@ public class ProtocolAdapterProperties extends ServiceConfigProperties {
      */
     public final void setEventLoopBlockedCheckTimeout(final long eventLoopBlockedCheckTimeout) {
         this.eventLoopBlockedCheckTimeout = eventLoopBlockedCheckTimeout;
+    }
+
+    /**
+     * Gets the number of maximal concurrent connections the protocol adapter should accept.
+     * <p>
+     * Default is {@link Integer#MAX_VALUE}.
+     * 
+     * @return The maximal number of concurrent connections.
+     */
+    public int getMaxConcurrentConnections() {
+        return maxConcurrentConnections;
+    }
+
+    /**
+     * Sets the number of maximal concurrent connections the protocol adapter should accept.
+     * 
+     * @param maxConcurrentConnections The maximal number of concurrent connections.
+     * @throws IllegalArgumentException if the number is &lt;= 0.
+     */
+    
+    public void setMaxConcurrentConnections(final int maxConcurrentConnections) {
+        if (maxConcurrentConnections <= 0) {
+            throw new IllegalArgumentException("connection limit must be greater than zero");
+        }
+        this.maxConcurrentConnections = maxConcurrentConnections;
     }
 }

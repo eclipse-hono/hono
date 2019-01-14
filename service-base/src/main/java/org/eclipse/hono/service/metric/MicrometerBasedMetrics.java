@@ -34,6 +34,7 @@ public abstract class MicrometerBasedMetrics implements Metrics {
 
     private final Map<String, AtomicLong> authenticatedConnections = new ConcurrentHashMap<>();
     private final AtomicLong unauthenticatedConnections;
+    private final AtomicLong totalCurrentConnections = new AtomicLong();
 
     /**
      * Creates a new metrics instance.
@@ -55,6 +56,7 @@ public abstract class MicrometerBasedMetrics implements Metrics {
         Objects.requireNonNull(tenantId);
         gaugeForTenant("hono.connections.authenticated", this.authenticatedConnections, tenantId, AtomicLong::new)
                 .incrementAndGet();
+        this.totalCurrentConnections.incrementAndGet();
 
     }
 
@@ -64,17 +66,25 @@ public abstract class MicrometerBasedMetrics implements Metrics {
         Objects.requireNonNull(tenantId);
         gaugeForTenant("hono.connections.authenticated", this.authenticatedConnections, tenantId, AtomicLong::new)
                 .decrementAndGet();
+        this.totalCurrentConnections.decrementAndGet();
 
     }
 
     @Override
     public final void incrementUnauthenticatedConnections() {
         this.unauthenticatedConnections.incrementAndGet();
+        this.totalCurrentConnections.incrementAndGet();
     }
 
     @Override
     public final void decrementUnauthenticatedConnections() {
         this.unauthenticatedConnections.decrementAndGet();
+        this.totalCurrentConnections.decrementAndGet();
+    }
+
+    @Override
+    public long getNumberOfConnections() {
+        return this.totalCurrentConnections.get();
     }
 
     @Override

@@ -326,11 +326,26 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
 
     private Future<Device> handleConnectionRequest(final MqttEndpoint endpoint, final Span currentSpan) {
 
+        if (isConnectionLimitExceeded()) {
+            LOG.debug("Connection limit ({}) exceeded, reject connection request", getConnectionLimit());
+            currentSpan.log(String.format("connection limit (%d) exceeded", getConnectionLimit()));
+            return Future.failedFuture(new MqttConnectionException(
+                    MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE));
+        }
+
         if (getConfig().isAuthenticationRequired()) {
             return handleEndpointConnectionWithAuthentication(endpoint, currentSpan);
         } else {
             return handleEndpointConnectionWithoutAuthentication(endpoint);
         }
+    }
+
+    private boolean isConnectionLimitExceeded() {
+        return metrics.getNumberOfConnections() >= getConnectionLimit();
+    }
+
+    private int getConnectionLimit() {
+        return getConfig().getMaxConcurrentConnections();
     }
 
     private void handleConnectionRequestResult(final MqttEndpoint endpoint,
