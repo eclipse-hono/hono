@@ -60,4 +60,9 @@ public class NoopBasedMetrics implements Metrics {
     @Override
     public void decrementConnections(final String tenantId) {
     }
+
+    @Override
+    public long getNumberOfConnections() {
+        return 0;
+    }
 }
