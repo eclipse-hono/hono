@@ -464,18 +464,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
         final Map<String, Future> topicFilters = new HashMap<>();
         final List<Future> subscriptionOutcome = new ArrayList<>(subscribeMsg.topicSubscriptions().size());
 
-        final Span span = tracer.buildSpan("SUBSCRIBE")
-                .ignoreActiveSpan()
-                .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_SERVER)
-                .withTag(Tags.COMPONENT.getKey(), getTypeName())
-                .withTag(TracingHelper.TAG_CLIENT_ID.getKey(), endpoint.clientIdentifier())
-                .withTag(TracingHelper.TAG_AUTHENTICATED.getKey(), authenticatedDevice != null)
-                .start();
-
-        if (authenticatedDevice != null) {
-            span.setTag(MessageHelper.APP_PROPERTY_TENANT_ID, authenticatedDevice.getTenantId());
-            span.setTag(MessageHelper.APP_PROPERTY_DEVICE_ID, authenticatedDevice.getDeviceId());
-        }
+        final Span span = newSpan("SUBSCRIBE", endpoint, authenticatedDevice);
 
         subscribeMsg.topicSubscriptions().forEach(subscription -> {
 
@@ -508,10 +497,12 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
                             // do not use the current span for sending the disconnected event
                             // because that span will (usually) be finished long before the
                             // connection is closed
-                            sendDisconnectedTtdEvent(cmdSub.getTenant(), cmdSub.getDeviceId(), authenticatedDevice, null)
+                            final Span closeHandlerSpan = newSpan("Send Disconnected Event", endpoint, authenticatedDevice);
+                            sendDisconnectedTtdEvent(cmdSub.getTenant(), cmdSub.getDeviceId(), authenticatedDevice, closeHandlerSpan.context()) 
                             .setHandler(sendAttempt -> {
                                 consumer.close(null);
                                 close(endpoint, authenticatedDevice);
+                                closeHandlerSpan.finish();
                             });
                         });
                         final Map<String, Object> items = new HashMap<>(4);
@@ -567,6 +558,22 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
         });
     }
 
+    private Span newSpan(final String operationName, final MqttEndpoint endpoint, final Device authenticatedDevice) {
+        final Span span = tracer.buildSpan(operationName)
+                .ignoreActiveSpan()
+                .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_SERVER)
+                .withTag(Tags.COMPONENT.getKey(), getTypeName())
+                .withTag(TracingHelper.TAG_CLIENT_ID.getKey(), endpoint.clientIdentifier())
+                .withTag(TracingHelper.TAG_AUTHENTICATED.getKey(), authenticatedDevice != null)
+                .start();
+
+        if (authenticatedDevice != null) {
+            span.setTag(MessageHelper.APP_PROPERTY_TENANT_ID, authenticatedDevice.getTenantId());
+            span.setTag(MessageHelper.APP_PROPERTY_DEVICE_ID, authenticatedDevice.getDeviceId());
+        }
+        return span;
+    }
+
     /**
      * Invoked when a device sends an MQTT <em>UNSUBSCRIBE</em> packet.
      * <p>
@@ -585,18 +592,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
             final Device authenticatedDevice,
             final MqttUnsubscribeMessage unsubscribeMsg) {
 
-        final Span span = tracer.buildSpan("UNSUBSCRIBE")
-                .ignoreActiveSpan()
-                .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_SERVER)
-                .withTag(Tags.COMPONENT.getKey(), getTypeName())
-                .withTag(TracingHelper.TAG_CLIENT_ID.getKey(), endpoint.clientIdentifier())
-                .withTag(TracingHelper.TAG_AUTHENTICATED.getKey(), authenticatedDevice != null)
-                .start();
-
-        if (authenticatedDevice != null) {
-            span.setTag(MessageHelper.APP_PROPERTY_TENANT_ID, authenticatedDevice.getTenantId());
-            span.setTag(MessageHelper.APP_PROPERTY_DEVICE_ID, authenticatedDevice.getDeviceId());
-        }
+        final Span span = newSpan("UNSUBSCRIBE", endpoint, authenticatedDevice);
 
         unsubscribeMsg.topics().forEach(topic -> {
             final CommandSubscription cmdSub = CommandSubscription.fromTopic(topic, authenticatedDevice);
