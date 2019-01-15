@@ -14,6 +14,9 @@ title = "Release Notes"
 * The OpenShift *source-to-image* (S2I) deployment is now the default
   OpenShift / OKD deployment. The old OpenShift deployment, which was deprecated
   in Hono 0.8, was removed.
+* The protocol adapters can now be configured with a custom DNS timeout value. By default, a DNS query is considered failed
+  after 5 seconds without receiving a response. Please refer to the adapter admin guides for details regarding the
+  new configuration variable.
 
 ## 0.9-M1
 
