@@ -41,6 +41,12 @@ import io.vertx.ext.unit.TestContext;
 public abstract class AbstractStandaloneApiTest {
 
     /**
+     * Stop all tests after max 20 seconds.
+     */
+    @Rule
+    public Timeout timeout = Timeout.seconds(20);
+
+    /**
      * The prefix to use for device identifiers.
      */
     protected static final String                             DEVICE_PREFIX = "device";

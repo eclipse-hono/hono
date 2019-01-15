@@ -33,7 +33,6 @@ import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
-import io.vertx.proton.ProtonClientOptions;
 
 /**
  * Stand alone integration tests for Hono's Telemetry API.
@@ -80,7 +79,7 @@ public class StandaloneTelemetryApiTest extends AbstractStandaloneApiTest {
             clientProps.setUsername(USER);
             clientProps.setPassword(PWD);
             client = new HonoClientImpl(vertx, clientProps);
-            return client.connect(new ProtonClientOptions());
+            return client.connect();
         }).setHandler(ctx.asyncAssertSuccess());
     }
 

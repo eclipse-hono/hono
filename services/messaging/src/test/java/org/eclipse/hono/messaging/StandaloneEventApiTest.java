@@ -37,7 +37,6 @@ import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
-import io.vertx.proton.ProtonClientOptions;
 import io.vertx.proton.ProtonHelper;
 
 /**
@@ -86,7 +85,7 @@ public class StandaloneEventApiTest extends AbstractStandaloneApiTest {
             clientProps.setPassword(PWD);
 
             client = new HonoClientImpl(vertx, clientProps);
-            return client.connect(new ProtonClientOptions());
+            return client.connect();
         }).setHandler(ctx.asyncAssertSuccess());
     }
 
