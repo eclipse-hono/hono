@@ -64,6 +64,7 @@ The following table provides an overview of the configuration variables and corr
 | `HONO_TENANT_SVC_MODIFICATION_ENABLED`<br>`--hono.tenant.svc.modificationEnabled` | no | `true` | When set to `false` the tenants contained in the registry cannot be updated nor removed. |
 | `HONO_TENANT_SVC_RECEIVER_LINK_CREDIT`<br>`--hono.tenant.svc.receiverLinkCredit` | no | `100` | The number of credits to flow to a client connecting to the Tenant endpoint. |
 | `HONO_TENANT_SVC_SAVE_TO_FILE`<br>`--hono.tenant.svc.saveToFile` | no | `false` | When set to `true` the server will periodically write out the registered tenants to the file specified by the `HONO_TENANTS_SVC_TENANT_FILENAME` property. |
+| `HONO_VERTX_DNS_QUERY_TIMEOUT`<br>`--hono.vertx.dnsQueryTimeout` | no | `5000` | The amount of time after which a DNS query is considered to be failed. Setting this variable to a smaller value may help to reduce the time required to establish connections to the services this service depends on. However, setting it to a value that is too small for any DNS query to succeed will effectively prevent any connections to be established at all. |
 
 The variables only need to be set if the default value does not match your environment.
 
