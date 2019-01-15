@@ -33,7 +33,6 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
-import io.vertx.proton.ProtonClientOptions;
 import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonDelivery;
 import io.vertx.proton.ProtonHelper;
@@ -60,12 +59,12 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
     private final Map<String, List<UpstreamReceiver>> receiversPerConnection = new HashMap<>();
     private final List<Handler<AsyncResult<Void>>>    clientAttachHandlers   = new ArrayList<>();
     private final Vertx                               vertx;
+    private final SenderFactory                       senderFactory;
 
     private MessagingMetrics  metrics;
     private boolean           running                     = false;
     private boolean           retryOnFailedConnectAttempt = true;
     private ProtonConnection  downstreamConnection;
-    private final SenderFactory     senderFactory;
     private ConnectionFactory downstreamConnectionFactory;
 
     /**
@@ -141,7 +140,7 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
             running = true;
             if (honoConfig.isWaitForDownstreamConnectionEnabled()) {
                 logger.info("waiting for connection to downstream container");
-                connectToDownstream(createClientOptions(), attempt -> {
+                connectToDownstream(attempt -> {
                     if (attempt.succeeded()) {
                         startFuture.complete();
                     } else {
@@ -149,7 +148,7 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
                     }
                 });
             } else {
-                connectToDownstream(createClientOptions());
+                connectToDownstream();
                 startFuture.complete();
             }
         }
@@ -190,21 +189,14 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
         }
     }
 
-    private ProtonClientOptions createClientOptions() {
-        return new ProtonClientOptions()
-                .setConnectTimeout(5000)
-                .setReconnectAttempts(1)
-                .setReconnectInterval(Constants.DEFAULT_RECONNECT_INTERVAL_MILLIS);
+    private void connectToDownstream() {
+        connectToDownstream(null);
     }
 
-    private void connectToDownstream(final ProtonClientOptions options) {
-        connectToDownstream(options, null);
-    }
-
-    private void connectToDownstream(final ProtonClientOptions options, final Handler<AsyncResult<ProtonConnection>> connectResultHandler) {
+    private void connectToDownstream(final Handler<AsyncResult<ProtonConnection>> connectResultHandler) {
 
         downstreamConnectionFactory.connect(
-                options,
+                null,
                 this::onRemoteClose,
                 this::onDisconnectFromDownstreamContainer,
                 connectAttempt -> {
@@ -288,13 +280,10 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
         if (!running) {
             logger.info("adapter is stopped, will not re-connect to downstream container");
         } else {
-            final ProtonClientOptions clientOptions = createClientOptions();
-            if (clientOptions.getReconnectAttempts() != 0) {
-                vertx.setTimer(Constants.DEFAULT_RECONNECT_INTERVAL_MILLIS, reconnect -> {
-                    logger.info("attempting to re-connect to downstream container");
-                    connectToDownstream(clientOptions, resultHandler);
-                });
-            }
+            vertx.setTimer(Constants.DEFAULT_RECONNECT_INTERVAL_MILLIS, reconnect -> {
+                logger.info("attempting to re-connect to downstream container");
+                connectToDownstream(resultHandler);
+            });
         }
     }
 

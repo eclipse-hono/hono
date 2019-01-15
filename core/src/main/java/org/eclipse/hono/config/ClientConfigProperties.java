@@ -27,42 +27,48 @@ import org.eclipse.hono.util.Constants;
 public class ClientConfigProperties extends AbstractConfig {
 
     /**
-     * The default amount of time to wait for credits after link creation.
+     * The default amount of time (milliseconds) to wait for a TCP/TLS connection to
+     * be established.
+     */
+    public static final int DEFAULT_CONNECT_TIMEOUT = 5000; // ms
+    /**
+     * The default amount of time (milliseconds) to wait for credits after link creation.
      */
     public static final long DEFAULT_FLOW_LATENCY = 20L; //ms
-    /**
-     * The default amount of milliseconds to wait for the remote peer's <em>attach</em>
-     * frame during link establishment.
-     */
-    public static final long DEFAULT_LINK_ESTABLISHMENT_TIMEOUT = 1000L; //ms
     /**
      * The default number of credits issued by the receiver side of a link.
      */
     public static final int  DEFAULT_INITIAL_CREDITS = 200;
     /**
-     * The default amount of time to wait for a response before a request times out.
+     * The default amount of time (milliseconds) to wait for the remote peer's <em>attach</em>
+     * frame during link establishment.
+     */
+    public static final long DEFAULT_LINK_ESTABLISHMENT_TIMEOUT = 1000L; //ms
+    /**
+     * The default amount of time (milliseconds) to wait for a response before a request times out.
      */
     public static final long DEFAULT_REQUEST_TIMEOUT = 200L; // ms
     /**
-     * The default amount of time to wait for a delivery update after a message was sent.
+     * The default amount of time (milliseconds) to wait for a delivery update after a message was sent.
      */
     public static final long DEFAULT_SEND_MESSAGE_TIMEOUT = 1000L; // ms
 
-    private String name;
-    private String host = "localhost";
-    private int port = Constants.PORT_AMQPS;
-    private String username;
-    private char[] password;
-    private String credentialsPath;
     private String amqpHostname;
+    private int connectTimeoutMillis = DEFAULT_CONNECT_TIMEOUT;
+    private String credentialsPath;
     private long flowLatency = DEFAULT_FLOW_LATENCY;
-    private long linkEstablishmentTimeout = DEFAULT_LINK_ESTABLISHMENT_TIMEOUT;
-    private int initialCredits = DEFAULT_INITIAL_CREDITS;
-    private long sendMessageTimeoutMillis = DEFAULT_SEND_MESSAGE_TIMEOUT;
-    private long requestTimeoutMillis = DEFAULT_REQUEST_TIMEOUT;
+    private String host = "localhost";
     private boolean hostnameVerificationRequired = true;
-    private boolean tlsEnabled = false;
+    private int initialCredits = DEFAULT_INITIAL_CREDITS;
+    private long linkEstablishmentTimeout = DEFAULT_LINK_ESTABLISHMENT_TIMEOUT;
+    private String name;
+    private char[] password;
+    private int port = Constants.PORT_AMQPS;
     private int reconnectAttempts = -1;
+    private long requestTimeoutMillis = DEFAULT_REQUEST_TIMEOUT;
+    private long sendMessageTimeoutMillis = DEFAULT_SEND_MESSAGE_TIMEOUT;
+    private boolean tlsEnabled = false;
+    private String username;
 
     /**
      * Creates new properties with default values.
@@ -78,16 +84,19 @@ public class ClientConfigProperties extends AbstractConfig {
      */
     public ClientConfigProperties(final ClientConfigProperties otherProperties) {
         this.amqpHostname = otherProperties.amqpHostname;
+        this.connectTimeoutMillis = otherProperties.connectTimeoutMillis;
         this.credentialsPath = otherProperties.credentialsPath;
         this.flowLatency = otherProperties.flowLatency;
         this.host = otherProperties.host;
         this.hostnameVerificationRequired = otherProperties.hostnameVerificationRequired;
         this.initialCredits = otherProperties.initialCredits;
+        this.linkEstablishmentTimeout = otherProperties.linkEstablishmentTimeout;
         this.name = otherProperties.name;
         this.password = otherProperties.password;
         this.port = otherProperties.port;
         this.reconnectAttempts = otherProperties.reconnectAttempts;
         this.requestTimeoutMillis = otherProperties.requestTimeoutMillis;
+        this.sendMessageTimeoutMillis = otherProperties.sendMessageTimeoutMillis;
         this.tlsEnabled = otherProperties.tlsEnabled;
         this.username = otherProperties.username;
     }
@@ -547,6 +556,41 @@ public class ClientConfigProperties extends AbstractConfig {
             throw new IllegalArgumentException("attempts must be >= -1");
         } else {
             this.reconnectAttempts = attempts;
+        }
+    }
+
+    /**
+     * Gets the maximum amount of time a client should wait for a TCP/TLS connection
+     * with a peer to be established.
+     * <p>
+     * Note that this value does not limit the amount of time to wait for the
+     * peer's AMQP <em>open</em> frame to be received.
+     * <p>
+     * The default value of this property is {@link #DEFAULT_CONNECT_TIMEOUT}.
+     *
+     * @return The maximum number of milliseconds to wait.
+     */
+    public final int getConnectTimeout() {
+        return connectTimeoutMillis;
+    }
+
+    /**
+     * Sets the maximum amount of time a client should wait for a TCP/TLS connection
+     * with a peer to be established.
+     * <p>
+     * Note that this value does not limit the amount of time to wait for the
+     * peer's AMQP <em>open</em> frame to be received.
+     * <p>
+     * The default value of this property is {@link #DEFAULT_CONNECT_TIMEOUT}.
+     *
+     * @param connectTimeoutMillis The maximum number of milliseconds to wait.
+     * @throws IllegalArgumentException if connect timeout is negative.
+     */
+    public final void setConnectTimeout(final int connectTimeoutMillis) {
+        if (connectTimeoutMillis < 0) {
+            throw new IllegalArgumentException("connect timeout must not be negative");
+        } else {
+            this.connectTimeoutMillis = connectTimeoutMillis;
         }
     }
 }

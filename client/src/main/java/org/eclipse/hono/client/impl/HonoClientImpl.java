@@ -57,7 +57,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import io.opentracing.Tracer;
 import io.opentracing.noop.NoopTracerFactory;
-
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
@@ -378,19 +377,10 @@ public class HonoClientImpl implements HonoClient {
                 connectionHandler.handle(Future.succeededFuture(this));
             } else if (connecting.compareAndSet(false, true)) {
 
-                if (options == null) {
-                    // by default, re-try to establish the TCP connection
-                    // a single time before giving up
-                    clientOptions = new ProtonClientOptions()
-                            .setConnectTimeout(5000)
-                            .setReconnectAttempts(1)
-                            .setReconnectInterval(Constants.DEFAULT_RECONNECT_INTERVAL_MILLIS);
-                } else {
-                    clientOptions = options;
-                }
-
                 log.debug("starting attempt [#{}] to connect to server [{}:{}]",
                         connectAttempts.get() + 1, connectionFactory.getHost(), connectionFactory.getPort());
+
+                clientOptions = options;
                 connectionFactory.connect(
                         clientOptions,
                         remoteClose -> onRemoteClose(remoteClose, disconnectHandler),
@@ -523,9 +513,12 @@ public class HonoClientImpl implements HonoClient {
             if (connectionFailureCause != null) {
                 log.debug("connection attempt failed", connectionFailureCause);
             }
-            log.trace("scheduling new connection attempt in {}ms ...", clientOptions.getReconnectInterval());
+            final long reconnectInterval = Optional.ofNullable(clientOptions)
+                    .map(o -> o.getReconnectInterval())
+                    .orElse(Constants.DEFAULT_RECONNECT_INTERVAL_MILLIS);
+            log.trace("scheduling new connection attempt in {}ms ...", reconnectInterval);
             // give Vert.x some time to clean up NetClient
-            vertx.setTimer(clientOptions.getReconnectInterval(), tid -> {
+            vertx.setTimer(reconnectInterval, tid -> {
                 connect(clientOptions, connectionHandler, disconnectHandler);
             });
         }

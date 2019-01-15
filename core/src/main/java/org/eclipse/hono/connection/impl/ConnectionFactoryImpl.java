@@ -19,6 +19,7 @@ import java.util.UUID;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.connection.ConnectionFactory;
+import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.Strings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -259,6 +260,9 @@ public final class ConnectionFactoryImpl implements ConnectionFactory {
 
     private ProtonClientOptions createClientOptions() {
         final ProtonClientOptions options = new ProtonClientOptions();
+        options.setConnectTimeout(config.getConnectTimeout());
+        options.setReconnectAttempts(1);
+        options.setReconnectInterval(Constants.DEFAULT_RECONNECT_INTERVAL_MILLIS);
         return options;
     }
 }
