@@ -14,6 +14,7 @@
 package org.eclipse.hono.adapter.mqtt;
 
 import static io.netty.handler.codec.mqtt.MqttConnectReturnCode.CONNECTION_REFUSED_NOT_AUTHORIZED;
+import static io.netty.handler.codec.mqtt.MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE;
 import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
@@ -340,6 +341,29 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
 
         // THEN the adapter has tried to authenticate the device
         verify(authHandler).authenticateDevice(any(MqttContext.class));
+    }
+
+    /**
+     * Verifies that an adapter rejects connections when the connection limit is exceeded.
+     */
+    @Test
+    public void testEndpointHandlerRejectsConnectionsAboveLimit() {
+
+        // GIVEN an adapter
+        final MqttServer server = getMqttServer(false);
+        // with a connection limit of 1
+        config.setMaxConcurrentConnections(1);
+        final AbstractVertxBasedMqttProtocolAdapter<ProtocolAdapterProperties> adapter = getAdapter(server);
+        forceClientMocksToConnected();
+        // which already has 1 connection open
+        when(metrics.getNumberOfConnections()).thenReturn(1L);
+
+        // WHEN a device tries to establish a connection
+        final MqttEndpoint endpoint = getMqttEndpointAuthenticated();
+        adapter.handleEndpointConnection(endpoint);
+
+        // THEN the connection is not established
+        verify(endpoint).reject(CONNECTION_REFUSED_SERVER_UNAVAILABLE);
     }
 
     /**
