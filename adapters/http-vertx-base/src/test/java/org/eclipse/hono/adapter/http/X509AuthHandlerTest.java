@@ -46,7 +46,9 @@ import org.eclipse.hono.service.auth.device.X509Authentication;
 import org.junit.Before;
 import org.junit.Test;
 
+import io.opentracing.Span;
 import io.opentracing.SpanContext;
+import io.opentracing.contrib.vertx.ext.web.TracingHandler;
 import io.vertx.core.Future;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.http.HttpServerResponse;
@@ -97,6 +99,7 @@ public class X509AuthHandlerTest {
         when(req.sslSession()).thenReturn(sslSession);
         final HttpServerResponse resp = mock(HttpServerResponse.class);
         final RoutingContext ctx = mock(RoutingContext.class);
+        when(ctx.get(TracingHandler.CURRENT_SPAN)).thenReturn(mock(Span.class));
         when(ctx.request()).thenReturn(req);
         when(ctx.response()).thenReturn(resp);
         authHandler.handle(ctx);
