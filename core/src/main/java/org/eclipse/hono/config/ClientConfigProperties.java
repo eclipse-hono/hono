@@ -36,6 +36,11 @@ public class ClientConfigProperties extends AbstractConfig {
      */
     public static final long DEFAULT_FLOW_LATENCY = 20L; //ms
     /**
+     * The default amount of time (milliseconds) after which a connection will be closed
+     * when no frames have been received from the remote peer.
+     */
+    public static final int DEFAULT_IDLE_TIMEOUT = 16000; //ms
+    /**
      * The default number of credits issued by the receiver side of a link.
      */
     public static final int  DEFAULT_INITIAL_CREDITS = 200;
@@ -59,6 +64,7 @@ public class ClientConfigProperties extends AbstractConfig {
     private long flowLatency = DEFAULT_FLOW_LATENCY;
     private String host = "localhost";
     private boolean hostnameVerificationRequired = true;
+    private int idleTimeoutMillis = DEFAULT_IDLE_TIMEOUT;
     private int initialCredits = DEFAULT_INITIAL_CREDITS;
     private long linkEstablishmentTimeout = DEFAULT_LINK_ESTABLISHMENT_TIMEOUT;
     private String name;
@@ -591,6 +597,53 @@ public class ClientConfigProperties extends AbstractConfig {
             throw new IllegalArgumentException("connect timeout must not be negative");
         } else {
             this.connectTimeoutMillis = connectTimeoutMillis;
+        }
+    }
+
+    /**
+     * Gets the interval in milliseconds in which frames are sent to the remote peer to check 
+     * that the connection is still alive.
+     * <p>
+     * This value is set to be half of {@link #getIdleTimeout()}.
+     *
+     * @return The heartbeatInterval in milliseconds.
+     */
+    public final int getHeartbeatInterval() {
+        return idleTimeoutMillis/2;
+    }
+
+    /**
+     * Gets the amount of time in milliseconds after which a connection will be closed
+     * when no frames have been received from the remote peer.
+     * <p>
+     * This property is also used to configure a heartbeat mechanism, checking that the connection is still alive.
+     * The corresponding heartbeat interval will be set to <em>idleTimeout/2</em> ms.
+     * <p>
+     * The default value of this property is {@link #DEFAULT_IDLE_TIMEOUT}.
+     *
+     * @return The idleTimeout in milliseconds.
+     */
+    public final int getIdleTimeout() {
+        return idleTimeoutMillis;
+    }
+
+    /**
+     * Sets the amount of time in milliseconds after which a connection will be closed
+     * when no frames have been received from the remote peer.
+     * <p>
+     * This property is also used to configure a heartbeat mechanism, checking that the connection is still alive.
+     * The corresponding heartbeat interval will be set to <em>idleTimeout/2</em> ms.
+     * <p>
+     * The default value of this property is {@link #DEFAULT_IDLE_TIMEOUT}.
+     *
+     * @param idleTimeoutMillis The idleTimeout in milliseconds.
+     * @throws IllegalArgumentException if idleTimeout is negative.
+     */
+    public final void setIdleTimeout(final int idleTimeoutMillis) {
+        if (idleTimeoutMillis < 0) {
+            throw new IllegalArgumentException("idleTimeout must not be negative");
+        } else {
+            this.idleTimeoutMillis = idleTimeoutMillis;
         }
     }
 }

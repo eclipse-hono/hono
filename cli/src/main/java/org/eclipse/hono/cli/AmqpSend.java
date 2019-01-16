@@ -124,6 +124,7 @@ public class AmqpSend extends AbstractCliClient {
         final ProtonClientOptions options = new ProtonClientOptions();
         final ProtonClient client = ProtonClient.create(vertx);
 
+        options.setHeartbeat(properties.getHeartbeatInterval());
         Optional.ofNullable(properties.getAmqpHostname()).ifPresent(s -> options.setVirtualHost(s));
 
         if (!Strings.isNullOrEmpty(properties.getUsername()) && !Strings.isNullOrEmpty(properties.getPassword())) {
