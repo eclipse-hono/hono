@@ -261,6 +261,7 @@ public final class ConnectionFactoryImpl implements ConnectionFactory {
     private ProtonClientOptions createClientOptions() {
         final ProtonClientOptions options = new ProtonClientOptions();
         options.setConnectTimeout(config.getConnectTimeout());
+        options.setHeartbeat(config.getHeartbeatInterval());
         options.setReconnectAttempts(1);
         options.setReconnectInterval(Constants.DEFAULT_RECONNECT_INTERVAL_MILLIS);
         return options;
