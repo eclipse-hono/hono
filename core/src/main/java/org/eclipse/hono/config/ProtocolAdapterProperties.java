@@ -173,7 +173,6 @@ public class ProtocolAdapterProperties extends ServiceConfigProperties {
      * @param maxConcurrentConnections The maximal number of concurrent connections.
      * @throws IllegalArgumentException if the number is &lt;= 0.
      */
-    
     public void setMaxConcurrentConnections(final int maxConcurrentConnections) {
         if (maxConcurrentConnections <= 0) {
             throw new IllegalArgumentException("connection limit must be greater than zero");
