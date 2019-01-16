@@ -17,10 +17,12 @@ import static org.mockito.Mockito.mock;
 
 import java.net.HttpURLConnection;
 
+import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.config.SignatureSupportingConfigProperties;
 import org.eclipse.hono.util.Constants;
 
+import org.eclipse.hono.util.EventBusMessage;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
@@ -163,6 +165,25 @@ public class CompleteBaseRegistrationServiceTest {
             ctx.assertEquals(result.getStatus(), HttpURLConnection.HTTP_NOT_IMPLEMENTED);
             ctx.assertNull(result.getPayload());
         }));
+    }
+
+    /**
+     * Verifies that the registry returns 400 when issuing a request with an unsupported action.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testProcessRequestFailsWithUnsupportedAction(final TestContext ctx) {
+
+        // GIVEN an empty registry
+        final CompleteBaseRegistrationService<ServiceConfigProperties> registrationService = newCompleteRegistrationService();
+        registrationService.setRegistrationAssertionFactory(RegistrationAssertionHelperImpl.forSigning(vertx, props));
+
+        registrationService
+                .processRequest(EventBusMessage.forOperation("unknown-action"))
+                .setHandler(ctx.asyncAssertFailure(t -> {
+                    ctx.assertEquals(HttpURLConnection.HTTP_BAD_REQUEST, ((ServiceInvocationException) t).getErrorCode());
+                }));
     }
 
 

@@ -21,16 +21,15 @@ import static org.mockito.Mockito.*;
 import java.net.HttpURLConnection;
 import java.nio.charset.StandardCharsets;
 
-import org.eclipse.hono.client.ServiceInvocationException;
-import org.eclipse.hono.util.Constants;
-import org.eclipse.hono.util.EventBusMessage;
+import io.vertx.ext.unit.junit.VertxUnitRunner;
+import org.eclipse.hono.service.registration.AbstractCompleteRegistrationServiceTest;
+import org.eclipse.hono.service.registration.CompleteBaseRegistrationService;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.RegistrationResult;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
-import org.junit.runner.RunWith;
 
 import io.vertx.core.Context;
 import io.vertx.core.Future;
@@ -42,17 +41,14 @@ import io.vertx.core.file.FileSystem;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
-import io.vertx.ext.unit.junit.VertxUnitRunner;
+import org.junit.runner.RunWith;
 
 /**
  * Tests {@link FileBasedRegistrationService}.
  */
 @RunWith(VertxUnitRunner.class)
-public class FileBasedRegistrationServiceTest {
+public class FileBasedRegistrationServiceTest extends AbstractCompleteRegistrationServiceTest {
 
-    private static final String TENANT = Constants.DEFAULT_TENANT;
-    private static final String DEVICE = "4711";
-    private static final String GW = "gw-1";
     private static final String FILE_NAME = "/device-identities.json";
 
     /**
@@ -84,6 +80,11 @@ public class FileBasedRegistrationServiceTest {
         registrationService = new FileBasedRegistrationService();
         registrationService.setConfig(props);
         registrationService.init(vertx, ctx);
+    }
+
+    @Override
+    public CompleteBaseRegistrationService getCompleteRegistrationService() {
+        return registrationService;
     }
 
     /**
@@ -317,112 +318,6 @@ public class FileBasedRegistrationServiceTest {
     }
 
     /**
-     * Verifies that the registry returns 404 when getting an unknown device.
-     * 
-     * @param ctx The vert.x test context.
-     */
-    @Test
-    public void testGetUnknownDeviceReturnsNotFound(final TestContext ctx) {
-
-        registrationService
-            .processRequest(newRequest(RegistrationConstants.ACTION_GET, TENANT))
-            .setHandler(ctx.asyncAssertSuccess(response -> {
-                ctx.assertEquals(HttpURLConnection.HTTP_NOT_FOUND, response.getStatus());
-            }));
-    }
-
-    /**
-     * Verifies that the registry returns 404 when unregistering an unknown device.
-     * 
-     * @param ctx The vert.x test context.
-     */
-    @Test
-    public void testDeregisterUnknownDeviceReturnsNotFound(final TestContext ctx) {
-
-        registrationService
-            .processRequest(newRequest(RegistrationConstants.ACTION_DEREGISTER, TENANT))
-            .setHandler(ctx.asyncAssertSuccess(response -> {
-                ctx.assertEquals(HttpURLConnection.HTTP_NOT_FOUND, response.getStatus());
-            }));
-    }
-
-    /**
-     * Verifies that the registry returns 400 when issuing a request with an unsupported action.
-     * 
-     * @param ctx The vert.x test context.
-     */
-    @Test
-    public void testProcessRequestFailsWithUnsupportedAction(final TestContext ctx) {
-
-        registrationService
-            .processRequest(EventBusMessage.forOperation("unknown-action"))
-            .setHandler(ctx.asyncAssertFailure(t -> {
-                ctx.assertEquals(HttpURLConnection.HTTP_BAD_REQUEST, ((ServiceInvocationException) t).getErrorCode());
-            }));
-    }
-
-    /**
-     * Verifies that the registry returns 409 when trying to register a device twice.
-     * 
-     * @param ctx The vert.x test context.
-     */
-    @Test
-    public void testDuplicateRegistrationFails(final TestContext ctx) {
-
-        final EventBusMessage createRequest = newRequest(RegistrationConstants.ACTION_REGISTER, TENANT);
-
-        registrationService.processRequest(createRequest).map(response -> {
-            ctx.assertEquals(HttpURLConnection.HTTP_CREATED, response.getStatus());
-            return response;
-        }).compose(ok -> registrationService.processRequest(createRequest)).setHandler(ctx.asyncAssertSuccess(response -> {
-            ctx.assertEquals(HttpURLConnection.HTTP_CONFLICT, response.getStatus());
-        }));
-    }
-
-    /**
-     * Verifies that the registry returns 200 when getting an existing device.
-     * 
-     * @param ctx The vert.x test context.
-     */
-    @Test
-    public void testGetSucceedsForRegisteredDevice(final TestContext ctx) {
-
-        final EventBusMessage createRequest = newRequest(RegistrationConstants.ACTION_REGISTER, TENANT);
-        final EventBusMessage getRequest = newRequest(RegistrationConstants.ACTION_GET, TENANT);
-
-        registrationService.processRequest(createRequest).compose(response -> {
-            ctx.assertEquals(HttpURLConnection.HTTP_CREATED, response.getStatus());
-            return registrationService.processRequest(getRequest);
-        }).setHandler(ctx.asyncAssertSuccess(response -> {
-            ctx.assertEquals(HttpURLConnection.HTTP_OK, response.getStatus());
-            ctx.assertNotNull(response.getJsonPayload());
-        }));
-    }
-
-    /**
-     * Verifies that the registry returns 404 when getting an unregistered device.
-     * 
-     * @param ctx The vert.x test context.
-     */
-    @Test
-    public void testGetFailsForDeregisteredDevice(final TestContext ctx) {
-
-        final EventBusMessage createRequest = newRequest(RegistrationConstants.ACTION_REGISTER, TENANT);
-        final EventBusMessage deregisterRequest = newRequest(RegistrationConstants.ACTION_DEREGISTER, TENANT);
-        final EventBusMessage getRequest = newRequest(RegistrationConstants.ACTION_GET, TENANT);
-
-        registrationService.processRequest(createRequest).compose(response -> {
-            ctx.assertEquals(HttpURLConnection.HTTP_CREATED, response.getStatus());
-            return registrationService.processRequest(deregisterRequest);
-        }).compose(response -> {
-            ctx.assertEquals(HttpURLConnection.HTTP_NO_CONTENT, response.getStatus());
-            return registrationService.processRequest(getRequest);
-        }).setHandler(ctx.asyncAssertSuccess(response -> {
-            ctx.assertEquals(HttpURLConnection.HTTP_NOT_FOUND, response.getStatus());
-        }));
-    }
-
-    /**
      * Verifies that setting the <em>saveToFile</em> configuration property to <em>false</em> prevents
      * the registration service to write its content to the file system periodically.
      * 
@@ -490,9 +385,5 @@ public class FileBasedRegistrationServiceTest {
         // THEN no data has been written to the file system
         shutdown.await();
         verify(fileSystem, never()).createFile(eq(props.getFilename()), any(Handler.class));
-    }
-
-    private static EventBusMessage newRequest(final String operation, final String tenant) {
-        return EventBusMessage.forOperation(operation).setTenant(tenant).setDeviceId(DEVICE);
     }
 }
