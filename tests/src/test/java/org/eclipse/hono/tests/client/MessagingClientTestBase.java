@@ -41,7 +41,6 @@ import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
-import io.vertx.proton.ProtonClientOptions;
 import io.vertx.proton.ProtonDelivery;
 
 /**
@@ -142,17 +141,13 @@ public abstract class MessagingClientTestBase extends ClientTestBase {
         registryProps.setPassword(IntegrationTestSupport.HONO_PWD);
         honoDeviceRegistryClient = HonoClient.newClient(VERTX, registryProps);
 
-        final ProtonClientOptions options = new ProtonClientOptions()
-                .setConnectTimeout(5000)
-                .setReconnectAttempts(1);
-
         final Async connectionEstablished = ctx.async();
 
-        final Future<HonoClient> registryClientTracker = honoDeviceRegistryClient.connect(options);
+        final Future<HonoClient> registryClientTracker = honoDeviceRegistryClient.connect();
         final Future<HonoClient> messagingClientTracker = Future.future();
         honoMessagingContext = VERTX.getOrCreateContext();
         honoMessagingContext.runOnContext(connect -> {
-            honoMessagingClient.connect(options).setHandler(messagingClientTracker);
+            honoMessagingClient.connect().setHandler(messagingClientTracker);
         });
         CompositeFuture.all(registryClientTracker, messagingClientTracker)
         .setHandler(ctx.asyncAssertSuccess(ok -> connectionEstablished.complete()));
@@ -240,7 +235,7 @@ public abstract class MessagingClientTestBase extends ClientTestBase {
             registrationAssertion.set(assertionResult.getString(RegistrationConstants.FIELD_ASSERTION));
             return assertionResult;
         }).setHandler(ctx.asyncAssertSuccess(ok -> setup.complete()));
-        setup.await();
+        setup.await(2000);
 
         final Function<Handler<Void>, Future<?>> receiverFactory = msgConsumer -> {
             return createConsumer(TEST_TENANT_ID, msg -> {
