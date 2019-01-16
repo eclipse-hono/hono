@@ -166,7 +166,12 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
             if (downstreamConnection != null && !downstreamConnection.isDisconnected()) {
                 final String container = downstreamConnection.getRemoteContainer();
                 logger.info("closing connection to downstream container [{}]", container);
-                downstreamConnection.closeHandler(null).disconnectHandler(null).close();
+                downstreamConnection.disconnectHandler(null);
+                downstreamConnection.closeHandler(remoteClose -> {
+                    logger.info("connection to downstream container [{}] closed", container);
+                });
+                downstreamConnection.close();
+                clearState();
                 metrics.decrementDownStreamConnections();
             } else {
                 logger.debug("downstream connection already closed");
@@ -248,23 +253,27 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
         } else {
             // all links to downstream host will now be stale and unusable
             logger.warn("lost connection to downstream container [{}], closing upstream receivers ...", con.getRemoteContainer());
-
-            for (final UpstreamReceiver client : activeSenders.keySet()) {
-                closeReceiver(client);
-            }
-            receiversPerConnection.clear();
-            activeSenders.clear();
-            downstreamConnection.attachments().clear();
+            clearState();
             downstreamConnection.disconnectHandler(null);
             downstreamConnection.disconnect();
             metrics.decrementDownStreamConnections();
 
-            for (final Iterator<Handler<AsyncResult<Void>>> iter = clientAttachHandlers.iterator(); iter.hasNext(); ) {
-                iter.next().handle(Future.failedFuture("connection to downstream container failed"));
-                iter.remove();
-            }
-
             reconnect(null);
+        }
+    }
+
+    private void clearState() {
+
+        for (final UpstreamReceiver client : activeSenders.keySet()) {
+            closeReceiver(client);
+        }
+        receiversPerConnection.clear();
+        activeSenders.clear();
+        downstreamConnection.attachments().clear();
+
+        for (final Iterator<Handler<AsyncResult<Void>>> iter = clientAttachHandlers.iterator(); iter.hasNext(); ) {
+            iter.next().handle(Future.failedFuture("connection to downstream container failed"));
+            iter.remove();
         }
     }
 
