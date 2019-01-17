@@ -197,8 +197,9 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
                     closeHandler.handle(Future.succeededFuture());
                 });
                 downstreamConnection.closeHandler(remoteClose -> {
-                    vertx.cancelTimer(timerId);
-                    closeHandler.handle(remoteClose);
+                    if (vertx.cancelTimer(timerId)) {
+                        closeHandler.handle(remoteClose);
+                    }
                 });
                 downstreamConnection.close();
             }

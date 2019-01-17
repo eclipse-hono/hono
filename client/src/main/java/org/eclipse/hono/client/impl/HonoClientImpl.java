@@ -491,6 +491,7 @@ public class HonoClientImpl implements HonoClient {
 
         if (shuttingDown.get()) {
             // no need to try to re-connect
+            log.debug("client is shutting down, giving up attempt to connect");
             connectionHandler.handle(Future.failedFuture(new IllegalStateException("client is shut down")));
         } else if (clientConfigProperties.getReconnectAttempts() - connectAttempts.getAndIncrement() == 0) {
             log.debug("max number of attempts [{}] to re-connect to peer [{}:{}] have been made, giving up",
@@ -1165,8 +1166,10 @@ public class HonoClientImpl implements HonoClient {
                         closeHandler.handle(Future.succeededFuture());
                     });
                     connectionToClose.closeHandler(remoteClose -> {
-                        vertx.cancelTimer(timerId);
-                        closeHandler.handle(remoteClose);
+                        if (vertx.cancelTimer(timerId)) {
+                            // timer has not fired yet
+                            closeHandler.handle(remoteClose);
+                        }
                     });
                     log.info("closing connection to container [{}] at [{}:{}] ...",
                             connectionToClose.getRemoteContainer(), connectionFactory.getHost(), connectionFactory.getPort());

@@ -69,11 +69,11 @@ public class DisconnectHandlerProvidingConnectionFactory implements ConnectionFa
         this.closeHandler = closeHandler;
         this.disconnectHandler = disconnectHandler;
         if (expectedFailingConnectionAttempts.getCount() > 0) {
-            connectionResultHandler.handle(Future.failedFuture(causeForFailure));
             expectedFailingConnectionAttempts.countDown();
+            connectionResultHandler.handle(Future.failedFuture(causeForFailure));
         } else {
-            connectionResultHandler.handle(Future.succeededFuture(connectionToCreate));
             expectedSucceedingConnectionAttempts.countDown();
+            connectionResultHandler.handle(Future.succeededFuture(connectionToCreate));
         }
     }
 

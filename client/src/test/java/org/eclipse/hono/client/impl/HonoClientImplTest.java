@@ -14,9 +14,15 @@
 package org.eclipse.hono.client.impl;
 
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.net.HttpURLConnection;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.MessageSender;
@@ -25,9 +31,8 @@ import org.eclipse.hono.client.RequestResponseClient;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ClientConfigProperties;
-import org.junit.AfterClass;
+import org.eclipse.hono.connection.ConnectionFactory;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
@@ -35,6 +40,7 @@ import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 
 import io.vertx.core.AsyncResult;
+import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
@@ -57,43 +63,31 @@ public class HonoClientImplTest {
     @Rule
     public Timeout timeout = Timeout.seconds(3);
 
-    private static Vertx vertx;
-
+    private Vertx vertx;
     private ProtonConnection con;
     private DisconnectHandlerProvidingConnectionFactory connectionFactory;
     private ClientConfigProperties props;
     private HonoClientImpl client;
 
     /**
-     * Sets up vertx.
-     */
-    @BeforeClass
-    public static void setUpVertx() {
-        vertx = Vertx.vertx();
-    }
-
-    /**
      * Sets up fixture.
      */
+    @SuppressWarnings("unchecked")
     @Before
     public void setUp() {
+        vertx = mock(Vertx.class);
+        final Context context = HonoClientUnitTestHelper.mockContext(vertx);
+        when(vertx.getOrCreateContext()).thenReturn(context);
+        when(vertx.setTimer(anyLong(), any(Handler.class))).thenAnswer(invocation -> {
+            final Handler<Void> handler = invocation.getArgument(1);
+            handler.handle(null);
+            return 0L;
+        });
         con = mock(ProtonConnection.class);
         when(con.getRemoteContainer()).thenReturn("server");
         connectionFactory = new DisconnectHandlerProvidingConnectionFactory(con);
         props = new ClientConfigProperties();
         client = new HonoClientImpl(vertx, connectionFactory, props);
-    }
-
-    /**
-     * Cleans up after test execution.
-     * 
-     * @param ctx The helper to use for running async tests.
-     */
-    @AfterClass
-    public static void shutdown(final TestContext ctx) {
-        if (vertx != null) {
-            vertx.close(ctx.asyncAssertSuccess());
-        }
     }
 
     /**
@@ -512,21 +506,29 @@ public class HonoClientImplTest {
      * @param ctx The test context.
      *
      */
+    @SuppressWarnings("unchecked")
     @Test
     public void testClientDoesNotTriggerReconnectionAfterShutdown(final TestContext ctx) {
 
         // GIVEN a client that tries to connect to a server but does not succeed
-        final Async connectionHandlerInvocation = ctx.async();
-        connectionFactory = new DisconnectHandlerProvidingConnectionFactory(con)
-                .setExpectedFailingConnectionAttempts(Integer.MAX_VALUE);
-        client = new HonoClientImpl(vertx, connectionFactory, props);
+        final AtomicInteger connectAttempts = new AtomicInteger(0);
+        final ConnectionFactory factory = mock(ConnectionFactory.class);
+        when(factory.getHost()).thenReturn("server");
+        when(factory.getPort()).thenReturn(5672);
+        doAnswer(invocation -> {
+            final Handler<AsyncResult<ProtonConnection>> resultHandler = invocation.getArgument(3);
+            if (connectAttempts.incrementAndGet() == 3) {
+                // WHEN client gets shutdown
+                client.shutdown();
+            }
+            resultHandler.handle(Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE)));
+            return null;
+        }).when(factory).connect(any(), any(Handler.class), any(Handler.class), any(Handler.class));
+        client = new HonoClientImpl(vertx, factory, props);
         client.connect().setHandler(
-                ctx.asyncAssertFailure(cause -> connectionHandlerInvocation.complete()));
-
-        // WHEN client gets shutdown
-        client.shutdown();
-
-        // THEN reconnect gets stopped, i.e. connection fails
-        connectionHandlerInvocation.await();
+                ctx.asyncAssertFailure(cause -> {
+                    // THEN three attempts have been made to connect
+                    ctx.assertTrue(connectAttempts.get() == 3);
+                }));
     }
 }
