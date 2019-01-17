@@ -1146,22 +1146,31 @@ public class HonoClientImpl implements HonoClient {
         synchronized (connectionLock) {
             if (isConnectedInternal()) {
                 executeOrRunOnContext(r -> {
-                    log.info("closing connection to server [{}:{}]...", connectionFactory.getHost(), connectionFactory.getPort());
                     final ProtonConnection connectionToClose = connection;
                     connectionToClose.disconnectHandler(null); // make sure we are not trying to re-connect
-                    connectionToClose.closeHandler(closedCon -> {
-                        if (closedCon.succeeded()) {
-                            log.info("closed connection to server [{}:{}]", connectionFactory.getHost(),
-                                    connectionFactory.getPort());
+                    final Handler<AsyncResult<ProtonConnection>> closeHandler = remoteClose -> {
+                        if (remoteClose.succeeded()) {
+                            log.info("closed connection to container [{}] at [{}:{}]",
+                                    connectionToClose.getRemoteContainer(), connectionFactory.getHost(), connectionFactory.getPort());
                         } else {
-                            log.info("closed connection to server [{}:{}]", connectionFactory.getHost(),
-                                    connectionFactory.getPort(), closedCon.cause());
+                            log.info("closed connection to container [{}] at [{}:{}]",
+                                    connectionToClose.getRemoteContainer(), connectionFactory.getHost(),
+                                    connectionFactory.getPort(), remoteClose.cause());
                         }
-                        connectionToClose.disconnect();
+                        clearState();
+                        r.complete();
+                    };
+                    final long timerId = vertx.setTimer(clientConfigProperties.getConnectTimeout(), tid -> {
+                        log.info("did not receive remote peer's close frame after {}ms", clientConfigProperties.getConnectTimeout());
+                        closeHandler.handle(Future.succeededFuture());
                     });
+                    connectionToClose.closeHandler(remoteClose -> {
+                        vertx.cancelTimer(timerId);
+                        closeHandler.handle(remoteClose);
+                    });
+                    log.info("closing connection to container [{}] at [{}:{}] ...",
+                            connectionToClose.getRemoteContainer(), connectionFactory.getHost(), connectionFactory.getPort());
                     connectionToClose.close();
-                    clearState();
-                    r.complete();
                 }).setHandler(handler);
             } else {
                 log.info("connection to server [{}:{}] already closed", connectionFactory.getHost(), connectionFactory.getPort());

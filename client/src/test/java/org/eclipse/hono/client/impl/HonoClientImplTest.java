@@ -32,8 +32,11 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
 import org.junit.runner.RunWith;
+import org.mockito.ArgumentCaptor;
 
+import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
+import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
@@ -467,14 +470,10 @@ public class HonoClientImplTest {
     public void testConnectFailsAfterShutdown(final TestContext ctx) {
 
         client.connect().compose(ok -> {
-            // GIVEN a client that is connected to a server
-            final Future<Void> disconnected = Future.future();
-            // WHEN the client is shut down
-            client.shutdown(disconnected.completer());
-            return disconnected;
-        }).compose(d -> {
-            // AND tries to reconnect again
-            return client.connect(new ProtonClientOptions());
+            // GIVEN a client that is in the process of shutting down
+            client.shutdown(Future.future());
+            // WHEN the client tries to reconnect before shut down is complete
+            return client.connect();
         }).setHandler(ctx.asyncAssertFailure(cause -> {
             // THEN the connection attempt fails
             ctx.assertEquals(HttpURLConnection.HTTP_CONFLICT, ((ClientErrorException) cause).getErrorCode());
@@ -486,6 +485,7 @@ public class HonoClientImplTest {
      *
      * @param ctx The test execution context.
      */
+    @SuppressWarnings("unchecked")
     @Test
     public void testConnectSucceedsAfterDisconnect(final TestContext ctx) {
 
@@ -493,7 +493,10 @@ public class HonoClientImplTest {
             // GIVEN a client that is connected to a server
             final Future<Void> disconnected = Future.future();
             // WHEN the client disconnects
-            client.disconnect(disconnected.completer());
+            client.disconnect(disconnected);
+            final ArgumentCaptor<Handler<AsyncResult<ProtonConnection>>> closeHandler = ArgumentCaptor.forClass(Handler.class);
+            verify(con).closeHandler(closeHandler.capture());
+            closeHandler.getValue().handle(Future.succeededFuture(con));
             return disconnected;
         }).compose(d -> {
             // AND tries to reconnect again
