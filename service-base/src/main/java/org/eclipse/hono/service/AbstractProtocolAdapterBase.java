@@ -362,11 +362,12 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         return result;
     }
 
-    private CompositeFuture closeServiceClients() {
+    private Future<?> closeServiceClients() {
 
         return CompositeFuture.all(
-                closeServiceClient(tenantServiceClient),
                 closeServiceClient(messagingClient),
+                closeServiceClient(commandConnection),
+                closeServiceClient(tenantServiceClient),
                 closeServiceClient(registrationServiceClient),
                 closeServiceClient(credentialsServiceClient));
     }
