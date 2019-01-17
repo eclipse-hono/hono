@@ -599,6 +599,8 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
      * @param connection The connection.
      */
     protected void setRemoteConnectionOpenHandler(final ProtonConnection connection) {
+
+        LOG.debug("received connection request from client");
         connection.sessionOpenHandler(session -> {
             HonoProtonHelper.setDefaultCloseHandler(session);
             handleSessionOpen(connection, session);
@@ -639,8 +641,8 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
      */
     protected void processRemoteOpen(final ProtonConnection connection) {
 
+        LOG.debug("processing open frame from client container [{}]", connection.getRemoteContainer());
         final HonoUser clientPrincipal = Constants.getClientPrincipal(connection);
-        LOG.debug("client [container: {}, user: {}] connected", connection.getRemoteContainer(), clientPrincipal.getName());
         // attach an ID so that we can later inform downstream components when connection is closed
         connection.attachments().set(Constants.KEY_CONNECTION_ID, String.class, UUID.randomUUID().toString());
         processDesiredCapabilities(connection, connection.getRemoteDesiredCapabilities());
@@ -652,6 +654,8 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
             }
         });
         connection.open();
+        LOG.info("client connected [container: {}, user: {}, token valid until: {}]",
+                connection.getRemoteContainer(), clientPrincipal.getName(), clientPrincipal.getExpirationTime().toString());
     }
 
     /**
