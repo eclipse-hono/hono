@@ -159,9 +159,9 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         if (isInsecurePortEnabled()) {
             final ProtonServerOptions options =
                     new ProtonServerOptions()
-                    .setHost(getConfig().getInsecurePortBindAddress())
-                    .setPort(determineInsecurePort())
-                    .setMaxFrameSize(getConfig().getMaxFrameSize());
+                        .setHost(getConfig().getInsecurePortBindAddress())
+                        .setPort(determineInsecurePort())
+                        .setMaxFrameSize(getConfig().getMaxFrameSize());
 
             final Future<Void> result = Future.future();
             insecureServer = createServer(insecureServer, options);
@@ -183,9 +183,9 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         if (isSecurePortEnabled()) {
             final ProtonServerOptions options =
                     new ProtonServerOptions()
-                    .setHost(getConfig().getBindAddress())
-                    .setPort(determineSecurePort())
-                    .setMaxFrameSize(getConfig().getMaxFrameSize());
+                        .setHost(getConfig().getBindAddress())
+                        .setPort(determineSecurePort())
+                        .setMaxFrameSize(getConfig().getMaxFrameSize());
             addTlsKeyCertOptions(options);
             addTlsTrustOptions(options);
 
@@ -219,68 +219,6 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
 
     private void onConnectRequest(final ProtonConnection con) {
 
-        final Span span = Optional
-                // try to pick up span that has been created during SASL handshake
-                .ofNullable(con.attachments().get(AmqpAdapterConstants.KEY_CURRENT_SPAN, Span.class))
-                // or create a fresh one if no SASL handshake has been performed
-                .orElse(tracer.buildSpan("open connection")
-                    .ignoreActiveSpan()
-                    .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_SERVER)
-                    .withTag(Tags.COMPONENT.getKey(), getTypeName())
-                    .start());
-
-        final Device authenticatedDevice = con.attachments()
-                .get(AmqpAdapterConstants.KEY_CLIENT_DEVICE, Device.class);
-        TracingHelper.TAG_AUTHENTICATED.set(span, authenticatedDevice != null);
-
-        final Future<Void> connectAuthorizationCheck = Future.future();
-
-        if (getConfig().isAuthenticationRequired()) {
-
-            if (authenticatedDevice == null) {
-                connectAuthorizationCheck.fail(new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED));
-            } else {
-                LOG.trace("received connection request from {}", authenticatedDevice);
-                // the SASL handshake will already have authenticated the device
-                // and will have verified that the adapter is enabled for the tenant
-                // we still need to check if the device/gateway exists and is enabled
-                checkDeviceRegistration(authenticatedDevice, span.context())
-                .map(ok -> {
-                    LOG.debug("device [tenant-id: {}, device-id: {}] is registered and enabled",
-                            authenticatedDevice.getTenantId(), authenticatedDevice.getDeviceId());
-                    span.log("device is registered and enabled");
-                    return (Void) null;
-                })
-                .setHandler(connectAuthorizationCheck);
-            }
-
-        } else {
-            LOG.trace("received connection request from anonymous device [container: {}]", con.getRemoteContainer());
-            connectAuthorizationCheck.complete();
-        }
-
-        connectAuthorizationCheck.map(ok -> {
-            con.setContainer(getTypeName());
-            setConnectionHandlers(con);
-            con.open();
-            if (authenticatedDevice != null) {
-                span.setTag(MessageHelper.APP_PROPERTY_TENANT_ID, authenticatedDevice.getTenantId());
-                span.setTag(MessageHelper.APP_PROPERTY_DEVICE_ID, authenticatedDevice.getDeviceId());
-            }
-            span.log("connection accepted");
-            return null;
-        }).otherwise(t -> {
-            con.setCondition(AmqpContext.getErrorCondition(t));
-            con.close();
-            TracingHelper.logError(span, t);
-            return null;
-        }).setHandler(conAttempt -> {
-            span.finish();
-        });
-    }
-
-    private void setConnectionHandlers(final ProtonConnection con) {
-
         con.disconnectHandler(lostConnection -> {
             LOG.debug("lost connection to device [container: {}]", con.getRemoteContainer());
             Optional.ofNullable(getConnectionLossHandler(con)).ifPresent(handler -> handler.handle(null));
@@ -307,6 +245,72 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         con.senderOpenHandler(sender -> {
             handleRemoteSenderOpenForCommands(con, sender);
         });
+        con.openHandler(remoteOpen -> {
+            if (remoteOpen.failed()) {
+                LOG.debug("ignoring device's open frame containing error", remoteOpen.cause());
+            } else {
+                processRemoteOpen(remoteOpen.result());
+            }
+        });
+    }
+
+    private void processRemoteOpen(final ProtonConnection con) {
+
+        final Span span = Optional
+                // try to pick up span that has been created during SASL handshake
+                .ofNullable(con.attachments().get(AmqpAdapterConstants.KEY_CURRENT_SPAN, Span.class))
+                // or create a fresh one if no SASL handshake has been performed
+                .orElse(tracer.buildSpan("open connection")
+                    .ignoreActiveSpan()
+                    .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_SERVER)
+                    .withTag(Tags.COMPONENT.getKey(), getTypeName())
+                    .start());
+
+        final Device authenticatedDevice = con.attachments()
+                .get(AmqpAdapterConstants.KEY_CLIENT_DEVICE, Device.class);
+        TracingHelper.TAG_AUTHENTICATED.set(span, authenticatedDevice != null);
+        if (authenticatedDevice != null) {
+            span.setTag(MessageHelper.APP_PROPERTY_TENANT_ID, authenticatedDevice.getTenantId());
+            span.setTag(MessageHelper.APP_PROPERTY_DEVICE_ID, authenticatedDevice.getDeviceId());
+        }
+
+        final Future<Void> connectAuthorizationCheck = Future.future();
+
+        if (getConfig().isAuthenticationRequired()) {
+
+            if (authenticatedDevice == null) {
+                connectAuthorizationCheck.fail(new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED, "anonymous devices not supported"));
+            } else {
+                LOG.trace("received connection request from {}", authenticatedDevice);
+                // the SASL handshake will already have authenticated the device
+                // and will have verified that the adapter is enabled for the tenant
+                // we still need to check if the device/gateway exists and is enabled
+                checkDeviceRegistration(authenticatedDevice, span.context())
+                .map(ok -> {
+                    LOG.debug("{} is registered and enabled", authenticatedDevice);
+                    span.log("device is registered and enabled");
+                    return ok;
+                }).setHandler(connectAuthorizationCheck);
+            }
+
+        } else {
+            LOG.trace("received connection request from anonymous device [container: {}]", con.getRemoteContainer());
+            connectAuthorizationCheck.complete();
+        }
+
+        connectAuthorizationCheck
+        .map(ok -> {
+            con.setContainer(getTypeName());
+            con.open();
+            LOG.debug("connection with device [container: {}] established", con.getRemoteContainer());
+            span.log("connection established");
+            return null;
+        }).otherwise(t -> {
+            con.setCondition(AmqpContext.getErrorCondition(t));
+            con.close();
+            TracingHelper.logError(span, t);
+            return null;
+        }).setHandler(s -> span.finish());
     }
 
     /**
@@ -344,7 +348,8 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
      *
      */
     private void handleSessionOpen(final ProtonConnection conn, final ProtonSession session) {
-        LOG.debug("opening new session with client [container: {}]", conn.getRemoteContainer());
+        LOG.debug("opening new session with client [container: {}, session window size: {}]",
+                conn.getRemoteContainer(), getConfig().getMaxSessionWindowSize());
         session.setIncomingCapacity(getConfig().getMaxSessionWindowSize());
         session.open();
     }

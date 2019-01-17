@@ -421,13 +421,13 @@ public class VertxBasedAmqpProtocolAdapterTest {
         startup.await();
 
         // to which a device is connected
-        final ArgumentCaptor<Handler<ProtonConnection>> connectHandler = ArgumentCaptor.forClass(Handler.class);
-        verify(server).connectHandler(connectHandler.capture());
         final Device authenticatedDevice = new Device(TEST_TENANT_ID, TEST_DEVICE);
-        final ProtonConnection deviceConnection = mock(ProtonConnection.class);
         final Record record = new RecordImpl();
         record.set(AmqpAdapterConstants.KEY_CLIENT_DEVICE, Device.class, authenticatedDevice);
+        final ProtonConnection deviceConnection = mock(ProtonConnection.class);
         when(deviceConnection.attachments()).thenReturn(record);
+        final ArgumentCaptor<Handler<ProtonConnection>> connectHandler = ArgumentCaptor.forClass(Handler.class);
+        verify(server).connectHandler(connectHandler.capture());
         connectHandler.getValue().handle(deviceConnection);
 
         // that wants to receive commands
