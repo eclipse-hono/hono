@@ -163,22 +163,50 @@ public abstract class ForwardingDownstreamAdapter implements DownstreamAdapter {
     public final void stop(final Future<Void> stopFuture) {
 
         if (running) {
-            if (downstreamConnection != null && !downstreamConnection.isDisconnected()) {
+
+            if (downstreamConnection == null || downstreamConnection.isDisconnected()) {
+
+                logger.debug("downstream connection already closed");
+                running = false;
+                stopFuture.complete();
+
+            } else {
                 final String container = downstreamConnection.getRemoteContainer();
-                logger.info("closing connection to downstream container [{}]", container);
+                logger.info("closing connection to downstream container [{}] at [{}:{}]",
+                        container, downstreamConnectionFactory.getHost(),
+                        downstreamConnectionFactory.getPort());
                 downstreamConnection.disconnectHandler(null);
+
+                final Handler<AsyncResult<ProtonConnection>> closeHandler = remoteClose -> {
+                    if (remoteClose.succeeded()) {
+                        logger.info("closed connection to downstream container [{}] at [{}:{}]",
+                                container, downstreamConnectionFactory.getHost(),
+                                downstreamConnectionFactory.getPort());
+                    } else {
+                        logger.info("closed connection to downstream container [{}] at [{}:{}]",
+                                container, downstreamConnectionFactory.getHost(),
+                                downstreamConnectionFactory.getPort(), remoteClose.cause());
+                    }
+                    clearState();
+                    metrics.decrementDownStreamConnections();
+                    running = false;
+                    stopFuture.complete();
+                };
+                final long timerId = vertx.setTimer(3000, tid -> {
+                    logger.info("did not receive downstream container's close frame after 3 seconds");
+                    closeHandler.handle(Future.succeededFuture());
+                });
                 downstreamConnection.closeHandler(remoteClose -> {
-                    logger.info("connection to downstream container [{}] closed", container);
+                    vertx.cancelTimer(timerId);
+                    closeHandler.handle(remoteClose);
                 });
                 downstreamConnection.close();
-                clearState();
-                metrics.decrementDownStreamConnections();
-            } else {
-                logger.debug("downstream connection already closed");
             }
-            running = false;
+
+
+        } else {
+            stopFuture.complete();
         }
-        stopFuture.complete();
     }
 
     /**
