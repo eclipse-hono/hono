@@ -198,7 +198,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
             <configuration>
               <verbose>true</verbose>
               <autoCreateCustomNetworks>true</autoCreateCustomNetworks>
-              <startParallel>true</startParallel>
+              <startParallel>false</startParallel>
               <images>
                 <!-- ##### Authentication service ##### -->
                 <image>
@@ -268,10 +268,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     </volumes>
                     <wait>
                       <time>${service.startup.timeout}</time>
-                      <tcp>
-                        <mode>mapped</mode>
-                        <ports><port>5672</port></ports>
-                      </tcp>
+                      <log>^.*(Started Application).*$</log>
                     </wait>
                   </run>
                 </image>
@@ -411,10 +408,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     </log>
                     <wait>
                       <time>${service.startup.timeout}</time>
-                      <tcp>
-                        <mode>mapped</mode>
-                        <ports><port>5671</port></ports>
-                      </tcp>
+                      <log>.*(Server is now live)$</log>
                     </wait>
                   </run>
                 </image>
@@ -478,10 +472,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     </log>
                     <wait>
                       <time>${service.startup.timeout}</time>
-                      <tcp>
-                        <mode>mapped</mode>
-                        <ports><port>5672</port></ports>
-                      </tcp>
+                      <log>.*(Listening on 0.0.0.0:5673)$</log>
                     </wait>
                     <env>
                       <PN_TRACE_FRM>0</PN_TRACE_FRM>
