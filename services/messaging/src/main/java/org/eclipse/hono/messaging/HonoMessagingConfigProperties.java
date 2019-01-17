@@ -26,7 +26,7 @@ public class HonoMessagingConfigProperties extends ServiceConfigProperties {
     /**
      * The default number of bytes that can be buffered unsettled per session created by a client.
      */
-    public static final int DEFAULT_MAX_SESSION_WINDOW = 300 * 32 * 1024; // 300 frames of 32kb each
+    public static final int DEFAULT_MAX_SESSION_WINDOW = 300 * 16 * 1024; // 300 frames of 16kb each
 
     private final SignatureSupportingConfigProperties registrationAssertionProperties = new SignatureSupportingConfigProperties();
     private int maxSessionWindow = DEFAULT_MAX_SESSION_WINDOW;
