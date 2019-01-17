@@ -345,6 +345,10 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
     /**
      * Invoked during start up to create options for the proton server instance binding to the secure port.
      * <p>
+     * This default implementation creates options using {@link #createInsecureServerOptions()}
+     * and sets the {@linkplain ServiceConfigProperties#getKeyCertOptions() server's private key and certificate}
+     * and {@linkplain ServiceConfigProperties#getTrustOptions() trust options}.
+     * <p>
      * Subclasses may override this method to set custom options.
      * 
      * @return The options.
@@ -357,7 +361,12 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
     }
 
     /**
-     * Invoked during start up to create options for the proton server instance binding to the insecure port.
+     * Invoked during start up to create options for the proton server instances.
+     * <ul>
+     * <li>The <em>heartbeat</em> interval is set to 10 seconds, i.e. the server will close the
+     * connection to the client if it does not receive any frames for 20 seconds.</li>
+     * <li>The maximum frame size is set to 16kb.</li>
+     * </ul>
      * <p>
      * Subclasses may override this method to set custom options.
      * 
@@ -366,9 +375,8 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
     protected ProtonServerOptions createInsecureServerOptions() {
 
         final ProtonServerOptions options = new ProtonServerOptions();
-        options.setHeartbeat(60000); // // close idle connections after two minutes of inactivity
-        options.setReceiveBufferSize(16 * 1024); // 16kb
-        options.setSendBufferSize(16 * 1024); // 16kb
+        options.setHeartbeat(10000); // close idle connections after 20 seconds of inactivity
+        options.setMaxFrameSize(16 * 1024); // 16kb
         options.setLogActivity(getConfig().isNetworkDebugLoggingEnabled());
 
         return options;
