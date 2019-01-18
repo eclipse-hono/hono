@@ -22,7 +22,9 @@ import java.util.Optional;
 import java.util.UUID;
 
 import org.apache.qpid.proton.amqp.messaging.Accepted;
+import org.apache.qpid.proton.amqp.messaging.Modified;
 import org.apache.qpid.proton.amqp.messaging.Rejected;
+import org.apache.qpid.proton.amqp.messaging.Released;
 import org.apache.qpid.proton.amqp.transport.DeliveryState;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.cache.ExpiringValueCache;
@@ -823,10 +825,17 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
                             replyMap.remove(correlationId);
                             resultHandler.handle(Future.succeededFuture());
                         }
-                    } else {
-                        LOG.debug("service did not accept request [target address: {}, subject: {}, correlation ID: {}]: {}",
+                    } else if (Released.class.isInstance(remoteState)) {
+                        LOG.debug("service did not accept request [target address: {}, subject: {}, correlation ID: {}], remote state: {}",
                                 targetAddress, request.getSubject(), correlationId, remoteState);
                         failedResult.fail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE));
+                        cancelRequest(correlationId, failedResult);
+                    } else if (Modified.class.isInstance(remoteState)) {
+                        LOG.debug("service did not accept request [target address: {}, subject: {}, correlation ID: {}], remote state: {}",
+                                targetAddress, request.getSubject(), correlationId, remoteState);
+                        final Modified modified = (Modified) deliveryUpdated.getRemoteState();
+                        failedResult.fail(new ServerErrorException(modified.getUndeliverableHere() ? HttpURLConnection.HTTP_NOT_FOUND
+                                        : HttpURLConnection.HTTP_UNAVAILABLE));
                         cancelRequest(correlationId, failedResult);
                     }
                 });

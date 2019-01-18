@@ -20,7 +20,9 @@ import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.qpid.proton.amqp.messaging.Accepted;
+import org.apache.qpid.proton.amqp.messaging.Modified;
 import org.apache.qpid.proton.amqp.messaging.Rejected;
+import org.apache.qpid.proton.amqp.messaging.Released;
 import org.apache.qpid.proton.amqp.transport.DeliveryState;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.MessageSender;
@@ -243,11 +245,18 @@ public final class TelemetrySenderImpl extends AbstractSender {
                             events.put(Fields.MESSAGE, String.format("message rejected by peer: %s, %s",
                                     rejected.getError().getCondition(), rejected.getError().getDescription()));
                         }
-                    } else {
+                    } else if (Released.class.isInstance(remoteState)) {
                         LOG.debug("message [message ID: {}] not accepted by peer, remote state: {}",
                                 messageId, remoteState.getClass().getSimpleName());
                         Tags.HTTP_STATUS.set(currentSpan, HttpURLConnection.HTTP_UNAVAILABLE);
-                        events.put(Fields.MESSAGE, "message not accepted by peer");
+                        events.put(Fields.MESSAGE, "message not accepted by peer, remote state: " + remoteState);
+                    } else if (Modified.class.isInstance(remoteState)) {
+                        final Modified modified = (Modified) deliveryUpdated.getRemoteState();
+                        LOG.debug("message [message ID: {}] not accepted by peer, remote state: {}",
+                                messageId, modified);
+                        Tags.HTTP_STATUS.set(currentSpan, modified.getUndeliverableHere() ? HttpURLConnection.HTTP_NOT_FOUND
+                                        : HttpURLConnection.HTTP_UNAVAILABLE);
+                        events.put(Fields.MESSAGE, "message not accepted by peer, remote state: " + remoteState);
                     }
                     TracingHelper.logError(currentSpan, events);
                 }

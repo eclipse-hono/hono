@@ -27,7 +27,9 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.qpid.proton.amqp.messaging.Accepted;
+import org.apache.qpid.proton.amqp.messaging.Modified;
 import org.apache.qpid.proton.amqp.messaging.Rejected;
+import org.apache.qpid.proton.amqp.messaging.Released;
 import org.apache.qpid.proton.amqp.transport.DeliveryState;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ClientErrorException;
@@ -445,9 +447,14 @@ abstract public class AbstractSender extends AbstractHonoClient implements Messa
                                     rejected.getError().getCondition(), rejected.getError().getDescription());
                             e = new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, rejected.getError().getDescription());
                         }
-                    } else {
-                        LOG.debug("message [message ID: {}] not accepted by peer: {}", messageId, remoteState);
-                        e = new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST);
+                    } else if (Released.class.isInstance(remoteState)) {
+                        LOG.debug("message [message ID: {}] not accepted by peer, remote state: {}", messageId, remoteState);
+                        e = new ClientErrorException(HttpURLConnection.HTTP_UNAVAILABLE);
+                    } else if (Modified.class.isInstance(remoteState)) {
+                        LOG.debug("message [message ID: {}] not accepted by peer, remote state: {}", messageId, remoteState);
+                        final Modified modified = (Modified) deliveryUpdated.getRemoteState();
+                        e = new ClientErrorException(modified.getUndeliverableHere() ? HttpURLConnection.HTTP_NOT_FOUND
+                                : HttpURLConnection.HTTP_UNAVAILABLE);
                     }
                     result.fail(e);
                 }
