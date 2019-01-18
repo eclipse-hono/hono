@@ -11,23 +11,20 @@
  * SPDX-License-Identifier: EPL-2.0
  */
 
-package org.eclipse.hono.client;
-
-import org.eclipse.hono.auth.Device;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.mockito.junit.MockitoJUnitRunner;
+package org.eclipse.hono.adapter.mqtt;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThat;
 
+import org.eclipse.hono.auth.Device;
+import org.junit.Test;
+
 /**
  * Verifies behavior of {@link CommandSubscription}.
  *
  */
-@RunWith(MockitoJUnitRunner.class)
 public class CommandSubscriptionTest {
 
     private Device device = new Device("tenant", "device");
