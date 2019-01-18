@@ -249,7 +249,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <alias>hono-service-auth.hono</alias>
                     </network>
                     <memorySwap>-1</memorySwap>
-                    <memory>167772160</memory>
+                    <memory>268435456</memory>
                     <env>
                       <LOGGING_CONFIG>file:///etc/hono/logback-spring.xml</LOGGING_CONFIG>
                       <SPRING_CONFIG_LOCATION>file:///etc/hono/</SPRING_CONFIG_LOCATION>
