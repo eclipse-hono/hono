@@ -31,6 +31,8 @@
     "requireSsl": true,
     "host": "0.0.0.0",
     "port": 5671,
+    "maxFrameSize": 16384,
+    "maxSessionFrames": 300,
     "authenticatePeer": true,
     "saslMechanisms": "PLAIN",
     "saslPlugin": "Hono Auth"
@@ -39,6 +41,8 @@
   ["listener", {
     "host": "0.0.0.0",
     "port": 5672,
+    "maxFrameSize": 16384,
+    "maxSessionFrames": 300,
     "authenticatePeer": true,
     "saslMechanisms": "PLAIN",
     "saslPlugin": "Hono Auth"
@@ -49,7 +53,8 @@
     "requireSsl": true,
     "host": "0.0.0.0",
     "port": 5673,
-    "maxSessionFrames": 10000,
+    "maxFrameSize": 16384,
+    "maxSessionFrames": 300,
     "authenticatePeer": true,
     "saslMechanisms": "EXTERNAL"
   }],
@@ -102,7 +107,7 @@
 
   ["vhost", {
       "hostname": "hono-internal",
-      "maxConnections": 20,
+      "maxConnections": 40,
       "groups": {
         "Hono": {
           "users": "Eclipse IoT;Hono;hono-messaging,Eclipse IoT;Hono;http-adapter,Eclipse IoT;Hono;mqtt-adapter,Eclipse IoT;Hono;amqp-adapter",
