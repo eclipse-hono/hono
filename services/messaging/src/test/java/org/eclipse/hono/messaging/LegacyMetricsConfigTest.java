@@ -60,7 +60,7 @@ public class LegacyMetricsConfigTest {
         mapper = config.legacyGraphiteFormatMapper(new GraphiteHierarchicalNameMapper(MetricsTags.TAG_HOST));
         meterFilters = config.getMeterFilters();
         defaultTags = Tags.of(MetricsTags.TAG_HOST, HOSTNAME)
-                .and(MetricsTags.TAG_COMPONENT, MetricsTags.VALUE_COMPONENT_SERVICE)
+                .and(MetricsTags.TAG_COMPONENT_TYPE, MetricsTags.VALUE_COMPONENT_TYPE_SERVICE)
                 .and(MetricsTags.TAG_PROTOCOL, COMPONENT_NAME)
                 .and(MetricsTags.TAG_TENANT, TENANT_NAME);
     }

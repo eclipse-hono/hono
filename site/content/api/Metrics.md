@@ -33,10 +33,10 @@ will still support the tags as described.
 
 Tags for common metrics are:
 
-| Tag         | Value                              | Description |
-| ----------- | ---------------------------------- | ----------- |
-| *host*      | *string*                           | The name of the host that the component reporting the metric is running on |
-| *component* | `adapter`, `service`             | The type of component reporting the metric |
+| Tag              | Value                              | Description |
+| ---------------- | ---------------------------------- | ----------- |
+| *host*           | *string*                           | The name of the host that the component reporting the metric is running on |
+| *component-type* | `adapter`, `service`             | The type of component reporting the metric |
 
 ### Protocol Adapter Metrics
 
@@ -50,16 +50,16 @@ Additional tags for protocols adapter are:
 
 Metrics provided by the protocol adapters are:
 
-| Metric                             | Type    | Tags                                              | Description |
-| ---------------------------------- | ------- | ------------------------------------------------- | ----------- |
-| *hono.connections.authenticated*   | Gauge   | *host*, *component*, *protocol*, *tenant*         | Current number of connected, authenticated devices. <br/> **NB** This metric is only supported by protocol adapters that maintain *connection state* with authenticated devices. In particular, the HTTP adapter does not support this metric. |
-| *hono.connections.unauthenticated* | Gauge   | *host*, *component*, *protocol*                   | Current number of connected, unauthenticated devices. <br/> **NB** This metric is only supported by protocol adapters that maintain *connection state* with authenticated devices. In particular, the HTTP adapter does not support this metric. |
-| *hono.messages.undeliverable*      | Counter | *host*, *component*, *protocol*, *tenant*, *type* | Total number of undeliverable messages |
-| *hono.messages.processed*          | Counter | *host*, *component*, *protocol*, *tenant*, *type* | Total number of processed messages |
-| *hono.messages.processed.payload*  | Counter | *host*, *component*, *protocol*, *tenant*, *type* | Total number of processed payload bytes |
-| *hono.commands.device.delivered*   | Counter | *host*, *component*, *protocol*, *tenant*         | Total number of delivered commands |
-| *hono.commands.ttd.expired*        | Counter | *host*, *component*, *protocol*, *tenant*         | Total number of expired TTDs |
-| *hono.commands.response.delivered* | Counter | *host*, *component*, *protocol*, *tenant*         | Total number of delivered responses to commands |
+| Metric                             | Type    | Tags                                                   | Description |
+| ---------------------------------- | ------- | ------------------------------------------------------ | ----------- |
+| *hono.connections.authenticated*   | Gauge   | *host*, *component-type*, *protocol*, *tenant*         | Current number of connected, authenticated devices. <br/> **NB** This metric is only supported by protocol adapters that maintain *connection state* with authenticated devices. In particular, the HTTP adapter does not support this metric. |
+| *hono.connections.unauthenticated* | Gauge   | *host*, *component-type*, *protocol*                   | Current number of connected, unauthenticated devices. <br/> **NB** This metric is only supported by protocol adapters that maintain *connection state* with authenticated devices. In particular, the HTTP adapter does not support this metric. |
+| *hono.messages.undeliverable*      | Counter | *host*, *component-type*, *protocol*, *tenant*, *type* | Total number of undeliverable messages |
+| *hono.messages.processed*          | Counter | *host*, *component-type*, *protocol*, *tenant*, *type* | Total number of processed messages |
+| *hono.messages.processed.payload*  | Counter | *host*, *component-type*, *protocol*, *tenant*, *type* | Total number of processed payload bytes |
+| *hono.commands.device.delivered*   | Counter | *host*, *component-type*, *protocol*, *tenant*         | Total number of delivered commands |
+| *hono.commands.ttd.expired*        | Counter | *host*, *component-type*, *protocol*, *tenant*         | Total number of expired TTDs |
+| *hono.commands.response.delivered* | Counter | *host*, *component-type*, *protocol*, *tenant*         | Total number of delivered responses to commands |
 
 ### Service Metrics
 

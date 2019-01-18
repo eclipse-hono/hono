@@ -28,7 +28,11 @@ public final class MetricsTags {
      * reporting a metric is running on.
      */
     public static final String TAG_HOST = "host";
-    public static final String TAG_COMPONENT = "component";
+    /**
+     * The name of the tag that holds the type of component that
+     * reports a metric.
+     */
+    public static final String TAG_COMPONENT_TYPE = "component-type";
     public static final String TAG_PROTOCOL = "protocol";
     public static final String TAG_SERVICE = "service";
     public static final String TAG_TENANT = "tenant";
@@ -37,9 +41,14 @@ public final class MetricsTags {
      * that a metric has been reported for.
      */
     public static final String TAG_TYPE = "type";
-
-    public static final String VALUE_COMPONENT_ADAPTER = "adapter";
-    public static final String VALUE_COMPONENT_SERVICE = "service";
+    /**
+     * The component type indicating a protocol adapter.
+     */
+    public static final String VALUE_COMPONENT_TYPE_ADAPTER = "adapter";
+    /**
+     * The component type indicating a service component.
+     */
+    public static final String VALUE_COMPONENT_TYPE_SERVICE = "service";
 
     public static final String VALUE_PROTOCOL_AMQP = "ampq";
     public static final String VALUE_PROTOCOL_COAP = "coap";
@@ -62,7 +71,7 @@ public final class MetricsTags {
     public static Tags forProtocolAdapter(final String name) {
         return Tags.of(
                 Tag.of(MetricsTags.TAG_HOST, Hostnames.getHostname()),
-                Tag.of(MetricsTags.TAG_COMPONENT, MetricsTags.VALUE_COMPONENT_ADAPTER),
+                Tag.of(MetricsTags.TAG_COMPONENT_TYPE, MetricsTags.VALUE_COMPONENT_TYPE_ADAPTER),
                 Tag.of(MetricsTags.TAG_PROTOCOL, name));
     }
 
@@ -75,7 +84,7 @@ public final class MetricsTags {
     public static Tags forService(final String name) {
         return Tags.of(
                 Tag.of(MetricsTags.TAG_HOST, Hostnames.getHostname()),
-                Tag.of(MetricsTags.TAG_COMPONENT, MetricsTags.VALUE_COMPONENT_SERVICE),
+                Tag.of(MetricsTags.TAG_COMPONENT_TYPE, MetricsTags.VALUE_COMPONENT_TYPE_SERVICE),
                 Tag.of(MetricsTags.TAG_SERVICE, name));
     }
 

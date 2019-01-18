@@ -129,7 +129,7 @@ public abstract class AbstractLegacyMetricsConfig {
         return new MeterFilter[] {
                                 MeterFilter.replaceTagValues(MetricsTags.TAG_HOST, host -> host.replace('.', '_')),
                                 MeterFilter.replaceTagValues(MetricsTags.TAG_TENANT, tenant -> tenant.replace('.', '_')),
-                                MeterFilter.ignoreTags(MetricsTags.TAG_COMPONENT),
+                                MeterFilter.ignoreTags(MetricsTags.TAG_COMPONENT_TYPE),
                                 meterTypeMapper() };
     }
 
