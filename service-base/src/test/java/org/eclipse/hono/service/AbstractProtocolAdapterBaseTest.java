@@ -21,12 +21,12 @@ import static org.mockito.Mockito.*;
 import java.net.HttpURLConnection;
 
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.client.CommandConnection;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.ServiceInvocationException;
-import org.eclipse.hono.client.CommandConnection;
-import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
@@ -39,8 +39,10 @@ import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 
 import io.opentracing.SpanContext;
+import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.TestContext;
@@ -64,6 +66,8 @@ public class AbstractProtocolAdapterBaseTest {
 
     private static final String ADAPTER_NAME = "abstract-adapter";
 
+    private Vertx vertx;
+    private Context context;
     private ProtocolAdapterProperties properties;
     private AbstractProtocolAdapterBase<ProtocolAdapterProperties> adapter;
     private RegistrationClient registrationClient;
@@ -105,6 +109,16 @@ public class AbstractProtocolAdapterBaseTest {
         adapter.setCredentialsServiceClient(credentialsService);
         adapter.setHonoMessagingClient(messagingService);
         adapter.setCommandConnection(commandConnection);
+
+        vertx = mock(Vertx.class);
+        // run timers immediately
+        when(vertx.setTimer(anyLong(), any(Handler.class))).thenAnswer(invocation -> {
+            final Handler<Void> task = invocation.getArgument(1);
+            task.handle(null);
+            return 1L;
+        });
+        context = mock(Context.class);
+        adapter.init(vertx, context);
     }
 
     /**
@@ -165,6 +179,7 @@ public class AbstractProtocolAdapterBaseTest {
      * @param ctx The vert.x test context.
      */
     @SuppressWarnings("unchecked")
+    @Test
     public void testCallbacksInvokedOnReconnect(final TestContext ctx) {
 
         // GIVEN an adapter connected to Hono services
@@ -173,7 +188,7 @@ public class AbstractProtocolAdapterBaseTest {
         givenAnAdapterConfiguredWithServiceClients(mock(Handler.class), commandConnectionEstablishedHandler, commandConnectionLostHandler);
         adapter.startInternal().setHandler(ctx.asyncAssertSuccess(ok -> {
             final ArgumentCaptor<Handler<ProtonConnection>> disconnectHandlerCaptor = ArgumentCaptor.forClass(Handler.class);
-            verify(commandConnection.connect(disconnectHandlerCaptor.capture()));
+            verify(commandConnection).connect(disconnectHandlerCaptor.capture());
             // WHEN the command connection is lost
             disconnectHandlerCaptor.getValue().handle(mock(ProtonConnection.class));
             // THEN the onCommandConnectionLost hook is being invoked,
@@ -181,7 +196,7 @@ public class AbstractProtocolAdapterBaseTest {
             // the connection is re-established and
             verify(commandConnection, times(2)).connect(any(Handler.class));
             // the onCommandConnectionEstablished hook is being invoked
-            verify(commandConnectionEstablishedHandler).handle(null);
+            verify(commandConnectionEstablishedHandler, times(2)).handle(null);
         }));
     }
 
@@ -422,6 +437,7 @@ public class AbstractProtocolAdapterBaseTest {
             }
         };
         result.setConfig(props);
+        result.init(vertx, context);
         return result;
     }
 
