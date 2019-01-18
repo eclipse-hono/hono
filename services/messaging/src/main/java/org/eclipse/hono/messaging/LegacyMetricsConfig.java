@@ -16,6 +16,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.eclipse.hono.service.metric.AbstractLegacyMetricsConfig;
+import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.service.metric.MicrometerBasedMetrics;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Configuration;
@@ -63,6 +64,7 @@ public class LegacyMetricsConfig extends AbstractLegacyMetricsConfig {
                         || MicrometerBasedMessagingMetrics.METER_CONNECTIONS_DOWNSTREAM.equals(id.getName())) {
 
                     newTags.add(Tag.of(TAG_METER_TYPE, "counter"));
+                    mapComponentName(id, newTags);
                     // we need to add the type suffix because the underlying
                     // Micrometer meter is a Gauge and the Graphite
                     // exporter will not automatically append the suffix
@@ -72,10 +74,12 @@ public class LegacyMetricsConfig extends AbstractLegacyMetricsConfig {
                 } else if (MicrometerBasedMessagingMetrics.METER_DOWNSTREAM_LINK_CREDITS.equals(id.getName())) {
 
                     newTags.add(Tag.of(TAG_METER_TYPE, "gauge"));
+                    mapComponentName(id, newTags);
 
                 } else if (MicrometerBasedMetrics.METER_MESSAGES_PROCESSED.equals(id.getName())) {
 
                     newTags.add(Tag.of(TAG_METER_TYPE, "meter"));
+                    mapComponentName(id, newTags);
                     // extract the "sub-name" into a separate tag
                     // so that we can later add it to the meter name
                     // AFTER the type and tenant. This is necessary
@@ -87,6 +91,7 @@ public class LegacyMetricsConfig extends AbstractLegacyMetricsConfig {
                 } else if (name.startsWith("messages.")) {
 
                     newTags.add(Tag.of(TAG_METER_TYPE, "counter"));
+                    mapComponentName(id, newTags);
                     newTags.add(Tag.of(TAG_SUB_NAME, name.substring("messages.".length())));
                     name = "messages";
 
@@ -94,6 +99,14 @@ public class LegacyMetricsConfig extends AbstractLegacyMetricsConfig {
 
                 return new Meter.Id(name, newTags, id.getBaseUnit(), id.getDescription(),
                         id.getType());
+            }
+
+            private void mapComponentName(final Meter.Id id, final List<Tag> newTags) {
+                final String componentName = id.getTag(MetricsTags.TAG_COMPONENT_NAME);
+                if (componentName != null) {
+                    final String protocol = getProtocolForComponentName(componentName);
+                    newTags.add(Tag.of(TAG_PROTOCOL, protocol));
+                }
             }
         };
     }

@@ -142,7 +142,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "sum(irate(hono_messages_processed_total{type=\"telemetry\",protocol=~\"$protocol\",tenant=~\"$tenant\"}[$__range]))",
+          "expr": "sum(irate(hono_messages_processed_total{type=\"telemetry\",component_name=~\"$componentname\",tenant=~\"$tenant\"}[$__range]))",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A"
@@ -223,7 +223,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "sum(irate(hono_messages_processed_payload_total{type=\"telemetry\",protocol=~\"$protocol\",tenant=~\"$tenant\"}[$__range]))",
+          "expr": "sum(irate(hono_messages_processed_payload_total{type=\"telemetry\",component_name=~\"$componentname\",tenant=~\"$tenant\"}[$__range]))",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A"
@@ -304,7 +304,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "sum(irate(hono_messages_undeliverable_total{type=\"telemetry\",protocol=~\"$protocol\",tenant=~\"$tenant\"}[$__range]))",
+          "expr": "sum(irate(hono_messages_undeliverable_total{type=\"telemetry\",component_name=~\"$componentname\",tenant=~\"$tenant\"}[$__range]))",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A"
@@ -385,7 +385,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "sum(irate(hono_messages_processed_total{type=\"event\",protocol=~\"$protocol\",tenant=~\"$tenant\"}[$__range]))",
+          "expr": "sum(irate(hono_messages_processed_total{type=\"event\",component_name=~\"$componentname\",tenant=~\"$tenant\"}[$__range]))",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A"
@@ -466,7 +466,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "sum(irate(hono_messages_processed_payload_total{type=\"event\",protocol=~\"$protocol\",tenant=~\"$tenant\"}[$__range]))",
+          "expr": "sum(irate(hono_messages_processed_payload_total{type=\"event\",component_name=~\"$componentname\",tenant=~\"$tenant\"}[$__range]))",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A"
@@ -547,7 +547,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "sum(irate(hono_messages_undeliverable_total{type=\"event\",protocol=~\"$protocol\",tenant=~\"$tenant\"}[$__range]))",
+          "expr": "sum(irate(hono_messages_undeliverable_total{type=\"event\",component_name=~\"$componentname\",tenant=~\"$tenant\"}[$__range]))",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A"
@@ -628,7 +628,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "sum(irate(hono_commands_device_delivered_total{protocol=~\"$protocol\",tenant=~\"$tenant\"}[$__range]))",
+          "expr": "sum(irate(hono_commands_device_delivered_total{component_name=~\"$componentname\",tenant=~\"$tenant\"}[$__range]))",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A"
@@ -709,7 +709,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "sum(irate(hono_commands_response_delivered_total{protocol=~\"$protocol\",tenant=~\"$tenant\"}[$__range]))",
+          "expr": "sum(irate(hono_commands_response_delivered_total{component_name=~\"$componentname\",tenant=~\"$tenant\"}[$__range]))",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A"
@@ -790,7 +790,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "sum(irate(hono_commands_ttd_expired_total{protocol=~\"$protocol\",tenant=~\"$tenant\"}[$__range]))",
+          "expr": "sum(irate(hono_commands_ttd_expired_total{component_name=~\"$componentname\",tenant=~\"$tenant\"}[$__range]))",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A"
@@ -869,7 +869,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(irate(hono_messages_processed_total{type=\"telemetry\",protocol=~\"$protocol\",tenant=~\"$tenant\"}[$__range]))",
+          "expr": "sum(irate(hono_messages_processed_total{type=\"telemetry\",component_name=~\"$componentname\",tenant=~\"$tenant\"}[$__range]))",
           "format": "time_series",
           "instant": false,
           "intervalFactor": 1,
@@ -877,7 +877,7 @@
           "refId": "A"
         },
         {
-          "expr": "sum(irate(hono_messages_undeliverable_total{type=\"telemetry\",protocol=~\"$protocol\",tenant=~\"$tenant\"}[$__range]))",
+          "expr": "sum(irate(hono_messages_undeliverable_total{type=\"telemetry\",component_name=~\"$componentname\",tenant=~\"$tenant\"}[$__range]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "unprocessed",
@@ -984,7 +984,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(irate(hono_messages_processed_total{type=\"event\",protocol=~\"$protocol\",tenant=~\"$tenant\"}[$__range]))",
+          "expr": "sum(irate(hono_messages_processed_total{type=\"event\",component_name=~\"$componentname\",tenant=~\"$tenant\"}[$__range]))",
           "format": "time_series",
           "instant": false,
           "intervalFactor": 1,
@@ -992,7 +992,7 @@
           "refId": "A"
         },
         {
-          "expr": "sum(irate(hono_messages_undeliverable_total{type=\"event\",protocol=~\"$protocol\",tenant=~\"$tenant\"}[$__range]))",
+          "expr": "sum(irate(hono_messages_undeliverable_total{type=\"event\",component_name=~\"$componentname\",tenant=~\"$tenant\"}[$__range]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "unprocessed",
@@ -1077,7 +1077,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(irate(hono_commands_device_delivered_total{protocol=~\"$protocol\",tenant=~\"$tenant\"}[$__range]))",
+          "expr": "sum(irate(hono_commands_device_delivered_total{component_name=~\"$componentname\",tenant=~\"$tenant\"}[$__range]))",
           "format": "time_series",
           "instant": false,
           "intervalFactor": 1,
@@ -1163,7 +1163,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(irate(hono_messages_processed_payload_total{type=\"telemetry\",protocol=~\"$protocol\",tenant=~\"$tenant\"}[$__range]))",
+          "expr": "sum(irate(hono_messages_processed_payload_total{type=\"telemetry\",component_name=~\"$componentname\",tenant=~\"$tenant\"}[$__range]))",
           "format": "time_series",
           "instant": false,
           "intervalFactor": 1,
@@ -1249,11 +1249,11 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "irate(hono_messages_processed_payload_total{type=\"event\",protocol=~\"$protocol\",tenant=~\"$tenant\"}[$__range])",
+          "expr": "irate(hono_messages_processed_payload_total{type=\"event\",component_name=~\"$componentname\",tenant=~\"$tenant\"}[$__range])",
           "format": "time_series",
           "instant": false,
           "intervalFactor": 1,
-          "legendFormat": "{{protocol}} - {{host}}",
+          "legendFormat": "{{component_name}} - {{host}}",
           "refId": "A"
         }
       ],
@@ -1337,7 +1337,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(irate(hono_commands_response_delivered_total{protocol=~\"$protocol\",tenant=~\"$tenant\"}[$__range]))",
+          "expr": "sum(irate(hono_commands_response_delivered_total{component_name=~\"$componentname\",tenant=~\"$tenant\"}[$__range]))",
           "format": "time_series",
           "instant": false,
           "intervalFactor": 1,
@@ -1345,7 +1345,7 @@
           "refId": "A"
         },
         {
-          "expr": "sum(irate(hono_commands_ttd_expired_total{protocol=~\"$protocol\",tenant=~\"$tenant\"}[$__range]))",
+          "expr": "sum(irate(hono_commands_ttd_expired_total{component_name=~\"$componentname\",tenant=~\"$tenant\"}[$__range]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "expired",
@@ -1468,7 +1468,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "count(count by (host)(hono_connections_unauthenticated{protocol=~\"$protocol\"}))",
+          "expr": "count(count by (host)(hono_connections_unauthenticated{component_name=~\"$componentname\"}))",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A"
@@ -1506,9 +1506,9 @@
         },
         "hide": 0,
         "includeAll": true,
-        "label": "Protocol",
+        "label": "Component Name",
         "multi": true,
-        "name": "protocol",
+        "name": "componentname",
         "options": [
           {
             "selected": true,
@@ -1517,26 +1517,26 @@
           },
           {
             "selected": false,
-            "text": "http",
-            "value": "http"
+            "text": "hono-http",
+            "value": "hono-http"
           },
           {
             "selected": false,
-            "text": "mqtt",
-            "value": "mqtt"
+            "text": "hono-mqtt",
+            "value": "hono-mqtt"
           },
           {
             "selected": false,
-            "text": "amqp",
-            "value": "amqp"
+            "text": "hono-amqp",
+            "value": "hono-amqp"
           },
           {
             "selected": false,
-            "text": "coap",
-            "value": "coap"
+            "text": "hono-coap",
+            "value": "hono-coap"
           }
         ],
-        "query": "http,mqtt,amqp,coap",
+        "query": "hono-http,hono-mqtt,hono-amqp,hono-coap",
         "skipUrlSync": false,
         "type": "custom"
       },

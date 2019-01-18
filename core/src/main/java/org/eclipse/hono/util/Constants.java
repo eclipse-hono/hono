@@ -72,6 +72,21 @@ public final class Constants {
     public static final String PROTOCOL_ADAPTER_TYPE_COAP= "hono-coap";
 
     /**
+     * The (short) name of the Auth Server component.
+     */
+    public static final String SERVICE_NAME_AUTH = "hono-auth";
+
+    /**
+     * The (short) name of the Device Registry component.
+     */
+    public static final String SERVICE_NAME_DEVICE_REGISTRY = "hono-registry";
+
+    /**
+     * The (short) name of the Hono Messaging component.
+     */
+    public static final String SERVICE_NAME_MESSAGING = "hono-messaging";
+
+    /**
      * The "QoS-Level" request header indicating the quality of service level supported by the HTTP Adapter.
      * The HTTP adapter supports QoS level AT_LEAST_ONCE when uploading telemetry messages.
      */

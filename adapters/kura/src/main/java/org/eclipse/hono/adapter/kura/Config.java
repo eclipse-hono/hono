@@ -19,6 +19,7 @@ import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.service.AbstractAdapterConfig;
 import org.eclipse.hono.service.metric.MetricsTags;
+import org.eclipse.hono.util.Constants;
 import org.springframework.beans.factory.config.ObjectFactoryCreatingFactoryBean;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -88,7 +89,7 @@ public class Config extends AbstractAdapterConfig {
     @Bean
     public MeterRegistryCustomizer<MeterRegistry> commonTags() {
         return r -> r.config().commonTags(
-                MetricsTags.forProtocolAdapter("kura"));
+                MetricsTags.forProtocolAdapter(Constants.PROTOCOL_ADAPTER_TYPE_KURA));
     }
 
     /**

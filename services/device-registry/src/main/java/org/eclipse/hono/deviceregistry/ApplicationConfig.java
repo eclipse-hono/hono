@@ -312,8 +312,7 @@ public class ApplicationConfig {
     @Bean
     public MeterRegistryCustomizer<MeterRegistry> commonTags() {
 
-        return r -> r.config().commonTags(
-                MetricsTags.forService(MetricsTags.VALUE_SERVICE_REGISTRY));
+        return r -> r.config().commonTags(MetricsTags.forService(Constants.SERVICE_NAME_DEVICE_REGISTRY));
 
     }
 

@@ -76,7 +76,7 @@ public class LegacyMetricsConfigTest {
 
         final Tags httpTags = defaultTags
                 .and(MetricsTags.TAG_COMPONENT_TYPE, MetricsTags.VALUE_COMPONENT_TYPE_ADAPTER)
-                .and(MetricsTags.TAG_PROTOCOL, MetricsTags.VALUE_PROTOCOL_HTTP)
+                .and(MetricsTags.TAG_COMPONENT_NAME, Constants.PROTOCOL_ADAPTER_TYPE_HTTP)
                 .and(MetricsTags.TAG_TENANT, TENANT);
 
         assertCommonAdapterMetrics("http", httpTags);
@@ -91,7 +91,7 @@ public class LegacyMetricsConfigTest {
 
         final Tags mqttTags = defaultTags
                 .and(MetricsTags.TAG_COMPONENT_TYPE, MetricsTags.VALUE_COMPONENT_TYPE_ADAPTER)
-                .and(MetricsTags.TAG_PROTOCOL, MetricsTags.VALUE_PROTOCOL_MQTT);
+                .and(MetricsTags.TAG_COMPONENT_NAME, Constants.PROTOCOL_ADAPTER_TYPE_MQTT);
         assertConnectionMetrics("mqtt", mqttTags);
 
         final Tags mqttWithTenantTags = mqttTags.and(MetricsTags.TAG_TENANT, TENANT);

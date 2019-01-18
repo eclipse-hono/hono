@@ -42,7 +42,7 @@ public class LegacyMetricsConfigTest {
 
     private static final String HOSTNAME = "the.node";
     private static final String HOSTNAME_MAPPED = "the_node";
-    private static final String COMPONENT_NAME = "messaging";
+    private static final String COMPONENT_NAME = Constants.SERVICE_NAME_MESSAGING;
     private static final String TENANT_NAME = Constants.DEFAULT_TENANT;
 
     private LegacyMetricsConfig config;
@@ -61,7 +61,7 @@ public class LegacyMetricsConfigTest {
         meterFilters = config.getMeterFilters();
         defaultTags = Tags.of(MetricsTags.TAG_HOST, HOSTNAME)
                 .and(MetricsTags.TAG_COMPONENT_TYPE, MetricsTags.VALUE_COMPONENT_TYPE_SERVICE)
-                .and(MetricsTags.TAG_PROTOCOL, COMPONENT_NAME)
+                .and(MetricsTags.TAG_COMPONENT_NAME, COMPONENT_NAME)
                 .and(MetricsTags.TAG_TENANT, TENANT_NAME);
     }
 

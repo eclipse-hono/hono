@@ -13,21 +13,21 @@ and how to interpret actual values.
 ## Reported Metrics
 
 Hono uses [Micrometer](https://micrometer.io/) in combination with Spring Boot
-to internally collect metrics. Those metrics can be exported using the different
-backends, see [Configuring metrics](/hono/admin-guide/monitoring-tracing-config/#configuring-metrics) on how to enable those.
+to internally collect metrics. Those metrics can be exported to different
+back ends. Please refer to [Configuring Metrics]({{< ref "/admin-guide/monitoring-tracing-config.md#configuring-metrics" >}})
+for details.
 
-The default Micrometer backend in the deployment examples is based on [Prometheus](https://prometheus.io/).
+The example deployment by default uses [Prometheus](https://prometheus.io/) as the metrics back end.
 
-The Prometheus scraper, especially when run inside of Kubernetes/OpenShift,
-might add additional tags like *pod*, etc. However those tags are not part of
-the Hono metrics definition.
+When deploying to Kubernetes/OpenShift, the metrics reported by Hono may contain
+environment specific tags (like the *pod* name) which are added by the Prometheus
+scraper. However, those tags are not part of the Hono metrics definition.
 
-Hono applications provide additional metrics as well as the ones described here,
-for example is it possible to get information about the internal JVM state, like
-memory and garbage collector. However those metrics are not part of of the Hono
-metrics definition. Especially for the Hono services, like device registry and
-the messaging component, no further metrics are defined. However all metrics
-will still support the tags as described.
+Hono applications may report other metrics in addition to the ones defined here.
+In particular, all components report metrics regarding the JVM's internal state, e.g.
+memory consumption and garbage collection status. Those metrics are not considered
+part of Hono's *official* metrics definition. However, all those metrics
+will still contain tags as described below.
 
 ### Common Metrics
 
@@ -37,37 +37,44 @@ Tags for common metrics are:
 | ---------------- | ---------------------------------- | ----------- |
 | *host*           | *string*                           | The name of the host that the component reporting the metric is running on |
 | *component-type* | `adapter`, `service`             | The type of component reporting the metric |
+| *component-name* | *string*                           | The name of the component reporting the metric. |
+
+The names of Hono's standard components are as follows:
+
+| Component         | *component-name*      |
+| ----------------- | --------------------- |
+| Auth Server       | `hono-auth`         |
+| Device Registry   | `hono-registry`     |
+| Hono Messaging    | `hono-messaging`    |
+| AMQP adapter      | `hono-amqp`         |
+| CoAP adapter      | `hono-coap`         |
+| HTTP adapter      | `hono-http`         |
+| Kura adapter      | `hono-kura-mqtt`   |
+| MQTT adapter      | `hono-mqtt`         |
 
 ### Protocol Adapter Metrics
 
-Additional tags for protocols adapter are:
+Additional tags for protocol adapters are:
 
 | Tag        | Value                              | Description |
 | ---------- | ---------------------------------- | ----------- |
-| *protocol* | `amqp`, `coap`, `http`, `mqtt`  | The name of the protocol that the protocol adapter supports |
 | *tenant*   | *string*                           | The name of the tenant that the metric is being reported for |
 | *type*     | `telemetry`, `event`             | The type of message that the metric is being reported for |
 
 Metrics provided by the protocol adapters are:
 
-| Metric                             | Type    | Tags                                                   | Description |
-| ---------------------------------- | ------- | ------------------------------------------------------ | ----------- |
-| *hono.connections.authenticated*   | Gauge   | *host*, *component-type*, *protocol*, *tenant*         | Current number of connected, authenticated devices. <br/> **NB** This metric is only supported by protocol adapters that maintain *connection state* with authenticated devices. In particular, the HTTP adapter does not support this metric. |
-| *hono.connections.unauthenticated* | Gauge   | *host*, *component-type*, *protocol*                   | Current number of connected, unauthenticated devices. <br/> **NB** This metric is only supported by protocol adapters that maintain *connection state* with authenticated devices. In particular, the HTTP adapter does not support this metric. |
-| *hono.messages.undeliverable*      | Counter | *host*, *component-type*, *protocol*, *tenant*, *type* | Total number of undeliverable messages |
-| *hono.messages.processed*          | Counter | *host*, *component-type*, *protocol*, *tenant*, *type* | Total number of processed messages |
-| *hono.messages.processed.payload*  | Counter | *host*, *component-type*, *protocol*, *tenant*, *type* | Total number of processed payload bytes |
-| *hono.commands.device.delivered*   | Counter | *host*, *component-type*, *protocol*, *tenant*         | Total number of delivered commands |
-| *hono.commands.ttd.expired*        | Counter | *host*, *component-type*, *protocol*, *tenant*         | Total number of expired TTDs |
-| *hono.commands.response.delivered* | Counter | *host*, *component-type*, *protocol*, *tenant*         | Total number of delivered responses to commands |
+| Metric                             | Type    | Tags                                                         | Description |
+| ---------------------------------- | ------- | ------------------------------------------------------------ | ----------- |
+| *hono.connections.authenticated*   | Gauge   | *host*, *component-type*, *component-name*, *tenant*         | Current number of connected, authenticated devices. <br/> **NB** This metric is only supported by protocol adapters that maintain *connection state* with authenticated devices. In particular, the HTTP adapter does not support this metric. |
+| *hono.connections.unauthenticated* | Gauge   | *host*, *component-type*, *component-name*                   | Current number of connected, unauthenticated devices. <br/> **NB** This metric is only supported by protocol adapters that maintain *connection state* with authenticated devices. In particular, the HTTP adapter does not support this metric. |
+| *hono.messages.undeliverable*      | Counter | *host*, *component-type*, *component-name*, *tenant*, *type* | Total number of undeliverable messages |
+| *hono.messages.processed*          | Counter | *host*, *component-type*, *component-name*, *tenant*, *type* | Total number of processed messages |
+| *hono.messages.processed.payload*  | Counter | *host*, *component-type*, *component-name*, *tenant*, *type* | Total number of processed payload bytes |
+| *hono.commands.device.delivered*   | Counter | *host*, *component-type*, *component-name*, *tenant*         | Total number of delivered commands |
+| *hono.commands.ttd.expired*        | Counter | *host*, *component-type*, *component-name*, *tenant*         | Total number of expired TTDs |
+| *hono.commands.response.delivered* | Counter | *host*, *component-type*, *component-name*, *tenant*         | Total number of delivered responses to commands |
 
 ### Service Metrics
-
-Additional tags for services are:
-
-| Tag        | Value                              | Description |
-| ---------- | ---------------------------------- | ----------- |
-| *service*  | `auth`, `registry`, `messaging` | The identifier of the service reporting the metric |
 
 Hono's service components do not report any metrics at the moment.
 
@@ -104,10 +111,10 @@ extracting the following *tags* from metric names transmitted via the Graphite r
 
 | Tag        | Description |
 | ---------- | ----------- |
-| *host*     | The name of the host that the service reporting the metric is running on. |
-| *type*     | The type of message that the metric is being processed for (either `telemetry` or `event`) |
+| *host*     | The name of the host that the component reporting the metric is running on. |
+| *type*     | The type of message that the metric is being reported for (either `telemetry` or `event`) |
 | *tenant*   | The name of the tenant that the metric is being reported for. |
-| *protocol* | The protocol of message that the metric is being processed for (example: `http`, `mqtt`). |
+| *protocol* | The transport protocol that has been used to send the message for which the metric is being reported (`http` or `mqtt`). |
 
 The following sections describe which of these tags are extracted for which metrics specifically.
 

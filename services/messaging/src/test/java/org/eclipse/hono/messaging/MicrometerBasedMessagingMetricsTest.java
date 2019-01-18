@@ -55,7 +55,7 @@ public class MicrometerBasedMessagingMetricsTest {
 
         final GraphiteMeterRegistry graphiteRegistry = legacyMetricsConfig.graphiteMeterRegistry(GraphiteConfig.DEFAULT, Clock.SYSTEM);
         legacyMetricsConfig.legacyMeterFilters().customize(graphiteRegistry);
-        graphiteRegistry.config().commonTags(Tags.of(MetricsTags.TAG_PROTOCOL, "messaging"));
+        graphiteRegistry.config().commonTags(Tags.of(MetricsTags.TAG_COMPONENT_NAME, "messaging"));
 
         registry = new CompositeMeterRegistry();
         registry.add(graphiteRegistry);

@@ -30,7 +30,7 @@ public final class HonoMessaging extends AmqpServiceBase<HonoMessagingConfigProp
 
     @Override
     protected String getServiceName() {
-        return "Hono-Messaging";
+        return Constants.SERVICE_NAME_MESSAGING;
     }
 
     @Autowired

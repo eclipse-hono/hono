@@ -21,6 +21,7 @@ import org.eclipse.hono.connection.impl.ConnectionFactoryImpl;
 import org.eclipse.hono.service.HealthCheckServer;
 import org.eclipse.hono.service.VertxBasedHealthCheckServer;
 import org.eclipse.hono.service.metric.MetricsTags;
+import org.eclipse.hono.service.metric.MicrometerBasedMetrics;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelper;
 import org.eclipse.hono.service.registration.RegistrationAssertionHelperImpl;
 import org.eclipse.hono.util.Constants;
@@ -33,7 +34,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Scope;
 
 import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.Tags;
 import io.micrometer.core.instrument.config.MeterFilter;
 import io.micrometer.spring.autoconfigure.MeterRegistryCustomizer;
 import io.vertx.core.Vertx;
@@ -209,11 +209,10 @@ public class HonoMessagingApplicationConfig {
     public MeterRegistryCustomizer<MeterRegistry> commonTags() {
 
         return r -> r.config()
-                .commonTags(MetricsTags.forService(MetricsTags.VALUE_SERVICE_MESSAGING)
-                        .and(Tags.of(MetricsTags.TAG_PROTOCOL, "messaging")))
+                .commonTags(MetricsTags.forService(Constants.SERVICE_NAME_MESSAGING))
                 // Hono Messaging does not have any connections to devices
-                .meterFilter(MeterFilter.denyNameStartsWith("hono.connections.authenticated"))
-                .meterFilter(MeterFilter.denyNameStartsWith("hono.connections.unauthenticated"));
+                .meterFilter(MeterFilter.denyNameStartsWith(MicrometerBasedMetrics.METER_CONNECTIONS_AUTHENTICATED))
+                .meterFilter(MeterFilter.denyNameStartsWith(MicrometerBasedMetrics.METER_CONNECTIONS_UNAUTHENTICATED));
     }
 
     /**

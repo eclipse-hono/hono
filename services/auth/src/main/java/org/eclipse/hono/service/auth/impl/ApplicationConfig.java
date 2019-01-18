@@ -20,6 +20,7 @@ import org.eclipse.hono.service.auth.AuthTokenHelper;
 import org.eclipse.hono.service.auth.AuthTokenHelperImpl;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.util.AuthenticationConstants;
+import org.eclipse.hono.util.Constants;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.config.ObjectFactoryCreatingFactoryBean;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -167,8 +168,7 @@ public class ApplicationConfig {
     @Bean
     public MeterRegistryCustomizer<MeterRegistry> commonTags() {
 
-        return r -> r.config().commonTags(
-                MetricsTags.forService(MetricsTags.VALUE_SERVICE_AUTH));
+        return r -> r.config().commonTags(MetricsTags.forService(Constants.SERVICE_NAME_AUTH));
 
     }
 }

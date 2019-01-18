@@ -57,10 +57,10 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "irate(hono_messages_processed_total{protocol=~\"$protocol\",type=~\"$type\",tenant=~\"$tenant\",host=~\"$instance\"}[$__range])",
+          "expr": "irate(hono_messages_processed_total{component_name=~\"$componentname\",type=~\"$type\",tenant=~\"$tenant\",host=~\"$instance\"}[$__range])",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "{{protocol}} - {{type}} - {{host}}",
+          "legendFormat": "{{component_name}} - {{type}} - {{host}}",
           "refId": "A"
         }
       ],
@@ -165,7 +165,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "sum(rate(hono_messages_processed_total{protocol=~\"$protocol\",type=~\"$type\",tenant=~\"$tenant\",host=~\"$instance\"}[$__interval]))",
+          "expr": "sum(rate(hono_messages_processed_total{component_name=~\"$componentname\",type=~\"$type\",tenant=~\"$tenant\",host=~\"$instance\"}[$__interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A"
@@ -246,7 +246,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "sum(rate(hono_messages_processed_total{protocol=~\"$protocol\",type=~\"$type\",tenant=~\"$tenant\",host=~\"$instance\"}[$__interval]))",
+          "expr": "sum(rate(hono_messages_processed_total{component_name=~\"$componentname\",type=~\"$type\",tenant=~\"$tenant\",host=~\"$instance\"}[$__interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A"
@@ -327,7 +327,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "sum(rate(hono_messages_processed_total{protocol=~\"$protocol\",type=~\"$type\",tenant=~\"$tenant\",host=~\"$instance\"}[$__interval]))",
+          "expr": "sum(rate(hono_messages_processed_total{component_name=~\"$componentname\",type=~\"$type\",tenant=~\"$tenant\",host=~\"$instance\"}[$__interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A"
@@ -386,10 +386,10 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "irate(hono_messages_processed_payload_total{protocol=~\"$protocol\",type=~\"$type\",tenant=~\"$tenant\",host=~\"$instance\"}[$__range])",
+          "expr": "irate(hono_messages_processed_payload_total{component_name=~\"$componentname\",type=~\"$type\",tenant=~\"$tenant\",host=~\"$instance\"}[$__range])",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "{{protocol}} - {{type}} - {{host}}",
+          "legendFormat": "{{component_name}} - {{type}} - {{host}}",
           "refId": "A"
         }
       ],
@@ -494,7 +494,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "sum(rate(hono_messages_processed_payload_total{protocol=~\"$protocol\",type=~\"$type\",tenant=~\"$tenant\",host=~\"$instance\"}[$__interval]))",
+          "expr": "sum(rate(hono_messages_processed_payload_total{component_name=~\"$componentname\",type=~\"$type\",tenant=~\"$tenant\",host=~\"$instance\"}[$__interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A"
@@ -575,7 +575,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "sum(rate(hono_messages_processed_payload_total{protocol=~\"$protocol\",type=~\"$type\",tenant=~\"$tenant\",host=~\"$instance\"}[$__interval]))",
+          "expr": "sum(rate(hono_messages_processed_payload_total{component_name=~\"$componentname\",type=~\"$type\",tenant=~\"$tenant\",host=~\"$instance\"}[$__interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A"
@@ -656,7 +656,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "sum(rate(hono_messages_processed_payload_total{protocol=~\"$protocol\",type=~\"$type\",tenant=~\"$tenant\",host=~\"$instance\"}[$__interval]))",
+          "expr": "sum(rate(hono_messages_processed_payload_total{component_name=~\"$componentname\",type=~\"$type\",tenant=~\"$tenant\",host=~\"$instance\"}[$__interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A"
@@ -715,10 +715,10 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "irate(hono_messages_undeliverable_total{protocol=~\"$protocol\",type=~\"$type\",tenant=~\"$tenant\",host=~\"$instance\"}[$__range])",
+          "expr": "irate(hono_messages_undeliverable_total{component_name=~\"$componentname\",type=~\"$type\",tenant=~\"$tenant\",host=~\"$instance\"}[$__range])",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "{{protocol}} - {{type}} - {{host}}",
+          "legendFormat": "{{component_name}} - {{type}} - {{host}}",
           "refId": "A"
         }
       ],
@@ -824,7 +824,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "sum(rate(hono_messages_undeliverable_total{protocol=~\"$protocol\",type=~\"$type\",tenant=~\"$tenant\",host=~\"$instance\"}[$__interval]))\n/\n(\n  sum(rate(hono_messages_undeliverable_total{protocol=~\"$protocol\",type=~\"$type\",tenant=~\"$tenant\",host=~\"$instance\"}[$__interval]))\n  +\n  sum(rate(hono_messages_processed_total{protocol=~\"$protocol\",type=~\"$type\",tenant=~\"$tenant\",host=~\"$instance\"}[$__interval]))\n)",
+          "expr": "sum(rate(hono_messages_undeliverable_total{component_name=~\"$componentname\",type=~\"$type\",tenant=~\"$tenant\",host=~\"$instance\"}[$__interval]))\n/\n(\n  sum(rate(hono_messages_undeliverable_total{component_name=~\"$componentname\",type=~\"$type\",tenant=~\"$tenant\",host=~\"$instance\"}[$__interval]))\n  +\n  sum(rate(hono_messages_processed_total{component_name=~\"$componentname\",type=~\"$type\",tenant=~\"$tenant\",host=~\"$instance\"}[$__interval]))\n)",
           "format": "time_series",
           "instant": false,
           "intervalFactor": 1,
@@ -863,11 +863,11 @@
         "datasource": "hono_metrics",
         "hide": 0,
         "includeAll": true,
-        "label": "Protocol",
+        "label": "Component Name",
         "multi": true,
-        "name": "protocol",
+        "name": "componentname",
         "options": [],
-        "query": "label_values(protocol)",
+        "query": "label_values(component_name)",
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,

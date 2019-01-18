@@ -22,6 +22,14 @@ title = "Release Notes"
   after 5 seconds. Please refer to the [Hono Client Configuration guide]({{< ref "/admin-guide/hono-client-configuration.md" >}})
   for details regarding the new configuration variable.
 
+### API Changes
+
+* Some of the *tags* used by Hono's components when reporting metrics have been changed. The common tag *component*
+  has been renamed to *component-type*. The *protocol* tag formerly used by adapters to indicate the transport protocol
+  that a message has been received over, has been replaced by the generic *component-name* tag which indicates the name
+  of the component that a metric has been reported by. Please refer to the [Metrics API]({{< ref "/api/Metrics.md" >}})
+  for details.
+
 ## 0.9-M1
 
 ### New Features

@@ -63,7 +63,7 @@ public final class SimpleAuthenticationServer extends AmqpServiceBase<ServiceCon
 
     @Override
     protected String getServiceName() {
-        return "Hono-Auth";
+        return Constants.SERVICE_NAME_AUTH;
     }
 
     @Override

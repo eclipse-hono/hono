@@ -51,6 +51,8 @@ public class LegacyMetricsConfig extends AbstractLegacyMetricsConfig {
                 if (MicrometerBasedMetrics.METER_CONNECTIONS_AUTHENTICATED.equals(id.getName())
                         || MicrometerBasedMetrics.METER_CONNECTIONS_UNAUTHENTICATED.equals(id.getName())) {
 
+                    // map component name to protocol
+                    mapComponentName(id, newTags);
                     newTags.add(Tag.of(TAG_METER_TYPE, "counter"));
                     // we need to add the type suffix because the underlying
                     // Micrometer meter is a Gauge and the Graphite
@@ -60,6 +62,8 @@ public class LegacyMetricsConfig extends AbstractLegacyMetricsConfig {
 
                 } else if (MicrometerBasedMetrics.METER_MESSAGES_UNDELIVERABLE.equals(id.getName())) {
 
+                    // map component name to protocol
+                    mapComponentName(id, newTags);
                     newTags.add(Tag.of(TAG_METER_TYPE, "counter"));
                     // extract the "sub-name" into a separate tag
                     // so that we can later add it to the meter name
@@ -71,6 +75,8 @@ public class LegacyMetricsConfig extends AbstractLegacyMetricsConfig {
 
                 } else if (name.startsWith("messages.")) {
 
+                    // map component name to protocol
+                    mapComponentName(id, newTags);
                     newTags.add(Tag.of(TAG_METER_TYPE, "meter"));
                     // extract the "sub-name" into a separate tag
                     // so that we can later add it to the meter name
@@ -82,6 +88,8 @@ public class LegacyMetricsConfig extends AbstractLegacyMetricsConfig {
 
                 } else if (name.startsWith("payload.")) {
 
+                    // map component name to protocol
+                    mapComponentName(id, newTags);
                     newTags.add(Tag.of(TAG_METER_TYPE, "meter"));
                     // extract the "sub-name" into a separate tag
                     // so that we can later add it to the meter name
@@ -93,6 +101,8 @@ public class LegacyMetricsConfig extends AbstractLegacyMetricsConfig {
 
                 } else if (name.startsWith("commands.")) {
 
+                    // map component name to protocol
+                    mapComponentName(id, newTags);
                     newTags.add(Tag.of(TAG_METER_TYPE, "meter"));
                     // extract the "sub-name" into a separate tag
                     // so that we can later add it to the meter name
@@ -107,6 +117,14 @@ public class LegacyMetricsConfig extends AbstractLegacyMetricsConfig {
                 return new Meter.Id(name, newTags, id.getBaseUnit(), id.getDescription(),
                         id.getType());
 
+            }
+
+            private void mapComponentName(final Meter.Id id, final List<Tag> newTags) {
+                final String componentName = id.getTag(MetricsTags.TAG_COMPONENT_NAME);
+                if (componentName != null) {
+                    final String protocol = getProtocolForComponentName(componentName);
+                    newTags.add(Tag.of(TAG_PROTOCOL, protocol));
+                }
             }
         };
     }

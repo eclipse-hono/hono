@@ -12,6 +12,10 @@
  *******************************************************************************/
 package org.eclipse.hono.service.metric;
 
+import java.util.HashMap;
+import java.util.Map;
+
+import org.eclipse.hono.util.Constants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
@@ -57,7 +61,18 @@ public abstract class AbstractLegacyMetricsConfig {
      */
     protected static final String TAG_TYPE_SUFFIX = "typeSuffix";
 
+    private static final Map<String, String> protocols = new HashMap<>(5);
+
     private final Logger log = LoggerFactory.getLogger(getClass());
+
+    static {
+        protocols.put(Constants.PROTOCOL_ADAPTER_TYPE_AMQP, "amqp");
+        protocols.put(Constants.PROTOCOL_ADAPTER_TYPE_COAP, "coap");
+        protocols.put(Constants.PROTOCOL_ADAPTER_TYPE_HTTP, "http");
+        protocols.put(Constants.PROTOCOL_ADAPTER_TYPE_KURA, "kura");
+        protocols.put(Constants.PROTOCOL_ADAPTER_TYPE_MQTT, "mqtt");
+        protocols.put(Constants.SERVICE_NAME_MESSAGING, "messaging");
+    }
 
     /**
      * Provide Vert.x metrics options for the legacy metrics setup.
@@ -100,7 +115,7 @@ public abstract class AbstractLegacyMetricsConfig {
             }
 
             return amendWithTags(id.getConventionName(convention), id,
-                    new String[] { MetricsTags.TAG_HOST, TAG_METER_TYPE, TAG_HONO, MetricsTags.TAG_PROTOCOL },
+                    new String[] { MetricsTags.TAG_HOST, TAG_METER_TYPE, TAG_HONO, TAG_PROTOCOL },
                     new String[] { MetricsTags.TAG_TYPE, MetricsTags.TAG_TENANT, TAG_SUB_NAME, TAG_TYPE_SUFFIX });
         };
     }
@@ -140,6 +155,18 @@ public abstract class AbstractLegacyMetricsConfig {
      * @return The filter.
      */
     protected abstract MeterFilter meterTypeMapper();
+
+    /**
+     * Gets the value of the legacy <em>protocol</em> tag for
+     * a component name.
+     * 
+     * @param componentName The name of the component.
+     * @return The protocol.
+     */
+    protected final String getProtocolForComponentName(final String componentName) {
+
+        return protocols.getOrDefault(componentName, componentName);
+    }
 
     private String amendWithTags(
             final String name,

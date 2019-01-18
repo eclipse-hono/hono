@@ -33,8 +33,15 @@ public final class MetricsTags {
      * reports a metric.
      */
     public static final String TAG_COMPONENT_TYPE = "component-type";
-    public static final String TAG_PROTOCOL = "protocol";
-    public static final String TAG_SERVICE = "service";
+    /**
+     * The name of the tag that holds the name of the component
+     * that reports a metric.
+     */
+    public static final String TAG_COMPONENT_NAME = "component-name";
+    /**
+     * The name of the tag that holds the identifier of the tenant
+     * that a metric has been reported for.
+     */
     public static final String TAG_TENANT = "tenant";
     /**
      * The name of the tag that holds the type of message
@@ -50,15 +57,6 @@ public final class MetricsTags {
      */
     public static final String VALUE_COMPONENT_TYPE_SERVICE = "service";
 
-    public static final String VALUE_PROTOCOL_AMQP = "ampq";
-    public static final String VALUE_PROTOCOL_COAP = "coap";
-    public static final String VALUE_PROTOCOL_HTTP = "http";
-    public static final String VALUE_PROTOCOL_MQTT = "mqtt";
-
-    public static final String VALUE_SERVICE_AUTH = "auth";
-    public static final String VALUE_SERVICE_MESSAGING = "messaging";
-    public static final String VALUE_SERVICE_REGISTRY = "registry";
-
     private MetricsTags() {
     }
 
@@ -72,7 +70,7 @@ public final class MetricsTags {
         return Tags.of(
                 Tag.of(MetricsTags.TAG_HOST, Hostnames.getHostname()),
                 Tag.of(MetricsTags.TAG_COMPONENT_TYPE, MetricsTags.VALUE_COMPONENT_TYPE_ADAPTER),
-                Tag.of(MetricsTags.TAG_PROTOCOL, name));
+                Tag.of(MetricsTags.TAG_COMPONENT_NAME, name));
     }
 
     /**
@@ -85,7 +83,7 @@ public final class MetricsTags {
         return Tags.of(
                 Tag.of(MetricsTags.TAG_HOST, Hostnames.getHostname()),
                 Tag.of(MetricsTags.TAG_COMPONENT_TYPE, MetricsTags.VALUE_COMPONENT_TYPE_SERVICE),
-                Tag.of(MetricsTags.TAG_SERVICE, name));
+                Tag.of(MetricsTags.TAG_COMPONENT_NAME, name));
     }
 
 }
