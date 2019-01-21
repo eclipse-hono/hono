@@ -16,6 +16,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.eclipse.hono.service.metric.AbstractLegacyMetricsConfig;
+import org.eclipse.hono.service.metric.MicrometerBasedMetrics;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.PropertySource;
@@ -57,9 +58,9 @@ public class LegacyMetricsConfig extends AbstractLegacyMetricsConfig {
                 final List<Tag> newTags = new ArrayList<>(id.getTags());
                 newTags.add(Tag.of(TAG_HONO, "hono"));
 
-                if ("receivers.upstream.links".equals(name)
-                        || "senders.downstream".equals(name)
-                        || "connections.downstream".equals(name)) {
+                if (MicrometerBasedMessagingMetrics.METER_UPSTREAM_LINKS.equals(id.getName())
+                        || MicrometerBasedMessagingMetrics.METER_DOWNSTREAM_SENDERS.equals(id.getName())
+                        || MicrometerBasedMessagingMetrics.METER_CONNECTIONS_DOWNSTREAM.equals(id.getName())) {
 
                     newTags.add(Tag.of(TAG_METER_TYPE, "counter"));
                     // we need to add the type suffix because the underlying
@@ -68,11 +69,11 @@ public class LegacyMetricsConfig extends AbstractLegacyMetricsConfig {
                     // itself
                     newTags.add(Tag.of(TAG_TYPE_SUFFIX, "count"));
 
-                } else if ("link.downstream.credits".equals(name)) {
+                } else if (MicrometerBasedMessagingMetrics.METER_DOWNSTREAM_LINK_CREDITS.equals(id.getName())) {
 
                     newTags.add(Tag.of(TAG_METER_TYPE, "gauge"));
 
-                } else if ("messages.processed".equals(name)) {
+                } else if (MicrometerBasedMetrics.METER_MESSAGES_PROCESSED.equals(id.getName())) {
 
                     newTags.add(Tag.of(TAG_METER_TYPE, "meter"));
                     // extract the "sub-name" into a separate tag

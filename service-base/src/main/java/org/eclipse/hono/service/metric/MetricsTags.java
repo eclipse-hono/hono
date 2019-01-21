@@ -23,11 +23,19 @@ import io.micrometer.core.instrument.Tags;
  */
 public final class MetricsTags {
 
+    /**
+     * The tag that holds the name of the host that the component
+     * reporting a metric is running on.
+     */
     public static final String TAG_HOST = "host";
     public static final String TAG_COMPONENT = "component";
     public static final String TAG_PROTOCOL = "protocol";
     public static final String TAG_SERVICE = "service";
     public static final String TAG_TENANT = "tenant";
+    /**
+     * The name of the tag that holds the type of message
+     * that a metric has been reported for.
+     */
     public static final String TAG_TYPE = "type";
 
     public static final String VALUE_COMPONENT_ADAPTER = "adapter";
@@ -46,7 +54,7 @@ public final class MetricsTags {
     }
 
     /**
-     * Create default tag set for a protocol adapter.
+     * Creates the default tag set for a protocol adapter.
      * 
      * @param name The name of the protocol adapter.
      * @return A ready to use tag set.
@@ -59,7 +67,7 @@ public final class MetricsTags {
     }
 
     /**
-     * Create default tag set for a service.
+     * Creates the default tag set for a service.
      * 
      * @param name The name of the service.
      * @return A ready to use tag set.

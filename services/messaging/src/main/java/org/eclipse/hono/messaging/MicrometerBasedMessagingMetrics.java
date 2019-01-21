@@ -35,6 +35,14 @@ import io.micrometer.core.instrument.Tags;
 @Component
 public class MicrometerBasedMessagingMetrics extends MicrometerBasedMetrics implements MessagingMetrics {
 
+    static final String METER_CONNECTIONS_DOWNSTREAM = "hono.connections.downstream";
+    static final String METER_DOWNSTREAM_SENDERS = "hono.senders.downstream";
+    static final String METER_DOWNSTREAM_LINK_CREDITS = "hono.link.downstream.credits";
+    static final String METER_UPSTREAM_LINKS = "hono.receivers.upstream.links";
+
+    static final String METER_MESSAGES_DISCARDED = "hono.messages.discarded";
+    static final String METER_MESSAGES_UNDELIVERABLE = "hono.messages.undeliverable";
+
     private final Map<ResourceIdentifier, AtomicDouble> downstreamLinkCredits = new ConcurrentHashMap<>();
     private final Map<ResourceIdentifier, AtomicLong> downstreamSenders = new ConcurrentHashMap<>();
     private final Map<ResourceIdentifier, AtomicLong> upstreamLinks = new ConcurrentHashMap<>();
@@ -53,7 +61,7 @@ public class MicrometerBasedMessagingMetrics extends MicrometerBasedMetrics impl
 
         Objects.requireNonNull(registry);
 
-        this.downstreamConnections = registry.gauge("hono.connections.downstream", new AtomicLong());
+        this.downstreamConnections = registry.gauge(METER_CONNECTIONS_DOWNSTREAM, new AtomicLong());
     }
 
     @Override
@@ -69,7 +77,7 @@ public class MicrometerBasedMessagingMetrics extends MicrometerBasedMetrics impl
     @Override
     public final void submitDownstreamLinkCredits(final ResourceIdentifier address, final double credits) {
 
-        gaugeForAddress("hono.link.downstream.credits", this.downstreamLinkCredits, address, AtomicDouble::new)
+        gaugeForAddress(METER_DOWNSTREAM_LINK_CREDITS, this.downstreamLinkCredits, address, AtomicDouble::new)
                 .set(credits);
 
     }
@@ -77,7 +85,7 @@ public class MicrometerBasedMessagingMetrics extends MicrometerBasedMetrics impl
     @Override
     public final void incrementDownstreamSenders(final ResourceIdentifier address) {
 
-        gaugeForAddress("hono.senders.downstream", this.downstreamSenders, address, AtomicLong::new)
+        gaugeForAddress(METER_DOWNSTREAM_SENDERS, this.downstreamSenders, address, AtomicLong::new)
                 .incrementAndGet();
 
     }
@@ -85,7 +93,7 @@ public class MicrometerBasedMessagingMetrics extends MicrometerBasedMetrics impl
     @Override
     public final void decrementDownstreamSenders(final ResourceIdentifier address) {
 
-        gaugeForAddress("hono.senders.downstream", this.downstreamSenders, address, AtomicLong::new)
+        gaugeForAddress(METER_DOWNSTREAM_SENDERS, this.downstreamSenders, address, AtomicLong::new)
                 .decrementAndGet();
 
     }
@@ -93,7 +101,7 @@ public class MicrometerBasedMessagingMetrics extends MicrometerBasedMetrics impl
     @Override
     public final void incrementUpstreamLinks(final ResourceIdentifier address) {
 
-        gaugeForAddress("hono.receivers.upstream.links", this.upstreamLinks, address, AtomicLong::new)
+        gaugeForAddress(METER_UPSTREAM_LINKS, this.upstreamLinks, address, AtomicLong::new)
                 .incrementAndGet();
 
     }
@@ -101,7 +109,7 @@ public class MicrometerBasedMessagingMetrics extends MicrometerBasedMetrics impl
     @Override
     public final void decrementUpstreamLinks(final ResourceIdentifier address) {
 
-        gaugeForAddress("hono.receivers.upstream.links", this.upstreamLinks, address, AtomicLong::new)
+        gaugeForAddress(METER_UPSTREAM_LINKS, this.upstreamLinks, address, AtomicLong::new)
                 .decrementAndGet();
 
     }
@@ -110,7 +118,7 @@ public class MicrometerBasedMessagingMetrics extends MicrometerBasedMetrics impl
     public final void incrementDiscardedMessages(final ResourceIdentifier address) {
 
         this.registry.counter(
-                "hono.messages.discarded",
+                METER_MESSAGES_DISCARDED,
                 Tags.of(MetricsTags.TAG_TYPE, address.getEndpoint()).and(MetricsTags.TAG_TENANT, address.getTenantId()))
         .increment();
     }
@@ -125,7 +133,7 @@ public class MicrometerBasedMessagingMetrics extends MicrometerBasedMetrics impl
     public final void incrementUndeliverableMessages(final ResourceIdentifier address) {
 
         this.registry.counter(
-                "hono.messages.undeliverable",
+                METER_MESSAGES_UNDELIVERABLE,
                 Tags.of(MetricsTags.TAG_TYPE, address.getEndpoint()).and(MetricsTags.TAG_TENANT, address.getTenantId()))
         .increment();
     }

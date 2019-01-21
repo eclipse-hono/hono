@@ -28,6 +28,24 @@ import io.micrometer.core.instrument.Tags;
 public abstract class MicrometerBasedMetrics implements Metrics {
 
     /**
+     * The name of the meter for authenticated connections.
+     */
+    public static final String METER_CONNECTIONS_AUTHENTICATED = "hono.connections.authenticated";
+    /**
+     * The name of the meter for unauthenticated connections.
+     */
+    public static final String METER_CONNECTIONS_UNAUTHENTICATED = "hono.connections.unauthenticated";
+    /**
+     * The name of the meter for processed messages.
+     */
+    public static final String METER_MESSAGES_PROCESSED = "hono.messages.processed";
+
+    static final String METER_COMMANDS_DEVICE_DELIVERED = "hono.commands.device.delivered";
+    static final String METER_COMMANDS_RESPONSE_DELIVERED = "hono.commands.response.delivered";
+    static final String METER_COMMANDS_TTD_EXPIRED = "hono.commands.ttd.expired";
+    static final String METER_MESSAGES_UNDELIVERABLE = "hono.messages.undeliverable";
+
+    /**
      * The meter registry.
      */
     protected final MeterRegistry registry;
@@ -47,14 +65,14 @@ public abstract class MicrometerBasedMetrics implements Metrics {
         Objects.requireNonNull(registry);
 
         this.registry = registry;
-        this.unauthenticatedConnections = registry.gauge("hono.connections.unauthenticated", new AtomicLong());
+        this.unauthenticatedConnections = registry.gauge(METER_CONNECTIONS_UNAUTHENTICATED, new AtomicLong());
     }
 
     @Override
     public final void incrementConnections(final String tenantId) {
 
         Objects.requireNonNull(tenantId);
-        gaugeForTenant("hono.connections.authenticated", this.authenticatedConnections, tenantId, AtomicLong::new)
+        gaugeForTenant(METER_CONNECTIONS_AUTHENTICATED, this.authenticatedConnections, tenantId, AtomicLong::new)
                 .incrementAndGet();
         this.totalCurrentConnections.incrementAndGet();
 
@@ -64,7 +82,7 @@ public abstract class MicrometerBasedMetrics implements Metrics {
     public final void decrementConnections(final String tenantId) {
 
         Objects.requireNonNull(tenantId);
-        gaugeForTenant("hono.connections.authenticated", this.authenticatedConnections, tenantId, AtomicLong::new)
+        gaugeForTenant(METER_CONNECTIONS_AUTHENTICATED, this.authenticatedConnections, tenantId, AtomicLong::new)
                 .decrementAndGet();
         this.totalCurrentConnections.decrementAndGet();
 
@@ -92,7 +110,7 @@ public abstract class MicrometerBasedMetrics implements Metrics {
 
         Objects.requireNonNull(type);
         Objects.requireNonNull(tenantId);
-        this.registry.counter("hono.messages.processed",
+        this.registry.counter(METER_MESSAGES_PROCESSED,
                 Tags.of(MetricsTags.TAG_TENANT, tenantId).and(MetricsTags.TAG_TYPE, type))
                 .increment();
 
@@ -103,7 +121,7 @@ public abstract class MicrometerBasedMetrics implements Metrics {
 
         Objects.requireNonNull(type);
         Objects.requireNonNull(tenantId);
-        this.registry.counter("hono.messages.undeliverable",
+        this.registry.counter(METER_MESSAGES_UNDELIVERABLE,
                 Tags.of(MetricsTags.TAG_TENANT, tenantId).and(MetricsTags.TAG_TYPE, type))
                 .increment();
 
@@ -129,7 +147,7 @@ public abstract class MicrometerBasedMetrics implements Metrics {
     public final void incrementCommandDeliveredToDevice(final String tenantId) {
 
         Objects.requireNonNull(tenantId);
-        this.registry.counter("hono.commands.device.delivered",
+        this.registry.counter(METER_COMMANDS_DEVICE_DELIVERED,
                 Tags.of(MetricsTags.TAG_TENANT, tenantId))
                 .increment();
 
@@ -139,7 +157,7 @@ public abstract class MicrometerBasedMetrics implements Metrics {
     public final void incrementNoCommandReceivedAndTTDExpired(final String tenantId) {
 
         Objects.requireNonNull(tenantId);
-        this.registry.counter("hono.commands.ttd.expired",
+        this.registry.counter(METER_COMMANDS_TTD_EXPIRED,
                 Tags.of(MetricsTags.TAG_TENANT, tenantId))
                 .increment();
 
@@ -149,7 +167,7 @@ public abstract class MicrometerBasedMetrics implements Metrics {
     public final void incrementCommandResponseDeliveredToApplication(final String tenantId) {
 
         Objects.requireNonNull(tenantId);
-        this.registry.counter("hono.commands.response.delivered",
+        this.registry.counter(METER_COMMANDS_RESPONSE_DELIVERED,
                 Tags.of(MetricsTags.TAG_TENANT, tenantId))
                 .increment();
 

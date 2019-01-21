@@ -48,9 +48,8 @@ public class LegacyMetricsConfig extends AbstractLegacyMetricsConfig {
                 final List<Tag> newTags = new ArrayList<>(id.getTags());
                 newTags.add(Tag.of(TAG_HONO, "hono"));
 
-                if ("connections.authenticated".equals(name)
-                        || "connections.unauthenticated".equals(name)
-                        || "messages.undeliverable".equals(name)) {
+                if (MicrometerBasedMetrics.METER_CONNECTIONS_AUTHENTICATED.equals(id.getName())
+                        || MicrometerBasedMetrics.METER_CONNECTIONS_UNAUTHENTICATED.equals(id.getName())) {
 
                     newTags.add(Tag.of(TAG_METER_TYPE, "counter"));
                     // we need to add the type suffix because the underlying
@@ -58,6 +57,17 @@ public class LegacyMetricsConfig extends AbstractLegacyMetricsConfig {
                     // exporter will not automatically append the suffix
                     // itself
                     newTags.add(Tag.of(TAG_TYPE_SUFFIX, "count"));
+
+                } else if (MicrometerBasedMetrics.METER_MESSAGES_UNDELIVERABLE.equals(id.getName())) {
+
+                    newTags.add(Tag.of(TAG_METER_TYPE, "counter"));
+                    // extract the "sub-name" into a separate tag
+                    // so that we can later add it to the meter name
+                    // AFTER the type and tenant. This is necessary
+                    // because the InfluxDB Graphite tag template
+                    // expects it to find there
+                    newTags.add(Tag.of(TAG_SUB_NAME, name.substring("messages.".length())));
+                    name = "messages";
 
                 } else if (name.startsWith("messages.")) {
 
@@ -70,10 +80,27 @@ public class LegacyMetricsConfig extends AbstractLegacyMetricsConfig {
                     newTags.add(Tag.of(TAG_SUB_NAME, name.substring("messages.".length())));
                     name = "messages";
 
-                } else if (name.startsWith("payload.")
-                        || name.startsWith("command.")) {
+                } else if (name.startsWith("payload.")) {
 
                     newTags.add(Tag.of(TAG_METER_TYPE, "meter"));
+                    // extract the "sub-name" into a separate tag
+                    // so that we can later add it to the meter name
+                    // AFTER the type and tenant. This is necessary
+                    // because the InfluxDB Graphite tag template
+                    // expects it to find there
+                    newTags.add(Tag.of(TAG_SUB_NAME, name.substring("payload.".length())));
+                    name = "payload";
+
+                } else if (name.startsWith("commands.")) {
+
+                    newTags.add(Tag.of(TAG_METER_TYPE, "meter"));
+                    // extract the "sub-name" into a separate tag
+                    // so that we can later add it to the meter name
+                    // AFTER the type and tenant. This is necessary
+                    // because the InfluxDB Graphite tag template
+                    // expects it to find there
+                    newTags.add(Tag.of(TAG_SUB_NAME, name.substring("commands.".length())));
+                    name = "commands";
 
                 }
 

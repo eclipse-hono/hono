@@ -34,9 +34,27 @@ import io.vertx.core.metrics.MetricsOptions;
 @PropertySource("classpath:org/eclipse/hono/service/metric/legacy.properties")
 public abstract class AbstractLegacyMetricsConfig {
 
+    /**
+     * The name of the tag that marks a meter as Hono specific.
+     */
     protected static final String TAG_HONO = "hono";
+    /**
+     * The name of the tag that holds the transport protocol
+     * over which a message has been received.
+     */
+    protected static final String TAG_PROTOCOL = "protocol";
+    /**
+     * The name of the tag that holds the Graphite specific
+     * meter type.
+     */
     protected static final String TAG_METER_TYPE = "meterType";
+    /**
+     * The name of the tag that contains the sub-name of the meter.
+     */
     protected static final String TAG_SUB_NAME = "subName";
+    /**
+     * The name of the tag that contains the type suffix of the meter.
+     */
     protected static final String TAG_TYPE_SUFFIX = "typeSuffix";
 
     private final Logger log = LoggerFactory.getLogger(getClass());
@@ -72,7 +90,7 @@ public abstract class AbstractLegacyMetricsConfig {
      *                      meters.
      * @return The mapper.
      */
-    protected HierarchicalNameMapper legacyGraphiteFormatMapper(
+    public HierarchicalNameMapper legacyGraphiteFormatMapper(
             final GraphiteHierarchicalNameMapper defaultMapper) {
 
         return (id, convention) -> {
@@ -94,12 +112,25 @@ public abstract class AbstractLegacyMetricsConfig {
      */
     @Bean
     public MeterRegistryCustomizer<GraphiteMeterRegistry> legacyMeterFilters() {
-        return r -> r.config()
-                .namingConvention(NamingConvention.dot)
-                .meterFilter(MeterFilter.replaceTagValues(MetricsTags.TAG_HOST, host -> host.replace('.', '_')))
-                .meterFilter(MeterFilter.replaceTagValues(MetricsTags.TAG_TENANT, tenant -> tenant.replace('.', '_')))
-                .meterFilter(MeterFilter.ignoreTags(MetricsTags.TAG_COMPONENT))
-                .meterFilter(meterTypeMapper());
+        return r -> {
+            r.config().namingConvention(NamingConvention.dot);
+            for (MeterFilter filter : getMeterFilters()) {
+                r.config().meterFilter(filter);
+            }
+        };
+    }
+
+    /**
+     * Gets the filters to apply to meters.
+     * 
+     * @return The meters.
+     */
+    public MeterFilter[] getMeterFilters() {
+        return new MeterFilter[] {
+                                MeterFilter.replaceTagValues(MetricsTags.TAG_HOST, host -> host.replace('.', '_')),
+                                MeterFilter.replaceTagValues(MetricsTags.TAG_TENANT, tenant -> tenant.replace('.', '_')),
+                                MeterFilter.ignoreTags(MetricsTags.TAG_COMPONENT),
+                                meterTypeMapper() };
     }
 
     /**
