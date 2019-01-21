@@ -55,10 +55,10 @@ public class CredentialsApiAuthProviderTest {
     private CredentialsClient credentialsClient;
 
     /**
-     * Time out all test after 2 secs.
+     * Time out all test after 5 secs.
      */
     @Rule
-    public Timeout globalTimeout = new Timeout(2, TimeUnit.SECONDS);
+    public Timeout globalTimeout = new Timeout(5, TimeUnit.SECONDS);
 
     /**
      * Sets up the fixture.
@@ -118,7 +118,8 @@ public class CredentialsApiAuthProviderTest {
     public void testAuthenticateFailsWith401ForNonExistingAuthId(final TestContext ctx) {
 
         // WHEN trying to authenticate using an auth-id that is not known
-        when(credentialsClient.get(anyString(), eq("user"), any(JsonObject.class), any())).thenReturn(Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND)));
+        when(credentialsClient.get(anyString(), eq("user"), any(JsonObject.class), any()))
+        .thenReturn(Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND)));
         provider.authenticate(new JsonObject(), ctx.asyncAssertFailure(t -> {
             // THEN authentication fails with a 401 client error
             ctx.assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED, ((ClientErrorException) t).getErrorCode());
@@ -137,7 +138,8 @@ public class CredentialsApiAuthProviderTest {
         final AbstractDeviceCredentials creds = getDeviceCredentials("type", "tenant", "identity");
         final CredentialsObject credentialsOnRecord = getCredentialsObject("type", "identity", "device", false)
                 .addSecret(CredentialsObject.emptySecret(Instant.now().minusSeconds(120), null));
-        when(credentialsClient.get(eq("type"), eq("identity"), any(JsonObject.class), any())).thenReturn(Future.succeededFuture(credentialsOnRecord));
+        when(credentialsClient.get(eq("type"), eq("identity"), any(JsonObject.class), any()))
+        .thenReturn(Future.succeededFuture(credentialsOnRecord));
         provider.authenticate(creds, null, ctx.asyncAssertFailure(t -> {
             // THEN authentication fails with a 401 client error
             ctx.assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED, ((ClientErrorException) t).getErrorCode());
