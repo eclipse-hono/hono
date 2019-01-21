@@ -18,6 +18,7 @@ import java.util.Optional;
 
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.tracing.MultiMapExtractAdapter;
+import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.ConfigurationSupportingVerticle;
 import org.eclipse.hono.util.EventBusMessage;
 import org.eclipse.hono.util.RequestResponseApiConstants;
@@ -25,10 +26,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.opentracing.noop.NoopTracerFactory;
 import io.opentracing.propagation.Format;
+import io.opentracing.tag.Tags;
 import io.vertx.core.Future;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.eventbus.MessageConsumer;
@@ -268,5 +271,31 @@ public abstract class EventBusService<C> extends ConfigurationSupportingVerticle
                 return pl.copy().put(RequestResponseApiConstants.FIELD_ENABLED, Boolean.TRUE);
             }
         }).orElse(new JsonObject().put(RequestResponseApiConstants.FIELD_ENABLED, Boolean.TRUE));
+    }
+
+    /**
+     * Composes the given future so that the given <em>OpenTracing</em> span is finished when the future completes.
+     * <p>
+     * The result or exception of the given future will be used to set a {@link Tags#HTTP_STATUS} tag on the span
+     * and to set a {@link Tags#ERROR} tag in case of an exception or a result with error status.
+     * 
+     * @param span The span to finish.
+     * @param resultFuture The future to be composed.
+     * @return The composed future.
+     */
+    protected Future<EventBusMessage> finishSpanOnFutureCompletion(final Span span, final Future<EventBusMessage> resultFuture) {
+        return resultFuture.compose(eventBusMessage -> {
+            Tags.HTTP_STATUS.set(span, eventBusMessage.getStatus());
+            if (eventBusMessage.hasErrorStatus()) {
+                Tags.ERROR.set(span, true);
+            }
+            span.finish();
+            return Future.succeededFuture(eventBusMessage);
+        }).recover(t -> {
+            Tags.HTTP_STATUS.set(span, ServiceInvocationException.extractStatusCode(t));
+            TracingHelper.logError(span, t);
+            span.finish();
+            return Future.failedFuture(t);
+        });
     }
 }
