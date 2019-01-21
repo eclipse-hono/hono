@@ -17,10 +17,16 @@ title = "Release Notes"
 * The protocol adapters can now be configured with a custom *DNS timeout* value, limiting that time that the adapter
   should wait for the response to a DNS query. By default, a DNS query will time out after 5 seconds.
   Please refer to the adapter admin guides for details regarding the new configuration variable.
-* `HonoClient`s can now be configured with a custom *connect timeout* value, limiting the time that the client should
-  wait for a TCP/TLS connection with the peer to be established. By default, a connection attempt will time out
-  after 5 seconds. Please refer to the [Hono Client Configuration guide]({{< ref "/admin-guide/hono-client-configuration.md" >}})
-  for details regarding the new configuration variable.
+* There are three new `HonoClient` configuration options:
+  * *connectTimeout*: This value will limit the time that the client should wait for a TCP/TLS connection with the peer
+    to be established. By default, a connection attempt will time out after 5 seconds.
+  * *idleTimeout*: The idle timeout defines the amount of time after which a connection will be closed when no frames
+    have been received from the remote peer. The default value is 16 seconds.
+  * *sendMessageTimeout*: This value configures a timeout for waiting for the outcome from the remote peer after
+    an event or command message was sent by the client. The default value is 1 second.
+
+  Please refer to the [Hono Client Configuration guide]({{< ref "/admin-guide/hono-client-configuration.md" >}})
+  for details regarding the new configuration options.
 
 ## 0.9-M1
 
