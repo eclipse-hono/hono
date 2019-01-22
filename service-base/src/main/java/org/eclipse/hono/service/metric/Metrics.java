@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,6 +12,10 @@
  *******************************************************************************/
 
 package org.eclipse.hono.service.metric;
+
+import org.eclipse.hono.util.EndpointType;
+
+import io.micrometer.core.instrument.Timer.Sample;
 
 /**
  * A collector for metrics.
@@ -52,27 +56,49 @@ public interface Metrics {
     long getNumberOfConnections();
 
     /**
-     * Reports a message received from a device as <em>processed</em>.
+     * Starts a new timer.
+     * 
+     * @return The newly created timer.
+     */
+    Sample startTimer();
+
+    /**
+     * Reports a telemetry message or event received from a device.
      *
      * @param type The type of message received, e.g. <em>telemetry</em> or <em>event</em>.
      * @param tenantId The tenant that the device belongs to.
+     * @param outcome The outcome of processing the message.
+     * @param qos The delivery semantics used for sending the message downstream.
+     * @param timer The timer indicating the amount of time used
+     *              for processing the message.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
-    void incrementProcessedMessages(String type, String tenantId);
+    void reportTelemetry(
+            EndpointType type,
+            String tenantId,
+            MetricsTags.ProcessingOutcome outcome,
+            MetricsTags.QoS qos,
+            Sample timer);
 
     /**
-     * Reports a message received from a device as <em>undeliverable</em>.
-     * <p>
-     * A message is considered undeliverable if the failure to deliver has not been caused by the device
-     * that the message originates from. In particular, messages that cannot be authorized or
-     * that are published to an unsupported/unrecognized endpoint do not fall into this category.
-     * Such messages should be silently discarded instead.
-     * 
+     * Reports a telemetry message or event received from a device.
+     *
      * @param type The type of message received, e.g. <em>telemetry</em> or <em>event</em>.
      * @param tenantId The tenant that the device belongs to.
+     * @param outcome The outcome of processing the message.
+     * @param qos The delivery semantics used for sending the message downstream.
+     * @param ttdStatus The outcome of processing the TTD value contained in the message.
+     * @param timer The timer indicating the amount of time used
+     *              for processing the message.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
-    void incrementUndeliverableMessages(String type, String tenantId);
+    void reportTelemetry(
+            EndpointType type,
+            String tenantId,
+            MetricsTags.ProcessingOutcome outcome,
+            MetricsTags.QoS qos,
+            MetricsTags.TtdStatus ttdStatus,
+            Sample timer);
 
     /**
      * Reports the size of a processed message's payload that has been received
@@ -83,7 +109,7 @@ public interface Metrics {
      * @param payloadSize The size of the payload in bytes.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
-    void incrementProcessedPayload(String type, String tenantId, long payloadSize);
+    void incrementProcessedPayload(EndpointType type, String tenantId, long payloadSize);
 
     /**
      * Reports a command being delivered to a device.
@@ -92,15 +118,6 @@ public interface Metrics {
      * @throws NullPointerException if tenant is {@code null}.
      */
     void incrementCommandDeliveredToDevice(String tenantId);
-
-    /**
-     * Reports a TTD having expired without a command being delivered
-     * to a device.
-     * 
-     * @param tenantId The tenant that the device belongs to.
-     * @throws NullPointerException if tenant is {@code null}.
-     */
-    void incrementNoCommandReceivedAndTTDExpired(String tenantId);
 
     /**
      * Reports a response to a command being delivered to an application.

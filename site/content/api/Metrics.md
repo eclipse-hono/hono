@@ -56,23 +56,26 @@ The names of Hono's standard components are as follows:
 
 Additional tags for protocol adapters are:
 
-| Tag        | Value                              | Description |
-| ---------- | ---------------------------------- | ----------- |
-| *tenant*   | *string*                           | The name of the tenant that the metric is being reported for |
-| *type*     | `telemetry`, `event`             | The type of message that the metric is being reported for |
+| Tag        | Value                                                  | Description |
+| ---------- | ------------------------------------------------------ | ----------- |
+| *qos*      | `0`, `1`                                              | The quality of service used for a message. `0` indicates *at most once*, `1` indicates *at least once* delivery semantics. |
+| *status*   | `processed`, `unprocessable`, `undeliverable`     | The processing status of a message. |
+| *tenant*   | *string*                                               | The name of the tenant that the metric is being reported for |
+| *type*     | `telemetry`, `event`                                 | The type of (downstream) message that the metric is being reported for |
+| *ttd*      | `expired`, `command`                                 | A status indicating the outcome of processing a TTD value contained in a message received from a device. The value `command` indicates that a command for the device has been included in the response to the device's request for uploading the message. Note that this value can only be used by protocol adapters which use a request/response based transport protocol like HTTP. |
 
 Metrics provided by the protocol adapters are:
 
-| Metric                             | Type    | Tags                                                         | Description |
-| ---------------------------------- | ------- | ------------------------------------------------------------ | ----------- |
-| *hono.connections.authenticated*   | Gauge   | *host*, *component-type*, *component-name*, *tenant*         | Current number of connected, authenticated devices. <br/> **NB** This metric is only supported by protocol adapters that maintain *connection state* with authenticated devices. In particular, the HTTP adapter does not support this metric. |
-| *hono.connections.unauthenticated* | Gauge   | *host*, *component-type*, *component-name*                   | Current number of connected, unauthenticated devices. <br/> **NB** This metric is only supported by protocol adapters that maintain *connection state* with authenticated devices. In particular, the HTTP adapter does not support this metric. |
-| *hono.messages.undeliverable*      | Counter | *host*, *component-type*, *component-name*, *tenant*, *type* | Total number of undeliverable messages |
-| *hono.messages.processed*          | Counter | *host*, *component-type*, *component-name*, *tenant*, *type* | Total number of processed messages |
-| *hono.messages.processed.payload*  | Counter | *host*, *component-type*, *component-name*, *tenant*, *type* | Total number of processed payload bytes |
-| *hono.commands.device.delivered*   | Counter | *host*, *component-type*, *component-name*, *tenant*         | Total number of delivered commands |
-| *hono.commands.ttd.expired*        | Counter | *host*, *component-type*, *component-name*, *tenant*         | Total number of expired TTDs |
-| *hono.commands.response.delivered* | Counter | *host*, *component-type*, *component-name*, *tenant*         | Total number of delivered responses to commands |
+| Metric                             | Type    | Tags                                                                                         | Description |
+| ---------------------------------- | ------- | -------------------------------------------------------------------------------------------- | ----------- |
+| *hono.connections.authenticated*   | Gauge   | *host*, *component-type*, *component-name*, *tenant*                                         | Current number of connected, authenticated devices. <br/> **NB** This metric is only supported by protocol adapters that maintain *connection state* with authenticated devices. In particular, the HTTP adapter does not support this metric. |
+| *hono.connections.unauthenticated* | Gauge   | *host*, *component-type*, *component-name*                                                   | Current number of connected, unauthenticated devices. <br/> **NB** This metric is only supported by protocol adapters that maintain *connection state* with authenticated devices. In particular, the HTTP adapter does not support this metric. |
+| *hono.messages.received*           | Timer   | *host*, *component-type*, *component-name*, *tenant*, *type*, *status*, \[*qos*,\] \[*ttd*\] | The time it took to process a message. |
+| *hono.messages.processed.payload*  | Counter | *host*, *component-type*, *component-name*, *tenant*, *type*                                 | Total number of processed payload bytes |
+| *hono.commands.device.delivered*   | Counter | *host*, *component-type*, *component-name*, *tenant*                                         | Total number of delivered commands |
+| *hono.commands.response.delivered* | Counter | *host*, *component-type*, *component-name*, *tenant*                                         | Total number of delivered responses to commands |
+
+Tag names in square brackets indicate that the tag is optional.
 
 ### Service Metrics
 

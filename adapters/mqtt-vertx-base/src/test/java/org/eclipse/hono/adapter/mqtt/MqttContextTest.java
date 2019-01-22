@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -20,6 +20,7 @@ import static org.mockito.Mockito.*;
 
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.util.CommandConstants;
+import org.eclipse.hono.util.EndpointType;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.TelemetryConstants;
 import org.junit.Test;
@@ -65,16 +66,16 @@ public class MqttContextTest {
 
         assertEndpoint(
                 newMessage(TelemetryConstants.TELEMETRY_ENDPOINT_SHORT, "tenant", "device"),
-                TelemetryConstants.TELEMETRY_ENDPOINT);
+                EndpointType.TELEMETRY);
         assertEndpoint(
                 newMessage(EventConstants.EVENT_ENDPOINT_SHORT, "tenant", "device"),
-                EventConstants.EVENT_ENDPOINT);
+                EndpointType.EVENT);
         assertEndpoint(
                 newMessage(CommandConstants.COMMAND_ENDPOINT_SHORT, "tenant", "device"),
-                CommandConstants.COMMAND_ENDPOINT);
+                EndpointType.CONTROL);
     }
 
-    private static void assertEndpoint(final MqttPublishMessage msg, final String expectedEndpoint) {
+    private static void assertEndpoint(final MqttPublishMessage msg, final EndpointType expectedEndpoint) {
         final MqttContext context = MqttContext.fromPublishPacket(msg, mock(MqttEndpoint.class));
         assertThat(context.endpoint(), is(expectedEndpoint));
     }

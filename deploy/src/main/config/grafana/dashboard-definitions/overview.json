@@ -142,7 +142,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "sum(irate(hono_messages_processed_total{type=\"telemetry\",component_name=~\"$componentname\",tenant=~\"$tenant\"}[$__range]))",
+          "expr": "sum(irate(hono_messages_received_seconds_count{type=\"telemetry\",component_name=~\"$componentname\",tenant=~\"$tenant\"}[$__range]))",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A"
@@ -385,7 +385,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "sum(irate(hono_messages_processed_total{type=\"event\",component_name=~\"$componentname\",tenant=~\"$tenant\"}[$__range]))",
+          "expr": "sum(irate(hono_messages_received_seconds_count{type=\"event\",component_name=~\"$componentname\",tenant=~\"$tenant\"}[$__range]))",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A"
@@ -869,7 +869,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(irate(hono_messages_processed_total{type=\"telemetry\",component_name=~\"$componentname\",tenant=~\"$tenant\"}[$__range]))",
+          "expr": "sum(irate(hono_messages_received_seconds_count{type=\"telemetry\",component_name=~\"$componentname\",tenant=~\"$tenant\"}[$__range]))",
           "format": "time_series",
           "instant": false,
           "intervalFactor": 1,
@@ -984,7 +984,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(irate(hono_messages_processed_total{type=\"event\",component_name=~\"$componentname\",tenant=~\"$tenant\"}[$__range]))",
+          "expr": "sum(irate(hono_messages_received_seconds_count{type=\"event\",component_name=~\"$componentname\",tenant=~\"$tenant\"}[$__range]))",
           "format": "time_series",
           "instant": false,
           "intervalFactor": 1,
@@ -1553,7 +1553,7 @@
         "multi": true,
         "name": "tenant",
         "options": [],
-        "query": "label_values(hono_messages_processed_total,tenant)",
+        "query": "label_values(hono_messages_received_seconds_count,tenant)",
         "refresh": 2,
         "regex": "",
         "skipUrlSync": false,

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -28,17 +28,16 @@ import org.eclipse.californium.core.coap.MediaTypeRegistry;
 import org.eclipse.californium.core.network.CoapEndpoint;
 import org.eclipse.californium.core.network.Endpoint;
 import org.eclipse.californium.core.network.config.NetworkConfig;
-import org.eclipse.californium.core.server.resources.CoapExchange;
 import org.eclipse.californium.scandium.DTLSConnector;
 import org.eclipse.californium.scandium.config.DtlsConnectorConfig;
+import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.MessageSender;
-import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
+import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.util.Constants;
-import org.eclipse.hono.util.EventConstants;
+import org.eclipse.hono.util.EndpointType;
 import org.eclipse.hono.util.ResourceIdentifier;
-import org.eclipse.hono.util.TelemetryConstants;
 import org.eclipse.hono.util.TenantObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -63,7 +62,6 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
      * A logger shared with subclasses.
      */
     protected final Logger log = LoggerFactory.getLogger(getClass());
-
     /**
      * Map for authorization handler.
      */
@@ -299,6 +297,12 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
         return networkConfig;
     }
 
+    /**
+     * Loads Californium configuration properties from a file.
+     * 
+     * @param fileName The absolute path to the properties file.
+     * @param networkConfig The configuration to apply the properties to.
+     */
     protected void loadNetworkConfig(final String fileName, final NetworkConfig networkConfig) {
         if (fileName != null && !fileName.isEmpty()) {
             final File file = new File(fileName);
@@ -327,9 +331,9 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
      * This default implementation does nothing.
      * 
      * @param downstreamMessage The message that will be sent downstream.
-     * @param exchange The CoAP message exchange that the request from the device is part of.
+     * @param context The context representing the request to be processed.
      */
-    protected void customizeDownstreamMessage(final Message downstreamMessage, final CoapExchange exchange) {
+    protected void customizeDownstreamMessage(final Message downstreamMessage, final CoapContext context) {
     }
 
     @Override
@@ -375,46 +379,47 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
     /**
      * Forwards the body of a CoAP request to the south bound Telemetry API of the AMQP 1.0 Messaging Network.
      * 
-     * @param exchange coap message exchange
+     * @param context The context representing the request to be processed.
      * @param authenticatedDevice authenticated device
      * @param originDevice message's origin device
      * @param waitForOutcome {@code true} to send the message waiting for the outcome, {@code false}, to wait just for
      *            the sent.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    public final void uploadTelemetryMessage(final CoapExchange exchange, final Device authenticatedDevice,
+    public final void uploadTelemetryMessage(final CoapContext context, final Device authenticatedDevice,
             final Device originDevice, final boolean waitForOutcome) {
 
         doUploadMessage(
-                Objects.requireNonNull(exchange),
+                Objects.requireNonNull(context),
                 Objects.requireNonNull(authenticatedDevice),
                 Objects.requireNonNull(originDevice),
                 waitForOutcome,
-                Buffer.buffer(exchange.getRequestPayload()),
-                MediaTypeRegistry.toString(exchange.getRequestOptions().getContentFormat()),
+                Buffer.buffer(context.getExchange().getRequestPayload()),
+                MediaTypeRegistry.toString(context.getExchange().getRequestOptions().getContentFormat()),
                 getTelemetrySender(authenticatedDevice.getTenantId()),
-                TelemetryConstants.TELEMETRY_ENDPOINT);
+                EndpointType.TELEMETRY);
     }
 
     /**
      * Forwards the body of a CoAP request to the south bound Event API of the AMQP 1.0 Messaging Network.
      * 
-     * @param exchange coap message exchange
+     * @param context The context representing the request to be processed.
      * @param authenticatedDevice authenticated device
      * @param originDevice message's origin device
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    public final void uploadEventMessage(final CoapExchange exchange, final Device authenticatedDevice,
+    public final void uploadEventMessage(final CoapContext context, final Device authenticatedDevice,
             final Device originDevice) {
 
         doUploadMessage(
-                Objects.requireNonNull(exchange),
+                Objects.requireNonNull(context),
                 Objects.requireNonNull(authenticatedDevice),
                 Objects.requireNonNull(originDevice),
                 true,
-                Buffer.buffer(exchange.getRequestPayload()),
-                MediaTypeRegistry.toString(exchange.getRequestOptions().getContentFormat()),
-                getEventSender(authenticatedDevice.getTenantId()), EventConstants.EVENT_ENDPOINT);
+                Buffer.buffer(context.getExchange().getRequestPayload()),
+                MediaTypeRegistry.toString(context.getExchange().getRequestOptions().getContentFormat()),
+                getEventSender(authenticatedDevice.getTenantId()),
+                EndpointType.EVENT);
     }
 
     /**
@@ -434,7 +439,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
      * See {@link CoapErrorResponse}.</li>
      * </ul>
      * 
-     * @param exchange coap message exchange
+     * @param context The context representing the request to be processed.
      * @param authenticatedDevice authenticated device
      * @param device message's origin device
      * @param waitForOutcome {@code true} to send the message waiting for the outcome, {@code false}, to wait just for
@@ -442,17 +447,17 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
      * @param payload message payload
      * @param contentType content type of message payload
      * @param senderTracker hono message sender tracker
-     * @param endpointName message destination endpoint name
+     * @param endpoint message destination endpoint
      */
-    private void doUploadMessage(final CoapExchange exchange, final Device authenticatedDevice, final Device device,
+    private void doUploadMessage(final CoapContext context, final Device authenticatedDevice, final Device device,
             final boolean waitForOutcome, final Buffer payload, final String contentType,
             final Future<MessageSender> senderTracker,
-            final String endpointName) {
+            final EndpointType endpoint) {
 
         if (contentType == null) {
-            exchange.respond(ResponseCode.NOT_ACCEPTABLE);
+            context.respondWithCode(ResponseCode.NOT_ACCEPTABLE);
         } else if (payload == null || payload.length() == 0) {
-            exchange.respond(ResponseCode.NOT_ACCEPTABLE);
+            context.respondWithCode(ResponseCode.NOT_ACCEPTABLE);
         } else {
 
             final Future<JsonObject> tokenTracker = getRegistrationAssertion(
@@ -464,14 +469,14 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                 if (tenantConfigTracker.result().isAdapterEnabled(getTypeName())) {
                     final MessageSender sender = senderTracker.result();
                     final Message downstreamMessage = newMessage(
-                            ResourceIdentifier.from(endpointName, device.getTenantId(), device.getDeviceId()),
+                            ResourceIdentifier.from(endpoint.getCanonicalName(), device.getTenantId(), device.getDeviceId()),
                             sender.isRegistrationAssertionRequired(),
-                            "/" + exchange.getRequestOptions().getUriPathString(),
+                            "/" + context.getExchange().getRequestOptions().getUriPathString(),
                             contentType,
                             payload,
                             tokenTracker.result(),
                             null);
-                    customizeDownstreamMessage(downstreamMessage, exchange);
+                    customizeDownstreamMessage(downstreamMessage, context);
                     if (waitForOutcome) {
                         // wait for outcome, ensure message order, if CoAP NSTART-1 is used.
                         return sender.sendAndWaitForOutcome(downstreamMessage);
@@ -484,17 +489,27 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                 }
             }).map(delivery -> {
                 LOG.trace("successfully processed message for device [tenantId: {}, deviceId: {}, endpoint: {}]",
-                        device.getTenantId(), device.getDeviceId(), endpointName);
-                metrics.incrementProcessedMessages(endpointName, device.getTenantId());
-                exchange.respond(ResponseCode.CHANGED);
+                        device.getTenantId(), device.getDeviceId(), endpoint);
+                metrics.reportTelemetry(
+                        endpoint,
+                        device.getTenantId(),
+                        MetricsTags.ProcessingOutcome.FORWARDED,
+                        waitForOutcome ? MetricsTags.QoS.AT_LEAST_ONCE : MetricsTags.QoS.AT_MOST_ONCE,
+                        MetricsTags.TtdStatus.NONE,
+                        context.getTimer());
+                context.respondWithCode(ResponseCode.CHANGED);
                 return delivery;
             }).recover(t -> {
                 LOG.debug("cannot process message for device [tenantId: {}, deviceId: {}, endpoint: {}]: {}",
-                        device.getTenantId(), device.getDeviceId(), endpointName, t.getMessage());
-                if (!(ClientErrorException.class.isInstance(t))) {
-                    metrics.incrementUndeliverableMessages(endpointName, device.getTenantId());
-                }
-                CoapErrorResponse.respond(exchange, t);
+                        device.getTenantId(), device.getDeviceId(), endpoint, t.getMessage());
+                metrics.reportTelemetry(
+                        endpoint,
+                        device.getTenantId(),
+                        ClientErrorException.class.isInstance(t) ? MetricsTags.ProcessingOutcome.UNPROCESSABLE : MetricsTags.ProcessingOutcome.UNDELIVERABLE,
+                        waitForOutcome ? MetricsTags.QoS.AT_LEAST_ONCE : MetricsTags.QoS.AT_MOST_ONCE,
+                        MetricsTags.TtdStatus.NONE,
+                        context.getTimer());
+                CoapErrorResponse.respond(context.getExchange(), t);
                 return Future.failedFuture(t);
             });
         }

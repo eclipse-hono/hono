@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -23,7 +23,6 @@ import java.util.Objects;
 import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 
-import io.vertx.mqtt.MqttTopicSubscription;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.auth.Device;
@@ -42,14 +41,13 @@ import org.eclipse.hono.service.auth.device.TenantServiceBasedX509Authentication
 import org.eclipse.hono.service.auth.device.UsernamePasswordAuthProvider;
 import org.eclipse.hono.service.auth.device.UsernamePasswordCredentials;
 import org.eclipse.hono.service.auth.device.X509AuthProvider;
+import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EndpointType;
-import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
-import org.eclipse.hono.util.TelemetryConstants;
 import org.eclipse.hono.util.TenantObject;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -67,6 +65,7 @@ import io.vertx.mqtt.MqttConnectionException;
 import io.vertx.mqtt.MqttEndpoint;
 import io.vertx.mqtt.MqttServer;
 import io.vertx.mqtt.MqttServerOptions;
+import io.vertx.mqtt.MqttTopicSubscription;
 import io.vertx.mqtt.messages.MqttPublishMessage;
 import io.vertx.mqtt.messages.MqttSubscribeMessage;
 import io.vertx.mqtt.messages.MqttUnsubscribeMessage;
@@ -664,6 +663,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
             .withTag(TracingHelper.TAG_CLIENT_ID.getKey(), context.deviceEndpoint().clientIdentifier())
             .start();
         context.setTracingContext(span.context());
+        context.setTimer(getMetrics().startTimer());
 
         checkTopic(context)
             .compose(ok -> onPublishedMessage(context))
@@ -679,9 +679,9 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                         Tags.HTTP_STATUS.set(span, HttpURLConnection.HTTP_INTERNAL_ERROR);
                     }
                     if (processing.cause() instanceof ClientErrorException) {
-                        // TODO update "malformed message" metric
+                        metrics.reportTelemetry(context.endpoint(), context.tenant(), MetricsTags.ProcessingOutcome.UNPROCESSABLE, MetricsTags.QoS.from(qos.value()), context.getTimer());
                     } else {
-                        metrics.incrementUndeliverableMessages(context.endpoint(), context.tenant());
+                        metrics.reportTelemetry(context.endpoint(), context.tenant(), MetricsTags.ProcessingOutcome.UNDELIVERABLE, MetricsTags.QoS.from(qos.value()), context.getTimer());
                         onMessageUndeliverable(context);
                     }
                 }
@@ -767,10 +767,11 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                 Objects.requireNonNull(deviceId),
                 Objects.requireNonNull(payload),
                 getTelemetrySender(tenant),
-                TelemetryConstants.TELEMETRY_ENDPOINT
+                EndpointType.TELEMETRY
         ).map(success -> {
-            metrics.incrementProcessedMessages(TelemetryConstants.TELEMETRY_ENDPOINT, tenant);
-            metrics.incrementProcessedPayload(TelemetryConstants.TELEMETRY_ENDPOINT, tenant, messagePayloadSize(ctx.message()));
+            final MetricsTags.QoS qos = MetricsTags.QoS.from(ctx.message().qosLevel().value());
+            metrics.reportTelemetry(ctx.endpoint(), ctx.tenant(), MetricsTags.ProcessingOutcome.FORWARDED, qos, ctx.getTimer());
+            metrics.incrementProcessedPayload(ctx.endpoint(), tenant, messagePayloadSize(ctx.message()));
             return (Void) null;
         });
     }
@@ -801,10 +802,11 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                 Objects.requireNonNull(deviceId),
                 Objects.requireNonNull(payload),
                 getEventSender(tenant),
-                EventConstants.EVENT_ENDPOINT
+                EndpointType.EVENT
         ).map(success -> {
-            metrics.incrementProcessedMessages(EventConstants.EVENT_ENDPOINT, tenant);
-            metrics.incrementProcessedPayload(EventConstants.EVENT_ENDPOINT, tenant, messagePayloadSize(ctx.message()));
+            final MetricsTags.QoS qos = MetricsTags.QoS.from(ctx.message().qosLevel().value());
+            metrics.reportTelemetry(ctx.endpoint(), ctx.tenant(), MetricsTags.ProcessingOutcome.FORWARDED, qos, ctx.getTimer());
+            metrics.incrementProcessedPayload(ctx.endpoint(), tenant, messagePayloadSize(ctx.message()));
             return (Void) null;
         });
     }
@@ -884,14 +886,14 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
             final String deviceId,
             final Buffer payload,
             final Future<? extends MessageSender> senderTracker,
-            final String endpointName) {
+            final EndpointType endpoint) {
 
         if (!isPayloadOfIndicatedType(payload, ctx.contentType())) {
             return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
                     String.format("Content-Type %s does not match payload", ctx.contentType())));
         } else {
 
-            final Span currentSpan = tracer.buildSpan("upload " + endpointName)
+            final Span currentSpan = tracer.buildSpan("upload " + endpoint)
                     .asChildOf(ctx.getTracingContext())
                     .ignoreActiveSpan()
                     .withTag(Tags.COMPONENT.getKey(), getTypeName())
@@ -911,7 +913,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
 
                     final MessageSender sender = senderTracker.result();
                     final Message downstreamMessage = newMessage(
-                            ResourceIdentifier.from(endpointName, tenant, deviceId),
+                            ResourceIdentifier.from(endpoint.getCanonicalName(), tenant, deviceId),
                             sender.isRegistrationAssertionRequired(),
                             ctx.message().topicName(),
                             ctx.contentType(),
@@ -950,10 +952,10 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                 if (ClientErrorException.class.isInstance(t)) {
                     final ClientErrorException e = (ClientErrorException) t;
                     LOG.debug("cannot process message [endpoint: {}] from device [tenantId: {}, deviceId: {}]: {} - {}",
-                            endpointName, tenant, deviceId, e.getErrorCode(), e.getMessage());
+                            endpoint, tenant, deviceId, e.getErrorCode(), e.getMessage());
                 } else {
                     LOG.debug("cannot process message [endpoint: {}] from device [tenantId: {}, deviceId: {}]",
-                            endpointName, tenant, deviceId, t);
+                            endpoint, tenant, deviceId, t);
                 }
                 TracingHelper.logError(currentSpan, t);
                 currentSpan.finish();

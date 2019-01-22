@@ -45,7 +45,7 @@ public enum EndpointType {
      * 
      * @return The name.
      */
-    public String canonicalName() {
+    public String getCanonicalName() {
         return canonicalName;
     }
 

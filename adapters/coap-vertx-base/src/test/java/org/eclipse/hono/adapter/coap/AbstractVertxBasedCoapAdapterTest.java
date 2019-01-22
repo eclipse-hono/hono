@@ -234,8 +234,9 @@ public class AbstractVertxBasedCoapAdapterTest {
         final Buffer payload = Buffer.buffer("some payload");
         final CoapExchange coapExchange = newCoapExchange(payload);
         final Device authenticatedDevice = new Device("my-tenant", "the-device");
+        final CoapContext ctx = CoapContext.fromRequest(coapExchange);
 
-        adapter.uploadTelemetryMessage(coapExchange, authenticatedDevice, authenticatedDevice, false);
+        adapter.uploadTelemetryMessage(ctx, authenticatedDevice, authenticatedDevice, false);
 
         // THEN the device gets a 4.03
 
@@ -265,8 +266,9 @@ public class AbstractVertxBasedCoapAdapterTest {
         final Buffer payload = Buffer.buffer("some payload");
         final CoapExchange coapExchange = newCoapExchange(payload);
         final Device authenticatedDevice = new Device("tenant", "device");
+        final CoapContext ctx = CoapContext.fromRequest(coapExchange);
 
-        adapter.uploadEventMessage(coapExchange, authenticatedDevice, authenticatedDevice);
+        adapter.uploadEventMessage(ctx, authenticatedDevice, authenticatedDevice);
 
         // THEN the device does not get a response
         verify(coapExchange, never()).respond(ResponseCode.CHANGED);
@@ -294,8 +296,9 @@ public class AbstractVertxBasedCoapAdapterTest {
         final Buffer payload = Buffer.buffer("some payload");
         final CoapExchange coapExchange = newCoapExchange(payload);
         final Device authenticatedDevice = new Device("tenant", "device");
+        final CoapContext ctx = CoapContext.fromRequest(coapExchange);
 
-        adapter.uploadEventMessage(coapExchange, authenticatedDevice, authenticatedDevice);
+        adapter.uploadEventMessage(ctx, authenticatedDevice, authenticatedDevice);
         outcome.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "malformed message"));
 
         // THEN the device gets a 4.00
@@ -323,8 +326,9 @@ public class AbstractVertxBasedCoapAdapterTest {
         final Buffer payload = Buffer.buffer("some payload");
         final CoapExchange coapExchange = newCoapExchange(payload);
         final Device authenticatedDevice = new Device("tenant", "device");
+        final CoapContext ctx = CoapContext.fromRequest(coapExchange);
 
-        adapter.uploadTelemetryMessage(coapExchange, authenticatedDevice, authenticatedDevice, false);
+        adapter.uploadTelemetryMessage(ctx, authenticatedDevice, authenticatedDevice, false);
 
         // THEN the device does not get a response
         verify(coapExchange, never()).respond(ResponseCode.CHANGED);
@@ -352,8 +356,9 @@ public class AbstractVertxBasedCoapAdapterTest {
         final Buffer payload = Buffer.buffer("some payload");
         final CoapExchange coapExchange = newCoapExchange(payload);
         final Device authenticatedDevice = new Device("tenant", "device");
+        final CoapContext ctx = CoapContext.fromRequest(coapExchange);
 
-        adapter.uploadTelemetryMessage(coapExchange, authenticatedDevice, authenticatedDevice, true);
+        adapter.uploadTelemetryMessage(ctx, authenticatedDevice, authenticatedDevice, true);
 
         // THEN the device does not get a response
         verify(coapExchange, never()).respond(ResponseCode.CHANGED);

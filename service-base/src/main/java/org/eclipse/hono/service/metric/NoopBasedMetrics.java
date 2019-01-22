@@ -13,16 +13,19 @@
 
 package org.eclipse.hono.service.metric;
 
+import org.eclipse.hono.util.EndpointType;
+
+import io.micrometer.core.instrument.Timer.Sample;
+
 /**
  * A no-op metrics implementation.
  */
 public class NoopBasedMetrics implements Metrics {
 
+    /**
+     * Creates a new instance.
+     */
     protected NoopBasedMetrics() {
-    }
-
-    @Override
-    public void incrementUndeliverableMessages(final String type, final String tenantId) {
     }
 
     @Override
@@ -30,15 +33,7 @@ public class NoopBasedMetrics implements Metrics {
     }
 
     @Override
-    public void incrementProcessedPayload(final String type, final String tenantId, final long payloadSize) {
-    }
-
-    @Override
-    public void incrementProcessedMessages(final String type, final String tenantId) {
-    }
-
-    @Override
-    public void incrementNoCommandReceivedAndTTDExpired(final String tenantId) {
+    public void incrementProcessedPayload(final EndpointType type, final String tenantId, final long payloadSize) {
     }
 
     @Override
@@ -64,5 +59,29 @@ public class NoopBasedMetrics implements Metrics {
     @Override
     public long getNumberOfConnections() {
         return 0;
+    }
+
+    @Override
+    public Sample startTimer() {
+        return null;
+    }
+
+    @Override
+    public void reportTelemetry(
+            final EndpointType type,
+            final String tenantId,
+            final MetricsTags.ProcessingOutcome outcome,
+            final MetricsTags.QoS qos,
+            final Sample timer) {
+    }
+
+    @Override
+    public void reportTelemetry(
+            final EndpointType type,
+            final String tenantId,
+            final MetricsTags.ProcessingOutcome outcome,
+            final MetricsTags.QoS qos,
+            final MetricsTags.TtdStatus ttdStatus,
+            final Sample timer) {
     }
 }
