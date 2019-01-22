@@ -30,6 +30,9 @@ public interface CoapAdapterMetrics extends Metrics {
         }
     }
 
+    /**
+     * The no-op implementation.
+     */
     CoapAdapterMetrics NOOP = new Noop();
 
     // nothing for now

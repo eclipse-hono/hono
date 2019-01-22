@@ -30,6 +30,9 @@ public interface MqttAdapterMetrics extends Metrics {
         }
     }
 
+    /**
+     * The no-op implementation.
+     */
     MqttAdapterMetrics NOOP = new Noop();
 
     // empty for now

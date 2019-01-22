@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -19,13 +19,17 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
 
+import org.eclipse.hono.util.EndpointType;
+
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tags;
+import io.micrometer.core.instrument.Timer;
+import io.micrometer.core.instrument.Timer.Sample;
 
 /**
  * Micrometer based metrics implementation.
  */
-public abstract class MicrometerBasedMetrics implements Metrics {
+public class MicrometerBasedMetrics implements Metrics {
 
     /**
      * The name of the meter for authenticated connections.
@@ -36,14 +40,12 @@ public abstract class MicrometerBasedMetrics implements Metrics {
      */
     public static final String METER_CONNECTIONS_UNAUTHENTICATED = "hono.connections.unauthenticated";
     /**
-     * The name of the meter for processed messages.
+     * The name of the meter for messages received from devices.
      */
-    public static final String METER_MESSAGES_PROCESSED = "hono.messages.processed";
+    public static final String METER_MESSAGES_RECEIVED = "hono.messages.received";
 
     static final String METER_COMMANDS_DEVICE_DELIVERED = "hono.commands.device.delivered";
     static final String METER_COMMANDS_RESPONSE_DELIVERED = "hono.commands.response.delivered";
-    static final String METER_COMMANDS_TTD_EXPIRED = "hono.commands.ttd.expired";
-    static final String METER_MESSAGES_UNDELIVERABLE = "hono.messages.undeliverable";
 
     /**
      * The meter registry.
@@ -54,18 +56,29 @@ public abstract class MicrometerBasedMetrics implements Metrics {
     private final AtomicLong unauthenticatedConnections;
     private final AtomicLong totalCurrentConnections = new AtomicLong();
 
+    private LegacyMetrics legacyMetrics;
+
     /**
      * Creates a new metrics instance.
      * 
      * @param registry The meter registry to use.
      * @throws NullPointerException if registry is {@code null}.
      */
-    public MicrometerBasedMetrics(final MeterRegistry registry) {
+    protected MicrometerBasedMetrics(final MeterRegistry registry) {
 
         Objects.requireNonNull(registry);
 
         this.registry = registry;
         this.unauthenticatedConnections = registry.gauge(METER_CONNECTIONS_UNAUTHENTICATED, new AtomicLong());
+    }
+
+    /**
+     * Sets the legacy metrics.
+     * 
+     * @param legacyMetrics The additional legacy metrics to report.
+     */
+    public final void setLegacyMetrics(final LegacyMetrics legacyMetrics) {
+        this.legacyMetrics = legacyMetrics;
     }
 
     @Override
@@ -106,29 +119,82 @@ public abstract class MicrometerBasedMetrics implements Metrics {
     }
 
     @Override
-    public final void incrementProcessedMessages(final String type, final String tenantId) {
-
-        Objects.requireNonNull(type);
-        Objects.requireNonNull(tenantId);
-        this.registry.counter(METER_MESSAGES_PROCESSED,
-                Tags.of(MetricsTags.TAG_TENANT, tenantId).and(MetricsTags.TAG_TYPE, type))
-                .increment();
-
+    public Sample startTimer() {
+        return Timer.start(registry);
     }
 
     @Override
-    public final void incrementUndeliverableMessages(final String type, final String tenantId) {
+    public final void reportTelemetry(
+            final EndpointType type,
+            final String tenantId,
+            final MetricsTags.ProcessingOutcome outcome,
+            final MetricsTags.QoS qos,
+            final Sample timer) {
 
-        Objects.requireNonNull(type);
-        Objects.requireNonNull(tenantId);
-        this.registry.counter(METER_MESSAGES_UNDELIVERABLE,
-                Tags.of(MetricsTags.TAG_TENANT, tenantId).and(MetricsTags.TAG_TYPE, type))
-                .increment();
-
+        reportTelemetry(type, tenantId, outcome, qos, MetricsTags.TtdStatus.NONE, timer);
     }
 
     @Override
-    public final void incrementProcessedPayload(final String type, final String tenantId,
+    public final void reportTelemetry(
+            final EndpointType type,
+            final String tenantId,
+            final MetricsTags.ProcessingOutcome outcome,
+            final MetricsTags.QoS qos,
+            final MetricsTags.TtdStatus ttdStatus,
+            final Sample timer) {
+
+        Objects.requireNonNull(type);
+        Objects.requireNonNull(tenantId);
+        Objects.requireNonNull(outcome);
+        Objects.requireNonNull(qos);
+        Objects.requireNonNull(ttdStatus);
+        Objects.requireNonNull(timer);
+
+        if (type != EndpointType.TELEMETRY && type != EndpointType.EVENT) {
+            throw new IllegalArgumentException("invalid type, must be either telemetry or event");
+        }
+
+        final Tags tags = 
+                ttdStatus.add(
+                        qos.add(
+                            Tags.of(MetricsTags.getTypeTag(type))
+                                .and(MetricsTags.getTenantTag(tenantId))
+                                .and(outcome.asTag())));
+
+        timer.stop(this.registry.timer(METER_MESSAGES_RECEIVED, tags));
+
+        if (legacyMetrics != null) {
+
+             // The legacy metric for processed messages is based on a counter
+             // instead of a timer. It is necessary to report the legacy
+             // metric in addition to the new one because the value types
+             // are incompatible (duration vs. occurrences).
+            switch(outcome) {
+            case FORWARDED:
+                legacyMetrics.incrementProcessedMessages(type, tenantId);
+                break;
+            case UNDELIVERABLE:
+                legacyMetrics.incrementUndeliverableMessages(type, tenantId);
+                break;
+            case UNPROCESSABLE:
+                // no corresponding legacy metric
+            }
+
+            // The legacy metrics contain a separate metric for
+            // counting the number of messages that contained
+            // an expired TTD value.
+            switch(ttdStatus) {
+            case EXPIRED:
+                legacyMetrics.incrementNoCommandReceivedAndTTDExpired(tenantId);
+                break;
+            default:
+                // nothing to do
+            }
+        }
+    }
+
+    @Override
+    public final void incrementProcessedPayload(final EndpointType type, final String tenantId,
             final long payloadSize) {
 
         Objects.requireNonNull(type);
@@ -139,7 +205,7 @@ public abstract class MicrometerBasedMetrics implements Metrics {
         }
 
         this.registry.counter("hono.messages.processed.payload",
-                Tags.of(MetricsTags.TAG_TENANT, tenantId).and(MetricsTags.TAG_TYPE, type))
+                Tags.of(MetricsTags.getTenantTag(tenantId)).and(MetricsTags.getTypeTag(type)))
                 .increment(payloadSize);
     }
 
@@ -148,17 +214,7 @@ public abstract class MicrometerBasedMetrics implements Metrics {
 
         Objects.requireNonNull(tenantId);
         this.registry.counter(METER_COMMANDS_DEVICE_DELIVERED,
-                Tags.of(MetricsTags.TAG_TENANT, tenantId))
-                .increment();
-
-    }
-
-    @Override
-    public final void incrementNoCommandReceivedAndTTDExpired(final String tenantId) {
-
-        Objects.requireNonNull(tenantId);
-        this.registry.counter(METER_COMMANDS_TTD_EXPIRED,
-                Tags.of(MetricsTags.TAG_TENANT, tenantId))
+                Tags.of(MetricsTags.getTenantTag(tenantId)))
                 .increment();
 
     }
@@ -168,7 +224,7 @@ public abstract class MicrometerBasedMetrics implements Metrics {
 
         Objects.requireNonNull(tenantId);
         this.registry.counter(METER_COMMANDS_RESPONSE_DELIVERED,
-                Tags.of(MetricsTags.TAG_TENANT, tenantId))
+                Tags.of(MetricsTags.getTenantTag(tenantId)))
                 .increment();
 
     }
@@ -203,7 +259,7 @@ public abstract class MicrometerBasedMetrics implements Metrics {
      * Gets a gauge value for a tenant.
      * <p>
      * If no gauge value exists for the given tenant yet, a new value
-     * is created using the given name and the {@link MetricsTags#TAG_TENANT} tag.
+     * is created using the given name and a tag for the tenant.
      * 
      * @param <V> The type of the gauge's value.
      * @param name The metric name.
@@ -215,7 +271,7 @@ public abstract class MicrometerBasedMetrics implements Metrics {
     protected <V extends Number> V gaugeForTenant(final String name, final Map<String, V> map, final String tenant,
             final Supplier<V> instanceSupplier) {
 
-        return gaugeForKey(name, map, tenant, Tags.of(MetricsTags.TAG_TENANT, tenant), instanceSupplier);
+        return gaugeForKey(name, map, tenant, Tags.of(MetricsTags.getTenantTag(tenant)), instanceSupplier);
 
     }
 }

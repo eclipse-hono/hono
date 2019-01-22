@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -35,15 +35,16 @@ import org.eclipse.hono.service.AbstractProtocolAdapterBase;
 import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.service.http.DefaultFailureHandler;
 import org.eclipse.hono.service.http.HttpUtils;
+import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.Constants;
-import org.eclipse.hono.util.EventConstants;
+import org.eclipse.hono.util.EndpointType;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
-import org.eclipse.hono.util.TelemetryConstants;
 import org.eclipse.hono.util.TenantObject;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import io.micrometer.core.instrument.Timer.Sample;
 import io.opentracing.Span;
 import io.opentracing.contrib.vertx.ext.web.TracingHandler;
 import io.opentracing.contrib.vertx.ext.web.WebSpanDecorator;
@@ -72,9 +73,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
      */
     protected static final String DEFAULT_UPLOADS_DIRECTORY = "/tmp";
 
-    private static final int AT_LEAST_ONCE = 1;
-    private static final int HEADER_QOS_INVALID = -1;
-
+    private static final String KEY_MICROMETER_SAMPLE = "micrometer.sample";
     private static final String KEY_TIMER_ID = "timerId";
 
     private HttpServer server;
@@ -192,7 +191,8 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
     }
 
     /**
-     * Adds a handler for adding an OpenTracing Span to the routing context.
+     * Adds a handler for adding an OpenTracing {@code Span}
+     * and a Micrometer {@code Timer.Sample} to the routing context.
      *
      * @param router The router to add the handler to.
      * @param position The position to add the tracing handler at.
@@ -206,6 +206,22 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
         addCustomSpanDecorators(decorators);
         final TracingHandler tracingHandler = new TracingHandler(tracer, decorators);
         router.route().order(position).handler(tracingHandler).failureHandler(tracingHandler);
+        router.route().order(position - 1).handler(ctx -> {
+            ctx.put(KEY_MICROMETER_SAMPLE, getMetrics().startTimer());
+            ctx.next();
+        });
+    }
+
+    private Sample getMicrometerSample(final RoutingContext ctx) {
+        return ctx.get(KEY_MICROMETER_SAMPLE);
+    }
+
+    private void setTtdStatus(final RoutingContext ctx, final MetricsTags.TtdStatus status) {
+        ctx.put(MetricsTags.TtdStatus.class.getName(), status);
+    }
+
+    private MetricsTags.TtdStatus getTtdStatus(final RoutingContext ctx) {
+        return ctx.get(MetricsTags.TtdStatus.class.getName());
     }
 
     /**
@@ -495,7 +511,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                 payload,
                 contentType,
                 getTelemetrySender(tenant),
-                TelemetryConstants.TELEMETRY_ENDPOINT);
+                EndpointType.TELEMETRY);
     }
 
     /**
@@ -544,23 +560,29 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                 payload,
                 contentType,
                 getEventSender(tenant),
-                EventConstants.EVENT_ENDPOINT);
+                EndpointType.EVENT);
     }
 
-    private void doUploadMessage(final RoutingContext ctx, final String tenant, final String deviceId,
-            final Buffer payload, final String contentType, final Future<MessageSender> senderTracker, final String endpointName) {
+    private void doUploadMessage(
+            final RoutingContext ctx,
+            final String tenant,
+            final String deviceId,
+            final Buffer payload,
+            final String contentType,
+            final Future<MessageSender> senderTracker,
+            final EndpointType endpoint) {
 
         if (!isPayloadOfIndicatedType(payload, contentType)) {
             HttpUtils.badRequest(ctx, String.format("content type [%s] does not match payload", contentType));
         } else {
             final String qosHeaderValue = ctx.request().getHeader(Constants.HEADER_QOS_LEVEL);
-            final Integer qos = getQoSLevel(qosHeaderValue);
-            if (qos != null && qos == HEADER_QOS_INVALID) {
+            final MetricsTags.QoS qos = getQoSLevel(qosHeaderValue);
+            if (qos == MetricsTags.QoS.UNKNOWN) {
                 HttpUtils.badRequest(ctx, "unsupported QoS-Level header value");
             } else {
 
                 final Device authenticatedDevice = getAuthenticatedDevice(ctx);
-                final Span currentSpan = tracer.buildSpan("upload " + endpointName)
+                final Span currentSpan = tracer.buildSpan("upload " + endpoint.getCanonicalName())
                         .asChildOf(TracingHandler.serverSpanContext(ctx))
                         .ignoreActiveSpan()
                         .withTag(Tags.COMPONENT.getKey(), getTypeName())
@@ -568,6 +590,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                         .withTag(MessageHelper.APP_PROPERTY_TENANT_ID, tenant)
                         .withTag(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId)
                         .withTag(TracingHelper.TAG_AUTHENTICATED.getKey(), authenticatedDevice != null)
+                        .withTag(Constants.HEADER_QOS_LEVEL, qos.asTag().getValue())
                         .start();
 
                 final Future<Void> responseReady = Future.future();
@@ -580,7 +603,9 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                 final Future<Integer> ttdTracker = tenantConfigTracker.compose(tenantObj -> {
                     final Integer ttdParam = HttpUtils.getTimeTilDisconnect(ctx);
                     return getTimeUntilDisconnect(tenantObj, ttdParam).map(effectiveTtd -> {
-                        if (effectiveTtd != null) {
+                        if (effectiveTtd == null) {
+                            setTtdStatus(ctx, MetricsTags.TtdStatus.NONE);
+                        } else {
                             currentSpan.setTag(MessageHelper.APP_PROPERTY_DEVICE_TTD, effectiveTtd);
                         }
                         return effectiveTtd;
@@ -597,7 +622,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                         final Integer ttd = Optional.ofNullable(commandConsumerTracker.result()).map(c -> ttdTracker.result())
                                 .orElse(null);
                         final Message downstreamMessage = newMessage(
-                                ResourceIdentifier.from(endpointName, tenant, deviceId),
+                                ResourceIdentifier.from(endpoint.getCanonicalName(), tenant, deviceId),
                                 sender.isRegistrationAssertionRequired(),
                                 ctx.request().uri(),
                                 contentType,
@@ -608,13 +633,13 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
 
                         addConnectionCloseHandler(ctx, commandConsumerTracker.result(), tenant, deviceId, currentSpan);
 
-                        if (qos == null) {
+                        if (MetricsTags.QoS.AT_MOST_ONCE.equals(qos)) {
                             return CompositeFuture.all(
                                     sender.send(downstreamMessage, currentSpan.context()),
                                     responseReady)
                                     .map(s -> (Void) null);
                         } else {
-                            currentSpan.setTag(Constants.HEADER_QOS_LEVEL, qosHeaderValue);
+                            // unsettled
                             return CompositeFuture.all(
                                     sender.sendAndWaitForOutcome(downstreamMessage, currentSpan.context()),
                                     responseReady)
@@ -640,7 +665,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
 
                     if (ctx.response().closed()) {
                         LOG.debug("failed to send http response for [{}] message from device [tenantId: {}, deviceId: {}]: response already closed",
-                                endpointName, tenant, deviceId);
+                                endpoint, tenant, deviceId);
                         TracingHelper.logError(currentSpan, "failed to send HTTP response to device: response already closed");
                         currentSpan.finish();
                     } else {
@@ -648,14 +673,20 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                         setResponsePayload(ctx.response(), commandContext, currentSpan);
                         ctx.addBodyEndHandler(ok -> {
                             LOG.trace("successfully processed [{}] message for device [tenantId: {}, deviceId: {}]",
-                                    endpointName, tenant, deviceId);
-                            metrics.incrementProcessedMessages(endpointName, tenant);
-                            metrics.incrementProcessedPayload(endpointName, tenant, messagePayloadSize(ctx));
+                                    endpoint, tenant, deviceId);
                             if (commandContext != null) {
                                 commandContext.getCurrentSpan().log("forwarded command to device in HTTP response body");
                                 commandContext.accept();
                                 metrics.incrementCommandDeliveredToDevice(tenant);
                             }
+                            metrics.reportTelemetry(
+                                    endpoint,
+                                    tenant,
+                                    MetricsTags.ProcessingOutcome.FORWARDED,
+                                    qos,
+                                    getTtdStatus(ctx),
+                                    getMicrometerSample(ctx));
+                            metrics.incrementProcessedPayload(endpoint, tenant, messagePayloadSize(ctx));
                             currentSpan.finish();
                             // the command consumer is used for a single request only
                             // we can close the consumer only AFTER we have accepted a
@@ -664,7 +695,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                         });
                         ctx.response().exceptionHandler(t -> {
                             LOG.debug("failed to send http response for [{}] message from device [tenantId: {}, deviceId: {}]",
-                                    endpointName, tenant, deviceId, t);
+                                    endpoint, tenant, deviceId, t);
                             if (commandContext != null) {
                                 commandContext.getCurrentSpan().log("failed to forward command to device in HTTP response body");
                                 TracingHelper.logError(commandContext.getCurrentSpan(), t);
@@ -687,7 +718,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                 .recover(t -> {
 
                     LOG.debug("cannot process [{}] message from device [tenantId: {}, deviceId: {}]",
-                            endpointName, tenant, deviceId, t);
+                            endpoint, tenant, deviceId, t);
                     final CommandContext commandContext = ctx.get(CommandContext.KEY_COMMAND_CONTEXT);
                     if (commandContext != null) {
                         commandContext.release();
@@ -698,10 +729,11 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                     Optional.ofNullable(commandConsumerTracker.result()).ifPresent(consumer -> consumer.close(null));
 
                     if (ClientErrorException.class.isInstance(t)) {
+                        metrics.reportTelemetry(endpoint, tenant, MetricsTags.ProcessingOutcome.UNPROCESSABLE, qos, getTtdStatus(ctx), getMicrometerSample(ctx));
                         final ClientErrorException e = (ClientErrorException) t;
                         ctx.fail(e);
                     } else {
-                        metrics.incrementUndeliverableMessages(endpointName, tenant);
+                        metrics.reportTelemetry(endpoint, tenant, MetricsTags.ProcessingOutcome.UNDELIVERABLE, qos, getTtdStatus(ctx), getMicrometerSample(ctx));
                         HttpUtils.serviceUnavailable(ctx, 2, "temporarily unavailable");
                     }
                     TracingHelper.logError(currentSpan, t);
@@ -754,7 +786,6 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                 currentSpan.log("device closed connection");
                 cancelCommandReceptionTimer(ctx);
                 messageConsumer.close(null);
-                metrics.incrementNoCommandReceivedAndTTDExpired(tenantId);
             });
         }
     }
@@ -841,6 +872,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                                 // put command context to routing context and notify
                                 ctx.put(CommandContext.KEY_COMMAND_CONTEXT, commandContext);
                                 cancelCommandReceptionTimer(ctx);
+                                setTtdStatus(ctx, MetricsTags.TtdStatus.COMMAND);
                                 responseReady.tryComplete();
                             }
                         } else {
@@ -904,6 +936,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
             } else {
                 // no command to be sent,
                 // send empty response
+                setTtdStatus(ctx, MetricsTags.TtdStatus.EXPIRED);
                 responseReady.complete();
             }
         });
@@ -1009,15 +1042,16 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
         }
     }
 
-    private static Integer getQoSLevel(final String qosValue) {
-        try {
-            if (qosValue == null) {
-                return null;
-            } else {
-                return Integer.parseInt(qosValue) != AT_LEAST_ONCE ? HEADER_QOS_INVALID : AT_LEAST_ONCE;
+    private static MetricsTags.QoS getQoSLevel(final String qosValue) {
+
+        if (qosValue == null) {
+            return MetricsTags.QoS.AT_MOST_ONCE;
+        } else {
+            try {
+                return MetricsTags.QoS.from(Integer.parseInt(qosValue));
+            } catch (final NumberFormatException e) {
+                return MetricsTags.QoS.UNKNOWN;
             }
-        } catch (final NumberFormatException e) {
-            return HEADER_QOS_INVALID;
         }
     }
 }

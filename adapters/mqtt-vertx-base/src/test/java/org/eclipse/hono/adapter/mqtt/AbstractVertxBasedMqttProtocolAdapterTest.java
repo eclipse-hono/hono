@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -49,6 +49,8 @@ import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.TenantClient;
 import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.service.auth.device.AuthHandler;
+import org.eclipse.hono.service.metric.MetricsTags;
+import org.eclipse.hono.util.EndpointType;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
@@ -466,7 +468,8 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         adapter.handlePublishedMessage(newMqttContext(msg, device));
 
         // THEN the message is not processed
-        verify(metrics, never()).incrementProcessedMessages(anyString(), anyString());
+        verify(metrics, never())
+            .reportTelemetry(any(EndpointType.class), anyString(), eq(MetricsTags.ProcessingOutcome.FORWARDED), any(MetricsTags.QoS.class), any());
         // and no PUBACK is sent to the device
         verify(device, never()).publishAcknowledge(anyInt());
     }
@@ -504,7 +507,8 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
                     ctx.assertEquals(HTTP_NOT_FOUND,
                             ((ClientErrorException) t).getErrorCode());
                     // and the message has not been reported as processed
-                    verify(metrics, never()).incrementProcessedMessages(anyString(), anyString());
+                    verify(metrics, never())
+                        .reportTelemetry(any(EndpointType.class), anyString(), eq(MetricsTags.ProcessingOutcome.FORWARDED), any(MetricsTags.QoS.class), any());
                 }));
     }
 
@@ -544,7 +548,8 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
                     ctx.assertEquals(HttpURLConnection.HTTP_FORBIDDEN,
                             ((ClientErrorException) t).getErrorCode());
                     // and the message has not been reported as processed
-                    verify(metrics, never()).incrementProcessedMessages(anyString(), anyString());
+                    verify(metrics, never())
+                        .reportTelemetry(any(EndpointType.class), anyString(), eq(MetricsTags.ProcessingOutcome.FORWARDED), any(MetricsTags.QoS.class), any());
                 }));
     }
 
@@ -608,12 +613,14 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         // THEN the device does not receive a PUBACK
         verify(endpoint, never()).publishAcknowledge(anyInt());
         // and the message has not been reported as processed
-        verify(metrics, never()).incrementProcessedMessages(anyString(), anyString());
+        verify(metrics, never())
+            .reportTelemetry(any(EndpointType.class), anyString(), eq(MetricsTags.ProcessingOutcome.FORWARDED), any(MetricsTags.QoS.class), any());
 
         // until the message has been settled and accepted
         outcome.complete(mock(ProtonDelivery.class));
         verify(endpoint).publishAcknowledge(5555555);
-        verify(metrics).incrementProcessedMessages(anyString(), anyString());
+        verify(metrics)
+            .reportTelemetry(any(EndpointType.class), anyString(), eq(MetricsTags.ProcessingOutcome.FORWARDED), eq(MetricsTags.QoS.AT_LEAST_ONCE), any());
     }
 
     /**
@@ -649,7 +656,8 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         // THEN the device has not received a PUBACK
         verify(endpoint, never()).publishAcknowledge(anyInt());
         // and the message has not been reported as processed
-        verify(metrics, never()).incrementProcessedMessages(anyString(), anyString());
+        verify(metrics, never())
+            .reportTelemetry(any(EndpointType.class), anyString(), eq(MetricsTags.ProcessingOutcome.FORWARDED), any(MetricsTags.QoS.class), any());
 
     }
 
@@ -673,7 +681,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         final MqttPublishMessage messageFromDevice = mock(MqttPublishMessage.class);
         when(messageFromDevice.qosLevel()).thenReturn(MqttQoS.AT_LEAST_ONCE);
         when(messageFromDevice.messageId()).thenReturn(5555555);
-        when(messageFromDevice.topicName()).thenReturn("t/tenant/device");
+        when(messageFromDevice.topicName()).thenReturn("t/my-tenant/4712");
         when(messageFromDevice.isRetain()).thenReturn(Boolean.TRUE);
         final MqttContext context = newMqttContext(messageFromDevice, endpoint);
 
@@ -686,7 +694,8 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
             verify(sender).sendAndWaitForOutcome(msgCaptor.capture(), (SpanContext) any());
             // including the "retain" annotation
             assertThat(MessageHelper.getAnnotation(msgCaptor.getValue(), MessageHelper.ANNOTATION_X_OPT_RETAIN, Boolean.class), is(Boolean.TRUE));
-            verify(metrics).incrementProcessedMessages(TelemetryConstants.TELEMETRY_ENDPOINT, "my-tenant");
+            verify(metrics)
+                .reportTelemetry(eq(EndpointType.TELEMETRY), eq("my-tenant"), eq(MetricsTags.ProcessingOutcome.FORWARDED), eq(MetricsTags.QoS.AT_LEAST_ONCE), any());
         }));
     }
 

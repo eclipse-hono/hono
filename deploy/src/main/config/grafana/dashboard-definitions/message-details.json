@@ -12,10 +12,10 @@
       }
     ]
   },
-  "editable": false,
+  "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "iteration": 1543839420011,
+  "iteration": 1548935257693,
   "links": [],
   "panels": [
     {
@@ -57,7 +57,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "irate(hono_messages_processed_total{component_name=~\"$componentname\",type=~\"$type\",tenant=~\"$tenant\",host=~\"$instance\"}[$__range])",
+          "expr": "irate(hono_messages_received_seconds_count{status=\"forwarded\",component_name=~\"$componentname\",type=~\"$type\",tenant=~\"$tenant\",host=~\"$instance\"}[$__range])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{component_name}} - {{type}} - {{host}}",
@@ -165,7 +165,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "sum(rate(hono_messages_processed_total{component_name=~\"$componentname\",type=~\"$type\",tenant=~\"$tenant\",host=~\"$instance\"}[$__interval]))",
+          "expr": "rate(hono_messages_received_seconds_count{status=\"forwarded\",component_name=~\"$componentname\",type=~\"$type\",tenant=~\"$tenant\",host=~\"$instance\"}[$__interval])",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A"
@@ -179,7 +179,7 @@
       "valueMaps": [
         {
           "op": "=",
-          "text": "N/A",
+          "text": "0",
           "value": "null"
         }
       ],
@@ -246,7 +246,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "sum(rate(hono_messages_processed_total{component_name=~\"$componentname\",type=~\"$type\",tenant=~\"$tenant\",host=~\"$instance\"}[$__interval]))",
+          "expr": "rate(hono_messages_received_seconds_count{status=\"forwarded\",component_name=~\"$componentname\",type=~\"$type\",tenant=~\"$tenant\",host=~\"$instance\"}[$__interval])",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A"
@@ -260,7 +260,7 @@
       "valueMaps": [
         {
           "op": "=",
-          "text": "N/A",
+          "text": "0",
           "value": "null"
         }
       ],
@@ -327,7 +327,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "sum(rate(hono_messages_processed_total{component_name=~\"$componentname\",type=~\"$type\",tenant=~\"$tenant\",host=~\"$instance\"}[$__interval]))",
+          "expr": "rate(hono_messages_received_seconds_count{status=\"forwarded\",component_name=~\"$componentname\",type=~\"$type\",tenant=~\"$tenant\",host=~\"$instance\"}[$__interval])",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A"
@@ -341,7 +341,7 @@
       "valueMaps": [
         {
           "op": "=",
-          "text": "N/A",
+          "text": "0",
           "value": "null"
         }
       ],
@@ -508,7 +508,7 @@
       "valueMaps": [
         {
           "op": "=",
-          "text": "N/A",
+          "text": "0",
           "value": "null"
         }
       ],
@@ -589,7 +589,7 @@
       "valueMaps": [
         {
           "op": "=",
-          "text": "N/A",
+          "text": "0",
           "value": "null"
         }
       ],
@@ -670,7 +670,7 @@
       "valueMaps": [
         {
           "op": "=",
-          "text": "N/A",
+          "text": "0",
           "value": "null"
         }
       ],
@@ -715,7 +715,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "irate(hono_messages_undeliverable_total{component_name=~\"$componentname\",type=~\"$type\",tenant=~\"$tenant\",host=~\"$instance\"}[$__range])",
+          "expr": "irate(hono_messages_received_seconds_count{component_name=~\"$componentname\",type=~\"$type\",status!=\"forwarded\",tenant=~\"$tenant\",host=~\"$instance\"}[$__range])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{component_name}} - {{type}} - {{host}}",
@@ -772,7 +772,7 @@
         "#d44a3a"
       ],
       "datasource": "hono_metrics",
-      "decimals": 2,
+      "decimals": 0,
       "format": "percentunit",
       "gauge": {
         "maxValue": 0.2,
@@ -824,7 +824,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "sum(rate(hono_messages_undeliverable_total{component_name=~\"$componentname\",type=~\"$type\",tenant=~\"$tenant\",host=~\"$instance\"}[$__interval]))\n/\n(\n  sum(rate(hono_messages_undeliverable_total{component_name=~\"$componentname\",type=~\"$type\",tenant=~\"$tenant\",host=~\"$instance\"}[$__interval]))\n  +\n  sum(rate(hono_messages_processed_total{component_name=~\"$componentname\",type=~\"$type\",tenant=~\"$tenant\",host=~\"$instance\"}[$__interval]))\n)",
+          "expr": "rate(hono_messages_received_seconds_count{component_name=~\"$componentname\",type=~\"$type\",status!=\"forwarded\",tenant=~\"$tenant\",host=~\"$instance\"}[$__interval])\n/\n rate(hono_messages_received_seconds_count{component_name=~\"$componentname\",type=~\"$type\",tenant=~\"$tenant\",host=~\"$instance\"}[$__interval])\n",
           "format": "time_series",
           "instant": false,
           "intervalFactor": 1,
@@ -839,7 +839,7 @@
       "valueMaps": [
         {
           "op": "=",
-          "text": "N/A",
+          "text": "0%",
           "value": "null"
         }
       ],

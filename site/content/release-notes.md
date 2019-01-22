@@ -8,6 +8,13 @@ title = "Release Notes"
 
 * The MQTT adapter now supports commands to be published using QoS 1. Please refer to [MQTT adapter User Guide]({{< relref "/user-guide/mqtt-adapter.md" >}}) for details.
 
+### API Changes
+
+* The layout and structure of the metrics reported by Hono have been changed substantially. Many of the existing meters and tags
+  have been changed or replaced in order to provide a more consistent set of metrics and increase the value of the information
+  being reported. The legacy metrics still remain unchanged, though.
+  Please refer to the [Metrics definition]({{< ref "/api/Metrics.md" >}}) for details.
+ 
 ### Depreciations
 
 * The already deprecated Hono Messaging component has been removed altogether from Hono.

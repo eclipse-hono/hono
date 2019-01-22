@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,13 +14,13 @@
 package org.eclipse.hono.adapter.mqtt;
 
 import java.util.Objects;
-import java.util.Optional;
 
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.util.EndpointType;
 import org.eclipse.hono.util.MapBasedExecutionContext;
 import org.eclipse.hono.util.ResourceIdentifier;
 
+import io.micrometer.core.instrument.Timer.Sample;
 import io.netty.handler.codec.mqtt.MqttQoS;
 import io.vertx.mqtt.MqttEndpoint;
 import io.vertx.mqtt.messages.MqttPublishMessage;
@@ -37,6 +37,8 @@ public final class MqttContext extends MapBasedExecutionContext {
     private Device authenticatedDevice;
     private ResourceIdentifier topic;
     private String contentType;
+    private Sample timer;
+    private EndpointType endpoint;
 
     private MqttContext() {
     }
@@ -79,18 +81,14 @@ public final class MqttContext extends MapBasedExecutionContext {
         result.message = publishedMessage;
         result.deviceEndpoint = deviceEndpoint;
         result.authenticatedDevice = authenticatedDevice;
-        ResourceIdentifier t = null;
-        try {
-            t = ResourceIdentifier.fromString(publishedMessage.topicName());
-            if (t.getEndpoint().length() == 1) {
-                // expand short name
-                final String[] path = t.getResourcePath();
-                path[0] = EndpointType.fromString(t.getEndpoint()).canonicalName();
-                t = ResourceIdentifier.fromPath(path);
+        if (publishedMessage.topicName() != null) {
+            try {
+                result.topic = ResourceIdentifier.fromString(publishedMessage.topicName());
+                result.endpoint = EndpointType.fromString(result.topic.getEndpoint());
+            } catch (final IllegalArgumentException e) {
+                // malformed topic
             }
-        } catch (final Throwable e) {
         }
-        result.topic = t;
         return result;
     }
 
@@ -185,19 +183,16 @@ public final class MqttContext extends MapBasedExecutionContext {
     }
 
     /**
-     * Gets the canonical name of the endpoint that the
-     * message has been published to.
+     * Gets the endpoint that the message has been published to.
      * <p>
      * The name is determined from the endpoint path segment of the
      * topic that the message has been published to.
      * 
-     * @return The endpoint name or {@code null} if the message does not
+     * @return The endpoint or {@code null} if the message does not
      *         contain a topic.
      */
-    public String endpoint() {
-        return Optional.ofNullable(topic)
-                .map(t -> t.getEndpoint())
-                .orElse(null);
+    public EndpointType endpoint() {
+        return endpoint;
     }
 
     /**
@@ -221,5 +216,25 @@ public final class MqttContext extends MapBasedExecutionContext {
         if (message != null && deviceEndpoint != null) {
             deviceEndpoint.publishAcknowledge(message.messageId());
         }
+    }
+
+    /**
+     * Sets the object to use for measuring the time it takes to
+     * process this request.
+     * 
+     * @param timer The timer.
+     */
+    public void setTimer(final Sample timer) {
+        this.timer = timer;
+    }
+
+    /**
+     * Gets the object used for measuring the time it takes to
+     * process this request.
+     * 
+     * @return The timer or {@code null} if not set.
+     */
+    public Sample getTimer() {
+        return timer;
     }
 }

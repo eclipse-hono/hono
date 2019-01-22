@@ -142,9 +142,10 @@ public abstract class AbstractLegacyMetricsConfig {
      */
     public MeterFilter[] getMeterFilters() {
         return new MeterFilter[] {
+                                MeterFilter.denyNameStartsWith(MicrometerBasedMetrics.METER_MESSAGES_RECEIVED),
                                 MeterFilter.replaceTagValues(MetricsTags.TAG_HOST, host -> host.replace('.', '_')),
                                 MeterFilter.replaceTagValues(MetricsTags.TAG_TENANT, tenant -> tenant.replace('.', '_')),
-                                MeterFilter.ignoreTags(MetricsTags.TAG_COMPONENT_TYPE),
+                                MeterFilter.ignoreTags(MetricsTags.ComponentType.TAG_NAME),
                                 meterTypeMapper() };
     }
 

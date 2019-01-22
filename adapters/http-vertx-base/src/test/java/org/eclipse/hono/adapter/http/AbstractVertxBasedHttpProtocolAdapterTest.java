@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -43,7 +43,9 @@ import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.ResourceConflictException;
 import org.eclipse.hono.client.TenantClient;
 import org.eclipse.hono.service.auth.DeviceUser;
+import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.EndpointType;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
@@ -55,7 +57,6 @@ import org.junit.Test;
 import org.junit.rules.Timeout;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.Mockito;
 
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
@@ -275,7 +276,8 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         // and the message has not been forwarded downstream
         verify(sender, never()).send(any(Message.class));
         // and has not been reported as processed
-        verify(metrics, never()).incrementProcessedMessages(anyString(), anyString());
+        verify(metrics, never())
+            .reportTelemetry(any(EndpointType.class), anyString(), eq(MetricsTags.ProcessingOutcome.FORWARDED), any(MetricsTags.QoS.class), any(MetricsTags.TtdStatus.class), any());
     }
 
     /**
@@ -308,14 +310,16 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         // THEN the device does not get a response
         verify(response, never()).end();
         // and the message is not reported as being processed
-        verify(metrics, never()).incrementProcessedMessages(anyString(), anyString());
+        verify(metrics, never())
+            .reportTelemetry(any(EndpointType.class), anyString(), eq(MetricsTags.ProcessingOutcome.FORWARDED), any(MetricsTags.QoS.class), any(MetricsTags.TtdStatus.class), any());
 
         // until the event has been accepted
         outcome.complete(mock(ProtonDelivery.class));
         verify(response).setStatusCode(202);
         verify(response).end();
-        verify(metrics).incrementProcessedMessages(anyString(), eq("tenant"));
-        verify(metrics).incrementProcessedPayload(anyString(), eq("tenant"), eq((long) payload.length()));
+        verify(metrics)
+            .reportTelemetry(any(EndpointType.class), eq("tenant"), eq(MetricsTags.ProcessingOutcome.FORWARDED), any(MetricsTags.QoS.class), any(MetricsTags.TtdStatus.class), any());
+        verify(metrics).incrementProcessedPayload(any(EndpointType.class), eq("tenant"), eq((long) payload.length()));
     }
 
     /**
@@ -342,7 +346,8 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         // THEN the device gets a 400
         assertContextFailedWithClientError(ctx, HttpURLConnection.HTTP_BAD_REQUEST);
         // and has not been reported as processed
-        verify(metrics, never()).incrementProcessedMessages(anyString(), anyString());
+        verify(metrics, never())
+            .reportTelemetry(any(EndpointType.class), anyString(), eq(MetricsTags.ProcessingOutcome.FORWARDED), any(MetricsTags.QoS.class), any(MetricsTags.TtdStatus.class), any());
     }
 
     /**
@@ -505,8 +510,9 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         verify(response).setStatusCode(202);
         verify(response).end();
         // and the message has been reported as processed
-        verify(metrics).incrementProcessedMessages(anyString(), eq("tenant"));
-        verify(metrics).incrementProcessedPayload(anyString(), eq("tenant"), eq((long) payload.length()));
+        verify(metrics)
+            .reportTelemetry(any(EndpointType.class), eq("tenant"), eq(MetricsTags.ProcessingOutcome.FORWARDED), any(MetricsTags.QoS.class), any(MetricsTags.TtdStatus.class), any());
+        verify(metrics).incrementProcessedPayload(any(EndpointType.class), eq("tenant"), eq((long) payload.length()));
     }
 
     /**
@@ -634,13 +640,14 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         when(response.closed()).thenReturn(false);
 
 
-        final RoutingContext ctx = mock(RoutingContext.class, Mockito.RETURNS_SMART_NULLS);
+        final RoutingContext ctx = mock(RoutingContext.class);
         when(ctx.getBody()).thenReturn(payload);
         when(ctx.response()).thenReturn(response);
         when(ctx.request()).thenReturn(request);
         when(ctx.get(TracingHandler.CURRENT_SPAN)).thenReturn(mock(Span.class));
         when(ctx.vertx()).thenReturn(vertx);
         when(ctx.get(CommandContext.KEY_COMMAND_CONTEXT)).thenReturn(null);
+        when(ctx.get(MetricsTags.TtdStatus.class.getName())).thenReturn(MetricsTags.TtdStatus.NONE);
 
         if (contentType != null) {
             final MIMEHeader headerContentType = mock(MIMEHeader.class);

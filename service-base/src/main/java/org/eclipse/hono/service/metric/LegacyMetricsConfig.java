@@ -60,7 +60,7 @@ public class LegacyMetricsConfig extends AbstractLegacyMetricsConfig {
                     // itself
                     newTags.add(Tag.of(TAG_TYPE_SUFFIX, "count"));
 
-                } else if (MicrometerBasedMetrics.METER_MESSAGES_UNDELIVERABLE.equals(id.getName())) {
+                } else if (MicrometerBasedLegacyMetrics.METER_MESSAGES_UNDELIVERABLE.equals(id.getName())) {
 
                     // map component name to protocol
                     mapComponentName(id, newTags);

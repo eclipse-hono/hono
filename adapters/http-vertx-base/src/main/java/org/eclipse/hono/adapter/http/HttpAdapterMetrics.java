@@ -30,6 +30,9 @@ public interface HttpAdapterMetrics extends Metrics {
         }
     }
 
+    /**
+     * The no-op implementation.
+     */
     HttpAdapterMetrics NOOP = new Noop();
 
     // empty for now

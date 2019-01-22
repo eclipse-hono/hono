@@ -22,6 +22,7 @@ import org.eclipse.californium.core.server.resources.CoapExchange;
 import org.eclipse.hono.adapter.coap.AbstractVertxBasedCoapAdapter;
 import org.eclipse.hono.adapter.coap.CoapAdapterProperties;
 import org.eclipse.hono.adapter.coap.CoapAuthenticationHandler;
+import org.eclipse.hono.adapter.coap.CoapContext;
 import org.eclipse.hono.adapter.coap.CoapErrorResponse;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.util.Constants;
@@ -122,7 +123,8 @@ public final class VertxBasedCoapAdapter extends AbstractVertxBasedCoapAdapter<C
                 getAuthenticatedExtendedDevice(null, exchange,
                         (device) -> {
                             final boolean waitForOutcome = useWaitForOutcome(exchange);
-                            uploadTelemetryMessage(exchange, device.authenticatedDevice, device.originDevice,
+                            final CoapContext ctx = CoapContext.fromRequest(exchange);
+                            uploadTelemetryMessage(ctx, device.authenticatedDevice, device.originDevice,
                                     waitForOutcome);
                         });
             }
@@ -132,7 +134,8 @@ public final class VertxBasedCoapAdapter extends AbstractVertxBasedCoapAdapter<C
                 getExtendedDevice(exchange,
                         (extDevice) -> {
                             final boolean waitForOutcome = useWaitForOutcome(exchange);
-                            uploadTelemetryMessage(exchange, extDevice.authenticatedDevice, extDevice.originDevice,
+                            final CoapContext ctx = CoapContext.fromRequest(exchange);
+                            uploadTelemetryMessage(ctx, extDevice.authenticatedDevice, extDevice.originDevice,
                                     waitForOutcome);
                         });
             }
@@ -143,13 +146,19 @@ public final class VertxBasedCoapAdapter extends AbstractVertxBasedCoapAdapter<C
             @Override
             public void handlePOST(final CoapExchange exchange) {
                 getAuthenticatedExtendedDevice(null, exchange,
-                        (device) -> uploadEventMessage(exchange, device.authenticatedDevice, device.originDevice));
+                        (device) -> {
+                            final CoapContext ctx = CoapContext.fromRequest(exchange);
+                            uploadEventMessage(ctx, device.authenticatedDevice, device.originDevice);
+                        });
             }
 
             @Override
             public void handlePUT(final CoapExchange exchange) {
                 getExtendedDevice(exchange,
-                        (device) -> uploadEventMessage(exchange, device.authenticatedDevice, device.originDevice));
+                        (device) -> {
+                            final CoapContext ctx = CoapContext.fromRequest(exchange);
+                            uploadEventMessage(ctx, device.authenticatedDevice, device.originDevice);
+                        });
             }
         };
 

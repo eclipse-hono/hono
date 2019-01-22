@@ -75,7 +75,7 @@ public class LegacyMetricsConfigTest {
     public void testMappingOfHttpAdapterMetrics() {
 
         final Tags httpTags = defaultTags
-                .and(MetricsTags.TAG_COMPONENT_TYPE, MetricsTags.VALUE_COMPONENT_TYPE_ADAPTER)
+                .and(MetricsTags.ComponentType.ADAPTER.asTag())
                 .and(MetricsTags.TAG_COMPONENT_NAME, Constants.PROTOCOL_ADAPTER_TYPE_HTTP)
                 .and(MetricsTags.TAG_TENANT, TENANT);
 
@@ -90,7 +90,7 @@ public class LegacyMetricsConfigTest {
     public void testMappingOfMqttAdapterMetrics() {
 
         final Tags mqttTags = defaultTags
-                .and(MetricsTags.TAG_COMPONENT_TYPE, MetricsTags.VALUE_COMPONENT_TYPE_ADAPTER)
+                .and(MetricsTags.ComponentType.ADAPTER.asTag())
                 .and(MetricsTags.TAG_COMPONENT_NAME, Constants.PROTOCOL_ADAPTER_TYPE_MQTT);
         assertConnectionMetrics("mqtt", mqttTags);
 
@@ -108,7 +108,7 @@ public class LegacyMetricsConfigTest {
                         HOSTNAME_MAPPED, protocol, TENANT));
 
         assertMapping(
-                new Id(MicrometerBasedMetrics.METER_COMMANDS_TTD_EXPIRED, tags, null, null, Type.COUNTER),
+                new Id(MicrometerBasedLegacyMetrics.METER_COMMANDS_TTD_EXPIRED, tags, null, null, Type.COUNTER),
                 String.format("%s.meter.hono.%s.commands.%s.ttd.expired",
                         HOSTNAME_MAPPED, protocol, TENANT));
 
@@ -122,11 +122,11 @@ public class LegacyMetricsConfigTest {
         final Tags telemetryTags = tags.and(MetricsTags.TAG_TYPE, TelemetryConstants.TELEMETRY_ENDPOINT);
 
         assertMapping(
-                new Id(MicrometerBasedMetrics.METER_MESSAGES_PROCESSED, telemetryTags, null, null, Type.COUNTER),
+                new Id(MicrometerBasedLegacyMetrics.METER_MESSAGES_PROCESSED, telemetryTags, null, null, Type.COUNTER),
                 String.format("%s.meter.hono.%s.messages.telemetry.%s.processed",
                         HOSTNAME_MAPPED, protocol, TENANT));
         assertMapping(
-                new Id(MicrometerBasedMetrics.METER_MESSAGES_UNDELIVERABLE, telemetryTags, null, null, Type.COUNTER),
+                new Id(MicrometerBasedLegacyMetrics.METER_MESSAGES_UNDELIVERABLE, telemetryTags, null, null, Type.COUNTER),
                 String.format("%s.counter.hono.%s.messages.telemetry.%s.undeliverable",
                         HOSTNAME_MAPPED, protocol, TENANT));
 
@@ -135,11 +135,11 @@ public class LegacyMetricsConfigTest {
         final Tags eventTags = tags.and(MetricsTags.TAG_TYPE, EventConstants.EVENT_ENDPOINT);
 
         assertMapping(
-                new Id(MicrometerBasedMetrics.METER_MESSAGES_PROCESSED, eventTags, null, null, Type.COUNTER),
+                new Id(MicrometerBasedLegacyMetrics.METER_MESSAGES_PROCESSED, eventTags, null, null, Type.COUNTER),
                 String.format("%s.meter.hono.%s.messages.event.%s.processed",
                         HOSTNAME_MAPPED, protocol, TENANT));
         assertMapping(
-                new Id(MicrometerBasedMetrics.METER_MESSAGES_UNDELIVERABLE, eventTags, null, null, Type.COUNTER),
+                new Id(MicrometerBasedLegacyMetrics.METER_MESSAGES_UNDELIVERABLE, eventTags, null, null, Type.COUNTER),
                 String.format("%s.counter.hono.%s.messages.event.%s.undeliverable",
                         HOSTNAME_MAPPED, protocol, TENANT));
     }
