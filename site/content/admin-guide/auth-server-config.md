@@ -8,8 +8,6 @@ The Auth Server component exposes a service endpoint implementing Eclipse Hono&t
 
 This component serves as a default implementation of the *Authentication* API only. On startup, it reads in all identities and their authorities from a JSON file from the file system. All data is then kept in memory and there are no remote service APIs for managing the identities and their authorities.
 
-In a production environment, a more sophisticated implementation should be used instead.
-
 The Auth Server is implemented as a Spring Boot application. It can be run either directly from the command line or by means of starting the corresponding [Docker image](https://hub.docker.com/r/eclipse/hono-service-auth/) created from it.
 
 ## Service Configuration
