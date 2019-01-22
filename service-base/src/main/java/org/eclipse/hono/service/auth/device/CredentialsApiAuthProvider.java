@@ -130,12 +130,6 @@ public abstract class CredentialsApiAuthProvider<T extends AbstractDeviceCredent
     /**
      * Verifies that the credentials provided by a device during the authentication
      * process match the credentials on record for that device.
-     * <p>
-     * This default implementation simply invokes the {@link DeviceCredentials#validate(CredentialsObject)}
-     * method in order to validate the credentials.
-     * <p>
-     * Subclasses may override this method in order to perform more specific checks
-     * for certain types of credentials.
      * 
      * @param deviceCredentials The credentials provided by the device.
      * @param credentialsOnRecord The credentials on record.

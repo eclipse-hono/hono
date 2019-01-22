@@ -27,7 +27,7 @@ public final class TimeUntilDisconnectNotification {
     /**
      * Define the maximum time in milliseconds until a disconnect notification is expired to be 10000 days.
      */
-    private static final long MAX_EXPIRY_MILLISECONDS = 60 * 60 * 24 * 10000 * 1000;
+    private static final long MAX_EXPIRY_MILLISECONDS = (long) 60 * 60 * 24 * 10000 * 1000;
 
     private String tenantId;
 
