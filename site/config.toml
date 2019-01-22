@@ -50,25 +50,25 @@ pluralizeListTitles = "false"
 
 [[menu.main]]
   name   = "Concepts"
-  identifier = "Concepts"
+  identifier = "concepts"
   url    = "/concepts/"
   weight = 180
 
 [[menu.main]]
 	name   = "User Guide"
-	identifier = "User Guide"
+	identifier = "user-guide"
 	url    = "/user-guide/"
   weight = 200
 
 [[menu.main]]
   name   = "Admin Guide"
-  identifier = "Admin Guide"
+  identifier = "admin-guide"
   url    = "/admin-guide/"
   weight = 300
 
 [[menu.main]]
 	name   = "Developer Guide"
-	identifier = "Developer Guide"
+	identifier = "dev-guide"
 	url    = "/dev-guide/"
   weight = 380
 
@@ -80,19 +80,19 @@ pluralizeListTitles = "false"
 
 [[menu.main]]
   name   = "Deployment"
-  identifier = "Deployment"
+  identifier = "deployment"
   url    = "/deployment/"
   weight = 470
 
 [[menu.main]]
   name   = "Architecture"
-  identifier = "Architecture"
+  identifier = "architecture"
   url    = "/architecture/"
   weight = 500
 
 [[menu.main]]
   name   = "Community"
-  identifier = "Community"
+  identifier = "community"
   url    = "/community/"
   weight = 600
 
