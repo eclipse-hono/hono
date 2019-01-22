@@ -152,7 +152,7 @@ public class Commander extends AbstractClient {
     /**
      * Command class that encapsulates hono command and payload.
      */
-    private class Command {
+    private static class Command {
 
         private final String name;
         private final String payload;
