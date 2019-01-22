@@ -45,6 +45,8 @@ The newest features and bug fixes are available in *milestones* that are publish
 *state of development* which also means that APIs or features may change from one milestone to the other.
 Installation works in the same way as for the latest stable release.
 
+* [Eclipse Hono 0.9-M2 Archive](https://www.eclipse.org/downloads/download.php?file=/hono/eclipse-hono-deploy-0.9-M2.tar.gz)
+* [Eclipse Hono 0.9-M2 Command Line Client](https://www.eclipse.org/downloads/download.php?file=/hono/hono-cli-0.9-M2-exec.jar)
 * [Eclipse Hono 0.9-M1 Archive](https://www.eclipse.org/downloads/download.php?file=/hono/eclipse-hono-deploy-0.9-M1.tar.gz)
 * [Eclipse Hono 0.9-M1 Command Line Client](https://www.eclipse.org/downloads/download.php?file=/hono/hono-cli-0.9-M1-exec.jar)
 

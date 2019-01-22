@@ -2,7 +2,7 @@
 title = "Release Notes"
 +++
 
-## 0.9-M2 (not released yet)
+## 0.9-M2
 
 ### New Features
 
@@ -35,7 +35,7 @@ title = "Release Notes"
   has been renamed to *component-type*. The *protocol* tag formerly used by adapters to indicate the transport protocol
   that a message has been received over, has been replaced by the generic *component-name* tag which indicates the name
   of the component that a metric has been reported by. Please refer to the [Metrics API]({{< ref "/api/Metrics.md" >}})
-  for details.
+  for details. Note that these changes do not affect the legacy Graphite based metrics back end.
 
 ### Depreciations
 
