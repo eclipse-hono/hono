@@ -16,7 +16,7 @@ title = "Release Notes"
   in Hono 0.8, has been removed.
 * The protocol adapters can now be configured with a custom *DNS timeout* value, limiting the time that the adapter
   will wait for the response to a DNS query. By default, a DNS query will time out after 5 seconds.
-  Please refer to the [Admin Guides]({{< ref "admin-guide" >}}) for details regarding the new configuration variable.
+  Please refer to the protocol adapter admin guides for details regarding the new configuration variable.
 * The following configuration variables have been added to `HonoClient`:
 
   * *connectTimeout*: Sets a limit on the time that the client will wait for a TCP/TLS connection with the peer
