@@ -9,6 +9,10 @@ The south bound API is used by protocol adapters to upload telemetry data and ev
 
 The component is implemented as a Spring Boot application. It can be run either directly from the command line or by means of starting the corresponding [Docker image](https://hub.docker.com/r/eclipse/hono-service-messaging/) created from it.
 
+{{% warning %}}
+The Hono Messaging component has been deprecated in Hono 0.9-M2 and will be removed in 0.9.
+{{% /warning %}}
+
 ## Service Configuration
 
 The following table provides an overview of the environment variables and corresponding command line options for configuring the Hono Messaging component.

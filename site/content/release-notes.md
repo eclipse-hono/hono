@@ -37,6 +37,12 @@ title = "Release Notes"
   of the component that a metric has been reported by. Please refer to the [Metrics API]({{< ref "/api/Metrics.md" >}})
   for details.
 
+### Depreciations
+
+* The Hono Messaging component is now  deprecated and will be removed from Hono in version 0.9 altogether.
+  The example deployment has not been using Hono Messaging since 0.6 and there is no practical reason for
+  using it anymore.
+
 ## 0.9-M1
 
 ### New Features
