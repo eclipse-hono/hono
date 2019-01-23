@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -16,7 +16,38 @@ package org.eclipse.hono.util;
  * Utility used to determine type of the endpoint.
  */
 public enum EndpointType {
-    TELEMETRY, EVENT, CONTROL, UNKNOWN;
+
+    /**
+     * The endpoint for telemetry messages.
+     */
+    TELEMETRY(TelemetryConstants.TELEMETRY_ENDPOINT),
+    /**
+     * The endpoint for events.
+     */
+    EVENT(EventConstants.EVENT_ENDPOINT),
+    /**
+     * The endpoint for command &amp; control messages.
+     */
+    CONTROL(CommandConstants.COMMAND_ENDPOINT),
+    /**
+     * The unknown endpoint.
+     */
+    UNKNOWN("unknown");
+
+    private final String canonicalName;
+
+    EndpointType(final String canonicalName) {
+        this.canonicalName = canonicalName;
+    }
+
+    /**
+     * Gets this type's canonical name.
+     * 
+     * @return The name.
+     */
+    public String canonicalName() {
+        return canonicalName;
+    }
 
     /**
      * Gets the endpoint type from a string value.

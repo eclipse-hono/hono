@@ -19,6 +19,9 @@ import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
 import org.eclipse.hono.auth.Device;
+import org.eclipse.hono.util.CommandConstants;
+import org.eclipse.hono.util.EventConstants;
+import org.eclipse.hono.util.TelemetryConstants;
 import org.junit.Test;
 
 import io.vertx.mqtt.MqttEndpoint;
@@ -49,9 +52,37 @@ public class MqttContextTest {
      */
     @Test
     public void testTenantIsRetrievedFromTopic() {
-        final MqttPublishMessage msg = mock(MqttPublishMessage.class);
-        when(msg.topicName()).thenReturn("t/tenant/device");
+        final MqttPublishMessage msg = newMessage(TelemetryConstants.TELEMETRY_ENDPOINT_SHORT, "tenant", "device");
         final MqttContext context = MqttContext.fromPublishPacket(msg, mock(MqttEndpoint.class));
         assertThat(context.tenant(), is("tenant"));
+    }
+
+    /**
+     * Verifies that the factory method expands short names of endpoints.
+     */
+    @Test
+    public void testFactoryMethodExpandsShortNames() {
+
+        assertEndpoint(
+                newMessage(TelemetryConstants.TELEMETRY_ENDPOINT_SHORT, "tenant", "device"),
+                TelemetryConstants.TELEMETRY_ENDPOINT);
+        assertEndpoint(
+                newMessage(EventConstants.EVENT_ENDPOINT_SHORT, "tenant", "device"),
+                EventConstants.EVENT_ENDPOINT);
+        assertEndpoint(
+                newMessage(CommandConstants.COMMAND_ENDPOINT_SHORT, "tenant", "device"),
+                CommandConstants.COMMAND_ENDPOINT);
+    }
+
+    private static void assertEndpoint(final MqttPublishMessage msg, final String expectedEndpoint) {
+        final MqttContext context = MqttContext.fromPublishPacket(msg, mock(MqttEndpoint.class));
+        assertThat(context.endpoint(), is(expectedEndpoint));
+    }
+
+    private static MqttPublishMessage newMessage(final String endpoint, final String tenant, final String device) {
+
+        final MqttPublishMessage msg = mock(MqttPublishMessage.class);
+        when(msg.topicName()).thenReturn(String.format("%s/%s/%s", endpoint, tenant, device));
+        return msg;
     }
 }

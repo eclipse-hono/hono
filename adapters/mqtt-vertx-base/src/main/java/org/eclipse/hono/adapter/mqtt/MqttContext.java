@@ -17,6 +17,7 @@ import java.util.Objects;
 import java.util.Optional;
 
 import org.eclipse.hono.auth.Device;
+import org.eclipse.hono.util.EndpointType;
 import org.eclipse.hono.util.MapBasedExecutionContext;
 import org.eclipse.hono.util.ResourceIdentifier;
 
@@ -80,6 +81,12 @@ public final class MqttContext extends MapBasedExecutionContext {
         ResourceIdentifier t = null;
         try {
             t = ResourceIdentifier.fromString(publishedMessage.topicName());
+            if (t.getEndpoint().length() == 1) {
+                // expand short name
+                final String[] path = t.getResourcePath();
+                path[0] = EndpointType.fromString(t.getEndpoint()).canonicalName();
+                t = ResourceIdentifier.fromPath(path);
+            }
         } catch (final Throwable e) {
         }
         result.topic = t;
@@ -177,7 +184,11 @@ public final class MqttContext extends MapBasedExecutionContext {
     }
 
     /**
-     * Gets the name of the endpoint that the message has been published to.
+     * Gets the canonical name of the endpoint that the
+     * message has been published to.
+     * <p>
+     * The name is determined from the endpoint path segment of the
+     * topic that the message has been published to.
      * 
      * @return The endpoint name or {@code null} if the message does not
      *         contain a topic.
