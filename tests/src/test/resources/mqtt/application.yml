@@ -56,3 +56,10 @@ hono:
 spring:
   jmx:
     enabled: false
+
+management:
+  port: -1
+
+server:
+  port: -1
+  
