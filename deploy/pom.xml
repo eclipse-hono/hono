@@ -195,6 +195,11 @@
                                     </includes>
                                     <filtering>true</filtering>
                                 </resource>
+                                <resource>
+                                    <directory>${project.basedir}/src/main/deploy/resource-descriptors/prometheus</directory>
+                                    <targetPath>${project.build.directory}/deploy/helm/templates/prometheus/</targetPath>
+                                    <includes>instance.yml</includes>
+                                </resource>
                             </resources>
                             <filters>
                                 <filter>${project.basedir}/src/main/kubernetes-config.properties</filter>

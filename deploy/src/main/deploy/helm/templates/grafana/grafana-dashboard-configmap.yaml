@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: hono-grafana-dashboard
+  labels:
+    grafana_dashboard: "1"
+    version: {{ .Chart.AppVersion }}
+    group: {{ .Values.project.groupId }}
+data:
+  overview.json:
+{{ toYaml ( .Files.Get "config/grafana/dashboard-definitions/overview.json" ) | indent 4 }}
+  message-details.json:
+{{ toYaml ( .Files.Get "config/grafana/dashboard-definitions/message-details.json" ) | indent 4 }}
+  jvm-details.json:
+{{ toYaml ( .Files.Get "config/grafana/dashboard-definitions/jvm-details.json" ) | indent 4 }}
