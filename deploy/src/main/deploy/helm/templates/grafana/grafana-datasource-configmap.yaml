@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: hono-grafana-datasource
+  labels:
+    grafana_datasource: "1"
+    version: {{ .Chart.AppVersion }}
+    group: {{ .Values.project.groupId }}
+data:
+  hono-datasource.yaml:
+{{ toYaml ( .Files.Get "config/grafana/provisioning/datasources/prometheus.yaml" ) | indent 4 }}
