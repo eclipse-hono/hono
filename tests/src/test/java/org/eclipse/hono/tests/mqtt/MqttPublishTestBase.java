@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,6 +13,10 @@
 
 package org.eclipse.hono.tests.mqtt;
 
+import java.net.HttpURLConnection;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -22,12 +26,15 @@ import java.util.function.Consumer;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.MessageConsumer;
+import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.TenantObject;
 import org.junit.Test;
 
+import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
+import io.vertx.core.Handler;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.net.SelfSignedCertificate;
 import io.vertx.ext.unit.Async;
@@ -49,8 +56,12 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
     /**
      * The number of messages to send as part of the test cases.
      */
-    protected static final int MESSAGES_TO_SEND = 200;
+    protected static final int MESSAGES_TO_SEND = IntegrationTestSupport.MSG_COUNT;
+
     private final String password = "secret";
+
+    // <MQTT message ID, PUBACK handler>
+    private Map<Integer, Handler<Integer>> pendingMessages = new HashMap<>();
 
     /**
      * Sends a message on behalf of a device to the MQTT adapter.
@@ -68,6 +79,30 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
             String deviceId,
             Buffer payload,
             boolean useShortTopicName);
+
+    /**
+     * Handles the outcome of an attempt to publish a message.
+     * 
+     * @param attempt The outcome of the attempt to send a PUBLISH message.
+     * @param publishResult The overall outcome of publishing the message.
+     */
+    protected void handlePublishAttempt(final AsyncResult<Integer> attempt, final Future<?> publishResult) {
+
+        if (attempt.failed()) {
+            publishResult.fail(attempt.cause());
+        } else {
+            final Integer messageId = attempt.result();
+            final long timerId = VERTX.setTimer(300, tid -> {
+                pendingMessages.remove(messageId);
+                publishResult.fail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE));
+            });
+            pendingMessages.put(messageId, mid -> {
+                if (VERTX.cancelTimer(timerId)) {
+                    publishResult.complete();
+                }
+            });
+        }
+    }
 
     /**
      * Asserts that the ration between messages that have been received and messages
@@ -206,11 +241,13 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
             assertAdditionalMessageProperties(ctx, msg);
             received.countDown();
             lastReceivedTimestamp.set(System.currentTimeMillis());
-            if (received.getCount() % 40 == 0) {
+            if (received.getCount() % 50 == 0) {
                 LOGGER.info("messages received: {}", MESSAGES_TO_SEND - received.getCount());
             }
         })).setHandler(ctx.asyncAssertSuccess(ok -> setup.complete()));
         setup.await();
+
+        customizeConnectedClient();
 
         final long start = System.currentTimeMillis();
         while (messageCount.get() < MESSAGES_TO_SEND) {
@@ -221,7 +258,7 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
                     if (sendAttempt.failed()) {
                         LOGGER.debug("error sending message {}", messageCount.get(), sendAttempt.cause());
                     }
-                    if (messageCount.get() % 40 == 0) {
+                    if (messageCount.get() % 50 == 0) {
                         LOGGER.info("messages sent: " + messageCount.get());
                     }
                     messageSent.complete();
@@ -238,6 +275,16 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
         LOGGER.info("sent {} and received {} messages in {} milliseconds",
                 messageCount.get(), messagesReceived, lastReceivedTimestamp.get() - start);
         assertMessageReceivedRatio(messagesReceived, messageCount.get(), ctx);
+    }
+
+    /**
+     * Invoked before messages are being published by test cases.
+     * Provides a hook to e.g. further customize the MQTT client.
+     */
+    protected void customizeConnectedClient() {
+        mqttClient.publishCompletionHandler(id -> {
+            Optional.ofNullable(pendingMessages.remove(id)).ifPresent(handler -> handler.handle(id));
+        });
     }
 
     private void assertMessageProperties(final TestContext ctx, final Message msg) {
@@ -259,4 +306,5 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
     protected void assertAdditionalMessageProperties(final TestContext ctx, final Message msg) {
         // empty
     }
+
 }

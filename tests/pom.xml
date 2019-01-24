@@ -816,8 +816,6 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
               <systemProperties>
                 <auth.host>${auth.ip}</auth.host>
                 <auth.amqp.port>${auth.amqp.port}</auth.amqp.port>
-                <!-- hono.host>${hono.ip}</hono.host>
-                <hono.amqp.port>${hono.amqp.port}</hono.amqp.port-->
                 <hono.username>hono-client</hono.username>
                 <hono.password>secret</hono.password>
                 <downstream.host>${qpid.ip}</downstream.host>

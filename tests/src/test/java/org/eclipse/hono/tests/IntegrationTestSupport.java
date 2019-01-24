@@ -72,8 +72,6 @@ public final class IntegrationTestSupport {
 
     public static final String PROPERTY_AUTH_HOST = "auth.host";
     public static final String PROPERTY_AUTH_PORT = "auth.amqp.port";
-//    public static final String PROPERTY_HONO_HOST = "hono.host";
-//    public static final String PROPERTY_HONO_PORT = "hono.amqp.port";
     public static final String PROPERTY_HONO_USERNAME = "hono.username";
     public static final String PROPERTY_HONO_PASSWORD = "hono.password";
     public static final String PROPERTY_DEVICEREGISTRY_HOST = "deviceregistry.host";
@@ -98,8 +96,6 @@ public final class IntegrationTestSupport {
     public static final String AUTH_HOST = System.getProperty(PROPERTY_AUTH_HOST, DEFAULT_HOST);
     public static final int    AUTH_PORT = Integer.getInteger(PROPERTY_AUTH_PORT, Constants.PORT_AMQP);
 
-//    public static final String HONO_HOST = System.getProperty(PROPERTY_HONO_HOST, DEFAULT_HOST);
-//    public static final int    HONO_PORT = Integer.getInteger(PROPERTY_HONO_PORT, Constants.PORT_AMQP);
     public static final String HONO_USER = System.getProperty(PROPERTY_HONO_USERNAME);
     public static final String HONO_PWD = System.getProperty(PROPERTY_HONO_PASSWORD);
 
@@ -125,7 +121,7 @@ public final class IntegrationTestSupport {
     public static final int    AMQPS_PORT = Integer.getInteger(PROPERTY_AMQPS_PORT, DEFAULT_AMQPS_PORT);
 
     public static final String PATH_SEPARATOR = System.getProperty("hono.pathSeparator", "/");
-    public static final int    MSG_COUNT = Integer.getInteger("msg.count", 1000);
+    public static final int    MSG_COUNT = Integer.getInteger("msg.count", 400);
 
     public static final int    MAX_BCRYPT_ITERATIONS = Integer.getInteger(PROPTERY_MAX_BCRYPT_ITERATIONS, DEFAULT_MAX_BCRYPT_ITERATIONS);
 

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -53,14 +53,21 @@ public class TelemetryMqttQoS0IT extends MqttPublishTestBase {
                 tenantId,
                 deviceId);
         final Future<Void> result = Future.future();
+        // throttle sending to allow adapter to be replenished with credits from consumer
         VERTX.setTimer(5, go -> {
-            mqttClient.publish(topic, payload, MqttQoS.AT_MOST_ONCE, false, false, sendAttempt -> {
-                if (sendAttempt.succeeded()) {
-                    result.complete();
-                } else {
-                    result.fail(sendAttempt.cause());
-                }
-            });
+            mqttClient.publish(
+                    topic,
+                    payload,
+                    MqttQoS.AT_MOST_ONCE,
+                    false, // is duplicate
+                    false, // is retained
+                    sendAttempt -> {
+                        if (sendAttempt.succeeded()) {
+                            result.complete();
+                        } else {
+                            result.fail(sendAttempt.cause());
+                        }
+                    });
         });
         return result;
     }
