@@ -47,21 +47,6 @@ The `demo-certs/certs` folder includes the following demo keys and certificates 
 | `qdrouter-cert.pem`   | The example certificate asserting the server's identity. |
 | `trusted-certs.pem`   | Trusted CA certificates to use for verifying signatures. |
 
-## Hono Messaging
-
-Hono Messaging supports the use of TLS for connections to protocol adapters, the Dispatch Router and the Auth Server.
-Please refer to the [Hono Messaging admin guide]({{< relref "hono-messaging-config.md" >}}) for details regarding the required configuration steps.
-
-The `demo-certs/certs` folder contains the following demo keys and certificates to be used with Hono Messaging for that purpose.
-
-| File                      | Description                                                      |
-| :------------------------ | :--------------------------------------------------------------- |
-| `auth-server-cert.pem` | The certificate of the Auth Server, used to verify the signatures of tokens issued by the Auth Server. |
-| `hono-server-key.pem`  | The example private key for creating signatures. |
-| `hono-server-cert.pem` | The example certificate asserting the server's identity. |
-| `trusted-certs.pem`    | Trusted CA certificates to use for verifying signatures. |
-
-
 ## Device Registry
 
 The Device Registry supports the use of TLS for connections to protocol adapters and the Auth Server.

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -72,8 +72,8 @@ public final class IntegrationTestSupport {
 
     public static final String PROPERTY_AUTH_HOST = "auth.host";
     public static final String PROPERTY_AUTH_PORT = "auth.amqp.port";
-    public static final String PROPERTY_HONO_HOST = "hono.host";
-    public static final String PROPERTY_HONO_PORT = "hono.amqp.port";
+//    public static final String PROPERTY_HONO_HOST = "hono.host";
+//    public static final String PROPERTY_HONO_PORT = "hono.amqp.port";
     public static final String PROPERTY_HONO_USERNAME = "hono.username";
     public static final String PROPERTY_HONO_PASSWORD = "hono.password";
     public static final String PROPERTY_DEVICEREGISTRY_HOST = "deviceregistry.host";
@@ -98,8 +98,8 @@ public final class IntegrationTestSupport {
     public static final String AUTH_HOST = System.getProperty(PROPERTY_AUTH_HOST, DEFAULT_HOST);
     public static final int    AUTH_PORT = Integer.getInteger(PROPERTY_AUTH_PORT, Constants.PORT_AMQP);
 
-    public static final String HONO_HOST = System.getProperty(PROPERTY_HONO_HOST, DEFAULT_HOST);
-    public static final int    HONO_PORT = Integer.getInteger(PROPERTY_HONO_PORT, Constants.PORT_AMQP);
+//    public static final String HONO_HOST = System.getProperty(PROPERTY_HONO_HOST, DEFAULT_HOST);
+//    public static final int    HONO_PORT = Integer.getInteger(PROPERTY_HONO_PORT, Constants.PORT_AMQP);
     public static final String HONO_USER = System.getProperty(PROPERTY_HONO_USERNAME);
     public static final String HONO_PWD = System.getProperty(PROPERTY_HONO_PASSWORD);
 

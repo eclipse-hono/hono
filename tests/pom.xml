@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-    Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+    Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
    
     See the NOTICE file(s) distributed with this work for additional
     information regarding copyright ownership.
@@ -479,85 +479,6 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     </env>
                   </run>
                 </image>
-                <!-- ##### Messaging service ##### -->
-                <image>
-                  <name>${docker.image.org-name}/hono-service-messaging-test</name>
-                  <alias>messaging</alias>
-                  <build>
-                    <from>${docker.image.org-name}/hono-service-messaging:${project.version}</from>
-                    <assembly>
-                      <mode>dir</mode>
-                      <basedir>/</basedir>
-                      <inline>
-                        <id>config</id>
-                        <fileSets>
-                          <fileSet>
-                            <directory>${project.build.directory}/resources/messaging</directory>
-                            <outputDirectory>etc/hono</outputDirectory>
-                            <includes>
-                              <include>*</include>
-                            </includes>
-                          </fileSet>
-                          <fileSet>
-                            <directory>${project.build.directory}/certs</directory>
-                            <outputDirectory>etc/hono/certs</outputDirectory>
-                            <includes>
-                              <include>hono-messaging-*.pem</include>
-                              <include>auth-server-cert.pem</include>
-                              <include>trusted-certs.pem</include>
-                            </includes>
-                          </fileSet>
-                          <fileSet>
-                            <directory>${project.build.directory}/agent</directory>
-                            <outputDirectory>opt/hono/agent</outputDirectory>
-                          </fileSet>
-                        </fileSets>
-                      </inline>
-                    </assembly>
-                    <runCmds>
-                      <runCmd>install -m 0777 -d /opt/hono/jacoco.result</runCmd>
-                      <runCmd>touch /opt/hono/jacoco.result/jacoco.part</runCmd>
-                      <runCmd>chmod 0666 /opt/hono/jacoco.result/jacoco.part</runCmd>
-                    </runCmds>
-                  </build>
-                  <run>
-                    <ports>
-                      <port>+hono.ip:hono.amqp.port:5672</port>
-                      <port>+hono.ip:hono.health.port:8088</port>
-                    </ports>
-                    <network>
-                      <mode>custom</mode>
-                      <name>hono</name>
-                      <alias>hono-service-messaging.hono</alias>
-                    </network>
-                    <memorySwap>-1</memorySwap>
-                    <memory>268435456</memory>
-                    <env>
-                      <LOGGING_CONFIG>file:///etc/hono/logback-spring.xml</LOGGING_CONFIG>
-                      <SPRING_CONFIG_LOCATION>file:///etc/hono/</SPRING_CONFIG_LOCATION>
-                      <SPRING_PROFILES_ACTIVE>qpid,prod</SPRING_PROFILES_ACTIVE>
-                      <_JAVA_OPTIONS>${default.java.options}</_JAVA_OPTIONS>
-                      <PN_TRACE_FRM>0</PN_TRACE_FRM>
-                    </env>
-                    <log>
-                      <prefix>MESSAGING</prefix>
-                      <color>green</color>
-                    </log>
-                    <volumes>
-                      <bind>
-                        <volume>${project.build.directory}/jacoco.result/messaging:/opt/hono/jacoco.result:z</volume>
-                      </bind>
-                    </volumes>
-                    <wait>
-                      <time>${service.startup.timeout}</time>
-                      <http>
-                        <method>GET</method>
-                        <url>http://${hono.ip}:${hono.health.port}/readiness</url>
-                        <status>200..299</status>
-                      </http>
-                    </wait>
-                  </run>
-                </image>
                 <!-- ##### HTTP adapter ##### -->
                 <image>
                   <name>${docker.image.org-name}/hono-adapter-http-test</name>
@@ -859,7 +780,6 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     <mkdir dir="${project.build.directory}/jacoco.result" />
                     <mkdir dir="${project.build.directory}/jacoco.result/auth" />
                     <mkdir dir="${project.build.directory}/jacoco.result/registry" />
-                    <mkdir dir="${project.build.directory}/jacoco.result/messaging" />
                     <mkdir dir="${project.build.directory}/jacoco.result/amqp" />
                     <mkdir dir="${project.build.directory}/jacoco.result/http" />
                     <mkdir dir="${project.build.directory}/jacoco.result/mqtt" />
@@ -896,8 +816,8 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
               <systemProperties>
                 <auth.host>${auth.ip}</auth.host>
                 <auth.amqp.port>${auth.amqp.port}</auth.amqp.port>
-                <hono.host>${hono.ip}</hono.host>
-                <hono.amqp.port>${hono.amqp.port}</hono.amqp.port>
+                <!-- hono.host>${hono.ip}</hono.host>
+                <hono.amqp.port>${hono.amqp.port}</hono.amqp.port-->
                 <hono.username>hono-client</hono.username>
                 <hono.password>secret</hono.password>
                 <downstream.host>${qpid.ip}</downstream.host>
