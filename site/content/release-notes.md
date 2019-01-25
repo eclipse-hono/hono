@@ -2,6 +2,12 @@
 title = "Release Notes"
 +++
 
+## 0.9 (not released yet)
+
+### Depreciations
+
+* The already deprecated Hono Messaging component has been removed altogether from Hono.
+
 ## 0.9-M2
 
 ### New Features
