@@ -21,6 +21,7 @@ import org.eclipse.hono.util.EndpointType;
 import org.eclipse.hono.util.MapBasedExecutionContext;
 import org.eclipse.hono.util.ResourceIdentifier;
 
+import io.netty.handler.codec.mqtt.MqttQoS;
 import io.vertx.mqtt.MqttEndpoint;
 import io.vertx.mqtt.messages.MqttPublishMessage;
 
@@ -197,5 +198,28 @@ public final class MqttContext extends MapBasedExecutionContext {
         return Optional.ofNullable(topic)
                 .map(t -> t.getEndpoint())
                 .orElse(null);
+    }
+
+    /**
+     * Checks if the message has been published using QoS 1.
+     * 
+     * @return {@code true} if the message has been published using QoS 1.
+     */
+    public boolean isAtLeastOnce() {
+
+        if (message == null) {
+            return false;
+        } else {
+            return MqttQoS.AT_LEAST_ONCE == message.qosLevel();
+        }
+    }
+
+    /**
+     * Sends a PUBACK for the message to the device.
+     */
+    public void acknowledge() {
+        if (message != null && deviceEndpoint != null) {
+            deviceEndpoint.publishAcknowledge(message.messageId());
+        }
     }
 }

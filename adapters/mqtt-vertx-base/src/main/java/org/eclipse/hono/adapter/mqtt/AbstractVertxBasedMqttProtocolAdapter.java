@@ -922,7 +922,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                     addRetainAnnotation(ctx, downstreamMessage, currentSpan);
                     customizeDownstreamMessage(downstreamMessage, ctx);
 
-                    if (ctx.message().qosLevel() == MqttQoS.AT_LEAST_ONCE) {
+                    if (ctx.isAtLeastOnce()) {
                         return sender.sendAndWaitForOutcome(downstreamMessage, currentSpan.context());
                     } else {
                         return sender.send(downstreamMessage, currentSpan.context());
@@ -938,9 +938,9 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                 LOG.trace("successfully processed message [topic: {}, QoS: {}] from device [tenantId: {}, deviceId: {}]",
                         ctx.message().topicName(), ctx.message().qosLevel(), tenant, deviceId);
                 // check that the remote MQTT client is still connected before sending PUBACK
-                if (ctx.deviceEndpoint().isConnected() && ctx.message().qosLevel() == MqttQoS.AT_LEAST_ONCE) {
+                if (ctx.isAtLeastOnce() && ctx.deviceEndpoint().isConnected()) {
                     currentSpan.log("sending PUBACK");
-                    ctx.deviceEndpoint().publishAcknowledge(ctx.message().messageId());
+                    ctx.acknowledge();
                 }
                 currentSpan.finish();
                 return Future.<Void> succeededFuture();
