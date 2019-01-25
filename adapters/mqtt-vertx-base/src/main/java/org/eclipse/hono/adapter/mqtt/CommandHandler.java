@@ -46,6 +46,7 @@ public final class CommandHandler<T extends MqttProtocolAdapterProperties> {
      *
      * @param vertx The Vert.x instance to execute the client on.
      * @param config The configuration properties to use.
+     * @throws NullPointerException if any of the parameters are {@code null}.
      */
     public CommandHandler(final Vertx vertx, final T config) {
         this.vertx = Objects.requireNonNull(vertx);
