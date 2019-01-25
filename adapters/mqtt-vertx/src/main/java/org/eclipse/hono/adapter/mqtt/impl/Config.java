@@ -13,9 +13,9 @@
 
 package org.eclipse.hono.adapter.mqtt.impl;
 
+import org.eclipse.hono.adapter.mqtt.MqttProtocolAdapterProperties;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.config.ClientConfigProperties;
-import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.AbstractAdapterConfig;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.service.monitoring.ConnectionEventProducer;
@@ -80,8 +80,8 @@ public class Config extends AbstractAdapterConfig {
      */
     @Bean
     @ConfigurationProperties(prefix = "hono.mqtt")
-    public ProtocolAdapterProperties adapterProperties() {
-        return new ProtocolAdapterProperties();
+    public MqttProtocolAdapterProperties adapterProperties() {
+        return new MqttProtocolAdapterProperties();
     }
 
     /**

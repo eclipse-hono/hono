@@ -15,6 +15,8 @@ package org.eclipse.hono.adapter.mqtt;
 
 import java.util.Objects;
 
+import io.netty.handler.codec.mqtt.MqttQoS;
+import io.vertx.mqtt.MqttTopicSubscription;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.util.CommandConstants;
 import org.slf4j.Logger;
@@ -40,10 +42,14 @@ public class CommandSubscription {
     private String req;
     private String tenant;
     private String deviceId;
+    private MqttQoS qos;
+    private String clientId;
+    private String topic;
     private boolean isAuthenticated;
 
     private CommandSubscription(final String topic) {
         Objects.requireNonNull(topic);
+        this.topic = topic;
         final String[] parts = topic.split("\\/");
         if (parts.length != 5 || !"#".equals(parts[4])) {
             throw new IllegalArgumentException("topic filter does not match pattern: control|c/+/+/req|q/#");
@@ -94,6 +100,12 @@ public class CommandSubscription {
         }
     }
 
+    private CommandSubscription(final String topic, final Device authenticatedDevice, final MqttQoS qos, final String clientId) {
+        this(topic, authenticatedDevice);
+        this.qos = qos;
+        this.clientId = clientId;
+    }
+
     /**
      * Gets the tenant from topic or authentication .
      *
@@ -119,6 +131,33 @@ public class CommandSubscription {
      */
     public String getEndpoint() {
         return endpoint;
+    }
+
+    /**
+     * Gets the QoS of the subscription.
+     *
+     * @return The QoS value.
+     */
+    public MqttQoS getQos() {
+        return qos;
+    }
+
+    /**
+     * Gets the clientId of the Mqtt subscription.
+     *
+     * @return The clientId.
+     */
+    public String getClientId() {
+        return clientId;
+    }
+
+    /**
+     * Gets the subscription topic.
+     *
+     * @return The topic.
+     */
+    public String getTopic() {
+        return topic;
     }
 
     /**
@@ -159,4 +198,24 @@ public class CommandSubscription {
         }
     }
 
+    /**
+     * Creates a command subscription object for the given topic. When the authenticated device is given
+     * it is used to either check given tenant and device-id from topic or fill this
+     * fields if not given.
+     *
+     * @param mqttTopicSub The MqttTopicSubscription request from device for command subscription.
+     * @param authenticatedDevice The authenticated device or {@code null}.
+     * @param clientId The the client identifier as provided by the remote MQTT client.
+     * @return The CommandSubscription object or {@code null} if the topic does not match the rules.
+     * @throws NullPointerException if topic is {@code null}.
+     */
+    public static CommandSubscription fromTopic(final MqttTopicSubscription mqttTopicSub, final Device authenticatedDevice, final String clientId) {
+        try {
+            return new CommandSubscription(mqttTopicSub.topicName(), authenticatedDevice,
+                    mqttTopicSub.qualityOfService(), clientId);
+        } catch (final IllegalArgumentException e) {
+            LOG.debug(e.getMessage());
+            return null;
+        }
+    }
 }

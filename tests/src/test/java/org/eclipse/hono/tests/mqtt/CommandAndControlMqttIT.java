@@ -78,18 +78,18 @@ public class CommandAndControlMqttIT extends MqttTestBase {
         return helper.honoClient.createEventConsumer(tenantId, messageConsumer, remoteClose -> {});
     }
 
-    private Future<Void> subscribeToCommands(final Handler<MqttPublishMessage> msgHandler) {
+    private Future<Void> subscribeToCommands(final Handler<MqttPublishMessage> msgHandler, final int qos) {
         final Future<Void> result = Future.future();
         context.runOnContext(go -> {
             mqttClient.publishHandler(msgHandler);
             mqttClient.subscribeCompletionHandler(subAckMsg -> {
-                if (subAckMsg.grantedQoSLevels().contains(0)) {
+                if (subAckMsg.grantedQoSLevels().contains(qos)) {
                     result.complete();
                 } else {
                     result.fail("could not subscribe to command topic");
                 }
             });
-            mqttClient.subscribe("control/+/+/req/#", 0);
+            mqttClient.subscribe("control/+/+/req/#", qos);
         });
         return result;
     }
@@ -116,19 +116,35 @@ public class CommandAndControlMqttIT extends MqttTestBase {
             commandsReceived.countDown();
         }, payload -> {
             return helper.sendOneWayCommand(tenantId, deviceId, "setValue", "text/plain", payload, null, 1000);
-        }, commandsToSend);
+        }, commandsToSend, 0);
         commandsReceived.await();
     }
 
     /**
-     * Verifies that the adapter forwards commands and response hence and forth between
-     * an application and a device.
-     * 
+     * Verifies that the adapter forwards commands with Qos 0 and response hence and forth between an application and a
+     * device.
+     *
      * @param ctx The vert.x test context.
      * @throws InterruptedException if not all commands and responses are exchanged in time.
      */
     @Test
-    public void testSendCommandSucceeds(final TestContext ctx) throws InterruptedException {
+    public void testSendCommandSucceedsWithQos0(final TestContext ctx) throws InterruptedException {
+        testSendCommandSucceeds(ctx, 0);
+    }
+
+    /**
+     * Verifies that the adapter forwards commands with Qos 1 and response hence and forth between an application and a
+     * device.
+     *
+     * @param ctx The vert.x test context.
+     * @throws InterruptedException if not all commands and responses are exchanged in time.
+     */
+    @Test
+    public void testSendCommandSucceedsWithQos1(final TestContext ctx) throws InterruptedException {
+        testSendCommandSucceeds(ctx, 1);
+    }
+
+    private void testSendCommandSucceeds(final TestContext ctx, final int qos) throws InterruptedException {
 
         testSendCommandSucceeds(ctx, msg -> {
             final ResourceIdentifier topic = ResourceIdentifier.fromString(msg.topicName());
@@ -139,7 +155,6 @@ public class CommandAndControlMqttIT extends MqttTestBase {
                 LOGGER.trace("received command [name: {}, req-id: {}]", command, commandRequestId);
                 // send response
                 final String responseTopic = String.format(COMMAND_RESPONSE_TOPIC_TEMPLATE, commandRequestId, HttpURLConnection.HTTP_OK);
-                LOGGER.trace("publishing response [topic: {}]", responseTopic);
                 mqttClient.publish(
                         responseTopic,
                         Buffer.buffer(command + ": ok"),
@@ -149,7 +164,7 @@ public class CommandAndControlMqttIT extends MqttTestBase {
             }
         }, payload -> {
             return helper.sendCommand(tenantId, deviceId, "setValue", "text/plain", payload, null, 200);
-        }, 60);
+        }, 60, qos);
     }
 
     /**
@@ -163,7 +178,8 @@ public class CommandAndControlMqttIT extends MqttTestBase {
             final TestContext ctx,
             final Handler<MqttPublishMessage> commandConsumer,
             final Function<Buffer, Future<?>> commandSender,
-            final int totalNoOfCommandsToSend) throws InterruptedException {
+            final int totalNoOfCommandsToSend,
+            final int qos) throws InterruptedException {
 
         final Async setup = ctx.async();
         final Async notificationReceived = ctx.async();
@@ -181,7 +197,7 @@ public class CommandAndControlMqttIT extends MqttTestBase {
                 notificationReceived.complete();
             }
         }))
-        .compose(conAck -> subscribeToCommands(commandConsumer))
+        .compose(conAck -> subscribeToCommands(commandConsumer, qos))
         .setHandler(ctx.asyncAssertSuccess(ok -> setup.complete()));
         setup.await();
         notificationReceived.await();
@@ -253,7 +269,7 @@ public class CommandAndControlMqttIT extends MqttTestBase {
             }
         })).compose(conAck -> subscribeToCommands(msg -> {
             ctx.fail("should not have received command");
-        })).setHandler(ctx.asyncAssertSuccess(ok -> setup.complete()));
+        }, 0)).setHandler(ctx.asyncAssertSuccess(ok -> setup.complete()));
         setup.await();
         notificationReceived.await();
 

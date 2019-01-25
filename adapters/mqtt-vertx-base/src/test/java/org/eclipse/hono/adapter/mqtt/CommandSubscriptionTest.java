@@ -18,6 +18,9 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThat;
 
+import io.netty.handler.codec.mqtt.MqttQoS;
+import io.vertx.mqtt.MqttTopicSubscription;
+import io.vertx.mqtt.impl.MqttTopicSubscriptionImpl;
 import org.eclipse.hono.auth.Device;
 import org.junit.Test;
 
@@ -62,6 +65,23 @@ public class CommandSubscriptionTest {
     public void testSubscriptionAuth() {
         final CommandSubscription subscription = CommandSubscription.fromTopic("control/tenant/device/req/#", device);
         assertNotNull(subscription);
+    }
+
+    /**
+     * Verifies subscription pattern with authenticated device, correct pattern and valid qos.
+     */
+    @Test
+    public void testSubscriptionAuthWithQoS() {
+        final MqttTopicSubscription mqttTopicSubscription = new MqttTopicSubscriptionImpl("control/tenant/device/req/#",
+                MqttQoS.AT_LEAST_ONCE);
+        final CommandSubscription subscription = CommandSubscription.fromTopic(mqttTopicSubscription, device,
+                "testMqttClient");
+        assertNotNull(subscription);
+        assertThat(subscription.getDeviceId(), is("device"));
+        assertThat(subscription.getTenant(), is("tenant"));
+        assertThat(subscription.getTopic(), is("control/tenant/device/req/#"));
+        assertThat(subscription.getQos(), is(MqttQoS.AT_LEAST_ONCE));
+        assertThat(subscription.getClientId(), is("testMqttClient"));
     }
 
     /**

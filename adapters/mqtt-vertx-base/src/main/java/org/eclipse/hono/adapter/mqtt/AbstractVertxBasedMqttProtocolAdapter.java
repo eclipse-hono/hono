@@ -16,11 +16,14 @@ package org.eclipse.hono.adapter.mqtt;
 import java.net.HttpURLConnection;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 
+import io.vertx.mqtt.MqttTopicSubscription;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.auth.Device;
@@ -31,7 +34,6 @@ import org.eclipse.hono.client.CommandResponse;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.ServiceInvocationException;
-import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
 import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.service.auth.device.AuthHandler;
@@ -75,7 +77,7 @@ import io.vertx.mqtt.messages.MqttUnsubscribeMessage;
  * 
  * @param <T> The type of configuration properties this adapter supports/requires.
  */
-public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAdapterProperties>
+public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtocolAdapterProperties>
         extends AbstractProtocolAdapterBase<T> {
 
     private static final int IANA_MQTT_PORT = 1883;
@@ -86,7 +88,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
     private MqttServer server;
     private MqttServer insecureServer;
     private AuthHandler<MqttContext> authHandler;
-
+    private final BiConsumer<CommandSubscription, CommandContext> afterCommandPubAckedConsumer = this::afterCommandPublished;
     /**
      * Sets the authentication handler to use for authenticating devices.
      * 
@@ -395,25 +397,18 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
 
     /**
      * Invoked when a client sends its <em>CONNECT</em> packet and client authentication has been disabled by setting
-     * the {@linkplain ProtocolAdapterProperties#isAuthenticationRequired() authentication required} configuration
+     * the {@linkplain MqttProtocolAdapterProperties#isAuthenticationRequired() authentication required} configuration
      * property to {@code false}.
      * <p>
-     * Registers a close handler on the endpoint which invokes {@link #close(MqttEndpoint, Device)}. Registers a publish
+     * Registers a close handler on the endpoint which invokes {@link #close(MqttEndpoint, Device, CommandHandler)}. Registers a publish
      * handler on the endpoint which invokes {@link #onPublishedMessage(MqttContext)} for each message being published
      * by the client. Accepts the connection request.
      * 
      * @param endpoint The MQTT endpoint representing the client.
      */
     private Future<Device> handleEndpointConnectionWithoutAuthentication(final MqttEndpoint endpoint) {
-
-        endpoint.closeHandler(v -> close(endpoint, null));
-        endpoint.publishHandler(message -> handlePublishedMessage(MqttContext.fromPublishPacket(message, endpoint)));
-
-        endpoint.subscribeHandler(subscribeMsg -> onSubscribe(endpoint, null, subscribeMsg));
-        endpoint.unsubscribeHandler(unsubscribeMsg -> onUnsubscribe(endpoint, null, unsubscribeMsg));
-
+        registerHandlers(endpoint, null);
         LOG.debug("unauthenticated device [clientId: {}] connected", endpoint.clientIdentifier());
-        metrics.incrementUnauthenticatedConnections();
         return Future.succeededFuture();
     }
 
@@ -459,24 +454,27 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
      * command consumer for receiving commands from applications for the device and
      * sends an empty notification downstream, indicating that the device will be
      * ready to receive commands until further notice.
-     * 
+     *
      * @param endpoint The endpoint representing the connection to the device.
      * @param authenticatedDevice The authenticated identity of the device or {@code null}
      *                            if the device has not been authenticated.
      * @param subscribeMsg The subscribe request received from the device.
+     * @param cmdHandler The commandHandler to track command subscriptions, unsubscriptions and handle PUBACKs.
      * @throws NullPointerException if any of endpoint or subscribe message are {@code null}.
      */
     @SuppressWarnings("rawtypes")
     protected final void onSubscribe(
             final MqttEndpoint endpoint,
             final Device authenticatedDevice,
-            final MqttSubscribeMessage subscribeMsg) {
+            final MqttSubscribeMessage subscribeMsg,
+            final CommandHandler<T> cmdHandler) {
 
         Objects.requireNonNull(endpoint);
         Objects.requireNonNull(subscribeMsg);
 
         final Map<String, Future> topicFilters = new HashMap<>();
-        final List<Future> subscriptionOutcome = new ArrayList<>(subscribeMsg.topicSubscriptions().size());
+        final Map<MqttTopicSubscription, Future> subscriptionOutcome = new LinkedHashMap<>(
+                subscribeMsg.topicSubscriptions().size());
 
         final Span span = newSpan("SUBSCRIBE", endpoint, authenticatedDevice);
 
@@ -489,12 +487,13 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
                 // make sure that we process multiple filters as if they had been
                 // submitted using multiple separate SUBSCRIBE packets
                 // we therefore always return the same result for duplicate topic filters
-                subscriptionOutcome.add(result);
+                subscriptionOutcome.put(subscription, result);
 
             } else {
 
                 // we currently only support subscriptions for receiving commands
-                final CommandSubscription cmdSub = CommandSubscription.fromTopic(subscription.topicName(), authenticatedDevice);
+                final CommandSubscription cmdSub = CommandSubscription.fromTopic(subscription, authenticatedDevice,
+                        endpoint.clientIdentifier());
                 if (cmdSub == null) {
                     span.log(String.format("ignoring unsupported topic filter [%s]", subscription.topicName()));
                     LOG.debug("cannot create subscription [filter: {}, requested QoS: {}]: unsupported topic filter",
@@ -504,30 +503,17 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
                     // we do not support subscribing to commands using QoS 2
                     result = Future.failedFuture(new IllegalArgumentException("QoS 2 not supported for command subscription"));
                 } else {
-                    result = createCommandConsumer(endpoint, cmdSub).map(consumer -> {
-                        // make sure that we close the consumer and notify downstream
-                        // applications when the connection is closed
-                        endpoint.closeHandler(c -> {
-                            // do not use the current span for sending the disconnected event
-                            // because that span will (usually) be finished long before the
-                            // connection is closed
-                            final Span closeHandlerSpan = newSpan("Send Disconnected Event", endpoint, authenticatedDevice);
-                            sendDisconnectedTtdEvent(cmdSub.getTenant(), cmdSub.getDeviceId(), authenticatedDevice, closeHandlerSpan.context()) 
-                            .setHandler(sendAttempt -> {
-                                consumer.close(null);
-                                close(endpoint, authenticatedDevice);
-                                closeHandlerSpan.finish();
-                            });
-                        });
+                    result = createCommandConsumer(endpoint, cmdSub, cmdHandler).map(consumer -> {
                         final Map<String, Object> items = new HashMap<>(4);
                         items.put(Fields.EVENT, "accepting subscription");
                         items.put("filter", subscription.topicName());
                         items.put("requested QoS", subscription.qualityOfService());
-                        items.put("granted QoS", MqttQoS.AT_MOST_ONCE);
+                        items.put("granted QoS", subscription.qualityOfService());
                         span.log(items);
                         LOG.debug("created subscription [tenant: {}, device: {}, filter: {}, requested QoS: {}, granted QoS: {}]",
                                 cmdSub.getTenant(), cmdSub.getDeviceId(), subscription.topicName(),
-                                subscription.qualityOfService(), MqttQoS.AT_MOST_ONCE);
+                                subscription.qualityOfService(), subscription.qualityOfService());
+                        cmdHandler.addSubscription(cmdSub, consumer);
                         return cmdSub;
                     }).recover(t -> {
                         final Map<String, Object> items = new HashMap<>(4);
@@ -543,16 +529,17 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
                     });
                 }
                 topicFilters.put(subscription.topicName(), result);
-                subscriptionOutcome.add(result);
+                subscriptionOutcome.put(subscription, result);
             }
         });
 
         // wait for all futures to complete before sending SUBACK
-        CompositeFuture.join(subscriptionOutcome).setHandler(v -> {
+        CompositeFuture.join(new ArrayList<>(subscriptionOutcome.values())).setHandler(v -> {
 
             // return a status code for each topic filter contained in the SUBSCRIBE packet
-            final List<MqttQoS> grantedQosLevels = subscriptionOutcome.stream()
-                    .map(f -> f.failed() ? MqttQoS.FAILURE : MqttQoS.AT_MOST_ONCE)
+            final List<MqttQoS> grantedQosLevels = subscriptionOutcome.entrySet().stream()
+                    .map(subscriptionOutcomeEntry -> subscriptionOutcomeEntry.getValue().failed() ? MqttQoS.FAILURE
+                            : subscriptionOutcomeEntry.getKey().qualityOfService())
                     .collect(Collectors.toList());
 
             if (endpoint.isConnected()) {
@@ -595,16 +582,18 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
      * commands as defined by Hono's
      * <a href="https://www.eclipse.org/hono/user-guide/mqtt-adapter/#receive-commands">
      * MQTT adapter user guide</a>.
-     * 
+     *
      * @param endpoint The endpoint representing the connection to the device.
      * @param authenticatedDevice The authenticated identity of the device or {@code null}
      *                            if the device has not been authenticated.
+     * @param cmdHandler The commandHandler to track command subscriptions, unsubscriptions and handle PUBACKs.
      * @param unsubscribeMsg The unsubscribe request received from the device.
      */
     protected final void onUnsubscribe(
             final MqttEndpoint endpoint,
             final Device authenticatedDevice,
-            final MqttUnsubscribeMessage unsubscribeMsg) {
+            final MqttUnsubscribeMessage unsubscribeMsg,
+            final CommandHandler<T> cmdHandler) {
 
         final Span span = newSpan("UNSUBSCRIBE", endpoint, authenticatedDevice);
 
@@ -625,8 +614,11 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
                 span.log(items);
                 LOG.debug("unsubscribing device [tenant-id: {}, device-id: {}] from topic [{}]",
                         tenantId, deviceId, topic);
-                closeCommandConsumer(tenantId, deviceId);
-                sendDisconnectedTtdEvent(tenantId, deviceId, authenticatedDevice, span.context());
+                cmdHandler.removeSubscription(topic, (tenant, device) -> {
+                    final Span closeHandlerSpan = newSpan("Send Disconnected Event", endpoint, authenticatedDevice);
+                    sendDisconnectedTtdEvent(tenant, device, authenticatedDevice, span.context())
+                            .setHandler(sendAttempt -> closeHandlerSpan.finish());
+                });
             }
         });
         if (endpoint.isConnected()) {
@@ -635,7 +627,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
         span.finish();
     }
 
-    private Future<MessageConsumer> createCommandConsumer(final MqttEndpoint mqttEndpoint, final CommandSubscription sub) {
+    private Future<MessageConsumer> createCommandConsumer(final MqttEndpoint mqttEndpoint, final CommandSubscription sub, final CommandHandler<T> cmdHandler) {
 
         // if a device does not specify a keep alive in its CONNECT packet then
         // the default value of the CommandConnection will be used
@@ -649,7 +641,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
                     Tags.COMPONENT.set(commandContext.getCurrentSpan(), getTypeName());
                     final Command command = commandContext.getCommand();
                     if (command.isValid()) {
-                        onCommandReceived(mqttEndpoint, sub, commandContext);
+                        onCommandReceived(mqttEndpoint, sub, commandContext, cmdHandler);
                     } else {
                         // issue credit so that application(s) can send the next command
                         commandContext.reject(new ErrorCondition(Constants.AMQP_BAD_REQUEST, "malformed command message"), 1);
@@ -991,9 +983,16 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
      * 
      * @param endpoint The connection to close.
      * @param authenticatedDevice Optional authenticated device information, may be {@code null}.
+     * @param cmdHandler The commandHandler to track command subscriptions, unsubscriptions and handle PUBACKs.
      */
-    protected final void close(final MqttEndpoint endpoint, final Device authenticatedDevice) {
+    protected final void close(final MqttEndpoint endpoint, final Device authenticatedDevice, final CommandHandler<T> cmdHandler) {
+        final Span span = newSpan("CLOSE", endpoint, authenticatedDevice);
         onClose(endpoint);
+        cmdHandler.removeAllSubscriptions((tenant, device) -> {
+            final Span closeHandlerSpan = newSpan("Send Disconnected Event", endpoint, authenticatedDevice);
+            sendDisconnectedTtdEvent(tenant, device, authenticatedDevice, span.context())
+                    .setHandler(sendAttempt -> closeHandlerSpan.finish());
+        });
         sendDisconnectedEvent(endpoint.clientIdentifier(), authenticatedDevice);
         if (authenticatedDevice == null) {
             LOG.debug("connection to anonymous device [clientId: {}] closed", endpoint.clientIdentifier());
@@ -1009,6 +1008,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
         } else {
             LOG.trace("client has already closed connection");
         }
+        span.finish();
     }
 
     /**
@@ -1128,23 +1128,23 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
 
     /**
      * Called for a command to be delivered to a device.
-     * 
+     *
      * @param endpoint The device that the command should be delivered to.
      * @param subscription The device's command subscription.
      * @param commandContext The command to be delivered.
+     * @param cmdHandler The commandHandler to track command subscriptions, unsubscriptions and handle PUBACKs.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
     protected final void onCommandReceived(
             final MqttEndpoint endpoint,
             final CommandSubscription subscription,
-            final CommandContext commandContext) {
+            final CommandContext commandContext,
+            final CommandHandler<T> cmdHandler) {
 
         Objects.requireNonNull(endpoint);
         Objects.requireNonNull(subscription);
         Objects.requireNonNull(commandContext);
 
-        // we always publish the message using QoS 0
-        final MqttQoS qos = MqttQoS.AT_MOST_ONCE;
         String tenantId = subscription.getTenant();
         String deviceId = subscription.getDeviceId();
         if (subscription.isAuthenticated()) {
@@ -1159,14 +1159,45 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
         final String commandRequestId = (command.isOneWay() ? "" : command.getRequestId());
         final String topic = String.format("%s/%s/%s/%s/%s/%s", subscription.getEndpoint(), tenantId, deviceId,
                 subscription.getRequestPart(), commandRequestId, command.getName());
-        endpoint.publish(topic, command.getPayload(), qos, false, false);
-        metrics.incrementCommandDeliveredToDevice(subscription.getTenant());
-        LOG.trace("command published to device [tenant-id: {}, device-id: {}, MQTT client-id: {}]",
-                subscription.getTenant(), subscription.getDeviceId(), endpoint.clientIdentifier());
+        LOG.debug("Publishing command to device [tenant-id: {}, device-id: {}, MQTT client-id: {}, QoS: {}]",
+                subscription.getTenant(), subscription.getDeviceId(), subscription.getClientId(),
+                subscription.getQos());
         final Map<String, String> items = new HashMap<>(3);
-        items.put(Fields.EVENT, "command published to device");
-        items.put(Tags.MESSAGE_BUS_DESTINATION.getKey(), topic);
-        items.put(TracingHelper.TAG_QOS.getKey(), qos.toString());
+        items.put(Fields.EVENT, "Publishing command to device");
+        items.put(TracingHelper.TAG_CLIENT_ID.getKey(), subscription.getClientId());
+        items.put(TracingHelper.TAG_QOS.getKey(), subscription.getQos().toString());
+        commandContext.getCurrentSpan().log(items);
+
+        endpoint.publish(topic, command.getPayload(), subscription.getQos(), false, false, sentHandler -> {
+            if (sentHandler.succeeded()) {
+                if (MqttQoS.AT_LEAST_ONCE.equals(subscription.getQos())) {
+                    cmdHandler.addToWaitingForAcknowledgement(sentHandler.result(), subscription, commandContext);
+                } else {
+                    afterCommandPublished(subscription, commandContext);
+                }
+            } else {
+                LOG.debug(
+                        "Error publishing command to device [tenant-id: {}, device-id: {}, MQTT client-id: {}, QoS: {}]",
+                        subscription.getTenant(), subscription.getDeviceId(), endpoint.clientIdentifier(),
+                        subscription.getQos(),
+                        sentHandler.cause());
+                TracingHelper.logError(commandContext.getCurrentSpan(), sentHandler.cause());
+                commandContext.release(1);
+            }
+        });
+    }
+
+    private void afterCommandPublished(final CommandSubscription subscription,
+            final CommandContext commandContext) {
+        metrics.incrementCommandDeliveredToDevice(subscription.getTenant());
+        LOG.debug("Published command to device [tenant-id: {}, device-id: {}, MQTT client-id: {}, QoS: {}]",
+                subscription.getTenant(), subscription.getDeviceId(), subscription.getClientId(),
+                subscription.getQos());
+        final Map<String, String> items = new HashMap<>(4);
+        items.put(Fields.EVENT, "Published command to device");
+        items.put(Tags.MESSAGE_BUS_DESTINATION.getKey(), subscription.getTopic());
+        items.put(TracingHelper.TAG_CLIENT_ID.getKey(), subscription.getClientId());
+        items.put(TracingHelper.TAG_QOS.getKey(), subscription.getQos().toString());
         commandContext.getCurrentSpan().log(items);
         commandContext.accept(1);
     }
@@ -1198,13 +1229,18 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends ProtocolAd
     }
 
     private Future<Device> registerHandlers(final MqttEndpoint endpoint, final Device authenticatedDevice) {
-
-        endpoint.closeHandler(v -> close(endpoint, authenticatedDevice));
+        final CommandHandler<T> cmdHandler = new CommandHandler<>(vertx, getConfig());
+        endpoint.closeHandler(v -> close(endpoint, authenticatedDevice, cmdHandler));
         endpoint.publishHandler(
                 message -> handlePublishedMessage(MqttContext.fromPublishPacket(message, endpoint, authenticatedDevice)));
-        endpoint.subscribeHandler(subscribeMsg -> onSubscribe(endpoint, authenticatedDevice, subscribeMsg));
-        endpoint.unsubscribeHandler(unsubscribeMsg -> onUnsubscribe(endpoint, authenticatedDevice, unsubscribeMsg));
-        metrics.incrementConnections(authenticatedDevice.getTenantId());
+        endpoint.publishAcknowledgeHandler(msgId -> cmdHandler.handlePubAck(msgId, afterCommandPubAckedConsumer));
+        endpoint.subscribeHandler(subscribeMsg -> onSubscribe(endpoint, authenticatedDevice, subscribeMsg, cmdHandler));
+        endpoint.unsubscribeHandler(unsubscribeMsg -> onUnsubscribe(endpoint, authenticatedDevice, unsubscribeMsg, cmdHandler));
+        if (authenticatedDevice == null) {
+            metrics.incrementUnauthenticatedConnections();
+        } else {
+            metrics.incrementConnections(authenticatedDevice.getTenantId());
+        }
         return Future.succeededFuture(authenticatedDevice);
     }
 

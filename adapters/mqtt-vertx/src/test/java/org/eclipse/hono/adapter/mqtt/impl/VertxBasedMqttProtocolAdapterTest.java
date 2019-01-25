@@ -20,9 +20,9 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import org.eclipse.hono.adapter.mqtt.MqttContext;
+import org.eclipse.hono.adapter.mqtt.MqttProtocolAdapterProperties;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.auth.Device;
-import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.util.EndpointType;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.ResourceIdentifier;
@@ -54,7 +54,7 @@ public class VertxBasedMqttProtocolAdapterTest {
     @Rule
     public Timeout timeout = Timeout.seconds(5);
 
-    private ProtocolAdapterProperties config;
+    private MqttProtocolAdapterProperties config;
     private VertxBasedMqttProtocolAdapter adapter;
 
     /**
@@ -255,7 +255,7 @@ public class VertxBasedMqttProtocolAdapterTest {
 
     private void givenAnAdapter() {
 
-        config = new ProtocolAdapterProperties();
+        config = new MqttProtocolAdapterProperties();
         adapter = new VertxBasedMqttProtocolAdapter();
         adapter.setConfig(config);
     }
