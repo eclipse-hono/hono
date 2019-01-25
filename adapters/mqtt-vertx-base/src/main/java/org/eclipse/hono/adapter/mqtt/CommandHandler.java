@@ -46,6 +46,7 @@ public final class CommandHandler<T extends MqttProtocolAdapterProperties> {
      *
      * @param vertx The Vert.x instance to execute the client on.
      * @param config The configuration properties to use.
+     * @throws NullPointerException if any of the parameters are {@code null}.
      */
     public CommandHandler(final Vertx vertx, final T config) {
         this.vertx = Objects.requireNonNull(vertx);
@@ -171,8 +172,8 @@ public final class CommandHandler<T extends MqttProtocolAdapterProperties> {
     }
 
     private long startTimer(final Integer msgId) {
-        LOG.trace("Start a timer for [{}] ms", config.getCommandAcknowledgementTimeOut());
-        return vertx.setTimer(config.getCommandAcknowledgementTimeOut(), timerId -> {
+        LOG.trace("Start a timer for [{}] ms", config.getCommandAckTimeout());
+        return vertx.setTimer(config.getCommandAckTimeout(), timerId -> {
             LOG.trace("Timer [{}] expired", timerId);
             Optional.ofNullable(removeFromWaitingForAcknowledgement(msgId)).ifPresent(value -> {
                 final CommandSubscription subscription = value.two();

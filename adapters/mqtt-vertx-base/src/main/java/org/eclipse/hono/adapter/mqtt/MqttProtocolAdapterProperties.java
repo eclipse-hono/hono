@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -16,7 +16,7 @@ package org.eclipse.hono.adapter.mqtt;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 
 /**
- * Properties for configuring an Mqtt based protocol adapter.
+ * Properties for configuring an MQTT based protocol adapter.
  *
  */
 public class MqttProtocolAdapterProperties extends ProtocolAdapterProperties {
@@ -24,33 +24,38 @@ public class MqttProtocolAdapterProperties extends ProtocolAdapterProperties {
     /**
      * The default number of milliseconds to wait for PUBACK.
      */
-    protected static final long DEFAULT_COMMAND_ACKNOWLEDGEMENT_TIME_OUT = 100L;
-    private long commandAcknowledgementTimeOut = DEFAULT_COMMAND_ACKNOWLEDGEMENT_TIME_OUT;
+    protected static final int DEFAULT_COMMAND_ACK_TIMEOUT = 100;
+    private int commandAckTimeout = DEFAULT_COMMAND_ACK_TIMEOUT;
 
     /**
      * Gets the waiting for acknowledgement time out in milliseconds for commands published with QoS 1.
      * <p>
-     * This time out is used by the mqtt adapter for commands published with QoS 1. If there is no acknowledgement
+     * This time out is used by the MQTT adapter for commands published with QoS 1. If there is no acknowledgement
      * within this time limit, then the command is settled with the the <em>released</em> outcome.
      * <p>
-     * The default value is {@link #DEFAULT_COMMAND_ACKNOWLEDGEMENT_TIME_OUT}.
+     * The default value is {@link #DEFAULT_COMMAND_ACK_TIMEOUT}.
      *
      * @return The time out in milliseconds.
      */
-    public final long getCommandAcknowledgementTimeOut() {
-        return commandAcknowledgementTimeOut;
+    public final int getCommandAckTimeout() {
+        return commandAckTimeout;
     }
 
     /**
      * Sets the waiting for acknowledgement time out in milliseconds for commands published with QoS 1.
      * <p>
-     * This time out is used by the mqtt adapter for commands published with QoS 1. If there is no acknowledgement
+     * This time out is used by the MQTT adapter for commands published with QoS 1. If there is no acknowledgement
      * within this time limit, then the command is settled with the the <em>released</em> outcome.
      * <p>
+     * The default value is {@link #DEFAULT_COMMAND_ACK_TIMEOUT}.
      *
-     * @param commandAcknowledgementTimeOut The time out in milliseconds.
+     * @param timeout The time out in milliseconds.
+     * @throws IllegalArgumentException if the timeout is negative.
      */
-    public final void setCommandAcknowledgementTimeOut(final long commandAcknowledgementTimeOut) {
-        this.commandAcknowledgementTimeOut = commandAcknowledgementTimeOut;
+    public final void setCommandAckTimeout(final int timeout) {
+        if (timeout < 0) {
+            throw new IllegalArgumentException("timeout must not be negative");
+        }
+        this.commandAckTimeout = timeout;
     }
 }
