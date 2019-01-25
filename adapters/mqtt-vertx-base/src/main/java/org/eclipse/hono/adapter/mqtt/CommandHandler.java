@@ -56,9 +56,11 @@ public final class CommandHandler<T extends MqttProtocolAdapterProperties> {
      * Invoked when a device sends an MQTT <em>PUBACK</em> packet.
      *
      * @param msgId The msgId of the command published with QoS 1.
-     * @param consumer The consumer to be invoked after arrival of PUBACK.
+     * @param consumer The consumer to be invoked if not {@code null} on arrival of PUBACK.
+     * @throws NullPointerException if msgId is {@code null}.
      */
     public void handlePubAck(final Integer msgId, final BiConsumer<CommandSubscription, CommandContext> consumer) {
+        Objects.requireNonNull(msgId);
         LOG.trace("Acknowledgement received for command [Msg-id: {}] that has been sent to device.", msgId);
         Optional.ofNullable(removeFromWaitingForAcknowledgement(msgId)).ifPresent(value -> {
             cancelTimer(value.one());
@@ -84,34 +86,41 @@ public final class CommandHandler<T extends MqttProtocolAdapterProperties> {
      * Stores the published message id along with command subscription and command context.
      *
      * @param msgId The id of the command (message) that has been published.
-     * @param commandSubscription The device's command subscription.
+     * @param subscription The device's command subscription.
      * @param commandContext The commandContext of the command sent.
-     *
+     * @throws NullPointerException if any of the parameters are {@code null}.
      */
     public void addToWaitingForAcknowledgement(final Integer msgId,
-            final CommandSubscription commandSubscription,
+            final CommandSubscription subscription,
             final CommandContext commandContext) {
-        waitingForAcknowledgement.put(msgId, TriTuple.of(startTimer(msgId), commandSubscription, commandContext));
+        Objects.requireNonNull(msgId);
+        Objects.requireNonNull(subscription);
+        Objects.requireNonNull(commandContext);
+        waitingForAcknowledgement.put(msgId, TriTuple.of(startTimer(msgId), subscription, commandContext));
     }
 
     /**
      * Removes the entry from the waitingForAcknowledgement map for the given msgId.
      *
      * @param msgId The id of the command (message) that has been published.
-     * @return The trituple object containing timer-id, Commandsubscription and CommandContext for the given msgId.
+     * @return The trituple object containing timer-id, commandSubscription and commandContext for the given msgId.
      */
     private TriTuple<Long, CommandSubscription, CommandContext> removeFromWaitingForAcknowledgement(
             final Integer msgId) {
         return waitingForAcknowledgement.remove(msgId);
     }
+
     /**
      * Stores the command subscription along with the command consumer.
      *
      * @param subscription The device's command subscription.
      * @param commandConsumer A client for consuming messages.
+     * @throws NullPointerException if any of the parameters are {@code null}.
      */
     public void addSubscription(final CommandSubscription subscription,
             final MessageConsumer commandConsumer) {
+        Objects.requireNonNull(subscription);
+        Objects.requireNonNull(commandConsumer);
         subscriptions.put(subscription.getTopic(), TriTuple.of(subscription, commandConsumer, null));
     }
 
@@ -119,9 +128,11 @@ public final class CommandHandler<T extends MqttProtocolAdapterProperties> {
      * Closes the command consumer and removes the subscription entry for the given topic.
      *
      * @param topic The topic string to unsubscribe.
-     * @param consumer The consumer to be invoked during removal of a subscription.
+     * @param consumer The consumer to be invoked if not {@code null} during removal of a subscription.
+     * @throws NullPointerException if topic is {@code null}.
      **/
     public void removeSubscription(final String topic, final BiConsumer<String, String> consumer) {
+        Objects.requireNonNull(topic);
         Optional.ofNullable(subscriptions.remove(topic)).ifPresent(value -> {
             final CommandSubscription subscription = value.one();
             if (consumer != null) {
@@ -134,7 +145,7 @@ public final class CommandHandler<T extends MqttProtocolAdapterProperties> {
     /**
      * Closes the command consumers and removes all the subscription entries.
      * 
-     * @param consumer The consumer to be invoked during removal of a subscription.
+     * @param consumer The consumer to be invoked if not {@code null} during removal of a subscription.
      **/
     public void removeAllSubscriptions(final BiConsumer<String, String> consumer) {
         subscriptions.keySet().forEach(topic -> removeSubscription(topic, consumer));

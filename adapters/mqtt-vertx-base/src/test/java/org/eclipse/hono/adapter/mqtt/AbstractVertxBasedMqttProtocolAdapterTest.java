@@ -734,7 +734,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         when(msg.messageId()).thenReturn(15);
         when(msg.topicSubscriptions()).thenReturn(subscriptions);
 
-        final CommandHandler cmdHandler = new CommandHandler(vertx, config);
+        final CommandHandler<MqttProtocolAdapterProperties> cmdHandler = new CommandHandler<>(vertx, config);
         endpoint.closeHandler(handler-> adapter.close(endpoint, new Device("tenant", "deviceId"), cmdHandler));
         adapter.onSubscribe(endpoint, null, msg, cmdHandler);
 
@@ -785,7 +785,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         when(msg.messageId()).thenReturn(15);
         when(msg.topicSubscriptions()).thenReturn(subscriptions);
 
-        adapter.onSubscribe(endpoint, null, msg, new CommandHandler(vertx, config));
+        adapter.onSubscribe(endpoint, null, msg, new CommandHandler<>(vertx, config));
 
         // THEN the adapter sends a SUBACK packet to the device
         // which contains a failure status code for each unsupported filter

@@ -407,15 +407,8 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
      * @param endpoint The MQTT endpoint representing the client.
      */
     private Future<Device> handleEndpointConnectionWithoutAuthentication(final MqttEndpoint endpoint) {
-        final CommandHandler<T> cmdHandler = new CommandHandler(vertx, getConfig());
-        endpoint.closeHandler(v -> close(endpoint, null, cmdHandler));
-        endpoint.publishHandler(message -> handlePublishedMessage(MqttContext.fromPublishPacket(message, endpoint)));
-        endpoint.publishAcknowledgeHandler(msgId -> cmdHandler.handlePubAck(msgId, afterCommandPubAckedConsumer));
-        endpoint.subscribeHandler(subscribeMsg -> onSubscribe(endpoint, null, subscribeMsg, cmdHandler));
-        endpoint.unsubscribeHandler(unsubscribeMsg -> onUnsubscribe(endpoint, null, unsubscribeMsg, cmdHandler));
-
+        registerHandlers(endpoint, null);
         LOG.debug("unauthenticated device [clientId: {}] connected", endpoint.clientIdentifier());
-        metrics.incrementUnauthenticatedConnections();
         return Future.succeededFuture();
     }
 
@@ -990,6 +983,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
      * 
      * @param endpoint The connection to close.
      * @param authenticatedDevice Optional authenticated device information, may be {@code null}.
+     * @param cmdHandler The commandHandler to track command subscriptions, unsubscriptions and handle PUBACKs.
      */
     protected final void close(final MqttEndpoint endpoint, final Device authenticatedDevice, final CommandHandler<T> cmdHandler) {
         final Span span = newSpan("CLOSE", endpoint, authenticatedDevice);
@@ -1235,14 +1229,18 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
     }
 
     private Future<Device> registerHandlers(final MqttEndpoint endpoint, final Device authenticatedDevice) {
-        final CommandHandler<T> cmdHandler = new CommandHandler(vertx, getConfig());
+        final CommandHandler<T> cmdHandler = new CommandHandler<>(vertx, getConfig());
         endpoint.closeHandler(v -> close(endpoint, authenticatedDevice, cmdHandler));
         endpoint.publishHandler(
                 message -> handlePublishedMessage(MqttContext.fromPublishPacket(message, endpoint, authenticatedDevice)));
         endpoint.publishAcknowledgeHandler(msgId -> cmdHandler.handlePubAck(msgId, afterCommandPubAckedConsumer));
         endpoint.subscribeHandler(subscribeMsg -> onSubscribe(endpoint, authenticatedDevice, subscribeMsg, cmdHandler));
         endpoint.unsubscribeHandler(unsubscribeMsg -> onUnsubscribe(endpoint, authenticatedDevice, unsubscribeMsg, cmdHandler));
-        metrics.incrementConnections(authenticatedDevice.getTenantId());
+        if (authenticatedDevice == null) {
+            metrics.incrementUnauthenticatedConnections();
+        } else {
+            metrics.incrementConnections(authenticatedDevice.getTenantId());
+        }
         return Future.succeededFuture(authenticatedDevice);
     }
 
