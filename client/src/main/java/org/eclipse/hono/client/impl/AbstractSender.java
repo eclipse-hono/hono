@@ -60,7 +60,7 @@ import io.vertx.proton.ProtonSender;
 /**
  * A Vertx-Proton based client for publishing messages to Hono.
  */
-abstract public class AbstractSender extends AbstractHonoClient implements MessageSender {
+public abstract class AbstractSender extends AbstractHonoClient implements MessageSender {
 
     /**
      * A counter to be used for creating message IDs.

@@ -50,13 +50,13 @@ import io.vertx.ext.unit.TestContext;
 @RunWith(VertxUnitRunner.class)
 public class FileBasedTenantServiceTest extends AbstractCompleteTenantServiceTest {
 
+    private static final String FILE_NAME = "/tenants.json";
+
     /**
      * Time out each test after five seconds.
      */
     @Rule
     public final Timeout timeout = Timeout.seconds(5);
-
-    private static final String FILE_NAME = "/tenants.json";
 
     private Vertx vertx;
     private EventBus eventBus;

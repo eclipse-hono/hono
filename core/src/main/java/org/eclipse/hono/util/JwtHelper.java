@@ -46,7 +46,6 @@ public abstract class JwtHelper {
 
     private static final Key DUMMY_KEY = new SecretKeySpec(new byte[] { 0x00, 0x01 },
             SignatureAlgorithm.HS256.getJcaName());
-    private final Vertx vertx;
 
     /**
      * The signature algorithm used for signing.
@@ -60,6 +59,8 @@ public abstract class JwtHelper {
      * The lifetime of created tokens.
      */
     protected Duration tokenLifetime;
+
+    private final Vertx vertx;
 
     /**
      * Creates a new helper for a vertx instance.

@@ -82,22 +82,9 @@ import io.vertx.proton.ProtonReceiver;
 @RunWith(VertxUnitRunner.class)
 public class VertxBasedHttpProtocolAdapterTest {
 
-    /**
-     * Time out all tests after 10 seconds (some timer based functionality need a slightly higher timeout in
-     * slow environments).
-     */
-    @Rule
-    public Timeout timeout = Timeout.seconds(10);
-    /**
-     * Provides access to the currently running test method.
-     */
-    @Rule
-    public TestName testName = new TestName();
-
     private static final Logger LOG = LoggerFactory.getLogger(VertxBasedHttpProtocolAdapterTest.class);
     private static final String HOST = "127.0.0.1";
     private static final String CMD_REQ_ID = "12fcmd-client-c925910f-ea2a-455c-a3f9-a339171f335474f48a55-c60d-4b99-8950-a2fbb9e8f1b6";
-
 
     private static HonoClient tenantServiceClient;
     private static HonoClient credentialsServiceClient;
@@ -113,6 +100,18 @@ public class VertxBasedHttpProtocolAdapterTest {
     private static Vertx vertx;
     private static String deploymentId;
     private static HttpClient httpClient;
+
+    /**
+     * Time out all tests after 10 seconds (some timer based functionality need a slightly higher timeout in
+     * slow environments).
+     */
+    @Rule
+    public Timeout timeout = Timeout.seconds(10);
+    /**
+     * Provides access to the currently running test method.
+     */
+    @Rule
+    public TestName testName = new TestName();
 
     /**
      * Prepare the adapter by configuring it.

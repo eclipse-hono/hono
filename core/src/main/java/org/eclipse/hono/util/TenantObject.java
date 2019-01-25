@@ -54,10 +54,12 @@ import io.vertx.core.json.JsonObject;
 public final class TenantObject {
 
     @JsonIgnore
-    private Map<String, JsonObject> adapterConfigurations;
+    private final JsonObject json = new JsonObject();
 
     @JsonIgnore
-    private final JsonObject json = new JsonObject();
+    private Map<String, JsonObject> adapterConfigurations;
+    @JsonIgnore
+    private TrustAnchor trustAnchor;
 
     /**
      * Gets a map of this tenant's properties that should be included
@@ -70,9 +72,6 @@ public final class TenantObject {
     private Map<String, Object> getPropertiesAsMap() {
         return json.getMap();
     }
-
-    @JsonIgnore
-    private TrustAnchor trustAnchor;
 
     /**
      * Gets a property value.

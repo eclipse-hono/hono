@@ -40,8 +40,6 @@ import io.vertx.ext.healthchecks.HealthCheckHandler;
  */
 public abstract class AbstractServiceBase<T extends ServiceConfigProperties> extends ConfigurationSupportingVerticle<T> implements HealthCheckProvider {
 
-    private HealthCheckServer healthCheckServer = new NoopHealthCheckServer();
-
     /**
      * A logger to be shared with subclasses.
      */
@@ -51,6 +49,8 @@ public abstract class AbstractServiceBase<T extends ServiceConfigProperties> ext
      * The OpenTracing {@code Tracer} for tracking processing of requests.
      */
     protected Tracer tracer = NoopTracerFactory.create();
+
+    private HealthCheckServer healthCheckServer = new NoopHealthCheckServer();
 
     /**
      * Sets the OpenTracing {@code Tracer} to use for tracking the processing

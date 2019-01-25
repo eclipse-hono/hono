@@ -51,14 +51,14 @@ public class TenantHttpIT {
 
     private static DeviceRegistryHttpClient registry;
 
-    private String tenantId;
-
     /**
      * Set the timeout for all test methods by using a JUnit Rule (instead of providing the timeout at every @Test annotation).
      * See {@link Test#timeout} for details about improved thread safety regarding the @After annotation for each test.
      */
     @Rule
     public final TestRule timeoutForAllMethods = Timeout.seconds(5);
+
+    private String tenantId;
 
     /**
      * Creates the HTTP client for accessing the registry.

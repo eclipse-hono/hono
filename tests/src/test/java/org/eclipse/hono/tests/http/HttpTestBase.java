@@ -70,6 +70,21 @@ import io.vertx.ext.unit.TestContext;
  */
 public abstract class HttpTestBase {
 
+    /**
+     * The default password of devices.
+     */
+    protected static final String PWD = "secret";
+    /**
+     * The CORS <em>origin</em> address to use for sending messages.
+     */
+    protected static final String ORIGIN_URI = "http://hono.eclipse.org";
+
+    /**
+     * A helper for accessing the AMQP 1.0 Messaging Network and
+     * for managing tenants/devices/credentials.
+     */
+    protected static IntegrationTestSupport helper;
+
     private static final String COMMAND_TO_SEND = "setBrightness";
     private static final String COMMAND_JSON_KEY = "brightness";
     private static final String COMMAND_RESPONSE_URI_TEMPLATE = "/control/res/%s";
@@ -79,19 +94,6 @@ public abstract class HttpTestBase {
     private static final long  TEST_TIMEOUT_MILLIS = 20000; // 20 seconds
     private static final int MESSAGES_TO_SEND = 60;
 
-    /**
-     * The default password of devices.
-     */
-    protected static final String PWD = "secret";
-    /**
-     * The CORS <em>origin</em> address to use for sending messages.
-     */
-    protected static final String ORIGIN_URI = "http://hono.eclipse.org";
-    /**
-     * A helper for accessing the AMQP 1.0 Messaging Network and
-     * for managing tenants/devices/credentials.
-     */
-    protected static IntegrationTestSupport helper;
     /**
      * The default options to use for creating HTTP clients.
      */

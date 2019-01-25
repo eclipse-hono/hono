@@ -36,11 +36,11 @@ import static org.eclipse.hono.jmeter.HonoSamplerUtils.getIntValueOrDefault;
  */
 public class HonoSenderSampler extends HonoSampler implements ThreadListener {
 
+    public static final int DEFAULT_SEND_TIMEOUT = 1000; // milliseconds
+
     private static final long serialVersionUID = -1386211797024120743L;
 
     private static final Logger LOGGER = LoggerFactory.getLogger(HonoSenderSampler.class);
-
-    public static final int DEFAULT_SEND_TIMEOUT = 1000; // milliseconds
 
     private static final String REGISTRY_HOST = "registryHost";
     private static final String REGISTRY_USER = "registryUser";

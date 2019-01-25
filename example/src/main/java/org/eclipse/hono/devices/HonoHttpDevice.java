@@ -45,36 +45,32 @@ import io.vertx.core.json.JsonObject;
 public class HonoHttpDevice {
 
     /**
+     * The authId of the device that is used inside this class.
+     * NB: you need to register credentials for this authId before data can be sent.
+     * Please refer to Hono's "Getting started" guide for details.
+     */
+    public static final String DEVICE_AUTH_ID = "sensor1";
+    /**
+     * The password to use for accessing the HTTP adapter.
+     */
+    public static final String DEVICE_PASSWORD = "hono-secret";
+    /**
      Define the host where Hono's HTTP adapter can be reached.
      */
     public static final String HONO_HTTP_ADAPTER_HOST = "localhost";
-
     /**
      * Port of Hono's http adapter microservice.
      */
     public static final int HONO_HTTP_ADAPTER_PORT = 8080;
-
-    /**
-     * The CORS <em>origin</em> address to use for sending messages.
-     */
-    protected static final String ORIGIN_URI = "http://hono.eclipse.org";
-
     /**
      * The tenant ID to use for these examples.
      */
     public static final String TENANT_ID = "DEFAULT_TENANT";
 
     /**
-     * The authId of the device that is used inside this class.
-     * NB: you need to register credentials for this authId before data can be sent.
-     * Please refer to Hono's "Getting started" guide for details.
+     * The CORS <em>origin</em> address to use for sending messages.
      */
-    public static final String DEVICE_AUTH_ID = "sensor1";
-
-    /**
-     * The password to use for accessing the HTTP adapter.
-     */
-    public static final String DEVICE_PASSWORD = "hono-secret";
+    protected static final String ORIGIN_URI = "http://hono.eclipse.org";
 
     private static final Vertx VERTX = Vertx.vertx();
 

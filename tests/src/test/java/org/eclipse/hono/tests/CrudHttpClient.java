@@ -41,9 +41,9 @@ import org.slf4j.LoggerFactory;
  */
 public final class CrudHttpClient {
 
-    private final Logger LOGGER = LoggerFactory.getLogger(getClass());
     private static final String CONTENT_TYPE_JSON = "application/json";
 
+    private final Logger LOGGER = LoggerFactory.getLogger(getClass());
     private final HttpClient client;
     private final Context context;
     private final HttpClientOptions options;

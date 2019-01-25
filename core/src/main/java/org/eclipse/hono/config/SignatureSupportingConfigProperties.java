@@ -136,5 +136,4 @@ public class SignatureSupportingConfigProperties {
     public final boolean isAppropriateForValidating() {
         return sharedSecret != null || certificatePath != null;
     }
-
 }

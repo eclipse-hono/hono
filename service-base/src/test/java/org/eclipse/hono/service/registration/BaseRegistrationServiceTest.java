@@ -47,15 +47,15 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
 @RunWith(VertxUnitRunner.class)
 public class BaseRegistrationServiceTest {
 
+    private static String secret = "dafhkjsdahfuksahuioahgfdahsgjkhfdjkg";
+    private static SignatureSupportingConfigProperties props;
+    private static Vertx vertx;
+
     /**
      * Time out each test case after 5 secs.
      */
     @Rule
     public Timeout timeout = Timeout.seconds(5);
-
-    private static String secret = "dafhkjsdahfuksahuioahgfdahsgjkhfdjkg";
-    private static SignatureSupportingConfigProperties props;
-    private static Vertx vertx;
 
     /**
      * Initializes common properties.

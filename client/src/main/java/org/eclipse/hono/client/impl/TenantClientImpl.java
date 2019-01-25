@@ -162,7 +162,7 @@ public class TenantClientImpl extends AbstractRequestResponseClient<TenantResult
      * @return The target address.
      * @throws NullPointerException if tenant is {@code null}.
      */
-    public final static String getTargetAddress() {
+    public static final String getTargetAddress() {
         return TenantConstants.TENANT_ENDPOINT;
     }
 
@@ -181,7 +181,7 @@ public class TenantClientImpl extends AbstractRequestResponseClient<TenantResult
      * @param creationHandler The handler to invoke with the outcome of the creation attempt.
      * @throws NullPointerException if any of the parameters, except for senderCloseHook and receiverCloseHook, is {@code null}.
      */
-    public final static void create(
+    public static final void create(
             final Context context,
             final ClientConfigProperties clientConfig,
             final CacheProvider cacheProvider,

@@ -86,20 +86,19 @@ import io.vertx.proton.ProtonServer;
 public class VertxBasedAmqpProtocolAdapterTest {
 
     /**
-     * Time out all tests after five seconds.
-     */
-    @Rule
-    public Timeout globalTimeout = new Timeout(5, TimeUnit.SECONDS);
-
-    /**
      * A tenant identifier used for testing.
      */
     private static final String TEST_TENANT_ID = Constants.DEFAULT_TENANT;
-
     /**
      * A device used for testing.
      */
     private static final String TEST_DEVICE = "test-device";
+
+    /**
+     * Time out all tests after five seconds.
+     */
+    @Rule
+    public Timeout globalTimeout = new Timeout(5, TimeUnit.SECONDS);
 
     private HonoClient tenantServiceClient;
     private HonoClient credentialsServiceClient;

@@ -63,14 +63,13 @@ public final class RegistrationConstants extends RequestResponseApiConstants {
      */
     public static final String REGISTRATION_ENDPOINT = "registration";
 
-    private static final List<String> ACTIONS = Arrays.asList(ACTION_ASSERT, ACTION_REGISTER,
-            ACTION_GET, ACTION_DEREGISTER, ACTION_UPDATE);
-
     /**
      * The vert.x event bus address to which inbound registration messages are published.
      */
     public static final String EVENT_BUS_ADDRESS_REGISTRATION_IN = "registration.in";
 
+    private static final List<String> ACTIONS = Arrays.asList(ACTION_ASSERT, ACTION_REGISTER,
+            ACTION_GET, ACTION_DEREGISTER, ACTION_UPDATE);
 
     private RegistrationConstants() {
         // prevent instantiation

@@ -25,6 +25,7 @@
   </module>
 
   <module name="SuppressWarningsFilter" />
+  <module name="NewlineAtEndOfFile"/>
 
   <module name="TreeWalker">
 
@@ -40,9 +41,11 @@
 
     <!-- style -->
 
+    <module name="DeclarationOrder"/>
     <module name="FinalLocalVariable"/>
     <module name="RedundantModifier"/>
     <module name="NeedBraces"/>
+    <module name="ModifierOrder"/>
 
     <!-- possible issues -->
 

@@ -67,17 +67,17 @@ import io.vertx.proton.ProtonSender;
  */
 public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties> extends AbstractAmqpEndpoint<T> {
 
-    private AuthorizationService authorizationService = new ClaimsBasedAuthorizationService();
+    /**
+     * The OpenTracing {@code Tracer} for tracking processing of requests.
+     */
+    protected Tracer tracer = NoopTracerFactory.create();
 
     private final Map<String, ProtonReceiver> replyToReceiverMap = new HashMap<>();
     private final Multimap<ProtonConnection, MessageConsumer<?>> replyConsumerMap = HashMultimap.create();
     private final Multimap<ProtonConnection, String> replyAddressMap = HashMultimap.create();
     private final Set<String> replyAddresses = new HashSet<>();
 
-    /**
-     * The OpenTracing {@code Tracer} for tracking processing of requests.
-     */
-    protected Tracer tracer = NoopTracerFactory.create();
+    private AuthorizationService authorizationService = new ClaimsBasedAuthorizationService();
 
     /**
      * Creates an endpoint for a Vertx instance.

@@ -51,12 +51,13 @@ public abstract class EventBusService<C> extends ConfigurationSupportingVerticle
      * A logger to be shared by subclasses.
      */
     protected final Logger log = LoggerFactory.getLogger(getClass());
-    private MessageConsumer<JsonObject> requestConsumer;
 
     /**
      * The OpenTracing {@code Tracer} for tracking processing of requests.
      */
     protected Tracer tracer = NoopTracerFactory.create();
+
+    private MessageConsumer<JsonObject> requestConsumer;
 
     /**
      * Sets the OpenTracing {@code Tracer} to use for tracking the processing

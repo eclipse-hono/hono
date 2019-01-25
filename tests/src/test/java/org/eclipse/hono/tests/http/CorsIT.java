@@ -42,13 +42,13 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
 @RunWith(VertxUnitRunner.class)
 public class CorsIT {
 
-    private static final Vertx VERTX = Vertx.vertx();
-    private static final String CORS_ORIGIN = "http://hono.eclipse.org";
-
     /**
      * A client for connecting to Hono Messaging.
      */
     protected static CrudHttpClient httpClient;
+
+    private static final Vertx VERTX = Vertx.vertx();
+    private static final String CORS_ORIGIN = "http://hono.eclipse.org";
 
     /**
      * Time out each test after five seconds.

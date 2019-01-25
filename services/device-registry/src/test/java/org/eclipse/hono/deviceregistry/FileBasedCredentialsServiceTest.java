@@ -56,13 +56,13 @@ import io.vertx.ext.unit.TestContext;
 @RunWith(VertxUnitRunner.class)
 public class FileBasedCredentialsServiceTest extends AbstractCompleteCredentialsServiceTest {
 
+    private static final String FILE_NAME = "/credentials.json";
+
     /**
      * Time out each test case after 5 seconds.
      */
     @Rule
     public Timeout timeout = Timeout.seconds(5);
-
-    private static final String FILE_NAME = "/credentials.json";
 
     private Vertx vertx;
     private EventBus eventBus;

@@ -39,18 +39,17 @@ import java.util.concurrent.TimeUnit;
 @RunWith(VertxUnitRunner.class)
 public class DeviceRegistrationAmqpIT {
 
-    private static final String DEVICE_ID_ENABLED = "4711";
-    private static final String DEVICE_ID_DISABLED = "disabled-device";
-    private static final String NON_EXISTING_DEVICE_ID = "non-existing-device";
-    private static final String NON_EXISTING_GATWAY_ID = "non-existing-gateway";
     static final String DEVICE_ID_ENABLED_WITH_ENABLED_GATEWAY = "4712";
     static final String GATEWAY_ID_ENABLED = "gw-1";
     static final String GATEWAY_ID_ENABLED_2 = "gw-3";
     static final String DEVICE_ID_ENABLED_WITH_DISABLED_GATEWAY = "4713";
     static final String GATEWAY_ID_DISABLED = "gw-2";
 
+    private static final String DEVICE_ID_ENABLED = "4711";
+    private static final String DEVICE_ID_DISABLED = "disabled-device";
+    private static final String NON_EXISTING_DEVICE_ID = "non-existing-device";
+    private static final String NON_EXISTING_GATWAY_ID = "non-existing-gateway";
     private static final Vertx vertx = Vertx.vertx();
-
     private static IntegrationTestSupport helper;
     private static HonoClient deviceRegistryclient;
 

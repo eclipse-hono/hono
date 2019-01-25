@@ -55,18 +55,18 @@ public class UsernamePasswordAuthProviderTest {
 
     private static Vertx vertx;
 
+    /**
+     * Time out all tests.
+     */
+    @Rule
+    public Timeout globalTimeout = new Timeout(5, TimeUnit.SECONDS);
+
     private CredentialsObject credentialsOnRecord;
     private UsernamePasswordCredentials deviceCredentials = UsernamePasswordCredentials.create("device@DEFAULT_TENANT", "pwd", false);
     private UsernamePasswordAuthProvider provider;
     private HonoClient credentialsServiceClient;
     private CredentialsClient credentialsClient;
     private HonoPasswordEncoder pwdEncoder;
-
-    /**
-     * Time out all tests.
-     */
-    @Rule
-    public Timeout globalTimeout = new Timeout(5, TimeUnit.SECONDS);
 
     /**
      * Initializes vert.x.

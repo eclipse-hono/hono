@@ -58,13 +58,13 @@ import io.vertx.proton.ProtonHelper;
 @RunWith(VertxUnitRunner.class)
 public class AbstractProtocolAdapterBaseTest {
 
+    private static final String ADAPTER_NAME = "abstract-adapter";
+
     /**
      * Time out each test after 5 seconds.
      */
     @Rule
     public Timeout timeout = Timeout.seconds(5);
-
-    private static final String ADAPTER_NAME = "abstract-adapter";
 
     private Vertx vertx;
     private Context context;

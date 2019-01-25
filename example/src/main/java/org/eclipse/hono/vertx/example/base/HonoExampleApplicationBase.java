@@ -49,13 +49,15 @@ import org.slf4j.LoggerFactory;
  * any input on it's console (which finishes it and closes vertx).
  */
 public class HonoExampleApplicationBase {
-    public static final Boolean USE_PLAIN_CONNECTION = Boolean.valueOf(System.getProperty("plain.connection", "false"));
+
     public static final String HONO_CLIENT_USER = System.getProperty("username", "consumer@HONO");
     public static final String HONO_CLIENT_PASSWORD = System.getProperty("password", "verysecret");
+    public static final Boolean USE_PLAIN_CONNECTION = Boolean.valueOf(System.getProperty("plain.connection", "false"));
+    public static final Boolean SEND_ONE_WAY_COMMANDS = Boolean.valueOf(System.getProperty("sendOneWayCommands", "false"));
+
+    private static final Logger LOG = LoggerFactory.getLogger(HonoExampleApplicationBase.class);
 
     protected final int DEFAULT_CONNECT_TIMEOUT_MILLIS = 1000;
-
-    public static final Boolean SEND_ONE_WAY_COMMANDS = Boolean.valueOf(System.getProperty("sendOneWayCommands", "false"));
 
     private final Vertx vertx = Vertx.vertx();
     private final HonoClient honoClient;
@@ -72,7 +74,6 @@ public class HonoExampleApplicationBase {
      */
     private final Map<String, TimeUntilDisconnectNotification> pendingTtdNotification = new HashMap<>();
 
-    private static final Logger LOG = LoggerFactory.getLogger(HonoExampleApplicationBase.class);
     /**
      * The consumer needs one connection to the AMQP 1.0 messaging network from which it can consume data.
      * <p>

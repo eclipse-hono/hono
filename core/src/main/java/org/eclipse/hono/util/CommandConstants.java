@@ -18,10 +18,6 @@ package org.eclipse.hono.util;
  */
 public class CommandConstants {
 
-    private CommandConstants() {
-        // prevent instantiation
-    }
-
     /**
      * The name of the Command and Control API endpoint.
      */
@@ -36,7 +32,6 @@ public class CommandConstants {
      * The part of the address for a command response between a device and an adapter, which identifies the request.
      */
     public static final String COMMAND_RESPONSE_REQUEST_PART = "req";
-
 
     /**
      * Short version of COMMAND_RESPONSE_REQUEST_PART.
@@ -65,6 +60,10 @@ public class CommandConstants {
      */
     public static final int TOPIC_POSITION_RESPONSE_REQ_ID = 4;
 
+    private CommandConstants() {
+        // prevent instantiation
+    }
+
     /**
      * Returns true if the passed endpoint denotes a command endpoint (full or short version).
      *
@@ -74,5 +73,4 @@ public class CommandConstants {
     public static final boolean isCommandEndpoint(final String endpoint) {
         return COMMAND_ENDPOINT.equals(endpoint) || COMMAND_ENDPOINT_SHORT.equals(endpoint);
     }
-
 }

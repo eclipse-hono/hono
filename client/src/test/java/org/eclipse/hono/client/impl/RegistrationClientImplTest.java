@@ -61,16 +61,15 @@ import io.vertx.proton.ProtonSender;
 @RunWith(VertxUnitRunner.class)
 public class RegistrationClientImplTest {
 
-    private Vertx vertx;
-    private Context context;
-    private ProtonSender sender;
-
     /**
      * Time out test cases after 5 seconds.
      */
     @Rule
     public Timeout globalTimeout = Timeout.seconds(5);
 
+    private Vertx vertx;
+    private Context context;
+    private ProtonSender sender;
     private RegistrationClientImpl client;
     private ExpiringValueCache<Object, RegistrationResult> cache;
 

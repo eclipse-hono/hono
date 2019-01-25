@@ -62,4 +62,3 @@ management:
 
 server:
   port: -1
-  

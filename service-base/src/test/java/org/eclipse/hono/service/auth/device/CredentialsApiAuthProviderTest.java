@@ -50,15 +50,15 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
 @RunWith(VertxUnitRunner.class)
 public class CredentialsApiAuthProviderTest {
 
-    private CredentialsApiAuthProvider<AbstractDeviceCredentials> provider;
-    private HonoClient honoClient;
-    private CredentialsClient credentialsClient;
-
     /**
      * Time out all test after 5 secs.
      */
     @Rule
     public Timeout globalTimeout = new Timeout(5, TimeUnit.SECONDS);
+
+    private CredentialsApiAuthProvider<AbstractDeviceCredentials> provider;
+    private HonoClient honoClient;
+    private CredentialsClient credentialsClient;
 
     /**
      * Sets up the fixture.

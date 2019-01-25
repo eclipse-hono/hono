@@ -65,16 +65,17 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
     protected final Logger log = LoggerFactory.getLogger(getClass());
 
     /**
-     * COAP server. Created from blocking execution, therefore use volatile.
-     */
-    private CoapServer server;
-    private volatile Endpoint secureEndpoint;
-    private volatile Endpoint insecureEndpoint;
-    private CoapAdapterMetrics metrics = CoapAdapterMetrics.NOOP;
-    /**
      * Map for authorization handler.
      */
     protected final Map<Class<? extends Principal>, CoapAuthenticationHandler> authenticationHandlerMap = new HashMap<>();
+
+    /**
+     * COAP server. Created from blocking execution, therefore use volatile.
+     */
+    private CoapServer server;
+    private CoapAdapterMetrics metrics = CoapAdapterMetrics.NOOP;
+    private volatile Endpoint secureEndpoint;
+    private volatile Endpoint insecureEndpoint;
 
     /**
      * Sets the metrics for this service.

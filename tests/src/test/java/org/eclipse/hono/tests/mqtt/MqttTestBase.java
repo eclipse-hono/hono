@@ -57,15 +57,6 @@ public abstract class MqttTestBase {
     protected static IntegrationTestSupport helper;
 
     /**
-     * A client for publishing messages to the MQTT protocol adapter.
-     */
-    protected MqttClient mqttClient;
-    /**
-     * The vert.x {@code Context} that the MQTT client runs on.
-     */
-    protected Context context;
-
-    /**
      * Provide test name to unit tests.
      */
     @Rule
@@ -75,6 +66,15 @@ public abstract class MqttTestBase {
      * A logger to be used by subclasses.
      */
     protected final Logger LOGGER = LoggerFactory.getLogger(getClass());
+
+    /**
+     * A client for publishing messages to the MQTT protocol adapter.
+     */
+    protected MqttClient mqttClient;
+    /**
+     * The vert.x {@code Context} that the MQTT client runs on.
+     */
+    protected Context context;
 
     /**
      * Sets up the helper.

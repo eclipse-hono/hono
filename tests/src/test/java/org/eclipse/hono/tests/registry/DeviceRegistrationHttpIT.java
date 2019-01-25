@@ -48,14 +48,14 @@ public class DeviceRegistrationHttpIT {
     private static Vertx vertx = Vertx.vertx();
     private static DeviceRegistryHttpClient registry;
 
-    private String deviceId;
-
     /**
      * Set the timeout for all test methods by using a JUnit Rule (instead of providing the timeout at every @Test annotation).
      * See {@link Test#timeout} for details about improved thread safety regarding the @After annotation for each test.
      */
     @Rule
     public final Timeout timeoutForAllMethods = Timeout.seconds(5);
+
+    private String deviceId;
 
     /**
      * Creates the HTTP client for accessing the registry.

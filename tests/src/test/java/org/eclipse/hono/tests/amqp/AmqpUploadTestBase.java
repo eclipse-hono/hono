@@ -321,7 +321,7 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
      * 
      * @return The QoS
      */
-    abstract protected ProtonQoS getProducerQoS();
+    protected abstract ProtonQoS getProducerQoS();
 
     /**
      * Sets up the protocol adapter by doing the following:
