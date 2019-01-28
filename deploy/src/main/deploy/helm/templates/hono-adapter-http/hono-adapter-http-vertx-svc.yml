@@ -5,7 +5,6 @@ metadata:
   labels:
     version: {{ .Chart.AppVersion }}
     group: {{ .Values.project.groupId }}
-    group: ${project.groupId}
     hono-metrics: prometheus
   name: hono-adapter-http-vertx
 spec:
