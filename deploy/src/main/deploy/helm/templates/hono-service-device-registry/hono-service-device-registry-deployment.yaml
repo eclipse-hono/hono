@@ -21,7 +21,7 @@ spec:
         group: {{ .Values.project.groupId }}
     spec:
       containers:
-      - image: eclipse/hono-service-device-registry:${project.version}
+      - image: eclipse/hono-service-device-registry:{{ .Chart.AppVersion }}
         imagePullPolicy: IfNotPresent
         name: eclipse-hono-service-device-registry
         ports:
