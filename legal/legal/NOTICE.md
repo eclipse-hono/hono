@@ -17,6 +17,7 @@ of the Eclipse Public License 2.0 which is available at https://www.eclipse.org/
 * Copyright 2016-2018 Red Hat, Inc.
 * Copyright 2017 Francois Travais
 * Copyright 2018 Alfusainey Jallow
+* Copyright 2019 Aloxy NV
 
 # Third-party Content
 

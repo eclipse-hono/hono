@@ -1475,7 +1475,7 @@ objects:
           command:
           - sh
           - -c
-          - 'cp -u /etc/examples/example-credentials.json /var/lib/hono/device-registry/credentials.json && cp -u /etc/examples/example-tenants.json /var/lib/hono/device-registry/tenants.json'
+          - 'cp -n /etc/examples/example-credentials.json /var/lib/hono/device-registry/credentials.json && cp -n /etc/examples/example-tenants.json /var/lib/hono/device-registry/tenants.json'
         containers:
         - name: eclipsehono-hono-service-device-registry
           image: hono-service-device-registry
