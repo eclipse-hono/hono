@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -23,6 +23,8 @@ import static org.mockito.Mockito.when;
 
 import java.net.HttpURLConnection;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import javax.security.sasl.AuthenticationException;
 
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.MessageSender;
@@ -49,6 +51,7 @@ import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.proton.ProtonClientOptions;
 import io.vertx.proton.ProtonConnection;
+import io.vertx.proton.sasl.SaslSystemException;
 
 /**
  * Test cases verifying the behavior of {@code HonoClient}.
@@ -121,20 +124,20 @@ public class HonoClientImplTest {
     }
 
     /**
-     * Verifies that the client fails with a ClientErrorException with status code 403
-     * if it cannot authenticate to the server.
+     * Verifies that the client fails with a ClientErrorException with status code 401
+     * if it cannot authenticate to the server due to wrong credentials.
      * 
      * @param ctx The vert.x test client.
      */
     @Test
-    public void testConnectFailsWithClientErrorForSecurityException(final TestContext ctx) {
+    public void testConnectFailsWithClientErrorForAuthenticationException(final TestContext ctx) {
 
         // GIVEN a client that is configured to connect
-        // to a peer using invalid credentials
+        // to a peer that always throws an AuthenticationException
         props.setReconnectAttempts(2);
         connectionFactory = new DisconnectHandlerProvidingConnectionFactory(con)
-                .setExpectedFailingConnectionAttempts(3)
-                .failWith(new SecurityException("invalid credentials"));
+                .setExpectedFailingConnectionAttempts(1) // only one connection attempt expected here
+                .failWith(new AuthenticationException("Failed to authenticate"));
         client = new HonoClientImpl(vertx, connectionFactory, props);
         final ProtonClientOptions options = new ProtonClientOptions()
                 .setConnectTimeout(10)
@@ -145,6 +148,97 @@ public class HonoClientImplTest {
         client.connect(options).setHandler(ctx.asyncAssertFailure(t -> {
             // THEN the connection attempt fails due do lack of authorization
             ctx.assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED, ((ServiceInvocationException) t).getErrorCode());
+        }));
+        // and the client has indeed tried three times in total
+        assertTrue(connectionFactory.awaitFailure());
+    }
+
+    /**
+     * Verifies that the client fails with a ClientErrorException with status code 401
+     * if it cannot authenticate to the server because no suitable SASL mechanism was found.
+     * 
+     * @param ctx The vert.x test client.
+     */
+    @Test
+    public void testConnectFailsWithClientErrorForNoSASLMechanismException(final TestContext ctx) {
+
+        // GIVEN a client that is configured to connect
+        // to a peer that always throws a SaslSystemException (as if no credentials were given)
+        props.setReconnectAttempts(2);
+        connectionFactory = new DisconnectHandlerProvidingConnectionFactory(con)
+                .setExpectedFailingConnectionAttempts(1) // only one connection attempt expected here
+                .failWith(new SaslSystemException(true, "Could not find a suitable SASL mechanism for the remote peer using the available credentials."));
+        client = new HonoClientImpl(vertx, connectionFactory, props);
+        final ProtonClientOptions options = new ProtonClientOptions()
+                .setConnectTimeout(10)
+                .setReconnectAttempts(0)
+                .setReconnectInterval(50);
+
+        // WHEN the client tries to connect
+        client.connect(options).setHandler(ctx.asyncAssertFailure(t -> {
+            // THEN the connection attempt fails due do lack of authorization
+            ctx.assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED, ((ServiceInvocationException) t).getErrorCode());
+            ctx.assertEquals("no suitable SASL mechanism found for authentication with server", t.getMessage());
+        }));
+        // and the client has indeed tried three times in total
+        assertTrue(connectionFactory.awaitFailure());
+    }
+
+    /**
+     * Verifies that the client fails with a ServerErrorException with status code 503
+     * if it cannot authenticate to the server because of a transient error.
+     *
+     * @param ctx The vert.x test client.
+     */
+    @Test
+    public void testConnectFailsWithClientErrorForTransientSaslSystemException(final TestContext ctx) {
+
+        // GIVEN a client that is configured to connect
+        // to a peer that always throws a SaslSystemException with permanent=false
+        props.setReconnectAttempts(2);
+        connectionFactory = new DisconnectHandlerProvidingConnectionFactory(con)
+                .setExpectedFailingConnectionAttempts(3)
+                .failWith(new SaslSystemException(false, "SASL handshake failed due to a transient error"));
+        client = new HonoClientImpl(vertx, connectionFactory, props);
+        final ProtonClientOptions options = new ProtonClientOptions()
+                .setConnectTimeout(10)
+                .setReconnectAttempts(0)
+                .setReconnectInterval(50);
+
+        // WHEN the client tries to connect
+        client.connect(options).setHandler(ctx.asyncAssertFailure(t -> {
+            // THEN the connection attempt fails
+            ctx.assertEquals(HttpURLConnection.HTTP_UNAVAILABLE, ((ServiceInvocationException) t).getErrorCode());
+        }));
+        // and the client has indeed tried three times in total
+        assertTrue(connectionFactory.awaitFailure());
+    }
+
+    /**
+     * Verifies that the client fails with a ServerErrorException with status code 503
+     * if it cannot authenticate to the server because of a permanent error.
+     *
+     * @param ctx The vert.x test client.
+     */
+    @Test
+    public void testConnectFailsWithClientErrorForPermanentSaslSystemException(final TestContext ctx) {
+
+        // GIVEN a client that is configured to connect
+        // to a peer that always throws a SaslSystemException with permanent=true
+        props.setReconnectAttempts(2);
+        connectionFactory = new DisconnectHandlerProvidingConnectionFactory(con)
+                .setExpectedFailingConnectionAttempts(1) // only one connection attempt expected here
+                .failWith(new SaslSystemException(true, "SASL handshake failed due to an unrecoverable error"));
+        client = new HonoClientImpl(vertx, connectionFactory, props);
+        final ProtonClientOptions options = new ProtonClientOptions()
+                .setConnectTimeout(10)
+                .setReconnectAttempts(0)
+                .setReconnectInterval(50);
+
+        // WHEN the client tries to connect
+        client.connect(options).setHandler(ctx.asyncAssertFailure(t -> {
+            // THEN the connection attempt fails
+            ctx.assertEquals(HttpURLConnection.HTTP_UNAVAILABLE, ((ServiceInvocationException) t).getErrorCode());
         }));
         // and the client has indeed tried three times in total
         assertTrue(connectionFactory.awaitFailure());
