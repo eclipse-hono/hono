@@ -33,6 +33,7 @@ import org.eclipse.hono.client.CommandResponse;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
 import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.service.auth.device.AuthHandler;
@@ -78,6 +79,9 @@ import io.vertx.mqtt.messages.MqttUnsubscribeMessage;
 public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtocolAdapterProperties>
         extends AbstractProtocolAdapterBase<T> {
 
+    protected static final int MINIMAL_MEMORY = 100_000_000; // 100MB: minimal memory necessary for startup
+    protected static final int MEMORY_PER_CONNECTION = 20_000; // 20KB: expected avg. memory consumption per connection
+
     private static final int IANA_MQTT_PORT = 1883;
     private static final int IANA_SECURE_MQTT_PORT = 8883;
 
@@ -87,6 +91,8 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
     private MqttServer insecureServer;
     private AuthHandler<MqttContext> authHandler;
     private final BiConsumer<CommandSubscription, CommandContext> afterCommandPubAckedConsumer = this::afterCommandPublished;
+    private int connectionLimit = Integer.MAX_VALUE;
+
     /**
      * Sets the authentication handler to use for authenticating devices.
      * 
@@ -261,6 +267,9 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         if (!getConfig().isAuthenticationRequired()) {
             LOG.warn("authentication of devices turned off");
         }
+
+        connectionLimit = getConfig().isConnectionLimitUnconfigured() ? autoconfigureConnectionLimit() : checkConnectionLimit();
+
         checkPortConfiguration()
             .compose(ok -> {
                 return CompositeFuture.all(bindSecureMqttServer(), bindInsecureMqttServer());
@@ -270,6 +279,58 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                 }
                 startFuture.complete();
             }, startFuture);
+    }
+
+    private int autoconfigureConnectionLimit() {
+        final long maxMemory = Runtime.getRuntime().maxMemory();
+        final int recommendedLimit = getRecommendedConnectionLimit(maxMemory);
+
+        LOG.info("Connection limit not configured, setting it to {} (based on {} MB memory)",
+                recommendedLimit, maxMemory / 1_000_000);
+
+        return recommendedLimit;
+    }
+
+    private int checkConnectionLimit() {
+        final long maxMemory = Runtime.getRuntime().maxMemory();
+        final int limit = getConfig().getMaxConnections();
+        final int recommendedLimit = getRecommendedConnectionLimit(maxMemory);
+
+        if (limit > recommendedLimit) {
+            LOG.warn("Connection limit ({}) too high: with {} MB memory the limit should be set to max. {}.",
+                    limit, maxMemory / 1_000_000, recommendedLimit);
+        }
+
+        return limit;
+    }
+
+    /**
+     * Returns a recommended limit of concurrent connections for the given maximum amount of memory. An amount of
+     * {@link #MINIMAL_MEMORY} bytes should be reserved for the startup of the adapter and
+     * {@link #MEMORY_PER_CONNECTION} bytes are estimated per connection.
+     * <p>
+     * The value returned is set as the connection limit if no other value is configured in
+     * {@link ProtocolAdapterProperties#setMaxConnections(int)}. If a value is configured and it is above the value
+     * returned here, a warning is printed.
+     * <p>
+     * Subclasses may override this method to implement another calculation.
+     * 
+     * @param maxMemory The maximum amount of memory for the JVM in bytes as returned by {@link Runtime#maxMemory()}.
+     * @return The recommended maximum connection limit between 0 and {@link Integer#MAX_VALUE}.
+     */
+    protected int getRecommendedConnectionLimit(final long maxMemory) {
+
+        final long recommendedLimit = (maxMemory - MINIMAL_MEMORY) / MEMORY_PER_CONNECTION;
+
+        if (recommendedLimit <= 0) {
+            LOG.warn("Not enough memory. It is recommended to provide more than {} MB (currently {} MB).",
+                    MINIMAL_MEMORY / 1_000_000, maxMemory / 1_000_000);
+            return 0;
+        } else if (recommendedLimit > Integer.MAX_VALUE) {
+            return Integer.MAX_VALUE;
+        } else {
+            return (int) recommendedLimit;
+        }
     }
 
     @Override
@@ -326,8 +387,8 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
     private Future<Device> handleConnectionRequest(final MqttEndpoint endpoint, final Span currentSpan) {
 
         if (isConnectionLimitExceeded()) {
-            LOG.debug("Connection limit ({}) exceeded, reject connection request", getConnectionLimit());
-            currentSpan.log(String.format("connection limit (%d) exceeded", getConnectionLimit()));
+            LOG.debug("Connection limit ({}) exceeded, reject connection request", connectionLimit);
+            currentSpan.log(String.format("connection limit (%d) exceeded", connectionLimit));
             return Future.failedFuture(new MqttConnectionException(
                     MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE));
         }
@@ -340,11 +401,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
     }
 
     private boolean isConnectionLimitExceeded() {
-        return metrics.getNumberOfConnections() >= getConnectionLimit();
-    }
-
-    private int getConnectionLimit() {
-        return getConfig().getMaxConcurrentConnections();
+        return metrics.getNumberOfConnections() >= connectionLimit;
     }
 
     private void handleConnectionRequestResult(final MqttEndpoint endpoint,
