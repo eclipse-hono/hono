@@ -20,6 +20,7 @@ hono:
     certPath: /etc/hono/certs/mqtt-adapter-cert.pem
     trustStorePath: /etc/hono/certs/trusted-certs.pem
     linkEstablishmentTimeout: ${link.establishment.timeout}
+    flowLatency: ${flow.latency}
   registration:
     name: 'Hono MQTT Adapter'
     host: hono-service-device-registry.hono
@@ -27,6 +28,7 @@ hono:
     username: mqtt-adapter@HONO
     password: mqtt-secret
     linkEstablishmentTimeout: ${link.establishment.timeout}
+    flowLatency: ${flow.latency}
   credentials:
     name: 'Hono MQTT Adapter'
     host: hono-service-device-registry.hono
@@ -34,6 +36,7 @@ hono:
     username: mqtt-adapter@HONO
     password: mqtt-secret
     linkEstablishmentTimeout: ${link.establishment.timeout}
+    flowLatency: ${flow.latency}
   tenant:
     name: 'Hono MQTT Adapter'
     host: hono-service-device-registry.hono
@@ -41,6 +44,7 @@ hono:
     username: mqtt-adapter@HONO
     password: mqtt-secret
     linkEstablishmentTimeout: ${link.establishment.timeout}
+    flowLatency: ${flow.latency}
   command:
     name: 'Hono MQTT Adapter'
     host: hono-dispatch-router.hono
@@ -50,6 +54,7 @@ hono:
     certPath: /etc/hono/certs/mqtt-adapter-cert.pem
     trustStorePath: /etc/hono/certs/trusted-certs.pem
     linkEstablishmentTimeout: ${link.establishment.timeout}
+    flowLatency: ${flow.latency}
   vertx:
     maxEventLoopExecuteTime: ${max.event-loop.execute-time}
 
