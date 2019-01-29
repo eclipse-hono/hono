@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -123,11 +123,11 @@ public final class CrudHttpClient {
             final HttpClientRequest req = client.options(requestOptions)
                     .handler(response -> {
                         if (successPredicate.test(response.statusCode())) {
-                            result.complete(response.headers());
+                            result.tryComplete(response.headers());
                         } else {
-                            result.fail(newServiceInvocationException(response.statusCode()));
+                            result.tryFail(newServiceInvocationException(response.statusCode()));
                         }
-                    }).exceptionHandler(result::fail);
+                    }).exceptionHandler(result::tryFail);
 
                 if (requestHeaders != null) {
                     req.headers().addAll(requestHeaders);
@@ -238,11 +238,11 @@ public final class CrudHttpClient {
                     .handler(response -> {
                         LOGGER.trace("response status code {}", response.statusCode());
                         if (successPredicate.test(response)) {
-                            result.complete(response.headers());
+                            result.tryComplete(response.headers());
                         } else {
-                            result.fail(newServiceInvocationException(response.statusCode()));
+                            result.tryFail(newServiceInvocationException(response.statusCode()));
                         }
-                    }).exceptionHandler(result::fail);
+                    }).exceptionHandler(result::tryFail);
 
                 if (requestHeaders != null) {
                     req.headers().addAll(requestHeaders);
@@ -355,11 +355,11 @@ public final class CrudHttpClient {
             final HttpClientRequest req = client.put(requestOptions)
                     .handler(response -> {
                         if (successPredicate.test(response.statusCode())) {
-                            result.complete(response.headers());
+                            result.tryComplete(response.headers());
                         } else {
-                            result.fail(newServiceInvocationException(response.statusCode()));
+                            result.tryFail(newServiceInvocationException(response.statusCode()));
                         }
-                    }).exceptionHandler(result::fail);
+                    }).exceptionHandler(result::tryFail);
 
                 if (requestHeaders != null) {
                     req.headers().addAll(requestHeaders);
@@ -408,11 +408,11 @@ public final class CrudHttpClient {
         client.get(requestOptions)
             .handler(response -> {
                 if (successPredicate.test(response.statusCode())) {
-                    response.bodyHandler(body -> result.complete(body));
+                    response.bodyHandler(body -> result.tryComplete(body));
                 } else {
-                    result.fail(newServiceInvocationException(response.statusCode()));
+                    result.tryFail(newServiceInvocationException(response.statusCode()));
                 }
-            }).exceptionHandler(result::fail).end();
+            }).exceptionHandler(result::tryFail).end();
 
         return result;
     }
@@ -452,11 +452,11 @@ public final class CrudHttpClient {
             client.delete(requestOptions)
             .handler(response -> {
                 if (successPredicate.test(response.statusCode())) {
-                    result.complete();
+                    result.tryComplete();
                 } else {
-                    result.fail(newServiceInvocationException(response.statusCode()));
+                    result.tryFail(newServiceInvocationException(response.statusCode()));
                 }
-            }).exceptionHandler(result::fail).end();
+            }).exceptionHandler(result::tryFail).end();
         });
 
         return result;
