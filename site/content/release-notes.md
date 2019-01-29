@@ -14,6 +14,12 @@ title = "Release Notes"
   have been changed or replaced in order to provide a more consistent set of metrics and increase the value of the information
   being reported. The legacy metrics still remain unchanged, though.
   Please refer to the [Metrics definition]({{< ref "/api/Metrics.md" >}}) for details.
+* In case of a failed connection attempt, `HonoClientImpl` will now determine based on the error whether it will re-try
+  to connect to the peer. Before, reconnect attempts were done unconditionally, by default infinitely or up to the
+  number of times defined in the *reconnectAttempts* property in the `ClientConfigProperties`. Now, when the outcome
+  of the SASL handshake received from the peer during connection establishment indicates that invalid credentials were
+  provided or that the server encountered a permanent error when handling the request, no further reconnect attempts
+  will be done.
  
 ### Depreciations
 

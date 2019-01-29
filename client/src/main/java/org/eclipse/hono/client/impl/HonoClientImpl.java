@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -30,6 +30,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+
+import javax.security.sasl.AuthenticationException;
 
 import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.message.Message;
@@ -65,6 +67,7 @@ import io.vertx.core.Vertx;
 import io.vertx.proton.ProtonClientOptions;
 import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonDelivery;
+import io.vertx.proton.sasl.SaslSystemException;
 
 /**
  * A helper class for creating Vert.x based clients for Hono's arbitrary APIs.
@@ -388,7 +391,11 @@ public class HonoClientImpl implements HonoClient {
                         conAttempt -> {
                             connecting.compareAndSet(true, false);
                             if (conAttempt.failed()) {
-                                reconnect(conAttempt.cause(), connectionHandler, disconnectHandler);
+                                if (isConnectionFailureEntailingReconnectAttempt(conAttempt.cause())) {
+                                    reconnect(conAttempt.cause(), connectionHandler, disconnectHandler);
+                                } else {
+                                    failConnectionAttempt(conAttempt.cause(), connectionHandler);
+                                }
                             } else {
                                 final ProtonConnection newConnection = conAttempt.result();
                                 if (shuttingDown.get()) {
@@ -497,18 +504,7 @@ public class HonoClientImpl implements HonoClient {
             log.debug("max number of attempts [{}] to re-connect to peer [{}:{}] have been made, giving up",
                     clientConfigProperties.getReconnectAttempts(), connectionFactory.getHost(), connectionFactory.getPort());
             clearState();
-            if (connectionFailureCause == null) {
-                connectionHandler.handle(Future.failedFuture(
-                        new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "failed to connect")));
-            } else if (connectionFailureCause instanceof SecurityException) {
-                // SASL handshake failed continuously, maybe due to wrong credentials?
-                connectionHandler.handle(Future.failedFuture(
-                        new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED, "failed to authenticate with server")));
-            } else {
-                connectionHandler.handle(Future.failedFuture(
-                        new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "failed to connect",
-                                connectionFailureCause)));
-            }
+            failConnectionAttempt(connectionFailureCause, connectionHandler);
 
         } else {
             if (connectionFailureCause != null) {
@@ -522,6 +518,33 @@ public class HonoClientImpl implements HonoClient {
             vertx.setTimer(reconnectInterval, tid -> {
                 connect(clientOptions, connectionHandler, disconnectHandler);
             });
+        }
+    }
+
+    private boolean isConnectionFailureEntailingReconnectAttempt(final Throwable connectionFailureCause) {
+        if (connectionFailureCause instanceof AuthenticationException
+            || (connectionFailureCause instanceof SaslSystemException && ((SaslSystemException) connectionFailureCause).isPermanent())) {
+            return false;
+        }
+        return true;
+    }
+
+    private void failConnectionAttempt(final Throwable connectionFailureCause, final Handler<AsyncResult<HonoClient>> connectionHandler) {
+        if (connectionFailureCause == null) {
+            connectionHandler.handle(Future.failedFuture(
+                    new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "failed to connect")));
+        } else if (connectionFailureCause instanceof AuthenticationException) {
+            // SASL handshake failed continuously, maybe due to wrong credentials?
+            connectionHandler.handle(Future.failedFuture(
+                    new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED, "failed to authenticate with server")));
+        } else if (connectionFailureCause instanceof SaslSystemException
+                && connectionFailureCause.getMessage().contains("Could not find a suitable SASL mechanism")) { // this check will have to be changed when using a future vert.x version where an AuthenticationException is thrown in this case
+            connectionHandler.handle(Future.failedFuture(
+                    new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED, "no suitable SASL mechanism found for authentication with server")));
+        } else {
+            connectionHandler.handle(Future.failedFuture(
+                    new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "failed to connect",
+                            connectionFailureCause)));
         }
     }
 
