@@ -17,6 +17,7 @@ import static io.netty.handler.codec.mqtt.MqttConnectReturnCode.CONNECTION_REFUS
 import static io.netty.handler.codec.mqtt.MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE;
 import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
 import static org.hamcrest.CoreMatchers.is;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -346,15 +347,26 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
 
     /**
      * Verifies that an adapter rejects connections when the connection limit is exceeded.
+     * 
+     * @param ctx The helper to use for running async tests on vertx.
      */
     @Test
-    public void testEndpointHandlerRejectsConnectionsAboveLimit() {
+    public void testEndpointHandlerRejectsConnectionsAboveLimit(final TestContext ctx) {
 
         // GIVEN an adapter
         final MqttServer server = getMqttServer(false);
         // with a connection limit of 1
-        config.setMaxConcurrentConnections(1);
+        config.setMaxConnections(1);
         final AbstractVertxBasedMqttProtocolAdapter<MqttProtocolAdapterProperties> adapter = getAdapter(server);
+
+        // that is set during startup
+        final Async startup = ctx.async();
+        final Future<Void> startupTracker = Future.future();
+        startupTracker.setHandler(ctx.asyncAssertSuccess(s -> {
+            startup.complete();
+        }));
+        adapter.start(startupTracker);
+        startup.await();
         forceClientMocksToConnected();
         // which already has 1 connection open
         when(metrics.getNumberOfConnections()).thenReturn(1L);
@@ -959,6 +971,47 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         closeHandlerCaptor.getValue().handle(null);
         // the number of unauthenticated connections is decremented again
         verify(metrics).decrementUnauthenticatedConnections();
+    }
+
+    /**
+     * Verifies that for less than 150 MB minimal memory + 20 KB memory per connection the recommended connection limit
+     * is 0.
+     */
+    @Test
+    public void testGetRecommendedConnectionLimitLowerLimit() {
+
+        final MqttServer server = getMqttServer(false);
+        final AbstractVertxBasedMqttProtocolAdapter<MqttProtocolAdapterProperties> adapter = getAdapter(server);
+
+        assertEquals(0, adapter.getRecommendedConnectionLimit(-1));
+        assertEquals(0, adapter.getRecommendedConnectionLimit(0));
+        assertEquals(0, adapter.getRecommendedConnectionLimit(100_000_000 + 20_000 - 1));
+    }
+
+    /**
+     * Verifies that every 20 KB memory per connection that exceed the minimal memory 150 MB the recommended connection
+     * limit is incremented by 1.
+     */
+    @Test
+    public void testGetRecommendedConnectionLimit() {
+
+        final MqttServer server = getMqttServer(false);
+        final AbstractVertxBasedMqttProtocolAdapter<MqttProtocolAdapterProperties> adapter = getAdapter(server);
+
+        assertEquals(1, adapter.getRecommendedConnectionLimit(100_000_000 + 20_000));
+        assertEquals(1, adapter.getRecommendedConnectionLimit(100_000_000 + 40_000 - 1));
+        assertEquals(2, adapter.getRecommendedConnectionLimit(100_000_000 + 40_000));
+    }
+
+    /**
+     * Verifies that the recommended connection limit does not overflow.
+     */
+    @Test
+    public void testGetRecommendedConnectionLimitUpperLimit() {
+        final MqttServer server = getMqttServer(false);
+        final AbstractVertxBasedMqttProtocolAdapter<MqttProtocolAdapterProperties> adapter = getAdapter(server);
+
+        assertEquals(Integer.MAX_VALUE, adapter.getRecommendedConnectionLimit(Long.MAX_VALUE - 1L));
     }
 
     private void forceClientMocksToConnected() {

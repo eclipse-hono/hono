@@ -23,7 +23,7 @@ public class ProtocolAdapterProperties extends ServiceConfigProperties {
     private boolean jmsVendorPropsEnabled = false;
     private boolean defaultsEnabled = true;
     private long eventLoopBlockedCheckTimeout = 5000L;
-    private int maxConcurrentConnections = Integer.MAX_VALUE;
+    private int maxConnections = 0;
 
     /**
      * Checks whether the protocol adapter always authenticates devices using their provided credentials as defined
@@ -159,24 +159,35 @@ public class ProtocolAdapterProperties extends ServiceConfigProperties {
     /**
      * Gets the number of maximal concurrent connections the protocol adapter should accept.
      * <p>
-     * Default is {@link Integer#MAX_VALUE}.
+     * Default is 0 if no other value had been configured. Which leaves it to the protocol adapter to set an appropriate
+     * limit.
      * 
      * @return The maximal number of concurrent connections.
      */
-    public int getMaxConcurrentConnections() {
-        return maxConcurrentConnections;
+    public int getMaxConnections() {
+        return maxConnections;
     }
 
     /**
-     * Sets the number of maximal concurrent connections the protocol adapter should accept.
+     * Sets the number of maximal concurrent connections the protocol adapter should accept. Setting 0 leaves it to the
+     * protocol adapter to set an appropriate limit.
      * 
-     * @param maxConcurrentConnections The maximal number of concurrent connections.
-     * @throws IllegalArgumentException if the number is &lt;= 0.
+     * @param maxConnections The maximal number of concurrent connections, 0 for no explicit limit.
+     * @throws IllegalArgumentException if the number is &lt; 0.
      */
-    public void setMaxConcurrentConnections(final int maxConcurrentConnections) {
-        if (maxConcurrentConnections <= 0) {
-            throw new IllegalArgumentException("connection limit must be greater than zero");
+    public void setMaxConnections(final int maxConnections) {
+        if (maxConnections < 0) {
+            throw new IllegalArgumentException("connection limit must be a positive integer");
         }
-        this.maxConcurrentConnections = maxConcurrentConnections;
+        this.maxConnections = maxConnections;
+    }
+
+    /**
+     * Checks if a positive connection limit has been configured.
+     * 
+     * @return {@code true} if {@link #maxConnections} is 0, {@code false} otherwise.
+     */
+    public boolean isConnectionLimitUnconfigured() {
+        return maxConnections == 0;
     }
 }
