@@ -460,10 +460,12 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         final AbstractVertxBasedMqttProtocolAdapter<MqttProtocolAdapterProperties> adapter = getAdapter(server);
 
         // WHEN a device publishes a message with a malformed topic
-        final MqttPublishMessage msg = mock(MqttPublishMessage.class);
         final MqttEndpoint device = mockEndpoint();
+        final Buffer payload = Buffer.buffer("hello");
+        final MqttPublishMessage msg = mock(MqttPublishMessage.class);
         when(msg.qosLevel()).thenReturn(MqttQoS.AT_LEAST_ONCE);
         when(msg.topicName()).thenReturn(null);
+        when(msg.payload()).thenReturn(payload);
         adapter.handlePublishedMessage(newMqttContext(msg, device));
 
         // THEN the message is not processed
@@ -472,6 +474,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
                 anyString(),
                 eq(MetricsTags.ProcessingOutcome.FORWARDED),
                 any(MetricsTags.QoS.class),
+                anyInt(),
                 any());
         // and no PUBACK is sent to the device
         verify(device, never()).publishAcknowledge(anyInt());
@@ -515,6 +518,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
                             anyString(),
                             eq(MetricsTags.ProcessingOutcome.FORWARDED),
                             any(MetricsTags.QoS.class),
+                            anyInt(),
                             any());
                 }));
     }
@@ -560,6 +564,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
                             anyString(),
                             eq(MetricsTags.ProcessingOutcome.FORWARDED),
                             any(MetricsTags.QoS.class),
+                            anyInt(),
                             any());
                 }));
     }
@@ -629,6 +634,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
                 anyString(),
                 eq(MetricsTags.ProcessingOutcome.FORWARDED),
                 any(MetricsTags.QoS.class),
+                anyInt(),
                 any());
 
         // until the message has been settled and accepted
@@ -639,6 +645,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
                 eq("tenant"),
                 eq(MetricsTags.ProcessingOutcome.FORWARDED),
                 eq(MetricsTags.QoS.AT_LEAST_ONCE),
+                eq(payload.length()),
                 any());
     }
 
@@ -680,6 +687,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
                 anyString(),
                 eq(MetricsTags.ProcessingOutcome.FORWARDED),
                 any(MetricsTags.QoS.class),
+                anyInt(),
                 any());
 
     }
@@ -701,14 +709,16 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         // WHEN a device publishes a message with its retain flag set
         final MqttEndpoint endpoint = mockEndpoint();
         when(endpoint.isConnected()).thenReturn(Boolean.TRUE);
+        final Buffer payload = Buffer.buffer("hello");
         final MqttPublishMessage messageFromDevice = mock(MqttPublishMessage.class);
         when(messageFromDevice.qosLevel()).thenReturn(MqttQoS.AT_LEAST_ONCE);
         when(messageFromDevice.messageId()).thenReturn(5555555);
         when(messageFromDevice.topicName()).thenReturn("t/my-tenant/4712");
         when(messageFromDevice.isRetain()).thenReturn(Boolean.TRUE);
+        when(messageFromDevice.payload()).thenReturn(payload);
         final MqttContext context = newMqttContext(messageFromDevice, endpoint);
 
-        adapter.uploadTelemetryMessage(context, "my-tenant", "4712", Buffer.buffer("some payload")).setHandler(ctx.asyncAssertSuccess(ok -> {
+        adapter.uploadTelemetryMessage(context, "my-tenant", "4712", payload).setHandler(ctx.asyncAssertSuccess(ok -> {
 
             // THEN the device has received a PUBACK
             verify(endpoint).publishAcknowledge(5555555);
@@ -722,6 +732,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
                     eq("my-tenant"),
                     eq(MetricsTags.ProcessingOutcome.FORWARDED),
                     eq(MetricsTags.QoS.AT_LEAST_ONCE),
+                    eq(payload.length()),
                     any());
         }));
     }
@@ -732,7 +743,6 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
      *
      * @param ctx The vert.x test context.
      */
-    @SuppressWarnings({ "unchecked" })
     @Test
     public void testOnSubscribeWithQos0RegistersAndClosesConnection(final TestContext ctx) {
         testOnSubscribeRegistersAndClosesConnection(ctx, MqttQoS.AT_MOST_ONCE);
@@ -744,12 +754,12 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
      * 
      * @param ctx The vert.x test context.
      */
-    @SuppressWarnings({ "unchecked" })
     @Test
     public void testOnSubscribeWithQos1RegistersAndClosesConnection(final TestContext ctx) {
         testOnSubscribeRegistersAndClosesConnection(ctx, MqttQoS.AT_LEAST_ONCE);
     }
 
+    @SuppressWarnings("unchecked")
     private void testOnSubscribeRegistersAndClosesConnection(final TestContext ctx, final MqttQoS qos) {
 
         // GIVEN a device connected to an adapter

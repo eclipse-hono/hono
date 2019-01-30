@@ -67,16 +67,19 @@ public interface Metrics {
      * @param tenantId The tenant that the device belongs to.
      * @param outcome The outcome of processing the message.
      * @param qos The delivery semantics used for sending the message downstream.
+     * @param payloadSize The number of bytes contained in the message's payload.
      * @param timer The timer indicating the amount of time used
      *              for processing the message.
      * @throws NullPointerException if any of the parameters are {@code null}.
-     * @throws IllegalArgumentException if type is neither telemetry nor event.
+     * @throws IllegalArgumentException if type is neither telemetry nor event or
+     *                    if payload size is negative.
      */
     void reportTelemetry(
             MetricsTags.EndpointType type,
             String tenantId,
             MetricsTags.ProcessingOutcome outcome,
             MetricsTags.QoS qos,
+            int payloadSize,
             Sample timer);
 
     /**
@@ -86,30 +89,22 @@ public interface Metrics {
      * @param tenantId The tenant that the device belongs to.
      * @param outcome The outcome of processing the message.
      * @param qos The delivery semantics used for sending the message downstream.
+     * @param payloadSize The number of bytes contained in the message's payload.
      * @param ttdStatus The outcome of processing the TTD value contained in the message.
      * @param timer The timer indicating the amount of time used
      *              for processing the message.
      * @throws NullPointerException if any of the parameters are {@code null}.
-     * @throws IllegalArgumentException if type is neither telemetry nor event.
+     * @throws IllegalArgumentException if type is neither telemetry nor event or
+     *                    if payload size is negative.
      */
     void reportTelemetry(
             MetricsTags.EndpointType type,
             String tenantId,
             MetricsTags.ProcessingOutcome outcome,
             MetricsTags.QoS qos,
+            int payloadSize,
             MetricsTags.TtdStatus ttdStatus,
             Sample timer);
-
-    /**
-     * Reports the size of a processed message's payload that has been received
-     * from a device.
-     *
-     * @param type The type of message received, e.g. <em>telemetry</em> or <em>event</em>.
-     * @param tenantId The tenant that the device belongs to.
-     * @param payloadSize The size of the payload in bytes.
-     * @throws NullPointerException if any of the parameters are {@code null}.
-     */
-    void incrementProcessedPayload(MetricsTags.EndpointType type, String tenantId, long payloadSize);
 
     /**
      * Reports a command being delivered to a device.

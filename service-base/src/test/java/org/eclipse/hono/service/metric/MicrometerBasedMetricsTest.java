@@ -57,6 +57,7 @@ public class MicrometerBasedMetricsTest {
                 "tenant",
                 MetricsTags.ProcessingOutcome.FORWARDED,
                 MetricsTags.QoS.UNKNOWN,
+                1024,
                 MetricsTags.TtdStatus.NONE,
                 metrics.startTimer());
 

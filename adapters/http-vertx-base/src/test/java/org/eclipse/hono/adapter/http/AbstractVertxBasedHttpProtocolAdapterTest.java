@@ -281,6 +281,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
                     anyString(),
                     eq(MetricsTags.ProcessingOutcome.FORWARDED),
                     any(MetricsTags.QoS.class),
+                    anyInt(),
                     any(MetricsTags.TtdStatus.class),
                     any());
     }
@@ -320,6 +321,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
                 anyString(),
                 eq(MetricsTags.ProcessingOutcome.FORWARDED),
                 any(MetricsTags.QoS.class),
+                anyInt(),
                 any(MetricsTags.TtdStatus.class),
                 any());
 
@@ -332,9 +334,9 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
                 eq("tenant"),
                 eq(MetricsTags.ProcessingOutcome.FORWARDED),
                 any(MetricsTags.QoS.class),
+                eq(payload.length()),
                 any(MetricsTags.TtdStatus.class),
                 any());
-        verify(metrics).incrementProcessedPayload(any(MetricsTags.EndpointType.class), eq("tenant"), eq((long) payload.length()));
     }
 
     /**
@@ -366,6 +368,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
                 anyString(),
                 eq(MetricsTags.ProcessingOutcome.FORWARDED),
                 any(MetricsTags.QoS.class),
+                anyInt(),
                 any(MetricsTags.TtdStatus.class),
                 any());
     }
@@ -535,9 +538,9 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
                 eq("tenant"),
                 eq(MetricsTags.ProcessingOutcome.FORWARDED),
                 any(MetricsTags.QoS.class),
+                eq(payload.length()),
                 any(MetricsTags.TtdStatus.class),
                 any());
-        verify(metrics).incrementProcessedPayload(any(MetricsTags.EndpointType.class), eq("tenant"), eq((long) payload.length()));
     }
 
     /**

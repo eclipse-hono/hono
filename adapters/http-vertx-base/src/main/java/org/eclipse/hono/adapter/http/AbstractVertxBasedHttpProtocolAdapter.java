@@ -683,9 +683,9 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                                     tenant,
                                     MetricsTags.ProcessingOutcome.FORWARDED,
                                     qos,
+                                    payload.length(),
                                     getTtdStatus(ctx),
                                     getMicrometerSample(ctx));
-                            metrics.incrementProcessedPayload(endpoint, tenant, messagePayloadSize(ctx));
                             currentSpan.finish();
                             // the command consumer is used for a single request only
                             // we can close the consumer only AFTER we have accepted a
@@ -728,11 +728,25 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                     Optional.ofNullable(commandConsumerTracker.result()).ifPresent(consumer -> consumer.close(null));
 
                     if (ClientErrorException.class.isInstance(t)) {
-                        metrics.reportTelemetry(endpoint, tenant, MetricsTags.ProcessingOutcome.UNPROCESSABLE, qos, getTtdStatus(ctx), getMicrometerSample(ctx));
+                        metrics.reportTelemetry(
+                                endpoint,
+                                tenant,
+                                MetricsTags.ProcessingOutcome.UNPROCESSABLE,
+                                qos,
+                                payload.length(),
+                                getTtdStatus(ctx),
+                                getMicrometerSample(ctx));
                         final ClientErrorException e = (ClientErrorException) t;
                         ctx.fail(e);
                     } else {
-                        metrics.reportTelemetry(endpoint, tenant, MetricsTags.ProcessingOutcome.UNDELIVERABLE, qos, getTtdStatus(ctx), getMicrometerSample(ctx));
+                        metrics.reportTelemetry(
+                                endpoint,
+                                tenant,
+                                MetricsTags.ProcessingOutcome.UNDELIVERABLE,
+                                qos,
+                                payload.length(),
+                                getTtdStatus(ctx),
+                                getMicrometerSample(ctx));
                         HttpUtils.serviceUnavailable(ctx, 2, "temporarily unavailable");
                     }
                     TracingHelper.logError(currentSpan, t);
@@ -741,22 +755,6 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                 });
             }
         }
-    }
-
-    /**
-     * Measure the size of the payload for using in the metrics system.
-     * <p>
-     * This implementation simply counts the bytes of the HTTP payload buffer and ignores all other attributes of the
-     * HTTP request.
-     *
-     * @param ctx The payload to measure. May be {@code null}.
-     * @return The number of bytes of the payload or zero if any input is {@code null}.
-     */
-    protected long messagePayloadSize(final RoutingContext ctx) {
-        if (ctx == null || ctx.getBody() == null) {
-            return 0L;
-        }
-        return ctx.getBody().length();
     }
 
     /**
