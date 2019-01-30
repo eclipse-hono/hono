@@ -198,7 +198,7 @@ public class HonoReceiver extends AbstractClient {
             final long sampleReceivedTime = System.currentTimeMillis();
             messageCount++;
 
-            if (!MessageHelper.hasDataBody(message, false)) {
+            if (!MessageHelper.hasDataBody(message)) {
                 errorCount++;
                 setSampleStartIfNotSetYet(sampleReceivedTime);
                 LOGGER.warn("got message with non-Data body section; increasing errorCount in batch to {}; current batch size: {}",

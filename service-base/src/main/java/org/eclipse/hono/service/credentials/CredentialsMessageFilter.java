@@ -49,8 +49,8 @@ public final class CredentialsMessageFilter {
         } else if (msg.getReplyTo() == null) {
             LOG.trace("message [{}] has no reply-to address set", msg.getMessageId());
             return false;
-        } else if (!MessageHelper.hasDataBody(msg, true)) {
-            LOG.trace("message [{}] contains no AmqpValue or Data section payload", msg.getMessageId());
+        } else if (!MessageHelper.hasDataBody(msg)) {
+            LOG.trace("message [{}] contains no Data section payload", msg.getMessageId());
             return false;
         } else {
             return true;

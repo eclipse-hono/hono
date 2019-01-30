@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,8 +14,6 @@ package org.eclipse.hono.service.credentials;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-
-import java.nio.charset.StandardCharsets;
 
 import org.apache.qpid.proton.amqp.Binary;
 import org.apache.qpid.proton.amqp.messaging.AmqpValue;
@@ -35,10 +33,9 @@ import io.vertx.proton.ProtonHelper;
  */
 public class CredentialsMessageFilterTest {
 
-    private static final String BILLIE_HASHED_PASSWORD = new JsonObject()
+    private static final JsonObject BILLIE_HASHED_PASSWORD = new JsonObject()
             .put(CredentialsConstants.FIELD_TYPE, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD)
-            .put(CredentialsConstants.FIELD_AUTH_ID, "billie")
-            .encode();
+            .put(CredentialsConstants.FIELD_AUTH_ID, "billie");
 
     private ResourceIdentifier target;
 
@@ -67,15 +64,15 @@ public class CredentialsMessageFilterTest {
     }
 
     /**
-     * Verifies that a message containing a non AmqpValued body
+     * Verifies that a message containing a non Data section body
      * does not pass the filter.
      */
     @Test
-    public void testVerifyFailsForNonAmqpValuedBody() {
+    public void testVerifyFailsForNonDataSectionBody() {
 
         // GIVEN a message with an unsupported subject
-        final Message msg = givenAValidMessageWithoutBody(CredentialsConstants.CredentialsAction.unknown);
-        msg.setBody(new Data(new Binary(BILLIE_HASHED_PASSWORD.getBytes(StandardCharsets.UTF_8))));
+        final Message msg = givenAValidMessageWithoutBody(CredentialsConstants.CredentialsAction.get);
+        msg.setBody(new AmqpValue(BILLIE_HASHED_PASSWORD.encode()));
         msg.setContentType("application/json");
 
         // WHEN receiving the message via a link with any tenant
@@ -132,7 +129,7 @@ public class CredentialsMessageFilterTest {
 
         // GIVEN a credentials message for user billie
         final Message msg = givenAValidMessageWithoutBody(CredentialsConstants.CredentialsAction.get);
-        msg.setBody(new AmqpValue(BILLIE_HASHED_PASSWORD));
+        msg.setBody(new Data(new Binary(BILLIE_HASHED_PASSWORD.toBuffer().getBytes())));
         msg.setContentType("application/json");
 
         // WHEN receiving the message via a link with any tenant

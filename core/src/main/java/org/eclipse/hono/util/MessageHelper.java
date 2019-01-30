@@ -28,7 +28,6 @@ import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
 import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.amqp.messaging.MessageAnnotations;
 import org.apache.qpid.proton.amqp.messaging.Rejected;
-import org.apache.qpid.proton.amqp.messaging.Section;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.message.Message;
 import org.slf4j.Logger;
@@ -725,55 +724,16 @@ public final class MessageHelper {
     }
 
     /**
-     * Test if the message has a {@link Data} section set as the body.
+     * Checks if a message's body consists of an AMQP <em>Data</em> section.
      * 
-     * @param message The message to test.
-     * @param allowAmqpValue Whether or now to allow AmqpValue of type {@code String} or {@code byte[]} to pass as well.
-     * @return {@code true} if the body was not {@code null} and an instance of {@link Data}, {@code false} otherwise.
-     *         If the parameter {@code allowAmqpValue} was {@code true}, then the method would also return {@code true}
-     *         if the body contains an {@link AmqpValue} of type {@code String} or {@code byte[]}.
-     * 
-     * @throws NullPointerException If the parameter {@code message} was {@code null}.
+     * @param message The message to check.
+     * @return {@code true} if the body consists of a Data section, {@code false} otherwise.
+     * @throws NullPointerException If message is {@code null}.
      */
-    public static boolean hasDataBody(final Message message, final boolean allowAmqpValue) {
+    public static boolean hasDataBody(final Message message) {
+
         Objects.requireNonNull(message);
-
-        final Section body = message.getBody();
-
-        if (body == null) {
-            // the body is null, so the answer is false
-            return false;
-        }
-
-        if (body instanceof Data) {
-            // early return, a data section
-            return true;
-        }
-
-        if (!allowAmqpValue) {
-            // no data section, but we don't allow AmqpValue either
-            return false;
-        }
-
-        if (body instanceof AmqpValue) {
-
-            // extract the actual value
-            final Object value = ((AmqpValue) body).getValue();
-
-            if (value instanceof byte[]) {
-                // byte arrays are fine
-                return true;
-            }
-
-            if (value instanceof String) {
-                // as are strings, because we return them as byte arrays
-                return true;
-            }
-        }
-
-        // we ran out of options
-
-        return false;
+        return message.getBody() instanceof Data;
     }
 
 }

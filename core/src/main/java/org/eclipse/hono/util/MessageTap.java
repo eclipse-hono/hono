@@ -46,7 +46,7 @@ public final class MessageTap implements Consumer<Message> {
 
         return new MessageTap(
                 msg -> {
-                    if (msg.getBody() == null || MessageHelper.hasDataBody(msg, false)) {
+                    if (msg.getBody() == null || MessageHelper.hasDataBody(msg)) {
                         TimeUntilDisconnectNotification.fromMessage(msg).ifPresent(
                                 notificationObject -> notificationReadyToDeliverConsumer.accept(notificationObject));
 

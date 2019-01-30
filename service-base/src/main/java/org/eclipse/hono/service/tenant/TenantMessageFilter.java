@@ -49,8 +49,8 @@ public final class TenantMessageFilter extends BaseMessageFilter {
         } else if (msg.getReplyTo() == null) {
             LOG.trace("message [{}] contains no reply-to address", msg.getMessageId());
             return false;
-        } else if (msg.getBody() != null && !MessageHelper.hasDataBody(msg, true)) {
-            LOG.trace("message [{}] contains no AmqpValue or Data section payload", msg.getMessageId());
+        } else if (msg.getBody() != null && !MessageHelper.hasDataBody(msg)) {
+            LOG.trace("message [{}] contains no Data section payload", msg.getMessageId());
             return false;
         } else {
             return true;
