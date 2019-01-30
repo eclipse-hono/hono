@@ -15,7 +15,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "iteration": 1549016699588,
+  "iteration": 1549025382653,
   "links": [],
   "panels": [
     {
@@ -68,7 +68,7 @@
       "thresholds": [],
       "timeFrom": null,
       "timeShift": null,
-      "title": "Forwarded",
+      "title": "Succeeded",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -383,21 +383,35 @@
       "renderer": "flot",
       "seriesOverrides": [],
       "spaceLength": 10,
-      "stack": false,
+      "stack": true,
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(irate(hono_messages_processed_payload_total{component_name=~\"$componentname\",type=~\"$type\",tenant=~\"$tenant\",host=~\"$instance\"}[$__range]))",
+          "expr": "sum(irate(hono_messages_payload_bytes_sum{component_name=~\"$componentname\",type=~\"$type\",status=\"forwarded\",tenant=~\"$tenant\",host=~\"$instance\"}[$__range]))",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "{{component_name}} - {{type}} - {{host}}",
+          "legendFormat": "forwarded",
           "refId": "A"
+        },
+        {
+          "expr": "sum(irate(hono_messages_payload_bytes_sum{component_name=~\"$componentname\",type=~\"$type\",status=\"undeliverable\",tenant=~\"$tenant\",host=~\"$instance\"}[$__range]))",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "undeliverable",
+          "refId": "B"
+        },
+        {
+          "expr": "sum(irate(hono_messages_payload_bytes_sum{component_name=~\"$componentname\",type=~\"$type\",status=\"unprocessable\",tenant=~\"$tenant\",host=~\"$instance\"}[$__range]))",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "unprocessable",
+          "refId": "C"
         }
       ],
       "thresholds": [],
       "timeFrom": null,
       "timeShift": null,
-      "title": "Processed payload",
+      "title": "Payload",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -495,7 +509,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "sum(rate(hono_messages_processed_payload_total{component_name=~\"$componentname\",type=~\"$type\",tenant=~\"$tenant\",host=~\"$instance\"}[$__interval]))",
+          "expr": "sum(rate(hono_messages_payload_bytes_sum{component_name=~\"$componentname\",type=~\"$type\",tenant=~\"$tenant\",host=~\"$instance\"}[$__interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A"
@@ -576,7 +590,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "sum(rate(hono_messages_processed_payload_total{component_name=~\"$componentname\",type=~\"$type\",tenant=~\"$tenant\",host=~\"$instance\"}[$__interval]))",
+          "expr": "sum(rate(hono_messages_payload_bytes_sum{component_name=~\"$componentname\",type=~\"$type\",tenant=~\"$tenant\",host=~\"$instance\"}[$__interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A"
@@ -657,7 +671,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "sum(rate(hono_messages_processed_payload_total{component_name=~\"$componentname\",type=~\"$type\",tenant=~\"$tenant\",host=~\"$instance\"}[$__interval]))",
+          "expr": "sum(rate(hono_messages_payload_bytes_sum{component_name=~\"$componentname\",type=~\"$type\",tenant=~\"$tenant\",host=~\"$instance\"}[$__interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A"
@@ -712,15 +726,22 @@
       "renderer": "flot",
       "seriesOverrides": [],
       "spaceLength": 10,
-      "stack": false,
+      "stack": true,
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(irate(hono_messages_received_seconds_count{component_name=~\"$componentname\",type=~\"$type\",status!=\"forwarded\",tenant=~\"$tenant\",host=~\"$instance\"}[$__range]))",
+          "expr": "sum(irate(hono_messages_received_seconds_count{component_name=~\"$componentname\",type=~\"$type\",status=\"undeliverable\",tenant=~\"$tenant\",host=~\"$instance\"}[$__range]))",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "{{component_name}} - {{type}} - {{host}}",
+          "legendFormat": "undeliverable",
           "refId": "A"
+        },
+        {
+          "expr": "sum(irate(hono_messages_received_seconds_count{component_name=~\"$componentname\",type=~\"$type\",status=\"unprocessable\",tenant=~\"$tenant\",host=~\"$instance\"}[$__range]))",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "unprocessable",
+          "refId": "B"
         }
       ],
       "thresholds": [],
@@ -769,14 +790,14 @@
       "colorValue": true,
       "colors": [
         "#299c46",
-        "rgba(237, 129, 40, 0.89)",
+        "#e5ac0e",
         "#d44a3a"
       ],
       "datasource": "hono_metrics",
       "decimals": 0,
-      "format": "percentunit",
+      "format": "percent",
       "gauge": {
-        "maxValue": 0.2,
+        "maxValue": 30,
         "minValue": 0,
         "show": true,
         "thresholdLabels": false,
@@ -825,7 +846,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "sum(rate(hono_messages_received_seconds_count{component_name=~\"$componentname\",type=~\"$type\",status!=\"forwarded\",tenant=~\"$tenant\",host=~\"$instance\"}[$__interval]))\n/\n sum(rate(hono_messages_received_seconds_count{component_name=~\"$componentname\",type=~\"$type\",tenant=~\"$tenant\",host=~\"$instance\"}[$__interval]))\n",
+          "expr": "(sum(rate(hono_messages_received_seconds_count{component_name=~\"$componentname\",type=~\"$type\",status!=\"forwarded\",tenant=~\"$tenant\",host=~\"$instance\"}[$__interval]))\n/\n sum(rate(hono_messages_received_seconds_count{component_name=~\"$componentname\",type=~\"$type\",tenant=~\"$tenant\",host=~\"$instance\"}[$__interval])))\n* 100\n",
           "format": "time_series",
           "instant": false,
           "intervalFactor": 1,
@@ -833,7 +854,7 @@
           "refId": "A"
         }
       ],
-      "thresholds": ".05,.15",
+      "thresholds": "5,15",
       "title": "Failure Rate",
       "type": "singlestat",
       "valueFontSize": "80%",
@@ -864,11 +885,56 @@
         "datasource": "hono_metrics",
         "hide": 0,
         "includeAll": true,
-        "label": "Component Name",
+        "label": "Adapter",
         "multi": true,
         "name": "componentname",
         "options": [],
-        "query": "label_values(component_name)",
+        "query": "label_values(hono_messages_received_seconds_count,component_name)",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "tagValuesQuery": "",
+        "tags": [],
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
+      },
+      {
+        "current": {
+          "text": "",
+          "value": ""
+        },
+        "hide": 0,
+        "label": "Tenant",
+        "name": "tenant",
+        "options": [
+          {
+            "text": ".+",
+            "value": ".+"
+          }
+        ],
+        "query": ".+",
+        "skipUrlSync": false,
+        "type": "textbox"
+      },
+      {
+        "allValue": null,
+        "current": {
+          "tags": [],
+          "text": "All",
+          "value": [
+            "$__all"
+          ]
+        },
+        "datasource": "hono_metrics",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Type",
+        "multi": true,
+        "name": "type",
+        "options": [],
+        "query": "label_values(hono_messages_received_seconds_count,type)",
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,
@@ -890,72 +956,11 @@
         "datasource": "hono_metrics",
         "hide": 0,
         "includeAll": true,
-        "label": "Tenant",
-        "multi": true,
-        "name": "tenant",
-        "options": [],
-        "query": "label_values(tenant)",
-        "refresh": 2,
-        "regex": "",
-        "skipUrlSync": false,
-        "sort": 0,
-        "tagValuesQuery": "",
-        "tags": [],
-        "tagsQuery": "",
-        "type": "query",
-        "useTags": false
-      },
-      {
-        "allValue": null,
-        "current": {
-          "tags": [],
-          "text": "All",
-          "value": [
-            "$__all"
-          ]
-        },
-        "hide": 0,
-        "includeAll": true,
-        "label": "Type",
-        "multi": true,
-        "name": "type",
-        "options": [
-          {
-            "selected": true,
-            "text": "All",
-            "value": "$__all"
-          },
-          {
-            "selected": false,
-            "text": "telemetry",
-            "value": "telemetry"
-          },
-          {
-            "selected": false,
-            "text": "event",
-            "value": "event"
-          }
-        ],
-        "query": "telemetry,event",
-        "skipUrlSync": false,
-        "type": "custom"
-      },
-      {
-        "allValue": null,
-        "current": {
-          "text": "All",
-          "value": [
-            "$__all"
-          ]
-        },
-        "datasource": "hono_metrics",
-        "hide": 0,
-        "includeAll": true,
         "label": "Instance",
         "multi": true,
         "name": "instance",
         "options": [],
-        "query": "label_values(host)",
+        "query": "label_values(hono_messages_received_seconds_count,host)",
         "refresh": 2,
         "regex": "",
         "skipUrlSync": false,

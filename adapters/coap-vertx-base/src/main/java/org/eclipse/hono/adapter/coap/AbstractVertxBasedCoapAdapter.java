@@ -494,7 +494,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                         device.getTenantId(),
                         MetricsTags.ProcessingOutcome.FORWARDED,
                         waitForOutcome ? MetricsTags.QoS.AT_LEAST_ONCE : MetricsTags.QoS.AT_MOST_ONCE,
-                        MetricsTags.TtdStatus.NONE,
+                        payload.length(),
                         context.getTimer());
                 context.respondWithCode(ResponseCode.CHANGED);
                 return delivery;
@@ -506,7 +506,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                         device.getTenantId(),
                         ClientErrorException.class.isInstance(t) ? MetricsTags.ProcessingOutcome.UNPROCESSABLE : MetricsTags.ProcessingOutcome.UNDELIVERABLE,
                         waitForOutcome ? MetricsTags.QoS.AT_LEAST_ONCE : MetricsTags.QoS.AT_MOST_ONCE,
-                        MetricsTags.TtdStatus.NONE,
+                        payload.length(),
                         context.getTimer());
                 CoapErrorResponse.respond(context.getExchange(), t);
                 return Future.failedFuture(t);

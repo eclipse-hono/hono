@@ -678,9 +678,21 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                         Tags.HTTP_STATUS.set(span, HttpURLConnection.HTTP_INTERNAL_ERROR);
                     }
                     if (processing.cause() instanceof ClientErrorException) {
-                        metrics.reportTelemetry(context.endpoint(), context.tenant(), MetricsTags.ProcessingOutcome.UNPROCESSABLE, MetricsTags.QoS.from(qos.value()), context.getTimer());
+                        metrics.reportTelemetry(
+                                context.endpoint(),
+                                context.tenant(),
+                                MetricsTags.ProcessingOutcome.UNPROCESSABLE,
+                                MetricsTags.QoS.from(qos.value()),
+                                context.message().payload().length(),
+                                context.getTimer());
                     } else {
-                        metrics.reportTelemetry(context.endpoint(), context.tenant(), MetricsTags.ProcessingOutcome.UNDELIVERABLE, MetricsTags.QoS.from(qos.value()), context.getTimer());
+                        metrics.reportTelemetry(
+                                context.endpoint(),
+                                context.tenant(),
+                                MetricsTags.ProcessingOutcome.UNDELIVERABLE,
+                                MetricsTags.QoS.from(qos.value()),
+                                context.message().payload().length(),
+                                context.getTimer());
                         onMessageUndeliverable(context);
                     }
                 }
@@ -769,8 +781,13 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                 MetricsTags.EndpointType.TELEMETRY
         ).map(success -> {
             final MetricsTags.QoS qos = MetricsTags.QoS.from(ctx.message().qosLevel().value());
-            metrics.reportTelemetry(ctx.endpoint(), ctx.tenant(), MetricsTags.ProcessingOutcome.FORWARDED, qos, ctx.getTimer());
-            metrics.incrementProcessedPayload(ctx.endpoint(), tenant, messagePayloadSize(ctx.message()));
+            metrics.reportTelemetry(
+                    ctx.endpoint(),
+                    ctx.tenant(),
+                    MetricsTags.ProcessingOutcome.FORWARDED,
+                    qos,
+                    payload.length(),
+                    ctx.getTimer());
             return (Void) null;
         });
     }
@@ -804,8 +821,13 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                 MetricsTags.EndpointType.EVENT
         ).map(success -> {
             final MetricsTags.QoS qos = MetricsTags.QoS.from(ctx.message().qosLevel().value());
-            metrics.reportTelemetry(ctx.endpoint(), ctx.tenant(), MetricsTags.ProcessingOutcome.FORWARDED, qos, ctx.getTimer());
-            metrics.incrementProcessedPayload(ctx.endpoint(), tenant, messagePayloadSize(ctx.message()));
+            metrics.reportTelemetry(
+                    ctx.endpoint(),
+                    ctx.tenant(),
+                    MetricsTags.ProcessingOutcome.FORWARDED,
+                    qos,
+                    payload.length(),
+                    ctx.getTimer());
             return (Void) null;
         });
     }
@@ -961,22 +983,6 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                 return Future.failedFuture(t);
             });
         }
-    }
-
-    /**
-     * Measure the size of the payload for using in the metrics system.
-     * <p>
-     * This implementation simply counts the bytes of the MQTT payload buffer and ignores all other attributes of the
-     * message.
-     * 
-     * @param message The message to measure the payload size. May be {@code null}.
-     * @return The number of bytes of the payload or zero if any input is {@code null}.
-     */
-    protected long messagePayloadSize(final MqttPublishMessage message) {
-        if (message == null || message.payload() == null) {
-            return 0L;
-        }
-        return message.payload().length();
     }
 
     /**

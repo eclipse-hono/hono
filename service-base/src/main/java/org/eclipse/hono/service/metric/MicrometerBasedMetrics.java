@@ -19,6 +19,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
 
+import io.micrometer.core.instrument.DistributionSummary;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tags;
 import io.micrometer.core.instrument.Timer;
@@ -37,6 +38,10 @@ public class MicrometerBasedMetrics implements Metrics {
      * The name of the meter for unauthenticated connections.
      */
     public static final String METER_CONNECTIONS_UNAUTHENTICATED = "hono.connections.unauthenticated";
+    /**
+     * The name of the meter for recording message payload size.
+     */
+    public static final String METER_MESSAGES_PAYLOAD = "hono.messages.payload";
     /**
      * The name of the meter for messages received from devices.
      */
@@ -127,9 +132,10 @@ public class MicrometerBasedMetrics implements Metrics {
             final String tenantId,
             final MetricsTags.ProcessingOutcome outcome,
             final MetricsTags.QoS qos,
+            final int payloadSize,
             final Sample timer) {
 
-        reportTelemetry(type, tenantId, outcome, qos, MetricsTags.TtdStatus.NONE, timer);
+        reportTelemetry(type, tenantId, outcome, qos, payloadSize, MetricsTags.TtdStatus.NONE, timer);
     }
 
     @Override
@@ -138,6 +144,7 @@ public class MicrometerBasedMetrics implements Metrics {
             final String tenantId,
             final MetricsTags.ProcessingOutcome outcome,
             final MetricsTags.QoS qos,
+            final int payloadSize,
             final MetricsTags.TtdStatus ttdStatus,
             final Sample timer) {
 
@@ -150,23 +157,30 @@ public class MicrometerBasedMetrics implements Metrics {
 
         if (type != MetricsTags.EndpointType.TELEMETRY && type != MetricsTags.EndpointType.EVENT) {
             throw new IllegalArgumentException("invalid type, must be either telemetry or event");
+        } else if (payloadSize < 0) {
+            throw new IllegalArgumentException("payload size must not be negative");
         }
 
-        final Tags tags = 
-                ttdStatus.add(
-                        qos.add(
-                            Tags.of(type.asTag())
-                                .and(MetricsTags.getTenantTag(tenantId))
-                                .and(outcome.asTag())));
+        final Tags baseTags = Tags.of(type.asTag())
+                .and(MetricsTags.getTenantTag(tenantId))
+                .and(outcome.asTag());
 
-        timer.stop(this.registry.timer(METER_MESSAGES_RECEIVED, tags));
+        timer.stop(this.registry.timer(METER_MESSAGES_RECEIVED, ttdStatus.add(qos.add(baseTags))));
+
+        // record payload size
+        DistributionSummary.builder(METER_MESSAGES_PAYLOAD)
+            .baseUnit("bytes")
+            .minimumExpectedValue(0L)
+            .tags(baseTags)
+            .register(this.registry)
+            .record(payloadSize);
 
         if (legacyMetrics != null) {
 
-             // The legacy metric for processed messages is based on a counter
-             // instead of a timer. It is necessary to report the legacy
-             // metric in addition to the new one because the value types
-             // are incompatible (duration vs. occurrences).
+             // Some of the legacy metrics are based on different meter types
+             // than the ones used now. It is necessary to report the legacy
+             // metric in addition to the new ones because the meter types
+             // are incompatible (e.g. duration vs. occurrences).
             switch(outcome) {
             case FORWARDED:
                 legacyMetrics.incrementProcessedMessages(type, tenantId);
@@ -189,22 +203,6 @@ public class MicrometerBasedMetrics implements Metrics {
                 // nothing to do
             }
         }
-    }
-
-    @Override
-    public final void incrementProcessedPayload(final MetricsTags.EndpointType type, final String tenantId,
-            final long payloadSize) {
-
-        Objects.requireNonNull(type);
-        Objects.requireNonNull(tenantId);
-        if (payloadSize < 0) {
-            // A negative size would mess up the metrics
-            return;
-        }
-
-        this.registry.counter("hono.messages.processed.payload",
-                Tags.of(MetricsTags.getTenantTag(tenantId)).and(type.asTag()))
-                .increment(payloadSize);
     }
 
     @Override

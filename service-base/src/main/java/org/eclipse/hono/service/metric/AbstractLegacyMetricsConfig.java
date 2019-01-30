@@ -143,9 +143,14 @@ public abstract class AbstractLegacyMetricsConfig {
     public MeterFilter[] getMeterFilters() {
         return new MeterFilter[] {
                                 MeterFilter.denyNameStartsWith(MicrometerBasedMetrics.METER_MESSAGES_RECEIVED),
+                                MeterFilter.denyNameStartsWith(MicrometerBasedMetrics.METER_MESSAGES_PAYLOAD),
                                 MeterFilter.replaceTagValues(MetricsTags.TAG_HOST, host -> host.replace('.', '_')),
                                 MeterFilter.replaceTagValues(MetricsTags.TAG_TENANT, tenant -> tenant.replace('.', '_')),
-                                MeterFilter.ignoreTags(MetricsTags.ComponentType.TAG_NAME),
+                                MeterFilter.ignoreTags(
+                                        MetricsTags.ComponentType.TAG_NAME,
+                                        MetricsTags.QoS.TAG_NAME,
+                                        MetricsTags.ProcessingOutcome.TAG_NAME,
+                                        MetricsTags.TtdStatus.TAG_NAME),
                                 meterTypeMapper() };
     }
 

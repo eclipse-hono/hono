@@ -31,10 +31,6 @@ public class NoopBasedMetrics implements Metrics {
     }
 
     @Override
-    public void incrementProcessedPayload(final MetricsTags.EndpointType type, final String tenantId, final long payloadSize) {
-    }
-
-    @Override
     public void incrementConnections(final String tenantId) {
     }
 
@@ -70,6 +66,7 @@ public class NoopBasedMetrics implements Metrics {
             final String tenantId,
             final MetricsTags.ProcessingOutcome outcome,
             final MetricsTags.QoS qos,
+            final int payloadSize,
             final Sample timer) {
     }
 
@@ -79,6 +76,7 @@ public class NoopBasedMetrics implements Metrics {
             final String tenantId,
             final MetricsTags.ProcessingOutcome outcome,
             final MetricsTags.QoS qos,
+            final int payloadSize,
             final MetricsTags.TtdStatus ttdStatus,
             final Sample timer) {
     }

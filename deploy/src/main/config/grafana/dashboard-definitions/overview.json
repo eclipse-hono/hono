@@ -15,7 +15,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "iteration": 1549018998349,
+  "iteration": 1549031221494,
   "links": [
     {
       "icon": "external link",
@@ -306,7 +306,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "sum(irate(hono_messages_processed_payload_total{type=\"telemetry\",component_name=~\"$componentname\",tenant=~\"$tenant\"}[$__range]))",
+          "expr": "sum(irate(hono_messages_payload_bytes_sum{type=\"telemetry\",component_name=~\"$componentname\",tenant=~\"$tenant\"}[$__range]))",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A"
@@ -552,7 +552,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "sum(irate(hono_messages_processed_payload_total{type=\"event\",component_name=~\"$componentname\",tenant=~\"$tenant\"}[$__range]))",
+          "expr": "sum(irate(hono_messages_payload_bytes_sum{type=\"event\",component_name=~\"$componentname\",tenant=~\"$tenant\"}[$__range]))",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A"
@@ -873,7 +873,7 @@
         }
       ],
       "spaceLength": 10,
-      "stack": false,
+      "stack": true,
       "steppedLine": false,
       "targets": [
         {
@@ -902,7 +902,7 @@
       "thresholds": [],
       "timeFrom": null,
       "timeShift": null,
-      "title": "received",
+      "title": "message rate",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -995,7 +995,7 @@
         }
       ],
       "spaceLength": 10,
-      "stack": false,
+      "stack": true,
       "steppedLine": false,
       "targets": [
         {
@@ -1024,7 +1024,7 @@
       "thresholds": [],
       "timeFrom": null,
       "timeShift": null,
-      "title": "received",
+      "title": "message rate",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -1185,12 +1185,26 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(irate(hono_messages_processed_payload_total{type=\"telemetry\",component_name=~\"$componentname\",tenant=~\"$tenant\"}[$__range]))",
+          "expr": "sum(irate(hono_messages_payload_bytes_sum{type=\"telemetry\",component_name=~\"$componentname\",tenant=~\"$tenant\",status=\"forwarded\"}[$__range]))",
           "format": "time_series",
           "instant": false,
           "intervalFactor": 1,
-          "legendFormat": "processed",
+          "legendFormat": "forwarded",
           "refId": "A"
+        },
+        {
+          "expr": "sum(irate(hono_messages_payload_bytes_sum{type=\"telemetry\",component_name=~\"$componentname\",tenant=~\"$tenant\",status=\"undeliverable\"}[$__range]))",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "undeliverable",
+          "refId": "B"
+        },
+        {
+          "expr": "sum(irate(hono_messages_payload_bytes_sum{type=\"telemetry\",component_name=~\"$componentname\",tenant=~\"$tenant\",status=\"unprocessable\"}[$__range]))",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "unprocessable",
+          "refId": "C"
         }
       ],
       "thresholds": [],
@@ -1271,12 +1285,26 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(irate(hono_messages_processed_payload_total{type=\"event\",component_name=~\"$componentname\",tenant=~\"$tenant\"}[$__range]))",
+          "expr": "sum(irate(hono_messages_payload_bytes_sum{type=\"event\",component_name=~\"$componentname\",tenant=~\"$tenant\",status=\"forwarded\"}[$__range]))",
           "format": "time_series",
           "instant": false,
           "intervalFactor": 1,
-          "legendFormat": "{{component_name}} - {{host}}",
+          "legendFormat": "forwarded",
           "refId": "A"
+        },
+        {
+          "expr": "sum(irate(hono_messages_payload_bytes_sum{type=\"event\",component_name=~\"$componentname\",tenant=~\"$tenant\",status=\"undeliverable\"}[$__range]))",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "undeliverable",
+          "refId": "B"
+        },
+        {
+          "expr": "sum(irate(hono_messages_payload_bytes_sum{type=\"event\",component_name=~\"$componentname\",tenant=~\"$tenant\",status=\"unprocessable\"}[$__range]))",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "unprocessable",
+          "refId": "C"
         }
       ],
       "thresholds": [],
@@ -1520,72 +1548,46 @@
       {
         "allValue": null,
         "current": {
-          "selected": true,
-          "tags": [],
           "text": "All",
           "value": [
             "$__all"
           ]
         },
-        "hide": 0,
-        "includeAll": true,
-        "label": "Component Name",
-        "multi": true,
-        "name": "componentname",
-        "options": [
-          {
-            "selected": true,
-            "text": "All",
-            "value": "$__all"
-          },
-          {
-            "selected": false,
-            "text": "hono-http",
-            "value": "hono-http"
-          },
-          {
-            "selected": false,
-            "text": "hono-mqtt",
-            "value": "hono-mqtt"
-          },
-          {
-            "selected": false,
-            "text": "hono-amqp",
-            "value": "hono-amqp"
-          },
-          {
-            "selected": false,
-            "text": "hono-coap",
-            "value": "hono-coap"
-          }
-        ],
-        "query": "hono-http,hono-mqtt,hono-amqp,hono-coap",
-        "skipUrlSync": false,
-        "type": "custom"
-      },
-      {
-        "allValue": "",
-        "current": {
-          "text": "All",
-          "value": "$__all"
-        },
         "datasource": "hono_metrics",
         "hide": 0,
         "includeAll": true,
-        "label": "Tenant",
+        "label": "Adapter",
         "multi": true,
-        "name": "tenant",
+        "name": "componentname",
         "options": [],
-        "query": "label_values(hono_messages_received_seconds_count,tenant)",
-        "refresh": 2,
+        "query": "label_values(hono_messages_received_seconds_count,component_name)",
+        "refresh": 1,
         "regex": "",
         "skipUrlSync": false,
-        "sort": 1,
+        "sort": 0,
         "tagValuesQuery": "",
         "tags": [],
         "tagsQuery": "",
         "type": "query",
         "useTags": false
+      },
+      {
+        "current": {
+          "text": ".+",
+          "value": ".+"
+        },
+        "hide": 0,
+        "label": "Tenant",
+        "name": "tenant",
+        "options": [
+          {
+            "text": ".+",
+            "value": ".+"
+          }
+        ],
+        "query": ".+",
+        "skipUrlSync": false,
+        "type": "textbox"
       }
     ]
   },
