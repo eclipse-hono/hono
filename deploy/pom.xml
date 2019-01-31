@@ -115,7 +115,6 @@
                                 hono-demo-certs
                             </includeArtifactIds>
                             <outputDirectory>${project.build.directory}/config</outputDirectory>
-                            <outputDirectory>${project.build.directory}/deploy/helm</outputDirectory>
                             <includes>
                                 *.pem,
                                 *.jks,
@@ -181,6 +180,11 @@
                         <configuration>
                             <outputDirectory>${project.build.directory}</outputDirectory>
                             <resources>
+                                <resource>
+                                    <directory>${project.build.directory}/config</directory>
+                                    <targetPath>deploy/helm</targetPath>
+                                    <filtering>true</filtering>
+                                </resource>
                                 <resource>
                                     <directory>${project.basedir}/src/main/config</directory>
                                     <targetPath>deploy/helm/config</targetPath>
