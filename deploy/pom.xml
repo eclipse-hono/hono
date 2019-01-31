@@ -115,7 +115,6 @@
                                 hono-demo-certs
                             </includeArtifactIds>
                             <outputDirectory>${project.build.directory}/config</outputDirectory>
-                            <outputDirectory>${project.build.directory}/deploy/helm</outputDirectory>
                             <includes>
                                 *.pem,
                                 *.jks,
@@ -179,16 +178,21 @@
                             <goal>copy-resources</goal>
                         </goals>
                         <configuration>
-                            <outputDirectory>${project.build.directory}</outputDirectory>
+                            <outputDirectory>${project.build.directory}/deploy/helm</outputDirectory>
                             <resources>
+                              <resource>
+                                <directory>${project.build.directory}/config/hono-demo-certs-jar</directory>
+                                <targetPath>hono-demo-certs-jar</targetPath>
+                                <filtering>false</filtering>
+                              </resource>
                                 <resource>
                                     <directory>${project.basedir}/src/main/config</directory>
-                                    <targetPath>deploy/helm/config</targetPath>
+                                    <targetPath>config</targetPath>
                                     <filtering>true</filtering>
                                 </resource>
                                 <resource>
                                     <directory>${project.basedir}/src/main/deploy</directory>
-                                    <targetPath>${project.build.directory}/deploy/helm/example</targetPath>
+                                    <targetPath>example</targetPath>
                                     <includes>
                                         *.json,
                                         *.credentials
@@ -197,7 +201,7 @@
                                 </resource>
                                 <resource>
                                     <directory>${project.basedir}/src/main/deploy/resource-descriptors/prometheus</directory>
-                                    <targetPath>${project.build.directory}/deploy/helm/templates/prometheus/</targetPath>
+                                    <targetPath>templates/prometheus/</targetPath>
                                     <includes>instance.yml</includes>
                                 </resource>
                             </resources>
