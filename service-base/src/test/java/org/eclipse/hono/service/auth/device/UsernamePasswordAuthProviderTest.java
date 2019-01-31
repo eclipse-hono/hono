@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -29,7 +29,6 @@ import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.CredentialsClient;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.config.ServiceConfigProperties;
-import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsObject;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -62,7 +61,7 @@ public class UsernamePasswordAuthProviderTest {
     public Timeout globalTimeout = new Timeout(5, TimeUnit.SECONDS);
 
     private CredentialsObject credentialsOnRecord;
-    private UsernamePasswordCredentials deviceCredentials = UsernamePasswordCredentials.create("device@DEFAULT_TENANT", "pwd", false);
+    private UsernamePasswordCredentials deviceCredentials = UsernamePasswordCredentials.create("device@DEFAULT_TENANT", "the-secret", false);
     private UsernamePasswordAuthProvider provider;
     private HonoClient credentialsServiceClient;
     private CredentialsClient credentialsClient;
@@ -82,17 +81,13 @@ public class UsernamePasswordAuthProviderTest {
     @Before
     public void setUp() {
 
-        credentialsOnRecord = new CredentialsObject()
-                .setAuthId("device")
-                .setDeviceId("4711")
-                .setType(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD)
-                .setEnabled(true);
+        credentialsOnRecord = CredentialsObject.fromClearTextPassword("4711", "device", "the-secret", null, null);
         credentialsClient = mock(CredentialsClient.class);
-        when(credentialsClient.get(anyString(), anyString(), any(JsonObject.class), any())).thenReturn(Future.succeededFuture(credentialsOnRecord));
+        when(credentialsClient.get(anyString(), eq("device"), any(), any())).thenReturn(Future.succeededFuture(credentialsOnRecord));
         credentialsServiceClient = mock(HonoClient.class);
-        when(credentialsServiceClient.getOrCreateCredentialsClient(anyString())).thenReturn(Future.succeededFuture(credentialsClient));
+        when(credentialsServiceClient.getOrCreateCredentialsClient("DEFAULT_TENANT")).thenReturn(Future.succeededFuture(credentialsClient));
         pwdEncoder = mock(HonoPasswordEncoder.class);
-        when(pwdEncoder.matches(anyString(), any(JsonObject.class))).thenReturn(true);
+        when(pwdEncoder.matches(eq("the-secret"), any(JsonObject.class))).thenReturn(true);
 
 
         provider = new UsernamePasswordAuthProvider(credentialsServiceClient, pwdEncoder, new ServiceConfigProperties(), NoopTracerFactory.create());
