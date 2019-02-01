@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,7 +13,10 @@
 
 package org.eclipse.hono.client;
 
+import java.net.HttpURLConnection;
 import java.util.Objects;
+
+import javax.security.sasl.AuthenticationException;
 
 import org.eclipse.hono.auth.HonoUser;
 import org.eclipse.hono.auth.HonoUserAdapter;
@@ -31,6 +34,7 @@ import io.vertx.proton.ProtonClientOptions;
 import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonMessageHandler;
 import io.vertx.proton.ProtonReceiver;
+import io.vertx.proton.sasl.SaslSystemException;
 
 /**
  * A client for retrieving a token from an authentication service via AMQP 1.0.
@@ -70,7 +74,8 @@ public final class AuthenticationServerClient {
      */
     public void verifyExternal(final String authzid, final String subjectDn, final Handler<AsyncResult<HonoUser>> authenticationResultHandler) {
         // unsupported mechanism (until we get better control over client SASL params in vertx-proton)
-        authenticationResultHandler.handle(Future.failedFuture("unsupported mechanism"));
+        authenticationResultHandler.handle(Future
+                .failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "unsupported mechanism")));
     }
 
     /**
@@ -90,7 +95,8 @@ public final class AuthenticationServerClient {
         options.addEnabledSaslMechanism(AuthenticationConstants.MECHANISM_PLAIN);
         factory.connect(options, authcid, password, null, null, conAttempt -> {
             if (conAttempt.failed()) {
-                authenticationResultHandler.handle(Future.failedFuture("cannot connect to Authentication service"));
+                authenticationResultHandler
+                        .handle(Future.failedFuture(mapConnectionFailureToServiceInvocationException(conAttempt.cause())));
             } else {
                 final ProtonConnection openCon = conAttempt.result();
 
@@ -99,7 +105,9 @@ public final class AuthenticationServerClient {
                     if (s.succeeded()) {
                         authenticationResultHandler.handle(Future.succeededFuture(s.result()));
                     } else {
-                        authenticationResultHandler.handle(Future.failedFuture(s.cause()));
+                        final Throwable thr = s.cause() instanceof ServiceInvocationException ? s.cause()
+                                : new ServerErrorException(HttpURLConnection.HTTP_INTERNAL_ERROR, s.cause());
+                        authenticationResultHandler.handle(Future.failedFuture(thr));
                     }
                     final ProtonConnection con = conAttempt.result();
                     if (con != null) {
@@ -110,13 +118,30 @@ public final class AuthenticationServerClient {
 
                 vertx.setTimer(5000, tid -> {
                     if (!userTracker.isComplete()) {
-                        userTracker.fail("time out reached while waiting for token from Authentication service");
+                        userTracker.fail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE,
+                                "time out reached while waiting for token from Authentication service"));
                     }
                 });
 
                 getToken(openCon, userTracker);
             }
         });
+    }
+
+    private ServiceInvocationException mapConnectionFailureToServiceInvocationException(final Throwable connectionFailureCause) {
+        final ServiceInvocationException exception;
+        if (connectionFailureCause == null) {
+            exception = new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "failed to connect to Authentication service");
+        } else if (connectionFailureCause instanceof AuthenticationException) {
+            exception = new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED, "failed to authenticate with Authentication service");
+        } else if (connectionFailureCause instanceof SaslSystemException
+                && connectionFailureCause.getMessage().contains("Could not find a suitable SASL mechanism")) { // this check will have to be changed when using a future vert.x version where an AuthenticationException is thrown in this case
+            exception = new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED, "no suitable SASL mechanism found for authentication with Authentication service");
+        } else {
+            exception = new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "failed to connect to Authentication service",
+                    connectionFailureCause);
+        }
+        return exception;
     }
 
     private void getToken(final ProtonConnection openCon, final Future<HonoUser> authResult) {
@@ -141,11 +166,13 @@ public final class AuthenticationServerClient {
                     LOG.debug("successfully retrieved token from Authentication service");
                     authResult.complete(user);
                 } else {
-                    authResult.fail("message from Authentication service contains no body");
+                    authResult.fail(new ServerErrorException(HttpURLConnection.HTTP_INTERNAL_ERROR,
+                            "message from Authentication service contains no body"));
                 }
 
             } else {
-                authResult.fail("Authentication service issued unsupported token [type: " + type + "]");
+                authResult.fail(new ServerErrorException(HttpURLConnection.HTTP_INTERNAL_ERROR,
+                        "Authentication service issued unsupported token [type: " + type + "]"));
             }
         };
 

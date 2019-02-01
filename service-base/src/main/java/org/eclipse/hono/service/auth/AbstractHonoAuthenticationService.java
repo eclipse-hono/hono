@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,12 +12,14 @@
  *******************************************************************************/
 package org.eclipse.hono.service.auth;
 
+import java.net.HttpURLConnection;
 import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 
 import javax.security.auth.login.CredentialException;
 
 import org.eclipse.hono.auth.HonoUser;
+import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.util.AuthenticationConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -75,7 +77,7 @@ public abstract class AbstractHonoAuthenticationService<T> extends BaseAuthentic
                 verifyPlain(authzid, authcid, pwd, resultHandler);
             } catch (final CredentialException e) {
                 // response did not contain expected values
-                resultHandler.handle(Future.failedFuture(e));
+                resultHandler.handle(Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, e)));
             }
 
         } else if (AuthenticationConstants.MECHANISM_EXTERNAL.equals(mechanism)) {
@@ -86,7 +88,8 @@ public abstract class AbstractHonoAuthenticationService<T> extends BaseAuthentic
             verifyExternal(authzid, subject, resultHandler);
 
         } else {
-            resultHandler.handle(Future.failedFuture("unsupported SASL mechanism"));
+            resultHandler.handle(Future.failedFuture(
+                    new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "unsupported SASL mechanism")));
         }
     }
 

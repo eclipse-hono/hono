@@ -13,6 +13,7 @@
 
 package org.eclipse.hono.service.auth;
 
+import java.net.HttpURLConnection;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Objects;
@@ -20,6 +21,9 @@ import java.util.Objects;
 import org.eclipse.hono.auth.Authorities;
 import org.eclipse.hono.auth.AuthoritiesImpl;
 import org.eclipse.hono.auth.HonoUser;
+import org.eclipse.hono.client.ServerErrorException;
+import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.util.AuthenticationConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,6 +36,7 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.DeliveryOptions;
+import io.vertx.core.eventbus.ReplyException;
 import io.vertx.core.json.JsonObject;
 
 /**
@@ -73,10 +78,36 @@ public final class EventBusAuthenticationService implements AuthenticationServic
                     final Jws<Claims> expandedToken = tokenValidator.expand(result.getString(AuthenticationConstants.FIELD_TOKEN));
                     authenticationResultHandler.handle(Future.succeededFuture(new HonoUserImpl(expandedToken, token)));
                 } catch (final JwtException e) {
-                    authenticationResultHandler.handle(Future.failedFuture(e));
+                    authenticationResultHandler.handle(Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_INTERNAL_ERROR, e)));
                 }
             } else {
-                authenticationResultHandler.handle(Future.failedFuture(reply.cause()));
+                final ServiceInvocationException resultException;
+                if (reply.cause() instanceof ReplyException) {
+                    switch (((ReplyException) reply.cause()).failureType()) {
+                        case TIMEOUT:
+                            log.debug("timeout processing authentication request", reply.cause());
+                            resultException = new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, reply.cause());
+                            break;
+                        case NO_HANDLERS:
+                            log.debug("could not process authentication request", reply.cause());
+                            resultException = new ServerErrorException(HttpURLConnection.HTTP_INTERNAL_ERROR, reply.cause());
+                            break;
+                        case RECIPIENT_FAILURE:
+                            final int statusCode = ((ReplyException) reply.cause()).failureCode();
+                            if (200 <= statusCode && statusCode < 300) {
+                                log.error("got illegal status code in authentication response exception: {}", statusCode);
+                                resultException = new ServerErrorException(HttpURLConnection.HTTP_INTERNAL_ERROR, reply.cause().getMessage());
+                            } else {
+                                resultException = StatusCodeMapper.from(statusCode, reply.cause().getMessage());
+                            }
+                            break;
+                        default:
+                            resultException = new ServerErrorException(HttpURLConnection.HTTP_INTERNAL_ERROR, reply.cause());
+                    }
+                } else {
+                    resultException = new ServerErrorException(HttpURLConnection.HTTP_INTERNAL_ERROR, reply.cause());
+                }
+                authenticationResultHandler.handle(Future.failedFuture(resultException));
             }
         });
 

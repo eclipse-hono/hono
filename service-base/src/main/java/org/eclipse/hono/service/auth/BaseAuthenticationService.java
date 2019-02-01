@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,9 +12,11 @@
  *******************************************************************************/
 package org.eclipse.hono.service.auth;
 
-import static org.eclipse.hono.util.AuthenticationConstants.ERROR_CODE_AUTHENTICATION_FAILED;
 import static org.eclipse.hono.util.AuthenticationConstants.EVENT_BUS_ADDRESS_AUTHENTICATION_IN;
 
+import java.net.HttpURLConnection;
+
+import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.util.AuthenticationConstants;
 import org.eclipse.hono.util.ConfigurationSupportingVerticle;
 import org.slf4j.Logger;
@@ -34,8 +36,8 @@ import io.vertx.core.json.JsonObject;
  * Messages are expected to be {@code JsonObject} typed. Apart from that this class makes no assumption regarding
  * the content of the message. The listener simply invokes the {@link #authenticate(JsonObject, io.vertx.core.Handler)}
  * method with the received message. If the handler succeeds, the result is sent back via the event bus as a reply
- * to the original authentication request. Otherwise, a failure reply is sent using error code
- * {@link AuthenticationConstants#ERROR_CODE_AUTHENTICATION_FAILED}.
+ * to the original authentication request. Otherwise, a failure reply is sent using the error code from the handler
+ * exception.
  * 
  * @param <T> The type of configuration properties this service supports.
  */
@@ -91,7 +93,12 @@ public abstract class BaseAuthenticationService<T> extends ConfigurationSupporti
             if (validation.succeeded()) {
                 message.reply(AuthenticationConstants.getAuthenticationReply(validation.result().getToken()));
             } else {
-                message.fail(ERROR_CODE_AUTHENTICATION_FAILED, validation.cause().getMessage());
+                if (validation.cause() instanceof ServiceInvocationException) {
+                    message.fail(((ServiceInvocationException) validation.cause()).getErrorCode(), validation.cause().getMessage());
+                } else {
+                    LOG.debug("unable to get status code from non-ServiceInvocationException", validation.cause());
+                    message.fail(HttpURLConnection.HTTP_INTERNAL_ERROR, validation.cause().getMessage());
+                }
             }
         });
     }

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -49,10 +49,22 @@ public interface AuthenticationService {
      *                                        // wants to act as (may be null)
      * }
      * </pre>
+     * <p>
+     * If the authentication succeeds, the given handler is to be invoked with an {@code AsyncResult} containing
+     * the authenticated user.
+     * <p>
+     * If the authentication fails, the given handler should be invoked with a failed {@code AsyncResult}, containing
+     * the authentication error as a {@code ServiceInvocationException}.
+     * In the case of wrong credentials, this would look like this:
+     * <pre>
+     * authenticationResultHandler.handle(Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED, "unauthorized")));
+     * </pre>
+     * In the case of a server error, a {@code ServerErrorException} with a corresponding status code should be used.
      * 
      * @param authRequest The authentication information provided by the client in the SASL exchange.
      * @param authenticationResultHandler The handler to invoke with the authentication result. If authentication succeeds,
-     *                                    the result contains the authenticated user.
+     *                                    the result contains the authenticated user. Otherwise the failed result
+     *                                    {@code ServiceInvocationException} indicates the error status.
      */
     void authenticate(JsonObject authRequest, Handler<AsyncResult<HonoUser>> authenticationResultHandler);
 }
