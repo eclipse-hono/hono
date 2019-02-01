@@ -15,7 +15,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "iteration": 1548940274753,
+  "iteration": 1549018998349,
   "links": [
     {
       "icon": "external link",
@@ -142,7 +142,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "irate(hono_messages_received_seconds_count{type=\"telemetry\",status=\"forwarded\",component_name=~\"$componentname\",tenant=~\"$tenant\"}[$__range])",
+          "expr": "sum(irate(hono_messages_received_seconds_count{type=\"telemetry\",status=\"forwarded\",component_name=~\"$componentname\",tenant=~\"$tenant\"}[$__range]))",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A"
@@ -224,7 +224,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "irate(hono_messages_received_seconds_count{type=\"telemetry\",status=\"undeliverable\",component_name=~\"$componentname\",tenant=~\"$tenant\"}[$__range])",
+          "expr": "sum(irate(hono_messages_received_seconds_count{type=\"telemetry\",status=\"undeliverable\",component_name=~\"$componentname\",tenant=~\"$tenant\"}[$__range]))",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A"
@@ -388,7 +388,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "irate(hono_messages_received_seconds_count{type=\"event\",status=\"forwarded\",component_name=~\"$componentname\",tenant=~\"$tenant\"}[$__range])",
+          "expr": "sum(irate(hono_messages_received_seconds_count{type=\"event\",status=\"forwarded\",component_name=~\"$componentname\",tenant=~\"$tenant\"}[$__range]))",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A"
@@ -470,7 +470,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "irate(hono_messages_received_seconds_count{type=\"event\",status!=\"forwarded\",component_name=~\"$componentname\",tenant=~\"$tenant\"}[$__range])",
+          "expr": "sum(irate(hono_messages_received_seconds_count{type=\"event\",status!=\"forwarded\",component_name=~\"$componentname\",tenant=~\"$tenant\"}[$__range]))",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A"
@@ -877,7 +877,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "irate(hono_messages_received_seconds_count{type=\"telemetry\",status=\"forwarded\",component_name=~\"$componentname\",tenant=~\"$tenant\"}[$__range])",
+          "expr": "sum(irate(hono_messages_received_seconds_count{type=\"telemetry\",status=\"forwarded\",component_name=~\"$componentname\",tenant=~\"$tenant\"}[$__range]))",
           "format": "time_series",
           "instant": false,
           "intervalFactor": 1,
@@ -885,14 +885,14 @@
           "refId": "A"
         },
         {
-          "expr": "irate(hono_messages_received_seconds_count{type=\"telemetry\",status=\"undeliverable\",component_name=~\"$componentname\",tenant=~\"$tenant\"}[$__range])",
+          "expr": "sum(irate(hono_messages_received_seconds_count{type=\"telemetry\",status=\"undeliverable\",component_name=~\"$componentname\",tenant=~\"$tenant\"}[$__range]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "undeliverable",
           "refId": "B"
         },
         {
-          "expr": "irate(hono_messages_received_seconds_count{type=\"telemetry\",status=\"unprocessable\",component_name=~\"$componentname\",tenant=~\"$tenant\"}[$__range])",
+          "expr": "sum(irate(hono_messages_received_seconds_count{type=\"telemetry\",status=\"unprocessable\",component_name=~\"$componentname\",tenant=~\"$tenant\"}[$__range]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "unprocessable",
@@ -999,7 +999,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "irate(hono_messages_received_seconds_count{type=\"event\",status=\"forwarded\",component_name=~\"$componentname\",tenant=~\"$tenant\"}[$__range])",
+          "expr": "sum(irate(hono_messages_received_seconds_count{type=\"event\",status=\"forwarded\",component_name=~\"$componentname\",tenant=~\"$tenant\"}[$__range]))",
           "format": "time_series",
           "instant": false,
           "intervalFactor": 1,
@@ -1007,14 +1007,14 @@
           "refId": "A"
         },
         {
-          "expr": "irate(hono_messages_received_seconds_count{type=\"event\",status=\"undeliverable\",component_name=~\"$componentname\",tenant=~\"$tenant\"}[$__range])",
+          "expr": "sum(irate(hono_messages_received_seconds_count{type=\"event\",status=\"undeliverable\",component_name=~\"$componentname\",tenant=~\"$tenant\"}[$__range]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "undeliverable",
           "refId": "B"
         },
         {
-          "expr": "irate(hono_messages_received_seconds_count{type=\"event\",status=\"unprocessable\",component_name=~\"$componentname\",tenant=~\"$tenant\"}[$__range])",
+          "expr": "sum(irate(hono_messages_received_seconds_count{type=\"event\",status=\"unprocessable\",component_name=~\"$componentname\",tenant=~\"$tenant\"}[$__range]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "unprocessable",
@@ -1271,7 +1271,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "irate(hono_messages_processed_payload_total{type=\"event\",component_name=~\"$componentname\",tenant=~\"$tenant\"}[$__range])",
+          "expr": "sum(irate(hono_messages_processed_payload_total{type=\"event\",component_name=~\"$componentname\",tenant=~\"$tenant\"}[$__range]))",
           "format": "time_series",
           "instant": false,
           "intervalFactor": 1,

@@ -15,7 +15,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "iteration": 1548935257693,
+  "iteration": 1549016699588,
   "links": [],
   "panels": [
     {
@@ -57,17 +57,18 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "irate(hono_messages_received_seconds_count{status=\"forwarded\",component_name=~\"$componentname\",type=~\"$type\",tenant=~\"$tenant\",host=~\"$instance\"}[$__range])",
+          "expr": "sum(irate(hono_messages_received_seconds_count{status=\"forwarded\",component_name=~\"$componentname\",type=~\"$type\",tenant=~\"$tenant\",host=~\"$instance\"}[$__range]))",
           "format": "time_series",
+          "interval": "",
           "intervalFactor": 1,
-          "legendFormat": "{{component_name}} - {{type}} - {{host}}",
+          "legendFormat": "forwarded",
           "refId": "A"
         }
       ],
       "thresholds": [],
       "timeFrom": null,
       "timeShift": null,
-      "title": "Processed",
+      "title": "Forwarded",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -165,7 +166,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "rate(hono_messages_received_seconds_count{status=\"forwarded\",component_name=~\"$componentname\",type=~\"$type\",tenant=~\"$tenant\",host=~\"$instance\"}[$__interval])",
+          "expr": "sum(rate(hono_messages_received_seconds_count{status=\"forwarded\",component_name=~\"$componentname\",type=~\"$type\",tenant=~\"$tenant\",host=~\"$instance\"}[$__interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A"
@@ -246,7 +247,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "rate(hono_messages_received_seconds_count{status=\"forwarded\",component_name=~\"$componentname\",type=~\"$type\",tenant=~\"$tenant\",host=~\"$instance\"}[$__interval])",
+          "expr": "sum(rate(hono_messages_received_seconds_count{status=\"forwarded\",component_name=~\"$componentname\",type=~\"$type\",tenant=~\"$tenant\",host=~\"$instance\"}[$__interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A"
@@ -327,7 +328,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "rate(hono_messages_received_seconds_count{status=\"forwarded\",component_name=~\"$componentname\",type=~\"$type\",tenant=~\"$tenant\",host=~\"$instance\"}[$__interval])",
+          "expr": "sum(rate(hono_messages_received_seconds_count{status=\"forwarded\",component_name=~\"$componentname\",type=~\"$type\",tenant=~\"$tenant\",host=~\"$instance\"}[$__interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A"
@@ -386,7 +387,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "irate(hono_messages_processed_payload_total{component_name=~\"$componentname\",type=~\"$type\",tenant=~\"$tenant\",host=~\"$instance\"}[$__range])",
+          "expr": "sum(irate(hono_messages_processed_payload_total{component_name=~\"$componentname\",type=~\"$type\",tenant=~\"$tenant\",host=~\"$instance\"}[$__range]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{component_name}} - {{type}} - {{host}}",
@@ -715,7 +716,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "irate(hono_messages_received_seconds_count{component_name=~\"$componentname\",type=~\"$type\",status!=\"forwarded\",tenant=~\"$tenant\",host=~\"$instance\"}[$__range])",
+          "expr": "sum(irate(hono_messages_received_seconds_count{component_name=~\"$componentname\",type=~\"$type\",status!=\"forwarded\",tenant=~\"$tenant\",host=~\"$instance\"}[$__range]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{component_name}} - {{type}} - {{host}}",
@@ -824,7 +825,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "rate(hono_messages_received_seconds_count{component_name=~\"$componentname\",type=~\"$type\",status!=\"forwarded\",tenant=~\"$tenant\",host=~\"$instance\"}[$__interval])\n/\n rate(hono_messages_received_seconds_count{component_name=~\"$componentname\",type=~\"$type\",tenant=~\"$tenant\",host=~\"$instance\"}[$__interval])\n",
+          "expr": "sum(rate(hono_messages_received_seconds_count{component_name=~\"$componentname\",type=~\"$type\",status!=\"forwarded\",tenant=~\"$tenant\",host=~\"$instance\"}[$__interval]))\n/\n sum(rate(hono_messages_received_seconds_count{component_name=~\"$componentname\",type=~\"$type\",tenant=~\"$tenant\",host=~\"$instance\"}[$__interval]))\n",
           "format": "time_series",
           "instant": false,
           "intervalFactor": 1,
