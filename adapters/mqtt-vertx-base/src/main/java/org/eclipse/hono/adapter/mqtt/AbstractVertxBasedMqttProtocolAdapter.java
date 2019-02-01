@@ -438,9 +438,10 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         final Future<DeviceUser> authAttempt = authenticate(context, currentSpan);
         return authAttempt
                 .compose(authenticatedDevice -> CompositeFuture.all(
-                            getTenantConfiguration(authenticatedDevice.getTenantId(), currentSpan.context())
-                                .compose(tenant -> isAdapterEnabled(tenant)),
-                            checkDeviceRegistration(authenticatedDevice, currentSpan.context()))
+                        getTenantConfiguration(authenticatedDevice.getTenantId(), currentSpan.context())
+                                .compose(tenantObj -> CompositeFuture
+                                        .all(isAdapterEnabled(tenantObj), getResourceLimitChecks().isConnectionLimitExceeded(tenantObj))),
+                        checkDeviceRegistration(authenticatedDevice, currentSpan.context()))
                         .map(ok -> authenticatedDevice))
                 .compose(authenticatedDevice -> createLinks(authenticatedDevice, currentSpan))
                 .compose(authenticatedDevice -> registerHandlers(endpoint, authenticatedDevice))

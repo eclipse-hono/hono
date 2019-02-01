@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -285,6 +285,27 @@ public class TenantObjectTest {
         final TenantObject obj = TenantObject.from(Constants.DEFAULT_TENANT, true);
         obj.setProperty(TenantConstants.FIELD_MAX_TTD, -2);
         assertThat(obj.getMaxTimeUntilDisconnect("custom"), is(TenantConstants.DEFAULT_MAX_TTD));
+    }
+
+    /**
+     * Verifies that the default value for connections limit is set to {@link TenantConstants#DEFAULT_MAX_CONNECTIONS}.
+     */
+    @Test
+    public void testGetConnectionsLimitDefaultValue() {
+        final TenantObject obj = TenantObject.from(Constants.DEFAULT_TENANT, true);
+        assertThat(obj.getConnectionsLimit(), is(TenantConstants.DEFAULT_MAX_CONNECTIONS));
+    }
+
+    /**
+     * Verifies if the connections limit is set based on the configuration.
+     */
+    @Test
+    public void testGetConnectionsLimit() {
+        final JsonObject limitsConfig = new JsonObject()
+                .put(TenantConstants.MAX_CONNECTIONS, 2);
+        final TenantObject obj = TenantObject.from(Constants.DEFAULT_TENANT, true);
+        obj.setProperty(TenantConstants.LIMITS, limitsConfig);
+        assertThat(obj.getConnectionsLimit(), is(2L));
     }
 
     private X509Certificate getCaCertificate() {

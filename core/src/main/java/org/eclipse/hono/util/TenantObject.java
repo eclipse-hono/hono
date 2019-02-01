@@ -496,4 +496,18 @@ public final class TenantObject extends JsonBackedValueObject {
                 .put(TenantConstants.FIELD_ADAPTERS_TYPE, type)
                 .put(TenantConstants.FIELD_ENABLED, enabled);
     }
+
+    /**
+     * Gets the connections limit for the tenant if configured, else returns
+     * {@link TenantConstants#DEFAULT_MAX_CONNECTIONS}.
+     *
+     * @return The connections limit.
+     */
+    @JsonIgnore
+    public long getConnectionsLimit() {
+        return Optional.ofNullable(getProperty(TenantConstants.LIMITS))
+                .map(limits -> getProperty((JsonObject) limits, TenantConstants.MAX_CONNECTIONS,
+                        (Number) TenantConstants.DEFAULT_MAX_CONNECTIONS).longValue())
+                .orElse(TenantConstants.DEFAULT_MAX_CONNECTIONS);
+    }
 }

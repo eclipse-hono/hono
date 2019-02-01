@@ -37,6 +37,8 @@ import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.auth.ValidityBasedTrustOptions;
 import org.eclipse.hono.service.limiting.ConnectionLimitManager;
 import org.eclipse.hono.service.monitoring.ConnectionEventProducer;
+import org.eclipse.hono.service.plan.NoopResourceLimitChecks;
+import org.eclipse.hono.service.plan.ResourceLimitChecks;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.EventConstants;
@@ -93,7 +95,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     private ConnectionLimitManager connectionLimitManager;
 
     private ConnectionEventProducer connectionEventProducer;
-
+    private ResourceLimitChecks resourceLimitChecks = new NoopResourceLimitChecks();
     private final ConnectionEventProducer.Context connectionEventProducerContext = new ConnectionEventProducer.Context() {
 
         @Override
@@ -105,7 +107,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
 
     /**
      * Adds a Micrometer sample to a command context.
-     * 
+     *
      * @param ctx The context to add the sample to.
      * @param sample The sample.
      * @throws NullPointerException if ctx is {@code null}.
@@ -118,7 +120,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     /**
      * Gets the Micrometer used to track the processing
      * of a command message.
-     * 
+     *
      * @param ctx The command context to extract the sample from.
      * @return The sample or {@code null} if the context does not
      *         contain a sample.
@@ -317,6 +319,26 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     }
 
     /**
+     * Sets the ResourceLimitChecks instance used to check if the number of connections exceeded the limit or not.
+     *
+     * @param resourceLimitChecks The ResourceLimitChecks instance
+     * @throws NullPointerException if the resourceLimitChecks is {@code null}.
+     */
+    @Autowired(required = false)
+    public final void setResourceLimitChecks(final ResourceLimitChecks resourceLimitChecks) {
+        this.resourceLimitChecks = Objects.requireNonNull(resourceLimitChecks);
+    }
+
+    /**
+     * Gets the ResourceLimitChecks instance used to check if the number of connections exceeded the limit or not.
+     *
+     * @return The ResourceLimitChecks instance.
+     */
+    protected final ResourceLimitChecks getResourceLimitChecks() {
+        return this.resourceLimitChecks;
+    }
+
+    /**
      * Establishes the connections to the services this adapter depends on.
      * <p>
      * Note that the connections will most likely not have been established when the
@@ -447,7 +469,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
 
     /**
      * Validates a message's target address for consistency with Hono's addressing rules.
-     * 
+     *
      * @param address The address to validate.
      * @param authenticatedDevice The device that has uploaded the message.
      * @return A future indicating the outcome of the check.
@@ -934,7 +956,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * <p>
      * This method creates a new {@code Message}, sets its content type and payload as an AMQP <em>Data</em> section
      * and then invokes {@link #addProperties(Message, ResourceIdentifier, boolean, String, JsonObject, Integer)}.
-     * 
+     *
      * @param target The resource that the message is targeted at.
      * @param regAssertionRequired {@code true} if the downstream peer requires the registration assertion to
      *            be included in the message.

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -25,12 +25,15 @@ import org.eclipse.hono.config.ApplicationConfigProperties;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.config.VertxProperties;
 import org.eclipse.hono.service.cache.SpringCacheProvider;
+import org.eclipse.hono.service.plan.ResourceLimitChecks;
+import org.eclipse.hono.service.plan.PrometheusBasedResourceLimitChecks;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.TenantConstants;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.cache.guava.GuavaCacheManager;
 import org.springframework.context.annotation.Bean;
@@ -55,7 +58,7 @@ public abstract class AbstractAdapterConfig {
      * The Tracer will be resolved by means of a Java service lookup.
      * If no tracer can be resolved this way, the {@code NoopTracer} is
      * returned.
-     * 
+     *
      * @return The tracer.
      */
     @Bean
@@ -71,7 +74,7 @@ public abstract class AbstractAdapterConfig {
      * This method creates new Vert.x default options and invokes
      * {@link VertxProperties#configureVertx(VertxOptions)} on the object returned
      * by {@link #vertxProperties()}.
-     * 
+     *
      * @return The Vert.x instance.
      */
     @Bean
@@ -272,7 +275,7 @@ public abstract class AbstractAdapterConfig {
 
     /**
      * Exposes the provider for caches as a Spring bean.
-     * 
+     *
      * @return The provider instance.
      */
     @Bean
@@ -307,7 +310,7 @@ public abstract class AbstractAdapterConfig {
 
     /**
      * Exposes configuration options for vertx.
-     * 
+     *
      * @return The Properties.
      */
     @ConfigurationProperties("hono.vertx")
@@ -318,7 +321,7 @@ public abstract class AbstractAdapterConfig {
 
     /**
      * Create a new cache provider based on Guava and Spring Cache.
-     * 
+     *
      * @param config The configuration to use as base for this cache.
      * @return A new cache provider or {@code null} if no cache should be used.
      */
@@ -361,5 +364,17 @@ public abstract class AbstractAdapterConfig {
     @Bean
     public HealthCheckServer healthCheckServer() {
         return new VertxBasedHealthCheckServer(vertx(), applicationConfigProperties());
+    }
+
+    /**
+     * Creates a new instance of {@link ResourceLimitChecks} based on prometheus metrics data.
+     * 
+     * @return A ResourceLimitChecks instance.
+     */
+    @Bean
+    @ConfigurationProperties(prefix = "hono.plan.prometheusBased")
+    @ConditionalOnProperty(name = "hono.plan.prometheusBased.host")
+    public ResourceLimitChecks resourceLimitChecks() {
+        return new PrometheusBasedResourceLimitChecks(vertx());
     }
 }
