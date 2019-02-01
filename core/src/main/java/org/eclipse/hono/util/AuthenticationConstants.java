@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -72,15 +72,6 @@ public final class AuthenticationConstants {
      * The EXTERNAL SASL mechanism name.
      */
     public static final String MECHANISM_EXTERNAL       = "EXTERNAL";
-
-    /**
-     * Indicates an unsupported SASL mechanism.
-     */
-    public static final int    ERROR_CODE_UNSUPPORTED_MECHANISM = 0;
-    /**
-     * Indicates that authentication failed.
-     */
-    public static final int    ERROR_CODE_AUTHENTICATION_FAILED = 10;
 
     /**
      * The qualifier to use for referring to components scoped to authentication.

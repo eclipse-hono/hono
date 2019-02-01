@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -18,6 +18,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
+import java.net.HttpURLConnection;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -29,6 +30,7 @@ import org.eclipse.hono.auth.Activity;
 import org.eclipse.hono.auth.Authorities;
 import org.eclipse.hono.auth.AuthoritiesImpl;
 import org.eclipse.hono.auth.HonoUser;
+import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.service.auth.AbstractHonoAuthenticationService;
 import org.eclipse.hono.service.auth.AuthTokenHelper;
 import org.eclipse.hono.util.AuthenticationConstants;
@@ -222,19 +224,23 @@ public final class FileBasedAuthenticationService extends AbstractHonoAuthentica
             final Handler<AsyncResult<HonoUser>> authenticationResultHandler) {
 
         if (username == null || username.isEmpty()) {
-            authenticationResultHandler.handle(Future.failedFuture("missing username"));
+            authenticationResultHandler.handle(Future
+                    .failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "missing username")));
         } else if (password == null || password.isEmpty()) {
-            authenticationResultHandler.handle(Future.failedFuture("missing password"));
+            authenticationResultHandler.handle(Future
+                    .failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "missing password")));
         } else {
             final JsonObject user = getUser(username, AuthenticationConstants.MECHANISM_PLAIN);
             if (user == null) {
                 log.debug("no such user [{}]", username);
-                authenticationResultHandler.handle(Future.failedFuture(UNAUTHORIZED));
+                authenticationResultHandler.handle(Future
+                        .failedFuture(new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED, UNAUTHORIZED)));
             } else if (password.equals(user.getString("password"))) {
                 verify(username, user, authzid, authenticationResultHandler);
             } else {
                 log.debug("password mismatch");
-                authenticationResultHandler.handle(Future.failedFuture(UNAUTHORIZED));
+                authenticationResultHandler.handle(Future
+                        .failedFuture(new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED, UNAUTHORIZED)));
             }
         }
     }
@@ -243,15 +249,19 @@ public final class FileBasedAuthenticationService extends AbstractHonoAuthentica
     public void verifyExternal(final String authzid, final String subjectDn, final Handler<AsyncResult<HonoUser>> authenticationResultHandler) {
 
         if (subjectDn == null || subjectDn.isEmpty()) {
-            authenticationResultHandler.handle(Future.failedFuture("missing subject DN"));
+            authenticationResultHandler.handle(Future
+                    .failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "missing subject DN")));
         } else {
             final String commonName = AuthenticationConstants.getCommonName(subjectDn);
             if (commonName == null) {
-                authenticationResultHandler.handle(Future.failedFuture("could not determine authorization ID for subject DN"));
+                authenticationResultHandler
+                        .handle(Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
+                                "could not determine authorization ID for subject DN")));
             } else {
                 final JsonObject user = getUser(commonName, AuthenticationConstants.MECHANISM_EXTERNAL);
                 if (user == null) {
-                    authenticationResultHandler.handle(Future.failedFuture(UNAUTHORIZED));
+                    authenticationResultHandler.handle(Future
+                            .failedFuture(new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED, UNAUTHORIZED)));
                 } else {
                     verify(commonName, user, authzid, authenticationResultHandler);
                 }
