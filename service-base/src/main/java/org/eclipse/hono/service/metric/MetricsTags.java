@@ -15,8 +15,10 @@ package org.eclipse.hono.service.metric;
 
 import java.util.Objects;
 
-import org.eclipse.hono.util.EndpointType;
+import org.eclipse.hono.util.CommandConstants;
+import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.Hostnames;
+import org.eclipse.hono.util.TelemetryConstants;
 
 import io.micrometer.core.instrument.Tag;
 import io.micrometer.core.instrument.Tags;
@@ -25,6 +27,81 @@ import io.micrometer.core.instrument.Tags;
  * Common definition of metrics tags.
  */
 public final class MetricsTags {
+
+    /**
+     * The type of endpoint that a message is published to.
+     */
+    public enum EndpointType {
+
+        /**
+         * The endpoint for telemetry messages.
+         */
+        TELEMETRY(TelemetryConstants.TELEMETRY_ENDPOINT),
+        /**
+         * The endpoint for events.
+         */
+        EVENT(EventConstants.EVENT_ENDPOINT),
+        /**
+         * The endpoint for command &amp; control messages.
+         */
+        CONTROL(CommandConstants.COMMAND_ENDPOINT),
+        /**
+         * The unknown endpoint.
+         */
+        UNKNOWN("unknown");
+
+        static final String TAG_NAME = "type";
+
+        private final String canonicalName;
+        private final Tag tag;
+
+        EndpointType(final String canonicalName) {
+            this.canonicalName = canonicalName;
+            this.tag = Tag.of(TAG_NAME, canonicalName);
+        }
+
+        /**
+         * Gets a <em>Micrometer</em> tag for the component type.
+         * 
+         * @return The tag.
+         */
+        public Tag asTag() {
+            return tag;
+        }
+
+        /**
+         * Gets this type's canonical name.
+         * 
+         * @return The name.
+         */
+        public String getCanonicalName() {
+            return canonicalName;
+        }
+
+        /**
+         * Gets the endpoint type from a string value.
+         * 
+         * @param name The name of the endpoint type.
+         * 
+         * @return The enum literal of the endpoint type. Returns {@link #UNKNOWN} if it cannot find the endpoint type.
+         *         Never returns {@code null}.
+         */
+        public static EndpointType fromString(final String name) {
+            switch (name) {
+            case TelemetryConstants.TELEMETRY_ENDPOINT:
+            case TelemetryConstants.TELEMETRY_ENDPOINT_SHORT:
+                return TELEMETRY;
+            case EventConstants.EVENT_ENDPOINT:
+            case EventConstants.EVENT_ENDPOINT_SHORT:
+                return EVENT;
+            case CommandConstants.COMMAND_ENDPOINT:
+            case CommandConstants.COMMAND_ENDPOINT_SHORT:
+                return CONTROL;
+            default:
+                return UNKNOWN;
+            }
+        }
+    }
 
     /**
      * The type of component.
@@ -285,17 +362,5 @@ public final class MetricsTags {
     public static Tag getTenantTag(final String tenant) {
         Objects.requireNonNull(tenant);
         return Tag.of(MetricsTags.TAG_TENANT, tenant);
-    }
-
-    /**
-     * Creates a tag for an endpoint type.
-     * 
-     * @param type The type.
-     * @return The tag.
-     * @throws NullPointerException if type is {@code null}.
-     */
-    public static Tag getTypeTag(final EndpointType type) {
-        Objects.requireNonNull(type);
-        return Tag.of(MetricsTags.TAG_TYPE, type.getCanonicalName());
     }
 }

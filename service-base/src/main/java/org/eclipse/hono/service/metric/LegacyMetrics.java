@@ -13,8 +13,6 @@
 
 package org.eclipse.hono.service.metric;
 
-import org.eclipse.hono.util.EndpointType;
-
 /**
  * A service for reporting legacy metrics.
  */
@@ -27,7 +25,7 @@ public interface LegacyMetrics {
      * @param tenantId The tenant that the device belongs to.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
-    void incrementProcessedMessages(EndpointType type, String tenantId);
+    void incrementProcessedMessages(MetricsTags.EndpointType type, String tenantId);
 
     /**
      * Reports a message received from a device as <em>undeliverable</em>.
@@ -41,7 +39,7 @@ public interface LegacyMetrics {
      * @param tenantId The tenant that the device belongs to.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
-    void incrementUndeliverableMessages(EndpointType type, String tenantId);
+    void incrementUndeliverableMessages(MetricsTags.EndpointType type, String tenantId);
 
     /**
      * Reports a TTD having expired without a command being delivered

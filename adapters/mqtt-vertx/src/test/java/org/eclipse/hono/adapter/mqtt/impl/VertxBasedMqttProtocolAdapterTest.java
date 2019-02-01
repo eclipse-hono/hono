@@ -14,16 +14,16 @@
 package org.eclipse.hono.adapter.mqtt.impl;
 
 import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import org.eclipse.hono.adapter.mqtt.MqttContext;
 import org.eclipse.hono.adapter.mqtt.MqttProtocolAdapterProperties;
-import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.auth.Device;
-import org.eclipse.hono.util.EndpointType;
+import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.TelemetryConstants;
@@ -226,25 +226,25 @@ public class VertxBasedMqttProtocolAdapterTest {
         message = newMessage(MqttQoS.AT_LEAST_ONCE, EventConstants.EVENT_ENDPOINT);
         context = newContext(message, null);
         adapter.mapTopic(context).setHandler(
-            address -> assertEquals(EndpointType.EVENT, EndpointType.fromString(address.result().getEndpoint()))
+            address -> assertTrue(MetricsTags.EndpointType.EVENT == MetricsTags.EndpointType.fromString(address.result().getEndpoint()))
         );
 
         message = newMessage(MqttQoS.AT_LEAST_ONCE, TelemetryConstants.TELEMETRY_ENDPOINT);
         context = newContext(message, null);
         adapter.mapTopic(context).setHandler(
-            address -> assertEquals(EndpointType.TELEMETRY, EndpointType.fromString(address.result().getEndpoint()))
+            address -> assertTrue(MetricsTags.EndpointType.TELEMETRY == MetricsTags.EndpointType.fromString(address.result().getEndpoint()))
         );
 
         message = newMessage(MqttQoS.AT_LEAST_ONCE, EventConstants.EVENT_ENDPOINT_SHORT);
         context = newContext(message, null);
         adapter.mapTopic(context).setHandler(
-            address -> assertEquals(EndpointType.EVENT, EndpointType.fromString(address.result().getEndpoint()))
+            address -> assertTrue(MetricsTags.EndpointType.EVENT == MetricsTags.EndpointType.fromString(address.result().getEndpoint()))
         );
 
         message = newMessage(MqttQoS.AT_LEAST_ONCE, TelemetryConstants.TELEMETRY_ENDPOINT_SHORT);
         context = newContext(message, null);
         adapter.mapTopic(context).setHandler(
-            address -> assertEquals(EndpointType.TELEMETRY, EndpointType.fromString(address.result().getEndpoint()))
+            address -> assertTrue(MetricsTags.EndpointType.TELEMETRY == MetricsTags.EndpointType.fromString(address.result().getEndpoint()))
         );
 
         message = newMessage(MqttQoS.AT_LEAST_ONCE, "unknown");

@@ -19,8 +19,8 @@ import org.eclipse.hono.adapter.mqtt.AbstractVertxBasedMqttProtocolAdapter;
 import org.eclipse.hono.adapter.mqtt.MqttContext;
 import org.eclipse.hono.adapter.mqtt.MqttProtocolAdapterProperties;
 import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.util.Constants;
-import org.eclipse.hono.util.EndpointType;
 import org.eclipse.hono.util.ResourceIdentifier;
 
 import io.netty.handler.codec.mqtt.MqttQoS;
@@ -62,7 +62,7 @@ public final class VertxBasedMqttProtocolAdapter extends AbstractVertxBasedMqttP
         final ResourceIdentifier topic = context.topic();
         final MqttQoS qos = context.message().qosLevel();
 
-        switch (EndpointType.fromString(topic.getEndpoint())) {
+        switch (MetricsTags.EndpointType.fromString(topic.getEndpoint())) {
             case TELEMETRY:
                 if (MqttQoS.EXACTLY_ONCE.equals(qos)) {
                     // client tries to send telemetry message using QoS 2

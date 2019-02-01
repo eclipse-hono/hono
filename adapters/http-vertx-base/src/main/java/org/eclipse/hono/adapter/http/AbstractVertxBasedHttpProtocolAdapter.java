@@ -38,7 +38,6 @@ import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.Constants;
-import org.eclipse.hono.util.EndpointType;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.TenantObject;
@@ -511,7 +510,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                 payload,
                 contentType,
                 getTelemetrySender(tenant),
-                EndpointType.TELEMETRY);
+                MetricsTags.EndpointType.TELEMETRY);
     }
 
     /**
@@ -560,7 +559,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                 payload,
                 contentType,
                 getEventSender(tenant),
-                EndpointType.EVENT);
+                MetricsTags.EndpointType.EVENT);
     }
 
     private void doUploadMessage(
@@ -570,7 +569,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
             final Buffer payload,
             final String contentType,
             final Future<MessageSender> senderTracker,
-            final EndpointType endpoint) {
+            final MetricsTags.EndpointType endpoint) {
 
         if (!isPayloadOfIndicatedType(payload, contentType)) {
             HttpUtils.badRequest(ctx, String.format("content type [%s] does not match payload", contentType));

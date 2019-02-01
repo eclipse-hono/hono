@@ -19,7 +19,6 @@ import static org.junit.Assert.assertNull;
 
 import org.eclipse.hono.service.metric.MetricsTags.QoS;
 import org.eclipse.hono.service.metric.MetricsTags.TtdStatus;
-import org.eclipse.hono.util.EndpointType;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -54,14 +53,14 @@ public class MicrometerBasedMetricsTest {
     public void testReportTelemetryOmitsOptionalTags() {
 
         metrics.reportTelemetry(
-                EndpointType.TELEMETRY,
+                MetricsTags.EndpointType.TELEMETRY,
                 "tenant",
                 MetricsTags.ProcessingOutcome.FORWARDED,
                 MetricsTags.QoS.UNKNOWN,
                 MetricsTags.TtdStatus.NONE,
                 metrics.startTimer());
 
-        final Tags expectedTags = Tags.of(MetricsTags.getTypeTag(EndpointType.TELEMETRY))
+        final Tags expectedTags = Tags.of(MetricsTags.EndpointType.TELEMETRY.asTag())
                 .and(MetricsTags.getTenantTag("tenant"))
                 .and(MetricsTags.ProcessingOutcome.FORWARDED.asTag());
 

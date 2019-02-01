@@ -16,7 +16,7 @@ package org.eclipse.hono.adapter.mqtt;
 import java.util.Objects;
 
 import org.eclipse.hono.auth.Device;
-import org.eclipse.hono.util.EndpointType;
+import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.util.MapBasedExecutionContext;
 import org.eclipse.hono.util.ResourceIdentifier;
 
@@ -38,7 +38,7 @@ public final class MqttContext extends MapBasedExecutionContext {
     private ResourceIdentifier topic;
     private String contentType;
     private Sample timer;
-    private EndpointType endpoint;
+    private MetricsTags.EndpointType endpoint;
 
     private MqttContext() {
     }
@@ -84,7 +84,7 @@ public final class MqttContext extends MapBasedExecutionContext {
         if (publishedMessage.topicName() != null) {
             try {
                 result.topic = ResourceIdentifier.fromString(publishedMessage.topicName());
-                result.endpoint = EndpointType.fromString(result.topic.getEndpoint());
+                result.endpoint = MetricsTags.EndpointType.fromString(result.topic.getEndpoint());
             } catch (final IllegalArgumentException e) {
                 // malformed topic
             }
@@ -191,7 +191,7 @@ public final class MqttContext extends MapBasedExecutionContext {
      * @return The endpoint or {@code null} if the message does not
      *         contain a topic.
      */
-    public EndpointType endpoint() {
+    public MetricsTags.EndpointType endpoint() {
         return endpoint;
     }
 

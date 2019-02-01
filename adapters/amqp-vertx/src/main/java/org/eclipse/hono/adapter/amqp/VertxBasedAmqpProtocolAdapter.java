@@ -36,10 +36,10 @@ import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
+import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
-import org.eclipse.hono.util.EndpointType;
 import org.eclipse.hono.util.HonoProtonHelper;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
@@ -710,7 +710,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         }
 
         return contentTypeCheck.compose(ok -> {
-            switch (EndpointType.fromString(context.getEndpoint())) {
+            switch (MetricsTags.EndpointType.fromString(context.getEndpoint())) {
             case TELEMETRY:
                 LOG.trace("forwarding telemetry data");
                 return doUploadMessage(context, getTelemetrySender(context.getTenantId()), currentSpan);
@@ -845,7 +845,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
 
         return getResourceIdentifier(address)
                 .map(resource -> {
-                    switch (EndpointType.fromString(resource.getEndpoint())) {
+                    switch (MetricsTags.EndpointType.fromString(resource.getEndpoint())) {
                     case TELEMETRY:
                         return resource;
                     case EVENT:

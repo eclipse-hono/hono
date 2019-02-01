@@ -15,7 +15,6 @@ package org.eclipse.hono.service.metric;
 
 import java.util.Objects;
 
-import org.eclipse.hono.util.EndpointType;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
@@ -54,22 +53,22 @@ public final class MicrometerBasedLegacyMetrics implements LegacyMetrics {
     }
 
     @Override
-    public void incrementProcessedMessages(final EndpointType type, final String tenantId) {
+    public void incrementProcessedMessages(final MetricsTags.EndpointType type, final String tenantId) {
 
         Objects.requireNonNull(type);
         Objects.requireNonNull(tenantId);
         this.registry.counter(METER_MESSAGES_PROCESSED,
-                Tags.of(MetricsTags.TAG_TENANT, tenantId).and(MetricsTags.TAG_TYPE, type.getCanonicalName()))
+                Tags.of(MetricsTags.TAG_TENANT, tenantId).and(type.asTag()))
                 .increment();
     }
 
     @Override
-    public void incrementUndeliverableMessages(final EndpointType type, final String tenantId) {
+    public void incrementUndeliverableMessages(final MetricsTags.EndpointType type, final String tenantId) {
 
         Objects.requireNonNull(type);
         Objects.requireNonNull(tenantId);
         this.registry.counter(METER_MESSAGES_UNDELIVERABLE,
-                Tags.of(MetricsTags.TAG_TENANT, tenantId).and(MetricsTags.TAG_TYPE, type.getCanonicalName()))
+                Tags.of(MetricsTags.TAG_TENANT, tenantId).and(type.asTag()))
                 .increment();
     }
 

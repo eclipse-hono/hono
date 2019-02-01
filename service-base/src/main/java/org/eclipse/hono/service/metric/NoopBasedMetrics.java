@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,8 +12,6 @@
  *******************************************************************************/
 
 package org.eclipse.hono.service.metric;
-
-import org.eclipse.hono.util.EndpointType;
 
 import io.micrometer.core.instrument.Timer.Sample;
 
@@ -33,7 +31,7 @@ public class NoopBasedMetrics implements Metrics {
     }
 
     @Override
-    public void incrementProcessedPayload(final EndpointType type, final String tenantId, final long payloadSize) {
+    public void incrementProcessedPayload(final MetricsTags.EndpointType type, final String tenantId, final long payloadSize) {
     }
 
     @Override
@@ -68,7 +66,7 @@ public class NoopBasedMetrics implements Metrics {
 
     @Override
     public void reportTelemetry(
-            final EndpointType type,
+            final MetricsTags.EndpointType type,
             final String tenantId,
             final MetricsTags.ProcessingOutcome outcome,
             final MetricsTags.QoS qos,
@@ -77,7 +75,7 @@ public class NoopBasedMetrics implements Metrics {
 
     @Override
     public void reportTelemetry(
-            final EndpointType type,
+            final MetricsTags.EndpointType type,
             final String tenantId,
             final MetricsTags.ProcessingOutcome outcome,
             final MetricsTags.QoS qos,

@@ -13,8 +13,6 @@
 
 package org.eclipse.hono.service.metric;
 
-import org.eclipse.hono.util.EndpointType;
-
 import io.micrometer.core.instrument.Timer.Sample;
 
 /**
@@ -75,7 +73,7 @@ public interface Metrics {
      * @throws IllegalArgumentException if type is neither telemetry nor event.
      */
     void reportTelemetry(
-            EndpointType type,
+            MetricsTags.EndpointType type,
             String tenantId,
             MetricsTags.ProcessingOutcome outcome,
             MetricsTags.QoS qos,
@@ -95,7 +93,7 @@ public interface Metrics {
      * @throws IllegalArgumentException if type is neither telemetry nor event.
      */
     void reportTelemetry(
-            EndpointType type,
+            MetricsTags.EndpointType type,
             String tenantId,
             MetricsTags.ProcessingOutcome outcome,
             MetricsTags.QoS qos,
@@ -111,7 +109,7 @@ public interface Metrics {
      * @param payloadSize The size of the payload in bytes.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
-    void incrementProcessedPayload(EndpointType type, String tenantId, long payloadSize);
+    void incrementProcessedPayload(MetricsTags.EndpointType type, String tenantId, long payloadSize);
 
     /**
      * Reports a command being delivered to a device.

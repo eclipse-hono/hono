@@ -15,12 +15,13 @@
 package org.eclipse.hono.adapter.mqtt;
 
 import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.*;
-import static org.mockito.Mockito.*;
+import static org.junit.Assert.assertThat;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import org.eclipse.hono.auth.Device;
+import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.util.CommandConstants;
-import org.eclipse.hono.util.EndpointType;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.TelemetryConstants;
 import org.junit.Test;
@@ -66,16 +67,16 @@ public class MqttContextTest {
 
         assertEndpoint(
                 newMessage(TelemetryConstants.TELEMETRY_ENDPOINT_SHORT, "tenant", "device"),
-                EndpointType.TELEMETRY);
+                MetricsTags.EndpointType.TELEMETRY);
         assertEndpoint(
                 newMessage(EventConstants.EVENT_ENDPOINT_SHORT, "tenant", "device"),
-                EndpointType.EVENT);
+                MetricsTags.EndpointType.EVENT);
         assertEndpoint(
                 newMessage(CommandConstants.COMMAND_ENDPOINT_SHORT, "tenant", "device"),
-                EndpointType.CONTROL);
+                MetricsTags.EndpointType.CONTROL);
     }
 
-    private static void assertEndpoint(final MqttPublishMessage msg, final EndpointType expectedEndpoint) {
+    private static void assertEndpoint(final MqttPublishMessage msg, final MetricsTags.EndpointType expectedEndpoint) {
         final MqttContext context = MqttContext.fromPublishPacket(msg, mock(MqttEndpoint.class));
         assertThat(context.endpoint(), is(expectedEndpoint));
     }

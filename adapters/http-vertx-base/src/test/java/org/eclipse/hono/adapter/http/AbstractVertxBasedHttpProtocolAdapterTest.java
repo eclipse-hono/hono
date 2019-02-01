@@ -45,7 +45,6 @@ import org.eclipse.hono.client.TenantClient;
 import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.util.Constants;
-import org.eclipse.hono.util.EndpointType;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
@@ -277,7 +276,13 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         verify(sender, never()).send(any(Message.class));
         // and has not been reported as processed
         verify(metrics, never())
-            .reportTelemetry(any(EndpointType.class), anyString(), eq(MetricsTags.ProcessingOutcome.FORWARDED), any(MetricsTags.QoS.class), any(MetricsTags.TtdStatus.class), any());
+            .reportTelemetry(
+                    any(MetricsTags.EndpointType.class),
+                    anyString(),
+                    eq(MetricsTags.ProcessingOutcome.FORWARDED),
+                    any(MetricsTags.QoS.class),
+                    any(MetricsTags.TtdStatus.class),
+                    any());
     }
 
     /**
@@ -310,16 +315,26 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         // THEN the device does not get a response
         verify(response, never()).end();
         // and the message is not reported as being processed
-        verify(metrics, never())
-            .reportTelemetry(any(EndpointType.class), anyString(), eq(MetricsTags.ProcessingOutcome.FORWARDED), any(MetricsTags.QoS.class), any(MetricsTags.TtdStatus.class), any());
+        verify(metrics, never()).reportTelemetry(
+                any(MetricsTags.EndpointType.class),
+                anyString(),
+                eq(MetricsTags.ProcessingOutcome.FORWARDED),
+                any(MetricsTags.QoS.class),
+                any(MetricsTags.TtdStatus.class),
+                any());
 
         // until the event has been accepted
         outcome.complete(mock(ProtonDelivery.class));
         verify(response).setStatusCode(202);
         verify(response).end();
-        verify(metrics)
-            .reportTelemetry(any(EndpointType.class), eq("tenant"), eq(MetricsTags.ProcessingOutcome.FORWARDED), any(MetricsTags.QoS.class), any(MetricsTags.TtdStatus.class), any());
-        verify(metrics).incrementProcessedPayload(any(EndpointType.class), eq("tenant"), eq((long) payload.length()));
+        verify(metrics).reportTelemetry(
+                any(MetricsTags.EndpointType.class),
+                eq("tenant"),
+                eq(MetricsTags.ProcessingOutcome.FORWARDED),
+                any(MetricsTags.QoS.class),
+                any(MetricsTags.TtdStatus.class),
+                any());
+        verify(metrics).incrementProcessedPayload(any(MetricsTags.EndpointType.class), eq("tenant"), eq((long) payload.length()));
     }
 
     /**
@@ -346,8 +361,13 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         // THEN the device gets a 400
         assertContextFailedWithClientError(ctx, HttpURLConnection.HTTP_BAD_REQUEST);
         // and has not been reported as processed
-        verify(metrics, never())
-            .reportTelemetry(any(EndpointType.class), anyString(), eq(MetricsTags.ProcessingOutcome.FORWARDED), any(MetricsTags.QoS.class), any(MetricsTags.TtdStatus.class), any());
+        verify(metrics, never()).reportTelemetry(
+                any(MetricsTags.EndpointType.class),
+                anyString(),
+                eq(MetricsTags.ProcessingOutcome.FORWARDED),
+                any(MetricsTags.QoS.class),
+                any(MetricsTags.TtdStatus.class),
+                any());
     }
 
     /**
@@ -510,9 +530,14 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         verify(response).setStatusCode(202);
         verify(response).end();
         // and the message has been reported as processed
-        verify(metrics)
-            .reportTelemetry(any(EndpointType.class), eq("tenant"), eq(MetricsTags.ProcessingOutcome.FORWARDED), any(MetricsTags.QoS.class), any(MetricsTags.TtdStatus.class), any());
-        verify(metrics).incrementProcessedPayload(any(EndpointType.class), eq("tenant"), eq((long) payload.length()));
+        verify(metrics).reportTelemetry(
+                any(MetricsTags.EndpointType.class),
+                eq("tenant"),
+                eq(MetricsTags.ProcessingOutcome.FORWARDED),
+                any(MetricsTags.QoS.class),
+                any(MetricsTags.TtdStatus.class),
+                any());
+        verify(metrics).incrementProcessedPayload(any(MetricsTags.EndpointType.class), eq("tenant"), eq((long) payload.length()));
     }
 
     /**

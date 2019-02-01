@@ -19,8 +19,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
 
-import org.eclipse.hono.util.EndpointType;
-
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tags;
 import io.micrometer.core.instrument.Timer;
@@ -125,7 +123,7 @@ public class MicrometerBasedMetrics implements Metrics {
 
     @Override
     public final void reportTelemetry(
-            final EndpointType type,
+            final MetricsTags.EndpointType type,
             final String tenantId,
             final MetricsTags.ProcessingOutcome outcome,
             final MetricsTags.QoS qos,
@@ -136,7 +134,7 @@ public class MicrometerBasedMetrics implements Metrics {
 
     @Override
     public final void reportTelemetry(
-            final EndpointType type,
+            final MetricsTags.EndpointType type,
             final String tenantId,
             final MetricsTags.ProcessingOutcome outcome,
             final MetricsTags.QoS qos,
@@ -150,14 +148,14 @@ public class MicrometerBasedMetrics implements Metrics {
         Objects.requireNonNull(ttdStatus);
         Objects.requireNonNull(timer);
 
-        if (type != EndpointType.TELEMETRY && type != EndpointType.EVENT) {
+        if (type != MetricsTags.EndpointType.TELEMETRY && type != MetricsTags.EndpointType.EVENT) {
             throw new IllegalArgumentException("invalid type, must be either telemetry or event");
         }
 
         final Tags tags = 
                 ttdStatus.add(
                         qos.add(
-                            Tags.of(MetricsTags.getTypeTag(type))
+                            Tags.of(type.asTag())
                                 .and(MetricsTags.getTenantTag(tenantId))
                                 .and(outcome.asTag())));
 
@@ -194,7 +192,7 @@ public class MicrometerBasedMetrics implements Metrics {
     }
 
     @Override
-    public final void incrementProcessedPayload(final EndpointType type, final String tenantId,
+    public final void incrementProcessedPayload(final MetricsTags.EndpointType type, final String tenantId,
             final long payloadSize) {
 
         Objects.requireNonNull(type);
@@ -205,7 +203,7 @@ public class MicrometerBasedMetrics implements Metrics {
         }
 
         this.registry.counter("hono.messages.processed.payload",
-                Tags.of(MetricsTags.getTenantTag(tenantId)).and(MetricsTags.getTypeTag(type)))
+                Tags.of(MetricsTags.getTenantTag(tenantId)).and(type.asTag()))
                 .increment(payloadSize);
     }
 

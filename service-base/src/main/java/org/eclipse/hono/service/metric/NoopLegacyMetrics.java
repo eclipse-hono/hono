@@ -13,8 +13,6 @@
 
 package org.eclipse.hono.service.metric;
 
-import org.eclipse.hono.util.EndpointType;
-
 /**
  * A no-op legacy metrics implementation.
  */
@@ -27,11 +25,11 @@ public class NoopLegacyMetrics implements LegacyMetrics {
     }
 
     @Override
-    public void incrementUndeliverableMessages(final EndpointType type, final String tenantId) {
+    public void incrementUndeliverableMessages(final MetricsTags.EndpointType type, final String tenantId) {
     }
 
     @Override
-    public void incrementProcessedMessages(final EndpointType type, final String tenantId) {
+    public void incrementProcessedMessages(final MetricsTags.EndpointType type, final String tenantId) {
     }
 
     @Override

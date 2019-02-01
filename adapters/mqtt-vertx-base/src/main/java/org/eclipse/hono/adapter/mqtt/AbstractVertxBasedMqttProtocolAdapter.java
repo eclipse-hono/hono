@@ -45,7 +45,6 @@ import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
-import org.eclipse.hono.util.EndpointType;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.TenantObject;
@@ -719,7 +718,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         Objects.requireNonNull(resource);
         Objects.requireNonNull(message);
 
-        switch (EndpointType.fromString(resource.getEndpoint())) {
+        switch (MetricsTags.EndpointType.fromString(resource.getEndpoint())) {
         case TELEMETRY:
             return uploadTelemetryMessage(
                     ctx,
@@ -767,7 +766,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                 Objects.requireNonNull(deviceId),
                 Objects.requireNonNull(payload),
                 getTelemetrySender(tenant),
-                EndpointType.TELEMETRY
+                MetricsTags.EndpointType.TELEMETRY
         ).map(success -> {
             final MetricsTags.QoS qos = MetricsTags.QoS.from(ctx.message().qosLevel().value());
             metrics.reportTelemetry(ctx.endpoint(), ctx.tenant(), MetricsTags.ProcessingOutcome.FORWARDED, qos, ctx.getTimer());
@@ -802,7 +801,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                 Objects.requireNonNull(deviceId),
                 Objects.requireNonNull(payload),
                 getEventSender(tenant),
-                EndpointType.EVENT
+                MetricsTags.EndpointType.EVENT
         ).map(success -> {
             final MetricsTags.QoS qos = MetricsTags.QoS.from(ctx.message().qosLevel().value());
             metrics.reportTelemetry(ctx.endpoint(), ctx.tenant(), MetricsTags.ProcessingOutcome.FORWARDED, qos, ctx.getTimer());
@@ -886,7 +885,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
             final String deviceId,
             final Buffer payload,
             final Future<? extends MessageSender> senderTracker,
-            final EndpointType endpoint) {
+            final MetricsTags.EndpointType endpoint) {
 
         if (!isPayloadOfIndicatedType(payload, ctx.contentType())) {
             return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,

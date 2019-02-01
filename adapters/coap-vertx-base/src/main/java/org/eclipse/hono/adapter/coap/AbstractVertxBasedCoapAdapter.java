@@ -36,7 +36,6 @@ import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.util.Constants;
-import org.eclipse.hono.util.EndpointType;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.TenantObject;
 import org.slf4j.Logger;
@@ -397,7 +396,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                 Buffer.buffer(context.getExchange().getRequestPayload()),
                 MediaTypeRegistry.toString(context.getExchange().getRequestOptions().getContentFormat()),
                 getTelemetrySender(authenticatedDevice.getTenantId()),
-                EndpointType.TELEMETRY);
+                MetricsTags.EndpointType.TELEMETRY);
     }
 
     /**
@@ -419,7 +418,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                 Buffer.buffer(context.getExchange().getRequestPayload()),
                 MediaTypeRegistry.toString(context.getExchange().getRequestOptions().getContentFormat()),
                 getEventSender(authenticatedDevice.getTenantId()),
-                EndpointType.EVENT);
+                MetricsTags.EndpointType.EVENT);
     }
 
     /**
@@ -452,7 +451,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
     private void doUploadMessage(final CoapContext context, final Device authenticatedDevice, final Device device,
             final boolean waitForOutcome, final Buffer payload, final String contentType,
             final Future<MessageSender> senderTracker,
-            final EndpointType endpoint) {
+            final MetricsTags.EndpointType endpoint) {
 
         if (contentType == null) {
             context.respondWithCode(ResponseCode.NOT_ACCEPTABLE);
