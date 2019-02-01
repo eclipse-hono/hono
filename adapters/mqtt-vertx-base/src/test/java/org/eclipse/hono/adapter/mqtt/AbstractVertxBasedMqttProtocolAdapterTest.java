@@ -51,6 +51,7 @@ import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.service.auth.device.AuthHandler;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.service.metric.MetricsTags.EndpointType;
+import org.eclipse.hono.service.plan.ResourceLimitChecks;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
@@ -111,6 +112,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
     private RegistrationClient regClient;
     private TenantClient tenantClient;
     private AuthHandler<MqttContext> authHandler;
+    private ResourceLimitChecks resourceLimitChecks;
     private MqttProtocolAdapterProperties config;
     private MqttAdapterMetrics metrics;
     private CommandConnection commandConnection;
@@ -175,6 +177,8 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         when(commandConnection.connect(any(Handler.class))).thenReturn(Future.succeededFuture(commandConnection));
 
         authHandler = mock(AuthHandler.class);
+        resourceLimitChecks = mock(ResourceLimitChecks.class);
+        when(resourceLimitChecks.isConnectionLimitExceeded(any(TenantObject.class))).thenReturn(Future.succeededFuture());
     }
 
     /**
@@ -1000,6 +1004,32 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         verify(metrics).decrementUnauthenticatedConnections();
     }
 
+    /**
+     * Verifies that the connection is rejected due to the limit exceeded.
+     */
+    @Test
+    public void testConnectionsLimitExceeded() {
+
+        // GIVEN an adapter requiring devices to authenticate endpoint
+        final MqttServer server = getMqttServer(false);
+        config.setAuthenticationRequired(true);
+        final AbstractVertxBasedMqttProtocolAdapter<MqttProtocolAdapterProperties> adapter = getAdapter(server);
+        forceClientMocksToConnected();
+
+        // WHEN a device tries to establish a connection
+        when(authHandler.authenticateDevice(any(MqttContext.class)))
+                .thenReturn(Future.succeededFuture(new DeviceUser("DEFAULT_TENANT", "4711")));
+        when(resourceLimitChecks.isConnectionLimitExceeded(any(TenantObject.class)))
+                .thenReturn(Future.failedFuture("Connections limit exceeded"));
+        final MqttEndpoint endpoint = getMqttEndpointAuthenticated();
+        adapter.handleEndpointConnection(endpoint);
+
+        // THEN the adapter has tried to authenticate the device
+        verify(authHandler).authenticateDevice(any(MqttContext.class));
+        // THEN the connection request is rejected
+        verify(endpoint).reject(MqttConnectReturnCode.CONNECTION_REFUSED_NOT_AUTHORIZED);
+    }
+
     private void forceClientMocksToConnected() {
         when(tenantServiceClient.isConnected()).thenReturn(Future.succeededFuture());
         when(messagingClient.isConnected()).thenReturn(Future.succeededFuture());
@@ -1064,6 +1094,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         adapter.setCredentialsServiceClient(credentialsServiceClient);
         adapter.setCommandConnection(commandConnection);
         adapter.setAuthHandler(authHandler);
+        adapter.setResourceLimitChecks(resourceLimitChecks);
 
         if (server != null) {
             adapter.setMqttInsecureServer(server);

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -73,6 +73,21 @@ public final class TenantConstants extends RequestResponseApiConstants {
      * The vert.x event bus address to which inbound registration messages are published.
      */
     public static final String EVENT_BUS_ADDRESS_TENANT_IN = "tenant.in";
+
+    /**
+     * The name of the property that contains the configuration options for limits.
+     */
+    public static final String LIMITS = "limits";
+
+    /**
+     * The default value for the maximum number of connections to be allowed is -1, which implies no limit.
+     */
+    public static final long DEFAULT_MAX_CONNECTIONS = -1;
+
+    /**
+     * The name of the property that contains the maximum number of connections to be allowed for a tenant.
+     */
+    public static final String MAX_CONNECTIONS = "max-connections";
 
     /**
      * Request actions that belong to the Tenant API.
