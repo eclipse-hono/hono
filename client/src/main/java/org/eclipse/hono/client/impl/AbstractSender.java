@@ -449,12 +449,12 @@ public abstract class AbstractSender extends AbstractHonoClient implements Messa
                         }
                     } else if (Released.class.isInstance(remoteState)) {
                         LOG.debug("message [message ID: {}] not accepted by peer, remote state: {}", messageId, remoteState);
-                        e = new ClientErrorException(HttpURLConnection.HTTP_UNAVAILABLE);
+                        e = new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE);
                     } else if (Modified.class.isInstance(remoteState)) {
                         LOG.debug("message [message ID: {}] not accepted by peer, remote state: {}", messageId, remoteState);
                         final Modified modified = (Modified) deliveryUpdated.getRemoteState();
-                        e = new ClientErrorException(modified.getUndeliverableHere() ? HttpURLConnection.HTTP_NOT_FOUND
-                                : HttpURLConnection.HTTP_UNAVAILABLE);
+                        e = modified.getUndeliverableHere() ? new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND)
+                                : new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE);
                     }
                     result.fail(e);
                 }

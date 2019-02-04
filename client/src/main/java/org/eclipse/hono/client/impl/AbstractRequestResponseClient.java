@@ -834,8 +834,8 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
                         LOG.debug("service did not accept request [target address: {}, subject: {}, correlation ID: {}], remote state: {}",
                                 targetAddress, request.getSubject(), correlationId, remoteState);
                         final Modified modified = (Modified) deliveryUpdated.getRemoteState();
-                        failedResult.fail(new ServerErrorException(modified.getUndeliverableHere() ? HttpURLConnection.HTTP_NOT_FOUND
-                                        : HttpURLConnection.HTTP_UNAVAILABLE));
+                        failedResult.fail(modified.getUndeliverableHere() ? new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND)
+                                : new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE));
                         cancelRequest(correlationId, failedResult);
                     }
                 });
