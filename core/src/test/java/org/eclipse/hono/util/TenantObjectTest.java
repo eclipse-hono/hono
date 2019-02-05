@@ -27,6 +27,9 @@ import java.security.GeneralSecurityException;
 import java.security.KeyStore;
 import java.security.cert.TrustAnchor;
 import java.security.cert.X509Certificate;
+import java.util.Base64;
+
+import javax.security.auth.x500.X500Principal;
 
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -83,6 +86,50 @@ public class TenantObjectTest {
         final JsonObject customAdapterConfig = obj.getAdapterConfiguration("custom");
         assertNotNull(customAdapterConfig);
         assertThat(customAdapterConfig.getJsonObject("deployment"), is(deploymentValue));
+    }
+
+    /**
+     * Verifies that a trust anchor can be deserialized from a Base64 encoded public key.
+     * 
+     * @throws GeneralSecurityException if the trust anchor cannot be deserialized.
+     */
+    @Test
+    public void testDeserializationOfPublicKeyTrustAnchor() throws GeneralSecurityException {
+
+        final X509Certificate cert = getCaCertificate();
+        final JsonObject config = new JsonObject()
+                .put(TenantConstants.FIELD_PAYLOAD_TENANT_ID, "my-tenant")
+                .put(TenantConstants.FIELD_ENABLED, true)
+                .put(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA,
+                        new JsonObject()
+                        .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, cert.getSubjectX500Principal().getName(X500Principal.RFC2253))
+                        .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, Base64.getEncoder().encodeToString(cert.getPublicKey().getEncoded())));
+
+        final TenantObject tenant = config.mapTo(TenantObject.class);
+        assertThat(tenant.getTrustedCaSubjectDn(), is(cert.getSubjectX500Principal()));
+        assertThat(tenant.getTrustAnchor().getCAPublicKey(), is(cert.getPublicKey()));
+    }
+
+    /**
+     * Verifies that a trust anchor can be deserialized from a Base64 encoded public key.
+     * 
+     * @throws GeneralSecurityException if the trust anchor cannot be deserialized.
+     */
+    @Test
+    public void testDeserializationOfCertificateTrustAnchor() throws GeneralSecurityException {
+
+        final X509Certificate cert = getCaCertificate();
+        final JsonObject config = new JsonObject()
+                .put(TenantConstants.FIELD_PAYLOAD_TENANT_ID, "my-tenant")
+                .put(TenantConstants.FIELD_ENABLED, true)
+                .put(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA,
+                        new JsonObject()
+                        .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, cert.getSubjectX500Principal().getName(X500Principal.RFC2253))
+                        .put(TenantConstants.FIELD_PAYLOAD_CERT, Base64.getEncoder().encodeToString(cert.getEncoded())));
+
+        final TenantObject tenant = config.mapTo(TenantObject.class);
+        assertThat(tenant.getTrustedCaSubjectDn(), is(cert.getSubjectX500Principal()));
+        assertThat(tenant.getTrustAnchor().getTrustedCert(), is(cert));
     }
 
     /**
