@@ -307,6 +307,7 @@ public final class FileBasedTenantService extends CompleteBaseTenantService<File
             return TenantResult.from(HttpURLConnection.HTTP_CONFLICT);
         } else {
             try {
+                log.debug("request: {}", tenantSpec.encodePrettily());
                 final TenantObject tenant = tenantSpec.mapTo(TenantObject.class);
                 tenant.setTenantId(tenantId);
                 final TenantObject conflictingTenant = getByCa(tenant.getTrustedCaSubjectDn());
@@ -319,6 +320,7 @@ public final class FileBasedTenantService extends CompleteBaseTenantService<File
                     return TenantResult.from(HttpURLConnection.HTTP_CREATED);
                 }
             } catch (final IllegalArgumentException e) {
+                log.debug("error parsing payload of add tenant request", e);
                 return TenantResult.from(HttpURLConnection.HTTP_BAD_REQUEST);
             }
         }
