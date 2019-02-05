@@ -56,24 +56,25 @@ The names of Hono's standard components are as follows:
 
 Additional tags for protocol adapters are:
 
-| Name       | Value                                              | Description |
-| ---------- | -------------------------------------------------- | ----------- |
-| *qos*      | `0`, `1`                                          | The quality of service used for a message. `0` indicates *at most once*, `1` indicates *at least once* delivery semantics. This tag will be omitted if the quality of service cannot be determined. |
-| *status*   | `forwarded`, `unprocessable`, `undeliverable` | The processing status of a message.<br>`forwarded` indicates that the message has been forwarded to a downstream consumer<br>`unprocessable` indicates that the message has not been processed not forwarded, e.g. because the message was malformed<br>`undeliverable` indicates that the message could not be forwarded, e.g. because there is no downstream consumer or due to an infrastructure problem |
-| *tenant*   | *string*                                           | The name of the tenant that the metric is being reported for |
-| *type*     | `telemetry`, `event`                             | The type of (downstream) message that the metric is being reported for |
-| *ttd*      | `expired`, `command`                             | A status indicating the outcome of processing a TTD value contained in a message received from a device.<br>`command` indicates that a command for the device has been included in the response to the device's request for uploading the message.<br>`expired` indicates that a response without a command has been sent to the device<br>Note that this tag is only used by protocol adapters which use a request/response based transport protocol like HTTP. The tag will be omitted if the device did not specify a TTD value in its message. |
+| Name        | Value                                              | Description |
+| ----------- | -------------------------------------------------- | ----------- |
+| *direction* | `one-way`, `request`, `response`               | The direction in which a Command &amp; Control message is being sent:<br>`one-way` indicates a command sent to a device for which the sending application doesn't expect to receive a response.<br>`request` indicates a command request message sent to a device.<br>`response` indicates a command response received from a device. |
+| *qos*       | `0`, `1`                                          | The quality of service used for a telemetry or event message.<br>`0` indicates *at most once*,<br>`1` indicates *at least once* delivery semantics.<br>This tag will be omitted if the quality of service cannot be determined. |
+| *status*    | `forwarded`, `unprocessable`, `undeliverable` | The processing status of a message.<br>`forwarded` indicates that the message has been forwarded to a downstream consumer<br>`unprocessable` indicates that the message has not been processed not forwarded, e.g. because the message was malformed<br>`undeliverable` indicates that the message could not be forwarded, e.g. because there is no downstream consumer or due to an infrastructure problem |
+| *tenant*    | *string*                                           | The identifier of the tenant that the metric is being reported for |
+| *ttd*       | `command`, `expired`                             | A status indicating the outcome of processing a TTD value contained in a message received from a device.<br>`command` indicates that a command for the device has been included in the response to the device's request for uploading the message.<br>`expired` indicates that a response without a command has been sent to the device<br>Note that this tag is only used by protocol adapters which use a request/response based transport protocol like HTTP. The tag will be omitted if the device did not specify a TTD value in its message. |
+| *type*      | `telemetry`, `event`                             | The type of (downstream) message that the metric is being reported for. |
 
 Metrics provided by the protocol adapters are:
 
 | Metric                             | Type                | Tags                                                                                         | Description |
-| ---------------------------------- | ------- | -------------------------------------------------------------------------------------------- | ----------- |
+| ---------------------------------- | ------------------- | -------------------------------------------------------------------------------------------- | ----------- |
+| *hono.commands.received*           | Timer               | *host*, *component-type*, *component-name*, *tenant*, *type*, *status*, *direction*          | The time it took to process a message conveying a command or a response to a command. |
+| *hono.commands.payload*            | DistributionSummary | *host*, *component-type*, *component-name*, *tenant*, *type*, *status*, *direction*          | The number of bytes conveyed in the payload of a command message. |
 | *hono.connections.authenticated*   | Gauge               | *host*, *component-type*, *component-name*, *tenant*                                         | Current number of connected, authenticated devices. <br/> **NB** This metric is only supported by protocol adapters that maintain *connection state* with authenticated devices. In particular, the HTTP adapter does not support this metric. |
 | *hono.connections.unauthenticated* | Gauge               | *host*, *component-type*, *component-name*                                                   | Current number of connected, unauthenticated devices. <br/> **NB** This metric is only supported by protocol adapters that maintain *connection state* with authenticated devices. In particular, the HTTP adapter does not support this metric. |
-| *hono.messages.received*           | Timer               | *host*, *component-type*, *component-name*, *tenant*, *type*, *status*, \[*qos*,\] \[*ttd*\] | The time it took to process a message. |
-| *hono.messages.payload*            | DistributionSummary | *host*, *component-type*, *component-name*, *tenant*, *type*, *status*                       | The number of bytes contained in the payload of a message. |
-| *hono.commands.device.delivered*   | Counter             | *host*, *component-type*, *component-name*, *tenant*                                         | Total number of delivered commands |
-| *hono.commands.response.delivered* | Counter             | *host*, *component-type*, *component-name*, *tenant*                                         | Total number of delivered responses to commands |
+| *hono.messages.received*           | Timer               | *host*, *component-type*, *component-name*, *tenant*, *type*, *status*, \[*qos*,\] \[*ttd*\] | The time it took to process a message conveying telemetry data or an event. |
+| *hono.messages.payload*            | DistributionSummary | *host*, *component-type*, *component-name*, *tenant*, *type*, *status*                       | The number of bytes conveyed in the payload of a telemetry or event message. |
 
 A tag name in square brackets indicates that the tag may not be used with each reported value.
 

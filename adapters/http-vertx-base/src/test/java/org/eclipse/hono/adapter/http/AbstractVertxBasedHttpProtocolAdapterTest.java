@@ -44,6 +44,7 @@ import org.eclipse.hono.client.ResourceConflictException;
 import org.eclipse.hono.client.TenantClient;
 import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.service.metric.MetricsTags;
+import org.eclipse.hono.service.metric.MetricsTags.Direction;
 import org.eclipse.hono.service.metric.MetricsTags.EndpointType;
 import org.eclipse.hono.service.metric.MetricsTags.ProcessingOutcome;
 import org.eclipse.hono.service.metric.MetricsTags.QoS;
@@ -406,14 +407,24 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
 
         // THEN the device does not get a response
         verify(response, never()).end();
-        // and the message is not reported as being processed
-        verify(metrics, never()).incrementCommandResponseDeliveredToApplication(eq("tenant"));
+        // and the response has not been reported as forwarded
+        verify(metrics, never()).reportCommand(
+                eq(Direction.RESPONSE),
+                eq("tenant"),
+                eq(ProcessingOutcome.FORWARDED),
+                anyInt(),
+                any());
 
         // until the command response has been accepted by the application
         outcome.complete(mock(ProtonDelivery.class));
         verify(response).setStatusCode(202);
         verify(response).end();
-        verify(metrics).incrementCommandResponseDeliveredToApplication(eq("tenant"));
+        verify(metrics).reportCommand(
+                eq(Direction.RESPONSE),
+                eq("tenant"),
+                eq(ProcessingOutcome.FORWARDED),
+                eq(payload.length()),
+                any());
     }
 
     /**
@@ -439,8 +450,13 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
 
         // THEN the device gets a 403
         assertContextFailedWithClientError(ctx, HttpURLConnection.HTTP_FORBIDDEN);
-        // and has not been reported as processed
-        verify(metrics, never()).incrementCommandResponseDeliveredToApplication(eq("tenant"));
+        // and the response has been reported as undeliverable
+        verify(metrics).reportCommand(
+                eq(Direction.RESPONSE),
+                eq("tenant"),
+                eq(ProcessingOutcome.UNPROCESSABLE),
+                eq(payload.length()),
+                any());
     }
 
     /**
@@ -475,8 +491,13 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
 
         // Then the device gets a 404
         assertContextFailedWithClientError(ctx, HttpURLConnection.HTTP_NOT_FOUND);
-        // and has not been reported as processed
-        verify(metrics, never()).incrementCommandResponseDeliveredToApplication(eq("tenant"));
+        // and the response has not been reported as forwarded
+        verify(metrics).reportCommand(
+                eq(Direction.RESPONSE),
+                eq("tenant"),
+                eq(ProcessingOutcome.UNPROCESSABLE),
+                eq(payload.length()),
+                any());
     }
 
     /**
@@ -502,8 +523,13 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
 
         // THEN the device gets a 400
         assertContextFailedWithClientError(ctx, HttpURLConnection.HTTP_BAD_REQUEST);
-        // and has not been reported as processed
-        verify(metrics, never()).incrementCommandResponseDeliveredToApplication(eq("tenant"));
+        // and the response has not been reported as forwarded
+        verify(metrics).reportCommand(
+                eq(Direction.RESPONSE),
+                eq("tenant"),
+                eq(ProcessingOutcome.UNPROCESSABLE),
+                eq(payload.length()),
+                any());
     }
 
     /**

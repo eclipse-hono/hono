@@ -103,7 +103,7 @@ public class LegacyMetricsConfigTest {
         // Command related meters
 
         assertMapping(
-                new Id(MicrometerBasedMetrics.METER_COMMANDS_DEVICE_DELIVERED, tags, null, null, Type.COUNTER),
+                new Id(MicrometerBasedLegacyMetrics.METER_COMMANDS_DEVICE_DELIVERED, tags, null, null, Type.COUNTER),
                 String.format("%s.meter.hono.%s.commands.%s.device.delivered",
                         HOSTNAME_MAPPED, protocol, TENANT));
 
@@ -113,7 +113,7 @@ public class LegacyMetricsConfigTest {
                         HOSTNAME_MAPPED, protocol, TENANT));
 
         assertMapping(
-                new Id(MicrometerBasedMetrics.METER_COMMANDS_RESPONSE_DELIVERED, tags, null, null, Type.COUNTER),
+                new Id(MicrometerBasedLegacyMetrics.METER_COMMANDS_RESPONSE_DELIVERED, tags, null, null, Type.COUNTER),
                 String.format("%s.meter.hono.%s.commands.%s.response.delivered",
                         HOSTNAME_MAPPED, protocol, TENANT));
 

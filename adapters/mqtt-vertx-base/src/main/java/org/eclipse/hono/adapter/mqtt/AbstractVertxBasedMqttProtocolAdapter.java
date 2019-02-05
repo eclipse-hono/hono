@@ -43,6 +43,9 @@ import org.eclipse.hono.service.auth.device.UsernamePasswordAuthProvider;
 import org.eclipse.hono.service.auth.device.UsernamePasswordCredentials;
 import org.eclipse.hono.service.auth.device.X509AuthProvider;
 import org.eclipse.hono.service.metric.MetricsTags;
+import org.eclipse.hono.service.metric.MetricsTags.Direction;
+import org.eclipse.hono.service.metric.MetricsTags.EndpointType;
+import org.eclipse.hono.service.metric.MetricsTags.ProcessingOutcome;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
@@ -741,21 +744,8 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                         Tags.HTTP_STATUS.set(span, HttpURLConnection.HTTP_INTERNAL_ERROR);
                     }
                     if (processing.cause() instanceof ClientErrorException) {
-                        metrics.reportTelemetry(
-                                context.endpoint(),
-                                context.tenant(),
-                                MetricsTags.ProcessingOutcome.UNPROCESSABLE,
-                                MetricsTags.QoS.from(qos.value()),
-                                context.message().payload().length(),
-                                context.getTimer());
+                        // nothing to do
                     } else {
-                        metrics.reportTelemetry(
-                                context.endpoint(),
-                                context.tenant(),
-                                MetricsTags.ProcessingOutcome.UNDELIVERABLE,
-                                MetricsTags.QoS.from(qos.value()),
-                                context.message().payload().length(),
-                                context.getTimer());
                         onMessageUndeliverable(context);
                     }
                 }
@@ -827,7 +817,8 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
      *         The future will succeed if the message has been uploaded successfully. Otherwise the future will fail
      *         with a {@link ServiceInvocationException}.
      * @throws NullPointerException if any of context, tenant, device ID or payload is {@code null}.
-     * @throws IllegalArgumentException if the payload is empty.
+     * @throws IllegalArgumentException if the context does not contain a
+     *              telemetry message or if the payload is empty.
      */
     public final Future<Void> uploadTelemetryMessage(
             final MqttContext ctx,
@@ -835,15 +826,20 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
             final String deviceId,
             final Buffer payload) {
 
+        if (ctx.endpoint() != EndpointType.TELEMETRY) {
+            throw new IllegalArgumentException("context does not contain telemetry message but " +
+                ctx.endpoint().getCanonicalName());
+        }
+
+        final MetricsTags.QoS qos = MetricsTags.QoS.from(ctx.message().qosLevel().value());
         return uploadMessage(
                 Objects.requireNonNull(ctx),
                 Objects.requireNonNull(tenant),
                 Objects.requireNonNull(deviceId),
                 Objects.requireNonNull(payload),
                 getTelemetrySender(tenant),
-                MetricsTags.EndpointType.TELEMETRY
+                ctx.endpoint()
         ).map(success -> {
-            final MetricsTags.QoS qos = MetricsTags.QoS.from(ctx.message().qosLevel().value());
             metrics.reportTelemetry(
                     ctx.endpoint(),
                     ctx.tenant(),
@@ -851,7 +847,16 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                     qos,
                     payload.length(),
                     ctx.getTimer());
-            return (Void) null;
+            return success;
+        }).recover(t -> {
+            metrics.reportTelemetry(
+                    ctx.endpoint(),
+                    ctx.tenant(),
+                    ProcessingOutcome.from(t),
+                    qos,
+                    payload.length(),
+                    ctx.getTimer());
+            return Future.failedFuture(t);
         });
     }
 
@@ -867,7 +872,8 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
      *         The future will succeed if the message has been uploaded successfully. Otherwise the future will fail
      *         with a {@link ServiceInvocationException}.
      * @throws NullPointerException if any of context, tenant, device ID or payload is {@code null}.
-     * @throws IllegalArgumentException if the payload is empty.
+     * @throws IllegalArgumentException if the context does not contain an
+     *              event or if the payload is empty.
      */
     public final Future<Void> uploadEventMessage(
             final MqttContext ctx,
@@ -875,15 +881,20 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
             final String deviceId,
             final Buffer payload) {
 
+        if (ctx.endpoint() != EndpointType.EVENT) {
+            throw new IllegalArgumentException("context does not contain event but " +
+                ctx.endpoint().getCanonicalName());
+        }
+
+        final MetricsTags.QoS qos = MetricsTags.QoS.from(ctx.message().qosLevel().value());
         return uploadMessage(
                 Objects.requireNonNull(ctx),
                 Objects.requireNonNull(tenant),
                 Objects.requireNonNull(deviceId),
                 Objects.requireNonNull(payload),
                 getEventSender(tenant),
-                MetricsTags.EndpointType.EVENT
+                ctx.endpoint()
         ).map(success -> {
-            final MetricsTags.QoS qos = MetricsTags.QoS.from(ctx.message().qosLevel().value());
             metrics.reportTelemetry(
                     ctx.endpoint(),
                     ctx.tenant(),
@@ -892,6 +903,15 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                     payload.length(),
                     ctx.getTimer());
             return (Void) null;
+        }).recover(t -> {
+            metrics.reportTelemetry(
+                    ctx.endpoint(),
+                    ctx.tenant(),
+                    ProcessingOutcome.from(t),
+                    qos,
+                    payload.length(),
+                    ctx.getTimer());
+            return Future.failedFuture(t);
         });
     }
 
@@ -916,6 +936,12 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         final String[] addressPath = targetAddress.getResourcePath();
 
         if (addressPath.length <= CommandConstants.TOPIC_POSITION_RESPONSE_STATUS) {
+            metrics.reportCommand(
+                    Direction.RESPONSE,
+                    targetAddress.getTenantId(),
+                    ProcessingOutcome.UNPROCESSABLE,
+                    ctx.message().payload().length(),
+                    ctx.getTimer());
             return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "malformed topic name"));
         } else {
             try {
@@ -925,6 +951,12 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                         targetAddress.getResourceId(), ctx.message().payload(), ctx.contentType(), status);
 
                 if (commandResponse == null) {
+                    metrics.reportCommand(
+                            Direction.RESPONSE,
+                            targetAddress.getTenantId(),
+                            ProcessingOutcome.UNPROCESSABLE,
+                            ctx.message().payload().length(),
+                            ctx.getTimer());
                     return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "malformed topic name"));
                } else {
 
@@ -944,7 +976,12 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                            .map(delivery -> {
                                LOG.trace("successfully forwarded command response from device [tenant-id: {}, device-id: {}]",
                                        targetAddress.getTenantId(), targetAddress.getResourceId());
-                               metrics.incrementCommandResponseDeliveredToApplication(targetAddress.getTenantId());
+                               metrics.reportCommand(
+                                       Direction.RESPONSE,
+                                       targetAddress.getTenantId(),
+                                       ProcessingOutcome.FORWARDED,
+                                       ctx.message().payload().length(),
+                                       ctx.getTimer());
                                // check that the remote MQTT client is still connected before sending PUBACK
                                if (ctx.deviceEndpoint().isConnected() && ctx.message().qosLevel() == MqttQoS.AT_LEAST_ONCE) {
                                    ctx.deviceEndpoint().publishAcknowledge(ctx.message().messageId());
@@ -954,11 +991,23 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                            }).recover(t -> {
                                TracingHelper.logError(currentSpan, t);
                                currentSpan.finish();
+                               metrics.reportCommand(
+                                       Direction.RESPONSE,
+                                       targetAddress.getTenantId(),
+                                       ProcessingOutcome.from(t),
+                                       ctx.message().payload().length(),
+                                       ctx.getTimer());
                                return Future.failedFuture(t);
                            });
 
                }
             } catch(final NumberFormatException e) {
+                metrics.reportCommand(
+                        Direction.RESPONSE,
+                        targetAddress.getTenantId(),
+                        ProcessingOutcome.UNPROCESSABLE,
+                        ctx.message().payload().length(),
+                        ctx.getTimer());
                 return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "invalid status code"));
             }
         }
@@ -1208,20 +1257,22 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         Objects.requireNonNull(subscription);
         Objects.requireNonNull(commandContext);
 
-        String tenantId = subscription.getTenant();
-        String deviceId = subscription.getDeviceId();
-        if (subscription.isAuthenticated()) {
-            // no need to include tenant and device ID in topic,
-            // i.e. publish to control///req/xyz/light
-            tenantId = deviceId = "";
-        }
+        addMicrometerSample(commandContext, metrics.startTimer());
         TracingHelper.TAG_CLIENT_ID.set(commandContext.getCurrentSpan(), endpoint.clientIdentifier());
         final Command command = commandContext.getCommand();
         // example: control/DEFAULT_TENANT/4711/req/xyz/light
         // one-way commands have an empty requestId, like control/DEFAULT_TENANT/4711/req//light
         final String commandRequestId = (command.isOneWay() ? "" : command.getRequestId());
-        final String topic = String.format("%s/%s/%s/%s/%s/%s", subscription.getEndpoint(), tenantId, deviceId,
-                subscription.getRequestPart(), commandRequestId, command.getName());
+        final String topic = String.format("%s/%s/%s/%s/%s/%s",
+                subscription.getEndpoint(),
+                // no need to include tenant and device ID in topic
+                // if device is authenticated,
+                // i.e. publish to control///req/xyz/light
+                subscription.isAuthenticated() ? "" : subscription.getTenant(),
+                subscription.isAuthenticated() ? "" : subscription.getDeviceId(),
+                subscription.getRequestPart(),
+                commandRequestId,
+                command.getName());
         LOG.debug("Publishing command to device [tenant-id: {}, device-id: {}, MQTT client-id: {}, QoS: {}]",
                 subscription.getTenant(), subscription.getDeviceId(), subscription.getClientId(),
                 subscription.getQos());
@@ -1245,14 +1296,27 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                         subscription.getQos(),
                         sentHandler.cause());
                 TracingHelper.logError(commandContext.getCurrentSpan(), sentHandler.cause());
+                metrics.reportCommand(
+                        command.isOneWay() ? Direction.ONE_WAY : Direction.REQUEST,
+                        subscription.getTenant(),
+                        ProcessingOutcome.from(sentHandler.cause()),
+                        command.getPayloadSize(),
+                        getMicrometerSample(commandContext));
                 commandContext.release(1);
             }
         });
     }
 
-    private void afterCommandPublished(final CommandSubscription subscription,
+    private void afterCommandPublished(
+            final CommandSubscription subscription,
             final CommandContext commandContext) {
-        metrics.incrementCommandDeliveredToDevice(subscription.getTenant());
+
+        metrics.reportCommand(
+                commandContext.getCommand().isOneWay() ? Direction.ONE_WAY : Direction.REQUEST,
+                subscription.getTenant(),
+                ProcessingOutcome.FORWARDED,
+                commandContext.getCommand().getPayloadSize(),
+                getMicrometerSample(commandContext));
         LOG.debug("Published command to device [tenant-id: {}, device-id: {}, MQTT client-id: {}, QoS: {}]",
                 subscription.getTenant(), subscription.getDeviceId(), subscription.getClientId(),
                 subscription.getQos());

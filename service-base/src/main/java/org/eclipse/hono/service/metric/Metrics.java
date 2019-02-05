@@ -107,19 +107,21 @@ public interface Metrics {
             Sample timer);
 
     /**
-     * Reports a command being delivered to a device.
-     * 
+     * Reports a command &amp; control message being transferred to/from a device.
+     *
+     * @param direction The command message's direction.
      * @param tenantId The tenant that the device belongs to.
-     * @throws NullPointerException if tenant is {@code null}.
+     * @param outcome The outcome of processing the message.
+     * @param payloadSize The number of bytes contained in the message's payload.
+     * @param timer The timer indicating the amount of time used
+     *              for processing the message.
+     * @throws NullPointerException if any of the parameters are {@code null}.
+     * @throws IllegalArgumentException if payload size is negative.
      */
-    void incrementCommandDeliveredToDevice(String tenantId);
-
-    /**
-     * Reports a response to a command being delivered to an application.
-     * 
-     * @param tenantId The tenant to which the device belongs from which the response
-     *                 has been received.
-     * @throws NullPointerException if tenant is {@code null}.
-     */
-    void incrementCommandResponseDeliveredToApplication(String tenantId);
+    void reportCommand(
+            MetricsTags.Direction direction,
+            String tenantId,
+            MetricsTags.ProcessingOutcome outcome,
+            int payloadSize,
+            Sample timer);
 }

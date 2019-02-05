@@ -15,7 +15,6 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "iteration": 1549031221494,
   "links": [
     {
       "icon": "external link",
@@ -81,755 +80,18 @@
       "type": "text"
     },
     {
-      "cacheTimeout": null,
-      "colorBackground": false,
-      "colorValue": false,
-      "colors": [
-        "#299c46",
-        "rgba(237, 129, 40, 0.89)",
-        "#d44a3a"
-      ],
-      "datasource": "hono_metrics",
-      "decimals": 1,
-      "format": "ops",
-      "gauge": {
-        "maxValue": 100,
-        "minValue": 0,
-        "show": false,
-        "thresholdLabels": false,
-        "thresholdMarkers": true
-      },
-      "gridPos": {
-        "h": 3,
-        "w": 3,
-        "x": 0,
-        "y": 2
-      },
-      "id": 4,
-      "interval": null,
-      "links": [],
-      "mappingType": 1,
-      "mappingTypes": [
-        {
-          "name": "value to text",
-          "value": 1
-        },
-        {
-          "name": "range to text",
-          "value": 2
-        }
-      ],
-      "maxDataPoints": 100,
-      "nullPointMode": "connected",
-      "nullText": null,
-      "postfix": "",
-      "postfixFontSize": "50%",
-      "prefix": "",
-      "prefixFontSize": "50%",
-      "rangeMaps": [
-        {
-          "from": "null",
-          "text": "N/A",
-          "to": "null"
-        }
-      ],
-      "sparkline": {
-        "fillColor": "rgba(31, 118, 189, 0.18)",
-        "full": false,
-        "lineColor": "rgb(31, 120, 193)",
-        "show": true
-      },
-      "tableColumn": "",
-      "targets": [
-        {
-          "expr": "sum(irate(hono_messages_received_seconds_count{type=\"telemetry\",status=\"forwarded\",component_name=~\"$componentname\",tenant=~\"$tenant\"}[$__range]))",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "refId": "A"
-        }
-      ],
-      "thresholds": "",
-      "timeFrom": null,
-      "title": "forwarded",
-      "type": "singlestat",
-      "valueFontSize": "80%",
-      "valueMaps": [
-        {
-          "op": "=",
-          "text": "0",
-          "value": "null"
-        }
-      ],
-      "valueName": "avg"
-    },
-    {
-      "cacheTimeout": null,
-      "colorBackground": false,
-      "colorValue": false,
-      "colors": [
-        "#299c46",
-        "rgba(237, 129, 40, 0.89)",
-        "#d44a3a"
-      ],
-      "datasource": "hono_metrics",
-      "decimals": 1,
-      "format": "ops",
-      "gauge": {
-        "maxValue": 100,
-        "minValue": 0,
-        "show": false,
-        "thresholdLabels": false,
-        "thresholdMarkers": true
-      },
-      "gridPos": {
-        "h": 3,
-        "w": 2,
-        "x": 3,
-        "y": 2
-      },
-      "id": 35,
-      "interval": null,
-      "links": [],
-      "mappingType": 1,
-      "mappingTypes": [
-        {
-          "name": "value to text",
-          "value": 1
-        },
-        {
-          "name": "range to text",
-          "value": 2
-        }
-      ],
-      "maxDataPoints": 100,
-      "nullPointMode": "connected",
-      "nullText": null,
-      "postfix": "",
-      "postfixFontSize": "50%",
-      "prefix": "",
-      "prefixFontSize": "50%",
-      "rangeMaps": [
-        {
-          "from": "null",
-          "text": "N/A",
-          "to": "null"
-        }
-      ],
-      "sparkline": {
-        "fillColor": "rgba(31, 118, 189, 0.18)",
-        "full": false,
-        "lineColor": "rgb(31, 120, 193)",
-        "show": true
-      },
-      "tableColumn": "",
-      "targets": [
-        {
-          "expr": "sum(irate(hono_messages_received_seconds_count{type=\"telemetry\",status=\"undeliverable\",component_name=~\"$componentname\",tenant=~\"$tenant\"}[$__range]))",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "refId": "A"
-        }
-      ],
-      "thresholds": "",
-      "timeFrom": null,
-      "title": "undeliverable",
-      "type": "singlestat",
-      "valueFontSize": "80%",
-      "valueMaps": [
-        {
-          "op": "=",
-          "text": "0",
-          "value": "null"
-        }
-      ],
-      "valueName": "avg"
-    },
-    {
-      "cacheTimeout": null,
-      "colorBackground": false,
-      "colorValue": false,
-      "colors": [
-        "#299c46",
-        "rgba(237, 129, 40, 0.89)",
-        "#d44a3a"
-      ],
-      "datasource": "hono_metrics",
-      "decimals": 0,
-      "format": "Bps",
-      "gauge": {
-        "maxValue": 100,
-        "minValue": 0,
-        "show": false,
-        "thresholdLabels": false,
-        "thresholdMarkers": true
-      },
-      "gridPos": {
-        "h": 3,
-        "w": 3,
-        "x": 5,
-        "y": 2
-      },
-      "id": 56,
-      "interval": null,
-      "links": [],
-      "mappingType": 1,
-      "mappingTypes": [
-        {
-          "name": "value to text",
-          "value": 1
-        },
-        {
-          "name": "range to text",
-          "value": 2
-        }
-      ],
-      "maxDataPoints": 100,
-      "nullPointMode": "connected",
-      "nullText": null,
-      "postfix": "",
-      "postfixFontSize": "50%",
-      "prefix": "",
-      "prefixFontSize": "50%",
-      "rangeMaps": [
-        {
-          "from": "null",
-          "text": "N/A",
-          "to": "null"
-        }
-      ],
-      "sparkline": {
-        "fillColor": "rgba(31, 118, 189, 0.18)",
-        "full": false,
-        "lineColor": "rgb(31, 120, 193)",
-        "show": true
-      },
-      "tableColumn": "",
-      "targets": [
-        {
-          "expr": "sum(irate(hono_messages_payload_bytes_sum{type=\"telemetry\",component_name=~\"$componentname\",tenant=~\"$tenant\"}[$__range]))",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "refId": "A"
-        }
-      ],
-      "thresholds": "",
-      "timeFrom": null,
-      "title": "payload",
-      "type": "singlestat",
-      "valueFontSize": "80%",
-      "valueMaps": [
-        {
-          "op": "=",
-          "text": "0",
-          "value": "null"
-        }
-      ],
-      "valueName": "avg"
-    },
-    {
-      "cacheTimeout": null,
-      "colorBackground": false,
-      "colorValue": false,
-      "colors": [
-        "#299c46",
-        "rgba(237, 129, 40, 0.89)",
-        "#d44a3a"
-      ],
-      "datasource": "hono_metrics",
-      "decimals": 1,
-      "format": "ops",
-      "gauge": {
-        "maxValue": 100,
-        "minValue": 0,
-        "show": false,
-        "thresholdLabels": false,
-        "thresholdMarkers": true
-      },
-      "gridPos": {
-        "h": 3,
-        "w": 3,
-        "x": 8,
-        "y": 2
-      },
-      "id": 14,
-      "interval": null,
-      "links": [],
-      "mappingType": 1,
-      "mappingTypes": [
-        {
-          "name": "value to text",
-          "value": 1
-        },
-        {
-          "name": "range to text",
-          "value": 2
-        }
-      ],
-      "maxDataPoints": 100,
-      "nullPointMode": "connected",
-      "nullText": null,
-      "postfix": "",
-      "postfixFontSize": "50%",
-      "prefix": "",
-      "prefixFontSize": "50%",
-      "rangeMaps": [
-        {
-          "from": "null",
-          "text": "N/A",
-          "to": "null"
-        }
-      ],
-      "sparkline": {
-        "fillColor": "rgba(31, 118, 189, 0.18)",
-        "full": false,
-        "lineColor": "rgb(31, 120, 193)",
-        "show": true
-      },
-      "tableColumn": "",
-      "targets": [
-        {
-          "expr": "sum(irate(hono_messages_received_seconds_count{type=\"event\",status=\"forwarded\",component_name=~\"$componentname\",tenant=~\"$tenant\"}[$__range]))",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "refId": "A"
-        }
-      ],
-      "thresholds": "",
-      "timeFrom": null,
-      "title": "forwarded",
-      "type": "singlestat",
-      "valueFontSize": "80%",
-      "valueMaps": [
-        {
-          "op": "=",
-          "text": "0",
-          "value": "null"
-        }
-      ],
-      "valueName": "avg"
-    },
-    {
-      "cacheTimeout": null,
-      "colorBackground": false,
-      "colorValue": false,
-      "colors": [
-        "#299c46",
-        "rgba(237, 129, 40, 0.89)",
-        "#d44a3a"
-      ],
-      "datasource": "hono_metrics",
-      "decimals": 1,
-      "format": "ops",
-      "gauge": {
-        "maxValue": 100,
-        "minValue": 0,
-        "show": false,
-        "thresholdLabels": false,
-        "thresholdMarkers": true
-      },
-      "gridPos": {
-        "h": 3,
-        "w": 2,
-        "x": 11,
-        "y": 2
-      },
-      "id": 36,
-      "interval": null,
-      "links": [],
-      "mappingType": 1,
-      "mappingTypes": [
-        {
-          "name": "value to text",
-          "value": 1
-        },
-        {
-          "name": "range to text",
-          "value": 2
-        }
-      ],
-      "maxDataPoints": 100,
-      "nullPointMode": "connected",
-      "nullText": null,
-      "postfix": "",
-      "postfixFontSize": "50%",
-      "prefix": "",
-      "prefixFontSize": "50%",
-      "rangeMaps": [
-        {
-          "from": "null",
-          "text": "N/A",
-          "to": "null"
-        }
-      ],
-      "sparkline": {
-        "fillColor": "rgba(31, 118, 189, 0.18)",
-        "full": false,
-        "lineColor": "rgb(31, 120, 193)",
-        "show": true
-      },
-      "tableColumn": "",
-      "targets": [
-        {
-          "expr": "sum(irate(hono_messages_received_seconds_count{type=\"event\",status!=\"forwarded\",component_name=~\"$componentname\",tenant=~\"$tenant\"}[$__range]))",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "refId": "A"
-        }
-      ],
-      "thresholds": "",
-      "timeFrom": null,
-      "title": "undeliverable",
-      "type": "singlestat",
-      "valueFontSize": "80%",
-      "valueMaps": [
-        {
-          "op": "=",
-          "text": "0",
-          "value": "null"
-        }
-      ],
-      "valueName": "avg"
-    },
-    {
-      "cacheTimeout": null,
-      "colorBackground": false,
-      "colorValue": false,
-      "colors": [
-        "#299c46",
-        "rgba(237, 129, 40, 0.89)",
-        "#d44a3a"
-      ],
-      "datasource": "hono_metrics",
-      "decimals": 0,
-      "format": "Bps",
-      "gauge": {
-        "maxValue": 100,
-        "minValue": 0,
-        "show": false,
-        "thresholdLabels": false,
-        "thresholdMarkers": true
-      },
-      "gridPos": {
-        "h": 3,
-        "w": 3,
-        "x": 13,
-        "y": 2
-      },
-      "id": 57,
-      "interval": null,
-      "links": [],
-      "mappingType": 1,
-      "mappingTypes": [
-        {
-          "name": "value to text",
-          "value": 1
-        },
-        {
-          "name": "range to text",
-          "value": 2
-        }
-      ],
-      "maxDataPoints": 100,
-      "nullPointMode": "connected",
-      "nullText": null,
-      "postfix": "",
-      "postfixFontSize": "50%",
-      "prefix": "",
-      "prefixFontSize": "50%",
-      "rangeMaps": [
-        {
-          "from": "null",
-          "text": "N/A",
-          "to": "null"
-        }
-      ],
-      "sparkline": {
-        "fillColor": "rgba(31, 118, 189, 0.18)",
-        "full": false,
-        "lineColor": "rgb(31, 120, 193)",
-        "show": true
-      },
-      "tableColumn": "",
-      "targets": [
-        {
-          "expr": "sum(irate(hono_messages_payload_bytes_sum{type=\"event\",component_name=~\"$componentname\",tenant=~\"$tenant\"}[$__range]))",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "refId": "A"
-        }
-      ],
-      "thresholds": "",
-      "timeFrom": null,
-      "title": "payload",
-      "type": "singlestat",
-      "valueFontSize": "80%",
-      "valueMaps": [
-        {
-          "op": "=",
-          "text": "0",
-          "value": "null"
-        }
-      ],
-      "valueName": "avg"
-    },
-    {
-      "cacheTimeout": null,
-      "colorBackground": false,
-      "colorValue": false,
-      "colors": [
-        "#299c46",
-        "rgba(237, 129, 40, 0.89)",
-        "#d44a3a"
-      ],
-      "datasource": "hono_metrics",
-      "decimals": 1,
-      "format": "ops",
-      "gauge": {
-        "maxValue": 100,
-        "minValue": 0,
-        "show": false,
-        "thresholdLabels": false,
-        "thresholdMarkers": true
-      },
-      "gridPos": {
-        "h": 3,
-        "w": 3,
-        "x": 16,
-        "y": 2
-      },
-      "id": 16,
-      "interval": null,
-      "links": [],
-      "mappingType": 1,
-      "mappingTypes": [
-        {
-          "name": "value to text",
-          "value": 1
-        },
-        {
-          "name": "range to text",
-          "value": 2
-        }
-      ],
-      "maxDataPoints": 100,
-      "nullPointMode": "connected",
-      "nullText": null,
-      "postfix": "",
-      "postfixFontSize": "50%",
-      "prefix": "",
-      "prefixFontSize": "50%",
-      "rangeMaps": [
-        {
-          "from": "null",
-          "text": "N/A",
-          "to": "null"
-        }
-      ],
-      "sparkline": {
-        "fillColor": "rgba(31, 118, 189, 0.18)",
-        "full": false,
-        "lineColor": "rgb(31, 120, 193)",
-        "show": true
-      },
-      "tableColumn": "",
-      "targets": [
-        {
-          "expr": "sum(irate(hono_commands_device_delivered_total{component_name=~\"$componentname\",tenant=~\"$tenant\"}[$__range]))",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "refId": "A"
-        }
-      ],
-      "thresholds": "",
-      "timeFrom": null,
-      "title": "requests",
-      "type": "singlestat",
-      "valueFontSize": "80%",
-      "valueMaps": [
-        {
-          "op": "=",
-          "text": "0",
-          "value": "null"
-        }
-      ],
-      "valueName": "avg"
-    },
-    {
-      "cacheTimeout": null,
-      "colorBackground": false,
-      "colorValue": false,
-      "colors": [
-        "#299c46",
-        "rgba(237, 129, 40, 0.89)",
-        "#d44a3a"
-      ],
-      "datasource": "hono_metrics",
-      "decimals": 1,
-      "format": "ops",
-      "gauge": {
-        "maxValue": 100,
-        "minValue": 0,
-        "show": false,
-        "thresholdLabels": false,
-        "thresholdMarkers": true
-      },
-      "gridPos": {
-        "h": 3,
-        "w": 3,
-        "x": 19,
-        "y": 2
-      },
-      "id": 58,
-      "interval": null,
-      "links": [],
-      "mappingType": 1,
-      "mappingTypes": [
-        {
-          "name": "value to text",
-          "value": 1
-        },
-        {
-          "name": "range to text",
-          "value": 2
-        }
-      ],
-      "maxDataPoints": 100,
-      "nullPointMode": "connected",
-      "nullText": null,
-      "postfix": "",
-      "postfixFontSize": "50%",
-      "prefix": "",
-      "prefixFontSize": "50%",
-      "rangeMaps": [
-        {
-          "from": "null",
-          "text": "N/A",
-          "to": "null"
-        }
-      ],
-      "sparkline": {
-        "fillColor": "rgba(31, 118, 189, 0.18)",
-        "full": false,
-        "lineColor": "rgb(31, 120, 193)",
-        "show": true
-      },
-      "tableColumn": "",
-      "targets": [
-        {
-          "expr": "sum(irate(hono_commands_response_delivered_total{component_name=~\"$componentname\",tenant=~\"$tenant\"}[$__range]))",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "refId": "A"
-        }
-      ],
-      "thresholds": "",
-      "timeFrom": null,
-      "title": "responses",
-      "type": "singlestat",
-      "valueFontSize": "80%",
-      "valueMaps": [
-        {
-          "op": "=",
-          "text": "0",
-          "value": "null"
-        }
-      ],
-      "valueName": "avg"
-    },
-    {
-      "cacheTimeout": null,
-      "colorBackground": false,
-      "colorValue": false,
-      "colors": [
-        "#299c46",
-        "rgba(237, 129, 40, 0.89)",
-        "#d44a3a"
-      ],
-      "datasource": "hono_metrics",
-      "decimals": 1,
-      "format": "ops",
-      "gauge": {
-        "maxValue": 100,
-        "minValue": 0,
-        "show": false,
-        "thresholdLabels": false,
-        "thresholdMarkers": true
-      },
-      "gridPos": {
-        "h": 3,
-        "w": 2,
-        "x": 22,
-        "y": 2
-      },
-      "id": 37,
-      "interval": null,
-      "links": [],
-      "mappingType": 1,
-      "mappingTypes": [
-        {
-          "name": "value to text",
-          "value": 1
-        },
-        {
-          "name": "range to text",
-          "value": 2
-        }
-      ],
-      "maxDataPoints": 100,
-      "nullPointMode": "connected",
-      "nullText": null,
-      "postfix": "",
-      "postfixFontSize": "50%",
-      "prefix": "",
-      "prefixFontSize": "50%",
-      "rangeMaps": [
-        {
-          "from": "null",
-          "text": "N/A",
-          "to": "null"
-        }
-      ],
-      "sparkline": {
-        "fillColor": "rgba(31, 118, 189, 0.18)",
-        "full": false,
-        "lineColor": "rgb(31, 120, 193)",
-        "show": true
-      },
-      "tableColumn": "",
-      "targets": [
-        {
-          "expr": "sum(irate(hono_commands_ttd_expired_total{component_name=~\"$componentname\",tenant=~\"$tenant\"}[$__range]))",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "refId": "A"
-        }
-      ],
-      "thresholds": "",
-      "timeFrom": null,
-      "title": "TTD expired",
-      "type": "singlestat",
-      "valueFontSize": "80%",
-      "valueMaps": [
-        {
-          "op": "=",
-          "text": "0",
-          "value": "null"
-        }
-      ],
-      "valueName": "avg"
-    },
-    {
       "aliasColors": {},
       "bars": false,
       "dashLength": 10,
       "dashes": false,
       "datasource": "hono_metrics",
+      "description": "average rate of telemetry messages received from devices",
       "fill": 1,
       "gridPos": {
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 5
+        "y": 2
       },
       "id": 2,
       "legend": {
@@ -877,32 +139,32 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(irate(hono_messages_received_seconds_count{type=\"telemetry\",status=\"forwarded\",component_name=~\"$componentname\",tenant=~\"$tenant\"}[$__range]))",
+          "expr": "sum(irate(hono_messages_received_seconds_count{type=\"telemetry\",status=\"unprocessable\"}[$__range]))",
           "format": "time_series",
-          "instant": false,
           "intervalFactor": 1,
-          "legendFormat": "forwarded",
-          "refId": "A"
+          "legendFormat": "unprocessable",
+          "refId": "C"
         },
         {
-          "expr": "sum(irate(hono_messages_received_seconds_count{type=\"telemetry\",status=\"undeliverable\",component_name=~\"$componentname\",tenant=~\"$tenant\"}[$__range]))",
+          "expr": "sum(irate(hono_messages_received_seconds_count{type=\"telemetry\",status=\"undeliverable\"}[$__range]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "undeliverable",
           "refId": "B"
         },
         {
-          "expr": "sum(irate(hono_messages_received_seconds_count{type=\"telemetry\",status=\"unprocessable\",component_name=~\"$componentname\",tenant=~\"$tenant\"}[$__range]))",
+          "expr": "sum(irate(hono_messages_received_seconds_count{type=\"telemetry\",status=\"forwarded\"}[$__range]))",
           "format": "time_series",
+          "instant": false,
           "intervalFactor": 1,
-          "legendFormat": "unprocessable",
-          "refId": "C"
+          "legendFormat": "forwarded",
+          "refId": "A"
         }
       ],
       "thresholds": [],
       "timeFrom": null,
       "timeShift": null,
-      "title": "message rate",
+      "title": "messages",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -919,9 +181,10 @@
       },
       "yaxes": [
         {
-          "format": "ops",
-          "label": "",
-          "logBase": 10,
+          "decimals": 0,
+          "format": "none",
+          "label": "messages/sec",
+          "logBase": 1,
           "max": null,
           "min": "0",
           "show": true
@@ -946,12 +209,13 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "hono_metrics",
+      "description": "average rate of events received from devices",
       "fill": 1,
       "gridPos": {
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 5
+        "y": 2
       },
       "id": 17,
       "legend": {
@@ -999,32 +263,32 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(irate(hono_messages_received_seconds_count{type=\"event\",status=\"forwarded\",component_name=~\"$componentname\",tenant=~\"$tenant\"}[$__range]))",
+          "expr": "sum(irate(hono_messages_received_seconds_count{type=\"event\",status=\"unprocessable\"}[$__range]))",
           "format": "time_series",
-          "instant": false,
           "intervalFactor": 1,
-          "legendFormat": "forwarded",
-          "refId": "A"
+          "legendFormat": "unprocessable",
+          "refId": "C"
         },
         {
-          "expr": "sum(irate(hono_messages_received_seconds_count{type=\"event\",status=\"undeliverable\",component_name=~\"$componentname\",tenant=~\"$tenant\"}[$__range]))",
+          "expr": "sum(irate(hono_messages_received_seconds_count{type=\"event\",status=\"undeliverable\"}[$__range]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "undeliverable",
           "refId": "B"
         },
         {
-          "expr": "sum(irate(hono_messages_received_seconds_count{type=\"event\",status=\"unprocessable\",component_name=~\"$componentname\",tenant=~\"$tenant\"}[$__range]))",
+          "expr": "sum(irate(hono_messages_received_seconds_count{type=\"event\",status=\"forwarded\"}[$__range]))",
           "format": "time_series",
+          "instant": false,
           "intervalFactor": 1,
-          "legendFormat": "unprocessable",
-          "refId": "C"
+          "legendFormat": "forwarded",
+          "refId": "A"
         }
       ],
       "thresholds": [],
       "timeFrom": null,
       "timeShift": null,
-      "title": "message rate",
+      "title": "messages",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -1041,9 +305,10 @@
       },
       "yaxes": [
         {
-          "format": "ops",
-          "label": "",
-          "logBase": 10,
+          "decimals": 0,
+          "format": "none",
+          "label": "messages/sec",
+          "logBase": 1,
           "max": null,
           "min": "0",
           "show": true
@@ -1068,17 +333,20 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "hono_metrics",
+      "description": "average rate of commands sent to devices",
       "fill": 1,
       "gridPos": {
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 5
+        "y": 2
       },
       "id": 20,
       "legend": {
         "avg": false,
         "current": false,
+        "hideEmpty": false,
+        "hideZero": false,
         "max": false,
         "min": false,
         "show": false,
@@ -1099,18 +367,35 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(irate(hono_commands_device_delivered_total{component_name=~\"$componentname\",tenant=~\"$tenant\"}[$__range]))",
+          "expr": "sum(irate(hono_commands_received_seconds_count{direction=~\"one-way|request\",status=\"unprocessable\"}[$__range]))",
+          "format": "time_series",
+          "interval": "",
+          "intervalFactor": 1,
+          "legendFormat": "unprocessable",
+          "refId": "C"
+        },
+        {
+          "expr": "sum(irate(hono_commands_received_seconds_count{direction=~\"one-way|request\",status=\"undeliverable\"}[$__range]))",
+          "format": "time_series",
+          "hide": false,
+          "interval": "",
+          "intervalFactor": 1,
+          "legendFormat": "undeliverable",
+          "refId": "B"
+        },
+        {
+          "expr": "sum(irate(hono_commands_received_seconds_count{direction=~\"one-way|request\",status=\"forwarded\"}[$__range]))",
           "format": "time_series",
           "instant": false,
           "intervalFactor": 1,
-          "legendFormat": "requests",
+          "legendFormat": "forwarded",
           "refId": "A"
         }
       ],
       "thresholds": [],
       "timeFrom": null,
       "timeShift": null,
-      "title": "Requests",
+      "title": "messages",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -1127,19 +412,21 @@
       },
       "yaxes": [
         {
-          "format": "reqps",
-          "label": "",
-          "logBase": 10,
+          "decimals": 0,
+          "format": "none",
+          "label": "messages/sec",
+          "logBase": 1,
           "max": null,
           "min": "0",
           "show": true
         },
         {
-          "format": "short",
-          "label": null,
-          "logBase": 1,
+          "decimals": 1,
+          "format": "none",
+          "label": "bytes/sec",
+          "logBase": 10,
           "max": null,
-          "min": null,
+          "min": "0",
           "show": false
         }
       ],
@@ -1154,12 +441,13 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "hono_metrics",
+      "description": "average rate of data received from devices as payload of telemetry messages",
       "fill": 1,
       "gridPos": {
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 13
+        "y": 10
       },
       "id": 55,
       "legend": {
@@ -1185,26 +473,26 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(irate(hono_messages_payload_bytes_sum{type=\"telemetry\",component_name=~\"$componentname\",tenant=~\"$tenant\",status=\"forwarded\"}[$__range]))",
+          "expr": "sum(irate(hono_messages_payload_bytes_sum{type=\"telemetry\",status=\"unprocessable\"}[$__range]))",
           "format": "time_series",
-          "instant": false,
           "intervalFactor": 1,
-          "legendFormat": "forwarded",
-          "refId": "A"
+          "legendFormat": "unprocessable",
+          "refId": "C"
         },
         {
-          "expr": "sum(irate(hono_messages_payload_bytes_sum{type=\"telemetry\",component_name=~\"$componentname\",tenant=~\"$tenant\",status=\"undeliverable\"}[$__range]))",
+          "expr": "sum(irate(hono_messages_payload_bytes_sum{type=\"telemetry\",status=\"undeliverable\"}[$__range]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "undeliverable",
           "refId": "B"
         },
         {
-          "expr": "sum(irate(hono_messages_payload_bytes_sum{type=\"telemetry\",component_name=~\"$componentname\",tenant=~\"$tenant\",status=\"unprocessable\"}[$__range]))",
+          "expr": "sum(irate(hono_messages_payload_bytes_sum{type=\"telemetry\",status=\"forwarded\"}[$__range]))",
           "format": "time_series",
+          "instant": false,
           "intervalFactor": 1,
-          "legendFormat": "unprocessable",
-          "refId": "C"
+          "legendFormat": "forwarded",
+          "refId": "A"
         }
       ],
       "thresholds": [],
@@ -1227,9 +515,10 @@
       },
       "yaxes": [
         {
-          "format": "Bps",
-          "label": "",
-          "logBase": 10,
+          "decimals": 0,
+          "format": "none",
+          "label": "bytes/sec",
+          "logBase": 1,
           "max": null,
           "min": "0",
           "show": true
@@ -1254,12 +543,13 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "hono_metrics",
+      "description": "average rate of data received from devices as payload of events",
       "fill": 1,
       "gridPos": {
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 13
+        "y": 10
       },
       "id": 59,
       "legend": {
@@ -1285,26 +575,26 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(irate(hono_messages_payload_bytes_sum{type=\"event\",component_name=~\"$componentname\",tenant=~\"$tenant\",status=\"forwarded\"}[$__range]))",
+          "expr": "sum(irate(hono_messages_payload_bytes_sum{type=\"event\",status=\"unprocessable\"}[$__range]))",
           "format": "time_series",
-          "instant": false,
           "intervalFactor": 1,
-          "legendFormat": "forwarded",
-          "refId": "A"
+          "legendFormat": "unprocessable",
+          "refId": "C"
         },
         {
-          "expr": "sum(irate(hono_messages_payload_bytes_sum{type=\"event\",component_name=~\"$componentname\",tenant=~\"$tenant\",status=\"undeliverable\"}[$__range]))",
+          "expr": "sum(irate(hono_messages_payload_bytes_sum{type=\"event\",status=\"undeliverable\"}[$__range]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "undeliverable",
           "refId": "B"
         },
         {
-          "expr": "sum(irate(hono_messages_payload_bytes_sum{type=\"event\",component_name=~\"$componentname\",tenant=~\"$tenant\",status=\"unprocessable\"}[$__range]))",
+          "expr": "sum(irate(hono_messages_payload_bytes_sum{type=\"event\",status=\"forwarded\"}[$__range]))",
           "format": "time_series",
+          "instant": false,
           "intervalFactor": 1,
-          "legendFormat": "unprocessable",
-          "refId": "C"
+          "legendFormat": "forwarded",
+          "refId": "A"
         }
       ],
       "thresholds": [],
@@ -1327,9 +617,10 @@
       },
       "yaxes": [
         {
-          "format": "Bps",
-          "label": "",
-          "logBase": 10,
+          "decimals": 0,
+          "format": "none",
+          "label": "bytes/sec",
+          "logBase": 1,
           "max": null,
           "min": "0",
           "show": true
@@ -1354,21 +645,22 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "hono_metrics",
+      "description": "average rate of data sent to devices as payload of commands",
       "fill": 1,
       "gridPos": {
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 13
+        "y": 10
       },
       "id": 60,
       "legend": {
-        "alignAsTable": true,
+        "alignAsTable": false,
         "avg": false,
         "current": false,
         "max": false,
         "min": false,
-        "rightSide": true,
+        "rightSide": false,
         "show": false,
         "total": false,
         "values": false
@@ -1387,25 +679,32 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(irate(hono_commands_response_delivered_total{component_name=~\"$componentname\",tenant=~\"$tenant\"}[$__range]))",
+          "expr": "sum(irate(hono_commands_payload_bytes_sum{direction=~\"one-way|request\",status=\"unprocessable\"}[$__range]))",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "unprocessable",
+          "refId": "C"
+        },
+        {
+          "expr": "sum(irate(hono_commands_payload_bytes_sum{direction=~\"one-way|request\",status=\"undeliverable\"}[$__range]))",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "undeliverable",
+          "refId": "B"
+        },
+        {
+          "expr": "sum(irate(hono_commands_payload_bytes_sum{direction=~\"one-way|request\",status=\"forwarded\"}[$__range]))",
           "format": "time_series",
           "instant": false,
           "intervalFactor": 1,
-          "legendFormat": "responses",
+          "legendFormat": "forwarded",
           "refId": "A"
-        },
-        {
-          "expr": "sum(irate(hono_commands_ttd_expired_total{component_name=~\"$componentname\",tenant=~\"$tenant\"}[$__range]))",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "TTD expired",
-          "refId": "B"
         }
       ],
       "thresholds": [],
       "timeFrom": null,
       "timeShift": null,
-      "title": "Outcome",
+      "title": "payload",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -1422,9 +721,10 @@
       },
       "yaxes": [
         {
-          "format": "ops",
-          "label": "",
-          "logBase": 10,
+          "decimals": 0,
+          "format": "none",
+          "label": "bytes/sec",
+          "logBase": 1,
           "max": null,
           "min": "0",
           "show": true
@@ -1444,99 +744,403 @@
       }
     },
     {
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 21
-      },
-      "id": 46,
-      "panels": [],
-      "title": "Instances",
-      "type": "row"
-    },
-    {
-      "cacheTimeout": null,
-      "colorBackground": false,
-      "colorPrefix": false,
-      "colorValue": false,
-      "colors": [
-        "#299c46",
-        "rgba(237, 129, 40, 0.89)",
-        "#d44a3a"
-      ],
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
       "datasource": "hono_metrics",
-      "description": "Number of protocol adapter instances of the selected type.",
-      "format": "none",
-      "gauge": {
-        "maxValue": 100,
-        "minValue": 0,
-        "show": false,
-        "thresholdLabels": false,
-        "thresholdMarkers": true
-      },
+      "description": "average rate of valid telemetry messages received from devices which could not be delivered downstream",
+      "fill": 1,
       "gridPos": {
-        "h": 3,
-        "w": 2,
+        "h": 8,
+        "w": 8,
         "x": 0,
-        "y": 22
+        "y": 18
       },
-      "id": 54,
-      "interval": null,
+      "id": 61,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": false,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
       "links": [],
-      "mappingType": 1,
-      "mappingTypes": [
-        {
-          "name": "value to text",
-          "value": 1
-        },
-        {
-          "name": "range to text",
-          "value": 2
-        }
-      ],
-      "maxDataPoints": 100,
-      "nullPointMode": "connected",
-      "nullText": null,
-      "postfix": "",
-      "postfixFontSize": "50%",
-      "prefix": "",
-      "prefixFontSize": "50%",
-      "rangeMaps": [
-        {
-          "from": "null",
-          "text": "N/A",
-          "to": "null"
-        }
-      ],
-      "sparkline": {
-        "fillColor": "rgba(31, 118, 189, 0.18)",
-        "full": false,
-        "lineColor": "rgb(31, 120, 193)",
-        "show": true
-      },
-      "tableColumn": "",
+      "nullPointMode": "null as zero",
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": true,
+      "steppedLine": false,
       "targets": [
         {
-          "expr": "count(count by (host)(hono_connections_unauthenticated{component_name=~\"$componentname\"}))",
+          "expr": "(100 * sum(irate(hono_messages_received_seconds_count{type=\"telemetry\",qos=\"0\",status=\"undeliverable\"}[$__range])))\n/\nsum(irate(hono_messages_received_seconds_count{type=\"telemetry\",qos=\"0\"}[$__range]))",
           "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "QoS 0",
+          "refId": "C"
+        },
+        {
+          "expr": "(100 * sum(irate(hono_messages_received_seconds_count{type=\"telemetry\",qos=\"1\",status=\"undeliverable\"}[$__range])))\n/\nsum(irate(hono_messages_received_seconds_count{type=\"telemetry\",qos=\"1\"}[$__range]))",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "QoS 1",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [
+        {
+          "colorMode": "warning",
+          "fill": true,
+          "line": true,
+          "op": "gt",
+          "value": 5,
+          "yaxis": "left"
+        },
+        {
+          "colorMode": "critical",
+          "fill": true,
+          "line": true,
+          "op": "gt",
+          "value": 15,
+          "yaxis": "left"
+        }
+      ],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "undeliverable rate",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "transparent": false,
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "decimals": 0,
+          "format": "none",
+          "label": "percent",
+          "logBase": 10,
+          "max": "100",
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": false
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "hono_metrics",
+      "description": "average rate of valid events received from devices which could not be delivered downstream",
+      "fill": 1,
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 18
+      },
+      "id": 62,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": false,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null as zero",
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "(100 * sum(irate(hono_messages_received_seconds_count{type=\"event\",status=\"undeliverable\"}[$__range])))\n/\nsum(irate(hono_messages_received_seconds_count{type=\"event\"}[$__range]))",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "not forwarded",
+          "refId": "C"
+        }
+      ],
+      "thresholds": [
+        {
+          "colorMode": "warning",
+          "fill": true,
+          "line": true,
+          "op": "gt",
+          "value": 1,
+          "yaxis": "left"
+        },
+        {
+          "colorMode": "critical",
+          "fill": true,
+          "line": true,
+          "op": "gt",
+          "value": 5,
+          "yaxis": "left"
+        }
+      ],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "undeliverable rate",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "transparent": false,
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "decimals": 0,
+          "format": "none",
+          "label": "percent",
+          "logBase": 10,
+          "max": "100",
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": false
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "hono_metrics",
+      "description": "average rate of valid commands received from applications which could not be delivered to devices",
+      "fill": 1,
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 18
+      },
+      "id": 63,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": false,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null as zero",
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "(100 * sum(irate(hono_commands_received_seconds_count{direction=~\"one-way|request\",status=\"undeliverable\"}[$__range])))\n/\nsum(irate(hono_commands_received_seconds_count{direction=\"one-way|request\"}[$__range]))",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "not forwarded",
+          "refId": "C"
+        }
+      ],
+      "thresholds": [
+        {
+          "colorMode": "warning",
+          "fill": true,
+          "line": true,
+          "op": "gt",
+          "value": 5,
+          "yaxis": "left"
+        },
+        {
+          "colorMode": "critical",
+          "fill": true,
+          "line": true,
+          "op": "gt",
+          "value": 15,
+          "yaxis": "left"
+        }
+      ],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "undeliverable rate",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "transparent": false,
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "decimals": 0,
+          "format": "none",
+          "label": "percent",
+          "logBase": 10,
+          "max": "100",
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": false
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "columns": [],
+      "datasource": "hono_metrics",
+      "fontSize": "100%",
+      "gridPos": {
+        "h": 5,
+        "w": 8,
+        "x": 0,
+        "y": 26
+      },
+      "id": 65,
+      "links": [],
+      "pageSize": null,
+      "scroll": true,
+      "showHeader": true,
+      "sort": {
+        "col": 1,
+        "desc": true
+      },
+      "styles": [
+        {
+          "alias": "Adapter Type",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 2,
+          "mappingType": 1,
+          "pattern": "component_name",
+          "thresholds": [],
+          "type": "string",
+          "unit": "short"
+        },
+        {
+          "alias": "#Instances",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "decimals": 0,
+          "pattern": "Value",
+          "thresholds": [],
+          "type": "number",
+          "unit": "short"
+        },
+        {
+          "alias": "",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 2,
+          "mappingType": 1,
+          "pattern": "Time",
+          "thresholds": [],
+          "type": "date",
+          "unit": "short"
+        }
+      ],
+      "targets": [
+        {
+          "expr": "count(hono_connections_unauthenticated{component_type=\"adapter\"}) by (component_name)",
+          "format": "table",
+          "instant": true,
           "intervalFactor": 1,
           "refId": "A"
         }
       ],
-      "thresholds": "",
       "title": "Protocol Adapters",
-      "type": "singlestat",
-      "valueFontSize": "80%",
-      "valueMaps": [
-        {
-          "op": "=",
-          "text": "0",
-          "value": "null"
-        }
-      ],
-      "valueName": "avg"
+      "transform": "table",
+      "type": "table"
     }
   ],
   "refresh": "10s",
@@ -1544,52 +1148,7 @@
   "style": "dark",
   "tags": [],
   "templating": {
-    "list": [
-      {
-        "allValue": null,
-        "current": {
-          "text": "All",
-          "value": [
-            "$__all"
-          ]
-        },
-        "datasource": "hono_metrics",
-        "hide": 0,
-        "includeAll": true,
-        "label": "Adapter",
-        "multi": true,
-        "name": "componentname",
-        "options": [],
-        "query": "label_values(hono_messages_received_seconds_count,component_name)",
-        "refresh": 1,
-        "regex": "",
-        "skipUrlSync": false,
-        "sort": 0,
-        "tagValuesQuery": "",
-        "tags": [],
-        "tagsQuery": "",
-        "type": "query",
-        "useTags": false
-      },
-      {
-        "current": {
-          "text": ".+",
-          "value": ".+"
-        },
-        "hide": 0,
-        "label": "Tenant",
-        "name": "tenant",
-        "options": [
-          {
-            "text": ".+",
-            "value": ".+"
-          }
-        ],
-        "query": ".+",
-        "skipUrlSync": false,
-        "type": "textbox"
-      }
-    ]
+    "list": []
   },
   "time": {
     "from": "now-5m",
@@ -1620,7 +1179,7 @@
       "30d"
     ]
   },
-  "timezone": "",
+  "timezone": "browser",
   "title": "Overview",
   "uid": "QpiDB0Bmz",
   "version": 1

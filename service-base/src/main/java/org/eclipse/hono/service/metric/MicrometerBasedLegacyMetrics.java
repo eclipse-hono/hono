@@ -33,7 +33,9 @@ public final class MicrometerBasedLegacyMetrics implements LegacyMetrics {
      */
     public static final String METER_MESSAGES_PROCESSED = "hono.messages.processed";
 
+    static final String METER_COMMANDS_DEVICE_DELIVERED = "hono.commands.device.delivered";
     static final String METER_COMMANDS_TTD_EXPIRED = "hono.commands.ttd.expired";
+    static final String METER_COMMANDS_RESPONSE_DELIVERED = "hono.commands.response.delivered";
     static final String METER_MESSAGES_UNDELIVERABLE = "hono.messages.undeliverable";
 
     /**
@@ -78,6 +80,24 @@ public final class MicrometerBasedLegacyMetrics implements LegacyMetrics {
         Objects.requireNonNull(tenantId);
         this.registry.counter(METER_COMMANDS_TTD_EXPIRED,
                 Tags.of(MetricsTags.TAG_TENANT, tenantId))
+                .increment();
+    }
+
+    @Override
+    public void incrementCommandResponseDeliveredToApplication(final String tenantId) {
+
+        Objects.requireNonNull(tenantId);
+        this.registry.counter(METER_COMMANDS_RESPONSE_DELIVERED,
+                Tags.of(MetricsTags.getTenantTag(tenantId)))
+                .increment();
+    }
+
+    @Override
+    public void incrementCommandDeliveredToDevice(final String tenantId) {
+
+        Objects.requireNonNull(tenantId);
+        this.registry.counter(METER_COMMANDS_DEVICE_DELIVERED,
+                Tags.of(MetricsTags.getTenantTag(tenantId)))
                 .increment();
     }
 }

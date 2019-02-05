@@ -35,4 +35,12 @@ public class NoopLegacyMetrics implements LegacyMetrics {
     @Override
     public void incrementNoCommandReceivedAndTTDExpired(final String tenantId) {
     }
+
+    @Override
+    public void incrementCommandResponseDeliveredToApplication(final String tenantId) {
+    }
+
+    @Override
+    public void incrementCommandDeliveredToDevice(final String tenantId) {
+    }
 }

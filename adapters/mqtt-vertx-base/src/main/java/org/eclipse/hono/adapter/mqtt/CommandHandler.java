@@ -94,9 +94,11 @@ public final class CommandHandler<T extends MqttProtocolAdapterProperties> {
     public void addToWaitingForAcknowledgement(final Integer msgId,
             final CommandSubscription subscription,
             final CommandContext commandContext) {
+
         Objects.requireNonNull(msgId);
         Objects.requireNonNull(subscription);
         Objects.requireNonNull(commandContext);
+
         waitingForAcknowledgement.put(msgId, TriTuple.of(startTimer(msgId), subscription, commandContext));
     }
 
@@ -172,9 +174,9 @@ public final class CommandHandler<T extends MqttProtocolAdapterProperties> {
     }
 
     private long startTimer(final Integer msgId) {
-        LOG.trace("Start a timer for [{}] ms", config.getCommandAckTimeout());
+
         return vertx.setTimer(config.getCommandAckTimeout(), timerId -> {
-            LOG.trace("Timer [{}] expired", timerId);
+
             Optional.ofNullable(removeFromWaitingForAcknowledgement(msgId)).ifPresent(value -> {
                 final CommandSubscription subscription = value.two();
                 final CommandContext commandContext = value.three();

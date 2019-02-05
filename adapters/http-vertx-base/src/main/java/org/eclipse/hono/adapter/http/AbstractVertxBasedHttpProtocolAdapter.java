@@ -36,6 +36,7 @@ import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.service.http.DefaultFailureHandler;
 import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.service.metric.MetricsTags;
+import org.eclipse.hono.service.metric.MetricsTags.Direction;
 import org.eclipse.hono.service.metric.MetricsTags.EndpointType;
 import org.eclipse.hono.service.metric.MetricsTags.ProcessingOutcome;
 import org.eclipse.hono.service.metric.MetricsTags.QoS;
@@ -76,7 +77,6 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
      */
     protected static final String DEFAULT_UPLOADS_DIRECTORY = "/tmp";
 
-    private static final String KEY_MICROMETER_SAMPLE = "micrometer.sample";
     private static final String KEY_TIMER_ID = "timerId";
 
     private HttpServer server;
@@ -673,7 +673,12 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                             if (commandContext != null) {
                                 commandContext.getCurrentSpan().log("forwarded command to device in HTTP response body");
                                 commandContext.accept();
-                                metrics.incrementCommandDeliveredToDevice(tenant);
+                                metrics.reportCommand(
+                                        commandContext.getCommand().isOneWay() ? Direction.ONE_WAY : Direction.REQUEST,
+                                        tenant,
+                                        ProcessingOutcome.FORWARDED,
+                                        commandContext.getCommand().getPayloadSize(),
+                                        getMicrometerSample(commandContext));
                             }
                             metrics.reportTelemetry(
                                     endpoint,
@@ -696,6 +701,12 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                                 commandContext.getCurrentSpan().log("failed to forward command to device in HTTP response body");
                                 TracingHelper.logError(commandContext.getCurrentSpan(), t);
                                 commandContext.release();
+                                metrics.reportCommand(
+                                        commandContext.getCommand().isOneWay() ? Direction.ONE_WAY : Direction.REQUEST,
+                                        tenant,
+                                        ProcessingOutcome.UNDELIVERABLE,
+                                        commandContext.getCommand().getPayloadSize(),
+                                        getMicrometerSample(commandContext));
                             }
                             currentSpan.log("failed to send HTTP response to device");
                             TracingHelper.logError(currentSpan, t);
@@ -851,11 +862,19 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
 
                         Tags.COMPONENT.set(commandContext.getCurrentSpan(), getTypeName());
                         final Command command = commandContext.getCommand();
+                        final Sample commandSample = getMetrics().startTimer();
                         if (command.isValid()) {
                             if (responseReady.isComplete()) {
                                 // the timer has already fired, release the command
+                                getMetrics().reportCommand(
+                                        command.isOneWay() ? Direction.ONE_WAY : Direction.REQUEST,
+                                        tenantId,
+                                        ProcessingOutcome.UNDELIVERABLE,
+                                        command.getPayloadSize(),
+                                        commandSample);
                                 commandContext.release();
                             } else {
+                                addMicrometerSample(commandContext, commandSample);
                                 // put command context to routing context and notify
                                 ctx.put(CommandContext.KEY_COMMAND_CONTEXT, commandContext);
                                 cancelCommandReceptionTimer(ctx);
@@ -863,6 +882,12 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                                 responseReady.tryComplete();
                             }
                         } else {
+                            getMetrics().reportCommand(
+                                    command.isOneWay() ? Direction.ONE_WAY : Direction.REQUEST,
+                                    tenantId,
+                                    ProcessingOutcome.UNPROCESSABLE,
+                                    command.getPayloadSize(),
+                                    commandSample);
                             commandContext.reject(new ErrorCondition(Constants.AMQP_BAD_REQUEST, "malformed command message"));
                         }
                         // we do not issue any new credit because the
@@ -977,6 +1002,12 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                 contentType, responseStatus);
 
         if (commandResponse == null) {
+            metrics.reportCommand(
+                    Direction.RESPONSE,
+                    tenant,
+                    ProcessingOutcome.UNPROCESSABLE,
+                    payload.length(),
+                    getMicrometerSample(ctx));
             HttpUtils.badRequest(
                     ctx,
                     String.format("command-request-id [%s] or status code [%s] is missing/invalid",
@@ -1005,10 +1036,15 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
             CompositeFuture.all(deviceRegistrationTracker, tenantEnabledTracker)
                     .compose(ok -> sendCommandResponse(tenant, commandResponse, currentSpan.context()))
                     .map(delivery -> {
-                        metrics.incrementCommandResponseDeliveredToApplication(tenant);
                         LOG.trace("delivered command response [command-request-id: {}] to application",
                                 commandRequestId);
                         currentSpan.log("delivered command response to application");
+                        metrics.reportCommand(
+                                Direction.RESPONSE,
+                                tenant,
+                                ProcessingOutcome.FORWARDED,
+                                payload.length(),
+                                getMicrometerSample(ctx));
                         ctx.response().setStatusCode(HttpURLConnection.HTTP_ACCEPTED);
                         ctx.response().end();
                         return delivery;
@@ -1017,6 +1053,14 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                                 commandRequestId, t);
                         TracingHelper.logError(currentSpan, t);
                         currentSpan.finish();
+                        final ProcessingOutcome outcome = t instanceof ClientErrorException ?
+                                ProcessingOutcome.UNPROCESSABLE : ProcessingOutcome.UNDELIVERABLE;
+                        metrics.reportCommand(
+                                Direction.RESPONSE,
+                                tenant,
+                                outcome,
+                                payload.length(),
+                                getMicrometerSample(ctx));
                         ctx.fail(t);
                         return null;
                     });

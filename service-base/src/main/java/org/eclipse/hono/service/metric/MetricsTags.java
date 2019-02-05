@@ -15,6 +15,7 @@ package org.eclipse.hono.service.metric;
 
 import java.util.Objects;
 
+import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.Hostnames;
@@ -163,6 +164,20 @@ public final class MetricsTags {
         }
 
         /**
+         * Gets an outcome for an error.
+         * 
+         * @param t The error.
+         * @return The outcome.
+         */
+        public static ProcessingOutcome from(final Throwable t) {
+            if (t instanceof ClientErrorException) {
+                return UNPROCESSABLE;
+            } else {
+                return UNDELIVERABLE;
+            }
+        }
+
+        /**
          * Gets a <em>Micrometer</em> tag for the outcome.
          * 
          * @return The tag.
@@ -303,6 +318,43 @@ public final class MetricsTags {
             } else {
                 return tags.and(tag);
             }
+        }
+    }
+
+    /**
+     * The direction of a message.
+     *
+     */
+    public enum Direction {
+
+        /**
+         * A one-way message.
+         */
+        ONE_WAY("one-way"),
+        /**
+         * A request message.
+         */
+        REQUEST("request"),
+        /**
+         * A response message.
+         */
+        RESPONSE("response");
+
+        static final String TAG_NAME = "direction";
+
+        private final Tag tag;
+
+        Direction(final String tagValue) {
+            this.tag = Tag.of(TAG_NAME, tagValue);
+        }
+
+        /**
+         * Gets a <em>Micrometer</em> tag for the direction.
+         * 
+         * @return The tag.
+         */
+        public Tag asTag() {
+            return tag;
         }
     }
 
