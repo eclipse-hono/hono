@@ -13,6 +13,9 @@
 
 package org.eclipse.hono.service.metric;
 
+import org.eclipse.hono.service.metric.MetricsTags.Direction;
+import org.eclipse.hono.service.metric.MetricsTags.ProcessingOutcome;
+
 import io.micrometer.core.instrument.Timer.Sample;
 
 /**
@@ -32,14 +35,6 @@ public class NoopBasedMetrics implements Metrics {
 
     @Override
     public void incrementConnections(final String tenantId) {
-    }
-
-    @Override
-    public void incrementCommandResponseDeliveredToApplication(final String tenantId) {
-    }
-
-    @Override
-    public void incrementCommandDeliveredToDevice(final String tenantId) {
     }
 
     @Override
@@ -78,6 +73,15 @@ public class NoopBasedMetrics implements Metrics {
             final MetricsTags.QoS qos,
             final int payloadSize,
             final MetricsTags.TtdStatus ttdStatus,
+            final Sample timer) {
+    }
+
+    @Override
+    public void reportCommand(
+            final Direction direction,
+            final String tenantId,
+            final ProcessingOutcome outcome,
+            final int payloadSize,
             final Sample timer) {
     }
 }

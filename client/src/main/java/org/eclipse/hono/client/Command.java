@@ -240,6 +240,22 @@ public final class Command {
     }
 
     /**
+     * Gets the size of this command's payload.
+     *
+     * @return The payload size in bytes, 0 if the command has no payload.
+     * @throws IllegalStateException if this command is invalid.
+     */
+    public int getPayloadSize() {
+        if (isValid()) {
+            return Optional.ofNullable(MessageHelper.getPayload(message))
+                    .map(b -> b.length())
+                    .orElse(0);
+        } else {
+            throw new IllegalStateException("command is invalid");
+        }
+    }
+
+    /**
      * Gets the type of this command's payload.
      *
      * @return The content type or {@code null} if not set.

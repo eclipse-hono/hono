@@ -19,6 +19,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
 
+import org.eclipse.hono.service.metric.MetricsTags.Direction;
+import org.eclipse.hono.service.metric.MetricsTags.ProcessingOutcome;
+
 import io.micrometer.core.instrument.DistributionSummary;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tags;
@@ -46,9 +49,14 @@ public class MicrometerBasedMetrics implements Metrics {
      * The name of the meter for messages received from devices.
      */
     public static final String METER_MESSAGES_RECEIVED = "hono.messages.received";
-
-    static final String METER_COMMANDS_DEVICE_DELIVERED = "hono.commands.device.delivered";
-    static final String METER_COMMANDS_RESPONSE_DELIVERED = "hono.commands.response.delivered";
+    /**
+     * The name of the meter for recording command payload size.
+     */
+    public static final String METER_COMMANDS_PAYLOAD = "hono.commands.payload";
+    /**
+     * The name of the meter for command messages.
+     */
+    public static final String METER_COMMANDS_RECEIVED = "hono.commands.received";
 
     /**
      * The meter registry.
@@ -206,23 +214,48 @@ public class MicrometerBasedMetrics implements Metrics {
     }
 
     @Override
-    public final void incrementCommandDeliveredToDevice(final String tenantId) {
+    public void reportCommand(
+            final Direction direction,
+            final String tenantId,
+            final ProcessingOutcome outcome,
+            final int payloadSize,
+            final Sample timer) {
 
+        Objects.requireNonNull(direction);
         Objects.requireNonNull(tenantId);
-        this.registry.counter(METER_COMMANDS_DEVICE_DELIVERED,
-                Tags.of(MetricsTags.getTenantTag(tenantId)))
-                .increment();
+        Objects.requireNonNull(outcome);
+        Objects.requireNonNull(timer);
 
-    }
+        if (payloadSize < 0) {
+            throw new IllegalArgumentException("payload size must not be negative");
+        }
 
-    @Override
-    public final void incrementCommandResponseDeliveredToApplication(final String tenantId) {
+        final Tags baseTags = Tags.of(direction.asTag())
+                .and(MetricsTags.getTenantTag(tenantId))
+                .and(outcome.asTag());
 
-        Objects.requireNonNull(tenantId);
-        this.registry.counter(METER_COMMANDS_RESPONSE_DELIVERED,
-                Tags.of(MetricsTags.getTenantTag(tenantId)))
-                .increment();
+        timer.stop(this.registry.timer(METER_COMMANDS_RECEIVED, baseTags));
 
+        // record payload size
+        DistributionSummary.builder(METER_COMMANDS_PAYLOAD)
+            .baseUnit("bytes")
+            .minimumExpectedValue(0L)
+            .tags(baseTags)
+            .register(this.registry)
+            .record(payloadSize);
+
+        if (legacyMetrics != null) {
+
+            switch(direction) {
+            case ONE_WAY:
+            case REQUEST:
+                legacyMetrics.incrementCommandDeliveredToDevice(tenantId);
+                break;
+            case RESPONSE:
+                legacyMetrics.incrementCommandResponseDeliveredToApplication(tenantId);
+                break;
+            }
+        }
     }
 
     /**

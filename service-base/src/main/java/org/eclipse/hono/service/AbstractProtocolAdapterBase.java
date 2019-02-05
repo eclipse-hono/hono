@@ -48,6 +48,7 @@ import org.eclipse.hono.util.TenantObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 
+import io.micrometer.core.instrument.Timer.Sample;
 import io.opentracing.SpanContext;
 import io.opentracing.tag.Tags;
 import io.vertx.core.CompositeFuture;
@@ -77,6 +78,11 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * The <em>application/octet-stream</em> content type.
      */
     protected static final String CONTENT_TYPE_OCTET_STREAM = "application/octet-stream";
+    /**
+     * The key used for storing a Micrometer {@code Sample} in an
+     * execution context.
+     */
+    protected static final String KEY_MICROMETER_SAMPLE = "micrometer.sample";
 
     private HonoClient messagingClient;
     private HonoClient registrationServiceClient;
@@ -99,6 +105,32 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         }
 
     };
+
+    /**
+     * Adds a Micrometer sample to a command context.
+     * 
+     * @param ctx The context to add the sample to.
+     * @param sample The sample.
+     * @throws NullPointerException if ctx is {@code null}.
+     */
+    protected static final void addMicrometerSample(final CommandContext ctx, final Sample sample) {
+        Objects.requireNonNull(ctx);
+        ctx.put(KEY_MICROMETER_SAMPLE, sample);
+    }
+
+    /**
+     * Gets the Micrometer used to track the processing
+     * of a command message.
+     * 
+     * @param ctx The command context to extract the sample from.
+     * @return The sample or {@code null} if the context does not
+     *         contain a sample.
+     * @throws NullPointerException if ctx is {@code null}.
+     */
+    protected static final Sample getMicrometerSample(final CommandContext ctx) {
+        Objects.requireNonNull(ctx);
+        return ctx.get(KEY_MICROMETER_SAMPLE);
+    }
 
     /**
      * Sets the configuration by means of Spring dependency injection.

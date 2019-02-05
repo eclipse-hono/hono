@@ -16,7 +16,7 @@ package org.eclipse.hono.service.metric;
 /**
  * A service for reporting legacy metrics.
  */
-public interface LegacyMetrics {
+interface LegacyMetrics {
 
     /**
      * Reports a message received from a device as <em>processed</em>.
@@ -49,4 +49,21 @@ public interface LegacyMetrics {
      * @throws NullPointerException if tenant is {@code null}.
      */
     void incrementNoCommandReceivedAndTTDExpired(String tenantId);
+
+    /**
+     * Reports a response to a command being delivered to an application.
+     * 
+     * @param tenantId The tenant to which the device belongs from which the response
+     *                 has been received.
+     * @throws NullPointerException if tenant is {@code null}.
+     */
+    void incrementCommandResponseDeliveredToApplication(String tenantId);
+
+    /**
+     * Reports a command being delivered to a device.
+     * 
+     * @param tenantId The tenant that the device belongs to.
+     * @throws NullPointerException if tenant is {@code null}.
+     */
+    void incrementCommandDeliveredToDevice(String tenantId);
 }
