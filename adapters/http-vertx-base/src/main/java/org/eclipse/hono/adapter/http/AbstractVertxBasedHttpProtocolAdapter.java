@@ -36,6 +36,8 @@ import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.service.http.DefaultFailureHandler;
 import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.service.metric.MetricsTags;
+import org.eclipse.hono.service.metric.MetricsTags.EndpointType;
+import org.eclipse.hono.service.metric.MetricsTags.QoS;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
@@ -575,7 +577,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
             HttpUtils.badRequest(ctx, String.format("content type [%s] does not match payload", contentType));
         } else {
             final String qosHeaderValue = ctx.request().getHeader(Constants.HEADER_QOS_LEVEL);
-            final MetricsTags.QoS qos = getQoSLevel(qosHeaderValue);
+            final MetricsTags.QoS qos = getQoSLevel(endpoint, qosHeaderValue);
             if (qos == MetricsTags.QoS.UNKNOWN) {
                 HttpUtils.badRequest(ctx, "unsupported QoS-Level header value");
             } else {
@@ -1039,9 +1041,11 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
         }
     }
 
-    private static MetricsTags.QoS getQoSLevel(final String qosValue) {
+    private static MetricsTags.QoS getQoSLevel(final EndpointType endpoint, final String qosValue) {
 
-        if (qosValue == null) {
+        if (endpoint == EndpointType.EVENT) {
+            return QoS.AT_LEAST_ONCE;
+        } else if (qosValue == null) {
             return MetricsTags.QoS.AT_MOST_ONCE;
         } else {
             try {

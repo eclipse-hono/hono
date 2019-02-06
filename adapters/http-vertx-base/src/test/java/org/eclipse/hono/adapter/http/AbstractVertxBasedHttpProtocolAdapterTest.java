@@ -44,6 +44,10 @@ import org.eclipse.hono.client.ResourceConflictException;
 import org.eclipse.hono.client.TenantClient;
 import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.service.metric.MetricsTags;
+import org.eclipse.hono.service.metric.MetricsTags.EndpointType;
+import org.eclipse.hono.service.metric.MetricsTags.ProcessingOutcome;
+import org.eclipse.hono.service.metric.MetricsTags.QoS;
+import org.eclipse.hono.service.metric.MetricsTags.TtdStatus;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
@@ -330,12 +334,12 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         verify(response).setStatusCode(202);
         verify(response).end();
         verify(metrics).reportTelemetry(
-                any(MetricsTags.EndpointType.class),
+                eq(MetricsTags.EndpointType.EVENT),
                 eq("tenant"),
                 eq(MetricsTags.ProcessingOutcome.FORWARDED),
-                any(MetricsTags.QoS.class),
+                eq(MetricsTags.QoS.AT_LEAST_ONCE),
                 eq(payload.length()),
-                any(MetricsTags.TtdStatus.class),
+                eq(MetricsTags.TtdStatus.NONE),
                 any());
     }
 
@@ -534,12 +538,12 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         verify(response).end();
         // and the message has been reported as processed
         verify(metrics).reportTelemetry(
-                any(MetricsTags.EndpointType.class),
+                eq(MetricsTags.EndpointType.TELEMETRY),
                 eq("tenant"),
                 eq(MetricsTags.ProcessingOutcome.FORWARDED),
-                any(MetricsTags.QoS.class),
+                eq(MetricsTags.QoS.AT_MOST_ONCE),
                 eq(payload.length()),
-                any(MetricsTags.TtdStatus.class),
+                eq(MetricsTags.TtdStatus.NONE),
                 any());
     }
 
@@ -563,6 +567,11 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         final HttpServerRequest request = mock(HttpServerRequest.class);
         when(request.getHeader(eq(Constants.HEADER_TIME_TIL_DISCONNECT))).thenReturn("10");
         final RoutingContext ctx = newRoutingContext(payload, "text/plain", request, response);
+        when(ctx.addBodyEndHandler(any(Handler.class))).thenAnswer(invocation -> {
+            final Handler<Void> handler = invocation.getArgument(0);
+            handler.handle(null);
+            return 0;
+        });
         // and the Command consumer for the device is already in use
         when(commandConnection.createCommandConsumer(eq("tenant"), eq("device"), any(Handler.class), any()))
             .thenReturn(Future.failedFuture(new ResourceConflictException("consumer in use")));
@@ -571,6 +580,15 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         // THEN the device receives a 202 response immediately
         verify(response).setStatusCode(202);
         verify(response).end();
+        // the message has been reported
+        verify(metrics).reportTelemetry(
+                eq(EndpointType.TELEMETRY),
+                eq("tenant"),
+                eq(ProcessingOutcome.FORWARDED),
+                eq(QoS.AT_MOST_ONCE),
+                eq(payload.length()),
+                eq(TtdStatus.NONE),
+                any());
         // and the downstream message does not contain any TTD value
         final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
         verify(sender).send(messageCaptor.capture(), (SpanContext) any());
@@ -603,8 +621,16 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         // THEN the device receives a 202 response immediately
         verify(response).setStatusCode(202);
         verify(response).end();
-        // and no message is being sent downstream
+        // and no event is being sent downstream
         verify(sender, never()).sendAndWaitForOutcome(any(Message.class), (SpanContext) any());
+        verify(metrics, never()).reportTelemetry(
+                eq(EndpointType.EVENT),
+                anyString(),
+                any(ProcessingOutcome.class),
+                eq(QoS.AT_LEAST_ONCE),
+                anyInt(),
+                any(TtdStatus.class),
+                any());
     }
 
     /**
@@ -760,7 +786,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
     private MessageSender givenAnEventSenderForOutcome(final Future<ProtonDelivery> outcome) {
 
         final MessageSender sender = mock(MessageSender.class);
-        when(sender.send(any(Message.class), (SpanContext) any())).thenReturn(outcome);
+        when(sender.sendAndWaitForOutcome(any(Message.class), (SpanContext) any())).thenReturn(outcome);
 
         when(messagingClient.getOrCreateEventSender(anyString())).thenReturn(Future.succeededFuture(sender));
         return sender;

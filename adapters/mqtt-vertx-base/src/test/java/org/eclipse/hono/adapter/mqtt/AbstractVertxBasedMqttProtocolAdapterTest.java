@@ -640,7 +640,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
 
         // THEN the device does not receive a PUBACK
         verify(endpoint, never()).publishAcknowledge(anyInt());
-        // and the message has not been reported as processed
+        // and the message has not been reported as forwarded
         verify(metrics, never()).reportTelemetry(
                 any(MetricsTags.EndpointType.class),
                 anyString(),
@@ -693,7 +693,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
 
         // THEN the device has not received a PUBACK
         verify(endpoint, never()).publishAcknowledge(anyInt());
-        // and the message has not been reported as processed
+        // and the message has not been reported as forwarded
         verify(metrics, never()).reportTelemetry(
                 any(MetricsTags.EndpointType.class),
                 anyString(),
@@ -1091,7 +1091,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
 
         final MessageSender sender = mock(MessageSender.class);
         when(sender.getEndpoint()).thenReturn(EventConstants.EVENT_ENDPOINT);
-        when(sender.send(any(Message.class), (SpanContext) any())).thenReturn(outcome);
+        when(sender.send(any(Message.class), (SpanContext) any())).thenThrow(new UnsupportedOperationException());
         when(sender.sendAndWaitForOutcome(any(Message.class), (SpanContext) any())).thenReturn(outcome);
 
         when(messagingClient.getOrCreateEventSender(anyString())).thenReturn(Future.succeededFuture(sender));

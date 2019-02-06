@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -28,17 +28,17 @@ import java.util.Base64;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.adapter.http.HttpProtocolAdapterProperties;
 import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.client.Command;
+import org.eclipse.hono.client.CommandConnection;
+import org.eclipse.hono.client.CommandContext;
+import org.eclipse.hono.client.CommandResponse;
+import org.eclipse.hono.client.CommandResponseSender;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.TenantClient;
-import org.eclipse.hono.client.Command;
-import org.eclipse.hono.client.CommandConnection;
-import org.eclipse.hono.client.CommandContext;
-import org.eclipse.hono.client.CommandResponse;
-import org.eclipse.hono.client.CommandResponseSender;
 import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.service.auth.device.HonoClientBasedAuthProvider;
 import org.eclipse.hono.service.auth.device.UsernamePasswordCredentials;
@@ -232,7 +232,8 @@ public class VertxBasedHttpProtocolAdapterTest {
         when(messagingClient.getOrCreateTelemetrySender(anyString(), anyString())).thenReturn(Future.succeededFuture(telemetrySender));
 
         eventSender = mock(MessageSender.class);
-        when(eventSender.send(any(Message.class), (SpanContext) any())).thenReturn(Future.succeededFuture(mock(ProtonDelivery.class)));
+        when(eventSender.send(any(Message.class), (SpanContext) any())).thenThrow(new UnsupportedOperationException());
+        when(eventSender.sendAndWaitForOutcome(any(Message.class), (SpanContext) any())).thenReturn(Future.succeededFuture(mock(ProtonDelivery.class)));
         when(messagingClient.getOrCreateEventSender(anyString())).thenReturn(Future.succeededFuture(eventSender));
         when(messagingClient.getOrCreateEventSender(anyString(), anyString())).thenReturn(Future.succeededFuture(eventSender));
 
@@ -377,7 +378,7 @@ public class VertxBasedHttpProtocolAdapterTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testPostTelemetrySucceedsForSupportedQoSLevel(final TestContext ctx) {
+    public void testPostTelemetrySucceedsForQoS1(final TestContext ctx) {
         final Async async = ctx.async();
         final String authHeader = getBasicAuth("testuser@DEFAULT_TENANT", "password123");
 
@@ -468,7 +469,7 @@ public class VertxBasedHttpProtocolAdapterTest {
                 .handler(response -> {
                     ctx.assertEquals(HttpURLConnection.HTTP_ACCEPTED, response.statusCode());
                     assertCorsHeaders(ctx, response.headers());
-                    verify(eventSender).send(any(Message.class), any(SpanContext.class));
+                    verify(eventSender).sendAndWaitForOutcome(any(Message.class), any(SpanContext.class));
                     async.complete();
                 }).exceptionHandler(ctx::fail).end(new JsonObject().encode());
     }
