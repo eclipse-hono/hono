@@ -391,10 +391,10 @@ public class HonoClientImpl implements HonoClient {
                         conAttempt -> {
                             connecting.compareAndSet(true, false);
                             if (conAttempt.failed()) {
-                                if (isConnectionFailureEntailingReconnectAttempt(conAttempt.cause())) {
-                                    reconnect(conAttempt.cause(), connectionHandler, disconnectHandler);
-                                } else {
+                                if (isTerminalConnectionError(conAttempt.cause())) {
                                     failConnectionAttempt(conAttempt.cause(), connectionHandler);
+                                } else {
+                                    reconnect(conAttempt.cause(), connectionHandler, disconnectHandler);
                                 }
                             } else {
                                 final ProtonConnection newConnection = conAttempt.result();
@@ -498,10 +498,10 @@ public class HonoClientImpl implements HonoClient {
 
         if (shuttingDown.get()) {
             // no need to try to re-connect
-            log.debug("client is shutting down, giving up attempt to connect");
+            log.info("client is shutting down, giving up attempt to connect");
             connectionHandler.handle(Future.failedFuture(new IllegalStateException("client is shut down")));
         } else if (clientConfigProperties.getReconnectAttempts() - connectAttempts.getAndIncrement() == 0) {
-            log.debug("max number of attempts [{}] to re-connect to peer [{}:{}] have been made, giving up",
+            log.info("max number of attempts [{}] to re-connect to peer [{}:{}] have been made, giving up",
                     clientConfigProperties.getReconnectAttempts(), connectionFactory.getHost(), connectionFactory.getPort());
             clearState();
             failConnectionAttempt(connectionFailureCause, connectionHandler);
@@ -521,24 +521,27 @@ public class HonoClientImpl implements HonoClient {
         }
     }
 
-    private boolean isConnectionFailureEntailingReconnectAttempt(final Throwable connectionFailureCause) {
-        if (connectionFailureCause instanceof AuthenticationException
-            || (connectionFailureCause instanceof SaslSystemException && ((SaslSystemException) connectionFailureCause).isPermanent())) {
-            return false;
-        }
-        return true;
+    private boolean isTerminalConnectionError(final Throwable connectionFailureCause) {
+
+        return connectionFailureCause instanceof AuthenticationException ||
+                (connectionFailureCause instanceof SaslSystemException && ((SaslSystemException) connectionFailureCause).isPermanent());
     }
 
     private void failConnectionAttempt(final Throwable connectionFailureCause, final Handler<AsyncResult<HonoClient>> connectionHandler) {
+
+        log.info("stopping connection attempt to server [host: {}, port: {}] due to terminal error",
+                connectionFactory.getHost(), connectionFactory.getPort(), connectionFailureCause);
+
         if (connectionFailureCause == null) {
             connectionHandler.handle(Future.failedFuture(
                     new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "failed to connect")));
         } else if (connectionFailureCause instanceof AuthenticationException) {
-            // SASL handshake failed continuously, maybe due to wrong credentials?
+            // wrong credentials?
             connectionHandler.handle(Future.failedFuture(
                     new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED, "failed to authenticate with server")));
         } else if (connectionFailureCause instanceof SaslSystemException
-                && connectionFailureCause.getMessage().contains("Could not find a suitable SASL mechanism")) { // this check will have to be changed when using a future vert.x version where an AuthenticationException is thrown in this case
+                && connectionFailureCause.getMessage().contains("Could not find a suitable SASL mechanism")) {
+            // this check will have to be changed when using a future vert.x version where an AuthenticationException is thrown in this case
             connectionHandler.handle(Future.failedFuture(
                     new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED, "no suitable SASL mechanism found for authentication with server")));
         } else {
