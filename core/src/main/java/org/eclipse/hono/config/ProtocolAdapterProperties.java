@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -111,7 +111,7 @@ public class ProtocolAdapterProperties extends ServiceConfigProperties {
      * 
      * @return {@code true} if the adapter should use default values.
      */
-    public boolean isDefaultsEnabled() {
+    public final boolean isDefaultsEnabled() {
         return defaultsEnabled;
     }
 
@@ -129,7 +129,7 @@ public class ProtocolAdapterProperties extends ServiceConfigProperties {
      * 
      * @param flag {@code true} if the adapter should use default values.
      */
-    public void setDefaultsEnabled(final boolean flag) {
+    public final void setDefaultsEnabled(final boolean flag) {
         this.defaultsEnabled = flag;
     }
 
@@ -157,25 +157,29 @@ public class ProtocolAdapterProperties extends ServiceConfigProperties {
     }
 
     /**
-     * Gets the number of maximal concurrent connections the protocol adapter should accept.
+     * Gets the maximum number of concurrent connections that the protocol adapter
+     * accepts.
      * <p>
-     * Default is 0 if no other value had been configured. Which leaves it to the protocol adapter to set an appropriate
-     * limit.
+     * The default value of this property is 0 which lets the protocol adapter
+     * determine an appropriate value based on e.g. available memory and CPU resources.
      * 
-     * @return The maximal number of concurrent connections.
+     * @return The number of connections.
      */
-    public int getMaxConnections() {
+    public final int getMaxConnections() {
         return maxConnections;
     }
 
     /**
-     * Sets the number of maximal concurrent connections the protocol adapter should accept. Setting 0 leaves it to the
-     * protocol adapter to set an appropriate limit.
+     * Sets the maximum number of concurrent connections that the protocol adapter
+     * should accept.
+     * <p>
+     * Setting this property to 0 (the default value) will let the protocol adapter
+     * determine an appropriate value based on e.g. available memory and CPU resources.
      * 
-     * @param maxConnections The maximal number of concurrent connections, 0 for no explicit limit.
+     * @param maxConnections The number of connections.
      * @throws IllegalArgumentException if the number is &lt; 0.
      */
-    public void setMaxConnections(final int maxConnections) {
+    public final void setMaxConnections(final int maxConnections) {
         if (maxConnections < 0) {
             throw new IllegalArgumentException("connection limit must be a positive integer");
         }
@@ -183,11 +187,11 @@ public class ProtocolAdapterProperties extends ServiceConfigProperties {
     }
 
     /**
-     * Checks if a positive connection limit has been configured.
+     * Checks if a connection limit has been configured.
      * 
-     * @return {@code true} if {@link #maxConnections} is 0, {@code false} otherwise.
+     * @return {@code true} if the maximum number of connections is &gt; 0.
      */
-    public boolean isConnectionLimitUnconfigured() {
-        return maxConnections == 0;
+    public final boolean isConnectionLimitConfigured() {
+        return maxConnections > 0;
     }
 }

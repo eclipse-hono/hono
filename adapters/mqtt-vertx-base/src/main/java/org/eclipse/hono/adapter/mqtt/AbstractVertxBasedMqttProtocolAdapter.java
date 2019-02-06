@@ -79,7 +79,13 @@ import io.vertx.mqtt.messages.MqttUnsubscribeMessage;
 public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtocolAdapterProperties>
         extends AbstractProtocolAdapterBase<T> {
 
+    /**
+     * The minimum amount of memory that the adapter requires to run.
+     */
     protected static final int MINIMAL_MEMORY = 100_000_000; // 100MB: minimal memory necessary for startup
+    /**
+     * The amount of memory required for each connection.
+     */
     protected static final int MEMORY_PER_CONNECTION = 20_000; // 20KB: expected avg. memory consumption per connection
 
     private static final int IANA_MQTT_PORT = 1883;
@@ -268,7 +274,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
             LOG.warn("authentication of devices turned off");
         }
 
-        connectionLimit = getConfig().isConnectionLimitUnconfigured() ? autoconfigureConnectionLimit() : checkConnectionLimit();
+        connectionLimit = getConfig().isConnectionLimitConfigured() ? checkConnectionLimit() : autoconfigureConnectionLimit();
 
         checkPortConfiguration()
             .compose(ok -> {
