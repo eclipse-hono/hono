@@ -391,7 +391,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-enforcer-plugin</artifactId>
-        <version>1.4.1</version>
+        <version>3.0.0-M2</version>
         <executions>
           <execution>
             <!-- Make sure that only non-snapshot versions are used for the dependencies. 
@@ -409,6 +409,19 @@
                 <requireReleaseVersion>
                   <message>Cannot release snapshot version!</message>
                 </requireReleaseVersion>
+              </rules>
+            </configuration>
+          </execution>
+          <execution>
+            <id>enforce-java-11</id>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <configuration>
+              <rules>
+                <requireJavaVersion>
+                  <version>11</version>
+                </requireJavaVersion>
               </rules>
             </configuration>
           </execution>
