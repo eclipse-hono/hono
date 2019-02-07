@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -33,7 +33,6 @@ public class HonoSenderSamplerUI extends HonoSamplerUI {
 
     private final JLabeledTextField  deviceId;
     private final JCheckBox          setSenderTime;
-    private final JCheckBox          waitForCredits;
     private final JCheckBox          waitForDeliveryResult;
     private final JLabeledTextField  contentType;
     private final JLabeledTextArea   data;
@@ -68,7 +67,6 @@ public class HonoSenderSamplerUI extends HonoSamplerUI {
         assertion = new JLabeledTextField("Registration Assertion");
         contentType = new JLabeledTextField("Content type");
         data = new JLabeledTextArea("Message data");
-        waitForCredits = new JCheckBox("Wait for credits if none left after sending");
         waitForDeliveryResult = new JCheckBox("Wait for delivery result");
         waitForDeliveryResult.setToolTipText("<html>Deselecting this option increases sender throughput, especially of <em>event</em> messages, " +
                 "at the expense of not finding out about rejected messages. <br>For this, the number of messages at the receiver end has to be checked.</html>");
@@ -95,7 +93,6 @@ public class HonoSenderSamplerUI extends HonoSamplerUI {
         addOption(data);
         addOption(assertion);
         addOption(registrationServiceOptions);
-        addOption(waitForCredits);
         addOption(waitForDeliveryResult);
         addOption(setSenderTime);
         addOption(waitForReceivers);
@@ -127,7 +124,6 @@ public class HonoSenderSamplerUI extends HonoSamplerUI {
         sampler.setContainer(container.getText());
         sampler.setDeviceId(deviceId.getText());
         sampler.setSetSenderTime(setSenderTime.isSelected());
-        sampler.setWaitForCredits(waitForCredits.isSelected());
         sampler.setWaitForDeliveryResult(waitForDeliveryResult.isSelected());
         sampler.setWaitForReceivers(waitForReceivers.getText());
         sampler.setWaitForReceiversTimeout(waitForReceiversTimeout.getText());
@@ -154,7 +150,6 @@ public class HonoSenderSamplerUI extends HonoSamplerUI {
         sampleSendTimeout.setText(sampler.getSendTimeoutOrDefault());
         msgCountPerSamplerRun.setText(sampler.getMessageCountPerSamplerRun());
         setSenderTime.setSelected(sampler.isSetSenderTime());
-        waitForCredits.setSelected(sampler.isWaitForCredits());
         waitForDeliveryResult.setSelected(sampler.isWaitForDeliveryResult());
         contentType.setText(sampler.getContentType());
         data.setText(sampler.getData());
@@ -175,7 +170,6 @@ public class HonoSenderSamplerUI extends HonoSamplerUI {
         contentType.setText("text/plain");
         data.setText("");
         assertion.setText("");
-        waitForCredits.setSelected(true);
         waitForDeliveryResult.setSelected(true);
         waitForReceivers.setText("0");
         waitForReceiversTimeout.setText("5000");

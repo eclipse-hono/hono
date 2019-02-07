@@ -132,6 +132,7 @@ public class AbstractSenderTest {
     /**
      * Verifies that the sender fails if a timeout occurs.
      */
+    @SuppressWarnings("unchecked")
     @Test
     public void testSendMessageFailsOnTimeout() {
 
@@ -162,7 +163,6 @@ public class AbstractSenderTest {
      * Verifies credits available.
      *
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void testCredits() {
         final AbstractSender sender = newSender("tenant", "endpoint");

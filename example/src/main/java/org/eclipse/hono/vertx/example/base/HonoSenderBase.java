@@ -27,6 +27,7 @@ import org.eclipse.hono.util.RegistrationConstants;
 
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
+import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.proton.ProtonClientOptions;
 
@@ -164,31 +165,33 @@ public class HonoSenderBase {
      * @param value The int value that is combined with a string and send downstream.
      * @param token The registration assertion that was retrieved for the device to let HonoMessaging verify the
      *              authorization to send data.
-     * @return A Future that is completed after the message was sent and there is capacity available for more messages.
+     * @return A Future that is completed after the message was sent.
      */
     private CompletableFuture<Void> sendMessageToHono(final int value, final String token) {
 
-        final CompletableFuture<Void> capacityAvailableFuture = new CompletableFuture<>();
-        final CompletableFuture<Void> messageDeliveredFuture = new CompletableFuture<>();
-        // let the returned result future be only completed after the message was delivered and there is more capacity available.
-        final CompletableFuture<Void> result = messageDeliveredFuture.thenCombine(capacityAvailableFuture,
-                (v1, v2) -> (Void) null
-        );
+        final CompletableFuture<Void> result = new CompletableFuture<>();
 
-        messageSender.send(HonoExampleConstants.DEVICE_ID, null, "myMessage" + value, "text/plain",
-            token, capacityAvail -> {
-                capacityAvailableFuture.complete(null);
-            }).map(delivery -> {
-                nrMessageDeliverySucceeded.incrementAndGet();
-                messageDeliveredFuture.complete(null);
-                return (Void) null;
-            }).otherwise(t -> {
-                System.err.println("Could not send message: " + t.getMessage());
-                nrMessageDeliveryFailed.incrementAndGet();
-                result.completeExceptionally(t);
-                return (Void) null;
+        final Handler<Void> sendHandler = go -> {
+            messageSender.send(HonoExampleConstants.DEVICE_ID, null, "myMessage" + value, "text/plain", token)
+            .setHandler(sendAttempt -> {
+                messageDeliveryCountDown.countDown();
+                if (sendAttempt.succeeded()) {
+                    nrMessageDeliverySucceeded.incrementAndGet();
+                    result.complete(null);
+                } else {
+                    System.err.println("Could not send message: " + sendAttempt.cause().getMessage());
+                    nrMessageDeliveryFailed.incrementAndGet();
+                    result.completeExceptionally(sendAttempt.cause());
+                }
             });
-        messageDeliveryCountDown.countDown();
+        };
+        vertx.runOnContext(send -> {
+            if (messageSender.getCredit() > 0) {
+                sendHandler.handle(null);
+            } else {
+                messageSender.sendQueueDrainHandler(sendHandler);
+            }
+        });
         return result;
     }
 

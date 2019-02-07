@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -17,8 +17,6 @@ import java.net.HttpURLConnection;
 import java.nio.charset.StandardCharsets;
 import java.text.MessageFormat;
 import java.time.Instant;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -27,6 +25,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.jmeter.samplers.SampleResult;
+import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.RegistrationClient;
@@ -36,13 +35,18 @@ import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.jmeter.HonoSampler;
 import org.eclipse.hono.jmeter.HonoSenderSampler;
 import org.eclipse.hono.util.JwtHelper;
+import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.vertx.core.CompositeFuture;
+import io.vertx.core.Context;
 import io.vertx.core.Future;
+import io.vertx.core.Handler;
+import io.vertx.core.buffer.Buffer;
 import io.vertx.proton.ProtonDelivery;
+import io.vertx.proton.ProtonHelper;
 
 /**
  * A wrapper around a {@code HonoClient} mapping the client's asynchronous API to the blocking
@@ -57,6 +61,7 @@ public class HonoSender extends AbstractClient {
     private final HonoSenderSampler sampler;
     private final HonoClient honoClient;
     private final byte[] payload;
+    private final Context ctx;
 
     private HonoClient registrationHonoClient;
     private String assertion;
@@ -70,6 +75,7 @@ public class HonoSender extends AbstractClient {
     public HonoSender(final HonoSenderSampler sampler) {
 
         super();
+        this.ctx = vertx.getOrCreateContext();
         this.sampler = sampler;
         this.payload = sampler.getData().getBytes(StandardCharsets.UTF_8);
 
@@ -120,20 +126,22 @@ public class HonoSender extends AbstractClient {
         final String tenant = sampler.getTenant();
         if (running.compareAndSet(false, true)) {
 
-            LOGGER.debug("create hono sender - tenant: {}", sampler.getTenant());
+            ctx.runOnContext(start -> {
+                LOGGER.debug("create hono sender - tenant: {}", sampler.getTenant());
 
-            CompositeFuture.all(connectToHonoMessaging(), connectToRegistrationService())
-                .setHandler(startup -> {
-                    if (startup.succeeded()) {
-                        LOGGER.info("sender initialization complete");
-                        LOGGER.debug("sender active: {}/{} ({})", sampler.getEndpoint(), tenant,
-                                Thread.currentThread().getName());
-                        result.complete(null);
-                    } else {
-                        running.set(false);
-                        result.completeExceptionally(startup.cause());
-                    }
-                });
+                CompositeFuture.all(connectToHonoMessaging(), connectToRegistrationService())
+                    .setHandler(startup -> {
+                        if (startup.succeeded()) {
+                            LOGGER.info("sender initialization complete");
+                            LOGGER.debug("sender active: {}/{} ({})", sampler.getEndpoint(), tenant,
+                                    Thread.currentThread().getName());
+                            result.complete(null);
+                        } else {
+                            running.set(false);
+                            result.completeExceptionally(startup.cause());
+                        }
+                    });
+            });
         } else {
             result.completeExceptionally(new IllegalStateException("sender is already starting"));
         }
@@ -206,11 +214,9 @@ public class HonoSender extends AbstractClient {
      * @param sampleResult The result object representing the combined outcome of the samples.
      * @param messageCount The number of messages to send
      * @param deviceId The identifier if the device to send a message for.
-     * @param waitOnCredits A flag indicating whether the sender should wait for more
-     *                      credits being available when there is no credit left after having sent the message.
      * @param waitForDeliveryResult A flag indicating whether to wait for the result of the send operation.
      */
-    public void send(final SampleResult sampleResult, final int messageCount, final String deviceId, final boolean waitOnCredits,
+    public void send(final SampleResult sampleResult, final int messageCount, final String deviceId,
                      final boolean waitForDeliveryResult) {
         final long sampleStart = System.currentTimeMillis();
         long addedSendDurations = 0;
@@ -226,7 +232,7 @@ public class HonoSender extends AbstractClient {
             subResult.setResponseCodeOK();
             subResult.setSampleLabel(sampleResult.getSampleLabel());
             // send the message
-            send(subResult, deviceId, waitOnCredits, waitForDeliveryResult);
+            send(subResult, deviceId, waitForDeliveryResult);
             // can't call sampleResult.addSubResult(subResult) here - this would prevent a later invocation of sampleResult.setStampAndTime()
             sampleResult.addRawSubResult(subResult);
 
@@ -261,77 +267,65 @@ public class HonoSender extends AbstractClient {
      *
      * @param sampleResult The result object representing the outcome of the sample.
      * @param deviceId The identifier if the device to send a message for.
-     * @param waitOnCredits A flag indicating whether the sender should wait for more
-     *                      credits being available when there is no credit left after having sent the message.
      * @param waitForDeliveryResult A flag indicating whether to wait for the result of the send operation.
      */
-    public void send(final SampleResult sampleResult, final String deviceId, final boolean waitOnCredits,
-            final boolean waitForDeliveryResult) {
+    public void send(final SampleResult sampleResult, final String deviceId, final boolean waitForDeliveryResult) {
 
-        final CompletableFuture<SampleResult> tracker = new CompletableFuture<>();
         final String endpoint = sampler.getEndpoint();
         final String tenant = sampler.getTenant();
-        // start sample
-        sampleResult.sampleStart();
+
         final Future<MessageSender> senderFuture = getSender(endpoint, tenant);
         final Future<String> regAssertionFuture = senderFuture.compose(ok -> getRegistrationAssertion(tenant, deviceId));
+        final CompletableFuture<SampleResult> tracker = new CompletableFuture<>();
         final Future<ProtonDelivery> deliveryTracker = Future.future();
-        final Future<Void> creditTracker = Future.future();
+        deliveryTracker.setHandler(s -> {
+            if (s.succeeded()) {
+                sampleResult.setResponseMessage(MessageFormat.format("{0}/{1}/{2}", endpoint, tenant, deviceId));
+                sampleResult.setSentBytes(payload.length);
+                sampleResult.setSampleCount(1);
+                tracker.complete(sampleResult);
+            } else {
+                tracker.completeExceptionally(s.cause());
+            }
+        });
+
+        // start sample
+        sampleResult.sampleStart();
         regAssertionFuture.map(token -> {
 
-            final Map<String, Long> properties = new HashMap<>();
+            final Message msg = ProtonHelper.message();
+            msg.setAddress(senderFuture.result().getEndpoint() + "/" + tenant);
+            MessageHelper.setPayload(msg, sampler.getContentType(), Buffer.buffer(sampler.getData()));
+            MessageHelper.addDeviceId(msg, deviceId);
+            MessageHelper.addRegistrationAssertion(msg, token);
             if (sampler.isSetSenderTime()) {
-                properties.put(TIME_STAMP_VARIABLE, System.currentTimeMillis());
+                MessageHelper.addProperty(msg, TIME_STAMP_VARIABLE, System.currentTimeMillis());
             }
 
             LOGGER.trace("sending message for device [{}]; credit: {}", deviceId, senderFuture.result().getCredit());
 
-            final Future<ProtonDelivery> sendResultFuture;
-            if (waitOnCredits) {
-
-                if (LOGGER.isDebugEnabled() && senderFuture.result().getCredit() == 1) {
-                    LOGGER.debug("only 1 credit left, will wait for new credit after having sent the message");
-                }
-                sendResultFuture = senderFuture.result().send(
-                        deviceId,
-                        properties,
-                        sampler.getData(),
-                        sampler.getContentType(),
-                        token,
-                        replenished -> creditTracker.complete());
-            } else {
-
-                creditTracker.complete();
-                sendResultFuture = senderFuture.result().send(
-                        deviceId,
-                        properties,
-                        sampler.getData(),
-                        sampler.getContentType(),
-                        token);
-            }
-            if (waitForDeliveryResult) {
-                sendResultFuture.setHandler(deliveryTracker.completer());
-            } else {
-                sendResultFuture.setHandler(ar -> {
-                    if (ar.succeeded()) {
-                        LOGGER.debug("{}: got delivery result for message sent for device [{}]: remoteState={}, localState={}",
-                                sampler.getThreadName(), deviceId, ar.result().getRemoteState(),
-                                ar.result().getLocalState());
-                    } else {
-                        LOGGER.warn("{}: error getting delivery result for message sent for device [{}]", sampler.getThreadName(), deviceId, ar.cause());
-                    }
-                });
-                deliveryTracker.complete();
-            }
-
-            CompositeFuture.all(deliveryTracker, creditTracker).setHandler(send -> {
-                if (send.succeeded()) {
-                    sampleResult.setResponseMessage(MessageFormat.format("{0}/{1}/{2}", endpoint, tenant, deviceId));
-                    sampleResult.setSentBytes(payload.length);
-                    sampleResult.setSampleCount(1);
-                    tracker.complete(sampleResult);
+            final Handler<Void> sendHandler = s -> {
+                if (waitForDeliveryResult) {
+                    senderFuture.result().sendAndWaitForOutcome(msg).setHandler(deliveryTracker);
                 } else {
-                    tracker.completeExceptionally(send.cause());
+                    senderFuture.result().send(msg).setHandler(ar -> {
+                        if (ar.succeeded()) {
+                            LOGGER.debug("{}: got delivery result for message sent for device [{}]: remoteState={}, localState={}",
+                                    sampler.getThreadName(), deviceId, ar.result().getRemoteState(),
+                                    ar.result().getLocalState());
+                        } else {
+                            LOGGER.warn("{}: error getting delivery result for message sent for device [{}]", sampler.getThreadName(), deviceId, ar.cause());
+                        }
+                    });
+                    deliveryTracker.complete();
+                }
+            };
+
+            ctx.runOnContext(send -> {
+                if (senderFuture.result().getCredit() > 0) {
+                    sendHandler.handle(null);
+                } else {
+                    senderFuture.result().sendQueueDrainHandler(sendHandler);
                 }
             });
 
@@ -356,9 +350,8 @@ public class HonoSender extends AbstractClient {
                 if (e instanceof TimeoutException) {
                     uncompletedFutureHint = !senderFuture.isComplete() ? " - timeout waiting for sender link"
                             : !regAssertionFuture.isComplete() ? "- timeout waiting for registration assertion"
-                                    : !creditTracker.isComplete() ? " - timeout waiting for credits"
-                                            : !deliveryTracker.isComplete() ? " - timeout waiting for message delivery"
-                                                    : "";
+                                : !deliveryTracker.isComplete() ? " - timeout waiting for message delivery"
+                                    : "";
                 }
                 sampleResult.setResponseMessage((e.getCause() != null ? e.getCause().getMessage() : e.getClass().getSimpleName()) + uncompletedFutureHint);
                 sampleResult.setResponseCode(String.valueOf(HttpURLConnection.HTTP_INTERNAL_ERROR));

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -128,12 +128,6 @@ public abstract class AbstractSender extends AbstractHonoClient implements Messa
     }
 
     @Override
-    @Deprecated
-    public final boolean sendQueueFull() {
-        return sender.sendQueueFull();
-    }
-
-    @Override
     public final void sendQueueDrainHandler(final Handler<Void> handler) {
         if (this.drainHandler != null) {
             throw new IllegalStateException("already waiting for replenishment with credit");
@@ -160,34 +154,6 @@ public abstract class AbstractSender extends AbstractHonoClient implements Messa
     @Override
     public final boolean isOpen() {
         return sender.isOpen();
-    }
-
-    @Override
-    @Deprecated
-    public final Future<ProtonDelivery> send(final Message rawMessage, final Handler<Void> capacityAvailableHandler) {
-
-        Objects.requireNonNull(rawMessage);
-
-        return executeOrRunOnContext(result -> {
-            if (capacityAvailableHandler == null) {
-                final Span currentSpan = startSpan(rawMessage);
-                sendMessage(rawMessage, currentSpan).setHandler(result.completer());
-            } else if (this.drainHandler != null) {
-                result.fail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE,
-                        "cannot send message while waiting for replenishment with credit"));
-            } else if (sender.isOpen()) {
-                final Span currentSpan = startSpan(rawMessage);
-                sendMessage(rawMessage, currentSpan).setHandler(result.completer());
-                if (sender.sendQueueFull()) {
-                    sendQueueDrainHandler(capacityAvailableHandler);
-                } else {
-                    capacityAvailableHandler.handle(null);
-                }
-            } else {
-                result.fail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE,
-                        "send link to peer is closed"));
-            }
-        });
     }
 
     @Override
@@ -229,22 +195,8 @@ public abstract class AbstractSender extends AbstractHonoClient implements Messa
     }
 
     @Override
-    @Deprecated
-    public final Future<ProtonDelivery> send(final String deviceId, final byte[] payload, final String contentType, final String registrationAssertion,
-            final Handler<Void> capacityAvailableHandler) {
-        return send(deviceId, null, payload, contentType, registrationAssertion, capacityAvailableHandler);
-    }
-
-    @Override
     public final Future<ProtonDelivery> send(final String deviceId, final String payload, final String contentType, final String registrationAssertion) {
         return send(deviceId, null, payload, contentType, registrationAssertion);
-    }
-
-    @Override
-    @Deprecated
-    public final Future<ProtonDelivery> send(final String deviceId, final String payload, final String contentType, final String registrationAssertion,
-            final Handler<Void> capacityAvailableHandler) {
-        return send(deviceId, null, payload, contentType, registrationAssertion, capacityAvailableHandler);
     }
 
     @Override
@@ -269,35 +221,6 @@ public abstract class AbstractSender extends AbstractHonoClient implements Messa
         setApplicationProperties(msg, properties);
         addProperties(msg, deviceId, registrationAssertion);
         return send(msg);
-    }
-
-    @Override
-    @Deprecated
-    public final Future<ProtonDelivery> send(final String deviceId, final Map<String, ?> properties,
-            final String payload, final String contentType, final String registrationAssertion,
-            final Handler<Void> capacityAvailableHandler) {
-        Objects.requireNonNull(payload);
-        final Charset charset = getCharsetForContentType(Objects.requireNonNull(contentType));
-        return send(deviceId, properties, payload.getBytes(charset), contentType, registrationAssertion, capacityAvailableHandler);
-    }
-
-    @Override
-    @Deprecated
-    public final Future<ProtonDelivery> send(final String deviceId, final Map<String, ?> properties,
-            final byte[] payload, final String contentType, final String registrationAssertion,
-            final Handler<Void> capacityAvailableHandler) {
-
-        Objects.requireNonNull(deviceId);
-        Objects.requireNonNull(payload);
-        Objects.requireNonNull(contentType);
-        Objects.requireNonNull(registrationAssertion);
-
-        final Message msg = ProtonHelper.message();
-        msg.setAddress(getTo(deviceId));
-        MessageHelper.setPayload(msg, contentType, payload);
-        setApplicationProperties(msg, properties);
-        addProperties(msg, deviceId, registrationAssertion);
-        return send(msg, capacityAvailableHandler);
     }
 
     /**

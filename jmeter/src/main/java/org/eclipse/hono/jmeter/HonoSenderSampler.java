@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -52,7 +52,6 @@ public class HonoSenderSampler extends HonoSampler implements ThreadListener {
     private static final String SET_SENDER_TIME = "setSenderTime";
     private static final String CONTENT_TYPE = "contentType";
     private static final String DATA = "data";
-    private static final String WAIT_FOR_CREDITS = "waitForCredits";
     private static final String WAIT_FOR_DELIVERY_RESULT = "waitForDeliveryResult";
     private static final String WAIT_FOR_RECEIVERS = "waitForReceivers";
     private static final String WAIT_FOR_RECEIVERS_TIMEOUT = "waitForReceiversTimeout";
@@ -264,19 +263,6 @@ public class HonoSenderSampler extends HonoSampler implements ThreadListener {
         setProperty(SET_SENDER_TIME, isSetSenderTime);
     }
 
-    public boolean isWaitForCredits() {
-        return getPropertyAsBoolean(WAIT_FOR_CREDITS);
-    }
-
-    /**
-     * Sets whether to wait for credits.
-     * 
-     * @param isWaitForCredits {@code true} in order to wait for credits.
-     */
-    public void setWaitForCredits(final boolean isWaitForCredits) {
-        setProperty(WAIT_FOR_CREDITS, isWaitForCredits);
-    }
-
     /**
      * Gets whether to wait for the result of sending the message.
      * <p>
@@ -376,9 +362,9 @@ public class HonoSenderSampler extends HonoSampler implements ThreadListener {
         res.setResponseCodeOK();
         res.setSampleLabel(getName());
         if (getMessageCountPerSamplerRunAsInt() == 1) {
-            honoSender.send(res, getDeviceId(), isWaitForCredits(), isWaitForDeliveryResult());
+            honoSender.send(res, getDeviceId(), isWaitForDeliveryResult());
         } else {
-            honoSender.send(res, getMessageCountPerSamplerRunAsInt(), getDeviceId(), isWaitForCredits(),
+            honoSender.send(res, getMessageCountPerSamplerRunAsInt(), getDeviceId(),
                     isWaitForDeliveryResult());
         }
         return res;
