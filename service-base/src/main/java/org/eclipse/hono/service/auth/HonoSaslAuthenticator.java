@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -15,10 +15,12 @@ package org.eclipse.hono.service.auth;
 import static org.eclipse.hono.util.AuthenticationConstants.MECHANISM_EXTERNAL;
 import static org.eclipse.hono.util.AuthenticationConstants.MECHANISM_PLAIN;
 
+import java.security.cert.Certificate;
+import java.security.cert.X509Certificate;
 import java.util.Objects;
 
 import javax.net.ssl.SSLPeerUnverifiedException;
-import javax.security.cert.X509Certificate;
+import javax.security.auth.x500.X500Principal;
 
 import org.apache.qpid.proton.engine.Sasl;
 import org.apache.qpid.proton.engine.Sasl.SaslOutcome;
@@ -60,7 +62,7 @@ public final class HonoSaslAuthenticator implements ProtonSaslAuthenticator {
     private Sasl                  sasl;
     private boolean               succeeded;
     private ProtonConnection      protonConnection;
-    private X509Certificate[]     peerCertificateChain;
+    private X509Certificate       clientCertificate;
 
     /**
      * Creates a new authenticator.
@@ -74,6 +76,7 @@ public final class HonoSaslAuthenticator implements ProtonSaslAuthenticator {
 
     @Override
     public void init(final NetSocket socket, final ProtonConnection protonConnection, final Transport transport) {
+
         LOG.debug("initializing SASL authenticator");
         this.protonConnection = protonConnection;
         this.sasl = transport.sasl();
@@ -84,10 +87,12 @@ public final class HonoSaslAuthenticator implements ProtonSaslAuthenticator {
         if (socket.isSsl()) {
             LOG.debug("client connected using TLS, extracting client certificate chain");
             try {
-                peerCertificateChain = socket.peerCertificateChain();
-                LOG.debug("found valid client certificate DN [{}]", peerCertificateChain[0].getSubjectDN());
+                final Certificate cert = socket.sslSession().getPeerCertificates()[0];
+                if (cert instanceof X509Certificate) {
+                    clientCertificate = (X509Certificate) cert;
+                }
             } catch (final SSLPeerUnverifiedException e) {
-                LOG.debug("could not extract client certificate chain, maybe TLS based client auth is not required");
+                LOG.debug("could not extract client certificate chain, maybe client uses other mechanism than SASL EXTERNAL");
             }
         }
     }
@@ -118,7 +123,7 @@ public final class HonoSaslAuthenticator implements ProtonSaslAuthenticator {
 
                 } else {
 
-                    LOG.debug("authentication failed: " + s.cause().getMessage());
+                    LOG.debug("authentication failed: {}", s.cause().getMessage());
                     sasl.done(SaslOutcome.PN_SASL_AUTH);
 
                 }
@@ -140,8 +145,10 @@ public final class HonoSaslAuthenticator implements ProtonSaslAuthenticator {
     private void verify(final String mechanism, final byte[] saslResponse, final Handler<AsyncResult<HonoUser>> authResultHandler) {
 
         final JsonObject authRequest = AuthenticationConstants.getAuthenticationRequest(mechanism, saslResponse);
-        if (peerCertificateChain != null) {
-            authRequest.put(AuthenticationConstants.FIELD_SUBJECT_DN, peerCertificateChain[0].getSubjectDN().getName());
+        if (clientCertificate != null) {
+            final String subjectDn = clientCertificate.getSubjectX500Principal().getName(X500Principal.RFC2253);
+            LOG.debug("client has provided X.509 certificate [subject DN: {}]", subjectDn);
+            authRequest.put(AuthenticationConstants.FIELD_SUBJECT_DN, subjectDn);
         }
         authenticationService.authenticate(authRequest, authResultHandler);
     }
