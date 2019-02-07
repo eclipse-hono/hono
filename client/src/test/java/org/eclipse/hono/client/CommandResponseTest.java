@@ -41,6 +41,8 @@ public class CommandResponseTest {
         final CommandResponse resp = CommandResponse.from(
                 Command.getRequestId(CORRELATION_ID, REPLY_TO_ID, DEVICE_ID),
                 DEVICE_ID,
+                null,
+                null,
                 HttpURLConnection.HTTP_OK);
         assertNotNull(resp);
         assertThat(resp.getCorrelationId(), is(CORRELATION_ID));
@@ -56,11 +58,15 @@ public class CommandResponseTest {
 
         // make sure we succeed with a valid length string
         final CommandResponse resp = CommandResponse.from(
-                "003anyString", DEVICE_ID, HttpURLConnection.HTTP_OK);
+                "003anyString",
+                DEVICE_ID,
+                null,
+                null,
+                HttpURLConnection.HTTP_OK);
         assertThat(resp.getCorrelationId(), is("any"));
         assertThat(resp.getReplyToId(), is("String"));
 
-        assertNull(CommandResponse.from("0ZZanyString", DEVICE_ID, HttpURLConnection.HTTP_OK));
+        assertNull(CommandResponse.from("0ZZanyString", DEVICE_ID, null, null, HttpURLConnection.HTTP_OK));
     }
 
     /**
@@ -71,18 +77,18 @@ public class CommandResponseTest {
 
         // make sure we succeed with a valid status code
         final CommandResponse resp = CommandResponse.from(
-                "103oneTwo", DEVICE_ID, 200);
+                "103oneTwo", DEVICE_ID, null, null, 200);
         assertThat(resp.getCorrelationId(), is("one"));
         assertThat(resp.getReplyToId(), is(DEVICE_ID + "/Two"));
 
         assertNull(CommandResponse.from(
-                "103oneTwo", DEVICE_ID, 100));
+                "103oneTwo", DEVICE_ID, null, null, 100));
         assertNull(CommandResponse.from(
-                "103oneTwo", DEVICE_ID, 310));
+                "103oneTwo", DEVICE_ID, null, null, 310));
         assertNull(CommandResponse.from(
-                "103oneTwo", DEVICE_ID, 600));
+                "103oneTwo", DEVICE_ID, null, null, 600));
         assertNull(CommandResponse.from(
-                "103oneTwo", DEVICE_ID, null));
+                "103oneTwo", DEVICE_ID, null, null, null));
     }
 
     /**
@@ -95,13 +101,15 @@ public class CommandResponseTest {
         final String id = "thisIsLessThan255Characters";
         // make sure we succeed with valid length
         final CommandResponse resp = CommandResponse.from(
-                String.format("0%02x%s", 4, id), DEVICE_ID, 200);
+                String.format("0%02x%s", 4, id), DEVICE_ID, null, null, 200);
         assertThat(resp.getCorrelationId(), is("this"));
         assertThat(resp.getReplyToId(), is("IsLessThan255Characters"));
 
         assertNull(CommandResponse.from(
                 "1FFthisIsLessThan255Characters",
                 DEVICE_ID,
+                null,
+                null,
                 HttpURLConnection.HTTP_OK));
     }
 
@@ -114,6 +122,8 @@ public class CommandResponseTest {
         final CommandResponse resp = CommandResponse.from(
                 Command.getRequestId(CORRELATION_ID, REPLY_TO_ID_WITH_DEVICE, DEVICE_ID),
                 DEVICE_ID,
+                null,
+                null,
                 HttpURLConnection.HTTP_OK);
         assertThat(resp.getReplyToId(), is(REPLY_TO_ID_WITH_DEVICE));
     }
@@ -127,6 +137,8 @@ public class CommandResponseTest {
         final CommandResponse resp = CommandResponse.from(
                 Command.getRequestId(CORRELATION_ID, REPLY_TO_ID, DEVICE_ID),
                 DEVICE_ID,
+                null,
+                null,
                 HttpURLConnection.HTTP_OK);
         assertThat(resp.getReplyToId(), is(REPLY_TO_ID));
     }
