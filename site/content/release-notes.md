@@ -21,6 +21,8 @@ title = "Release Notes"
   of the SASL handshake received from the peer during connection establishment indicates that invalid credentials were
   provided or that the server encountered a permanent error when handling the request, no further reconnect attempts
   will be done.
+* The deprecated methods have been removed from `org.eclipse.hono.client.MessageSender` and
+  its implementations.
  
 ### Depreciations
 
