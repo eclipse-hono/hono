@@ -600,8 +600,9 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                         deviceId,
                         authenticatedDevice,
                         currentSpan.context());
-                final Future<TenantObject> tenantConfigTracker = getTenantConfiguration(tenant, currentSpan.context());
-                final Future<Integer> ttdTracker = tenantConfigTracker.compose(tenantObj -> {
+                final Future<TenantObject> tenantEnabledTracker = getTenantConfiguration(tenant, currentSpan.context())
+                        .compose(tenantObject -> isAdapterEnabled(tenantObject));
+                final Future<Integer> ttdTracker = tenantEnabledTracker.compose(tenantObj -> {
                     final Integer ttdParam = HttpUtils.getTimeTilDisconnect(ctx);
                     return getTimeUntilDisconnect(tenantObj, ttdParam).map(effectiveTtd -> {
                         if (effectiveTtd == null) {
@@ -617,7 +618,6 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
 
                 CompositeFuture.all(tokenTracker, senderTracker, commandConsumerTracker).compose(ok -> {
 
-                    if (tenantConfigTracker.result().isAdapterEnabled(getTypeName())) {
                         final MessageSender sender = senderTracker.result();
 
                         final Integer ttd = Optional.ofNullable(commandConsumerTracker.result()).map(c -> ttdTracker.result())
@@ -646,11 +646,6 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                                     responseReady)
                                     .map(s -> (Void) null);
                         }
-                    } else {
-                        // this adapter is not enabled for the tenant
-                        return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_FORBIDDEN,
-                                "adapter is not enabled for tenant"));
-                    }
                 })
                 .recover(t -> {
                     if (t instanceof ResourceConflictException) {
@@ -1012,14 +1007,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                     authenticatedDevice,
                     currentSpan.context());
             final Future<Void> tenantEnabledTracker = getTenantConfiguration(tenant, currentSpan.context())
-                    .compose(tenantObj -> {
-                        if (tenantObj.isAdapterEnabled(getTypeName())) {
-                            return Future.succeededFuture();
-                        } else {
-                            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_FORBIDDEN,
-                                    "adapter is not enabled for tenant"));
-                        }
-                    });
+                    .compose(tenantObject -> isAdapterEnabled(tenantObject).map(ok -> null));
             CompositeFuture.all(deviceRegistrationTracker, tenantEnabledTracker)
                     .compose(ok -> sendCommandResponse(tenant, commandResponse, currentSpan.context()))
                     .map(delivery -> {
