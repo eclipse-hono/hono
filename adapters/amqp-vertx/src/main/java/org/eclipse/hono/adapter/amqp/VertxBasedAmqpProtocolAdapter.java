@@ -743,13 +743,11 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
 
         final Future<JsonObject> tokenFuture = getRegistrationAssertion(context.getTenantId(), context.getDeviceId(),
                 context.getAuthenticatedDevice(), currentSpan.context());
-        final Future<TenantObject> tenantConfigFuture = getTenantConfiguration(context.getTenantId(), currentSpan.context());
+        final Future<TenantObject> tenantEnabledFuture = getTenantConfiguration(context.getTenantId(),
+                currentSpan.context()).compose(tenantObject -> isAdapterEnabled(tenantObject));
 
-        return CompositeFuture.all(tenantConfigFuture, tokenFuture, senderFuture)
+        return CompositeFuture.all(tenantEnabledFuture, tokenFuture, senderFuture)
                 .compose(ok -> {
-                    final TenantObject tenantObject = tenantConfigFuture.result();
-                    if (tenantObject.isAdapterEnabled(getTypeName())) {
-
                         final MessageSender sender = senderFuture.result();
                         final Message downstreamMessage = newMessage(context.getResourceIdentifier(),
                                 sender.isRegistrationAssertionRequired(),
@@ -763,13 +761,6 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                             // client uses AT_LEAST_ONCE delivery semantics
                             return sender.sendAndWaitForOutcome(downstreamMessage, currentSpan.context());
                         }
-                    } else {
-                        // this adapter is not enabled for tenant
-                        return Future.failedFuture(
-                                new ClientErrorException(HttpURLConnection.HTTP_FORBIDDEN,
-                                        String.format("This adapter is not enabled for tenant [tenantId: %s].",
-                                                context.getTenantId())));
-                    }
                 }).recover(t -> {
                     LOG.debug("cannot process {} message from device [tenant: {}, device-id: {}]",
                             context.getEndpoint(),
