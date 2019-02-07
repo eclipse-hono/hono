@@ -36,6 +36,7 @@ import javax.security.sasl.AuthenticationException;
 import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.cache.CacheProvider;
+import org.eclipse.hono.client.AsyncCommandClient;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.CommandClient;
 import org.eclipse.hono.client.CredentialsClient;
@@ -589,7 +590,8 @@ public class HonoClientImpl implements HonoClient {
 
         Objects.requireNonNull(tenantId);
         return getOrCreateSender(
-                TelemetrySenderImpl.getTargetAddress(tenantId, null),
+                getResourcesKeyForSender(TelemetrySenderImpl.class, TelemetrySenderImpl.getTargetAddress(tenantId,
+                        null)),
                 () -> createTelemetrySender(tenantId));
     }
 
@@ -599,7 +601,9 @@ public class HonoClientImpl implements HonoClient {
             final Future<MessageSender> result = Future.future();
             TelemetrySenderImpl.create(context, clientConfigProperties, connection, tenantId, null,
                     onSenderClosed -> {
-                        activeSenders.remove(TelemetrySenderImpl.getTargetAddress(tenantId, null));
+                        activeSenders.remove(getResourcesKeyForSender(TelemetrySenderImpl.class,
+                                TelemetrySenderImpl.getTargetAddress(tenantId,
+                                        null)));
                     },
                     result.completer(), tracer);
             return result;
@@ -614,7 +618,7 @@ public class HonoClientImpl implements HonoClient {
 
         Objects.requireNonNull(tenantId);
         return getOrCreateSender(
-                EventSenderImpl.getTargetAddress(tenantId, null),
+                getResourcesKeyForSender(EventSenderImpl.class, EventSenderImpl.getTargetAddress(tenantId, null)),
                 () -> createEventSender(tenantId));
     }
 
@@ -624,7 +628,8 @@ public class HonoClientImpl implements HonoClient {
             final Future<MessageSender> result = Future.future();
             EventSenderImpl.create(context, clientConfigProperties, connection, tenantId, null,
                     onSenderClosed -> {
-                        activeSenders.remove(EventSenderImpl.getTargetAddress(tenantId, null));
+                        activeSenders.remove(getResourcesKeyForSender(EventSenderImpl.class,
+                                EventSenderImpl.getTargetAddress(tenantId, null)));
                     },
                     result.completer(), tracer);
             return result;
@@ -651,6 +656,17 @@ public class HonoClientImpl implements HonoClient {
             final Supplier<Future<MessageSender>> newSenderSupplier) {
 
         return executeOrRunOnContext(result -> getOrCreateSender(key, newSenderSupplier, result));
+    }
+
+    /**
+     * Builds a unique resources key for the given message sender class and target address for caching.
+     *
+     * @param senderClass The class of the sender.
+     * @param targetAddress The target address of the sender.
+     * @return A key to cache the sender.
+     */
+    private static String getResourcesKeyForSender(final Class<?> senderClass, final String targetAddress) {
+        return senderClass.getSimpleName() + '#' + targetAddress;
     }
 
     private void getOrCreateSender(
@@ -759,6 +775,48 @@ public class HonoClientImpl implements HonoClient {
         return checkConnected().compose(con -> {
             final Future<MessageConsumer> result = Future.future();
             EventConsumerImpl.create(context, clientConfigProperties, connection, tenantId,
+                    connectionFactory.getPathSeparator(), messageConsumer, result.completer(),
+                    closeHook -> closeHandler.handle(null));
+            return result;
+        });
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public final Future<MessageConsumer> createAsyncCommandResponseConsumer(
+            final String tenantId, final String replyId,
+            final Consumer<Message> consumer,
+            final Handler<Void> closeHandler) {
+
+        return createAsyncCommandResponseConsumer(tenantId, replyId,
+                (delivery, message) -> consumer.accept(message), closeHandler);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public final Future<MessageConsumer> createAsyncCommandResponseConsumer(
+            final String tenantId, final String replyId,
+            final BiConsumer<ProtonDelivery, Message> consumer,
+            final Handler<Void> closeHandler) {
+
+        return createConsumer(
+                tenantId,
+                () -> newAsyncCommandResponseConsumer(tenantId, replyId, consumer, closeHandler));
+    }
+
+    private Future<MessageConsumer> newAsyncCommandResponseConsumer(
+            final String tenantId,
+            final String replyId,
+            final BiConsumer<ProtonDelivery, Message> messageConsumer,
+            final Handler<Void> closeHandler) {
+
+        return checkConnected().compose(con -> {
+            final Future<MessageConsumer> result = Future.future();
+            AsyncCommandResponseConsumerImpl.create(context, clientConfigProperties, connection, tenantId, replyId,
                     connectionFactory.getPathSeparator(), messageConsumer, result.completer(),
                     closeHook -> closeHandler.handle(null));
             return result;
@@ -1030,6 +1088,31 @@ public class HonoClientImpl implements HonoClient {
                     this::removeActiveRequestResponseClient,
                     result.completer());
             return result.map(client -> (RequestResponseClient) client);
+        });
+    }
+
+    @Override
+    public Future<AsyncCommandClient> getOrCreateAsyncCommandClient(final String tenantId, final String deviceId) {
+        Objects.requireNonNull(tenantId);
+        Objects.requireNonNull(deviceId);
+
+        return getOrCreateSender(
+                getResourcesKeyForSender(AsyncCommandClientImpl.class, AsyncCommandClientImpl.getTargetAddress(tenantId,
+                        deviceId)),
+                () -> newAsyncCommandClient(tenantId, deviceId)).map(client -> (AsyncCommandClient) client);
+    }
+
+    private Future<MessageSender> newAsyncCommandClient(final String tenantId, final String deviceId) {
+        return checkConnected().compose(connected -> {
+            final Future<AsyncCommandClient> result = Future.future();
+            AsyncCommandClientImpl.create(context, clientConfigProperties, connection, tenantId, deviceId,
+                    onSenderClosed -> {
+                        activeSenders.remove(getResourcesKeyForSender(AsyncCommandClientImpl.class,
+                                AsyncCommandClientImpl.getTargetAddress(tenantId,
+                                        deviceId)));
+                    },
+                    result.completer());
+            return result.map(client -> (MessageSender) client);
         });
     }
 

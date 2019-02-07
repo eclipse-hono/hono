@@ -214,7 +214,7 @@ public interface HonoClient extends ConnectionLifecycle,
 
     /**
      * {@inheritDoc}
-     * 
+     *
      * To re-connect to the server, an explicit call to {@code #connect()} should be made.
      * Unlike {@code #shutdown()}, which does not allow to connect back to the server,
      * this method allows to connect back to the server.

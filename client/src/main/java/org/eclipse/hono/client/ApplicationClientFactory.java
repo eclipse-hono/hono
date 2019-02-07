@@ -81,6 +81,42 @@ public interface ApplicationClientFactory extends ConnectionLifecycle {
             Handler<Void> closeHandler);
 
     /**
+     * Creates a client for consuming async command responses from Hono's north bound <em>Command API</em>.
+     * <p>
+     * The command responses passed in to the consumer will be settled automatically if the consumer does not
+     * throw an exception.
+     *
+     * @param tenantId The tenant to consume command responses for.
+     * @param replyId The replyId of commands to consume command responses for.
+     * @param consumer The handler to invoke with every command response received.
+     * @param closeHandler The handler invoked when the peer detaches the link.
+     * @return A future that will complete with the consumer once the link has been established. The future will fail if
+     *         the link cannot be established, e.g. because this client is not connected.
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     * @see org.eclipse.hono.client.AsyncCommandClient
+     */
+    Future<MessageConsumer> createAsyncCommandResponseConsumer(String tenantId, String replyId,
+            Consumer<Message> consumer, Handler<Void> closeHandler);
+
+    /**
+     * Creates a client for consuming async command responses from Hono's north bound <em>Command API</em>.
+     * <p>
+     * The command responses passed in to the responses consumer will be settled automatically if the consumer does not
+     * throw an exception and does not manually handle the message disposition using the passed in delivery.
+     *
+     * @param tenantId The tenant to consume command responses for.
+     * @param replyId The replyId of commands to consume command responses for.
+     * @param consumer The handler to invoke with every command response received.
+     * @param closeHandler The handler invoked when the peer detaches the link.
+     * @return A future that will complete with the consumer once the link has been established. The future will fail if
+     *         the link cannot be established, e.g. because this client is not connected.
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     * @see org.eclipse.hono.client.AsyncCommandClient
+     */
+    Future<MessageConsumer> createAsyncCommandResponseConsumer(String tenantId, String replyId,
+            BiConsumer<ProtonDelivery, Message> consumer, Handler<Void> closeHandler);
+
+    /**
      * Gets a client for sending commands to a device.
      * <p>
      * The client returned may be either newly created or it may be an existing
@@ -128,4 +164,20 @@ public interface ApplicationClientFactory extends ConnectionLifecycle {
      * @throws NullPointerException if the tenantId is {@code null}.
      */
     Future<CommandClient> getOrCreateCommandClient(String tenantId, String deviceId, String replyId);
+
+    /**
+     * Gets a client for sending commands to a device asynchronously, i.e. command responses get received by a
+     * separate receiver.
+     * <p>
+     * The client returned may be either newly created or it may be an existing client for the given device.
+     *
+     * @param tenantId The tenant that the device belongs to.
+     * @param deviceId The device to send the commands to.
+     * @return A future that will complete with the async command client (if successful) or
+     *         fail if the client cannot be created, e.g. because the underlying connection
+     *         is not established or if a concurrent request to create a client for the same
+     *         tenant and device is already being executed.
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     */
+    Future<AsyncCommandClient> getOrCreateAsyncCommandClient(String tenantId, String deviceId);
 }
