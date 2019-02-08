@@ -163,7 +163,7 @@ public final class TenantServiceBasedX509Authentication implements X509Authentic
                             return certPathValidator.validate(chainToValidate, trustAnchor)
                                     .recover(t -> Future.failedFuture(UNAUTHORIZED));
                         } catch (final GeneralSecurityException e) {
-                            // cannot de-serialize trust anchor from tenant
+                            log.debug("cannot de-serialize trust anchor from tenant: {}", e.getMessage());
                             return Future.failedFuture(UNAUTHORIZED);
                         }
                     }).compose(ok -> getCredentials(x509chain, tenantTracker.result()));
