@@ -43,7 +43,7 @@ import io.vertx.mqtt.MqttConnectionException;
 public class MqttConnectionIT extends MqttTestBase {
 
     /**
-     * Time out tests after two seconds.
+     * Time out tests after 5 seconds.
      */
     @Rule
     public Timeout timeout = Timeout.seconds(5);
