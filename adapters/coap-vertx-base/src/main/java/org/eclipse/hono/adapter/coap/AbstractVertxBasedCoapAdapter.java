@@ -13,7 +13,6 @@
 package org.eclipse.hono.adapter.coap;
 
 import java.io.File;
-import java.net.HttpURLConnection;
 import java.net.InetSocketAddress;
 import java.security.Principal;
 import java.util.HashMap;
@@ -463,9 +462,9 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                     device.getTenantId(), device.getDeviceId(),
                     authenticatedDevice,
                     null);
-            final Future<TenantObject> tenantConfigTracker = getTenantConfiguration(device.getTenantId(), null);
-            CompositeFuture.all(tokenTracker, senderTracker, tenantConfigTracker).compose(ok -> {
-                if (tenantConfigTracker.result().isAdapterEnabled(getTypeName())) {
+            final Future<TenantObject> tenantEnabledTracker = getTenantConfiguration(device.getTenantId(), null)
+                    .compose(tenantObject -> isAdapterEnabled(tenantObject));
+            CompositeFuture.all(tokenTracker, senderTracker, tenantEnabledTracker).compose(ok -> {
                     final MessageSender sender = senderTracker.result();
                     final Message downstreamMessage = newMessage(
                             ResourceIdentifier.from(endpoint.getCanonicalName(), device.getTenantId(), device.getDeviceId()),
@@ -482,10 +481,6 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                     } else {
                         return sender.send(downstreamMessage);
                     }
-                } else {
-                    // this adapter is not enabled for the tenant
-                    return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_FORBIDDEN));
-                }
             }).map(delivery -> {
                 LOG.trace("successfully processed message for device [tenantId: {}, deviceId: {}, endpoint: {}]",
                         device.getTenantId(), device.getDeviceId(), endpoint);
