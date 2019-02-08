@@ -29,9 +29,9 @@
       },
       {
         "device-id": "gw-1",
-        "comment": "this device is authorized to publish data on behalf of device 4712",
         "data": {
-          "enabled": true
+          "enabled": true,
+          "comment": "this device is authorized to publish data on behalf of device 4712"
         }
       }
     ]
