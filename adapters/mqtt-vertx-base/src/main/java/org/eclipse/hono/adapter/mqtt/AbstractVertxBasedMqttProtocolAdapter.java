@@ -989,11 +989,10 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
 
             final Future<JsonObject> tokenTracker = getRegistrationAssertion(tenant, deviceId,
                     ctx.authenticatedDevice(), currentSpan.context());
-            final Future<TenantObject> tenantConfigTracker = getTenantConfiguration(tenant, currentSpan.context());
+            final Future<TenantObject> tenantEnabledTracker = getTenantConfiguration(tenant, currentSpan.context())
+                    .compose(tenantObject -> isAdapterEnabled(tenantObject));
 
-            return CompositeFuture.all(tokenTracker, tenantConfigTracker, senderTracker).compose(ok -> {
-
-                if (tenantConfigTracker.result().isAdapterEnabled(getTypeName())) {
+            return CompositeFuture.all(tokenTracker, tenantEnabledTracker, senderTracker).compose(ok -> {
 
                     final MessageSender sender = senderTracker.result();
                     final Message downstreamMessage = newMessage(
@@ -1013,12 +1012,6 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                     } else {
                         return sender.send(downstreamMessage, currentSpan.context());
                     }
-                } else {
-                    // this adapter is not enabled for the tenant
-                    return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_FORBIDDEN,
-                            "adapter is not enabled for tenant"));
-                }
-
             }).compose(delivery -> {
 
                 LOG.trace("successfully processed message [topic: {}, QoS: {}] from device [tenantId: {}, deviceId: {}]",
