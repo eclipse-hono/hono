@@ -540,7 +540,7 @@ public abstract class HttpTestBase {
 
             // WHEN a device that belongs to the tenant uploads a message
             final MultiMap requestHeaders = MultiMap.caseInsensitiveMultiMap()
-                    .add(HttpHeaders.CONTENT_TYPE, "test/plain")
+                    .add(HttpHeaders.CONTENT_TYPE, "text/plain")
                     .add(HttpHeaders.AUTHORIZATION, authorization);
 
             return httpClient.create(
