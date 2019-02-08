@@ -37,7 +37,9 @@ import org.eclipse.hono.service.http.DefaultFailureHandler;
 import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.service.metric.MetricsTags.EndpointType;
+import org.eclipse.hono.service.metric.MetricsTags.ProcessingOutcome;
 import org.eclipse.hono.service.metric.MetricsTags.QoS;
+import org.eclipse.hono.service.metric.MetricsTags.TtdStatus;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
@@ -217,12 +219,13 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
         return ctx.get(KEY_MICROMETER_SAMPLE);
     }
 
-    private void setTtdStatus(final RoutingContext ctx, final MetricsTags.TtdStatus status) {
-        ctx.put(MetricsTags.TtdStatus.class.getName(), status);
+    private void setTtdStatus(final RoutingContext ctx, final TtdStatus status) {
+        ctx.put(TtdStatus.class.getName(), status);
     }
 
-    private MetricsTags.TtdStatus getTtdStatus(final RoutingContext ctx) {
-        return ctx.get(MetricsTags.TtdStatus.class.getName());
+    private TtdStatus getTtdStatus(final RoutingContext ctx) {
+        return Optional.ofNullable((TtdStatus) ctx.get(TtdStatus.class.getName()))
+                .orElse(TtdStatus.NONE);
     }
 
     /**
@@ -605,9 +608,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                 final Future<Integer> ttdTracker = tenantEnabledTracker.compose(tenantObj -> {
                     final Integer ttdParam = HttpUtils.getTimeTilDisconnect(ctx);
                     return getTimeUntilDisconnect(tenantObj, ttdParam).map(effectiveTtd -> {
-                        if (effectiveTtd == null) {
-                            setTtdStatus(ctx, MetricsTags.TtdStatus.NONE);
-                        } else {
+                        if (effectiveTtd != null) {
                             currentSpan.setTag(MessageHelper.APP_PROPERTY_DEVICE_TTD, effectiveTtd);
                         }
                         return effectiveTtd;
@@ -616,7 +617,8 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                 final Future<MessageConsumer> commandConsumerTracker = ttdTracker
                         .compose(ttd -> createCommandConsumer(ttd, tenant, deviceId, ctx, responseReady, currentSpan));
 
-                CompositeFuture.all(tokenTracker, senderTracker, commandConsumerTracker).compose(ok -> {
+                CompositeFuture.all(tokenTracker, senderTracker, commandConsumerTracker)
+                .compose(ok -> {
 
                         final MessageSender sender = senderTracker.result();
 
@@ -646,8 +648,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                                     responseReady)
                                     .map(s -> (Void) null);
                         }
-                })
-                .recover(t -> {
+                }).recover(t -> {
                     if (t instanceof ResourceConflictException) {
                         // simply return an empty response
                         LOG.debug("ignoring empty notification [tenant: {}, device-id: {}], command consumer is already in use",
@@ -656,8 +657,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                     } else {
                         return Future.failedFuture(t);
                     }
-                })
-                .compose(proceed -> {
+                }).map(proceed -> {
 
                     if (ctx.response().closed()) {
                         LOG.debug("failed to send http response for [{}] message from device [tenantId: {}, deviceId: {}]: response already closed",
@@ -678,7 +678,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                             metrics.reportTelemetry(
                                     endpoint,
                                     tenant,
-                                    MetricsTags.ProcessingOutcome.FORWARDED,
+                                    ProcessingOutcome.FORWARDED,
                                     qos,
                                     payload.length(),
                                     getTtdStatus(ctx),
@@ -708,10 +708,9 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                         ctx.response().end();
                     }
 
-                    return Future.succeededFuture();
+                    return proceed;
 
-                })
-                .recover(t -> {
+                }).recover(t -> {
 
                     LOG.debug("cannot process [{}] message from device [tenantId: {}, deviceId: {}]",
                             endpoint, tenant, deviceId, t);
@@ -724,28 +723,22 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                     // potential command
                     Optional.ofNullable(commandConsumerTracker.result()).ifPresent(consumer -> consumer.close(null));
 
+                    final ProcessingOutcome outcome;
                     if (ClientErrorException.class.isInstance(t)) {
-                        metrics.reportTelemetry(
-                                endpoint,
-                                tenant,
-                                MetricsTags.ProcessingOutcome.UNPROCESSABLE,
-                                qos,
-                                payload.length(),
-                                getTtdStatus(ctx),
-                                getMicrometerSample(ctx));
-                        final ClientErrorException e = (ClientErrorException) t;
-                        ctx.fail(e);
+                        outcome = ProcessingOutcome.UNPROCESSABLE;
+                        ctx.fail(t);
                     } else {
-                        metrics.reportTelemetry(
-                                endpoint,
-                                tenant,
-                                MetricsTags.ProcessingOutcome.UNDELIVERABLE,
-                                qos,
-                                payload.length(),
-                                getTtdStatus(ctx),
-                                getMicrometerSample(ctx));
+                        outcome = ProcessingOutcome.UNDELIVERABLE;
                         HttpUtils.serviceUnavailable(ctx, 2, "temporarily unavailable");
                     }
+                    metrics.reportTelemetry(
+                            endpoint,
+                            tenant,
+                            outcome,
+                            qos,
+                            payload.length(),
+                            getTtdStatus(ctx),
+                            getMicrometerSample(ctx));
                     TracingHelper.logError(currentSpan, t);
                     currentSpan.finish();
                     return Future.failedFuture(t);
@@ -866,7 +859,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                                 // put command context to routing context and notify
                                 ctx.put(CommandContext.KEY_COMMAND_CONTEXT, commandContext);
                                 cancelCommandReceptionTimer(ctx);
-                                setTtdStatus(ctx, MetricsTags.TtdStatus.COMMAND);
+                                setTtdStatus(ctx, TtdStatus.COMMAND);
                                 responseReady.tryComplete();
                             }
                         } else {
@@ -930,7 +923,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
             } else {
                 // no command to be sent,
                 // send empty response
-                setTtdStatus(ctx, MetricsTags.TtdStatus.EXPIRED);
+                setTtdStatus(ctx, TtdStatus.EXPIRED);
                 responseReady.complete();
             }
         });
