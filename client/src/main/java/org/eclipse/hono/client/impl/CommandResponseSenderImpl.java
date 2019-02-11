@@ -124,7 +124,7 @@ public class CommandResponseSenderImpl extends AbstractSender implements Command
                 commandResponse.getCorrelationId(),
                 commandResponse.getContentType(),
                 commandResponse.getPayload(),
-                null,
+                commandResponse.getProperties(),
                 commandResponse.getStatus());
     }
 
