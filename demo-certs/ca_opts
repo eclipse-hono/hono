@@ -56,13 +56,6 @@ extendedKeyUsage     = serverAuth, clientAuth
 # for the particular components (hono, qdrouter, auth-server etc.)
 # They are listed separately because this is only way to specify individual subjectAltNames for them
 
-[ req_ext_hono-messaging ]
-
-subjectKeyIdentifier = hash
-keyUsage             = keyAgreement,keyEncipherment,digitalSignature
-extendedKeyUsage     = serverAuth, clientAuth
-subjectAltName       = DNS.1:hono-service-messaging,DNS.2:hono-service-messaging.hono,DNS.3:localhost
-
 [ req_ext_qdrouter ]
 
 subjectKeyIdentifier = hash

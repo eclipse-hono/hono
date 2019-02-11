@@ -91,6 +91,16 @@ Publish some JSON data for device `4711`, indicating that the device will wait f
       "brightness" : 87
     }
 
+Publish some JSON data for device `4711` using a client certificate for authentication (in the directory that contains the certificates, e.g. `hono/demo-certs/certs/`):
+
+    $ curl -i --cert device-4711-cert.pem --key device-4711-key.pem --cacert trusted-certs.pem \
+    -H 'Content-Type: application/json' --data-binary '{"temp": 5}' https://localhost:8443/telemetry
+
+    HTTP/1.1 202 Accepted
+    content-length: 0
+
+**NB**: The example above assumes that the HTTP adapter is [configured for TLS]({{< ref "/admin-guide/secure_communication.md#http-adapter" >}}) and the secure port is used.
+
 ## Publish Telemetry Data (unauthenticated Device)
 
 * URI: `/telemetry/${tenantId}/${deviceId}`

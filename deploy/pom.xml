@@ -118,7 +118,8 @@
                             <includes>
                                 *.pem,
                                 *.jks,
-                                *.p12
+                                *.p12,
+                                *.properties
                             </includes>
                             <useSubDirectoryPerArtifact>true</useSubDirectoryPerArtifact>
                             <stripClassifier>true</stripClassifier>
@@ -131,6 +132,27 @@
             <plugin>
                 <artifactId>maven-resources-plugin</artifactId>
                 <executions>
+                    <execution>
+                        <id>create_default_tenants_trust_anchor</id>
+                        <phase>process-resources</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${project.build.directory}</outputDirectory>
+                            <resources>
+                                <resource>
+                                    <directory>${project.basedir}/src/main/deploy</directory>
+                                    <targetPath>deploy</targetPath>
+                                    <filtering>true</filtering>
+                                </resource>
+                            </resources>
+                            <filters>
+                                <filter>${project.build.directory}/config/hono-demo-certs-jar/trust-anchor.properties</filter>
+                                <filter>${project.build.directory}/config/hono-demo-certs-jar/device-certs.properties</filter>
+                            </filters>
+                        </configuration>
+                    </execution>
                     <execution>
                         <id>create_docker_config_files</id>
                         <phase>process-resources</phase>

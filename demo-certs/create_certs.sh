@@ -16,8 +16,6 @@
 
 CURVE=prime256v1
 DIR=certs
-HONO_MESSAGING_KEY_STORE=honoKeyStore.p12
-HONO_MESSAGING_KEY_STORE_PWD=honokeys
 HONO_TRUST_STORE=trustStore.jks
 HONO_TRUST_STORE_PWD=honotrust
 AUTH_SERVER_KEY_STORE=authServerKeyStore.p12
@@ -34,6 +32,8 @@ ARTEMIS_KEY_STORE=artemisKeyStore.p12
 ARTEMIS_KEY_STORE_PWD=artemiskeys
 COAP_ADAPTER_KEY_STORE=coapKeyStore.p12
 COAP_ADAPTER_KEY_STORE_PWD=coapkeys
+AMQP_ADAPTER_KEY_STORE=amqpKeyStore.p12
+AMQP_ADAPTER_KEY_STORE_PWD=amqpkeys
 
 function to_pkcs8 {
 
@@ -58,11 +58,22 @@ function create_cert {
   fi
 }
 
+function create_client_cert {
+  echo ""
+  echo "creating client key and certificate for device $1"
+  openssl genrsa -out "$DIR/device-$1-key.pem" 4096
+  openssl req -new -key "$DIR/device-$1-key.pem" -subj "/C=CA/L=Ottawa/O=Eclipse IoT/OU=Hono/CN=Device $1" | \
+    openssl x509 -req -out "$DIR/device-$1-cert.pem" -days 365 -CA $DIR/ca-cert.pem -CAkey $DIR/ca-key.pem -CAcreateserial
+  SUBJECT=$(openssl x509 -in "$DIR/device-$1-cert.pem" -noout -subject -nameopt RFC2253)
+  echo "cert.device-$1.$SUBJECT" >> $DIR/device-certs.properties
+}
+
 if [ -d $DIR ]
 then
 rm $DIR/*.pem
 rm $DIR/*.p12
 rm $DIR/*.jks
+rm $DIR/*.properties
 else
 mkdir $DIR
 fi
@@ -90,7 +101,13 @@ echo "creating JKS trust store ($DIR/$HONO_TRUST_STORE) containing CA certificat
 keytool -import -trustcacerts -noprompt -alias root -file $DIR/root-cert.pem -keystore $DIR/$HONO_TRUST_STORE -storepass $HONO_TRUST_STORE_PWD
 keytool -import -trustcacerts -noprompt -alias ca -file $DIR/ca-cert.pem -keystore $DIR/$HONO_TRUST_STORE -storepass $HONO_TRUST_STORE_PWD
 
-create_cert hono-messaging $HONO_MESSAGING_KEY_STORE $HONO_MESSAGING_KEY_STORE_PWD
+echo ""
+echo "extracting trust anchor information from CA cert"
+CA_SUBJECT=$(openssl x509 -in $DIR/ca-cert.pem -noout -subject -nameopt RFC2253 | sed s/^subject=//)
+PK=$(openssl x509 -in $DIR/ca-cert.pem -noout -pubkey | sed /^---/d | sed -z 's/\n//g')
+echo "trusted-ca.subject-dn=$CA_SUBJECT" > $DIR/trust-anchor.properties
+echo "trusted-ca.public-key=$PK" >> $DIR/trust-anchor.properties
+
 create_cert qdrouter
 create_cert auth-server $AUTH_SERVER_KEY_STORE $AUTH_SERVER_KEY_STORE_PWD
 create_cert device-registry $DEVREG_SERVER_KEY_STORE $DEVREG_SERVER_KEY_STORE_PWD
@@ -99,4 +116,6 @@ create_cert mqtt-adapter $MQTT_ADAPTER_KEY_STORE $MQTT_ADAPTER_KEY_STORE_PWD
 create_cert kura-adapter $KURA_ADAPTER_KEY_STORE $KURA_ADAPTER_KEY_STORE_PWD
 create_cert artemis $ARTEMIS_KEY_STORE $ARTEMIS_KEY_STORE_PWD
 create_cert coap-adapter $COAP_ADAPTER_KEY_STORE $COAP_ADAPTER_KEY_STORE_PWD
+create_cert amqp-adapter $AMQP_ADAPTER_KEY_STORE $AMQP_ADAPTER_KEY_STORE_PWD
 
+create_client_cert 4711

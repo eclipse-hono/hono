@@ -35,8 +35,8 @@ public class KeyLoaderTest {
     @Test
     public void testLoaderSucceedsForExistingKeyStore() {
 
-        final KeyLoader loader = KeyLoader.fromKeyStore(vertx, PREFIX_KEY_PATH + "honoKeyStore.p12",
-                "honokeys".toCharArray());
+        final KeyLoader loader = KeyLoader.fromKeyStore(vertx, PREFIX_KEY_PATH + "authServerKeyStore.p12",
+                "authkeys".toCharArray());
         assertNotNull(loader.getPrivateKey());
         assertNotNull(loader.getPublicKey());
     }
@@ -57,8 +57,8 @@ public class KeyLoaderTest {
     @Test
     public void testLoaderSucceedsForExistingKeyAndCertFiles() {
 
-        final KeyLoader loader = KeyLoader.fromFiles(vertx, PREFIX_KEY_PATH + "hono-messaging-key.pem",
-                PREFIX_KEY_PATH + "hono-messaging-cert.pem");
+        final KeyLoader loader = KeyLoader.fromFiles(vertx, PREFIX_KEY_PATH + "auth-server-key.pem",
+                PREFIX_KEY_PATH + "auth-server-cert.pem");
         assertNotNull(loader.getPrivateKey());
         assertNotNull(loader.getPublicKey());
     }
@@ -70,7 +70,7 @@ public class KeyLoaderTest {
     @Test
     public void testLoaderSucceedsForExistingKeyFile() {
 
-        final KeyLoader loader = KeyLoader.fromFiles(vertx, PREFIX_KEY_PATH + "hono-messaging-key.pem", null);
+        final KeyLoader loader = KeyLoader.fromFiles(vertx, PREFIX_KEY_PATH + "auth-server-key.pem", null);
         assertNotNull(loader.getPrivateKey());
         assertNull(loader.getPublicKey());
     }
@@ -82,7 +82,7 @@ public class KeyLoaderTest {
     @Test
     public void testLoaderSucceedsForExistingCertFile() {
 
-        final KeyLoader loader = KeyLoader.fromFiles(vertx, null, PREFIX_KEY_PATH + "hono-messaging-cert.pem");
+        final KeyLoader loader = KeyLoader.fromFiles(vertx, null, PREFIX_KEY_PATH + "auth-server-cert.pem");
         assertNull(loader.getPrivateKey());
         assertNotNull(loader.getPublicKey());
     }
@@ -94,7 +94,7 @@ public class KeyLoaderTest {
     @Test(expected = IllegalArgumentException.class)
     public void testLoaderFailsForNonExistingKeyFile() {
 
-        KeyLoader.fromFiles(vertx, "non-existing-key.pem", PREFIX_KEY_PATH + "hono-messaging-cert.pem");
+        KeyLoader.fromFiles(vertx, "non-existing-key.pem", PREFIX_KEY_PATH + "auth-server-cert.pem");
     }
 
     /**
@@ -104,7 +104,7 @@ public class KeyLoaderTest {
     @Test(expected = IllegalArgumentException.class)
     public void testLoaderFailsForNonExistingCertFile() {
 
-        KeyLoader.fromFiles(vertx, PREFIX_KEY_PATH + "hono-messaging-key.pem", "non-existing-cert.pem");
+        KeyLoader.fromFiles(vertx, PREFIX_KEY_PATH + "auth-server-key.pem", "non-existing-cert.pem");
     }
 
     /**
