@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -212,6 +212,16 @@ public abstract class JwtHelper {
         }
     }
 
+    /**
+     * Creates a helper that can be used for creating and verifying signatures of JWTs.
+     * 
+     * @param <T> The type of helper to create.
+     * @param sharedSecret The shared secret to use for signatures.
+     * @param tokenExpiration The number of seconds after which the tokens created by this
+     *                        helper should be considered expired.
+     * @param instanceSupplier The supplier to invoke for creating the new helper instance.
+     * @return The newly created helper.
+     */
     protected static <T extends JwtHelper> T forSharedSecret(final String sharedSecret, final long tokenExpiration,
             final Supplier<T> instanceSupplier) {
 
@@ -224,6 +234,14 @@ public abstract class JwtHelper {
         return result;
     }
 
+    /**
+     * Creates a helper that can be used for creating signed JWTs.
+     * 
+     * @param <T> The type of helper to create.
+     * @param config The key material to use for signing.
+     * @param instanceSupplier The supplier to invoke for creating the new helper instance.
+     * @return The newly created helper.
+     */
     protected static <T extends JwtHelper> T forSigning(final SignatureSupportingConfigProperties config,
             final Supplier<T> instanceSupplier) {
 
@@ -248,6 +266,14 @@ public abstract class JwtHelper {
         }
     }
 
+    /**
+     * Creates a helper that can be used for verifying signatures of JWTs.
+     * 
+     * @param <T> The type of helper to create.
+     * @param config The key material to use for verifying signatures.
+     * @param instanceSupplier The supplier to invoke for creating the new helper instance.
+     * @return The newly created helper.
+     */
     protected static <T extends JwtHelper> T forValidating(final SignatureSupportingConfigProperties config,
             final Supplier<T> instanceSupplier) {
 
