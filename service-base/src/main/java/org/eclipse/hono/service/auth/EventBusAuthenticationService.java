@@ -94,7 +94,7 @@ public final class EventBusAuthenticationService implements AuthenticationServic
                             break;
                         case RECIPIENT_FAILURE:
                             final int statusCode = ((ReplyException) reply.cause()).failureCode();
-                            if (200 <= statusCode && statusCode < 300) {
+                            if (statusCode < 400 || statusCode >= 600) {
                                 log.error("got illegal status code in authentication response exception: {}", statusCode);
                                 resultException = new ServerErrorException(HttpURLConnection.HTTP_INTERNAL_ERROR, reply.cause().getMessage());
                             } else {

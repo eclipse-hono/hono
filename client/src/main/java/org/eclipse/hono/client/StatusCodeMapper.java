@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -38,7 +38,8 @@ public abstract class StatusCodeMapper {
      * @param result The result containing the status code.
      * @param <T> The type of the payload contained in the result.
      * @return The exception.
-     * @throws NullPointerException if response is {@code null}.
+     * @throws NullPointerException if result is {@code null}.
+     * @throws IllegalArgumentException if the result statusCode does not represent a valid error code (i.e. it is not &ge; 400 and &lt; 600)
      */
     public static final <T> ServiceInvocationException from(final RequestResponseResult<T> result) {
 
@@ -50,7 +51,8 @@ public abstract class StatusCodeMapper {
      * 
      * @param result The result containing the status code.
      * @return The exception.
-     * @throws NullPointerException if response is {@code null}.
+     * @throws NullPointerException if result is {@code null}.
+     * @throws IllegalArgumentException if the result statusCode does not represent a valid error code (i.e. it is not &ge; 400 and &lt; 600)
      */
     public static final ServiceInvocationException from(final RegistrationResult result) {
 
@@ -65,7 +67,7 @@ public abstract class StatusCodeMapper {
      * @param statusCode The status code.
      * @param detailMessage The detail message.
      * @return The exception.
-     * @throws NullPointerException if the response does not contain an error code.
+     * @throws IllegalArgumentException if the statusCode does not represent a valid error code (i.e. it is not &ge; 400 and &lt; 600)
      */
     public static final ServiceInvocationException from(final int statusCode, final String detailMessage) {
 
@@ -81,7 +83,7 @@ public abstract class StatusCodeMapper {
         } else if (500 <= statusCode && statusCode < 600) {
             return new ServerErrorException(statusCode, detailMessage);
         } else {
-            return new ServiceInvocationException(statusCode, detailMessage);
+            throw new IllegalArgumentException(String.format("illegal error code [%d], must be >= 400 and < 600", statusCode));
         }
     }
 
