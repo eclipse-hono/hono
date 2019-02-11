@@ -95,7 +95,7 @@ public class AbstractServiceBaseTest {
 
         // GIVEN a configuration with a key store set
         final ServiceConfigProperties configProperties = new ServiceConfigProperties();
-        configProperties.setKeyStorePath(PREFIX_KEY_PATH + "/honoKeyStore.p12");
+        configProperties.setKeyStorePath(PREFIX_KEY_PATH + "/authServerKeyStore.p12");
 
         // WHEN using this configuration to determine the server's port configuration
         // secure port config: no port set -> secure IANA port selected
@@ -118,7 +118,7 @@ public class AbstractServiceBaseTest {
 
         // GIVEN a configuration with a key store and a secure port being set
         final ServiceConfigProperties configProperties = new ServiceConfigProperties();
-        configProperties.setKeyStorePath(PREFIX_KEY_PATH + "/honoKeyStore.p12");
+        configProperties.setKeyStorePath(PREFIX_KEY_PATH + "/authServerKeyStore.p12");
         configProperties.setPort(8989);
 
         // WHEN using this configuration to determine the server's port configuration
@@ -207,7 +207,7 @@ public class AbstractServiceBaseTest {
         // GIVEN a default configuration with insecure port being enabled and a key store being set.
         final ServiceConfigProperties configProperties = new ServiceConfigProperties();
         configProperties.setInsecurePortEnabled(true);
-        configProperties.setKeyStorePath(PREFIX_KEY_PATH + "/honoKeyStore.p12");
+        configProperties.setKeyStorePath(PREFIX_KEY_PATH + "/authServerKeyStore.p12");
 
         // WHEN using this configuration to determine the server's port configuration
         final AbstractServiceBase<ServiceConfigProperties> server = createService(configProperties);
@@ -233,7 +233,7 @@ public class AbstractServiceBaseTest {
         // being set to the same value.
         final ServiceConfigProperties configProperties = new ServiceConfigProperties();
         configProperties.setInsecurePortEnabled(true);
-        configProperties.setKeyStorePath(PREFIX_KEY_PATH + "/honoKeyStore.p12");
+        configProperties.setKeyStorePath(PREFIX_KEY_PATH + "/authServerKeyStore.p12");
         configProperties.setInsecurePort(8888);
         configProperties.setPort(8888);
 
@@ -254,7 +254,7 @@ public class AbstractServiceBaseTest {
 
         // GIVEN a default configuration for TLS
         final ServiceConfigProperties config = new ServiceConfigProperties();
-        config.setKeyStorePath(PREFIX_KEY_PATH + "/honoKeyStore.p12");
+        config.setKeyStorePath(PREFIX_KEY_PATH + "/authServerKeyStore.p12");
 
         // WHEN configuring a service using the configuration
         final AbstractServiceBase<ServiceConfigProperties> service = createService(config);
@@ -276,7 +276,7 @@ public class AbstractServiceBaseTest {
 
         // GIVEN a configuration with only TLS 1 and TLS 1.1 enabled
         final ServiceConfigProperties config = new ServiceConfigProperties();
-        config.setKeyStorePath(PREFIX_KEY_PATH + "/honoKeyStore.p12");
+        config.setKeyStorePath(PREFIX_KEY_PATH + "/authServerKeyStore.p12");
         config.setSecureProtocols(Arrays.asList("TLSv1", "TLSv1.1"));
 
         // WHEN configuring a service using the configuration

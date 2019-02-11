@@ -62,6 +62,12 @@ Publish some JSON data for device `4711`:
 
     $ mosquitto_pub -u 'sensor1@DEFAULT_TENANT' -P hono-secret -t telemetry -m '{"temp": 5}'
 
+Publish some JSON data for device `4711` using a client certificate for authentication (in the directory that contains the certificates, e.g. `hono/demo-certs/certs/`):
+
+    $ mosquitto_pub -p 8883 -t telemetry -m '{"temp": 5}' --cert device-4711-cert.pem --key device-4711-key.pem --cafile trusted-certs.pem
+
+**NB**: The example above assumes that the MQTT adapter is [configured for TLS]({{< ref "/admin-guide/secure_communication.md#mqtt-adapter" >}}) and the secure port is used.
+
 ## Publish Telemetry Data (unauthenticated Device)
 
 * Topic: `telemetry/${tenant-id}/${device-id}` or `t/${tenant-id}/${device-id}`

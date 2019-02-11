@@ -46,8 +46,8 @@ public class RegistrationAssertionHelperImplTest {
     public void testForSigningWorksWithRsaSignatures() {
 
         final SignatureSupportingConfigProperties props = new SignatureSupportingConfigProperties();
-        props.setKeyPath("target/certs/hono-messaging-key.pem");
-        props.setCertPath("target/certs/hono-messaging-cert.pem");
+        props.setKeyPath("target/certs/auth-server-key.pem");
+        props.setCertPath("target/certs/auth-server-cert.pem");
 
         final RegistrationAssertionHelper factory = RegistrationAssertionHelperImpl.forSigning(vertx, props);
         final String assertion = factory.getAssertion("tenant", "device");

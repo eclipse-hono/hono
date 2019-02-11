@@ -1,6 +1,10 @@
 [
   {
     "tenant-id": "DEFAULT_TENANT",
+    "trusted-ca": {
+      "subject-dn": "${trusted-ca.subject-dn}",
+      "public-key": "${trusted-ca.public-key}"
+    },
     "enabled": true
   },
   {

@@ -45,8 +45,8 @@ public class AbstractConfigTest {
      */
     @Test
     public void testPfxConfig() {
-        cfg.setKeyStorePath(PREFIX_KEY_PATH + "honoKeyStore.p12");
-        cfg.setKeyStorePassword("honokeys");
+        cfg.setKeyStorePath(PREFIX_KEY_PATH + "authServerKeyStore.p12");
+        cfg.setKeyStorePassword("authkeys");
 
         final KeyCertOptions options = cfg.getKeyCertOptions();
 
@@ -59,8 +59,8 @@ public class AbstractConfigTest {
      */
     @Test
     public void testPemConfig() {
-        cfg.setKeyPath(PREFIX_KEY_PATH + "hono-messaging-key.pem");
-        cfg.setCertPath(PREFIX_KEY_PATH + "hono-messaging-cert.pem");
+        cfg.setKeyPath(PREFIX_KEY_PATH + "auth-server-key.pem");
+        cfg.setCertPath(PREFIX_KEY_PATH + "auth-server-cert.pem");
 
         final KeyCertOptions options = cfg.getKeyCertOptions();
 
@@ -73,8 +73,8 @@ public class AbstractConfigTest {
      */
     @Test
     public void testInvalidConfig1() {
-        cfg.setKeyPath(PREFIX_KEY_PATH + "hono-messaging-key.pem");
-        cfg.setCertPath(PREFIX_KEY_PATH + "hono-messaging-cert.pem");
+        cfg.setKeyPath(PREFIX_KEY_PATH + "auth-server-key.pem");
+        cfg.setCertPath(PREFIX_KEY_PATH + "auth-server-cert.pem");
         cfg.setKeyFormat(FileFormat.PKCS12);
 
         final KeyCertOptions options = cfg.getKeyCertOptions();
@@ -87,8 +87,8 @@ public class AbstractConfigTest {
      */
     @Test
     public void testInvalidConfig2() {
-        cfg.setKeyStorePath(PREFIX_KEY_PATH + "honoKeyStore.p12");
-        cfg.setKeyStorePassword("honokeys");
+        cfg.setKeyStorePath(PREFIX_KEY_PATH + "authServerKeyStore.p12");
+        cfg.setKeyStorePassword("authkeys");
 
         cfg.setKeyFormat(FileFormat.PEM);
 
@@ -103,7 +103,7 @@ public class AbstractConfigTest {
     @Test(expected=IllegalArgumentException.class)
     public void testMissingFile1() {
         cfg.setKeyStorePath(PREFIX_KEY_PATH + "does-not-exist");
-        cfg.setKeyStorePassword("honokeys");
+        cfg.setKeyStorePassword("authkeys");
 
         cfg.getKeyCertOptions();
     }
@@ -114,7 +114,7 @@ public class AbstractConfigTest {
     @Test(expected=IllegalArgumentException.class)
     public void testMissingFile2() {
         cfg.setKeyPath(PREFIX_KEY_PATH + "does-not-exist");
-        cfg.setCertPath(PREFIX_KEY_PATH + "hono-messaging-cert.pem");
+        cfg.setCertPath(PREFIX_KEY_PATH + "auth-server-cert.pem");
 
         cfg.getKeyCertOptions();
     }
@@ -124,7 +124,7 @@ public class AbstractConfigTest {
      */
     @Test(expected=IllegalArgumentException.class)
     public void testMissingFile3() {
-        cfg.setKeyPath(PREFIX_KEY_PATH + "hono-messaging-cert.pem");
+        cfg.setKeyPath(PREFIX_KEY_PATH + "auth-server-cert.pem");
         cfg.setCertPath(PREFIX_KEY_PATH + "does-not-exist");
 
         cfg.getKeyCertOptions();
