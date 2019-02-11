@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -54,6 +54,7 @@ import io.vertx.proton.ProtonHelper;
 @RunWith(VertxUnitRunner.class)
 public class CommandAndControlMqttIT extends MqttTestBase {
 
+    private static final int COMMANDS_TO_SEND = 60;
     private static final String COMMAND_TOPIC_TEMPLATE = CommandConstants.COMMAND_ENDPOINT + "/%s/%s";
     private static final String COMMAND_RESPONSE_TOPIC_TEMPLATE = "control///res/%s/%d";
 
@@ -104,7 +105,7 @@ public class CommandAndControlMqttIT extends MqttTestBase {
     @Test
     public void testSendOneWayCommandSucceeds(final TestContext ctx) throws InterruptedException {
 
-        final int commandsToSend = 60;
+        final int commandsToSend = COMMANDS_TO_SEND;
         final Async commandsReceived = ctx.async(commandsToSend);
         testSendCommandSucceeds(ctx, msg -> {
             final ResourceIdentifier topic = ResourceIdentifier.fromString(msg.topicName());
@@ -164,7 +165,7 @@ public class CommandAndControlMqttIT extends MqttTestBase {
             }
         }, payload -> {
             return helper.sendCommand(tenantId, deviceId, "setValue", "text/plain", payload, null, 200);
-        }, 60, qos);
+        }, COMMANDS_TO_SEND, qos);
     }
 
     /**
