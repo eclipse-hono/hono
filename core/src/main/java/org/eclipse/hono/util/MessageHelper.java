@@ -620,28 +620,30 @@ public final class MessageHelper {
     }
 
     /**
-     * Verify if a device is currently connected to a protocol adapter. This is evaluated at the point in time this
-     * method is invoked.
+     * Checks if a device is currently connected to a protocol adapter.
      * <p>
-     * This could be used as a trigger condition for an attempt to send a command upstream to the device.
+     * If this method returns {@code true} an attempt could be made to send a command to the device.
+     * <p>
+     * This method uses the message's creation time and TTD value to determine the point in time
+     * until which the device will remain connected.
      *
-     * @param msg Message that is evaluated.
-     * @return Boolean {@code true} if the message signals that the device now should be ready to receive a command,
-     *         {@code false} otherwise.
+     * @param msg The message that is checked for a TTD value.
+     * @return {@code true} if the TTD value contained in the message indicates that the device will
+     *         stay connected for some additional time.
      * @throws NullPointerException If msg is {@code null}.
      */
-    public static Boolean isDeviceCurrentlyConnected(final Message msg) {
+    public static boolean isDeviceCurrentlyConnected(final Message msg) {
 
         return Optional.ofNullable(MessageHelper.getTimeUntilDisconnect(msg)).map(ttd -> {
             if (ttd == MessageHelper.TTD_VALUE_UNLIMITED) {
-                return Boolean.TRUE;
+                return true;
             } else if (ttd == 0) {
-                return Boolean.FALSE;
+                return false;
             } else {
                 final Instant creationTime = Instant.ofEpochMilli(msg.getCreationTime());
                 return Instant.now().isBefore(creationTime.plusSeconds(ttd));
             }
-        }).orElse(Boolean.FALSE);
+        }).orElse(false);
     }
 
     /**

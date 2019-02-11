@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -60,10 +60,20 @@ public final class TimeUntilDisconnectNotification {
         this.creationTime = creationTime;
     }
 
+    /**
+     * Gets the identifier of the tenant that the device belongs to.
+     * 
+     * @return The identifier.
+     */
     public String getTenantId() {
         return tenantId;
     }
 
+    /**
+     * Gets the identifier of the device that sent the TTD.
+     * 
+     * @return The identifier.
+     */
     public String getDeviceId() {
         return deviceId;
     }
@@ -77,38 +87,61 @@ public final class TimeUntilDisconnectNotification {
         return Optional.ofNullable(tenantId).map(t -> t + "/" + deviceId).orElse(null);
     }
 
+    /**
+     * Gets the time period that the device indicated to remain connected.
+     * 
+     * @return The time period in seconds.
+     */
     public Integer getTtd() {
         return ttd;
     }
 
+    /**
+     * Gets the point in time until which the device will remain connected.
+     * 
+     * @return The point in time.
+     */
     public Instant getReadyUntil() {
         return readyUntil;
     }
 
+    /**
+     * Gets the point in time that the message has been created at.
+     * 
+     * @return The creation time.
+     */
     public Instant getCreationTime() {
         return creationTime;
     }
 
     @Override
     public String toString() {
-        return "TimeUntilDisconnectNotification{" +
-                "tenantId='" + tenantId + '\'' +
-                ", deviceId='" + deviceId + '\'' +
-                ", ttd='" + ttd + '\'' +
-                ", readyUntil='" + readyUntil + '\'' +
-                ", creationTime='" + creationTime + '\'' +
-                '}';
+        return new StringBuilder("TimeUntilDisconnectNotification [")
+                .append("tenant-id: ").append(tenantId)
+                .append(", device-id: ").append(deviceId)
+                .append(", ttd: ").append(ttd)
+                .append(", readyUntil: ").append(readyUntil)
+                .append(", creationTime: ").append(creationTime)
+                .append("]").toString();
     }
 
     /**
-     * Provide an instance of {@link TimeUntilDisconnectNotification} if a message indicates that the device sending it
-     * is currently connected to a protocol adapter.
+     * Creates a notification from an AMQP message.
      * <p>
-     * If this is not the case, the returned {@link Optional} will be empty.
+     * The notification will contain information extracted from the AMQP message
+     * as follows:
+     * <ul>
+     * <li><em>ttd</em> - the value of the {@link MessageHelper#APP_PROPERTY_DEVICE_TTD} application property</li>
+     * <li><em>tenantId</em> - the value of the {@link MessageHelper#APP_PROPERTY_TENANT_ID} application property</li>
+     * <li><em>deviceId</em> - the value of the {@link MessageHelper#APP_PROPERTY_DEVICE_ID} application property</li>
+     * <li><em>creationTime</em> - the value of the message's <em>creation-time</em> property</li>
+     * <li><em>readyUntil</em> - the instant until the device will remain connected</li>
+     * </ul>
      *
      * @param msg Message that is evaluated.
-     * @return Optional containing an instance of the class {@link TimeUntilDisconnectNotification} if the device is considered
-     * being ready to receive an upstream message or is empty otherwise.
+     * @return A notification if the message contains a
+     *         TTD value in its {@link MessageHelper#APP_PROPERTY_DEVICE_TTD}
+     *         application property or {@code null} otherwise.
      * @throws NullPointerException If msg is {@code null}.
      */
     public static Optional<TimeUntilDisconnectNotification> fromMessage(final Message msg) {
