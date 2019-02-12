@@ -19,8 +19,6 @@ import java.util.HashMap;
 import java.util.Objects;
 import java.util.Optional;
 
-import io.vertx.core.buffer.Buffer;
-
 import org.apache.qpid.proton.amqp.Binary;
 import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.amqp.messaging.AmqpValue;
@@ -33,6 +31,7 @@ import org.apache.qpid.proton.message.Message;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonObject;
 import io.vertx.proton.ProtonDelivery;
