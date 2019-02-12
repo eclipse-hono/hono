@@ -20,6 +20,7 @@ import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
 import org.eclipse.hono.cache.CacheProvider;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.RegistrationClient;
@@ -116,16 +117,17 @@ public class RegistrationClientImpl extends AbstractRequestResponseClient<Regist
             final int status,
             final String contentType,
             final Buffer payload,
-            final CacheDirective cacheDirective) {
+            final CacheDirective cacheDirective,
+            final ApplicationProperties applicationProperties) {
 
         if (payload == null) {
-            return RegistrationResult.from(status);
+            return RegistrationResult.from(status, null, null, applicationProperties);
         } else {
             try {
-                return RegistrationResult.from(status, new JsonObject(payload), cacheDirective);
+                return RegistrationResult.from(status, new JsonObject(payload), cacheDirective, applicationProperties);
             } catch (final DecodeException e) {
                 LOG.warn("received malformed payload from Device Registration service", e);
-                return RegistrationResult.from(HttpURLConnection.HTTP_INTERNAL_ERROR);
+                return RegistrationResult.from(HttpURLConnection.HTTP_INTERNAL_ERROR, null, null, applicationProperties);
             }
         }
     }

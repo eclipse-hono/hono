@@ -22,6 +22,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import org.apache.qpid.proton.amqp.messaging.Accepted;
+import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
 import org.apache.qpid.proton.amqp.messaging.Modified;
 import org.apache.qpid.proton.amqp.messaging.Rejected;
 import org.apache.qpid.proton.amqp.messaging.Released;
@@ -373,9 +374,16 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      * @param contentType A media type describing the payload or {@code null} if unknown.
      * @param payload The representation of the payload (may be {@code null}).
      * @param cacheDirective Restrictions regarding the caching of the payload (may be {@code null}).
+     * @param applicationProperties Arbitrary properties conveyed in the response message's
+     *                              <em>application-properties</em>.
      * @return The result object.
      */
-    protected abstract R getResult(int status, String contentType, Buffer payload, CacheDirective cacheDirective);
+    protected abstract R getResult(
+            int status,
+            String contentType,
+            Buffer payload,
+            CacheDirective cacheDirective,
+            ApplicationProperties applicationProperties);
 
     /**
      * Creates the sender and receiver links to the peer for sending requests
@@ -528,7 +536,12 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
             return null;
         } else {
             final CacheDirective cacheDirective = CacheDirective.from(MessageHelper.getCacheDirective(message));
-            return getResult(status, message.getContentType(), MessageHelper.getPayload(message), cacheDirective);
+            return getResult(
+                    status,
+                    message.getContentType(),
+                    MessageHelper.getPayload(message),
+                    cacheDirective,
+                    message.getApplicationProperties());
         }
     }
 

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -479,8 +479,9 @@ public class AbstractRequestResponseClientTest  {
                     final int status,
                     final String contentType,
                     final Buffer payload,
-                    final CacheDirective cacheDirective) {
-                return SimpleRequestResponseResult.from(status, payload, cacheDirective);
+                    final CacheDirective cacheDirective,
+                    final ApplicationProperties applicationProperties) {
+                return SimpleRequestResponseResult.from(status, payload, cacheDirective, applicationProperties);
             }
         };
     }
@@ -489,7 +490,6 @@ public class AbstractRequestResponseClientTest  {
      * Verifies credits available.
      *
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void testCredits() {
         when(sender.getCredit()).thenReturn(10);

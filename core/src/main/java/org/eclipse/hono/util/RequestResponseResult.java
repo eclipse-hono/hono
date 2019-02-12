@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,6 +13,10 @@
 package org.eclipse.hono.util;
 
 import java.net.HttpURLConnection;
+import java.util.Collections;
+import java.util.Map;
+
+import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
 
 /**
  * A container for the result returned by a Hono API that implements the request response pattern.
@@ -24,6 +28,7 @@ public class RequestResponseResult<T> {
     private final int status;
     private final T payload;
     private final CacheDirective cacheDirective;
+    private final Map<String, Object> applicationProperties;
 
     /**
      * Creates a new result for a status code and payload.
@@ -32,12 +37,23 @@ public class RequestResponseResult<T> {
      * @param payload The payload to convey to the sender of the request (may be {@code null}).
      * @param directive Restrictions regarding the caching of the payload by
      *                       the receiver of the result (may be {@code null}).
+     * @param applicationProperties Arbitrary properties conveyed in the response message's
+     *                              <em>application-properties</em>.
      */
-    protected RequestResponseResult(final int status, final T payload, final CacheDirective directive) {
+    protected RequestResponseResult(
+            final int status,
+            final T payload,
+            final CacheDirective directive,
+            final ApplicationProperties applicationProperties) {
 
         this.status = status;
         this.payload = payload;
         this.cacheDirective = directive;
+        if (applicationProperties == null || applicationProperties.getValue().isEmpty()) {
+            this.applicationProperties = Collections.emptyMap();
+        } else {
+            this.applicationProperties = Collections.unmodifiableMap(applicationProperties.getValue());
+        }
     }
 
     /**
@@ -66,6 +82,25 @@ public class RequestResponseResult<T> {
      */
     public final CacheDirective getCacheDirective() {
         return cacheDirective;
+    }
+
+    /**
+     * Gets the value of a property conveyed in this response message's
+     * <em>application-properties</em>.
+     * 
+     * @param <V> The expected value type.
+     * @param key The key of the property.
+     * @param type The expected value type.
+     * @return The value if it is of the expected type or {@code null} otherwise.
+     */
+    @SuppressWarnings("unchecked")
+    public final <V> V getApplicationProperty(final String key, final Class<V> type) {
+        final Object value = applicationProperties.get(key);
+        if (type.isInstance(value)) {
+            return (V) value;
+        } else {
+            return null;
+        }
     }
 
     /**

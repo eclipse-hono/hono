@@ -13,6 +13,8 @@
 
 package org.eclipse.hono.util;
 
+import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
+
 /**
  * A container for the result returned by Hono's credentials API.
  *
@@ -20,8 +22,12 @@ package org.eclipse.hono.util;
  */
 public final class CredentialsResult<T> extends RequestResponseResult<T> {
 
-    private CredentialsResult(final int status, final T payload, final CacheDirective cacheDirective) {
-        super(status, payload, cacheDirective);
+    private CredentialsResult(
+            final int status,
+            final T payload,
+            final CacheDirective cacheDirective,
+            final ApplicationProperties applicationProperties) {
+        super(status, payload, cacheDirective, applicationProperties);
     }
 
     /**
@@ -32,7 +38,7 @@ public final class CredentialsResult<T> extends RequestResponseResult<T> {
      * @return The result.
      */
     public static <T> CredentialsResult<T> from(final int status) {
-        return new CredentialsResult<>(status, null, CacheDirective.noCacheDirective());
+        return new CredentialsResult<>(status, null, CacheDirective.noCacheDirective(), null);
     }
 
     /**
@@ -47,7 +53,7 @@ public final class CredentialsResult<T> extends RequestResponseResult<T> {
      * @return The result.
      */
     public static <T> CredentialsResult<T> from(final int status, final T payload) {
-        return new CredentialsResult<>(status, payload, CacheDirective.noCacheDirective());
+        return new CredentialsResult<>(status, payload, CacheDirective.noCacheDirective(), null);
     }
 
     /**
@@ -61,6 +67,26 @@ public final class CredentialsResult<T> extends RequestResponseResult<T> {
      * @return The result.
      */
     public static <T> CredentialsResult<T> from(final int status, final T payload, final CacheDirective cacheDirective) {
-        return new CredentialsResult<>(status, payload, cacheDirective);
+        return new CredentialsResult<>(status, payload, cacheDirective, null);
+    }
+
+    /**
+     * Creates a new result for a status code and payload.
+     * 
+     * @param status The status code indicating the outcome of the request.
+     * @param payload The payload to convey to the sender of the request.
+     * @param cacheDirective Restrictions regarding the caching of the payload by
+     *                       the receiver of the result (may be {@code null}).
+     * @param applicationProperties Arbitrary properties conveyed in the response message's
+     *                              <em>application-properties</em>.
+     * @param <T> The type of the payload that is conveyed in the result.
+     * @return The result.
+     */
+    public static <T> CredentialsResult<T> from(
+            final int status,
+            final T payload,
+            final CacheDirective cacheDirective,
+            final ApplicationProperties applicationProperties) {
+        return new CredentialsResult<>(status, payload, cacheDirective, applicationProperties);
     }
 }

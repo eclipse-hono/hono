@@ -20,6 +20,8 @@ import java.util.Objects;
 import io.opentracing.Span;
 import io.opentracing.tag.Tags;
 import io.vertx.proton.ProtonHelper;
+
+import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.CommandClient;
 import org.eclipse.hono.client.ServerErrorException;
@@ -122,8 +124,13 @@ public class CommandClientImpl extends AbstractRequestResponseClient<BufferResul
     }
 
     @Override
-    protected BufferResult getResult(final int status, final String contentType, final Buffer payload, final CacheDirective cacheDirective) {
-        return BufferResult.from(status, contentType, payload);
+    protected BufferResult getResult(
+            final int status,
+            final String contentType,
+            final Buffer payload,
+            final CacheDirective cacheDirective,
+            final ApplicationProperties applicationProperties) {
+        return BufferResult.from(status, contentType, payload, applicationProperties);
     }
 
     /**

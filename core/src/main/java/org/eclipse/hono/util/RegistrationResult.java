@@ -13,6 +13,8 @@
 
 package org.eclipse.hono.util;
 
+import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
+
 import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonObject;
 
@@ -22,8 +24,12 @@ import io.vertx.core.json.JsonObject;
  */
 public final class RegistrationResult extends RequestResponseResult<JsonObject> {
 
-    private RegistrationResult(final int status, final JsonObject payload, final CacheDirective cacheDirective) {
-        super(status, payload, cacheDirective);
+    private RegistrationResult(
+            final int status,
+            final JsonObject payload,
+            final CacheDirective cacheDirective,
+            final ApplicationProperties applicationProperties) {
+        super(status, payload, cacheDirective, applicationProperties);
     }
 
     /**
@@ -33,7 +39,7 @@ public final class RegistrationResult extends RequestResponseResult<JsonObject> 
      * @return The result.
      */
     public static RegistrationResult from(final int status) {
-        return new RegistrationResult(status, null, null);
+        return new RegistrationResult(status, null, null, null);
     }
 
     /**
@@ -44,19 +50,7 @@ public final class RegistrationResult extends RequestResponseResult<JsonObject> 
      * @return The result.
      */
     public static RegistrationResult from(final int status, final JsonObject payload) {
-        return new RegistrationResult(status, payload, null);
-    }
-
-    /**
-     * Creates a new result for a status code and a payload.
-     * 
-     * @param status The status code.
-     * @param payload The payload to include in the result.
-     * @param cacheDirective Restrictions regarding the caching of the payload.
-     * @return The result.
-     */
-    public static RegistrationResult from(final int status, final JsonObject payload, final CacheDirective cacheDirective) {
-        return new RegistrationResult(status, payload, cacheDirective);
+        return new RegistrationResult(status, payload, null, null);
     }
 
     /**
@@ -70,9 +64,39 @@ public final class RegistrationResult extends RequestResponseResult<JsonObject> 
      */
     public static RegistrationResult from(final int status, final String payload) {
         if (payload != null) {
-            return new RegistrationResult(status, new JsonObject(payload), null);
+            return new RegistrationResult(status, new JsonObject(payload), null, null);
         } else {
-            return new RegistrationResult(status, null, null);
+            return new RegistrationResult(status, null, null, null);
         }
+    }
+
+    /**
+     * Creates a new result for a status code and a payload.
+     * 
+     * @param status The status code.
+     * @param payload The payload to include in the result.
+     * @param cacheDirective Restrictions regarding the caching of the payload.
+     * @return The result.
+     */
+    public static RegistrationResult from(final int status, final JsonObject payload, final CacheDirective cacheDirective) {
+        return new RegistrationResult(status, payload, cacheDirective, null);
+    }
+
+    /**
+     * Creates a new result for a status code and a payload.
+     * 
+     * @param status The status code.
+     * @param payload The payload to include in the result.
+     * @param cacheDirective Restrictions regarding the caching of the payload.
+     * @param applicationProperties Arbitrary properties conveyed in the response message's
+     *                              <em>application-properties</em>.
+     * @return The result.
+     */
+    public static RegistrationResult from(
+            final int status,
+            final JsonObject payload,
+            final CacheDirective cacheDirective,
+            final ApplicationProperties applicationProperties) {
+        return new RegistrationResult(status, payload, cacheDirective, applicationProperties);
     }
 }

@@ -18,6 +18,7 @@ import java.net.HttpURLConnection;
 import java.util.Objects;
 import java.util.UUID;
 
+import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.CredentialsClient;
 import org.eclipse.hono.client.StatusCodeMapper;
@@ -92,19 +93,21 @@ public class CredentialsClientImpl extends AbstractRequestResponseClient<Credent
             final int status,
             final String contentType,
             final Buffer payload,
-            final CacheDirective cacheDirective) {
+            final CacheDirective cacheDirective,
+            final ApplicationProperties applicationProperties) {
 
         if (payload == null) {
-            return CredentialsResult.from(status);
+            return CredentialsResult.from(status, null, null, applicationProperties);
         } else {
             try {
                 return CredentialsResult.from(
                         status,
                         OBJECT_MAPPER.readValue(payload.getBytes(), CredentialsObject.class),
-                        cacheDirective);
+                        cacheDirective,
+                        applicationProperties);
             } catch (final IOException e) {
                 LOG.warn("received malformed payload from Credentials service", e);
-                return CredentialsResult.from(HttpURLConnection.HTTP_INTERNAL_ERROR);
+                return CredentialsResult.from(HttpURLConnection.HTTP_INTERNAL_ERROR, null, null, applicationProperties);
             }
         }
     }

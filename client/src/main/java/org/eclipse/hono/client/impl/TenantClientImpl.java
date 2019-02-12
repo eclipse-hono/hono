@@ -22,6 +22,7 @@ import java.util.function.Supplier;
 
 import javax.security.auth.x500.X500Principal;
 
+import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
 import org.eclipse.hono.cache.CacheProvider;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.StatusCodeMapper;
@@ -139,19 +140,21 @@ public class TenantClientImpl extends AbstractRequestResponseClient<TenantResult
             final int status,
             final String contentType,
             final Buffer payload,
-            final CacheDirective cacheDirective) {
+            final CacheDirective cacheDirective,
+            final ApplicationProperties applicationProperties) {
 
         if (payload == null) {
-            return TenantResult.from(status, (TenantObject) null, cacheDirective);
+            return TenantResult.from(status, (TenantObject) null, cacheDirective, applicationProperties);
         } else {
             try {
                 return TenantResult.from(
                         status,
                         OBJECT_MAPPER.readValue(payload.getBytes(), TenantObject.class),
-                        cacheDirective);
+                        cacheDirective,
+                        applicationProperties);
             } catch (final IOException e) {
                 LOG.warn("received malformed payload from Tenant service", e);
-                return TenantResult.from(HttpURLConnection.HTTP_INTERNAL_ERROR);
+                return TenantResult.from(HttpURLConnection.HTTP_INTERNAL_ERROR, null, null, applicationProperties);
             }
         }
     }

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,6 +13,8 @@
 
 package org.eclipse.hono.util;
 
+import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
+
 import io.vertx.core.buffer.Buffer;
 
 /**
@@ -23,8 +25,13 @@ public final class BufferResult extends RequestResponseResult<Buffer> {
 
     private final String contentType;
 
-    private BufferResult(final int status, final String contentType, final Buffer payload) {
-        super(status, payload, CacheDirective.noCacheDirective());
+    private BufferResult(
+            final int status,
+            final String contentType,
+            final Buffer payload,
+            final ApplicationProperties applicationProperties) {
+
+        super(status, payload, CacheDirective.noCacheDirective(), applicationProperties);
         this.contentType = contentType;
     }
 
@@ -35,7 +42,7 @@ public final class BufferResult extends RequestResponseResult<Buffer> {
      * @return The result.
      */
     public static BufferResult from(final int status) {
-        return new BufferResult(status, null, null);
+        return new BufferResult(status, null, null, null);
     }
 
     /**
@@ -46,7 +53,8 @@ public final class BufferResult extends RequestResponseResult<Buffer> {
      * @return The result.
      */
     public static BufferResult from(final int status, final Buffer payload) {
-        return new BufferResult(status, null, payload);
+
+        return new BufferResult(status, null, payload, null);
     }
 
     /**
@@ -57,8 +65,31 @@ public final class BufferResult extends RequestResponseResult<Buffer> {
      * @param payload The payload to include in the result.
      * @return The result.
      */
-    public static BufferResult from(final int status, final String contentType, final Buffer payload) {
-        return new BufferResult(status, contentType, payload);
+    public static BufferResult from(
+            final int status,
+            final String contentType,
+            final Buffer payload) {
+
+        return new BufferResult(status, contentType, payload, null);
+    }
+
+    /**
+     * Creates a new result for a status code and payload.
+     * 
+     * @param status The status code.
+     * @param contentType A media type describing the payload or {@code null} if unknown.
+     * @param payload The payload to include in the result.
+     * @param applicationProperties Arbitrary properties conveyed in the response message's
+     *                              <em>application-properties</em>.
+     * @return The result.
+     */
+    public static BufferResult from(
+            final int status,
+            final String contentType,
+            final Buffer payload,
+            final ApplicationProperties applicationProperties) {
+
+        return new BufferResult(status, contentType, payload, applicationProperties);
     }
 
     /**

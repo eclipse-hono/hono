@@ -14,6 +14,8 @@
 package org.eclipse.hono.client.impl;
 
 import io.vertx.core.buffer.Buffer;
+
+import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
 import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.RequestResponseResult;
 
@@ -24,19 +26,12 @@ import org.eclipse.hono.util.RequestResponseResult;
  */
 public final class SimpleRequestResponseResult extends RequestResponseResult<Buffer> {
 
-    private SimpleRequestResponseResult(final int status, final Buffer payload, final CacheDirective directive) {
-        super(status, payload, directive);
-    }
-
-    /**
-     * Creates a new instance for a status code and payload.
-     * 
-     * @param status The status code.
-     * @param payload The payload.
-     * @return The instance.
-     */
-    public static SimpleRequestResponseResult from(final int status, final Buffer payload) {
-        return new SimpleRequestResponseResult(status, payload, null);
+    private SimpleRequestResponseResult(
+            final int status,
+            final Buffer payload,
+            final CacheDirective directive,
+            final ApplicationProperties applicationProperties) {
+        super(status, payload, directive, applicationProperties);
     }
 
     /**
@@ -46,9 +41,15 @@ public final class SimpleRequestResponseResult extends RequestResponseResult<Buf
      * @param payload The payload.
      * @param cacheDirective Restrictions regarding the caching of the payload by
      *                       the receiver of the result (may be {@code null}).
+     * @param applicationProperties Arbitrary properties conveyed in the response message's
+     *                              <em>application-properties</em>.
      * @return The instance.
      */
-    public static SimpleRequestResponseResult from(final int status, final Buffer payload, final CacheDirective cacheDirective) {
-        return new SimpleRequestResponseResult(status, payload, cacheDirective);
+    public static SimpleRequestResponseResult from(
+            final int status,
+            final Buffer payload,
+            final CacheDirective cacheDirective,
+            final ApplicationProperties applicationProperties) {
+        return new SimpleRequestResponseResult(status, payload, cacheDirective, applicationProperties);
     }
 }

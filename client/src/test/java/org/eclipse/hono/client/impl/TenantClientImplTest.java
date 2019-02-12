@@ -179,7 +179,7 @@ public class TenantClientImplTest {
 
         final JsonObject tenantJsonObject = newTenantResult("tenant");
         final TenantResult<TenantObject> tenantResult = client.getResult(
-                HttpURLConnection.HTTP_OK, "application/json", tenantJsonObject.toBuffer(), null);
+                HttpURLConnection.HTTP_OK, "application/json", tenantJsonObject.toBuffer(), null, null);
 
         when(cache.get(any(TriTuple.class))).thenReturn(tenantResult);
 
