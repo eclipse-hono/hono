@@ -39,6 +39,8 @@ title = "Release Notes"
   in business applications.
   As a consequence, the `org.eclipse.hono.client.CommandResponse`'s factory methods have been changed to
   accept the tenant and device IDs as parameters.
+* The *connectTimeout* configuration variable for the `HonoClient` now defines the time to wait not only for the TCP/TLS
+  connection establishment but also for the SASL handshake and the exchange of the AMQP *open* frame.
 
 ### Depreciations
 

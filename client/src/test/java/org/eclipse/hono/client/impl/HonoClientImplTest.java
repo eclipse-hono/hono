@@ -105,17 +105,14 @@ public class HonoClientImplTest {
         // GIVEN a client that is configured to reconnect
         // two times before failing
         props.setReconnectAttempts(2);
+        props.setConnectTimeout(10);
         // expect three unsuccessful connection attempts
         connectionFactory = new DisconnectHandlerProvidingConnectionFactory(con)
                 .setExpectedFailingConnectionAttempts(3);
         client = new HonoClientImpl(vertx, connectionFactory, props);
 
         // WHEN the client tries to connect
-        final ProtonClientOptions options = new ProtonClientOptions()
-                .setConnectTimeout(10)
-                .setReconnectAttempts(0)
-                .setReconnectInterval(100);
-        client.connect(options).setHandler(ctx.asyncAssertFailure(t -> {
+        client.connect().setHandler(ctx.asyncAssertFailure(t -> {
             // THEN the connection attempt fails
             ctx.assertEquals(HttpURLConnection.HTTP_UNAVAILABLE, ((ServerErrorException) t).getErrorCode());
         }));
@@ -135,17 +132,14 @@ public class HonoClientImplTest {
         // GIVEN a client that is configured to connect
         // to a peer that always throws an AuthenticationException
         props.setReconnectAttempts(2);
+        props.setConnectTimeout(10);
         connectionFactory = new DisconnectHandlerProvidingConnectionFactory(con)
                 .setExpectedFailingConnectionAttempts(1) // only one connection attempt expected here
                 .failWith(new AuthenticationException("Failed to authenticate"));
         client = new HonoClientImpl(vertx, connectionFactory, props);
-        final ProtonClientOptions options = new ProtonClientOptions()
-                .setConnectTimeout(10)
-                .setReconnectAttempts(0)
-                .setReconnectInterval(50);
 
         // WHEN the client tries to connect
-        client.connect(options).setHandler(ctx.asyncAssertFailure(t -> {
+        client.connect().setHandler(ctx.asyncAssertFailure(t -> {
             // THEN the connection attempt fails due do lack of authorization
             ctx.assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED, ((ServiceInvocationException) t).getErrorCode());
         }));
@@ -165,17 +159,14 @@ public class HonoClientImplTest {
         // GIVEN a client that is configured to connect
         // to a peer that always throws a SaslSystemException (as if no credentials were given)
         props.setReconnectAttempts(2);
+        props.setConnectTimeout(10);
         connectionFactory = new DisconnectHandlerProvidingConnectionFactory(con)
                 .setExpectedFailingConnectionAttempts(1) // only one connection attempt expected here
                 .failWith(new SaslSystemException(true, "Could not find a suitable SASL mechanism for the remote peer using the available credentials."));
         client = new HonoClientImpl(vertx, connectionFactory, props);
-        final ProtonClientOptions options = new ProtonClientOptions()
-                .setConnectTimeout(10)
-                .setReconnectAttempts(0)
-                .setReconnectInterval(50);
 
         // WHEN the client tries to connect
-        client.connect(options).setHandler(ctx.asyncAssertFailure(t -> {
+        client.connect().setHandler(ctx.asyncAssertFailure(t -> {
             // THEN the connection attempt fails due do lack of authorization
             ctx.assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED, ((ServiceInvocationException) t).getErrorCode());
             ctx.assertEquals("no suitable SASL mechanism found for authentication with server", t.getMessage());
@@ -196,17 +187,14 @@ public class HonoClientImplTest {
         // GIVEN a client that is configured to connect
         // to a peer that always throws a SaslSystemException with permanent=false
         props.setReconnectAttempts(2);
+        props.setConnectTimeout(10);
         connectionFactory = new DisconnectHandlerProvidingConnectionFactory(con)
                 .setExpectedFailingConnectionAttempts(3)
                 .failWith(new SaslSystemException(false, "SASL handshake failed due to a transient error"));
         client = new HonoClientImpl(vertx, connectionFactory, props);
-        final ProtonClientOptions options = new ProtonClientOptions()
-                .setConnectTimeout(10)
-                .setReconnectAttempts(0)
-                .setReconnectInterval(50);
 
         // WHEN the client tries to connect
-        client.connect(options).setHandler(ctx.asyncAssertFailure(t -> {
+        client.connect().setHandler(ctx.asyncAssertFailure(t -> {
             // THEN the connection attempt fails
             ctx.assertEquals(HttpURLConnection.HTTP_UNAVAILABLE, ((ServiceInvocationException) t).getErrorCode());
         }));
@@ -226,17 +214,14 @@ public class HonoClientImplTest {
         // GIVEN a client that is configured to connect
         // to a peer that always throws a SaslSystemException with permanent=true
         props.setReconnectAttempts(2);
+        props.setConnectTimeout(10);
         connectionFactory = new DisconnectHandlerProvidingConnectionFactory(con)
                 .setExpectedFailingConnectionAttempts(1) // only one connection attempt expected here
                 .failWith(new SaslSystemException(true, "SASL handshake failed due to an unrecoverable error"));
         client = new HonoClientImpl(vertx, connectionFactory, props);
-        final ProtonClientOptions options = new ProtonClientOptions()
-                .setConnectTimeout(10)
-                .setReconnectAttempts(0)
-                .setReconnectInterval(50);
 
         // WHEN the client tries to connect
-        client.connect(options).setHandler(ctx.asyncAssertFailure(t -> {
+        client.connect().setHandler(ctx.asyncAssertFailure(t -> {
             // THEN the connection attempt fails
             ctx.assertEquals(HttpURLConnection.HTTP_UNAVAILABLE, ((ServiceInvocationException) t).getErrorCode());
         }));
@@ -500,15 +485,12 @@ public class HonoClientImplTest {
         connectionFactory = new DisconnectHandlerProvidingConnectionFactory(con)
                 .setExpectedFailingConnectionAttempts(2);
         props.setReconnectAttempts(2);
+        props.setConnectTimeout(10);
         client = new HonoClientImpl(vertx, connectionFactory, props);
 
         // WHEN trying to connect
         final Async disconnectHandlerInvocation = ctx.async();
-        final ProtonClientOptions options = new ProtonClientOptions()
-                .setConnectTimeout(10)
-                .setReconnectAttempts(0)
-                .setReconnectInterval(100);
-        client.connect(options, failedCon -> disconnectHandlerInvocation.complete()).setHandler(ctx.asyncAssertSuccess());
+        client.connect(null, failedCon -> disconnectHandlerInvocation.complete()).setHandler(ctx.asyncAssertSuccess());
 
         // THEN the client fails twice to connect
         assertTrue(connectionFactory.awaitFailure());

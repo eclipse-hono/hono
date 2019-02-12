@@ -151,7 +151,7 @@ public class HonoSender extends AbstractClient {
     private Future<HonoClient> connectToHonoMessaging() {
 
         return honoClient
-                .connect(getClientOptions())
+                .connect()
                 .map(client -> {
                     LOGGER.info("connected to Hono Messaging [{}:{}]", sampler.getHost(), sampler.getPort());
                     return client;
@@ -165,7 +165,7 @@ public class HonoSender extends AbstractClient {
             return Future.succeededFuture(null);
         } else {
             return registrationHonoClient
-                    .connect(getClientOptions())
+                    .connect()
                     .map(client -> {
                         LOGGER.info("connected to Device Registration service [{}:{}]", sampler.getRegistryHost(), sampler.getRegistryPort());
                         return client;

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -105,7 +105,7 @@ public class HonoReceiver extends AbstractClient {
 
     private Future<HonoClient> connect() {
         return amqpNetworkClient
-                .connect(getClientOptions())
+                .connect()
                 .map(client -> {
                     LOGGER.info("connected to AMQP Messaging Network [{}:{}]", sampler.getHost(), sampler.getPort());
                     return client;
