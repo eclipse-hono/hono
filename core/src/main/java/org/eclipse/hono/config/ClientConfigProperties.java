@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -27,8 +27,8 @@ import org.eclipse.hono.util.Constants;
 public class ClientConfigProperties extends AbstractConfig {
 
     /**
-     * The default amount of time (milliseconds) to wait for a TCP/TLS connection to
-     * be established.
+     * The default amount of time (milliseconds) to wait for an AMQP connection to
+     * be opened.
      */
     public static final int DEFAULT_CONNECT_TIMEOUT = 5000; // ms
     /**
@@ -566,11 +566,11 @@ public class ClientConfigProperties extends AbstractConfig {
     }
 
     /**
-     * Gets the maximum amount of time a client should wait for a TCP/TLS connection
-     * with a peer to be established.
+     * Gets the maximum amount of time a client should wait for an AMQP connection
+     * with a peer to be opened.
      * <p>
-     * Note that this value does not limit the amount of time to wait for the
-     * peer's AMQP <em>open</em> frame to be received.
+     * This includes the time for TCP/TLS connection establishment, SASL handshake
+     * and exchange of the AMQP <em>open</em> frame.
      * <p>
      * The default value of this property is {@link #DEFAULT_CONNECT_TIMEOUT}.
      *
@@ -581,11 +581,11 @@ public class ClientConfigProperties extends AbstractConfig {
     }
 
     /**
-     * Sets the maximum amount of time a client should wait for a TCP/TLS connection
-     * with a peer to be established.
+     * Sets the maximum amount of time a client should wait for an AMQP connection
+     * with a peer to be opened.
      * <p>
-     * Note that this value does not limit the amount of time to wait for the
-     * peer's AMQP <em>open</em> frame to be received.
+     * This includes the time for TCP/TLS connection establishment, SASL handshake
+     * and exchange of the AMQP <em>open</em> frame.
      * <p>
      * The default value of this property is {@link #DEFAULT_CONNECT_TIMEOUT}.
      *

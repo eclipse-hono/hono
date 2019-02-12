@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -16,7 +16,6 @@ import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
 import io.vertx.core.dns.AddressResolverOptions;
-import io.vertx.proton.ProtonClientOptions;
 
 /**
  * Base class for implementing JMeter samplers connecting to Hono.
@@ -24,7 +23,6 @@ import io.vertx.proton.ProtonClientOptions;
  */
 public abstract class AbstractClient {
 
-    static final int    DEFAULT_CONNECT_TIMEOUT_MILLIS            = 1000;
     static final int    DEFAULT_ADDRESS_RESOLUTION_TIMEOUT_MILLIS = 2000;
     static final String TIME_STAMP_VARIABLE                       = "timeStamp";
 
@@ -49,10 +47,6 @@ public abstract class AbstractClient {
                         .setRotateServers(true)
                         .setQueryTimeout(DEFAULT_ADDRESS_RESOLUTION_TIMEOUT_MILLIS));
         return Vertx.vertx(options);
-    }
-
-    final ProtonClientOptions getClientOptions() {
-        return new ProtonClientOptions().setConnectTimeout(DEFAULT_CONNECT_TIMEOUT_MILLIS);
     }
 
     /**

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -15,16 +15,16 @@ package org.eclipse.hono.connection.impl;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
-import io.vertx.core.AsyncResult;
-import io.vertx.core.Future;
-import io.vertx.proton.ProtonConnection;
 import org.eclipse.hono.config.ClientConfigProperties;
-import org.eclipse.hono.connection.impl.ConnectionFactoryImpl;
+import org.eclipse.hono.connection.ConnectTimeoutException;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.Mockito;
 
+import io.vertx.core.AsyncResult;
+import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.ext.unit.Async;
@@ -32,7 +32,7 @@ import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.proton.ProtonClient;
 import io.vertx.proton.ProtonClientOptions;
-import org.mockito.Mockito;
+import io.vertx.proton.ProtonConnection;
 
 /**
  * Verifies behavior of {@code ConnectionFactoryImpl}.
@@ -64,7 +64,7 @@ public class ConnectionFactoryImplTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testConnectInvokesHandlerOnfailureToConnect(final TestContext ctx) {
+    public void testConnectInvokesHandlerOnFailureToConnect(final TestContext ctx) {
 
         // GIVEN a factory configured to connect to a non-existing server
         final ConnectionFactoryImpl factory = new ConnectionFactoryImpl(vertx, props);
@@ -72,12 +72,38 @@ public class ConnectionFactoryImplTest {
         // WHEN trying to connect to the server
         final Async handlerInvocation = ctx.async();
 
-        final ProtonClientOptions options = new ProtonClientOptions().setConnectTimeout(100);
-        factory.connect(options, null, null, ctx.asyncAssertFailure(t -> {
+        factory.connect(null, null, null, ctx.asyncAssertFailure(t -> {
+            ctx.assertFalse(t instanceof ConnectTimeoutException);
             handlerInvocation.complete();
         }));
 
         // THEN the connection attempt fails and the given handler is invoked
+        handlerInvocation.await(2000);
+    }
+
+    /**
+     * Verifies that the given result handler is invoked if a connection attempt times out.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testConnectInvokesHandlerOnConnectTimeout(final TestContext ctx) {
+
+        // GIVEN a factory configured to connect to a server with a mocked ProtonClient that won't actually try to connect
+        props.setConnectTimeout(10);
+        final ConnectionFactoryImpl factory = new ConnectionFactoryImpl(vertx, props);
+        final ProtonClient protonClientMock = mock(ProtonClient.class);
+        factory.setProtonClient(protonClientMock);
+
+        // WHEN trying to connect to the server
+        final Async handlerInvocation = ctx.async();
+
+        factory.connect(null, null, null, ctx.asyncAssertFailure(t -> {
+            ctx.assertTrue(t instanceof ConnectTimeoutException);
+            handlerInvocation.complete();
+        }));
+
+        // THEN the connection attempt fails with a TimeoutException and the given handler is invoked
         handlerInvocation.await(2000);
     }
 
