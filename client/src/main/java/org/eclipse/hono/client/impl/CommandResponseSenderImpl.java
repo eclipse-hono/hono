@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -114,18 +114,10 @@ public class CommandResponseSenderImpl extends AbstractSender implements Command
             final SpanContext context) {
 
         Objects.requireNonNull(commandResponse);
-        return sendAndWaitForOutcome(createResponseMessage(commandResponse), context);
-    }
-
-    private Message createResponseMessage(final CommandResponse commandResponse) {
-
-        return createResponseMessage(
-                targetAddress,
-                commandResponse.getCorrelationId(),
-                commandResponse.getContentType(),
-                commandResponse.getPayload(),
-                commandResponse.getProperties(),
-                commandResponse.getStatus());
+        final Message message = commandResponse.toMessage();
+        Objects.requireNonNull(message);
+        message.setAddress(targetAddress);
+        return sendAndWaitForOutcome(message, context);
     }
 
     private static Message createResponseMessage(
