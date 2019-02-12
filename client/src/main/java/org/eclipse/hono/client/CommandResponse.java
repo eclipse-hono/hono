@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,11 +13,10 @@
 
 package org.eclipse.hono.client;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Optional;
 import java.util.function.Predicate;
 
+import io.vertx.proton.ProtonHelper;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
@@ -34,22 +33,24 @@ public final class CommandResponse {
     private static final Predicate<Integer> INVALID_STATUS_CODE = code ->
         code == null || code < 200 || (code >= 300 && code < 400) || code >= 600;
 
-    private final Buffer payload;
-    private final String contentType;
-    private final int status;
+    private final Message message;
     private final String replyToId;
-    private final String correlationId;
-    private final Map<String, Object> properties = new HashMap<>();
 
     private CommandResponse(final String tenantId, final String deviceId, final Buffer payload,
             final String contentType, final int status, final String correlationId, final String replyToId) {
-        this.payload = payload;
-        this.contentType = contentType;
-        this.status = status;
+        message = ProtonHelper.message();
+        message.setCorrelationId(correlationId);
+        MessageHelper.setCreationTime(message);
+        MessageHelper.addProperty(message, MessageHelper.APP_PROPERTY_TENANT_ID, tenantId);
+        MessageHelper.addProperty(message, MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId);
+        MessageHelper.addProperty(message, MessageHelper.APP_PROPERTY_STATUS, status);
+        MessageHelper.setPayload(this.message, contentType, payload);
         this.replyToId = replyToId;
-        this.correlationId = correlationId;
-        this.properties.put(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId);
-        this.properties.put(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId);
+    }
+
+    private CommandResponse(final Message message, final String replyToId) {
+        this.message = message;
+        this.replyToId = replyToId;
     }
 
     /**
@@ -127,9 +128,9 @@ public final class CommandResponse {
         } else {
             try {
                 final ResourceIdentifier resource = ResourceIdentifier.fromString(message.getAddress());
-                return new CommandResponse(resource.getTenantId(), resource.getResourceId(),
-                        MessageHelper.getPayload(message), message.getContentType(), status, correlationId,
-                        getReplyId(resource));
+                MessageHelper.addProperty(message, MessageHelper.APP_PROPERTY_TENANT_ID, resource.getTenantId());
+                MessageHelper.addProperty(message, MessageHelper.APP_PROPERTY_DEVICE_ID, resource.getResourceId());
+                return new CommandResponse(message, getReplyId(resource));
             } catch (NullPointerException | IllegalArgumentException e) {
                 return null;
             }
@@ -151,25 +152,7 @@ public final class CommandResponse {
      * @return The identifier or {@code null} if the request ID could not be parsed.
      */
     public String getCorrelationId() {
-        return correlationId;
-    }
-
-    /**
-     * Gets the payload of the response message.
-     * 
-     * @return The payload or {@code null} if the response is empty.
-     */
-    public Buffer getPayload() {
-        return payload;
-    }
-
-    /**
-     * Gets the contentType of the response message.
-     *
-     * @return The contentType or {@code null} if the contentType was not set for the response.
-     */
-    public String getContentType() {
-        return contentType;
+        return (String) message.getCorrelationId();
     }
 
     /**
@@ -179,16 +162,17 @@ public final class CommandResponse {
      * @return The status code.
      */
     public int getStatus() {
-        return status;
+        return MessageHelper.getApplicationProperty(message.getApplicationProperties(),
+                MessageHelper.APP_PROPERTY_STATUS, Integer.class);
     }
 
     /**
-     * Gets a map of the properties to include in the message as application properties.
+     * Gets the AMQP 1.0 message representing this command response.
      *
-     * @return The properties.
+     * @return The command response message.
      */
-    public Map<String, Object> getProperties() {
-        return properties;
+    public Message toMessage() {
+        return message;
     }
 
     private static String getReplyId(final ResourceIdentifier resource) {

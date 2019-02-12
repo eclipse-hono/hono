@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -53,7 +53,8 @@ public class CommandResponseTest {
                 null,
                 HttpURLConnection.HTTP_OK);
         assertNotNull(resp);
-        assertThat(resp.getCorrelationId(), is(CORRELATION_ID));
+        assertNotNull(resp.toMessage());
+        assertThat(resp.toMessage().getCorrelationId(), is(CORRELATION_ID));
         assertThat(resp.getReplyToId(), is(REPLY_TO_ID));
     }
 
@@ -72,7 +73,8 @@ public class CommandResponseTest {
                 null,
                 null,
                 HttpURLConnection.HTTP_OK);
-        assertThat(resp.getCorrelationId(), is("any"));
+        assertNotNull(resp.toMessage());
+        assertThat(resp.toMessage().getCorrelationId(), is("any"));
         assertThat(resp.getReplyToId(), is("String"));
 
         assertNull(CommandResponse.from("0ZZanyString", TENANT_ID, DEVICE_ID, null, null, HttpURLConnection.HTTP_OK));
@@ -87,7 +89,8 @@ public class CommandResponseTest {
         // make sure we succeed with a valid status code
         final CommandResponse resp = CommandResponse.from(
                 "103oneTwo", TENANT_ID, DEVICE_ID, null, null, 200);
-        assertThat(resp.getCorrelationId(), is("one"));
+        assertNotNull(resp.toMessage());
+        assertThat(resp.toMessage().getCorrelationId(), is("one"));
         assertThat(resp.getReplyToId(), is(DEVICE_ID + "/Two"));
 
         assertNull(CommandResponse.from(
@@ -111,7 +114,8 @@ public class CommandResponseTest {
         // make sure we succeed with valid length
         final CommandResponse resp = CommandResponse.from(
                 String.format("0%02x%s", 4, id), TENANT_ID, DEVICE_ID, null, null, 200);
-        assertThat(resp.getCorrelationId(), is("this"));
+        assertNotNull(resp.toMessage());
+        assertThat(resp.toMessage().getCorrelationId(), is("this"));
         assertThat(resp.getReplyToId(), is("IsLessThan255Characters"));
 
         assertNull(CommandResponse.from(
@@ -200,8 +204,8 @@ public class CommandResponseTest {
                 null,
                 null,
                 HttpURLConnection.HTTP_OK);
-        assertThat(response.getProperties(), is(notNullValue()));
-        assertThat(response.getProperties().get(MessageHelper.APP_PROPERTY_TENANT_ID), is(TENANT_ID));
-        assertThat(response.getProperties().get(MessageHelper.APP_PROPERTY_DEVICE_ID), is(DEVICE_ID));
+        assertNotNull(response.toMessage());
+        assertThat(MessageHelper.getTenantId(response.toMessage()), is(TENANT_ID));
+        assertThat(MessageHelper.getDeviceId(response.toMessage()), is(DEVICE_ID));
     }
 }
