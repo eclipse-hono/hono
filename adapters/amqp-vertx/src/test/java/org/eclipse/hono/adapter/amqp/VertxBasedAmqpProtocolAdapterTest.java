@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -110,6 +110,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
     private TenantClient tenantClient;
 
     private AmqpAdapterProperties config;
+    private AmqpAdapterMetrics metrics;
 
     /**
      * Setups the protocol adapter.
@@ -119,6 +120,8 @@ public class VertxBasedAmqpProtocolAdapterTest {
     @SuppressWarnings("unchecked")
     @Before
     public void setup(final TestContext context) {
+
+        metrics = mock(AmqpAdapterMetrics.class);
 
         tenantClient = mock(TenantClient.class);
         when(tenantClient.get(anyString(), (SpanContext) any())).thenAnswer(invocation -> {
@@ -482,6 +485,88 @@ public class VertxBasedAmqpProtocolAdapterTest {
 
     }
 
+    /**
+     * Verifies that the adapter increments the connection count when
+     * a device connects and decrement the count when the device disconnects.
+     */
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testConnectionCount() {
+
+        // GIVEN an AMQP adapter
+        final VertxBasedAmqpProtocolAdapter adapter = givenAnAmqpAdapter();
+
+        // WHEN a device connects
+        final Device authenticatedDevice = new Device(TEST_TENANT_ID, TEST_DEVICE);
+        final Record record = new RecordImpl();
+        record.set(AmqpAdapterConstants.KEY_CLIENT_DEVICE, Device.class, authenticatedDevice);
+        final ProtonConnection deviceConnection = mock(ProtonConnection.class);
+        when(deviceConnection.attachments()).thenReturn(record);
+        adapter.onConnectRequest(deviceConnection);
+        final ArgumentCaptor<Handler<AsyncResult<ProtonConnection>>> openHandler = ArgumentCaptor.forClass(Handler.class);
+        verify(deviceConnection).openHandler(openHandler.capture());
+        openHandler.getValue().handle(Future.succeededFuture(deviceConnection));
+
+        // THEN the connection count is incremented
+        verify(metrics).incrementConnections(TEST_TENANT_ID);
+
+        // WHEN the connection to the device is lost
+        final ArgumentCaptor<Handler<ProtonConnection>> disconnectHandler = ArgumentCaptor.forClass(Handler.class);
+        verify(deviceConnection).disconnectHandler(disconnectHandler.capture());
+        disconnectHandler.getValue().handle(deviceConnection);
+
+        // THEN the connection count is decremented
+        verify(metrics).decrementConnections(TEST_TENANT_ID);
+
+        // WHEN the device closes its connection to the adapter
+        final ArgumentCaptor<Handler<AsyncResult<ProtonConnection>>> closeHandler = ArgumentCaptor.forClass(Handler.class);
+        verify(deviceConnection).closeHandler(closeHandler.capture());
+        closeHandler.getValue().handle(Future.succeededFuture());
+
+        // THEN the connection count is decremented
+        verify(metrics, times(2)).decrementConnections(TEST_TENANT_ID);
+    }
+
+    /**
+     * Verifies that the adapter increments the connection count when
+     * a device connects and decrement the count when the device disconnects.
+     */
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testConnectionCountForAnonymousDevice() {
+
+        // GIVEN an AMQP adapter that does not require devices to authenticate
+        config.setAuthenticationRequired(false);
+        final VertxBasedAmqpProtocolAdapter adapter = givenAnAmqpAdapter();
+
+        // WHEN a device connects
+        final ProtonConnection deviceConnection = mock(ProtonConnection.class);
+        when(deviceConnection.attachments()).thenReturn(mock(Record.class));
+        adapter.onConnectRequest(deviceConnection);
+        final ArgumentCaptor<Handler<AsyncResult<ProtonConnection>>> openHandler = ArgumentCaptor.forClass(Handler.class);
+        verify(deviceConnection).openHandler(openHandler.capture());
+        openHandler.getValue().handle(Future.succeededFuture(deviceConnection));
+
+        // THEN the connection count is incremented
+        verify(metrics).incrementUnauthenticatedConnections();
+
+        // WHEN the connection to the device is lost
+        final ArgumentCaptor<Handler<ProtonConnection>> disconnectHandler = ArgumentCaptor.forClass(Handler.class);
+        verify(deviceConnection).disconnectHandler(disconnectHandler.capture());
+        disconnectHandler.getValue().handle(deviceConnection);
+
+        // THEN the connection count is decremented
+        verify(metrics).decrementUnauthenticatedConnections();
+
+        // WHEN the device closes its connection to the adapter
+        final ArgumentCaptor<Handler<AsyncResult<ProtonConnection>>> closeHandler = ArgumentCaptor.forClass(Handler.class);
+        verify(deviceConnection).closeHandler(closeHandler.capture());
+        closeHandler.getValue().handle(Future.succeededFuture());
+
+        // THEN the connection count is decremented
+        verify(metrics, times(2)).decrementUnauthenticatedConnections();
+    }
+
     private Target getTarget(final ResourceIdentifier resource) {
         final Target target = new Target();
         target.setAddress(resource.toString());
@@ -573,6 +658,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
         adapter.setRegistrationServiceClient(registrationServiceClient);
         adapter.setCredentialsServiceClient(credentialsServiceClient);
         adapter.setCommandConnection(commandConnection);
+        adapter.setMetrics(metrics);
         return adapter;
     }
 

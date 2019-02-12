@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -45,6 +45,7 @@ import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.Strings;
 import org.eclipse.hono.util.TenantObject;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import io.opentracing.Span;
 import io.opentracing.log.Fields;
@@ -87,6 +88,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
      * This adapter's custom SASL authenticator factory for handling the authentication process for devices.
      */
     private ProtonSaslAuthenticatorFactory authenticatorFactory;
+    private AmqpAdapterMetrics metrics = AmqpAdapterMetrics.NOOP;
 
     // -----------------------------------------< AbstractProtocolAdapterBase >---
     /**
@@ -95,6 +97,25 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
     @Override
     protected String getTypeName() {
         return Constants.PROTOCOL_ADAPTER_TYPE_AMQP;
+    }
+
+    /**
+     * Sets the metrics for this service.
+     *
+     * @param metrics The metrics
+     */
+    @Autowired
+    public void setMetrics(final AmqpAdapterMetrics metrics) {
+        this.metrics = metrics;
+    }
+
+    /**
+     * Gets the metrics for this service.
+     *
+     * @return The metrics
+     */
+    protected AmqpAdapterMetrics getMetrics() {
+        return metrics;
     }
 
     /**
@@ -217,15 +238,22 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         return createdServer;
     }
 
-    private void onConnectRequest(final ProtonConnection con) {
+    /**
+     * Handles a remote peer's request to open a connection.
+     * 
+     * @param con The connection to be opened.
+     */
+    protected void onConnectRequest(final ProtonConnection con) {
 
         con.disconnectHandler(lostConnection -> {
             LOG.debug("lost connection to device [container: {}]", con.getRemoteContainer());
             Optional.ofNullable(getConnectionLossHandler(con)).ifPresent(handler -> handler.handle(null));
+            decrementConnectionCount(con);
         });
         con.closeHandler(remoteClose -> {
             handleRemoteConnectionClose(con, remoteClose);
             Optional.ofNullable(getConnectionLossHandler(con)).ifPresent(handler -> handler.handle(null));
+            decrementConnectionCount(con);
         });
 
         // when a begin frame is received
@@ -266,8 +294,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                     .withTag(Tags.COMPONENT.getKey(), getTypeName())
                     .start());
 
-        final Device authenticatedDevice = con.attachments()
-                .get(AmqpAdapterConstants.KEY_CLIENT_DEVICE, Device.class);
+        final Device authenticatedDevice = getAuthenticatedDevice(con);
         TracingHelper.TAG_AUTHENTICATED.set(span, authenticatedDevice != null);
         if (authenticatedDevice != null) {
             span.setTag(MessageHelper.APP_PROPERTY_TENANT_ID, authenticatedDevice.getTenantId());
@@ -304,6 +331,11 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             con.open();
             LOG.debug("connection with device [container: {}] established", con.getRemoteContainer());
             span.log("connection established");
+            if (authenticatedDevice == null) {
+                metrics.incrementUnauthenticatedConnections();
+            } else {
+                metrics.incrementConnections(authenticatedDevice.getTenantId());
+            }
             return null;
         }).otherwise(t -> {
             con.setCondition(AmqpContext.getErrorCondition(t));
@@ -361,6 +393,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
      * @param res The client's close frame.
      */
     private void handleRemoteConnectionClose(final ProtonConnection con, final AsyncResult<ProtonConnection> res) {
+
         if (res.succeeded()) {
             LOG.debug("client [container: {}] closed connection", con.getRemoteContainer());
         } else {
@@ -369,6 +402,16 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         con.disconnectHandler(null);
         con.close();
         con.disconnect();
+    }
+
+    private void decrementConnectionCount(final ProtonConnection con) {
+
+        final Device device = getAuthenticatedDevice(con);
+        if (device == null) {
+            metrics.decrementUnauthenticatedConnections();
+        } else {
+            metrics.decrementConnections(device.getTenantId());
+        }
     }
 
     /**
@@ -911,6 +954,12 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
     private static Handler<Void> getConnectionLossHandler(final ProtonConnection con) {
 
         return con.attachments().get("connectionLossHandler", Handler.class);
+    }
+
+    private static Device getAuthenticatedDevice(final ProtonConnection con) {
+        return Optional.ofNullable(con.attachments())
+                .map(attachments -> attachments.get(AmqpAdapterConstants.KEY_CLIENT_DEVICE, Device.class))
+                .orElse(null);
     }
 
     // -------------------------------------------< AbstractServiceBase >---
