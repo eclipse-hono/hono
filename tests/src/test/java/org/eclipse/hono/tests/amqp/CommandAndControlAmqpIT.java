@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -159,7 +159,12 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
                 }
             });
         }, (commandClient, payload) -> {
-            return commandClient.sendCommand("setValue", "text/plain", payload, null);
+            return commandClient.sendCommand("setValue", "text/plain", payload, null)
+                    .map(response -> {
+                        ctx.assertEquals(deviceId, response.getApplicationProperty(MessageHelper.APP_PROPERTY_DEVICE_ID, String.class));
+                        ctx.assertEquals(tenantId, response.getApplicationProperty(MessageHelper.APP_PROPERTY_TENANT_ID, String.class));
+                        return response;
+                    });
         }, 60);
     }
 

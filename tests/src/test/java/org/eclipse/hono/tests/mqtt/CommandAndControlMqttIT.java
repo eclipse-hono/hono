@@ -29,6 +29,7 @@ import org.eclipse.hono.tests.GenericMessageSender;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.EventConstants;
+import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.TenantObject;
 import org.eclipse.hono.util.TimeUntilDisconnectNotification;
@@ -164,7 +165,12 @@ public class CommandAndControlMqttIT extends MqttTestBase {
                         false);
             }
         }, payload -> {
-            return helper.sendCommand(tenantId, deviceId, "setValue", "text/plain", payload, null, 200);
+            return helper.sendCommand(tenantId, deviceId, "setValue", "text/plain", payload, null, 200)
+                    .map(response -> {
+                        ctx.assertEquals(deviceId, response.getApplicationProperty(MessageHelper.APP_PROPERTY_DEVICE_ID, String.class));
+                        ctx.assertEquals(tenantId, response.getApplicationProperty(MessageHelper.APP_PROPERTY_TENANT_ID, String.class));
+                        return response;
+                    });
         }, COMMANDS_TO_SEND, qos);
     }
 

@@ -865,6 +865,8 @@ public abstract class HttpTestBase {
                             .sendCommand(notification, COMMAND_TO_SEND, "application/json", inputData.toBuffer(), null)
                             .setHandler(ctx.asyncAssertSuccess(response -> {
                                 ctx.assertEquals("text/plain", response.getContentType());
+                                ctx.assertEquals(deviceId, response.getApplicationProperty(MessageHelper.APP_PROPERTY_DEVICE_ID, String.class));
+                                ctx.assertEquals(tenantId, response.getApplicationProperty(MessageHelper.APP_PROPERTY_TENANT_ID, String.class));
                             }));
                     });
                 },
