@@ -591,8 +591,8 @@ public final class DeviceRegistryHttpClient {
     /**
      * Creates a tenant and adds a device to it with a given password.
      * <p>
-     * This method simply invokes {@link #addDeviceForTenant(TenantObject, String, String, String)}
-     * with <em>sha-512</em> as the hash algorithm.
+     * This method simply invokes {@link #addDeviceForTenant(TenantObject, String, JsonObject, String)}
+     * with no extra data.
      * 
      * @param tenant The tenant to create.
      * @param deviceId The identifier of the device to add to the tenant.
@@ -602,35 +602,13 @@ public final class DeviceRegistryHttpClient {
      */
     public Future<Void> addDeviceForTenant(final TenantObject tenant, final String deviceId, final String password) {
 
-        return addDeviceForTenant(tenant, deviceId, password, CredentialsConstants.HASH_FUNCTION_SHA512);
+        return addDeviceForTenant(tenant, deviceId, new JsonObject(), password);
     }
 
     /**
      * Creates a tenant and adds a device to it with a given password.
      * <p>
-     * This method simply invokes {@link #addDeviceForTenant(TenantObject, String, JsonObject, String, String)}
-     * with an empty JSON object as the device data.
-     * 
-     * @param tenant The tenant to create.
-     * @param deviceId The identifier of the device to add to the tenant.
-     * @param password The password to use for the device's credentials.
-     * @param hashAlgorithm The algorithm to use for creating the password hash.
-     * @return A future indicating the outcome of the operation.
-     * @throws NullPointerException if tenant is {@code null}.
-     */
-    public Future<Void> addDeviceForTenant(
-            final TenantObject tenant,
-            final String deviceId,
-            final String password,
-            final String hashAlgorithm) {
-
-        return addDeviceForTenant(tenant, deviceId, new JsonObject(), password, hashAlgorithm);
-    }
-
-    /**
-     * Creates a tenant and adds a device to it with a given password.
-     * <p>
-     * The password will be added as a <em>sha-512</em> hashed password
+     * The password will be added as a hashed password
      * using the device identifier as the authentication identifier.
      * 
      * @param tenant The tenant to create.
@@ -646,48 +624,64 @@ public final class DeviceRegistryHttpClient {
             final JsonObject data,
             final String password) {
 
-        return addDeviceForTenant(tenant, deviceId, data, password, CredentialsConstants.HASH_FUNCTION_SHA512);
+        Objects.requireNonNull(tenant);
+        final CredentialsObject credentialsSpec =
+                CredentialsObject.fromClearTextPassword(deviceId, deviceId, password, null, null);
+
+        return addTenant(JsonObject.mapFrom(tenant))
+            .compose(ok -> registerDevice(tenant.getTenantId(), deviceId, data))
+            .compose(ok -> addCredentials(tenant.getTenantId(), JsonObject.mapFrom(credentialsSpec)));
     }
 
     /**
-     * Creates a tenant and adds a device to it with a given password.
+     * Adds a device with a given password to an existing tenant.
      * <p>
      * The password will be added as a hashed password
      * using the device identifier as the authentication identifier.
      * 
-     * @param tenant The tenant to create.
+     * @param tenantId The identifier of the tenant to add the device to.
+     * @param deviceId The identifier of the device to add.
+     * @param password The password to use for the device's credentials.
+     * @return A future indicating the outcome of the operation.
+     * @throws NullPointerException if any of the parameters are {@code null}.
+     */
+    public Future<Void> addDeviceToTenant(
+            final String tenantId,
+            final String deviceId,
+            final String password) {
+
+        return addDeviceToTenant(tenantId, deviceId, new JsonObject(), password);
+    }
+
+    /**
+     * Adds a device with a given password to an existing tenant.
+     * <p>
+     * The password will be added as a hashed password
+     * using the device identifier as the authentication identifier.
+     * 
+     * @param tenantId The identifier of the tenant to add the device to.
      * @param deviceId The identifier of the device to add.
      * @param data The data to register for the device.
      * @param password The password to use for the device's credentials.
-     * @param hashAlgorithm The algorithm to use for creating the password hash.
      * @return A future indicating the outcome of the operation.
-     * @throws NullPointerException if tenant is {@code null}.
+     * @throws NullPointerException if any of the parameters are {@code null}.
      */
-    public Future<Void> addDeviceForTenant(
-            final TenantObject tenant,
+    public Future<Void> addDeviceToTenant(
+            final String tenantId,
             final String deviceId,
             final JsonObject data,
-            final String password,
-            final String hashAlgorithm) {
+            final String password) {
 
-        Objects.requireNonNull(tenant);
+        Objects.requireNonNull(tenantId);
+        Objects.requireNonNull(deviceId);
+        Objects.requireNonNull(data);
+        Objects.requireNonNull(password);
 
-        return addTenant(JsonObject.mapFrom(tenant))
-            .compose(ok -> registerDevice(tenant.getTenantId(), deviceId, data))
-            .compose(ok -> {
-                String passwordHash = null;
-                if (CredentialsConstants.HASH_FUNCTION_BCRYPT.equals(hashAlgorithm)) {
-                    passwordHash = IntegrationTestSupport.getBcryptHash(password);
-                } else {
-                    passwordHash = IntegrationTestSupport.getBase64EncodedDigestPasswordHash(
-                            hashAlgorithm,
-                            null,
-                            password);
-                }
-                final CredentialsObject credentialsSpec =
-                        CredentialsObject.fromHashedPassword(deviceId, deviceId, passwordHash, hashAlgorithm, null, null, null);
-                return addCredentials(tenant.getTenantId(), JsonObject.mapFrom(credentialsSpec));
-            });
+        final CredentialsObject credentialsSpec =
+                CredentialsObject.fromClearTextPassword(deviceId, deviceId, password, null, null);
+
+        return registerDevice(tenantId, deviceId, data)
+            .compose(ok -> addCredentials(tenantId, JsonObject.mapFrom(credentialsSpec)));
     }
 
     /**

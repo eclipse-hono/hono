@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -34,6 +34,7 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
@@ -169,8 +170,18 @@ public class BaseRegistrationServiceTest {
         final BaseRegistrationService<ServiceConfigProperties> registrationService = newRegistrationService();
         registrationService.setRegistrationAssertionFactory(RegistrationAssertionHelperImpl.forSigning(vertx, props));
 
-        // WHEN trying to assert the device's registration status for a gateway
+        // WHEN trying to assert the device's registration status for gateway 1
         registrationService.assertRegistration(Constants.DEFAULT_TENANT, "4711", "gw-1", ctx.asyncAssertSuccess(result -> {
+            // THEN the response contains a 200 status
+            ctx.assertEquals(HttpURLConnection.HTTP_OK, result.getStatus());
+            final JsonObject payload = result.getPayload();
+            ctx.assertNotNull(payload);
+            // and contains a JWT token
+            ctx.assertNotNull(payload.getString(RegistrationConstants.FIELD_ASSERTION));
+        }));
+
+        // WHEN trying to assert the device's registration status for gateway 4
+        registrationService.assertRegistration(Constants.DEFAULT_TENANT, "4711", "gw-4", ctx.asyncAssertSuccess(result -> {
             // THEN the response contains a 200 status
             ctx.assertEquals(HttpURLConnection.HTTP_OK, result.getStatus());
             final JsonObject payload = result.getPayload();
@@ -282,7 +293,7 @@ public class BaseRegistrationServiceTest {
                         .put(RegistrationConstants.FIELD_ENABLED, true)
                         .put(RegistrationConstants.FIELD_DEFAULTS, new JsonObject()
                                 .put(MessageHelper.SYS_PROPERTY_CONTENT_TYPE, "application/default"))
-                        .put(BaseRegistrationService.PROPERTY_VIA, "gw-1"));
+                        .put(BaseRegistrationService.PROPERTY_VIA, new JsonArray().add("gw-1").add("gw-4")));
             return Future.succeededFuture(RegistrationResult.from(HttpURLConnection.HTTP_OK, responsePayload));
         } else if ("4712".equals(deviceId)) {
                 final JsonObject responsePayload = BaseRegistrationService.getResultPayload(
@@ -310,6 +321,11 @@ public class BaseRegistrationServiceTest {
             final JsonObject responsePayload = BaseRegistrationService.getResultPayload(
                     "gw-3",
                     new JsonObject().put(RegistrationConstants.FIELD_ENABLED, false));
+            return Future.succeededFuture(RegistrationResult.from(HttpURLConnection.HTTP_OK, responsePayload));
+        } else if ("gw-4".equals(deviceId)) {
+            final JsonObject responsePayload = BaseRegistrationService.getResultPayload(
+                    "gw-4",
+                    new JsonObject().put(RegistrationConstants.FIELD_ENABLED, true));
             return Future.succeededFuture(RegistrationResult.from(HttpURLConnection.HTTP_OK, responsePayload));
         } else {
             return Future.succeededFuture(RegistrationResult.from(HttpURLConnection.HTTP_NOT_FOUND));
