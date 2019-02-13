@@ -18,6 +18,11 @@ title = "Release Notes"
 
 * `org.eclipse.hono.util.RequestResponseResult` now provides access to AMQP application-properties conveyed in the
   response message.
+* The `org.eclipse.hono.service.registration.BaseRegistrationService` class now supports authorization of gateways
+  to act on behalf of a device against a list of gateway identifiers instead of a single identifier only. For that purpose
+  the `via` property of the device's registration information may contain either a single string or a JSON array containing
+  multiple strings. Based on this, a device can now be configured to connect via arbitrary gateways instead of just a single
+  one.
 
 ### API Changes
 

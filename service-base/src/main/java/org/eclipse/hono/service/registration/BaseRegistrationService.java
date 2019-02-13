@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -36,6 +36,7 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
 /**
@@ -350,9 +351,9 @@ public abstract class BaseRegistrationService<T> extends EventBusService<T> impl
     /**
      * Checks if a gateway is authorized to act <em>on behalf of</em> a device.
      * <p>
-     * This default implementation checks if the value of the
-     * {@link #PROPERTY_VIA} property in the device's registration information
-     * matches the gateway's identifier.
+     * This default implementation checks if the gateway's identifier matches the
+     * value of the {@link #PROPERTY_VIA} property in the device's registration information.
+     * The property may either contain a single String value or a JSON array of Strings.
      * <p>
      * Subclasses may override this method in order to implement a more
      * sophisticated check.
@@ -367,7 +368,19 @@ public abstract class BaseRegistrationService<T> extends EventBusService<T> impl
     protected boolean isGatewayAuthorized(final String gatewayId, final JsonObject gatewayData,
             final String deviceId, final JsonObject deviceData) {
 
-        return gatewayId.equals(deviceData.getString(PROPERTY_VIA));
+        Objects.requireNonNull(gatewayId);
+        Objects.requireNonNull(gatewayData);
+        Objects.requireNonNull(deviceId);
+        Objects.requireNonNull(deviceData);
+
+        final Object obj = deviceData.getValue(PROPERTY_VIA);
+        if (obj instanceof String) {
+            return gatewayId.equals(obj);
+        } else if (obj instanceof JsonArray) {
+            return ((JsonArray) obj).stream().filter(o -> o instanceof String).anyMatch(id -> gatewayId.equals(id));
+        } else {
+            return false;
+        }
     }
 
     private boolean isDeviceEnabled(final RegistrationResult registrationResult) {

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -34,7 +34,6 @@ import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.tests.CrudHttpClient;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.Constants;
-import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.TenantConstants;
@@ -58,6 +57,7 @@ import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpClientOptions;
 import io.vertx.core.http.HttpHeaders;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.net.PemTrustOptions;
 import io.vertx.core.net.SelfSignedCertificate;
@@ -242,7 +242,7 @@ public abstract class HttpTestBase {
                 .add(HttpHeaders.ORIGIN, ORIGIN_URI);
 
         helper.registry
-            .addDeviceForTenant(tenant, deviceId, PWD, CredentialsConstants.HASH_FUNCTION_BCRYPT)
+            .addDeviceForTenant(tenant, deviceId, PWD)
             .setHandler(ctx.asyncAssertSuccess(ok -> setup.complete()));
         setup.await();
 
@@ -267,29 +267,37 @@ public abstract class HttpTestBase {
     @Test
     public void testUploadMessagesViaGateway(final TestContext ctx) throws InterruptedException {
 
-        // GIVEN a device that is connected via a gateway
+        // GIVEN a device that is connected via two gateways
         final TenantObject tenant = TenantObject.from(tenantId, true);
-        final String gatewayId = helper.getRandomDeviceId(tenantId);
+        final String gatewayOneId = helper.getRandomDeviceId(tenantId);
+        final String gatewayTwoId = helper.getRandomDeviceId(tenantId);
         final JsonObject deviceData = new JsonObject()
-                .put("via", gatewayId);
+                .put("via", new JsonArray().add(gatewayOneId).add(gatewayTwoId));
 
         final Async setup = ctx.async();
-        helper.registry.addDeviceForTenant(tenant, gatewayId, PWD)
+        helper.registry.addDeviceForTenant(tenant, gatewayOneId, PWD)
+        .compose(ok -> helper.registry.addDeviceToTenant(tenantId, gatewayTwoId, PWD))
         .compose(ok -> helper.registry.registerDevice(tenantId, deviceId, deviceData))
         .setHandler(ctx.asyncAssertSuccess(ok -> setup.complete()));
         setup.await();
 
-        final MultiMap requestHeaders = MultiMap.caseInsensitiveMultiMap()
+        final MultiMap requestHeadersOne = MultiMap.caseInsensitiveMultiMap()
                 .add(HttpHeaders.CONTENT_TYPE, "text/plain")
-                .add(HttpHeaders.AUTHORIZATION, getBasicAuth(tenantId, gatewayId, PWD))
+                .add(HttpHeaders.AUTHORIZATION, getBasicAuth(tenantId, gatewayOneId, PWD))
+                .add(HttpHeaders.ORIGIN, ORIGIN_URI);
+
+        final MultiMap requestHeadersTwo = MultiMap.caseInsensitiveMultiMap()
+                .add(HttpHeaders.CONTENT_TYPE, "text/plain")
+                .add(HttpHeaders.AUTHORIZATION, getBasicAuth(tenantId, gatewayTwoId, PWD))
                 .add(HttpHeaders.ORIGIN, ORIGIN_URI);
 
         testUploadMessages(ctx, tenantId,
                 count -> {
+                    final MultiMap headers = (count.intValue() & 1) == 0 ? requestHeadersOne : requestHeadersTwo;
                     return httpClient.create(
                             getEndpointUri(),
                             Buffer.buffer("hello " + count),
-                            requestHeaders,
+                            headers,
                             response -> response.statusCode() == HttpURLConnection.HTTP_ACCEPTED
                                     && hasAccessControlExposedHeaders(response.headers()));
                 });

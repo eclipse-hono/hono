@@ -160,14 +160,14 @@ The configuration file's location is `/deploy/src/main/deploy/example-tenants.js
 
 The Device Registry supports devices to *act on behalf of* other devices. This is particularly useful for cases where a device does not connect directly to a Hono protocol adapter but is connected to a *gateway* component that is usually specific to the device's communication protocol. It is the gateway component which then connects to a Hono protocol adapter and publishes data on behalf of the device(s). Examples of such a set up include devices using [SigFox](https://www.sigfox.com) or [LoRa](https://www.lora-alliance.org/) for communication.
 
-In these cases the protocol adapter will usually authenticate the gateway component instead of the device for which it wants to publish data. In order to verify that the gateway is *authorized* to publish data on behalf of the particular device, the protocol adapter should include the gateway's device identifier (as determined during the authentication process) in its invocation of the Device Registry's *assert Device Registration* operation.
+In these cases the protocol adapter will authenticate the gateway component instead of the device for which it wants to publish data. In order to verify that the gateway is *authorized* to publish data on behalf of the particular device, the protocol adapter should include the gateway's device identifier (as determined during the authentication process) in its invocation of the Device Registration API's *assert Device Registration* operation.
 
 The Device Registry will then do the following:
 1. Verify that the device exists and is enabled.
 1. Verify that the gateway exists and is enabled.
-2. Verify that the device's registration information contains a property called `via` and that its value is the gateway's device identifier.
+2. Verify that the device's registration information contains a property called `via` and that its value is either the gateway's device identifier or a JSON array which contains the gateway's device identifier as one of its values.
 
-Only if all conditions are met, the Device Registry returns an assertion of the device's registration status. The protocol adapter can then forward the published data to Hono Messaging in the same way as for any device that connects directly to the adapter.
+Only if all conditions are met, the Device Registry returns an assertion of the device's registration status. The protocol adapter can then forward the published data to the AMQP Messaging Network in the same way as for any device that connects directly to the adapter.
 
 The example configuration file (located at `/deploy/src/main/deploy/example-device-identities.json`) includes a device and a corresponding gateway configured in this way.
 
