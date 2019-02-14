@@ -91,6 +91,7 @@ public class CommandResponseSenderImpl extends AbstractSender implements Command
     /**
      * {@inheritDoc}
      */
+    @Deprecated
     @Override
     public Future<ProtonDelivery> sendCommandResponse(
             final String correlationId,

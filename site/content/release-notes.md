@@ -37,6 +37,10 @@ title = "Release Notes"
 ### Depreciations
 
 * The already deprecated Hono Messaging component has been removed altogether from Hono.
+* The *sendCommandResponse(String, String, Buffer, Map, int, SpanContext)* of the
+  `org.eclipse.hono.client.CommandResponseSender` interface has been deprecated and
+  will be removed in the next version. Custom protocol adapters should use
+  *sendCommandResponse(CommandResponse, SpanContext)* instead.
 
 ## 0.9-M2
 

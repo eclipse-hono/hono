@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -44,7 +44,9 @@ public interface CommandResponseSender extends MessageSender {
      *         The future will be failed with a {@link ServiceInvocationException} if the
      *         message could not be sent or has not been accepted by the application.
      * @throws NullPointerException if any of tenantId, deviceId, replyId or correlationId is {@code null}.
+     * @deprecated Use {@link #sendCommandResponse(CommandResponse, SpanContext)} instead.
      */
+    @Deprecated
     Future<ProtonDelivery> sendCommandResponse(
             String correlationId,
             String contentType,
