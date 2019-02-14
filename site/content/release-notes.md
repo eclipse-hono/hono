@@ -33,7 +33,13 @@ title = "Release Notes"
   will be done.
 * The deprecated methods have been removed from `org.eclipse.hono.client.MessageSender` and
   its implementations.
- 
+* The Command &amp; Control API's *send a request/response command* operation has been changed. The response
+  message to a command now must include the device and tenant identifiers of the device. Including
+  these two properties should make it much easier to implement competing command response consumers
+  in business applications.
+  As a consequence, the `org.eclipse.hono.client.CommandResponse`'s factory methods have been changed to
+  accept the tenant and device IDs as parameters.
+
 ### Depreciations
 
 * The already deprecated Hono Messaging component has been removed altogether from Hono.

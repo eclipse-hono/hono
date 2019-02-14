@@ -142,15 +142,17 @@ The following table provides an overview of the properties set on a message sent
 | :--------------- | :-------: | :----------------------- | :----------- | :---------- |
 | *content-type*   | no        | *properties*             | *string*     | If present, MUST contain a *Media Type* as defined by [RFC 2046](https://tools.ietf.org/html/rfc2046) which describes the semantics and format of the command's input data contained in the message payload. However, not all protocol adapters will support this property as not all transport protocols provide means to convey this information, e.g. MQTT 3.1.1 has no notion of message headers. |
 | *correlation-id* | yes       | *properties*             | *message-id* | MUST contain the correlation ID used to match the command message with the response message containing the result of execution on the device. |
+| *device_id*      | yes       | *application-properties* | *string*     | The identifier of the device that sent the response. |
 | *status*         | yes       | *application-properties* | *integer*    | MUST indicate the status of the execution. See table below for possible values. |
+| *tenant_id*      | yes       | *application-properties* | *string*     | The identifier of the tenant that the device belongs to. |
 
-The *status* property must contain a valid HTTP status code: <a name="status"></a>
+The *status* property must contain an [HTTP 1.1 response status code](https://tools.ietf.org/html/rfc7231#section-6):
 
 | Code | Description |
 | :--- | :---------- |
 | *2xx* | The command has been processed successfully. |
 | *4xx* | The command could not be processed due to a client error, e.g. malformed message payload. |
-| *5xx* | The command could not be processed due to a problem at the device side, e.g. device is not connected. |
+| *5xx* | The command could not be processed due to an internal problem at the device side. |
 
 The semantics of the individual codes are specific to the device and command. For status codes indicating an error (codes in the `400 - 599` range) the message body MAY contain a detailed description of the error that occurred.
 
