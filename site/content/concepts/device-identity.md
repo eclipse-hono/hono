@@ -37,4 +37,4 @@ In order to support the protocol adapters in the process of verifying credential
 
 The Credentials API supports registration of multiple sets of credentials for each device. A set of credentials consists of an *auth-id* and some sort of *secret* information. The particular *type* of secret determines the kind of information kept. Please refer to the [Standard Credential Types]({{< relref "api/Credentials-API.md#standard-credential-types" >}}) defined in the Credentials API for details. Based on this approach, a device may be authenticated using different types of secrets, e.g. a *hashed password* or a *pre-shared key*, depending on the capabilities of the device and/or protocol adapter.
 
-Once the protocol adapter has resolved the *device-id* for a device, it uses this identity when referring to the device in all subsequent API invocations, e.g. when forwarding telemetry messages downstream to the Hono Messaging component.
+Once the protocol adapter has resolved the *device-id* for a device, it uses this identity when referring to the device in all subsequent API invocations, e.g. when forwarding telemetry messages downstream to the AMQP Messaging Network.

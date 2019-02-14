@@ -24,7 +24,7 @@ You can find the source of the HTTP Adapter at <https://github.com/eclipse/hono/
  
 Like many other Hono components, the HTTP Adapter is built on top of the [Vert.x](https://vertx.io) framework.
 
-The HTTP Adapter's `VertxBasedHttpProtocolAdapter` class is derived from an abstract base class. This base class implements the base functionality for component initialization, receiving HTTP requests from devices or external clients, and forwarding of data to *Hono Messaging*.
+The HTTP Adapter's `VertxBasedHttpProtocolAdapter` class is derived from an abstract base class. This base class implements the standard functionality for component initialization, receiving HTTP requests from devices or external clients, and forwarding of data to the downstream *AMQP Messaging Network*.
 
 ## Derive a custom HTTP Protocol Adapter
 

@@ -23,7 +23,7 @@ The following table provides an overview of the configuration variables and corr
 | `HONO_KURA_CONTROL_PREFIX`<br>`--hono.kura.controlPrefix` | no | `$EDC` | The *topic.control-prefix* to use for determining if a message published by a Kura gateway is a *control* message. All messages published to a topic that does not start with this prefix are considered *data* messages. |
 | `HONO_KURA_CTRL_MSG_CONTENT_TYPE`<br>`--hono.kura.ctrlMsgContentType` | no | `application/vnd.eclipse.kura-control` | The content type to set on AMQP messages created from Kura *control* messages. |
 | `HONO_KURA_DATA_MSG_CONTENT_TYPE`<br>`--hono.kura.dataMsgContentType` | no | `application/vnd.eclipse.kura-data` | The content type to set on AMQP messages created from Kura *data* messages. |
-| `HONO_KURA_DEFAULTS_ENABLED`<br>`--hono.kura.defaultsEnabled` | no | `true` | If set to `true` the protocol adapter uses *default values* registered for a device to augment messages published by the device with missing information like a content type. In particular, the protocol adapter adds default values registered for the device as (application) properties with the same name to the AMQP 1.0 messages it sends downstream to the Hono Messaging service. |
+| `HONO_KURA_DEFAULTS_ENABLED`<br>`--hono.kura.defaultsEnabled` | no | `true` | If set to `true` the protocol adapter uses *default values* registered for a device to augment messages published by the device with missing information like a content type. In particular, the protocol adapter adds default values registered for the device as (application) properties with the same name to the AMQP 1.0 messages it sends downstream to the AMQP Messaging Network. |
 | `HONO_KURA_INSECURE_PORT`<br>`--hono.kura.insecurePort` | no | - | The insecure port the protocol adapter should listen on.<br>See [Port Configuration]({{< relref "#port-configuration" >}}) below for details. |
 | `HONO_KURA_INSECURE_PORT_BIND_ADDRESS`<br>`--hono.kura.insecurePortBindAddress` | no | `127.0.0.1` | The IP address of the network interface that the insecure port should be bound to.<br>See [Port Configuration]({{< relref "#port-configuration" >}}) below for details. |
 | `HONO_KURA_INSECURE_PORT_ENABLED`<br>`--hono.kura.insecurePortEnabled` | no | `false` | If set to `true` the protocol adapter will open an insecure port (not secured by TLS) using either the port number set via `HONO_KURA_INSECURE_PORT` or the default MQTT port number (`1883`) if not set explicitly.<br>See [Port Configuration]({{< relref "#port-configuration" >}}) below for details. |
@@ -161,7 +161,7 @@ The adapter can be run as a Docker container from the command line. The followin
 There are several things noteworthy about the above command to start the service:
 
 1. The *secrets* need to be created once only, i.e. they only need to be removed and re-created if they are changed.
-1. The *--network* command line switch is used to specify the *user defined* Docker network that the Kura adapter container should attach to. It is important that the adapter container is attached to the same network that the Hono Messaging component is attached to so that the Kura adapter can use the Hono Messaging component's host name to connect to it via the Docker network. Please refer to the [Docker Networking Guide](https://docs.docker.com/engine/userguide/networking/#/user-defined-networks) for details regarding how to create a *user defined* network in Docker.
+1. The *--network* command line switch is used to specify the *user defined* Docker network that the Kura adapter container should attach to. It is important that the adapter container is attached to the same network that the AMQP Messaging Network is attached to so that the Kura adapter can use the AMQP Messaging Network's host name to connect to it via the Docker network. Please refer to the [Docker Networking Guide](https://docs.docker.com/engine/userguide/networking/#/user-defined-networks) for details regarding how to create a *user defined* network in Docker.
 1. In cases where the Kura adapter container requires a lot of configuration via environment variables (provided by means of *-e* switches), it is more convenient to add all environment variable definitions to a separate *env file* and refer to it using Docker's *--env-file* command line switch when starting the container. This way the command line to start the container is much shorter and can be copied and edited more easily.
 {{% /note %}}
 
@@ -211,9 +211,9 @@ The corresponding command to start up the adapter with the configuration used in
 ~~~
 
 {{% note %}}
-In the example above the *--hono.messaging.host=hono-service-messaging.hono* command line option indicates that the Hono Messaging component is running on a host
-with name *hono-service-messaging.hono*. However, if the Hono Messaging component has been started as a Docker container then the *hono-service-messaging.hono* host name will most likely only be resolvable on the network that Docker has created for running the container on, i.e. when you run the Kura adapter
-from the Spring Boot application and want it to connect to a Hono Messaging instance run as a Docker container then you need to set the
-value of the *--hono.messaging.host* option to the IP address (or name) of the Docker host running the Hono Messaging container.
+In the example above the *--hono.messaging.host=hono-service-messaging.hono* command line option indicates that the AMQP Messaging Network is running on a host
+with name *hono-service-messaging.hono*. However, if the AMQP Messaging Network has been started as a Docker container then the *hono-service-messaging.hono* host name will most likely only be resolvable on the network that Docker has created for running the container on, i.e. when you run the Kura adapter
+from the Spring Boot application and want it to connect to the AMQP Messaging Network run as a Docker container then you need to set the
+value of the *--hono.messaging.host* option to the IP address (or name) of the Docker host running the AMQP Messaging Network.
 The same holds true analogously for the *hono-service-device-registry.hono* address.
 {{% /note %}}

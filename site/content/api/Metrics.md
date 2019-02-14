@@ -45,7 +45,6 @@ The names of Hono's standard components are as follows:
 | ----------------- | --------------------- |
 | Auth Server       | `hono-auth`         |
 | Device Registry   | `hono-registry`     |
-| Hono Messaging    | `hono-messaging`    |
 | AMQP adapter      | `hono-amqp`         |
 | CoAP adapter      | `hono-coap`         |
 | HTTP adapter      | `hono-http`         |

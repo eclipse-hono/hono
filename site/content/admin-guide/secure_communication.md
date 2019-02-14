@@ -3,7 +3,7 @@ title = "Secure Communication"
 weight = 350
 +++
 
-The individual components of an Eclipse Hono&trade; installation, e.g. the protocol adapters, *Hono Messaging*, *Hono Auth* etc., and the clients attaching to Hono in order to send and receive data all communicate with each other using AMQP 1.0 over TCP. The Hono components and the clients will usually not be located on the same local network but will probably communicate over public networking infrastructure. For most use cases it is therefore desirable, if not necessary, to provide for confidentiality of the data being transferred between these components. This section describes how Hono supports confidentiality by means of *Transport Layer Security* (TLS) and how to configure it.
+The individual components of an Eclipse Hono&trade; installation, e.g. the protocol adapters, *AMQP Messaging Network*, *Hono Auth* etc., and the clients attaching to Hono in order to send and receive data all communicate with each other using AMQP 1.0 over TCP. The Hono components and the clients will usually not be located on the same local network but will probably communicate over public networking infrastructure. For most use cases it is therefore desirable, if not necessary, to provide for confidentiality of the data being transferred between these components. This section describes how Hono supports confidentiality by means of *Transport Layer Security* (TLS) and how to configure it.
 <!--more-->
 
 # Enabling TLS
@@ -14,12 +14,10 @@ Using TLS in this way requires configuring the server component with a cryptogra
 
 Within a Hono installation the following communication channels can be secured with TLS:
 
-1. Applications connecting to *Dispatch Router* - Client applications consuming e.g. Telemetry data from Hono connect to the Dispatch Router component. This connection can be secured by configuring the client and the Dispatch Router for TLS.
-1. *Hono Messaging* connecting to *Dispatch Router* - Hono Messaging connects to the Dispatch Router in order to forward telemetry data and commands hence and forth between downstream components (client applications) and devices. This (internal) connection can be secured by configuring the Dispatch Router and Hono Messaging for TLS.
-1. *Hono Messaging* connecting to *Auth Server* - Hono Messaging connects to the Auth Server in order to verify client credentials and determine the client's authorities. This (internal) connection can (should) be secured by configuring the Auth Server and Hono Messaging for TLS.
+1. Applications connecting to *Dispatch Router* - Client applications consuming e.g. Telemetry data from Hono connect to the AMQP Messaging Network. This connection can be secured by configuring the client and the messaging network for TLS.
 1. *Device Registry* connecting to *Auth Server* - The Device Registry connects to the Auth Server in order to verify client credentials and determine the client's authorities. This (internal) connection can (should) be secured by configuring the Auth Server and Device Registry for TLS.
 1. *Protocol Adapter* to *Device Registry* - A protocol adapter connects to the Device Registry in order to retrieve assertions regarding the registration status of devices. This (internal) connection can be secured by configuring the protocol adapter and the Device Registry for TLS.
-1. *Protocol Adapter* to *Hono server* - A protocol adapter connects to Hono to e.g. forward telemetry data received from devices to downstream consumers. This (internal) connection can be secured by configuring the protocol adapter and Hono server for TLS.
+1. *Protocol Adapter* connecting to *AMQP Messaging Network* - A protocol adapter connects to the messaging network in order to forward telemetry data and commands hence and forth between downstream components (client applications) and devices. This (internal) connection can be secured by configuring the Dispatch Router and the protocol adapters for TLS.
 1. *Devices* connecting to a *Protocol Adapter* - Devices use TLS to both authenticate the protocol adapter and to establish an encrypted channel that provides integrity and privacy when transmitting data. Note that the specifics of if and how TLS can be used with a particular protocol adapter is specific to the transport protocol the adapter uses for communicating with the devices.
 
 ## Auth Server
@@ -64,7 +62,7 @@ The `demo-certs/certs` folder contains the following demo keys and certificates 
 
 ## HTTP Adapter
 
-The HTTP adapter supports the use of TLS for its connections to the Tenant service, the Device Registration service, the Credentials service and the Hono Messaging component. The adapter also supports the use of TLS for connections with devices. For this purpose, the adapter can be configured with a server certificate and private key.
+The HTTP adapter supports the use of TLS for its connections to the Tenant service, the Device Registration service, the Credentials service and the AMQP Messaging Network. The adapter also supports the use of TLS for connections with devices. For this purpose, the adapter can be configured with a server certificate and private key.
 Please refer to the [HTTP adapter admin guide]({{< relref "http-adapter-config.md" >}}) for details regarding the required configuration steps.
 
 The `demo-certs/certs` folder contains the following demo keys and certificates to be used with the HTTP adapter for that purpose.
@@ -78,7 +76,7 @@ The `demo-certs/certs` folder contains the following demo keys and certificates 
 
 ## MQTT Adapter
 
-The MQTT adapter supports the use of TLS for its connections to the Tenant service, the Device Registration service, the Credentials service and the Hono Messaging component. The adapter also supports the use of TLS for connections with devices. For this purpose, the adapter can be configured with a server certificate and private key.
+The MQTT adapter supports the use of TLS for its connections to the Tenant service, the Device Registration service, the Credentials service and the AMQP Messaging Network. The adapter also supports the use of TLS for connections with devices. For this purpose, the adapter can be configured with a server certificate and private key.
 Please refer to the [MQTT adapter admin guide]({{< relref "mqtt-adapter-config.md" >}}) for details regarding the required configuration steps.
 
 The `demo-certs/certs` folder contains the following demo keys and certificates to be used with the MQTT adapter for that purpose.
@@ -91,7 +89,7 @@ The `demo-certs/certs` folder contains the following demo keys and certificates 
 
 ## Kura Adapter
 
-The Kura adapter supports the use of TLS for its connections to the Tenant service, the Device Registration service, the Credentials service and the Hono Messaging component. The adapter also supports the use of TLS for connections with devices. For this purpose, the adapter can be configured with a server certificate and private key.
+The Kura adapter supports the use of TLS for its connections to the Tenant service, the Device Registration service, the Credentials service and the AMQP Messaging Network. The adapter also supports the use of TLS for connections with devices. For this purpose, the adapter can be configured with a server certificate and private key.
 Please refer to the [Kura adapter admin guide]({{< relref "kura-adapter-config.md" >}}) for details regarding the required configuration steps.
 
 The `demo-certs/certs` folder contains the following demo keys and certificates to be used with the Kura adapter for that purpose.
