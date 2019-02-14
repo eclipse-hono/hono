@@ -1,0 +1,10 @@
+title Forward Telemetry (AT LEAST ONCE)
+
+participant Device
+participant HTTP Adapter
+participant AMQP 1.0 Messaging Network
+
+Device->+HTTP Adapter: 1.0 PUT("telemetry/TENANT/4711", "QoS-Level: 1", data)
+HTTP Adapter->AMQP 1.0 Messaging Network: 1.1 transfer("telemetry/TENANT", "4711", data)
+AMQP 1.0 Messaging Network->HTTP Adapter: 1.2 disposition("accepted")
+HTTP Adapter->-Device: 1.3 202 (Accepted)

@@ -3,7 +3,7 @@ title = "Telemetry API"
 weight = 405
 +++
 
-The *Telemetry* API is used by *Devices* to send data downstream.
+The *Telemetry* API is used by *Protocol Adapters* to send telemetry data downstream.
 *Business Applications* and other consumers use the API to receive data published by devices belonging to a particular tenant.
 <!--more-->
 
@@ -11,82 +11,79 @@ The Telemetry API is defined by means of AMQP 1.0 message exchanges, i.e. a clie
 
 # Southbound Operations
 
-The following operations can be used by *Devices* and/or *Protocol Adapters* (to which the devices are connected) to publish telemetry data for consumption by downstream consumers like *Business Applications*.
+The following operations can be used by *Protocol Adapters* to forward telemetry data received from devices to downstream consumers like *Business Applications*.
 
-Both *Devices* as well as *Protocol Adapters* will be referred to as *clients* in the remainder of this section.
-
-## Upload Telemetry Data
+## Forward Telemetry Data
 
 **Preconditions**
 
-1. Client has established an AMQP connection with Hono's Telemetry endpoint.
-1. Client has established an AMQP link in role *sender* with Telemetry endpoint using target address `telemetry/${tenant_id}` where `${tenant_id}` is the ID of the tenant that the client wants to upload telemetry data for. 
-1. The device for which the client wants to upload telemetry data has been registered (see [Device Registration API]({{< relref "Device-Registration-API.md" >}})).
-1. Client has obtained a *registration assertion* for the device from the Device Registration service by means of the [assert Device Registration operation]({{< relref "Device-Registration-API.md#assert-device-registration" >}}).
+1. Adapter has established an AMQP connection with the AMQP Messaging Network.
+1. Adapter has established an AMQP link in role *sender* with the AMQP Messaging Network using target address `telemetry/${tenant_id}` where `${tenant_id}` is the ID of the tenant that the client wants to upload telemetry data for. 
+1. The device for which the adapter wants to send telemetry data has been registered (see [Device Registration API]({{< relref "Device-Registration-API.md" >}})).
+1. Adapter has obtained a *registration assertion* for the device from the Device Registration service by means of the [assert Device Registration operation]({{< relref "Device-Registration-API.md#assert-device-registration" >}}).
 
-The client indicates its preferred message delivery mode by means of the *snd-settle-mode* and *rcv-settle-mode* fields of its *attach* frame during link establishment. Hono will receive messages using a delivery mode according to the following table:
+The adapter indicates its preferred message delivery mode by means of the *snd-settle-mode* and *rcv-settle-mode* fields of its *attach* frame during link establishment.
 
 | snd-settle-mode        | rcv-settle-mode        | Delivery semantics |
 | :--------------------- | :--------------------- | :----------------- |
-| `unsettled`, `mixed` | `first`               | Hono will forward messages to the downstream AMQP 1.0 Messaging Network and will forward AMQP *disposition* frames received from the AMQP 1.0 Messaging Network to the client *as is*. It is up to the client's discretion if and how it processes these disposition frames. Hono will accept any re-delivered messages. Using `unsettled` for the *snd-settle-mode* allows for clients to implement both *AT LEAST ONCE* or *AT MOST ONCE* delivery semantics, depending on whether a client waits for and considers the disposition frames it receives from Hono or not. This is the recommended mode for uploading telemetry data. |
-| `settled`             | `first`               | Hono will acknowledge and settle received messages spontaneously before forwarding the messages to the downstream AMQP 1.0 Messaging Network. Hono will ignore any AMQP *disposition* frames it receives from the AMQP 1.0 Messaging Network. Using `settled` for the *snd-settle-mode* allows for clients to implement *AT MOST ONCE* delivery semantics only. This is the fastest mode of delivery but has the drawback of less reliable end-to-end flow control and potential loss of messages without notice. |
+| `unsettled`, `mixed` | `first`               | Using `unsettled` for the *snd-settle-mode* allows for adapters to implement both *AT LEAST ONCE* or *AT MOST ONCE* delivery semantics, depending on whether the adapter waits for and considers the disposition frames it receives from the AMQP Messaging Network or not. This is the recommended mode for forwarding telemetry data. |
+| `settled`             | `first`               | Using `settled` for the *snd-settle-mode* allows for adapters to implement *AT MOST ONCE* delivery semantics only. This is the fastest mode of delivery but has the drawback of less reliable end-to-end flow control and potential loss of messages without notice. |
 
-All other combinations are not supported by Hono and result in a termination of the link.
+All other combinations are not supported by Hono and may result in the termination of the link or connection (depending on the configuration of the AMQP Messaging Network).
 
 **Message Flow**
 
-The following sequence diagram illustrates the flow of messages involved in the *MQTT Adapter* uploading an *unsettled* telemetry data message to Hono Messaging's Telemetry endpoint.
+As indicated above, it is up to the discretion of the protocol adapter whether it wants to use *AT LEAST ONCE* or *AT MOST ONCE* delivery semantics.
 
-![Upload unsettled telemetry data flow](../uploadTelemetry_unsettled_Success.png)
+Hono's HTTP adapter allows devices to indicate, which delivery semantics they want to use when uploading telemetry data.
 
-1. *MQTT Adapter* sends telemetry data for device `4711`.
-   1. *Hono Messaging* successfully verifies that device `4711` of `TENANT` exists and is enabled by means of validating the *registration assertion* included in the message (see [Device Registration]({{< relref "api/Device-Registration-API.md#assert-device-registration" >}})) and forwards the message to the *AMQP 1.0 Messaging Network*.
-1. *AMQP 1.0 Messaging Network* acknowledges reception of the message.
-   1. *Hono Messaging* forwards the disposition frame to the adapter.
+The following sequence diagram illustrates the flow of messages involved in the *HTTP Adapter* forwarding an *unsettled* telemetry data message to the downstream AMQP Messaging Network implementing *AT MOST ONCE* delivery semantics.
+
+![Forward telemetry data flow (AT MOST ONCE)](../forwardTelemetry_qos0.png)
+
+1. *Device* `4711` PUTs telemetry data to the *HTTP Adapter*
+   1. *HTTP Adapter* transfers telemetry data to *AMQP 1.0 Messaging Network*.
+   1. *HTTP Adapter* acknowledges the reception of the data to the *Device*.
+1. *AMQP 1.0 Messaging Network* acknowledges reception of the message which is ignored by the *HTTP Adapter*.
 
 {{% note %}}
-Hono Messaging does not act on any disposition frames it receives from the AMQP 1.0 Messaging Network in any specific way. It is therefore up to the MQTT Adapter to choose whether it wants to wait for *disposition* frames forwarded by *Hono Messaging* to determine whether the message has been delivered successfully to the consumer or to simply ignore any disposition frames it receives. The former will result in *AT LEAST ONCE* delivery semantics, the latter will result in *AT MOST ONCE* semantics.
+In the example above the HTTP adapter does not wait for the outcome of the transfer of the message to the AMQP Messaging Network before sending back the HTTP response to the device.
+If the messaging network had sent a disposition frame with the *rejected* instead of the *accepted* outcome, the HTTP adapter would still have signaled a 202 status code back to the device. In this case the data would have been lost without the device noticing.
 {{% /note %}}
 
-The following sequence diagram illustrates the flow of messages involved in the *MQTT Adapter* uploading a *pre-settled* telemetry data message to Hono Messaging's Telemetry endpoint.
+The following sequence diagram illustrates the flow of messages involved in the *HTTP Adapter* forwarding an *unsettled* telemetry data message to the downstream AMQP Messaging Network implementing *AT LEAST ONCE* delivery semantics.
 
-![Upload pre-settled telemetry data flow](../uploadTelemetry_presettled_Success.png)
+![Forward telemetry data flow (AT LEAST ONCE)](../forwardTelemetry_qos1.png)
 
-1. *MQTT Adapter* sends telemetry data for device `4711`.
-   1. *Hono Messaging* successfully verifies that device `4711` of `TENANT` exists and is enabled by means of validating the *registration assertion* included in the message (see [Device Registration]({{< relref "api/Device-Registration-API.md#assert-device-registration" >}})) and forwards the message to the *AMQP 1.0 Messaging Network*.
-   2. *Hono Messaging* acknowledges reception of the message.
+1. *Device* `4711` PUTs telemetry data to the *HTTP Adapter*, indicating *QoS Level* 1.
+   1. *HTTP Adapter* transfers telemetry data to *AMQP 1.0 Messaging Network*.
+   1. *AMQP 1.0 Messaging Network* acknowledges reception of the message.
+   1. *HTTP Adapter* acknowledges the reception of the data to the *Device*.
+
+When the AMQP Messaging Network fails to settle the transfer of a telemetry message or settles the transfer with any other outcome than `accepted`, the protocol adapter MUST NOT try to re-send such rejected messages but SHOULD indicate the failed transfer to the device if the transport protocol provides means to do so.
 
 **Message Format**
 
-The following table provides an overview of the properties a client needs to set on an *Upload Telemetry Data* message.
+The following table provides an overview of the properties a client needs to set on a *Forward Telemetry Data* message.
 
 | Name            | Mandatory       | Location                 | Type        | Description |
 | :-------------- | :-------------: | :----------------------- | :---------- | :---------- |
-| *content-type*  | yes             | *properties*             | *symbol*    | SHOULD be set to *application/octet-stream* if the message payload is to be considered *opaque* binary data. In most cases though, the client should be able to set a more specific content type indicating the type and characteristics of the data contained in the payload, e.g. `text/plain; charset="utf-8"` for a text message or `application/json` etc. |
-| *device_id*     | yes             | *application-properties* | *string*    | MUST contain the ID of the device the data in the payload has been reported by. |
-| *reg_assertion* | yes             | *application-properties* | *string*    | A [JSON Web Token](https://jwt.io/introduction/) issued by the [Device Registration service]({{< relref "api/Device-Registration-API.md#assert-device-registration" >}}) asserting the device's registration status. |
-| *ttd*           | no              | *application-properties* | *int*       | 'time til disconnect' : in context with the `creation-time` of the AMQP 1.0 message it defines the time interval in seconds in which a device should be available for receiving upstream data. If this property is missing, it shall be considered as not being known if the device is ready for receiving a message. If it has the value -1, the device shall be considered as being always ready to receive a message. | 
-| *creation-time* | see description | *properties*             | *timestamp* | the time when this message was created (see the [AMQP 1.0 specification](http://docs.oasis-open.org/amqp/core/v1.0/amqp-core-messaging-v1.0.html) for details). This is mandatory if *ttd* is set. 
+| *content-type*  | yes             | *properties*             | *symbol*    | A content type indicating the type and characteristics of the data contained in the payload, e.g. `text/plain; charset="utf-8"` for a text message or `application/json` etc. The value may be set to `application/octet-stream` if the message payload is to be considered *opaque* binary data. |
+| *creation-time* | no              | *properties*             | *timestamp* | The instant in time when the message has been created (see the [AMQP 1.0 specification](http://docs.oasis-open.org/amqp/core/v1.0/amqp-core-messaging-v1.0.html) for details). This property is mandatory if *ttd* is set, otherwise it is optional. |
+| *device_id*     | yes             | *application-properties* | *string*    | The identifier of the device that the data in the payload is originating from. |
+| *ttd*           | no              | *application-properties* | *int*       | The *time 'til disconnect* indicates the number of seconds that the device will remain connected to the protocol adapter. The value of this property must be interpreted relative to the message's *creation-time*. A value of `-1` is used to indicate that the device will remain connected until further notice, i.e. until another message indicates a *ttd* value of `0`. In absence of this property, the connection status of the device is to be considered indeterminate. *Backend Applications* might use this information to determine a time window during which the device will be able to receive a command. |
 
 
 The body of the message MUST consist of a single AMQP *Data* section containing the telemetry data. The format and encoding of the data MUST be indicated by the *content-type* and (optional) *content-encoding* properties of the message.
 
-Any additional properties set by the client in either the *properties* or *application-properties* sections are preserved by Hono, i.e. these properties will also be contained in the message delivered to consumers. However, the *reg_assertion* contained in the *application-properties* will **not** be propagated downstream.
-
-Note that Hono does not return any *application layer* message back to the client in order to signal the outcome of the operation.
-
-When a client sends a telemetry message that cannot be processed because it does not conform to the message format defined above, Hono spontaneously settles the message transfer using the AMQP `REJECTED` outcome containing an `amqp:decode-error`. Clients should **not** try to re-send such rejected messages unaltered.
-
-When a client sends a telemetry message which contains a registration assertion that cannot be validated, Hono spontaneously settles the message transfer using the AMQP `REJECTED` outcome containing an `amqp:precondition-failed`. Clients should **not** try to re-send such rejected messages unaltered.
-
-In all other cases, Hono forwards the message to the *AMQP 1.0 Messaging Network* and sends a disposition frame to the client according to the message flows defined above.
+Any additional properties set by the client in either the *properties* or *application-properties* sections are preserved by Hono, i.e. these properties will also be contained in the message delivered to consumers.
 
 # Northbound Operations
 
 ## Receive Telemetry Data
 
-Hono delivers messages containing telemetry data reported by a particular device in the same order that they have been received in (using the *Upload Telemetry Data* operation defined above).
-Hono MAY drop telemetry messages that it cannot deliver to any consumers. Reasons for this include that there are no consumers connected to Hono or the existing consumers are not able to process the messages from Hono fast enough.
+Hono delivers messages containing telemetry data reported by a particular device in the same order that they have been received in (using the *Upload Telemetry Data* operation defined above). Hono MAY drop telemetry messages that it cannot deliver to any consumers. Reasons for this include that there are no consumers connected to Hono or the existing consumers are not able to process the messages from Hono fast enough.
+
 Hono supports multiple non-competing *Business Application* consumers of telemetry data for a given tenant. Hono allows each *Business Application* to have multiple competing consumers for telemetry data for a given tenant to share the load of processing the messages.
 
 **Preconditions**
