@@ -54,6 +54,7 @@ import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.TenantObject;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import io.micrometer.core.instrument.Timer.Sample;
 import io.netty.handler.codec.mqtt.MqttConnectReturnCode;
 import io.netty.handler.codec.mqtt.MqttQoS;
 import io.opentracing.Span;
@@ -703,12 +704,20 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                 commandContext -> {
 
                     Tags.COMPONENT.set(commandContext.getCurrentSpan(), getTypeName());
+                    final Sample timer = metrics.startTimer();
                     final Command command = commandContext.getCommand();
                     if (command.isValid()) {
+                        addMicrometerSample(commandContext, timer);
                         onCommandReceived(mqttEndpoint, sub, commandContext, cmdHandler);
                     } else {
                         // issue credit so that application(s) can send the next command
                         commandContext.reject(new ErrorCondition(Constants.AMQP_BAD_REQUEST, "malformed command message"), 1);
+                        metrics.reportCommand(
+                                command.isOneWay() ? Direction.ONE_WAY : Direction.REQUEST,
+                                sub.getTenant(),
+                                ProcessingOutcome.UNPROCESSABLE,
+                                command.getPayloadSize(),
+                                timer);
                     }
                 },
                 remoteClose -> {},
@@ -1257,7 +1266,6 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         Objects.requireNonNull(subscription);
         Objects.requireNonNull(commandContext);
 
-        addMicrometerSample(commandContext, metrics.startTimer());
         TracingHelper.TAG_CLIENT_ID.set(commandContext.getCurrentSpan(), endpoint.clientIdentifier());
         final Command command = commandContext.getCommand();
         // example: control/DEFAULT_TENANT/4711/req/xyz/light
