@@ -154,7 +154,7 @@ public final class Command {
     /**
      * Checks if this command is a <em>one-way</em> command (meaning there is no response expected).
      *
-     * @return {@code true} if this is a valid command.
+     * @return {@code true} if the message's <em>reply-to</em> property is empty or invalid.
      */
     public boolean isOneWay() {
         return replyToId == null;
@@ -243,16 +243,11 @@ public final class Command {
      * Gets the size of this command's payload.
      *
      * @return The payload size in bytes, 0 if the command has no payload.
-     * @throws IllegalStateException if this command is invalid.
      */
     public int getPayloadSize() {
-        if (isValid()) {
-            return Optional.ofNullable(MessageHelper.getPayload(message))
-                    .map(b -> b.length())
-                    .orElse(0);
-        } else {
-            throw new IllegalStateException("command is invalid");
-        }
+        return Optional.ofNullable(MessageHelper.getPayload(message))
+                .map(b -> b.length())
+                .orElse(0);
     }
 
     /**
