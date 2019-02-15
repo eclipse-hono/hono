@@ -15,13 +15,12 @@ package org.eclipse.hono.adapter.amqp;
 import static org.hamcrest.core.IsEqual.equalTo;
 import static org.junit.Assert.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -30,24 +29,33 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.qpid.proton.amqp.messaging.AmqpValue;
+import org.apache.qpid.proton.amqp.Binary;
+import org.apache.qpid.proton.amqp.messaging.Accepted;
 import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
+import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.amqp.messaging.Rejected;
+import org.apache.qpid.proton.amqp.messaging.Released;
 import org.apache.qpid.proton.amqp.messaging.Target;
+import org.apache.qpid.proton.amqp.transport.DeliveryState;
 import org.apache.qpid.proton.amqp.transport.Source;
 import org.apache.qpid.proton.engine.Record;
 import org.apache.qpid.proton.engine.impl.RecordImpl;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.auth.Device;
+import org.eclipse.hono.client.Command;
 import org.eclipse.hono.client.CommandConnection;
+import org.eclipse.hono.client.CommandContext;
 import org.eclipse.hono.client.CommandResponse;
 import org.eclipse.hono.client.CommandResponseSender;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.RegistrationClient;
-import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.TenantClient;
+import org.eclipse.hono.service.metric.MetricsTags.Direction;
+import org.eclipse.hono.service.metric.MetricsTags.EndpointType;
+import org.eclipse.hono.service.metric.MetricsTags.ProcessingOutcome;
+import org.eclipse.hono.service.metric.MetricsTags.QoS;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
@@ -68,6 +76,7 @@ import io.opentracing.SpanContext;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
@@ -208,12 +217,15 @@ public class VertxBasedAmqpProtocolAdapterTest {
     /**
      * Verifies that a request to upload a pre-settled telemetry message results
      * in the downstream sender not waiting for the consumer's acknowledgment.
+     * 
+     * @param ctx The vert.x test context.
      */
     @Test
-    public void uploadTelemetryMessageWithSettledDeliverySemantics() {
+    public void testUploadTelemetryWithAtMostOnceDeliverySemantics(final TestContext ctx) {
         // GIVEN an AMQP adapter with a configured server
         final VertxBasedAmqpProtocolAdapter adapter = givenAnAmqpAdapter();
         final MessageSender telemetrySender = givenATelemetrySenderForAnyTenant();
+        when(telemetrySender.send(any(Message.class), (SpanContext) any())).thenReturn(Future.succeededFuture(mock(ProtonDelivery.class)));
 
         // which is enabled for a tenant
         givenAConfiguredTenant(TEST_TENANT_ID, true);
@@ -221,26 +233,38 @@ public class VertxBasedAmqpProtocolAdapterTest {
         // IF a device sends a 'fire and forget' telemetry message
         final ProtonDelivery delivery = mock(ProtonDelivery.class);
         when(delivery.remotelySettled()).thenReturn(true);
-
+        final Buffer payload = Buffer.buffer("payload");
         final String to = ResourceIdentifier.from(TelemetryConstants.TELEMETRY_ENDPOINT, TEST_TENANT_ID, TEST_DEVICE).toString();
 
-        adapter.uploadMessage(new AmqpContext(delivery, getFakeMessage(to), null), mock(Span.class));
-
-        // THEN the adapter sends the message and does not wait for response from the peer.
-        verify(telemetrySender).send(any(Message.class), (SpanContext) any());
+        adapter.onMessageReceived(delivery, getFakeMessage(to, payload), null).setHandler(ctx.asyncAssertSuccess(d -> {
+            // THEN the adapter has forwarded the message downstream
+            verify(telemetrySender).send(any(Message.class), (SpanContext) any());
+            // and acknowledged the message to the device
+            verify(delivery).disposition(any(Accepted.class), eq(true));
+            // and has reported the telemetry message
+            verify(metrics).reportTelemetry(
+                    eq(EndpointType.TELEMETRY),
+                    eq(TEST_TENANT_ID),
+                    eq(ProcessingOutcome.FORWARDED),
+                    eq(QoS.AT_MOST_ONCE),
+                    eq(payload.length()),
+                    any());
+        }));
     }
 
     /**
      * Verifies that a request to upload an "unsettled" telemetry message results in the sender sending the
      * message and waits for a response from the downstream peer.
      * 
-     * AT_LEAST_ONCE delivery semantics.
+     * @param ctx The vert.x test context.
      */
     @Test
-    public void uploadTelemetryMessageWithUnsettledDeliverySemantics() {
+    public void testUploadTelemetryWithAtLeastOnceDeliverySemantics(final TestContext ctx) {
         // GIVEN an adapter configured to use a user-define server.
         final VertxBasedAmqpProtocolAdapter adapter = givenAnAmqpAdapter();
         final MessageSender telemetrySender = givenATelemetrySenderForAnyTenant();
+        final Future<ProtonDelivery> downstreamDelivery = Future.future();
+        when(telemetrySender.sendAndWaitForOutcome(any(Message.class), (SpanContext) any())).thenReturn(downstreamDelivery);
 
         // which is enabled for a tenant
         givenAConfiguredTenant(TEST_TENANT_ID, true);
@@ -248,44 +272,67 @@ public class VertxBasedAmqpProtocolAdapterTest {
         // IF a device send telemetry data (with un-settled delivery)
         final ProtonDelivery delivery = mock(ProtonDelivery.class);
         when(delivery.remotelySettled()).thenReturn(false);
-
+        final Buffer payload = Buffer.buffer("payload");
         final String to = ResourceIdentifier.from(TelemetryConstants.TELEMETRY_ENDPOINT, TEST_TENANT_ID, TEST_DEVICE).toString();
 
-        adapter.uploadMessage(new AmqpContext(delivery, getFakeMessage(to), null), mock(Span.class));
+        adapter.onMessageReceived(delivery, getFakeMessage(to, payload), null);
 
-        // THEN the sender sends the message and waits for the outcome from the downstream peer
+        // THEN the sender sends the message
         verify(telemetrySender).sendAndWaitForOutcome(any(Message.class), (SpanContext) any());
+        //  and waits for the outcome from the downstream peer
+        verify(delivery, never()).disposition(any(DeliveryState.class), anyBoolean());
+        // until the transfer is settled
+        downstreamDelivery.complete(mock(ProtonDelivery.class));
+        verify(delivery).disposition(any(Accepted.class), eq(true));
+        // and has reported the telemetry message
+        verify(metrics).reportTelemetry(
+                eq(EndpointType.TELEMETRY),
+                eq(TEST_TENANT_ID),
+                eq(ProcessingOutcome.FORWARDED),
+                eq(QoS.AT_LEAST_ONCE),
+                eq(payload.length()),
+                any());
     }
 
     /**
      * Verifies that a request to upload an "unsettled" telemetry message from a device that belongs to a tenant for which the AMQP
      * adapter is disabled fails and that the device is notified when the message cannot be processed.
      * 
+     * @param ctx The vert.x test context.
      */
     @Test
-    public void testUploadTelemetryMessageFailsForDisabledTenant() {
+    public void testUploadTelemetryMessageFailsForDisabledAdapter(final TestContext ctx) {
+
         // GIVEN an adapter configured to use a user-define server.
         final VertxBasedAmqpProtocolAdapter adapter = givenAnAmqpAdapter();
         final MessageSender telemetrySender = givenATelemetrySenderForAnyTenant();
 
-        // AND given a tenant which is ENABLED but DISABLED for the AMQP Adapter
-        givenAConfiguredTenant(TEST_TENANT_ID, Boolean.FALSE);
+        // AND given a tenant for which the AMQP Adapter is disabled
+        givenAConfiguredTenant(TEST_TENANT_ID, false);
 
         // WHEN a device uploads telemetry data to the adapter (and wants to be notified of failure)
         final ProtonDelivery delivery = mock(ProtonDelivery.class);
-        when(delivery.remotelySettled()).thenReturn(false);
+        when(delivery.remotelySettled()).thenReturn(false); // AT LEAST ONCE
         final String to = ResourceIdentifier.from(TelemetryConstants.TELEMETRY_ENDPOINT, TEST_TENANT_ID, TEST_DEVICE).toString();
+        final Buffer payload = Buffer.buffer("some payload");
 
-        final AmqpContext context = spy(new AmqpContext(delivery, getFakeMessage(to), null));
-        adapter.uploadMessage(context, mock(Span.class));
+        adapter.onMessageReceived(delivery, getFakeMessage(to, payload), null).setHandler(ctx.asyncAssertFailure(t -> {
+            // THEN the adapter does not send the message (regardless of the delivery mode).
+            verify(telemetrySender, never()).send(any(Message.class), (SpanContext) any());
+            verify(telemetrySender, never()).sendAndWaitForOutcome(any(Message.class), (SpanContext) any());
 
-        // THEN the adapter does not send the message (regardless of the delivery mode).
-        verify(telemetrySender, never()).send(any(Message.class), (SpanContext) any());
-        verify(telemetrySender, never()).sendAndWaitForOutcome(any(Message.class), (SpanContext) any());
+            // AND notifies the device by sending back a REJECTED disposition
+            verify(delivery).disposition(any(Rejected.class), eq(true));
 
-        // AND notifies the device by sending back a REJECTED disposition
-        verify(context).handleFailure(any(ServiceInvocationException.class));
-        verify(delivery).disposition(isA(Rejected.class), eq(true));
+            // AND has reported the message as unprocessable
+            verify(metrics).reportTelemetry(
+                    eq(EndpointType.TELEMETRY),
+                    eq(TEST_TENANT_ID),
+                    eq(ProcessingOutcome.UNPROCESSABLE),
+                    eq(QoS.AT_LEAST_ONCE),
+                    eq(payload.length()),
+                    any());
+        }));
     }
 
     /**
@@ -455,34 +502,139 @@ public class VertxBasedAmqpProtocolAdapterTest {
 
     /**
      * Verify that the AMQP adapter forwards command responses downstream.
+     * 
+     * @param ctx The vert.x test context.
      */
     @Test
-    public void testUploadCommandResponseSucceeds() {
+    public void testUploadCommandResponseSucceeds(final TestContext ctx) {
 
         // GIVEN an AMQP adapter
         final VertxBasedAmqpProtocolAdapter adapter = givenAnAmqpAdapter();
         final CommandResponseSender responseSender = givenACommandResponseSenderForAnyTenant();
+        final ProtonDelivery delivery = mock(ProtonDelivery.class);
+        when(responseSender.sendCommandResponse(any(CommandResponse.class), (SpanContext) any())).thenReturn(Future.succeededFuture(delivery));
         // which is enabled for the test tenant
         givenAConfiguredTenant(TEST_TENANT_ID, true);
 
         // WHEN an unauthenticated device publishes a command response
-        final ProtonDelivery delivery = mock(ProtonDelivery.class);
-
         final String replyToAddress = String.format("%s/%s/%s", CommandConstants.COMMAND_ENDPOINT, TEST_TENANT_ID,
                 TEST_DEVICE);
 
         final Map<String, Object> propertyMap = new HashMap<>();
         propertyMap.put(MessageHelper.APP_PROPERTY_STATUS, 200);
         final ApplicationProperties props = new ApplicationProperties(propertyMap);
-        final Message message = getFakeMessage(replyToAddress);
+        final Buffer payload = Buffer.buffer("some payload");
+        final Message message = getFakeMessage(replyToAddress, payload);
         when(message.getCorrelationId()).thenReturn("correlation-id");
         when(message.getApplicationProperties()).thenReturn(props);
 
-        adapter.uploadMessage(new AmqpContext(delivery, message, null), mock(Span.class));
+        adapter.onMessageReceived(delivery, message, null).setHandler(ctx.asyncAssertSuccess(ok -> {
+            // THEN the adapter forwards the command response message downstream
+            verify(responseSender).sendCommandResponse((CommandResponse) any(), (SpanContext) any());
+            // and reports the forwarded message
+            verify(metrics).reportCommand(
+                eq(Direction.RESPONSE),
+                eq(TEST_TENANT_ID),
+                eq(ProcessingOutcome.FORWARDED),
+                eq(payload.length()),
+                any());
+        }));
+    }
 
-        // THEN the adapter forwards the command response message downstream
-        verify(responseSender).sendCommandResponse((CommandResponse) any(), (SpanContext) any());
+    /**
+     * Verifies that the adapter signals successful forwarding of a one-way command
+     * back to the sender of the command.
+     */
+    @Test
+    public void testOneWayCommandAccepted() {
 
+        final ProtonDelivery successfulDelivery = mock(ProtonDelivery.class);
+        when(successfulDelivery.remotelySettled()).thenReturn(true);
+        when(successfulDelivery.getRemoteState()).thenReturn(new Accepted());
+        testOneWayCommandOutcome(successfulDelivery, Accepted.class, ProcessingOutcome.FORWARDED);
+    }
+
+    /**
+     * Verifies that the adapter signals a rejected one-way command
+     * back to the sender of the command.
+     */
+    @Test
+    public void testOneWayCommandRejected() {
+
+        final DeliveryState remoteState = new Rejected();
+        final ProtonDelivery unsuccessfulDelivery = mock(ProtonDelivery.class);
+        when(unsuccessfulDelivery.remotelySettled()).thenReturn(true);
+        when(unsuccessfulDelivery.getRemoteState()).thenReturn(remoteState);
+        testOneWayCommandOutcome(unsuccessfulDelivery, Rejected.class, ProcessingOutcome.UNPROCESSABLE);
+    }
+
+    /**
+     * Verifies that the adapter signals a released one-way command
+     * back to the sender of the command.
+     */
+    @Test
+    public void testOneWayCommandReleased() {
+
+        final DeliveryState remoteState = new Released();
+        final ProtonDelivery unsuccessfulDelivery = mock(ProtonDelivery.class);
+        when(unsuccessfulDelivery.remotelySettled()).thenReturn(true);
+        when(unsuccessfulDelivery.getRemoteState()).thenReturn(remoteState);
+        testOneWayCommandOutcome(unsuccessfulDelivery, Released.class, ProcessingOutcome.UNDELIVERABLE);
+    }
+
+    /**
+     * Verifies that the adapter signals a released one-way command
+     * back to the sender of the command.
+     */
+    @Test
+    public void testOneWayCommandUnsettled() {
+
+        final DeliveryState remoteState = mock(DeliveryState.class);
+        final ProtonDelivery unsuccessfulDelivery = mock(ProtonDelivery.class);
+        when(unsuccessfulDelivery.remotelySettled()).thenReturn(false);
+        when(unsuccessfulDelivery.getRemoteState()).thenReturn(remoteState);
+        testOneWayCommandOutcome(unsuccessfulDelivery, Released.class, ProcessingOutcome.UNDELIVERABLE);
+    }
+
+    @SuppressWarnings("unchecked")
+    private void testOneWayCommandOutcome(
+            final ProtonDelivery outcome,
+            final Class<? extends DeliveryState> expectedDeliveryState,
+            final ProcessingOutcome expectedProcessingOutcome) {
+
+        // GIVEN an AMQP adapter
+        final VertxBasedAmqpProtocolAdapter adapter = givenAnAmqpAdapter();
+        //  to which a device is connected
+        final ProtonSender deviceLink = mock(ProtonSender.class);
+        when(deviceLink.getQoS()).thenReturn(ProtonQoS.AT_LEAST_ONCE);
+        // that has subscribed to commands
+        final ProtonReceiver commandReceiver = mock(ProtonReceiver.class);
+
+        // WHEN an application sends a one-way command to the device
+        final ProtonDelivery commandDelivery = mock(ProtonDelivery.class);
+        final String commandAddress = String.format("%s/%s/%s", CommandConstants.COMMAND_ENDPOINT, TEST_TENANT_ID, TEST_DEVICE);
+        final Buffer payload = Buffer.buffer("payload");
+        final Message message = getFakeMessage(commandAddress, payload, "commandToEecute");
+        final Command command = Command.from(message, TEST_TENANT_ID, TEST_DEVICE);
+        final CommandContext context = CommandContext.from(command, commandDelivery, commandReceiver, mock(Span.class));
+        adapter.onCommandReceived(deviceLink, context);
+        // and the device settles it
+        final ArgumentCaptor<Handler<ProtonDelivery>> deliveryUpdateHandler = ArgumentCaptor.forClass(Handler.class);
+        verify(deviceLink).send(any(Message.class), deliveryUpdateHandler.capture());
+        deliveryUpdateHandler.getValue().handle(outcome);
+
+        // THEN the command message is settled on the receiver link
+        // with the same outcome
+        verify(commandDelivery).disposition(any(expectedDeliveryState), eq(true));
+        // and a credit is issued
+        verify(commandReceiver).flow(1);
+        // and the command has been reported according to the outcome
+        verify(metrics).reportCommand(
+                eq(Direction.ONE_WAY),
+                eq(TEST_TENANT_ID),
+                eq(expectedProcessingOutcome),
+                eq(payload.length()),
+                any());
     }
 
     /**
@@ -602,10 +754,18 @@ public class VertxBasedAmqpProtocolAdapterTest {
         when(tenantClient.get(eq(tenantId), (SpanContext) any())).thenReturn(Future.succeededFuture(tenantConfig));
     }
 
-    private Message getFakeMessage(final String to) {
+    private Message getFakeMessage(final String to, final Buffer payload) {
+        return getFakeMessage(to, payload, "hello");
+    }
+
+    private Message getFakeMessage(final String to, final Buffer payload, final String subject) {
+
+        final Data data = new Data(new Binary(payload.getBytes()));
         final Message message = mock(Message.class);
+        when(message.getMessageId()).thenReturn("the-message-id");
+        when(message.getSubject()).thenReturn(subject);
         when(message.getContentType()).thenReturn("text/plain");
-        when(message.getBody()).thenReturn(new AmqpValue("some payload"));
+        when(message.getBody()).thenReturn(data);
         when(message.getAddress()).thenReturn(to);
         return message;
     }

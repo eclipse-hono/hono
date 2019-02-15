@@ -13,6 +13,7 @@
 package org.eclipse.hono.adapter.amqp;
 
 import java.net.HttpURLConnection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -37,6 +38,10 @@ import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
 import org.eclipse.hono.service.metric.MetricsTags;
+import org.eclipse.hono.service.metric.MetricsTags.Direction;
+import org.eclipse.hono.service.metric.MetricsTags.EndpointType;
+import org.eclipse.hono.service.metric.MetricsTags.ProcessingOutcome;
+import org.eclipse.hono.service.metric.MetricsTags.QoS;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
@@ -47,6 +52,7 @@ import org.eclipse.hono.util.Strings;
 import org.eclipse.hono.util.TenantObject;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import io.micrometer.core.instrument.Timer.Sample;
 import io.opentracing.Span;
 import io.opentracing.log.Fields;
 import io.opentracing.tag.Tags;
@@ -57,6 +63,7 @@ import io.vertx.core.Handler;
 import io.vertx.core.json.JsonObject;
 import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonDelivery;
+import io.vertx.proton.ProtonHelper;
 import io.vertx.proton.ProtonLink;
 import io.vertx.proton.ProtonQoS;
 import io.vertx.proton.ProtonReceiver;
@@ -431,24 +438,22 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         final Device authenticatedDevice = conn.attachments().get(AmqpAdapterConstants.KEY_CLIENT_DEVICE,
                 Device.class);
 
-        final Span span = newSpan("attach anonymous sender", authenticatedDevice);
+        final Span span = newSpan("attach receiver", authenticatedDevice);
 
         if (ProtonQoS.AT_MOST_ONCE.equals(receiver.getRemoteQoS())) {
             // the device needs to send all types of message over this link
             // so we must make sure that it does not allow for pre-settled messages
             // to be sent only
             final Exception ex = new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
-                    "link must not use snd-settle-mode 'settled'");
-            TracingHelper.logError(span, ex);
-            closeLinkWithError(receiver, ex);
+                    "unsupported snd-settle-mode: settled");
+            closeLinkWithError(receiver, ex, span);
         } else  if (receiver.getRemoteTarget() != null && receiver.getRemoteTarget().getAddress() != null) {
             if (!receiver.getRemoteTarget().getAddress().isEmpty()) {
                 LOG.debug("Closing link due to the present of Target [address : {}]", receiver.getRemoteTarget().getAddress());
             }
             final Exception ex = new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
                     "this adapter supports anonymous relay mode only");
-            TracingHelper.logError(span, ex);
-            closeLinkWithError(receiver, ex);
+            closeLinkWithError(receiver, ex, span);
         } else {
 
             receiver.setTarget(receiver.getRemoteTarget());
@@ -459,31 +464,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             receiver.setAutoAccept(false);
             HonoProtonHelper.setCloseHandler(receiver, remoteDetach -> onLinkDetach(receiver));
             HonoProtonHelper.setDetachHandler(receiver, remoteDetach -> onLinkDetach(receiver));
-            receiver.handler((delivery, message) -> {
-
-                final Span msgSpan = newSpan("upload message", authenticatedDevice);
-
-                final Map<String, Object> items = new HashMap<>(1);
-                items.put(Tags.MESSAGE_BUS_DESTINATION.getKey(), message.getAddress());
-                msgSpan.log(items);
-
-                validateEndpoint(message.getAddress(), delivery)
-                .compose(address -> validateAddress(address, authenticatedDevice))
-                .recover(t -> {
-                    // invalid address / endpoint
-                    MessageHelper.rejected(delivery, AmqpContext.getErrorCondition(t));
-                    return Future.failedFuture(t);
-                })
-                .map(validatedAddress -> createContext(validatedAddress, delivery, message, authenticatedDevice))
-                .compose(context -> uploadMessage(context, msgSpan))
-                .otherwise(t -> {
-                    TracingHelper.logError(msgSpan, t);
-                    return null;
-                })
-                .setHandler(s -> {
-                    msgSpan.finish();
-                });
-            });
+            receiver.handler((delivery, message) -> onMessageReceived(delivery, message, authenticatedDevice));
             receiver.open();
             if (authenticatedDevice == null) {
                 LOG.debug("established link for receiving messages from device [container: {}]",
@@ -497,6 +478,50 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         span.finish();
     }
 
+    /**
+     * Processes an AMQP message received from a device.
+     * <p>
+     * This method settles the transfer with the following outcomes:
+     * <ul>
+     * <li><em>accepted</em> if the message has been successfully processed.</li>
+     * <li><em>rejected</em> if the message could not be processed due to a problem caused by the device.</li>
+     * <li><em>released</em> if the message could not be forwarded to a downstream consumer.</li>
+     * </ul>
+     * 
+     * @param delivery The message delivery.
+     * @param message The message.
+     * @param authenticatedDevice The device that the message has been received from or {@code null}
+     *                            if the device has not been authenticated.
+     * @return A future indicating the outcome of processing the message.
+     *         The future will succeed if the message has been processed successfully, otherwise it
+     *         will fail with a {@link ServiceInvocationException}.
+     */
+    protected Future<ProtonDelivery> onMessageReceived(final ProtonDelivery delivery, final Message message, final Device authenticatedDevice) {
+
+        final Span msgSpan = newSpan("upload message", authenticatedDevice);
+        msgSpan.log(Collections.singletonMap(Tags.MESSAGE_BUS_DESTINATION.getKey(), message.getAddress()));
+
+        return validateEndpoint(message.getAddress(), delivery)
+        .compose(address -> validateAddress(address, authenticatedDevice))
+        .map(validatedAddress -> createContext(validatedAddress, delivery, message, authenticatedDevice))
+        .compose(context -> uploadMessage(context, msgSpan))
+        .map(d -> {
+            ProtonHelper.accepted(delivery, true);
+            msgSpan.finish();
+            return d;
+        }).recover(t -> {
+            if (t instanceof ClientErrorException) {
+                final ErrorCondition condition = AmqpContext.getErrorCondition(t);
+                MessageHelper.rejected(delivery, condition);
+            } else {
+                ProtonHelper.released(delivery, true);
+            }
+            TracingHelper.logError(msgSpan, t);
+            msgSpan.finish();
+            return Future.failedFuture(t);
+        });
+    }
+
     private AmqpContext createContext(
             final ResourceIdentifier validatedAddress,
             final ProtonDelivery delivery,
@@ -508,7 +533,9 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             LOG.debug("adjusting message's address [orig: {}, updated: {}]", message.getAddress(), to);
             message.setAddress(to);
         }
-        return new AmqpContext(delivery, message, authenticatedDevice);
+        final AmqpContext ctx = new AmqpContext(delivery, message, authenticatedDevice);
+        ctx.setTimer(metrics.startTimer());
+        return ctx;
     }
 
     /**
@@ -564,12 +591,12 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             return consumer;
         })
         .otherwise(t -> {
-            TracingHelper.logError(span, t);
             if (t instanceof ServiceInvocationException) {
-                closeLinkWithError(sender, t);
+                closeLinkWithError(sender, t, span);
             } else {
                 closeLinkWithError(sender,
-                        new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "Invalid source address"));
+                        new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "Invalid source address"),
+                        span);
             }
             return null;
         })
@@ -638,14 +665,28 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                 sourceAddress.getResourceId(),
                 commandContext -> {
 
+                    final Sample timer = metrics.startTimer();
+                    addMicrometerSample(commandContext, timer);
                     Tags.COMPONENT.set(commandContext.getCurrentSpan(), getTypeName());
                     final Command command = commandContext.getCommand();
 
                     if (!command.isValid()) {
                         final Exception ex = new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "malformed command message");
                         commandContext.reject(AmqpContext.getErrorCondition(ex), 1);
+                        metrics.reportCommand(
+                                command.isOneWay() ? Direction.ONE_WAY : Direction.REQUEST,
+                                sourceAddress.getTenantId(),
+                                ProcessingOutcome.UNPROCESSABLE,
+                                command.getPayloadSize(),
+                                timer);
                     } else if (!sender.isOpen()) {
                         commandContext.release(1);
+                        metrics.reportCommand(
+                                command.isOneWay() ? Direction.ONE_WAY : Direction.REQUEST,
+                                sourceAddress.getTenantId(),
+                                ProcessingOutcome.UNDELIVERABLE,
+                                command.getPayloadSize(),
+                                timer);
                     } else {
                         onCommandReceived(sender, commandContext);
                     }
@@ -676,28 +717,33 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             msg.setCorrelationId(msg.getMessageId());
         }
 
+        // TODO time out waiting for disposition update
         sender.send(msg, delivery -> {
             // release the command message when the device either
             // rejects or does not settle the command request message.
             final DeliveryState remoteState = delivery.getRemoteState();
             final Map<String, Object> logItems = new HashMap<>(2);
+            ProcessingOutcome outcome = null;
             if (delivery.remotelySettled()) {
                 if (Accepted.class.isInstance(remoteState)) {
                     LOG.trace("device accepted command message [command: {}]", command.getName());
-                    logItems.put(Fields.EVENT, "device accepted command");
+                    logItems.put(Fields.EVENT, "device has accepted command");
                     commandContext.getCurrentSpan().log(logItems);
                     commandContext.accept(1);
+                    outcome = ProcessingOutcome.FORWARDED;
                 } else if (Rejected.class.isInstance(remoteState)) {
                     final ErrorCondition error = ((Rejected) remoteState).getError();
                     LOG.debug("device rejected command message [command: {}, error: {}]", command.getName(), error);
-                    logItems.put(Fields.EVENT, "device rejected command");
+                    logItems.put(Fields.EVENT, "device has rejected command");
                     commandContext.getCurrentSpan().log(logItems);
                     commandContext.reject(error, 1);
+                    outcome = ProcessingOutcome.UNPROCESSABLE;
                 } else if (Released.class.isInstance(remoteState)) {
                     LOG.debug("device released command message [command: {}]", command.getName());
-                    logItems.put(Fields.EVENT, "device released command");
+                    logItems.put(Fields.EVENT, "device has released command");
                     commandContext.getCurrentSpan().log(logItems);
                     commandContext.release(1);
+                    outcome = ProcessingOutcome.UNDELIVERABLE;
                 }
             } else {
                 LOG.debug("device did not settle command message [command: {}, remote state: {}]", command.getName(),
@@ -706,7 +752,14 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                 logItems.put("remote state", remoteState.getClass().getSimpleName());
                 commandContext.getCurrentSpan().log(logItems);
                 commandContext.release(1);
+                outcome = ProcessingOutcome.UNDELIVERABLE;
             }
+            metrics.reportCommand(
+                    command.isOneWay() ? Direction.ONE_WAY : Direction.REQUEST,
+                    command.getTenant(),
+                    outcome,
+                    command.getPayloadSize(),
+                    getMicrometerSample(commandContext));
         });
         final Map<String, Object> items = new HashMap<>(4);
         items.put(Fields.EVENT, "command sent to device");
@@ -719,16 +772,24 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
     }
 
     /**
-     * Closes the specified link using the given throwable to set the local ErrorCondition object for the link.
+     * Closes a link with an error condition.
      *
      * @param link The link to close.
-     * @param t The throwable to use to determine the error condition object.
+     * @param t The throwable to create the error condition from.
+     * @param span The span to log the error condition to (may be {@code null}).
      */
-    private <T extends ProtonLink<T>> void closeLinkWithError(final ProtonLink<T> link, final Throwable t) {
+    private <T extends ProtonLink<T>> void closeLinkWithError(
+            final ProtonLink<T> link,
+            final Throwable t,
+            final Span span) {
+
         final ErrorCondition ec = AmqpContext.getErrorCondition(t);
         LOG.debug("closing link with error condition [symbol: {}, description: {}]", ec.getCondition(), ec.getDescription());
         link.setCondition(ec);
         link.close();
+        if (span != null) {
+            TracingHelper.logError(span, t);
+        }
     }
 
     /**
@@ -741,7 +802,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
      *                    trace the forwarding of the message.
      * @return A future indicating the outcome.
      */
-    protected Future<Void> uploadMessage(final AmqpContext context, final Span currentSpan) {
+    private Future<ProtonDelivery> uploadMessage(final AmqpContext context, final Span currentSpan) {
 
         final Future<Void> contentTypeCheck = Future.future();
 
@@ -755,34 +816,24 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         return contentTypeCheck.compose(ok -> {
             switch (MetricsTags.EndpointType.fromString(context.getEndpoint())) {
             case TELEMETRY:
-                LOG.trace("forwarding telemetry data");
                 return doUploadMessage(context, getTelemetrySender(context.getTenantId()), currentSpan);
             case EVENT:
-                LOG.trace("forwarding event");
                 return doUploadMessage(context, getEventSender(context.getTenantId()), currentSpan);
             case CONTROL:
-                LOG.trace("forwarding command response");
                 return doUploadCommandResponseMessage(context, currentSpan);
             default:
                 return Future
                         .failedFuture(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND, "unknown endpoint"));
             }
-        })
-        .map(downstreamDelivery -> {
-            context.accept();
-            return (Void) null;
-        })
-        .recover(t -> {
-            context.handleFailure(t);
-            return Future.failedFuture(t);
         });
-
     }
 
     private Future<ProtonDelivery> doUploadMessage(
             final AmqpContext context,
             final Future<MessageSender> senderFuture,
             final Span currentSpan) {
+
+        LOG.trace("forwarding {} message", context.getEndpoint());
 
         final Future<JsonObject> tokenFuture = getRegistrationAssertion(context.getTenantId(), context.getDeviceId(),
                 context.getAuthenticatedDevice(), currentSpan.context());
@@ -791,56 +842,102 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
 
         return CompositeFuture.all(tenantEnabledFuture, tokenFuture, senderFuture)
                 .compose(ok -> {
-                        final MessageSender sender = senderFuture.result();
-                        final Message downstreamMessage = newMessage(context.getResourceIdentifier(),
-                                sender.isRegistrationAssertionRequired(),
-                                context.getEndpoint(), context.getMessageContentType(), context.getMessagePayload(),
-                                tokenFuture.result(), null);
 
-                        if (context.isRemotelySettled()) {
-                            // client uses AT_MOST_ONCE delivery semantics -> fire and forget
-                            return sender.send(downstreamMessage, currentSpan.context());
-                        } else {
-                            // client uses AT_LEAST_ONCE delivery semantics
-                            return sender.sendAndWaitForOutcome(downstreamMessage, currentSpan.context());
-                        }
+                    final MessageSender sender = senderFuture.result();
+                    final Message downstreamMessage = newMessage(
+                            context.getResourceIdentifier(),
+                            sender.isRegistrationAssertionRequired(),
+                            context.getEndpoint(),
+                            context.getMessageContentType(),
+                            context.getMessagePayload(),
+                            tokenFuture.result(),
+                            null); // no TTD
+
+                    if (context.isRemotelySettled()) {
+                        // client uses AT_MOST_ONCE delivery semantics -> fire and forget
+                        return sender.send(downstreamMessage, currentSpan.context());
+                    } else {
+                        // client uses AT_LEAST_ONCE delivery semantics
+                        return sender.sendAndWaitForOutcome(downstreamMessage, currentSpan.context());
+                    }
+
                 }).recover(t -> {
+
                     LOG.debug("cannot process {} message from device [tenant: {}, device-id: {}]",
                             context.getEndpoint(),
                             context.getTenantId(),
                             context.getDeviceId(), t);
+                    final ProcessingOutcome outcome = t instanceof ClientErrorException ? ProcessingOutcome.UNPROCESSABLE : ProcessingOutcome.UNDELIVERABLE;
+                    metrics.reportTelemetry(
+                            EndpointType.fromString(context.getEndpoint()),
+                            context.getTenantId(),
+                            outcome,
+                            context.isRemotelySettled() ? QoS.AT_MOST_ONCE : QoS.AT_LEAST_ONCE,
+                            context.getPayloadSize(),
+                            context.getTimer());
                     return Future.failedFuture(t);
+
+                }).map(delivery -> {
+
+                    metrics.reportTelemetry(
+                            EndpointType.fromString(context.getEndpoint()),
+                            context.getTenantId(),
+                            ProcessingOutcome.FORWARDED,
+                            context.isRemotelySettled() ? QoS.AT_MOST_ONCE : QoS.AT_LEAST_ONCE,
+                            context.getPayloadSize(),
+                            context.getTimer());
+                    return delivery;
                 });
     }
 
     private Future<ProtonDelivery> doUploadCommandResponseMessage(final AmqpContext context, final Span currentSpan) {
 
-        final CommandResponse commandResponse = CommandResponse.from(context.getMessage());
-        if (commandResponse == null) {
-            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
-                    "malformed command response message"));
-        } else {
+        final Future<CommandResponse> response = Optional.ofNullable(CommandResponse.from(context.getMessage()))
+                .map(r -> Future.succeededFuture(r))
+                .orElse(Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
+                    "malformed command response message")));
+
+        return response.compose(commandResponse -> {
+
             LOG.trace("sending command response [device-id: {}, status: {}, correlation-id: {}, reply-to: {}]",
                     context.getDeviceId(), commandResponse.getStatus(), commandResponse.getCorrelationId(),
                     commandResponse.getReplyToId());
+
             final Map<String, Object> items = new HashMap<>(3);
             items.put(Fields.EVENT, "sending command response");
             items.put(TracingHelper.TAG_CORRELATION_ID.getKey(), commandResponse.getCorrelationId());
             items.put(MessageHelper.APP_PROPERTY_STATUS, commandResponse.getStatus());
             currentSpan.log(items);
-            return sendCommandResponse(context.getTenantId(), commandResponse, currentSpan.context())
-                    .map(delivery -> {
-                        LOG.trace("forwarded command response from device [tenant: {}, device-id: {}]",
-                                context.getTenantId(), context.getDeviceId());
-                        return delivery;
-                    }).recover(t -> {
-                        LOG.debug("cannot process command response from device [tenant: {}, device-id: {}]",
-                                context.getTenantId(),
-                                context.getDeviceId(), t);
 
-                        return Future.failedFuture(t);
-                    });
-        }
+            return sendCommandResponse(context.getTenantId(), commandResponse, currentSpan.context());
+
+        }).map(delivery -> {
+
+            LOG.trace("forwarded command response from device [tenant: {}, device-id: {}]",
+                    context.getTenantId(), context.getDeviceId());
+            metrics.reportCommand(
+                    Direction.RESPONSE,
+                    context.getTenantId(),
+                    ProcessingOutcome.FORWARDED,
+                    context.getPayloadSize(),
+                    context.getTimer());
+            return delivery;
+
+        }).recover(t -> {
+
+            LOG.debug("cannot process command response from device [tenant: {}, device-id: {}]",
+                    context.getTenantId(),
+                    context.getDeviceId(), t);
+            final ProcessingOutcome outcome = t instanceof ClientErrorException ? ProcessingOutcome.UNPROCESSABLE : ProcessingOutcome.UNDELIVERABLE;
+            metrics.reportCommand(
+                    Direction.RESPONSE,
+                    context.getTenantId(),
+                    outcome,
+                    context.getPayloadSize(),
+                    context.getTimer());
+
+            return Future.failedFuture(t);
+        });
     }
 
     /**

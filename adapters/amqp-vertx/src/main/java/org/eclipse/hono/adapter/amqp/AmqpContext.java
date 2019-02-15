@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -18,14 +18,14 @@ import java.util.Objects;
 import org.apache.qpid.proton.amqp.transport.AmqpError;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.message.Message;
-import org.eclipse.hono.client.ServerErrorException;
-import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.auth.Device;
+import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MapBasedExecutionContext;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
 
+import io.micrometer.core.instrument.Timer.Sample;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.proton.ProtonDelivery;
 import io.vertx.proton.ProtonHelper;
@@ -41,6 +41,7 @@ public class AmqpContext extends MapBasedExecutionContext {
     private final ResourceIdentifier resource;
     private final Device authenticatedDevice;
     private final Buffer payload;
+    private Sample timer;
 
     /**
      * Creates an AmqpContext instance using the specified delivery, message and authenticated device.
@@ -68,6 +69,15 @@ public class AmqpContext extends MapBasedExecutionContext {
      */
     Buffer getMessagePayload() {
         return payload;
+    }
+
+    /**
+     * Gets the size of the message's payload.
+     * 
+     * @return The size in bytes.
+     */
+    int getPayloadSize() {
+        return payload == null ? 0 : payload.length();
     }
 
     /**
@@ -152,49 +162,6 @@ public class AmqpContext extends MapBasedExecutionContext {
     }
 
     /**
-     * Sets an AMQP 1.0 message delivery state to either RELEASED in the case of a <em>ServerErrorException</em> or REJECTED in the
-     * case of a <em>ClientErrorException</em>. In the REJECTED case, the supplied exception will provide
-     * the error condition value and description as reason for rejection.
-     *
-     * @param t The service invocation exception.
-     * @throws NullPointerException if error is {@code null}.
-     */
-    void handleFailure(final Throwable t) {
-        Objects.requireNonNull(t);
-        final ErrorCondition condition = getErrorCondition(t);
-        if (ServiceInvocationException.class.isInstance(t)) {
-            final ServiceInvocationException error = (ServiceInvocationException) t;
-            if (ServerErrorException.class.isInstance(error)) {
-                ProtonHelper.released(delivery, true);
-            } else {
-                MessageHelper.rejected(delivery, condition);
-            }
-        } else {
-            MessageHelper.rejected(delivery, condition);
-        }
-    }
-
-    /**
-     * Settles and accepts the delivery by applying the ACCEPTED disposition state.
-     *
-     * @return The proton delivery.
-     */
-    ProtonDelivery accept() {
-        return ProtonHelper.accepted(delivery, true);
-    }
-
-    /**
-     * Updates this context's delivery state and settlement using the specified delivery.
-     *
-     * @param newDelivery The new delivery use to update this context's delivery.
-     *
-     * @return The new proton delivery.
-     */
-    ProtonDelivery updateDelivery(final ProtonDelivery newDelivery) {
-        return delivery.disposition(newDelivery.getRemoteState(), newDelivery.remotelySettled());
-    }
-
-    /**
      * Whether the delivery was settled by the device.
      *
      * @return True if the device sends the message settled, false otherwise.
@@ -203,13 +170,33 @@ public class AmqpContext extends MapBasedExecutionContext {
         return delivery.remotelySettled();
     }
 
-    //---------------------------------------------< private methods >---
     /**
-     * Creates an ErrorCondition using the given throwable to provide an error condition value and
-     * description. All throwables that are not service invocation exceptions will be mapped to {@link AmqpError#PRECONDITION_FAILED}.
+     * Sets the object to use for measuring the time it takes to
+     * process this request.
+     * 
+     * @param timer The timer.
+     */
+    void setTimer(final Sample timer) {
+        this.timer = timer;
+    }
+
+    /**
+     * Gets the object used for measuring the time it takes to
+     * process this request.
+     * 
+     * @return The timer or {@code null} if not set.
+     */
+    Sample getTimer() {
+        return timer;
+    }
+
+    /**
+     * Creates an AMQP error condition for an throwable.
+     * <p>
+     * Non {@link ServiceInvocationException} instances are mapped to {@link AmqpError#PRECONDITION_FAILED}.
      *
      * @param t The throwable to map to an error condition.
-     * @return The ErrorCondition.
+     * @return The error condition.
      */
     static ErrorCondition getErrorCondition(final Throwable t) {
         if (ServiceInvocationException.class.isInstance(t)) {
