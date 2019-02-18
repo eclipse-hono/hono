@@ -46,7 +46,7 @@ public class NoopBasedMetrics implements Metrics {
     }
 
     @Override
-    public long getNumberOfConnections() {
+    public int getNumberOfConnections() {
         return 0;
     }
 

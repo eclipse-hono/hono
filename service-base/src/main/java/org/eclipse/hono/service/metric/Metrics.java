@@ -51,7 +51,7 @@ public interface Metrics {
      *
      * @return total number of connections.
      */
-    long getNumberOfConnections();
+    int getNumberOfConnections();
 
     /**
      * Starts a new timer.

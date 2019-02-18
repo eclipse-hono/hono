@@ -13,6 +13,9 @@ title = "Release Notes"
   [MQTT Adapter Configuration]({{< relref "/admin-guide/mqtt-adapter-config.md" >}}) for details.
 * The new *Helm deployment* for Kubernetes has been added. Please refer to
   [Kubernetes deployment guide]({{< relref "/deployment/kubernetes.md" >}}) for details.
+* The AMQP adapter now supports limiting the number of concurrent connections in order
+  to prevent Out of Memory errors. Please refer to
+  [AMQP Adapter Configuration]({{< relref "/admin-guide/amqp-adapter-config.md" >}}) for details.
 
 ### Fixes & Enhancements
 

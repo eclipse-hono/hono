@@ -35,6 +35,7 @@ import org.eclipse.hono.client.TenantClient;
 import org.eclipse.hono.config.AbstractConfig;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.auth.ValidityBasedTrustOptions;
+import org.eclipse.hono.service.limiting.ConnectionLimitManager;
 import org.eclipse.hono.service.monitoring.ConnectionEventProducer;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
@@ -89,6 +90,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     private HonoClient tenantServiceClient;
     private HonoClient credentialsServiceClient;
     private CommandConnection commandConnection;
+    private ConnectionLimitManager connectionLimitManager;
 
     private ConnectionEventProducer connectionEventProducer;
 
@@ -1456,4 +1458,19 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
                 });
     }
 
+    /**
+     * Gets the manager to use for connection limits.
+     * @return The manager. Maybe {@code null}.
+     */
+    public final ConnectionLimitManager getConnectionLimitManager() {
+        return connectionLimitManager;
+    }
+
+    /**
+     * Sets the manager to use for connection limits.
+     * @param connectionLimitManager The implementation that manages the connection limit.
+     */
+    public final void setConnectionLimitManager(final ConnectionLimitManager connectionLimitManager) {
+        this.connectionLimitManager = connectionLimitManager;
+    }
 }
