@@ -1065,6 +1065,7 @@
     {
       "columns": [],
       "datasource": "hono_metrics",
+      "description": "The number of containers running for each service.",
       "fontSize": "100%",
       "gridPos": {
         "h": 5,
@@ -1083,7 +1084,7 @@
       },
       "styles": [
         {
-          "alias": "Adapter Type",
+          "alias": "Service",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -1093,13 +1094,13 @@
           "dateFormat": "YYYY-MM-DD HH:mm:ss",
           "decimals": 2,
           "mappingType": 1,
-          "pattern": "component_name",
+          "pattern": "job",
           "thresholds": [],
           "type": "string",
           "unit": "short"
         },
         {
-          "alias": "#Instances",
+          "alias": "Count",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -1131,14 +1132,14 @@
       ],
       "targets": [
         {
-          "expr": "count(hono_connections_unauthenticated{component_type=\"adapter\"}) by (component_name)",
+          "expr": "count(up) by (job)",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
           "refId": "A"
         }
       ],
-      "title": "Protocol Adapters",
+      "title": "Service Instances",
       "transform": "table",
       "type": "table"
     }
