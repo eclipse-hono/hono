@@ -39,6 +39,7 @@ import org.eclipse.hono.service.auth.device.SubjectDnCredentials;
 import org.eclipse.hono.service.auth.device.UsernamePasswordAuthProvider;
 import org.eclipse.hono.service.auth.device.UsernamePasswordCredentials;
 import org.eclipse.hono.service.auth.device.X509AuthProvider;
+import org.eclipse.hono.service.limiting.ConnectionLimitManager;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.AuthenticationConstants;
 import org.eclipse.hono.util.Constants;
@@ -77,6 +78,7 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
     private final HonoClient credentialsServiceClient;
     private final Tracer tracer;
     private final Supplier<Span> spanFactory;
+    private final ConnectionLimitManager connectionLimitManager;
 
     /**
      * Creates a new SASL authenticator factory for an authentication provider. If the AMQP adapter supports
@@ -89,6 +91,7 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
      * @param tracer The tracer instance.
      * @param spanFactory The factory to use for creating and starting an OpenTracing span to
      *                    trace the authentication of the device.
+     * @param connectionLimitManager The connection limit manager to use to monitor the number of connections.
      *
      * @throws NullPointerException if any of the parameters are null.
      */
@@ -97,18 +100,21 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
             final HonoClient credentialsServiceClient,
             final ProtocolAdapterProperties config,
             final Tracer tracer,
-            final Supplier<Span> spanFactory) {
+            final Supplier<Span> spanFactory,
+            final ConnectionLimitManager connectionLimitManager) {
 
         this.tenantServiceClient = Objects.requireNonNull(tenantServiceClient, "Tenant client cannot be null");
         this.credentialsServiceClient = Objects.requireNonNull(credentialsServiceClient, "Credentials client cannot be null");
         this.config = Objects.requireNonNull(config, "configuration cannot be null");
         this.tracer = Objects.requireNonNull(tracer);
         this.spanFactory = Objects.requireNonNull(spanFactory);
+        this.connectionLimitManager = Objects.requireNonNull(connectionLimitManager);
     }
 
     @Override
     public ProtonSaslAuthenticator create() {
-        return new AmqpAdapterSaslAuthenticator(tenantServiceClient, credentialsServiceClient, config, tracer, spanFactory.get());
+        return new AmqpAdapterSaslAuthenticator(tenantServiceClient, credentialsServiceClient, config, tracer,
+                spanFactory.get(), connectionLimitManager);
     }
 
     /**
@@ -123,6 +129,7 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
         private final HonoClient credentialsServiceClient;
         private final Tracer tracer;
         private final Span currentSpan;
+        private final ConnectionLimitManager connectionLimitManager;
 
         private Sasl sasl;
         private boolean succeeded;
@@ -137,13 +144,15 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
                 final HonoClient credentialsServiceClient,
                 final ProtocolAdapterProperties config,
                 final Tracer tracer,
-                final Span currentSpan) {
+                final Span currentSpan,
+                final ConnectionLimitManager connectionLimitManager) {
 
             this.tenantServiceClient = tenantServiceClient;
             this.credentialsServiceClient = credentialsServiceClient;
             this.config = config;
             this.tracer = tracer;
             this.currentSpan = currentSpan;
+            this.connectionLimitManager = connectionLimitManager;
         }
 
         @Override
@@ -171,46 +180,54 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
                 LOG.debug("client device provided an empty list of SASL mechanisms [hostname: {}, state: {}]",
                         sasl.getHostname(), sasl.getState());
                 completionHandler.handle(Boolean.FALSE);
-            } else {
-                final String remoteMechanism = remoteMechanisms[0];
-                LOG.debug("client device wants to authenticate using SASL [mechanism: {}, host: {}, state: {}]",
-                        remoteMechanism, sasl.getHostname(), sasl.getState());
-
-                final Context currentContext = Vertx.currentContext();
-                final Future<DeviceUser> deviceAuthTracker = Future.future();
-                deviceAuthTracker.setHandler(outcome -> {
-                    if (outcome.succeeded()) {
-                        currentSpan.log("credentials verified successfully");
-                        // add span to connection so that it can be used during the
-                        // remaining connection establishment process
-                        protonConnection.attachments().set(AmqpAdapterConstants.KEY_CURRENT_SPAN, Span.class, currentSpan);
-                        final Device authenticatedDevice = outcome.result();
-                        protonConnection.attachments().set(AmqpAdapterConstants.KEY_CLIENT_DEVICE, Device.class,
-                                authenticatedDevice);
-                        succeeded = true;
-                        sasl.done(SaslOutcome.PN_SASL_OK);
-
-                    } else {
-                        TracingHelper.logError(currentSpan, outcome.cause());
-                        currentSpan.finish();
-                        LOG.debug("validation of credentials failed: {}", outcome.cause().getMessage());
-                        sasl.done(SaslOutcome.PN_SASL_AUTH);
-
-                    }
-                    // invoke the completion handler on the calling context.
-                    currentContext.runOnContext(action -> completionHandler.handle(Boolean.TRUE));
-                });
-
-                final byte[] saslResponse = new byte[sasl.pending()];
-                sasl.recv(saslResponse, 0, saslResponse.length);
-
-                if (AuthenticationConstants.MECHANISM_PLAIN.equals(remoteMechanism)) {
-                    verifyPlain(saslResponse, deviceAuthTracker.completer());
-                } else if (AuthenticationConstants.MECHANISM_EXTERNAL.equals(remoteMechanism)){
-                    verifyExternal(deviceAuthTracker.completer());
-                }
-
+                return;
             }
+
+            if (connectionLimitManager.isLimitExceeded()) {
+                LOG.debug("Connection limit exceeded, reject connection request");
+                sasl.done(SaslOutcome.PN_SASL_TEMP);
+                completionHandler.handle(Boolean.TRUE);
+                return;
+            }
+
+            final String remoteMechanism = remoteMechanisms[0];
+            LOG.debug("client device wants to authenticate using SASL [mechanism: {}, host: {}, state: {}]",
+                    remoteMechanism, sasl.getHostname(), sasl.getState());
+
+            final Context currentContext = Vertx.currentContext();
+            final Future<DeviceUser> deviceAuthTracker = Future.future();
+            deviceAuthTracker.setHandler(outcome -> {
+                if (outcome.succeeded()) {
+                    currentSpan.log("credentials verified successfully");
+                    // add span to connection so that it can be used during the
+                    // remaining connection establishment process
+                    protonConnection.attachments().set(AmqpAdapterConstants.KEY_CURRENT_SPAN, Span.class, currentSpan);
+                    final Device authenticatedDevice = outcome.result();
+                    protonConnection.attachments().set(AmqpAdapterConstants.KEY_CLIENT_DEVICE, Device.class,
+                            authenticatedDevice);
+                    succeeded = true;
+                    sasl.done(SaslOutcome.PN_SASL_OK);
+
+                } else {
+                    TracingHelper.logError(currentSpan, outcome.cause());
+                    currentSpan.finish();
+                    LOG.debug("validation of credentials failed: {}", outcome.cause().getMessage());
+                    sasl.done(SaslOutcome.PN_SASL_AUTH);
+
+                }
+                // invoke the completion handler on the calling context.
+                currentContext.runOnContext(action -> completionHandler.handle(Boolean.TRUE));
+            });
+
+            final byte[] saslResponse = new byte[sasl.pending()];
+            sasl.recv(saslResponse, 0, saslResponse.length);
+
+            if (AuthenticationConstants.MECHANISM_PLAIN.equals(remoteMechanism)) {
+                verifyPlain(saslResponse, deviceAuthTracker.completer());
+            } else if (AuthenticationConstants.MECHANISM_EXTERNAL.equals(remoteMechanism)) {
+                verifyExternal(deviceAuthTracker.completer());
+            }
+
         }
 
         @Override

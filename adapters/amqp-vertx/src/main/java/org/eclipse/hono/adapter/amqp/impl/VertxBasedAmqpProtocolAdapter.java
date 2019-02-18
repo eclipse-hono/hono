@@ -42,6 +42,8 @@ import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
+import org.eclipse.hono.service.limiting.ConnectionLimitManager;
+import org.eclipse.hono.service.limiting.MemoryBasedConnectionLimitStrategy;
 import org.eclipse.hono.service.metric.MetricsTags.Direction;
 import org.eclipse.hono.service.metric.MetricsTags.ProcessingOutcome;
 import org.eclipse.hono.service.metric.MetricsTags.QoS;
@@ -83,6 +85,16 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
 
     // These values should be made configurable.
     private static final long DEFAULT_COMMAND_CONSUMER_CHECK_INTERVAL_MILLIS = 10000; // 10 seconds
+
+    /**
+     * The minimum amount of memory that the adapter requires to run.
+     */
+    private static final int MINIMAL_MEMORY = 100_000_000; // 100MB: minimal memory necessary for startup
+
+    /**
+     * The amount of memory required for each connection.
+     */
+    private static final int MEMORY_PER_CONNECTION = 20_000; // 20KB: expected avg. memory consumption per connection
 
     /**
      * The AMQP server instance that maps to a secure port.
@@ -136,6 +148,9 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         checkPortConfiguration()
                 .compose(success -> {
                     if (authenticatorFactory == null && getConfig().isAuthenticationRequired()) {
+                        final ConnectionLimitManager connectionLimitManager = Optional.ofNullable(
+                                getConnectionLimitManager()).orElse(createConnectionLimitManager());
+                        setConnectionLimitManager(connectionLimitManager);
                         authenticatorFactory = new AmqpAdapterSaslAuthenticatorFactory(
                                 getTenantServiceClient(),
                                 getCredentialsServiceClient(),
@@ -145,7 +160,8 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                                     .ignoreActiveSpan()
                                     .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_SERVER)
                                     .withTag(Tags.COMPONENT.getKey(), getTypeName())
-                                    .start());
+                                    .start(),
+                                connectionLimitManager);
                     }
                     return Future.succeededFuture();
                 }).compose(succcess -> {
@@ -154,6 +170,13 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                     startFuture.complete();
                 }, startFuture);
 
+    }
+
+    private ConnectionLimitManager createConnectionLimitManager() {
+        return new ConnectionLimitManager(
+                new MemoryBasedConnectionLimitStrategy(
+                        MINIMAL_MEMORY, MEMORY_PER_CONNECTION + getConfig().getMaxSessionWindowSize()),
+                () -> metrics.getNumberOfConnections(), getConfig());
     }
 
     @Override

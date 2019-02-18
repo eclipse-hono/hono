@@ -16,6 +16,7 @@ package org.eclipse.hono.service.metric;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
 
@@ -65,7 +66,7 @@ public class MicrometerBasedMetrics implements Metrics {
 
     private final Map<String, AtomicLong> authenticatedConnections = new ConcurrentHashMap<>();
     private final AtomicLong unauthenticatedConnections;
-    private final AtomicLong totalCurrentConnections = new AtomicLong();
+    private final AtomicInteger totalCurrentConnections = new AtomicInteger();
 
     private LegacyMetrics legacyMetrics;
 
@@ -125,7 +126,7 @@ public class MicrometerBasedMetrics implements Metrics {
     }
 
     @Override
-    public long getNumberOfConnections() {
+    public int getNumberOfConnections() {
         return this.totalCurrentConnections.get();
     }
 
