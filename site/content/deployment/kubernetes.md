@@ -47,18 +47,18 @@ From the directory `deploy/target/deploy/kubernetes` run:
 
 ## Helm deployment
 
-The easiest way to deploy Eclipse Hono to Kubernetes cluster is to use Helm. You can use Helm with or without Helm Tiller server. In order to use Helm, you need to have it installed properly on your system.
-Please follow [these instructions](https://docs.helm.sh/install/) on how to install Helm tool locally and optionally Tiller server.
+The easiest way to deploy Eclipse Hono to Kubernetes cluster is to use Helm. You can use Helm with or without Helm's *Tiller* service. In order to use Helm, you need to have it installed properly on your system.
+Please refer to [Helm's installation instructions](https://docs.helm.sh/install/) for details.
 
 ### Install Eclipse Hono with Helm
 
-To deploy Eclipse Hono to the cluster with installed Tiller server, simply run
+To deploy Eclipse Hono to the cluster with installed Tiller service, simply run
 
 ~~~sh
 ~hono/deploy$ helm install --dep-up --name eclipse-hono --namespace hono target/deploy/helm/
 ~~~
 
-This will create a new `hono` namespace in the cluster and install all the components. The name of the Helm release will be `eclipse-hono`.
+This will create a new `hono` namespace in the cluster and install all the components to that namespace. The name of the Helm release will be `eclipse-hono`.
 
 You can check the status of the deployment with one of the following commands
 
@@ -68,7 +68,7 @@ $ helm status eclipse-hono
 $ helm get eclipse-hono
 ~~~
 
-### Install Eclipse Hono without using Helm Tiller server
+### Install Eclipse Hono without using Helm Tiller service
 
 If you for whatever reason can't or don't want to install Helm Tiller server in your cluster, you can still use the resources and deploy them manually.
 To generate Eclipse Hono resources locally with Helm, run
@@ -88,23 +88,18 @@ This should create `eclipse-hono` folder with all the resources. Now, you can us
 
 After successful installation, you can proceed and [access your Hono services](#accessing-hono-services)
 
-Note that in this deployment default Grafana credentials are (admin:prom-operator)
-
 ### Uninstall Eclipse Hono
 
-To uninstall Eclipse Hono using Helm tiller server, run
+To uninstall Eclipse Hono that has been installed using Helm's Tiller service, run
 
 ~~~sh
 ~hono/deploy$ helm delete --purge eclipse-hono
-~hono/deploy$ kubectl delete crd prometheuses.monitoring.coreos.com
-~hono/deploy$ kubectl delete crd prometheusrules.monitoring.coreos.com
-~hono/deploy$ kubectl delete crd servicemonitors.monitoring.coreos.com
-~hono/deploy$ kubectl delete crd alertmanagers.monitoring.coreos.com
+~hono/deploy$ kubectl delete crd prometheuses.monitoring.coreos.com delete crd prometheusrules.monitoring.coreos.com servicemonitors.monitoring.coreos.com alertmanagers.monitoring.coreos.com
 ~~~
 
 The additional delete commands are necessary to clean [Prometheus operator CRDs](https://github.com/helm/charts/tree/master/stable/prometheus-operator#uninstalling-the-chart).
 
-To uninstall manually deployed Eclipse Hono, run
+To uninstall Eclipse Hono that has been installed manually, run
 
 ~~~sh
 ~hono/deploy$ kubectl delete -f ./eclipse-hono --namespace hono
