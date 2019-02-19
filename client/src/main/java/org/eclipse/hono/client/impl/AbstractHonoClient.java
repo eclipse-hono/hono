@@ -21,8 +21,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
-import javax.net.ssl.HttpsURLConnection;
-
 import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
@@ -345,7 +343,7 @@ public abstract class AbstractHonoClient {
                     // and will send a detach frame for closing the link very shortly
                     // see AMQP 1.0 spec section 2.6.3
                     LOG.debug("peer did not create terminus for target [{}] and will detach the link", targetAddress);
-                    result.tryFail(new ServerErrorException(HttpsURLConnection.HTTP_UNAVAILABLE));
+                    result.tryFail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE));
                 }
             });
             HonoProtonHelper.setDetachHandler(sender, remoteDetached -> onRemoteDetach(sender, con.getRemoteContainer(), false, closeHook));
@@ -426,7 +424,7 @@ public abstract class AbstractHonoClient {
                     // and will send a detach frame for closing the link very shortly
                     // see AMQP 1.0 spec section 2.6.3
                     LOG.debug("peer did not create terminus for source [{}] and will detach the link", sourceAddress);
-                    result.tryFail(new ServerErrorException(HttpsURLConnection.HTTP_UNAVAILABLE));
+                    result.tryFail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE));
                 }
             });
             HonoProtonHelper.setDetachHandler(receiver, remoteDetached -> onRemoteDetach(receiver, con.getRemoteContainer(), false, remoteCloseHook));
@@ -446,7 +444,7 @@ public abstract class AbstractHonoClient {
                     clientConfig.getHost(), clientConfig.getLinkEstablishmentTimeout());
             link.close();
             link.free();
-            result.tryFail(new ServerErrorException(HttpsURLConnection.HTTP_UNAVAILABLE));
+            result.tryFail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE));
         }
     }
 

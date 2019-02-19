@@ -181,9 +181,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                 dtlsConfig.setConnectionThreadCount(config.getConnectorThreads());
                 dtlsConfig.setAddress(
                         new InetSocketAddress(config.getBindAddress(), config.getPort(getPortDefaultValue())));
-                if (coapPreSharedKeyProvider != null) {
-                    dtlsConfig.setPskStore(coapPreSharedKeyProvider);
-                }
+                dtlsConfig.setPskStore(coapPreSharedKeyProvider);
                 Endpoint secureEndpoint = null;
                 try {
                     final CoapEndpoint.CoapEndpointBuilder builder = new CoapEndpoint.CoapEndpointBuilder();

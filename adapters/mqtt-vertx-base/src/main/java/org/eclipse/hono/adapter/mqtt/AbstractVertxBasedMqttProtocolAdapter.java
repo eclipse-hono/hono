@@ -696,7 +696,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
 
         // if a device does not specify a keep alive in its CONNECT packet then
         // the default value of the CommandConnection will be used
-        final long livenessCheckInterval = mqttEndpoint.keepAliveTimeSeconds() * 1000 / 2;
+        final long livenessCheckInterval = (long) mqttEndpoint.keepAliveTimeSeconds() * 1000 / 2;
 
         return getCommandConnection().createCommandConsumer(
                 sub.getTenant(),
