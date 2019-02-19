@@ -39,7 +39,7 @@ import io.vertx.core.Future;
  * and <a href="https://www.eclipse.org/hono/api/Credentials-API/">Credentials API</a>.
  * </p>
  */
-@ComponentScan(basePackages = { "org.eclipse.hono.service.auth", "org.eclipse.hono.deviceregistry" })
+@ComponentScan(basePackages = { "org.eclipse.hono.service.auth", "org.eclipse.hono.service.metric", "org.eclipse.hono.deviceregistry" })
 @Configuration
 @EnableAutoConfiguration
 public class Application extends AbstractApplication {
