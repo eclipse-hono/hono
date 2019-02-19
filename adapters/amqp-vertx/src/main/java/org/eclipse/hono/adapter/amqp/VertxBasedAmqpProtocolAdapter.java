@@ -21,6 +21,7 @@ import java.util.Optional;
 
 import org.apache.qpid.proton.amqp.UnsignedLong;
 import org.apache.qpid.proton.amqp.messaging.Accepted;
+import org.apache.qpid.proton.amqp.messaging.Modified;
 import org.apache.qpid.proton.amqp.messaging.Rejected;
 import org.apache.qpid.proton.amqp.messaging.Released;
 import org.apache.qpid.proton.amqp.transport.DeliveryState;
@@ -744,6 +745,13 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                     commandContext.getCurrentSpan().log(logItems);
                     commandContext.release(1);
                     outcome = ProcessingOutcome.UNDELIVERABLE;
+                } else if (Modified.class.isInstance(remoteState)) {
+                    final Modified modified = (Modified) remoteState;
+                    LOG.debug("device modified command message [command: {}]", command.getName());
+                    logItems.put(Fields.EVENT, "device has modified command");
+                    commandContext.getCurrentSpan().log(logItems);
+                    commandContext.modify(modified.getDeliveryFailed(), modified.getUndeliverableHere(), 1);
+                    outcome = modified.getUndeliverableHere() ? ProcessingOutcome.UNPROCESSABLE : ProcessingOutcome.UNDELIVERABLE;
                 }
             } else {
                 LOG.debug("device did not settle command message [command: {}, remote state: {}]", command.getName(),
