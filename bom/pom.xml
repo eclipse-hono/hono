@@ -61,7 +61,7 @@
     <vertx.version>3.6.3</vertx.version>
 
     <!-- The port at which the Prometheus scraping endpoint is exposed -->
-    <prometheus.scraping.port>8081</prometheus.scraping.port>
+    <prometheus.scraping.port>8088</prometheus.scraping.port>
     <!-- The port at which the health check server should expose its resources -->
     <vertx.health.port>8088</vertx.health.port>
 
@@ -120,11 +120,6 @@
         <artifactId>spring-boot-starter-logging</artifactId>
         <version>${spring-boot.version}</version>
         <scope>runtime</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-actuator</artifactId>
-        <version>${spring-boot.version}</version>
       </dependency>
       <dependency>
         <groupId>io.micrometer</groupId>

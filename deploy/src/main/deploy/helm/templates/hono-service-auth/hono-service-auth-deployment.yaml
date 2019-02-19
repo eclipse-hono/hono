@@ -37,7 +37,7 @@ spec:
         - name: SPRING_CONFIG_LOCATION
           value: file:///etc/hono/
         - name: SPRING_PROFILES_ACTIVE
-          value: authentication-impl,dev,prometheus
+          value: authentication-impl,dev
         - name: LOGGING_CONFIG
           value: classpath:logback-spring.xml
         - name: _JAVA_OPTIONS
@@ -54,17 +54,17 @@ spec:
           limits:
             memory: "196Mi"
         livenessProbe:
-          initialDelaySeconds: 25
-          periodSeconds: 9
-          tcpSocket:
-            port: 5672
-          timeoutSeconds: 1
+          httpGet:
+            path: /liveness
+            port: {{ .Values.healthCheckPort }}
+            scheme: HTTP
+          initialDelaySeconds: 180
         readinessProbe:
-          initialDelaySeconds: 15
-          periodSeconds: 5
-          tcpSocket:
-            port: 5672
-          timeoutSeconds: 1
+          httpGet:
+            path: /readiness
+            port: {{ .Values.healthCheckPort }}
+            scheme: HTTP
+          initialDelaySeconds: 10
       volumes:
       - name: conf
         secret:

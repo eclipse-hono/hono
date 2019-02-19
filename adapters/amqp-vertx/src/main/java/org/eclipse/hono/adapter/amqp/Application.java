@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -21,7 +21,7 @@ import org.springframework.context.annotation.Configuration;
 /**
  * The Hono AMQP main application class.
  */
-@ComponentScan(basePackages = "org.eclipse.hono.adapter.amqp")
+@ComponentScan(basePackages = { "org.eclipse.hono.adapter.amqp", "org.eclipse.hono.service.metric" })
 @Configuration
 @EnableAutoConfiguration
 public class Application extends AbstractApplication {
