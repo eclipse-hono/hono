@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -15,6 +15,7 @@ package org.eclipse.hono.service.metric;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.PropertySource;
@@ -28,6 +29,7 @@ import io.micrometer.core.instrument.config.MeterFilter;
  */
 @Configuration
 @ConditionalOnProperty(name = "hono.metrics.legacy", havingValue = "true")
+@ConditionalOnClass(name = "io.micrometer.graphite.GraphiteMeterRegistry")
 @PropertySource("classpath:org/eclipse/hono/service/metric/legacy.properties")
 public class LegacyMetricsConfig extends AbstractLegacyMetricsConfig {
 
