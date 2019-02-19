@@ -86,7 +86,7 @@ public final class TenantServiceBasedX509Authentication implements X509Authentic
             final HonoClient tenantServiceClient,
             final Tracer tracer) {
 
-        this(tenantServiceClient, NoopTracerFactory.create(), new DeviceCertificateValidator());
+        this(tenantServiceClient, tracer, new DeviceCertificateValidator());
     }
 
     /**
