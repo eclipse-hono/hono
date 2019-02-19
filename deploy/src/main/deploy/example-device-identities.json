@@ -20,7 +20,8 @@
         "device-id": "4712",
         "data": {
           "enabled": true,
-          "comment": ["this device connects only via the gateway indicated by the 'via' property","therefore, no credentials are registered for the device"],"via":"gw-1"
+          "comment": ["this device connects only via the gateway indicated by the 'via' property","therefore, no credentials are registered for the device"],
+          "via":"gw-1"
         }
       },
       {

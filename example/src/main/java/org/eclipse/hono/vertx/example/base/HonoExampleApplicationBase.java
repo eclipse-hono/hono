@@ -263,7 +263,7 @@ public class HonoExampleApplicationBase {
                         // for devices that stay connected, start a periodic timer now that repeatedly sends a command
                         // to the device
                         vertx.setPeriodic(
-                                HonoExampleConstants.COMMAND_INTERVAL_FOR_DEVICES_CONNECTED_WITH_UNLIMITED_EXPIRY
+                                (long) HonoExampleConstants.COMMAND_INTERVAL_FOR_DEVICES_CONNECTED_WITH_UNLIMITED_EXPIRY
                                         * 1000,
                                 id -> {
                                     createCommandClientAndSendCommand(notificationToHandle).map(commandClient -> {
@@ -318,7 +318,7 @@ public class HonoExampleApplicationBase {
     private long calculateCommandTimeout(final TimeUntilDisconnectNotification notification) {
         if (notification.getTtd() == -1) {
             // let the command expire directly before the next periodic timer is started
-            return HonoExampleConstants.COMMAND_INTERVAL_FOR_DEVICES_CONNECTED_WITH_UNLIMITED_EXPIRY*1000;
+            return (long) HonoExampleConstants.COMMAND_INTERVAL_FOR_DEVICES_CONNECTED_WITH_UNLIMITED_EXPIRY * 1000;
         } else {
             // let the command expire when the notification expires
             return notification.getMillisecondsUntilExpiry();

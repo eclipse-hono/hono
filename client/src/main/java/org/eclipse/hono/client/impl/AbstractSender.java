@@ -356,6 +356,7 @@ public abstract class AbstractSender extends AbstractHonoClient implements Messa
                 LOG.debug("ignoring received delivery update for message [message ID: {}]: waiting for the update has already timed out", messageId);
             } else if (deliveryUpdated.remotelySettled()) {
                 if (Accepted.class.isInstance(remoteState)) {
+                    LOG.trace("message [message ID: {}] accepted by peer", messageId);
                     currentSpan.log("message accepted by peer");
                     result.complete(deliveryUpdated);
                 } else {
@@ -399,7 +400,7 @@ public abstract class AbstractSender extends AbstractHonoClient implements Messa
             return delivery;
         }).recover(t -> {
             TracingHelper.logError(currentSpan, t);
-            Tags.HTTP_STATUS.set(currentSpan, ServiceInvocationException.extractStatusCode(result.cause()));
+            Tags.HTTP_STATUS.set(currentSpan, ServiceInvocationException.extractStatusCode(t));
             currentSpan.finish();
             return Future.failedFuture(t);
         });
