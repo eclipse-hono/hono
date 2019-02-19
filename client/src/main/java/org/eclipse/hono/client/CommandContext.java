@@ -175,6 +175,32 @@ public final class CommandContext extends MapBasedExecutionContext {
     }
 
     /**
+     * Settles the command message with the <em>modified</em> outcome
+     * and flows credit to the peer.
+     * <p>
+     * This method also finishes the OpenTracing span returned by
+     * {@link #getCurrentSpan()}.
+     *
+     * @param deliveryFailed Whether the delivery should be treated as failed.
+     * @param undeliverableHere Whether the delivery is considered undeliverable.
+     * @param credit The number of credits to flow to the peer.
+     * @throws IllegalArgumentException if credit is negative.
+     */
+    public void modify(final boolean deliveryFailed, final boolean undeliverableHere, final int credit) {
+
+        if (credit < 0) {
+            throw new IllegalArgumentException("credit must be >= 0");
+        }
+        ProtonHelper.modified(delivery, true, deliveryFailed, undeliverableHere);
+        currentSpan.log("modified command for device");
+        currentSpan.log(Tags.ERROR.getKey());
+        if (credit > 0) {
+            flow(credit);
+        }
+        currentSpan.finish();
+    }
+
+    /**
      * Settles the command message with the <em>rejected</em> outcome.
      * <p>
      * This method simply invokes {@link CommandContext#reject(ErrorCondition, int)}
