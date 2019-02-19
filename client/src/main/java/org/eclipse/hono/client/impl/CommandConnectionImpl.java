@@ -96,6 +96,7 @@ public class CommandConnectionImpl extends HonoClientImpl implements CommandConn
     /**
      * {@inheritDoc}
      */
+    @Override
     public final Future<MessageConsumer> createCommandConsumer(
             final String tenantId,
             final String deviceId,
@@ -132,6 +133,7 @@ public class CommandConnectionImpl extends HonoClientImpl implements CommandConn
      * of the given interval length and {@link #MIN_LIVENESS_CHECK_INTERVAL_MILLIS}.
      * 
      */
+    @Override
     public final Future<MessageConsumer> createCommandConsumer(
             final String tenantId,
             final String deviceId,
@@ -233,6 +235,7 @@ public class CommandConnectionImpl extends HonoClientImpl implements CommandConn
     /**
      * {@inheritDoc}
      */
+    @Override
     public Future<Void> closeCommandConsumer(final String tenantId, final String deviceId) {
 
         Objects.requireNonNull(tenantId);
@@ -254,6 +257,7 @@ public class CommandConnectionImpl extends HonoClientImpl implements CommandConn
      * 
      * This implementation always creates a new sender link.
      */
+    @Override
     public Future<CommandResponseSender> getCommandResponseSender(
             final String tenantId,
             final String replyId) {

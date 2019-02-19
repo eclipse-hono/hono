@@ -88,6 +88,7 @@ public class PreSharedKeyDeviceIdentity implements DeviceCredentials {
      * 
      * @return The identity.
      */
+    @Override
     public final String getAuthId() {
         return authId;
     }
@@ -100,6 +101,7 @@ public class PreSharedKeyDeviceIdentity implements DeviceCredentials {
      * 
      * @return The tenant.
      */
+    @Override
     public final String getTenantId() {
         return tenantId;
     }

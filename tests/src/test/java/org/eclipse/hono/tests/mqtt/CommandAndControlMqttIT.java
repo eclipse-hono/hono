@@ -67,6 +67,7 @@ public class CommandAndControlMqttIT extends MqttTestBase {
     /**
      * Sets up the fixture.
      */
+    @Override
     @Before
     public void setUp() {
         LOGGER.info("running {}", testName.getMethodName());

@@ -115,6 +115,7 @@ public final class VertxBasedCoapAdapter extends AbstractVertxBasedCoapAdapter<C
         return exchange.advanced().getRequest().isConfirmable();
     }
 
+    @Override
     protected void addResources(final Context adapterContext, final CoapServer server) {
         final CoapRequestHandler telemetry = new CoapRequestHandler() {
 
