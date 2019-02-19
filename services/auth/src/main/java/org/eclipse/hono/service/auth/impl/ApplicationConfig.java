@@ -16,6 +16,8 @@ package org.eclipse.hono.service.auth.impl;
 import org.eclipse.hono.config.ApplicationConfigProperties;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.config.VertxProperties;
+import org.eclipse.hono.service.HealthCheckServer;
+import org.eclipse.hono.service.VertxBasedHealthCheckServer;
 import org.eclipse.hono.service.auth.AuthTokenHelper;
 import org.eclipse.hono.service.auth.AuthTokenHelperImpl;
 import org.eclipse.hono.service.metric.MetricsTags;
@@ -169,6 +171,15 @@ public class ApplicationConfig {
     public MeterRegistryCustomizer<MeterRegistry> commonTags() {
 
         return r -> r.config().commonTags(MetricsTags.forService(Constants.SERVICE_NAME_AUTH));
+    }
 
+    /**
+     * Exposes the health check server as a Spring bean.
+     *
+     * @return The health check server.
+     */
+    @Bean
+    public HealthCheckServer healthCheckServer() {
+        return new VertxBasedHealthCheckServer(vertx(), applicationConfigProperties());
     }
 }

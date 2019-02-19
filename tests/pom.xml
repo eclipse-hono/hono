@@ -243,6 +243,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                   <run>
                     <ports>
                       <port>+auth.ip:auth.amqp.port:5672</port>
+                      <port>+auth.ip:auth.health.port:${vertx.health.port}</port>
                     </ports>
                     <network>
                       <mode>custom</mode>
@@ -269,7 +270,11 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     </volumes>
                     <wait>
                       <time>${service.startup.timeout}</time>
-                      <log>^.*(Started Application).*$</log>
+                      <http>
+                        <method>GET</method>
+                        <url>http://${auth.ip}:${auth.health.port}/readiness</url>
+                        <status>200..299</status>
+                      </http>
                     </wait>
                   </run>
                 </image>

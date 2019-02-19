@@ -1132,7 +1132,7 @@
       ],
       "targets": [
         {
-          "expr": "count(up) by (job)",
+          "expr": "sum(up) by (job)",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,

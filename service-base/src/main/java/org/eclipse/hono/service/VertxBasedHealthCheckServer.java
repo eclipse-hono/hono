@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,14 +13,19 @@
 
 package org.eclipse.hono.service;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 
 import org.eclipse.hono.config.ApplicationConfigProperties;
 import org.eclipse.hono.util.Constants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 
 import io.vertx.core.Future;
+import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.http.HttpServerOptions;
@@ -53,6 +58,7 @@ public final class VertxBasedHealthCheckServer implements HealthCheckServer {
     private final Vertx vertx;
     private final ApplicationConfigProperties config;
     private Router router;
+    private final List<Handler<Router>> additionalResources = new ArrayList<>();
 
     /**
      * Create a new VertxBasedHealthCheckServer for the given Vertx and configuration.
@@ -87,6 +93,22 @@ public final class VertxBasedHealthCheckServer implements HealthCheckServer {
     }
 
     /**
+     * Sets providers of additional resources to be exposed by this health check server.
+     * <p>
+     * During start up, each of the providers will be invoked with the HTTP server's
+     * {@code Router} so that the providers can register their resources.
+     * 
+     * @param resourceProviders Additional resources to expose.
+     * @throws NullPointerException if provider list is {@code null}.
+     */
+    @Autowired(required = false)
+    @Qualifier("healthchecks")
+    public void setAdditionalResources(final List<Handler<Router>> resourceProviders) {
+        Objects.requireNonNull(resourceProviders);
+        this.additionalResources.addAll(resourceProviders);
+    }
+
+    /**
      * Starts the health check server.
      *
      * @return a future indicating the output of the operation.
@@ -100,6 +122,7 @@ public final class VertxBasedHealthCheckServer implements HealthCheckServer {
                 .setHost(config.getHealthCheckBindAddress());
         server = vertx.createHttpServer(options);
 
+        registerAdditionalResources();
         router.get(URI_READINESS_PROBE).handler(readinessHandler);
         router.get(URI_LIVENESS_PROBE).handler(livenessHandler);
 
@@ -116,6 +139,14 @@ public final class VertxBasedHealthCheckServer implements HealthCheckServer {
             }
         });
         return result;
+    }
+
+    private void registerAdditionalResources() {
+        this.additionalResources.forEach(handler -> {
+            LOG.info("registering additional resource: {}", handler);
+            handler.handle(router);
+        });
+        additionalResources.clear();
     }
 
     /**
