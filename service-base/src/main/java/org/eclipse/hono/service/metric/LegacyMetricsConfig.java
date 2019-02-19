@@ -31,6 +31,7 @@ import io.micrometer.core.instrument.config.MeterFilter;
 @PropertySource("classpath:org/eclipse/hono/service/metric/legacy.properties")
 public class LegacyMetricsConfig extends AbstractLegacyMetricsConfig {
 
+    @Override
     protected MeterFilter meterTypeMapper() {
         return new MeterFilter() {
 
