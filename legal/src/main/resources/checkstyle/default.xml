@@ -53,6 +53,7 @@
     <module name="OneStatementPerLine" />
     <module name="StringLiteralEquality" />
     <module name="FinalParameters"/>
+    <module name="MissingOverride"/>
 
     <!-- whitespaces, linebreaks -->
 
