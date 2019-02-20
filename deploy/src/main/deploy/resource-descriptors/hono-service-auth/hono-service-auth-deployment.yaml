@@ -25,6 +25,8 @@ spec:
         imagePullPolicy: IfNotPresent
         name: eclipse-hono-service-auth
         ports:
+        - containerPort: ${vertx.health.port}
+          protocol: TCP
         - containerPort: 5671
           protocol: TCP
         - containerPort: 5672

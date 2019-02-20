@@ -25,7 +25,7 @@ spec:
         imagePullPolicy: IfNotPresent
         name: eclipse-hono-adapter-kura
         ports:
-        - containerPort: 8088
+        - containerPort: ${vertx.health.port}
           protocol: TCP
         - containerPort: 8883
           protocol: TCP
@@ -56,13 +56,13 @@ spec:
         readinessProbe:
           httpGet:
             path: /readiness
-            port: 8088
+            port: ${vertx.health.port}
             scheme: HTTP
           initialDelaySeconds: 10
         livenessProbe:
           httpGet:
             path: /liveness
-            port: 8088
+            port: ${vertx.health.port}
             scheme: HTTP
           initialDelaySeconds: 180
       volumes:

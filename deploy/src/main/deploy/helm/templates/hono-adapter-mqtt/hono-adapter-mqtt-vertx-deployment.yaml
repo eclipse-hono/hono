@@ -25,7 +25,7 @@ spec:
         imagePullPolicy: IfNotPresent
         name: eclipse-hono-adapter-mqtt-vertx
         ports:
-        - containerPort: 8088
+        - containerPort: {{ .Values.healthCheckPort }}
           protocol: TCP
         - containerPort: 8883
           protocol: TCP
@@ -56,13 +56,13 @@ spec:
         livenessProbe:
           httpGet:
             path: /liveness
-            port: 8088
+            port: {{ .Values.healthCheckPort }}
             scheme: HTTP
           initialDelaySeconds: 180
         readinessProbe:
           httpGet:
             path: /readiness
-            port: 8088
+            port: {{ .Values.healthCheckPort }}
             scheme: HTTP
           initialDelaySeconds: 10
       volumes:
