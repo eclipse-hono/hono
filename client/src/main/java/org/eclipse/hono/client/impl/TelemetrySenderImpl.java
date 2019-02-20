@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -29,7 +29,6 @@ import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ClientConfigProperties;
-import org.eclipse.hono.tracing.MessageAnnotationsInjectAdapter;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.TelemetryConstants;
@@ -38,7 +37,6 @@ import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.opentracing.log.Fields;
-import io.opentracing.propagation.Format;
 import io.opentracing.tag.Tags;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
@@ -154,7 +152,7 @@ public final class TelemetrySenderImpl extends AbstractSender {
         Tags.MESSAGE_BUS_DESTINATION.set(span, targetAddress);
         span.setTag(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId);
         span.setTag(MessageHelper.APP_PROPERTY_DEVICE_ID, MessageHelper.getDeviceId(rawMessage));
-        tracer.inject(span.context(), Format.Builtin.TEXT_MAP, new MessageAnnotationsInjectAdapter(rawMessage));
+        TracingHelper.injectSpanContext(tracer, span.context(), rawMessage);
 
         if (!isRegistrationAssertionRequired()) {
             MessageHelper.getAndRemoveRegistrationAssertion(rawMessage);

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -215,7 +215,10 @@ public class AbstractSenderTest {
 
             @Override
             protected Span startSpan(final SpanContext context, final Message rawMessage) {
-                return mock(Span.class);
+                final SpanContext spanContext = mock(SpanContext.class);
+                final Span span = mock(Span.class);
+                when(span.context()).thenReturn(spanContext);
+                return span;
             }
         };
     }

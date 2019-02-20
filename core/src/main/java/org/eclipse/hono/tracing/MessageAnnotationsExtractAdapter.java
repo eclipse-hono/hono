@@ -1,5 +1,5 @@
-/**
- * Copyright (c) 2018 Contributors to the Eclipse Foundation
+/*******************************************************************************
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -9,59 +9,67 @@
  * http://www.eclipse.org/legal/epl-2.0
  *
  * SPDX-License-Identifier: EPL-2.0
- */
-
+ *******************************************************************************/
 
 package org.eclipse.hono.tracing;
 
 import java.util.AbstractMap;
-import java.util.HashMap;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
-import java.util.Optional;
 
 import org.apache.qpid.proton.amqp.Symbol;
-import org.apache.qpid.proton.amqp.messaging.DeliveryAnnotations;
+import org.apache.qpid.proton.amqp.messaging.MessageAnnotations;
 import org.apache.qpid.proton.message.Message;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import io.opentracing.propagation.TextMap;
 
-
 /**
- * An adapter for extracting properties from an AMQP 1.0 message's delivery annotations.
+ * An adapter for extracting properties from an AMQP 1.0 message's message annotations.
  *
  */
 public class MessageAnnotationsExtractAdapter implements TextMap {
 
-    private Message message;
+    private static final Logger LOG = LoggerFactory.getLogger(MessageAnnotationsExtractAdapter.class);
+
+    private final Message message;
+    private final String propertiesMapName;
 
     /**
      * Creates an adapter for a message.
      * 
      * @param message The message.
+     * @param propertiesMapName The name of the message annotation of type map that contains the properties to extract.
+     * @throws NullPointerException if any of the parameters are {@code null}.
      */
-    public MessageAnnotationsExtractAdapter(final Message message) {
+    public MessageAnnotationsExtractAdapter(final Message message, final String propertiesMapName) {
         this.message = Objects.requireNonNull(message);
+        this.propertiesMapName = Objects.requireNonNull(propertiesMapName);
     }
 
     @Override
     public Iterator<Entry<String, String>> iterator() {
 
-        final Iterator<Entry<Symbol, Object>> entries =
-                getDeliveryAnnotations().getValue().entrySet().iterator();
+        final Map<Object, Object> propertiesMap = getPropertiesMap();
+        if (propertiesMap.isEmpty()) {
+            return Collections.emptyIterator();
+        }
+        final Iterator<Entry<Object, Object>> entriesIterator = propertiesMap.entrySet().iterator();
         return new Iterator<Map.Entry<String, String>>() {
 
             @Override
             public boolean hasNext() {
-                return entries.hasNext();
+                return entriesIterator.hasNext();
             }
 
             @Override
             public Entry<String, String> next() {
-                final Entry<Symbol, Object> nextEntry = entries.next();
-                return new AbstractMap.SimpleEntry<String, String>(nextEntry.getKey().toString(),
+                final Entry<Object, Object> nextEntry = entriesIterator.next();
+                return new AbstractMap.SimpleEntry<>(nextEntry.getKey().toString(),
                         nextEntry.getValue().toString());
             }
         };
@@ -72,8 +80,19 @@ public class MessageAnnotationsExtractAdapter implements TextMap {
         throw new UnsupportedOperationException();
     }
 
-    private DeliveryAnnotations getDeliveryAnnotations() {
-        return Optional.ofNullable(message.getDeliveryAnnotations())
-                .orElse(new DeliveryAnnotations(new HashMap<>()));
+    private Map<Object, Object> getPropertiesMap() {
+        final MessageAnnotations messageAnnotations = message.getMessageAnnotations();
+        if (messageAnnotations == null || messageAnnotations.getValue() == null) {
+            return Collections.emptyMap();
+        }
+        final Object annotationValue = messageAnnotations.getValue().get(Symbol.getSymbol(propertiesMapName));
+        if (!(annotationValue instanceof Map)) {
+            if (annotationValue != null) {
+                LOG.debug("Value of '{}' annotation is not of type Map; actual type: {}", propertiesMapName,
+                        annotationValue.getClass().getName());
+            }
+            return Collections.emptyMap();
+        }
+        return (Map<Object, Object>) annotationValue;
     }
 }

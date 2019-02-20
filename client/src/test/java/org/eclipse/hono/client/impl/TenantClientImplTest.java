@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -49,6 +49,7 @@ import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 
 import io.opentracing.Span;
+import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.opentracing.Tracer.SpanBuilder;
 import io.opentracing.tag.Tags;
@@ -93,7 +94,10 @@ public class TenantClientImplTest {
     @Before
     public void setUp() {
 
+        final SpanContext spanContext = mock(SpanContext.class);
+
         span = mock(Span.class);
+        when(span.context()).thenReturn(spanContext);
         final SpanBuilder spanBuilder = HonoClientUnitTestHelper.mockSpanBuilder(span);
 
         tracer = mock(Tracer.class);
