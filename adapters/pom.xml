@@ -39,10 +39,6 @@
   <name>Hono Protocol Adapters</name>
   <description>An arbitrary collection of example protocol adapters for Hono. These adapters are mainly intended to be used for demonstration or PoCs. </description>
 
-  <properties>
-    <vertx.health.port>8088</vertx.health.port>
-  </properties>
-
   <dependencies>
     <dependency>
       <groupId>org.eclipse.hono</groupId>

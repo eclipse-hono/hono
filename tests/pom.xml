@@ -318,7 +318,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     <ports>
                       <port>+deviceregistry.ip:deviceregistry.amqp.port:5672</port>
                       <port>+deviceregistry.ip:deviceregistry.http.port:8080</port>
-                      <port>+deviceregistry.ip:deviceregistry.health.port:8088</port>
+                      <port>+deviceregistry.ip:deviceregistry.health.port:${vertx.health.port}</port>
                     </ports>
                     <network>
                       <mode>custom</mode>
@@ -532,7 +532,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     <ports>
                       <port>+http.ip:http.port:8080</port>
                       <port>https.port:8443</port>
-                      <port>+http.ip:http.health.port:8088</port>
+                      <port>+http.ip:http.health.port:${vertx.health.port}</port>
                     </ports>
                     <network>
                       <mode>custom</mode>
@@ -618,7 +618,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     <ports>
                       <port>+mqtt.ip:mqtt.port:1883</port>
                       <port>mqtts.port:8883</port>
-                      <port>+mqtt.ip:mqtt.health.port:8088</port>
+                      <port>+mqtt.ip:mqtt.health.port:${vertx.health.port}</port>
                     </ports>
                     <network>
                       <mode>custom</mode>
@@ -696,7 +696,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     <ports>
                       <port>+adapter.amqp.ip:adapter.amqp.port:5672</port>
                       <port>+adapter.amqps.ip:adapter.amqps.port:5671</port>
-                      <port>+adapter.amqp.ip:adapter.amqp.health.port:8088</port>
+                      <port>+adapter.amqp.ip:adapter.amqp.health.port:${vertx.health.port}</port>
                     </ports>
                     <network>
                       <mode>custom</mode>

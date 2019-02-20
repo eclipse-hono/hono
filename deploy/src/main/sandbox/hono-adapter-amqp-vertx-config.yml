@@ -1,7 +1,7 @@
 hono:
   app:
     maxInstances: 1
-    healthCheckPort: 8088
+    healthCheckPort: ${vertx.health.port}
     healthCheckBindAddress: 0.0.0.0
   amqp:
     bindAddress: 0.0.0.0

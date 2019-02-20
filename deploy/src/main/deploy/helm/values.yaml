@@ -15,6 +15,11 @@ artemis:
 
 defaultJavaOptions: ${default-java-options}
 
+# the port that the Hono components' health check resources are exposed at
+healthCheckPort: ${vertx.health.port}
+
+# whether we are deploying to OpenShift (true) or plain Kubernetes (false)
+# this flag is used to determine whether we need to deploy Route resources as well
 openshift: false
 
 # Default values for prometheus-operator.

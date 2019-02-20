@@ -59,6 +59,10 @@
     <spring-security-crypto.version>4.2.11.RELEASE</spring-security-crypto.version>
     <truth.version>0.28</truth.version>
     <vertx.version>3.6.3</vertx.version>
+
+    <!-- The port at which the health check server should expose its resources -->
+    <vertx.health.port>8088</vertx.health.port>
+
   </properties>
 
   <dependencyManagement>
