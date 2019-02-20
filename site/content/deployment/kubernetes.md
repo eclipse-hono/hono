@@ -77,7 +77,7 @@ To undeploy a Hono instance that has been deployed using Helm's Tiller service, 
 
 ~~~sh
 ~hono/deploy$ helm delete --purge eclipse-hono
-~hono/deploy$ kubectl delete crd prometheuses.monitoring.coreos.com delete crd prometheusrules.monitoring.coreos.com servicemonitors.monitoring.coreos.com alertmanagers.monitoring.coreos.com
+~hono/deploy$ kubectl delete crd prometheuses.monitoring.coreos.com prometheusrules.monitoring.coreos.com servicemonitors.monitoring.coreos.com alertmanagers.monitoring.coreos.com
 ~~~
 
 The additional `kubectl delete` command is necessary to remove [Prometheus operator CRDs](https://github.com/helm/charts/tree/master/stable/prometheus-operator#uninstalling-the-chart).
