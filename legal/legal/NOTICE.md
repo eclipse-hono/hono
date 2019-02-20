@@ -13,8 +13,8 @@ of the Eclipse Public License 2.0 which is available at https://www.eclipse.org/
 
 # Copyright Holders
 
-* Copyright 2016-2018 Bosch Software Innovations GmbH
-* Copyright 2016-2018 Red Hat, Inc.
+* Copyright 2016-2019 Bosch Software Innovations GmbH
+* Copyright 2016-2019 Red Hat, Inc.
 * Copyright 2017 Francois Travais
 * Copyright 2018 Alfusainey Jallow
 * Copyright 2019 Aloxy NV
