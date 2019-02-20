@@ -886,6 +886,112 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     }
 
     /**
+     * Creates a new AMQP 1.0 message.
+     * <p>
+     * Subclasses are encouraged to use this method for creating {@code Message} instances to be sent downstream in
+     * order to have required Hono specific properties being set on the message automatically.
+     * <p>
+     * This method creates a new {@code Message}, sets its content type and payload as an AMQP <em>Data</em> section
+     * and then invokes {@link #addProperties(Message, ResourceIdentifier, boolean, String, JsonObject, Integer)}.
+     * 
+     * @param target The resource that the message is targeted at.
+     * @param regAssertionRequired {@code true} if the downstream peer requires the registration assertion to
+     *            be included in the message.
+     * @param publishAddress The address that the message has been published to originally by the device. (may be
+     *            {@code null}).
+     *            <p>
+     *            This address will be transport protocol specific, e.g. an HTTP based adapter will probably use URIs
+     *            here whereas an MQTT based adapter might use the MQTT message's topic.
+     * @param contentType The content type describing the message's payload (may be {@code null}).
+     * @param payload The message payload.
+     * @param registrationInfo The device's registration information as retrieved by the <em>Device Registration</em>
+     *            service's <em>assert Device Registration</em> operation.
+     * @param timeUntilDisconnect The number of milliseconds until the device that has published the message
+     *            will disconnect from the protocol adapter (may be {@code null}).
+     * @return The message.
+     * @throws NullPointerException if target or registration info are {@code null}.
+     */
+    protected final Message newMessage(
+            final ResourceIdentifier target,
+            final boolean regAssertionRequired,
+            final String publishAddress,
+            final String contentType,
+            final Buffer payload,
+            final JsonObject registrationInfo,
+            final Integer timeUntilDisconnect) {
+
+        Objects.requireNonNull(target);
+        Objects.requireNonNull(registrationInfo);
+
+        final Message msg = ProtonHelper.message();
+        MessageHelper.setPayload(msg, contentType, payload);
+        msg.setContentType(contentType);
+
+        return addProperties(msg, target, regAssertionRequired, publishAddress, registrationInfo, timeUntilDisconnect);
+    }
+
+    /**
+     * Sets Hono specific properties on an AMQP 1.0 message.
+     * <p>
+     * The following properties are set:
+     * <ul>
+     * <li><em>to</em> will be set to the address consisting of the target's endpoint and tenant</li>
+     * <li><em>creation-time</em> will be set to the current number of milliseconds since 1970-01-01T00:00:00Z</li>
+     * <li>application property <em>device_id</em> will be set to the target's resourceId property</li>
+     * <li>application property <em>orig_address</em> will be set to the given publish address</li>
+     * <li>application property <em>ttd</em> will be set to the given time til disconnect</li>
+     * <li>additional properties set by {@link #addProperties(Message, JsonObject, boolean)}</li>
+     * </ul>
+     *
+     * @param msg The message to add the properties to.
+     * @param target The resource that the message is targeted at.
+     * @param regAssertionRequired {@code true} if the downstream peer requires the registration assertion to
+     *            be included in the message.
+     * @param publishAddress The address that the message has been published to originally by the device. (may be
+     *            {@code null}).
+     *            <p>
+     *            This address will be transport protocol specific, e.g. an HTTP based adapter will probably use URIs
+     *            here whereas an MQTT based adapter might use the MQTT message's topic.
+     * @param registrationInfo The device's registration information as retrieved by the <em>Device Registration</em>
+     *            service's <em>assert Device Registration</em> operation.
+     * @param timeUntilDisconnect The number of seconds until the device that has published the message
+     *            will disconnect from the protocol adapter (may be {@code null}).
+     * @return The message with its properties set.
+     * @throws NullPointerException if message, target or registration info are {@code null}.
+     */
+    protected final Message addProperties(
+            final Message msg,
+            final ResourceIdentifier target,
+            final boolean regAssertionRequired,
+            final String publishAddress,
+            final JsonObject registrationInfo,
+            final Integer timeUntilDisconnect) {
+
+        Objects.requireNonNull(msg);
+        Objects.requireNonNull(target);
+        Objects.requireNonNull(registrationInfo);
+
+        msg.setAddress(target.getBasePath());
+        MessageHelper.addDeviceId(msg, target.getResourceId());
+        if (!regAssertionRequired) {
+            // this adapter is not connected to Hono Messaging
+            // so we need to add the annotations for tenant and
+            // device ID
+            MessageHelper.annotate(msg, target);
+        }
+        if (publishAddress != null) {
+            MessageHelper.addProperty(msg, MessageHelper.APP_PROPERTY_ORIG_ADDRESS, publishAddress);
+        }
+        if (timeUntilDisconnect != null) {
+            MessageHelper.addTimeUntilDisconnect(msg, timeUntilDisconnect);
+        }
+
+        MessageHelper.setCreationTime(msg);
+        addProperties(msg, registrationInfo, regAssertionRequired);
+        return msg;
+    }
+
+    /**
      * Adds message properties based on a device's registration information.
      * <p>
      * This methods simply invokes {@link #addProperties(Message, JsonObject, boolean)} with
@@ -1014,75 +1120,6 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     @Override
     public void registerLivenessChecks(final HealthCheckHandler handler) {
         registerEventLoopBlockedCheck(handler);
-    }
-
-    /**
-     * Creates a new AMQP 1.0 message.
-     * <p>
-     * Subclasses are encouraged to use this method for creating {@code Message} instances to be sent downstream in
-     * order to have the following properties set on the message automatically:
-     * <ul>
-     * <li><em>to</em> will be set to the address consisting of the target's endpoint and tenant</li>
-     * <li><em>content-type</em> will be set to content type</li>
-     * <li><em>creation-time</em> will be set to the current number of milliseconds since 1970-01-01T00:00:00Z</li>
-     * <li>application property <em>device_id</em> will be set to the target's resourceId property</li>
-     * <li>application property <em>orig_address</em> will be set to the given publish address</li>
-     * <li>application property <em>ttd</em> will be set to the given time til disconnect</li>
-     * <li>additional properties set by {@link #addProperties(Message, JsonObject, boolean)}</li>
-     * </ul>
-     * This method also sets the message's payload as an AMQP <em>Data</em> section.
-     *
-     * @param target The resource that the message is targeted at.
-     * @param regAssertionRequired {@code true} if the downstream peer requires the registration assertion to
-     *            be included in the message.
-     * @param publishAddress The address that the message has been published to originally by the device. (may be
-     *            {@code null}).
-     *            <p>
-     *            This address will be transport protocol specific, e.g. an HTTP based adapter will probably use URIs
-     *            here whereas an MQTT based adapter might use the MQTT message's topic.
-     * @param contentType The content type describing the message's payload (may be {@code null}).
-     * @param payload The message payload.
-     * @param registrationInfo The device's registration information as retrieved by the <em>Device Registration</em>
-     *            service's <em>assert Device Registration</em> operation.
-     * @param timeUntilDisconnect The number of milliseconds until the device that has published the message
-     *            will disconnect from the protocol adapter (may be {@code null}).
-     * @return The message.
-     * @throws NullPointerException if target or registration info are {@code null}.
-     */
-    protected final Message newMessage(
-            final ResourceIdentifier target,
-            final boolean regAssertionRequired,
-            final String publishAddress,
-            final String contentType,
-            final Buffer payload,
-            final JsonObject registrationInfo,
-            final Integer timeUntilDisconnect) {
-
-        Objects.requireNonNull(target);
-        Objects.requireNonNull(registrationInfo);
-
-        final Message msg = ProtonHelper.message();
-        msg.setAddress(target.getBasePath());
-        MessageHelper.addDeviceId(msg, target.getResourceId());
-        if (!regAssertionRequired) {
-            // this adapter is not connected to Hono Messaging
-            // so we need to add the annotations for tenant and
-            // device ID
-            MessageHelper.annotate(msg, target);
-        }
-        if (publishAddress != null) {
-            MessageHelper.addProperty(msg, MessageHelper.APP_PROPERTY_ORIG_ADDRESS, publishAddress);
-        }
-        MessageHelper.setPayload(msg, contentType, payload);
-        msg.setContentType(contentType);
-        if (timeUntilDisconnect != null) {
-            MessageHelper.addTimeUntilDisconnect(msg, timeUntilDisconnect);
-        }
-
-        MessageHelper.setCreationTime(msg);
-
-        addProperties(msg, registrationInfo, regAssertionRequired);
-        return msg;
     }
 
     /**

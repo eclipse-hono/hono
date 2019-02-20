@@ -852,12 +852,11 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                 .compose(ok -> {
 
                     final MessageSender sender = senderFuture.result();
-                    final Message downstreamMessage = newMessage(
+                    final Message downstreamMessage = addProperties(
+                            context.getMessage(),
                             context.getResourceIdentifier(),
                             sender.isRegistrationAssertionRequired(),
-                            context.getEndpoint(),
-                            context.getMessageContentType(),
-                            context.getMessagePayload(),
+                            context.getResourceIdentifier().toString(),
                             tokenFuture.result(),
                             null); // no TTD
 
