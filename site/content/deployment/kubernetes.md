@@ -10,12 +10,9 @@ to communicate with each other.
 
 ## Prerequisites
 
-The main prerequisite for this kind of deployment is to have an available Kubernetes cluster, running version 1.11.x or newer. For a local development, it's pretty simple having such cluster using Minikube 
-which is a tool that helps you run Kubernetes locally by running a single-node Kubernetes cluster inside a VM. Follow [this guide](https://kubernetes.io/docs/getting-started-guides/minikube/)
-for installing and having Minikube up and running.
+The main prerequisite for this kind of deployment is to have an available Kubernetes cluster, running version 1.11.x or newer. For a local development, it's pretty simple having such cluster using Minikube which is a tool that helps you run Kubernetes locally by running a single-node Kubernetes cluster inside a VM. Follow [this guide](https://kubernetes.io/docs/getting-started-guides/minikube/) for installing and having Minikube up and running.
 
-The other prerequisite is to have the Kubectl command line tool for interacting with the Kubernetes cluster. Follow [this guide](https://kubernetes.io/docs/tasks/tools/install-kubectl/) 
-for installing and configuring such a tool.
+The other prerequisite is to have the Kubectl command line tool for interacting with the Kubernetes cluster. Follow [this guide](https://kubernetes.io/docs/tasks/tools/install-kubectl/) for installing and configuring such a tool.
 
 After launching Minikube and before building the Eclipse Hono images, it's necessary to execute the following command:
 
@@ -30,28 +27,14 @@ such daemon will be used and the final images will be available inside the Minik
 ~/hono$ mvn clean install -Pbuild-docker-image,metrics-prometheus
 ~~~
 
-### OLM deployment
+## Helm based Deployment
 
-The Hono deployment requires the OLM to be deployed in the Kubernetes cluster if
-you want to use the Prometheus deployment provided by Hono. This can be done by
-executing the `olm_deploy.sh` script. This step is only required once for a
-cluster. You may skip this step if you don't want to use Prometheus based
-metrics, or want to deploy Prometheus yourself.
+The easiest (and recommended) way to deploy Eclipse Hono to a Kubernetes cluster is to use the *Helm* tool.
+In order to use Helm, you need to have it installed properly on your system. Please refer to [Helm's installation instructions](https://docs.helm.sh/install/) for details.
 
-From the directory `deploy/target/deploy/kubernetes` run:
+### Deploying Hono using Helm's Tiller Service
 
-~~~sh
-~hono/deploy/target/deploy/kubernetes$ chmod +x *.sh
-~hono/deploy/target/deploy/kubernetes$ ./olm_deploy.sh
-~~~
-
-## Helm deployment
-
-The easiest way to deploy Eclipse Hono to Kubernetes cluster is to use Helm. You can use Helm with or without Helm's *Tiller* service. In order to use Helm, you need to have it installed properly on your system.
-Please refer to [Helm's installation instructions](https://docs.helm.sh/install/) for details.
-
-### Install Eclipse Hono with Helm
-
+You can deploy Hono using Helm with or without the *Tiller* service.
 To deploy Eclipse Hono to the cluster with installed Tiller service, simply run
 
 ~~~sh
@@ -68,38 +51,38 @@ $ helm status eclipse-hono
 $ helm get eclipse-hono
 ~~~
 
-### Install Eclipse Hono without using Helm Tiller service
+### Deploying Hono without using Helm's Tiller Service
 
-If you for whatever reason can't or don't want to install Helm Tiller server in your cluster, you can still use the resources and deploy them manually.
-To generate Eclipse Hono resources locally with Helm, run
+If, for whatever reason, you can't or don't want to install Helm's Tiller service in your cluster, you can still use the resources created by Helm and deploy them manually using the `kubectl` command line tool.
+To generate the resources locally with Helm, run
 
 ~~~sh
 ~hono/deploy$ helm dep update target/deploy/helm/
 ~hono/deploy$ helm template --name eclipse-hono --namespace hono --output-dir . target/deploy/helm/
 ~~~
 
-This should create `eclipse-hono` folder with all the resources. Now, you can use `kubectl` to deploy them to any Kubernetes cluster
+This should create an `eclipse-hono` folder with all the resources. Now, you can use `kubectl` to deploy them to any Kubernetes cluster
 
 ~~~sh
 ~hono/deploy$ kubectl apply -f ./eclipse-hono --namespace hono
 ~~~
 
-### Use Eclipse Hono
+### Using Hono
 
 After successful installation, you can proceed and [access your Hono services](#accessing-hono-services)
 
-### Uninstall Eclipse Hono
+### Undeploying Hono
 
-To uninstall Eclipse Hono that has been installed using Helm's Tiller service, run
+To undeploy a Hono instance that has been deployed using Helm's Tiller service, run
 
 ~~~sh
 ~hono/deploy$ helm delete --purge eclipse-hono
 ~hono/deploy$ kubectl delete crd prometheuses.monitoring.coreos.com delete crd prometheusrules.monitoring.coreos.com servicemonitors.monitoring.coreos.com alertmanagers.monitoring.coreos.com
 ~~~
 
-The additional delete commands are necessary to clean [Prometheus operator CRDs](https://github.com/helm/charts/tree/master/stable/prometheus-operator#uninstalling-the-chart).
+The additional `kubectl delete` command is necessary to remove [Prometheus operator CRDs](https://github.com/helm/charts/tree/master/stable/prometheus-operator#uninstalling-the-chart).
 
-To uninstall Eclipse Hono that has been installed manually, run
+To undeploy a Hono instance that has been deployed manually from the resource files, run
 
 ~~~sh
 ~hono/deploy$ kubectl delete -f ./eclipse-hono --namespace hono
@@ -107,10 +90,25 @@ To uninstall Eclipse Hono that has been installed manually, run
 
 ## Script based Deployment
 
-In order to deploy Eclipse Hono on Kubernetes, a bunch of steps are needed as explained in the next chapter. If you want to avoid to do them manually, a _one click_ deployment
-script is available in the repository.
-After having the Kubernetes cluster up and running and the `kubectl` command line tool in the PATH, the deployment can be done by running the following bash script
-(from the `deploy/target/deploy/kubernetes` directory)
+As an alternative to the recommended Helm based deployment, Hono can also be deployed to a Kubernetes cluster using a shell script which takes care of deploying Hono's components using multiple `kubectl` commands. This approach requires the [Operator Lifecycle Manager](https://github.com/operator-framework/operator-lifecycle-manager) (OLM) to be available on the Kubernetes cluster.
+
+### Deploying the Operator Lifecycle Manager
+
+OLM is used for creating a Prometheus instance which is used as the metrics back end by Hono.
+OLM can be installed by executing the `olm_deploy.sh` script. This step is only required once for a
+cluster. You may skip this step if you don't want to use Prometheus based
+metrics, or want to deploy Prometheus yourself.
+
+From the directory `deploy/target/deploy/kubernetes` run:
+
+~~~sh
+~hono/deploy/target/deploy/kubernetes$ chmod +x *.sh
+~hono/deploy/target/deploy/kubernetes$ ./olm_deploy.sh
+~~~
+
+### Deploying Hono
+
+After having the Kubernetes cluster up and running and the `kubectl` command line tool in the PATH, the deployment can be done by running the following bash script from the `deploy/target/deploy/kubernetes` folder.
 
 ~~~sh
 ~hono/deploy/target/deploy/kubernetes$ chmod +x *.sh
@@ -142,32 +140,38 @@ You may also deploy each of Hono's components separately by copying the relevant
 
 ## Accessing Hono Services
 
-The Kubernetes deployment provides access to Eclipse Hono by means of *services* and the main ones are:
+The Kubernetes deployment provides access to Hono by means of *services* and the main ones are:
 
 * **hono-dispatch-router-ext**: router network for the business application in order to consume data
 * **hono-adapter-amqp-vertx**: protocol adapter for publishing telemetry data and events using the AMQP 1.0 protocol
 * **hono-adapter-mqtt-vertx**: protocol adapter for publishing telemetry data and events using the MQTT protocol
-* **hono-adapter-rest-vertx**: protocol adapter for publishing telemetry data and events using the HTTP protocol
+* **hono-adapter-http-vertx**: protocol adapter for publishing telemetry data and events using the HTTP protocol
 * **hono-service-device-registry**: component for registering and managing devices
 
-You can check these services through the `kubectl get services --namespace hono` command having the following output :
+You can get a list of these services running:
 
 ~~~sh
-NAME                           CLUSTER-IP      EXTERNAL-IP   PORT(S)                                      AGE
-grafana                        10.0.0.115      <nodes>       3000:31000/TCP                               15m
-hono-adapter-amqp-vertx        10.108.52.132   <none>        4040:30040/TCP,4041:30041/TCP                6m
-hono-adapter-mqtt-vertx        10.0.0.155      <nodes>       1883:31883/TCP,8883:30883/TCP                2m
-hono-adapter-rest-vertx        10.0.0.184      <nodes>       8080:30080/TCP,8443:30443/TCP                3m
-hono-artemis                   10.0.0.11       <none>        5672/TCP                                     6m
-hono-dispatch-router           10.0.0.175      <none>        5673/TCP                                     5m
-hono-dispatch-router-ext       10.0.0.124      <nodes>       5671:30671/TCP,5672:30672/TCP                5m
-hono-service-auth              10.0.0.116      <none>        5671/TCP                                     5m
-hono-service-device-registry   10.0.0.248      <none>        5671:31671/TCP,8080:31080/TCP,8443:31443/TCP 4m
-hono-service-messaging         10.0.0.223      <none>        5671/TCP                                     3m
-influxdb                       10.0.0.217      <none>        2003/TCP,8083/TCP,8086/TCP                   15m
+$ kubectl get services --namespace hono
+
+NAME                                    TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)                                                       AGE
+eclipse-hono-grafana                    ClusterIP   10.104.193.167   <none>        80/TCP                                                        2m
+eclipse-hono-kube-state-metrics         ClusterIP   10.107.92.96     <none>        8080/TCP                                                      2m
+eclipse-hono-prometheus-node-exporter   ClusterIP   10.101.235.63    <none>        9100/TCP                                                      2m
+eclipse-hono-prometheus-op-operator     ClusterIP   10.103.73.214    <none>        8080/TCP                                                      2m
+grafana                                 NodePort    10.109.160.126   <none>        3000:31000/TCP                                                2m
+hono-adapter-amqp-vertx                 NodePort    10.107.180.234   <none>        5672:30040/TCP,5671:30041/TCP,8081:32498/TCP                  2m
+hono-adapter-http-vertx                 NodePort    10.111.106.170   <none>        8080:30080/TCP,8443:30443/TCP,8081:30969/TCP                  2m
+hono-adapter-kura                       NodePort    10.96.215.55     <none>        1883:31884/TCP,8883:30884/TCP,8081:30950/TCP                  2m
+hono-adapter-mqtt-vertx                 NodePort    10.109.67.134    <none>        1883:31883/TCP,8883:30883/TCP,8081:30852/TCP                  2m
+hono-artemis                            ClusterIP   10.103.0.92      <none>        5671/TCP                                                      2m
+hono-dispatch-router                    ClusterIP   10.99.252.201    <none>        5673/TCP                                                      2m
+hono-dispatch-router-ext                NodePort    10.102.205.168   <none>        5671:30671/TCP,5672:30672/TCP                                 2m
+hono-service-auth                       ClusterIP   10.103.101.237   <none>        5671/TCP,8081/TCP                                             2m
+hono-service-device-registry            NodePort    10.96.143.66     <none>        5671:31671/TCP,8080:31080/TCP,8443:31443/TCP,8081:30651/TCP   2m
+prometheus-operated                     ClusterIP   None             <none>        9090/TCP                                                      52s
 ~~~
 
-These services are accessible using the Minikube VM's IP address (which you can get with the `minikube ip` command) and the so called *node ports* (i.e. 30080, 30671, ...).
+The services of type `NodePort` are accessible at the Minikube VM's IP address (which you can get with the `minikube ip` command) and the corresponding *node ports* (e.g. 30080, 30671, ...).
 In the following sections the `$(minikube ip)` is used  in order to put the IP address of the Minikube VM into the command to execute.
 
 ### Starting a Consumer
