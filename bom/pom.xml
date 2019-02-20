@@ -34,7 +34,6 @@
     <dispatch-router.image.name>enmasseproject/qdrouterd-base:1.4.1</dispatch-router.image.name>
     <grafana.version>5.3.2</grafana.version>
     <guava.version>25.0-jre</guava.version>
-    <influxdb.version>1.5.4-alpine</influxdb.version>
     <jackson.version>2.9.8</jackson.version>
     <jaeger.version>0.32.0</jaeger.version>
     <java-base-image.name>openjdk:11-jre-slim</java-base-image.name>
