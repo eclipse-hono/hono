@@ -60,6 +60,8 @@
     <truth.version>0.28</truth.version>
     <vertx.version>3.6.3</vertx.version>
 
+    <!-- The port at which the Prometheus scraping endpoint is exposed -->
+    <prometheus.scraping.port>8081</prometheus.scraping.port>
     <!-- The port at which the health check server should expose its resources -->
     <vertx.health.port>8088</vertx.health.port>
 
