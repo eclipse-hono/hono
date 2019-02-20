@@ -26,8 +26,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
-import io.opentracing.Span;
-import io.vertx.core.buffer.Buffer;
 import org.apache.qpid.proton.amqp.messaging.Accepted;
 import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
 import org.apache.qpid.proton.amqp.messaging.Data;
@@ -47,9 +45,12 @@ import org.junit.rules.Timeout;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 
+import io.opentracing.Span;
+import io.opentracing.SpanContext;
 import io.vertx.core.Context;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
+import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
@@ -445,9 +446,13 @@ public class AbstractRequestResponseClientTest  {
         request.setApplicationProperties(new ApplicationProperties(applicationProps));
         MessageHelper.setPayload(request, "application/json", payload.toBuffer());
 
+        final SpanContext spanContext = mock(SpanContext.class);
+        final Span span = mock(Span.class);
+        when(span.context()).thenReturn(spanContext);
+
         client.sendRequest(request, ctx.asyncAssertSuccess(t -> {
             sendSuccess.complete();
-        }), null, mock(Span.class));
+        }), null, span);
         // and the peer accepts the message
         final Accepted accepted = new Accepted();
         final ProtonDelivery delivery = mock(ProtonDelivery.class);

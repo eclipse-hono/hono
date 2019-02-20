@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -25,8 +25,8 @@ import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.auth.AuthorizationService;
 import org.eclipse.hono.service.auth.ClaimsBasedAuthorizationService;
-import org.eclipse.hono.tracing.MessageAnnotationsExtractAdapter;
 import org.eclipse.hono.tracing.MultiMapInjectAdapter;
+import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.AmqpErrorException;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventBusMessage;
@@ -547,13 +547,13 @@ public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties>
     }
 
     /**
-     * Extracts a {@code SpanContext} out of the delivery annotations of the given {@code Message}.
+     * Extracts a {@code SpanContext} out of the message annotations of the given {@code Message}.
      * 
      * @param message The AMQP message.
      * @return The extracted {@code SpanContext} (may be {@code null}).
      * @throws NullPointerException if the message is {@code null}.
      */
     protected final SpanContext extractSpanContext(final Message message) {
-        return tracer.extract(Format.Builtin.TEXT_MAP, new MessageAnnotationsExtractAdapter(message));
+        return TracingHelper.extractSpanContext(tracer, message);
     }
 }

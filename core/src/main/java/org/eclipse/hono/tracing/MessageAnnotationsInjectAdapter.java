@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,31 +14,35 @@ package org.eclipse.hono.tracing;
 
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
-import java.util.Optional;
 
 import org.apache.qpid.proton.amqp.Symbol;
-import org.apache.qpid.proton.amqp.messaging.DeliveryAnnotations;
+import org.apache.qpid.proton.amqp.messaging.MessageAnnotations;
 import org.apache.qpid.proton.message.Message;
 
 import io.opentracing.propagation.TextMap;
 
 /**
- * An adapter for injecting properties into an AMQP 1.0 message's annotations.
+ * An adapter for injecting properties into an AMQP 1.0 message's message annotations.
  *
  */
 public class MessageAnnotationsInjectAdapter implements TextMap {
 
-    private Message message;
+    private final Message message;
+    private final String propertiesMapName;
 
     /**
      * Creates an adapter for a message.
      * 
      * @param message The message.
+     * @param propertiesMapName The name of the annotation of type map that contains the properties.
+     * @throws NullPointerException if any of the parameters are {@code null}.
      */
-    public MessageAnnotationsInjectAdapter(final Message message) {
+    public MessageAnnotationsInjectAdapter(final Message message, final String propertiesMapName) {
         this.message = Objects.requireNonNull(message);
+        this.propertiesMapName = Objects.requireNonNull(propertiesMapName);
     }
 
     @Override
@@ -48,14 +52,25 @@ public class MessageAnnotationsInjectAdapter implements TextMap {
 
     @Override
     public void put(final String key, final String value) {
-        getDeliveryAnnotations().getValue().put(Symbol.getSymbol(key), value);
+        getPropertiesMap().put(Symbol.getSymbol(key), value);
     }
 
-    private DeliveryAnnotations getDeliveryAnnotations() {
-        return Optional.ofNullable(message.getDeliveryAnnotations()).orElseGet(() -> {
-            final DeliveryAnnotations annotations = new DeliveryAnnotations(new HashMap<>());
-            message.setDeliveryAnnotations(annotations);
-            return annotations;
-        });
+    private Map<Symbol, String> getPropertiesMap() {
+        final MessageAnnotations messageAnnotations;
+        if (message.getMessageAnnotations() == null || message.getMessageAnnotations().getValue() == null) {
+            messageAnnotations = new MessageAnnotations(new HashMap<>());
+            message.setMessageAnnotations(messageAnnotations);
+        } else {
+            messageAnnotations = message.getMessageAnnotations();
+        }
+        final Map<Symbol, String> propertiesMap;
+        final Object annotationValue = messageAnnotations.getValue().get(Symbol.getSymbol(propertiesMapName));
+        if (!(annotationValue instanceof Map)) {
+            propertiesMap = new HashMap<>();
+            messageAnnotations.getValue().put(Symbol.getSymbol(propertiesMapName), propertiesMap);
+        } else {
+            propertiesMap = (Map<Symbol, String>) annotationValue;
+        }
+        return propertiesMap;
     }
 }

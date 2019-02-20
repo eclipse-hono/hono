@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -36,7 +36,6 @@ import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.config.ClientConfigProperties;
-import org.eclipse.hono.tracing.MessageAnnotationsInjectAdapter;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.MessageHelper;
@@ -48,7 +47,6 @@ import org.slf4j.LoggerFactory;
 
 import io.opentracing.Span;
 import io.opentracing.Tracer;
-import io.opentracing.propagation.Format;
 import io.opentracing.tag.Tags;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
@@ -809,7 +807,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
                 details.put(TracingHelper.TAG_QOS.getKey(), sender.getQoS().toString());
                 currentSpan.log(details);
                 final TriTuple<Handler<AsyncResult<R>>, Object, Span> handler = TriTuple.of(resultHandler, cacheKey, currentSpan);
-                tracer.inject(currentSpan.context(), Format.Builtin.TEXT_MAP, new MessageAnnotationsInjectAdapter(request));
+                TracingHelper.injectSpanContext(tracer, currentSpan.context(), request);
                 replyMap.put(correlationId, handler);
 
                 sender.send(request, deliveryUpdated -> {

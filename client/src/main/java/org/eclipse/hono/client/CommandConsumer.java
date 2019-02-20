@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -19,7 +19,6 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import org.eclipse.hono.client.impl.AbstractConsumer;
 import org.eclipse.hono.config.ClientConfigProperties;
-import org.eclipse.hono.tracing.MessageAnnotationsExtractAdapter;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.MessageHelper;
@@ -32,7 +31,6 @@ import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.opentracing.log.Fields;
-import io.opentracing.propagation.Format;
 import io.opentracing.tag.Tags;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
@@ -128,7 +126,7 @@ public class CommandConsumer extends AbstractConsumer {
                     final Command command = Command.from(msg, tenantId, deviceId);
 
                     // try to extract Span context from incoming message
-                    final SpanContext spanContext = tracer.extract(Format.Builtin.TEXT_MAP, new MessageAnnotationsExtractAdapter(msg));
+                    final SpanContext spanContext = TracingHelper.extractSpanContext(tracer, msg);
                     // start a Span to use for tracing the delivery of the command to the device
                     // we set the component tag to the class name because we have no access to
                     // the name of the enclosing component we are running in
