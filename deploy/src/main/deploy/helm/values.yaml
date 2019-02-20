@@ -15,6 +15,11 @@ artemis:
 
 defaultJavaOptions: ${default-java-options}
 
+# the port that the Hono components' Prometheus scraping endpoint is exposed
+monitoring:
+  prometheus:
+    port: ${prometheus.scraping.port}
+
 # the port that the Hono components' health check resources are exposed at
 healthCheckPort: ${vertx.health.port}
 

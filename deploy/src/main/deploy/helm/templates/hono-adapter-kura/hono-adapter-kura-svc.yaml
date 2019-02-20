@@ -21,7 +21,7 @@ spec:
     protocol: TCP
     targetPort: 8883
   - name: actuator
-    port: 8081
+    port: {{ .Values.monitoring.prometheus.port }}
   selector:
     app: hono-adapter-kura
     group: {{ .Values.project.groupId }}

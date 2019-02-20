@@ -21,7 +21,7 @@ spec:
     protocol: TCP
     targetPort: 5671
   - name: actuator
-    port: 8081
+    port: ${prometheus.scraping.port}
   selector:
     app: hono-adapter-amqp-vertx
     group: ${project.groupId}

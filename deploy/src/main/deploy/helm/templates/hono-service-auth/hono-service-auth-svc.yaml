@@ -15,7 +15,7 @@ spec:
     protocol: TCP
     targetPort: 5671
   - name: actuator
-    port: 8081
+    port: {{ .Values.monitoring.prometheus.port }}
   selector:
     app: hono-service-auth
     group: {{ .Values.project.groupId }}

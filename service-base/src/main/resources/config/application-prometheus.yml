@@ -1,4 +1,4 @@
-# Endpoint configuration for prometheus
+# Configuration for Prometheus scraping endpoint
 
 ## Disable global server
 
@@ -8,7 +8,7 @@ server:
 ## Enable management server
 
 management:
-  port: 8081
+  port: ${prometheus.scraping.port}
   security:
     enabled: false
 

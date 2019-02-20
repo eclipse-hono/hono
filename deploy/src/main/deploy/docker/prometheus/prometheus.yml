@@ -13,7 +13,7 @@ scrape_configs:
   - names:
       - tasks.hono-service-auth.hono
     type: A
-    port: 8081
+    port: ${prometheus.scraping.port}
     refresh_interval: 10s
 
 - job_name: hono-service-device-registry
@@ -22,7 +22,7 @@ scrape_configs:
   - names:
       - tasks.hono-service-device-registry.hono
     type: A
-    port: 8081
+    port: ${prometheus.scraping.port}
     refresh_interval: 10s
 
 - job_name: hono-adapter-amqp-vertx
@@ -31,7 +31,7 @@ scrape_configs:
   - names:
       - tasks.hono-adapter-amqp-vertx.hono
     type: A
-    port: 8081
+    port: ${prometheus.scraping.port}
     refresh_interval: 10s
 
 - job_name: hono-adapter-http-vertx
@@ -40,7 +40,7 @@ scrape_configs:
   - names:
       - tasks.hono-adapter-http-vertx.hono
     type: A
-    port: 8081
+    port: ${prometheus.scraping.port}
     refresh_interval: 10s
 
 - job_name: hono-adapter-mqtt-vertx
@@ -49,7 +49,7 @@ scrape_configs:
   - names:
       - tasks.hono-adapter-mqtt-vertx.hono
     type: A
-    port: 8081
+    port: ${prometheus.scraping.port}
     refresh_interval: 10s
 
 - job_name: hono-adapter-kura-vertx
@@ -58,5 +58,5 @@ scrape_configs:
   - names:
       - tasks.hono-adapter-kura-vertx.hono
     type: A
-    port: 8081
+    port: ${prometheus.scraping.port}
     refresh_interval: 10s
