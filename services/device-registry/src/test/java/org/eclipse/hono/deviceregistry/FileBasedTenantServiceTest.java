@@ -214,6 +214,33 @@ public class FileBasedTenantServiceTest extends AbstractCompleteTenantServiceTes
     }
 
     /**
+     * Verifies that tenants are successfully loaded from file during startup.
+     *
+     * @param ctx The test context.
+     */
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    @Test
+    public void testDoStartwithStartEmptyIgnoreTenants(final TestContext ctx) {
+
+        // GIVEN a service configured with a file name
+        props.setFilename(FILE_NAME);
+        props.setStartEmpty(true);
+        when(fileSystem.existsBlocking(props.getFilename())).thenReturn(Boolean.TRUE);
+
+        // WHEN the service is started
+        final Async startup = ctx.async();
+        final Future<Void> startFuture = Future.future();
+        startFuture.setHandler(ctx.asyncAssertSuccess(s -> {
+            startup.complete();
+        }));
+        svc.doStart(startFuture);
+
+        // THEN the credentials from the file are loaded
+        startup.await();
+        verify(fileSystem, never()).readFile(anyString(), any(Handler.class));
+    }
+
+    /**
      * Verifies that the tenants file written by the registry when persisting the contents can
      * be loaded in again.
      *

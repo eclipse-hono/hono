@@ -14,6 +14,7 @@
 package org.eclipse.hono.tests.registry;
 
 import io.vertx.core.Vertx;
+import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.proton.ProtonClientOptions;
@@ -39,14 +40,6 @@ import java.util.concurrent.TimeUnit;
 @RunWith(VertxUnitRunner.class)
 public class DeviceRegistrationAmqpIT {
 
-    static final String DEVICE_ID_ENABLED_WITH_ENABLED_GATEWAY = "4712";
-    static final String GATEWAY_ID_ENABLED = "gw-1";
-    static final String GATEWAY_ID_ENABLED_2 = "gw-3";
-    static final String DEVICE_ID_ENABLED_WITH_DISABLED_GATEWAY = "4713";
-    static final String GATEWAY_ID_DISABLED = "gw-2";
-
-    private static final String DEVICE_ID_ENABLED = "4711";
-    private static final String DEVICE_ID_DISABLED = "disabled-device";
     private static final String NON_EXISTING_DEVICE_ID = "non-existing-device";
     private static final String NON_EXISTING_GATWAY_ID = "non-existing-gateway";
     private static final Vertx vertx = Vertx.vertx();
@@ -105,11 +98,13 @@ public class DeviceRegistrationAmqpIT {
     @Test
     public void testAssertRegistrationSucceedsForDevice(final TestContext ctx) {
 
-        deviceRegistryclient
-                .getOrCreateRegistrationClient(Constants.DEFAULT_TENANT)
-                .compose(client -> client.assertRegistration(DEVICE_ID_ENABLED))
+        final String deviceId = helper.getRandomDeviceId(Constants.DEFAULT_TENANT);
+
+         helper.registry.registerDevice(Constants.DEFAULT_TENANT, deviceId)
+                .compose(r -> deviceRegistryclient.getOrCreateRegistrationClient(Constants.DEFAULT_TENANT))
+                .compose(client -> client.assertRegistration(deviceId))
                 .setHandler(ctx.asyncAssertSuccess(resp -> {
-                    ctx.assertEquals(DEVICE_ID_ENABLED, resp.getString(RegistrationConstants.FIELD_PAYLOAD_DEVICE_ID));
+                    ctx.assertEquals(deviceId, resp.getString(RegistrationConstants.FIELD_PAYLOAD_DEVICE_ID));
                     ctx.assertNotNull(resp.getString(RegistrationConstants.FIELD_ASSERTION));
                 }));
     }
@@ -136,10 +131,15 @@ public class DeviceRegistrationAmqpIT {
     @Test
     public void testAssertRegistrationFailsForDisabledDevice(final TestContext ctx) {
 
-        deviceRegistryclient.getOrCreateRegistrationClient(Constants.DEFAULT_TENANT)
-            .compose(ok -> deviceRegistryclient.getOrCreateRegistrationClient(Constants.DEFAULT_TENANT))
-            .compose(client -> client.assertRegistration(DEVICE_ID_DISABLED))
-            .setHandler(ctx.asyncAssertFailure(t -> assertErrorCode(t, HttpURLConnection.HTTP_NOT_FOUND, ctx)));
+        final String deviceId = helper.getRandomDeviceId(Constants.DEFAULT_TENANT);
+
+        helper.registry.registerDevice(Constants.DEFAULT_TENANT, deviceId,
+                    new JsonObject().put(RegistrationConstants.FIELD_ENABLED, false))
+                .compose(r -> deviceRegistryclient.getOrCreateRegistrationClient(Constants.DEFAULT_TENANT))
+                .compose(client -> client.assertRegistration(deviceId))
+                .setHandler(ctx.asyncAssertFailure( t -> {
+                    assertErrorCode(t, HttpURLConnection.HTTP_NOT_FOUND, ctx);
+                }));
     }
 
     /**
@@ -151,9 +151,14 @@ public class DeviceRegistrationAmqpIT {
     @Test
     public void testAssertRegistrationFailsForNonExistingGateway(final TestContext ctx) {
 
-        deviceRegistryclient.getOrCreateRegistrationClient(Constants.DEFAULT_TENANT)
-                .compose(client -> client.assertRegistration(DEVICE_ID_ENABLED, NON_EXISTING_GATWAY_ID))
-                .setHandler(ctx.asyncAssertFailure(t -> assertErrorCode(t, HttpURLConnection.HTTP_FORBIDDEN, ctx)));
+        final String deviceId = helper.getRandomDeviceId(Constants.DEFAULT_TENANT);
+
+        helper.registry.registerDevice(Constants.DEFAULT_TENANT, deviceId)
+                .compose(r -> deviceRegistryclient.getOrCreateRegistrationClient(Constants.DEFAULT_TENANT))
+                .compose(client -> client.assertRegistration(deviceId, NON_EXISTING_GATWAY_ID))
+                .setHandler(ctx.asyncAssertFailure(t -> {
+                    assertErrorCode(t, HttpURLConnection.HTTP_FORBIDDEN, ctx);
+                }));
     }
 
     private static void assertErrorCode(final Throwable error, final int expectedErrorCode, final TestContext ctx) {

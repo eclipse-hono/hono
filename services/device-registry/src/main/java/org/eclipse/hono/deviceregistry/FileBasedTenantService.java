@@ -97,7 +97,8 @@ public final class FileBasedTenantService extends CompleteBaseTenantService<File
 
     Future<Void> loadTenantData() {
 
-        if (getConfig().getFilename() == null) {
+        if (getConfig().getFilename() == null || getConfig().isStartEmpty()) {
+            log.info("Either filename is null or empty start is set, won't load any tenants");
             return Future.succeededFuture();
         } else {
             final Future<Buffer> readResult = Future.future();

@@ -23,6 +23,7 @@ abstract class AbstractFileBasedRegistryConfigProperties {
     private String filename = getDefaultFileName();
     private boolean saveToFile = false;
     private boolean modificationEnabled = true;
+    private boolean startEmpty = false;
 
     /**
      * Gets the path to the file that the registry should be persisted to periodically.
@@ -105,4 +106,27 @@ abstract class AbstractFileBasedRegistryConfigProperties {
         this.filename = filename;
     }
 
+    /**
+     * Checks whether this registry should ignore the provided JSON file when starting up.
+     * <p>
+     * If set to {@code true} then the starting process will result in an empty registry, even if populated JSON file are provided.
+     * <p>
+     * The default value of this property is {@code false}.
+     *
+     * @return The flag.
+     */
+    public boolean isStartEmpty() {
+        return startEmpty;
+    }
+
+    /**
+     * Sets whether this registry should ignore the provided JSON file when starting up.
+     * <p>
+     * Default value is {@code false}.
+     *
+     * @param flag {@code true} if registry content should be persisted.
+     */
+    public void setStartEmpty(final boolean flag) {
+        this.startEmpty = flag;
+    }
 }

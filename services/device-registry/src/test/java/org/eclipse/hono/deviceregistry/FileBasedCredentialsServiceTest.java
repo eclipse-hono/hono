@@ -15,10 +15,7 @@ package org.eclipse.hono.deviceregistry;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 import java.net.HttpURLConnection;
 import java.nio.charset.StandardCharsets;
@@ -228,6 +225,34 @@ public class FileBasedCredentialsServiceTest extends AbstractCompleteCredentials
         startup.await();
         assertRegistered(svc, Constants.DEFAULT_TENANT, "sensor1", CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, ctx);
     }
+
+    /**
+     * Verifies that credentials are ignored if the startEmpty property is set.
+     *
+     * @param ctx The test context.
+     */
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    @Test
+    public void testDoStartIgnoreCredentialIfStartEmptyIsSet(final TestContext ctx) {
+
+        // GIVEN a service configured with a file name and startEmpty set to true
+        props.setFilename(FILE_NAME);
+        props.setStartEmpty(true);
+        when(fileSystem.existsBlocking(props.getFilename())).thenReturn(Boolean.TRUE);
+
+        // WHEN the service is started
+        final Async startup = ctx.async();
+        final Future<Void> startFuture = Future.future();
+        startFuture.setHandler(ctx.asyncAssertSuccess(s -> {
+            startup.complete();
+        }));
+        svc.doStart(startFuture);
+
+        // THEN the credentials from the file are not loaded
+        startup.await();
+        verify(fileSystem, never()).readFile(anyString(), any(Handler.class));
+    }
+
 
     /**
      * Verifies that the file written by the registry when persisting the registry's contents can

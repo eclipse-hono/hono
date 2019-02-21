@@ -89,13 +89,19 @@ public class AmqpConnectionIT extends AmqpAdapterTestBase {
     @Test
     public void testConnectFailsForNonExistingDevice(final TestContext ctx) {
 
-        // GIVEN an adapter
-        // WHEN an unknown device tries to connect
-        connectToAdapter(IntegrationTestSupport.getUsername("non-existing", Constants.DEFAULT_TENANT), "secret")
-        .setHandler(ctx.asyncAssertFailure(t -> {
-            // THEN the connection is refused
-            ctx.assertTrue(t instanceof SaslException);
-        }));
+        // GIVEN an existing tenant
+        final String tenantId = helper.getRandomTenantId();
+        final TenantObject tenant = TenantObject.from(tenantId, true);
+
+        helper.registry.addTenant(JsonObject.mapFrom(tenant)).compose( r ->
+
+            // GIVEN an adapter
+            // WHEN an unknown device tries to connect
+            connectToAdapter(IntegrationTestSupport.getUsername("non-existing", tenantId), "secret")
+            .setHandler(ctx.asyncAssertFailure(t -> {
+                // THEN the connection is refused
+                ctx.assertTrue(t instanceof SaslException);
+            })));
     }
 
     /**
