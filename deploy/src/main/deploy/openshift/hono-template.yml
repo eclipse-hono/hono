@@ -272,7 +272,7 @@ objects:
           name: fabric8-s2i-java-custom:3.0
         env:
         - name: MAVEN_ARGS_APPEND
-          value: -B -pl org.eclipse.hono:hono-adapter-amqp-vertx --also-make -Pnetty-tcnative -Pmetrics-prometheus
+          value: -B -pl org.eclipse.hono:hono-adapter-amqp-vertx --also-make -Pnetty-tcnative -Pmetrics-prometheus -Pnetty-native-linux-x86_64
         - name: ARTIFACT_DIR
           value: adapters/amqp-vertx/target
         - name: ARTIFACT_COPY_ARGS
@@ -325,6 +325,8 @@ objects:
           maxInstances: 1
           healthCheckPort: 8088
           healthCheckBindAddress: 0.0.0.0
+        vertx:
+          preferNative: true
         amqp:
           bindAddress: 0.0.0.0
           insecurePortBindAddress: 0.0.0.0
@@ -601,7 +603,7 @@ objects:
           name: fabric8-s2i-java-custom:3.0
         env:
         - name: MAVEN_ARGS_APPEND
-          value: -B -pl org.eclipse.hono:hono-adapter-mqtt-vertx --also-make -Pnetty-tcnative -Pmetrics-prometheus
+          value: -B -pl org.eclipse.hono:hono-adapter-mqtt-vertx --also-make -Pnetty-tcnative -Pmetrics-prometheus -Pnetty-native-linux-x86_64
         - name: ARTIFACT_DIR
           value: adapters/mqtt-vertx/target
         - name: ARTIFACT_COPY_ARGS
@@ -654,6 +656,8 @@ objects:
           maxInstances: 1
           healthCheckPort: 8088
           healthCheckBindAddress: 0.0.0.0
+        vertx:
+          preferNative: true
         mqtt:
           bindAddress: 0.0.0.0
           insecurePortBindAddress: 0.0.0.0
@@ -960,7 +964,7 @@ objects:
           name: fabric8-s2i-java-custom:3.0
         env:
         - name: MAVEN_ARGS_APPEND
-          value: -B -pl org.eclipse.hono:hono-adapter-http-vertx --also-make -Pnetty-tcnative -Pmetrics-prometheus
+          value: -B -pl org.eclipse.hono:hono-adapter-http-vertx --also-make -Pnetty-tcnative -Pmetrics-prometheus -Pnetty-native-linux-x86_64
         - name: ARTIFACT_DIR
           value: adapters/http-vertx/target
         - name: ARTIFACT_COPY_ARGS
@@ -1013,6 +1017,8 @@ objects:
           maxInstances: 1
           healthCheckPort: 8088
           healthCheckBindAddress: 0.0.0.0
+        vertx:
+          preferNative: true
         http:
           bindAddress: 0.0.0.0
           insecurePortBindAddress: 0.0.0.0
@@ -1300,7 +1306,7 @@ objects:
           name: fabric8-s2i-java-custom:3.0
         env:
         - name: MAVEN_ARGS_APPEND
-          value: -B -pl org.eclipse.hono:hono-service-device-registry --also-make -Pnetty-tcnative -Pmetrics-prometheus
+          value: -B -pl org.eclipse.hono:hono-service-device-registry --also-make -Pnetty-tcnative -Pmetrics-prometheus -Pnetty-native-linux-x86_64
         - name: ARTIFACT_DIR
           value: services/device-registry/target
         - name: ARTIFACT_COPY_ARGS
@@ -1323,6 +1329,8 @@ objects:
           maxInstances: 1
           healthCheckBindAddress: 0.0.0.0
           healthCheckPort: 8088
+        vertx:
+          preferNative: true
         auth:
           port: 5671
           keyPath: /etc/tls/tls.key
@@ -1631,7 +1639,7 @@ objects:
           name: fabric8-s2i-java-custom:3.0
         env:
         - name: MAVEN_ARGS_APPEND
-          value: -B -pl org.eclipse.hono:hono-service-auth --also-make -Pnetty-tcnative -Pmetrics-prometheus
+          value: -B -pl org.eclipse.hono:hono-service-auth --also-make -Pnetty-tcnative -Pmetrics-prometheus -Pnetty-native-linux-x86_64
         - name: ARTIFACT_DIR
           value: services/auth/target
         - name: ARTIFACT_COPY_ARGS
@@ -1654,6 +1662,8 @@ objects:
           maxInstances: 1
           healthCheckPort: 8088
           healthCheckBindAddress: 0.0.0.0
+        vertx:
+          preferNative: true
         auth:
           amqp:
             bindAddress: 0.0.0.0
