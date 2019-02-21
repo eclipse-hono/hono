@@ -20,6 +20,7 @@ hono:
     svc:
       filename: /etc/hono/device-identities.json
       saveToFile: false
+      startEmpty: true
       signing:
         sharedSecret: sdgfsdafazufgsdafjhfgsdajfgwhriojsdafjlksdhfgsa8fg452368gdf
   credentials:
@@ -27,10 +28,12 @@ hono:
       filename: /etc/hono/credentials.json
       maxBcryptIterations: ${max.bcrypt.iterations}
       saveToFile: false
+      startEmpty: true
   tenant:
     svc:
       filename: /etc/hono/tenants.json
       saveToFile: false
+      startEmpty: true
   vertx:
     maxEventLoopExecuteTime: ${max.event-loop.execute-time}
 

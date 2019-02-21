@@ -105,7 +105,8 @@ public final class FileBasedRegistrationService extends CompleteBaseRegistration
 
     Future<Void> loadRegistrationData() {
 
-        if (getConfig().getFilename() == null) {
+        if (getConfig().getFilename() == null || getConfig().isStartEmpty()) {
+            log.info("Either filename is null or empty start is set, won't load any device identities");
             return Future.succeededFuture();
         } else {
             final Future<Buffer> readResult = Future.future();

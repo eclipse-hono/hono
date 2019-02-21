@@ -21,9 +21,11 @@ import static org.junit.Assert.assertTrue;
 
 import java.net.HttpURLConnection;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Base64;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import org.eclipse.hono.client.CredentialsClient;
@@ -33,10 +35,11 @@ import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsObject;
-import org.junit.AfterClass;
+import org.junit.After;
 import org.junit.BeforeClass;
-import org.junit.Rule;
+import org.junit.AfterClass;
 import org.junit.Test;
+import org.junit.Rule;
 import org.junit.rules.Timeout;
 import org.junit.runner.RunWith;
 
@@ -57,12 +60,12 @@ public class CredentialsAmqpIT {
     private static final String CREDENTIALS_AUTHID2 = "little-sensor2";
     private static final String CREDENTIALS_USER_PASSWORD = "hono-secret";
     private static final byte[] CREDENTIALS_PASSWORD_SALT = "hono".getBytes(StandardCharsets.UTF_8);
-    private static final String DEFAULT_DEVICE_ID = "4711";
 
     private static final Vertx vertx = Vertx.vertx();
 
     private static HonoClient client;
     private static CredentialsClient credentialsClient;
+    private static IntegrationTestSupport helper;
 
     /**
      * Global timeout for all test cases.
@@ -72,11 +75,14 @@ public class CredentialsAmqpIT {
 
     /**
      * Starts the device registry and connects a client.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @BeforeClass
     public static void prepareDeviceRegistry(final TestContext ctx) {
+
+        helper = new IntegrationTestSupport(vertx);
+        helper.initRegistryClient(ctx);
 
         client = DeviceRegistryAmqpTestSupport.prepareDeviceRegistryClient(vertx,
                 IntegrationTestSupport.HONO_USER, IntegrationTestSupport.HONO_PWD);
@@ -89,8 +95,18 @@ public class CredentialsAmqpIT {
     }
 
     /**
+     * Remove the fixture from the device registry if the test had set up any.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @After
+    public void cleanupDeviceRegistry(final TestContext ctx){
+        helper.deleteObjects(ctx);
+    }
+
+    /**
      * Shuts down the device registry and closes the client.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @AfterClass
@@ -102,7 +118,7 @@ public class CredentialsAmqpIT {
 
     /**
      * Verify that a not existing authId is responded with HTTP_NOT_FOUND.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
@@ -119,35 +135,41 @@ public class CredentialsAmqpIT {
 
     /**
      * Verifies that the service returns credentials for a given type and authentication ID.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
     public void testGetCredentialsReturnsCredentialsTypeAndAuthId(final TestContext ctx) {
 
-        credentialsClient
-            .get(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, CREDENTIALS_AUTHID1)
-            .setHandler(ctx.asyncAssertSuccess(result -> {
-                ctx.assertEquals(CREDENTIALS_AUTHID1, result.getAuthId());
-                ctx.assertEquals(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, result.getType());
-            }));
+        final CredentialsObject payload = getRandomHashedPasswordCredential();
+
+        helper.registry.addCredentials(Constants.DEFAULT_TENANT, JsonObject.mapFrom(payload))
+                .compose(ok -> credentialsClient.get(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, payload.getAuthId()))
+                .setHandler(ctx.asyncAssertSuccess(result -> {
+                    ctx.assertEquals(payload.getAuthId(), result.getAuthId());
+                    ctx.assertEquals(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, result.getType());
+                }));
     }
 
-    /**
-     * Verifies that the service returns credentials for a given type, authentication ID and matching client context.
-     *
-     * @param ctx The vert.x test context.
-     */
+/**
+ * Verifies that the service returns credentials for a given type, authentication ID and matching client context.
+ *
+ * @param ctx The vert.x test context.
+ */
     @Test
     public void testGetCredentialsExistingClientContext(final TestContext ctx) {
+
+        final CredentialsObject payload = getRandomHashedPasswordCredential();
 
         final JsonObject clientContext = new JsonObject()
                 .put("client-id", "gateway-one");
 
-        credentialsClient
-                .get(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, "gw", clientContext)
+        payload.setProperty("client-id", "gateway-one");
+
+        helper.registry.addCredentials(Constants.DEFAULT_TENANT, JsonObject.mapFrom(payload))
+                .compose(ok -> credentialsClient.get(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, payload.getAuthId(), clientContext))
                 .setHandler(ctx.asyncAssertSuccess(result -> {
-                    ctx.assertEquals("gw", result.getAuthId());
+                    ctx.assertEquals(payload.getAuthId(), result.getAuthId());
                     ctx.assertEquals(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, result.getType());
                 }));
     }
@@ -160,12 +182,16 @@ public class CredentialsAmqpIT {
     @Test
     public void testGetCredentialsNotMatchingClientContext(final TestContext ctx) {
 
+        final CredentialsObject payload = getRandomHashedPasswordCredential();
+
         final JsonObject clientContext = new JsonObject()
                 .put("client-id", "gateway-two");
 
-        credentialsClient
-                .get(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, "gw", clientContext)
-                .setHandler(ctx.asyncAssertFailure(t -> {
+        payload.setProperty("client-id", "gateway-one");
+
+        helper.registry.addCredentials(Constants.DEFAULT_TENANT, JsonObject.mapFrom(payload))
+                .compose(ok ->  credentialsClient.get(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, payload.getAuthId(), clientContext))
+                .setHandler(ctx.asyncAssertFailure( t -> {
                     ctx.assertEquals(
                             HttpURLConnection.HTTP_NOT_FOUND,
                             ((ServiceInvocationException) t).getErrorCode());
@@ -180,12 +206,14 @@ public class CredentialsAmqpIT {
     @Test
     public void testGetCredentialsNotExistingClientContext(final TestContext ctx) {
 
+        final CredentialsObject payload = getRandomHashedPasswordCredential();
+
         final JsonObject clientContext = new JsonObject()
                 .put("client-id", "gateway-one");
 
-        credentialsClient
-                .get(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, CREDENTIALS_AUTHID1, clientContext)
-                .setHandler(ctx.asyncAssertFailure(t -> {
+        helper.registry.addCredentials(Constants.DEFAULT_TENANT, JsonObject.mapFrom(payload))
+                .compose(ok -> credentialsClient.get(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, payload.getAuthId(), clientContext))
+                .setHandler(ctx.asyncAssertFailure( t -> {
                     ctx.assertEquals(
                             HttpURLConnection.HTTP_NOT_FOUND,
                             ((ServiceInvocationException) t).getErrorCode());
@@ -195,81 +223,123 @@ public class CredentialsAmqpIT {
     /**
      * Verify that setting authId and type to existing credentials is responded with HTTP_OK.
      * Check that the payload contains the default deviceId and is enabled.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
     public void testGetCredentialsReturnsCredentialsDefaultDeviceIdAndIsEnabled(final TestContext ctx) {
 
-        credentialsClient
-            .get(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, CREDENTIALS_AUTHID1)
-            .setHandler(ctx.asyncAssertSuccess(result -> {
-                assertTrue(checkPayloadGetCredentialsContainsDefaultDeviceIdAndReturnEnabled(result));
-            }));
+        final CredentialsObject payload = getRandomHashedPasswordCredential();
+
+        helper.registry.addCredentials(Constants.DEFAULT_TENANT, JsonObject.mapFrom(payload))
+                .compose(ok -> credentialsClient.get(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, payload.getAuthId()))
+                .setHandler(ctx.asyncAssertSuccess(result -> {
+                    assertTrue(checkPayloadGetCredentialsContainsDeviceIdAndReturnEnabled(result, payload.getDeviceId()));
+                }));
     }
 
     /**
      * Verify that setting authId and type to existing credentials is responded with HTTP_OK.
      * Check that the payload contains multiple secrets (more than one).
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
     public void testGetCredentialsReturnsMultipleSecrets(final TestContext ctx) {
 
-        credentialsClient
-            .get(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, CREDENTIALS_AUTHID1)
-            .setHandler(ctx.asyncAssertSuccess(result -> {
-                checkPayloadGetCredentialsReturnsMultipleSecrets(result);
-            }));
+        final CredentialsObject payload = getRandomHashedPasswordCredential();
+
+        helper.registry.addCredentials(Constants.DEFAULT_TENANT, JsonObject.mapFrom(payload))
+                .compose(ok -> credentialsClient.get(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, payload.getAuthId()))
+                .setHandler(ctx.asyncAssertSuccess(result -> {
+                    checkPayloadGetCredentialsReturnsMultipleSecrets(result);
+                }));
     }
 
     /**
      * Verify that setting authId and type to existing credentials is responded with HTTP_OK.
      * Check that the payload contains the expected hash-function, salt and encrypted password.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
     public void testGetCredentialsFirstSecretCorrectPassword(final TestContext ctx) {
 
-        credentialsClient
-            .get(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, CREDENTIALS_AUTHID1)
-            .setHandler(ctx.asyncAssertSuccess(result -> {
-                checkPayloadGetCredentialsReturnsFirstSecretWithCorrectPassword(result);
-            }));
+        final CredentialsObject payload = getRandomHashedPasswordCredential();
+
+        helper.registry.addCredentials(Constants.DEFAULT_TENANT, JsonObject.mapFrom(payload))
+                .compose(ok -> credentialsClient.get(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, payload.getAuthId()))
+                .setHandler(ctx.asyncAssertSuccess(result -> {
+                    checkPayloadGetCredentialsReturnsFirstSecretWithCorrectPassword(result);
+                }));
     }
 
     /**
      * Verify that setting authId and type to existing credentials is responded with HTTP_OK.
      * Check that the payload contains NOT_BEFORE and NOT_AFTER entries which denote a currently active time interval.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
     public void testGetCredentialsFirstSecretCurrentlyActiveTimeInterval(final TestContext ctx) {
 
-        credentialsClient
-            .get(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, CREDENTIALS_AUTHID1)
-            .setHandler(ctx.asyncAssertSuccess(result -> {
-                checkPayloadGetCredentialsReturnsFirstSecretWithCurrentlyActiveTimeInterval(result);
-            }));
+        final CredentialsObject payload = getRandomHashedPasswordCredential();
+
+        helper.registry.addCredentials(Constants.DEFAULT_TENANT, JsonObject.mapFrom(payload))
+                .compose(ok -> credentialsClient.get(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, payload.getAuthId()))
+                .setHandler(ctx.asyncAssertSuccess(result -> {
+                    checkPayloadGetCredentialsReturnsFirstSecretWithCurrentlyActiveTimeInterval(result);
+                }));
     }
 
     /**
      * Verify that setting authId and type PreSharedKey to existing credentials is responded with HTTP_OK.
      * Check that the payload contains NOT_BEFORE and NOT_AFTER entries which denote a currently active time interval.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
     public void testGetCredentialsPresharedKeyIsNotEnabled(final TestContext ctx) {
 
-        credentialsClient
-            .get(CredentialsConstants.SECRETS_TYPE_PRESHARED_KEY, CREDENTIALS_AUTHID2)
-            .setHandler(ctx.asyncAssertSuccess(result -> {
-                assertFalse(checkPayloadGetCredentialsContainsDefaultDeviceIdAndReturnEnabled(result));
-            }));
+        final String deviceId = helper.getRandomDeviceId(Constants.DEFAULT_TENANT);
+        final CredentialsObject payload = CredentialsObject.fromPresharedKey(
+                deviceId,
+                CREDENTIALS_AUTHID2,
+                "c2VjcmV0S2V5Mg==".getBytes(),
+                null, null);
+        payload.setEnabled(false);
+
+
+        helper.registry.addCredentials(Constants.DEFAULT_TENANT, JsonObject.mapFrom(payload))
+                .compose(r -> credentialsClient.get(CredentialsConstants.SECRETS_TYPE_PRESHARED_KEY, CREDENTIALS_AUTHID2))
+                .setHandler(ctx.asyncAssertSuccess(result -> {
+                    assertFalse(checkPayloadGetCredentialsContainsDeviceIdAndReturnEnabled(result, deviceId));
+                }));
+    }
+
+    private CredentialsObject getRandomHashedPasswordCredential(){
+        final String deviceId = helper.getRandomDeviceId(Constants.DEFAULT_TENANT);
+        final String authId = UUID.randomUUID().toString();
+        final CredentialsObject credential = new CredentialsObject(deviceId, authId, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD);
+        setSecrets(credential);
+        return credential;
+    }
+
+    private void setSecrets(final CredentialsObject credential){
+
+             new JsonArray()
+                //.add( CredentialsObject.hashedPasswordSecretForClearTextPassword("hono-secret",null, null))
+                .add( CredentialsObject.hashedPasswordSecretForPasswordHash(
+                        "C9/T62m1tT4ZxxqyIiyN9fvoEqmL0qnM4/+M+GHHDzr0QzzkAUdGYyJBfxRSe4upDzb6TSC4k5cpZG17p4QCvA==",
+                        CredentialsConstants.HASH_FUNCTION_SHA512,
+                        Instant.parse("2017-05-01T14:00:00Z"),
+                        Instant.parse("2037-06-01T14:00:00Z"),
+                        CREDENTIALS_PASSWORD_SALT))
+                 .add(CredentialsObject.hashedPasswordSecretForClearTextPassword(
+                         "hono-password",
+                         null,
+                         null))
+                .forEach( secret -> credential.addSecret((JsonObject) secret));
     }
 
     private JsonObject pickFirstSecretFromPayload(final CredentialsObject payload) {
@@ -340,11 +410,11 @@ public class CredentialsAmqpIT {
         assertTrue(secrets.size() > 1); // at least 2 entries to test multiple entries
     }
 
-    private boolean checkPayloadGetCredentialsContainsDefaultDeviceIdAndReturnEnabled(final CredentialsObject payload) {
+    private boolean checkPayloadGetCredentialsContainsDeviceIdAndReturnEnabled(final CredentialsObject payload, final String deviceId) {
         assertNotNull(payload);
 
         assertNotNull(payload.getDeviceId());
-        assertEquals(payload.getDeviceId(), DEFAULT_DEVICE_ID);
+        assertEquals(payload.getDeviceId(), deviceId);
 
         return payload.isEnabled();
     }

@@ -14,6 +14,10 @@
 package org.eclipse.hono.tests.registry;
 
 import java.net.HttpURLConnection;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
+import java.security.NoSuchAlgorithmException;
+import java.security.PublicKey;
 import java.util.concurrent.TimeUnit;
 
 import javax.security.auth.x500.X500Principal;
@@ -24,6 +28,8 @@ import org.eclipse.hono.client.TenantClient;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.TenantConstants;
+import org.eclipse.hono.util.TenantObject;
+import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Rule;
@@ -47,6 +53,9 @@ public class TenantAmqpIT {
 
     private static HonoClient client;
     private static TenantClient tenantClient;
+    private static IntegrationTestSupport helper;
+
+
 
     /**
      * Global timeout for all test cases.
@@ -56,11 +65,14 @@ public class TenantAmqpIT {
 
     /**
      * Starts the device registry, connects a client and provides a tenant API client.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @BeforeClass
     public static void prepareDeviceRegistry(final TestContext ctx) {
+
+        helper = new IntegrationTestSupport(vertx);
+        helper.initRegistryClient(ctx);
 
         client = DeviceRegistryAmqpTestSupport.prepareDeviceRegistryClient(vertx,
                 IntegrationTestSupport.HONO_USER, IntegrationTestSupport.HONO_PWD);
@@ -73,8 +85,19 @@ public class TenantAmqpIT {
     }
 
     /**
+     * Removes all temporary objects from the registry.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @After
+    public void cleanUp(final TestContext ctx) {
+        helper.deleteObjects(ctx);
+        helper.registry.removeTenant(Constants.DEFAULT_TENANT);
+    }
+
+    /**
      * Shuts down the device registry and closes the client.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @AfterClass
@@ -87,17 +110,21 @@ public class TenantAmqpIT {
     /**
      * Verifies that a client can use the get operation to retrieve information for an existing
      * tenant.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
     public void testGetTenant(final TestContext ctx) {
 
-        tenantClient
-            .get(Constants.DEFAULT_TENANT)
-            .setHandler(ctx.asyncAssertSuccess(tenantObject -> {
-                ctx.assertEquals(Constants.DEFAULT_TENANT, tenantObject.getTenantId());
-            }));
+        final String tenantId = Constants.DEFAULT_TENANT;
+        final TenantObject payload = new TenantObject()
+                .setTenantId(tenantId);
+
+        helper.registry.addTenant( JsonObject.mapFrom(payload))
+                .compose(r -> tenantClient.get(tenantId))
+                .setHandler(ctx.asyncAssertSuccess(tenantObject -> {
+                   ctx.assertEquals(tenantId, tenantObject.getTenantId());
+           }));
     }
 
     /**
@@ -109,13 +136,21 @@ public class TenantAmqpIT {
     @Test
     public void testGetNotConfiguredTenantReturnsUnauthorized(final TestContext ctx) {
 
-        tenantClient
-                .get("HTTP_ONLY")
+        final String tenantId = helper.getRandomTenantId();
+        final TenantObject payload = new TenantObject()
+                .setTenantId(tenantId)
+                .addAdapterConfiguration( new JsonObject()
+                                .put(TenantConstants.FIELD_ADAPTERS_TYPE, Constants.PROTOCOL_ADAPTER_TYPE_HTTP)
+                                .put(TenantConstants.FIELD_ENABLED, true)
+                                .put(TenantConstants.FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED, true));
+
+        helper.registry.addTenant(JsonObject.mapFrom(payload))
+                .compose(r -> tenantClient.get(tenantId))
                 .setHandler(ctx.asyncAssertFailure(t -> {
-                    ctx.assertEquals(
-                            HttpURLConnection.HTTP_FORBIDDEN,
-                            ((ServiceInvocationException) t).getErrorCode());
-                }));
+                        ctx.assertEquals(
+                                HttpURLConnection.HTTP_FORBIDDEN,
+                                ((ServiceInvocationException) t).getErrorCode());
+                    }));
     }
 
     /**
@@ -141,15 +176,21 @@ public class TenantAmqpIT {
      * a tenant by the subject DN of the trusted certificate authority.
      *
      * @param ctx The vert.x test context.
+     * @throws NoSuchAlgorithmException if the public key cannot be generated
      */
     @Test
-    public void testGetByCaSucceeds(final TestContext ctx) {
+    public void testGetByCaSucceeds(final TestContext ctx) throws NoSuchAlgorithmException {
 
+        final String tenantId = Constants.DEFAULT_TENANT;
         final X500Principal subjectDn = new X500Principal("CN=ca, OU=Hono, O=Eclipse");
-        tenantClient
-                .get(subjectDn)
+        final TenantObject payload = new TenantObject()
+                .setTenantId(tenantId)
+                .setTrustAnchor(getRandomPublicKey(), subjectDn);
+
+        helper.registry.addTenant(JsonObject.mapFrom(payload))
+                .compose(r -> tenantClient.get(subjectDn))
                 .setHandler(ctx.asyncAssertSuccess(tenantObject -> {
-                    ctx.assertEquals(Constants.DEFAULT_TENANT, tenantObject.getTenantId());
+                    ctx.assertEquals(tenantId, tenantObject.getTenantId());
                     final JsonObject trustedCa = tenantObject.getProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA);
                     ctx.assertNotNull(trustedCa);
                     final X500Principal trustedSubjectDn = new X500Principal(trustedCa.getString(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN));
@@ -163,18 +204,35 @@ public class TenantAmqpIT {
      * <em>403 Forbidden</em> if the client is not authorized to retrieve
      * information for the tenant.
      *
+     * @throws NoSuchAlgorithmException if the public key cannot be generated
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testGetByCaFailsIfNotAuthorized(final TestContext ctx) {
+    public void testGetByCaFailsIfNotAuthorized(final TestContext ctx) throws NoSuchAlgorithmException {
+        final String tenantId = helper.getRandomTenantId();
+        final X500Principal subjectDn = new X500Principal("CN=ca-http,OU=Hono,O=Eclipse");
+        final TenantObject payload = new TenantObject()
+                .setTenantId(tenantId)
+                .setTrustAnchor(getRandomPublicKey(), subjectDn)
+                .addAdapterConfiguration(new JsonObject()
+                        .put(TenantConstants.FIELD_ADAPTERS_TYPE, Constants.PROTOCOL_ADAPTER_TYPE_HTTP)
+                        .put(TenantConstants.FIELD_ENABLED, true)
+                        .put(TenantConstants.FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED, true));
 
-        final X500Principal subjectDn = new X500Principal("CN=ca-http, OU=Hono, O=Eclipse");
-        tenantClient
-                .get(subjectDn)
+        helper.registry.addTenant(JsonObject.mapFrom(payload))
+                .compose(r ->  tenantClient.get(subjectDn))
                 .setHandler(ctx.asyncAssertFailure(t -> {
-                    ctx.assertEquals(
-                            HttpURLConnection.HTTP_FORBIDDEN,
-                            ((ServiceInvocationException) t).getErrorCode());
-                }));
+                        ctx.assertEquals(
+                                HttpURLConnection.HTTP_FORBIDDEN,
+                                ((ServiceInvocationException) t).getErrorCode());
+                    }));
+    }
+
+    private PublicKey getRandomPublicKey() throws NoSuchAlgorithmException {
+
+        final KeyPairGenerator keyGen = KeyPairGenerator.getInstance("RSA");
+        keyGen.initialize(1024);
+        final KeyPair keypair = keyGen.genKeyPair();
+        return keypair.getPublic();
     }
 }

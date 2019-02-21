@@ -262,6 +262,33 @@ public class FileBasedRegistrationServiceTest extends AbstractCompleteRegistrati
     }
 
     /**
+     * Verifies that device identities in file are ignored if startEmpty is set to true.
+     *
+     * @param ctx The test context.
+     */
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    @Test
+    public void testDoStartIgnoreIdentitiesIfStartEmptyIsSet(final TestContext ctx) {
+
+        // GIVEN a service configured with a file name and startEmpty set to true
+        props.setFilename(FILE_NAME);
+        props.setStartEmpty(true);
+        when(fileSystem.existsBlocking(props.getFilename())).thenReturn(Boolean.TRUE);
+
+        // WHEN the service is started
+        final Async startup = ctx.async();
+        final Future<Void> startFuture = Future.future();
+        startFuture.setHandler(ctx.asyncAssertSuccess(s -> {
+            startup.complete();
+        }));
+        registrationService.doStart(startFuture);
+
+        // THEN the device identities from the file are not loaded
+        startup.await();
+        verify(fileSystem, never()).readFile(anyString(), any(Handler.class));
+    }
+
+    /**
      * Verifies that the registry enforces the maximum devices per tenant limit.
      */
     @Test
