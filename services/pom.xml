@@ -104,6 +104,17 @@
     </profile>
 
     <profile>
+      <id>netty-native-linux-x86_64</id>
+      <dependencies>
+        <dependency>
+          <groupId>io.netty</groupId>
+          <artifactId>netty-transport-native-epoll</artifactId>
+          <classifier>linux-x86_64</classifier>
+        </dependency>
+      </dependencies>
+    </profile>
+
+    <profile>
       <id>metrics-graphite</id>
       <dependencies>
         <dependency>
