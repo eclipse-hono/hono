@@ -92,7 +92,7 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
             publishResult.fail(attempt.cause());
         } else {
             final Integer messageId = attempt.result();
-            final long timerId = VERTX.setTimer(300, tid -> {
+            final long timerId = VERTX.setTimer(1000, tid -> {
                 pendingMessages.remove(messageId);
                 publishResult.fail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE));
             });
