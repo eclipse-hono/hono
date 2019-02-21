@@ -695,7 +695,8 @@ public abstract class HttpTestBase {
 
         // GIVEN a registered device
         final Async setup = ctx.async();
-        final Async messagesReceived = ctx.async(2);
+        final Async firstMessageReceived = ctx.async();
+        final Async secondMessageReceived = ctx.async();
         helper.registry.addDeviceForTenant(tenant, deviceId, PWD)
         .compose(ok -> createConsumer(tenantId, msg -> {
             logger.trace("received message: {}", msg);
@@ -705,12 +706,19 @@ public abstract class HttpTestBase {
                 ctx.assertEquals(tenantId, notification.getTenantId());
                 ctx.assertEquals(deviceId, notification.getDeviceId());
             });
-            if ("text/plain".equals(msg.getContentType())) {
-                // this is one of the "relevant" messages
-                messagesReceived.countDown();
+            switch(msg.getContentType()) {
+            case "text/msg1":
+                logger.debug("received first message");
+                firstMessageReceived.complete();
+                break;
+            case "text/msg2":
+                logger.debug("received second message");
+                secondMessageReceived.complete();
+                break;
+            default:
+                // nothing to do
             }
-        }))
-        .compose(c -> {
+        })).compose(c -> {
             // we need to send an initial request with QoS 1 to trigger establishment
             // of links required for processing requests in the HTTP adapter
             // otherwise, the second of the two consecutive upload requests
@@ -724,16 +732,15 @@ public abstract class HttpTestBase {
                     .add(HttpHeaders.ORIGIN, ORIGIN_URI)
                     .add(Constants.HEADER_QOS_LEVEL, "1"),
                 response -> response.statusCode() >= 200 && response.statusCode() < 300);
-        })
-        .setHandler(ctx.asyncAssertSuccess(ok -> setup.complete()));
+        }).setHandler(ctx.asyncAssertSuccess(ok -> setup.complete()));
         setup.await();
 
         // WHEN the device sends a first upload request
-        final MultiMap requestHeaders = MultiMap.caseInsensitiveMultiMap()
-                .add(HttpHeaders.CONTENT_TYPE, "text/plain")
+        MultiMap requestHeaders = MultiMap.caseInsensitiveMultiMap()
+                .add(HttpHeaders.CONTENT_TYPE, "text/msg1")
                 .add(HttpHeaders.AUTHORIZATION, authorization)
                 .add(HttpHeaders.ORIGIN, ORIGIN_URI)
-                .add(Constants.HEADER_TIME_TIL_DISCONNECT, "5");
+                .add(Constants.HEADER_TIME_TIL_DISCONNECT, "10");
 
         final Future<MultiMap> firstRequest = httpClient.create(
                 getEndpointUri(),
@@ -745,7 +752,14 @@ public abstract class HttpTestBase {
                     return headers;
                 });
         logger.info("sent first request");
-        // immediately followed by a second request
+        firstMessageReceived.await();
+
+        // followed by a second request
+        requestHeaders = MultiMap.caseInsensitiveMultiMap()
+                .add(HttpHeaders.CONTENT_TYPE, "text/msg2")
+                .add(HttpHeaders.AUTHORIZATION, authorization)
+                .add(HttpHeaders.ORIGIN, ORIGIN_URI)
+                .add(Constants.HEADER_TIME_TIL_DISCONNECT, "5");
         final Future<MultiMap> secondRequest = httpClient.create(
                 getEndpointUri(),
                 Buffer.buffer("hello two"),
@@ -757,27 +771,21 @@ public abstract class HttpTestBase {
                 });
         logger.info("sent second request");
         // wait for messages having been received
-        messagesReceived.await();
+        secondMessageReceived.await();
         // send command
         final JsonObject inputData = new JsonObject().put(COMMAND_JSON_KEY, (int) (Math.random() * 100));
-        helper.sendOneWayCommand(tenantId, deviceId, COMMAND_TO_SEND, "application/json", inputData.toBuffer(), null, 3000);
-        logger.info("sent command to device");
+        final Future<Void> commandSent = helper.sendOneWayCommand(tenantId, deviceId, COMMAND_TO_SEND, "application/json", inputData.toBuffer(), null, 3000);
+        logger.info("sent one-way command to device");
 
         // THEN both requests succeed
-        CompositeFuture.all(firstRequest, secondRequest).map(ok -> {
+        CompositeFuture.all(commandSent, firstRequest, secondRequest).map(ok -> {
 
             // and the response to the first request contains a command
-            final MultiMap responseHeaders = firstRequest.result();
-            ctx.assertEquals(COMMAND_TO_SEND, responseHeaders.get(Constants.HEADER_COMMAND));
-
-            return null;
-
-        }).map(ok -> {
+            ctx.assertEquals(COMMAND_TO_SEND, firstRequest.result().get(Constants.HEADER_COMMAND));
 
             // while the response to the second request is empty
-            final MultiMap responseHeaders = secondRequest.result();
-            ctx.assertNull(responseHeaders.get(Constants.HEADER_COMMAND));
-            return null;
+            ctx.assertNull(secondRequest.result().get(Constants.HEADER_COMMAND));
+            return ok;
 
         }).setHandler(ctx.asyncAssertSuccess());
     }
