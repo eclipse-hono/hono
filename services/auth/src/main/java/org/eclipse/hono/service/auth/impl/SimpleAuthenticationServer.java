@@ -177,7 +177,7 @@ public final class SimpleAuthenticationServer extends AmqpServiceBase<ServiceCon
             default:
                 // return 0.0.0
             }
-        } catch (NumberFormatException e) {
+        } catch (final NumberFormatException e) {
             // return 0.0.0
         }
         return result;
@@ -204,7 +204,7 @@ public final class SimpleAuthenticationServer extends AmqpServiceBase<ServiceCon
                 return null;
             }
         }).filter(Objects::nonNull).collect(Collectors.toSet());
-        return result.toArray(new String[result.size()]);
+        return result.toArray(String[]::new);
     }
 
     @Override
