@@ -196,7 +196,7 @@ public final class FileBasedAuthenticationService extends AbstractHonoAuthentica
                           activityList.add(act);
                       }
                   });
-                  result.addResource(resource, activityList.toArray(new Activity[activityList.size()]));
+                        result.addResource(resource, activityList.toArray(Activity[]::new));
               } else if (operation != null) {
                   final String[] parts = operation.split(":", 2);
                   if (parts.length == 2) {

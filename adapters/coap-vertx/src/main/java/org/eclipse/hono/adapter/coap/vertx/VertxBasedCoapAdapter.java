@@ -58,7 +58,7 @@ public final class VertxBasedCoapAdapter extends AbstractVertxBasedCoapAdapter<C
     public void getExtendedDevice(final CoapExchange exchange, final Handler<ExtendedDevice> handler) {
         try {
             final List<String> pathList = exchange.getRequestOptions().getUriPath();
-            final String[] path = pathList.toArray(new String[pathList.size()]);
+            final String[] path = pathList.toArray(String[]::new);
             final ResourceIdentifier identifier = ResourceIdentifier.fromPath(path);
             final Device device = new Device(identifier.getTenantId(), identifier.getResourceId());
             final Principal peer = exchange.advanced().getRequest().getSourceContext().getPeerIdentity();
@@ -69,9 +69,9 @@ public final class VertxBasedCoapAdapter extends AbstractVertxBasedCoapAdapter<C
             } else {
                 getAuthenticatedExtendedDevice(device, exchange, handler);
             }
-        } catch (NullPointerException cause) {
+        } catch (final NullPointerException cause) {
             CoapErrorResponse.respond(exchange, "missing tenant and device!", ResponseCode.BAD_REQUEST);
-        } catch (Throwable cause) {
+        } catch (final Throwable cause) {
             CoapErrorResponse.respond(exchange, cause, ResponseCode.INTERNAL_SERVER_ERROR);
         }
     }

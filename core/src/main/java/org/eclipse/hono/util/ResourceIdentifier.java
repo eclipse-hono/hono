@@ -60,7 +60,7 @@ public final class ResourceIdentifier {
         if (assumeDefaultTenant) {
             pathSegments.add(1, Constants.DEFAULT_TENANT);
         }
-        setResourcePath(pathSegments.toArray(new String[pathSegments.size()]));
+        setResourcePath(pathSegments.toArray(String[]::new));
     }
 
     private ResourceIdentifier(final String endpoint, final String tenantId, final String resourceId) {
@@ -94,7 +94,7 @@ public final class ResourceIdentifier {
                 pathSegments.add(segment);
             }
         }
-        this.resourcePath = pathSegments.toArray(new String[pathSegments.size()]);
+        this.resourcePath = pathSegments.toArray(String[]::new);
         if (resourcePath.length > IDX_TENANT_ID && resourcePath[IDX_TENANT_ID].length() == 0) {
             resourcePath[IDX_TENANT_ID] = null;
         }
