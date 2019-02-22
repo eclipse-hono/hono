@@ -250,10 +250,11 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
     }
 
     /**
-     * Verifies that the adapter fails the upload of an event with a 403
+     * Verifies that the adapter fails the upload of a message with a 403
      * result if the device belongs to a tenant for which the adapter is
      * disabled.
      */
+    @SuppressWarnings("unchecked")
     @Test
     public void testUploadTelemetryFailsForDisabledTenant() {
 
@@ -277,8 +278,60 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
 
         // THEN the device gets a 403
         assertContextFailedWithClientError(ctx, HttpURLConnection.HTTP_FORBIDDEN);
+        // and no Command consumer has been created for the device
+        verify(commandConnection, never()).createCommandConsumer(anyString(), anyString(), any(Handler.class), any(Handler.class));
         // and the message has not been forwarded downstream
         verify(sender, never()).send(any(Message.class));
+        // and has not been reported as processed
+        verify(metrics, never())
+            .reportTelemetry(
+                    any(MetricsTags.EndpointType.class),
+                    anyString(),
+                    eq(MetricsTags.ProcessingOutcome.FORWARDED),
+                    any(MetricsTags.QoS.class),
+                    anyInt(),
+                    any(MetricsTags.TtdStatus.class),
+                    any());
+    }
+
+    /**
+     * Verifies that the adapter fails the upload of a message containing
+     * a TTD value with a 404 result if the device is not registered.
+     * Also verifies that the adapter does not open a command consumer for
+     * the device in this case.
+     */
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testUploadTelemetryFailsForUnknownDevice() {
+
+        // GIVEN an adapter
+        final HttpServer server = getHttpServer(false);
+        final MessageSender sender = givenATelemetrySenderForOutcome(Future.succeededFuture());
+
+        // with an enabled tenant
+        final TenantObject myTenantConfig = TenantObject.from("my-tenant", true);
+        when(tenantClient.get(eq("my-tenant"), any())).thenReturn(Future.succeededFuture(myTenantConfig));
+        final AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> adapter = getAdapter(server, null);
+
+        // WHEN an unknown device that supposedly belongs to that tenant publishes a telemetry message
+        // with a TTD value set
+        when(regClient.assertRegistration(eq("unknown-device"), any(), any(SpanContext.class))).thenReturn(
+                Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND)));
+        final Buffer payload = Buffer.buffer("some payload");
+        final HttpServerResponse response = mock(HttpServerResponse.class);
+        final HttpServerRequest request = mock(HttpServerRequest.class);
+        when(request.getHeader(eq(Constants.HEADER_TIME_TIL_DISCONNECT))).thenReturn("5");
+        final RoutingContext ctx = newRoutingContext(payload, "application/text", request, response);
+
+        adapter.uploadTelemetryMessage(ctx, "my-tenant", "unknown-device", payload, "application/text");
+
+        // THEN the device gets a 404
+        assertContextFailedWithClientError(ctx, HttpURLConnection.HTTP_NOT_FOUND);
+        verify(regClient).assertRegistration(eq("unknown-device"), any(), any(SpanContext.class));
+        // and the message has not been forwarded downstream
+        verify(sender, never()).send(any(Message.class), any(SpanContext.class));
+        // and no Command consumer has been created for the device
+        verify(commandConnection, never()).createCommandConsumer(anyString(), anyString(), any(Handler.class), any(Handler.class));
         // and has not been reported as processed
         verify(metrics, never())
             .reportTelemetry(

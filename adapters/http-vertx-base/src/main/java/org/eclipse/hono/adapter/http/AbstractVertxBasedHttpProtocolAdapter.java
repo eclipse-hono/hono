@@ -603,21 +603,25 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                         deviceId,
                         authenticatedDevice,
                         currentSpan.context());
-                final Future<TenantObject> tenantEnabledTracker = getTenantConfiguration(tenant, currentSpan.context())
+                final Future<TenantObject> tenantTracker = getTenantConfiguration(tenant, currentSpan.context())
                         .compose(tenantObject -> isAdapterEnabled(tenantObject));
-                final Future<Integer> ttdTracker = tenantEnabledTracker.compose(tenantObj -> {
-                    final Integer ttdParam = HttpUtils.getTimeTilDisconnect(ctx);
-                    return getTimeUntilDisconnect(tenantObj, ttdParam).map(effectiveTtd -> {
-                        if (effectiveTtd != null) {
-                            currentSpan.setTag(MessageHelper.APP_PROPERTY_DEVICE_TTD, effectiveTtd);
-                        }
-                        return effectiveTtd;
-                    });
-                });
+
+                // we only need to consider TTD if the device and tenant are enabled and the adapter
+                // is enabled for the tenant
+                final Future<Integer> ttdTracker = CompositeFuture.all(tokenTracker, tenantTracker)
+                        .compose(ok -> {
+                            final Integer ttdParam = HttpUtils.getTimeTilDisconnect(ctx);
+                            return getTimeUntilDisconnect(tenantTracker.result(), ttdParam).map(effectiveTtd -> {
+                                if (effectiveTtd != null) {
+                                    currentSpan.setTag(MessageHelper.APP_PROPERTY_DEVICE_TTD, effectiveTtd);
+                                }
+                                return effectiveTtd;
+                            });
+                        });
                 final Future<MessageConsumer> commandConsumerTracker = ttdTracker
                         .compose(ttd -> createCommandConsumer(ttd, tenant, deviceId, ctx, responseReady, currentSpan));
 
-                CompositeFuture.all(tokenTracker, senderTracker, commandConsumerTracker)
+                CompositeFuture.all(senderTracker, commandConsumerTracker)
                 .compose(ok -> {
 
                         final MessageSender sender = senderTracker.result();
