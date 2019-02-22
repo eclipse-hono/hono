@@ -435,7 +435,7 @@ objects:
           - name: SPRING_CONFIG_LOCATION
             value: file:///etc/config/
           - name: SPRING_PROFILES_ACTIVE
-            value: prometheus
+            value: 
           - name: LOGGING_CONFIG
             value: file:///etc/config/logback-spring.xml
           - name: KUBERNETES_NAMESPACE
@@ -497,9 +497,6 @@ objects:
           ports:
           - containerPort: 8778
             name: jolokia
-          - containerPort: 8081
-            name: actuator
-            protocol: TCP
           - containerPort: 8088
             name: health
             protocol: TCP
@@ -549,9 +546,9 @@ objects:
         port: 5671
         targetPort: 5671
         protocol: TCP
-      - name: actuator
-        port: 8081
-        targetPort: 8081
+      - name: health
+        port: 8088
+        targetPort: 8088
         protocol: TCP
     selector:
       app: hono-adapter
@@ -767,7 +764,7 @@ objects:
           - name: SPRING_CONFIG_LOCATION
             value: file:///etc/config/
           - name: SPRING_PROFILES_ACTIVE
-            value: prometheus
+            value: 
           - name: LOGGING_CONFIG
             value: file:///etc/config/logback-spring.xml
           - name: KUBERNETES_NAMESPACE
@@ -827,9 +824,6 @@ objects:
           ports:
           - containerPort: 8778 
             name: jolokia
-          - containerPort: 8081
-            name: actuator
-            protocol: TCP
           - containerPort: 8088
             name: health
             protocol: TCP
@@ -879,9 +873,10 @@ objects:
         port: 8883
         targetPort: 8883
         protocol: TCP
-      - name: actuator
-        port: 8081
-        targetPort: 8081
+      - name: health
+        port: 8088
+        targetPort: 8088
+        protocol: TCP
     selector:
       app: hono-adapter
       deploymentconfig: hono-adapter-mqtt-vertx
@@ -1128,7 +1123,7 @@ objects:
           - name: SPRING_CONFIG_LOCATION
             value: file:///etc/config/
           - name: SPRING_PROFILES_ACTIVE
-            value: prometheus
+            value: 
           - name: LOGGING_CONFIG
             value: file:///etc/config/logback-spring.xml
           - name: KUBERNETES_NAMESPACE
@@ -1194,9 +1189,6 @@ objects:
           - containerPort: 8080
             name: http
             protocol: TCP
-          - containerPort: 8081
-            name: actuator
-            protocol: TCP
           - containerPort: 8443
             name: https
             protocol: TCP
@@ -1240,9 +1232,10 @@ objects:
         port: 8443
         targetPort: 8443
         protocol: TCP
-      - name: actuator
-        port: 8081
-        targetPort: 8081
+      - name: health
+        port: 8088
+        targetPort: 8088
+        protocol: TCP
     selector:
       app: hono-adapter
       deploymentconfig: hono-adapter-http-vertx
@@ -1362,14 +1355,6 @@ objects:
           svc:
             filename: /var/lib/hono/device-registry/tenants.json
             saveToFile: true
-        metrics:
-          legacy: false
-      management:
-        metrics:
-          enabled: false
-          export:
-            graphite:
-              enabled: false
 
     logback-spring.xml: |+
         <?xml version="1.0" encoding="UTF-8"?>
@@ -1480,7 +1465,7 @@ objects:
           - name: SPRING_CONFIG_LOCATION
             value: file:///etc/config/
           - name: SPRING_PROFILES_ACTIVE
-            value: prometheus
+            value: 
           - name: LOGGING_CONFIG
             value: file:///etc/config/logback-spring.xml
           - name: KUBERNETES_NAMESPACE
@@ -1532,9 +1517,6 @@ objects:
             protocol: TCP
           - containerPort: 8080
             name: http
-            protocol: TCP
-          - containerPort: 8081
-            name: actuator
             protocol: TCP
           - containerPort: 8443
             name: https
@@ -1594,9 +1576,10 @@ objects:
       port: 8443
       protocol: TCP
       targetPort: 8443
-    - name: actuator
-      port: 8081
-      targetPort: 8081
+    - name: health
+      port: 8088
+      targetPort: 8088
+      protocol: TCP
     selector:
       app: hono-service
       deploymentconfig: hono-service-device-registry
@@ -1669,6 +1652,8 @@ objects:
       hono:
         app:
           maxInstances: 1
+          healthCheckPort: 8088
+          healthCheckBindAddress: 0.0.0.0
         auth:
           amqp:
             bindAddress: 0.0.0.0
@@ -1681,14 +1666,6 @@ objects:
             insecurePortBindAddress: 0.0.0.0
           svc:
             permissionsPath: file:///etc/config/permissions.json
-        metrics:
-          legacy: false
-      management:
-        metrics:
-          enabled: false
-          export:
-            graphite:
-              enabled: false
 
     permissions.json: |+
       {
@@ -1863,7 +1840,7 @@ objects:
           - name: SPRING_CONFIG_LOCATION
             value: file:///etc/config/
           - name: SPRING_PROFILES_ACTIVE
-            value: authentication-impl,prometheus
+            value: authentication-impl
           - name: LOGGING_CONFIG
             value: file:///etc/config/logback-spring.xml
           - name: HONO_AUTH_SVC_SIGNING_SHARED_SECRET
@@ -1907,8 +1884,8 @@ objects:
           ports:
           - containerPort: 8778 
             name: jolokia
-          - containerPort: 8081
-            name: actuator
+          - containerPort: 8088
+            name: health
             protocol: TCP
           - containerPort: 5671
             name: amqps
@@ -1946,9 +1923,10 @@ objects:
       port: 5671
       protocol: TCP
       targetPort: 5671
-    - name: actuator
-      port: 8081
-      targetPort: 8081
+    - name: health
+      port: 8088
+      targetPort: 8088
+      protocol: TCP
     selector:
       app: hono-service
       deploymentconfig: hono-service-auth
