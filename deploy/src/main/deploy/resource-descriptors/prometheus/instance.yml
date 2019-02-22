@@ -43,7 +43,7 @@ spec:
   serviceAccountName: prometheus
   serviceMonitorSelector:
     matchLabels:
-      metrics: hono-actuator-services
+      metrics: hono-health-services
   resources:
     requests:
       memory: 400Mi
@@ -54,13 +54,13 @@ kind: ServiceMonitor
 metadata:
   name: hono
   labels:
-    metrics: hono-actuator-services
+    metrics: hono-health-services
     app: hono-metrics
 spec:
   selector:
     matchLabels:
       hono-metrics: prometheus
   endpoints:
-    - port: actuator
+    - port: health
       path: /prometheus
       interval: 5s
