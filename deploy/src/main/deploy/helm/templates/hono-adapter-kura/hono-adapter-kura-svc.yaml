@@ -20,7 +20,7 @@ spec:
     port: 8883
     protocol: TCP
     targetPort: 8883
-  - name: actuator
+  - name: health
     port: {{ .Values.monitoring.prometheus.port }}
   selector:
     app: hono-adapter-kura

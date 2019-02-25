@@ -25,7 +25,7 @@ spec:
     port: 8443
     protocol: TCP
     targetPort: 8443
-  - name: actuator
+  - name: health
     port: {{ .Values.monitoring.prometheus.port }}
   selector:
     app: hono-service-device-registry

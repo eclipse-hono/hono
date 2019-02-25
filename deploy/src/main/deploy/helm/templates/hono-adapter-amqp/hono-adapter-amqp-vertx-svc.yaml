@@ -20,7 +20,7 @@ spec:
     port: 5671
     protocol: TCP
     targetPort: 5671
-  - name: actuator
+  - name: health
     port: {{ .Values.monitoring.prometheus.port }}
   selector:
     app: hono-adapter-amqp-vertx
