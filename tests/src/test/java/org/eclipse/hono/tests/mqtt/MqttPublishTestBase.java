@@ -232,7 +232,7 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
 
         final CountDownLatch received = new CountDownLatch(MESSAGES_TO_SEND);
         final AtomicInteger messageCount = new AtomicInteger(0);
-        final AtomicLong lastReceivedTimestamp = new AtomicLong();
+        final AtomicLong lastReceivedTimestamp = new AtomicLong(0);
 
         final Async setup = ctx.async();
         connection.compose(ok -> createConsumer(tenantId, msg -> {
@@ -270,6 +270,10 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
 
         if (!received.await(getTimeToWait(), TimeUnit.MILLISECONDS)) {
             LOGGER.info("Timeout of {} milliseconds reached, stop waiting to receive messages.", getTimeToWait());
+        }
+        if (lastReceivedTimestamp.get() == 0L) {
+            // no message has been received at all
+            lastReceivedTimestamp.set(System.currentTimeMillis());
         }
         final long messagesReceived = MESSAGES_TO_SEND - received.getCount();
         LOGGER.info("sent {} and received {} messages in {} milliseconds",

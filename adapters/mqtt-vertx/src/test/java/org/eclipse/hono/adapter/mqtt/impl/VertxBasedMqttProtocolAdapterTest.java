@@ -19,6 +19,8 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.net.HttpURLConnection;
+
 import org.eclipse.hono.adapter.mqtt.MqttContext;
 import org.eclipse.hono.adapter.mqtt.MqttProtocolAdapterProperties;
 import org.eclipse.hono.auth.Device;
@@ -71,7 +73,8 @@ public class VertxBasedMqttProtocolAdapterTest {
         // WHEN a device publishes a message to a topic with an unknown endpoint
         final MqttPublishMessage message = newMessage(MqttQoS.AT_MOST_ONCE, "unknown");
         adapter.mapTopic(newContext(message, null)).setHandler(ctx.asyncAssertFailure(t -> {
-            // THEN no downstream sender can be created for the message
+            // THEN the message cannot be mapped to a topic
+            ctx.assertEquals(HttpURLConnection.HTTP_NOT_FOUND, ((ClientErrorException) t).getErrorCode());
         }));
     }
 
@@ -88,8 +91,8 @@ public class VertxBasedMqttProtocolAdapterTest {
         // WHEN a device publishes a message with QoS 2 to a "telemetry" topic
         final MqttPublishMessage message = newMessage(MqttQoS.EXACTLY_ONCE, TelemetryConstants.TELEMETRY_ENDPOINT);
         adapter.mapTopic(newContext(message, null)).setHandler(ctx.asyncAssertFailure(t -> {
-            // THEN no downstream sender can be created for the message
-            ctx.assertTrue(t instanceof ClientErrorException);
+            // THEN the message cannot be mapped to a topic
+            ctx.assertEquals(HttpURLConnection.HTTP_BAD_REQUEST, ((ClientErrorException) t).getErrorCode());
         }));
     }
 
@@ -106,7 +109,8 @@ public class VertxBasedMqttProtocolAdapterTest {
         // WHEN a device publishes a message with QoS 0 to an "event" topic
         final MqttPublishMessage message = newMessage(MqttQoS.AT_MOST_ONCE, EventConstants.EVENT_ENDPOINT);
         adapter.mapTopic(newContext(message, null)).setHandler(ctx.asyncAssertFailure(t -> {
-            // THEN no downstream sender can be created for the message
+            // THEN the message cannot be mapped to a topic
+            ctx.assertEquals(HttpURLConnection.HTTP_BAD_REQUEST, ((ClientErrorException) t).getErrorCode());
         }));
     }
 
@@ -123,7 +127,8 @@ public class VertxBasedMqttProtocolAdapterTest {
         // WHEN a device publishes a message with QoS 2 to an "event" topic
         final MqttPublishMessage message = newMessage(MqttQoS.EXACTLY_ONCE, EventConstants.EVENT_ENDPOINT);
         adapter.mapTopic(newContext(message, null)).setHandler(ctx.asyncAssertFailure(t -> {
-            // THEN no downstream sender can be created for the message
+            // THEN the message cannot be mapped to a topic
+            ctx.assertEquals(HttpURLConnection.HTTP_BAD_REQUEST, ((ClientErrorException) t).getErrorCode());
         }));
     }
 
@@ -140,7 +145,8 @@ public class VertxBasedMqttProtocolAdapterTest {
         // WHEN an anonymous device publishes a message to a topic that does not contain a tenant ID
         final MqttContext context = newContext(MqttQoS.AT_MOST_ONCE, TelemetryConstants.TELEMETRY_ENDPOINT);
         adapter.onPublishedMessage(context).setHandler(ctx.asyncAssertFailure(t -> {
-            // THEN the message cannot be mapped to an address
+            // THEN the message cannot be published
+            ctx.assertEquals(HttpURLConnection.HTTP_BAD_REQUEST, ((ClientErrorException) t).getErrorCode());
         }));
     }
 
@@ -157,7 +163,8 @@ public class VertxBasedMqttProtocolAdapterTest {
         // WHEN an anonymous device publishes a message to a topic that does not contain a device ID
         final MqttContext context = newContext(MqttQoS.AT_MOST_ONCE, TelemetryConstants.TELEMETRY_ENDPOINT + "/my-tenant");
         adapter.onPublishedMessage(context).setHandler(ctx.asyncAssertFailure(t -> {
-            // THEN the message cannot be mapped to an address
+            // THEN the message cannot be published
+            ctx.assertEquals(HttpURLConnection.HTTP_BAD_REQUEST, ((ClientErrorException) t).getErrorCode());
         }));
     }
 
@@ -177,7 +184,30 @@ public class VertxBasedMqttProtocolAdapterTest {
                 TelemetryConstants.TELEMETRY_ENDPOINT + "/my-tenant",
                 new Device("my-tenant", "device"));
         adapter.onPublishedMessage(context).setHandler(ctx.asyncAssertFailure(t -> {
-            // THEN the message cannot be mapped to an address
+            // THEN the message cannot be published
+            ctx.assertEquals(HttpURLConnection.HTTP_BAD_REQUEST, ((ClientErrorException) t).getErrorCode());
+        }));
+    }
+
+    /**
+     * Verifies that the adapter rejects a message published by a gateway whose tenant
+     * does not match the tenant specified in the topic.
+     * 
+     * @param ctx The helper to use for running tests on vert.x.
+     */
+    @Test
+    public void testOnPublishedAuthenticatedMessageFailsForNonMatchingTenant(final TestContext ctx) {
+
+        givenAnAdapter();
+
+        // WHEN an authenticated gateway publishes a message to a topic that does not match the gateway's tenant
+        final MqttContext context = newContext(
+                MqttQoS.AT_MOST_ONCE,
+                TelemetryConstants.TELEMETRY_ENDPOINT + "/other-tenant/4711",
+                new Device("my-tenant", "gateway"));
+        adapter.onPublishedMessage(context).setHandler(ctx.asyncAssertFailure(t -> {
+            // THEN the message cannot be published
+            ctx.assertEquals(HttpURLConnection.HTTP_FORBIDDEN, ((ClientErrorException) t).getErrorCode());
         }));
     }
 

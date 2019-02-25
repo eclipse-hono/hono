@@ -90,7 +90,7 @@ public final class VertxBasedMqttProtocolAdapter extends AbstractVertxBasedMqttP
             default:
                 // MQTT client is trying to publish on a not supported endpoint
                 LOG.debug("no such endpoint [{}]", topic.getEndpoint());
-                result.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "no such endpoint"));
+                result.fail(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND, "no such endpoint"));
         }
         return result;
     }
@@ -106,10 +106,14 @@ public final class VertxBasedMqttProtocolAdapter extends AbstractVertxBasedMqttP
             } else {
                 result.complete(address);
             }
+
         } else {
+
             if (address.getTenantId() != null && address.getResourceId() == null) {
                 result.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
                         "topic of authenticated message must not contain tenant ID only"));
+            } else if (address.getTenantId() != null && !address.getTenantId().equals(ctx.authenticatedDevice().getTenantId())) {
+                result.fail(new ClientErrorException(HttpURLConnection.HTTP_FORBIDDEN, "can only publish for device of same tenant"));
             } else if (address.getTenantId() == null && address.getResourceId() == null) {
                 // use authenticated device's tenant to fill in missing information
                 final ResourceIdentifier downstreamAddress = ResourceIdentifier.from(address,
