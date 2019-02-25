@@ -155,27 +155,42 @@ The Kubernetes deployment provides access to Hono by means of *services* and the
 You can get a list of these services running:
 
 ~~~sh
-$ kubectl get services --namespace hono
+$ minikube service list -n hono
 
-NAME                                    TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)                                                       AGE
-eclipse-hono-grafana                    ClusterIP   10.104.193.167   <none>        80/TCP                                                        2m
-eclipse-hono-kube-state-metrics         ClusterIP   10.107.92.96     <none>        8080/TCP                                                      2m
-eclipse-hono-prometheus-node-exporter   ClusterIP   10.101.235.63    <none>        9100/TCP                                                      2m
-eclipse-hono-prometheus-op-operator     ClusterIP   10.103.73.214    <none>        8080/TCP                                                      2m
-grafana                                 NodePort    10.109.160.126   <none>        3000:31000/TCP                                                2m
-hono-adapter-amqp-vertx                 NodePort    10.107.180.234   <none>        5672:30040/TCP,5671:30041/TCP,8081:32498/TCP                  2m
-hono-adapter-http-vertx                 NodePort    10.111.106.170   <none>        8080:30080/TCP,8443:30443/TCP,8081:30969/TCP                  2m
-hono-adapter-kura                       NodePort    10.96.215.55     <none>        1883:31884/TCP,8883:30884/TCP,8081:30950/TCP                  2m
-hono-adapter-mqtt-vertx                 NodePort    10.109.67.134    <none>        1883:31883/TCP,8883:30883/TCP,8081:30852/TCP                  2m
-hono-artemis                            ClusterIP   10.103.0.92      <none>        5671/TCP                                                      2m
-hono-dispatch-router                    ClusterIP   10.99.252.201    <none>        5673/TCP                                                      2m
-hono-dispatch-router-ext                NodePort    10.102.205.168   <none>        5671:30671/TCP,5672:30672/TCP                                 2m
-hono-service-auth                       ClusterIP   10.103.101.237   <none>        5671/TCP,8081/TCP                                             2m
-hono-service-device-registry            NodePort    10.96.143.66     <none>        5671:31671/TCP,8080:31080/TCP,8443:31443/TCP,8081:30651/TCP   2m
-prometheus-operated                     ClusterIP   None             <none>        9090/TCP                                                      52s
+|-----------|---------------------------------------|--------------------------------|
+| NAMESPACE |                 NAME                  |              URL               |
+|-----------|---------------------------------------|--------------------------------|
+| hono      | eclipse-hono-grafana                  | No node port                   |
+| hono      | eclipse-hono-kube-state-metrics       | No node port                   |
+| hono      | eclipse-hono-prometheus-node-exporter | No node port                   |
+| hono      | eclipse-hono-prometheus-op-operator   | No node port                   |
+| hono      | grafana                               | http://192.168.39.225:31000    |
+| hono      | hono-adapter-amqp-vertx               | http://192.168.39.225:32672    |
+|           |                                       | http://192.168.39.225:32671    |
+|           |                                       | http://192.168.39.225:32358    |
+| hono      | hono-adapter-http-vertx               | http://192.168.39.225:30080    |
+|           |                                       | http://192.168.39.225:30443    |
+|           |                                       | http://192.168.39.225:31163    |
+| hono      | hono-adapter-kura                     | http://192.168.39.225:31884    |
+|           |                                       | http://192.168.39.225:30884    |
+|           |                                       | http://192.168.39.225:30600    |
+| hono      | hono-adapter-mqtt-vertx               | http://192.168.39.225:31883    |
+|           |                                       | http://192.168.39.225:30883    |
+|           |                                       | http://192.168.39.225:31210    |
+| hono      | hono-artemis                          | No node port                   |
+| hono      | hono-dispatch-router                  | No node port                   |
+| hono      | hono-dispatch-router-ext              | http://192.168.39.225:30671    |
+|           |                                       | http://192.168.39.225:30672    |
+| hono      | hono-service-auth                     | No node port                   |
+| hono      | hono-service-device-registry          | http://192.168.39.225:31671    |
+|           |                                       | http://192.168.39.225:31080    |
+|           |                                       | http://192.168.39.225:31443    |
+|           |                                       | http://192.168.39.225:32514    |
+| hono      | prometheus-operated                   | No node port                   |
+|-----------|---------------------------------------|--------------------------------|
 ~~~
 
-The services of type `NodePort` are accessible at the Minikube VM's IP address (which you can get with the `minikube ip` command) and the corresponding *node ports* (e.g. 30080, 30671, ...).
+The services are accessible at the Minikube VM's IP address (which you can get with the `minikube ip` command) and the corresponding *node ports* (e.g. 30080, 30671, ...) as used in the URLs above.
 In the following sections the `$(minikube ip)` is used  in order to put the IP address of the Minikube VM into the command to execute.
 
 ### Starting a Consumer

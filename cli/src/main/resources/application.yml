@@ -53,11 +53,9 @@ spring:
 hono:
   client:
     port: 5672
-    username: sensor1@DEFAULT_TENANT
-    password: hono-secret
 
 message:
-  address: telemetry/DEFAULT_TENANT/4711
+  address: telemetry
   payload: '{"temp": 5}'
 
 ---

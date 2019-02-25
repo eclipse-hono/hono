@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -21,6 +21,8 @@ import java.util.concurrent.CompletionException;
 
 import javax.annotation.PostConstruct;
 
+import org.apache.qpid.proton.amqp.messaging.Rejected;
+import org.apache.qpid.proton.amqp.transport.DeliveryState;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.util.Strings;
@@ -79,22 +81,27 @@ public class AmqpSend extends AbstractCliClient {
         final CompletableFuture<ProtonDelivery> messageSent = new CompletableFuture<>();
         final Message message = ProtonHelper.message(messageAddress, payload);
 
-        connectToAdapter()
-        .compose(con -> {
-            adapterConnection = con;
-            final Future<ProtonSender> senderTracker = Future.future();
-            final ProtonSender sender = adapterConnection.createSender(null);
-            sender.openHandler(senderTracker);
-            sender.open();
-            return senderTracker;
-        })
-        .map(sender -> {
-            sender.send(message, delivery -> messageSent.complete(delivery));
-            return sender;
-        })
-        .otherwise(t -> {
-            messageSent.completeExceptionally(t);
-            return null;
+        ctx.runOnContext(go -> {
+            connectToAdapter()
+            .compose(con -> {
+                adapterConnection = con;
+                final Future<ProtonSender> senderTracker = Future.future();
+                final ProtonSender sender = adapterConnection.createSender(null);
+                sender.openHandler(senderTracker);
+                sender.open();
+                return senderTracker;
+            })
+            .map(sender -> {
+                sender.send(message, delivery -> {
+                    adapterConnection.close();
+                    messageSent.complete(delivery);
+                });
+                return sender;
+            })
+            .otherwise(t -> {
+                messageSent.completeExceptionally(t);
+                return null;
+            });
         });
 
         final PrintWriter pw = new PrintWriter(System.out);
@@ -102,18 +109,32 @@ public class AmqpSend extends AbstractCliClient {
         try {
             final ProtonDelivery delivery = messageSent.join();
             // Logs the delivery state to the console
-            pw.println("\n" + delivery.getRemoteState() + "\n");
-            pw.flush();
+            pw.println();
+            printDelivery(delivery, pw);
         } catch (CompletionException e) {
             pw.println(e.getCause());
             pw.flush();
         } catch (CancellationException e) {
             // do-nothing
         }
-        if (adapterConnection != null) {
-            adapterConnection.close();
-        }
         System.exit(0);
+    }
+
+    private void printDelivery(final ProtonDelivery delivery, final PrintWriter pw) {
+
+        final DeliveryState state = delivery.getRemoteState();
+        pw.println(state.getType());
+        switch(state.getType()) {
+        case Rejected:
+            final Rejected rejected = (Rejected) state;
+            if (rejected.getError() != null) {
+                pw.println(rejected.getError().getCondition() + ": " + rejected.getError().getDescription());
+            }
+            break;
+        default:
+            break;
+        }
+        pw.flush();
     }
 
     // ----------------------------------< Vertx-proton >---
@@ -129,7 +150,7 @@ public class AmqpSend extends AbstractCliClient {
         Optional.ofNullable(properties.getAmqpHostname()).ifPresent(s -> options.setVirtualHost(s));
 
         if (!Strings.isNullOrEmpty(properties.getUsername()) && !Strings.isNullOrEmpty(properties.getPassword())) {
-            // SASL PLAIN authc.
+            // SASL PLAIN auth
             options.addEnabledSaslMechanism(ProtonSaslPlainImpl.MECH_NAME);
 
             LOG.info("connecting to AMQP adapter using SASL PLAIN [host: {}, port: {}, username: {}]",
@@ -143,8 +164,9 @@ public class AmqpSend extends AbstractCliClient {
                     properties.getPassword(),
                     connectAttempt);
         } else {
-            // SASL ANONYMOUS authc.
-            client.connect(properties.getHost(), properties.getPort(), connectAttempt);
+            // SASL ANONYMOUS auth
+            LOG.info("connecting to AMQP adapter [host: {}, port: {}]", properties.getHost(), properties.getPort());
+            client.connect(options, properties.getHost(), properties.getPort(), connectAttempt);
         }
 
         return connectAttempt

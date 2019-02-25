@@ -11,12 +11,12 @@ metadata:
 spec:
   ports:
   - name: amqp
-    nodePort: 30040
+    nodePort: 32672
     port: 5672
     protocol: TCP
     targetPort: 5672
   - name: amqps
-    nodePort: 30041
+    nodePort: 32671
     port: 5671
     protocol: TCP
     targetPort: 5671

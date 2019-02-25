@@ -205,7 +205,7 @@ echo
 echo Deploying AMQP adapter ...
 docker secret create -l project=$NS amqp-adapter.credentials $SCRIPTPATH/../deploy/amqp-adapter.credentials
 docker secret create -l project=$NS hono-adapter-amqp-vertx-config.yml $SCRIPTPATH/hono-adapter-amqp-vertx-config.yml
-docker service create $CREATE_OPTIONS --name hono-adapter-amqp-vertx -p 4040:5672 -p 4041:5671 \
+docker service create $CREATE_OPTIONS --name hono-adapter-amqp-vertx -p 5672:5672 -p 5671:5671 \
   --secret hono.eclipse.org-key.pem \
   --secret hono.eclipse.org-cert.pem \
   --secret amqp-adapter.credentials \

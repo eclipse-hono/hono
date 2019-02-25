@@ -242,7 +242,7 @@ docker secret create -l project=$NS amqp-adapter-key.pem $CERTS/amqp-adapter-key
 docker secret create -l project=$NS amqp-adapter-cert.pem $CERTS/amqp-adapter-cert.pem
 docker secret create -l project=$NS amqp-adapter.credentials $SCRIPTPATH/../amqp-adapter.credentials
 docker secret create -l project=$NS hono-adapter-amqp-vertx-config.yml $SCRIPTPATH/hono-adapter-amqp-vertx-config.yml
-docker service create $CREATE_OPTIONS --name hono-adapter-amqp-vertx -p 4040:5672 -p 4041:5671 \
+docker service create $CREATE_OPTIONS --name hono-adapter-amqp-vertx -p 5672:5672 -p 5671:5671 \
   --secret amqp-adapter-key.pem \
   --secret amqp-adapter-cert.pem \
   --secret trusted-certs.pem \

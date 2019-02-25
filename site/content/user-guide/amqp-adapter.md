@@ -12,7 +12,7 @@ By default, all Hono protocol adapters require clients (devices or gateway compo
 
 In this guide, we will give examples for publishing telemetry and events for *authenticated* (using SASL PLAIN) and *unauthenticated* clients. 
 
-NB: The AMQP adapter can be configured to *disallow* authentication for devices by setting the value of `HONO_AMQP_AUTHENTICATION_REQUIRED` to `false`.
+NB: The AMQP adapter can be configured to *allow* unauthenticated devices to connect by setting configuration variable `HONO_AMQP_AUTHENTICATION_REQUIRED` to `false`.
 
 ### SASL PLAIN Authentication
 
@@ -27,13 +27,14 @@ There is a subtle difference between the *device identifier* (*device-id*) and t
 {{% /note %}}
 
 ### SASL EXTERNAL Authentication
+
 When a device uses a client certificate for authentication, the TLS handshake is initiated during TCP connection establishment. If no trust anchor is configured for the AMQP adapter, the TLS handshake will succeed only if the certificate has not yet expired. Once the TLS handshake completes and a secure connection is established, the certificate's signature is checked during the SASL handshake. To complete the SASL handshake and authenticate the client, the adapter performs the following steps:
 
-* Adapter extracts the client certificate's Issuer DN and uses it to
-* perform a Tenant API lookup to retrieve the tenant that the client belongs to. In order for the lookup to succeed, the tenant’s trust anchor needs to be configured by means of registering the [trusted certificate authority]({{< relref "/api/Tenant-API.md#trusted-ca-format" >}}).
-* If the lookup succeeds, the Tenant API returns the tenant, thus implicitly establishing the tenant that the device belongs to.
+* Adapter extracts the client certificate's *Issuer DN* and uses it to
+* us the Tenant service to look up the tenant that the client belongs to. In order for the lookup to succeed, the tenant’s trust anchor needs to be configured by means of registering the [trusted certificate authority]({{< relref "/api/Tenant-API.md#trusted-ca-format" >}}).
+* If the lookup succeeds, the Tenant service returns the tenant, thus implicitly establishing the tenant that the device belongs to.
 * Adapter validates the device’s client certificate using the registered trust anchor for the tenant.
-* Finally, adapter authenticates the client certificate using Hono's credentials API. In this step, the adapter uses the client certificate’s subject DN (as authentication identifier) and x509-cert (as credentials type) in order to determine the device ID.
+* Finally, adapter authenticates the client certificate using Hono's credentials API. In this step, the adapter uses the client certificate’s *Subject DN* (as authentication identifier) and `x509-cert` (for the credentials type) in order to determine the device ID.
 
 NB: The AMQP adapter needs to be configured for TLS in order to support this mechanism.
 
@@ -60,28 +61,21 @@ For purposes of demonstrating the usage of the AMQP adapter, the **Hono CLI Modu
 The command-line client supports the following parameters (with default values):
 
 * `--spring.profiles.active=amqp-adapter-cli`: Tells Hono CLI to activate the AMQP command-line client.
-* `--message.address`: The AMQP 1.0 message address (default: `telemetry/DEFAULT_TENANT/4711`)
+* `--message.address`: The AMQP 1.0 message address (default: `telemetry`)
 * `--message.payload`: The message payload body (default: `'{"temp": 5}'`)
-* `--hono.client.host`: The hostname that the AMQP adapter is running on (default: `localhost`)
+* `--hono.client.host`: The host name that the AMQP adapter is running on (default: `localhost`)
 * `--hono.client.port`: The port that the adapter is listening for incoming connections (default: `5672`)
-* `--hono.client.username`: The username to use for authenticating to the adpter (default: `sensor1@DEFAULT_TENANT`)
-* `--hono.client.password`: The password to use for authenticating to the adapter (default: `hono-secret`)
 
 To run the client using the above default values, open a terminal and execute the following:
 
-    $ /hono/cli/target$ java -jar hono-cli-0.8-SNAPSHOT-exec.jar --spring.profiles.active=amqp-adapter-cli
-
-To run the client with a different value for the message address, username, password and payload body, do the following:
-
-    $ /hono/cli/target$ java -jar hono-cli-0.8-SNAPSHOT-exec.jar --spring.profiles.active=amqp-adapter-cli --hono.client.username=sensor20@DEFAULT_TENANT --hono.client.password=my-secret --message.address=event/DEFAULT_TENANT/4710 --message.payload='{"alarm": 1}'
+    $ /hono/cli/target$ java -jar hono-cli-*-exec.jar --spring.profiles.active=amqp-adapter-cli --hono.client.username=sensor1@DEFAULT_TENANT --hono.client.password=hono-secret
     
     Accepted{}
 
-After running the client, the delivery state is printed to standard output. The output shown above shows that the request to upload a telemetry message succeeded and `accepted` disposition frame is printed to standard output. 
+The client prints the outcome of the operation to standard out. The outcome above (`Accepted`) indicates that the request to upload the data has succeeded.
 
-{{% note %}}
+**NB**
 There are two JAR files in the hono/cli/target directory. The JAR to use for the client is the `hono-cli-$VERSION-exec.jar` and not the `hono-cli-$VERSION.jar` file. Running the latter will not work and will output the message: `no main manifest attribute, in hono-cli-$VERSION.jar`
-{{% /note %}}
 
 ## Publishing Telemetry Data
 
@@ -96,14 +90,12 @@ All other combinations are not supported by the adapter and will result in the m
 
 ## Publish Telemetry Data (authenticated Device)
 
-The AMQP adapter supports publishing of telemetry data to Hono's Telemetry API. Telemetry messages can be published using either `AT_LEAST_ONCE` or `AT_MOST_ONCE` QoS.
+The AMQP adapter supports publishing of telemetry data to Hono's Telemetry API. Telemetry messages can be published using either *AT LEAS ONCE* or *AT MOST ONCE delivery semantics.
 
 * Message Address: `telemetry` or `t`
   * This refers to the `to` property of the message.
-* Settlement Mode: `presettled` (AT_MOST_ONCE) or `unsettled` (AT_LEAST_ONCE)
-* Authentication: required
-* Message Header(s):
-  * (optional) Arbitrary headers (durable, ttl, priority, ...)
+* Settlement Mode: `presettled` (*AT MOST ONCE*) or `unsettled` (*AT LEAST ONCE*)
+* Authentication: SASL PLAIN or SASL EXTERNAL
 * Message Body:
   * (optional) Arbitrary payload
 * Message properties:
@@ -122,17 +114,15 @@ When a device publishes data to the `telemetry` address, the AMQP adapter automa
 
 Publish some JSON data for device `4711`:
 
-    $ /hono/cli/target$ java -jar hono-cli-0.7-SNAPSHOT-exec.jar --spring.profiles.active=amqp-adapter-cli --message.address=telemetry
+    $ /hono/cli/target$ java -jar hono-cli-*-exec.jar --spring.profiles.active=amqp-adapter-cli --hono.client.username=sensor1@DEFAULT_TENANT --hono.client.password=hono-secret
 
 Notice that we only supplied a new value for the message address, leaving the other default values.
 
 ## Publish Telemetry Data (unauthenticated Device)
 
 * Message Address: `telemetry/${tenant-id}/${device-id}` or `t/${tenant-id}/${device-id}`
-* Settlement Mode: `presettled` (AT_MOST_ONCE) or `unsettled` (AT_LEAST_ONCE)
+* Settlement Mode: `presettled` (AT MOST ONCE) or `unsettled` (AT LEAST ONCE)
 * Authentication: none
-* Message Header(s):
-  * (optional) Arbitrary headers (durable, ttl, priority, ...)
 * Message Body:
   * (optional) Arbitrary payload
 * Message properties:
@@ -151,9 +141,7 @@ Note how verbose the address is for unauthenticated devices. This address can be
 
 Publish some JSON data for device `4711`:
 
-    $ /hono/cli/target$ java -jar hono-cli-0.7-SNAPSHOT-exec.jar --spring.profiles.active=amqp-adapter-cli --username="" --password=""
-
-We supply an empty username and password to connect anonymously to the adapter.
+    $ /hono/cli/target$ java -jar hono-cli-*-exec.jar --spring.profiles.active=amqp-adapter-cli --message.address=t/DEFAULT_TENANT/4711
 
 ## Publish Telemetry Data (authenticated Gateway)
 
@@ -161,23 +149,21 @@ A device that publishes data on behalf of another device is called a gateway dev
 
 **Examples**
 
-A Gateway connecting to the adapter using `gw@DEFAULT_TENANT` as username and `gw-secret` as password and then publishing some JSON data for device `4711`, as shown below:
+A Gateway connecting to the adapter using `gw@DEFAULT_TENANT` as username and `gw-secret` as password and then publishing some JSON data for device `4711`:
 
-    $ /hono/cli/target$ java -jar hono-cli-0.7-SNAPSHOT-exec.jar --spring.profiles.active=amqp-adapter-cli --username="gw@DEFAULT_TENANT" --password="gw-secret"
+    $ /hono/cli/target$ java -jar hono-cli-*-exec.jar --spring.profiles.active=amqp-adapter-cli --hono.client.username=gw@DEFAULT_TENANT --hono.client.password=gw-secret --message.address=t/DEFAULT_TENANT/4711
 
-In this example, we are using the default message address: `telemetry/DEFAULT_TENANT/4711`, which contains the real device that the gateway is publishing the message for.
+In this example, we are using message address `t/DEFAULT_TENANT/4711` which contains the device that the gateway is publishing the message for.
 
 ## Publishing Events
 
-The adapter supports *AT LEAST ONCE* delivery of *Event* messages only. A client therefore MUST set the *settled* property to `true` and the *rcv-settle-mode* property to `first` in all *transfer* frame(s) it uses for uploading events. All other combinations are not supported by the adapter and result in the message being rejected.
+The adapter supports *AT LEAST ONCE* delivery of *Event* messages only. A client therefore MUST set the *settled* property to `false` and the *rcv-settle-mode* property to `first` in all *transfer* frame(s) it uses for uploading events. All other combinations are not supported by the adapter and result in the message being rejected.
 
 ## Publish an Event (authenticated Device)
 
 * Message Address: `event` or `e`
-* Settlement Mode: `unsettled` (AT_LEAST_ONCE)
-* Authentication: required
-* Message Header(s):
-  * (optional) Arbitrary headers (durable, ttl, priority, ...)
+* Settlement Mode: `unsettled` (AT LEAST ONCE)
+* Authentication: SASL PLAIN or SASL EXTERNAL
 * Message Body:
   * (optional) Arbitrary payload
 * Message properties:
@@ -196,15 +182,12 @@ This is the preferred way for devices to publish events. It is available only if
 
 Upload a JSON string for device `4711`:
 
-    $ /hono/cli/target$ java -jar hono-cli-0.7-SNAPSHOT-exec.jar --spring.profiles.active=amqp-adapter-cli --message.address=event --payload='{"alarm": 1}'
+    $ /hono/cli/target$ java -jar hono-cli-*-exec.jar --spring.profiles.active=amqp-adapter-cli --hono.client.username=sensor1@DEFAULT_TENANT --hono.client.password=hono-secret --message.address=event --message.payload='{"alarm": 1}'
 
 ## Publish an Event (unauthenticated Device)
 
 * Message Address: `event/${tenant-id}/${device-id}` or `e/${tenant-id}/${device-id}`
-* Settlement Mode: `unsettled` (AT_LEAST_ONCE)
-* Authentication: none
-* Message Header(s):
-  * (optional) Arbitrary headers (durable, ttl, priority, ...)
+* Settlement Mode: `unsettled` (AT LEAST ONCE)
 * Message Body:
   * (optional) Arbitrary payload
 * Message properties:
@@ -224,17 +207,17 @@ This address format is used by devices that have not authenticated to the protoc
 
 Publish some JSON data for device `4711`:
 
-    $ /hono/cli/target$ java -jar hono-cli-0.7-SNAPSHOT-exec.jar --spring.profiles.active=amqp-adapter-cli --username="" --password="" --message.address=event/DEFAULT_TENANT/4711 --payload='{"alarm": 1}'
+    $ /hono/cli/target$ java -jar hono-cli-*-exec.jar --spring.profiles.active=amqp-adapter-cli --message.address=e/DEFAULT_TENANT/4711 --message.payload='{"alarm": 1}'
 
 ## Publish an Event (authenticated Gateway)
 
 **Examples**
 
-A Gateway connecting to the adapter using `gw@DEFAULT_TENANT` as username and `gw-secret` as password and then publishing some JSON data for device `4711`, as shown below:
+A Gateway connecting to the adapter using `gw@DEFAULT_TENANT` as username and `gw-secret` as password and then publishing some JSON data for device `4711`:
 
-    $ /hono/cli/target$ java -jar hono-cli-0.7-SNAPSHOT-exec.jar --spring.profiles.active=amqp-adapter-cli --username="gw@DEFAULT_TENANT" --password="gw-secret" --message.address="event/DEFAULT_TENANT/4711"
+    $ /hono/cli/target$ java -jar hono-cli-*-exec.jar --spring.profiles.active=amqp-adapter-cli --hono.client.username=gw@DEFAULT_TENANT --hono.client.password=gw-secret --message.address=e/DEFAULT_TENANT/4711
 
-In this example, we are using the default message address: `telemetry/DEFAULT_TENANT/4711`, which contains the real device that the gateway is publishing the message for.
+In this example, we are using message address `e/DEFAULT_TENANT/4711` which contains the device that the gateway is publishing the message for.
 
 ## Command & Control
 
