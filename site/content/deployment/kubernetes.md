@@ -92,6 +92,10 @@ To undeploy a Hono instance that has been deployed manually from the resource fi
 
 As an alternative to the recommended Helm based deployment, Hono can also be deployed to a Kubernetes cluster using a shell script which takes care of deploying Hono's components using multiple `kubectl` commands. This approach requires the [Operator Lifecycle Manager](https://github.com/operator-framework/operator-lifecycle-manager) (OLM) to be available on the Kubernetes cluster.
 
+{{% warning title="Deprecation" %}}
+The script based deployment is deprecated as of Hono 0.9 and will no longer be supported in future versions.
+{{% /warning %}}
+
 ### Deploying the Operator Lifecycle Manager
 
 OLM is used for creating a Prometheus instance which is used as the metrics back end by Hono.

@@ -9,7 +9,7 @@ title = "Release Notes"
 * The MQTT adapter now supports commands to be published using QoS 1. Please refer to
   [MQTT adapter User Guide]({{< relref "/user-guide/mqtt-adapter.md" >}}) for details.
 * The MQTT adapter now supports limiting the number of concurrent connections in order
-  to prevent Out of Memory errors. Please refer to
+  to prevent running out of resources. Please refer to
   [MQTT Adapter Configuration]({{< relref "/admin-guide/mqtt-adapter-config.md" >}}) for details.
 * The new *Helm deployment* for Kubernetes has been added. Please refer to
   [Kubernetes deployment guide]({{< relref "/deployment/kubernetes.md" >}}) for details.
@@ -19,7 +19,7 @@ title = "Release Notes"
 * `org.eclipse.hono.util.RequestResponseResult` now provides access to AMQP application-properties conveyed in the
   response message.
 * The `org.eclipse.hono.service.registration.BaseRegistrationService` class now supports authorization of gateways
-  to act on behalf of a device against a list of gateway identifiers instead of a single identifier only. For that purpose
+  (acting on behalf of a device) against a list of gateway identifiers instead of a single identifier only. For that purpose
   the `via` property of the device's registration information may contain either a single string or a JSON array containing
   multiple strings. Based on this, a device can now be configured to connect via arbitrary gateways instead of just a single
   one.
@@ -46,10 +46,12 @@ title = "Release Notes"
   accept the tenant and device IDs as parameters.
 * The *connectTimeout* configuration variable for the `HonoClient` now defines the time to wait not only for the TCP/TLS
   connection establishment but also for the SASL handshake and the exchange of the AMQP *open* frame.
+* The (already deprecated) Hono Messaging component has been removed from Hono.
 
 ### Depreciations
 
-* The already deprecated Hono Messaging component has been removed altogether from Hono.
+* The script based deployment to Kubernetes has been deprecated and will be removed in the next version.
+  The Helm based deployment should be used instead.
 * The *sendCommandResponse(String, String, Buffer, Map, int, SpanContext)* of the
   `org.eclipse.hono.client.CommandResponseSender` interface has been deprecated and
   will be removed in the next version. Custom protocol adapters should use
