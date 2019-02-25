@@ -1,11 +1,16 @@
 +++
-title = "Presentations"
+title = "Resources"
 weight = 620
 +++
 
-On this page you can find links to arbitrary material covering Eclipse Hono which has been presented at events, conferences
+On this page you can find links to arbitrary resources covering Eclipse Hono&trade; which have been presented at events, conferences
 and meet-ups or are available online.
 <!--more-->
+
+## "X.509 based device authentication in Eclipse Hono" (Blog post February 2019)
+
+* Author: Kai Hudalla (Bosch Software Innovations)
+* [Article](https://blog.bosch-si.com/developer/x-509-based-device-authentication-in-eclipse-hono/)
 
 ## "Eclipse Hono: Command and Control" (Talk at eclipsecon Europe October 2018)
 
