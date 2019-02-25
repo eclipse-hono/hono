@@ -10,6 +10,8 @@ The adapter is implemented as a Spring Boot application. It can be run either di
 
 ## Service Configuration
 
+In addition to the following options, this component supports the options described in [Common Configuration]({{< relref "common-config.md" >}}).
+
 The following table provides an overview of the configuration variables and corresponding command line options for configuring the AMQP adapter.
 
 | Environment Variable<br>Command Line Option | Mandatory | Default Value | Description  |
@@ -36,7 +38,6 @@ The following table provides an overview of the configuration variables and corr
 | `HONO_VERTX_DNS_QUERY_TIMEOUT`<br>`--hono.vertx.dnsQueryTimeout` | no | `5000` | The amount of time after which a DNS query is considered to be failed. Setting this variable to a smaller value may help to reduce the time required to establish connections to the services this adapter depends on. However, setting it to a value that is too small for any DNS query to succeed will effectively prevent any connections to be established at all. |
 
 The variables only need to be set if the default values do not match your environment.
-
 
 ## Port Configuration
 
