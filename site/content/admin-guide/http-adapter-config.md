@@ -10,6 +10,8 @@ The adapter is implemented as a Spring Boot application. It can be run either di
 
 ## Service Configuration
 
+In addition to the following options, this component supports the options described in [Common Configuration]({{< relref "common-config.md" >}}).
+
 The following table provides an overview of the configuration variables and corresponding command line options for configuring the HTTP adapter.
 
 | Environment Variable<br>Command Line Option | Mandatory | Default | Description |

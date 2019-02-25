@@ -12,6 +12,8 @@ The Auth Server is implemented as a Spring Boot application. It can be run eithe
 
 ## Service Configuration
 
+In addition to the following options, this component supports the options described in [Common Configuration]({{< relref "common-config.md" >}}).
+
 The server can be configured by means of environment variables or corresponding command line options.
 The following table provides an overview of the configuration variables and corresponding command line options that the server supports:
 
