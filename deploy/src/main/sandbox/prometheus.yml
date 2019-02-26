@@ -4,14 +4,59 @@ global:
 
 scrape_configs:
 
-- job_name: hono
+# The "tasks." prefix allows to resolve the IP addresses of the service instance
+# containers instead of just the Virtual IP of the (logical) service
+
+- job_name: hono-service-auth
   metrics_path: /prometheus
-  static_configs:
-    - targets:
-      - hono-service-auth:8081
-      - hono-service-device-registry:8081
-      - hono-adapter-amqp-vertx:8081
-      - hono-adapter-coap-vertx:8081
-      - hono-adapter-http-vertx:8081
-      - hono-adapter-mqtt-vertx:8081
-      - hono-adapter-kura:8081
+  dns_sd_configs:
+  - names:
+      - tasks.hono-service-auth.hono
+    type: A
+    port: ${prometheus.scraping.port}
+    refresh_interval: 10s
+
+- job_name: hono-service-device-registry
+  metrics_path: /prometheus
+  dns_sd_configs:
+  - names:
+      - tasks.hono-service-device-registry.hono
+    type: A
+    port: ${prometheus.scraping.port}
+    refresh_interval: 10s
+
+- job_name: hono-adapter-amqp-vertx
+  metrics_path: /prometheus
+  dns_sd_configs:
+  - names:
+      - tasks.hono-adapter-amqp-vertx.hono
+    type: A
+    port: ${prometheus.scraping.port}
+    refresh_interval: 10s
+
+- job_name: hono-adapter-http-vertx
+  metrics_path: /prometheus
+  dns_sd_configs:
+  - names:
+      - tasks.hono-adapter-http-vertx.hono
+    type: A
+    port: ${prometheus.scraping.port}
+    refresh_interval: 10s
+
+- job_name: hono-adapter-mqtt-vertx
+  metrics_path: /prometheus
+  dns_sd_configs:
+  - names:
+      - tasks.hono-adapter-mqtt-vertx.hono
+    type: A
+    port: ${prometheus.scraping.port}
+    refresh_interval: 10s
+
+- job_name: hono-adapter-kura-vertx
+  metrics_path: /prometheus
+  dns_sd_configs:
+  - names:
+      - tasks.hono-adapter-kura-vertx.hono
+    type: A
+    port: ${prometheus.scraping.port}
+    refresh_interval: 10s
