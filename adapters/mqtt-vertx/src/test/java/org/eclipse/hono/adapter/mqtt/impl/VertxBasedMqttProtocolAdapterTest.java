@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,8 +13,6 @@
 
 package org.eclipse.hono.adapter.mqtt.impl;
 
-import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -27,7 +25,6 @@ import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.util.EventConstants;
-import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.TelemetryConstants;
 import org.junit.Rule;
 import org.junit.Test;
@@ -35,9 +32,7 @@ import org.junit.rules.Timeout;
 import org.junit.runner.RunWith;
 
 import io.netty.handler.codec.mqtt.MqttQoS;
-import io.vertx.core.Future;
 import io.vertx.core.buffer.Buffer;
-import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.mqtt.MqttEndpoint;
@@ -209,34 +204,6 @@ public class VertxBasedMqttProtocolAdapterTest {
             // THEN the message cannot be published
             ctx.assertEquals(HttpURLConnection.HTTP_FORBIDDEN, ((ClientErrorException) t).getErrorCode());
         }));
-    }
-
-    /**
-     * Verifies that the adapter uses an authenticated device's identity when mapping a topic without tenant ID.
-     * 
-     * @param ctx The helper to use for running tests on vert.x.
-     */
-    @Test
-    public void testOnPublishedMessageUsesDeviceIdentityForTopicWithoutTenant(final TestContext ctx) {
-
-        givenAnAdapter();
-
-        // WHEN an authenticated device publishes a message to a topic that does not contain a tenant ID
-        final MqttPublishMessage message = newMessage(MqttQoS.AT_MOST_ONCE, TelemetryConstants.TELEMETRY_ENDPOINT);
-        final MqttContext context = newContext(message, new Device("my-tenant", "4711"));
-        final Async addressCheck = ctx.async();
-        final Future<ResourceIdentifier> checkedAddress = adapter.mapTopic(context)
-            .compose(address -> adapter.checkAddress(context, address))
-            .map(address -> {
-                addressCheck.complete();
-                return address;
-            });
-
-        // THEN the mapped address contains the authenticated device's tenant and device ID
-        addressCheck.await();
-        final ResourceIdentifier downstreamAddress = checkedAddress.result();
-        assertThat(downstreamAddress.getEndpoint(), is(TelemetryConstants.TELEMETRY_ENDPOINT));
-        assertThat(downstreamAddress.getTenantId(), is("my-tenant"));
     }
 
     /**

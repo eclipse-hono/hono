@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -446,6 +446,48 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
             return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_FORBIDDEN,
                     "adapter disabled for tenant"));
         }
+    }
+
+    /**
+     * Validates a message's target address for consistency with Hono's addressing rules.
+     * 
+     * @param address The address to validate.
+     * @param authenticatedDevice The device that has uploaded the message.
+     * @return A future indicating the outcome of the check.
+     *         <p>
+     *         The future will be completed with the validated target address if all
+     *         checks succeed. Otherwise the future will be failed with a
+     *         {@link ClientErrorException}.
+     * @throws NullPointerException if address is {@code null}.
+     */
+    protected final Future<ResourceIdentifier> validateAddress(final ResourceIdentifier address, final Device authenticatedDevice) {
+
+        Objects.requireNonNull(address);
+        final Future<ResourceIdentifier> result = Future.future();
+
+        if (authenticatedDevice == null) {
+            if (Strings.isNullOrEmpty(address.getTenantId()) || Strings.isNullOrEmpty(address.getResourceId())) {
+                result.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
+                        "unauthenticated client must provide tenant and device ID in message address"));
+            } else {
+                result.complete(address);
+            }
+        } else {
+            if (!Strings.isNullOrEmpty(address.getTenantId()) && Strings.isNullOrEmpty(address.getResourceId())) {
+                result.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
+                        "message address must not contain tenant ID only"));
+            } else if (!Strings.isNullOrEmpty(address.getTenantId()) && !address.getTenantId().equals(authenticatedDevice.getTenantId())) {
+                result.fail(new ClientErrorException(HttpURLConnection.HTTP_FORBIDDEN, "can only publish for device of same tenant"));
+            } else if (Strings.isNullOrEmpty(address.getTenantId()) && Strings.isNullOrEmpty(address.getResourceId())) {
+                // use authenticated device's tenant and device ID
+                final ResourceIdentifier resource = ResourceIdentifier.from(address,
+                        authenticatedDevice.getTenantId(), authenticatedDevice.getDeviceId());
+                result.complete(resource);
+            } else {
+                result.complete(address);
+            }
+        }
+        return result;
     }
 
     /**

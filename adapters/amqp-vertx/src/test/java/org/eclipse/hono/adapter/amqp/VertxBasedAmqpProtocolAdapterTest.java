@@ -236,7 +236,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
         final Buffer payload = Buffer.buffer("payload");
         final String to = ResourceIdentifier.from(TelemetryConstants.TELEMETRY_ENDPOINT, TEST_TENANT_ID, TEST_DEVICE).toString();
 
-        adapter.onMessageReceived(delivery, getFakeMessage(to, payload), null).setHandler(ctx.asyncAssertSuccess(d -> {
+        adapter.onMessageReceived(AmqpContext.fromMessage(delivery, getFakeMessage(to, payload), null)).setHandler(ctx.asyncAssertSuccess(d -> {
             // THEN the adapter has forwarded the message downstream
             verify(telemetrySender).send(any(Message.class), (SpanContext) any());
             // and acknowledged the message to the device
@@ -273,12 +273,15 @@ public class VertxBasedAmqpProtocolAdapterTest {
         final ProtonDelivery delivery = mock(ProtonDelivery.class);
         when(delivery.remotelySettled()).thenReturn(false);
         final Buffer payload = Buffer.buffer("payload");
-        final String to = ResourceIdentifier.from(TelemetryConstants.TELEMETRY_ENDPOINT, TEST_TENANT_ID, TEST_DEVICE).toString();
+        final String to = ResourceIdentifier.from(TelemetryConstants.TELEMETRY_ENDPOINT_SHORT, TEST_TENANT_ID, TEST_DEVICE).toString();
+        final Message mockMessage = getFakeMessage(to, payload);
 
-        adapter.onMessageReceived(delivery, getFakeMessage(to, payload), null);
+        adapter.onMessageReceived(AmqpContext.fromMessage(delivery, mockMessage, null));
 
         // THEN the sender sends the message
         verify(telemetrySender).sendAndWaitForOutcome(any(Message.class), (SpanContext) any());
+        // using the canonical endpoint name
+        verify(mockMessage).setAddress(TelemetryConstants.TELEMETRY_ENDPOINT + "/" + TEST_TENANT_ID);
         //  and waits for the outcome from the downstream peer
         verify(delivery, never()).disposition(any(DeliveryState.class), anyBoolean());
         // until the transfer is settled
@@ -316,7 +319,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
         final String to = ResourceIdentifier.from(TelemetryConstants.TELEMETRY_ENDPOINT, TEST_TENANT_ID, TEST_DEVICE).toString();
         final Buffer payload = Buffer.buffer("some payload");
 
-        adapter.onMessageReceived(delivery, getFakeMessage(to, payload), null).setHandler(ctx.asyncAssertFailure(t -> {
+        adapter.onMessageReceived(AmqpContext.fromMessage(delivery, getFakeMessage(to, payload), null)).setHandler(ctx.asyncAssertFailure(t -> {
             // THEN the adapter does not send the message (regardless of the delivery mode).
             verify(telemetrySender, never()).send(any(Message.class), (SpanContext) any());
             verify(telemetrySender, never()).sendAndWaitForOutcome(any(Message.class), (SpanContext) any());
@@ -332,6 +335,39 @@ public class VertxBasedAmqpProtocolAdapterTest {
                     eq(QoS.AT_LEAST_ONCE),
                     eq(payload.length()),
                     any());
+        }));
+    }
+
+    /**
+     * Verifies that a request from a gateway to upload an event on behalf of a device that belongs
+     * to another tenant than the gateway fails.
+     * 
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testUploadEventFailsForGatewayOfDifferentTenant(final TestContext ctx) {
+
+        // GIVEN an adapter
+        final VertxBasedAmqpProtocolAdapter adapter = givenAnAmqpAdapter();
+        final MessageSender eventSender = givenAnEventSender(Future.future());
+
+        // with an enabled tenant
+        givenAConfiguredTenant(TEST_TENANT_ID, true);
+
+        // WHEN a gateway uploads an event on behalf of a device of another tenant
+        final Device gateway = new Device(TEST_TENANT_ID, "gw");
+        final ProtonDelivery delivery = mock(ProtonDelivery.class);
+        when(delivery.remotelySettled()).thenReturn(false); // AT LEAST ONCE
+        final String to = ResourceIdentifier.from(EventConstants.EVENT_ENDPOINT, "other-tenant", TEST_DEVICE).toString();
+        final Buffer payload = Buffer.buffer("some payload");
+
+        adapter.onMessageReceived(AmqpContext.fromMessage(delivery, getFakeMessage(to, payload), gateway)).setHandler(ctx.asyncAssertFailure(t -> {
+            // THEN the adapter does not send the event
+            verify(eventSender, never()).send(any(Message.class), (SpanContext) any());
+            verify(eventSender, never()).sendAndWaitForOutcome(any(Message.class), (SpanContext) any());
+
+            // AND notifies the device by sending back a REJECTED disposition
+            verify(delivery).disposition(any(Rejected.class), eq(true));
         }));
     }
 
@@ -528,7 +564,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
         when(message.getCorrelationId()).thenReturn("correlation-id");
         when(message.getApplicationProperties()).thenReturn(props);
 
-        adapter.onMessageReceived(delivery, message, null).setHandler(ctx.asyncAssertSuccess(ok -> {
+        adapter.onMessageReceived(AmqpContext.fromMessage(delivery, message, null)).setHandler(ctx.asyncAssertSuccess(ok -> {
             // THEN the adapter forwards the command response message downstream
             verify(responseSender).sendCommandResponse((CommandResponse) any(), (SpanContext) any());
             // and reports the forwarded message

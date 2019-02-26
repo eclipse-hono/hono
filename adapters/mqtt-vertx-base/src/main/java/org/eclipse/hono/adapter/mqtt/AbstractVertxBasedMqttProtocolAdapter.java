@@ -951,7 +951,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                     ProcessingOutcome.UNPROCESSABLE,
                     ctx.message().payload().length(),
                     ctx.getTimer());
-            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "malformed topic name"));
+            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "command response topic has too few segments"));
         } else {
             try {
                 final Integer status = Integer.parseInt(addressPath[CommandConstants.TOPIC_POSITION_RESPONSE_STATUS]);
@@ -966,7 +966,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                             ProcessingOutcome.UNPROCESSABLE,
                             ctx.message().payload().length(),
                             ctx.getTimer());
-                    return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "malformed topic name"));
+                    return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "command response topic contains invalid data"));
                } else {
 
                    final Span currentSpan = tracer.buildSpan("upload Command response")
@@ -1010,7 +1010,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                            });
 
                }
-            } catch(final NumberFormatException e) {
+            } catch (final NumberFormatException e) {
                 metrics.reportCommand(
                         Direction.RESPONSE,
                         targetAddress.getTenantId(),

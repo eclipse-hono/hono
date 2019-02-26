@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,9 +14,17 @@
 package org.eclipse.hono.service;
 
 import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.net.HttpURLConnection;
 
@@ -31,6 +39,8 @@ import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
+import org.eclipse.hono.util.ResourceIdentifier;
+import org.eclipse.hono.util.TelemetryConstants;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -542,4 +552,25 @@ public class AbstractProtocolAdapterBaseTest {
         // arbitrary content-type needs non empty payload
         ctx.assertFalse(adapter.isPayloadOfIndicatedType(payload, arbitraryContentType));
     }
+
+    /**
+     * Verifies that the adapter uses an authenticated device's identity when validating an
+     * address without a tenant ID.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testValidateAddressUsesDeviceIdentityForAddressWithoutTenant(final TestContext ctx) {
+
+        // WHEN an authenticated device publishes a message to an address that does not contain a tenant ID
+        final Device authenticatedDevice = new Device("my-tenant", "4711");
+        final ResourceIdentifier address = ResourceIdentifier.fromString(TelemetryConstants.TELEMETRY_ENDPOINT);
+        adapter.validateAddress(address, authenticatedDevice).setHandler(ctx.asyncAssertSuccess(r -> {
+            // THEN the validated address contains the authenticated device's tenant and device ID
+            ctx.assertEquals("my-tenant", r.getTenantId());
+            ctx.assertEquals("4711", r.getResourceId());
+        }));
+    }
+
+
 }

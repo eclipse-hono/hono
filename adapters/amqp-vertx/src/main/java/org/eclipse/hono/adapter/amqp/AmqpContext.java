@@ -20,6 +20,7 @@ import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.service.metric.MetricsTags.EndpointType;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MapBasedExecutionContext;
 import org.eclipse.hono.util.MessageHelper;
@@ -36,30 +37,44 @@ import io.vertx.proton.ProtonHelper;
  */
 public class AmqpContext extends MapBasedExecutionContext {
 
-    private final ProtonDelivery delivery;
-    private final Message message;
-    private final ResourceIdentifier resource;
-    private final Device authenticatedDevice;
-    private final Buffer payload;
+    private ProtonDelivery delivery;
+    private Message message;
+    private ResourceIdentifier address;
+    private Device authenticatedDevice;
+    private Buffer payload;
+    private EndpointType endpoint;
     private Sample timer;
 
     /**
      * Creates an AmqpContext instance using the specified delivery, message and authenticated device.
      * <p>
      * This constructor <b>does not</b> validate the message address. It is the responsibility of the caller to make
-     * sure that the message address is valid i.e matches the pattern {@code endpointName/tenantId/deviceId}.
+     * sure that the message address is valid.
      * 
      * @param delivery The delivery of the message.
      * @param message The AMQP 1.0 message. The message must contain a valid address.
      * @param authenticatedDevice The device that authenticates to the adapter or {@code null} if the device is unauthenticated.
-     * @throws NullPointerException if the delivery or message is null.
+     * @return The context.
+     * @throws NullPointerException if the delivery, the message or the message's address are {@code null}.
+     * @throws IllegalArgumentException if the message's address is not a valid resource identifier.
      */
-    AmqpContext(final ProtonDelivery delivery, final Message message, final Device authenticatedDevice) {
-        this.delivery = Objects.requireNonNull(delivery);
-        this.message = Objects.requireNonNull(message);
-        this.authenticatedDevice = authenticatedDevice;
-        this.resource = ResourceIdentifier.fromString(message.getAddress());
-        this.payload = MessageHelper.getPayload(message);
+    static AmqpContext fromMessage(final ProtonDelivery delivery, final Message message, final Device authenticatedDevice) {
+        Objects.requireNonNull(delivery);
+        Objects.requireNonNull(message);
+        final AmqpContext ctx = new AmqpContext();
+        ctx.delivery = delivery;
+        ctx.message = message;
+        ctx.authenticatedDevice = authenticatedDevice;
+        ctx.payload = MessageHelper.getPayload(message);
+        if (message.getAddress() != null) {
+            try {
+                ctx.address = ResourceIdentifier.fromString(message.getAddress());
+                ctx.endpoint = EndpointType.fromString(ctx.address.getEndpoint());
+            } catch (final IllegalArgumentException e) {
+                // malformed address
+            }
+        }
+        return ctx;
     }
 
     /**
@@ -108,39 +123,21 @@ public class AmqpContext extends MapBasedExecutionContext {
     }
 
     /**
-     * Gets the tenant identifier for this context.
-     *
-     * @return The tenant identifier.
-     */
-    String getTenantId() {
-        return isDeviceAuthenticated() ? authenticatedDevice.getTenantId() : resource.getTenantId();
-    }
-
-    /**
-     * Gets the device identifier for this context.
-     *
-     * @return The device identifier.
-     */
-    String getDeviceId() {
-        return isDeviceAuthenticated() ? authenticatedDevice.getDeviceId() : resource.getResourceId();
-    }
-
-    /**
-     * Gets the endpoint name of the context's resource.
+     * Gets the endpoint that this context's message is targeted at.
      *
      * @return The endpoint name.
      */
-    String getEndpoint() {
-        return resource.getEndpoint();
+    EndpointType getEndpoint() {
+        return endpoint;
     }
 
     /**
-     * Gets the resource of this context.
+     * Gets the address of this context's message.
      *
      * @return The resource.
      */
-    ResourceIdentifier getResourceIdentifier() {
-        return resource;
+    ResourceIdentifier getAddress() {
+        return address;
     }
 
     /**

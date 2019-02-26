@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -48,7 +48,7 @@ public final class VertxBasedMqttProtocolAdapter extends AbstractVertxBasedMqttP
     protected Future<Void> onPublishedMessage(final MqttContext ctx) {
 
         return mapTopic(ctx)
-        .compose(address -> checkAddress(ctx, address))
+        .compose(address -> validateAddress(address, ctx.authenticatedDevice()))
         .compose(targetAddress -> uploadMessage(ctx, targetAddress, ctx.message()))
         .recover(t -> {
             LOG.debug("discarding message [topic: {}] from device: {}", ctx.message().topicName(), t.getMessage());
@@ -91,37 +91,6 @@ public final class VertxBasedMqttProtocolAdapter extends AbstractVertxBasedMqttP
                 // MQTT client is trying to publish on a not supported endpoint
                 LOG.debug("no such endpoint [{}]", topic.getEndpoint());
                 result.fail(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND, "no such endpoint"));
-        }
-        return result;
-    }
-
-    Future<ResourceIdentifier> checkAddress(final MqttContext ctx, final ResourceIdentifier address) {
-
-        final Future<ResourceIdentifier> result = Future.future();
-
-        if (ctx.authenticatedDevice() == null) {
-            if (address.getTenantId() == null || address.getResourceId() == null) {
-                result.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
-                        "topic of unauthenticated message must contain tenant and device ID"));
-            } else {
-                result.complete(address);
-            }
-
-        } else {
-
-            if (address.getTenantId() != null && address.getResourceId() == null) {
-                result.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
-                        "topic of authenticated message must not contain tenant ID only"));
-            } else if (address.getTenantId() != null && !address.getTenantId().equals(ctx.authenticatedDevice().getTenantId())) {
-                result.fail(new ClientErrorException(HttpURLConnection.HTTP_FORBIDDEN, "can only publish for device of same tenant"));
-            } else if (address.getTenantId() == null && address.getResourceId() == null) {
-                // use authenticated device's tenant to fill in missing information
-                final ResourceIdentifier downstreamAddress = ResourceIdentifier.from(address,
-                        ctx.authenticatedDevice().getTenantId(), ctx.authenticatedDevice().getDeviceId());
-                result.complete(downstreamAddress);
-            } else {
-                result.complete(address);
-            }
         }
         return result;
     }
