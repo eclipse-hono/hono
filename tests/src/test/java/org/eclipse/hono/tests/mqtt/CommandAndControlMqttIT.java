@@ -212,7 +212,7 @@ public class CommandAndControlMqttIT extends MqttTestBase {
 
         final CountDownLatch commandsSucceeded = new CountDownLatch(totalNoOfCommandsToSend);
         final AtomicInteger commandsSent = new AtomicInteger(0);
-        final AtomicLong lastReceivedTimestamp = new AtomicLong();
+        final AtomicLong lastReceivedTimestamp = new AtomicLong(0);
         final long start = System.currentTimeMillis();
 
         while (commandsSent.get() < totalNoOfCommandsToSend) {
@@ -221,7 +221,7 @@ public class CommandAndControlMqttIT extends MqttTestBase {
                 final Buffer msg = Buffer.buffer("value: " + commandsSent.getAndIncrement());
                 commandSender.apply(msg).setHandler(sendAttempt -> {
                     if (sendAttempt.failed()) {
-                        LOGGER.debug("error sending command {}", commandsSent.get(), sendAttempt.cause());
+                        LOGGER.info("error sending command {}", commandsSent.get(), sendAttempt.cause());
                     } else {
                         lastReceivedTimestamp.set(System.currentTimeMillis());
                         commandsSucceeded.countDown();
@@ -242,6 +242,10 @@ public class CommandAndControlMqttIT extends MqttTestBase {
         final long timeToWait = totalNoOfCommandsToSend * 200;
         if (!commandsSucceeded.await(timeToWait, TimeUnit.MILLISECONDS)) {
             LOGGER.info("Timeout of {} milliseconds reached, stop waiting for commands to succeed", timeToWait);
+        }
+        if (lastReceivedTimestamp.get() == 0L) {
+            // no message has been received at all
+            lastReceivedTimestamp.set(System.currentTimeMillis());
         }
         final long commandsCompleted = totalNoOfCommandsToSend - commandsSucceeded.getCount();
         LOGGER.info("commands sent: {}, commands succeeded: {} after {} milliseconds",
