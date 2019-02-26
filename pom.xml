@@ -17,7 +17,7 @@
 
   <groupId>org.eclipse.hono</groupId>
   <artifactId>hono-parent</artifactId>
-  <version>0.9</version>
+  <version>1.0-M1-SNAPSHOT</version>
   <packaging>pom</packaging>
 
   <name>Hono</name>
