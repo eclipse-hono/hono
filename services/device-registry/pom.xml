@@ -15,7 +15,7 @@
   <parent>
     <groupId>org.eclipse.hono</groupId>
     <artifactId>hono-services</artifactId>
-    <version>0.9-SNAPSHOT</version>
+    <version>0.9</version>
   </parent>
   <artifactId>hono-service-device-registry</artifactId>
   <name>Hono Device Registry</name>

@@ -4,7 +4,7 @@
   <parent>
     <groupId>org.eclipse.hono</groupId>
     <artifactId>hono-adapters</artifactId>
-    <version>0.9-SNAPSHOT</version>
+    <version>0.9</version>
   </parent>
   <artifactId>hono-adapter-coap-vertx-base</artifactId>
   <name>Hono COAP Adapter base</name>
