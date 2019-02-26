@@ -11,12 +11,12 @@ on [Docker Hub](https://hub.docker.com/u/eclipse/).
 
 The most convenient way to both pull the images and start corresponding containers is by means of running the deployment script contained in the release archive.
 
-* [Eclipse Hono 0.8 Archive](https://www.eclipse.org/downloads/download.php?file=/hono/eclipse-hono-deploy-0.8.tar.gz)
+* [Eclipse Hono 0.9 Archive](https://www.eclipse.org/downloads/download.php?file=/hono/eclipse-hono-deploy-0.9.tar.gz)
 
 After downloading the archive, extract it to a local folder, change into that folder and run the following from the command line (assuming that your local Docker client is configured to connect to a Docker Swarm manager):
 
 ~~~sh
-eclipse-hono-deploy-0.8$ deploy/docker/swarm_deploy.sh
+eclipse-hono-deploy-0.9$ deploy/docker/swarm_deploy.sh
 ~~~
 
 Hono supports deployment to the following container orchestration platforms:
@@ -27,36 +27,25 @@ Hono supports deployment to the following container orchestration platforms:
 
 A Java based command line client for consuming telemetry data and events from Hono is available for download as well:
 
-* [Eclipse Hono 0.8 Command Line Client](https://www.eclipse.org/downloads/download.php?file=/hono/hono-cli-0.8-exec.jar)
+* [Eclipse Hono 0.9 Command Line Client](https://www.eclipse.org/downloads/download.php?file=/hono/hono-cli-0.9-exec.jar)
 
 The client can be run from the command line like this:
 
 ~~~sh
-$ java -jar hono-cli-0.8-exec.jar --hono.client.host=hono.eclipse.org --hono.client.port=15671 \
+$ java -jar hono-cli-0.9-exec.jar --hono.client.host=hono.eclipse.org --hono.client.port=15671 \
 --hono.client.tlsEnabled=true --hono.client.username=consumer@HONO --hono.client.password=verysecret \
 --spring.profiles.active=receiver --tenant.id=DEFAULT_TENANT
 ~~~
 
 Please refer to the [Admin Guide]({{< ref "/admin-guide/hono-client-configuration.md" >}}) for details regarding the command line options that the client supports.
 
-### Latest Milestone
-
-The newest features and bug fixes are available in *milestones* that are published every 4 -6 weeks. Please note that these milestones represent the latest
-*state of development* which also means that APIs or features may change from one milestone to the other.
-Installation works in the same way as for the latest stable release.
-
-* [Eclipse Hono 0.9-M2 Archive](https://www.eclipse.org/downloads/download.php?file=/hono/eclipse-hono-deploy-0.9-M2.tar.gz)
-* [Eclipse Hono 0.9-M2 Command Line Client](https://www.eclipse.org/downloads/download.php?file=/hono/hono-cli-0.9-M2-exec.jar)
-* [Eclipse Hono 0.9-M1 Archive](https://www.eclipse.org/downloads/download.php?file=/hono/eclipse-hono-deploy-0.9-M1.tar.gz)
-* [Eclipse Hono 0.9-M1 Command Line Client](https://www.eclipse.org/downloads/download.php?file=/hono/hono-cli-0.9-M1-exec.jar)
-
 ### Older Versions
 
 These artifacts are available for reference only. Please always use the latest version since this is the one we can provide the best support for.
 
+* [Eclipse Hono 0.8 Archive](https://www.eclipse.org/downloads/download.php?file=/hono/eclipse-hono-example-0.8.tar.gz)
 * [Eclipse Hono 0.7 Archive](https://www.eclipse.org/downloads/download.php?file=/hono/eclipse-hono-example-0.7.tar.gz)
 * [Eclipse Hono 0.6 Archive](https://www.eclipse.org/downloads/download.php?file=/hono/eclipse-hono-example-0.6.tar.gz)
-* [Eclipse Hono 0.5 Archive](https://www.eclipse.org/downloads/download.php?file=/hono/eclipse-hono-example-0.5.tar.gz)
 
 ## Source Code
 
