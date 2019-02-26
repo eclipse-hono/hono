@@ -1,6 +1,6 @@
 #!/bin/bash
 #*******************************************************************************
-# Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+# Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
 #
 # See the NOTICE file(s) distributed with this work for additional
 # information regarding copyright ownership.
@@ -16,7 +16,7 @@ TAG=$1
 
 if [ -n "$TAG" ]
 then
-  for image in hono-adapter-http-vertx hono-adapter-mqtt-vertx hono-adapter-kura hono-adapter-amqp-vertx hono-service-auth hono-service-device-registry hono-service-messaging 
+  for image in hono-adapter-http-vertx hono-adapter-mqtt-vertx hono-adapter-kura hono-adapter-amqp-vertx hono-service-auth hono-service-device-registry
   do
     docker push eclipse/$image:$TAG
   done
