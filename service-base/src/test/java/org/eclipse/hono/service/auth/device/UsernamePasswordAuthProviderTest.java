@@ -15,7 +15,6 @@
 package org.eclipse.hono.service.auth.device;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -29,6 +28,8 @@ import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.CredentialsClient;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.config.ServiceConfigProperties;
+import org.eclipse.hono.service.auth.DeviceUser;
+import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsObject;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -52,6 +53,7 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
 @RunWith(VertxUnitRunner.class)
 public class UsernamePasswordAuthProviderTest {
 
+    private static final String PWD = "the-secret";
     private static Vertx vertx;
 
     /**
@@ -60,7 +62,6 @@ public class UsernamePasswordAuthProviderTest {
     @Rule
     public Timeout globalTimeout = new Timeout(5, TimeUnit.SECONDS);
 
-    private CredentialsObject credentialsOnRecord;
     private UsernamePasswordCredentials deviceCredentials = UsernamePasswordCredentials.create("device@DEFAULT_TENANT", "the-secret", false);
     private UsernamePasswordAuthProvider provider;
     private HonoClient credentialsServiceClient;
@@ -81,16 +82,15 @@ public class UsernamePasswordAuthProviderTest {
     @Before
     public void setUp() {
 
-        credentialsOnRecord = CredentialsObject.fromClearTextPassword("4711", "device", "the-secret", null, null);
         credentialsClient = mock(CredentialsClient.class);
-        when(credentialsClient.get(anyString(), eq("device"), any(), any())).thenReturn(Future.succeededFuture(credentialsOnRecord));
         credentialsServiceClient = mock(HonoClient.class);
         when(credentialsServiceClient.getOrCreateCredentialsClient("DEFAULT_TENANT")).thenReturn(Future.succeededFuture(credentialsClient));
         pwdEncoder = mock(HonoPasswordEncoder.class);
         when(pwdEncoder.matches(eq("the-secret"), any(JsonObject.class))).thenReturn(true);
 
-
         provider = new UsernamePasswordAuthProvider(credentialsServiceClient, pwdEncoder, new ServiceConfigProperties(), NoopTracerFactory.create());
+        givenCredentialsOnRecord(CredentialsObject.fromClearTextPassword("4711", "device", "the-secret", null, null));
+
     }
 
     /**
@@ -116,12 +116,14 @@ public class UsernamePasswordAuthProviderTest {
     @Test
     public void testAuthenticateSucceedsWhenRunningOnVertxContext(final TestContext ctx) {
 
+        final Future<DeviceUser> result = Future.future();
         vertx.runOnContext(go -> {
-            provider.authenticate(deviceCredentials, null, ctx.asyncAssertSuccess(device -> {
+            provider.authenticate(deviceCredentials, null, result);
+        });
+        result.setHandler(ctx.asyncAssertSuccess(device -> {
                 ctx.assertEquals("4711", device.getDeviceId());
                 ctx.assertEquals("DEFAULT_TENANT", device.getTenantId());
             }));
-        });
     }
 
     /**
@@ -133,14 +135,16 @@ public class UsernamePasswordAuthProviderTest {
     public void testAuthenticateFailsForWrongCredentials(final TestContext ctx) {
 
         when(pwdEncoder.matches(eq("wrong_pwd"), any(JsonObject.class))).thenReturn(false);
+        final Future<DeviceUser> result = Future.future();
 
         deviceCredentials = UsernamePasswordCredentials.create("device@DEFAULT_TENANT", "wrong_pwd", false);
         vertx.runOnContext(go -> {
-            provider.authenticate(deviceCredentials, null, ctx.asyncAssertFailure(e -> {
+            provider.authenticate(deviceCredentials, null, result);
+        });
+        result.setHandler(ctx.asyncAssertFailure(e -> {
                 final ClientErrorException error = (ClientErrorException) e;
                 ctx.assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED, error.getErrorCode());
             }));
-        });
     }
 
     /**
@@ -152,13 +156,15 @@ public class UsernamePasswordAuthProviderTest {
     @Test
     public void testAuthenticateFailsIfNoSecretsAreValidAnymore(final TestContext ctx) {
 
-        credentialsOnRecord.addSecret(CredentialsObject.emptySecret(null, Instant.now().minusSeconds(120)));
+        givenCredentialsOnRecord(CredentialsObject.fromClearTextPassword("4711", "device", PWD, null, Instant.now().minusSeconds(120)));
+        final Future<DeviceUser> result = Future.future();
         vertx.runOnContext(go -> {
-            provider.authenticate(deviceCredentials, null, ctx.asyncAssertFailure(t -> {
+            provider.authenticate(deviceCredentials, null, result);
+        });
+        result.setHandler(ctx.asyncAssertFailure(t -> {
                 // THEN authentication fails with a 401 client error
                 ctx.assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED, ((ClientErrorException) t).getErrorCode());
             }));
-        });
     }
 
     /**
@@ -170,12 +176,22 @@ public class UsernamePasswordAuthProviderTest {
     @Test
     public void testAuthenticateFailsIfNoSecretsAreValidYet(final TestContext ctx) {
 
-        credentialsOnRecord.addSecret(CredentialsObject.emptySecret(Instant.now().plusSeconds(120), null));
+        givenCredentialsOnRecord(CredentialsObject.fromClearTextPassword("4711", "device", PWD, Instant.now().plusSeconds(120), null));
+        final Future<DeviceUser> result = Future.future();
         vertx.runOnContext(go -> {
-            provider.authenticate(deviceCredentials, null, ctx.asyncAssertFailure(t -> {
-                // THEN authentication fails with a 401 client error
-                ctx.assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED, ((ClientErrorException) t).getErrorCode());
-            }));
+            provider.authenticate(deviceCredentials, null, result);
         });
+        result.setHandler(ctx.asyncAssertFailure(t -> {
+            // THEN authentication fails with a 401 client error
+            ctx.assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED, ((ClientErrorException) t).getErrorCode());
+        }));
+    }
+
+    private void givenCredentialsOnRecord(final CredentialsObject credentials) {
+        when(credentialsClient.get(
+                eq(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD),
+                eq("device"),
+                any(),
+                any())).thenReturn(Future.succeededFuture(credentials));
     }
 }
