@@ -264,16 +264,16 @@ machine. You can do this with the following command:
 
     git clone https://github.com/eclipse/hono.git
 
-Or if you want to check out a specific branch (e.g. `0.8.x`):
+Or if you want to check out a specific branch (e.g. `0.9.x`):
 
-    git clone -b 0.8.x https://github.com/eclipse/hono.git
+    git clone -b 0.9.x https://github.com/eclipse/hono.git
 
 {{% note title="Different branches" %}}
 This deployment description is based on the master branch of Hono. However this
 branch is also the current development and may be unstable at times.
 
 If you experience any problems, it is
-recommended to switch to a release branch (e.g. `0.8.x`) instead of using
+recommended to switch to a release branch (e.g. `0.9.x`) instead of using
 the default master branch. However this documentation is only published from
 the master branch, so there may be inconsistencies between the repository
 content and the documentation. In this case you can read through `index.md`
@@ -355,7 +355,7 @@ use the following syntax:
 
     oc process -f hono-template.yml \
       -p GIT_REPOSITORY=https://github.com/your/hono.git \
-      -p GIT_BRANCH=0.8.x| oc create -f -
+      -p GIT_BRANCH=0.9.x| oc create -f -
 
 {{% note title="Align branches" %}}
 By default the Hono template uses the `master` branch for deploying Hono. As
@@ -364,7 +364,7 @@ also is the default branch of the Hono Git repository where you checked out
 the deployment template.
 
 It is recommended that when you execute the guide from an alternate branch
-(e.g. `0.8.x`) that you also pass the same branch as `GIT_BRANCH` to the
+(e.g. `0.9.x`) that you also pass the same branch as `GIT_BRANCH` to the
 template.
 {{% /note %}}
 
@@ -431,7 +431,7 @@ use the following syntax:
       -p ADMIN_PASSWORD=admin \
       -p HONO_NAMESPACE=hono \
       -p GIT_REPOSITORY=https://github.com/your/hono.git \
-      -p GIT_BRANCH=0.8.x| oc create -f -
+      -p GIT_BRANCH=0.9.x| oc create -f -
 
 ## Configuring the installation
 
