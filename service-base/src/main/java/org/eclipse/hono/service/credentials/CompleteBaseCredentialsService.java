@@ -111,7 +111,7 @@ public abstract class CompleteBaseCredentialsService<T> extends BaseCredentialsS
         try {
             payload.checkValidity(this::checkSecret);
             final Future<CredentialsResult<JsonObject>> result = Future.future();
-            add(tenantId, JsonObject.mapFrom(payload), result.completer());
+            add(tenantId, request.getJsonPayload(), result.completer());
             return result.map(res -> {
                 return request.getResponse(res.getStatus())
                         .setDeviceId(payload.getDeviceId())
