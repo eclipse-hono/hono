@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -133,13 +133,10 @@ public class CommandTest {
     public void testFromMessageSucceedsWithApplicationProperties() {
         final String replyToId = "the-reply-to-id";
         final String correlationId = "the-correlation-id";
+        final Map<String, Object> applicationProperties = new HashMap<>();
+        applicationProperties.put("deviceId", "4711");
+        applicationProperties.put("tenantId", "DEFAULT_TENANT");
         final Message message = mock(Message.class);
-        final Map<String, Object> applicationProperties = new HashMap<String, Object>() {
-            {
-                put("deviceId", "4711");
-                put("tenantId", "DEFAULT_TENANT");
-            }
-        };
         when(message.getApplicationProperties()).thenReturn(new ApplicationProperties(applicationProperties));
         when(message.getSubject()).thenReturn("doThis");
         when(message.getCorrelationId()).thenReturn(correlationId);

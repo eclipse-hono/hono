@@ -18,6 +18,7 @@ import static org.hamcrest.CoreMatchers.startsWith;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.mock;
@@ -101,7 +102,7 @@ public class TenantClientImplTest {
         final SpanBuilder spanBuilder = HonoClientUnitTestHelper.mockSpanBuilder(span);
 
         tracer = mock(Tracer.class);
-        when(tracer.buildSpan(any())).thenReturn(spanBuilder);
+        when(tracer.buildSpan(anyString())).thenReturn(spanBuilder);
 
         vertx = mock(Vertx.class);
         context = HonoClientUnitTestHelper.mockContext(vertx);

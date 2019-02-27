@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -120,6 +120,7 @@ public class TelemetrySenderImplTest {
      * Verifies that a timeout occurring while a message is sent doesn't cause the corresponding 
      * OpenTracing span to stay unfinished.
      */
+    @SuppressWarnings("unchecked")
     @Test
     public void testSendMessageFailsOnTimeout() {
 

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,8 +14,6 @@
 package org.eclipse.hono.client.impl;
 
 import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -263,25 +261,20 @@ public class AbstractHonoClientTest {
      *
      * @param ctx The vert.x test context.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void testApplicationPropertiesAreSetAtTheMessage(final TestContext ctx) {
 
         final Message msg = mock(Message.class);
         final Map<String, Object> applicationProps = new HashMap<>();
-        applicationProps.put("key", "value");
-        applicationProps.put("key2", "otherValue");
+        applicationProps.put("string-key", "value");
+        applicationProps.put("int-key", 15);
+        applicationProps.put("long-key", 1000L);
 
         final ArgumentCaptor<ApplicationProperties> applicationPropsCaptor = ArgumentCaptor.forClass(ApplicationProperties.class);
 
         AbstractHonoClient.setApplicationProperties(msg, applicationProps);
 
         verify(msg).setApplicationProperties(applicationPropsCaptor.capture());
-        assertNotNull(applicationPropsCaptor.getValue());
-        assertNotNull(applicationPropsCaptor.getValue().getValue());
-        assertTrue(applicationPropsCaptor.getValue().getValue().size() == 2);
-        assertEquals(applicationPropsCaptor.getValue().getValue().get("key"), "value");
-        assertEquals(applicationPropsCaptor.getValue().getValue().get("key2"), "otherValue");
-
+        assertThat(applicationPropsCaptor.getValue().getValue(), is(applicationProps));
     }
 }
