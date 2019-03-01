@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -19,7 +19,6 @@ import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.Base64;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -31,29 +30,17 @@ import java.util.stream.Collectors;
 
 import javax.security.auth.x500.X500Principal;
 
+import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.annotation.JsonProperty;
 
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
 /**
- * Encapsulates the credentials information for a device that was found by the get operation of the
+ * Encapsulates the credentials information for a device as defined by the
  * <a href="https://www.eclipse.org/hono/api/credentials-api/">Credentials API</a>.
  */
-@JsonIgnoreProperties(ignoreUnknown = true)
-public final class CredentialsObject {
-
-    @JsonProperty(CredentialsConstants.FIELD_PAYLOAD_DEVICE_ID)
-    private String deviceId;
-    @JsonProperty(CredentialsConstants.FIELD_TYPE)
-    private String type;
-    @JsonProperty(CredentialsConstants.FIELD_AUTH_ID)
-    private String authId;
-    @JsonProperty(CredentialsConstants.FIELD_ENABLED)
-    private boolean enabled = true;
-    private JsonArray secrets = new JsonArray();
+public final class CredentialsObject extends JsonBackedValueObject {
 
     /**
      * Empty default constructor.
@@ -87,12 +74,27 @@ public final class CredentialsObject {
     }
 
     /**
+     * Adds a property to this tenant.
+     * 
+     * @param name The property name.
+     * @param value The property value.
+     * @return This credentials object for command chaining.
+     * @throws NullPointerException if name is {@code null}.
+     */
+    @JsonAnySetter
+    public CredentialsObject setProperty(final String name, final Object value) {
+        json.put(Objects.requireNonNull(name), value);
+        return this;
+    }
+
+    /**
      * Gets the identifier of the device that these credentials belong to.
      * 
      * @return The identifier or {@code null} if not set.
      */
+    @JsonIgnore
     public String getDeviceId() {
-        return deviceId;
+        return (String) getProperty(CredentialsConstants.FIELD_PAYLOAD_DEVICE_ID);
     }
 
     /**
@@ -101,8 +103,9 @@ public final class CredentialsObject {
      * @param deviceId The identifier.
      * @return This credentials object for method chaining.
      */
+    @JsonIgnore
     public CredentialsObject setDeviceId(final String deviceId) {
-        this.deviceId = deviceId;
+        setProperty(CredentialsConstants.FIELD_PAYLOAD_DEVICE_ID, deviceId);
         return this;
     }
 
@@ -111,8 +114,9 @@ public final class CredentialsObject {
      * 
      * @return The type or {@code null} if not set.
      */
+    @JsonIgnore
     public String getType() {
-        return type;
+        return (String) getProperty(CredentialsConstants.FIELD_TYPE);
     }
 
     /**
@@ -121,8 +125,9 @@ public final class CredentialsObject {
      * @param type The credentials type.
      * @return This credentials object for method chaining.
      */
+    @JsonIgnore
     public CredentialsObject setType(final String type) {
-        this.type = type;
+        setProperty(CredentialsConstants.FIELD_TYPE, type);
         return this;
     }
 
@@ -131,8 +136,9 @@ public final class CredentialsObject {
      * 
      * @return The identifier or {@code null} if not set.
      */
+    @JsonIgnore
     public String getAuthId() {
-        return authId;
+        return (String) getProperty(CredentialsConstants.FIELD_AUTH_ID);
     }
 
     /**
@@ -141,8 +147,9 @@ public final class CredentialsObject {
      * @param authId The identifier.
      * @return This credentials object for method chaining.
      */
+    @JsonIgnore
     public CredentialsObject setAuthId(final String authId) {
-        this.authId = authId;
+        setProperty(CredentialsConstants.FIELD_AUTH_ID, authId);
         return this;
     }
 
@@ -153,8 +160,9 @@ public final class CredentialsObject {
      * 
      * @return {@code true} if these credentials can be used for authenticating devices.
      */
+    @JsonIgnore
     public boolean isEnabled() {
-        return enabled;
+        return (Boolean) getProperty(CredentialsConstants.FIELD_ENABLED, true);
     }
 
     /**
@@ -165,21 +173,10 @@ public final class CredentialsObject {
      * @param enabled {@code true} if these credentials can be used for authenticating devices.
      * @return This credentials object for method chaining.
      */
+    @JsonIgnore
     public CredentialsObject setEnabled(final boolean enabled) {
-        this.enabled = enabled;
+        setProperty(CredentialsConstants.FIELD_ENABLED, enabled);
         return this;
-    }
-
-    /**
-     * Gets this credentials' secret(s) as {@code Map} instances.
-     * 
-     * @return The (potentially empty) list of secrets.
-     */
-    @JsonProperty(CredentialsConstants.FIELD_SECRETS)
-    public List<Map<String, Object>> getSecretsAsMaps() {
-        final List<Map<String, Object>> result = new LinkedList<>();
-        secrets.forEach(secret -> result.add(((JsonObject) secret).getMap()));
-        return result;
     }
 
     /**
@@ -191,23 +188,13 @@ public final class CredentialsObject {
      */
     @JsonIgnore
     public JsonArray getSecrets() {
-        return secrets;
-    }
-
-    /**
-     * Sets this credentials' secret(s).
-     * <p>
-     * The new secret(s) will replace the existing ones.
-     * 
-     * @param newSecrets The secrets to set.
-     * @return This credentials object for method chaining.
-     * @throws NullPointerException if secrets is {@code null}.
-     */
-    @JsonProperty(CredentialsConstants.FIELD_SECRETS)
-    public CredentialsObject setSecrets(final List<Map<String, Object>> newSecrets) {
-        this.secrets.clear();
-        newSecrets.forEach(secret -> addSecret(secret));
-        return this;
+        return Optional.ofNullable((JsonArray) getProperty(CredentialsConstants.FIELD_SECRETS))
+                .map(secrets -> secrets)
+                .orElseGet(() -> {
+                    final JsonArray result = new JsonArray();
+                    setProperty(CredentialsConstants.FIELD_SECRETS, result);
+                    return result;
+                });
     }
 
     /**
@@ -218,7 +205,7 @@ public final class CredentialsObject {
      */
     public CredentialsObject addSecret(final JsonObject secret) {
         if (secret != null) {
-            secrets.add(secret);
+            getSecrets().add(secret);
         }
         return this;
     }
@@ -257,11 +244,11 @@ public final class CredentialsObject {
      *                  problem.
      */
     public void checkValidity(final BiConsumer<String, JsonObject> secretValidator) {
-        if (deviceId == null) {
+        if (getDeviceId() == null) {
             throw new IllegalStateException("missing device ID");
-        } else if (authId == null) {
+        } else if (getAuthId() == null) {
             throw new IllegalStateException("missing auth ID");
-        } else if (type == null) {
+        } else if (getType() == null) {
             throw new IllegalStateException("missing type");
         }
         checkSecrets(secretValidator);
@@ -294,7 +281,7 @@ public final class CredentialsObject {
     public void checkSecrets(final BiConsumer<String, JsonObject> secretValidator) {
 
         Objects.requireNonNull(secretValidator);
-
+        final JsonArray secrets = getSecrets();
         if (secrets == null || secrets.isEmpty()) {
 
             throw new IllegalStateException("credentials object must contain at least one secret");
@@ -302,14 +289,14 @@ public final class CredentialsObject {
         } else {
 
             try {
-                switch(type) {
+                switch(getType()) {
                 case CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD:
-                    checkSecrets(getSecrets(), secret -> {
+                    checkSecrets(secrets, secret -> {
                         checkHashedPassword(secret);
-                        secretValidator.accept(type, secret);
+                        secretValidator.accept(getType(), secret);
                     });
                 default:
-                    checkSecrets(getSecrets(), secret -> {});
+                    checkSecrets(secrets, secret -> {});
                 }
             } catch (final Exception e) {
                 throw new IllegalStateException(e.getMessage());

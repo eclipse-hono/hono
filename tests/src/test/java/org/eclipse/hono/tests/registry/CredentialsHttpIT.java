@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -123,6 +123,29 @@ public class CredentialsHttpIT {
     public void testAddCredentialsSucceeds(final TestContext context)  {
 
         registry.addCredentials(TENANT, hashedPasswordCredentials).setHandler(context.asyncAssertSuccess());
+    }
+
+    /**
+     * Verifies that the service accepts an add credentials request containing
+     * a clear text password.
+     * 
+     * @param context The vert.x test context.
+     */
+    @Test
+    public void testAddCredentialsSucceedsForAdditionalProperties(final TestContext context)  {
+
+        final CredentialsObject credentials = CredentialsObject.fromClearTextPassword(
+                deviceId,
+                authId,
+                "thePassword",
+                null, null).setProperty("client-id", "MQTT-client-2384236854");
+
+        registry.addCredentials(TENANT, JsonObject.mapFrom(credentials))
+        .compose(createAttempt -> registry.getCredentials(TENANT, authId, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD))
+        .setHandler(context.asyncAssertSuccess(b -> {
+            final JsonObject obj = b.toJsonObject();
+            context.assertEquals("MQTT-client-2384236854", obj.getString("client-id"));
+        }));
     }
 
     /**

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -35,7 +35,6 @@ import java.util.Optional;
 
 import javax.security.auth.x500.X500Principal;
 
-import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
@@ -51,10 +50,7 @@ import io.vertx.core.json.JsonObject;
  * <a href="https://www.eclipse.org/hono/api/tenant-api/">Tenant API</a>.
  */
 @JsonInclude(value = Include.NON_NULL)
-public final class TenantObject {
-
-    @JsonIgnore
-    private final JsonObject json = new JsonObject();
+public final class TenantObject extends JsonBackedValueObject {
 
     @JsonIgnore
     private Map<String, JsonObject> adapterConfigurations;
@@ -62,45 +58,11 @@ public final class TenantObject {
     private TrustAnchor trustAnchor;
 
     /**
-     * Gets a map of this tenant's properties that should be included
-     * in serialization to JSON in addition to the explicitly annotated
-     * properties.
-     * 
-     * @return The properties.
-     */
-    @JsonAnyGetter
-    private Map<String, Object> getPropertiesAsMap() {
-        return json.getMap();
-    }
-
-    /**
-     * Gets a property value.
-     * 
-     * @param name The property name.
-     * @param <T> The type of the property.
-     * @return The property value or {@code null} if not set.
-     * @throws NullPointerException if name is {@code null}.
-     */
-    public <T> T getProperty(final String name) {
-        return getProperty(json, name);
-    }
-
-    @SuppressWarnings("unchecked")
-    private <T> T getProperty(final JsonObject parent, final String name) {
-        final Object value = parent.getValue(Objects.requireNonNull(name));
-        try {
-            return (T) value;
-        } catch (ClassCastException e) {
-            return null;
-        }
-    }
-
-    /**
      * Adds a property to this tenant.
      * 
      * @param name The property name.
      * @param value The property value.
-     * @return This tenant for command chaining.
+     * @return This object for command chaining.
      * @throws NullPointerException if name is {@code null}.
      */
     @JsonAnySetter
@@ -116,7 +78,7 @@ public final class TenantObject {
      */
     @JsonIgnore
     public String getTenantId() {
-        return json.getString(TenantConstants.FIELD_PAYLOAD_TENANT_ID);
+        return (String) getProperty(TenantConstants.FIELD_PAYLOAD_TENANT_ID);
     }
 
     /**
@@ -127,8 +89,7 @@ public final class TenantObject {
      */
     @JsonIgnore
     public TenantObject setTenantId(final String tenantId) {
-        json.put(TenantConstants.FIELD_PAYLOAD_TENANT_ID, tenantId);
-        return this;
+        return setProperty(TenantConstants.FIELD_PAYLOAD_TENANT_ID, tenantId);
     }
 
     /**
@@ -138,7 +99,7 @@ public final class TenantObject {
      */
     @JsonIgnore
     public boolean isEnabled() {
-        return json.getBoolean(TenantConstants.FIELD_ENABLED, true);
+        return (Boolean) getProperty(TenantConstants.FIELD_ENABLED, true);
     }
 
     /**
@@ -149,8 +110,7 @@ public final class TenantObject {
      */
     @JsonIgnore
     public TenantObject setEnabled(final boolean flag) {
-        json.put(TenantConstants.FIELD_ENABLED, flag);
-        return this;
+        return setProperty(TenantConstants.FIELD_ENABLED, flag);
     }
 
     /**
@@ -189,8 +149,7 @@ public final class TenantObject {
         final JsonObject trustedCa = new JsonObject();
         trustedCa.put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, subjectDn.getName(X500Principal.RFC2253));
         trustedCa.put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, publicKey.getEncoded());
-        setProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, trustedCa);
-        return this;
+        return setProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, trustedCa);
     }
 
     /**
@@ -210,8 +169,7 @@ public final class TenantObject {
         try {
             final JsonObject trustedCa = new JsonObject()
                     .put(TenantConstants.FIELD_PAYLOAD_CERT, certificate.getEncoded());
-            setProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, trustedCa);
-            return this;
+            return setProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, trustedCa);
         } catch (CertificateEncodingException e) {
             throw new IllegalArgumentException("cannot encode certificate");
         }

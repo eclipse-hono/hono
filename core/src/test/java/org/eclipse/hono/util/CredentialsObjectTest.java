@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,6 +13,10 @@
 
 package org.eclipse.hono.util;
 
+import static org.hamcrest.CoreMatchers.is;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertThat;
+
 import org.junit.Test;
 
 import io.vertx.core.json.JsonObject;
@@ -23,6 +27,31 @@ import io.vertx.core.json.JsonObject;
  *
  */
 public class CredentialsObjectTest {
+
+    /**
+     * Verifies that the object can be successfully marshaled to JSON
+     * and then unmarshaled back into an object.
+     */
+    @Test
+    public void testMarshaling() {
+
+        // GIVEN a credentials object with some additional custom data
+        final CredentialsObject orig = CredentialsObject.fromClearTextPassword("4711", "my-device", "secret", null, null);
+        orig.setProperty("client-id", "MQTT-client-4523653");
+        orig.setEnabled(false);
+
+        // WHEN marshaling the object to JSON
+        final JsonObject json = JsonObject.mapFrom(orig);
+        // and unmarshaling it back into an object
+        final CredentialsObject unmarshaled = json.mapTo(CredentialsObject.class);
+
+        // THEN all properties have the same value as in the original object
+        assertThat(unmarshaled.getDeviceId(), is("4711"));
+        assertThat(unmarshaled.getAuthId(), is("my-device"));
+        assertThat(unmarshaled.getType(), is(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD));
+        assertFalse(unmarshaled.isEnabled());
+        assertThat((String) unmarshaled.getProperty("client-id"), is("MQTT-client-4523653"));
+    }
 
     /**
      * Verifies that credentials that do not contain any secrets are
