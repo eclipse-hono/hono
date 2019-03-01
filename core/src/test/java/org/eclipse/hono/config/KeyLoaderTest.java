@@ -61,6 +61,7 @@ public class KeyLoaderTest {
                 PREFIX_KEY_PATH + "auth-server-cert.pem");
         assertNotNull(loader.getPrivateKey());
         assertNotNull(loader.getPublicKey());
+        assertTrue(loader.getCertificateChain().length == 2);
     }
 
     /**
@@ -85,6 +86,8 @@ public class KeyLoaderTest {
         final KeyLoader loader = KeyLoader.fromFiles(vertx, null, PREFIX_KEY_PATH + "auth-server-cert.pem");
         assertNull(loader.getPrivateKey());
         assertNotNull(loader.getPublicKey());
+        assertTrue(loader.getCertificateChain().length == 2);
+        assertEquals(loader.getPublicKey(), loader.getCertificateChain()[0].getPublicKey());
     }
 
     /**

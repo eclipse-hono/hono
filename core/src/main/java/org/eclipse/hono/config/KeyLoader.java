@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -26,12 +26,18 @@ import java.security.KeyStore;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.cert.Certificate;
+import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.spec.KeySpec;
 import java.security.spec.PKCS8EncodedKeySpec;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 import org.eclipse.hono.config.PemReader.Entry;
 import org.slf4j.Logger;
@@ -61,15 +67,17 @@ public final class KeyLoader {
     }
 
     private final PrivateKey privateKey;
-    private final PublicKey publicKey;
+    private final List<Certificate> certs = new ArrayList<>();
 
-    private KeyLoader(final PrivateKey privateKey, final PublicKey publicKey) {
+    private KeyLoader(final PrivateKey privateKey, final List<Certificate> certs) {
         this.privateKey = privateKey;
-        this.publicKey = publicKey;
+        if (certs != null) {
+            this.certs.addAll(certs);
+        }
     }
 
     /**
-     * Get the private key.
+     * Gets the private key.
      * 
      * @return The private key, may be {@code null}
      */
@@ -78,12 +86,29 @@ public final class KeyLoader {
     }
 
     /**
-     * Get the public key.
+     * Gets the certificate chain.
      * 
-     * @return The public key, may be {@code null}
+     * @return The chain of {@code null} if no certificates have been loaded.
+     */
+    public Certificate[] getCertificateChain() {
+        if (certs.isEmpty()) {
+            return null;
+        } else {
+            return certs.toArray(new Certificate[certs.size()]);
+        }
+    }
+
+    /**
+     * Gets the public key.
+     * 
+     * @return The public key or {@code null} if not set.
      */
     public PublicKey getPublicKey() {
-        return this.publicKey;
+        if (certs.isEmpty()) {
+            return null;
+        } else {
+            return certs.get(0).getPublicKey();
+        }
     }
 
     /**
@@ -128,7 +153,7 @@ public final class KeyLoader {
      * 
      * @param vertx The vertx instance to use for loading the key store.
      * @param keyPath The absolute path to the PEM file containing the private key.
-     * @param certPath The absolute path to the PEM file containing the certificate.
+     * @param certPath The absolute path to the PEM file containing the certificate (chain).
      * @return The loader.
      * @throws NullPointerException if vertx is {@code null}.
      * @throws IllegalArgumentException if any of the files could not be loaded. Reasons might be things like missing,
@@ -137,16 +162,16 @@ public final class KeyLoader {
     public static KeyLoader fromFiles(final Vertx vertx, final String keyPath, final String certPath) {
 
         PrivateKey privateKey = null;
-        PublicKey publicKey = null;
+        List<Certificate> certChain = null;
 
         if (keyPath != null) {
             privateKey = loadPrivateKeyFromFile(vertx, keyPath);
         }
         if (certPath != null) {
-            publicKey = loadPublicKeyFromFile(vertx, certPath);
+            certChain = loadCertsFromFile(vertx, certPath);
         }
 
-        return new KeyLoader(privateKey, publicKey);
+        return new KeyLoader(privateKey, certChain);
 
     }
 
@@ -203,24 +228,20 @@ public final class KeyLoader {
         });
     }
 
-    private static PublicKey loadPublicKeyFromFile(final Vertx vertx, final String certPath) {
+    private static List<Certificate> loadCertsFromFile(final Vertx vertx, final String certPath) {
 
         return processFile(vertx, certPath, pems -> {
 
-            final Entry pem = pems.get(0);
-
-            switch (pem.getType()) {
-
-            case "CERTIFICATE": {
-                final CertificateFactory factory = CertificateFactory.getInstance("X.509");
-                final Certificate cert = factory.generateCertificate(new ByteArrayInputStream(pem.getPayload()));
-                return cert.getPublicKey();
-            }
-
-            default:
-                throw new IllegalArgumentException(format("%s: Unsupported cert type: %s", certPath, pem.getType()));
-
-            }
+            return pems.stream()
+                    .filter(entry -> "CERTIFICATE".equals(entry.getType()))
+                    .map(entry -> {
+                        try {
+                            final CertificateFactory factory = CertificateFactory.getInstance("X.509");
+                            return factory.generateCertificate(new ByteArrayInputStream(entry.getPayload()));
+                        } catch (final CertificateException e) {
+                            return null;
+                        }
+                    }).filter(s -> s != null).collect(Collectors.toList());
         });
 
     }
@@ -229,7 +250,6 @@ public final class KeyLoader {
             final char[] password) {
 
         PrivateKey privateKey = null;
-        PublicKey publicKey = null;
 
         final Buffer buffer = vertx.fileSystem().readFileBlocking(path);
         try (InputStream is = new ByteArrayInputStream(buffer.getBytes())) {
@@ -244,9 +264,9 @@ public final class KeyLoader {
                     privateKey = (PrivateKey) store.getKey(alias, password);
                     LOG.debug("loading public key [{}]", alias);
                     final Certificate[] chain = store.getCertificateChain(alias);
-                    publicKey = chain[0].getPublicKey();
+                    final List<Certificate> certChain = Optional.of(chain).map(c -> Arrays.asList(c)).orElse(Collections.emptyList());
 
-                    return new KeyLoader(privateKey, publicKey);
+                    return new KeyLoader(privateKey, certChain);
 
                 } else {
                     LOG.debug("skipping non-private key entry");
