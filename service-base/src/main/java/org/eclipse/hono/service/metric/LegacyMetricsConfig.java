@@ -22,6 +22,7 @@ import org.springframework.context.annotation.PropertySource;
 
 import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.Tag;
+import io.micrometer.core.instrument.Tags;
 import io.micrometer.core.instrument.config.MeterFilter;
 
 /**
@@ -117,7 +118,11 @@ public class LegacyMetricsConfig extends AbstractLegacyMetricsConfig {
 
                 }
 
-                return new Meter.Id(name, newTags, id.getBaseUnit(), id.getDescription(),
+                /*
+                 * The next line wraps the "newTags" in a Tags instance in order the make the call compatible with
+                 * Micrometer 1.1, which only allows providing Tags.
+                 */
+                return new Meter.Id(name, Tags.of(newTags), id.getBaseUnit(), id.getDescription(),
                         id.getType());
 
             }
