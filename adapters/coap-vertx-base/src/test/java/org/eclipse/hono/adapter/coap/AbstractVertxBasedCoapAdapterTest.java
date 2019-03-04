@@ -15,25 +15,39 @@ package org.eclipse.hono.adapter.coap;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.net.HttpURLConnection;
+import java.util.Collections;
+import java.util.concurrent.Executor;
 
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.californium.core.CoapResource;
 import org.eclipse.californium.core.CoapServer;
+import org.eclipse.californium.core.coap.CoAP.Code;
 import org.eclipse.californium.core.coap.CoAP.ResponseCode;
 import org.eclipse.californium.core.coap.MediaTypeRegistry;
 import org.eclipse.californium.core.coap.OptionSet;
+import org.eclipse.californium.core.coap.Request;
 import org.eclipse.californium.core.coap.Response;
+import org.eclipse.californium.core.network.Exchange;
+import org.eclipse.californium.core.network.Exchange.Origin;
 import org.eclipse.californium.core.server.resources.CoapExchange;
+import org.eclipse.californium.core.server.resources.Resource;
+import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.client.CommandConnection;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.TenantClient;
-import org.eclipse.hono.client.CommandConnection;
-import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantObject;
@@ -157,6 +171,84 @@ public class AbstractVertxBasedCoapAdapterTest {
         // THEN the onStartupSuccess method has been invoked
         startup.await();
         onStartupSuccess.await();
+    }
+
+    /**
+     * Verifies that the adapter registers resources as part of the start-up process.
+     * 
+     * @param ctx The helper to use for running async tests on vertx.
+     */
+    @Test
+    public void testStartRegistersResources(final TestContext ctx) {
+
+        // GIVEN an adapter
+        final CoapServer server = getCoapServer(false);
+        // and a set of resources
+        final Resource resource = mock(Resource.class);
+
+        final AbstractVertxBasedCoapAdapter<CoapAdapterProperties> adapter = getAdapter(server, true, s -> {});
+        adapter.setMetrics(mock(CoapAdapterMetrics.class));
+        adapter.setResources(Collections.singleton(resource));
+
+        // WHEN starting the adapter
+        final Async startup = ctx.async();
+        final Future<Void> startupTracker = Future.future();
+        startupTracker.setHandler(ctx.asyncAssertSuccess(s -> {
+            startup.complete();
+        }));
+        adapter.start(startupTracker);
+        startup.await();
+
+        // THEN the resources have been registered with the server
+        final ArgumentCaptor<VertxCoapResource> resourceCaptor = ArgumentCaptor.forClass(VertxCoapResource.class);
+        verify(server).add(resourceCaptor.capture());
+        ctx.assertEquals(resource, resourceCaptor.getValue().getWrappedResource());
+    }
+
+    /**
+     * Verifies that the resources registered with the adapter are always
+     * executed on the adapter's vert.x context.
+     * 
+     * @param ctx The helper to use for running async tests on vertx.
+     */
+    @Test
+    public void testResourcesAreRunOnVertxContext(final TestContext ctx) {
+
+        // GIVEN an adapter
+        final Context context = vertx.getOrCreateContext();
+        final CoapServer server = getCoapServer(false);
+        // with a resource
+        final Async resourceInvocation = ctx.async();
+        final Resource resource = new CoapResource("test") {
+
+            @Override
+            public void handleGET(final CoapExchange exchange) {
+                ctx.assertEquals(context, Vertx.currentContext());
+                resourceInvocation.complete();
+            }
+        };
+
+        final AbstractVertxBasedCoapAdapter<CoapAdapterProperties> adapter = getAdapter(server, true, s -> {});
+        adapter.setMetrics(mock(CoapAdapterMetrics.class));
+        adapter.setResources(Collections.singleton(resource));
+
+        final Async startup = ctx.async();
+        final Future<Void> startupTracker = Future.future();
+        startupTracker.setHandler(ctx.asyncAssertSuccess(s -> {
+            startup.complete();
+        }));
+        adapter.init(vertx, context);
+        adapter.start(startupTracker);
+        startup.await();
+
+        // WHEN the resource receives a GET request
+        final Request request = new Request(Code.GET);
+        final Exchange getExchange = new Exchange(request, Origin.REMOTE, mock(Executor.class));
+        final ArgumentCaptor<VertxCoapResource> resourceCaptor = ArgumentCaptor.forClass(VertxCoapResource.class);
+        verify(server).add(resourceCaptor.capture());
+        resourceCaptor.getValue().handleRequest(getExchange);
+        // THEN the resource's handler has been run on the adapter's vert.x event loop
+        resourceInvocation.await();
     }
 
     /**
@@ -415,11 +507,6 @@ public class AbstractVertxBasedCoapAdapterTest {
                 if (onStartupSuccess != null) {
                     onStartupSuccess.handle(null);
                 }
-            }
-
-            @Override
-            protected void addResources(final Context adapterContext, final CoapServer server) {
-
             }
         };
 

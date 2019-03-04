@@ -52,28 +52,86 @@ public class CoapAdapterProperties extends ProtocolAdapterProperties {
         this.idSplitRegex = Objects.requireNonNull(idSplitRegex);
     }
 
+    /**
+     * Gets the absolute path to a properties file containing
+     * network configuration properties that should be used for
+     * all CoAP endpoints.
+     * 
+     * @return The path.
+     */
     public final String getNetworkConfig() {
         return networkConfig;
     }
 
-    public final void setNetworkConfig(final String networkConfig) {
-        this.networkConfig = Objects.requireNonNull(networkConfig);
+    /**
+     * Sets the absolute path to a properties file containing
+     * network configuration properties that should be used for
+     * all CoAP endpoints..
+     * 
+     * @param path The path to the properties file.
+     */
+    public final void setNetworkConfig(final String path) {
+        this.networkConfig = Objects.requireNonNull(path);
     }
 
+    /**
+     * Gets the absolute path to a properties file containing
+     * network configuration properties that should be used for
+     * the <em>secure</em> CoAP endpoint only.
+     * <p>
+     * The properties contained in this file will overwrite
+     * properties of the same name read from the file indicated
+     * by {@link #getNetworkConfig()}.
+     * 
+     * @return The path.
+     */
     public final String getSecureNetworkConfig() {
         return secureNetworkConfig;
     }
 
-    public final void setSecureNetworkConfig(final String secureNetworkConfig) {
-        this.secureNetworkConfig = Objects.requireNonNull(secureNetworkConfig);
+    /**
+     * Sets the absolute path to a properties file containing
+     * network configuration properties that should be used for
+     * the <em>secure</em> CoAP endpoint only.
+     * <p>
+     * The properties contained in this file will overwrite
+     * properties of the same name read from the file indicated
+     * by {@link #getNetworkConfig()}.
+     * 
+     * @param path The path.
+     */
+    public final void setSecureNetworkConfig(final String path) {
+        this.secureNetworkConfig = Objects.requireNonNull(path);
     }
 
+    /**
+     * Gets the absolute path to a properties file containing
+     * network configuration properties that should be used for
+     * the <em>insecure</em> CoAP endpoint only.
+     * <p>
+     * The properties contained in this file will overwrite
+     * properties of the same name read from the file indicated
+     * by {@link #getNetworkConfig()}.
+     * 
+     * @return The path.
+     */
     public final String getInsecureNetworkConfig() {
         return insecureNetworkConfig;
     }
 
-    public final void setInsecureNetworkConfig(final String insecureNetworkConfig) {
-        this.insecureNetworkConfig = Objects.requireNonNull(insecureNetworkConfig);
+    /**
+     * Sets the absolute path to a properties file containing
+     * network configuration properties that should be used for
+     * the <em>insecure</em> CoAP endpoint only.
+     * <p>
+     * The properties contained in this file will overwrite
+     * properties of the same name read from the file indicated
+     * by {@link #getNetworkConfig()}.
+     * 
+     * @param path The path.
+     */
+    public final void setInsecureNetworkConfig(final String path) {
+        this.insecureNetworkConfig = Objects.requireNonNull(path);
     }
 
     /**

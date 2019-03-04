@@ -12,12 +12,17 @@
  */
 package org.eclipse.hono.adapter.coap;
 
-import java.io.File;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.net.InetSocketAddress;
 import java.security.Principal;
+import java.security.PublicKey;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.californium.core.CoapServer;
@@ -27,11 +32,13 @@ import org.eclipse.californium.core.coap.MediaTypeRegistry;
 import org.eclipse.californium.core.network.CoapEndpoint;
 import org.eclipse.californium.core.network.Endpoint;
 import org.eclipse.californium.core.network.config.NetworkConfig;
+import org.eclipse.californium.core.server.resources.Resource;
 import org.eclipse.californium.scandium.DTLSConnector;
 import org.eclipse.californium.scandium.config.DtlsConnectorConfig;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.MessageSender;
+import org.eclipse.hono.config.KeyLoader;
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.util.Constants;
@@ -42,14 +49,15 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import io.vertx.core.CompositeFuture;
-import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
 
 /**
- * Base class for a Vert.x based Hono protocol adapter that uses CoAP. It provides access to the Telemetry and Event
- * API.
+ * Base class for a vert.x based Hono protocol adapter that uses CoAP.
+ * <p>
+ * Provides support for exposing Hono's southbound Telemetry &amp; Event
+ * API by means of CoAP resources.
  * 
  * @param <T> The type of configuration properties used by this service.
  */
@@ -64,6 +72,8 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
      * Map for authorization handler.
      */
     protected final Map<Class<? extends Principal>, CoapAuthenticationHandler> authenticationHandlerMap = new HashMap<>();
+
+    private final Set<Resource> resourcesToAdd = new HashSet<>();
 
     /**
      * COAP server. Created from blocking execution, therefore use volatile.
@@ -81,6 +91,18 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
     @Autowired
     public final void setMetrics(final CoapAdapterMetrics metrics) {
         this.metrics = metrics;
+    }
+
+    /**
+     * Sets the CoAP resources that should be added to the CoAP server
+     * managed by this class.
+     * 
+     * @param resources The resources.
+     * @throws NullPointerException if resources is {@code null}.
+     */
+    @Autowired(required = false)
+    public final void setResources(final Set<Resource> resources) {
+        this.resourcesToAdd.addAll(Objects.requireNonNull(resources));
     }
 
     /**
@@ -130,17 +152,6 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
     }
 
     /**
-     * Called during {@link #doStart(Future)}.
-     * 
-     * Note: The call is in the scope of "executeBlocking" and therefore special care accessing this instance must be
-     * obeyed.
-     * 
-     * @param adapterContext context of this adapter. Intended for schedule calls back into this vertical.
-     * @param server coap server to add resources.
-     */
-    protected abstract void addResources(Context adapterContext, CoapServer server);
-
-    /**
      * Sets the coap server instance configured to serve requests.
      * <p>
      * If no server is set using this method, then a server instance is created during startup of this adapter based on
@@ -157,68 +168,29 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
 
     @Override
     public final void doStart(final Future<Void> startFuture) {
-        checkPortConfiguration().compose(s -> preStartup()).compose(s -> {
-            final Future<Void> deployFuture = Future.future();
-            // access environment using the context of this vertx and
-            // load it into finals to access them within the executeBlocking
-            final CoapAdapterProperties config = getConfig();
-            final CoapPreSharedKeyHandler coapPreSharedKeyProvider = new CoapPreSharedKeyHandler(getVertx(), config,
-                    getCredentialsServiceClient());
-            // add handler to authentication handler map.
-            authenticationHandlerMap.put(coapPreSharedKeyProvider.getType(), coapPreSharedKeyProvider);
-            final Context adapterContext = this.context;
-            final CoapServer server = this.server;
 
-            // delegate for blocking execution
-            getVertx().executeBlocking(future -> {
-                // Call some potential blocking API
-                final NetworkConfig secureNetworkConfig = getSecureNetworkConfig();
-                final NetworkConfig insecureNetworkConfig = getInsecureNetworkConfig();
-                final CoapServer startingServer = server == null ? new CoapServer(insecureNetworkConfig) : server;
-                addResources(adapterContext, startingServer);
-                final DtlsConnectorConfig.Builder dtlsConfig = new DtlsConnectorConfig.Builder();
-                dtlsConfig.setClientAuthenticationRequired(config.isAuthenticationRequired());
-                dtlsConfig.setConnectionThreadCount(config.getConnectorThreads());
-                dtlsConfig.setAddress(
-                        new InetSocketAddress(config.getBindAddress(), config.getPort(getPortDefaultValue())));
-                dtlsConfig.setPskStore(coapPreSharedKeyProvider);
-                Endpoint secureEndpoint = null;
-                try {
-                    final CoapEndpoint.CoapEndpointBuilder builder = new CoapEndpoint.CoapEndpointBuilder();
-                    builder.setNetworkConfig(secureNetworkConfig);
-                    builder.setConnector(new DTLSConnector(dtlsConfig.build()));
-                    secureEndpoint = builder.build();
-                    startingServer.addEndpoint(secureEndpoint);
-                } catch (final IllegalStateException ex) {
-                    LOG.warn("Failed to create secure endpoint!", ex);
-                }
-                Endpoint insecureEndpoint = null;
-                if (config.isInsecurePortEnabled()) {
-                    if (config.isAuthenticationRequired()) {
-                        LOG.warn("ambig configuration! authenticationRequired is not supported for insecure endpoint!");
-                    } else {
-                        final CoapEndpoint.CoapEndpointBuilder builder = new CoapEndpoint.CoapEndpointBuilder();
-                        builder.setNetworkConfig(insecureNetworkConfig);
-                        builder.setInetSocketAddress(new InetSocketAddress(config.getInsecurePortBindAddress(),
-                                config.getInsecurePort(getInsecurePortDefaultValue())));
-                        insecureEndpoint = builder.build();
-                        startingServer.addEndpoint(insecureEndpoint);
+        checkPortConfiguration()
+        .compose(s -> preStartup())
+        .compose(s -> {
+            final Future<NetworkConfig> secureConfig = getSecureNetworkConfig();
+            final Future<NetworkConfig> insecureConfig = getInsecureNetworkConfig();
+
+            return CompositeFuture.all(secureConfig, insecureConfig)
+                .map(ok -> {
+                    final CoapServer startingServer = server == null ? new CoapServer(insecureConfig.result()) : server;
+                    addResources(startingServer);
+                    bindSecureEndpoint(startingServer, secureConfig.result());
+                    bindInsecureEndpoint(startingServer, insecureConfig.result());
+                    startingServer.start();
+                    if (secureEndpoint != null) {
+                        LOG.info("coaps/udp endpoint running on {}", secureEndpoint.getAddress());
                     }
-                }
-                startingServer.start();
-                this.secureEndpoint = secureEndpoint;
-                this.insecureEndpoint = insecureEndpoint;
-                future.complete(startingServer);
-            }, res -> {
-                if (res.succeeded()) {
-                    this.server = (CoapServer) res.result();
-                    deployFuture.complete();
-                } else {
-                    deployFuture.fail(res.cause());
-                }
-            });
-            return deployFuture;
-        }).compose(s -> {
+                    if (insecureEndpoint != null) {
+                        LOG.info("coap/udp endpoint running on {}", insecureEndpoint.getAddress());
+                    }
+                    return ok;
+                });
+        }).compose(ok -> {
             try {
                 onStartupSuccess();
                 startFuture.complete();
@@ -227,6 +199,64 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                 startFuture.fail(e);
             }
         }, startFuture);
+    }
+
+    private void addResources(final CoapServer startingServer) {
+        resourcesToAdd.forEach(resource -> startingServer.add(new VertxCoapResource(resource, context)));
+        resourcesToAdd.clear();
+    }
+
+    private void bindSecureEndpoint(final CoapServer startingServer, final NetworkConfig config) {
+
+        // access environment using the context of this vertx and
+        // load it into finals to access them within the executeBlocking
+        final CoapPreSharedKeyHandler coapPreSharedKeyProvider = new CoapPreSharedKeyHandler(getVertx(), getConfig(),
+                getCredentialsServiceClient());
+        // add handler to authentication handler map.
+        authenticationHandlerMap.put(coapPreSharedKeyProvider.getType(), coapPreSharedKeyProvider);
+
+        final DtlsConnectorConfig.Builder dtlsConfig = new DtlsConnectorConfig.Builder();
+        dtlsConfig.setClientAuthenticationRequired(getConfig().isAuthenticationRequired());
+        dtlsConfig.setConnectionThreadCount(getConfig().getConnectorThreads());
+        dtlsConfig.setAddress(
+                new InetSocketAddress(getConfig().getBindAddress(), getConfig().getPort(getPortDefaultValue())));
+        dtlsConfig.setPskStore(coapPreSharedKeyProvider);
+        final KeyLoader keyLoader = KeyLoader.fromFiles(vertx, getConfig().getKeyPath(), getConfig().getCertPath());
+        if (keyLoader.getPrivateKey() != null && keyLoader.getCertificateChain() != null) {
+            final PublicKey pk = keyLoader.getPublicKey();
+            if (pk.getAlgorithm().equals("EC")) {
+                // Californium's cipher suites support ECC based keys only
+                dtlsConfig.setIdentity(keyLoader.getPrivateKey(), keyLoader.getCertificateChain());
+            }
+        }
+
+        try {
+            final CoapEndpoint.Builder builder = new CoapEndpoint.Builder();
+            builder.setNetworkConfig(config);
+            builder.setConnector(new DTLSConnector(dtlsConfig.build()));
+            this.secureEndpoint = builder.build();
+            startingServer.addEndpoint(this.secureEndpoint);
+
+        } catch (final IllegalStateException ex) {
+            LOG.warn("failed to create secure endpoint", ex);
+        }
+    }
+
+    private void bindInsecureEndpoint(final CoapServer startingServer, final NetworkConfig config) {
+
+        if (getConfig().isInsecurePortEnabled()) {
+            if (getConfig().isAuthenticationRequired()) {
+                LOG.warn("skipping start up of insecure endpoint, configuration requires authentication of devices");
+            } else {
+                final CoapEndpoint.Builder builder = new CoapEndpoint.Builder();
+                builder.setNetworkConfig(config);
+                builder.setInetSocketAddress(new InetSocketAddress(
+                        getConfig().getInsecurePortBindAddress(),
+                        getConfig().getInsecurePort(getInsecurePortDefaultValue())));
+                this.insecureEndpoint = builder.build();
+                startingServer.addEndpoint(this.insecureEndpoint);
+            }
+        }
     }
 
     /**
@@ -254,43 +284,49 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
     /**
      * Gets the CoAP network configuration for the secure endpoint.
      * <p>
-     * Creates a coap network configuration setup with defaults. If the {@link CoapAdapterProperties} provides a
+     * Creates a CoAP network configuration setup with defaults. If the {@link CoapAdapterProperties} provides a
      * filename in "networkConfig", load that available values from that file overwriting existing values. If the
      * {@link CoapAdapterProperties} provides a filename in "secureNetworkConfig", load that available values from that
      * file also overwriting existing values.
      * 
      * @return The network configuration for the secure endpoint.
      */
-    protected NetworkConfig getSecureNetworkConfig() {
+    protected Future<NetworkConfig> getSecureNetworkConfig() {
+
+        final Future<NetworkConfig> result = Future.future();
         final CoapAdapterProperties config = getConfig();
         final NetworkConfig networkConfig = new NetworkConfig();
         networkConfig.setInt(NetworkConfig.Keys.PROTOCOL_STAGE_THREAD_COUNT, config.getCoapThreads());
         networkConfig.setInt(NetworkConfig.Keys.NETWORK_STAGE_RECEIVER_THREAD_COUNT, config.getConnectorThreads());
         networkConfig.setInt(NetworkConfig.Keys.NETWORK_STAGE_SENDER_THREAD_COUNT, config.getConnectorThreads());
-        loadNetworkConfig(config.getNetworkConfig(), networkConfig);
-        loadNetworkConfig(config.getSecureNetworkConfig(), networkConfig);
-        return networkConfig;
+        loadNetworkConfig(config.getNetworkConfig(), networkConfig)
+        .compose(c -> loadNetworkConfig(config.getSecureNetworkConfig(), c))
+        .setHandler(result);
+        return result;
     }
 
     /**
      * Gets the CoAP network configuration for the insecure endpoint.
      * 
-     * Creates a coap network configuration setup with defaults. If the {@link CoapAdapterProperties} provides a
+     * Creates a CoAP network configuration setup with defaults. If the {@link CoapAdapterProperties} provides a
      * filename in "networkConfig", load that available values from that file overwriting existing values. If the
      * {@link CoapAdapterProperties} provides a filename in "insecureNetworkConfig", load that available values from
      * that file also overwriting existing values.
      * 
      * @return The network configuration for the insecure endpoint.
      */
-    protected NetworkConfig getInsecureNetworkConfig() {
+    protected Future<NetworkConfig> getInsecureNetworkConfig() {
+
+        final Future<NetworkConfig> result = Future.future();
         final CoapAdapterProperties config = getConfig();
         final NetworkConfig networkConfig = new NetworkConfig();
         networkConfig.setInt(NetworkConfig.Keys.PROTOCOL_STAGE_THREAD_COUNT, config.getCoapThreads());
         networkConfig.setInt(NetworkConfig.Keys.NETWORK_STAGE_RECEIVER_THREAD_COUNT, config.getConnectorThreads());
         networkConfig.setInt(NetworkConfig.Keys.NETWORK_STAGE_SENDER_THREAD_COUNT, config.getConnectorThreads());
-        loadNetworkConfig(config.getNetworkConfig(), networkConfig);
-        loadNetworkConfig(config.getInsecureNetworkConfig(), networkConfig);
-        return networkConfig;
+        loadNetworkConfig(config.getNetworkConfig(), networkConfig)
+        .compose(c -> loadNetworkConfig(config.getInsecureNetworkConfig(), c))
+        .setHandler(result);
+        return result;
     }
 
     /**
@@ -298,24 +334,24 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
      * 
      * @param fileName The absolute path to the properties file.
      * @param networkConfig The configuration to apply the properties to.
+     * @return The updated configuration.
      */
-    protected void loadNetworkConfig(final String fileName, final NetworkConfig networkConfig) {
+    protected Future<NetworkConfig> loadNetworkConfig(final String fileName, final NetworkConfig networkConfig) {
+
         if (fileName != null && !fileName.isEmpty()) {
-            final File file = new File(fileName);
-            String cause = null;
-            if (!file.exists()) {
-                cause = "File doesn't exists!";
-            } else if (!file.isFile()) {
-                cause = "Isn't a file!";
-            } else if (!file.canRead()) {
-                cause = "Can't read file!";
-            } else {
-                networkConfig.load(file);
-            }
-            if (cause != null) {
-                LOG.warn("Can't read NetworkConfig from {}! {}", fileName, cause);
-            }
+            getVertx().fileSystem().readFile(fileName, readAttempt -> {
+                if (readAttempt.succeeded()) {
+                    try (InputStream is = new ByteArrayInputStream(readAttempt.result().getBytes())) {
+                        networkConfig.load(is);
+                    } catch (final IOException e) {
+                        LOG.warn("skipping malformed NetworkConfig properties [{}]", fileName);
+                    }
+                } else {
+                    LOG.warn("error reading NetworkConfig file [{}]", fileName, readAttempt.cause());
+                }
+            });
         }
+        return Future.succeededFuture(networkConfig);
     }
 
     /**

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,11 +14,14 @@
 package org.eclipse.hono.adapter.coap.impl;
 
 import java.security.Principal;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
-import org.eclipse.californium.core.CoapServer;
+import org.eclipse.californium.core.CoapResource;
 import org.eclipse.californium.core.coap.CoAP.ResponseCode;
 import org.eclipse.californium.core.server.resources.CoapExchange;
+import org.eclipse.californium.core.server.resources.Resource;
 import org.eclipse.hono.adapter.coap.AbstractVertxBasedCoapAdapter;
 import org.eclipse.hono.adapter.coap.CoapAdapterProperties;
 import org.eclipse.hono.adapter.coap.CoapAuthenticationHandler;
@@ -30,12 +33,12 @@ import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.TelemetryConstants;
 
-import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 
 /**
- * A Vert.x based Hono protocol adapter for accessing Hono's Telemetry &amp; Event API using COAP.
+ * A vert.x based Hono protocol adapter providing access to Hono's southbound
+ * Telemetry &amp; Event API by means of CoAP resources.
  */
 public final class VertxBasedCoapAdapter extends AbstractVertxBasedCoapAdapter<CoapAdapterProperties> {
 
@@ -58,7 +61,7 @@ public final class VertxBasedCoapAdapter extends AbstractVertxBasedCoapAdapter<C
     public void getExtendedDevice(final CoapExchange exchange, final Handler<ExtendedDevice> handler) {
         try {
             final List<String> pathList = exchange.getRequestOptions().getUriPath();
-            final String[] path = pathList.toArray(String[]::new);
+            final String[] path = pathList.toArray(new String[pathList.size()]);
             final ResourceIdentifier identifier = ResourceIdentifier.fromPath(path);
             final Device device = new Device(identifier.getTenantId(), identifier.getResourceId());
             final Principal peer = exchange.advanced().getRequest().getSourceContext().getPeerIdentity();
@@ -69,9 +72,9 @@ public final class VertxBasedCoapAdapter extends AbstractVertxBasedCoapAdapter<C
             } else {
                 getAuthenticatedExtendedDevice(device, exchange, handler);
             }
-        } catch (final NullPointerException cause) {
+        } catch (NullPointerException cause) {
             CoapErrorResponse.respond(exchange, "missing tenant and device!", ResponseCode.BAD_REQUEST);
-        } catch (final Throwable cause) {
+        } catch (Throwable cause) {
             CoapErrorResponse.respond(exchange, cause, ResponseCode.INTERNAL_SERVER_ERROR);
         }
     }
@@ -116,8 +119,10 @@ public final class VertxBasedCoapAdapter extends AbstractVertxBasedCoapAdapter<C
     }
 
     @Override
-    protected void addResources(final Context adapterContext, final CoapServer server) {
-        final CoapRequestHandler telemetry = new CoapRequestHandler() {
+    protected Future<Void> preStartup() {
+
+        final Set<Resource> result = new HashSet<>();
+        result.add(new CoapResource(TelemetryConstants.TELEMETRY_ENDPOINT) {
 
             @Override
             public void handlePOST(final CoapExchange exchange) {
@@ -140,9 +145,9 @@ public final class VertxBasedCoapAdapter extends AbstractVertxBasedCoapAdapter<C
                                     waitForOutcome);
                         });
             }
-        };
+        });
 
-        final CoapRequestHandler event = new CoapRequestHandler() {
+        result.add(new CoapResource(EventConstants.EVENT_ENDPOINT) {
 
             @Override
             public void handlePOST(final CoapExchange exchange) {
@@ -161,9 +166,8 @@ public final class VertxBasedCoapAdapter extends AbstractVertxBasedCoapAdapter<C
                             uploadEventMessage(ctx, device.authenticatedDevice, device.originDevice);
                         });
             }
-        };
-
-        server.add(new VertxCoapResource(TelemetryConstants.TELEMETRY_ENDPOINT, adapterContext, telemetry));
-        server.add(new VertxCoapResource(EventConstants.EVENT_ENDPOINT, adapterContext, event));
+        });
+        setResources(result);
+        return Future.succeededFuture();
     }
 }
