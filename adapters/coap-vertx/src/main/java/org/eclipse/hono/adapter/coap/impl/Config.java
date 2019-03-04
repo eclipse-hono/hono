@@ -1,5 +1,5 @@
-/*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+/**
+ * Copyright (c) 2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -9,12 +9,11 @@
  * http://www.eclipse.org/legal/epl-2.0
  *
  * SPDX-License-Identifier: EPL-2.0
- *******************************************************************************/
+ */
 
-package org.eclipse.hono.adapter.kura;
+package org.eclipse.hono.adapter.coap.impl;
 
-import org.eclipse.hono.adapter.mqtt.MicrometerBasedMqttAdapterMetrics;
-import org.eclipse.hono.adapter.mqtt.MqttAdapterMetrics;
+import org.eclipse.hono.adapter.coap.CoapAdapterProperties;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.service.AbstractAdapterConfig;
@@ -30,55 +29,55 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.spring.autoconfigure.MeterRegistryCustomizer;
 
 /**
- * Spring Boot configuration for the Eclipse Kura protocol adapter.
+ * Spring Boot configuration for the COAP adapter.
  */
 @Configuration
 public class Config extends AbstractAdapterConfig {
 
-    private static final String CONTAINER_ID_KURA_ADAPTER = "Kura Adapter";
-    private static final String BEAN_NAME_KURA_PROTOCOL_ADAPTER = "kuraProtocolAdapter";
+    private static final String CONTAINER_ID_HONO_COAP_ADAPTER = "Hono COAP Adapter";
+    private static final String BEAN_NAME_VERTX_BASED_COAP_ADAPTER = "vertxBasedCoapAdapter";
 
     /**
-     * Creates a new MQTT protocol adapter instance.
+     * Creates a new COAP adapter instance.
      * 
      * @return The new instance.
      */
-    @Bean(name = BEAN_NAME_KURA_PROTOCOL_ADAPTER)
+    @Bean(name = BEAN_NAME_VERTX_BASED_COAP_ADAPTER)
     @Scope("prototype")
-    public KuraProtocolAdapter kuraProtocolAdapter(){
-        return new KuraProtocolAdapter();
+    public VertxBasedCoapAdapter vertxBasedCoapAdapter() {
+        return new VertxBasedCoapAdapter();
     }
 
     @Override
     protected void customizeMessagingClientConfig(final ClientConfigProperties props) {
         if (props.getName() == null) {
-            props.setName(CONTAINER_ID_KURA_ADAPTER);
+            props.setName(CONTAINER_ID_HONO_COAP_ADAPTER);
         }
     }
 
     @Override
     protected void customizeRegistrationServiceClientConfig(final RequestResponseClientConfigProperties props) {
         if (props.getName() == null) {
-            props.setName(CONTAINER_ID_KURA_ADAPTER);
+            props.setName(CONTAINER_ID_HONO_COAP_ADAPTER);
         }
     }
 
     @Override
     protected void customizeCredentialsServiceClientConfig(final RequestResponseClientConfigProperties props) {
         if (props.getName() == null) {
-            props.setName(CONTAINER_ID_KURA_ADAPTER);
+            props.setName(CONTAINER_ID_HONO_COAP_ADAPTER);
         }
     }
 
     /**
-     * Exposes the Kura adapter's configuration properties as a Spring bean.
-     * 
+     * Exposes the COAP adapter's configuration properties as a Spring bean.
+     *
      * @return The configuration properties.
      */
     @Bean
-    @ConfigurationProperties(prefix = "hono.kura")
-    public KuraAdapterProperties adapterProperties() {
-        return new KuraAdapterProperties();
+    @ConfigurationProperties(prefix = "hono.coap")
+    public CoapAdapterProperties adapterProperties() {
+        return new CoapAdapterProperties();
     }
 
     /**
@@ -89,29 +88,18 @@ public class Config extends AbstractAdapterConfig {
     @Bean
     public MeterRegistryCustomizer<MeterRegistry> commonTags() {
         return r -> r.config().commonTags(
-                MetricsTags.forProtocolAdapter(Constants.PROTOCOL_ADAPTER_TYPE_KURA));
+                MetricsTags.forProtocolAdapter(Constants.PROTOCOL_ADAPTER_TYPE_COAP));
     }
 
     /**
-     * Provides the adapter metrics instance to use.
-     * 
-     * @param registry The meter registry to use.
-     * @return A new adapter metrics instance.
-     */
-    @Bean
-    public MqttAdapterMetrics adapterMetrics(final MeterRegistry registry) {
-        return new MicrometerBasedMqttAdapterMetrics(registry);
-    }
-
-    /**
-     * Exposes a factory for creating MQTT adapter instances.
-     * 
+     * Exposes a factory for creating COAP adapter instances.
+     *
      * @return The factory bean.
      */
     @Bean
     public ObjectFactoryCreatingFactoryBean serviceFactory() {
         final ObjectFactoryCreatingFactoryBean factory = new ObjectFactoryCreatingFactoryBean();
-        factory.setTargetBeanName(BEAN_NAME_KURA_PROTOCOL_ADAPTER);
+        factory.setTargetBeanName(BEAN_NAME_VERTX_BASED_COAP_ADAPTER);
         return factory;
     }
 }

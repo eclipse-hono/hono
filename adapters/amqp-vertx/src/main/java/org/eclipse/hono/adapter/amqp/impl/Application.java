@@ -10,7 +10,7 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
-package org.eclipse.hono.adapter.amqp;
+package org.eclipse.hono.adapter.amqp.impl;
 
 import org.eclipse.hono.service.AbstractApplication;
 import org.springframework.boot.SpringApplication;
@@ -21,7 +21,8 @@ import org.springframework.context.annotation.Configuration;
 /**
  * The Hono AMQP main application class.
  */
-@ComponentScan(basePackages = { "org.eclipse.hono.adapter.amqp", "org.eclipse.hono.service.metric" })
+@ComponentScan("org.eclipse.hono.adapter.amqp")
+@ComponentScan("org.eclipse.hono.service.metric")
 @Configuration
 @EnableAutoConfiguration
 public class Application extends AbstractApplication {

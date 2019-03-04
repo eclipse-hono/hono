@@ -11,7 +11,7 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package org.eclipse.hono.adapter.kura;
+package org.eclipse.hono.adapter.kura.impl;
 
 import org.eclipse.hono.adapter.mqtt.MqttProtocolAdapterProperties;
 

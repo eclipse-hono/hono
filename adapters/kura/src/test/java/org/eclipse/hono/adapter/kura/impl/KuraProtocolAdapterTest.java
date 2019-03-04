@@ -11,13 +11,15 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package org.eclipse.hono.adapter.kura;
+package org.eclipse.hono.adapter.kura.impl;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import org.eclipse.hono.adapter.kura.impl.KuraAdapterProperties;
+import org.eclipse.hono.adapter.kura.impl.KuraProtocolAdapter;
 import org.eclipse.hono.adapter.mqtt.MqttContext;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.util.EventConstants;

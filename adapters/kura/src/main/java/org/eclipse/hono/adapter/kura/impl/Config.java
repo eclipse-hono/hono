@@ -11,9 +11,10 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package org.eclipse.hono.adapter.http.vertx;
+package org.eclipse.hono.adapter.kura.impl;
 
-import org.eclipse.hono.adapter.http.HttpProtocolAdapterProperties;
+import org.eclipse.hono.adapter.mqtt.MicrometerBasedMqttAdapterMetrics;
+import org.eclipse.hono.adapter.mqtt.MqttAdapterMetrics;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.service.AbstractAdapterConfig;
@@ -29,55 +30,55 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.spring.autoconfigure.MeterRegistryCustomizer;
 
 /**
- * Spring Boot configuration for the HTTP adapter.
+ * Spring Boot configuration for the Eclipse Kura protocol adapter.
  */
 @Configuration
 public class Config extends AbstractAdapterConfig {
 
-    private static final String CONTAINER_ID_HONO_HTTP_ADAPTER = "Hono HTTP Adapter";
-    private static final String BEAN_NAME_VERTX_BASED_HTTP_PROTOCOL_ADAPTER = "vertxBasedHttpProtocolAdapter";
+    private static final String CONTAINER_ID_KURA_ADAPTER = "Kura Adapter";
+    private static final String BEAN_NAME_KURA_PROTOCOL_ADAPTER = "kuraProtocolAdapter";
 
     /**
-     * Creates a new HTTP adapter instance.
+     * Creates a new MQTT protocol adapter instance.
      * 
      * @return The new instance.
      */
-    @Bean(name = BEAN_NAME_VERTX_BASED_HTTP_PROTOCOL_ADAPTER)
+    @Bean(name = BEAN_NAME_KURA_PROTOCOL_ADAPTER)
     @Scope("prototype")
-    public VertxBasedHttpProtocolAdapter vertxBasedHttpProtocolAdapter() {
-        return new VertxBasedHttpProtocolAdapter();
+    public KuraProtocolAdapter kuraProtocolAdapter(){
+        return new KuraProtocolAdapter();
     }
 
     @Override
     protected void customizeMessagingClientConfig(final ClientConfigProperties props) {
         if (props.getName() == null) {
-            props.setName(CONTAINER_ID_HONO_HTTP_ADAPTER);
+            props.setName(CONTAINER_ID_KURA_ADAPTER);
         }
     }
 
     @Override
     protected void customizeRegistrationServiceClientConfig(final RequestResponseClientConfigProperties props) {
         if (props.getName() == null) {
-            props.setName(CONTAINER_ID_HONO_HTTP_ADAPTER);
+            props.setName(CONTAINER_ID_KURA_ADAPTER);
         }
     }
 
     @Override
     protected void customizeCredentialsServiceClientConfig(final RequestResponseClientConfigProperties props) {
         if (props.getName() == null) {
-            props.setName(CONTAINER_ID_HONO_HTTP_ADAPTER);
+            props.setName(CONTAINER_ID_KURA_ADAPTER);
         }
     }
 
     /**
-     * Exposes the HTTP adapter's configuration properties as a Spring bean.
-     *
+     * Exposes the Kura adapter's configuration properties as a Spring bean.
+     * 
      * @return The configuration properties.
      */
     @Bean
-    @ConfigurationProperties(prefix = "hono.http")
-    public HttpProtocolAdapterProperties adapterProperties() {
-        return new HttpProtocolAdapterProperties();
+    @ConfigurationProperties(prefix = "hono.kura")
+    public KuraAdapterProperties adapterProperties() {
+        return new KuraAdapterProperties();
     }
 
     /**
@@ -88,18 +89,29 @@ public class Config extends AbstractAdapterConfig {
     @Bean
     public MeterRegistryCustomizer<MeterRegistry> commonTags() {
         return r -> r.config().commonTags(
-                MetricsTags.forProtocolAdapter(Constants.PROTOCOL_ADAPTER_TYPE_HTTP));
+                MetricsTags.forProtocolAdapter(Constants.PROTOCOL_ADAPTER_TYPE_KURA));
     }
 
     /**
-     * Exposes a factory for creating HTTP adapter instances.
-     *
+     * Provides the adapter metrics instance to use.
+     * 
+     * @param registry The meter registry to use.
+     * @return A new adapter metrics instance.
+     */
+    @Bean
+    public MqttAdapterMetrics adapterMetrics(final MeterRegistry registry) {
+        return new MicrometerBasedMqttAdapterMetrics(registry);
+    }
+
+    /**
+     * Exposes a factory for creating MQTT adapter instances.
+     * 
      * @return The factory bean.
      */
     @Bean
     public ObjectFactoryCreatingFactoryBean serviceFactory() {
         final ObjectFactoryCreatingFactoryBean factory = new ObjectFactoryCreatingFactoryBean();
-        factory.setTargetBeanName(BEAN_NAME_VERTX_BASED_HTTP_PROTOCOL_ADAPTER);
+        factory.setTargetBeanName(BEAN_NAME_KURA_PROTOCOL_ADAPTER);
         return factory;
     }
 }

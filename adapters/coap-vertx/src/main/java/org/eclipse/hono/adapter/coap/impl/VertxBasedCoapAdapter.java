@@ -11,7 +11,7 @@
  * SPDX-License-Identifier: EPL-2.0
  */
 
-package org.eclipse.hono.adapter.coap.vertx;
+package org.eclipse.hono.adapter.coap.impl;
 
 import java.security.Principal;
 import java.util.List;

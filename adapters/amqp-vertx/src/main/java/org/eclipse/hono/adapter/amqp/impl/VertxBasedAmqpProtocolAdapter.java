@@ -10,7 +10,7 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
-package org.eclipse.hono.adapter.amqp;
+package org.eclipse.hono.adapter.amqp.impl;
 
 import java.net.HttpURLConnection;
 import java.util.Collections;
@@ -28,6 +28,10 @@ import org.apache.qpid.proton.amqp.transport.DeliveryState;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.amqp.transport.Source;
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.adapter.amqp.AmqpAdapterConstants;
+import org.eclipse.hono.adapter.amqp.AmqpAdapterMetrics;
+import org.eclipse.hono.adapter.amqp.AmqpAdapterProperties;
+import org.eclipse.hono.adapter.amqp.AmqpAdapterSaslAuthenticatorFactory;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.Command;
