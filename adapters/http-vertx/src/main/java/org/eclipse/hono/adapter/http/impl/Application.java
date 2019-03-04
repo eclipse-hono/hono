@@ -10,8 +10,7 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
-
-package org.eclipse.hono.adapter.kura;
+package org.eclipse.hono.adapter.http.impl;
 
 import org.eclipse.hono.service.AbstractApplication;
 import org.springframework.boot.SpringApplication;
@@ -20,17 +19,18 @@ import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * The Kura adapter main application class.
+ * The Hono HTTP adapter main application class.
  */
-@ComponentScan(basePackages = { "org.eclipse.hono.adapter.kura", "org.eclipse.hono.service.metric", "org.eclipse.hono.service.credentials" })
+@ComponentScan("org.eclipse.hono.adapter.http")
+@ComponentScan("org.eclipse.hono.service.metric")
 @Configuration
 @EnableAutoConfiguration
 public class Application extends AbstractApplication {
 
     /**
-     * Starts the Kura Adapter application.
+     * Starts the HTTP Adapter application.
      * 
-     * @param args Command line arguments passed to the application.
+     * @param args Command line args passed to the application.
      */
     public static void main(final String[] args) {
         SpringApplication.run(Application.class, args);

@@ -1,5 +1,5 @@
-/**
- * Copyright (c) 2018 Contributors to the Eclipse Foundation
+/*******************************************************************************
+ * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -9,11 +9,11 @@
  * http://www.eclipse.org/legal/epl-2.0
  *
  * SPDX-License-Identifier: EPL-2.0
- */
+ *******************************************************************************/
 
-package org.eclipse.hono.adapter.coap.vertx;
+package org.eclipse.hono.adapter.http.impl;
 
-import org.eclipse.hono.adapter.coap.CoapAdapterProperties;
+import org.eclipse.hono.adapter.http.HttpProtocolAdapterProperties;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.service.AbstractAdapterConfig;
@@ -29,55 +29,55 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.spring.autoconfigure.MeterRegistryCustomizer;
 
 /**
- * Spring Boot configuration for the COAP adapter.
+ * Spring Boot configuration for the HTTP adapter.
  */
 @Configuration
 public class Config extends AbstractAdapterConfig {
 
-    private static final String CONTAINER_ID_HONO_COAP_ADAPTER = "Hono COAP Adapter";
-    private static final String BEAN_NAME_VERTX_BASED_COAP_ADAPTER = "vertxBasedCoapAdapter";
+    private static final String CONTAINER_ID_HONO_HTTP_ADAPTER = "Hono HTTP Adapter";
+    private static final String BEAN_NAME_VERTX_BASED_HTTP_PROTOCOL_ADAPTER = "vertxBasedHttpProtocolAdapter";
 
     /**
-     * Creates a new COAP adapter instance.
+     * Creates a new HTTP adapter instance.
      * 
      * @return The new instance.
      */
-    @Bean(name = BEAN_NAME_VERTX_BASED_COAP_ADAPTER)
+    @Bean(name = BEAN_NAME_VERTX_BASED_HTTP_PROTOCOL_ADAPTER)
     @Scope("prototype")
-    public VertxBasedCoapAdapter vertxBasedCoapAdapter() {
-        return new VertxBasedCoapAdapter();
+    public VertxBasedHttpProtocolAdapter vertxBasedHttpProtocolAdapter() {
+        return new VertxBasedHttpProtocolAdapter();
     }
 
     @Override
     protected void customizeMessagingClientConfig(final ClientConfigProperties props) {
         if (props.getName() == null) {
-            props.setName(CONTAINER_ID_HONO_COAP_ADAPTER);
+            props.setName(CONTAINER_ID_HONO_HTTP_ADAPTER);
         }
     }
 
     @Override
     protected void customizeRegistrationServiceClientConfig(final RequestResponseClientConfigProperties props) {
         if (props.getName() == null) {
-            props.setName(CONTAINER_ID_HONO_COAP_ADAPTER);
+            props.setName(CONTAINER_ID_HONO_HTTP_ADAPTER);
         }
     }
 
     @Override
     protected void customizeCredentialsServiceClientConfig(final RequestResponseClientConfigProperties props) {
         if (props.getName() == null) {
-            props.setName(CONTAINER_ID_HONO_COAP_ADAPTER);
+            props.setName(CONTAINER_ID_HONO_HTTP_ADAPTER);
         }
     }
 
     /**
-     * Exposes the COAP adapter's configuration properties as a Spring bean.
+     * Exposes the HTTP adapter's configuration properties as a Spring bean.
      *
      * @return The configuration properties.
      */
     @Bean
-    @ConfigurationProperties(prefix = "hono.coap")
-    public CoapAdapterProperties adapterProperties() {
-        return new CoapAdapterProperties();
+    @ConfigurationProperties(prefix = "hono.http")
+    public HttpProtocolAdapterProperties adapterProperties() {
+        return new HttpProtocolAdapterProperties();
     }
 
     /**
@@ -88,18 +88,18 @@ public class Config extends AbstractAdapterConfig {
     @Bean
     public MeterRegistryCustomizer<MeterRegistry> commonTags() {
         return r -> r.config().commonTags(
-                MetricsTags.forProtocolAdapter(Constants.PROTOCOL_ADAPTER_TYPE_COAP));
+                MetricsTags.forProtocolAdapter(Constants.PROTOCOL_ADAPTER_TYPE_HTTP));
     }
 
     /**
-     * Exposes a factory for creating COAP adapter instances.
+     * Exposes a factory for creating HTTP adapter instances.
      *
      * @return The factory bean.
      */
     @Bean
     public ObjectFactoryCreatingFactoryBean serviceFactory() {
         final ObjectFactoryCreatingFactoryBean factory = new ObjectFactoryCreatingFactoryBean();
-        factory.setTargetBeanName(BEAN_NAME_VERTX_BASED_COAP_ADAPTER);
+        factory.setTargetBeanName(BEAN_NAME_VERTX_BASED_HTTP_PROTOCOL_ADAPTER);
         return factory;
     }
 }

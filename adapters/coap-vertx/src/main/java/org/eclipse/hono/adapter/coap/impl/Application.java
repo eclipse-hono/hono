@@ -10,7 +10,7 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  */
-package org.eclipse.hono.adapter.coap.vertx;
+package org.eclipse.hono.adapter.coap.impl;
 
 import org.eclipse.hono.service.AbstractApplication;
 import org.springframework.boot.SpringApplication;
@@ -21,7 +21,8 @@ import org.springframework.context.annotation.Configuration;
 /**
  * The Hono COAP adapter main application class.
  */
-@ComponentScan(basePackages = { "org.eclipse.hono.adapter.coap", "org.eclipse.hono.service.metric" })
+@ComponentScan("org.eclipse.hono.adapter.coap")
+@ComponentScan("org.eclipse.hono.service.metric")
 @Configuration
 @EnableAutoConfiguration
 public class Application extends AbstractApplication {

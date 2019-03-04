@@ -10,7 +10,7 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
-package org.eclipse.hono.adapter.amqp;
+package org.eclipse.hono.adapter.amqp.impl;
 
 import static org.hamcrest.core.IsEqual.equalTo;
 import static org.junit.Assert.assertThat;
@@ -41,6 +41,10 @@ import org.apache.qpid.proton.amqp.transport.Source;
 import org.apache.qpid.proton.engine.Record;
 import org.apache.qpid.proton.engine.impl.RecordImpl;
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.adapter.amqp.AmqpAdapterConstants;
+import org.eclipse.hono.adapter.amqp.AmqpAdapterMetrics;
+import org.eclipse.hono.adapter.amqp.AmqpAdapterProperties;
+import org.eclipse.hono.adapter.amqp.impl.VertxBasedAmqpProtocolAdapter;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.Command;
 import org.eclipse.hono.client.CommandConnection;
