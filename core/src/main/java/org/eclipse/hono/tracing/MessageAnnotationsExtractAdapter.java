@@ -54,12 +54,12 @@ public class MessageAnnotationsExtractAdapter implements TextMap {
     @Override
     public Iterator<Entry<String, String>> iterator() {
 
-        final Map<Object, Object> propertiesMap = getPropertiesMap();
+        final Map<?, ?> propertiesMap = getPropertiesMap();
         if (propertiesMap.isEmpty()) {
             return Collections.emptyIterator();
         }
-        final Iterator<Entry<Object, Object>> entriesIterator = propertiesMap.entrySet().iterator();
-        return new Iterator<Map.Entry<String, String>>() {
+        final Iterator<? extends Entry<?, ?>> entriesIterator = propertiesMap.entrySet().iterator();
+        return new Iterator<>() {
 
             @Override
             public boolean hasNext() {
@@ -68,7 +68,7 @@ public class MessageAnnotationsExtractAdapter implements TextMap {
 
             @Override
             public Entry<String, String> next() {
-                final Entry<Object, Object> nextEntry = entriesIterator.next();
+                final Entry<?, ?> nextEntry = entriesIterator.next();
                 return new AbstractMap.SimpleEntry<>(nextEntry.getKey().toString(),
                         nextEntry.getValue().toString());
             }
@@ -80,7 +80,7 @@ public class MessageAnnotationsExtractAdapter implements TextMap {
         throw new UnsupportedOperationException();
     }
 
-    private Map<Object, Object> getPropertiesMap() {
+    private Map<?, ?> getPropertiesMap() {
         final MessageAnnotations messageAnnotations = message.getMessageAnnotations();
         if (messageAnnotations == null || messageAnnotations.getValue() == null) {
             return Collections.emptyMap();
@@ -93,6 +93,6 @@ public class MessageAnnotationsExtractAdapter implements TextMap {
             }
             return Collections.emptyMap();
         }
-        return (Map<Object, Object>) annotationValue;
+        return (Map<?, ?>) annotationValue;
     }
 }

@@ -55,6 +55,7 @@ public class MessageAnnotationsInjectAdapter implements TextMap {
         getPropertiesMap().put(Symbol.getSymbol(key), value);
     }
 
+    @SuppressWarnings("unchecked")
     private Map<Symbol, String> getPropertiesMap() {
         final MessageAnnotations messageAnnotations;
         if (message.getMessageAnnotations() == null || message.getMessageAnnotations().getValue() == null) {

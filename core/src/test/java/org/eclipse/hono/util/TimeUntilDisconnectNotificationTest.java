@@ -36,13 +36,13 @@ public class TimeUntilDisconnectNotificationTest {
     public void testNotificationIsConstructedIfTtdIsSetToPositiveValue() {
 
         final Message msg = createTestMessage();
-        MessageHelper.addProperty(msg, MessageHelper.APP_PROPERTY_DEVICE_TTD, new Integer(10));
+        MessageHelper.addProperty(msg, MessageHelper.APP_PROPERTY_DEVICE_TTD, Integer.valueOf(10));
         final Optional<TimeUntilDisconnectNotification> ttdNotificationOpt = TimeUntilDisconnectNotification.fromMessage(msg);
         assertTrue(ttdNotificationOpt.isPresent());
 
         final TimeUntilDisconnectNotification notification = ttdNotificationOpt.get();
         assertNotificationProperties(notification, msg);
-        assertEquals(notification.getTtd(), new Integer(10));
+        assertEquals(notification.getTtd(), Integer.valueOf(10));
     }
 
     /**
@@ -58,7 +58,7 @@ public class TimeUntilDisconnectNotificationTest {
         final TimeUntilDisconnectNotification notification = ttdNotificationOpt.get();
 
         assertNotificationProperties(notification, msg);
-        assertEquals(notification.getTtd(), new Integer(MessageHelper.TTD_VALUE_UNLIMITED));
+        assertEquals(notification.getTtd(), Integer.valueOf(MessageHelper.TTD_VALUE_UNLIMITED));
     }
 
     private void assertNotificationProperties(final TimeUntilDisconnectNotification notification, final Message msg) {
