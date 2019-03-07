@@ -1,0 +1,69 @@
+hono:
+  app:
+    maxInstances: 1
+    healthCheckBindAddress: 0.0.0.0
+    healthCheckPort: ${vertx.health.port}
+    startupTimeout: 120
+  coap:
+    authenticationRequired: false
+    bindAddress: 0.0.0.0
+    insecurePortBindAddress: 0.0.0.0
+    insecurePortEnabled: true
+    keyPath: /etc/hono/certs/coap-adapter-key.pem
+    certPath: /etc/hono/certs/coap-adapter-cert.pem
+  messaging:
+    name: 'Hono CoAP Adapter'
+    host: hono-dispatch-router.hono
+    port: 5673
+    amqpHostname: hono-internal
+    keyPath: /etc/hono/certs/coap-adapter-key.pem
+    certPath: /etc/hono/certs/coap-adapter-cert.pem
+    trustStorePath: /etc/hono/certs/trusted-certs.pem
+    linkEstablishmentTimeout: ${link.establishment.timeout}
+    flowLatency: ${flow.latency}
+  registration:
+    name: 'Hono CoAP Adapter'
+    host: hono-service-device-registry.hono
+    port: 5672
+    username: coap-adapter@HONO
+    password: coap-secret
+    linkEstablishmentTimeout: ${link.establishment.timeout}
+    flowLatency: ${flow.latency}
+  credentials:
+    name: 'Hono CoAP Adapter'
+    host: hono-service-device-registry.hono
+    port: 5672
+    username: coap-adapter@HONO
+    password: coap-secret
+    linkEstablishmentTimeout: ${link.establishment.timeout}
+    flowLatency: ${flow.latency}
+  tenant:
+    name: 'Hono CoAP Adapter'
+    host: hono-service-device-registry.hono
+    port: 5672
+    username: coap-adapter@HONO
+    password: coap-secret
+    linkEstablishmentTimeout: ${link.establishment.timeout}
+    flowLatency: ${flow.latency}
+  command:
+    name: 'Hono CoAP Adapter'
+    host: hono-dispatch-router.hono
+    port: 5673
+    amqpHostname: hono-internal
+    keyPath: /etc/hono/certs/coap-adapter-key.pem
+    certPath: /etc/hono/certs/coap-adapter-cert.pem
+    trustStorePath: /etc/hono/certs/trusted-certs.pem
+    linkEstablishmentTimeout: ${link.establishment.timeout}
+    flowLatency: ${flow.latency}
+  vertx:
+    maxEventLoopExecuteTime: ${max.event-loop.execute-time}
+
+spring:
+  jmx:
+    enabled: false
+
+management:
+  port: -1
+
+server:
+  port: -1

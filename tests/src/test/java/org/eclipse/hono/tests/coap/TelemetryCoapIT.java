@@ -1,0 +1,93 @@
+/*******************************************************************************
+ * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ *
+ * See the NOTICE file(s) distributed with this work for additional
+ * information regarding copyright ownership.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License 2.0 which is available at
+ * http://www.eclipse.org/legal/epl-2.0
+ *
+ * SPDX-License-Identifier: EPL-2.0
+ *******************************************************************************/
+
+package org.eclipse.hono.tests.coap;
+
+import java.util.function.Consumer;
+
+import org.apache.qpid.proton.message.Message;
+import org.eclipse.californium.core.CoapClient;
+import org.eclipse.californium.core.coap.CoAP.Code;
+import org.eclipse.californium.core.coap.CoAP.Type;
+import org.eclipse.californium.core.coap.OptionSet;
+import org.eclipse.californium.core.coap.Request;
+import org.eclipse.hono.client.MessageConsumer;
+import org.eclipse.hono.util.TelemetryConstants;
+import org.eclipse.hono.util.TenantObject;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+
+import io.vertx.core.Future;
+import io.vertx.ext.unit.Async;
+import io.vertx.ext.unit.TestContext;
+import io.vertx.ext.unit.junit.VertxUnitRunner;
+
+
+/**
+ * Integration tests for uploading telemetry data to the CoAP adapter.
+ *
+ */
+@RunWith(VertxUnitRunner.class)
+public class TelemetryCoapIT extends CoapTestBase {
+
+    private static final String POST_URI = "/" + TelemetryConstants.TELEMETRY_ENDPOINT;
+    private static final String PUT_URI_TEMPLATE = POST_URI + "/%s/%s";
+
+    @Override
+    protected Future<MessageConsumer> createConsumer(final String tenantId, final Consumer<Message> messageConsumer) {
+
+        return helper.honoClient.createTelemetryConsumer(tenantId, messageConsumer, remoteClose -> {});
+    }
+
+    @Override
+    protected String getPutResource(final String tenant, final String deviceId) {
+        return String.format(PUT_URI_TEMPLATE, tenant, deviceId);
+    }
+
+    @Override
+    protected String getPostResource() {
+        return POST_URI;
+    }
+
+    @Override
+    protected Type getMessageType() {
+        return Type.NON;
+    }
+
+    /**
+     * Verifies that a number of telemetry messages uploaded to Hono's CoAP adapter
+     * using QoS 1 can be successfully consumed via the AMQP Messaging Network.
+     * 
+     * @param ctx The test context.
+     * @throws InterruptedException if the test fails.
+     */
+    @Test
+    public void testUploadUsingQoS1(final TestContext ctx) throws InterruptedException {
+
+        final Async setup = ctx.async();
+        final TenantObject tenant = TenantObject.from(tenantId, true);
+
+        helper.registry.addPskDeviceForTenant(tenant, deviceId, SECRET)
+        .setHandler(ctx.asyncAssertSuccess(ok -> setup.complete()));
+        setup.await();
+
+        final CoapClient client = getCoapsClient(deviceId, tenantId, SECRET);
+
+        testUploadMessages(ctx, tenantId, count -> {
+            final Future<OptionSet> result = Future.future();
+            final Request request = createCoapsRequest(Code.POST, Type.CON, getPostResource(), count);
+            client.advanced(getHandler(result), request);
+            return result;
+        });
+    }
+}

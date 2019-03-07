@@ -194,6 +194,14 @@
         "protocol-adapter"
       ]
     },
+    "coap-adapter@HONO": {
+      "mechanism": "PLAIN",
+      "password": "coap-secret",
+      "authorities": [
+        "hono-component",
+        "protocol-adapter"
+      ]
+    },
     "hono-client": {
       "mechanism": "PLAIN",
       "password": "secret",

@@ -120,6 +120,16 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
       <scope>runtime</scope>
     </dependency>
 
+    <dependency>
+      <groupId>org.eclipse.californium</groupId>
+      <artifactId>californium-core</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.californium</groupId>
+      <artifactId>scandium</artifactId>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <build>
@@ -736,6 +746,74 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     </wait>
                   </run>
                 </image>
+                <!-- ##### CoAP adapter ##### -->
+                <image>
+                  <name>${docker.image.org-name}/hono-adapter-coap-test</name>
+                  <alias>coap-adapter</alias>
+                  <build>
+                    <from>${docker.image.org-name}/hono-adapter-coap-vertx:${project.version}</from>
+                    <assembly>
+                      <mode>dir</mode>
+                      <basedir>/</basedir>
+                      <inline>
+                        <id>config</id>
+                        <fileSets>
+                          <fileSet>
+                            <directory>${project.build.directory}/resources/coap</directory>
+                            <outputDirectory>etc/hono</outputDirectory>
+                            <includes>
+                              <include>*</include>
+                            </includes>
+                          </fileSet>
+                          <fileSet>
+                            <directory>${project.build.directory}/certs</directory>
+                            <outputDirectory>etc/hono/certs</outputDirectory>
+                            <includes>
+                              <include>coap-adapter-*.pem</include>
+                              <include>trusted-certs.pem</include>
+                            </includes>
+                          </fileSet>
+                        </fileSets>
+                      </inline>
+                    </assembly>
+                  </build>
+                  <run>
+                    <ports>
+                      <port>+coap.ip:coap.port:5683/udp</port>
+                      <port>coaps.port:5684/udp</port>
+                      <port>+coap.ip:coap.health.port:${vertx.health.port}</port>
+                    </ports>
+                    <network>
+                      <mode>custom</mode>
+                      <name>hono</name>
+                      <alias>hono-adapter-coap-vertx.hono</alias>
+                    </network>
+                    <memorySwap>-1</memorySwap>
+                    <memory>268435456</memory>
+                    <env>
+                      <LOGGING_CONFIG>file:/etc/hono/logback-spring.xml</LOGGING_CONFIG>
+                      <SPRING_CONFIG_LOCATION>file:/etc/hono/</SPRING_CONFIG_LOCATION>
+                      <SPRING_PROFILES_ACTIVE>prod</SPRING_PROFILES_ACTIVE>
+                      <_JAVA_OPTIONS>
+                        -XX:MinRAMPercentage=80
+                        -XX:MaxRAMPercentage=80
+                        ${http.java.options}
+                      </_JAVA_OPTIONS>
+                      <PN_TRACE_FRM>0</PN_TRACE_FRM>
+                    </env>
+                    <log>
+                      <prefix>COAP</prefix>
+                    </log>
+                    <wait>
+                      <time>${service.startup.timeout}</time>
+                      <http>
+                        <method>GET</method>
+                        <url>http://${coap.ip}:${coap.health.port}/readiness</url>
+                        <status>200..299</status>
+                      </http>
+                    </wait>
+                  </run>
+                </image>
               </images>
             </configuration>
             <executions>
@@ -831,6 +909,9 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                 <deviceregistry.host>${deviceregistry.ip}</deviceregistry.host>
                 <deviceregistry.amqp.port>${deviceregistry.amqp.port}</deviceregistry.amqp.port>
                 <deviceregistry.http.port>${deviceregistry.http.port}</deviceregistry.http.port>
+                <coap.host>${coap.ip}</coap.host>
+                <coap.port>${coap.port}</coap.port>
+                <coaps.port>${coaps.port}</coaps.port>
                 <http.host>${http.ip}</http.host>
                 <http.port>${http.port}</http.port>
                 <https.port>${https.port}</https.port>

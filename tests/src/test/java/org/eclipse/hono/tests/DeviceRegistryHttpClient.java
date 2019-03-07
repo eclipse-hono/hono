@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,6 +14,7 @@
 package org.eclipse.hono.tests;
 
 import java.net.HttpURLConnection;
+import java.nio.charset.StandardCharsets;
 import java.security.cert.X509Certificate;
 import java.util.Objects;
 import java.util.Optional;
@@ -711,6 +712,76 @@ public final class DeviceRegistryHttpClient {
                         tenant.getTenantId(), deviceId, deviceCert.getSubjectX500Principal().getName(X500Principal.RFC2253));
                 return null;
             });
+    }
+
+    /**
+     * Creates a tenant and adds a device to it with a given Pre-Shared Key.
+     * <p>
+     * The device will be registered with a set of <em>psk</em> credentials
+     * using the device identifier as the authentication identifier and PSK identity.
+     * 
+     * @param tenant The tenant to create.
+     * @param deviceId The identifier of the device to add to the tenant.
+     * @param key The shared key.
+     * @return A future indicating the outcome of the operation.
+     * @throws NullPointerException if any of the parameters are are {@code null}.
+     */
+    public Future<Void> addPskDeviceForTenant(final TenantObject tenant, final String deviceId, final String key) {
+        return addPskDeviceForTenant(tenant, deviceId, new JsonObject(), key);
+    }
+
+    /**
+     * Creates a tenant and adds a device to it with a given Pre-Shared Key.
+     * <p>
+     * The device will be registered with a set of <em>psk</em> credentials
+     * using the device identifier as the authentication identifier and PSK identity.
+     * 
+     * @param tenant The tenant to create.
+     * @param deviceId The identifier of the device to add to the tenant.
+     * @param deviceData Additional data to register for the device.
+     * @param key The shared key.
+     * @return A future indicating the outcome of the operation.
+     * @throws NullPointerException if any of the parameters are are {@code null}.
+     */
+    public Future<Void> addPskDeviceForTenant(
+            final TenantObject tenant,
+            final String deviceId,
+            final JsonObject deviceData,
+            final String key) {
+
+        Objects.requireNonNull(tenant);
+        Objects.requireNonNull(deviceId);
+        Objects.requireNonNull(deviceData);
+        Objects.requireNonNull(key);
+
+        final CredentialsObject credentialsSpec =
+                CredentialsObject.fromPresharedKey(deviceId, deviceId, key.getBytes(StandardCharsets.UTF_8), null, null);
+
+        return addTenant(JsonObject.mapFrom(tenant))
+            .compose(ok -> registerDevice(tenant.getTenantId(), deviceId, deviceData))
+            .compose(ok -> addCredentials(tenant.getTenantId(), JsonObject.mapFrom(credentialsSpec)));
+
+    }
+
+    /**
+     * Adds a device with a given Pre-Shared Key to an existing tenant.
+     * <p>
+     * The key will be added as a <em>psk</em> secret
+     * using the device identifier as the authentication identifier and PSK identity.
+     * 
+     * @param tenant The identifier of the tenant to add the device to.
+     * @param deviceId The identifier of the device to add.
+     * @param key The shared key.
+     * @return A future indicating the outcome of the operation.
+     * @throws NullPointerException if any of the parameters are {@code null}.
+     */
+    public Future<Void> addPskDeviceToTenant(final String tenant, final String deviceId, final String key) {
+
+        final CredentialsObject credentialsSpec =
+                CredentialsObject.fromPresharedKey(deviceId, deviceId, key.getBytes(StandardCharsets.UTF_8), null, null);
+
+        return registerDevice(tenant, deviceId)
+                .compose(ok -> addCredentials(tenant, JsonObject.mapFrom(credentialsSpec)));
     }
 
 }

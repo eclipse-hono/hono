@@ -58,8 +58,10 @@ import io.vertx.ext.unit.TestContext;
  */
 public final class IntegrationTestSupport {
 
-    public static final int    DEFAULT_AMQP_PORT = 4040;
-    public static final int    DEFAULT_AMQPS_PORT = 4041;
+    public static final int    DEFAULT_AMQP_PORT = 5672;
+    public static final int    DEFAULT_AMQPS_PORT = 5671;
+    public static final int    DEFAULT_COAP_PORT = 5683;
+    public static final int    DEFAULT_COAPS_PORT = 5684;
     public static final int    DEFAULT_DEVICEREGISTRY_AMQP_PORT = 25672;
     public static final int    DEFAULT_DEVICEREGISTRY_HTTP_PORT = 28080;
     public static final int    DEFAULT_DOWNSTREAM_PORT = 15672;
@@ -81,6 +83,9 @@ public final class IntegrationTestSupport {
     public static final String PROPERTY_DOWNSTREAM_PORT = "downstream.amqp.port";
     public static final String PROPERTY_DOWNSTREAM_USERNAME = "downstream.username";
     public static final String PROPERTY_DOWNSTREAM_PASSWORD = "downstream.password";
+    public static final String PROPERTY_COAP_HOST = "coap.host";
+    public static final String PROPERTY_COAP_PORT = "coap.port";
+    public static final String PROPERTY_COAPS_PORT = "coaps.port";
     public static final String PROPERTY_HTTP_HOST = "http.host";
     public static final String PROPERTY_HTTP_PORT = "http.port";
     public static final String PROPERTY_HTTPS_PORT = "https.port";
@@ -110,6 +115,9 @@ public final class IntegrationTestSupport {
     public static final String RESTRICTED_CONSUMER_NAME = "user1@HONO";
     public static final String RESTRICTED_CONSUMER_PWD = "pw";
 
+    public static final String COAP_HOST = System.getProperty(PROPERTY_COAP_HOST, DEFAULT_HOST);
+    public static final int    COAP_PORT = Integer.getInteger(PROPERTY_COAP_PORT, DEFAULT_COAP_PORT);
+    public static final int    COAPS_PORT = Integer.getInteger(PROPERTY_COAPS_PORT, DEFAULT_COAPS_PORT);
     public static final String HTTP_HOST = System.getProperty(PROPERTY_HTTP_HOST, DEFAULT_HOST);
     public static final int    HTTP_PORT = Integer.getInteger(PROPERTY_HTTP_PORT, DEFAULT_HTTP_PORT);
     public static final int    HTTPS_PORT = Integer.getInteger(PROPERTY_HTTPS_PORT, DEFAULT_HTTPS_PORT);
