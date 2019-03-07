@@ -13,13 +13,13 @@
 
 package org.eclipse.hono.adapter.coap.impl;
 
+import java.net.HttpURLConnection;
 import java.security.Principal;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
 import org.eclipse.californium.core.CoapResource;
-import org.eclipse.californium.core.coap.CoAP.ResponseCode;
 import org.eclipse.californium.core.server.resources.CoapExchange;
 import org.eclipse.californium.core.server.resources.Resource;
 import org.eclipse.hono.adapter.coap.AbstractVertxBasedCoapAdapter;
@@ -28,13 +28,15 @@ import org.eclipse.hono.adapter.coap.CoapAuthenticationHandler;
 import org.eclipse.hono.adapter.coap.CoapContext;
 import org.eclipse.hono.adapter.coap.CoapErrorResponse;
 import org.eclipse.hono.auth.Device;
+import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.TelemetryConstants;
 
+import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
-import io.vertx.core.Handler;
 
 /**
  * A vert.x based Hono protocol adapter providing access to Hono's southbound
@@ -53,59 +55,65 @@ public final class VertxBasedCoapAdapter extends AbstractVertxBasedCoapAdapter<C
     }
 
     /**
-     * Get extended device.
+     * Gets a device identity for a CoAP request.
      * 
-     * @param exchange coap exchange with URI and/or peer's principal.
-     * @param handler handler for determined extended device
+     * @param exchange The CoAP exchange with URI and/or peer's principal.
+     * @return The device identity.
      */
-    public void getExtendedDevice(final CoapExchange exchange, final Handler<ExtendedDevice> handler) {
+    public Future<ExtendedDevice> getExtendedDevice(final CoapExchange exchange) {
+
+        final List<String> pathList = exchange.getRequestOptions().getUriPath();
+        if (pathList.isEmpty()) {
+            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
+                    "missing request URI"));
+        }
+
         try {
-            final List<String> pathList = exchange.getRequestOptions().getUriPath();
             final String[] path = pathList.toArray(new String[pathList.size()]);
             final ResourceIdentifier identifier = ResourceIdentifier.fromPath(path);
             final Device device = new Device(identifier.getTenantId(), identifier.getResourceId());
             final Principal peer = exchange.advanced().getRequest().getSourceContext().getPeerIdentity();
             if (peer == null) {
-                final ExtendedDevice extendedDevice = new ExtendedDevice(device, device);
-                log.debug("use {}", extendedDevice);
-                handler.handle(extendedDevice);
+                return Future.succeededFuture(new ExtendedDevice(device, device));
             } else {
-                getAuthenticatedExtendedDevice(device, exchange, handler);
+                return getAuthenticatedExtendedDevice(device, exchange);
             }
-        } catch (NullPointerException cause) {
-            CoapErrorResponse.respond(exchange, "missing tenant and device!", ResponseCode.BAD_REQUEST);
-        } catch (Throwable cause) {
-            CoapErrorResponse.respond(exchange, cause, ResponseCode.INTERNAL_SERVER_ERROR);
+        } catch (IllegalArgumentException cause) {
+            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
+                    "missing tenant and device ID in URI"));
         }
     }
 
     /**
-     * Get authenticated device.
+     * Gets an authenticated device's identity for a CoAP request.
      * 
-     * @param device origin device of message. If {@code null}, the message is sent from the authenticated device.
-     * @param exchange coap exchange with peer's principal.
-     * @param handler handler for determined extended device
+     * @param device The device that the data in the request payload originates from.
+     *               If {@code null}, the origin of the data is assumed to be the authenticated device.
+     * @param exchange The CoAP exchange with the authenticated device's principal.
+     * @return The device identity.
      */
-    public void getAuthenticatedExtendedDevice(final Device device,
-            final CoapExchange exchange, final Handler<ExtendedDevice> handler) {
+    public Future<ExtendedDevice> getAuthenticatedExtendedDevice(final Device device,
+            final CoapExchange exchange) {
+
+        final Future<ExtendedDevice> result = Future.future();
         final Principal peer = exchange.advanced().getRequest().getSourceContext().getPeerIdentity();
-        final CoapAuthenticationHandler authenticationHandler = getAuthenticationHandler(peer);
-        if (authenticationHandler == null) {
-            log.debug("device authentication handler missing for {}!", peer);
-            exchange.respond(ResponseCode.INTERNAL_SERVER_ERROR);
+        if (peer == null) {
+            result.fail(new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED));
         } else {
-            authenticationHandler.getAuthenticatedDevice(exchange)
-                    .compose((authorizedDevice) -> {
-                        final Device originDevice = device != null ? device : authorizedDevice;
-                        final ExtendedDevice extendedDevice = new ExtendedDevice(authorizedDevice, originDevice);
-                        log.debug("used {}", extendedDevice);
-                        handler.handle(extendedDevice);
-                        return Future.succeededFuture();
-                    }).otherwise((error) -> {
-                        CoapErrorResponse.respond(exchange, error);
-                        return null;
-                    });
+            final CoapAuthenticationHandler authenticationHandler = getAuthenticationHandler(peer);
+
+            if (authenticationHandler == null) {
+                log.debug("device authentication handler missing for principal [{}]", peer);
+                result.fail(new ServerErrorException(HttpURLConnection.HTTP_INTERNAL_ERROR));
+            } else {
+                authenticationHandler.getAuthenticatedDevice(exchange)
+                        .compose(authorizedDevice -> {
+                            final Device originDevice = device != null ? device : authorizedDevice;
+                            result.complete(new ExtendedDevice(authorizedDevice, originDevice));
+                        }, result);
+            }
         }
+        return result;
     }
 
     /**
@@ -125,46 +133,63 @@ public final class VertxBasedCoapAdapter extends AbstractVertxBasedCoapAdapter<C
         result.add(new CoapResource(TelemetryConstants.TELEMETRY_ENDPOINT) {
 
             @Override
+            public Resource getChild(final String name) {
+                return this;
+            }
+
+            @Override
             public void handlePOST(final CoapExchange exchange) {
-                getAuthenticatedExtendedDevice(null, exchange,
-                        (device) -> {
-                            final boolean waitForOutcome = useWaitForOutcome(exchange);
-                            final CoapContext ctx = CoapContext.fromRequest(exchange);
-                            uploadTelemetryMessage(ctx, device.authenticatedDevice, device.originDevice,
-                                    waitForOutcome);
-                        });
+                getAuthenticatedExtendedDevice(null, exchange)
+                .setHandler(authAttempt -> upload(exchange, authAttempt));
             }
 
             @Override
             public void handlePUT(final CoapExchange exchange) {
-                getExtendedDevice(exchange,
-                        (extDevice) -> {
-                            final boolean waitForOutcome = useWaitForOutcome(exchange);
-                            final CoapContext ctx = CoapContext.fromRequest(exchange);
-                            uploadTelemetryMessage(ctx, extDevice.authenticatedDevice, extDevice.originDevice,
-                                    waitForOutcome);
-                        });
+                getExtendedDevice(exchange)
+                .setHandler(authAttempt -> upload(exchange, authAttempt));
+            }
+
+            private void upload(final CoapExchange exchange, final AsyncResult<ExtendedDevice> authAttempt) {
+
+                if (authAttempt.succeeded()) {
+                    final boolean waitForOutcome = useWaitForOutcome(exchange);
+                    final ExtendedDevice device = authAttempt.result();
+                    final CoapContext ctx = CoapContext.fromRequest(exchange, getMetrics().startTimer());
+                    uploadTelemetryMessage(ctx, device.authenticatedDevice, device.originDevice,
+                            waitForOutcome);
+                } else {
+                    CoapErrorResponse.respond(exchange, authAttempt.cause());
+                }
             }
         });
 
         result.add(new CoapResource(EventConstants.EVENT_ENDPOINT) {
 
             @Override
+            public Resource getChild(final String name) {
+                return this;
+            }
+
+            @Override
             public void handlePOST(final CoapExchange exchange) {
-                getAuthenticatedExtendedDevice(null, exchange,
-                        (device) -> {
-                            final CoapContext ctx = CoapContext.fromRequest(exchange);
-                            uploadEventMessage(ctx, device.authenticatedDevice, device.originDevice);
-                        });
+                getAuthenticatedExtendedDevice(null, exchange)
+                .setHandler(authAttempt -> upload(exchange, authAttempt));
             }
 
             @Override
             public void handlePUT(final CoapExchange exchange) {
-                getExtendedDevice(exchange,
-                        (device) -> {
-                            final CoapContext ctx = CoapContext.fromRequest(exchange);
-                            uploadEventMessage(ctx, device.authenticatedDevice, device.originDevice);
-                        });
+                getExtendedDevice(exchange)
+                .setHandler(authAttempt -> upload(exchange, authAttempt));
+            }
+
+            private void upload(final CoapExchange exchange, final AsyncResult<ExtendedDevice> authAttempt) {
+                if (authAttempt.succeeded()) {
+                    final ExtendedDevice device = authAttempt.result();
+                    final CoapContext ctx = CoapContext.fromRequest(exchange, getMetrics().startTimer());
+                    uploadEventMessage(ctx, device.authenticatedDevice, device.originDevice);
+                } else {
+                    CoapErrorResponse.respond(exchange, authAttempt.cause());
+                }
             }
         });
         setResources(result);

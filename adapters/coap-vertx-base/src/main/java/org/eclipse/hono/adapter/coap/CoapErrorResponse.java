@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -64,21 +64,16 @@ public class CoapErrorResponse {
      * @param defaultCode default response code, if a more specific response code is not available.
      */
     public static void respond(final CoapExchange exchange, final Throwable cause, final ResponseCode defaultCode) {
+
         final String message = cause == null ? null : cause.getMessage();
-        final ResponseCode code;
-        if (ServiceInvocationException.class.isInstance(cause)) {
-            final int error = ((ServiceInvocationException) cause).getErrorCode();
-            code = toCoapCode(error, defaultCode);
-            switch (error) {
-            case HttpURLConnection.HTTP_UNAVAILABLE:
-                // delay retry by 2 seconds, see http adapter, HttpUtils.serviceUnavailable(ctx, 2)
-                exchange.setMaxAge(2);
-                break;
-            default:
-                break;
-            }
-        } else {
-            code = defaultCode;
+        final ResponseCode code = toCoapCode(cause, defaultCode);
+        switch (code) {
+        case SERVICE_UNAVAILABLE:
+            // delay retry by 2 seconds, see http adapter, HttpUtils.serviceUnavailable(ctx, 2)
+            exchange.setMaxAge(2);
+            break;
+        default:
+            break;
         }
         respond(exchange, message, code);
     }
@@ -97,19 +92,24 @@ public class CoapErrorResponse {
     }
 
     /**
-     * Convert http-code into coap-code.
+     * Gets a CoAP response code for an error.
      * 
-     * @param httpCode http-code
-     * @param defaultCode default response code, if http-code could not be mapped.
-     * @return coap-code
+     * @param cause The cause of the error.
+     * @param defaultCode The default CoAP response code to use if the error cannot be mapped.
+     * @return The CoAP response code.
      */
-    public static ResponseCode toCoapCode(final int httpCode, final ResponseCode defaultCode) {
-        final int codeClass = httpCode / 100;
-        final int codeDetail = httpCode % 100;
-        if (0 < codeClass && codeClass < 8 && 0 <= codeDetail && codeDetail < 32) {
-            try {
-                return ResponseCode.valueOf(codeClass << 5 | codeDetail);
-            } catch (MessageFormatException e) {
+    public static ResponseCode toCoapCode(final Throwable cause, final ResponseCode defaultCode) {
+
+        if (ServiceInvocationException.class.isInstance(cause)) {
+            final int statusCode = ((ServiceInvocationException) cause).getErrorCode();
+
+            final int codeClass = statusCode / 100;
+            final int codeDetail = statusCode % 100;
+            if (0 < codeClass && codeClass < 8 && 0 <= codeDetail && codeDetail < 32) {
+                try {
+                    return ResponseCode.valueOf(codeClass << 5 | codeDetail);
+                } catch (MessageFormatException e) {
+                }
             }
         }
         return defaultCode;

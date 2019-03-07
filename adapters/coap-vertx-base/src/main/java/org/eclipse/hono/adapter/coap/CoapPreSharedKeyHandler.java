@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,6 +13,7 @@
 
 package org.eclipse.hono.adapter.coap;
 
+import java.net.HttpURLConnection;
 import java.net.InetSocketAddress;
 import java.security.Principal;
 import java.util.Base64;
@@ -28,8 +29,10 @@ import org.eclipse.californium.core.server.resources.CoapExchange;
 import org.eclipse.californium.elements.auth.PreSharedKeyIdentity;
 import org.eclipse.californium.scandium.dtls.pskstore.PskStore;
 import org.eclipse.californium.scandium.util.ServerNames;
-import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.auth.Device;
+import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.client.HonoClient;
+import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsObject;
 import org.slf4j.Logger;
@@ -39,8 +42,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 
+import io.vertx.core.Context;
 import io.vertx.core.Future;
-import io.vertx.core.Vertx;
 
 /**
  * A coap pre-shared-key store based on a credentials service client.
@@ -50,10 +53,9 @@ public class CoapPreSharedKeyHandler implements PskStore, CoapAuthenticationHand
     private static final Logger LOG = LoggerFactory.getLogger(CoapPreSharedKeyHandler.class);
 
     /**
-     * Vertx to be used by this pre-shared-key store. The {@link PskStore} callbacks are execute in a other threading
-     * context and therefore they must be passed into vertx by {@link Vertx#runOnContext(io.vertx.core.Handler)}.
+     * The vert.x context to run interactions with Hono services on.
      */
-    private final Vertx vertx;
+    private final Context context;
     /**
      * Credentials provider for pre-shared-key secrets.
      */
@@ -70,16 +72,16 @@ public class CoapPreSharedKeyHandler implements PskStore, CoapAuthenticationHand
     /**
      * Creates a new coap pre-shared-key for a given configuration.
      * 
-     * @param vertx The vertx instance to use.
+     * @param context The vert.x context to run on.
      * @param config The adapter configuration. Specify the minimum and maximum cache size and the split of the identity
      *            into authentication id and tenant
      * @param credentialsServiceClient The credentials service client.
-     * @throws NullPointerException if any of the params is {@code null}.
+     * @throws NullPointerException if any of the parameters are {@code null}.
      */
     @Autowired
-    public CoapPreSharedKeyHandler(final Vertx vertx, final CoapAdapterProperties config,
+    public CoapPreSharedKeyHandler(final Context context, final CoapAdapterProperties config,
             final HonoClient credentialsServiceClient) {
-        this.vertx = Objects.requireNonNull(vertx);
+        this.context = Objects.requireNonNull(context);
         this.config = Objects.requireNonNull(config);
         this.credentialsServiceClient = Objects.requireNonNull(credentialsServiceClient);
         final CacheBuilder<Object, Object> builder = CacheBuilder.newBuilder()
@@ -91,12 +93,13 @@ public class CoapPreSharedKeyHandler implements PskStore, CoapAuthenticationHand
     }
 
     /**
-     * Get pre-shared-key for device from credentials service.
+     * Gets the pre-shared key for an identity used by a device in a PSK based DTLS
+     * handshake.
      * <p>
      * On success, add hono device to cache.
      * 
-     * @param handshakeIdentity pre-shared-key identity of device.
-     * @return future with pre-shared-key.
+     * @param handshakeIdentity The identity used by the device.
+     * @return A future completed with the key or failed with a {@link ServiceInvocationException}.
      */
     protected final Future<byte[]> getSharedKeyForDevice(final PreSharedKeyDeviceIdentity handshakeIdentity) {
 
@@ -110,7 +113,8 @@ public class CoapPreSharedKeyHandler implements PskStore, CoapAuthenticationHand
                                 new Device(handshakeIdentity.getTenantId(), credentials.getDeviceId()));
                         return Future.succeededFuture(key);
                     } else {
-                        return Future.failedFuture("secret key missing!");
+                        return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED,
+                                "no shared key registered for identity"));
                     }
                 });
     }
@@ -152,14 +156,14 @@ public class CoapPreSharedKeyHandler implements PskStore, CoapAuthenticationHand
 
     @Override
     public byte[] getKey(final String identity) {
-        LOG.debug("get secret key for {}", identity);
+        LOG.debug("getting PSK secret for identity [{}]", identity);
         final PreSharedKeyDeviceIdentity handshakeIdentity = getHandshakeIdentity(identity);
         if (handshakeIdentity == null) {
             return null;
         }
-        //
+
         final CompletableFuture<byte[]> secret = new CompletableFuture<>();
-        vertx.runOnContext((v) -> {
+        context.runOnContext((v) -> {
             getSharedKeyForDevice(handshakeIdentity).setHandler((getAttempt) -> {
                 if (getAttempt.succeeded()) {
                     secret.complete(getAttempt.result());
@@ -176,7 +180,7 @@ public class CoapPreSharedKeyHandler implements PskStore, CoapAuthenticationHand
         } catch (CancellationException e) {
         } catch (ExecutionException e) {
         }
-        LOG.warn("missing secret key for {}!", identity);
+        LOG.debug("no candidate PSK secret found for identity [{}]", identity);
         return null;
     }
 

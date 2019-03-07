@@ -17,7 +17,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetSocketAddress;
 import java.security.Principal;
-import java.security.PublicKey;
+import java.security.PrivateKey;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -91,6 +91,15 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
     @Autowired
     public final void setMetrics(final CoapAdapterMetrics metrics) {
         this.metrics = metrics;
+    }
+
+    /**
+     * Gets the object for reporting this adapter's metrics.
+     * 
+     * @return The metrics.
+     */
+    protected CoapAdapterMetrics getMetrics() {
+        return metrics;
     }
 
     /**
@@ -208,25 +217,24 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
 
     private void bindSecureEndpoint(final CoapServer startingServer, final NetworkConfig config) {
 
-        // access environment using the context of this vertx and
-        // load it into finals to access them within the executeBlocking
-        final CoapPreSharedKeyHandler coapPreSharedKeyProvider = new CoapPreSharedKeyHandler(getVertx(), getConfig(),
+        final CoapPreSharedKeyHandler pskHandler = new CoapPreSharedKeyHandler(context, getConfig(),
                 getCredentialsServiceClient());
-        // add handler to authentication handler map.
-        authenticationHandlerMap.put(coapPreSharedKeyProvider.getType(), coapPreSharedKeyProvider);
+        authenticationHandlerMap.put(pskHandler.getType(), pskHandler);
 
         final DtlsConnectorConfig.Builder dtlsConfig = new DtlsConnectorConfig.Builder();
         dtlsConfig.setClientAuthenticationRequired(getConfig().isAuthenticationRequired());
         dtlsConfig.setConnectionThreadCount(getConfig().getConnectorThreads());
         dtlsConfig.setAddress(
                 new InetSocketAddress(getConfig().getBindAddress(), getConfig().getPort(getPortDefaultValue())));
-        dtlsConfig.setPskStore(coapPreSharedKeyProvider);
+        dtlsConfig.setPskStore(pskHandler);
         final KeyLoader keyLoader = KeyLoader.fromFiles(vertx, getConfig().getKeyPath(), getConfig().getCertPath());
-        if (keyLoader.getPrivateKey() != null && keyLoader.getCertificateChain() != null) {
-            final PublicKey pk = keyLoader.getPublicKey();
+        final PrivateKey pk = keyLoader.getPrivateKey();
+        if (pk != null && keyLoader.getCertificateChain() != null) {
             if (pk.getAlgorithm().equals("EC")) {
                 // Californium's cipher suites support ECC based keys only
                 dtlsConfig.setIdentity(keyLoader.getPrivateKey(), keyLoader.getCertificateChain());
+            } else {
+                LOG.warn("configured key is not ECC based, certificate based cipher suites will be disabled");
             }
         }
 
@@ -481,8 +489,13 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
      * @param senderTracker hono message sender tracker
      * @param endpoint message destination endpoint
      */
-    private void doUploadMessage(final CoapContext context, final Device authenticatedDevice, final Device device,
-            final boolean waitForOutcome, final Buffer payload, final String contentType,
+    private void doUploadMessage(
+            final CoapContext context,
+            final Device authenticatedDevice,
+            final Device device,
+            final boolean waitForOutcome,
+            final Buffer payload,
+            final String contentType,
             final Future<MessageSender> senderTracker,
             final MetricsTags.EndpointType endpoint) {
 
@@ -517,7 +530,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                     }
             }).map(delivery -> {
                 LOG.trace("successfully processed message for device [tenantId: {}, deviceId: {}, endpoint: {}]",
-                        device.getTenantId(), device.getDeviceId(), endpoint);
+                        device.getTenantId(), device.getDeviceId(), endpoint.getCanonicalName());
                 metrics.reportTelemetry(
                         endpoint,
                         device.getTenantId(),
@@ -528,8 +541,8 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                 context.respondWithCode(ResponseCode.CHANGED);
                 return delivery;
             }).recover(t -> {
-                LOG.debug("cannot process message for device [tenantId: {}, deviceId: {}, endpoint: {}]: {}",
-                        device.getTenantId(), device.getDeviceId(), endpoint, t.getMessage());
+                LOG.debug("cannot process message for device [tenantId: {}, deviceId: {}, endpoint: {}]",
+                        device.getTenantId(), device.getDeviceId(), endpoint.getCanonicalName(), t);
                 metrics.reportTelemetry(
                         endpoint,
                         device.getTenantId(),
