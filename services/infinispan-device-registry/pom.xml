@@ -1,0 +1,139 @@
+<!--
+    Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+
+    See the NOTICE file(s) distributed with this work for additional
+    information regarding copyright ownership.
+
+    This program and the accompanying materials are made available under the
+    terms of the Eclipse Public License 2.0 which is available at
+    http://www.eclipse.org/legal/epl-2.0
+
+    SPDX-License-Identifier: EPL-2.0
+ -->
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://maven.apache.org/POM/4.0.0" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>org.eclipse.hono</groupId>
+    <artifactId>hono-services</artifactId>
+    <version>1.0-M1-SNAPSHOT</version>
+  </parent>
+  <artifactId>infinispan-device-registry</artifactId>
+  <name>Hono Device Registry built with Infinispan</name>
+  <description>A device registry for Hono using Infinispan as a storage backend.</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.eclipse.hono</groupId>
+            <artifactId>hono-service-device-registry</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.infinispan</groupId>
+            <artifactId>infinispan-core</artifactId>
+            <version>9.4.6.Final</version>
+        </dependency>
+        <dependency>
+            <groupId>org.infinispan</groupId>
+            <artifactId>infinispan-query</artifactId>
+            <version>9.4.6.Final</version>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.hono</groupId>
+            <artifactId>hono-service-base</artifactId>
+            <version>${project.version}</version>
+            <classifier>tests</classifier>
+            <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+
+    <profiles>
+    <profile>
+        <id>build-docker-image</id>
+        <activation>
+            <property>
+                <name>docker.host</name>
+            </property>
+        </activation>
+        <build>
+            <plugins>
+                <plugin>
+                    <groupId>io.fabric8</groupId>
+                    <artifactId>docker-maven-plugin</artifactId>
+                    <configuration>
+                        <images>
+                            <image>
+                                <build>
+                                    <from>${java-base-image.name}</from>
+                                    <labels>
+                                        <implemented.api.1>Tenant</implemented.api.1>
+                                        <implemented.api.2>Device Registration</implemented.api.2>
+                                        <implemented.api.3>Credentials</implemented.api.3>
+                                    </labels>
+                                    <ports>
+                                        <port>5671</port>
+                                        <port>5672</port>
+                                        <port>8080</port>
+                                        <port>8443</port>
+                                        <port>${vertx.health.port}</port>
+                                    </ports>
+                                    <cmd>
+                                        <exec>
+                                            <arg>java</arg>
+                                            <arg>--illegal-access=permit</arg>
+                                            <arg>-Dvertx.cacheDirBase=/tmp</arg>
+                                            <arg>-Dloader.home=/opt/hono</arg>
+                                            <arg>-Dloader.path=extensions</arg>
+                                            <arg>-cp</arg>
+                                            <arg>/opt/hono/${project.artifactId}-${project.version}-${classifier.spring.boot.artifact}.jar</arg>
+                                            <arg>org.springframework.boot.loader.PropertiesLauncher</arg>
+                                        </exec>
+                                    </cmd>
+                                    <assembly>
+                                        <mode>dir</mode>
+                                        <basedir>/</basedir>
+                                        <inline>
+                                            <fileSets>
+                                                <fileSet>
+                                                    <directory>${project.build.directory}</directory>
+                                                    <outputDirectory>opt/hono</outputDirectory>
+                                                    <includes>
+                                                        <include>${project.artifactId}-${project.version}-${classifier.spring.boot.artifact}.jar</include>
+                                                    </includes>
+                                                </fileSet>
+                                            </fileSets>
+                                        </inline>
+                                    </assembly>
+                                </build>
+                            </image>
+                        </images>
+                    </configuration>
+                </plugin>
+            </plugins>
+        </build>
+    </profile>
+
+    <profile>
+      <id>jaeger</id>
+      <dependencies>
+        <dependency>
+          <groupId>io.jaegertracing</groupId>
+          <artifactId>jaeger-client</artifactId>
+        </dependency>
+      </dependencies>
+    </profile>
+    </profiles>
+</project>

@@ -28,7 +28,8 @@
   <modules>
     <module>auth</module>
     <module>device-registry</module>
-    
+      <module>infinispan-device-registry</module>
+
   </modules>
 
   <name>Hono Services</name>

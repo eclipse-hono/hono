@@ -1,0 +1,43 @@
+hono:
+  app:
+    type: infinispan
+    maxInstances: 1
+    healthCheckBindAddress: 0.0.0.0
+    healthCheckPort: 8088
+    startupTimeout: 90
+  auth:
+    host: localhost #hono-service-auth.hono
+    port: 35672
+    name: device-registry
+    validation:
+      certPath: ../../demo-certs/certs/auth-server-cert.pem
+  registry:
+    amqp:
+      Port: 25672
+      insecurePortEnabled: true
+      insecurePortBindAddress: 0.0.0.0
+      insecurePort: 25672
+    rest:
+      insecurePortEnabled: true
+      insecurePort: 28080
+      insecurePortBindAddress: 0.0.0.0
+    svc:
+      signing:
+        sharedSecret: sdgfsdafazufgsdafjhfgsdajfgwhriojsdafjlksdhfgsa8fg452368gdf
+  credentials:
+    svc:
+      maxBcryptIterations: 10
+  metrics:
+    legacy: false
+infinispan:
+  config:
+    file: /src/main/resources/cache-configuration.xml
+spring:
+  jmx:
+    enabled: false
+management:
+  metrics:
+    enabled: false
+    export:
+      graphite:
+        enabled: false
