@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -171,7 +171,7 @@ public class CacheTenantService extends CompleteBaseTenantService<CacheTenantCon
         // TODO make a difference between not found and conflict?
         if (matches.size() != 1){
             return null;
-        }else {
+        } else {
             return matches.get(0);
         }
     }
