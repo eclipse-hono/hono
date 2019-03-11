@@ -1,0 +1,21 @@
+{
+  "params": {
+    "payload": "YnVtbHV4",
+    "port": 7,
+    "duplicate": false,
+    "counter_up": 8,
+    "rx_time": 1559072813.337586,
+    "encrypted_payload": "YnVtbHV4="
+  },
+  "meta": {
+    "network": "7a068679f9d8528b0ac02fe7ca8982c6",
+    "packet_hash": "36f8e12b3de7f1e059584d06b240a514",
+    "application": "1081ea3923ad1408",
+    "device_addr": "02711f49",
+    "time": 1559072813.337497,
+    "device": "85f5ab9ebc636142",
+    "packet_id": "de3fb2303a20bd8a1dd0ecbc959e55ff",
+    "gateway": "88145c9c8db9e552"
+  },
+  "type": "uplink"
+}

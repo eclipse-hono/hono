@@ -1,0 +1,48 @@
+{
+  "DevEUI_uplink": {
+    "Time": "2019-02-27T14:48:35.544+01:00",
+    "DevEUI": "actility-device",
+    "FPort": "1",
+    "FCntUp": "548",
+    "ADRbit": "1",
+    "MType": "2",
+    "FCntDn": "43",
+    "payload_hex": "00",
+    "mic_hex": "922d4454",
+    "Lrcid": "00000119",
+    "LrrRSSI": "-48.000000",
+    "LrrSNR": "3.000000",
+    "SpFact": "11",
+    "SubBand": "G1",
+    "Channel": "LC2",
+    "DevLrrCnt": "1",
+    "Lrrid": "18035559",
+    "Late": "0",
+    "LrrLAT": "53.108805",
+    "LrrLON": "9.193430",
+    "Lrrs": {
+      "Lrr": [
+        {
+          "Lrrid": "18035559",
+          "Chain": "0",
+          "LrrRSSI": "-48.000000",
+          "LrrSNR": "3.000000",
+          "LrrESP": "-44.334920"
+        }
+      ]
+    },
+    "CustomerID": "43347311",
+    "CustomerData": {
+      "alr": {
+        "pro": "LORA/Generic",
+        "ver": "1"
+      }
+    },
+    "ModelCfg": "0",
+    "InstantPER": "0.000000",
+    "MeanPER": "0.000003",
+    "DevAddr": "A53925E2",
+    "AckRequested": "0",
+    "rawMacCommands": ""
+  }
+}

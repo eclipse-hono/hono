@@ -1,0 +1,40 @@
+{
+  "id": "uplink-7-1221",
+  "device_id": 1325751707030347,
+  "group_id": 1,
+  "group": "hono",
+  "profile_id": 4,
+  "profile": "test-tag",
+  "type": "uplink",
+  "timestamp": "2019-02-27T14:48:35.544Z",
+  "count": 7,
+  "payload_encrypted": "4b503954fe7a25629aa9d18b3dc4daa97635c4f5e391e6b7471d4e31d04958b156aa",
+  "payload_cleartext": "00000000004000000000000000000000000000000000000000000000000000000000",
+  "device_properties": {
+    "appeui": "be4800dfcb4f4333",
+    "deveui": "2032e013597bde6b",
+    "external_id": ""
+  },
+  "protocol_data": {
+    "AppNonce": "d04ade",
+    "DevAddr": "d508e11e",
+    "DevNonce": "1221",
+    "NetID": "000007",
+    "best_gateway_id": "O24614",
+    "gateways": 25,
+    "lora_version": 0,
+    "noise": -10.22221891083863,
+    "port": 1,
+    "rssi": -103,
+    "sf": 11,
+    "signal": -102.12901394045883,
+    "snr": 1
+  },
+  "lat": 53.108805,
+  "lng": 9.193430,
+  "geolocation_type": "network",
+  "geolocation_precision": 1000,
+  "city_code": "12345",
+  "city_name": "none",
+  "delivered_at": null
+}

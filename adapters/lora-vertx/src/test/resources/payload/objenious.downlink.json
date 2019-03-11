@@ -1,0 +1,25 @@
+{
+  "id": "downlink-0-1122-M10580",
+  "device_id": 1325751707030347,
+  "group_id": 1,
+  "group": "hono",
+  "profile_id": 4,
+  "profile": "test-tag",
+  "type": "downlink",
+  "timestamp": "2019-02-27T14:48:35.544Z",
+  "payload_encrypted": null,
+  "payload_cleartext": null,
+  "device_properties": {
+    "appeui": "be4800dfcb4f4333",
+    "deveui": "2032e013597bde6b",
+    "external_id": ""
+  },
+  "protocol_data": {
+    "AppNonce": "d04ade",
+    "DevAddr": "d508e11e",
+    "DevNonce": "1221",
+    "NetID": "000009",
+    "port": 0
+  },
+  "delivered_at": "2019-02-27T14:48:36.102Z"
+}

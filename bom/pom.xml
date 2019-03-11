@@ -31,6 +31,8 @@
     <artemis.image.name>enmasseproject/activemq-artemis:2.2.0-4</artemis.image.name>
     <assertj-core.version>3.11.1</assertj-core.version>
     <californium.version>2.0.0-M13</californium.version>
+    <commons-codec.version>1.10</commons-codec.version>
+    <commons-lang.version>2.6</commons-lang.version>
     <dispatch-router.image.name>enmasseproject/qdrouterd-base:1.4.1</dispatch-router.image.name>
     <grafana.version>5.3.2</grafana.version>
     <guava.version>25.0-jre</guava.version>
@@ -44,7 +46,7 @@
     <junit.version>4.12</junit.version>
     <logback.version>1.2.3</logback.version>
     <micrometer.version>1.0.9</micrometer.version>
-    <mockito.version>2.19.0</mockito.version>
+    <mockito.version>2.24.5</mockito.version>
     <netty.version>4.1.30.Final</netty.version>
     <netty.tcnative.version>2.0.17.Final</netty.tcnative.version>
     <opentracing.version>0.31.0</opentracing.version>
@@ -59,6 +61,7 @@
     <spring-security-crypto.version>4.2.11.RELEASE</spring-security-crypto.version>
     <truth.version>0.28</truth.version>
     <vertx.version>3.6.3</vertx.version>
+    <wiremock.version>2.19.0</wiremock.version>
 
     <!-- The port at which the Prometheus scraping endpoint is exposed -->
     <prometheus.scraping.port>8088</prometheus.scraping.port>
@@ -206,6 +209,22 @@
         <scope>test</scope>
       </dependency>
       <dependency>
+        <groupId>commons-lang</groupId>
+        <artifactId>commons-lang</artifactId>
+        <version>${commons-lang.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>commons-codec</groupId>
+        <artifactId>commons-codec</artifactId>
+        <version>${commons-codec.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.github.tomakehurst</groupId>
+        <artifactId>wiremock</artifactId>
+        <version>${wiremock.version}</version>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
         <groupId>io.vertx</groupId>
         <artifactId>vertx-unit</artifactId>
         <version>${vertx.version}</version>
@@ -305,6 +324,11 @@
       <dependency>
         <groupId>io.vertx</groupId>
         <artifactId>vertx-web</artifactId>
+        <version>${vertx.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.vertx</groupId>
+        <artifactId>vertx-web-client</artifactId>
         <version>${vertx.version}</version>
       </dependency>
       <dependency>
