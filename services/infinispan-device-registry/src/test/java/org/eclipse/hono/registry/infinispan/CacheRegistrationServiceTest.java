@@ -10,24 +10,25 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
-package org.eclipse.hono.deviceregistry;
+package org.eclipse.hono.registry.infinispan;
 
 import io.vertx.ext.unit.junit.VertxUnitRunner;
-import org.eclipse.hono.service.tenant.AbstractCompleteTenantServiceTest;
-import org.eclipse.hono.service.tenant.CompleteTenantService;
+import org.eclipse.hono.registry.CacheRegistrationService;
+import org.eclipse.hono.service.registration.AbstractCompleteRegistrationServiceTest;
+import org.eclipse.hono.service.registration.CompleteRegistrationService;
 import org.infinispan.manager.DefaultCacheManager;
 import org.infinispan.manager.EmbeddedCacheManager;
 import org.junit.Before;
 import org.junit.runner.RunWith;
 
 /**
- * Tests verifying behavior of {@link CacheTenantService}.
+ * Tests verifying behavior of {@link CacheRegistrationService}.
  *
  */
 @RunWith(VertxUnitRunner.class)
-public class CacheTenantServiceTest extends AbstractCompleteTenantServiceTest {
+public class CacheRegistrationServiceTest extends AbstractCompleteRegistrationServiceTest {
 
-    CacheTenantService service;
+    CacheRegistrationService service;
 
     /**
      * Spin up the service using Infinispan EmbeddedCache.
@@ -35,11 +36,13 @@ public class CacheTenantServiceTest extends AbstractCompleteTenantServiceTest {
     @Before
     public void setUp() {
         final EmbeddedCacheManager manager = new DefaultCacheManager();
-        service = new CacheTenantService(manager);
+        service = new CacheRegistrationService(manager);
     }
 
     @Override
-    public CompleteTenantService getCompleteTenantService() {
+    public CompleteRegistrationService getCompleteRegistrationService() {
         return service;
     }
+
+
 }

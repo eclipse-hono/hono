@@ -10,7 +10,7 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
-package org.eclipse.hono.deviceregistry;
+package org.eclipse.hono.registry.infinispan;
 
 import io.vertx.core.json.JsonObject;
 import org.eclipse.hono.util.CredentialsObject;
@@ -19,7 +19,7 @@ import org.eclipse.hono.util.CredentialsObject;
  * A custom class to be used as value in the backend key-value storage.
  * This store credentials details.
  *
- *  See {@link org.eclipse.hono.deviceregistry.CacheTenantService CacheTenantService} class.
+ *  See {@link CacheTenantService CacheTenantService} class.
  */
 public class RegistryCredentialObject {
 

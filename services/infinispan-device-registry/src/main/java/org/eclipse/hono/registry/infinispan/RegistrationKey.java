@@ -10,51 +10,47 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
-package org.eclipse.hono.deviceregistry;
+package org.eclipse.hono.registry.infinispan;
 
 import java.util.Objects;
 
 /**
  * A custom class to be used as key in the backend key-value storage.
- * This uses the uniques values of a credential to create a unique key to store the credentials details.
+ * This uses the uniques values of a registration to create a unique key to store the registration details.
  *
- *  See {@link org.eclipse.hono.deviceregistry.CacheCredentialService CacheCredentialService} class.
+ *  See {@link CacheRegistrationService CacheRegistrationService} class.
  */
-public class CredentialsKey {
+public class RegistrationKey {
 
     String tenantId;
-    String authId;
-    String type;
+    String deviceId;
 
     /**
-     * Creates a new CredentialsKey. Used by CacheCredentialsService.
+     * Creates a new RegistrationKey. Used by CacheRegistrationService.
      *
      * @param tenantId the id of the tenant owning the registration key.
-     * @param authId the auth-id used in the credential.
-     * @param type the the type of the credential.
+     * @param deviceId the id of the device being registered.
      */
-    public CredentialsKey(final String tenantId, final String authId, final String type) {
+    public RegistrationKey(final String tenantId, final String deviceId) {
         this.tenantId = tenantId;
-        this.authId = authId;
-        this.type = type;
+        this.deviceId = deviceId;
     }
 
     @Override
     public boolean equals(final Object o) {
-        if (this == o) {
+        if (this == o){
             return true;
         }
         if (o == null || getClass() != o.getClass()) {
             return false;
         }
-        final CredentialsKey that = (CredentialsKey) o;
+        final RegistrationKey that = (RegistrationKey) o;
         return Objects.equals(tenantId, that.tenantId) &&
-                Objects.equals(authId, that.authId) &&
-                Objects.equals(type, that.type);
+                Objects.equals(deviceId, that.deviceId);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(tenantId, authId, type);
+        return Objects.hash(tenantId, deviceId);
     }
 }

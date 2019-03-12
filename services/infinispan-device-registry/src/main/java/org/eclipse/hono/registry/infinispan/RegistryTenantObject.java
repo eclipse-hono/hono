@@ -10,7 +10,7 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
-package org.eclipse.hono.deviceregistry;
+package org.eclipse.hono.registry.infinispan;
 
 import org.eclipse.hono.util.TenantObject;
 
@@ -18,7 +18,7 @@ import org.eclipse.hono.util.TenantObject;
  * A custom class to be used as value in the backend key-value storage.
  * This store tenants details.
  *
- *  See {@link org.eclipse.hono.deviceregistry.CacheTenantService CacheTenantService} class.
+ *  See {@link CacheTenantService CacheTenantService} class.
  */
 public class RegistryTenantObject {
 

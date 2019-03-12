@@ -10,11 +10,11 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
-package org.eclipse.hono.deviceregistry;
+package org.eclipse.hono.registry.infinispan;
 
 /**
- * Configuration properties for Hono's Infinispan Tenant service.
+ * Configuration properties for Hono's Infinispan Credential service.
  *
  */
-public class CacheTenantConfigProperties {
+public class CacheCredentialConfigProperties {
 }

@@ -11,8 +11,9 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package org.eclipse.hono.deviceregistry;
+package org.eclipse.hono.registry.infinispan;
 
+import org.eclipse.hono.deviceregistry.ApplicationConfig;
 import org.infinispan.manager.DefaultCacheManager;
 import org.infinispan.manager.EmbeddedCacheManager;
 import org.springframework.beans.factory.annotation.Value;

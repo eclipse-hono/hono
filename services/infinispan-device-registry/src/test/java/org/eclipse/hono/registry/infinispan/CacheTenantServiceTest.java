@@ -10,25 +10,25 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
-package org.eclipse.hono.deviceregistry;
+package org.eclipse.hono.registry.infinispan;
 
 import io.vertx.ext.unit.junit.VertxUnitRunner;
-import org.eclipse.hono.auth.SpringBasedHonoPasswordEncoder;
-import org.eclipse.hono.service.credentials.AbstractCompleteCredentialsServiceTest;
-import org.eclipse.hono.service.credentials.CompleteCredentialsService;
+import org.eclipse.hono.registry.CacheTenantService;
+import org.eclipse.hono.service.tenant.AbstractCompleteTenantServiceTest;
+import org.eclipse.hono.service.tenant.CompleteTenantService;
 import org.infinispan.manager.DefaultCacheManager;
 import org.infinispan.manager.EmbeddedCacheManager;
 import org.junit.Before;
 import org.junit.runner.RunWith;
 
 /**
- * Tests verifying behavior of {@link CacheCredentialService}.
+ * Tests verifying behavior of {@link CacheTenantService}.
  *
  */
 @RunWith(VertxUnitRunner.class)
-public class CacheCredentialsServiceTest extends AbstractCompleteCredentialsServiceTest {
+public class CacheTenantServiceTest extends AbstractCompleteTenantServiceTest {
 
-    CacheCredentialService service;
+    CacheTenantService service;
 
     /**
      * Spin up the service using Infinispan EmbeddedCache.
@@ -36,13 +36,11 @@ public class CacheCredentialsServiceTest extends AbstractCompleteCredentialsServ
     @Before
     public void setUp() {
         final EmbeddedCacheManager manager = new DefaultCacheManager();
-        service = new CacheCredentialService(manager, new SpringBasedHonoPasswordEncoder());
+        service = new CacheTenantService(manager);
     }
-
 
     @Override
-    public CompleteCredentialsService getCompleteCredentialsService() {
+    public CompleteTenantService getCompleteTenantService() {
         return service;
     }
-
 }

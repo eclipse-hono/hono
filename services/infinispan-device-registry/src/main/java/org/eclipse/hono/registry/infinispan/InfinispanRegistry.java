@@ -11,8 +11,9 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package org.eclipse.hono.deviceregistry;
+package org.eclipse.hono.registry.infinispan;
 
+import org.eclipse.hono.deviceregistry.Application;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.context.annotation.ComponentScan;
