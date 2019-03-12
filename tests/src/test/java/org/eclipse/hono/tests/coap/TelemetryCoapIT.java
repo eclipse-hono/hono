@@ -83,7 +83,9 @@ public class TelemetryCoapIT extends CoapTestBase {
 
         final CoapClient client = getCoapsClient(deviceId, tenantId, SECRET);
 
-        testUploadMessages(ctx, tenantId, count -> {
+        testUploadMessages(ctx, tenantId,
+                () -> warmUp(client, createCoapsRequest(Code.POST, Type.CON, getPostResource(), 0)),
+                count -> {
             final Future<OptionSet> result = Future.future();
             final Request request = createCoapsRequest(Code.POST, Type.CON, getPostResource(), count);
             client.advanced(getHandler(result), request);

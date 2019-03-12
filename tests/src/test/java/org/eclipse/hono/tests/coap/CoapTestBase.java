@@ -21,11 +21,13 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
+import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.californium.core.CoapClient;
@@ -258,6 +260,36 @@ public abstract class CoapTestBase {
     protected abstract Type getMessageType();
 
     /**
+     * Warms up the adapter with a request.
+     * 
+     * @param client The CoAP client to use for sending the request.
+     * @param request The request to send.
+     * @return A succeeded future.
+     */
+    protected final Future<Void> warmUp(final CoapClient client, final Request request) {
+
+        logger.debug("sending request to trigger CoAP adapter's downstream message sender");
+        final Future<Void> result = Future.future();
+        client.advanced(new CoapHandler() {
+
+            @Override
+            public void onLoad(final CoapResponse response) {
+                waitForWarmUp();
+            }
+
+            @Override
+            public void onError() {
+                waitForWarmUp();
+            }
+
+            private void waitForWarmUp() {
+                VERTX.setTimer(500, tid -> result.complete());
+            }
+        }, request);
+        return result;
+    }
+
+    /**
      * Verifies that a number of messages uploaded to Hono's CoAP adapter
      * can be successfully consumed via the AMQP Messaging Network.
      * 
@@ -277,6 +309,7 @@ public abstract class CoapTestBase {
 
         final CoapClient client = getCoapClient();
         testUploadMessages(ctx, tenantId,
+                () -> warmUp(client, createCoapRequest(Code.PUT, getPutResource(tenantId, deviceId), 0)),
                 count -> {
                     final Future<OptionSet> result = Future.future();
                     final Request request = createCoapRequest(Code.PUT, getPutResource(tenantId, deviceId), count);
@@ -305,12 +338,14 @@ public abstract class CoapTestBase {
 
         final CoapClient client = getCoapsClient(deviceId, tenantId, SECRET);
 
-        testUploadMessages(ctx, tenantId, count -> {
-            final Future<OptionSet> result = Future.future();
-            final Request request = createCoapsRequest(Code.POST, getPostResource(), count);
-            client.advanced(getHandler(result), request);
-            return result;
-        });
+        testUploadMessages(ctx, tenantId,
+                () -> warmUp(client, createCoapsRequest(Code.POST, getPostResource(), 0)),
+                count -> {
+                    final Future<OptionSet> result = Future.future();
+                    final Request request = createCoapsRequest(Code.POST, getPostResource(), count);
+                    client.advanced(getHandler(result), request);
+                    return result;
+                });
     }
 
     /**
@@ -341,6 +376,7 @@ public abstract class CoapTestBase {
         final CoapClient gatewayTwo = getCoapsClient(gatewayTwoId, tenantId, SECRET);
 
         testUploadMessages(ctx, tenantId,
+                () -> warmUp(gatewayOne, createCoapsRequest(Code.PUT, getPutResource(tenantId, deviceId), 0)),
                 count -> {
                     final CoapClient client = (count.intValue() & 1) == 0 ? gatewayOne : gatewayTwo;
                     final Future<OptionSet> result = Future.future();
@@ -355,6 +391,9 @@ public abstract class CoapTestBase {
      *
      * @param ctx The test context to run on.
      * @param tenantId The tenant that the device belongs to.
+     * @param warmUp A sender of messages used to warm up the adapter before
+     *               running the test itself or {@code null} if no warm up should
+     *               be performed. 
      * @param requestSender The test device that will publish the data.
      * @throws InterruptedException if the test is interrupted before it
      *              has finished.
@@ -362,8 +401,9 @@ public abstract class CoapTestBase {
     protected void testUploadMessages(
             final TestContext ctx,
             final String tenantId,
+            final Supplier<Future<?>> warmUp,
             final Function<Integer, Future<OptionSet>> requestSender) throws InterruptedException {
-        this.testUploadMessages(ctx, tenantId, null, requestSender);
+        this.testUploadMessages(ctx, tenantId, warmUp, null, requestSender);
     }
 
     /**
@@ -372,6 +412,9 @@ public abstract class CoapTestBase {
      * @param ctx The test context to run on.
      * @param tenantId The tenant that the device belongs to.
      * @param messageConsumer Consumer that is invoked when a message was received.
+     * @param warmUp A sender of messages used to warm up the adapter before
+     *               running the test itself or {@code null} if no warm up should
+     *               be performed. 
      * @param requestSender The test device that will publish the data.
      * @throws InterruptedException if the test is interrupted before it
      *              has finished.
@@ -379,9 +422,10 @@ public abstract class CoapTestBase {
     protected void testUploadMessages(
             final TestContext ctx,
             final String tenantId,
+            final Supplier<Future<?>> warmUp,
             final Consumer<Message> messageConsumer,
             final Function<Integer, Future<OptionSet>> requestSender) throws InterruptedException {
-        this.testUploadMessages(ctx, tenantId, messageConsumer, requestSender, MESSAGES_TO_SEND);
+        this.testUploadMessages(ctx, tenantId, warmUp, messageConsumer, requestSender, MESSAGES_TO_SEND);
     }
 
     /**
@@ -389,6 +433,9 @@ public abstract class CoapTestBase {
      *
      * @param ctx The test context to run on.
      * @param tenantId The tenant that the device belongs to.
+     * @param warmUp A sender of messages used to warm up the adapter before
+     *               running the test itself or {@code null} if no warm up should
+     *               be performed. 
      * @param messageConsumer Consumer that is invoked when a message was received.
      * @param requestSender The test device that will publish the data.
      * @param numberOfMessages The number of messages that are uploaded.
@@ -398,6 +445,7 @@ public abstract class CoapTestBase {
     protected void testUploadMessages(
             final TestContext ctx,
             final String tenantId,
+            final Supplier<Future<?>> warmUp,
             final Consumer<Message> messageConsumer,
             final Function<Integer, Future<OptionSet>> requestSender,
             final int numberOfMessages) throws InterruptedException {
@@ -415,7 +463,9 @@ public abstract class CoapTestBase {
             if (received.getCount() % 20 == 0) {
                 logger.info("messages received: {}", numberOfMessages - received.getCount());
             }
-        }).setHandler(ctx.asyncAssertSuccess(ok -> setup.complete()));
+        })
+        .compose(ok -> Optional.ofNullable(warmUp).map(w -> w.get()).orElse(Future.succeededFuture()))
+        .setHandler(ctx.asyncAssertSuccess(ok -> setup.complete()));
 
         setup.await();
         final long start = System.currentTimeMillis();
@@ -718,6 +768,17 @@ public abstract class CoapTestBase {
                 responseHandler.handle(Future.failedFuture(new ServiceInvocationException(HttpURLConnection.HTTP_UNAVAILABLE)));
             }
         };
+    }
+
+    /**
+     * Sends some (optional) messages before uploading the batch of
+     * real test messages.
+     * 
+     * @param client The CoAP client to use for sending the messages.
+     * @return A succeeded future upon completion.
+     */
+    protected Future<Void> sendWarmUpMessages(final CoapClient client) {
+        return Future.succeededFuture();
     }
 
     private static int toHttpStatusCode(final ResponseCode responseCode) {
