@@ -21,7 +21,6 @@ import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.RegistrationConstants;
-import org.springframework.context.MessageSource;
 
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
@@ -33,7 +32,7 @@ import io.vertx.core.json.JsonObject;
 public abstract class AbstractMessageSenderConnectionEventProducer implements ConnectionEventProducer {
 
     /**
-     * The function to derive the {@link MessageSource} from the provided <em>Message Sender Client</em>.
+     * The function to derive the {@link MessageSender} from the provided <em>Message Sender Client</em>.
      */
     private final BiFunction<HonoClient, String, Future<MessageSender>> messageSenderSource;
 
