@@ -13,7 +13,6 @@
 package org.eclipse.hono.registry.infinispan;
 
 import io.vertx.ext.unit.junit.VertxUnitRunner;
-import org.eclipse.hono.registry.CacheRegistrationService;
 import org.eclipse.hono.service.registration.AbstractCompleteRegistrationServiceTest;
 import org.eclipse.hono.service.registration.CompleteRegistrationService;
 import org.infinispan.manager.DefaultCacheManager;

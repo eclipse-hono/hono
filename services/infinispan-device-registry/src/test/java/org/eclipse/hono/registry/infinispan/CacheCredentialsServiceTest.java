@@ -14,7 +14,6 @@ package org.eclipse.hono.registry.infinispan;
 
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import org.eclipse.hono.auth.SpringBasedHonoPasswordEncoder;
-import org.eclipse.hono.registry.CacheCredentialService;
 import org.eclipse.hono.service.credentials.AbstractCompleteCredentialsServiceTest;
 import org.eclipse.hono.service.credentials.CompleteCredentialsService;
 import org.infinispan.manager.DefaultCacheManager;
