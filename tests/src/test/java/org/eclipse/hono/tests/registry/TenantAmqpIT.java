@@ -204,8 +204,8 @@ public class TenantAmqpIT {
      * <em>403 Forbidden</em> if the client is not authorized to retrieve
      * information for the tenant.
      *
-     * @throws NoSuchAlgorithmException if the public key cannot be generated
      * @param ctx The vert.x test context.
+     * @throws NoSuchAlgorithmException if the public key cannot be generated
      */
     @Test
     public void testGetByCaFailsIfNotAuthorized(final TestContext ctx) throws NoSuchAlgorithmException {
