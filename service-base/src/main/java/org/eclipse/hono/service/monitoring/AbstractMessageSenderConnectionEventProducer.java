@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -16,13 +16,11 @@ import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 import java.util.function.BiFunction;
 
+import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageSender;
-import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.util.EventConstants;
-import org.eclipse.hono.util.RegistrationConstants;
 
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 
@@ -70,27 +68,8 @@ public abstract class AbstractMessageSenderConnectionEventProducer implements Co
             return Future.succeededFuture();
         }
 
-        // get an assertion
-
-        final Future<String> assertionFuture = context.getDeviceRegistryClient()
-                .getOrCreateRegistrationClient(authenticatedDevice.getTenantId())
-                .compose(registrationClient -> {
-                    return registrationClient.assertRegistration(authenticatedDevice.getDeviceId())
-                            .map(registration -> {
-                                return registration.getString(RegistrationConstants.FIELD_ASSERTION);
-                            });
-                });
-
-        // get a sender
-
-        final Future<MessageSender> senderFuture = getOrCreateSender(context.getMessageSenderClient(),
-                authenticatedDevice);
-
-        // send message with assertion and sender
-
-        return CompositeFuture.all(assertionFuture, senderFuture)
-                .compose(f -> {
-                    final String deviceId = authenticatedDevice.getDeviceId();
+        return getOrCreateSender(context.getMessageSenderClient(), authenticatedDevice.getTenantId())
+                .compose(sender -> {
 
                     final JsonObject payload = new JsonObject();
                     payload.put("cause", cause);
@@ -101,17 +80,16 @@ public abstract class AbstractMessageSenderConnectionEventProducer implements Co
                         payload.put("data", data);
                     }
 
-                    return senderFuture.result().send(
-                            deviceId,
+                    return sender.send(
+                            authenticatedDevice.getDeviceId(),
                             payload.encode().getBytes(StandardCharsets.UTF_8),
                             EventConstants.EVENT_CONNECTION_NOTIFICATION_CONTENT_TYPE,
-                            assertionFuture.result()
+                            ""
                             );
                 });
     }
 
-    private Future<MessageSender> getOrCreateSender(final HonoClient messageSenderClient, final Device device) {
-        return messageSenderSource.apply(messageSenderClient, device.getTenantId());
+    private Future<MessageSender> getOrCreateSender(final HonoClient messageSenderClient, final String tenant) {
+        return messageSenderSource.apply(messageSenderClient, tenant);
     }
-
 }

@@ -97,11 +97,6 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     private final ConnectionEventProducer.Context connectionEventProducerContext = new ConnectionEventProducer.Context() {
 
         @Override
-        public HonoClient getDeviceRegistryClient() {
-            return AbstractProtocolAdapterBase.this.registrationServiceClient;
-        }
-
-        @Override
         public HonoClient getMessageSenderClient() {
             return AbstractProtocolAdapterBase.this.messagingClient;
         }

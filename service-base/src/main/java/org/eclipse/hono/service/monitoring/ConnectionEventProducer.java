@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -43,14 +43,6 @@ public interface ConnectionEventProducer {
      * <em>connection event producer</em>.
      */
     interface Context {
-
-        /**
-         * Provide the device registry service client provided by the caller.
-         * 
-         * @return The instance of the registry client which the {@link ConnectionEventProducer} method should use. This
-         *         client has to be initialized and started.
-         */
-        HonoClient getDeviceRegistryClient();
 
         /**
          * Provide the device message sender client provided by the caller.
