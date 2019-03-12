@@ -22,7 +22,7 @@ import org.eclipse.hono.util.TenantObject;
  */
 public class RegistryTenantObject {
 
-    //TODO add infinispan anotations
+    //TODO add infinispan annotations
     private final String tenantId;
     // Matching TenantConstants.FIELD_PAYLOAD_TRUSTED_CA;
     private String trustedCa;

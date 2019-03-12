@@ -52,7 +52,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
  *
  */
 @Repository
-@ConditionalOnProperty(name = "hono.app.type", havingValue = "infinispan", matchIfMissing = true)
 public class CacheCredentialService extends CompleteBaseCredentialsService<CacheCredentialConfigProperties> {
 
      private final Cache<CredentialsKey, RegistryCredentialObject> credentialsCache;

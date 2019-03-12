@@ -45,7 +45,6 @@ import java.util.Optional;
  *
  */
 @Repository
-@ConditionalOnProperty(name = "hono.app.type", havingValue = "infinispan", matchIfMissing = true)
 public class CacheTenantService extends CompleteBaseTenantService<CacheTenantConfigProperties> {
 
     Cache<String, RegistryTenantObject> tenantsCache;

@@ -1,6 +1,5 @@
 hono:
   app:
-    type: infinispan
     maxInstances: 1
     healthCheckBindAddress: 0.0.0.0
     healthCheckPort: 8088

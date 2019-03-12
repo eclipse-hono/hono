@@ -36,7 +36,6 @@ import java.net.HttpURLConnection;
  *
  */
 @Repository
-@ConditionalOnProperty(name = "hono.app.type", havingValue = "infinispan", matchIfMissing = true)
 public class CacheRegistrationService extends CompleteBaseRegistrationService<CacheRegistrationConfigProperties> {
 
     Cache<RegistrationKey, JsonObject> registrationCache;
