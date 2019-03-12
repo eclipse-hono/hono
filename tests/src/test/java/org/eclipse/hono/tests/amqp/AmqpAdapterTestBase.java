@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -141,6 +141,8 @@ public abstract class AmqpAdapterTestBase {
     }
 
     /**
+     * Connects to the AMQP protocol adapter using a username and password.
+     * 
      * 
      * @param username The username to use for authentication.
      * @param password The password to use for authentication.
@@ -151,9 +153,10 @@ public abstract class AmqpAdapterTestBase {
         final Future<ProtonConnection> result = Future.future();
         final ProtonClient client = ProtonClient.create(VERTX);
 
-        defaultOptions.addEnabledSaslMechanism(ProtonSaslPlainImpl.MECH_NAME);
+        final ProtonClientOptions options = new ProtonClientOptions(defaultOptions);
+        options.addEnabledSaslMechanism(ProtonSaslPlainImpl.MECH_NAME);
         client.connect(
-                defaultOptions,
+                options,
                 IntegrationTestSupport.AMQP_HOST,
                 IntegrationTestSupport.AMQPS_PORT,
                 username,
@@ -163,6 +166,7 @@ public abstract class AmqpAdapterTestBase {
     }
 
     /**
+     * Connects to the AMQP protocol adapter using a client certificate.
      * 
      * @param clientCertificate The certificate to use for authentication.
      * @return A succeeded future containing the established connection.

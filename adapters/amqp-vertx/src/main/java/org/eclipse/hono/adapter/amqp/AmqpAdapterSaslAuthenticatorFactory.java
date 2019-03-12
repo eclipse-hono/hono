@@ -193,7 +193,7 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
                     } else {
                         TracingHelper.logError(currentSpan, outcome.cause());
                         currentSpan.finish();
-                        LOG.debug("validation of credentials failed: " + outcome.cause().getMessage());
+                        LOG.debug("validation of credentials failed: {}", outcome.cause().getMessage());
                         sasl.done(SaslOutcome.PN_SASL_AUTH);
 
                     }
@@ -237,18 +237,19 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
                     items.put("auth_id", credentials.getAuthId());
                     currentSpan.log(items);
 
-                    getTenantObject(credentials.getTenantId()).map(tenant -> {
+                    getTenantObject(credentials.getTenantId())
+                    .map(tenant -> {
                         if (tenant.isAdapterEnabled(Constants.PROTOCOL_ADAPTER_TYPE_AMQP)) {
                             getUsernamePasswordAuthProvider().authenticate(credentials, currentSpan.context(), completer);
                         } else {
                             completer.handle(Future.failedFuture(new CredentialException(
-                                    String.format("AMQP adapter is disabled for Tenant [tenantId: %s]",
-                                            tenant.getTenantId()))));
+                                    String.format("AMQP adapter is disabled for tenant [%s]", tenant.getTenantId()))));
                         }
                         return null;
                     });
                 }
             } catch (CredentialException e) {
+                // SASL response could not be parsed
                 TracingHelper.logError(currentSpan, e);
                 completer.handle(Future.failedFuture(e));
             }

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -28,6 +28,7 @@ import org.eclipse.hono.util.TenantObject;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.rules.Timeout;
 import org.junit.runner.RunWith;
 
 import io.vertx.core.json.JsonObject;
@@ -41,6 +42,11 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
  */
 @RunWith(VertxUnitRunner.class)
 public class AmqpConnectionIT extends AmqpAdapterTestBase {
+
+    /**
+     * Time out all tests after 5 seconds.
+     */
+    public Timeout timeout = Timeout.seconds(5);
 
     /**
      * Logs the currently executing test method name.
@@ -59,6 +65,7 @@ public class AmqpConnectionIT extends AmqpAdapterTestBase {
         if (connection != null) {
             connection.closeHandler(null);
             connection.close();
+            connection = null;
         }
     }
 
