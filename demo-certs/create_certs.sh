@@ -1,6 +1,6 @@
 #!/bin/bash
 #*******************************************************************************
-# Copyright (c) 2016, 2017 Contributors to the Eclipse Foundation
+# Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
 #
 # See the NOTICE file(s) distributed with this work for additional
 # information regarding copyright ownership.
@@ -14,7 +14,6 @@
 
 # A simple shell script for generating example certificates to be used with Hono.
 
-CURVE=prime256v1
 DIR=certs
 HONO_TRUST_STORE=trustStore.jks
 HONO_TRUST_STORE_PWD=honotrust
@@ -35,20 +34,20 @@ COAP_ADAPTER_KEY_STORE_PWD=coapkeys
 AMQP_ADAPTER_KEY_STORE=amqpKeyStore.p12
 AMQP_ADAPTER_KEY_STORE_PWD=amqpkeys
 
-function to_pkcs8 {
+function create_key { 
 
-  # turn key into PKCS8 format
-  openssl pkcs8 -topk8 -nocrypt -inform PEM -outform PEM -in $1 -out $2 && rm $1
+  echo ""
+  openssl genrsa 4096 | openssl pkcs8 -topk8 -nocrypt -inform PEM -outform PEM -out $DIR/$1
+#  openssl ecparam -name prime256v1 -genkey -noout | openssl pkcs8 -topk8 -nocrypt -inform PEM -outform PEM -out $DIR/$1
+  
 }
 
 function create_cert {
 
   echo ""
   echo "creating $1 key and certificate"
-  #openssl ecparam -name $CURVE -genkey -noout -out $DIR/$1-key-orig.pem
-  openssl genrsa -out $DIR/$1-key-orig.pem 4096
-  to_pkcs8 $DIR/$1-key-orig.pem $DIR/$1-key.pem
-  openssl req -config ca_opts -new -key $DIR/$1-key.pem -days 365 -subj "/C=CA/L=Ottawa/O=Eclipse IoT/OU=Hono/CN=$1" | \
+  create_key $1-key.pem
+  openssl req -config ca_opts -new -key $DIR/$1-key.pem -subj "/C=CA/L=Ottawa/O=Eclipse IoT/OU=Hono/CN=$1" | \
     openssl x509 -req -extfile ca_opts -extensions req_ext_$1 -out $DIR/$1.pem -days 365 -CA $DIR/ca-cert.pem -CAkey $DIR/ca-key.pem -CAcreateserial
   cat $DIR/$1.pem $DIR/ca-cert.pem > $DIR/$1-cert.pem && rm $DIR/$1.pem
   if [ $2 ]
@@ -61,7 +60,7 @@ function create_cert {
 function create_client_cert {
   echo ""
   echo "creating client key and certificate for device $1"
-  openssl genrsa -out "$DIR/device-$1-key.pem" 4096
+  create_key device-$1-key.pem
   openssl req -new -key "$DIR/device-$1-key.pem" -subj "/C=CA/L=Ottawa/O=Eclipse IoT/OU=Hono/CN=Device $1" | \
     openssl x509 -req -out "$DIR/device-$1-cert.pem" -days 365 -CA $DIR/ca-cert.pem -CAkey $DIR/ca-key.pem -CAcreateserial
   SUBJECT=$(openssl x509 -in "$DIR/device-$1-cert.pem" -noout -subject -nameopt RFC2253)
@@ -79,16 +78,12 @@ mkdir $DIR
 fi
 
 echo "creating root key and certificate"
-#openssl ecparam -name $CURVE -genkey -noout -out $DIR/root-key-orig.pem
-openssl genrsa -out $DIR/root-key-orig.pem 4096
-to_pkcs8 $DIR/root-key-orig.pem $DIR/root-key.pem
+create_key root-key.pem
 openssl req -x509 -config ca_opts -new -key $DIR/root-key.pem -out $DIR/root-cert.pem -days 365 -subj "/C=CA/L=Ottawa/O=Eclipse IoT/OU=Hono/CN=root"
 
 echo ""
 echo "creating CA key and certificate"
-#openssl ecparam -name $CURVE -genkey -noout -out $DIR/ca-key-orig.pem
-openssl genrsa -out $DIR/ca-key-orig.pem 4096
-to_pkcs8 $DIR/ca-key-orig.pem $DIR/ca-key.pem
+create_key ca-key.pem
 openssl req -config ca_opts -reqexts intermediate_ext -new -key $DIR/ca-key.pem -days 365 -subj "/C=CA/L=Ottawa/O=Eclipse IoT/OU=Hono/CN=ca" | \
  openssl x509 -req -extfile ca_opts -extensions intermediate_ext -out $DIR/ca-cert.pem -days 365 -CA $DIR/root-cert.pem -CAkey $DIR/root-key.pem -CAcreateserial
 
