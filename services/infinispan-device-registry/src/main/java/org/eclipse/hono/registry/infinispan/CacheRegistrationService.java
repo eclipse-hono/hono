@@ -22,7 +22,7 @@ import org.infinispan.Cache;
 import org.infinispan.configuration.cache.ConfigurationBuilder;
 import org.infinispan.manager.EmbeddedCacheManager;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Repository;
 
 import java.net.HttpURLConnection;
@@ -36,6 +36,7 @@ import java.net.HttpURLConnection;
  *
  */
 @Repository
+@Primary
 public class CacheRegistrationService extends CompleteBaseRegistrationService<CacheRegistrationConfigProperties> {
 
     Cache<RegistrationKey, JsonObject> registrationCache;

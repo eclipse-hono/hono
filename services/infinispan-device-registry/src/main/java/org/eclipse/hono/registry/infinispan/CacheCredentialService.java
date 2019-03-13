@@ -32,7 +32,7 @@ import org.infinispan.query.Search;
 import org.infinispan.query.dsl.Query;
 import org.infinispan.query.dsl.QueryFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Repository;
 
 import java.net.HttpURLConnection;
@@ -52,6 +52,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  *
  */
 @Repository
+@Primary
 public class CacheCredentialService extends CompleteBaseCredentialsService<CacheCredentialConfigProperties> {
 
      private final Cache<CredentialsKey, RegistryCredentialObject> credentialsCache;

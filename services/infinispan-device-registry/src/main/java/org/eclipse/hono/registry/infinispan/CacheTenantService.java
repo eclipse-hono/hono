@@ -27,7 +27,7 @@ import org.infinispan.query.Search;
 import org.infinispan.query.dsl.Query;
 import org.infinispan.query.dsl.QueryFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Repository;
 
 import javax.security.auth.x500.X500Principal;
@@ -45,6 +45,7 @@ import java.util.Optional;
  *
  */
 @Repository
+@Primary
 public class CacheTenantService extends CompleteBaseTenantService<CacheTenantConfigProperties> {
 
     Cache<String, RegistryTenantObject> tenantsCache;
