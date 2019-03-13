@@ -164,7 +164,15 @@ public class AmqpSend extends AbstractCliClient {
                     properties.getPassword(),
                     connectAttempt);
         } else {
-            // SASL ANONYMOUS auth
+            if (properties.getKeyCertOptions() != null && properties.getTrustOptions() != null) {
+                // SASL EXTERNAL auth
+                options.setSsl(true);
+                options.setKeyCertOptions(properties.getKeyCertOptions());
+                options.setTrustOptions(properties.getTrustOptions());
+            } else {
+                // SASL ANONYMOUS auth
+            }
+
             LOG.info("connecting to AMQP adapter [host: {}, port: {}]", properties.getHost(), properties.getPort());
             client.connect(options, properties.getHost(), properties.getPort(), connectAttempt);
         }

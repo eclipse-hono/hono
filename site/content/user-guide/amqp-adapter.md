@@ -118,6 +118,10 @@ Publish some JSON data for device `4711`:
 
 Notice that we only supplied a new value for the message address, leaving the other default values.
 
+Publish some JSON data for device `4711` using a client certificate for authentication:
+
+    ~/hono/cli/target$ java -jar hono-cli-*-exec.jar --spring.profiles.active=amqp-adapter-cli --hono.client.port=5671 --hono.client.certPath=config/hono-demo-certs-jar/device-4711-cert.pem --hono.client.keyPath=config/hono-demo-certs-jar/device-4711-key.pem --hono.client.trustStorePath=config/hono-demo-certs-jar/trusted-certs.pem --hono.client.hostnameVerificationRequired=false
+
 ## Publish Telemetry Data (unauthenticated Device)
 
 * Message Address: `telemetry/${tenant-id}/${device-id}` or `t/${tenant-id}/${device-id}`
