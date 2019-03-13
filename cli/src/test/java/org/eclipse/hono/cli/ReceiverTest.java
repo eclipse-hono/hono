@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -21,7 +21,7 @@ import static org.mockito.Mockito.when;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
-import org.eclipse.hono.client.HonoClient;
+import org.eclipse.hono.client.HonoApplicationClient;
 import org.eclipse.hono.client.MessageConsumer;
 import org.junit.After;
 import org.junit.Before;
@@ -63,7 +63,7 @@ public class ReceiverTest {
         final Vertx vertx = mock(Vertx.class);
         when(vertx.getOrCreateContext()).thenReturn(mock(Context.class));
 
-        final HonoClient client = mock(HonoClient.class);
+        final HonoApplicationClient client = mock(HonoApplicationClient.class);
         when(client.connect(any(Handler.class))).thenReturn(Future.succeededFuture(client));
         when(client.connect()).thenReturn(Future.succeededFuture(client));
         when(client.createTelemetryConsumer(anyString(), any(Consumer.class), any(Handler.class)))

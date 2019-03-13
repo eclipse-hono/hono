@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -20,7 +20,6 @@ import io.vertx.core.Handler;
 import io.vertx.core.buffer.Buffer;
 
 import org.apache.qpid.proton.message.Message;
-import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.util.MessageHelper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
@@ -62,16 +61,16 @@ public class Receiver extends AbstractClient {
     @PostConstruct
     Future<CompositeFuture> start() {
         return client.connect(this::onDisconnect)
-                .compose(this::createConsumer)
+                .compose(res -> createConsumer())
                 .setHandler(this::handleCreateConsumerStatus);
     }
 
-    private CompositeFuture createConsumer(final HonoClient connectedClient) {
+    private CompositeFuture createConsumer() {
         final Handler<Void> closeHandler = closeHook -> {
             LOG.info("close handler of consumer is called");
             vertx.setTimer(connectionRetryInterval, reconnect -> {
                 LOG.info("attempting to re-open the consumer link ...");
-                createConsumer(connectedClient);
+                createConsumer();
             });
         };
 
@@ -79,11 +78,11 @@ public class Receiver extends AbstractClient {
         final List<Future> consumerFutures = new ArrayList<>();
         if (messageType.equals(TYPE_EVENT) || messageType.equals(TYPE_ALL)) {
             consumerFutures.add(
-                    connectedClient.createEventConsumer(tenantId, msg -> handleMessage(TYPE_EVENT, msg), closeHandler));
+                    client.createEventConsumer(tenantId, msg -> handleMessage(TYPE_EVENT, msg), closeHandler));
         }
 
         if (messageType.equals(TYPE_TELEMETRY) || messageType.equals(TYPE_ALL)) {
-            consumerFutures.add(connectedClient
+            consumerFutures.add(client
                     .createTelemetryConsumer(tenantId, msg -> handleMessage(TYPE_TELEMETRY, msg), closeHandler));
         }
 
@@ -101,7 +100,7 @@ public class Receiver extends AbstractClient {
         vertx.setTimer(connectionRetryInterval, reconnect -> {
             LOG.info("attempting to re-connect to Hono ...");
             client.connect(this::onDisconnect)
-                    .compose(this::createConsumer);
+                    .compose(res -> createConsumer());
         });
     }
 

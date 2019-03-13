@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -15,7 +15,7 @@ package org.eclipse.hono.cli;
 
 import java.util.Objects;
 
-import org.eclipse.hono.client.HonoClient;
+import org.eclipse.hono.client.HonoApplicationClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 
@@ -31,10 +31,10 @@ abstract class AbstractClient extends AbstractCliClient {
     protected String deviceId;
     @Value(value = "${connection.retryInterval}")
     protected int connectionRetryInterval;
-    protected HonoClient client;
+    protected HonoApplicationClient client;
 
     @Autowired
-    public final void setHonoClient(final HonoClient client) {
+    public final void setHonoClient(final HonoApplicationClient client) {
         this.client = Objects.requireNonNull(client);
     }
 }

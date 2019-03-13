@@ -19,9 +19,10 @@ import javax.jms.IllegalStateException;
 
 import org.apache.jmeter.samplers.SampleResult;
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.client.HonoApplicationClient;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageConsumer;
-import org.eclipse.hono.client.impl.HonoClientImpl;
+import org.eclipse.hono.client.impl.HonoApplicationClientImpl;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.jmeter.HonoReceiverSampler;
 import org.eclipse.hono.jmeter.HonoSampler;
@@ -41,7 +42,7 @@ public class HonoReceiver extends AbstractClient {
 
     private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(HonoReceiver.class);
 
-    private final HonoClient          amqpNetworkClient;
+    private final HonoApplicationClient amqpNetworkClient;
     private final HonoReceiverSampler sampler;
 
     private final transient Object lock = new Object();
@@ -78,7 +79,7 @@ public class HonoReceiver extends AbstractClient {
         clientConfig.setInitialCredits(Integer.parseInt(sampler.getPrefetch()));
         clientConfig.setReconnectAttempts(Integer.parseInt(sampler.getReconnectAttempts()));
         // amqp network config
-        amqpNetworkClient = new HonoClientImpl(vertx, clientConfig);
+        amqpNetworkClient = new HonoApplicationClientImpl(vertx, clientConfig);
     }
 
     /**

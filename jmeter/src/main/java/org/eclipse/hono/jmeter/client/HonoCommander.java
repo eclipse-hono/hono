@@ -1,18 +1,15 @@
-/*
- * ******************************************************************************
- *  * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
- *  *
- *  * See the NOTICE file(s) distributed with this work for additional
- *  * information regarding copyright ownership.
- *  *
- *  * This program and the accompanying materials are made available under the
- *  * terms of the Eclipse Public License 2.0 which is available at
- *  * http://www.eclipse.org/legal/epl-2.0
- *  *
- *  * SPDX-License-Identifier: EPL-2.0
- *  ******************************************************************************
+/*******************************************************************************
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
- */
+ * See the NOTICE file(s) distributed with this work for additional
+ * information regarding copyright ownership.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License 2.0 which is available at
+ * http://www.eclipse.org/legal/epl-2.0
+ *
+ * SPDX-License-Identifier: EPL-2.0
+ *******************************************************************************/
 
 package org.eclipse.hono.jmeter.client;
 
@@ -29,9 +26,10 @@ import org.apache.jmeter.samplers.SampleResult;
 import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.CommandClient;
+import org.eclipse.hono.client.HonoApplicationClient;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageConsumer;
-import org.eclipse.hono.client.impl.HonoClientImpl;
+import org.eclipse.hono.client.impl.HonoApplicationClientImpl;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.jmeter.HonoCommanderSampler;
 import org.eclipse.hono.jmeter.sampleresult.HonoCommanderSampleResult;
@@ -48,7 +46,7 @@ import io.vertx.core.buffer.Buffer;
 public class HonoCommander extends AbstractClient {
 
     private static final org.slf4j.Logger LOG = LoggerFactory.getLogger(HonoCommander.class);
-    private final HonoClient client;
+    private final HonoApplicationClient client;
     private final HonoCommanderSampler sampler;
     private final List<String> devicesReadyToReceiveCommands = new CopyOnWriteArrayList<>();
     private final AtomicInteger successCount = new AtomicInteger(0);
@@ -81,7 +79,7 @@ public class HonoCommander extends AbstractClient {
         tenant = sampler.getTenant();
         commandTimeoutInMs = sampler.getCommandTimeoutAsInt();
         triggerType = sampler.getTriggerType();
-        client = new HonoClientImpl(vertx, clientConfig);
+        client = new HonoApplicationClientImpl(vertx, clientConfig);
     }
 
     /**

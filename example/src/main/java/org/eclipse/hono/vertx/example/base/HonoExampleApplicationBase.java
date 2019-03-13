@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -21,10 +21,10 @@ import java.util.function.Consumer;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.CommandClient;
-import org.eclipse.hono.client.HonoClient;
+import org.eclipse.hono.client.HonoApplicationClient;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.ServiceInvocationException;
-import org.eclipse.hono.client.impl.HonoClientImpl;
+import org.eclipse.hono.client.impl.HonoApplicationClientImpl;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.MessageTap;
@@ -60,7 +60,7 @@ public class HonoExampleApplicationBase {
     protected final int DEFAULT_CONNECT_TIMEOUT_MILLIS = 1000;
 
     private final Vertx vertx = Vertx.vertx();
-    private final HonoClient honoClient;
+    private final HonoApplicationClient honoClient;
 
     /**
      * A map holding a handler to cancel a timer that was started to send commands periodically to a device.
@@ -94,7 +94,7 @@ public class HonoExampleApplicationBase {
             props.setHostnameVerificationRequired(false);
         }
 
-        honoClient = new HonoClientImpl(vertx, props);
+        honoClient = new HonoApplicationClientImpl(vertx, props);
     }
 
     /**

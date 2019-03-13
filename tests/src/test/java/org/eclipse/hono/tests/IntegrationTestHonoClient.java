@@ -1,5 +1,5 @@
-/**
- * Copyright (c) 2018 Contributors to the Eclipse Foundation
+/*******************************************************************************
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -9,14 +9,13 @@
  * http://www.eclipse.org/legal/epl-2.0
  *
  * SPDX-License-Identifier: EPL-2.0
- */
-
+ *******************************************************************************/
 
 package org.eclipse.hono.tests;
 
 import java.util.Objects;
 
-import org.eclipse.hono.client.impl.HonoClientImpl;
+import org.eclipse.hono.client.impl.HonoApplicationClientImpl;
 import org.eclipse.hono.config.ClientConfigProperties;
 
 import io.vertx.core.Future;
@@ -27,7 +26,7 @@ import io.vertx.core.Vertx;
  * A Hono client that also allows to create generic links to a peer.
  *
  */
-public class IntegrationTestHonoClient extends HonoClientImpl {
+public class IntegrationTestHonoClient extends HonoApplicationClientImpl {
 
     /**
      * Creates a new client.

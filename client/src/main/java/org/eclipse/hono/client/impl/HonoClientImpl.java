@@ -22,22 +22,17 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.BiConsumer;
-import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import javax.security.sasl.AuthenticationException;
 
 import org.apache.qpid.proton.amqp.Symbol;
-import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.cache.CacheProvider;
 import org.eclipse.hono.client.ClientErrorException;
-import org.eclipse.hono.client.CommandClient;
 import org.eclipse.hono.client.CredentialsClient;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageConsumer;
@@ -49,10 +44,8 @@ import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.TenantClient;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.connection.ConnectionFactory;
-import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.HonoProtonHelper;
-import org.eclipse.hono.util.ResourceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -66,11 +59,10 @@ import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.proton.ProtonClientOptions;
 import io.vertx.proton.ProtonConnection;
-import io.vertx.proton.ProtonDelivery;
 import io.vertx.proton.sasl.SaslSystemException;
 
 /**
- * A helper class for creating Vert.x based clients for Hono's arbitrary APIs.
+ * A helper class for creating Vert.x based clients for Hono's APIs.
  * <p>
  * The client ensures that all interactions with the peer are performed on the
  * same vert.x {@code Context}. For this purpose the <em>connect</em> methods
@@ -87,7 +79,7 @@ public class HonoClientImpl implements HonoClient {
     /**
      * A logger to be shared with subclasses.
      */
-    protected final Logger log = LoggerFactory.getLogger(HonoClientImpl.class);
+    protected final Logger log = LoggerFactory.getLogger(getClass());
     /**
      * The configuration properties for this client.
      */
@@ -110,6 +102,10 @@ public class HonoClientImpl implements HonoClient {
      * The vert.x Context to use for interacting with the peer.
      */
     protected volatile Context context;
+    /**
+     * The ConnectionFactory to use for creating connections.
+     */
+    protected final ConnectionFactory connectionFactory;
 
     private final Map<String, RequestResponseClient> activeRequestResponseClients = new HashMap<>();
     private final Map<String, Boolean> creationLocks = new HashMap<>();
@@ -117,7 +113,6 @@ public class HonoClientImpl implements HonoClient {
     private final AtomicBoolean connecting = new AtomicBoolean(false);
     private final AtomicBoolean shuttingDown = new AtomicBoolean(false);
     private final AtomicBoolean disconnecting = new AtomicBoolean(false);
-    private final ConnectionFactory connectionFactory;
     private final Object connectionLock = new Object();
 
     private ProtonClientOptions clientOptions;
@@ -690,74 +685,6 @@ public class HonoClientImpl implements HonoClient {
     }
 
     /**
-     * {@inheritDoc}
-     */
-    @Override
-    public final Future<MessageConsumer> createTelemetryConsumer(
-            final String tenantId,
-            final Consumer<Message> messageConsumer,
-            final Handler<Void> closeHandler) {
-
-        return createConsumer(
-                tenantId,
-                () -> newTelemetryConsumer(tenantId, messageConsumer, closeHandler));
-    }
-
-    private Future<MessageConsumer> newTelemetryConsumer(
-            final String tenantId,
-            final Consumer<Message> messageConsumer,
-            final Handler<Void> closeHandler) {
-
-        return checkConnected().compose(con -> {
-            final Future<MessageConsumer> result = Future.future();
-            TelemetryConsumerImpl.create(context, clientConfigProperties, connection, tenantId,
-                    connectionFactory.getPathSeparator(), messageConsumer, result.completer(),
-                    closeHook -> closeHandler.handle(null));
-            return result;
-        });
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public final Future<MessageConsumer> createEventConsumer(
-            final String tenantId,
-            final Consumer<Message> eventConsumer,
-            final Handler<Void> closeHandler) {
-
-        return createEventConsumer(tenantId, (delivery, message) -> eventConsumer.accept(message), closeHandler);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public final Future<MessageConsumer> createEventConsumer(
-            final String tenantId,
-            final BiConsumer<ProtonDelivery, Message> messageConsumer,
-            final Handler<Void> closeHandler) {
-
-        return createConsumer(
-                tenantId,
-                () -> newEventConsumer(tenantId, messageConsumer, closeHandler));
-    }
-
-    private Future<MessageConsumer> newEventConsumer(
-            final String tenantId,
-            final BiConsumer<ProtonDelivery, Message> messageConsumer,
-            final Handler<Void> closeHandler) {
-
-        return checkConnected().compose(con -> {
-            final Future<MessageConsumer> result = Future.future();
-            EventConsumerImpl.create(context, clientConfigProperties, connection, tenantId,
-                    connectionFactory.getPathSeparator(), messageConsumer, result.completer(),
-                    closeHook -> closeHandler.handle(null));
-            return result;
-        });
-    }
-
-    /**
      * Creates a new message consumer for a tenant.
      * 
      * @param tenantId The tenant to create the consumer for.
@@ -854,13 +781,21 @@ public class HonoClientImpl implements HonoClient {
         removeActiveRequestResponseClient(targetAddress);
     }
 
-    private void removeActiveRequestResponseClient(final String targetAddress) {
+    /**
+     * Removes a RequestResponseClient from the list of active clients.
+     * <p>
+     * Once a client has been removed, the next invocation of the corresponding <em>getOrCreateRequestResponseClient</em>
+     * method will result in a new client being created (and added to the list of active clients).
+     * 
+     * @param key The key to look-up the client by.
+     */
+    protected void removeActiveRequestResponseClient(final String key) {
 
-        final RequestResponseClient client = activeRequestResponseClients.remove(targetAddress);
+        final RequestResponseClient client = activeRequestResponseClients.remove(key);
         if (client != null) {
             client.close(s -> {
             });
-            log.debug("closed and removed client for [{}]", targetAddress);
+            log.debug("closed and removed client for [{}]", key);
         }
     }
 
@@ -981,48 +916,6 @@ public class HonoClientImpl implements HonoClient {
     protected void removeTenantClient() {
         final String targetAddress = TenantClientImpl.getTargetAddress();
         removeActiveRequestResponseClient(targetAddress);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public Future<CommandClient> getOrCreateCommandClient(final String tenantId, final String deviceId) {
-        return getOrCreateCommandClient(tenantId, deviceId, UUID.randomUUID().toString());
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public Future<CommandClient> getOrCreateCommandClient(final String tenantId, final String deviceId,
-            final String replyId) {
-
-        Objects.requireNonNull(tenantId);
-        Objects.requireNonNull(deviceId);
-        Objects.requireNonNull(replyId);
-
-        log.debug("get or create command client for [tenantId: {}, deviceId: {}, replyId: {}]", tenantId, deviceId,
-                replyId);
-        return getOrCreateRequestResponseClient(
-                ResourceIdentifier.from(CommandConstants.COMMAND_ENDPOINT, tenantId, deviceId).toString(),
-                () -> newCommandClient(tenantId, deviceId, replyId)).map(c -> (CommandClient) c);
-    }
-
-    private Future<RequestResponseClient> newCommandClient(final String tenantId, final String deviceId,
-            final String replyId) {
-        return checkConnected().compose(connected -> {
-            final Future<CommandClient> result = Future.future();
-            CommandClientImpl.create(
-                    context,
-                    clientConfigProperties,
-                    connection,
-                    tenantId, deviceId, replyId,
-                    this::removeActiveRequestResponseClient,
-                    this::removeActiveRequestResponseClient,
-                    result.completer());
-            return result.map(client -> (RequestResponseClient) client);
-        });
     }
 
     /**
