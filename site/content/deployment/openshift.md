@@ -229,7 +229,7 @@ proper certificates set up, and will try to assist if that is not the case.
 
 {{% note title="Let's encrypt" %}}
 As [Let's encrypt](https://letsencrypt.org/) now supports wildcard certificates,
-having proper certificates may one be a few commands away for you.
+having proper certificates may only be a few commands away for you.
 {{% /note %}}
 
 In general, `curl` commands require the parameter `--insecure` in order to
