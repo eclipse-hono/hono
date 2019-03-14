@@ -260,7 +260,9 @@ public abstract class CoapTestBase {
     protected abstract Type getMessageType();
 
     /**
-     * Warms up the adapter with a request.
+     * Triggers the establishment of a downstream sender
+     * for a tenant so that subsequent messages will be
+     * more likely to be forwarded.
      * 
      * @param client The CoAP client to use for sending the request.
      * @param request The request to send.
@@ -283,7 +285,7 @@ public abstract class CoapTestBase {
             }
 
             private void waitForWarmUp() {
-                VERTX.setTimer(500, tid -> result.complete());
+                VERTX.setTimer(1000, tid -> result.complete());
             }
         }, request);
         return result;
