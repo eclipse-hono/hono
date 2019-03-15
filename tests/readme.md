@@ -13,7 +13,8 @@ In order to run the tests you will need the following:
 
 Run the tests by executing the following command from the `tests` directory (add `-Ddocker.host=tcp://${host}:${port}` if Docker is not installed locally)
 
-    $ mvn verify -Prun-tests
+    # in directory: hono/tests/
+    mvn verify -Prun-tests
 
 This starts the following Docker containers and runs the test cases against them
 

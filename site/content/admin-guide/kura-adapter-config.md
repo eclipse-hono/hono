@@ -128,35 +128,36 @@ See [Monitoring & Tracing Admin Guide]({{< ref "monitoring-tracing-config.md" >}
 The adapter can be run as a Docker container from the command line. The following commands create and start the adapter as a Docker Swarm service using the default keys  contained in the `demo-certs` module:
 
 ~~~sh
-~/hono$ docker secret create trusted-certs.pem demo-certs/certs/trusted-certs.pem
-~/hono$ docker secret create kura-adapter-key.pem demo-certs/certs/kura-adapter-key.pem
-~/hono$ docker secret create kura-adapter-cert.pem demo-certs/certs/kura-adapter-cert.pem
-~/hono$ docker service create --detach --name hono-adapter-kura --network hono-net -p 1883:1883 -p 8883:8883 \
-> --secret trusted-certs.pem \
-> --secret kura-adapter-key.pem \
-> --secret kura-adapter-cert.pem \
-> -e 'HONO_MESSAGING_HOST=hono-service-messaging.hono' \
-> -e 'HONO_MESSAGING_USERNAME=kura-adapter@HONO' \
-> -e 'HONO_MESSAGING_PASSWORD=kura-secret' \
-> -e 'HONO_MESSAGING_TRUST_STORE_PATH=/run/secrets/trusted-certs.pem' \
-> -e 'HONO_TENANT_HOST=hono-service-device-registry.hono' \
-> -e 'HONO_TENANT_USERNAME=kura-adapter@HONO' \
-> -e 'HONO_TENANT_PASSWORD=kura-secret' \
-> -e 'HONO_TENANT_TRUST_STORE_PATH=/run/secrets/trusted-certs.pem' \
-> -e 'HONO_REGISTRATION_HOST=hono-service-device-registry.hono' \
-> -e 'HONO_REGISTRATION_USERNAME=kura-adapter@HONO' \
-> -e 'HONO_REGISTRATION_PASSWORD=kura-secret' \
-> -e 'HONO_REGISTRATION_TRUST_STORE_PATH=/run/secrets/trusted-certs.pem' \
-> -e 'HONO_CREDENTIALS_HOST=hono-service-device-registry.hono' \
-> -e 'HONO_CREDENTIALS_USERNAME=kura-adapter@HONO' \
-> -e 'HONO_CREDENTIALS_PASSWORD=kura-secret' \
-> -e 'HONO_CREDENTIALS_TRUST_STORE_PATH=/run/secrets/trusted-certs.pem' \
-> -e 'HONO_KURA_BIND_ADDRESS=0.0.0.0' \
-> -e 'HONO_KURA_KEY_PATH=/run/secrets/kura-adapter-key.pem' \
-> -e 'HONO_KURA_CERT_PATH=/run/secrets/kura-adapter-cert.pem' \
-> -e 'HONO_KURA_INSECURE_PORT_ENABLED=true' \
-> -e 'HONO_KURA_INSECURE_PORT_BIND_ADDRESS=0.0.0.0'
-> eclipse/hono-adapter-kura:latest
+# in base directory of Hono repository:
+docker secret create trusted-certs.pem demo-certs/certs/trusted-certs.pem
+docker secret create kura-adapter-key.pem demo-certs/certs/kura-adapter-key.pem
+docker secret create kura-adapter-cert.pem demo-certs/certs/kura-adapter-cert.pem
+docker service create --detach --name hono-adapter-kura --network hono-net -p 1883:1883 -p 8883:8883 \
+ --secret trusted-certs.pem \
+ --secret kura-adapter-key.pem \
+ --secret kura-adapter-cert.pem \
+ -e 'HONO_MESSAGING_HOST=hono-service-messaging.hono' \
+ -e 'HONO_MESSAGING_USERNAME=kura-adapter@HONO' \
+ -e 'HONO_MESSAGING_PASSWORD=kura-secret' \
+ -e 'HONO_MESSAGING_TRUST_STORE_PATH=/run/secrets/trusted-certs.pem' \
+ -e 'HONO_TENANT_HOST=hono-service-device-registry.hono' \
+ -e 'HONO_TENANT_USERNAME=kura-adapter@HONO' \
+ -e 'HONO_TENANT_PASSWORD=kura-secret' \
+ -e 'HONO_TENANT_TRUST_STORE_PATH=/run/secrets/trusted-certs.pem' \
+ -e 'HONO_REGISTRATION_HOST=hono-service-device-registry.hono' \
+ -e 'HONO_REGISTRATION_USERNAME=kura-adapter@HONO' \
+ -e 'HONO_REGISTRATION_PASSWORD=kura-secret' \
+ -e 'HONO_REGISTRATION_TRUST_STORE_PATH=/run/secrets/trusted-certs.pem' \
+ -e 'HONO_CREDENTIALS_HOST=hono-service-device-registry.hono' \
+ -e 'HONO_CREDENTIALS_USERNAME=kura-adapter@HONO' \
+ -e 'HONO_CREDENTIALS_PASSWORD=kura-secret' \
+ -e 'HONO_CREDENTIALS_TRUST_STORE_PATH=/run/secrets/trusted-certs.pem' \
+ -e 'HONO_KURA_BIND_ADDRESS=0.0.0.0' \
+ -e 'HONO_KURA_KEY_PATH=/run/secrets/kura-adapter-key.pem' \
+ -e 'HONO_KURA_CERT_PATH=/run/secrets/kura-adapter-cert.pem' \
+ -e 'HONO_KURA_INSECURE_PORT_ENABLED=true' \
+ -e 'HONO_KURA_INSECURE_PORT_BIND_ADDRESS=0.0.0.0' \
+ eclipse/hono-adapter-kura:latest
 ~~~
 
 {{% note %}}
@@ -175,8 +176,8 @@ Using the example from above, the following environment variable definition need
 
 ~~~sh
 ...
-> -e '_JAVA_OPTIONS=-Xmx128m' \
-> eclipse/hono-adapter-kura:latest
+ -e '_JAVA_OPTIONS=-Xmx128m' \
+ eclipse/hono-adapter-kura:latest
 ~~~
 
 ## Run using the Docker Swarm Deployment Script
@@ -190,26 +191,27 @@ In order to do so, the adapter can be started using the `spring-boot:run` maven 
 The corresponding command to start up the adapter with the configuration used in the Docker example above looks like this:
 
 ~~~sh
-~/hono/adapters/kura$ mvn spring-boot:run -Drun.arguments=\
-> --hono.messaging.host=hono-service-messaging.hono,\
-> --hono.messaging.username=kura-adapter@HONO,\
-> --hono.messaging.password=kura-secret,\
-> --hono.messaging.trustStorePath=target/certs/trusted-certs.pem,\
-> --hono.tenant.host=hono-service-device-registry.hono,\
-> --hono.tenant.username=kura-adapter@HONO,\
-> --hono.tenant.password=kura-secret,\
-> --hono.tenant.trustStorePath=target/certs/trusted-certs.pem,\
-> --hono.registration.host=hono-service-device-registry.hono,\
-> --hono.registration.username=kura-adapter@HONO,\
-> --hono.registration.password=kura-secret,\
-> --hono.registration.trustStorePath=target/certs/trusted-certs.pem,\
-> --hono.credentials.host=hono-service-device-registry.hono,\
-> --hono.credentials.username=kura-adapter@HONO,\
-> --hono.credentials.password=kura-secret,\
-> --hono.credentials.trustStorePath=target/certs/trusted-certs.pem,\
-> --hono.kura.bindAddress=0.0.0.0,\
-> --hono.kura.insecurePortEnabled=true,\
-> --hono.kura.insecurePortBindAddress=0.0.0.0
+# in directory: hono/adapters/kura/
+mvn spring-boot:run -Dhono.app.healthCheckPort=8088 -Dhono.app.maxInstances=1 -Drun.arguments=\
+--hono.messaging.host=hono-service-messaging.hono,\
+--hono.messaging.username=kura-adapter@HONO,\
+--hono.messaging.password=kura-secret,\
+--hono.messaging.trustStorePath=../../demo-certs/certs/trusted-certs.pem,\
+--hono.tenant.host=hono-service-device-registry.hono,\
+--hono.tenant.username=kura-adapter@HONO,\
+--hono.tenant.password=kura-secret,\
+--hono.tenant.trustStorePath=../../demo-certs/certs/trusted-certs.pem,\
+--hono.registration.host=hono-service-device-registry.hono,\
+--hono.registration.username=kura-adapter@HONO,\
+--hono.registration.password=kura-secret,\
+--hono.registration.trustStorePath=../../demo-certs/certs/trusted-certs.pem,\
+--hono.credentials.host=hono-service-device-registry.hono,\
+--hono.credentials.username=kura-adapter@HONO,\
+--hono.credentials.password=kura-secret,\
+--hono.credentials.trustStorePath=../../demo-certs/certs/trusted-certs.pem,\
+--hono.kura.bindAddress=0.0.0.0,\
+--hono.kura.insecurePortEnabled=true,\
+--hono.kura.insecurePortBindAddress=0.0.0.0
 ~~~
 
 {{% note %}}

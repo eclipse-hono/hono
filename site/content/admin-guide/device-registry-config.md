@@ -178,33 +178,34 @@ The example configuration file (located at `/deploy/src/main/deploy/example-devi
 The Device Registry can be run as a Docker container from the command line. The following commands create and start the Device Registry as a Docker Swarm service using the default keys and configuration files contained in the `demo-certs` and `services/device-registry` modules:
 
 ~~~sh
-~/hono$ docker secret create auth-server-key.pem demo-certs/certs/auth-server-key.pem
-~/hono$ docker secret create auth-server-cert.pem demo-certs/certs/auth-server-cert.pem
-~/hono$ docker secret create device-registry-key.pem demo-certs/certs/device-registry-key.pem
-~/hono$ docker secret create device-registry-cert.pem demo-certs/certs/device-registry-cert.pem
-~/hono$ docker secret create trusted-certs.pem demo-certs/certs/trusted-certs.pem
-~/hono$ docker secret create device-identities.json services/device-registry/src/test/resources/device-identities.json
-~/hono$ docker service create --detach --name hono-service-device-registry --network hono-net -p 25671:5671 \
-> --secret auth-server-key.pem \
-> --secret auth-server-cert.pem \
-> --secret device-registry-key.pem \
-> --secret device-registry-cert.pem \
-> --secret trusted-certs.pem \
-> --secret tenants.json \
-> --secret device-identities.json \
-> --secret credentials.json \
-> -e 'HONO_AUTH_HOST=<name or address of the auth-server>' \
-> -e 'HONO_AUTH_NAME=device-registry' \
-> -e 'HONO_AUTH_VALIDATION_CERT_PATH=/run/secrets/auth-server-cert.pem' \
-> -e 'HONO_AUTH_TRUST_STORE_PATH=/run/secrets/trusted-certs.pem' \
-> -e 'HONO_REGISTRY_AMQP_BIND_ADDRESS=0.0.0.0'
-> -e 'HONO_REGISTRY_AMQP_KEY_PATH=/run/secrets/device-registry-key.pem' \
-> -e 'HONO_REGISTRY_AMQP_CERT_PATH=/run/secrets/device-registry-cert.pem' \
-> -e 'HONO_TENANT_SVC_FILENAME=file:/run/secrets/tenants.json' \
-> -e 'HONO_REGISTRY_SVC_FILENAME=file:/run/secrets/device-identities.json' \
-> -e 'HONO_CREDENTIALS_SVC_FILENAME=file:/run/secrets/credentials.json' \
-> -e 'HONO_REGISTRY_SVC_SIGNING_SHARED_SECRET=asharedsecretforvalidatingassertions' \
-> eclipse/hono-service-device-registry:latest
+# in base directory of Hono repository:
+docker secret create auth-server-key.pem demo-certs/certs/auth-server-key.pem
+docker secret create auth-server-cert.pem demo-certs/certs/auth-server-cert.pem
+docker secret create device-registry-key.pem demo-certs/certs/device-registry-key.pem
+docker secret create device-registry-cert.pem demo-certs/certs/device-registry-cert.pem
+docker secret create trusted-certs.pem demo-certs/certs/trusted-certs.pem
+docker secret create device-identities.json services/device-registry/src/test/resources/device-identities.json
+docker service create --detach --name hono-service-device-registry --network hono-net -p 25671:5671 \
+ --secret auth-server-key.pem \
+ --secret auth-server-cert.pem \
+ --secret device-registry-key.pem \
+ --secret device-registry-cert.pem \
+ --secret trusted-certs.pem \
+ --secret tenants.json \
+ --secret device-identities.json \
+ --secret credentials.json \
+ -e 'HONO_AUTH_HOST=<name or address of the auth-server>' \
+ -e 'HONO_AUTH_NAME=device-registry' \
+ -e 'HONO_AUTH_VALIDATION_CERT_PATH=/run/secrets/auth-server-cert.pem' \
+ -e 'HONO_AUTH_TRUST_STORE_PATH=/run/secrets/trusted-certs.pem' \
+ -e 'HONO_REGISTRY_AMQP_BIND_ADDRESS=0.0.0.0' \
+ -e 'HONO_REGISTRY_AMQP_KEY_PATH=/run/secrets/device-registry-key.pem' \
+ -e 'HONO_REGISTRY_AMQP_CERT_PATH=/run/secrets/device-registry-cert.pem' \
+ -e 'HONO_TENANT_SVC_FILENAME=file:/run/secrets/tenants.json' \
+ -e 'HONO_REGISTRY_SVC_FILENAME=file:/run/secrets/device-identities.json' \
+ -e 'HONO_CREDENTIALS_SVC_FILENAME=file:/run/secrets/credentials.json' \
+ -e 'HONO_REGISTRY_SVC_SIGNING_SHARED_SECRET=asharedsecretforvalidatingassertions' \
+ eclipse/hono-service-device-registry:latest
 ~~~
 
 {{% note %}}
@@ -224,8 +225,8 @@ Using the example from above, the following environment variable definition need
 
 ~~~sh
 ...
-> -e '_JAVA_OPTIONS=-Xmx128m' \
-> eclipse/hono-service-device-registry:latest
+ -e '_JAVA_OPTIONS=-Xmx128m' \
+ eclipse/hono-service-device-registry:latest
 ~~~
 
 ## Run using the Docker Swarm Deployment Script
@@ -239,15 +240,17 @@ In order to do so, the server can be started using the `spring-boot:run` maven g
 The corresponding command to start up the server with the configuration used in the Docker example above looks like this:
 
 ~~~sh
-~/hono/services/device-registry $ mvn spring-boot:run -Drun.arguments=\
-> --hono.registry.amqp.bindAddress=0.0.0.0,\
-> --hono.registry.amqp.keyPath=target/certs/device-registry-key.pem,\
-> --hono.registry.amqp.certPath=target/certs/device-registry-cert.pem,\
-> --hono.registry.amqp.trustStorePath=target/certs/trusted-certs.pem,\
-> --hono.auth.host=localhost,\
-> --hono.auth.name='device-registry',\
-> --hono.auth.validation.certPath=target/certs/auth-server-cert.pem,\
-> --hono.auth.trustStorePath=target/certs/trusted-certs.pem
+# in directory: hono/services/device-registry/
+mvn spring-boot:run -Dhono.app.healthCheckPort=8088 -Dhono.app.maxInstances=1 -Drun.arguments=\
+--hono.registry.amqp.bindAddress=0.0.0.0,\
+--hono.registry.amqp.keyPath=../../demo-certs/certs/device-registry-key.pem,\
+--hono.registry.amqp.certPath=../../demo-certs/certs/device-registry-cert.pem,\
+--hono.registry.amqp.trustStorePath=../../demo-certs/certs/trusted-certs.pem,\
+--hono.registry.rest.insecurePortEnabled=true,\
+--hono.auth.host=localhost,\
+--hono.auth.name='device-registry',\
+--hono.auth.validation.certPath=../../demo-certs/certs/auth-server-cert.pem,\
+--hono.auth.trustStorePath=../../demo-certs/certs/trusted-certs.pem
 ~~~
 
 {{% note %}}

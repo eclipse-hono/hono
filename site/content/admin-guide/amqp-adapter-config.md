@@ -127,35 +127,36 @@ See [Monitoring & Tracing Admin Guide]({{< ref "monitoring-tracing-config.md" >}
 The AMQP adapter can be run as a Docker container from the command line. The following commands create and start the AMQP adapter as a Docker Swarm service using the default keys contained in the `demo-certs` module:
 
 ~~~sh
-~/hono$ docker secret create trusted-certs.pem demo-certs/certs/trusted-certs.pem
-~/hono$ docker secret create amqp-adapter-key.pem demo-certs/certs/amqp-adapter-key.pem
-~/hono$ docker secret create amqp-adapter-cert.pem demo-certs/certs/amqp-adapter-cert.pem
-~/hono$ docker service create --detach --name hono-adapter-amqp-vertx --network hono-net -p 4040:4040 -p 4041:4041 \
-> --secret trusted-certs.pem \
-> --secret amqp-adapter-key.pem \
-> --secret amqp-adapter-cert.pem \
-> -e 'HONO_MESSAGING_HOST=hono-service-messaging.hono' \
-> -e 'HONO_MESSAGING_USERNAME=amqp-adapter@HONO' \
-> -e 'HONO_MESSAGING_PASSWORD=amqp-secret' \
-> -e 'HONO_MESSAGING_TRUST_STORE_PATH=/run/secrets/trusted-certs.pem' \
-> -e 'HONO_TENANT_HOST=hono-service-device-registry.hono' \
-> -e 'HONO_TENANT_USERNAME=amqp-adapter@HONO' \
-> -e 'HONO_TENANT_PASSWORD=amqp-secret' \
-> -e 'HONO_TENANT_TRUST_STORE_PATH=/run/secrets/trusted-certs.pem' \
-> -e 'HONO_REGISTRATION_HOST=hono-service-device-registry.hono' \
-> -e 'HONO_REGISTRATION_USERNAME=amqp-adapter@HONO' \
-> -e 'HONO_REGISTRATION_PASSWORD=amqp-secret' \
-> -e 'HONO_REGISTRATION_TRUST_STORE_PATH=/run/secrets/trusted-certs.pem' \
-> -e 'HONO_CREDENTIALS_HOST=hono-service-device-registry.hono' \
-> -e 'HONO_CREDENTIALS_USERNAME=amqp-adapter@HONO' \
-> -e 'HONO_CREDENTIALS_PASSWORD=amqp-secret' \
-> -e 'HONO_CREDENTIALS_TRUST_STORE_PATH=/run/secrets/trusted-certs.pem' \
-> -e 'HONO_AMQP_BIND_ADDRESS=0.0.0.0' \
-> -e 'HONO_AMQP_KEY_PATH=/run/secrets/amqp-adapter-key.pem' \
-> -e 'HONO_AMQP_CERT_PATH=/run/secrets/amqp-adapter-cert.pem' \
-> -e 'HONO_AMQP_INSECURE_PORT_ENABLED=true' \
-> -e 'HONO_AMQP_INSECURE_PORT_BIND_ADDRESS=0.0.0.0'
-> eclipse/hono-adapter-amqp-vertx:latest
+# in base directory of Hono repository:
+docker secret create trusted-certs.pem demo-certs/certs/trusted-certs.pem
+docker secret create amqp-adapter-key.pem demo-certs/certs/amqp-adapter-key.pem
+docker secret create amqp-adapter-cert.pem demo-certs/certs/amqp-adapter-cert.pem
+docker service create --detach --name hono-adapter-amqp-vertx --network hono-net -p 4040:4040 -p 4041:4041 \
+ --secret trusted-certs.pem \
+ --secret amqp-adapter-key.pem \
+ --secret amqp-adapter-cert.pem \
+ -e 'HONO_MESSAGING_HOST=hono-service-messaging.hono' \
+ -e 'HONO_MESSAGING_USERNAME=amqp-adapter@HONO' \
+ -e 'HONO_MESSAGING_PASSWORD=amqp-secret' \
+ -e 'HONO_MESSAGING_TRUST_STORE_PATH=/run/secrets/trusted-certs.pem' \
+ -e 'HONO_TENANT_HOST=hono-service-device-registry.hono' \
+ -e 'HONO_TENANT_USERNAME=amqp-adapter@HONO' \
+ -e 'HONO_TENANT_PASSWORD=amqp-secret' \
+ -e 'HONO_TENANT_TRUST_STORE_PATH=/run/secrets/trusted-certs.pem' \
+ -e 'HONO_REGISTRATION_HOST=hono-service-device-registry.hono' \
+ -e 'HONO_REGISTRATION_USERNAME=amqp-adapter@HONO' \
+ -e 'HONO_REGISTRATION_PASSWORD=amqp-secret' \
+ -e 'HONO_REGISTRATION_TRUST_STORE_PATH=/run/secrets/trusted-certs.pem' \
+ -e 'HONO_CREDENTIALS_HOST=hono-service-device-registry.hono' \
+ -e 'HONO_CREDENTIALS_USERNAME=amqp-adapter@HONO' \
+ -e 'HONO_CREDENTIALS_PASSWORD=amqp-secret' \
+ -e 'HONO_CREDENTIALS_TRUST_STORE_PATH=/run/secrets/trusted-certs.pem' \
+ -e 'HONO_AMQP_BIND_ADDRESS=0.0.0.0' \
+ -e 'HONO_AMQP_KEY_PATH=/run/secrets/amqp-adapter-key.pem' \
+ -e 'HONO_AMQP_CERT_PATH=/run/secrets/amqp-adapter-cert.pem' \
+ -e 'HONO_AMQP_INSECURE_PORT_ENABLED=true' \
+ -e 'HONO_AMQP_INSECURE_PORT_BIND_ADDRESS=0.0.0.0' \
+ eclipse/hono-adapter-amqp-vertx:latest
 ~~~
 
 {{% note %}}
@@ -189,26 +190,27 @@ In order to do so, the adapter can be started using the `spring-boot:run` maven 
 The corresponding command to start up the adapter with the configuration used in the Docker example above looks like this:
 
 ~~~sh
-~/hono/adapters/amqp-vertx$ mvn spring-boot:run -Drun.arguments=\
-> --hono.messaging.host=hono-service-messaging.hono,\
-> --hono.messaging.username=amqp-adapter@HONO,\
-> --hono.messaging.password=amqp-secret,\
-> --hono.messaging.trustStorePath=target/certs/trusted-certs.pem,\
-> --hono.tenant.host=hono-service-device-registry.hono,\
-> --hono.tenant.username=amqp-adapter@HONO,\
-> --hono.tenant.password=amqp-secret,\
-> --hono.tenant.trustStorePath=target/certs/trusted-certs.pem,\
-> --hono.registration.host=hono-service-device-registry.hono,\
-> --hono.registration.username=amqp-adapter@HONO,\
-> --hono.registration.password=amqp-secret,\
-> --hono.registration.trustStorePath=target/certs/trusted-certs.pem,\
-> --hono.credentials.host=hono-service-device-registry.hono,\
-> --hono.credentials.username=amqp-adapter@HONO,\
-> --hono.credentials.password=amqp-secret,\
-> --hono.credentials.trustStorePath=target/certs/trusted-certs.pem,\
-> --hono.amqp.bindAddress=0.0.0.0,\
-> --hono.amqp.insecurePortEnabled=true,\
-> --hono.amqp.insecurePortBindAddress=0.0.0.0
+# in directory: hono/adapters/amqp-vertx/
+mvn spring-boot:run -Dhono.app.healthCheckPort=8088 -Dhono.app.maxInstances=1 -Drun.arguments=\
+--hono.messaging.host=hono-service-messaging.hono,\
+--hono.messaging.username=amqp-adapter@HONO,\
+--hono.messaging.password=amqp-secret,\
+--hono.messaging.trustStorePath=../../demo-certs/certs/trusted-certs.pem,\
+--hono.tenant.host=hono-service-device-registry.hono,\
+--hono.tenant.username=amqp-adapter@HONO,\
+--hono.tenant.password=amqp-secret,\
+--hono.tenant.trustStorePath=../../demo-certs/certs/trusted-certs.pem,\
+--hono.registration.host=hono-service-device-registry.hono,\
+--hono.registration.username=amqp-adapter@HONO,\
+--hono.registration.password=amqp-secret,\
+--hono.registration.trustStorePath=../../demo-certs/certs/trusted-certs.pem,\
+--hono.credentials.host=hono-service-device-registry.hono,\
+--hono.credentials.username=amqp-adapter@HONO,\
+--hono.credentials.password=amqp-secret,\
+--hono.credentials.trustStorePath=../../demo-certs/certs/trusted-certs.pem,\
+--hono.amqp.bindAddress=0.0.0.0,\
+--hono.amqp.insecurePortEnabled=true,\
+--hono.amqp.insecurePortBindAddress=0.0.0.0
 ~~~
 
 {{% note %}}

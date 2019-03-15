@@ -17,14 +17,15 @@ The other prerequisite is to have the Kubectl command line tool for interacting 
 After launching Minikube and before building the Eclipse Hono images, it's necessary to execute the following command:
 
 ~~~sh
-$ eval $(minikube docker-env)
+eval $(minikube docker-env)
 ~~~
 
 In this way, the `DOCKER_HOST` environment variable is set to the Docker daemon running inside the Minikube VM. Launching the following command for building the Eclipse Hono images,
 such daemon will be used and the final images will be available inside the Minikube VM, ready for the deployment.
 
 ~~~sh
-~/hono$ mvn clean install -Pbuild-docker-image,metrics-prometheus
+# in base directory of Hono repository:
+mvn clean install -Pbuild-docker-image,metrics-prometheus
 ~~~
 
 ## Helm based Deployment
@@ -38,7 +39,8 @@ You can deploy Hono using Helm with or without the *Tiller* service.
 To deploy Eclipse Hono to the cluster with installed Tiller service, simply run
 
 ~~~sh
-~hono/deploy$ helm install --dep-up --name eclipse-hono --namespace hono target/deploy/helm/
+# in directory: hono/deploy/
+helm install --dep-up --name eclipse-hono --namespace hono target/deploy/helm/
 ~~~
 
 This will create a new `hono` namespace in the cluster and install all the components to that namespace. The name of the Helm release will be `eclipse-hono`.
@@ -46,9 +48,9 @@ This will create a new `hono` namespace in the cluster and install all the compo
 You can check the status of the deployment with one of the following commands
 
 ~~~sh
-$ helm list
-$ helm status eclipse-hono
-$ helm get eclipse-hono
+helm list
+helm status eclipse-hono
+helm get eclipse-hono
 ~~~
 
 ### Deploying Hono without using Helm's Tiller Service
@@ -57,14 +59,16 @@ If, for whatever reason, you can't or don't want to install Helm's Tiller servic
 To generate the resources locally with Helm, run
 
 ~~~sh
-~hono/deploy$ helm dep update target/deploy/helm/
-~hono/deploy$ helm template --name eclipse-hono --namespace hono --output-dir . target/deploy/helm/
+# in directory: hono/deploy/
+helm dep update target/deploy/helm/
+helm template --name eclipse-hono --namespace hono --output-dir . target/deploy/helm/
 ~~~
 
 This should create an `eclipse-hono` folder with all the resources. Now, you can use `kubectl` to deploy them to any Kubernetes cluster
 
 ~~~sh
-~hono/deploy$ kubectl apply -f ./eclipse-hono --namespace hono
+# in directory: hono/deploy/
+kubectl apply -f ./eclipse-hono --namespace hono
 ~~~
 
 ### Using Hono
@@ -76,8 +80,9 @@ After successful installation, you can proceed and [access your Hono services](#
 To undeploy a Hono instance that has been deployed using Helm's Tiller service, run
 
 ~~~sh
-~hono/deploy$ helm delete --purge eclipse-hono
-~hono/deploy$ kubectl delete crd prometheuses.monitoring.coreos.com prometheusrules.monitoring.coreos.com servicemonitors.monitoring.coreos.com alertmanagers.monitoring.coreos.com
+# in directory: hono/deploy/
+helm delete --purge eclipse-hono
+kubectl delete crd prometheuses.monitoring.coreos.com prometheusrules.monitoring.coreos.com servicemonitors.monitoring.coreos.com alertmanagers.monitoring.coreos.com
 ~~~
 
 The additional `kubectl delete` command is necessary to remove [Prometheus operator CRDs](https://github.com/helm/charts/tree/master/stable/prometheus-operator#uninstalling-the-chart).
@@ -85,7 +90,8 @@ The additional `kubectl delete` command is necessary to remove [Prometheus opera
 To undeploy a Hono instance that has been deployed manually from the resource files, run
 
 ~~~sh
-~hono/deploy$ kubectl delete -f ./eclipse-hono --namespace hono
+# in directory: hono/deploy/
+kubectl delete -f ./eclipse-hono --namespace hono
 ~~~
 
 ## Script based Deployment
@@ -106,8 +112,9 @@ metrics, or want to deploy Prometheus yourself.
 From the directory `deploy/target/deploy/kubernetes` run:
 
 ~~~sh
-~hono/deploy/target/deploy/kubernetes$ chmod +x *.sh
-~hono/deploy/target/deploy/kubernetes$ ./olm_deploy.sh
+# in directory: hono/deploy/target/deploy/kubernetes/
+chmod +x *.sh
+./olm_deploy.sh
 ~~~
 
 ### Deploying Hono
@@ -115,14 +122,15 @@ From the directory `deploy/target/deploy/kubernetes` run:
 After having the Kubernetes cluster up and running and the `kubectl` command line tool in the PATH, the deployment can be done by running the following bash script from the `deploy/target/deploy/kubernetes` folder.
 
 ~~~sh
-~hono/deploy/target/deploy/kubernetes$ chmod +x *.sh
-~hono/deploy/target/deploy/kubernetes$ ./kubernetes_deploy.sh
+# in directory: hono/deploy/target/deploy/kubernetes/
+chmod +x *.sh
+./kubernetes_deploy.sh
 ~~~
 
 In order to see the deployed components, you can launch Kubernetes' web UI in a browser by issuing:
 
 ~~~sh
-$ minikube dashboard
+minikube dashboard
 ~~~
 
 Be sure to switch to the `hono` namespace in the UI in order to see the components deployed as part of Hono.
@@ -135,7 +143,8 @@ In the following pictures an Eclipse Hono deployment on Kubernetes is running wi
 There also is a script for shutting down and undeploying Hono:
 
 ~~~sh
-~hono/deploy/target/deploy/kubernetes$ ./kubernetes_undeploy.sh
+# in directory: hono/deploy/target/deploy/kubernetes/
+./kubernetes_undeploy.sh
 ~~~
 
 ## Deploying individual Components
@@ -155,7 +164,7 @@ The Kubernetes deployment provides access to Hono by means of *services* and the
 You can get a list of these services running:
 
 ~~~sh
-$ minikube service list -n hono
+minikube service list -n hono
 
 |-----------|---------------------------------------|--------------------------------|
 | NAMESPACE |                 NAME                  |              URL               |
@@ -199,7 +208,8 @@ As described in the [Getting Started]({{< relref "getting-started.md" >}}) guide
 You can start the client from the `cli` folder as follows:
 
 ~~~sh
-~/hono/cli$ mvn spring-boot:run -Drun.arguments=--hono.client.host=$(minikube ip),--hono.client.port=30671,--hono.client.username=consumer@HONO,--hono.client.password=verysecret
+# in directory: hono/cli/
+mvn spring-boot:run -Drun.arguments=--hono.client.host=$(minikube ip),--hono.client.port=30671,--hono.client.username=consumer@HONO,--hono.client.password=verysecret
 ~~~
 
 ### Uploading Telemetry
@@ -208,19 +218,19 @@ In order to upload telemetry data to Hono, the device needs to be registered wit
 *Device Registry* by running the following command (i.e. for a device with ID `4711`):
 
 ~~~sh
-$ curl -X POST -i -H 'Content-Type: application/json' --data-binary '{"device-id": "4711"}' http://$(minikube ip):31080/registration/DEFAULT_TENANT
+curl -X POST -i -H 'Content-Type: application/json' --data-binary '{"device-id": "4711"}' http://$(minikube ip):31080/registration/DEFAULT_TENANT
 ~~~
 
 After having the device registered, uploading telemetry is just a simple HTTP POST command to the *HTTP Adapter*:
 
 ~~~sh
-$ curl -X POST -i -u sensor1@DEFAULT_TENANT:hono-secret -H 'Content-Type: application/json' --data-binary '{"temp": 5}' http://$(minikube ip):30080/telemetry
+curl -X POST -i -u sensor1@DEFAULT_TENANT:hono-secret -H 'Content-Type: application/json' --data-binary '{"temp": 5}' http://$(minikube ip):30080/telemetry
 ~~~
 
 Other than using the *HTTP Adapter*, it's possible to upload telemetry data using the *MQTT Adapter* as well:
 
 ~~~sh
-$ mosquitto_pub -h $(minikube ip) -p 31883 -u 'sensor1@DEFAULT_TENANT' -P hono-secret -t telemetry -m '{"temp": 5}'
+mosquitto_pub -h $(minikube ip) -p 31883 -u 'sensor1@DEFAULT_TENANT' -P hono-secret -t telemetry -m '{"temp": 5}'
 ~~~
 
 The username and password used above for device `4711` are part of the example configuration that comes with Hono. See [Device Identity]({{< relref "concepts/device-identity.md" >}}) for an explanation of how devices are identified in Hono and how device identity is related to authentication.

@@ -46,7 +46,7 @@ The following commands add some tenants with different adapter configurations:
 
 Add a tenant that has all adapters set to enabled:
 
-    $ curl -i -X POST -H 'Content-Type: application/json' --data-binary '{
+    curl -i -X POST -H 'Content-Type: application/json' --data-binary '{
         "tenant-id": "tenantAllAdapters"
       }' http://localhost:28080/tenant
     
@@ -56,7 +56,7 @@ Add a tenant that has all adapters set to enabled:
 
 Add a tenant that can only use the MQTT adapter:
 
-    $ curl -i -X POST -H 'Content-Type: application/json' --data-binary '{
+    curl -i -X POST -H 'Content-Type: application/json' --data-binary '{
         "tenant-id": "tenantMqttAdapter",
         "adapters" : [ {
             "type" : "hono-mqtt",
@@ -80,7 +80,7 @@ Add a tenant that can only use the MQTT adapter:
 
 The following command retrieves the details for the tenant `tenantMqttAdapter`:
 
-    $ curl -i http://localhost:28080/tenant/tenantMqttAdapter
+    curl -i http://localhost:28080/tenant/tenantMqttAdapter
     
     HTTP/1.1 200 OK
     Content-Type: application/json; charset=utf-8
@@ -114,7 +114,7 @@ This resource can be used to change the configuration of a particular tenant.
 
 The following command disables the MQTT adapter for devices that belong to the tenant `tenantMqttAdapter`:
 
-    $ curl -i -X PUT -H 'Content-Type: application/json' --data-binary '{
+    curl -i -X PUT -H 'Content-Type: application/json' --data-binary '{
           "adapters" : [ {
               "type" : "hono-mqtt",
               "enabled" : true
@@ -135,7 +135,7 @@ The following command disables the MQTT adapter for devices that belong to the t
 
 **Example**
 
-    $ curl -i -X DELETE http://localhost:28080/tenant/tenantMqttAdapter
+    curl -i -X DELETE http://localhost:28080/tenant/tenantMqttAdapter
     
     HTTP/1.1 204 No Content
     Content-Length: 0
@@ -161,7 +161,7 @@ The following sections describe the resources representing the operations of the
 
 The following command registers a device with ID `4711`
 
-    $ curl -i -X POST -H 'Content-Type: application/json' --data-binary '{
+    curl -i -X POST -H 'Content-Type: application/json' --data-binary '{
         "device-id": "4711",
         "ep": "IMEI4711"
     }' http://localhost:28080/registration/DEFAULT_TENANT
@@ -185,7 +185,7 @@ like this:
 
 The following command retrieves registration data for device `4711`:
 
-    $ curl -i http://localhost:28080/registration/DEFAULT_TENANT/4711
+    curl -i http://localhost:28080/registration/DEFAULT_TENANT/4711
     
     HTTP/1.1 200 OK
     Content-Type: application/json; charset=utf-8
@@ -215,7 +215,7 @@ The following command retrieves registration data for device `4711`:
 
 **Example**
 
-    $ curl -i -X PUT -H 'Content-Type: application/json' --data-binary '{
+    curl -i -X PUT -H 'Content-Type: application/json' --data-binary '{
         "ep": "IMEI4711",
         "psk-id": "psk4711"
     }' http://localhost:28080/registration/DEFAULT_TENANT/4711
@@ -233,7 +233,7 @@ The following command retrieves registration data for device `4711`:
 
 **Example**
 
-    $ curl -i -X DELETE http://localhost:28080/registration/DEFAULT_TENANT/4711
+    curl -i -X DELETE http://localhost:28080/registration/DEFAULT_TENANT/4711
     
     HTTP/1.1 204 No Content
     Content-Length: 0
@@ -262,7 +262,7 @@ Please refer to the [Credentials API]({{< relref "api/Credentials-API.md" >}}) f
 
 The following command adds some `hashed-password` credentials from a given plain text password for device `4710` using authentication identifier `sensor10`: 
 
-    $ curl -i -X POST -H 'Content-Type: application/json' --data-binary '{
+    curl -i -X POST -H 'Content-Type: application/json' --data-binary '{
       "device-id": "4710",
       "type": "hashed-password",
       "auth-id": "sensor10",
@@ -278,7 +278,7 @@ The following command adds some `hashed-password` credentials from a given plain
 This uses a convenient option which lets the Device Registry do the hashing of the password. The following command retrieves the credentials that are stored by the Device Registry as a result of the command above: 
     
     
-    $ curl -i http://localhost:28080/credentials/DEFAULT_TENANT/4710
+    curl -i http://localhost:28080/credentials/DEFAULT_TENANT/4710
     
     HTTP/1.1 200 OK
     Content-Type: application/json; charset=utf-8
@@ -305,8 +305,8 @@ This uses a convenient option which lets the Device Registry do the hashing of t
     
 The following commands add some `hashed-password` credentials for device `4720` using authentication identifier `sensor20`:
 
-    $ PWD_HASH=$(echo -n "mylittlesecret" | openssl dgst -binary -sha512 | base64 -w 0)
-    $ curl -i -X POST -H 'Content-Type: application/json' --data-binary '{
+    PWD_HASH=$(echo -n "mylittlesecret" | openssl dgst -binary -sha512 | base64 -w 0)
+    curl -i -X POST -H 'Content-Type: application/json' --data-binary '{
         "device-id": "4720",
         "type": "hashed-password",
         "auth-id": "sensor20",
@@ -323,8 +323,8 @@ The following commands add some `hashed-password` credentials for device `4720` 
 Multiple credentials of different type can be registered for the same authentication identifier.
 The following commands add `psk` credentials for the same device `4720` using authentication identifier `sensor20`:
 
-    $ SHARED_KEY=$(echo -n "TheSharedKey" | base64 -w 0)
-    $ curl -i -X POST -H 'Content-Type: application/json' --data-binary '{
+    SHARED_KEY=$(echo -n "TheSharedKey" | base64 -w 0)
+    curl -i -X POST -H 'Content-Type: application/json' --data-binary '{
        "device-id": "4720",
        "type": "psk",
        "auth-id": "sensor20",
@@ -354,7 +354,7 @@ properties against the properties defined in the credentials record. It will ret
 
 The following command retrieves credentials data of type `hashed-password` for the authentication identifier `sensor20`:
 
-    $ curl -i http://localhost:28080/credentials/DEFAULT_TENANT/sensor20/hashed-password
+    curl -i http://localhost:28080/credentials/DEFAULT_TENANT/sensor20/hashed-password
     
     HTTP/1.1 200 OK
     Content-Length: 268
@@ -387,7 +387,7 @@ The following command retrieves credentials data of type `hashed-password` for t
 
 The following command retrieves credentials for device `4720`:
 
-    $ curl -i http://localhost:28080/credentials/DEFAULT_TENANT/4720
+    curl -i http://localhost:28080/credentials/DEFAULT_TENANT/4720
     
     HTTP/1.1 200 OK
     Content-Length: 491
@@ -442,8 +442,8 @@ This resource can be used to change values of a particular set of credentials. H
 
 The following command adds an expiration date to the `hashed-password` credentials for authentication identifier `sensor20`:
 
-    $ PWD_HASH=$(echo -n "mylittlesecret" | openssl dgst -binary -sha512 | base64 -w 0)
-    $ curl -i -X PUT -H 'Content-Type: application/json' --data-binary '{
+    PWD_HASH=$(echo -n "mylittlesecret" | openssl dgst -binary -sha512 | base64 -w 0)
+    curl -i -X PUT -H 'Content-Type: application/json' --data-binary '{
         "device-id": "4720",
         "type": "hashed-password",
         "auth-id": "sensor20",
@@ -468,7 +468,7 @@ The following command adds an expiration date to the `hashed-password` credentia
 
 **Example**
 
-    $ curl -i -X DELETE http://localhost:28080/credentials/DEFAULT_TENANT/sensor20/hashed-password
+    curl -i -X DELETE http://localhost:28080/credentials/DEFAULT_TENANT/sensor20/hashed-password
     
     HTTP/1.1 204 No Content
     Content-Length: 0
@@ -486,7 +486,7 @@ Removes all credentials registered for a particular device.
 
 **Example**
 
-    $ curl -i -X DELETE http://localhost:28080/credentials/DEFAULT_TENANT/4720
+    curl -i -X DELETE http://localhost:28080/credentials/DEFAULT_TENANT/4720
     
     HTTP/1.1 204 No Content
     Content-Length: 0
