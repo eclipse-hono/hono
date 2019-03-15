@@ -60,11 +60,12 @@ This is the preferred way for devices to publish telemetry data. It is available
 
 Publish some JSON data for device `4711`:
 
-    $ mosquitto_pub -u 'sensor1@DEFAULT_TENANT' -P hono-secret -t telemetry -m '{"temp": 5}'
+    mosquitto_pub -u 'sensor1@DEFAULT_TENANT' -P hono-secret -t telemetry -m '{"temp": 5}'
 
-Publish some JSON data for device `4711` using a client certificate for authentication (in the directory that contains the certificates, e.g. `hono/demo-certs/certs/`):
+Publish some JSON data for device `4711` using a client certificate for authentication:
 
-    $ mosquitto_pub -p 8883 -t telemetry -m '{"temp": 5}' --cert device-4711-cert.pem --key device-4711-key.pem --cafile trusted-certs.pem
+    # in base directory of Hono repository:
+    mosquitto_pub -p 8883 -t telemetry -m '{"temp": 5}' --cert demo-certs/certs/device-4711-cert.pem --key demo-certs/certs/device-4711-key.pem --cafile demo-certs/certs/trusted-certs.pem
 
 **NB**: The example above assumes that the MQTT adapter is [configured for TLS]({{< ref "/admin-guide/secure_communication.md#mqtt-adapter" >}}) and the secure port is used.
 
@@ -82,7 +83,7 @@ This topic can be used by devices that have not authenticated to the protocol ad
 
 Publish some JSON data for device `4711`:
 
-    $ mosquitto_pub -t telemetry/DEFAULT_TENANT/4711 -m '{"temp": 5}'
+    mosquitto_pub -t telemetry/DEFAULT_TENANT/4711 -m '{"temp": 5}'
 
 
 ## Publish Telemetry Data (authenticated Gateway)
@@ -100,7 +101,7 @@ The protocol adapter checks the gateway's authority to publish data on behalf of
 
 Publish some JSON data for device `4712` via gateway `gw-1`:
 
-    $ mosquitto_pub -u 'gw@DEFAULT_TENANT' -P gw-secret -t telemetry/DEFAULT_TENANT/4712 -m '{"temp": 5}'
+    mosquitto_pub -u 'gw@DEFAULT_TENANT' -P gw-secret -t telemetry/DEFAULT_TENANT/4712 -m '{"temp": 5}'
 
 **NB**: The example above assumes that a gateway device with ID `gw-1` has been registered with `hashed-password` credentials with *auth-id* `gw` and password `gw-secret`.
 
@@ -127,7 +128,7 @@ This is the preferred way for devices to publish events. It is available only if
 
 Upload a JSON string for device `4711`:
 
-    $ mosquitto_pub -u 'sensor1@DEFAULT_TENANT' -P hono-secret -t event -q 1 -m '{"alarm": 1}'
+    mosquitto_pub -u 'sensor1@DEFAULT_TENANT' -P hono-secret -t event -q 1 -m '{"alarm": 1}'
 
 ## Publish an Event (unauthenticated Device)
 
@@ -143,7 +144,7 @@ This topic can be used by devices that have not authenticated to the protocol ad
 
 Publish some JSON data for device `4711`:
 
-    $ mosquitto_pub -t event/DEFAULT_TENANT/4711 -q 1 -m '{"alarm": 1}'
+    mosquitto_pub -t event/DEFAULT_TENANT/4711 -q 1 -m '{"alarm": 1}'
 
 ## Publish an Event (authenticated Gateway)
 
@@ -160,7 +161,7 @@ The protocol adapter checks the gateway's authority to publish data on behalf of
 
 Publish some JSON data for device `4712` via gateway `gw-1`:
 
-    $ mosquitto_pub -u 'gw@DEFAULT_TENANT' -P gw-secret -t event/DEFAULT_TENANT/4712 -q 1 -m '{"temp": 5}'
+    mosquitto_pub -u 'gw@DEFAULT_TENANT' -P gw-secret -t event/DEFAULT_TENANT/4712 -q 1 -m '{"temp": 5}'
 
 **NB**: The example above assumes that a gateway device with ID `gw-1` has been registered with `hashed-password` credentials with *auth-id* `gw` and password `gw-secret`.
 
@@ -200,7 +201,7 @@ An authenticated device MUST use the following topic filter to subscribe to comm
 
 **Example**
 
-    $ mosquitto_sub -v -u 'sensor1@DEFAULT_TENANT' -P hono-secret -t control/+/+/req/#
+    mosquitto_sub -v -u 'sensor1@DEFAULT_TENANT' -P hono-secret -t control/+/+/req/#
 
 The adapter will then publish commands for the device to topic:
 
@@ -212,13 +213,13 @@ The adapter will then publish commands for the device to topic:
 
 For example, if the [HonoExampleApplication]({{< relref "dev-guide/java_client_consumer.md" >}}) was started, after the `ttd` event requested by the subscription of mosquitto_sub, it layers a command that arrives as follows:  
 
-    $ control///q/1010f8ab0b53-bd96-4d99-9d9c-56b868474a6a/setBrightness {
+    control///q/1010f8ab0b53-bd96-4d99-9d9c-56b868474a6a/setBrightness {
        "brightness" : 79
     }
 
 If the command is a *one-way* command, it will arrive as follows:
 
-    $ control///q//setBrightness {
+    control///q//setBrightness {
        "brightness" : 79
     }
 
@@ -231,7 +232,7 @@ An unauthenticated device MUST use the following topic filter to subscribe to co
 
 **Example**
 
-    $ mosquitto_sub -v -t control/DEFAULT_TENANT/4711/req/#
+    mosquitto_sub -v -t control/DEFAULT_TENANT/4711/req/#
 
 The adapter will then publish *Request/Response* commands for the device to topic:
 
@@ -253,7 +254,7 @@ An authenticated device MUST send the response to a previously received command 
 
 After a command has arrived as in the above example, you send a response using the arrived `${req-id}`:
 
-    $ mosquitto_pub -u 'sensor1@DEFAULT_TENANT' -P hono-secret -t control///res/1010f8ab0b53-bd96-4d99-9d9c-56b868474a6a/200 -m '{"lumen": 200}'
+    mosquitto_pub -u 'sensor1@DEFAULT_TENANT' -P hono-secret -t control///res/1010f8ab0b53-bd96-4d99-9d9c-56b868474a6a/200 -m '{"lumen": 200}'
 
 ### Sending a Response to a Command (unauthenticated Device)
 
@@ -265,7 +266,7 @@ An unauthenticated device MUST send the response to a previously received comman
 
 After a command has arrived as in the above example, you send a response using the arrived `${req-id}`:
 
-    $ mosquitto_pub -t control/DEFAULT_TENANT/4711/res/1010f8ab0b53-bd96-4d99-9d9c-56b868474a6a/200 -m '{"lumen": 200}'
+    mosquitto_pub -t control/DEFAULT_TENANT/4711/res/1010f8ab0b53-bd96-4d99-9d9c-56b868474a6a/200 -m '{"lumen": 200}'
 
 ## Downstream Meta Data
 

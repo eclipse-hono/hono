@@ -42,7 +42,7 @@ The following JVM options can be used in Java 9 and later in order to change thi
 As stated above, the Docker images provided by Hono run on OpenJDK 11. Options can be passed to the JVM during startup by means of setting the `_JAVA_OPTIONS` environment variable on the container. The following example from the Docker Swarm deployment script illustrates this mechanism:
 
 ~~~sh
-$ docker service create --name hono-adapter-http-vertx -p 8080:8080 \
+docker service create --name hono-adapter-http-vertx -p 8080:8080 \
   --secret http-adapter.credentials \
   --secret hono-adapter-http-vertx-config.yml \
   --limit-memory 256m \

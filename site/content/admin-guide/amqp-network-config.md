@@ -21,16 +21,17 @@ The Dispatch Router can be configured by means of configuration files. Hono incl
 The Dispatch Router can be run as a Docker container from the command line. The following commands create and start the Dispatch Router as a Docker Swarm service using the default keys and configuration file contained in the `example` and `demo-certs` modules:
 
 ~~~sh
-~/hono$ docker secret create qdrouter-key.pem demo-certs/certs/qdrouter-key.pem
-~/hono$ docker secret create qdrouter-cert.pem demo-certs/certs/qdrouter-cert.pem
-~/hono$ docker secret create trusted-certs.pem demo-certs/certs/trusted-certs.pem
-~/hono$ docker secret create qdrouterd.json deploy/src/main/config/qpid/qdrouterd-with-broker.json
-~/hono$ docker service create --detach --name hono-dispatch-router --network hono-net -p 15671:5671 -p 15672:5672 -p 15673:5673 \
->  --secret qdrouter-key.pem \
->  --secret qdrouter-cert.pem \
->  --secret trusted-certs.pem \
->  --secret qdrouterd.json \
->  enmasseproject/qdrouterd-base:1.1.0 /sbin/qdrouterd -c /run/secrets/qdrouterd.json
+# in base directory of Hono repository:
+docker secret create qdrouter-key.pem demo-certs/certs/qdrouter-key.pem
+docker secret create qdrouter-cert.pem demo-certs/certs/qdrouter-cert.pem
+docker secret create trusted-certs.pem demo-certs/certs/trusted-certs.pem
+docker secret create qdrouterd.json deploy/src/main/config/qpid/qdrouterd-with-broker.json
+docker service create --detach --name hono-dispatch-router --network hono-net -p 15671:5671 -p 15672:5672 -p 15673:5673 \
+  --secret qdrouter-key.pem \
+  --secret qdrouter-cert.pem \
+  --secret trusted-certs.pem \
+  --secret qdrouterd.json \
+  enmasseproject/qdrouterd-base:1.1.0 /sbin/qdrouterd -c /run/secrets/qdrouterd.json
 ~~~
 
 {{% note %}}

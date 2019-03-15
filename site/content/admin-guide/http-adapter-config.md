@@ -128,35 +128,36 @@ See [Monitoring & Tracing Admin Guide]({{< ref "monitoring-tracing-config.md" >}
 The HTTP adapter can be run as a Docker container from the command line. The following commands create and start the HTTP adapter as a Docker Swarm service using the default keys  contained in the `demo-certs` module:
 
 ~~~sh
-~/hono$ docker secret create trusted-certs.pem demo-certs/certs/trusted-certs.pem
-~/hono$ docker secret create http-adapter-key.pem demo-certs/certs/http-adapter-key.pem
-~/hono$ docker secret create http-adapter-cert.pem demo-certs/certs/http-adapter-cert.pem
-~/hono$ docker service create --detach --name hono-adapter-http-vertx --network hono-net -p 8080:8080 -p 8443:8443  \
-> --secret trusted-certs.pem \
-> --secret http-adapter-key.pem \
-> --secret http-adapter-cert.pem \
-> -e 'HONO_MESSAGING_HOST=hono-service-messaging.hono' \
-> -e 'HONO_MESSAGING_USERNAME=http-adapter@HONO' \
-> -e 'HONO_MESSAGING_PASSWORD=http-secret' \
-> -e 'HONO_MESSAGING_TRUST_STORE_PATH=/run/secrets/trusted-certs.pem' \
-> -e 'HONO_TENANT_HOST=hono-service-device-registry.hono' \
-> -e 'HONO_TENANT_USERNAME=http-adapter@HONO' \
-> -e 'HONO_TENANT_PASSWORD=http-secret' \
-> -e 'HONO_TENANT_TRUST_STORE_PATH=/run/secrets/trusted-certs.pem' \
-> -e 'HONO_REGISTRATION_HOST=hono-service-device-registry.hono' \
-> -e 'HONO_REGISTRATION_USERNAME=http-adapter@HONO' \
-> -e 'HONO_REGISTRATION_PASSWORD=http-secret' \
-> -e 'HONO_REGISTRATION_TRUST_STORE_PATH=/run/secrets/trusted-certs.pem' \
-> -e 'HONO_CREDENTIALS_HOST=hono-service-device-registry.hono' \
-> -e 'HONO_CREDENTIALS_USERNAME=http-adapter@HONO' \
-> -e 'HONO_CREDENTIALS_PASSWORD=http-secret' \
-> -e 'HONO_CREDENTIALS_TRUST_STORE_PATH=/run/secrets/trusted-certs.pem' \
-> -e 'HONO_HTTP_BIND_ADDRESS=0.0.0.0' \
-> -e 'HONO_HTTP_KEY_PATH=/run/secrets/http-adapter-key.pem' \
-> -e 'HONO_HTTP_CERT_PATH=/run/secrets/http-adapter-cert.pem' \
-> -e 'HONO_HTTP_INSECURE_PORT_ENABLED=true' \
-> -e 'HONO_HTTP_INSECURE_PORT_BIND_ADDRESS=0.0.0.0'
-> eclipse/hono-adapter-http-vertx:latest
+# in base directory of Hono repository:
+docker secret create trusted-certs.pem demo-certs/certs/trusted-certs.pem
+docker secret create http-adapter-key.pem demo-certs/certs/http-adapter-key.pem
+docker secret create http-adapter-cert.pem demo-certs/certs/http-adapter-cert.pem
+docker service create --detach --name hono-adapter-http-vertx --network hono-net -p 8080:8080 -p 8443:8443 \
+ --secret trusted-certs.pem \
+ --secret http-adapter-key.pem \
+ --secret http-adapter-cert.pem \
+ -e 'HONO_MESSAGING_HOST=hono-service-messaging.hono' \
+ -e 'HONO_MESSAGING_USERNAME=http-adapter@HONO' \
+ -e 'HONO_MESSAGING_PASSWORD=http-secret' \
+ -e 'HONO_MESSAGING_TRUST_STORE_PATH=/run/secrets/trusted-certs.pem' \
+ -e 'HONO_TENANT_HOST=hono-service-device-registry.hono' \
+ -e 'HONO_TENANT_USERNAME=http-adapter@HONO' \
+ -e 'HONO_TENANT_PASSWORD=http-secret' \
+ -e 'HONO_TENANT_TRUST_STORE_PATH=/run/secrets/trusted-certs.pem' \
+ -e 'HONO_REGISTRATION_HOST=hono-service-device-registry.hono' \
+ -e 'HONO_REGISTRATION_USERNAME=http-adapter@HONO' \
+ -e 'HONO_REGISTRATION_PASSWORD=http-secret' \
+ -e 'HONO_REGISTRATION_TRUST_STORE_PATH=/run/secrets/trusted-certs.pem' \
+ -e 'HONO_CREDENTIALS_HOST=hono-service-device-registry.hono' \
+ -e 'HONO_CREDENTIALS_USERNAME=http-adapter@HONO' \
+ -e 'HONO_CREDENTIALS_PASSWORD=http-secret' \
+ -e 'HONO_CREDENTIALS_TRUST_STORE_PATH=/run/secrets/trusted-certs.pem' \
+ -e 'HONO_HTTP_BIND_ADDRESS=0.0.0.0' \
+ -e 'HONO_HTTP_KEY_PATH=/run/secrets/http-adapter-key.pem' \
+ -e 'HONO_HTTP_CERT_PATH=/run/secrets/http-adapter-cert.pem' \
+ -e 'HONO_HTTP_INSECURE_PORT_ENABLED=true' \
+ -e 'HONO_HTTP_INSECURE_PORT_BIND_ADDRESS=0.0.0.0' \
+ eclipse/hono-adapter-http-vertx:latest
 ~~~
 
 {{% note %}}
@@ -175,8 +176,8 @@ Using the example from above, the following environment variable definition need
 
 ~~~sh
 ...
-> -e '_JAVA_OPTIONS=-Xmx128m' \
-> eclipse/hono-adapter-http-vertx:latest
+ -e '_JAVA_OPTIONS=-Xmx128m' \
+ eclipse/hono-adapter-http-vertx:latest
 ~~~
 
 ## Run using the Docker Swarm Deployment Script
@@ -190,26 +191,27 @@ In order to do so, the adapter can be started using the `spring-boot:run` maven 
 The corresponding command to start up the adapter with the configuration used in the Docker example above looks like this:
 
 ~~~sh
-~/hono/adapters/http-vertx$ mvn spring-boot:run -Drun.arguments=\
-> --hono.messaging.host=hono-service-messaging.hono,\
-> --hono.messaging.username=http-adapter@HONO,\
-> --hono.messaging.password=http-secret,\
-> --hono.messaging.trustStorePath=target/certs/trusted-certs.pem,\
-> --hono.tenant.host=hono-service-device-registry.hono,\
-> --hono.tenant.username=http-adapter@HONO,\
-> --hono.tenant.password=http-secret,\
-> --hono.tenant.trustStorePath=target/certs/trusted-certs.pem,\
-> --hono.registration.host=hono-service-device-registry.hono,\
-> --hono.registration.username=http-adapter@HONO,\
-> --hono.registration.password=http-secret,\
-> --hono.registration.trustStorePath=target/certs/trusted-certs.pem,\
-> --hono.credentials.host=hono-service-device-registry.hono,\
-> --hono.credentials.username=http-adapter@HONO,\
-> --hono.credentials.password=http-secret,\
-> --hono.credentials.trustStorePath=target/certs/trusted-certs.pem,\
-> --hono.http.bindAddress=0.0.0.0,\
-> --hono.http.insecurePortEnabled=true,\
-> --hono.http.insecurePortBindAddress=0.0.0.0
+# in directory: hono/adapters/http-vertx/
+mvn spring-boot:run -Dhono.app.healthCheckPort=8088 -Dhono.app.maxInstances=1 -Drun.arguments=\
+--hono.messaging.host=hono-service-messaging.hono,\
+--hono.messaging.username=http-adapter@HONO,\
+--hono.messaging.password=http-secret,\
+--hono.messaging.trustStorePath=../../demo-certs/certs/trusted-certs.pem,\
+--hono.tenant.host=hono-service-device-registry.hono,\
+--hono.tenant.username=http-adapter@HONO,\
+--hono.tenant.password=http-secret,\
+--hono.tenant.trustStorePath=../../demo-certs/certs/trusted-certs.pem,\
+--hono.registration.host=hono-service-device-registry.hono,\
+--hono.registration.username=http-adapter@HONO,\
+--hono.registration.password=http-secret,\
+--hono.registration.trustStorePath=../../demo-certs/certs/trusted-certs.pem,\
+--hono.credentials.host=hono-service-device-registry.hono,\
+--hono.credentials.username=http-adapter@HONO,\
+--hono.credentials.password=http-secret,\
+--hono.credentials.trustStorePath=../../demo-certs/certs/trusted-certs.pem,\
+--hono.http.bindAddress=0.0.0.0,\
+--hono.http.insecurePortEnabled=true,\
+--hono.http.insecurePortBindAddress=0.0.0.0
 ~~~
 
 {{% note %}}

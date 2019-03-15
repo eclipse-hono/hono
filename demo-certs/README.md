@@ -37,6 +37,7 @@ You can also use the script to create your own certificates for use with Hono. S
 
 Then simply run the script from the command line:
 
-    $~/hono/demo-certs> ./create_certs.sh
+    # in base directory of Hono repository:
+    ./demo-certs/create_certs.sh
 
 The script will create the `certs` subfolder (if it already exists it will be removed first) and then create all keys and certificates in that subfolder.

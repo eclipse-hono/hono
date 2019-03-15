@@ -16,7 +16,7 @@ The most convenient way to both pull the images and start corresponding containe
 After downloading the archive, extract it to a local folder, change into that folder and run the following from the command line (assuming that your local Docker client is configured to connect to a Docker Swarm manager):
 
 ~~~sh
-eclipse-hono-deploy-0.9$ deploy/docker/swarm_deploy.sh
+deploy/docker/swarm_deploy.sh
 ~~~
 
 Hono supports deployment to the following container orchestration platforms:
@@ -32,7 +32,7 @@ A Java based command line client for consuming telemetry data and events from Ho
 The client can be run from the command line like this:
 
 ~~~sh
-$ java -jar hono-cli-0.9-exec.jar --hono.client.host=hono.eclipse.org --hono.client.port=15671 \
+java -jar hono-cli-0.9-exec.jar --hono.client.host=hono.eclipse.org --hono.client.port=15671 \
 --hono.client.tlsEnabled=true --hono.client.username=consumer@HONO --hono.client.password=verysecret \
 --spring.profiles.active=receiver --tenant.id=DEFAULT_TENANT
 ~~~

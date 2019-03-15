@@ -33,7 +33,7 @@ The easiest way to contribute code/patches/whatever is by creating a GitHub pull
 
 You do this by adding the `-s` flag when you make the commit(s), e.g.
 
-    $> git commit -s -m "Shave the yak some more"
+    git commit -s -m "Shave the yak some more"
 
 You can find all the details in the [Contributing via Git](http://wiki.eclipse.org/Development_Resources/Contributing_via_Git) document on the Eclipse web site.
 

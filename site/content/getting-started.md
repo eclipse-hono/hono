@@ -15,7 +15,7 @@ In order to build and run the images you need access to a [Docker](http://www.do
 As noted above, Hono consists of multiple service components that together comprise a Hono instance. The remainder of this guide employs Docker's *Swarm Mode* for configuring, running and managing all Hono components as a whole.
 In order to enable *Swarm Mode* on your *Docker Engine* run the following command
 
-    $ docker swarm init
+    docker swarm init
 
 Please refer to the [Docker Swarm Mode documentation](https://docs.docker.com/engine/swarm/swarm-mode/) for details.
 
@@ -32,7 +32,7 @@ If you do not already have a working Maven installation on your system, please f
 
 Then run the following from the project's root folder
 
-    ~/hono$ mvn clean install -Ddocker.host=tcp://${host}:${port} -Pbuild-docker-image,metrics-prometheus
+    mvn clean install -Ddocker.host=tcp://${host}:${port} -Pbuild-docker-image,metrics-prometheus
 
 with `${host}` and `${port}` reflecting the name/IP address and port of the host where Docker is running on. This will build all libraries, Docker images and example code. If you are running on Linux and Docker is installed locally or you have set the `DOCKER_HOST` environment variable, you can omit the `-Ddocker.host` property definition.
 
@@ -48,8 +48,9 @@ As part of the build process, a set of scripts for deploying and undeploying Hon
 To deploy and start Hono simply run the following from the `deploy/target/deploy/docker` directory
 
 ~~~sh
-~/hono/deploy/target/deploy/docker$ chmod +x swarm_*.sh
-~/hono/deploy/target/deploy/docker$ ./swarm_deploy.sh
+# in base directory of Hono repository:
+chmod +x deploy/target/deploy/docker/swarm_*.sh
+deploy/target/deploy/docker/swarm_deploy.sh
 ~~~
 
 The first command makes the generated scripts executable. This needs to be done once after each build.
@@ -74,7 +75,7 @@ The second command creates and starts up Docker Swarm *services* for all compone
 You can list all services by executing
 
 ~~~sh
-~/hono/deploy/target/deploy/docker$ docker service ls
+docker service ls
 ~~~
 
 ## Starting a Consumer
@@ -84,7 +85,8 @@ In this example we will use a simple command line client that logs all telemetry
 You can start the client from the `cli` folder as follows:
 
 ~~~sh
-~/hono/cli$ mvn spring-boot:run -Drun.arguments=--hono.client.host=localhost,--hono.client.username=consumer@HONO,--hono.client.password=verysecret,--message.type=telemetry
+# in directory: hono/cli/
+mvn spring-boot:run -Drun.arguments=--hono.client.host=localhost,--hono.client.username=consumer@HONO,--hono.client.password=verysecret,--message.type=telemetry
 ~~~
 
 Event messages are very similar to telemetry ones, except that they use `AT LEAST ONCE` quality of service. You can receive and log event messages uploaded to Hono using the same client.
@@ -92,13 +94,15 @@ Event messages are very similar to telemetry ones, except that they use `AT LEAS
 In order to do so, run the client from the `cli` folder as follows:
 
 ~~~sh
-~/hono/cli$ mvn spring-boot:run -Drun.arguments=--hono.client.host=localhost,--hono.client.username=consumer@HONO,--hono.client.password=verysecret,--message.type=event
+# in directory: hono/cli/
+mvn spring-boot:run -Drun.arguments=--hono.client.host=localhost,--hono.client.username=consumer@HONO,--hono.client.password=verysecret,--message.type=event
 ~~~
 
 In order to receive and log both telemetry and event messages, run the client from the `cli` folder as follows:
 
 ~~~sh
-~/hono/cli$ mvn spring-boot:run -Drun.arguments=--hono.client.host=localhost,--hono.client.username=consumer@HONO,--hono.client.password=verysecret
+# in directory: hono/cli/
+mvn spring-boot:run -Drun.arguments=--hono.client.host=localhost,--hono.client.username=consumer@HONO,--hono.client.password=verysecret
 ~~~
 
 {{% warning %}}
@@ -124,14 +128,14 @@ The first thing to do is registering a device identity with Hono. Hono uses this
 The following command registers a device with ID `4711` with the Device Registry.
 
 ~~~sh
-$ curl -X POST -i -H 'Content-Type: application/json' -d '{"device-id": "4711"}' \
+curl -X POST -i -H 'Content-Type: application/json' -d '{"device-id": "4711"}' \
 http://localhost:28080/registration/DEFAULT_TENANT
 ~~~
 
 or (using HTTPie):
 
 ~~~sh
-$ http POST http://localhost:28080/registration/DEFAULT_TENANT device-id=4711
+http POST http://localhost:28080/registration/DEFAULT_TENANT device-id=4711
 ~~~
 
 The result will contain a `Location` header containing the resource path created for the device. In this example it will look like this:
@@ -145,13 +149,13 @@ Content-Length: 0
 You can then retrieve registration data for the device using
 
 ~~~sh
-$ curl -i http://localhost:28080/registration/DEFAULT_TENANT/4711
+curl -i http://localhost:28080/registration/DEFAULT_TENANT/4711
 ~~~
 
 or (using HTTPie):
 
 ~~~sh
-$ http http://localhost:28080/registration/DEFAULT_TENANT/4711
+http http://localhost:28080/registration/DEFAULT_TENANT/4711
 ~~~
 
 which will result in something like this:
@@ -172,14 +176,14 @@ Content-Length: 35
 ### Uploading Telemetry Data using the HTTP Adapter
 
 ~~~sh
-$ curl -X POST -i -u sensor1@DEFAULT_TENANT:hono-secret -H 'Content-Type: application/json' \
+curl -X POST -i -u sensor1@DEFAULT_TENANT:hono-secret -H 'Content-Type: application/json' \
 --data-binary '{"temp": 5}' http://localhost:8080/telemetry
 ~~~
 
 or (using HTTPie):
 
 ~~~sh
-$ http --auth sensor1@DEFAULT_TENANT:hono-secret POST http://localhost:8080/telemetry temp:=5
+http --auth sensor1@DEFAULT_TENANT:hono-secret POST http://localhost:8080/telemetry temp:=5
 ~~~
 
 The username and password used above for device `4711` are part of the example configuration that comes with Hono. See [Device Identity]({{< relref "concepts/device-identity.md" >}}) for an explanation of how devices are identified in Hono and how device identity is related to authentication.
@@ -214,14 +218,14 @@ The HTTP Adapter also supports publishing telemetry messages using *at least onc
 In a similar way you can upload event data, using curl
 
 ~~~sh
-$ curl -X POST -i -u sensor1@DEFAULT_TENANT:hono-secret -H 'Content-Type: application/json' \
+curl -X POST -i -u sensor1@DEFAULT_TENANT:hono-secret -H 'Content-Type: application/json' \
 --data-binary '{"alarm": "fire"}' http://localhost:8080/event
 ~~~
 
 or (using HTTPie):
 
 ~~~sh
-$ http --auth sensor1@DEFAULT_TENANT:hono-secret POST http://localhost:8080/event alarm=fire
+http --auth sensor1@DEFAULT_TENANT:hono-secret POST http://localhost:8080/event alarm=fire
 ~~~
 
 ## Using Command & Control
@@ -248,7 +252,7 @@ Note that it is the responsibility of the application to send a command - to ill
 To simulate an HTTP device, we use the standard tool `curl` to publish some JSON data for the device `4711`.
 To signal that the device is willing to receive and process a command, the device uploads a telemetry or event message and includes the `hono-ttd` request parameter to indicate the number of seconds it will wait for the response:
 
-    $ curl -i -X POST -u sensor1@DEFAULT_TENANT:hono-secret -H 'Content-Type: application/json' \
+    curl -i -X POST -u sensor1@DEFAULT_TENANT:hono-secret -H 'Content-Type: application/json' \
     --data-binary '{"temp": 5}' http://127.0.0.1:8080/telemetry?hono-ttd=30
 
 Watch the example application that receives the message - on the console you will find a line looking similar to the following:
@@ -285,7 +289,7 @@ Thus, you need to make sure that the clocks of the node running the application 
 
 If the received command was *not* a *one-way command*, and the device has received the command and has processed it, it needs to inform the application about the outcome. For this purpose the device uploads the result to the HTTP adapter using a new HTTP request. The following command simulates the device uploading some JSON payload indicating a successful result:
 
-    $ curl -i -X POST -u sensor1@DEFAULT_TENANT:hono-secret -H 'Content-Type: application/json' \
+    curl -i -X POST -u sensor1@DEFAULT_TENANT:hono-secret -H 'Content-Type: application/json' \
     -H 'hono-cmd-status: 200' --data-binary '{"success": true}' \
     http://127.0.0.1:8080/control/res/10117f669c12-09ef-416d-88c1-1787f894856d
     
@@ -300,7 +304,8 @@ The command line client from the `cli` module supports the interactive sending o
 In order to do so, the client needs to be run with the `command` profile as follows:
  
 ~~~sh
-~/hono/cli$ mvn spring-boot:run -Drun.arguments=--hono.client.host=localhost,--hono.client.username=consumer@HONO,--hono.client.password=verysecret -Drun.profiles=command,ssl
+# in directory: hono/cli/
+mvn spring-boot:run -Drun.arguments=--hono.client.host=localhost,--hono.client.username=consumer@HONO,--hono.client.password=verysecret -Drun.profiles=command,ssl
 ~~~
 
 The client will prompt the user to enter the command's name, the payload to send and the payload's content type. For more information about command and payload refer to [Command and Control Concepts]({{< relref "concepts/command-and-control.md" >}}).
@@ -332,7 +337,8 @@ a response from the device but will consider the sending of the command successf
  The command line argument `command.timeoutInSeconds` can be used to set the timeout period (default is 60 seconds). The command line arguments `device.id` and `tenant.id` provide the device and tenant ID of the device that you want to send commands to.
 
 ~~~sh
-~/hono/cli$ mvn spring-boot:run -Drun.arguments=--hono.client.host=localhost,--hono.client.username=consumer@HONO,--hono.client.password=verysecret,--command.timeoutInSeconds=10,--device.id=4711,--tenant.id=DEFAULT_TENANT -Drun.profiles=command,ssl
+# in directory: hono/cli/
+mvn spring-boot:run -Drun.arguments=--hono.client.host=localhost,--hono.client.username=consumer@HONO,--hono.client.password=verysecret,--command.timeoutInSeconds=10,--device.id=4711,--tenant.id=DEFAULT_TENANT -Drun.profiles=command,ssl
 ~~~
 
 ### Summary
@@ -368,7 +374,7 @@ If you do not run Docker on localhost, replace *localhost* in the link with the 
 The Hono instance's Docker services can be stopped and removed using the following command:
 
 ~~~sh
-~/hono/deploy/target/deploy/docker$ ./swarm_undeploy.sh
+hono/deploy/target/deploy/docker/swarm_undeploy.sh
 ~~~
 
 Please refer to the [Docker Swarm documentation](https://docs.docker.com/engine/swarm/services/) for details regarding the management of individual services.
@@ -378,5 +384,5 @@ Please refer to the [Docker Swarm documentation](https://docs.docker.com/engine/
 In order to start up the instance again:
 
 ~~~sh
-~/hono/deploy/target/deploy/docker$ ./swarm_deploy.sh
+hono/deploy/target/deploy/docker/swarm_deploy.sh
 ~~~

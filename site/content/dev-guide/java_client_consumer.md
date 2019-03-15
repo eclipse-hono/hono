@@ -46,11 +46,12 @@ The application waits for messages until you press any key or kill it.
 
 It is started by
 
-`$ mvn exec:java -Dexec.mainClass=org.eclipse.hono.vertx.example.HonoExampleApplication`
+    # in directory: hono/example/
+    mvn exec:java -Dexec.mainClass=org.eclipse.hono.vertx.example.HonoExampleApplication
 
 or - if e.g. the host of the AMQP network should be changed - 
  
-`$ mvn exec:java -Dexec.mainClass=org.eclipse.hono.vertx.example.HonoExampleApplication -Dconsumer.host=192.168.99.100`
+    mvn exec:java -Dexec.mainClass=org.eclipse.hono.vertx.example.HonoExampleApplication -Dconsumer.host=192.168.99.100
 
 
 ### Telemetry and Event messages
@@ -70,10 +71,7 @@ Inside this callback an arbitrary simple command is sent down to the device (onc
   
 For the encrypted communication with Hono, the necessary truststore is already installed and used by the Hono client.
 
-If you want to integrate the code with your own software, please copy the provided truststore from the Hono project, e.g. like
-
-    $ mkdir -p ${yourProjectDir}/src/main/resources/certs
-    $ cp ${honoProjectDir}/demo-certs/certs/trusted-certs.pem ${yourProjectDir}/src/main/resources/certs
-
+If you want to integrate the code with your own software, please copy the provided truststore (`hono/demo-certs/certs/trusted-certs.pem`) 
+from the Hono project to the `resources` directory of your project
 and adopt the code pointing to the file location.
 

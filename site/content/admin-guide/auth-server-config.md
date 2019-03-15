@@ -101,16 +101,17 @@ See [Monitoring & Tracing Admin Guide]({{< ref "/admin-guide/monitoring-tracing-
 The Auth Server can be run as a Docker container from the command line. The following commands create and start the Auth Server as a Docker Swarm service using the default keys and configuration files contained in the `services/auth` and `demo-certs` modules:
 
 ~~~sh
-~/hono$ docker secret create auth-server-key.pem demo-certs/certs/auth-server-key.pem
-~/hono$ docker secret create auth-server-cert.pem demo-certs/certs/auth-server-cert.pem
-~/hono$ docker service create --detach --name auth-server --network hono-net -p5671:5671 \
-> --secret auth-server-key.pem \
-> --secret auth-server-cert.pem \
-> -e 'HONO_AUTH_AMQP_BIND_ADDRESS=0.0.0.0'
-> -e 'HONO_AUTH_AMQP_KEY_PATH=/run/secrets/auth-server-key.pem' \
-> -e 'HONO_AUTH_AMQP_CERT_PATH=/run/secrets/auth-server-cert.pem' \
-> -e 'SPRING_PROFILES_ACTIVE=authentication-impl' \
-> eclipse/hono-service-auth:latest
+# in base directory of Hono repository:
+docker secret create auth-server-key.pem demo-certs/certs/auth-server-key.pem
+docker secret create auth-server-cert.pem demo-certs/certs/auth-server-cert.pem
+docker service create --detach --name auth-server --network hono-net -p5671:5671 \
+ --secret auth-server-key.pem \
+ --secret auth-server-cert.pem \
+ -e 'HONO_AUTH_AMQP_BIND_ADDRESS=0.0.0.0' \
+ -e 'HONO_AUTH_AMQP_KEY_PATH=/run/secrets/auth-server-key.pem' \
+ -e 'HONO_AUTH_AMQP_CERT_PATH=/run/secrets/auth-server-cert.pem' \
+ -e 'SPRING_PROFILES_ACTIVE=authentication-impl' \
+ eclipse/hono-service-auth:latest
 ~~~
 
 {{% note %}}
@@ -130,8 +131,8 @@ Using the example from above, the following environment variable definition need
 
 ~~~sh
 ...
-> -e '_JAVA_OPTIONS=-Xmx64m' \
-> eclipse/hono-service-auth:latest
+ -e '_JAVA_OPTIONS=-Xmx64m' \
+ eclipse/hono-service-auth:latest
 ~~~
 
 ## Run using the Docker Swarm Deployment Script
@@ -145,11 +146,12 @@ In order to do so, the server can be started using the `spring-boot:run` maven g
 The corresponding command to start up the server with the configuration used in the Docker example above looks like this:
 
 ~~~sh
-~/hono/services/auth$ mvn spring-boot:run -Drun.profiles=authentication-impl -Drun.arguments=\
-> --hono.auth.amqp.bindAddress=0.0.0.0,\
-> --hono.auth.amqp.keyPath=target/certs/auth-server-key.pem,\
-> --hono.auth.amqp.certPath=target/certs/auth-server-cert.pem,\
-> --hono.auth.amqp.trustStorePath=target/certs/trusted-certs.pem
+# in directory: hono/services/auth/
+mvn spring-boot:run -Drun.profiles=authentication-impl -Dhono.app.healthCheckPort=8088 -Dhono.app.maxInstances=1 -Drun.arguments=\
+--hono.auth.amqp.bindAddress=0.0.0.0,\
+--hono.auth.amqp.keyPath=../../demo-certs/certs/auth-server-key.pem,\
+--hono.auth.amqp.certPath=../../demo-certs/certs/auth-server-cert.pem,\
+--hono.auth.amqp.trustStorePath=../../demo-certs/certs/trusted-certs.pem
 ~~~
 
 {{% note %}}
