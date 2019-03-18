@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -31,10 +31,8 @@ public interface CommandConnection extends HonoClient {
      * <p>
      * For each device only one command consumer may be active at any given time.
      * It is the responsibility of the calling code to properly close a consumer
-     * once it is no longer needed. The preferred way of doing so is to invoke the
-     * instance's {@link CommandConsumer#close(Handler)} method. Alternatively, if
-     * no reference to the instance is held, the {@link #closeCommandConsumer(String, String)}
-     * method can be used instead.
+     * once it is no longer needed by invoking its {@link CommandConsumer#close(Handler)}
+     * method.
      * 
      * @param tenantId The tenant to consume commands from.
      * @param deviceId The device for which the consumer will be created.
@@ -67,10 +65,8 @@ public interface CommandConnection extends HonoClient {
      * <p>
      * For each device only one command consumer may be active at any given time.
      * It is the responsibility of the calling code to properly close a consumer
-     * once it is no longer needed. The preferred way of doing so is to invoke the
-     * instance's {@link CommandConsumer#close(Handler)} method. Alternatively, if
-     * no reference to the instance is held, the {@link #closeCommandConsumer(String, String)}
-     * method can be used instead.
+     * once it is no longer needed by invoking its {@link CommandConsumer#close(Handler)}
+     * method.
      * <p>
      * The underlying link for receiving the commands will be checked periodically
      * after the given number of milliseconds. If the link is no longer active, e.g.
@@ -115,7 +111,9 @@ public interface CommandConnection extends HonoClient {
      * @param deviceId The device for which the consumer will be created.
      * @return A future indicating the outcome of the operation.
      * @throws NullPointerException if tenantId or deviceId are {@code null}.
+     * @deprecated This method will be removed in Hono 1.0. Use {@link CommandConsumer#close(Handler)} instead.
      */
+    @Deprecated
     Future<Void> closeCommandConsumer(String tenantId, String deviceId);
 
     /**

@@ -10,6 +10,11 @@ title = "Release Notes"
   to prevent Out of Memory errors. Please refer to
   [AMQP Adapter Configuration]({{< relref "/admin-guide/amqp-adapter-config.md" >}}) for details.
 
+### Depreciations
+
+* The `HonoClient.closeCommandConsumer()` method will be removed in Hono 1.0.
+  The `CommandConsumer.close()` method should be used instead.
+
 ## 0.9
 
 ### New Features

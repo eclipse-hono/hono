@@ -691,7 +691,9 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * 
      * @param tenantId The tenant that the device belongs to.
      * @param deviceId The identifier of the device.
+     * @deprecated This method will be removed in Hono 1.0. Use {@link CommandConsumer#close(Handler)} instead.
      */
+    @Deprecated
     protected final void closeCommandConsumer(final String tenantId, final String deviceId) {
 
         getCommandConnection().closeCommandConsumer(tenantId, deviceId).otherwise(t -> {

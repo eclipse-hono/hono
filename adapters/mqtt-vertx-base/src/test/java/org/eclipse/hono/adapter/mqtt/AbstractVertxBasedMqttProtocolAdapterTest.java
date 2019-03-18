@@ -173,7 +173,6 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         when(commandConnection.isConnected()).thenReturn(
                 Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE)));
         when(commandConnection.connect(any(Handler.class))).thenReturn(Future.succeededFuture(commandConnection));
-        when(commandConnection.closeCommandConsumer(anyString(), anyString())).thenReturn(Future.succeededFuture(null));
 
         authHandler = mock(AuthHandler.class);
     }
