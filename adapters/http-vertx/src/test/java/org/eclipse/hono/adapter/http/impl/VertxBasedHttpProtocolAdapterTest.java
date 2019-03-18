@@ -230,13 +230,11 @@ public class VertxBasedHttpProtocolAdapterTest {
         when(telemetrySender.sendAndWaitForOutcome(any(Message.class), (SpanContext) any())).thenReturn(
                 Future.succeededFuture(mock(ProtonDelivery.class)));
         when(messagingClient.getOrCreateTelemetrySender(anyString())).thenReturn(Future.succeededFuture(telemetrySender));
-        when(messagingClient.getOrCreateTelemetrySender(anyString(), anyString())).thenReturn(Future.succeededFuture(telemetrySender));
 
         eventSender = mock(MessageSender.class);
         when(eventSender.send(any(Message.class), (SpanContext) any())).thenThrow(new UnsupportedOperationException());
         when(eventSender.sendAndWaitForOutcome(any(Message.class), (SpanContext) any())).thenReturn(Future.succeededFuture(mock(ProtonDelivery.class)));
         when(messagingClient.getOrCreateEventSender(anyString())).thenReturn(Future.succeededFuture(eventSender));
-        when(messagingClient.getOrCreateEventSender(anyString(), anyString())).thenReturn(Future.succeededFuture(eventSender));
 
         doAnswer(invocation -> {
             final Handler<AsyncResult<User>> resultHandler = invocation.getArgument(1);

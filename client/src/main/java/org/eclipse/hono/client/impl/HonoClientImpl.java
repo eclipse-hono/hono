@@ -39,9 +39,11 @@ import org.eclipse.hono.cache.CacheProvider;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.CommandClient;
 import org.eclipse.hono.client.CredentialsClient;
+import org.eclipse.hono.client.DisconnectListener;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.MessageSender;
+import org.eclipse.hono.client.ReconnectListener;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.RequestResponseClient;
 import org.eclipse.hono.client.ServerErrorException;
@@ -114,6 +116,8 @@ public class HonoClientImpl implements HonoClient {
     private final Map<String, RequestResponseClient> activeRequestResponseClients = new HashMap<>();
     private final Map<String, Boolean> creationLocks = new HashMap<>();
     private final List<Handler<Void>> creationRequests = new ArrayList<>();
+    private final List<DisconnectListener> disconnectListeners = new ArrayList<>();
+    private final List<ReconnectListener> reconnectListeners = new ArrayList<>();
     private final AtomicBoolean connecting = new AtomicBoolean(false);
     private final AtomicBoolean shuttingDown = new AtomicBoolean(false);
     private final AtomicBoolean disconnecting = new AtomicBoolean(false);
@@ -203,6 +207,16 @@ public class HonoClientImpl implements HonoClient {
      */
     public final Tracer getTracer() {
         return tracer;
+    }
+
+    @Override
+    public final void addDisconnectListener(final DisconnectListener listener) {
+        disconnectListeners.add(listener);
+    }
+
+    @Override
+    public final void addReconnectListener(final ReconnectListener listener) {
+        reconnectListeners.add(listener);
     }
 
     /**
@@ -460,7 +474,15 @@ public class HonoClientImpl implements HonoClient {
         if (connectionLossHandler != null) {
             connectionLossHandler.handle(failedConnection);
         } else {
-            reconnect(attempt -> {}, null);
+            reconnect(this::notifyReconnectHandlers, null);
+        }
+    }
+
+    private void notifyReconnectHandlers(final AsyncResult<HonoClient> reconnectAttempt) {
+        if (reconnectAttempt.succeeded()) {
+            for (ReconnectListener listener : reconnectListeners) {
+                listener.onReconnect(this);
+            }
         }
     }
 
@@ -474,8 +496,16 @@ public class HonoClientImpl implements HonoClient {
         activeSenders.clear();
         activeRequestResponseClients.clear();
         failAllCreationRequests();
+        notifyDisconnectHandlers();
         // make sure we make configured number of attempts to re-connect
         connectAttempts = new AtomicInteger(0);
+    }
+
+    private void notifyDisconnectHandlers() {
+
+        for (DisconnectListener listener : disconnectListeners) {
+            listener.onDisconnect(this);
+        }
     }
 
     private void failAllCreationRequests() {
@@ -556,30 +586,20 @@ public class HonoClientImpl implements HonoClient {
      */
     @Override
     public final Future<MessageSender> getOrCreateTelemetrySender(final String tenantId) {
-        return getOrCreateTelemetrySender(tenantId, null);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public final Future<MessageSender> getOrCreateTelemetrySender(final String tenantId, final String deviceId) {
 
         Objects.requireNonNull(tenantId);
         return getOrCreateSender(
-                TelemetrySenderImpl.getTargetAddress(tenantId, deviceId),
-                () -> createTelemetrySender(tenantId, deviceId));
+                TelemetrySenderImpl.getTargetAddress(tenantId, null),
+                () -> createTelemetrySender(tenantId));
     }
 
-    private Future<MessageSender> createTelemetrySender(
-            final String tenantId,
-            final String deviceId) {
+    private Future<MessageSender> createTelemetrySender(final String tenantId) {
 
         return checkConnected().compose(connected -> {
             final Future<MessageSender> result = Future.future();
-            TelemetrySenderImpl.create(context, clientConfigProperties, connection, tenantId, deviceId,
+            TelemetrySenderImpl.create(context, clientConfigProperties, connection, tenantId, null,
                     onSenderClosed -> {
-                        activeSenders.remove(TelemetrySenderImpl.getTargetAddress(tenantId, deviceId));
+                        activeSenders.remove(TelemetrySenderImpl.getTargetAddress(tenantId, null));
                     },
                     result.completer(), tracer);
             return result;
@@ -591,32 +611,20 @@ public class HonoClientImpl implements HonoClient {
      */
     @Override
     public final Future<MessageSender> getOrCreateEventSender(final String tenantId) {
-        return getOrCreateEventSender(tenantId, null);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public final Future<MessageSender> getOrCreateEventSender(
-            final String tenantId,
-            final String deviceId) {
 
         Objects.requireNonNull(tenantId);
         return getOrCreateSender(
-                EventSenderImpl.getTargetAddress(tenantId, deviceId),
-                () -> createEventSender(tenantId, deviceId));
+                EventSenderImpl.getTargetAddress(tenantId, null),
+                () -> createEventSender(tenantId));
     }
 
-    private Future<MessageSender> createEventSender(
-            final String tenantId,
-            final String deviceId) {
+    private Future<MessageSender> createEventSender(final String tenantId) {
 
         return checkConnected().compose(connected -> {
             final Future<MessageSender> result = Future.future();
-            EventSenderImpl.create(context, clientConfigProperties, connection, tenantId, deviceId,
+            EventSenderImpl.create(context, clientConfigProperties, connection, tenantId, null,
                     onSenderClosed -> {
-                        activeSenders.remove(EventSenderImpl.getTargetAddress(tenantId, deviceId));
+                        activeSenders.remove(EventSenderImpl.getTargetAddress(tenantId, null));
                     },
                     result.completer(), tracer);
             return result;
