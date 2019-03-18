@@ -182,7 +182,8 @@ public abstract class BaseRegistrationService<T> extends EventBusService<T> impl
      * This method is invoked by {@link #assertRegistration(String, String, String, Span, Handler)} to retrieve
      * device registration information from the persistent store.
      * <p>
-     * This default implementation simply returns an empty result with status code 501 (Not Implemented).
+     * This default implementation simply invokes the given handler with a successful Future containing an empty result
+     * with status code 501 (Not Implemented).
      * Subclasses need to override this method and provide a reasonable implementation in order for this
      * class' default implementation of <em>assertRegistration</em> to work properly.
      * 
@@ -339,8 +340,8 @@ public abstract class BaseRegistrationService<T> extends EventBusService<T> impl
     }
 
     /**
-     * Handles an unimplemented operation by failing the given handler
-     * with a {@link ClientErrorException} having a <em>501 Not Implemented</em> status code.
+     * Handles an unimplemented operation by invoking the given handler with a successful Future
+     * containing an empty result with a <em>501 Not Implemented</em> status code.
      * 
      * @param resultHandler The handler.
      */
