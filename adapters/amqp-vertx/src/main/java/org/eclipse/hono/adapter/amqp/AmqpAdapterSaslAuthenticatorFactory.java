@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -255,15 +255,12 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
                     currentSpan.log(items);
 
                     getTenantObject(credentials.getTenantId())
-                    .map(tenant -> {
-                        if (tenant.isAdapterEnabled(Constants.PROTOCOL_ADAPTER_TYPE_AMQP)) {
-                            getUsernamePasswordAuthProvider().authenticate(credentials, currentSpan.context(), completer);
-                        } else {
-                            completer.handle(Future.failedFuture(new CredentialException(
-                                    String.format("AMQP adapter is disabled for tenant [%s]", tenant.getTenantId()))));
-                        }
-                        return null;
-                    });
+                    .compose(tenant -> {
+                        final Future<DeviceUser> user = Future.future();
+                        getUsernamePasswordAuthProvider().authenticate(credentials, currentSpan.context(), user);
+                        return user;
+                    })
+                    .setHandler(completer);
                 }
             } catch (CredentialException e) {
                 // SASL response could not be parsed
@@ -290,41 +287,43 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
                 final Future<TenantObject> tenantTracker = getTenantObject(deviceCert.getIssuerX500Principal());
                 tenantTracker
                         .compose(tenant -> {
-                            if (!tenant.isAdapterEnabled(Constants.PROTOCOL_ADAPTER_TYPE_AMQP)) {
-                                return Future.failedFuture(new CredentialException(
-                                        String.format("AMQP adapter is disabled for Tenant [tenantId: %s]",
-                                                tenant.getTenantId())));
-                            }
-                            return Future.succeededFuture();
-                        })
-                        .compose(ok -> {
                             try {
                                 final TrustAnchor trustAnchor = tenantTracker.result().getTrustAnchor();
                                 return getValidator().validate(Collections.singletonList(deviceCert), trustAnchor);
                             } catch(final GeneralSecurityException e) {
-                                return Future.failedFuture(e);
+                                LOG.debug("cannot retrieve trust anchor of tenant [{}]", tenant.getTenantId(), e);
+                                return Future.failedFuture(new CredentialException("validation of client certificate failed"));
                             }
                         })
-                        .map(validPath -> {
+                        .compose(ok -> {
+                            final Future<DeviceUser> user = Future.future();
                             final String tenantId = tenantTracker.result().getTenantId();
                             final SubjectDnCredentials credentials = SubjectDnCredentials.create(tenantId, deviceCert.getSubjectX500Principal());
-                            getCertificateAuthProvider().authenticate(credentials, currentSpan.context(), completer);
-                            return null;
-                        }).otherwise(t -> {
-                            completer.handle(Future.failedFuture(new CredentialException(t.getMessage())));
-                            return null;
-                        });
+                            getCertificateAuthProvider().authenticate(credentials, currentSpan.context(), user);
+                            return user;
+                        })
+                        .setHandler(completer);
             }
         }
 
         private Future<TenantObject> getTenantObject(final X500Principal issuerDn) {
             return tenantServiceClient.getOrCreateTenantClient()
-                    .compose(tenantClient -> tenantClient.get(issuerDn, currentSpan.context()));
+                    .compose(tenantClient -> tenantClient.get(issuerDn, currentSpan.context()))
+                    .compose(tenant -> checkTenantIsEnabled(tenant));
         }
 
         private Future<TenantObject> getTenantObject(final String tenantId) {
             return tenantServiceClient.getOrCreateTenantClient()
-                    .compose(tenantClient -> tenantClient.get(tenantId, currentSpan.context()));
+                    .compose(tenantClient -> tenantClient.get(tenantId, currentSpan.context()))
+                    .compose(tenant -> checkTenantIsEnabled(tenant));
+        }
+
+        private Future<TenantObject> checkTenantIsEnabled(final TenantObject tenant) {
+            if (tenant.isAdapterEnabled(Constants.PROTOCOL_ADAPTER_TYPE_AMQP)) {
+                return Future.succeededFuture(tenant);
+            } else {
+                return Future.failedFuture(new CredentialException("AMQP adapter is disabled for tenant"));
+            }
         }
 
         private HonoClientBasedAuthProvider<UsernamePasswordCredentials> getUsernamePasswordAuthProvider() {

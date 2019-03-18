@@ -27,6 +27,7 @@ import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantObject;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
 import org.junit.runner.RunWith;
@@ -46,6 +47,7 @@ public class AmqpConnectionIT extends AmqpAdapterTestBase {
     /**
      * Time out all tests after 5 seconds.
      */
+    @Rule
     public Timeout timeout = Timeout.seconds(5);
 
     /**
@@ -100,15 +102,14 @@ public class AmqpConnectionIT extends AmqpAdapterTestBase {
         final String tenantId = helper.getRandomTenantId();
         final TenantObject tenant = TenantObject.from(tenantId, true);
 
-        helper.registry.addTenant(JsonObject.mapFrom(tenant)).compose( r ->
-
-            // GIVEN an adapter
+        helper.registry.addTenant(JsonObject.mapFrom(tenant))
+        .compose(ok ->
             // WHEN an unknown device tries to connect
-            connectToAdapter(IntegrationTestSupport.getUsername("non-existing", tenantId), "secret")
-            .setHandler(ctx.asyncAssertFailure(t -> {
-                // THEN the connection is refused
-                ctx.assertTrue(t instanceof SaslException);
-            })));
+            connectToAdapter(IntegrationTestSupport.getUsername("non-existing", tenantId), "secret"))
+        .setHandler(ctx.asyncAssertFailure(t -> {
+            // THEN the connection is refused
+            ctx.assertTrue(t instanceof SaslException);
+        }));
     }
 
     /**
@@ -148,11 +149,13 @@ public class AmqpConnectionIT extends AmqpAdapterTestBase {
         final String tenantId = helper.getRandomTenantId();
         final String deviceId = helper.getRandomDeviceId(tenantId);
         final String password = "secret";
+
+        // GIVEN a tenant for which the AMQP adapter is disabled
         final TenantObject tenant = TenantObject.from(tenantId, true);
-        final JsonObject adapterDetailsMqtt = new JsonObject()
+        final JsonObject adapterConfiguration = new JsonObject()
                 .put(TenantConstants.FIELD_ADAPTERS_TYPE, Constants.PROTOCOL_ADAPTER_TYPE_HTTP)
                 .put(TenantConstants.FIELD_ENABLED, Boolean.TRUE);
-        tenant.addAdapterConfiguration(adapterDetailsMqtt);
+        tenant.addAdapterConfiguration(adapterConfiguration);
 
         helper.registry.addDeviceForTenant(tenant, deviceId, password)
         // WHEN a device that belongs to the tenant tries to connect to the adapter
