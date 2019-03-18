@@ -149,7 +149,8 @@ public abstract class CompleteBaseRegistrationService<T> extends BaseRegistratio
     /**
      * {@inheritDoc}
      *
-     * This default implementation simply returns an empty result with status code 501 (Not Implemented).
+     * This default implementation simply invokes the given handler with a successful Future containing an empty result
+     * with status code 501 (Not Implemented).
      * Subclasses should override this method in order to provide a reasonable implementation.
      */
     @Override
@@ -161,7 +162,8 @@ public abstract class CompleteBaseRegistrationService<T> extends BaseRegistratio
     /**
      * {@inheritDoc}
      *
-     * This default implementation simply returns an empty result with status code 501 (Not Implemented).
+     * This default implementation simply invokes the given handler with a successful Future containing an empty result
+     * with status code 501 (Not Implemented).
      * Subclasses should override this method in order to provide a reasonable implementation.
      */
     @Override
@@ -173,7 +175,8 @@ public abstract class CompleteBaseRegistrationService<T> extends BaseRegistratio
     /**
      * {@inheritDoc}
      *
-     * This default implementation simply returns an empty result with status code 501 (Not Implemented).
+     * This default implementation simply invokes the given handler with a successful Future containing an empty result
+     * with status code 501 (Not Implemented).
      * Subclasses should override this method in order to provide a reasonable implementation.
      */
     @Override

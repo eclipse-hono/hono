@@ -202,7 +202,7 @@ public class EventBusMessage {
 
     /**
      * Adds a property for the address that responses to
-     * this (request) message should be sent.
+     * this (request) message should be sent to.
      * <p>
      * The property will only be added if the AMQP message contains
      * a non-{@code null} <em>reply-to</em> property.
