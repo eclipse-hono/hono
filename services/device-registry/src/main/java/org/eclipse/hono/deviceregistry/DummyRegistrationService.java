@@ -52,4 +52,10 @@ public class DummyRegistrationService extends BaseRegistrationService<Object> {
                 HttpURLConnection.HTTP_OK,
                 getAssertionPayload(tenantId, deviceId, deviceData))));
     }
+
+    @Override
+    protected Future<Void> updateDeviceLastVia(final String tenantId, final String deviceId, final String gatewayId,
+            final JsonObject deviceData) {
+        return Future.succeededFuture();
+    }
 }
