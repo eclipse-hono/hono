@@ -167,7 +167,7 @@ In these cases the protocol adapter will authenticate the gateway component inst
 The Device Registry will then do the following:
 1. Verify that the device exists and is enabled.
 1. Verify that the gateway exists and is enabled.
-2. Verify that the device's registration information contains a property called `via` and that its value is either the gateway's device identifier or a JSON array which contains the gateway's device identifier as one of its values.
+2. Verify that the device's registration information contains a property called `via` and that its value is either the gateway's device identifier or a JSON array which contains the gateway's device identifier as one of its values. In the latter case of a device configured for multiple gateways, the device's registration information is updated with a `last-via` property containing the gateway identifier used in this request.
 
 Only if all conditions are met, the Device Registry returns an assertion of the device's registration status. The protocol adapter can then forward the published data to the AMQP Messaging Network in the same way as for any device that connects directly to the adapter.
 

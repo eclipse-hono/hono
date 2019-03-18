@@ -16,6 +16,7 @@ import java.net.HttpURLConnection;
 import java.util.Objects;
 
 import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.service.EventBusService;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CacheDirective;
@@ -61,9 +62,19 @@ public abstract class BaseRegistrationService<T> extends EventBusService<T> impl
 
     /**
      * The name of the field in a device's registration information that contains
-     * the identifier of the gateway that it is connected to.
+     * the identifier of the gateway that it is connected to (either as string value or inside a JSON array). 
      */
     public static final String PROPERTY_VIA = "via";
+    /**
+     * The name of the field in a device's registration information that contains
+     * the identifier of the gateway that it was last connected to as well as the date when this information was updated.
+     */
+    public static final String PROPERTY_LAST_VIA = "last-via";
+    /**
+     * The name of the field in a device's registration information that contains
+     * the date when the 'last-via' device id was last updated.
+     */
+    public static final String PROPERTY_LAST_VIA_UPDATE_DATE = "update-date";
 
     private static final String SPAN_NAME_ASSERT_DEVICE_REGISTRATION = "assert Device Registration";
 
@@ -292,10 +303,16 @@ public abstract class BaseRegistrationService<T> extends EventBusService<T> impl
                 final JsonObject gatewayData = gatewayResult.getPayload().getJsonObject(RegistrationConstants.FIELD_DATA, new JsonObject());
 
                 if (isGatewayAuthorized(gatewayId, gatewayData, deviceId, deviceData)) {
-                    return Future.succeededFuture(RegistrationResult.from(
-                        HttpURLConnection.HTTP_OK,
-                        getAssertionPayload(tenantId, deviceId, deviceData),
-                        CacheDirective.maxAgeDirective(assertionFactory.getAssertionLifetime())));
+                    return updateDeviceLastViaIfNeeded(tenantId, deviceId, gatewayId, deviceData).map(res -> {
+                        return RegistrationResult.from(
+                                HttpURLConnection.HTTP_OK,
+                                getAssertionPayload(tenantId, deviceId, deviceData),
+                                CacheDirective.maxAgeDirective(assertionFactory.getAssertionLifetime()));
+                    }).recover(t -> {
+                        log.error("update of the 'last-via' property failed", t);
+                        TracingHelper.logError(span, "update of the 'last-via' property failed: " + t.toString());
+                        return Future.succeededFuture(RegistrationResult.from(ServiceInvocationException.extractStatusCode(t)));
+                    });
                 } else {
                     TracingHelper.logError(span, "gateway not authorized");
                     return Future.succeededFuture(RegistrationResult.from(HttpURLConnection.HTTP_FORBIDDEN));
@@ -303,6 +320,39 @@ public abstract class BaseRegistrationService<T> extends EventBusService<T> impl
             }
         }).setHandler(resultHandler);
     }
+
+    private Future<Void> updateDeviceLastViaIfNeeded(final String tenantId, final String deviceId,
+            final String gatewayId, final JsonObject deviceData) {
+        if (!isDeviceWithMultipleVias(deviceData)) {
+            return Future.succeededFuture();
+        }
+        return updateDeviceLastVia(tenantId, deviceId, gatewayId, deviceData);
+    }
+
+    private boolean isDeviceWithMultipleVias(final JsonObject deviceData) {
+        final Object viaObj = deviceData.getValue(PROPERTY_VIA);
+        return viaObj instanceof JsonArray && ((JsonArray) viaObj).size() > 1;
+    }
+
+    /**
+     * Updates device registration data and adds a 'last-via' property containing the given gateway identifier
+     * as well as the current date.
+     * <p>
+     * This method this called by this class' default implementation of <em>assertRegistration</em> for a device that
+     * has multiple gateway entries in its 'via' definition.
+     * <p>
+     * Subclasses need to override this method and provide a reasonable implementation in order to support scenarios
+     * where devices with multiple potential 'via' gateways are used, along with gateways subscribing to command 
+     * messages only using their gateway id. In such scenarios, the 'last-via' value is needed to route command messages
+     * to the right gateway.
+     *
+     * @param tenantId The tenant id.
+     * @param deviceId The device id.
+     * @param gatewayId The gateway id.
+     * @param deviceData The current data associated with the device.
+     * @return A future indicating whether the operation succeeded or not.
+     */
+    protected abstract Future<Void> updateDeviceLastVia(String tenantId, String deviceId, String gatewayId, JsonObject deviceData);
 
     /**
      * Creates a new <em>OpenTracing</em> span for tracing the execution of a registration service operation.

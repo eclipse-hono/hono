@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,10 +12,16 @@
  *******************************************************************************/
 package org.eclipse.hono.service.registration;
 
+import static org.eclipse.hono.util.Constants.JSON_FIELD_DEVICE_ID;
+
 import java.net.HttpURLConnection;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Objects;
 
 import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.util.EventBusMessage;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.RegistrationResult;
@@ -144,6 +150,36 @@ public abstract class CompleteBaseRegistrationService<T> extends BaseRegistratio
                         .setCacheDirective(res.getCacheDirective());
             });
         }
+    }
+
+    @Override
+    protected Future<Void> updateDeviceLastVia(final String tenantId, final String deviceId, final String gatewayId,
+            final JsonObject deviceData) {
+        final Future<Void> resultFuture = Future.future();
+        deviceData.put(PROPERTY_LAST_VIA, createLastViaObject(gatewayId));
+        updateDevice(tenantId, deviceId, deviceData, res -> {
+            if (res.failed() || res.result() == null) {
+                resultFuture.fail(res.cause());
+            } else if (res.result().isError()) {
+                resultFuture.fail(StatusCodeMapper.from(res.result()));
+            } else {
+                resultFuture.complete();
+            }
+        });
+        return resultFuture;
+    }
+
+    /**
+     * Creates the JsonObject used as value for the <em>last-via</em> property.
+     * 
+     * @param gatewayId The gateway id.
+     * @return JSON value for the <em>last-via</em> property.
+     */
+    protected final JsonObject createLastViaObject(final String gatewayId) {
+        final JsonObject lastViaObj = new JsonObject();
+        lastViaObj.put(JSON_FIELD_DEVICE_ID, gatewayId);
+        lastViaObj.put(PROPERTY_LAST_VIA_UPDATE_DATE, ZonedDateTime.now(ZoneOffset.UTC).format(DateTimeFormatter.ISO_INSTANT));
+        return lastViaObj;
     }
 
     /**

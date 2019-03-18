@@ -18,6 +18,7 @@ import static org.mockito.Mockito.mock;
 import java.net.HttpURLConnection;
 import java.util.function.Function;
 
+import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.config.SignatureSupportingConfigProperties;
 import org.eclipse.hono.util.Constants;
@@ -179,16 +180,6 @@ public class BaseRegistrationServiceTest {
             // and contains a JWT token
             ctx.assertNotNull(payload.getString(RegistrationConstants.FIELD_ASSERTION));
         }));
-
-        // WHEN trying to assert the device's registration status for gateway 4
-        registrationService.assertRegistration(Constants.DEFAULT_TENANT, "4711", "gw-4", ctx.asyncAssertSuccess(result -> {
-            // THEN the response contains a 200 status
-            ctx.assertEquals(HttpURLConnection.HTTP_OK, result.getStatus());
-            final JsonObject payload = result.getPayload();
-            ctx.assertNotNull(payload);
-            // and contains a JWT token
-            ctx.assertNotNull(payload.getString(RegistrationConstants.FIELD_ASSERTION));
-        }));
     }
 
     /**
@@ -207,6 +198,30 @@ public class BaseRegistrationServiceTest {
         registrationService.assertRegistration(Constants.DEFAULT_TENANT, "4711", "non-existent-gw", ctx.asyncAssertSuccess(result -> {
             // THEN the response contains a 403 status
             ctx.assertEquals(result.getStatus(), HttpURLConnection.HTTP_FORBIDDEN);
+            // and does not contain a JWT token
+            ctx.assertNull(result.getPayload());
+        }));
+    }
+
+    /**
+     * Verifies that a device's status cannot be asserted if there are multiple <em>via</em> entries
+     * defined for the device and the update of the <em>last-via</em> property cannot be performed
+     * because an update of device registration data is not supported. 
+     *
+     * @param ctx The vertx unit test context.
+     */
+    @Test
+    public void testAssertDeviceRegistrationFailsForDeviceWithMultipleVias(final TestContext ctx) {
+
+        // GIVEN a registry that contains an enabled device that is configured to
+        // be connected to an enabled gateway
+        final BaseRegistrationService<ServiceConfigProperties> registrationService = newRegistrationService();
+        registrationService.setRegistrationAssertionFactory(RegistrationAssertionHelperImpl.forSigning(vertx, props));
+
+        // WHEN trying to assert the device's registration status for the gateway
+        registrationService.assertRegistration(Constants.DEFAULT_TENANT, "4714", "gw-1", ctx.asyncAssertSuccess(result -> {
+            // THEN the response contains a 501 status
+            ctx.assertEquals(result.getStatus(), HttpURLConnection.HTTP_NOT_IMPLEMENTED);
             // and does not contain a JWT token
             ctx.assertNull(result.getPayload());
         }));
@@ -265,7 +280,7 @@ public class BaseRegistrationServiceTest {
 
     private BaseRegistrationService<ServiceConfigProperties> newRegistrationService(final Function<String, Future<RegistrationResult>> devices) {
 
-        return new BaseRegistrationService<ServiceConfigProperties>() {
+        return new BaseRegistrationService<>() {
 
             @Override
             protected String getEventBusAddress() {
@@ -281,6 +296,12 @@ public class BaseRegistrationServiceTest {
             public void getDevice(final String tenantId, final String deviceId, final Handler<AsyncResult<RegistrationResult>> resultHandler) {
                 devices.apply(deviceId).setHandler(resultHandler);
             }
+
+            @Override
+            protected Future<Void> updateDeviceLastVia(final String tenantId, final String deviceId, final String gatewayId,
+                    final JsonObject deviceData) {
+                return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_NOT_IMPLEMENTED));
+            }
         };
     }
 
@@ -293,11 +314,11 @@ public class BaseRegistrationServiceTest {
                         .put(RegistrationConstants.FIELD_ENABLED, true)
                         .put(RegistrationConstants.FIELD_DEFAULTS, new JsonObject()
                                 .put(MessageHelper.SYS_PROPERTY_CONTENT_TYPE, "application/default"))
-                        .put(BaseRegistrationService.PROPERTY_VIA, new JsonArray().add("gw-1").add("gw-4")));
+                        .put(BaseRegistrationService.PROPERTY_VIA, "gw-1"));
             return Future.succeededFuture(RegistrationResult.from(HttpURLConnection.HTTP_OK, responsePayload));
         } else if ("4712".equals(deviceId)) {
                 final JsonObject responsePayload = BaseRegistrationService.getResultPayload(
-                        "4711",
+                        "4712",
                         new JsonObject().put(RegistrationConstants.FIELD_ENABLED, false));
                 return Future.succeededFuture(RegistrationResult.from(HttpURLConnection.HTTP_OK, responsePayload));
         } else if ("4713".equals(deviceId)) {
@@ -306,6 +327,15 @@ public class BaseRegistrationServiceTest {
                     new JsonObject()
                         .put(RegistrationConstants.FIELD_ENABLED, true)
                         .put(BaseRegistrationService.PROPERTY_VIA, "gw-3"));
+            return Future.succeededFuture(RegistrationResult.from(HttpURLConnection.HTTP_OK, responsePayload));
+        } else if ("4714".equals(deviceId)) {
+            final JsonObject responsePayload = BaseRegistrationService.getResultPayload(
+                    "4714",
+                    new JsonObject()
+                        .put(RegistrationConstants.FIELD_ENABLED, true)
+                        .put(RegistrationConstants.FIELD_DEFAULTS, new JsonObject()
+                                .put(MessageHelper.SYS_PROPERTY_CONTENT_TYPE, "application/default"))
+                        .put(BaseRegistrationService.PROPERTY_VIA, new JsonArray().add("gw-1").add("gw-4")));
             return Future.succeededFuture(RegistrationResult.from(HttpURLConnection.HTTP_OK, responsePayload));
         } else if ("gw-1".equals(deviceId)) {
             final JsonObject responsePayload = BaseRegistrationService.getResultPayload(
