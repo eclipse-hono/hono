@@ -82,11 +82,6 @@ public final class Constants {
     public static final String SERVICE_NAME_DEVICE_REGISTRY = "hono-registry";
 
     /**
-     * The (short) name of the Hono Messaging component.
-     */
-    public static final String SERVICE_NAME_MESSAGING = "hono-messaging";
-
-    /**
      * The "QoS-Level" request header indicating the quality of service level supported by the HTTP Adapter.
      * The HTTP adapter supports QoS level AT_LEAST_ONCE when uploading telemetry messages.
      */
@@ -156,7 +151,7 @@ public final class Constants {
     public static final String QUALIFIER_DOWNSTREAM = "downstream";
 
     /**
-     * The qualifier to use for referring to the Hono Messaging component.
+     * The qualifier to use for referring to the AMQP Messaging Network.
      */
     public static final String QUALIFIER_MESSAGING = "messaging";
 

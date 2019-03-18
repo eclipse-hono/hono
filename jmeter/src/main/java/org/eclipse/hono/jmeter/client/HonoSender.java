@@ -115,7 +115,7 @@ public class HonoSender extends AbstractClient {
     /**
      * Starts this sender.
      * <p>
-     * As part of the startup the sender connects to Hono Messaging and the
+     * As part of the startup the sender connects to the AMQP Messaging Network and the
      * Device Registration service.
      *
      * @return A future indicating the outcome of the startup process.
@@ -129,7 +129,7 @@ public class HonoSender extends AbstractClient {
             ctx.runOnContext(start -> {
                 LOGGER.debug("create hono sender - tenant: {}", sampler.getTenant());
 
-                CompositeFuture.all(connectToHonoMessaging(), connectToRegistrationService())
+                CompositeFuture.all(connectToAmqpMessagingNetwork(), connectToRegistrationService())
                     .setHandler(startup -> {
                         if (startup.succeeded()) {
                             LOGGER.info("sender initialization complete");
@@ -148,12 +148,12 @@ public class HonoSender extends AbstractClient {
         return result;
     }
 
-    private Future<HonoClient> connectToHonoMessaging() {
+    private Future<HonoClient> connectToAmqpMessagingNetwork() {
 
         return honoClient
                 .connect()
                 .map(client -> {
-                    LOGGER.info("connected to Hono Messaging [{}:{}]", sampler.getHost(), sampler.getPort());
+                    LOGGER.info("connected to AMQP Messaging Network [{}:{}]", sampler.getHost(), sampler.getPort());
                     return client;
                 });
     }
@@ -365,7 +365,7 @@ public class HonoSender extends AbstractClient {
     }
 
     /**
-     * Closes the connections to the Device Registration Service and Hono Messaging.
+     * Closes the connections to the Device Registration Service and the AMQP Messaging Network.
      *
      * @return A future that successfully completes once the connections are closed.
      */

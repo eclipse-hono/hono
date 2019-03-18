@@ -21,7 +21,7 @@ This starts the following Docker containers and runs the test cases against them
 * Hono Device Registration service
 * ActiveMQ Artemis message broker
 * Qpid Dispatch Router
-* Hono Messaging service
 * Hono HTTP adapter
 * Hono MQTT adapter
 * Hono AMQP adapter
+* Hono CoAP adapter

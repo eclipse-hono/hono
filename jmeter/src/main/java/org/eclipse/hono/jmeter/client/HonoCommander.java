@@ -139,7 +139,7 @@ public class HonoCommander extends AbstractClient {
     }
 
     /**
-     * Closes the connections to the Device Registration Service and Hono Messaging.
+     * Closes the connections to the Device Registration Service and the AMQP Messaging Network.
      *
      * @return A future that successfully completes once the connections are closed.
      */

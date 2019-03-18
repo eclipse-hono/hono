@@ -80,7 +80,7 @@ public abstract class AbstractAdapterConfig {
     }
 
     /**
-     * Exposes configuration properties for accessing a Hono Messaging service as a Spring bean.
+     * Exposes configuration properties for accessing the AMQP Messaging Network as a Spring bean.
      * <p>
      * The properties can be customized in subclasses by means of overriding the
      * {@link #customizeMessagingClientConfig(ClientConfigProperties)} method.
@@ -110,7 +110,7 @@ public abstract class AbstractAdapterConfig {
     }
 
     /**
-     * Exposes a client for the <em>Hono Messaging</em> component as a Spring bean.
+     * Exposes a client for the <em>AMQP Messaging Network</em> as a Spring bean.
      * <p>
      * The client is configured with the properties provided by {@link #messagingClientConfig()}.
      *

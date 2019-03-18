@@ -724,15 +724,15 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
     }
 
     /**
-     * Uploads a message to Hono Messaging.
+     * Forwards a message to the AMQP Messaging Network.
      * 
      * @param ctx The context in which the MQTT message has been published.
-     * @param resource The resource that the message should be uploaded to.
+     * @param resource The resource that the message should be forwarded to.
      * @param message The message to send.
      * @return A future indicating the outcome of the operation.
      *         <p>
-     *         The future will succeed if the message has been uploaded successfully. Otherwise the future will fail
-     *         with a {@link ServiceInvocationException}.
+     *         The future will succeed if the message has been forwarded successfully.
+     *         Otherwise the future will fail with a {@link ServiceInvocationException}.
      * @throws NullPointerException if any of context, resource or payload is {@code null}.
      * @throws IllegalArgumentException if the payload is empty.
      */
@@ -768,7 +768,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
     }
 
     /**
-     * Uploads a telemetry message to Hono Messaging.
+     * Forwards a telemetry message to the AMQP Messaging Network.
      * 
      * @param ctx The context in which the MQTT message has been published.
      * @param tenant The tenant of the device that has produced the data.
@@ -776,8 +776,8 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
      * @param payload The message payload to send.
      * @return A future indicating the outcome of the operation.
      *         <p>
-     *         The future will succeed if the message has been uploaded successfully. Otherwise the future will fail
-     *         with a {@link ServiceInvocationException}.
+     *         The future will succeed if the message has been forwarded successfully.
+     *         Otherwise the future will fail with a {@link ServiceInvocationException}.
      * @throws NullPointerException if any of context, tenant, device ID or payload is {@code null}.
      * @throws IllegalArgumentException if the context does not contain a
      *              telemetry message or if the payload is empty.
@@ -823,7 +823,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
     }
 
     /**
-     * Uploads an event message to Hono Messaging.
+     * Forwards an event to the AMQP Messaging Network.
      * 
      * @param ctx The context in which the MQTT message has been published.
      * @param tenant The tenant of the device that has produced the data.
@@ -831,8 +831,8 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
      * @param payload The message payload to send.
      * @return A future indicating the outcome of the operation.
      *         <p>
-     *         The future will succeed if the message has been uploaded successfully. Otherwise the future will fail
-     *         with a {@link ServiceInvocationException}.
+     *         The future will succeed if the message has been forwarded successfully.
+     *         Otherwise the future will fail with a {@link ServiceInvocationException}.
      * @throws NullPointerException if any of context, tenant, device ID or payload is {@code null}.
      * @throws IllegalArgumentException if the context does not contain an
      *              event or if the payload is empty.

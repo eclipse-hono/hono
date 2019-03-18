@@ -71,7 +71,6 @@ public abstract class AbstractLegacyMetricsConfig {
         protocols.put(Constants.PROTOCOL_ADAPTER_TYPE_HTTP, "http");
         protocols.put(Constants.PROTOCOL_ADAPTER_TYPE_KURA, "kura");
         protocols.put(Constants.PROTOCOL_ADAPTER_TYPE_MQTT, "mqtt");
-        protocols.put(Constants.SERVICE_NAME_MESSAGING, "messaging");
     }
 
     /**

@@ -3,7 +3,7 @@
   <hashTree>
     <TestPlan guiclass="TestPlanGui" testclass="TestPlan" testname="AMQP throughput test" enabled="true">
       <boolProp name="TestPlan.functional_mode">false</boolProp>
-      <stringProp name="TestPlan.comments">Tests throughput at the AMQP message level. Can be used to determine the maximum number of telemetry messages or events that can be processed by e.g. Hono Messaging in conjunction with a Qpid Dispatch Router and/or Artemis broker.</stringProp>
+      <stringProp name="TestPlan.comments">Tests throughput at the AMQP message level. Can be used to determine the maximum number of telemetry messages or events that can be processed by a Qpid Dispatch Router and/or Artemis broker.</stringProp>
       <stringProp name="TestPlan.user_define_classpath"></stringProp>
       <boolProp name="TestPlan.serialize_threadgroups">false</boolProp>
       <collectionProp name="TestPlan.thread_groups"/>

@@ -172,7 +172,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     }
 
     /**
-     * Sets the client to use for connecting to the Hono Messaging component.
+     * Sets the client to use for connecting to the AMQP Messaging Network.
      *
      * @param honoClient The client.
      * @throws NullPointerException if hono client is {@code null}.
@@ -184,7 +184,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     }
 
     /**
-     * Gets the client used for connecting to the Hono Messaging component.
+     * Gets the client used for connecting to the AMQP Messaging Network.
      *
      * @return The client.
      */
@@ -1014,12 +1014,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
 
         msg.setAddress(target.getBasePath());
         MessageHelper.addDeviceId(msg, target.getResourceId());
-        if (!regAssertionRequired) {
-            // this adapter is not connected to Hono Messaging
-            // so we need to add the annotations for tenant and
-            // device ID
-            MessageHelper.annotate(msg, target);
-        }
+        MessageHelper.annotate(msg, target);
         if (publishAddress != null) {
             MessageHelper.addProperty(msg, MessageHelper.APP_PROPERTY_ORIG_ADDRESS, publishAddress);
         }
