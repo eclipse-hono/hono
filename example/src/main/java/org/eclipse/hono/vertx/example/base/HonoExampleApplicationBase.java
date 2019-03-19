@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -45,8 +45,7 @@ import org.slf4j.LoggerFactory;
  * <p>
  * This class implements all necessary code to get Hono's messaging consumer client and Hono's command client running.
  * <p>
- * The code consumes data until it receives
- * any input on it's console (which finishes it and closes vertx).
+ * The code consumes data until it receives any input on its console (which finishes it and closes vertx).
  */
 public class HonoExampleApplicationBase {
 
@@ -123,7 +122,7 @@ public class HonoExampleApplicationBase {
         latch.await();
 
         if (consumerFuture.succeeded()) {
-            System.in.read();
+            final int ignored = System.in.read();
         }
         vertx.close();
     }
