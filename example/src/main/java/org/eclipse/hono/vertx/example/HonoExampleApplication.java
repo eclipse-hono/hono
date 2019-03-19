@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -19,8 +19,8 @@ import org.eclipse.hono.vertx.example.base.HonoExampleApplicationBase;
  * Example class with minimal dependencies for consuming data from Hono and sending commands
  * to connected devices.
  * <p>
- * Please refer to {@link org.eclipse.hono.vertx.example.base.HonoExampleConstants} to configure where Hono's
- * microservices are reachable.
+ * Please refer to {@link org.eclipse.hono.vertx.example.base.HonoExampleConstants} to configure the host/port
+ * to which to connect.
  */
 public class HonoExampleApplication extends HonoExampleApplicationBase {
 
