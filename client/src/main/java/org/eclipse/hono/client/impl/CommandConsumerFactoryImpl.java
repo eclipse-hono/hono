@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -20,8 +20,8 @@ import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.eclipse.hono.auth.Device;
-import org.eclipse.hono.client.CommandConnection;
 import org.eclipse.hono.client.CommandConsumer;
+import org.eclipse.hono.client.CommandConsumerFactory;
 import org.eclipse.hono.client.CommandContext;
 import org.eclipse.hono.client.CommandResponseSender;
 import org.eclipse.hono.client.MessageConsumer;
@@ -36,7 +36,7 @@ import io.vertx.core.Vertx;
 /**
  * Implements a connection between an Adapter and the AMQP 1.0 network to receive commands and send a response.
  */
-public class CommandConnectionImpl extends HonoClientImpl implements CommandConnection {
+public class CommandConsumerFactoryImpl extends HonoClientImpl implements CommandConsumerFactory {
 
     /**
      * The minimum number of milliseconds to wait between checking a
@@ -65,7 +65,7 @@ public class CommandConnectionImpl extends HonoClientImpl implements CommandConn
      * @param clientConfigProperties The configuration properties to use.
      * @throws NullPointerException if clientConfigProperties is {@code null}
      */
-    public CommandConnectionImpl(final Vertx vertx, final ClientConfigProperties clientConfigProperties) {
+    public CommandConsumerFactoryImpl(final Vertx vertx, final ClientConfigProperties clientConfigProperties) {
         super(vertx, clientConfigProperties);
     }
 
@@ -80,7 +80,7 @@ public class CommandConnectionImpl extends HonoClientImpl implements CommandConn
      * @param clientConfigProperties The configuration properties to use.
      * @throws NullPointerException if clientConfigProperties is {@code null}
      */
-    public CommandConnectionImpl(final Vertx vertx, final ConnectionFactory connectionFactory, final ClientConfigProperties clientConfigProperties) {
+    public CommandConsumerFactoryImpl(final Vertx vertx, final ConnectionFactory connectionFactory, final ClientConfigProperties clientConfigProperties) {
         super(vertx, connectionFactory, clientConfigProperties);
     }
 
@@ -235,6 +235,7 @@ public class CommandConnectionImpl extends HonoClientImpl implements CommandConn
     /**
      * {@inheritDoc}
      */
+    @Deprecated
     @Override
     public Future<Void> closeCommandConsumer(final String tenantId, final String deviceId) {
 

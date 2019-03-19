@@ -40,7 +40,7 @@ import java.util.function.BiConsumer;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
-import org.eclipse.hono.client.CommandConnection;
+import org.eclipse.hono.client.CommandConsumerFactory;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.MessageSender;
@@ -115,7 +115,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
     private ResourceLimitChecks resourceLimitChecks;
     private MqttProtocolAdapterProperties config;
     private MqttAdapterMetrics metrics;
-    private CommandConnection commandConnection;
+    private CommandConsumerFactory commandConsumerFactory;
     private Context context;
 
     /**
@@ -171,10 +171,10 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         when(deviceRegistrationServiceClient.getOrCreateRegistrationClient(anyString()))
                 .thenReturn(Future.succeededFuture(regClient));
 
-        commandConnection = mock(CommandConnection.class);
-        when(commandConnection.isConnected()).thenReturn(
+        commandConsumerFactory = mock(CommandConsumerFactory.class);
+        when(commandConsumerFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoClient.class)));
+        when(commandConsumerFactory.isConnected()).thenReturn(
                 Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE)));
-        when(commandConnection.connect(any(Handler.class))).thenReturn(Future.succeededFuture(commandConnection));
 
         authHandler = mock(AuthHandler.class);
         resourceLimitChecks = mock(ResourceLimitChecks.class);
@@ -797,7 +797,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
 
         // WHEN a device subscribes to commands
         final MessageConsumer commandConsumer = mock(MessageConsumer.class);
-        when(commandConnection.createCommandConsumer(eq("tenant"), eq("deviceId"), any(Handler.class), any(Handler.class), anyLong()))
+        when(commandConsumerFactory.createCommandConsumer(eq("tenant"), eq("deviceId"), any(Handler.class), any(Handler.class), anyLong()))
             .thenReturn(Future.succeededFuture(commandConsumer));
         final List<MqttTopicSubscription> subscriptions = Collections.singletonList(
                 newMockTopicSubscription("control/tenant/deviceId/req/#", qos));
@@ -810,7 +810,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         adapter.onSubscribe(endpoint, null, msg, cmdHandler);
 
         // THEN the adapter creates a command consumer that is checked periodically
-        verify(commandConnection).createCommandConsumer(eq("tenant"), eq("deviceId"), any(Handler.class), any(Handler.class), anyLong());
+        verify(commandConsumerFactory).createCommandConsumer(eq("tenant"), eq("deviceId"), any(Handler.class), any(Handler.class), anyLong());
         // and the adapter registers a hook on the connection to the device
         final ArgumentCaptor<Handler<Void>> closeHookCaptor = ArgumentCaptor.forClass(Handler.class);
         verify(endpoint).closeHandler(closeHookCaptor.capture());
@@ -848,7 +848,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         subscriptions.add(newMockTopicSubscription("bumlux/+/+/#", MqttQoS.AT_MOST_ONCE));
         subscriptions.add(newMockTopicSubscription("bumlux/+/+/#", MqttQoS.AT_MOST_ONCE));
         // and for subscribing to commands
-        when(commandConnection.createCommandConsumer(eq("tenant-1"), eq("device-A"), any(Handler.class), any(Handler.class), anyLong()))
+        when(commandConsumerFactory.createCommandConsumer(eq("tenant-1"), eq("device-A"), any(Handler.class), any(Handler.class), anyLong()))
             .thenReturn(Future.succeededFuture(mock(MessageConsumer.class)));
         subscriptions.add(newMockTopicSubscription("control/tenant-1/device-A/req/#", MqttQoS.AT_MOST_ONCE));
         subscriptions.add(newMockTopicSubscription("control/tenant-1/device-B/req/#", MqttQoS.EXACTLY_ONCE));
@@ -1035,7 +1035,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         when(messagingClient.isConnected()).thenReturn(Future.succeededFuture());
         when(deviceRegistrationServiceClient.isConnected()).thenReturn(Future.succeededFuture());
         when(credentialsServiceClient.isConnected()).thenReturn(Future.succeededFuture());
-        when(commandConnection.isConnected()).thenReturn(Future.succeededFuture());
+        when(commandConsumerFactory.isConnected()).thenReturn(Future.succeededFuture());
     }
 
     @SuppressWarnings("unchecked")
@@ -1092,7 +1092,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         adapter.setHonoMessagingClient(messagingClient);
         adapter.setRegistrationServiceClient(deviceRegistrationServiceClient);
         adapter.setCredentialsServiceClient(credentialsServiceClient);
-        adapter.setCommandConnection(commandConnection);
+        adapter.setCommandConsumerFactory(commandConsumerFactory);
         adapter.setAuthHandler(authHandler);
         adapter.setResourceLimitChecks(resourceLimitChecks);
 

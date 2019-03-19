@@ -86,8 +86,9 @@ public interface HonoClient extends ConnectionLifecycle,
     }
 
     /**
-     * Connects to the Hono server using default TCP client options.
-     * <p>
+     * {@inheritDoc}
+     *
+     * The connection will be established using default options.
      * With the default options a client will try three times to establish a TCP connection to the peer
      * before giving up. Each attempt will be canceled after 200ms and the client will wait 500ms
      * before making the next attempt. Note that each connection attempt is made using the same IP
@@ -115,6 +116,7 @@ public interface HonoClient extends ConnectionLifecycle,
      *         <li>the maximum number of (unsuccessful) connection attempts have been made.</li>
      *         </ul>
      */
+    @Override
     Future<HonoClient> connect();
 
     /**

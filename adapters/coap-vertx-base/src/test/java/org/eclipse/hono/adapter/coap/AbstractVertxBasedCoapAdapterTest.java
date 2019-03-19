@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -43,7 +43,7 @@ import org.eclipse.californium.core.server.resources.CoapExchange;
 import org.eclipse.californium.core.server.resources.Resource;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
-import org.eclipse.hono.client.CommandConnection;
+import org.eclipse.hono.client.CommandConsumerFactory;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.RegistrationClient;
@@ -93,7 +93,7 @@ public class AbstractVertxBasedCoapAdapterTest {
     private RegistrationClient regClient;
     private TenantClient tenantClient;
     private CoapAdapterProperties config;
-    private CommandConnection commandConnection;
+    private CommandConsumerFactory commandConsumerFactory;
 
     /**
      * Sets up common fixture.
@@ -132,8 +132,8 @@ public class AbstractVertxBasedCoapAdapterTest {
         when(registrationServiceClient.getOrCreateRegistrationClient(anyString()))
                 .thenReturn(Future.succeededFuture(regClient));
 
-        commandConnection = mock(CommandConnection.class);
-        when(commandConnection.connect(any(Handler.class))).thenReturn(Future.succeededFuture(commandConnection));
+        commandConsumerFactory = mock(CommandConsumerFactory.class);
+        when(commandConsumerFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoClient.class)));
     }
 
     /**
@@ -518,7 +518,7 @@ public class AbstractVertxBasedCoapAdapterTest {
         if (complete) {
             adapter.setCredentialsServiceClient(credentialsServiceClient);
         }
-        adapter.setCommandConnection(commandConnection);
+        adapter.setCommandConsumerFactory(commandConsumerFactory);
         adapter.setMetrics(mock(CoapAdapterMetrics.class));
         adapter.init(vertx, mock(Context.class));
 

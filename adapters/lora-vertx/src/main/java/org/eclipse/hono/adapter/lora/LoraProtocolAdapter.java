@@ -305,7 +305,7 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
 
     private Future<MessageConsumer> startLoraCommandConsumer(final String tenantId) {
 
-        return getCommandConnection().createCommandConsumer(
+        return getCommandConsumerFactory().createCommandConsumer(
                 tenantId,
                 LORA_COMMAND_CONSUMER_DEVICE_ID,
                 receivedCommandContext -> commandConsumer(tenantId, receivedCommandContext),

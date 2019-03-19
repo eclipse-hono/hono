@@ -101,6 +101,18 @@ public interface CommandConsumerFactory extends ConnectionLifecycle {
             long livenessCheckInterval);
 
     /**
+     * Closes the command consumer for a given device.
+     *
+     * @param tenantId The tenant to consume commands from.
+     * @param deviceId The device for which the consumer will be created.
+     * @return A future indicating the outcome of the operation.
+     * @throws NullPointerException if tenantId or deviceId are {@code null}.
+     * @deprecated This method will be removed in Hono 1.0. Use {@link CommandConsumer#close(Handler)} instead.
+     */
+    @Deprecated
+    Future<Void> closeCommandConsumer(String tenantId, String deviceId);
+
+    /**
      * Gets a sender for sending command responses to a business application.
      * <p>
      * It is the responsibility of the calling code to properly close the

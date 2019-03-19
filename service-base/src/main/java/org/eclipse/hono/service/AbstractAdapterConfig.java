@@ -16,10 +16,10 @@ package org.eclipse.hono.service;
 import java.util.Optional;
 
 import org.eclipse.hono.cache.CacheProvider;
-import org.eclipse.hono.client.CommandConnection;
+import org.eclipse.hono.client.CommandConsumerFactory;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
-import org.eclipse.hono.client.impl.CommandConnectionImpl;
+import org.eclipse.hono.client.impl.CommandConsumerFactoryImpl;
 import org.eclipse.hono.client.impl.HonoClientImpl;
 import org.eclipse.hono.config.ApplicationConfigProperties;
 import org.eclipse.hono.config.ClientConfigProperties;
@@ -293,25 +293,26 @@ public abstract class AbstractAdapterConfig {
     @Qualifier(CommandConstants.COMMAND_ENDPOINT)
     @ConfigurationProperties(prefix = "hono.command")
     @Bean
-    public ClientConfigProperties commandConnectionClientConfig() {
+    public ClientConfigProperties commandConsumerFactoryConfig() {
         return new ClientConfigProperties();
     }
 
     /**
-     * Exposes the Command and Control connection.
+     * Exposes a factory for creating clients for receiving upstream commands
+     * via the AMQP Messaging Network.
      *
-     * @return The Connection.
+     * @return The factory.
      */
     @Bean
     @Scope("prototype")
-    public CommandConnection commandConnection() {
-        return new CommandConnectionImpl(vertx(), commandConnectionClientConfig());
+    public CommandConsumerFactory commandConsumerFactory() {
+        return new CommandConsumerFactoryImpl(vertx(), commandConsumerFactoryConfig());
     }
 
     /**
-     * Exposes configuration options for vertx.
-     *
-     * @return The Properties.
+     * Exposes configuration properties for vert.x.
+     * 
+     * @return The properties.
      */
     @ConfigurationProperties("hono.vertx")
     @Bean

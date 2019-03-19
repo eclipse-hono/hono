@@ -19,10 +19,25 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 
 /**
- * Provides access to the life cycle events of a connection to a Hono service.
+ * Provides access to the life cycle of a connection to a Hono service.
  *
  */
 public interface ConnectionLifecycle {
+
+    /**
+     * Establishes the underlying AMQP connection to the service.
+     *
+     * @return A future that will be completed with the established connection.
+     *         The future will be failed with a {@link ServiceInvocationException} if the
+     *         connection cannot be established, e.g. because
+     *         <ul>
+     *         <li>authentication failed, or</li>
+     *         <li>the connection has been shut down before the connection could be
+     *         established.</li>
+     *         <li>the maximum number of (unsuccessful) connection attempts have been made.</li>
+     *         </ul>
+     */
+    Future<HonoClient> connect();
 
     /**
      * Adds a listener to be notified when the connection is lost unexpectedly.
