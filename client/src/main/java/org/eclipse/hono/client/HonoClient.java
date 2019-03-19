@@ -71,12 +71,19 @@ public interface HonoClient extends ConnectionLifecycle,
                                     TenantClientFactory {
 
     /**
-     * Checks whether this client is connected to the service.
+     * Creates a new client using the default implementation.
+     * <p>
+     * <strong>Note:</strong> Instances of {@link ClientConfigProperties} are not thread safe and not immutable. They
+     * must not be modified after calling this method.
      *
-     * @return A succeeded future if this client is connected. Otherwise, the future will fail with a
-     *         {@link ServerErrorException}.
+     * @param vertx The vert.x instance to use or {@code null}, if a new vert.x instance should be created.
+     * @param clientConfigProperties The client properties to use.
+     * @return The created client.
+     * @throws NullPointerException if properties are {@code null}.
      */
-    Future<Void> isConnected();
+    static HonoClient newClient(final Vertx vertx, final ClientConfigProperties clientConfigProperties) {
+        return new HonoClientImpl(vertx, clientConfigProperties);
+    }
 
     /**
      * Connects to the Hono server using default TCP client options.
@@ -257,18 +264,4 @@ public interface HonoClient extends ConnectionLifecycle,
      *         AMQP <em>open</em> frame, {@code false} otherwise.
      */
     boolean supportsCapability(Symbol capability);
-
-    /**
-     * Create a new {@link HonoClient} using the default implementation.
-     * <p>
-     * <strong>Note:</strong> Instances of {@link ClientConfigProperties} are not thread safe and not immutable. They
-     * must not be modified after calling this method.
-     *
-     * @param vertx The vertx instance to use. May be {@code null}, in which case a new instance will be created.
-     * @param clientConfigProperties The client properties to use. Must not be {@code null}.
-     * @return A new instance of a <em>Hono Client</em>.
-     */
-    static HonoClient newClient(final Vertx vertx, final ClientConfigProperties clientConfigProperties) {
-        return new HonoClientImpl(vertx, clientConfigProperties);
-    }
 }
