@@ -30,8 +30,10 @@ import java.net.HttpURLConnection;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
-import org.eclipse.hono.client.CommandConnection;
+import org.eclipse.hono.client.CommandConsumerFactory;
+import org.eclipse.hono.client.DisconnectListener;
 import org.eclipse.hono.client.HonoClient;
+import org.eclipse.hono.client.ReconnectListener;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
@@ -56,7 +58,6 @@ import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
-import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonHelper;
 
 
@@ -84,7 +85,7 @@ public class AbstractProtocolAdapterBaseTest {
     private HonoClient registrationService;
     private HonoClient credentialsService;
     private HonoClient messagingService;
-    private CommandConnection commandConnection;
+    private CommandConsumerFactory commandConsumerFactory;
 
     /**
      * Sets up the fixture.
@@ -92,6 +93,8 @@ public class AbstractProtocolAdapterBaseTest {
     @SuppressWarnings("unchecked")
     @Before
     public void setup() {
+
+        final HonoClient connection = mock(HonoClient.class);
 
         tenantService = mock(HonoClient.class);
         when(tenantService.connect(any(Handler.class))).thenReturn(Future.succeededFuture(tenantService));
@@ -108,8 +111,8 @@ public class AbstractProtocolAdapterBaseTest {
         messagingService = mock(HonoClient.class);
         when(messagingService.connect(any(Handler.class))).thenReturn(Future.succeededFuture(messagingService));
 
-        commandConnection = mock(CommandConnection.class);
-        when(commandConnection.connect(any(Handler.class))).thenReturn(Future.succeededFuture(commandConnection));
+        commandConsumerFactory = mock(CommandConsumerFactory.class);
+        when(commandConsumerFactory.connect()).thenReturn(Future.succeededFuture(connection));
 
         properties = new ProtocolAdapterProperties();
         adapter = newProtocolAdapter(properties);
@@ -117,7 +120,7 @@ public class AbstractProtocolAdapterBaseTest {
         adapter.setRegistrationServiceClient(registrationService);
         adapter.setCredentialsServiceClient(credentialsService);
         adapter.setHonoMessagingClient(messagingService);
-        adapter.setCommandConnection(commandConnection);
+        adapter.setCommandConsumerFactory(commandConsumerFactory);
 
         vertx = mock(Vertx.class);
         // run timers immediately
@@ -165,7 +168,6 @@ public class AbstractProtocolAdapterBaseTest {
         final Handler<Void> commandConnectionHandler = mock(Handler.class);
         final Handler<Void> commandConnectionLostHandler = mock(Handler.class);
         givenAnAdapterConfiguredWithServiceClients(startupHandler, commandConnectionHandler, commandConnectionLostHandler);
-
         // WHEN starting the adapter
         adapter.startInternal().setHandler(ctx.asyncAssertSuccess(ok -> {
             // THEN the service clients have connected
@@ -173,8 +175,12 @@ public class AbstractProtocolAdapterBaseTest {
             verify(registrationService).connect(any(Handler.class));
             verify(messagingService).connect(any(Handler.class));
             verify(credentialsService).connect(any(Handler.class));
-            verify(commandConnection).connect(any(Handler.class));
+            verify(commandConsumerFactory).connect();
+            verify(commandConsumerFactory).addDisconnectListener(any(DisconnectListener.class));
+            verify(commandConsumerFactory).addReconnectListener(any(ReconnectListener.class));
             verify(startupHandler).handle(null);
+            // and the establishment of the command consumer factory's connection
+            // is signaled
             verify(commandConnectionHandler).handle(null);
             verify(commandConnectionLostHandler, never()).handle(null);
         }));
@@ -196,14 +202,16 @@ public class AbstractProtocolAdapterBaseTest {
         final Handler<Void> commandConnectionLostHandler = mock(Handler.class);
         givenAnAdapterConfiguredWithServiceClients(mock(Handler.class), commandConnectionEstablishedHandler, commandConnectionLostHandler);
         adapter.startInternal().setHandler(ctx.asyncAssertSuccess(ok -> {
-            final ArgumentCaptor<Handler<ProtonConnection>> disconnectHandlerCaptor = ArgumentCaptor.forClass(Handler.class);
-            verify(commandConnection).connect(disconnectHandlerCaptor.capture());
+            final ArgumentCaptor<DisconnectListener> disconnectHandlerCaptor = ArgumentCaptor.forClass(DisconnectListener.class);
+            verify(commandConsumerFactory).addDisconnectListener(disconnectHandlerCaptor.capture());
+            final ArgumentCaptor<ReconnectListener> reconnectHandlerCaptor = ArgumentCaptor.forClass(ReconnectListener.class);
+            verify(commandConsumerFactory).addReconnectListener(reconnectHandlerCaptor.capture());
             // WHEN the command connection is lost
-            disconnectHandlerCaptor.getValue().handle(mock(ProtonConnection.class));
+            disconnectHandlerCaptor.getValue().onDisconnect(mock(HonoClient.class));
             // THEN the onCommandConnectionLost hook is being invoked,
             verify(commandConnectionLostHandler).handle(null);
-            // the connection is re-established and
-            verify(commandConnection, times(2)).connect(any(Handler.class));
+            // and when the connection is re-established
+            reconnectHandlerCaptor.getValue().onReconnect(mock(HonoClient.class));
             // the onCommandConnectionEstablished hook is being invoked
             verify(commandConnectionEstablishedHandler, times(2)).handle(null);
         }));
@@ -220,7 +228,7 @@ public class AbstractProtocolAdapterBaseTest {
         adapter.setHonoMessagingClient(messagingService);
         adapter.setRegistrationServiceClient(registrationService);
         adapter.setTenantServiceClient(tenantService);
-        adapter.setCommandConnection(commandConnection);
+        adapter.setCommandConsumerFactory(commandConsumerFactory);
     }
 
     /**

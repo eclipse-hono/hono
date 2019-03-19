@@ -671,7 +671,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             final ProtonSender sender,
             final ResourceIdentifier sourceAddress) {
 
-        return getCommandConnection().createCommandConsumer(
+        return getCommandConsumerFactory().createCommandConsumer(
                 sourceAddress.getTenantId(),
                 sourceAddress.getResourceId(),
                 commandContext -> {

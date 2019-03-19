@@ -20,11 +20,12 @@ import java.util.function.BiConsumer;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
-import org.eclipse.hono.client.CommandConnection;
 import org.eclipse.hono.client.CommandConsumer;
+import org.eclipse.hono.client.CommandConsumerFactory;
 import org.eclipse.hono.client.CommandContext;
 import org.eclipse.hono.client.CommandResponse;
 import org.eclipse.hono.client.CommandResponseSender;
+import org.eclipse.hono.client.ConnectionLifecycle;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.MessageSender;
@@ -91,7 +92,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     private HonoClient registrationServiceClient;
     private HonoClient tenantServiceClient;
     private HonoClient credentialsServiceClient;
-    private CommandConnection commandConnection;
+    private CommandConsumerFactory commandConsumerFactory;
     private ConnectionLimitManager connectionLimitManager;
 
     private ConnectionEventProducer connectionEventProducer;
@@ -298,23 +299,23 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     }
 
     /**
-     * Sets the client to use for connecting to the AMQP 1.0 network to receive commands.
+     * Sets the factory to use for creating clients to receive commands via the AMQP Messaging Network.
      *
-     * @param commandConnection The command connection.
-     * @throws NullPointerException if the connection is {@code null}.
+     * @param factory The factory.
+     * @throws NullPointerException if factory is {@code null}.
      */
     @Autowired
-    public final void setCommandConnection(final CommandConnection commandConnection) {
-        this.commandConnection = Objects.requireNonNull(commandConnection);
+    public final void setCommandConsumerFactory(final CommandConsumerFactory factory) {
+        this.commandConsumerFactory = Objects.requireNonNull(factory);
     }
 
     /**
-     * Gets the client used for connecting to the AMQP 1.0 network to receive commands.
+     * Gets the factory used for creating clients to receive commands via the AMQP Messaging Network.
      *
-     * @return The command connection.
+     * @return The factory.
      */
-    public final CommandConnection getCommandConnection() {
-        return this.commandConnection;
+    public final CommandConsumerFactory getCommandConsumerFactory() {
+        return this.commandConsumerFactory;
     }
 
     /**
@@ -363,18 +364,20 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
             result.fail(new IllegalStateException("Device Registration service client must be set"));
         } else if (credentialsServiceClient == null) {
             result.fail(new IllegalStateException("Credentials service client must be set"));
-        } else if (commandConnection == null) {
-            result.fail(new IllegalStateException("Command & Control service client must be set"));
+        } else if (commandConsumerFactory == null) {
+            result.fail(new IllegalStateException("Command & Control client factory must be set"));
         } else {
             connectToService(tenantServiceClient, "Tenant service");
             connectToService(messagingClient, "AMQP Messaging Network");
             connectToService(registrationServiceClient, "Device Registration service");
             connectToService(credentialsServiceClient, "Credentials service");
-            connectToService(
-                    commandConnection,
-                    "Command and Control service",
-                    this::onCommandConnectionEstablished,
-                    this::onCommandConnectionLost);
+            commandConsumerFactory.connect().setHandler(c -> {
+                if (c.succeeded()) {
+                    onCommandConnectionEstablished(c.result());
+                }
+            });
+            commandConsumerFactory.addDisconnectListener(this::onCommandConnectionLost);
+            commandConsumerFactory.addReconnectListener(this::onCommandConnectionEstablished);
             doStart(result);
         }
         return result;
@@ -416,10 +419,10 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
 
         return CompositeFuture.all(
                 closeServiceClient(messagingClient),
-                closeServiceClient(commandConnection),
                 closeServiceClient(tenantServiceClient),
                 closeServiceClient(registrationServiceClient),
-                closeServiceClient(credentialsServiceClient));
+                closeServiceClient(credentialsServiceClient),
+                disconnectFromService(commandConsumerFactory));
     }
 
     private Future<Void> closeServiceClient(final HonoClient client) {
@@ -432,6 +435,13 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         }
 
         return shutdownTracker;
+    }
+
+    private Future<Void> disconnectFromService(final ConnectionLifecycle connection) {
+
+        final Future<Void> disconnectTracker = Future.future();
+        connection.disconnect(disconnectTracker);
+        return disconnectTracker;
     }
 
     /**
@@ -673,7 +683,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
                 .map(client -> client.isConnected())
                 .orElse(Future.failedFuture(new ServerErrorException(
                         HttpURLConnection.HTTP_UNAVAILABLE, "Messaging client is not set")));
-        final Future<Void> commandCheck = Optional.ofNullable(commandConnection)
+        final Future<Void> commandCheck = Optional.ofNullable(commandConsumerFactory)
                 .map(client -> client.isConnected())
                 .orElse(Future.failedFuture(new ServerErrorException(
                         HttpURLConnection.HTTP_UNAVAILABLE, "Command & Control client is not set")));
@@ -695,7 +705,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
             final Handler<CommandContext> commandConsumer,
             final Handler<Void> closeHandler) {
 
-        return commandConnection.createCommandConsumer(
+        return commandConsumerFactory.createCommandConsumer(
                 tenantId,
                 deviceId,
                 commandContext -> {
@@ -717,7 +727,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     @Deprecated
     protected final void closeCommandConsumer(final String tenantId, final String deviceId) {
 
-        getCommandConnection().closeCommandConsumer(tenantId, deviceId).otherwise(t -> {
+        getCommandConsumerFactory().closeCommandConsumer(tenantId, deviceId).otherwise(t -> {
             LOG.warn("cannot close command consumer [tenant-id: {}, device-id: {}]: {}",
                     tenantId, deviceId, t.getMessage());
             return null;
@@ -735,7 +745,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     protected final Future<CommandResponseSender> createCommandResponseSender(
             final String tenantId,
             final String replyId) {
-        return commandConnection.getCommandResponseSender(tenantId, replyId);
+        return commandConsumerFactory.getCommandResponseSender(tenantId, replyId);
     }
 
     /**

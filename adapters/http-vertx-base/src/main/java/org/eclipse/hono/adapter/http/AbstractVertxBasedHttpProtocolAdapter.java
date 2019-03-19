@@ -859,7 +859,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
             return Future.succeededFuture();
         } else {
             currentSpan.setTag(MessageHelper.APP_PROPERTY_DEVICE_TTD, ttdSecs);
-            return getCommandConnection().createCommandConsumer(
+            return getCommandConsumerFactory().createCommandConsumer(
                     tenantId,
                     deviceId,
                     commandContext -> {
