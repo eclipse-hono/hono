@@ -27,6 +27,8 @@ if [ -z "$SKIP_OLM_CHECK" -a $(is_olm_deployed) == "NO" ]; then
 	exit 1
 fi
 
+set +e
+
 echo DEPLOYING ECLIPSE HONO TO KUBERNETES
 
 # creating Hono namespace
