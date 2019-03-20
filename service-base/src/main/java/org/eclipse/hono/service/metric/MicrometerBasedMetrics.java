@@ -22,6 +22,7 @@ import java.util.function.Supplier;
 
 import org.eclipse.hono.service.metric.MetricsTags.Direction;
 import org.eclipse.hono.service.metric.MetricsTags.ProcessingOutcome;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import io.micrometer.core.instrument.DistributionSummary;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -89,6 +90,7 @@ public class MicrometerBasedMetrics implements Metrics {
      * 
      * @param legacyMetrics The additional legacy metrics to report.
      */
+    @Autowired(required = false)
     public final void setLegacyMetrics(final LegacyMetrics legacyMetrics) {
         this.legacyMetrics = legacyMetrics;
     }

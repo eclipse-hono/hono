@@ -16,7 +16,9 @@ package org.eclipse.hono.service.metric;
 
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.mockito.Mockito.*;
 
+import org.eclipse.hono.service.metric.MetricsTags.EndpointType;
 import org.eclipse.hono.service.metric.MetricsTags.QoS;
 import org.eclipse.hono.service.metric.MetricsTags.TtdStatus;
 import org.junit.Before;
@@ -71,5 +73,26 @@ public class MicrometerBasedMetricsTest {
                 .tags(expectedTags).tagKeys(MetricsTags.QoS.TAG_NAME).timer());
         assertNull(registry.find(MicrometerBasedMetrics.METER_MESSAGES_RECEIVED)
                 .tags(expectedTags).tagKeys(MetricsTags.TtdStatus.TAG_NAME).timer());
+    }
+
+    /**
+     * Verifies that when reporting a downstream message the legacy metrics
+     * are also reported, if set.
+     */
+    @Test
+    public void testReportTelemetryInvokesLegacyMetrics() {
+
+        final LegacyMetrics legacyMetrics = mock(LegacyMetrics.class);
+        metrics.setLegacyMetrics(legacyMetrics);
+        metrics.reportTelemetry(
+                MetricsTags.EndpointType.TELEMETRY,
+                "tenant",
+                MetricsTags.ProcessingOutcome.FORWARDED,
+                MetricsTags.QoS.UNKNOWN,
+                1024,
+                MetricsTags.TtdStatus.NONE,
+                metrics.startTimer());
+
+        verify(legacyMetrics).incrementProcessedMessages(eq(EndpointType.TELEMETRY), eq("tenant"));
     }
 }
