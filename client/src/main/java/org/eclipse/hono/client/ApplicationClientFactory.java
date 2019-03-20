@@ -35,8 +35,9 @@ public interface ApplicationClientFactory extends ConnectionLifecycle {
      * @param tenantId The tenant to consume data for.
      * @param telemetryConsumer The handler to invoke with every message received.
      * @param closeHandler The handler invoked when the peer detaches the link.
-     * @return A future that will complete with the consumer once the link has been established. The future will fail if
-     *         the link cannot be established, e.g. because this client is not connected.
+     * @return A future that will complete with the consumer once the link has been established.
+     *         The future will fail if the link cannot be established, e.g. because this factory
+     *         is not connected.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
     Future<MessageConsumer> createTelemetryConsumer(
@@ -53,8 +54,9 @@ public interface ApplicationClientFactory extends ConnectionLifecycle {
      * @param tenantId The tenant to consume events for.
      * @param eventConsumer The handler to invoke with every event received.
      * @param closeHandler The handler invoked when the peer detaches the link.
-     * @return A future that will complete with the consumer once the link has been established. The future will fail if
-     *         the link cannot be established, e.g. because this client is not connected.
+     * @return A future that will complete with the consumer once the link has been established.
+     *         The future will fail if the link cannot be established, e.g. because this factory
+     *         is not connected.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
     Future<MessageConsumer> createEventConsumer(
@@ -71,8 +73,9 @@ public interface ApplicationClientFactory extends ConnectionLifecycle {
      * @param tenantId The tenant to consume events for.
      * @param eventConsumer The handler to invoke with every event received.
      * @param closeHandler The handler invoked when the peer detaches the link.
-     * @return A future that will complete with the consumer once the link has been established. The future will fail if
-     *         the link cannot be established, e.g. because this client is not connected.
+     * @return A future that will complete with the consumer once the link has been established.
+     *         The future will fail if the link cannot be established, e.g. because this factory
+     *         is not connected.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
     Future<MessageConsumer> createEventConsumer(
@@ -81,7 +84,8 @@ public interface ApplicationClientFactory extends ConnectionLifecycle {
             Handler<Void> closeHandler);
 
     /**
-     * Creates a client for consuming async command responses from Hono's north bound <em>Command API</em>.
+     * Creates a client for consuming responses to commands that have been sent asynchronously
+     * using Hono's north bound <em>Command &amp; Control API</em>.
      * <p>
      * The command responses passed in to the consumer will be settled automatically if the consumer does not
      * throw an exception.
@@ -90,8 +94,9 @@ public interface ApplicationClientFactory extends ConnectionLifecycle {
      * @param replyId The replyId of commands to consume command responses for.
      * @param consumer The handler to invoke with every command response received.
      * @param closeHandler The handler invoked when the peer detaches the link.
-     * @return A future that will complete with the consumer once the link has been established. The future will fail if
-     *         the link cannot be established, e.g. because this client is not connected.
+     * @return A future that will complete with the consumer once the link has been established.
+     *         The future will fail if the link cannot be established, e.g. because this factory
+     *         is not connected.
      * @throws NullPointerException if any of the parameters is {@code null}.
      * @see org.eclipse.hono.client.AsyncCommandClient
      */
@@ -108,8 +113,9 @@ public interface ApplicationClientFactory extends ConnectionLifecycle {
      * @param replyId The replyId of commands to consume command responses for.
      * @param consumer The handler to invoke with every command response received.
      * @param closeHandler The handler invoked when the peer detaches the link.
-     * @return A future that will complete with the consumer once the link has been established. The future will fail if
-     *         the link cannot be established, e.g. because this client is not connected.
+     * @return A future that will complete with the consumer once the link has been established.
+     *         The future will fail if the link cannot be established, e.g. because this client
+     *         is not connected.
      * @throws NullPointerException if any of the parameters is {@code null}.
      * @see org.eclipse.hono.client.AsyncCommandClient
      */
@@ -173,7 +179,7 @@ public interface ApplicationClientFactory extends ConnectionLifecycle {
      *
      * @param tenantId The tenant that the device belongs to.
      * @param deviceId The device to send the commands to.
-     * @return A future that will complete with the async command client (if successful) or
+     * @return A future that will complete with the command client (if successful) or
      *         fail if the client cannot be created, e.g. because the underlying connection
      *         is not established or if a concurrent request to create a client for the same
      *         tenant and device is already being executed.

@@ -27,6 +27,7 @@ import java.util.function.Supplier;
 
 import org.apache.qpid.proton.amqp.messaging.Accepted;
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.client.AsyncCommandClient;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.CommandClient;
 import org.eclipse.hono.client.MessageConsumer;
@@ -41,6 +42,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.ext.unit.Async;
@@ -103,6 +105,55 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
         });
     }
 
+    private void connectAndSubscribe(
+            final TestContext ctx,
+            final Function<ProtonSender, ProtonMessageHandler> commandConsumerFactory) {
+
+        final Async setup = ctx.async();
+        final Async notificationReceived = ctx.async();
+
+        connectToAdapter(tenant, deviceId, password, () -> createEventConsumer(tenantId, msg -> {
+            // expect empty notification with TTD -1
+            ctx.assertEquals(EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION, msg.getContentType());
+            final TimeUntilDisconnectNotification notification = TimeUntilDisconnectNotification.fromMessage(msg).orElse(null);
+            log.debug("received notification [{}]", notification);
+            ctx.assertNotNull(notification);
+            if (notification.getTtd() == -1) {
+                notificationReceived.complete();
+            }
+        }))
+        .compose(con -> createProducer(null))
+        .compose(sender -> subscribeToCommands(tenantId, deviceId, commandConsumerFactory.apply(sender)))
+        .setHandler(ctx.asyncAssertSuccess(ok -> setup.complete()));
+        setup.await();
+        notificationReceived.await();
+    }
+
+    private ProtonMessageHandler createCommandConsumer(final TestContext ctx, final ProtonSender sender) {
+
+        return (delivery, msg) -> {
+            ctx.assertNotNull(msg.getReplyTo());
+            ctx.assertNotNull(msg.getSubject());
+            ctx.assertNotNull(msg.getCorrelationId());
+            final String command = msg.getSubject();
+            final Object correlationId = msg.getCorrelationId();
+            log.debug("received command [name: {}, reply-to: {}, correlation-id: {}]", command, msg.getReplyTo(), correlationId);
+            // send response
+            final Message commandResponse = ProtonHelper.message(command + " ok");
+            commandResponse.setAddress(msg.getReplyTo());
+            commandResponse.setCorrelationId(correlationId);
+            commandResponse.setContentType("text/plain");
+            MessageHelper.addProperty(commandResponse, MessageHelper.APP_PROPERTY_STATUS, HttpURLConnection.HTTP_OK);
+            log.debug("sending response [to: {}, correlation-id: {}]", commandResponse.getAddress(), commandResponse.getCorrelationId());
+            sender.send(commandResponse, updatedDelivery -> {
+                if (!Accepted.class.isInstance(updatedDelivery.getRemoteState())) {
+                    log.error("AMQP adapter did not accept command response [remote state: {}]",
+                            updatedDelivery.getRemoteState().getClass().getSimpleName());
+                }
+            });
+        };
+    }
+
     /**
      * Verifies that the adapter forwards on-way commands from
      * an application to a device.
@@ -129,6 +180,76 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
     }
 
     /**
+     * Verifies that the adapter forwards commands and responses hence and forth between
+     * an application and a device that have been sent using the async API.
+     * 
+     * 
+     * @param ctx The vert.x test context.
+     * @throws InterruptedException if not all commands and responses are exchanged in time.
+     */
+    @Test
+    public void testSendAsyncCommandsSucceeds(final TestContext ctx) throws InterruptedException {
+
+        connectAndSubscribe(ctx, sender -> createCommandConsumer(ctx, sender));
+
+        final String replyId = "reply-id";
+        final int totalNoOfcommandsToSend = 60;
+        final CountDownLatch commandsSucceeded = new CountDownLatch(totalNoOfcommandsToSend);
+        final AtomicInteger commandsSent = new AtomicInteger(0);
+        final AtomicLong lastReceivedTimestamp = new AtomicLong();
+
+        final Async commandClientCreation = ctx.async();
+
+        final Future<MessageConsumer> asyncResponseConsumer = helper.honoClient.createAsyncCommandResponseConsumer(
+                tenantId,
+                replyId,
+                response -> {
+                    lastReceivedTimestamp.set(System.currentTimeMillis());
+                    commandsSucceeded.countDown();
+                    if (commandsSucceeded.getCount() % 20 == 0) {
+                        log.info("command responses received: {}", totalNoOfcommandsToSend - commandsSucceeded.getCount());
+                    }
+                },
+                null);
+        final Future<AsyncCommandClient> asyncCommandClient = helper.honoClient.getOrCreateAsyncCommandClient(tenantId, deviceId);
+
+        CompositeFuture.all(asyncResponseConsumer, asyncCommandClient).setHandler(ctx.asyncAssertSuccess(ok -> commandClientCreation.complete()));
+        commandClientCreation.await();
+
+        final long start = System.currentTimeMillis();
+
+        while (commandsSent.get() < totalNoOfcommandsToSend) {
+            final Async commandSent = ctx.async();
+            context.runOnContext(go -> {
+                final String correlationId = String.valueOf(commandsSent.getAndIncrement());
+                final Buffer msg = Buffer.buffer("value: " + correlationId);
+                asyncCommandClient.result().sendAsyncCommand("setValue", "text/plain", msg, correlationId, replyId, null).setHandler(sendAttempt -> {
+                    if (sendAttempt.failed()) {
+                        log.debug("error sending command {}", correlationId, sendAttempt.cause());
+                    }
+                    if (commandsSent.get() % 20 == 0) {
+                        log.info("commands sent: " + commandsSent.get());
+                    }
+                    commandSent.complete();
+                });
+            });
+
+            commandSent.await();
+        }
+
+        final long timeToWait = totalNoOfcommandsToSend * 200;
+        if (!commandsSucceeded.await(timeToWait, TimeUnit.MILLISECONDS)) {
+            log.info("Timeout of {} milliseconds reached, stop waiting for command responses", timeToWait);
+        }
+        final long commandsCompleted = totalNoOfcommandsToSend - commandsSucceeded.getCount();
+        log.info("commands sent: {}, responses received: {} after {} milliseconds",
+                commandsSent.get(), commandsCompleted, lastReceivedTimestamp.get() - start);
+        if (commandsCompleted != commandsSent.get()) {
+            ctx.fail("did not complete all commands sent");
+        }
+    }
+
+    /**
      * Verifies that the adapter forwards commands and response hence and forth between
      * an application and a device.
      * 
@@ -138,34 +259,18 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
     @Test
     public void testSendCommandSucceeds(final TestContext ctx) throws InterruptedException {
 
-        testSendCommandSucceeds(ctx, sender -> (delivery, msg) -> {
-            ctx.assertNotNull(msg.getReplyTo());
-            ctx.assertNotNull(msg.getSubject());
-            ctx.assertNotNull(msg.getCorrelationId());
-            final String command = msg.getSubject();
-            final Object correlationId = msg.getCorrelationId();
-            log.debug("received command [name: {}, reply-to: {}, correlation-id: {}]", command, msg.getReplyTo(), correlationId);
-            // send response
-            final Message commandResponse = ProtonHelper.message(command + " ok");
-            commandResponse.setAddress(msg.getReplyTo());
-            commandResponse.setCorrelationId(correlationId);
-            commandResponse.setContentType("text/plain");
-            MessageHelper.addProperty(commandResponse, MessageHelper.APP_PROPERTY_STATUS, HttpURLConnection.HTTP_OK);
-            log.debug("sending response [to: {}, correlation-id: {}]", commandResponse.getAddress(), commandResponse.getCorrelationId());
-            sender.send(commandResponse, updatedDelivery -> {
-                if (!Accepted.class.isInstance(updatedDelivery.getRemoteState())) {
-                    log.error("AMQP adapter did not accept command response [remote state: {}]",
-                            updatedDelivery.getRemoteState().getClass().getSimpleName());
-                }
-            });
-        }, (commandClient, payload) -> {
-            return commandClient.sendCommand("setValue", "text/plain", payload, null)
-                    .map(response -> {
-                        ctx.assertEquals(deviceId, response.getApplicationProperty(MessageHelper.APP_PROPERTY_DEVICE_ID, String.class));
-                        ctx.assertEquals(tenantId, response.getApplicationProperty(MessageHelper.APP_PROPERTY_TENANT_ID, String.class));
-                        return response;
-                    });
-        }, 60);
+        testSendCommandSucceeds(
+                ctx,
+                sender -> createCommandConsumer(ctx, sender),
+                (commandClient, payload) -> {
+                    return commandClient.sendCommand("setValue", "text/plain", payload, null)
+                            .map(response -> {
+                                ctx.assertEquals(deviceId, response.getApplicationProperty(MessageHelper.APP_PROPERTY_DEVICE_ID, String.class));
+                                ctx.assertEquals(tenantId, response.getApplicationProperty(MessageHelper.APP_PROPERTY_TENANT_ID, String.class));
+                                return response;
+                            });
+                },
+                60);
     }
 
     private void testSendCommandSucceeds(
@@ -174,24 +279,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
             final BiFunction<CommandClient, Buffer, Future<?>> commandSender,
             final int totalNoOfcommandsToSend) throws InterruptedException {
 
-        final Async setup = ctx.async();
-        final Async notificationReceived = ctx.async();
-
-        connectToAdapter(tenant, deviceId, password, () -> createEventConsumer(tenantId, msg -> {
-            // expect empty notification with TTD -1
-            ctx.assertEquals(EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION, msg.getContentType());
-            final TimeUntilDisconnectNotification notification = TimeUntilDisconnectNotification.fromMessage(msg).orElse(null);
-            log.debug("received notification [{}]", notification);
-            ctx.assertNotNull(notification);
-            if (notification.getTtd() == -1) {
-                notificationReceived.complete();
-            }
-        }))
-        .compose(con -> createProducer(null))
-        .compose(sender -> subscribeToCommands(tenantId, deviceId, commandConsumerFactory.apply(sender)))
-        .setHandler(ctx.asyncAssertSuccess(ok -> setup.complete()));
-        setup.await();
-        notificationReceived.await();
+        connectAndSubscribe(ctx, commandConsumerFactory);
 
         final CountDownLatch commandsSucceeded = new CountDownLatch(totalNoOfcommandsToSend);
         final AtomicInteger commandsSent = new AtomicInteger(0);

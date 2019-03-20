@@ -22,12 +22,6 @@ import io.vertx.core.buffer.Buffer;
  * A client for sending asynchronous request response commands.
  * <p>
  * An instance of this interface is always scoped to a specific tenant and device.
- * </p>
- *
- * @see org.eclipse.hono.client.HonoClient#createAsyncCommandResponseConsumer(String, String,
- *      java.util.function.Consumer, io.vertx.core.Handler)
- * @see org.eclipse.hono.client.HonoClient#createAsyncCommandResponseConsumer(String, String,
- *      java.util.function.BiConsumer, io.vertx.core.Handler)
  */
 public interface AsyncCommandClient extends MessageSender {
 
@@ -52,9 +46,9 @@ public interface AsyncCommandClient extends MessageSender {
      *         The future will fail with a {@link ServiceInvocationException} if the command could not be forwarded to
      *         the device.
      * @throws NullPointerException if command, correlationId or replyId is {@code null}.
-     * @see org.eclipse.hono.client.HonoClient#createAsyncCommandResponseConsumer(String, String,
+     * @see ApplicationClientFactory#createAsyncCommandResponseConsumer(String, String,
      *      java.util.function.Consumer, io.vertx.core.Handler)
-     * @see org.eclipse.hono.client.HonoClient#createAsyncCommandResponseConsumer(String, String,
+     * @see ApplicationClientFactory#createAsyncCommandResponseConsumer(String, String,
      *      java.util.function.BiConsumer, io.vertx.core.Handler)
      */
     Future<Void> sendAsyncCommand(String command, Buffer data, String correlationId, String replyId);
@@ -82,9 +76,9 @@ public interface AsyncCommandClient extends MessageSender {
      *         The future will fail with a {@link ServiceInvocationException} if the command could not be forwarded to
      *         the device.
      * @throws NullPointerException if command, correlationId or replyId is {@code null}.
-     * @see org.eclipse.hono.client.HonoClient#createAsyncCommandResponseConsumer(String, String,
+     * @see ApplicationClientFactory#createAsyncCommandResponseConsumer(String, String,
      *      java.util.function.Consumer, io.vertx.core.Handler)
-     * @see org.eclipse.hono.client.HonoClient#createAsyncCommandResponseConsumer(String, String,
+     * @see ApplicationClientFactory#createAsyncCommandResponseConsumer(String, String,
      *      java.util.function.BiConsumer, io.vertx.core.Handler)
      */
     Future<Void> sendAsyncCommand(String command, String contentType, Buffer data, String correlationId, String replyId,
