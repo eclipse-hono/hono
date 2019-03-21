@@ -190,6 +190,7 @@ public class TenantAmqpIT {
         helper.registry.addTenant(JsonObject.mapFrom(payload))
                 .compose(r -> tenantClient.get(subjectDn))
                 .setHandler(ctx.asyncAssertSuccess(tenantObject -> {
+
                     ctx.assertEquals(tenantId, tenantObject.getTenantId());
                     final JsonObject trustedCa = tenantObject.getProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA);
                     ctx.assertNotNull(trustedCa);
@@ -226,6 +227,30 @@ public class TenantAmqpIT {
                                 HttpURLConnection.HTTP_FORBIDDEN,
                                 ((ServiceInvocationException) t).getErrorCode());
                     }));
+    }
+
+    /**
+     * Verify that a request to add a tenant returns a 400 status code when the request payload defines a trusted CA
+     * configuration containing an invalid Base64 encoding for its <em>public-key</em> property.
+     *
+     * @param ctx The Vert.x test context.
+     */
+    @Test
+    public void testAddTenantFailsIfTrustedCaPublicKeyHasInvalidEncoding(final TestContext ctx) {
+
+        final JsonObject malformedTrustedCa = new JsonObject()
+                .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, "CN=test")
+                .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, "NotBase64Encoded");
+
+        final String tenantId = Constants.DEFAULT_TENANT;
+        final TenantObject payload = TenantObject.from(tenantId, true)
+                .setProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, malformedTrustedCa);
+
+        helper.registry.addTenant(JsonObject.mapFrom(payload))
+        .setHandler(ctx.asyncAssertFailure(t -> {
+                    ctx.assertEquals(HttpURLConnection.HTTP_BAD_REQUEST,
+                            ((ServiceInvocationException) t).getErrorCode());
+        }));
     }
 
     private PublicKey getRandomPublicKey() throws NoSuchAlgorithmException {

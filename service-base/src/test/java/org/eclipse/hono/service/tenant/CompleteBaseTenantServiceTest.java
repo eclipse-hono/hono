@@ -13,7 +13,14 @@
 
 package org.eclipse.hono.service.tenant;
 
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.net.HttpURLConnection;
+import java.security.cert.CertificateException;
+import java.security.cert.CertificateFactory;
+import java.security.cert.X509Certificate;
+import java.util.UUID;
 
 import javax.security.auth.x500.X500Principal;
 
@@ -23,6 +30,7 @@ import org.eclipse.hono.util.EventBusMessage;
 import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantObject;
 import org.eclipse.hono.util.TenantResult;
+import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.rules.Timeout;
@@ -34,6 +42,7 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import io.vertx.core.net.SelfSignedCertificate;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 
@@ -48,6 +57,7 @@ public class CompleteBaseTenantServiceTest {
     private static final String TEST_TENANT = "dummy";
 
     private static CompleteBaseTenantService<ServiceConfigProperties> tenantService;
+    private static SelfSignedCertificate testCertificate;
 
     /**
      * Time out each test after five seconds.
@@ -60,6 +70,15 @@ public class CompleteBaseTenantServiceTest {
     @BeforeClass
     public static void setUp() {
         tenantService = createCompleteBaseTenantService();
+        testCertificate = SelfSignedCertificate.create(UUID.randomUUID().toString());
+    }
+
+    /**
+     * Deletes the test certificate.
+     */
+    @AfterClass
+    public static void tearDown() {
+        testCertificate.delete();
     }
 
     /**
@@ -178,9 +197,10 @@ public class CompleteBaseTenantServiceTest {
      * containing both a certificate and a public key.
      *
      * @param ctx The vert.x test context.
+     * @throws CertificateException if the test certificate cannot be created.
      */
     @Test
-    public void testAddFailsForTrustedCaWithCertAndPk(final TestContext ctx) {
+    public void testAddFailsForTrustedCaWithCertAndPk(final TestContext ctx) throws CertificateException {
 
         final JsonObject malformedTrustedCa = new JsonObject()
                 .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, "CN=test")
@@ -197,18 +217,20 @@ public class CompleteBaseTenantServiceTest {
 
     /**
      * Verifies that the base service accepts a payload that defines a trusted CA
-     * containing both a subject DN and a public key.
+     * containing both a subject DN and a valid Base64 encoded public key.
      *
      * @param ctx The vert.x test context.
+     * @throws CertificateException if the test certificate cannot be created.
      */
     @Test
-    public void testAddSucceedsForTrustedCaWithSubjectDnAndPk(final TestContext ctx) {
+    public void testAddSucceedsForTrustedCaWithSubjectDnAndPk(final TestContext ctx) throws CertificateException {
 
-        final JsonObject malformedTrustedCa = new JsonObject()
+        final X509Certificate cert = getSelfSignedCertificate();
+        final JsonObject validTrustedCa = new JsonObject()
                 .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, "CN=test")
-                .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, "key");
+                .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, cert.getPublicKey().getEncoded());
         final JsonObject testPayload = createValidTenantPayload();
-        testPayload.put(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, malformedTrustedCa);
+        testPayload.put(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, validTrustedCa);
 
         final EventBusMessage msg = createRequest(TenantConstants.TenantAction.add, testPayload);
         tenantService.processRequest(msg).setHandler(ctx.asyncAssertSuccess());
@@ -216,21 +238,72 @@ public class CompleteBaseTenantServiceTest {
 
     /**
      * Verifies that the base service accepts a payload that defines a trusted CA
-     * containing both a subject DN and a certificate.
+     * containing both a subject DN and a valid Base64 encoded certificate.
      *
      * @param ctx The vert.x test context.
+     * @throws CertificateException if the test certificate cannot be created.
      */
     @Test
-    public void testAddSucceedsForTrustedCaWithSubjectDnAndCert(final TestContext ctx) {
+    public void testAddSucceedsForTrustedCaWithSubjectDnAndCert(final TestContext ctx) throws CertificateException {
 
-        final JsonObject malformedTrustedCa = new JsonObject()
+        final X509Certificate cert = getSelfSignedCertificate();
+        final JsonObject validTrustedCa = new JsonObject()
                 .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, "CN=test")
-                .put(TenantConstants.FIELD_PAYLOAD_CERT, "certificate");
+                .put(TenantConstants.FIELD_PAYLOAD_CERT, cert.getEncoded());
         final JsonObject testPayload = createValidTenantPayload();
-        testPayload.put(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, malformedTrustedCa);
+        testPayload.put(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, validTrustedCa);
 
         final EventBusMessage msg = createRequest(TenantConstants.TenantAction.add, testPayload);
         tenantService.processRequest(msg).setHandler(ctx.asyncAssertSuccess());
+    }
+
+    /**
+     * Verify that a request to add a tenant returns a 400 status code when the request payload defines a trusted CA
+     * configuration containing an invalid Base64 encoding for its <em>public-key</em> property.
+     *
+     * @param ctx The Vert.x test context.
+     */
+    @Test
+    public void testAddFailsForInvalidTrustedCaWithInvalidBase64EncondingForPK(final TestContext ctx) {
+        // GIVEN a tenant payload containing a trusted CA configuration
+        // with an invalid Base64 encoding of its public-key
+        final JsonObject malformedPKTrustedCa = new JsonObject()
+                .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, "CN=test")
+                .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, "NOTAPUBLICKEY");
+
+        final JsonObject testPayloadPK = createValidTenantPayload()
+                .put(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, malformedPKTrustedCa);
+
+        // WHEN there is a request to add the tenant with such malformed payload
+        final EventBusMessage msgPK = createRequest(TenantConstants.TenantAction.add, testPayloadPK);
+        tenantService.processRequest(msgPK).setHandler(ctx.asyncAssertFailure(t -> {
+            // THEN the base tenant service rejects the request.
+            ctx.assertEquals(HttpURLConnection.HTTP_BAD_REQUEST, ((ServiceInvocationException) t).getErrorCode());
+        }));
+    }
+
+    /**
+     * Verify that a request to add a tenant returns a 400 status code when the request payload defines a trusted CA
+     * configuration containing an invalid Base64 encoding for its <em>cert</em> property.
+     *
+     * @param ctx The Vert.x test context.
+     */
+    @Test
+    public void testAddFailsForInvalidTrustedCaWithInvalidBase64EncondingForCert(final TestContext ctx) {
+        // GIVEN a tenant payload containing a trusted CA configuration
+        // with an invalid Base64 encoding of its cert property
+        final JsonObject malformedCertTrustedCa = new JsonObject()
+                .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, "CN=test")
+                .put(TenantConstants.FIELD_PAYLOAD_CERT, "NOTACERTIFICATE");
+        final JsonObject testPayloadCert = createValidTenantPayload()
+                .put(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, malformedCertTrustedCa);
+
+        // WHEN there is a request to add the tenant with such malformed payload
+        final EventBusMessage msgCert = createRequest(TenantConstants.TenantAction.add, testPayloadCert);
+        tenantService.processRequest(msgCert).setHandler(ctx.asyncAssertFailure(t -> {
+            // THEN the base tenant service rejects the request.
+            ctx.assertEquals(HttpURLConnection.HTTP_BAD_REQUEST, ((ServiceInvocationException) t).getErrorCode());
+        }));
     }
 
     private static EventBusMessage createRequest(final TenantConstants.TenantAction action, final JsonObject payload) {
@@ -246,6 +319,14 @@ public class CompleteBaseTenantServiceTest {
         payload.put(TenantConstants.FIELD_ENABLED, Boolean.TRUE);
 
         return payload;
+    }
+
+    private static X509Certificate getSelfSignedCertificate() throws CertificateException {
+        try (InputStream is = new FileInputStream(testCertificate.certificatePath())) {
+            return (X509Certificate) CertificateFactory.getInstance("X.509").generateCertificate(is);
+        } catch (final IOException e) {
+            throw new CertificateException("error creating test certificate");
+        }
     }
 
     private static CompleteBaseTenantService<ServiceConfigProperties> createCompleteBaseTenantService() {

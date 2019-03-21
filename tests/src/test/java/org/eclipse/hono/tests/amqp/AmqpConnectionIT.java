@@ -234,8 +234,7 @@ public class AmqpConnectionIT extends AmqpAdapterTestBase {
         // GIVEN a tenant configured with a trust anchor
         helper.getCertificate(deviceCert.certificatePath())
         .compose(cert -> {
-            tenant.setProperty(
-                    TenantConstants.FIELD_PAYLOAD_TRUSTED_CA,
+            tenant.setProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA,
                     new JsonObject()
                         .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, cert.getIssuerX500Principal().getName(X500Principal.RFC2253))
                         .put(TenantConstants.FIELD_ADAPTERS_TYPE, "EC")
@@ -254,40 +253,4 @@ public class AmqpConnectionIT extends AmqpAdapterTestBase {
         }));
     }
 
-    /**
-     * Verifies that the adapter fails to authorize a device using a client certificate
-     * if the public key that is registered for the tenant that the device belongs to can
-     * not be parsed into a trust anchor.
-     * 
-     * @param ctx The vert.x test context.
-     */
-    @Test
-    public void testConnectFailsForMalformedCaPublicKey(final TestContext ctx) {
-
-        final String tenantId = helper.getRandomTenantId();
-        final String deviceId = helper.getRandomDeviceId(tenantId);
-        final TenantObject tenant = TenantObject.from(tenantId, true);
-        final SelfSignedCertificate deviceCert = SelfSignedCertificate.create(UUID.randomUUID().toString());
-
-        // GIVEN a tenant configured with an invalid Base64 encoding of the
-        // trust anchor public key
-        helper.getCertificate(deviceCert.certificatePath())
-        .compose(cert -> {
-            tenant.setProperty(
-                    TenantConstants.FIELD_PAYLOAD_TRUSTED_CA,
-                    new JsonObject()
-                        .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, cert.getIssuerX500Principal().getName(X500Principal.RFC2253))
-                        .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, "notBase64"));
-            return helper.registry.addDeviceForTenant(tenant, deviceId, cert);
-        })
-        .compose(ok -> {
-            // WHEN a device tries to connect to the adapter
-            // using a client certificate
-            return connectToAdapter(deviceCert);
-        })
-        .setHandler(ctx.asyncAssertFailure(t -> {
-            // THEN the connection is not established
-            ctx.assertTrue(t instanceof SaslException);
-        }));
-    }
 }

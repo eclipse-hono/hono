@@ -242,6 +242,22 @@ public class TenantHttpIT {
     }
 
     /**
+     * Verifies that the service returns a 400 status code for an add tenant request containing
+     * a malformed trust configuration (i.e an invalid Base64 encoding value of the trust CA's certificate).
+     * 
+     * @param context The Vert.x test context.
+     */
+    @Test
+    public void testAddTenantFailsForMalformedTrustConfiguration(final TestContext context) {
+        final JsonObject trustConfig = new JsonObject()
+                .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, "test-dn")
+                .put(TenantConstants.FIELD_PAYLOAD_CERT, "NotBased64Encoded");
+        final JsonObject requestBody = buildTenantPayload(tenantId)
+                .put(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, trustConfig);
+        registry.addTenant(requestBody, "application/json", HttpURLConnection.HTTP_BAD_REQUEST).setHandler(context.asyncAssertSuccess());
+    }
+
+    /**
      * Creates a tenant object for a tenantId.
      * <p>
      * The tenant object created contains configurations for the http and the mqtt adapter.
