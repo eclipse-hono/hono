@@ -52,8 +52,8 @@ public class CredentialsHttpIT {
     private static final String TENANT = Constants.DEFAULT_TENANT;
     private static final String TEST_AUTH_ID = "sensor20";
     private static final Vertx vertx = Vertx.vertx();
-    private static final String ORIG_BCRYPT_PWD = "$2a$10$UK9lmSMlYmeXqABkTrDRsu1nlZRnAmGnBdPIWZoDajtjyxX18Dry."; // "thePassword"
 
+    private static String ORIG_BCRYPT_PWD;
     private static DeviceRegistryHttpClient registry;
 
     /**
@@ -74,6 +74,9 @@ public class CredentialsHttpIT {
      */
     @BeforeClass
     public static void setUpClient(final TestContext ctx) {
+
+        final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(IntegrationTestSupport.MAX_BCRYPT_ITERATIONS);
+        ORIG_BCRYPT_PWD = encoder.encode("thePassword");
 
         registry = new DeviceRegistryHttpClient(
                 vertx,

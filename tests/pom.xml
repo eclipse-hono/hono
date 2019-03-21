@@ -36,7 +36,8 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
     <service.startup.timeout>120000</service.startup.timeout>
     <link.establishment.timeout>5000</link.establishment.timeout>
     <flow.latency>1000</flow.latency>
-    <max.bcrypt.iterations>10</max.bcrypt.iterations>
+    <!-- use minimum number of iterations in order to speed up test execution --> 
+    <max.bcrypt.iterations>4</max.bcrypt.iterations>
     <max.event-loop.execute-time>5000</max.event-loop.execute-time>
     <default.java.options>
       -XX:MinRAMPercentage=80
