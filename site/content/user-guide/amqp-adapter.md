@@ -20,7 +20,7 @@ The AMQP adapter supports authenticating clients using a *username* and *passwor
 
 The adapter verifies the credentials provided by the client against the credentials that the [Credentials Service] ({{< relref "#credentials-service-connection-configuration" >}}) has on record for the device. If the credentials match, then authentication is successful and the client device can proceed to publish messages to Hono.
 
-When running the Hono example installation, as described in the [Getting Started guide]({{< relref "getting-started.md" >}}), the demo Credentials service comes pre-configured with a `hashed-password` secret for devices `4711` and `gw-1` of tenant `DEFAULT_TENANT` as shown below. These credentials are used in the following examples to illustrate the usage of the adapter.
+When running the Hono example installation, as described in the [Getting Started guide]({{< ref "/getting-started/_index.md" >}}), the demo Credentials service comes pre-configured with a `hashed-password` secret for devices `4711` and `gw-1` of tenant `DEFAULT_TENANT` as shown below. These credentials are used in the following examples to illustrate the usage of the adapter.
 
 {{% note %}}
 There is a subtle difference between the *device identifier* (*device-id*) and the *auth-id* a device uses for authentication. See [Device Identity]({{< relref "concepts/device-identity.md" >}}) for a discussion of the concepts.

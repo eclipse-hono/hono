@@ -242,7 +242,7 @@ Since 0.8-M1 missed an important artifact, the first 0.8 milestone is available 
 
 ### Fixes & Enhancements
 
-* Hono-cli now supports Command & Control. Using command line, users can send commands to devices and receive command responses.  See [Using CLI for Command & Control]({{< ref "/getting-started.md#using-cli-command-line-interface-to-send-commands-and-receive-command-responses" >}}) for more information.
+* Hono-cli now supports Command & Control. Using command line, users can send commands to devices and receive command responses.  See [Using CLI for Command & Control]({{< ref "/getting-started/_index.md#using-cli-command-line-interface-to-send-commands-and-receive-command-responses" >}}) for more information.
 * The command client now enables the setting of application properties for command messages. This can be helpful if custom protocol adapters want to react to specifically annotated commands sent by an application. The standard protocol adapters of Hono do not further exploit these properties.
 * The command consumer (typically used in protocol adapters) allows access to the application properties of command messages.
 
@@ -271,7 +271,7 @@ Since 0.8-M1 missed an important artifact, the first 0.8 milestone is available 
 
 * Hono is now licensed under the [Eclipse Public License 2.0](https://www.eclipse.org/legal/epl-2.0/). Please refer to the Eclipse Foundation's [FAQ](https://www.eclipse.org/legal/epl-2.0/faq.php) for details regarding any implications this might have.
 * Hono deployment scripts are now available under `deploy` folder. Deployment scripts which were previously available under `example` folder were moved to `deploy`.
-* Hono-cli (Command Line Interface) is now available under folder `cli`. A command line argument `message.type` with value `telemetry`, `event` or `all` (default) tells the client what kind of messages to be received. See [Starting a Consumer]({{< relref "getting-started.md#starting-a-consumer" >}}) for more information.
+* Hono-cli (Command Line Interface) is now available under folder `cli`. A command line argument `message.type` with value `telemetry`, `event` or `all` (default) tells the client what kind of messages to be received. See [Starting a Consumer]({{< ref "/getting-started/_index.md#starting-a-consumer" >}}) for more information.
 * Added metrics to Command and Control for HTTP and MQTT protocol adapters. Now Hono-Dashboard also shows the metrics from Command and Control.
 * Add a *dummy* implementation of the device registry services. This allows to
   do better scale testing as the file based device registry cannot be scaled up
@@ -450,7 +450,7 @@ A corresponding *assertRegistration* operation has been added to the `org.eclips
 
 ### New Features
 
-* We have set up a [Sandbox server]({{< relref "sandbox.md" >}}) at `hono.eclipse.org` which can be used to connect devices and consumers for testing purposes without the need to run a Hono instance locally.
+* We have set up a [Sandbox server]({{< ref "/sandbox/_index.md" >}}) at `hono.eclipse.org` which can be used to connect devices and consumers for testing purposes without the need to run a Hono instance locally.
 
 ### Fixes & Enhancements
 

@@ -1,0 +1,33 @@
+h1 {
+    /*color: orange !important;*/
+    color: orange;
+    text-transform: none;
+}
+
+h2 {
+    color: orange;
+    text-transform: none;
+}
+
+h3 {
+    color: orange;
+    text-transform: none;
+}
+
+h4 {
+    color: orange;
+    text-transform: none;
+}
+
+h5 {
+    color: orange;
+    text-transform: none;
+}
+
+section a {
+    color: orange;
+}
+
+#footer {
+    color: var(--SIDE-MAIN-TXT-color);
+}

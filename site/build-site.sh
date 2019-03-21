@@ -19,17 +19,17 @@ then
   exit 0
 fi
 
-if [ ! -d themes/hugo-material-docs ]
+if [ ! -d themes/hugo-theme-docdock ]
 then
-  git clone https://github.com/digitalcraftsman/hugo-material-docs.git themes/hugo-material-docs
-  cd themes/hugo-material-docs
-  git checkout 194c497216c8389e02e9719381168a668a0ffb05
+  git clone https://github.com/vjeantet/hugo-theme-docdock.git themes/hugo-theme-docdock
+  cd themes/hugo-theme-docdock
+  git checkout 1d12f5733354d9bd4e19e439f068bdc3cfdabe4f
   cd ../..
 fi
 if [ $1 ]
 then
-  hugo --theme hugo-material-docs -d $1
+  hugo --theme hugo-theme-docdock -d $1
 else
-  hugo --theme hugo-material-docs
+  hugo --theme hugo-theme-docdock
 fi
 

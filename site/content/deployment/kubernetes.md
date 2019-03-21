@@ -195,7 +195,7 @@ In the following sections the `$(minikube ip)` is used  in order to put the IP a
 
 ### Starting a Consumer
 
-As described in the [Getting Started]({{< relref "getting-started.md" >}}) guide, data produced by devices is usually consumed by downstream applications which connect directly to the router network service.
+As described in the [Getting Started]({{< ref "/getting-started/_index.md" >}}) guide, data produced by devices is usually consumed by downstream applications which connect directly to the router network service.
 You can start the client from the `cli` folder as follows:
 
 ~~~sh

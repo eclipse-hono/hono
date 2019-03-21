@@ -720,7 +720,7 @@ Hono documentation.
 
 ### Running consumer
 
-As described in the [Getting Started]({{< relref "getting-started.md" >}})
+As described in the [Getting Started]({{< ref "/getting-started/_index.md" >}})
 guide, data produced by devices is usually consumed by downstream applications
 which connect directly to the router network service. You can start the client
 from the `cli` folder as follows:

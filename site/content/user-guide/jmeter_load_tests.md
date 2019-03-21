@@ -18,7 +18,7 @@ The plugin provides a *Hono Sender Sampler* and a *Hono Receiver Sampler* which 
 
 ## Example Test Plans
 
-The `<hono-installation>/jmeter/src/jmeter` folder contains several JMeter test plans which you can use as a basis for your own tests. All test plans can be run against any standard Hono installation, e.g. as deployed in the [Getting started Guide]({{< relref "getting-started.md" >}}).
+The `<hono-installation>/jmeter/src/jmeter` folder contains several JMeter test plans which you can use as a basis for your own tests. All test plans can be run against any standard Hono installation, e.g. as deployed in the [Getting started Guide]({{< ref "/getting-started/_index.md" >}}).
 
 1.  `amqp_messaging_throughput_test.jmx` runs a set of AMQP 1.0 senders and consumers for a given period of time. The senders publish data to the AMQP 1.0 Messaging Network directly while the consumers receive messages from the AMQP 1.0 Messaging Network (in case of the example installation this is the Qpid Dispatch Router). The test plan measures the number of messages that are sent/received during the test execution.<br>
 The sender can be configured to wait for *n active receivers* (from this test plan and JMeter instance) which can be used to make sure, that the receivers consuming from the corresponding address (e.g. `telemetry/DEFAULT_TENANT`) are up and running before the senders begin to publish messages.

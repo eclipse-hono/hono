@@ -10,11 +10,11 @@ The focus of this guide is on describing how custom configuration files can be u
 
 ## Prerequisites
 
-The only requirement for this guide is a working cluster of Docker Engine nodes running in Swarm mode. While this guide also works with a single Docker Engine node in Swarm mode (see [Getting started]({{< relref "getting-started.md" >}})), the main deployment target will probably be a multi-node cluster running on some cloud infrastructure, e.g. a [Docker for AWS](https://docs.docker.com/docker-for-aws/) installation running on Amazon Web Services infrastructure. Please refer to the Docker for AWS documentation for instructions on how to set up a Swarm on AWS.
+The only requirement for this guide is a working cluster of Docker Engine nodes running in Swarm mode. While this guide also works with a single Docker Engine node in Swarm mode (see [Getting started]({{< ref "/getting-started/_index.md" >}})), the main deployment target will probably be a multi-node cluster running on some cloud infrastructure, e.g. a [Docker for AWS](https://docs.docker.com/docker-for-aws/) installation running on Amazon Web Services infrastructure. Please refer to the Docker for AWS documentation for instructions on how to set up a Swarm on AWS.
 
 ## Deployment
 
-It is very easy to deploy the containers comprising a Hono instance to an existing Docker Swarm based on a script. The remainder of this guide will use the example deploy script created in the `deploy/target/deploy/docker` folder during the build process for that purpose. Once the build has finished, the process of deploying Hono to a cloud based, multi-node cluster is similar to the way described in the [Getting started guide]({{< relref "getting-started.md" >}}):
+It is very easy to deploy the containers comprising a Hono instance to an existing Docker Swarm based on a script. The remainder of this guide will use the example deploy script created in the `deploy/target/deploy/docker` folder during the build process for that purpose. Once the build has finished, the process of deploying Hono to a cloud based, multi-node cluster is similar to the way described in the [Getting started guide]({{< ref "/getting-started/_index.md" >}}):
 
 ~~~sh
 ~/hono/deploy$ export DOCKER_HOST=tcp://my-swarm.my-domain.com:2375
@@ -187,7 +187,7 @@ The log output of the *Auth Server* should contain a line similar to this:
 14:02:15.790 [vert.x-eventloop-thread-1] INFO  o.e.h.a.i.FileBasedAuthenticationService - loading permissions from resource file:/run/secrets/my-permissions.json
 ~~~
 
-Once the stack is up and running, start up a consumer as described by the [Getting started Guide]({{< relref "getting-started.md#starting-a-consumer" >}}). You should then be able to connect to the Hono server using the example sender from the `example` module, specifying `new-user@HONO` as the user name.
+Once the stack is up and running, start up a consumer as described by the [Getting started Guide]({{< ref "/getting-started/_index.md#starting-a-consumer" >}}). You should then be able to connect to the Hono server using the example sender from the `example` module, specifying `new-user@HONO` as the user name.
 
 ~~~sh
 ~/hono/example$ mvn spring-boot:run -Drun.profiles=sender,ssl -Drun.arguments=--hono.client.username=new-user@HONO,--hono.client.password=mypassword,--hono.client.hostname=my-swarm.my-domain.com

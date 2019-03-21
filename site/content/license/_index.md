@@ -1,7 +1,6 @@
 +++
 title = "License"
-menu = "main"
-weight = 650
+pre ="<i class='fa fa-handshake-o' ></i> "
 +++
 
 <h2>Eclipse Public License - v 2.0</h2>

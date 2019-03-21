@@ -1,7 +1,8 @@
 baseurl = "https://www.eclipse.org/hono/"
 languageCode = "en-us"
 title = "Eclipse Hono"
-theme = "hugo-material-docs"
+theme = "hugo-theme-docdock"
+#theme = ["hugo-theme-docdock", "hugo-theme-learn"]
 metadataformat = "toml"
 canonifyurls = false
 # Enable Google Analytics by entering your tracking id
@@ -31,6 +32,17 @@ pluralizeListTitles = "false"
 
 	# Syntax highlighting theme
 	highlight_css  = ""
+	
+	showVisitedLinks = false # default is false
+    themeStyle = "original" # "original" or "flex" # default "flex"
+    themeVariant = "gray" # choose theme variant "green", "gold" , "gray", "blue" (default)
+    ordersectionsby = "weight" # ordersectionsby = "title"
+    disableHomeIcon = true # default is false
+    disableSearch = false # default is false
+    disableNavChevron = false # set true to hide next/prev chevron, default is false
+    highlightClientSide = false # set true to use highlight.pack.js instead of the default hugo chroma highlighter
+    menushortcutsnewtab = false # set true to open shortcuts links to a new tab/window
+    enableGitInfo = true
 
 [params.palette]
 	primary = "orange"
@@ -48,56 +60,29 @@ pluralizeListTitles = "false"
 	mailinglist = "https://dev.eclipse.org/mailman/listinfo/hono-dev"
 
 
-[[menu.main]]
-  name   = "Concepts"
-  identifier = "concepts"
-  url    = "/concepts/"
-  weight = 180
+[[menu.shortcuts]]
+name = "<i class='fa fa-github'></i> <label>Github Repository</label>"
+identifier = "ds"
+url = "https://github.com/eclipse/hono"
+weight = 10
 
-[[menu.main]]
-	name   = "User Guide"
-	identifier = "user-guide"
-	url    = "/user-guide/"
-  weight = 200
+[[menu.shortcuts]]
+name = "<img src='https://ci.eclipse.org/hono/buildStatus/icon?job=Hono CI Pipeline' title='Eclipse Build Status'/>"
+identifier = "build1"
+url = "https://ci.eclipse.org/hono/job/Hono CI Pipeline/"
+weight = 20
 
-[[menu.main]]
-  name   = "Admin Guide"
-  identifier = "admin-guide"
-  url    = "/admin-guide/"
-  weight = 300
-
-[[menu.main]]
-	name   = "Developer Guide"
-	identifier = "dev-guide"
-	url    = "/dev-guide/"
-  weight = 380
-
-[[menu.main]]
-  name   = "API"
-  identifier = "api"
-  url    = "/api/"
-  weight = 400
-
-[[menu.main]]
-  name   = "Deployment"
-  identifier = "deployment"
-  url    = "/deployment/"
-  weight = 470
-
-[[menu.main]]
-  name   = "Architecture"
-  identifier = "architecture"
-  url    = "/architecture/"
-  weight = 500
-
-[[menu.main]]
-  name   = "Community"
-  identifier = "community"
-  url    = "/community/"
-  weight = 600
+[[menu.shortcuts]]
+name = "<img src='https://travis-ci.org/eclipse/hono.svg?branch=master' title='Travis Build Status' />"
+identifier = "build2"
+url = "https://travis-ci.org/eclipse/hono"
+weight = 20
 
 [blackfriday]
 	smartypants	= true
 	fractions = true
 	smartDashes = true
 	plainIDAnchors = true
+
+[outputs]
+    home = [ "HTML", "RSS", "JSON"]

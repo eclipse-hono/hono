@@ -1,7 +1,6 @@
 +++
 title = "Thank you"
-menu = "main"
-weight = 750
+pre ="<i class='fa fa-heart' ></i> "
 +++
 
 ![YourKit](https://www.yourkit.com/images/yklogo.png) 
