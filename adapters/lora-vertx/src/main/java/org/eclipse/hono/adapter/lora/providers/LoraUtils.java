@@ -16,7 +16,6 @@ package org.eclipse.hono.adapter.lora.providers;
 import org.apache.commons.codec.DecoderException;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.binary.Hex;
-import org.apache.commons.lang.StringUtils;
 import org.eclipse.hono.adapter.lora.LoraConstants;
 import org.eclipse.hono.util.RegistrationConstants;
 
@@ -51,12 +50,12 @@ public class LoraUtils {
 
         try {
             final String provider = loraConfig.getString(LoraConstants.FIELD_LORA_PROVIDER);
-            if (StringUtils.isBlank(provider)) {
+            if (isBlank(provider)) {
                 return false;
             }
 
             final String authId = loraConfig.getString(LoraConstants.FIELD_AUTH_ID);
-            if (StringUtils.isBlank(authId)) {
+            if (isBlank(authId)) {
                 return false;
             }
 
@@ -66,7 +65,7 @@ public class LoraUtils {
             }
 
             final String url = loraConfig.getString(LoraConstants.FIELD_LORA_URL);
-            if (StringUtils.isBlank(url)) {
+            if (isBlank(url)) {
                 return false;
             }
         } catch (final ClassCastException | DecodeException e) {
@@ -86,7 +85,11 @@ public class LoraUtils {
         final JsonObject loraNetworkData = LoraUtils.getLoraConfigFromLoraGatewayDevice(gatewayDevice);
 
         // Remove trailing slash at the end, if any. Makes it easier to concat
-        return StringUtils.removeEnd(loraNetworkData.getString(LoraConstants.FIELD_LORA_URL), "/");
+        String url = loraNetworkData.getString(LoraConstants.FIELD_LORA_URL);
+        if (url.endsWith("/")) {
+            url = url.substring(0, url.length() - 1);
+        }
+        return url;
     }
 
     /**
@@ -142,5 +145,15 @@ public class LoraUtils {
      */
     public static boolean isHttpSuccessStatusCode(final int statusCode) {
         return statusCode >= 200 && statusCode <= 299;
+    }
+
+    /**
+     * Checks if the given string is null, empty or consists only of whitespace.
+     *
+     * @param message the string to check
+     * @return boolean {@code true} if the message is a blank
+     */
+    public static boolean isBlank(final String message) {
+        return message == null || message.trim().isEmpty();
     }
 }

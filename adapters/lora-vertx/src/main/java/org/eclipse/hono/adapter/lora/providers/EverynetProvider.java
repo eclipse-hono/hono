@@ -13,7 +13,7 @@
 
 package org.eclipse.hono.adapter.lora.providers;
 
-import org.apache.commons.lang.StringUtils;
+import org.eclipse.hono.adapter.lora.LoraConstants;
 import org.eclipse.hono.adapter.lora.LoraMessageType;
 import org.eclipse.hono.service.http.HttpUtils;
 import org.springframework.stereotype.Component;
@@ -67,7 +67,7 @@ public class EverynetProvider implements LoraProvider {
 
     @Override
     public LoraMessageType extractMessageType(final JsonObject loraMessage) {
-        final String type = loraMessage.getString(FIELD_EVERYNET_TYPE, StringUtils.EMPTY);
+        final String type = loraMessage.getString(FIELD_EVERYNET_TYPE, LoraConstants.EMPTY);
         return "uplink".equals(type) ? LoraMessageType.UPLINK : LoraMessageType.UNKNOWN;
     }
 }

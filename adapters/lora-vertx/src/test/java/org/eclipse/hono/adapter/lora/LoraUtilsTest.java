@@ -182,7 +182,7 @@ public class LoraUtilsTest {
         final JsonObject loraNetworkServerData = new JsonObject();
         loraNetworkServerData.put("provider", "my-provider-id");
         loraNetworkServerData.put("auth-id", "lora-secret");
-        loraNetworkServerData.put("url", "https://localhost");
+        loraNetworkServerData.put("url", "https://localhost/");
         loraNetworkServerData.put("lora-port", 23);
 
         final JsonObject loraGatewayData = new JsonObject();
@@ -195,5 +195,48 @@ public class LoraUtilsTest {
         loraGatewayDevice.put("data", loraGatewayData);
 
         return loraGatewayDevice;
+    }
+
+    /**
+     * Verifies that isBlank returns true for null.
+     */
+    @Test
+    public void isBlankReturnsTrueForNull() {
+        assertTrue(LoraUtils.isBlank(null));
+    }
+
+    /**
+     * Verifies that isBlank returns true for empty string.
+     */
+    @Test
+    public void isBlankReturnsTrueForEmptyString() {
+        assertTrue(LoraUtils.isBlank(""));
+    }
+
+    /**
+     * Verifies that isBlank returns true for whitespace.
+     */
+    @Test
+    public void isBlankReturnsTrueForWhitespace() {
+        assertTrue(LoraUtils.isBlank("    "));
+    }
+
+
+    /**
+     * Verifies that isBlank returns true for null.
+     */
+    @Test
+    public void isBlankReturnsFalseForWord() {
+        assertFalse(LoraUtils.isBlank("test"));
+    }
+
+    /**
+     * Verifies that normalization removes trailing slash.
+     */
+    @Test
+    public void getNormalizedProviderUrlFromGatewayDeviceTrimsTrailingSlash() {
+        final JsonObject validGateway = getValidGateway();
+
+        assertEquals("https://localhost", LoraUtils.getNormalizedProviderUrlFromGatewayDevice(validGateway));
     }
 }

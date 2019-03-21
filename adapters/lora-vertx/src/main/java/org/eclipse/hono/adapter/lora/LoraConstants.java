@@ -34,6 +34,7 @@ public class LoraConstants {
     public static final String FIELD_LORA_CREDENTIAL_KEY = "key";
     public static final String FIELD_LORA_DEVICE_PORT = "lora-port";
     public static final String FIELD_LORA_DOWNLINK_PAYLOAD = "payload";
+    public static final String EMPTY = "";
 
     private LoraConstants() {
         // prevent instantiation

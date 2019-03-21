@@ -21,7 +21,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
-import org.apache.commons.lang.StringUtils;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.adapter.http.AbstractVertxBasedHttpProtocolAdapter;
@@ -501,7 +500,7 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
         LOG.debug("Retrieved device from device-registry {}", actualDevice);
         final JsonObject data = actualDevice.getJsonObject(RegistrationConstants.FIELD_DATA);
         final String gatewayId = data.getString(LoraConstants.FIELD_VIA);
-        if (StringUtils.isBlank(gatewayId)) {
+        if (LoraUtils.isBlank(gatewayId)) {
             LOG.error("Lora device has no gateway configured :{}", gatewayId);
             return Future.failedFuture("Lora device has no gateway configured");
         } else {

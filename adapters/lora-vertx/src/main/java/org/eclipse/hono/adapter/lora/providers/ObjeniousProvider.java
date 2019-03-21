@@ -13,7 +13,7 @@
 
 package org.eclipse.hono.adapter.lora.providers;
 
-import org.apache.commons.lang.StringUtils;
+import org.eclipse.hono.adapter.lora.LoraConstants;
 import org.eclipse.hono.adapter.lora.LoraMessageType;
 import org.springframework.stereotype.Component;
 
@@ -54,7 +54,7 @@ public class ObjeniousProvider implements LoraProvider {
 
     @Override
     public LoraMessageType extractMessageType(final JsonObject loraMessage) {
-        final String type = loraMessage.getString(FIELD_TYPE, StringUtils.EMPTY);
+        final String type = loraMessage.getString(FIELD_TYPE, LoraConstants.EMPTY);
 
         switch (type) {
         case "join":
