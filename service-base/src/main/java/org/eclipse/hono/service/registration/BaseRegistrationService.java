@@ -237,15 +237,17 @@ public abstract class BaseRegistrationService<T> extends EventBusService<T> impl
         final Future<RegistrationResult> getResultTracker = Future.future();
         getDevice(tenantId, deviceId, getResultTracker.completer());
 
-        getResultTracker.map(result -> {
+        getResultTracker.compose(result -> {
             if (isDeviceEnabled(result)) {
-                return RegistrationResult.from(
-                        HttpURLConnection.HTTP_OK,
-                        getAssertionPayload(tenantId, deviceId, result.getPayload().getJsonObject(RegistrationConstants.FIELD_DATA)),
-                        CacheDirective.maxAgeDirective(assertionFactory.getAssertionLifetime()));
+                final JsonObject deviceData = result.getPayload().getJsonObject(RegistrationConstants.FIELD_DATA);
+                return updateDeviceLastViaIfNeeded(tenantId, deviceId, deviceId, deviceData, span).map(res -> {
+                    return createSuccessfulRegistrationResult(tenantId, deviceId, deviceData);
+                }).recover(t -> {
+                    return Future.succeededFuture(RegistrationResult.from(ServiceInvocationException.extractStatusCode(t)));
+                });
             } else {
                 TracingHelper.logError(span, "device not enabled");
-                return RegistrationResult.from(HttpURLConnection.HTTP_NOT_FOUND);
+                return Future.succeededFuture(RegistrationResult.from(HttpURLConnection.HTTP_NOT_FOUND));
             }
         }).setHandler(resultHandler);
     }
@@ -303,14 +305,9 @@ public abstract class BaseRegistrationService<T> extends EventBusService<T> impl
                 final JsonObject gatewayData = gatewayResult.getPayload().getJsonObject(RegistrationConstants.FIELD_DATA, new JsonObject());
 
                 if (isGatewayAuthorized(gatewayId, gatewayData, deviceId, deviceData)) {
-                    return updateDeviceLastViaIfNeeded(tenantId, deviceId, gatewayId, deviceData).map(res -> {
-                        return RegistrationResult.from(
-                                HttpURLConnection.HTTP_OK,
-                                getAssertionPayload(tenantId, deviceId, deviceData),
-                                CacheDirective.maxAgeDirective(assertionFactory.getAssertionLifetime()));
+                    return updateDeviceLastViaIfNeeded(tenantId, deviceId, gatewayId, deviceData, span).map(res -> {
+                        return createSuccessfulRegistrationResult(tenantId, deviceId, deviceData);
                     }).recover(t -> {
-                        log.error("update of the 'last-via' property failed", t);
-                        TracingHelper.logError(span, "update of the 'last-via' property failed: " + t.toString());
                         return Future.succeededFuture(RegistrationResult.from(ServiceInvocationException.extractStatusCode(t)));
                     });
                 } else {
@@ -321,12 +318,26 @@ public abstract class BaseRegistrationService<T> extends EventBusService<T> impl
         }).setHandler(resultHandler);
     }
 
+    private RegistrationResult createSuccessfulRegistrationResult(final String tenantId, final String deviceId, final JsonObject deviceData) {
+        final CacheDirective cacheDirective = isDeviceWithMultipleVias(deviceData) ? CacheDirective.noCacheDirective()
+                : CacheDirective.maxAgeDirective(assertionFactory.getAssertionLifetime());
+        return RegistrationResult.from(
+                HttpURLConnection.HTTP_OK,
+                getAssertionPayload(tenantId, deviceId, deviceData),
+                cacheDirective);
+    }
+
     private Future<Void> updateDeviceLastViaIfNeeded(final String tenantId, final String deviceId,
-            final String gatewayId, final JsonObject deviceData) {
+            final String gatewayId, final JsonObject deviceData, final Span span) {
         if (!isDeviceWithMultipleVias(deviceData)) {
             return Future.succeededFuture();
         }
-        return updateDeviceLastVia(tenantId, deviceId, gatewayId, deviceData);
+        return updateDeviceLastVia(tenantId, deviceId, gatewayId, deviceData)
+                .recover(t -> {
+                    log.error("update of the 'last-via' property failed", t);
+                    TracingHelper.logError(span, "update of the 'last-via' property failed: " + t.toString());
+                    return Future.failedFuture(t);
+                });
     }
 
     private boolean isDeviceWithMultipleVias(final JsonObject deviceData) {
@@ -341,6 +352,9 @@ public abstract class BaseRegistrationService<T> extends EventBusService<T> impl
      * This method this called by this class' default implementation of <em>assertRegistration</em> for a device that
      * has multiple gateway entries in its 'via' definition.
      * <p>
+     * If such a device connects directly instead of through a gateway, the device identifier is to be used as value
+     * for the <em>gatewayId</em> parameter.
+     * <p>
      * Subclasses need to override this method and provide a reasonable implementation in order to support scenarios
      * where devices with multiple potential 'via' gateways are used, along with gateways subscribing to command 
      * messages only using their gateway id. In such scenarios, the 'last-via' value is needed to route command messages
@@ -348,7 +362,7 @@ public abstract class BaseRegistrationService<T> extends EventBusService<T> impl
      *
      * @param tenantId The tenant id.
      * @param deviceId The device id.
-     * @param gatewayId The gateway id.
+     * @param gatewayId The gateway id (or the device id if the request comes directly from the device).
      * @param deviceData The current data associated with the device.
      * @return A future indicating whether the operation succeeded or not.
      */
