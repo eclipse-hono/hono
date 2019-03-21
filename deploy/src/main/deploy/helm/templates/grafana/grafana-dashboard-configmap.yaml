@@ -4,7 +4,7 @@ metadata:
   name: hono-grafana-dashboard
   labels:
     grafana_dashboard: "1"
-    version: {{ .Chart.AppVersion }}
+    version: "{{ .Chart.AppVersion }}"
     group: {{ .Values.project.groupId }}
 data:
   overview.json:

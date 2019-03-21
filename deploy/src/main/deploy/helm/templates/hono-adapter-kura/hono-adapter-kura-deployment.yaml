@@ -4,7 +4,7 @@ kind: Deployment
 metadata:
   labels:
     app: hono-adapter-kura
-    version: {{ .Chart.AppVersion }}
+    version: "{{ .Chart.AppVersion }}"
     group: {{ .Values.project.groupId }}
   name: hono-adapter-kura
 spec:
@@ -17,7 +17,7 @@ spec:
     metadata:
       labels:
         app: hono-adapter-kura
-        version: {{ .Chart.AppVersion }}
+        version: "{{ .Chart.AppVersion }}"
         group: {{ .Values.project.groupId }}
     spec:
       containers:

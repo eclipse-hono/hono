@@ -6,7 +6,7 @@ metadata:
   labels:
     app: hono-adapter-amqp-vertx
     provider: fabric8
-    version: {{ .Chart.AppVersion }}
+    version: "{{ .Chart.AppVersion }}"
     group: {{ .Values.project.groupId }}
   name: hono-adapter-amqp-vertx
 spec:

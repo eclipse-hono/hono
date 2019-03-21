@@ -4,7 +4,7 @@ kind: Service
 metadata:
   labels:
     app: hono-adapter-kura
-    version: {{ .Chart.AppVersion }}
+    version: "{{ .Chart.AppVersion }}"
     group: {{ .Values.project.groupId }}
     hono-metrics: prometheus
   name: hono-adapter-kura

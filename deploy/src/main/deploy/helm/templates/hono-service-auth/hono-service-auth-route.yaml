@@ -5,7 +5,7 @@ kind: Route
 metadata:
   labels:
     app: hono-service-auth
-    version: {{ .Chart.AppVersion }}
+    version: "{{ .Chart.AppVersion }}"
     group: {{ .Values.project.groupId }}
   name: hono-service-auth
 spec:

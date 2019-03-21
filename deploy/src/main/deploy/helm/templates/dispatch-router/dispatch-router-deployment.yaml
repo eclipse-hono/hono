@@ -4,7 +4,7 @@ kind: Deployment
 metadata:
   labels:
     app: amqp-messaging-network
-    version: {{ .Chart.AppVersion }}
+    version: "{{ .Chart.AppVersion }}"
     group: {{ .Values.project.groupId }}
   name: hono-dispatch-router
 spec:
@@ -19,7 +19,7 @@ spec:
       labels:
         app: amqp-messaging-network
         role: router
-        version: {{ .Chart.AppVersion }}
+        version: "{{ .Chart.AppVersion }}"
         group: {{ .Values.project.groupId }}
     spec:
       containers:

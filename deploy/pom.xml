@@ -41,6 +41,7 @@
 
         <!-- This is only used by the Docker Swarm deployment -->
         <prometheus.image.name>prom/prometheus:v2.3.1</prometheus.image.name>
+        <helm.app-version>${project.version}</helm.app-version>
     </properties>
 
     <dependencies>
