@@ -25,8 +25,16 @@ import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantResult;
 
+import java.io.ByteArrayInputStream;
 import java.net.HttpURLConnection;
+import java.security.GeneralSecurityException;
+import java.security.KeyFactory;
+import java.security.cert.CertificateException;
+import java.security.cert.CertificateFactory;
+import java.security.spec.X509EncodedKeySpec;
+import java.util.Base64;
 import java.util.Objects;
+import java.util.Optional;
 
 /**
  * A base class for implementing {@link CompleteTenantService}.
@@ -181,6 +189,68 @@ public abstract class CompleteBaseTenantService<T> extends BaseTenantService<T> 
     }
 
     /**
+     * Ensure that the <em>public-key</em> or <em>cert</em> property of the JSON object contains a valid Base64 DER encoded value.
+     * This method also validates that the trusted CA config also contains the mandatory <em>subject-dn</em>
+     * property.
+     * 
+     * @param trustedCa The JSON object containing either the <em>public-key</em> or the <em>cert</em> property.
+     * @return true if the trusted CA object is valid (i.e it can be parsed into either an X.509 certificate or the
+     *         public key can be generated) or false otherwise.
+     */
+    private boolean isValidTrustedCaSpec(final JsonObject trustedCa) {
+
+        final Object encodedCert = trustedCa.getValue(TenantConstants.FIELD_PAYLOAD_CERT);
+        final Object encodedKey = trustedCa.getValue(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY);
+        final Object subjectDn = trustedCa.getValue(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN);
+
+        if (!String.class.isInstance(subjectDn)) {
+            return false;
+        } 
+        if (encodedCert != null && encodedKey == null) {
+            // validate the certificate
+            return isEncodedCertificate(encodedCert);
+        } else if (encodedKey != null && encodedCert == null) {
+            // validate public-key
+            final String algorithmName = Optional
+                    .ofNullable((String) trustedCa.getValue(TenantConstants.FIELD_ADAPTERS_TYPE)).orElse("RSA");
+            return isEncodedPublicKey(encodedKey, algorithmName);
+        } else {
+            // Either the trusted CA configuration:
+            // contains both a cert and a public-key property
+            // or they are both missing
+            return false;
+        }
+    }
+
+    private boolean isEncodedCertificate(final Object encodedCert) {
+        if (String.class.isInstance(encodedCert)) {
+            try {
+                CertificateFactory.getInstance("X.509").generateCertificate(
+                        new ByteArrayInputStream(Base64.getDecoder().decode((String) encodedCert)));
+                return true;
+            } catch (final CertificateException | IllegalArgumentException e) {
+                return false;
+            }
+        } else {
+            return false;
+        }
+    }
+
+    private boolean isEncodedPublicKey(final Object encodedKey, final String algorithmName) {
+        if (String.class.isInstance(encodedKey)) {
+            try {
+                KeyFactory.getInstance(algorithmName)
+                        .generatePublic(new X509EncodedKeySpec(Base64.getDecoder().decode((String) encodedKey)));
+                return true;
+            } catch (final GeneralSecurityException | IllegalArgumentException e) {
+                return false;
+            }
+        } else {
+            return false;
+        }
+    }
+
+    /**
      * Checks if a payload contains a valid trusted CA specification.
      *
      * @param payload The payload to check.
@@ -188,33 +258,14 @@ public abstract class CompleteBaseTenantService<T> extends BaseTenantService<T> 
      */
     private boolean hasValidTrustedCaSpec(final JsonObject payload) {
 
-        final Object trustedCaObj = payload.getValue(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA);
-
-
-        if (trustedCaObj instanceof JsonObject) {
-            final JsonObject trustedCa = (JsonObject) trustedCaObj;
-            if (!(trustedCa.getValue(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN) instanceof String)) {
-                // Subject DN is mandatory
-                return false;
-            }
-            final Object cert = trustedCa.getValue(TenantConstants.FIELD_PAYLOAD_CERT);
-            final Object pk = trustedCa.getValue(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY);
-            if (cert == null && pk == null) {
-                // either one must be set
-                return false;
-            } else if (cert != null && pk != null) {
-                // only one can be set
-                return false;
-            } else if (cert != null && !(cert instanceof String)) {
-                return false;
-            } else if (pk != null && !(pk instanceof String)) {
-                return false;
-            }
-        } else if (trustedCaObj != null) {
-            return false;
-        }
-
-        return true;
+       final Object trustConfig = payload.getValue(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA);
+       if (trustConfig == null) {
+           return true;
+       } else if (JsonObject.class.isInstance(trustConfig)) {
+           return isValidTrustedCaSpec((JsonObject) trustConfig);
+       } else {
+           return false;
+       }
     }
 
     /**
