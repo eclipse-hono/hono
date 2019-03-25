@@ -2,7 +2,7 @@
 title = "Release Notes"
 +++
 
-## 1.0-M1 (not released yet)
+## 1.0-M1
 
 ### New Features
 

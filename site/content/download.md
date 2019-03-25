@@ -39,6 +39,15 @@ java -jar hono-cli-0.9-exec.jar --hono.client.host=hono.eclipse.org --hono.clien
 
 Please refer to the [Admin Guide]({{< ref "/admin-guide/hono-client-configuration.md" >}}) for details regarding the command line options that the client supports.
 
+### Latest Milestone
+
+The newest features and bug fixes are available in *milestones* that are published every 4 -6 weeks. Please note that these milestones represent the latest
+*state of development* which also means that APIs or features may change from one milestone to the other.
+Installation works in the same way as for the latest stable release.
+
+* [Eclipse Hono 1.0-M1 Archive](https://www.eclipse.org/downloads/download.php?file=/hono/eclipse-hono-deploy-1.0-M1.tar.gz)
+* [Eclipse Hono 1.0-M1 Command Line Client](https://www.eclipse.org/downloads/download.php?file=/hono/hono-cli-1.0-M1-exec.jar)
+
 ### Older Versions
 
 These artifacts are available for reference only. Please always use the latest version since this is the one we can provide the best support for.
