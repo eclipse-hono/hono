@@ -12,6 +12,9 @@ title = "Release Notes"
 * The `org.eclipse.hono.client.AsyncCommancClient` has been added to support the sending of
   commands to devices and the receiving of responses in an asynchronous way. This can be used
   to decouple the sender and receiver from each other. 
+* The `org.eclipse.hono.service.tenant.CompleteBaseTenantService` class now rejects malformed
+  encodings of public keys/certificates included in a request to add a trust anchor to a tenant.
+
 ### Depreciations
 
 * The `HonoClient.closeCommandConsumer()` method will be removed in Hono 1.0.
