@@ -13,14 +13,15 @@
 
 package org.eclipse.hono.adapter.lora.providers;
 
-import org.apache.commons.codec.DecoderException;
-import org.apache.commons.codec.binary.Base64;
-import org.apache.commons.codec.binary.Hex;
 import org.eclipse.hono.adapter.lora.LoraConstants;
+import org.eclipse.hono.util.HexDecodingException;
 import org.eclipse.hono.util.RegistrationConstants;
+import org.eclipse.hono.util.Strings;
 
 import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonObject;
+
+import java.util.Base64;
 
 /**
  * A utility class to provide common features for different @{@link LoraProvider}s.
@@ -100,8 +101,8 @@ public class LoraUtils {
      */
     public static String convertFromHexToBase64(final String hex) {
         try {
-            return Base64.encodeBase64String(Hex.decodeHex(hex.toCharArray()));
-        } catch (final DecoderException e) {
+            return Base64.getEncoder().encodeToString(Strings.decodeHex(hex.toCharArray()));
+        } catch (final HexDecodingException e) {
             throw new LoraProviderMalformedPayloadException("Exception while decoding hex data", e);
         }
     }
@@ -113,7 +114,7 @@ public class LoraUtils {
      * @return the converted hex string
      */
     public static String convertFromBase64ToHex(final String base64) {
-        return Hex.encodeHexString(Base64.decodeBase64(base64));
+        return Strings.encodeHexAsString(Base64.getDecoder().decode(base64));
     }
 
     /**
@@ -123,7 +124,7 @@ public class LoraUtils {
      * @return the converted hex string
      */
     public static String convertToHexString(final byte[] payload) {
-        return new String(Hex.encodeHex(payload));
+        return new String(Strings.encodeHex(payload));
     }
 
     /**

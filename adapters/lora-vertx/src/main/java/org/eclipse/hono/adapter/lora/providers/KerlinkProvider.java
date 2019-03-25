@@ -21,9 +21,9 @@ import static org.eclipse.hono.util.RequestResponseApiConstants.FIELD_PAYLOAD_DE
 
 import java.text.MessageFormat;
 import java.time.Instant;
+import java.util.Base64;
 import java.util.List;
 
-import org.apache.commons.codec.binary.Base64;
 import org.eclipse.hono.adapter.lora.LoraConstants;
 import org.eclipse.hono.adapter.lora.LoraProtocolAdapter;
 import org.eclipse.hono.cache.ExpiringValueCache;
@@ -278,7 +278,7 @@ public class KerlinkProvider implements LoraProvider {
         final String loginUri = LoraUtils.getNormalizedProviderUrlFromGatewayDevice(gatewayDevice) + API_PATH_GET_TOKEN;
 
         final String passwordBase64 = secret.getString(FIELD_LORA_CREDENTIAL_KEY);
-        final String password = new String(Base64.decodeBase64(passwordBase64));
+        final String password = new String(Base64.getDecoder().decode(passwordBase64));
 
         final JsonObject loginRequestPayload = new JsonObject();
         loginRequestPayload.put(FIELD_KERLINK_AUTH_LOGIN, secret.getString(FIELD_LORA_CREDENTIAL_IDENTITY));

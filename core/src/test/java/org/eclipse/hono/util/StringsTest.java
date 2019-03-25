@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -88,5 +88,71 @@ public class StringsTest {
     @Test
     public void testNullNonString() {
         assertTrue(Strings.isNullOrEmpty(new Mock(null)));
+    }
+
+
+    /**
+     * Test encodeHex with byte input.
+     */
+    @Test
+    public void testEncodeHex() {
+        final byte[] bumluxAsBytes = {98, 117, 109, 108, 117, 120};
+        final char[] bumluxAsHex = {'6', '2', '7', '5', '6', 'd', '6', 'c', '7', '5', '7', '8'};
+
+        assertArrayEquals(bumluxAsHex, Strings.encodeHex(bumluxAsBytes));
+    }
+
+    /**
+     * Test encodeHex with empty input.
+     */
+    @Test
+    public void testEncodeNothingInHex() {
+        assertArrayEquals(new char[0], Strings.encodeHex(new byte[0]));
+    }
+
+    /**
+     * Test decodeHex with char input.
+     *
+     * @throws HexDecodingException if the test fails
+     */
+    @Test
+    public void testDecodeHex() throws HexDecodingException {
+        final byte[] bumluxAsBytes = {98, 117, 109, 108, 117, 120};
+        final char[] bumluxAsHex = {'6', '2', '7', '5', '6', 'd', '6', 'c', '7', '5', '7', '8'};
+
+        assertArrayEquals(bumluxAsBytes, Strings.decodeHex(bumluxAsHex));
+    }
+
+    /**
+     * Test decodeHex with odd char input.
+     *
+     * @throws HexDecodingException if the test succeeds
+     */
+    @Test(expected = HexDecodingException.class)
+    public void testOddHexInput() throws HexDecodingException {
+        final char[] oddInput = {'6'};
+        Strings.decodeHex(oddInput);
+    }
+
+    /**
+     * Test decodeHex with invalid hex character.
+     *
+     * @throws HexDecodingException if the test succeeds
+     */
+    @Test(expected = HexDecodingException.class)
+    public void testInvalidHexInput() throws HexDecodingException {
+        final char[] invalidInput = {'6', '7', 'g'};
+        Strings.decodeHex(invalidInput);
+    }
+
+    /**
+     * Test encodeHexAsString is successfully encoding bytes to a hex String.
+     */
+    @Test
+    public void testEncodeHexAsString() {
+        final byte[] bumluxAsBytes = {98, 117, 109, 108, 117, 120};
+        final String bumluxAsHexString = "62756d6c7578";
+
+        assertEquals(bumluxAsHexString, Strings.encodeHexAsString(bumluxAsBytes));
     }
 }
