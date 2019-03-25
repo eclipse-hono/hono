@@ -18,8 +18,8 @@ import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMoc
 import static org.eclipse.hono.adapter.lora.providers.LoraTestUtil.verifyAsync;
 
 import java.time.Instant;
+import java.util.Base64;
 
-import org.apache.commons.codec.binary.Base64;
 import org.apache.qpid.proton.amqp.messaging.AmqpValue;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.adapter.lora.LoraConstants;
@@ -402,7 +402,7 @@ public class KerlinkProviderTest {
     private CredentialsObject getValidGatewayCredential() {
         final JsonObject secret = new JsonObject();
         secret.put("identity", TEST_KERLINK_API_USER);
-        secret.put("key", Base64.encodeBase64String(TEST_KERLINK_API_PASSWORD.getBytes(Charsets.UTF_8)));
+        secret.put("key", Base64.getEncoder().encodeToString(TEST_KERLINK_API_PASSWORD.getBytes(Charsets.UTF_8)));
 
         final CredentialsObject gatewayCredential = new CredentialsObject();
         gatewayCredential.setAuthId("lora-secret");
