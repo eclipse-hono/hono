@@ -23,6 +23,11 @@ public class LoraCommandProperties {
 
     private final List<String> commandEnabledTenants = new LinkedList<>();
 
+    /**
+     * Returns all tenants who are allowed to send commands. These have to be set explicitly in the properties file.
+     *
+     * @return all command enabled tenants
+     */
     public List<String> getCommandEnabledTenants() {
         return commandEnabledTenants;
     }
