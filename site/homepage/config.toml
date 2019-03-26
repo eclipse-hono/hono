@@ -1,0 +1,73 @@
+baseurl = "https://www.eclipse.org/hono/"
+languageCode = "en-us"
+title = "Eclipse Hono"
+theme = "hugo-universal-theme"
+metadataformat = "toml"
+canonifyurls = false
+googleAnalytics = "GTM-5WLCZXC"
+pluralizeListTitles = "false"
+
+
+# The menu is defined in the file menu_main.toml
+
+[params]
+  author = "The Eclipse Hono Project"
+  description = "A set of micro-services for connecting millions of devices."
+  copyright = "&copy; 2019 The Eclipse Hono Project"
+    viewMorePostLink = "/blog/"
+    defaultKeywords = []
+    defaultDescription = "A set of micro-services for connecting millions of devices."
+
+    # Twitter
+#    twitter = "EclipseHono"
+#    twitterImage = "img/twitter-default.png"
+
+    # Style options: default (light-blue), blue, green, marsala, pink, red, turquoise, violet
+    style = "hono"
+
+    # Format dates with Go's time formatting
+    date_format = "January 2, 2006"
+
+# Enable or disable top bar with social icons
+[params.topbar]
+    enable = false
+
+# Enable and disable widgets for the right sidebar
+[params.widgets]
+    categories = false
+    tags = false
+    search = false
+
+[params.carousel]
+    enable = false
+    # All carousel items are defined in their own files. You can find example items
+    # at 'exampleSite/data/carousel'.
+    # For more informtion take a look at the README.
+
+[params.features]
+    enable = true
+    # All features are defined in their own files. You can find example items
+    # at 'exampleSite/data/features'.
+    # For more informtion take a look at the README.
+
+[params.testimonials]
+    enable = false
+    # All testimonials are defined in their own files. You can find example items
+    # at 'exampleSite/data/testimonials'.
+    # For more informtion take a look at the README.
+    title = "Testimonials"
+    subtitle = "Have a look what happy users said about Hono."
+
+[params.see_more]
+    enable = false
+
+[params.clients]
+    enable = true
+    # All clients are defined in their own files. You can find example items
+    # at 'exampleSite/data/clients'.
+    # For more informtion take a look at the README.
+    title = "Who uses Eclipse Hono?"
+    subtitle = ""
+
+[params.recent_posts]
+    enable = false

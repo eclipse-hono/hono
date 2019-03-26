@@ -1,0 +1,6 @@
+weight: 2
+title: "Connect. Command. Control."
+description: >
+  <p>Eclipse Hono™ provides remote service interfaces for connecting large numbers of IoT devices to a back end and 
+  interacting with them in a uniform way regardless of the device communication protocol.</p> 
+image: "img/hono_landing_page.svg"

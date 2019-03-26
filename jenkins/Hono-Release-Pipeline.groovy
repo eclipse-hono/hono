@@ -33,6 +33,12 @@ node {
                     description: "The version identifier to use during development of the next version.\nExamples:\n2.0.0-SNAPSHOT\n1.1.0-SNAPSHOT",
                     name: 'NEXT_VERSION',
                     trim: true),
+            booleanParam(defaultValue: true,
+                    description: "Deploy documentation for this release to web site.\nDisable for milestone release.",
+                    name: 'DEPLOY_DOCUMENTATION'),
+            booleanParam(defaultValue: true,
+                    description: "Set the documentation for this release as the new stable version.\nDisable for milestone release.",
+                    name: 'STABLE_DOCUMENTATION'),
             credentials(credentialType: 'com.cloudbees.plugins.credentials.common.StandardCredentials',
                     defaultValue: '',
                     description: 'The credentials to use during checkout from git',
@@ -41,6 +47,7 @@ node {
     try {
         checkOut()
         setReleaseVersionAndBuild(utils)
+        setVersionForDocumentation()
         commitAndTag()
         setNextVersion(utils)
         commitAndPush()
@@ -83,6 +90,35 @@ def setReleaseVersionAndBuild(def utils) {
         withMaven(maven: utils.getMavenVersion(), jdk: utils.getJDKVersion(), options: [jacocoPublisher(disabled: true), artifactsPublisher(disabled: true)]) {
             sh "mvn versions:set -DgenerateBackupPoms=false -DnewVersion=${RELEASE_VERSION}"
             sh 'mvn clean install javadoc:aggregate -Dmaven.test.failure.ignore=false -DenableEclipseJarSigner=true -DsnapshotDependencyAllowed=false -Ddocker.skip.build=true'
+        }
+    }
+}
+
+/**
+ * Store version as supported version, if enabled:
+ * - Add to list of supported versions (used by the pipeline that builds the web site)
+ * - Set as the new stable version, if enabled
+ */
+def setVersionForDocumentation() {
+    stage("Add version for documentation") {
+        if (params.DEPLOY_DOCUMENTATION ==~ /(?i)(T|TRUE)/) {
+            echo "add to supported versions"
+            sh ''' 
+               MAJOR="${RELEASE_VERSION%%.*}" # before first dot
+               rest="${RELEASE_VERSION#*.}" # after first dot
+               MINOR="${rest%%.*}"  # before first dot of rest
+               echo "${MAJOR};${MINOR};${RELEASE_VERSION}" >> site/homepage/versions_supported.csv
+               git add site/homepage/versions_supported.csv
+               '''
+            if (params.STABLE_DOCUMENTATION ==~ /(?i)(T|TRUE)/) {
+                echo "set as stable version"
+                sh ''' 
+                   echo "${RELEASE_VERSION}" > site/homepage/tag_stable.txt
+                   git add site/homepage/tag_stable.txt
+                   '''
+            }
+        } else {
+            echo "skip release of documentation"
         }
     }
 }

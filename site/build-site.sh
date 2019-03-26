@@ -1,6 +1,6 @@
 #!/bin/bash
 #*******************************************************************************
-# Copyright (c) 2016, 2017 Contributors to the Eclipse Foundation
+# Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
 #
 # See the NOTICE file(s) distributed with this work for additional
 # information regarding copyright ownership.
@@ -19,17 +19,36 @@ then
   exit 0
 fi
 
-if [ ! -d themes/hugo-material-docs ]
-then
-  git clone https://github.com/digitalcraftsman/hugo-material-docs.git themes/hugo-material-docs
-  cd themes/hugo-material-docs
-  git checkout 194c497216c8389e02e9719381168a668a0ffb05
-  cd ../..
-fi
 if [ $1 ]
 then
-  hugo --theme hugo-material-docs -d $1
+  TARGET="$1"
 else
-  hugo --theme hugo-material-docs
+  TARGET="public"
 fi
 
+cd homepage/
+if [ ! -d themes/hugo-universal-theme ]
+then
+  git clone https://github.com/devcows/hugo-universal-theme.git themes/hugo-universal-theme
+  cd themes/hugo-universal-theme
+  git checkout 1.0.0
+  echo "Remove images from theme" # We do not need the pictures. Removing them, so they don't get deployed
+  rm static/img/*
+  cd ../..
+fi
+
+echo "Going to build homepage in directory: $TARGET"
+hugo -v -d $TARGET --config config.toml,menu_main.toml
+cd .. 
+
+cd documentation/
+if [ ! -d themes/hugo-theme-learn ]
+then
+  git clone https://github.com/matcornic/hugo-theme-learn.git themes/hugo-theme-learn
+  cd themes/hugo-theme-learn
+  git checkout 2.2.0
+  cd ../..
+fi
+
+echo "Going to build documentation in directory: $TARGET/docs/latest"
+hugo -v -d $TARGET/docs/latest

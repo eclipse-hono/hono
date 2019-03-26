@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   id="svg3985"
+   version="1.1"
+   viewBox="0 0 140.48529 18.142855"
+   height="18.142855mm"
+   width="140.48529mm">
+  <defs
+     id="defs3979" />
+  <metadata
+     id="metadata3982">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title></dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     transform="translate(-35.590689,-139.7619)"
+     id="layer1">
+    <text
+       id="text3924"
+       y="155.6369"
+       x="35.846806"
+       style="font-style:italic;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:23.28333282px;line-height:1.25;font-family:FreeMono;-inkscape-font-specification:'FreeMono Bold Italic';letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       xml:space="preserve"><tspan
+         style="font-style:italic;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:23.28333282px;font-family:FreeMono;-inkscape-font-specification:'FreeMono Bold Italic';stroke-width:0.26458332"
+         y="155.6369"
+         x="35.846806"
+         id="tspan3922">ACME</tspan></text>
+    <ellipse
+       ry="8.6934528"
+       rx="19.276785"
+       cy="149.2113"
+       cx="118.62358"
+       id="path3928"
+       style="fill:#1a1a1a;stroke-width:0.26458332" />
+    <ellipse
+       ry="8.6934528"
+       rx="19.276785"
+       cy="148.83333"
+       cx="156.79919"
+       id="path3928-3"
+       style="fill:#1a1a1a;stroke-width:0.26458332" />
+    <ellipse
+       ry="7.9375"
+       rx="13.229167"
+       cy="147.6994"
+       cx="136.76643"
+       id="path3945"
+       style="fill:#ffffff;stroke-width:0.26458332" />
+  </g>
+</svg>

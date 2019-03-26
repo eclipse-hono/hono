@@ -1,0 +1,155 @@
+/* Colors are declared two times. The hex codes are for IE, which does not support CSS variables.
+The variables are still used to keep track of places that need to be changed together. */
+
+:root{
+    /*HONO-ORANGE-DARK: #f08712;*/
+    /*HONO-ORANGE-LIGHT: #f7c388;*/
+
+    --MAIN-TEXT-color: #000000; /* Color of text by default */
+    --MAIN-TITLES-TEXT-color: #4c4c4c; /* Color of titles h2-h3-h4-h5 */
+    --MAIN-LINK-color: #c55c04; /* Color of links */
+    --MAIN-LINK-HOVER-color: #f08712; /* Color of hovered links */
+    --MAIN-ANCHOR-color: #f08712; /* color of anchors on titles */
+
+    --MENU-HEADER-BG-color: #f6f6f6; /* Background color of menu header */
+    --MENU-HEADER-BORDER-color: #f08712; /*Color of menu header border */
+
+    --MENU-SEARCH-BG-color: #ffffff; /* Search field background color (by default borders + icons) */
+    --MENU-SEARCH-BOX-color: #000000; /* Override search field border color */
+    --MENU-SEARCH-BOX-ICONS-color: #000000; /* Override search field icons color */
+    --MENU-SEARCH-BOX-PLACEHOLDER-color: #000000; /* Override search field placeholder color */
+
+    --MENU-SECTIONS-ACTIVE-BG-color: #c9c9c9; /* Background color of the active section and its childs */
+    --MENU-SECTIONS-BG-color: #f6f6f6; /* Background color of other sections */
+    --MENU-SECTIONS-LINK-color: #000000; /* Color of links in menu */
+    --MENU-SECTIONS-LINK-HOVER-color: #c55c04;  /* Color of links in menu, when hovered */
+    --MENU-SECTIONS-ACTIVE-color: #000000; /* Color of active section text */
+    --MENU-SECTION-ACTIVE-CATEGORY-color: #ffffff; /* Color of active category text */
+    --MENU-SECTION-ACTIVE-CATEGORY-BG-color: #f08712; /* Color of background for the active category (only) */
+
+    --MENU-VISITED-color: #f08712; /* Color of 'page visited' icons in menu */
+    --MENU-SECTION-HR-color: #f08712; /* Color of <hr> separator in menu */
+
+}
+
+body {
+    color: #000000 !important;
+    color: var(--MAIN-TEXT-color) !important;
+}
+
+textarea:focus, input[type="email"]:focus, input[type="number"]:focus, input[type="password"]:focus, input[type="search"]:focus, input[type="tel"]:focus, input[type="text"]:focus, input[type="url"]:focus, input[type="color"]:focus, input[type="date"]:focus, input[type="datetime"]:focus, input[type="datetime-local"]:focus, input[type="month"]:focus, input[type="time"]:focus, input[type="week"]:focus, select[multiple=multiple]:focus {
+    border-color: none;
+    box-shadow: none;
+}
+
+h2, h3, h4, h5 {
+    color: #4c4c4c !important;
+    color: var(--MAIN-TITLES-TEXT-color) !important;
+}
+
+a {
+    color: #c55c04;
+    color: var(--MAIN-LINK-color);
+}
+
+.anchor {
+    color: #f08712;
+    color: var(--MAIN-ANCHOR-color);
+}
+
+a:hover {
+    color: #f08712;
+    color: var(--MAIN-LINK-HOVER-color);
+}
+
+#sidebar ul li.visited > a .read-icon {
+    color: #f08712;
+    color: var(--MENU-VISITED-color);
+}
+
+#body a.highlight:after {
+    display: block;
+    content: "";
+    height: 1px;
+    width: 0%;
+    -webkit-transition: width 0.5s ease;
+    -moz-transition: width 0.5s ease;
+    -ms-transition: width 0.5s ease;
+    transition: width 0.5s ease;
+    background-color: #f08712;
+    background-color: var(--MAIN-LINK-HOVER-color);
+}
+#sidebar {
+    background-color: #f6f6f6;
+    background-color: var(--MENU-SECTIONS-BG-color);
+}
+#sidebar #header-wrapper {
+    background: #f6f6f6;
+    background: var(--MENU-HEADER-BG-color);
+    color: #000000;
+    color: var(--MENU-SEARCH-BOX-color);
+    border-color: #f08712;
+    border-color: var(--MENU-HEADER-BORDER-color);
+}
+#sidebar .searchbox {
+    border-color: #000000;
+    border-color: var(--MENU-SEARCH-BOX-color);
+    background: #f6f6f6;
+    background: var(--MENU-SEARCH-BG-color);
+}
+#sidebar ul.topics > li.parent, #sidebar ul.topics > li.active {
+    background: #c9c9c9;
+    background: var(--MENU-SECTIONS-ACTIVE-BG-color);
+}
+#sidebar ul.topics > li.parent a, #sidebar ul.topics > li.active a {
+    color: #000000;
+    color: var(--MENU-SECTIONS-ACTIVE-color);
+}
+#sidebar .searchbox * {
+    color: #000000;
+    color: var(--MENU-SEARCH-BOX-ICONS-color);
+}
+
+#sidebar a {
+    color: #000000;
+    color: var(--MENU-SECTIONS-LINK-color);
+}
+
+#sidebar a:hover {
+    color: #c55c04 !important;
+    color: var(--MENU-SECTIONS-LINK-HOVER-color) !important;
+}
+
+#sidebar ul li.active > a {
+    background: #f08712;
+    background: var(--MENU-SECTION-ACTIVE-CATEGORY-BG-color);
+    color: #ffffff !important;
+    color: var(--MENU-SECTION-ACTIVE-CATEGORY-color) !important;
+}
+
+#sidebar ul li.active > a:hover {
+    color: #000000 !important;
+    color: var(--MENU-SECTIONS-LINK-color) !important;
+}
+
+#sidebar hr {
+    border-color: #f08712;
+    border-color: var(--MENU-SECTION-HR-color);
+}
+
+.searchbox input::-webkit-input-placeholder {
+    color: #000000;
+    color: var(--MENU-SEARCH-BOX-PLACEHOLDER-color);
+}
+.searchbox input::-moz-placeholder {
+    color: #000000;
+    color: var(--MENU-SEARCH-BOX-PLACEHOLDER-color);
+}
+.searchbox input:-moz-placeholder {
+    color: #000000;
+    color: var(--MENU-SEARCH-BOX-PLACEHOLDER-color);
+}
+.searchbox input:-ms-input-placeholder {
+    color: #000000;
+    color: var(--MENU-SEARCH-BOX-PLACEHOLDER-color);
+}

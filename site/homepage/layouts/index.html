@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="{{ .Site.LanguageCode }}">
+
+  {{ partial "head.html" . }}
+
+  <body>
+
+    <div id="all">
+
+        <div id="landing-vp">
+            <header>
+
+                {{ partial "top.html" . }}
+
+                {{ partial "nav.html" . }}
+
+            </header>
+
+            <section id="landing">
+                <div class="container landing">
+                    <h1>Connect. Command. Control.</h1>
+
+                    <p>
+                        Eclipse Hono&trade; provides remote service interfaces for connecting large numbers of IoT
+                        devices to a back end and interacting with them in a uniform way regardless of the device 
+                        communication protocol.
+                    </p>
+
+                    <div id="landing-img">
+                        <object data="/hono/img/hono_landing_page.svg" alt="Hono overview" title="Hono overview"></object>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        {{ partial "carousel.html" . }}
+
+        {{ partial "features.html" . }}
+
+        {{ partial "testimonials.html" . }}
+
+        {{ partial "see_more.html" . }}
+
+        {{ partial "recent_posts.html" . }}
+
+        {{ partial "clients.html" . }}
+
+        {{ partial "footer.html" . }}
+
+    </div>
+    <!-- /#all -->
+
+    {{ partial "scripts.html" . }}
+
+  </body>
+</html>

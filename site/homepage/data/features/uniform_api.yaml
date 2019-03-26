@@ -1,0 +1,4 @@
+weight: 20
+icon: "fas fa-ruler"
+name: "Uniform API"
+description: "Connect a multitude of different types of devices to your (cloud) back end. Communicate with all of them via the same simple API regardless of the device protocol."
