@@ -1,0 +1,4 @@
+weight: 50
+icon: "fas fa-shield-alt"
+name: "Secure"
+description: "Hono is designed for security by default. It supports common authentication mechanisms like username/password and X.509 client certificates to verify a device's identity and uses transport layer security (TLS) when communicating with devices."

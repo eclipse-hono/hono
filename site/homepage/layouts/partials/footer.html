@@ -1,0 +1,82 @@
+<footer id="footer">
+    <div class="container">
+
+        <div class="col-md-4 col-sm-6">
+            <h4>More</h4>
+            
+            <ul>
+                <li><a href="https://github.com/eclipse/hono" title="View Source Code on GitHub"><i class='fab fa-github'></i> GitHub Repository</a></li>
+                <li><a href="https://twitter.com/EclipseHono" title="Follow us on Twitter"><i class='fab fa-twitter'></i> Twitter</a></li>
+                <li><a href="/hono/thankyou">Thank you</a></li>
+            </ul>
+
+            <hr class="hidden-md hidden-lg hidden-sm">
+
+        </div>
+        <!-- /.col-md-4 -->
+
+        <div class="col-md-4 col-sm-6">
+
+            <h4>Eclipse Legal</h4>
+
+            <ul>
+                <li><a href="http://www.eclipse.org/legal/privacy.php" target="_blank">Privacy Policy</a></li>
+                <li><a href="http://www.eclipse.org/legal/termsofuse.php" target="_blank">Terms of Use</a></li>
+                <li><a href="http://www.eclipse.org/legal/copyright.php" target="_blank">Copyright Agent</a></li>
+                <li><a href="http://www.eclipse.org/legal" target="_blank">Legal</a></li>
+                <li><a href="https://www.eclipse.org/legal/epl-2.0/" target="_blank">License</a></li>
+                <li><a href="https://eclipse.org/security" target="_blank">Report a Vulnerability</a></li>
+            </ul>
+
+            <hr class="hidden-md hidden-lg">
+
+        </div>
+        <!-- /.col-md-4 -->
+
+        <div class="col-md-4 col-sm-6">
+
+            <div>
+                <div class="incubation">
+                    <a href="https://www.eclipse.org/projects/what-is-incubation.php" target="_blank">
+                        <img src="{{ .Site.BaseURL }}img/egg-incubation-transparent.png"/>
+                    </a>
+                </div>
+                <div class="eclipse-logo">
+                    <a href="https://www.eclipse.org" target="_blank">
+                        <img src="{{ .Site.BaseURL }}img/eclipse_foundation_logo_wo.svg"/>
+                    </a>
+                </div>
+            </div>
+
+        </div>
+        <!-- /.col-md-4 -->
+
+    </div>
+    <!-- /.container -->
+</footer>
+
+<!-- /#footer -->
+
+<!-- *** FOOTER END *** -->
+
+<!-- *** COPYRIGHT ***
+_________________________________________________________ -->
+
+<div id="copyright">
+    <div class="container">
+        <div class="col-md-12">
+            {{ if isset .Site.Params "copyright" }}
+            <p class="pull-left">{{ .Site.Params.copyright | safeHTML }}</p>
+            {{ end }}
+            <p class="pull-right">
+                {{ i18n "templateBy" }} <a href="http://bootstrapious.com/free-templates">Bootstrapious</a>.
+                <!-- Not removing this link is part of the licence conditions of the template. Thanks for understanding :) -->
+
+                {{ i18n "portedBy" }} <a href="https://github.com/devcows/hugo-universal-theme">DevCows</a>
+            </p>
+        </div>
+    </div>
+</div>
+<!-- /#copyright -->
+
+<!-- *** COPYRIGHT END *** -->

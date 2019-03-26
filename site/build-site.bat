@@ -1,5 +1,5 @@
 @rem ***************************************************************************
-@rem Copyright (c) 2016, 2017 Contributors to the Eclipse Foundation
+@rem Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
 @rem
 @rem See the NOTICE file(s) distributed with this work for additional
 @rem information regarding copyright ownership.
@@ -20,20 +20,44 @@ IF ERRORLEVEL 1 (
   ECHO Hugo installation detected...
 )
 
-IF NOT EXIST themes\hugo-material-docs (
-  ECHO Going to download material theme for hugo...
-  git clone https://github.com/digitalcraftsman/hugo-material-docs.git themes/hugo-material-docs
-  cd themes\hugo-material-docs
-  git checkout 194c497216c8389e02e9719381168a668a0ffb05
+cd homepage
+IF NOT EXIST themes\hugo-universal-theme (
+  ECHO Going to download theme 'universal' for hugo...
+  git clone https://github.com/devcows/hugo-universal-theme.git themes\hugo-universal-theme
+  cd themes\hugo-universal-theme
+  git checkout 2765194e3b464a4912fd13dd02b736e45542cbb2
+  ECHO Remove images from theme
+  DEL /Q static\img\*
   cd ..\..
 ) ELSE (
-  ECHO Hugo material theme detected...
+  ECHO Hugo theme 'universal' detected...
 )
 
 IF NOT "%~1"==""  (
-  ECHO Going to build docs in directory: %1
-  hugo --theme hugo-material-docs -d %1
+  ECHO Going to build homepage in directory: %1
+  hugo -v -d %1
 ) ELSE (
-  ECHO Going to build docs in default directory...
-  hugo --theme hugo-material-docs
+  ECHO Going to build homepage in default directory...
+  hugo -v
 )
+cd ..
+
+cd documentation
+IF NOT EXIST themes\hugo-theme-learn (
+  ECHO Going to download theme 'learn' for hugo...
+  git clone https://github.com/matcornic/hugo-theme-learn.git themes\hugo-theme-learn
+  cd themes\hugo-theme-learn
+  git checkout 2.2.0
+  cd ..\..
+) ELSE (
+  ECHO Hugo theme 'learn' detected...
+)
+
+IF NOT "%~1"==""  (
+  ECHO Going to build documentation in directory: %1\docs
+  hugo -v -d %1\docs
+) ELSE (
+  ECHO Going to build documentation in default directory...
+  hugo -v
+)
+cd ..

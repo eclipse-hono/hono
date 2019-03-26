@@ -1,0 +1,69 @@
+
+#footer div.incubation {
+  float: right;
+  width: 99px;
+}
+
+#footer div.eclipse-logo {
+  width: 250px;
+}
+
+.alert {
+  padding-left: 1.4rem;
+  padding-right: 1.4rem;
+  border: 1px solid;
+  border-radius: .25rem;
+}
+
+.alert .alert-heading {
+  color: inherit !important;
+}
+
+.alert-notice {
+  background-color: #c4dfff;
+  border-color: #5fb4fc;
+  color: inherit !important;
+}
+
+.alert-warning {
+  background-color: #f89691;
+  border-color: #e84e40;
+  color: inherit !important;
+}
+
+#landing-img {
+  display: block;
+  margin: 40px auto;
+  max-width: 900px;
+  box-sizing: border-box;
+}
+
+section#landing {
+  box-sizing: border-box;
+}
+
+section#landing p {
+  font-size: 1.3em;
+  padding-top: 20px;
+  text-align: center;
+}
+
+div#all div#content {
+  padding-bottom: 3em;
+}
+
+div#landing-vp {
+  min-height: 100vh;
+}
+
+/* prevents that the anchor is positioned behind the menu bar */
+:target:before {
+  content: "";
+  display: block;
+  height: 80px;
+  margin: -80px 0 0;
+}
+
+#navbar .logo {
+  height: 46px;
+}

@@ -1,0 +1,75 @@
+<div class="navbar-affixed-top" data-spy="affix" data-offset-top="70">
+
+    <div class="navbar navbar-default yamm" role="navigation" id="navbar">
+
+        <div class="container">
+            <div class="navbar-header">
+                <a class="navbar-brand home" href="{{ .Site.BaseURL }}">
+                    <img src="{{ .Site.BaseURL }}img/HONO-Logo_Bild-Wort_quer-s-310x120px.svg" alt="{{ .Title }} logo" class="logo">
+                    <span class="sr-only">{{ .Title }} - {{ i18n "navHome" }}</span>
+                </a>
+                <div class="navbar-buttons">
+                    <button type="button" class="navbar-toggle btn-template-main" data-toggle="collapse" data-target="#navigation">
+                      <span class="sr-only">{{ i18n "navToggle" }}</span>
+                        <i class="fa fa-align-justify"></i>
+                    </button>
+                </div>
+            </div>
+            <!--/.navbar-header -->
+
+            <div class="navbar-collapse collapse" id="navigation">
+                <ul class="nav navbar-nav navbar-right">
+                  {{ $current := . }}
+                  {{ range .Site.Menus.main }}
+                  {{ $topLevel := replace .URL "/" "" }}
+                  <li class="dropdown{{ if not $current.IsHome }}{{ if or (eq $current.RelPermalink .URL) (eq $current.Type $topLevel) }} active{{ end }}{{ end }}">
+                      
+                      
+                      
+                    {{ if .HasChildren }}
+                      <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">{{ .Name }} <span class="caret"></span></a>
+                    <ul class="dropdown-menu">
+                      {{ range .Children }}
+                        {{ if hasPrefix .URL "/hono/docs/" }}
+                          <li><a href="{{ .URL }}"  target="_blank">{{ .Name }} <i class="fas fa-external-link-alt"></i></a></li>
+                        {{ else }}
+                          <li><a href="{{ .URL }}">{{ .Name }}</a></li>
+                        {{ end }}
+                      {{ end }}
+                    </ul>
+                    {{ else }}
+                      {{ if hasPrefix .URL "/hono/docs/" }}
+                        <li><a href="{{ .URL }}" target="_blank">{{ .Name }} <i class="fas fa-external-link-alt"></i></a></li>
+                      {{ else }}
+                        <li><a href="{{ .URL }}">{{ .Name }}</a></li>
+                      {{ end }}
+                    {{ end  }}
+                  </li>
+                  {{ end }}
+                </ul>
+            </div>
+            <!--/.nav-collapse -->
+
+            <div class="collapse clearfix" id="search">
+
+                <form class="navbar-form" role="search">
+                    <div class="input-group">
+                        <input type="text" class="form-control" placeholder="Search">
+                        <span class="input-group-btn">
+
+                    <button type="submit" class="btn btn-template-main"><i class="fa fa-search"></i></button>
+
+                </span>
+                    </div>
+                </form>
+
+            </div>
+            <!--/.nav-collapse -->
+
+        </div>
+    </div>
+    <!-- /#navbar -->
+
+</div>
+
+<!-- *** NAVBAR END ***-->

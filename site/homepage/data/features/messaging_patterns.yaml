@@ -1,0 +1,4 @@
+weight: 40
+icon: "fas fa-exchange-alt"
+name: "Messaging Patterns"
+description: "Hono provides APIs for important IoT communication patterns: *Telemetry* and *Event* messages can be used by devices to report sensor readings whereas applications can use *Command &amp; Control* to invoke operations on devices."

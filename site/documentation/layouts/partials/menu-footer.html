@@ -1,0 +1,16 @@
+<!-- The footer of the left menu -->
+{{ if .Site.Params.copyright }}
+<p>&copy; {{ now.Year }} <a href="https://www.eclipse.org/hono/" target="_blank">{{ .Site.Params.copyright }}</a></p>
+{{ end }}
+<p>
+    Documentation built with
+    <a href="https://www.gohugo.io" target="_blank">Hugo</a>
+    using the
+    <a href="https://github.com/matcornic/hugo-theme-learn" target="_blank">Learn</a> theme.
+</p>
+
+<div class="eclipse-logo">
+    <a href="https://www.eclipse.org" target="_blank">
+        <img src="{{ .Site.BaseURL }}images/eclipse_foundation_logo.svg"/>
+    </a>
+</div>
