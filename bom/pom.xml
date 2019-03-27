@@ -44,7 +44,7 @@
     <junit.version>4.12</junit.version>
     <logback.version>1.2.3</logback.version>
     <micrometer.version>1.0.9</micrometer.version>
-    <mockito.version>2.19.0</mockito.version>
+    <mockito.version>2.24.5</mockito.version>
     <netty.version>4.1.30.Final</netty.version>
     <netty.tcnative.version>2.0.17.Final</netty.tcnative.version>
     <opentracing.version>0.31.0</opentracing.version>
@@ -305,6 +305,11 @@
       <dependency>
         <groupId>io.vertx</groupId>
         <artifactId>vertx-web</artifactId>
+        <version>${vertx.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.vertx</groupId>
+        <artifactId>vertx-web-client</artifactId>
         <version>${vertx.version}</version>
       </dependency>
       <dependency>

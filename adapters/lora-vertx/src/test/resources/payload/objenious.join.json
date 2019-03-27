@@ -1,0 +1,39 @@
+{
+  "id": "join-0-aba6-O24614-accept",
+  "device_id": 1325751707030347,
+  "group_id": 1,
+  "group": "hono",
+  "profile_id": 4,
+  "profile": "test-tag",
+  "type": "join",
+  "timestamp": "2019-02-27T14:48:35.544Z",
+  "payload_encrypted": null,
+  "payload_cleartext": null,
+  "device_properties": {
+    "appeui": "be4800dfcb4f4333",
+    "deveui": "2032e013597bde6b",
+    "external_id": ""
+  },
+  "protocol_data": {
+    "AppNonce": "d04ade",
+    "DevAddr": "d508e11e",
+    "DevNonce": "1221",
+    "NetID": "000007",
+    "best_gateway_id": "O24614",
+    "gateways": 2,
+    "lora_version": 0,
+    "noise": -106.26572375596102,
+    "port": 0,
+    "rssi": -94,
+    "sf": 7,
+    "signal": -94.26572375596102,
+    "snr": 12
+  },
+  "lat": 53.108805,
+  "lng": 9.193430,
+  "geolocation_type": "network",
+  "geolocation_precision": 1000,
+  "city_code": "12345",
+  "city_name": "none",
+  "delivered_at": "2019-02-27T14:48:36.102Z"
+}

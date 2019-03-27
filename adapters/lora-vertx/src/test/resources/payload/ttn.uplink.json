@@ -1,0 +1,37 @@
+{
+  "app_id": "ttn-app-id",
+  "dev_id": "ttn-dev-id",
+  "hardware_serial": "0352828610682633",
+  "port": 1,
+  "counter": 9,
+  "is_retry": false,
+  "confirmed": false,
+  "payload_raw": "YnVtbHV4",
+  "payload_fields": {},
+  "metadata": {
+    "airtime": 32527000,
+    "time": "2019-03-03T04:20:04Z",
+    "frequency": 868.1,
+    "modulation": "LORA",
+    "data_rate": "SF7BW125",
+    "bit_rate": 50000,
+    "coding_rate": "4/5",
+    "gateways": [
+      {
+        "gtw_id": "ttn-test-gtw",
+        "timestamp": 12345,
+        "time": "2019-03-03T04:19:32Z",
+        "channel": 0,
+        "rssi": -25,
+        "snr": 5,
+        "rf_chain": 0,
+        "latitude": 53.1088,
+        "longitude": 9.1934,
+        "altitude": 90
+      }
+    ],
+    "latitude": 53.1088,
+    "longitude": 9.1934,
+    "altitude": 90
+  }
+}
