@@ -18,6 +18,8 @@ package org.eclipse.hono.util;
  */
 public class HexDecodingException extends RuntimeException {
 
+    private static final long serialVersionUID = 1L;
+
     /**
      * Creates a new exception whith the given error message.
      *

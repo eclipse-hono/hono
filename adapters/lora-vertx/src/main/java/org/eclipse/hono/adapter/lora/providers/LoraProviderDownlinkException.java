@@ -14,9 +14,11 @@
 package org.eclipse.hono.adapter.lora.providers;
 
 /**
- * An Exception thrown when something went wrong during processing of a downlink message.
+ * Indicates an error while processing of a downlink message.
  */
 public class LoraProviderDownlinkException extends RuntimeException {
+
+    private static final long serialVersionUID = 1L;
 
     /**
      * Creates the exception with a failure message.

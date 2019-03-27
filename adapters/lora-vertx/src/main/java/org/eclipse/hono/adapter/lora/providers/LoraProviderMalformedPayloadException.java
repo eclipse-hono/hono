@@ -14,9 +14,11 @@
 package org.eclipse.hono.adapter.lora.providers;
 
 /**
- * An Exception thrown when a malformed payload has to be processed.
+ * Indicates that a message received from a LoRa adapter contains malformed payload.
  */
 public class LoraProviderMalformedPayloadException extends RuntimeException {
+
+    private static final long serialVersionUID = 1L;
 
     /**
      * Create the Exception with the given message and cause.

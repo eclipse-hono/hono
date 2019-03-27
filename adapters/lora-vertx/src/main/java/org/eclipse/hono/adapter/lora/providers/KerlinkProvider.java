@@ -52,8 +52,8 @@ import io.vertx.ext.web.client.WebClientOptions;
 @Component
 public class KerlinkProvider implements LoraProvider {
 
-    public static final String FIELD_KERLINK_CLUSTER_ID = "cluster-id";
-    public static final String FIELD_KERLINK_CUSTOMER_ID = "customer-id";
+    private static final String FIELD_KERLINK_CLUSTER_ID = "cluster-id";
+    private static final String FIELD_KERLINK_CUSTOMER_ID = "customer-id";
 
     private static final Logger LOG = LoggerFactory.getLogger(LoraProtocolAdapter.class);
 

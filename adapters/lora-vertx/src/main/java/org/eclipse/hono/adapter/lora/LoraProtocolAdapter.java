@@ -36,8 +36,10 @@ import org.eclipse.hono.client.CommandContext;
 import org.eclipse.hono.client.CommandResponse;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.service.auth.device.HonoClientBasedAuthProvider;
+import org.eclipse.hono.service.auth.device.SubjectDnCredentials;
 import org.eclipse.hono.service.auth.device.TenantServiceBasedX509Authentication;
 import org.eclipse.hono.service.auth.device.UsernamePasswordAuthProvider;
+import org.eclipse.hono.service.auth.device.UsernamePasswordCredentials;
 import org.eclipse.hono.service.auth.device.X509AuthProvider;
 import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.tracing.TracingHelper;
@@ -81,12 +83,35 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
     private static final String TAG_LORA_PROVIDER = "lora_provider";
     private static final String JSON_MISSING_REQUIRED_FIELDS = "JSON Body does not contain required fields";
     private static final String INVALID_PAYLOAD = "Invalid payload";
-    @Autowired
+
     private final List<LoraProvider> loraProviders = new ArrayList<>();
-    private HonoClientBasedAuthProvider usernamePasswordAuthProvider;
-    private HonoClientBasedAuthProvider clientCertAuthProvider;
-    @Autowired
+
+    private HonoClientBasedAuthProvider<UsernamePasswordCredentials> usernamePasswordAuthProvider;
+    private HonoClientBasedAuthProvider<SubjectDnCredentials> clientCertAuthProvider;
     private LoraCommandProperties loraCommandProperties;
+
+    /**
+     * Sets the LoRa providers that this adapter should support.
+     *
+     * @param providers The providers.
+     * @throws NullPointerException if providers is {@code null}.
+     */
+    @Autowired
+    public void setLoraProviders(final List<LoraProvider> providers) {
+        this.loraProviders.addAll(Objects.requireNonNull(providers));
+    }
+
+    /**
+     * Sets the properties defining the command consumer links that should
+     * be created for the LoRa providers.
+     * 
+     * @param properties The properties.
+     * @throws NullPointerException if properties is {@code null}.
+     */
+    @Autowired
+    public void setLoraCommandProperties(final LoraCommandProperties properties) {
+        this.loraCommandProperties = Objects.requireNonNull(properties);
+    }
 
     /**
      * Sets the provider to use for authenticating devices based on a username and password.
@@ -96,7 +121,7 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
      * @param provider The provider to use.
      * @throws NullPointerException if provider is {@code null}.
      */
-    public void setUsernamePasswordAuthProvider(final HonoClientBasedAuthProvider provider) {
+    public void setUsernamePasswordAuthProvider(final HonoClientBasedAuthProvider<UsernamePasswordCredentials> provider) {
         this.usernamePasswordAuthProvider = Objects.requireNonNull(provider);
     }
 
@@ -108,7 +133,7 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
      * @param provider The provider to use.
      * @throws NullPointerException if provider is {@code null}.
      */
-    public void setClientCertAuthProvider(final HonoClientBasedAuthProvider provider) {
+    public void setClientCertAuthProvider(final HonoClientBasedAuthProvider<SubjectDnCredentials> provider) {
         this.clientCertAuthProvider = Objects.requireNonNull(provider);
     }
 
@@ -279,11 +304,15 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
     }
 
     private Future<MessageConsumer> startLoraCommandConsumer(final String tenantId) {
-        return getCommandConnection().createCommandConsumer(tenantId, LORA_COMMAND_CONSUMER_DEVICE_ID,
-                receivedCommandContext -> commandConsumer(tenantId, receivedCommandContext), close -> {
-                    LOG.info("Lora command consumer closing initiated");
-                    closeCommandConsumer(tenantId, LORA_COMMAND_CONSUMER_DEVICE_ID);
-                }, LORA_COMMAND_CONSUMER_RETRY_INTERVAL);
+
+        return getCommandConnection().createCommandConsumer(
+                tenantId,
+                LORA_COMMAND_CONSUMER_DEVICE_ID,
+                receivedCommandContext -> commandConsumer(tenantId, receivedCommandContext),
+                remoteClose -> {
+                    LOG.info("Closing command consumer");
+                },
+                LORA_COMMAND_CONSUMER_RETRY_INTERVAL);
     }
 
     @Override

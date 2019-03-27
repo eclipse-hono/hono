@@ -13,10 +13,8 @@
 
 package org.eclipse.hono.adapter.lora;
 
-import org.eclipse.hono.adapter.lora.providers.LoraProvider;
-
 /**
- * An enum defining different message types for {@link LoraProvider}.
+ * An enum defining different types of messages exchanged with LoRa providers.
  */
 public enum LoraMessageType {
     JOIN, UPLINK, DOWNLINK, UNKNOWN
