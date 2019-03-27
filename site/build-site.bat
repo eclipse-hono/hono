@@ -20,20 +20,20 @@ IF ERRORLEVEL 1 (
   ECHO Hugo installation detected...
 )
 
-IF NOT EXIST themes\hugo-material-docs (
-  ECHO Going to download material theme for hugo...
-  git clone https://github.com/digitalcraftsman/hugo-material-docs.git themes/hugo-material-docs
-  cd themes\hugo-material-docs
-  git checkout 194c497216c8389e02e9719381168a668a0ffb05
+IF NOT EXIST themes\hugo-theme-docdock (
+  ECHO Going to download theme 'docdock' for hugo...
+  git clone https://github.com/vjeantet/hugo-theme-docdock.git themes/hugo-theme-docdock
+  cd themes\hugo-theme-docdock
+  git checkout 1d12f5733354d9bd4e19e439f068bdc3cfdabe4f
   cd ..\..
 ) ELSE (
-  ECHO Hugo material theme detected...
+  ECHO Hugo theme 'docdock' detected...
 )
 
 IF NOT "%~1"==""  (
   ECHO Going to build docs in directory: %1
-  hugo --theme hugo-material-docs -d %1
+  hugo --theme hugo-theme-docdock -d %1
 ) ELSE (
   ECHO Going to build docs in default directory...
-  hugo --theme hugo-material-docs
+  hugo --theme hugo-theme-docdock
 )
