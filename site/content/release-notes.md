@@ -9,7 +9,7 @@ title = "Release Notes"
 * The AMQP adapter now supports limiting the number of concurrent connections in order
   to prevent Out of Memory errors. Please refer to
   [AMQP Adapter Configuration]({{< relref "/admin-guide/amqp-adapter-config.md" >}}) for details.
-* The `org.eclipse.hono.client.AsyncCommancClient` has been added to support the sending of
+* The `org.eclipse.hono.client.AsyncCommandClient` has been added to support the sending of
   commands to devices and the receiving of responses in an asynchronous way. This can be used
   to decouple the sender and receiver from each other. 
 * The `org.eclipse.hono.service.tenant.CompleteBaseTenantService` class now rejects malformed
