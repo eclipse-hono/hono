@@ -43,6 +43,10 @@ public final class TracingHelper {
      */
     public static final BooleanTag TAG_AUTHENTICATED = new BooleanTag("authenticated");
     /**
+     * An OpenTracing tag that contains the authentication identifier used by a device.
+     */
+    public static final StringTag TAG_AUTH_ID = new StringTag("auth_id");
+    /**
      * An OpenTracing tag that is used to indicate if the result of an operation
      * has been taken from a local cache.
      */
@@ -58,6 +62,10 @@ public final class TracingHelper {
      * with a request message.
      */
     public static final StringTag TAG_CORRELATION_ID = new StringTag("message_bus.correlation_id");
+    /**
+     * An OpenTracing tag that contains the type of credentials used by a device.
+     */
+    public static final StringTag TAG_CREDENTIALS_TYPE = new StringTag("credentials_type");
     /**
      * An OpenTracing tag that contains the number of available credits for a sender link.
      */

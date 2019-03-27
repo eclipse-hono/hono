@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -48,9 +48,6 @@ import io.vertx.core.json.JsonObject;
 public abstract class BaseCredentialsService<T> extends EventBusService<T> implements CredentialsService {
 
     private static final String SPAN_NAME_GET_CREDENTIALS = "get Credentials";
-
-    private static final String TAG_AUTH_ID = "auth_id";
-    private static final String TAG_CREDENTIALS_TYPE = "credentials_type";
 
     @Override
     protected String getEventBusAddress() {
@@ -126,8 +123,8 @@ public abstract class BaseCredentialsService<T> extends EventBusService<T> imple
     private Future<EventBusMessage> processGetByAuthIdRequest(final EventBusMessage request, final String tenantId,
             final JsonObject payload, final String type, final String authId, final Span span) {
         log.debug("getting credentials [tenant: {}, type: {}, auth-id: {}]", tenantId, type, authId);
-        span.setTag(TAG_CREDENTIALS_TYPE, type);
-        span.setTag(TAG_AUTH_ID, authId);
+        TracingHelper.TAG_CREDENTIALS_TYPE.set(span, type);
+        TracingHelper.TAG_AUTH_ID.set(span, authId);
         final Future<CredentialsResult<JsonObject>> result = Future.future();
         get(tenantId, type, authId, payload, span, result.completer());
         return result.map(res -> {
@@ -148,7 +145,7 @@ public abstract class BaseCredentialsService<T> extends EventBusService<T> imple
     private Future<EventBusMessage> processGetByDeviceIdRequest(final EventBusMessage request, final String tenantId,
             final String type, final String deviceId, final Span span) {
         log.debug("getting credentials for device [tenant: {}, device-id: {}]", tenantId, deviceId);
-        span.setTag(TAG_CREDENTIALS_TYPE, type);
+        TracingHelper.TAG_CREDENTIALS_TYPE.set(span, type);
         span.setTag(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId);
         final Future<CredentialsResult<JsonObject>> result = Future.future();
         getAll(tenantId, deviceId, span, result.completer());
