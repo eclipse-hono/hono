@@ -17,6 +17,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 
 import org.apache.qpid.proton.message.Message;
 
@@ -24,11 +25,15 @@ import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.opentracing.log.Fields;
+import io.opentracing.noop.NoopSpanContext;
 import io.opentracing.propagation.Format;
 import io.opentracing.tag.BooleanTag;
 import io.opentracing.tag.IntTag;
 import io.opentracing.tag.StringTag;
 import io.opentracing.tag.Tags;
+import io.vertx.core.MultiMap;
+import io.vertx.core.eventbus.DeliveryOptions;
+import io.vertx.core.http.CaseInsensitiveHeaders;
 import io.vertx.core.json.JsonObject;
 
 /**
@@ -252,5 +257,46 @@ public final class TracingHelper {
 
         return tracer.extract(Format.Builtin.TEXT_MAP,
                 new MessageAnnotationsExtractAdapter(message, AMQP_ANNOTATION_NAME_TRACE_CONTEXT));
+    }
+
+    /**
+     * Injects a {@code SpanContext} into the headers of vert.x {@code DeliveryOptions}.
+     *
+     * @param tracer The Tracer to use for injecting the context.
+     * @param spanContext The context to inject or {@code null} if no context is available.
+     * @param deliveryOptions The delivery options to inject the context into.
+     * @throws NullPointerException if any of the parameters are {@code null}.
+     */
+    public static void injectSpanContext(final Tracer tracer, final SpanContext spanContext, final DeliveryOptions deliveryOptions) {
+
+        Objects.requireNonNull(tracer);
+        Objects.requireNonNull(deliveryOptions);
+
+        if (spanContext != null && !(spanContext instanceof NoopSpanContext)) {
+            final MultiMap headers = Optional.of(deliveryOptions)
+                    .map(options -> options.getHeaders())
+                    .orElseGet(() -> {
+                        final MultiMap newHeaders = new CaseInsensitiveHeaders();
+                        deliveryOptions.setHeaders(newHeaders);
+                        return newHeaders;
+                    });
+            tracer.inject(spanContext, Format.Builtin.TEXT_MAP, new MultiMapInjectAdapter(headers));
+        }
+    }
+
+    /**
+     * Extracts a {@code SpanContext} from the headers of a vert.x event bus message.
+     *
+     * @param tracer The Tracer to use for extracting the context.
+     * @param headers The headers to extract the context from.
+     * @return The context or {@code null} if the given options do not contain a context.
+     * @throws NullPointerException if any of the parameters are {@code null}.
+     */
+    public static SpanContext extractSpanContext(final Tracer tracer, final MultiMap headers) {
+
+        Objects.requireNonNull(tracer);
+        Objects.requireNonNull(headers);
+
+        return tracer.extract(Format.Builtin.TEXT_MAP, new MultiMapExtractAdapter(headers));
     }
 }

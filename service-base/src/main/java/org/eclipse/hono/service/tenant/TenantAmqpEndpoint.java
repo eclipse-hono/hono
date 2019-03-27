@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -29,7 +29,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
-import io.vertx.core.eventbus.DeliveryOptions;
 
 /**
  * An {@code AmqpEndpoint} for managing tenant information.
@@ -53,6 +52,14 @@ public class TenantAmqpEndpoint extends RequestResponseEndpoint<ServiceConfigPro
     @Override
     public final String getName() {
         return TenantConstants.TENANT_ENDPOINT;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected final String getEventBusServiceAddress() {
+        return TenantConstants.EVENT_BUS_ADDRESS_TENANT_IN;
     }
 
     /**
@@ -128,19 +135,20 @@ public class TenantAmqpEndpoint extends RequestResponseEndpoint<ServiceConfigPro
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
-    public final void processRequest(final Message msg, final ResourceIdentifier targetAddress,
-                               final HonoUser clientPrincipal) {
+    protected Future<EventBusMessage> createEventBusRequestMessage(
+            final Message requestMessage,
+            final ResourceIdentifier targetAddress,
+            final HonoUser clientPrincipal) {
 
-        final EventBusMessage request = EventBusMessage.forOperation(msg)
-                .setReplyToAddress(msg)
-                .setAppCorrelationId(msg)
-                .setCorrelationId(msg)
-                .setTenant(msg)
-                .setJsonPayload(msg);
-
-        final DeliveryOptions options = createEventBusMessageDeliveryOptions(extractSpanContext(msg));
-        vertx.eventBus().send(TenantConstants.EVENT_BUS_ADDRESS_TENANT_IN, request.toJson(), options);
+        return Future.succeededFuture(EventBusMessage.forOperation(requestMessage)
+                .setAppCorrelationId(requestMessage)
+                .setCorrelationId(requestMessage)
+                .setTenant(requestMessage)
+                .setJsonPayload(requestMessage));
     }
 
     @Override

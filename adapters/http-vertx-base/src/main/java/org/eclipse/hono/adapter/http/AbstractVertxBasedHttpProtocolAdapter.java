@@ -33,6 +33,7 @@ import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.ResourceConflictException;
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
 import org.eclipse.hono.service.auth.DeviceUser;
+import org.eclipse.hono.service.http.ComponentMetaDataDecorator;
 import org.eclipse.hono.service.http.DefaultFailureHandler;
 import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.service.metric.MetricsTags;

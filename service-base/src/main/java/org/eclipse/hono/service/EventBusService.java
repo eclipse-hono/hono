@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -17,7 +17,6 @@ import java.util.Objects;
 import java.util.Optional;
 
 import org.eclipse.hono.client.ServiceInvocationException;
-import org.eclipse.hono.tracing.MultiMapExtractAdapter;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.ConfigurationSupportingVerticle;
 import org.eclipse.hono.util.EventBusMessage;
@@ -30,7 +29,6 @@ import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.opentracing.noop.NoopTracerFactory;
-import io.opentracing.propagation.Format;
 import io.opentracing.tag.Tags;
 import io.vertx.core.Future;
 import io.vertx.core.eventbus.Message;
@@ -157,7 +155,7 @@ public abstract class EventBusService<C> extends ConfigurationSupportingVerticle
         }
 
         final EventBusMessage request = EventBusMessage.fromJson(msg.body());
-        final SpanContext spanContext = tracer.extract(Format.Builtin.TEXT_MAP, new MultiMapExtractAdapter(msg.headers()));
+        final SpanContext spanContext = TracingHelper.extractSpanContext(tracer, msg.headers());
         request.setSpanContext(spanContext);
         processRequest(request).recover(t -> {
             log.debug("cannot process request [operation: {}]: {}", request.getOperation(), t.getMessage());

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -23,8 +23,8 @@ import org.eclipse.hono.util.EventBusMessage;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import io.vertx.core.Future;
 import io.vertx.core.Vertx;
-import io.vertx.core.eventbus.DeliveryOptions;
 
 /**
  * An {@code AmqpEndpoint} for managing device credential information.
@@ -51,19 +51,28 @@ public class CredentialsAmqpEndpoint extends RequestResponseEndpoint<ServiceConf
         return CredentialsConstants.CREDENTIALS_ENDPOINT;
     }
 
-
+    /**
+     * {@inheritDoc}
+     */
     @Override
-    public final void processRequest(final Message msg, final ResourceIdentifier targetAddress, final HonoUser clientPrincipal) {
+    protected final String getEventBusServiceAddress() {
+        return CredentialsConstants.EVENT_BUS_ADDRESS_CREDENTIALS_IN;
+    }
 
-        final EventBusMessage credentialsMsg = EventBusMessage.forOperation(msg)
-                .setReplyToAddress(msg)
-                .setAppCorrelationId(msg)
-                .setCorrelationId(msg)
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected Future<EventBusMessage> createEventBusRequestMessage(
+            final Message requestMessage,
+            final ResourceIdentifier targetAddress,
+            final HonoUser clientPrincipal) {
+
+        return Future.succeededFuture(EventBusMessage.forOperation(requestMessage)
+                .setAppCorrelationId(requestMessage)
+                .setCorrelationId(requestMessage)
                 .setTenant(targetAddress.getTenantId())
-                .setJsonPayload(msg);
-
-        final DeliveryOptions options = createEventBusMessageDeliveryOptions(extractSpanContext(msg));
-        vertx.eventBus().send(CredentialsConstants.EVENT_BUS_ADDRESS_CREDENTIALS_IN, credentialsMsg.toJson(), options);
+                .setJsonPayload(requestMessage));
     }
 
     @Override

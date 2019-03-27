@@ -26,8 +26,10 @@ import org.eclipse.hono.util.RequestResponseApiConstants;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 
+import io.opentracing.contrib.vertx.ext.web.TracingHandler;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
+import io.vertx.core.eventbus.DeliveryOptions;
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonObject;
@@ -190,7 +192,8 @@ public abstract class AbstractHttpEndpoint<T> extends AbstractEndpoint implement
      */
     protected final void sendAction(final RoutingContext ctx, final JsonObject requestMsg, final BiConsumer<Integer, JsonObject> responseHandler) {
 
-        vertx.eventBus().send(getEventBusAddress(), requestMsg, invocation -> {
+        final DeliveryOptions options = createEventBusMessageDeliveryOptions(TracingHandler.serverSpanContext(ctx));
+        vertx.eventBus().send(getEventBusAddress(), requestMsg, options, invocation -> {
             if (invocation.failed()) {
                 HttpUtils.serviceUnavailable(ctx, 2);
             } else {

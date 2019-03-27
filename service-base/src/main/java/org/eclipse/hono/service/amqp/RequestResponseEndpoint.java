@@ -12,22 +12,22 @@
  *******************************************************************************/
 package org.eclipse.hono.service.amqp;
 
+import java.net.HttpURLConnection;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 
 import org.apache.qpid.proton.amqp.transport.AmqpError;
+import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.auth.HonoUser;
+import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.auth.AuthorizationService;
 import org.eclipse.hono.service.auth.ClaimsBasedAuthorizationService;
-import org.eclipse.hono.tracing.MultiMapInjectAdapter;
 import org.eclipse.hono.tracing.TracingHelper;
-import org.eclipse.hono.util.AmqpErrorException;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventBusMessage;
 import org.eclipse.hono.util.HonoProtonHelper;
@@ -35,21 +35,14 @@ import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.Multimap;
-
+import io.opentracing.Span;
 import io.opentracing.SpanContext;
-import io.opentracing.Tracer;
-import io.opentracing.noop.NoopSpanContext;
-import io.opentracing.noop.NoopTracerFactory;
-import io.opentracing.propagation.Format;
+import io.opentracing.tag.Tags;
+import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
-import io.vertx.core.MultiMap;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.DeliveryOptions;
-import io.vertx.core.eventbus.MessageConsumer;
-import io.vertx.core.http.CaseInsensitiveHeaders;
-import io.vertx.core.json.DecodeException;
+import io.vertx.core.eventbus.ReplyException;
 import io.vertx.core.json.JsonObject;
 import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonDelivery;
@@ -67,15 +60,7 @@ import io.vertx.proton.ProtonSender;
  */
 public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties> extends AbstractAmqpEndpoint<T> {
 
-    /**
-     * The OpenTracing {@code Tracer} for tracking processing of requests.
-     */
-    protected Tracer tracer = NoopTracerFactory.create();
-
-    private final Map<String, ProtonReceiver> replyToReceiverMap = new HashMap<>();
-    private final Multimap<ProtonConnection, MessageConsumer<?>> replyConsumerMap = HashMultimap.create();
-    private final Multimap<ProtonConnection, String> replyAddressMap = HashMultimap.create();
-    private final Set<String> replyAddresses = new HashSet<>();
+    private final Map<String, ProtonSender> replyToSenderMap = new HashMap<>();
 
     private AuthorizationService authorizationService = new ClaimsBasedAuthorizationService();
 
@@ -90,15 +75,26 @@ public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties>
     }
 
     /**
-     * Processes an AMQP message received from a client.
-     *
-     * @param request The Message to process. Must not be null.
+     * Gets the address on the vert.x event bus to which service invocation
+     * requests should be sent.
+     * 
+     * @return The address.
+     */
+    protected abstract String getEventBusServiceAddress();
+
+    /**
+     * Creates the message to send to the service implementation
+     * via the vert.x event bus in order to invoke an operation.
+     * 
+     * @param requestMessage The AMQP message representing the service invocation request.
      * @param targetAddress The address the message is sent to.
      * @param clientPrincipal The principal representing the client identity and its authorities.
-     * @throws DecodeException if the message's payload does not contain a valid JSON string.
-     * @throws NullPointerException if message is {@code null}.
+     * @return A future indicating the outcome of the operation.
      */
-    public abstract void processRequest(Message request, ResourceIdentifier targetAddress, HonoUser clientPrincipal);
+    protected abstract Future<EventBusMessage> createEventBusRequestMessage(
+            Message requestMessage,
+            ResourceIdentifier targetAddress,
+            HonoUser clientPrincipal);
 
     /**
      * Creates an AMQP message for a service response.
@@ -131,27 +127,15 @@ public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties>
     }
 
     /**
-     * Sets the OpenTracing {@code Tracer} to use for tracking the processing
-     * of requests.
+     * Handles a client's request to establish a link for sending service invocation requests.
      * <p>
-     * If not set explicitly, the {@code NoopTracer} from OpenTracing will
-     * be used.
-     *
-     * @param opentracingTracer The tracer.
-     */
-    @Autowired(required = false)
-    public final void setTracer(final Tracer opentracingTracer) {
-        logger.info("using OpenTracing Tracer implementation [{}]", opentracingTracer.getClass().getName());
-        this.tracer = Objects.requireNonNull(opentracingTracer);
-    }
-
-    /**
      * Configure and check the receiver link of the endpoint.
      * The remote link of the receiver must not demand the AT_MOST_ONCE QoS (not supported).
      * The receiver link itself is configured with the AT_LEAST_ONCE QoS and grants the configured credits
      * ({@link ServiceConfigProperties#getReceiverLinkCredit()}) with autoAcknowledge.
      * <p>
-     * Handling of received messages is delegated to {@link #handleMessage(ProtonConnection, ProtonReceiver, ResourceIdentifier, ProtonDelivery, Message)}.
+     * Handling of request messages is delegated to
+     * {@link #handleRequestMessage(ProtonConnection, ProtonReceiver, ResourceIdentifier, ProtonDelivery, Message)}.
      *
      * @param con The AMQP connection that the link is part of.
      * @param receiver The ProtonReceiver that has already been created for this endpoint.
@@ -159,38 +143,35 @@ public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties>
      */
     @Override
     public final void onLinkAttach(final ProtonConnection con, final ProtonReceiver receiver, final ResourceIdentifier targetAddress) {
+
         if (ProtonQoS.AT_MOST_ONCE.equals(receiver.getRemoteQoS())) {
             logger.debug("client wants to use unsupported AT MOST ONCE delivery mode for endpoint [{}], closing link ...", getName());
             receiver.setCondition(ProtonHelper.condition(AmqpError.PRECONDITION_FAILED.toString(), "endpoint requires AT_LEAST_ONCE QoS"));
             receiver.close();
         } else {
 
-            logger.debug("establishing link for receiving messages from client [{}]", receiver.getName());
+            logger.debug("establishing link for receiving request messages from client [{}]", receiver.getName());
 
             receiver.setQoS(ProtonQoS.AT_LEAST_ONCE);
             receiver.setAutoAccept(true); // settle received messages if the handler succeeds
 
-            /*
-             * We do manual flow control, credits are replenished after responses have been sent.
-             */
+            // We do manual flow control, credits are replenished after responses have been sent.
             receiver.setPrefetch(0);
 
             // set up handlers
 
             receiver.handler((delivery, message) -> {
-                handleMessage(con, receiver, targetAddress, delivery, message);
+                handleRequestMessage(con, receiver, targetAddress, delivery, message);
             });
-            HonoProtonHelper.setCloseHandler(receiver, clientDetached -> onLinkDetach(receiver));
+            HonoProtonHelper.setCloseHandler(receiver, remoteClose -> onLinkDetach(receiver));
+            HonoProtonHelper.setDetachHandler(receiver, remoteDetach -> onLinkDetach(receiver));
 
             // acknowledge the remote open
-
             receiver.open();
 
             // send out initial credits, after opening
-
+            logger.debug("flowing {} credits to client", config.getReceiverLinkCredit());
             receiver.flow(config.getReceiverLinkCredit());
-
-            logger.debug("Flowing {} credits to the sender", config.getReceiverLinkCredit());
         }
     }
 
@@ -210,76 +191,107 @@ public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties>
      * @param receiver The link over which the message has been received.
      * @param targetAddress The address the message is sent to.
      * @param delivery The message's delivery status.
-     * @param message The message.
+     * @param requestMessage The request message.
      */
-    protected final void handleMessage(final ProtonConnection con, final ProtonReceiver receiver,
-            final ResourceIdentifier targetAddress, final ProtonDelivery delivery, final Message message) {
-
-        final Future<Void> formalCheck = Future.future();
-        if (passesFormalVerification(targetAddress, message)) {
-            formalCheck.complete();
-        } else {
-            formalCheck.fail(new AmqpErrorException(AmqpError.DECODE_ERROR, "malformed payload"));
-        }
+    protected final void handleRequestMessage(
+            final ProtonConnection con,
+            final ProtonReceiver receiver,
+            final ResourceIdentifier targetAddress,
+            final ProtonDelivery delivery,
+            final Message requestMessage) {
 
         final HonoUser clientPrincipal = Constants.getClientPrincipal(con);
+        final String replyTo = requestMessage.getReplyTo();
+        final SpanContext spanContext = TracingHelper.extractSpanContext(tracer, requestMessage);
+        final Span currentSpan = tracer.buildSpan("process request message")
+                .asChildOf(spanContext)
+                .ignoreActiveSpan()
+                .withTag(Tags.COMPONENT.getKey(), getName())
+                .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_SERVER)
+                .withTag(Tags.HTTP_METHOD.getKey(), requestMessage.getSubject())
+                .withTag(Tags.MESSAGE_BUS_DESTINATION.getKey(), targetAddress.toString())
+                .start();
 
-        final String replyTo = message.getReplyTo();
+        if (!passesFormalVerification(targetAddress, requestMessage)) {
+            MessageHelper.rejected(delivery, new ErrorCondition(Constants.AMQP_BAD_REQUEST, "malformed request message"));
+            flowCreditToRequestor(receiver, replyTo);
+            TracingHelper.logError(currentSpan, "malformed request message");
+            currentSpan.finish();
+            return;
+        }
 
-        formalCheck
+        ProtonHelper.accepted(delivery, true);
+        currentSpan.log("request message accepted");
 
-                .compose(ok -> {
+        final Future<ProtonSender> sender = getSenderForConnection(con, replyTo);
+        final Future<EventBusMessage> request = createEventBusRequestMessage(requestMessage, targetAddress, clientPrincipal);
 
-                    if (!replyAddresses.contains(replyTo)) {
-                        return Future
-                                .failedFuture(new AmqpErrorException(AmqpError.ILLEGAL_STATE,
-                                        "unsubscribed reply-to address"));
-                    }
+        CompositeFuture.all(request, sender)
+        .compose(ok -> isAuthorized(clientPrincipal, targetAddress, requestMessage))
+        .map(authorized -> {
 
-                    allocateReceiverForReplyTo(replyTo, receiver);
+            logger.debug("client [{}] is {}authorized to {}:{}", clientPrincipal.getName(),
+                    authorized ? "" : "not ", targetAddress, requestMessage.getSubject());
 
-                    return Future.succeededFuture();
-                })
+            if (authorized) {
+                return authorized;
+            } else {
+                throw new ClientErrorException(HttpURLConnection.HTTP_FORBIDDEN, "not authorized to invoke operation");
+            }
+        })
+        .compose(authorized -> {
+            final Future<io.vertx.core.eventbus.Message<Object>> reply = Future.future();
+            final DeliveryOptions options = createEventBusMessageDeliveryOptions(currentSpan.context());
+            vertx.eventBus().send(
+                    getEventBusServiceAddress(),
+                    request.result().toJson(),
+                    options,
+                    reply);
+            return reply;
+        })
+        .map(reply -> extractResponse(reply))
+        .compose(eventBusMessage -> filterResponse(clientPrincipal, eventBusMessage))
+        .map(filteredResponse -> {
+            Tags.HTTP_STATUS.set(currentSpan, filteredResponse.getStatus());
+            return getAmqpReply(filteredResponse);
+        })
+        .otherwise(t -> {
 
-                .compose(ok -> isAuthorized(clientPrincipal, targetAddress, message))
-
-                .compose(authorized -> {
-
-                    logger.debug("client [{}] is {}authorized to {}:{}", clientPrincipal.getName(),
-                            authorized ? "" : "not ", targetAddress, message.getSubject());
-
-                    if (authorized) {
-                        try {
-                            processRequest(message, targetAddress, clientPrincipal);
-                            ProtonHelper.accepted(delivery, true);
-                            return Future.succeededFuture();
-                        } catch (final DecodeException e) {
-                            return Future
-                                    .failedFuture(new AmqpErrorException(AmqpError.DECODE_ERROR, "malformed payload"));
-                        }
-                    } else {
-                        return Future
-                                .failedFuture(new AmqpErrorException(AmqpError.UNAUTHORIZED_ACCESS, "unauthorized"));
-                    }
-
-                })
-
-                .otherwise(t -> {
-
-                    flowCreditToRequestor(replyTo);
-
-                    if (t instanceof AmqpErrorException) {
-                        final AmqpErrorException cause = (AmqpErrorException) t;
-                        MessageHelper.rejected(delivery, cause.asErrorCondition());
-                    } else {
-                        logger.debug("error processing request [resource: {}, op: {}]: {}", targetAddress,
-                                message.getSubject(), t.getMessage());
-                        MessageHelper.rejected(delivery,
-                                ProtonHelper.condition(AmqpError.INTERNAL_ERROR, "internal error"));
-                    }
-
-                    return null;
-                });
+            logger.debug("error processing request [resource: {}, op: {}]: {}", targetAddress,
+                    requestMessage.getSubject(), t.getMessage());
+            currentSpan.log("error processing request");
+            TracingHelper.logError(currentSpan, t);
+            final int statusCode;
+            if (t instanceof ReplyException) {
+                final ReplyException ex = (ReplyException) t;
+                switch(ex.failureType()) {
+                case TIMEOUT:
+                    statusCode = HttpURLConnection.HTTP_UNAVAILABLE;
+                    break;
+                default:
+                    statusCode = HttpURLConnection.HTTP_INTERNAL_ERROR;
+                }
+            } else {
+                statusCode = ServiceInvocationException.extractStatusCode(t);
+            }
+            Tags.HTTP_STATUS.set(currentSpan, statusCode);
+            return getAmqpReply(request.result().getResponse(statusCode));
+        })
+        .map(amqpMessage -> {
+            if (sender.result().isOpen()) {
+                final ProtonDelivery responseDelivery = sender.result().send(amqpMessage);
+                currentSpan.log("sent response message to client");
+                return responseDelivery;
+            } else {
+                TracingHelper.logError(currentSpan, "cannot send response, reply-to link is closed");
+                return null;
+            }
+        })
+        .setHandler(s -> {
+            // allow client to send another request
+            flowCreditToRequestor(receiver, replyTo);
+            currentSpan.finish();
+        });
     }
 
     /**
@@ -303,6 +315,17 @@ public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties>
 
         Objects.requireNonNull(message);
         return getAuthorizationService().isAuthorized(clientPrincipal, resource, message.getSubject());
+    }
+
+    private EventBusMessage extractResponse(final io.vertx.core.eventbus.Message<Object> response) {
+
+        if (response.body() instanceof JsonObject) {
+
+            final JsonObject body = (JsonObject) response.body();
+            return EventBusMessage.fromJson(body);
+        } else {
+            throw new ServerErrorException(HttpURLConnection.HTTP_INTERNAL_ERROR);
+        }
     }
 
     /**
@@ -352,7 +375,7 @@ public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties>
 
         final String replyTo = replyToAddress.toString();
 
-        if (this.replyAddresses.contains(replyTo)) {
+        if (this.replyToSenderMap.containsKey(replyTo)) {
             logger.debug("client [{}] wanted to subscribe to already subscribed reply-to address [{}]",
                     sender.getName(), replyTo);
             sender.setCondition(ProtonHelper.condition(AmqpError.ILLEGAL_STATE,
@@ -363,143 +386,83 @@ public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties>
 
         logger.debug("establishing response sender link with client [{}]", sender.getName());
 
-        final MessageConsumer<JsonObject> replyConsumer = vertx.eventBus().consumer(replyTo,
-                message -> {
-                    // TODO check for correct session here...?
-                    if (logger.isTraceEnabled()) {
-                        logger.trace("forwarding reply to client [{}]: {}", sender.getName(),
-                                message.body().encodePrettily());
-                    }
-                    final EventBusMessage response = EventBusMessage.fromJson(message.body());
-                    filterResponse(Constants.getClientPrincipal(con), response)
-                            .recover(t -> {
-                                final int status = ServiceInvocationException.extractStatusCode(t);
-                                return Future.succeededFuture(response.getResponse(status));
-                            })
-                            .map(filteredResponse -> {
-                                try {
-                                    final Message amqpReply = getAmqpReply(filteredResponse);
-                                    sender.send(amqpReply);
-                                } finally {
-                                    flowCreditToRequestor(replyTo);
-                                }
-                                return null;
-                            });
-                });
-
-        // register this consumer and replyTo address with this connection
-
-        registerConsumerForConnection(con, replyTo, replyConsumer);
+        registerSenderForReplyTo(replyTo, sender);
 
         sender.setQoS(ProtonQoS.AT_LEAST_ONCE);
 
-        HonoProtonHelper.setCloseHandler(sender, senderClosed -> {
-            logger.debug("client [{}] closed sender link, removing associated event bus consumer [{}]",
-                    sender.getName(), replyConsumer.address());
-
-            deallocateReceiverForReplyTo(replyTo);
-            unregisterConsumerForConnection(con, replyTo, replyConsumer);
-
+        HonoProtonHelper.setCloseHandler(sender, remoteClose -> {
+            logger.debug("client [{}] closed sender link", sender.getName());
+            unregisterSenderForReplyTo(replyTo);
+            sender.close();
+        });
+        HonoProtonHelper.setDetachHandler(sender, remoteDetach -> {
+            logger.debug("client [{}] detached sender link", sender.getName());
+            unregisterSenderForReplyTo(replyTo);
             sender.close();
         });
 
         sender.open();
-
     }
 
     @Override
     public void onConnectionClosed(final ProtonConnection connection) {
 
         Objects.requireNonNull(connection);
-
-        unregisterAllConsumersForConnection(connection);
-        deallocateAllReceiversForConnection(connection);
+        deallocateAllSendersForConnection(connection);
     }
 
-    private void allocateReceiverForReplyTo(final String replyTo, final ProtonReceiver receiver) {
+    private Future<ProtonSender> getSenderForConnection(final ProtonConnection con, final String replytoAddress) {
 
-        final ProtonReceiver oldReceiver = replyToReceiverMap.put(replyTo, receiver);
-
-        if (oldReceiver == null || oldReceiver == receiver) {
-            logger.debug("Allocated receiver [{}] for replies to [{}]", receiver, replyTo);
+        final Future<ProtonSender> result = Future.future();
+        final ProtonSender sender = replyToSenderMap.get(replytoAddress);
+        if (sender != null && sender.isOpen() && sender.getSession().getConnection() == con) {
+            result.complete(sender);
         } else {
-            logger.info("Allocated receiver [{}] for replies to [{}] - Had existing receiver: [{}]", receiver, replyTo,
-                    oldReceiver);
+            result.fail(new ClientErrorException(
+                    HttpURLConnection.HTTP_PRECON_FAILED,
+                    "must open receiver link for reply-to address first"));
         }
+        return result;
     }
 
-    private void flowCreditToRequestor(final String replyTo) {
+    private void registerSenderForReplyTo(final String replyTo, final ProtonSender sender) {
 
-        final ProtonReceiver receiver = replyToReceiverMap.get(replyTo);
-        if (receiver == null) {
-            logger.warn("No receiver found for reply-to address [{}]", replyTo);
-            return;
-        }
+        final ProtonSender oldSender = replyToSenderMap.put(replyTo, sender);
 
-        // flow one credit back to the receiver
-        receiver.flow(1);
-
-        if (logger.isTraceEnabled()) {
-            logger.trace("Flowing credit back to sender - replyTo: [{}], currentCredits: {}", replyTo,
-                    receiver.getCredit());
-        }
-
-    }
-
-    private void deallocateReceiverForReplyTo(final String replyTo) {
-
-        final ProtonReceiver receiver = replyToReceiverMap.remove(replyTo);
-        if (receiver == null) {
-            logger.warn("Receiver was not allocated to replyTo address [{}]", replyTo);
+        if (oldSender == null || oldSender == sender) {
+            logger.debug("registered sender [{}] for replies to [{}]", sender, replyTo);
         } else {
-            logger.debug("Deallocated receiver [{}] for replies to [{}]", receiver, replyTo);
+            logger.info("replaced existing sender [{}] for replies to [{}] with sender [{}]",
+                    oldSender, replyTo, sender);
+        }
+    }
+
+    private void unregisterSenderForReplyTo(final String replyTo) {
+
+        final ProtonSender sender = replyToSenderMap.remove(replyTo);
+        if (sender == null) {
+            logger.warn("sender was not allocated for replyTo address [{}]", replyTo);
+        } else {
+            logger.debug("deallocated sender [{}] for replies to [{}]", sender, replyTo);
         }
 
     }
 
-    private void deallocateAllReceiversForConnection(final ProtonConnection connection) {
-        replyToReceiverMap
+    private void deallocateAllSendersForConnection(final ProtonConnection connection) {
+        replyToSenderMap
                 .entrySet()
                 .removeIf(entry -> entry.getValue().getSession().getConnection() == connection);
     }
 
-    private void registerConsumerForConnection(final ProtonConnection connection,
-            final String replyTo, final MessageConsumer<?> replyConsumer) {
+    private void flowCreditToRequestor(final ProtonReceiver receiver, final String replyTo) {
 
-        replyConsumerMap.put(connection, replyConsumer);
-        replyAddressMap.put(connection, replyTo);
-        replyAddresses.add(replyTo);
+        receiver.flow(1);
 
-    }
+        if (logger.isTraceEnabled()) {
+            logger.trace("replenished client [reply-to: {}, current credit: {}]", replyTo,
+                    receiver.getCredit());
+        }
 
-    private void unregisterConsumerForConnection(final ProtonConnection connection,
-            final String replyTo, final MessageConsumer<?> replyConsumer) {
-
-        // unregister the consumer
-
-        replyConsumer.unregister();
-
-        // remove the consumer from the connection map
-
-        replyConsumerMap.remove(connection, replyConsumer);
-
-        // remove the replyTo address from the connection map and address set
-
-        replyAddressMap.remove(connection, replyTo);
-        replyAddresses.remove(replyTo);
-    }
-
-    private void unregisterAllConsumersForConnection(final ProtonConnection connection) {
-
-        // unregister all consumers the connection had registered
-
-        replyConsumerMap
-                .removeAll(connection)
-                .forEach(MessageConsumer::unregister);
-
-        // now remove all addresses this connection has and remove them from the reply address set
-
-        replyAddresses.removeAll(replyAddressMap.removeAll(connection));
     }
 
     /**
@@ -514,7 +477,7 @@ public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties>
      * segments: an endpoint identifier, a tenant identifier and a resource identifier.
      * <p>
      * Subclasses should override this method if the service they provide an endpoint for
-     * use a different reply-to address format.
+     * uses a different reply-to address format.
      * 
      * @param replyToAddress The address to check.
      * @return {@code true} if the address is valid.
@@ -526,34 +489,5 @@ public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties>
         } else {
             return replyToAddress.getResourcePath().length >= 3;
         }
-    }
-
-    /**
-     * Creates {@code DeliveryOptions} that contain the given {@code SpanContext}.
-     * <p>
-     * To be used when sending a message on the vert.x event bus.
-     *  
-     * @param spanContext The {@code SpanContext} (may be {@code null}).
-     * @return The {@code DeliveryOptions}.
-     */
-    protected final DeliveryOptions createEventBusMessageDeliveryOptions(final SpanContext spanContext) {
-        final DeliveryOptions deliveryOptions = new DeliveryOptions();
-        if (spanContext != null && !(spanContext instanceof NoopSpanContext)) {
-            final MultiMap multiMap = new CaseInsensitiveHeaders();
-            tracer.inject(spanContext, Format.Builtin.TEXT_MAP, new MultiMapInjectAdapter(multiMap));
-            deliveryOptions.setHeaders(multiMap);
-        }
-        return deliveryOptions;
-    }
-
-    /**
-     * Extracts a {@code SpanContext} out of the message annotations of the given {@code Message}.
-     * 
-     * @param message The AMQP message.
-     * @return The extracted {@code SpanContext} (may be {@code null}).
-     * @throws NullPointerException if the message is {@code null}.
-     */
-    protected final SpanContext extractSpanContext(final Message message) {
-        return TracingHelper.extractSpanContext(tracer, message);
     }
 }

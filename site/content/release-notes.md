@@ -2,6 +2,21 @@
 title = "Release Notes"
 +++
 
+## 1.0-M2 (not released yet)
+
+### New Features
+
+* A new *experimental* LoRa protocol adapter has been added which (so far) supports the reception
+  of telemetry data and events from devices connected to LoRa network providers and/or
+  LoRa gateways. Note that this adapter is *not* considered production ready yet.
+  Any help in improving and enhancing the adapter is more than welcome.
+
+### Fixes & Enhancements
+
+* The base classes for implementing the AMQP and HTTP endpoints for the Credentials, Tenant
+  and Device Registration APIs now create an OpenTracing Span for tracking the
+  processing of requests at a high level.
+
 ## 1.0-M1
 
 ### New Features

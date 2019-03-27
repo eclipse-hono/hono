@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,11 +14,17 @@ package org.eclipse.hono.service;
 
 import java.util.Objects;
 
+import org.eclipse.hono.tracing.TracingHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 
+import io.opentracing.SpanContext;
+import io.opentracing.Tracer;
+import io.opentracing.noop.NoopTracerFactory;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
+import io.vertx.core.eventbus.DeliveryOptions;
 import io.vertx.ext.healthchecks.HealthCheckHandler;
 
 /**
@@ -36,6 +42,11 @@ public abstract class AbstractEndpoint implements Endpoint {
     protected final Logger logger = LoggerFactory.getLogger(getClass());
 
     /**
+     * The OpenTracing {@code Tracer} for tracking processing of requests.
+     */
+    protected Tracer tracer = NoopTracerFactory.create();
+
+    /**
      * Creates an endpoint for a Vertx instance.
      * 
      * @param vertx The Vertx instance to use.
@@ -43,6 +54,21 @@ public abstract class AbstractEndpoint implements Endpoint {
      */
     protected AbstractEndpoint(final Vertx vertx) {
         this.vertx = Objects.requireNonNull(vertx);
+    }
+
+    /**
+     * Sets the OpenTracing {@code Tracer} to use for tracking the processing
+     * of requests.
+     * <p>
+     * If not set explicitly, the {@code NoopTracer} from OpenTracing will
+     * be used.
+     *
+     * @param opentracingTracer The tracer.
+     */
+    @Autowired(required = false)
+    public final void setTracer(final Tracer opentracingTracer) {
+        logger.info("using OpenTracing Tracer implementation [{}]", opentracingTracer.getClass().getName());
+        this.tracer = Objects.requireNonNull(opentracingTracer);
     }
 
     @Override
@@ -107,5 +133,20 @@ public abstract class AbstractEndpoint implements Endpoint {
     @Override
     public void registerReadinessChecks(final HealthCheckHandler handler) {
         // empty default implementation
+    }
+
+    /**
+     * Creates {@code DeliveryOptions} that contain the given {@code SpanContext}.
+     * <p>
+     * To be used when sending a message on the vert.x event bus.
+     *  
+     * @param spanContext The {@code SpanContext} (may be {@code null}).
+     * @return The {@code DeliveryOptions}.
+     */
+    protected final DeliveryOptions createEventBusMessageDeliveryOptions(final SpanContext spanContext) {
+        final DeliveryOptions deliveryOptions = new DeliveryOptions();
+        deliveryOptions.setSendTimeout(3000);
+        TracingHelper.injectSpanContext(tracer, spanContext, deliveryOptions);
+        return deliveryOptions;
     }
 }

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,8 +14,11 @@
 package org.eclipse.hono.service.http;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
@@ -24,8 +27,10 @@ import org.eclipse.hono.service.AbstractServiceBase;
 import org.eclipse.hono.util.Constants;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.beans.factory.annotation.Value;
 
+import io.opentracing.contrib.vertx.ext.web.TracingHandler;
+import io.opentracing.contrib.vertx.ext.web.WebSpanDecorator;
+import io.opentracing.tag.Tags;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.http.HttpServer;
@@ -48,8 +53,6 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
 
     private final Set<HttpEndpoint> endpoints = new HashSet<>();
 
-    @Value("${spring.profiles.active:}")
-    private String activeProfiles;
     private HttpServer server;
     private HttpServer insecureServer;
 
@@ -156,8 +159,12 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
     /**
      * Creates the router for handling requests.
      * <p>
-     * This method creates a router instance with a default route limiting the body size of requests to the maximum
-     * payload size set in the <em>config</em> properties.
+     * This method creates a router instance with
+     * <ul>
+     * <li>a default route limiting the body size of requests to the maximum
+     * payload size set in the <em>config</em> properties,</li>
+     * <li>a default failure handler.</li>
+     * </ul>
      *
      * @return The newly created router (never {@code null}).
      */
@@ -165,11 +172,40 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
 
         final Router router = Router.router(vertx);
         LOG.info("limiting size of inbound request body to {} bytes", getConfig().getMaxPayloadSize());
-        router.route()
-            .handler(BodyHandler.create().setBodyLimit(getConfig().getMaxPayloadSize()).setUploadsDirectory(DEFAULT_UPLOADS_DIRECTORY))
-            .failureHandler(new DefaultFailureHandler());
+        router.route().handler(BodyHandler.create().setUploadsDirectory(DEFAULT_UPLOADS_DIRECTORY).setBodyLimit(getConfig().getMaxPayloadSize()));
+        addTracingHandler(router, -5);
+        // add default handler for failed routes
+        router.route().order(-1).failureHandler(new DefaultFailureHandler());
 
         return router;
+    }
+
+    /**
+     * Adds a handler for adding an OpenTracing {@code Span} to the routing context.
+     *
+     * @param router The router to add the handler to.
+     * @param position The position to add the handler at.
+     */
+    private void addTracingHandler(final Router router, final int position) {
+        final Map<String, String> customTags = new HashMap<>();
+        customTags.put(Tags.COMPONENT.getKey(), getClass().getSimpleName());
+        addCustomTags(customTags);
+        final List<WebSpanDecorator> decorators = Collections.singletonList(new ComponentMetaDataDecorator(customTags));
+        final TracingHandler tracingHandler = new TracingHandler(tracer, decorators);
+        router.route().order(position).handler(tracingHandler).failureHandler(tracingHandler);
+    }
+
+    /**
+     * Adds meta data about this service to be included in OpenTracing
+     * spans that are used for tracing requests handled by this service.
+     * <p>
+     * This method is empty by default.
+     *
+     * @param customTags The existing custom tags to add to. The map will already
+     *                 include this service's simple class name under key {@link Tags#COMPONENT}.
+     */
+    protected void addCustomTags(final Map<String, String> customTags) {
+        // empty by default
     }
 
     private void addEndpointRoutes(final Router router) {

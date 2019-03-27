@@ -79,6 +79,10 @@
      <artifactId>opentracing-api</artifactId>
     </dependency>
     <dependency>
+      <groupId>io.opentracing</groupId>
+      <artifactId>opentracing-noop</artifactId>
+    </dependency>
+    <dependency>
       <groupId>org.eclipse.hono</groupId>
       <artifactId>hono-demo-certs</artifactId>
       <scope>test</scope>
@@ -153,6 +157,7 @@
             </Export-Package>
             <Embed-Dependency>
               opentracing-api;inline=true,
+              opentracing-noop;inline=true,
               spring-security-crypto;inline=true
             </Embed-Dependency>
           </instructions>
