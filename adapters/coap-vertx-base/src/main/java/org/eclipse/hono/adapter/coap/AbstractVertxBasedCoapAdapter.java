@@ -515,7 +515,6 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                     final MessageSender sender = senderTracker.result();
                     final Message downstreamMessage = newMessage(
                             ResourceIdentifier.from(endpoint.getCanonicalName(), device.getTenantId(), device.getDeviceId()),
-                            sender.isRegistrationAssertionRequired(),
                             "/" + context.getExchange().getRequestOptions().getUriPathString(),
                             contentType,
                             payload,

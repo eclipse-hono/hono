@@ -14,7 +14,6 @@
 package org.eclipse.hono.service;
 
 import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -225,29 +224,6 @@ public class AbstractProtocolAdapterBaseTest {
     }
 
     /**
-     * Verifies that the registration assertion is set on a downstream message.
-     */
-    @Test
-    public void testAddPropertiesAddsRegistrationAssertion() {
-
-        final Message message = ProtonHelper.message();
-        adapter.addProperties(message, newRegistrationAssertionResult("token"));
-        assertThat(MessageHelper.getRegistrationAssertion(message), is("token"));
-    }
-
-    /**
-     * Verifies that the registration assertion is not set on a downstream message
-     * if the downstream peer does not require it.
-     */
-    @Test
-    public void testAddPropertiesOmitsRegistrationAssertion() {
-
-        final Message message = ProtonHelper.message();
-        adapter.addProperties(message, newRegistrationAssertionResult("token"), false);
-        assertNull(MessageHelper.getRegistrationAssertion(message));
-    }
-
-    /**
      * Verifies that the adapter's name is set on a downstream message.
      */
     @Test
@@ -271,7 +247,6 @@ public class AbstractProtocolAdapterBaseTest {
 
         final Message message = ProtonHelper.message();
         adapter.addProperties(message, newRegistrationAssertionResult("token", "application/hono"));
-        assertThat(MessageHelper.getRegistrationAssertion(message), is("token"));
         assertThat(message.getContentType(), is("application/hono"));
     }
 
@@ -285,7 +260,6 @@ public class AbstractProtocolAdapterBaseTest {
         final Message message = ProtonHelper.message();
         message.setContentType("application/existing");
         adapter.addProperties(message, newRegistrationAssertionResult("token", "application/hono"));
-        assertThat(MessageHelper.getRegistrationAssertion(message), is("token"));
         assertThat(message.getContentType(), is("application/existing"));
     }
 
@@ -298,7 +272,6 @@ public class AbstractProtocolAdapterBaseTest {
 
         final Message message = ProtonHelper.message();
         adapter.addProperties(message, newRegistrationAssertionResult("token"));
-        assertThat(MessageHelper.getRegistrationAssertion(message), is("token"));
         assertThat(message.getContentType(), is(AbstractProtocolAdapterBase.CONTENT_TYPE_OCTET_STREAM));
     }
 

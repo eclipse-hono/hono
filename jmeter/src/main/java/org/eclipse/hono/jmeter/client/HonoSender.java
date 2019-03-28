@@ -16,7 +16,6 @@ package org.eclipse.hono.jmeter.client;
 import java.net.HttpURLConnection;
 import java.nio.charset.StandardCharsets;
 import java.text.MessageFormat;
-import java.time.Instant;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -28,19 +27,15 @@ import org.apache.jmeter.samplers.SampleResult;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageSender;
-import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.impl.HonoClientImpl;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.jmeter.HonoSampler;
 import org.eclipse.hono.jmeter.HonoSenderSampler;
-import org.eclipse.hono.util.JwtHelper;
 import org.eclipse.hono.util.MessageHelper;
-import org.eclipse.hono.util.RegistrationConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -62,10 +57,6 @@ public class HonoSender extends AbstractClient {
     private final HonoClient honoClient;
     private final byte[] payload;
     private final Context ctx;
-
-    private HonoClient registrationHonoClient;
-    private String assertion;
-    private Instant assertionExpiration;
 
     /**
      * Creates a new sender for configuration properties.
@@ -90,26 +81,6 @@ public class HonoSender extends AbstractClient {
         honoProps.setTrustStorePath(sampler.getTrustStorePath());
         honoProps.setReconnectAttempts(MAX_RECONNECT_ATTEMPTS);
         honoClient = new HonoClientImpl(vertx, honoProps);
-
-        final String registryHost = sampler.getRegistryHost();
-        final String staticAssertion = sampler.getRegistrationAssertion();
-        if ((registryHost != null && registryHost.length() > 0) &&
-                (staticAssertion == null || staticAssertion.length() == 0)) {
-            // only connect to Device Registration service if no static assertion token
-            // has been configured
-            final ClientConfigProperties registryProps = new ClientConfigProperties();
-            registryProps.setHostnameVerificationRequired(false);
-            registryProps.setHost(registryHost);
-            registryProps.setPort(sampler.getRegistryPortAsInt());
-            registryProps.setName(sampler.getContainer());
-            registryProps.setUsername(sampler.getRegistryUser());
-            registryProps.setPassword(sampler.getRegistryPwd());
-            registryProps.setTrustStorePath(sampler.getRegistryTrustStorePath());
-            registryProps.setReconnectAttempts(MAX_RECONNECT_ATTEMPTS);
-            registrationHonoClient = new HonoClientImpl(vertx, registryProps);
-        } else {
-            LOGGER.info("Registration Service host is not set, will use static token from Registration Assertion config option");
-        }
     }
 
     /**
@@ -129,7 +100,7 @@ public class HonoSender extends AbstractClient {
             ctx.runOnContext(start -> {
                 LOGGER.debug("create hono sender - tenant: {}", sampler.getTenant());
 
-                CompositeFuture.all(connectToAmqpMessagingNetwork(), connectToRegistrationService())
+                connectToAmqpMessagingNetwork()
                     .setHandler(startup -> {
                         if (startup.succeeded()) {
                             LOGGER.info("sender initialization complete");
@@ -158,26 +129,6 @@ public class HonoSender extends AbstractClient {
                 });
     }
 
-    private Future<HonoClient> connectToRegistrationService() {
-
-        if (registrationHonoClient == null) {
-            LOGGER.info("no client for Registration Service configured");
-            return Future.succeededFuture(null);
-        } else {
-            return registrationHonoClient
-                    .connect()
-                    .map(client -> {
-                        LOGGER.info("connected to Device Registration service [{}:{}]", sampler.getRegistryHost(), sampler.getRegistryPort());
-                        return client;
-                    });
-        }
-    }
-
-    private Future<RegistrationClient> getRegistrationClient(final String tenant) {
-
-        return registrationHonoClient.getOrCreateRegistrationClient(tenant);
-    }
-
     private Future<MessageSender> getSender(final String endpoint, final String tenant) {
 
         if (endpoint.equals(HonoSampler.Endpoint.telemetry.toString())) {
@@ -186,25 +137,6 @@ public class HonoSender extends AbstractClient {
         } else {
             LOGGER.trace("getting event sender for tenant [{}]", tenant);
             return honoClient.getOrCreateEventSender(tenant);
-        }
-    }
-
-    private Future<String> getRegistrationAssertion(final String tenant, final String deviceId) {
-
-        final String registrationAssertion = sampler.getRegistrationAssertion();
-        if (registrationAssertion != null && registrationAssertion.length() > 0) {
-            return Future.succeededFuture(registrationAssertion);
-        } else if (assertion != null && Instant.now().isBefore(assertionExpiration)) {
-            return Future.succeededFuture(assertion);
-        } else {
-            return getRegistrationClient(tenant)
-                    .compose(client -> client.assertRegistration(deviceId))
-                    .map(regInfo -> {
-                        assertion = regInfo.getString(RegistrationConstants.FIELD_ASSERTION);
-                        assertionExpiration = JwtHelper.getExpiration(assertion).toInstant();
-                        LOGGER.info("got registration assertion for device [{}], expires: {}", deviceId, assertionExpiration);
-                        return assertion;
-                    });
         }
     }
 
@@ -275,7 +207,6 @@ public class HonoSender extends AbstractClient {
         final String tenant = sampler.getTenant();
 
         final Future<MessageSender> senderFuture = getSender(endpoint, tenant);
-        final Future<String> regAssertionFuture = senderFuture.compose(ok -> getRegistrationAssertion(tenant, deviceId));
         final CompletableFuture<SampleResult> tracker = new CompletableFuture<>();
         final Future<ProtonDelivery> deliveryTracker = Future.future();
         deliveryTracker.setHandler(s -> {
@@ -291,24 +222,23 @@ public class HonoSender extends AbstractClient {
 
         // start sample
         sampleResult.sampleStart();
-        regAssertionFuture.map(token -> {
+        senderFuture.map(sender -> {
 
             final Message msg = ProtonHelper.message();
-            msg.setAddress(senderFuture.result().getEndpoint() + "/" + tenant);
+            msg.setAddress(sender.getEndpoint() + "/" + tenant);
             MessageHelper.setPayload(msg, sampler.getContentType(), Buffer.buffer(sampler.getData()));
             MessageHelper.addDeviceId(msg, deviceId);
-            MessageHelper.addRegistrationAssertion(msg, token);
             if (sampler.isSetSenderTime()) {
                 MessageHelper.addProperty(msg, TIME_STAMP_VARIABLE, System.currentTimeMillis());
             }
 
-            LOGGER.trace("sending message for device [{}]; credit: {}", deviceId, senderFuture.result().getCredit());
+            LOGGER.trace("sending message for device [{}]; credit: {}", deviceId, sender.getCredit());
 
             final Handler<Void> sendHandler = s -> {
                 if (waitForDeliveryResult) {
-                    senderFuture.result().sendAndWaitForOutcome(msg).setHandler(deliveryTracker);
+                    sender.sendAndWaitForOutcome(msg).setHandler(deliveryTracker);
                 } else {
-                    senderFuture.result().send(msg).setHandler(ar -> {
+                    sender.send(msg).setHandler(ar -> {
                         if (ar.succeeded()) {
                             LOGGER.debug("{}: got delivery result for message sent for device [{}]: remoteState={}, localState={}",
                                     sampler.getThreadName(), deviceId, ar.result().getRemoteState(),
@@ -322,10 +252,10 @@ public class HonoSender extends AbstractClient {
             };
 
             ctx.runOnContext(send -> {
-                if (senderFuture.result().getCredit() > 0) {
+                if (sender.getCredit() > 0) {
                     sendHandler.handle(null);
                 } else {
-                    senderFuture.result().sendQueueDrainHandler(sendHandler);
+                    sender.sendQueueDrainHandler(sendHandler);
                 }
             });
 
@@ -349,9 +279,7 @@ public class HonoSender extends AbstractClient {
                 String uncompletedFutureHint = "";
                 if (e instanceof TimeoutException) {
                     uncompletedFutureHint = !senderFuture.isComplete() ? " - timeout waiting for sender link"
-                            : !regAssertionFuture.isComplete() ? "- timeout waiting for registration assertion"
-                                : !deliveryTracker.isComplete() ? " - timeout waiting for message delivery"
-                                    : "";
+                            : !deliveryTracker.isComplete() ? " - timeout waiting for message delivery" : "";
                 }
                 sampleResult.setResponseMessage((e.getCause() != null ? e.getCause().getMessage() : e.getClass().getSimpleName()) + uncompletedFutureHint);
                 sampleResult.setResponseCode(String.valueOf(HttpURLConnection.HTTP_INTERNAL_ERROR));
@@ -381,17 +309,8 @@ public class HonoSender extends AbstractClient {
             } else {
                 honoTracker.complete();
             }
-            final Future<Void> registrationServiceTracker = Future.future();
-            if (registrationHonoClient != null) {
-                registrationHonoClient.shutdown(registrationServiceTracker.completer());
-            } else {
-                registrationServiceTracker.complete();
-            }
 
-            CompositeFuture.all(
-                    honoTracker.otherwiseEmpty(),
-                    registrationServiceTracker.otherwiseEmpty()
-                    ).compose(ok -> closeVertx()).setHandler(done -> shutdown.complete(null));
+            honoTracker.otherwiseEmpty().compose(ok -> closeVertx()).setHandler(done -> shutdown.complete(null));
         } else {
             LOGGER.debug("sender already stopped");
             shutdown.complete(null);

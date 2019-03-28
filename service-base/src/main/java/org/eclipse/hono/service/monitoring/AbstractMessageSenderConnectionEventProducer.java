@@ -83,8 +83,7 @@ public abstract class AbstractMessageSenderConnectionEventProducer implements Co
                     return sender.send(
                             authenticatedDevice.getDeviceId(),
                             payload.encode().getBytes(StandardCharsets.UTF_8),
-                            EventConstants.EVENT_CONNECTION_NOTIFICATION_CONTENT_TYPE,
-                            ""
+                            EventConstants.EVENT_CONNECTION_NOTIFICATION_CONTENT_TYPE
                             );
                 });
     }

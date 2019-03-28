@@ -84,7 +84,7 @@ public class EventSenderImplTest {
         }).when(sender).send(any(Message.class), any(Handler.class));
 
         // WHEN trying to send a message
-        final Future<ProtonDelivery> result = messageSender.send("device", "some payload", "application/text", "token");
+        final Future<ProtonDelivery> result = messageSender.send("device", "some payload", "application/text");
 
         // THEN the message has been sent
         // and the result is not completed yet
@@ -119,7 +119,7 @@ public class EventSenderImplTest {
         }).when(sender).send(any(Message.class), any(Handler.class));
 
         // WHEN trying to send a message
-        final Future<ProtonDelivery> result = messageSender.send("device", "some payload", "application/text", "token");
+        final Future<ProtonDelivery> result = messageSender.send("device", "some payload", "application/text");
 
         // THEN the message has been sent
         // and the result is not completed yet

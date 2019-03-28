@@ -154,9 +154,6 @@ public final class TelemetrySenderImpl extends AbstractSender {
         span.setTag(MessageHelper.APP_PROPERTY_DEVICE_ID, MessageHelper.getDeviceId(rawMessage));
         TracingHelper.injectSpanContext(tracer, span.context(), rawMessage);
 
-        if (!isRegistrationAssertionRequired()) {
-            MessageHelper.getAndRemoveRegistrationAssertion(rawMessage);
-        }
         return executeOrRunOnContext(result -> {
             if (sender.sendQueueFull()) {
                 final ServiceInvocationException e = new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "no credit available");

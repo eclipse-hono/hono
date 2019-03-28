@@ -17,6 +17,17 @@ title = "Release Notes"
   and Device Registration APIs now create an OpenTracing Span for tracking the
   processing of requests at a high level.
 
+### API Changes
+
+* The `org.eclipse.hono.client.MessageSender` interface's *send* methods have been changed
+  to no longer accept a *registration assertion token* which became obsolete with the removal
+  of the *Hono Messaging* component. The *isRegistrationAssertionRequired* method has also been
+  removed from the interface.
+* Consequently, the `org.eclipse.hono.service.AbstractProtocolAdapterBase` class's
+  *newMessage* and *addProperties* methods no longer require a boolean parameter indicating
+  whether to include the assertion token in the message being created/amended.
+  Custom protocol adapters should simply omit the corresponding parameter.
+
 ## 1.0-M1
 
 ### New Features

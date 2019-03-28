@@ -1009,7 +1009,6 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                     final MessageSender sender = senderTracker.result();
                     final Message downstreamMessage = newMessage(
                             ResourceIdentifier.from(endpoint.getCanonicalName(), tenant, deviceId),
-                            sender.isRegistrationAssertionRequired(),
                             ctx.message().topicName(),
                             ctx.contentType(),
                             payload,
