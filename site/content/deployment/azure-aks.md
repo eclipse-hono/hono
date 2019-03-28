@@ -1,6 +1,10 @@
-# Eclipse Hono deployment on Microsoft Azure
++++
+title = "Azure Kubernetes Service"
+weight = 477
++++
 
-This guide describes the installation of Eclipse Hono on Microsoft Azure. It is not meant for productive use but rather for evaluation as well as demonstration or development purposes or as a baseline to evolve a production grade [Application architecture](https://docs.microsoft.com/en-us/azure/architecture/guide/) out of it which includes Eclipse Hono.
+This guide describes the installation of Eclipse Hono&trade; on Microsoft Azure. It is not meant for productive use but rather for evaluation as well as demonstration or development purposes or as a baseline to evolve a production grade [Application architecture](https://docs.microsoft.com/en-us/azure/architecture/guide/) out of it which includes Hono.
+<!--more-->
 
 ## Prepare environment
 
