@@ -152,11 +152,14 @@ public class AmqpConnectionIT extends AmqpAdapterTestBase {
 
         // GIVEN a tenant for which the AMQP adapter is disabled
         final TenantObject tenant = TenantObject.from(tenantId, true);
-        final JsonObject adapterConfiguration = new JsonObject()
+        final JsonObject adapterConfigurationHttp = new JsonObject()
                 .put(TenantConstants.FIELD_ADAPTERS_TYPE, Constants.PROTOCOL_ADAPTER_TYPE_HTTP)
                 .put(TenantConstants.FIELD_ENABLED, Boolean.TRUE);
-        tenant.addAdapterConfiguration(adapterConfiguration);
-
+        final JsonObject adapterConfigurationAmqp = new JsonObject()
+                .put(TenantConstants.FIELD_ADAPTERS_TYPE, Constants.PROTOCOL_ADAPTER_TYPE_AMQP)
+                .put(TenantConstants.FIELD_ENABLED, Boolean.FALSE);
+        tenant.addAdapterConfiguration(adapterConfigurationHttp);
+        tenant.addAdapterConfiguration(adapterConfigurationAmqp);
         helper.registry.addDeviceForTenant(tenant, deviceId, password)
         // WHEN a device that belongs to the tenant tries to connect to the adapter
         .compose(ok -> connectToAdapter(IntegrationTestSupport.getUsername(deviceId, tenantId), password))
