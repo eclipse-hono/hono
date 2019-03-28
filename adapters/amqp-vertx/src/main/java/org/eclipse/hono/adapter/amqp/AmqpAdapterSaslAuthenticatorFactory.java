@@ -254,13 +254,14 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
                     items.put("auth_id", credentials.getAuthId());
                     currentSpan.log(items);
 
-                    getTenantObject(credentials.getTenantId())
-                    .compose(tenant -> {
-                        final Future<DeviceUser> user = Future.future();
-                        getUsernamePasswordAuthProvider().authenticate(credentials, currentSpan.context(), user);
-                        return user;
-                    })
-                    .setHandler(completer);
+                    final Future<DeviceUser> authenticationTracker = Future.future();
+                    getUsernamePasswordAuthProvider().authenticate(credentials, currentSpan.context(),
+                            authenticationTracker);
+                    authenticationTracker
+                            .compose(user -> getTenantObject(credentials.getTenantId())
+                                    .compose(tenant -> checkTenantIsEnabled(tenant)
+                                            .map(ok -> user)))
+                            .setHandler(completer);
                 }
             } catch (CredentialException e) {
                 // SASL response could not be parsed
@@ -302,20 +303,20 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
                             getCertificateAuthProvider().authenticate(credentials, currentSpan.context(), user);
                             return user;
                         })
+                        .compose(user -> checkTenantIsEnabled(tenantTracker.result())
+                                .map(ok -> user))
                         .setHandler(completer);
             }
         }
 
         private Future<TenantObject> getTenantObject(final X500Principal issuerDn) {
             return tenantServiceClient.getOrCreateTenantClient()
-                    .compose(tenantClient -> tenantClient.get(issuerDn, currentSpan.context()))
-                    .compose(tenant -> checkTenantIsEnabled(tenant));
+                    .compose(tenantClient -> tenantClient.get(issuerDn, currentSpan.context()));
         }
 
         private Future<TenantObject> getTenantObject(final String tenantId) {
             return tenantServiceClient.getOrCreateTenantClient()
-                    .compose(tenantClient -> tenantClient.get(tenantId, currentSpan.context()))
-                    .compose(tenant -> checkTenantIsEnabled(tenant));
+                    .compose(tenantClient -> tenantClient.get(tenantId, currentSpan.context()));
         }
 
         private Future<TenantObject> checkTenantIsEnabled(final TenantObject tenant) {
