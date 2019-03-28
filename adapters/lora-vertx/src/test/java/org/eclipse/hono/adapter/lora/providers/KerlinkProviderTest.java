@@ -13,15 +13,35 @@
 
 package org.eclipse.hono.adapter.lora.providers;
 
+import static com.github.tomakehurst.wiremock.client.WireMock.*;
+import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
+import static org.eclipse.hono.adapter.lora.providers.LoraTestUtil.verifyAsync;
+
+import java.time.Instant;
+import java.util.Base64;
+
+import org.apache.qpid.proton.amqp.messaging.AmqpValue;
+import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.adapter.lora.LoraConstants;
 import org.eclipse.hono.adapter.lora.LoraMessageType;
+import org.eclipse.hono.client.Command;
+import org.eclipse.hono.util.CredentialsObject;
+import org.eclipse.hono.util.RegistrationConstants;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.cache.concurrent.ConcurrentMapCacheManager;
 
+import com.github.tomakehurst.wiremock.http.Fault;
+import com.github.tomakehurst.wiremock.junit.WireMockRule;
+import com.google.common.base.Charsets;
+
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
+import io.vertx.ext.unit.Async;
+import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 
 /**
@@ -29,6 +49,17 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
  */
 @RunWith(VertxUnitRunner.class)
 public class KerlinkProviderTest {
+
+    private static final String KERLINK_APPLICATION_TYPE = "application/vnd.kerlink.iot-v1+json";
+
+    private static final String TEST_KERLINK_API_USER = "kerlinkApiUser";
+    private static final String TEST_KERLINK_API_PASSWORD = "kerlinkApiPassword";
+
+    private static final String KERLINK_URL_TOKEN = "/oss/application/login";
+    private static final String KERLINK_URL_DOWNLINK = "/oss/application/customers/.*/clusters/.*/endpoints/.*/txMessages";
+
+    @Rule
+    public WireMockRule wireMockRule = new WireMockRule(wireMockConfig().dynamicPort().dynamicPort());
 
     private KerlinkProvider provider;
 
@@ -75,5 +106,409 @@ public class KerlinkProviderTest {
         final JsonObject loraMessage = LoraTestUtil.loadTestFile("kerlink.uplink");
         final LoraMessageType type = provider.extractMessageType(loraMessage);
         Assert.assertEquals(LoraMessageType.UPLINK, type);
+    }
+
+    /**
+     * Verifies that sending a downlink command is successful.
+     *
+     * @param context The helper to use for running async tests on vertx.
+     */
+    @Test
+    public void sendingDownlinkCommandIsSuccessful(final TestContext context) {
+        final Async async = context.async();
+        stubSuccessfulTokenRequest();
+        stubSuccessfulDownlinkRequest();
+
+        final JsonObject loraGatewayDevice = getValidGatewayDevice();
+        final CredentialsObject gatewayCredential = getValidGatewayCredential();
+
+        final String targetDeviceId = "myTestDevice";
+        final Command command = getValidDownlinkCommand();
+
+        provider.sendDownlinkCommand(loraGatewayDevice, gatewayCredential, targetDeviceId, command)
+                .setHandler(downlinkResult -> {
+                    context.assertTrue(downlinkResult.succeeded());
+
+                    final JsonObject expectedBody = new JsonObject();
+                    expectedBody.put("login", TEST_KERLINK_API_USER);
+                    expectedBody.put("password", TEST_KERLINK_API_PASSWORD);
+
+                    verify(postRequestedFor(urlEqualTo("/oss/application/login"))
+                            .withRequestBody(equalToJson(expectedBody.encode())));
+
+                    async.complete();
+                });
+    }
+
+    /**
+     * Verifies that sending a downlink fails when LoRa config is missing.
+     *
+     * @param context The helper to use for running async tests on vertx.
+     */
+    @Test
+    public void sendingDownlinkFailsOnMissingLoraConfig(final TestContext context) {
+        final JsonObject loraGatewayDevice = getValidGatewayDevice();
+        loraGatewayDevice.getJsonObject(RegistrationConstants.FIELD_DATA).remove(LoraConstants.FIELD_LORA_CONFIG);
+
+        expectValidationFailureForGateway(context, loraGatewayDevice);
+    }
+
+    /**
+     * Verifies that sending a downlink fails when vendor properties are missing.
+     *
+     * @param context The helper to use for running async tests on vertx.
+     */
+    @Test
+    public void sendingDownlinkFailsOnMissingVendorProperties(final TestContext context) {
+        final JsonObject loraGatewayDevice = getValidGatewayDevice();
+        final JsonObject loraConfig = LoraUtils.getLoraConfigFromLoraGatewayDevice(loraGatewayDevice);
+        loraConfig.remove(LoraConstants.FIELD_LORA_VENDOR_PROPERTIES);
+        expectValidationFailureForGateway(context, loraGatewayDevice);
+    }
+
+    /**
+     * Verifies that sending a downlink fails when the cluster id is missing.
+     *
+     * @param context The helper to use for running async tests on vertx.
+     */
+    @Test
+    public void sendingDownlinkFailsOnMissingClusterId(final TestContext context) {
+        final JsonObject loraGatewayDevice = getValidGatewayDevice();
+        LoraUtils.getLoraConfigFromLoraGatewayDevice(loraGatewayDevice)
+                .getJsonObject(LoraConstants.FIELD_LORA_VENDOR_PROPERTIES)
+                .remove(KerlinkProvider.FIELD_KERLINK_CLUSTER_ID);
+
+        expectValidationFailureForGateway(context, loraGatewayDevice);
+    }
+
+    /**
+     * Verifies that sending a downlink fails when the customer id is missing.
+     *
+     * @param context The helper to use for running async tests on vertx.
+     */
+    @Test
+    public void sendingDownlinkFailsOnMissingCustomerId(final TestContext context) {
+        final JsonObject loraGatewayDevice = getValidGatewayDevice();
+        LoraUtils.getLoraConfigFromLoraGatewayDevice(loraGatewayDevice)
+                .getJsonObject(LoraConstants.FIELD_LORA_VENDOR_PROPERTIES)
+                .remove(KerlinkProvider.FIELD_KERLINK_CUSTOMER_ID);
+
+        expectValidationFailureForGateway(context, loraGatewayDevice);
+    }
+
+    private void expectValidationFailureForGateway(final TestContext context, final JsonObject loraGatewayDevice) {
+        final Async async = context.async();
+
+        final CredentialsObject gatewayCredential = getValidGatewayCredential();
+
+        final String targetDeviceId = "myTestDevice";
+        final Command command = getValidDownlinkCommand();
+
+        provider.sendDownlinkCommand(loraGatewayDevice, gatewayCredential, targetDeviceId, command)
+                .setHandler(downlinkResult -> {
+                    context.assertTrue(downlinkResult.failed());
+
+                    async.complete();
+                });
+    }
+
+    /**
+     * Verifies that a token is renewed after the token has expired.
+     *
+     * @param context The helper to use for running async tests on vertx.
+     */
+    @Test
+    public void tokenIsRenewedAfterTokenExpiry(final TestContext context) {
+        final Async async = context.async();
+        stubSuccessfulTokenRequest(Instant.now().plusMillis(250));
+        stubSuccessfulDownlinkRequest();
+
+        final JsonObject loraGatewayDevice = getValidGatewayDevice();
+        final CredentialsObject gatewayCredential = getValidGatewayCredential();
+
+        final String targetDeviceId = "myTestDevice";
+        final Command command = getValidDownlinkCommand();
+
+        provider.sendDownlinkCommand(loraGatewayDevice, gatewayCredential, targetDeviceId, command)
+                .setHandler(firstResponse -> {
+                    context.assertTrue(firstResponse.succeeded());
+
+                    vertx.setTimer(500,
+                            nextRequest -> provider
+                                    .sendDownlinkCommand(loraGatewayDevice, gatewayCredential, targetDeviceId, command)
+                                    .setHandler(secondResponse -> {
+                                        context.assertTrue(secondResponse.succeeded());
+                                        verifyAsync(context, 2, postRequestedFor(urlEqualTo("/oss/application/login")));
+                                        async.complete();
+                                    }));
+                });
+    }
+
+    /**
+     * Verifies that a token is reused from cache while it is still valid.
+     *
+     * @param context The helper to use for running async tests on vertx.
+     */
+    @Test
+    public void tokenIsReusedFromCacheWhileValid(final TestContext context) {
+        final Async async = context.async();
+        stubSuccessfulTokenRequest();
+        stubSuccessfulDownlinkRequest();
+
+        final JsonObject loraGatewayDevice = getValidGatewayDevice();
+        final CredentialsObject gatewayCredential = getValidGatewayCredential();
+
+        final String targetDeviceId = "myTestDevice";
+        final Command command = getValidDownlinkCommand();
+
+        provider.sendDownlinkCommand(loraGatewayDevice, gatewayCredential, targetDeviceId, command)
+                .setHandler(firstResponse -> {
+                    context.assertTrue(firstResponse.succeeded());
+
+                    vertx.setTimer(250,
+                            nextRequest -> provider
+                                    .sendDownlinkCommand(loraGatewayDevice, gatewayCredential, targetDeviceId, command)
+                                    .setHandler(secondResponse -> {
+                                        context.assertTrue(secondResponse.succeeded());
+                                        verifyAsync(context, 1, postRequestedFor(urlEqualTo("/oss/application/login")));
+                                        async.complete();
+                                    }));
+                });
+    }
+
+    /**
+     * Verifies that a token is invalidated after an unauthorized downlink request.
+     *
+     * @param context The helper to use for running async tests on vertx.
+     */
+    @Test
+    public void tokenIsInvalidatedOnApiUnauthorized(final TestContext context) {
+        final Async async = context.async();
+        stubSuccessfulTokenRequest();
+        stubUnauthorizedDownlinkRequest();
+
+        final JsonObject loraGatewayDevice = getValidGatewayDevice();
+        final CredentialsObject gatewayCredential = getValidGatewayCredential();
+
+        final String targetDeviceId = "myTestDevice";
+        final Command command = getValidDownlinkCommand();
+
+        provider.sendDownlinkCommand(loraGatewayDevice, gatewayCredential, targetDeviceId, command)
+                .setHandler(firstResponse -> {
+                    context.assertTrue(firstResponse.failed());
+
+                    provider.sendDownlinkCommand(loraGatewayDevice, gatewayCredential, targetDeviceId, command)
+                            .setHandler(secondResponse -> {
+                                verifyAsync(context, 2, postRequestedFor(urlEqualTo("/oss/application/login")));
+                                async.complete();
+                            });
+                });
+    }
+
+    /**
+     * Verifies that a request fails on invalid token response.
+     *
+     * @param context The helper to use for running async tests on vertx.
+     */
+    @Test
+    public void failureOnInvalidTokenResponse(final TestContext context) {
+        final Async async = context.async();
+        stubInvalidResponseOnTokenRequest();
+
+        final JsonObject loraGatewayDevice = getValidGatewayDevice();
+        final CredentialsObject gatewayCredential = getValidGatewayCredential();
+
+        final String targetDeviceId = "myTestDevice";
+        final Command command = getValidDownlinkCommand();
+
+        provider.sendDownlinkCommand(loraGatewayDevice, gatewayCredential, targetDeviceId, command)
+                .setHandler(downlinkResult -> {
+                    context.assertTrue(downlinkResult.failed());
+                    async.complete();
+                });
+    }
+
+    /**
+     * Verifies that a request fails on invalid token request.
+     *
+     * @param context The helper to use for running async tests on vertx.
+     */
+    @Test
+    public void failureOnTokenRequest(final TestContext context) {
+        final Async async = context.async();
+        stubFailureOnTokenRequest();
+
+        final JsonObject loraGatewayDevice = getValidGatewayDevice();
+        final CredentialsObject gatewayCredential = getValidGatewayCredential();
+
+        final String targetDeviceId = "myTestDevice";
+        final Command command = getValidDownlinkCommand();
+
+        provider.sendDownlinkCommand(loraGatewayDevice, gatewayCredential, targetDeviceId, command)
+                .setHandler(downlinkResult -> {
+                    context.assertTrue(downlinkResult.failed());
+                    async.complete();
+                });
+    }
+
+    /**
+     * Verifies that a failed downlink request is handled properly.
+     *
+     * @param context The helper to use for running async tests on vertx.
+     */
+    @Test
+    public void failureOnDownlinkRequest(final TestContext context) {
+        final Async async = context.async();
+        stubSuccessfulTokenRequest();
+        stubFailureOnDownlinkRequest();
+
+        final JsonObject loraGatewayDevice = getValidGatewayDevice();
+        final CredentialsObject gatewayCredential = getValidGatewayCredential();
+
+        final String targetDeviceId = "myTestDevice";
+        final Command command = getValidDownlinkCommand();
+
+        provider.sendDownlinkCommand(loraGatewayDevice, gatewayCredential, targetDeviceId, command)
+                .setHandler(downlinkResult -> {
+                    context.assertTrue(downlinkResult.failed());
+                    async.complete();
+                });
+    }
+
+    /**
+     * Verifies that a connection fault on a downlink request is handled properly.
+     *
+     * @param context The helper to use for running async tests on vertx.
+     */
+    @Test
+    public void faultOnDownlinkRequest(final TestContext context) {
+        final Async async = context.async();
+        stubSuccessfulTokenRequest();
+        stubConnectionFaultOnDownlinkRequest();
+
+        final JsonObject loraGatewayDevice = getValidGatewayDevice();
+        final CredentialsObject gatewayCredential = getValidGatewayCredential();
+
+        final String targetDeviceId = "myTestDevice";
+        final Command command = getValidDownlinkCommand();
+
+        provider.sendDownlinkCommand(loraGatewayDevice, gatewayCredential, targetDeviceId, command)
+                .setHandler(downlinkResult -> {
+                    context.assertTrue(downlinkResult.failed());
+                    async.complete();
+                });
+    }
+
+    private CredentialsObject getValidGatewayCredential() {
+        final JsonObject secret = new JsonObject();
+        secret.put("identity", TEST_KERLINK_API_USER);
+        secret.put("key", Base64.getEncoder().encodeToString(TEST_KERLINK_API_PASSWORD.getBytes(Charsets.UTF_8)));
+
+        final CredentialsObject gatewayCredential = new CredentialsObject();
+        gatewayCredential.setAuthId("lora-secret");
+        gatewayCredential.addSecret(secret);
+
+        return gatewayCredential;
+    }
+
+    private JsonObject getValidGatewayDevice() {
+        final JsonObject loraVendorProperties = new JsonObject();
+        loraVendorProperties.put("cluster-id", 23);
+        loraVendorProperties.put("customer-id", 4);
+
+        final JsonObject loraNetworkServerData = new JsonObject();
+        loraNetworkServerData.put("provider", "kerlink");
+        loraNetworkServerData.put("auth-id", "lora-secret");
+        loraNetworkServerData.put("url", "http://localhost:" + wireMockRule.port());
+        loraNetworkServerData.put("vendor-properties", loraVendorProperties);
+        loraNetworkServerData.put("lora-port", 23);
+
+        final JsonObject loraGatewayData = new JsonObject();
+        loraGatewayData.put("lora-network-server", loraNetworkServerData);
+
+        final JsonObject loraGatewayDevice = new JsonObject();
+        loraGatewayDevice.put("tenant-id", "test-tenant");
+        loraGatewayDevice.put("device-id", "bumlux");
+        loraGatewayDevice.put("enabled", true);
+        loraGatewayDevice.put("data", loraGatewayData);
+
+        return loraGatewayDevice;
+    }
+
+    private Command getValidDownlinkCommand() {
+        final Message message = Message.Factory.create();
+        message.setSubject("subject");
+        message.setCorrelationId("correlation_id");
+        message.setReplyTo("control/bumlux");
+
+        final JsonObject payload = new JsonObject();
+        payload.put(LoraConstants.FIELD_LORA_DOWNLINK_PAYLOAD, "bumlux".getBytes(Charsets.UTF_8));
+
+        message.setBody(new AmqpValue(payload.encode()));
+
+        return Command.from(message, "bumlux", "bumlux");
+    }
+
+    private void stubSuccessfulTokenRequest() {
+        final Instant tokenExpiryTime = Instant.now().plusSeconds(60);
+        stubSuccessfulTokenRequest(tokenExpiryTime);
+    }
+
+    private void stubSuccessfulTokenRequest(final Instant tokenExpiryTime) {
+        final JsonObject result = new JsonObject();
+        result.put("expiredDate", tokenExpiryTime.toEpochMilli());
+        result.put("tokenType", "Bearer");
+        result.put("token", "ThisIsAveryLongBearerTokenUsedByKerlink");
+
+        stubFor(post(urlEqualTo(KERLINK_URL_TOKEN))
+                .withHeader("Content-Type", equalTo(KERLINK_APPLICATION_TYPE))
+                .willReturn(aResponse()
+                        .withStatus(201)
+                        .withHeader("Content-Type", KERLINK_APPLICATION_TYPE)
+                        .withBody(result.encodePrettily())));
+    }
+
+    private void stubFailureOnTokenRequest() {
+        stubFor(post(urlEqualTo(KERLINK_URL_TOKEN))
+                .withHeader("Content-Type", equalTo(KERLINK_APPLICATION_TYPE))
+                .willReturn(aResponse()
+                        .withStatus(500)
+                        .withHeader("Content-Type", KERLINK_APPLICATION_TYPE)));
+    }
+
+    private void stubInvalidResponseOnTokenRequest() {
+        stubFor(post(urlEqualTo(KERLINK_URL_TOKEN))
+                .withHeader("Content-Type", equalTo(KERLINK_APPLICATION_TYPE))
+                .willReturn(aResponse()
+                        .withStatus(201)
+                        .withHeader("Content-Type", KERLINK_APPLICATION_TYPE)
+                        .withBody("Here should be JSON, but instead it's some text we're for sure not expecting.")));
+    }
+
+    private void stubSuccessfulDownlinkRequest() {
+        stubFor(post(urlPathMatching(KERLINK_URL_DOWNLINK))
+                .withHeader("Content-Type", equalTo(KERLINK_APPLICATION_TYPE))
+                .willReturn(aResponse()
+                        .withStatus(201)));
+    }
+
+    private void stubUnauthorizedDownlinkRequest() {
+        stubFor(post(urlPathMatching(KERLINK_URL_DOWNLINK))
+                .withHeader("Content-Type", equalTo(KERLINK_APPLICATION_TYPE))
+                .willReturn(aResponse()
+                        .withStatus(401)));
+    }
+
+    private void stubFailureOnDownlinkRequest() {
+        stubFor(post(urlPathMatching(KERLINK_URL_DOWNLINK))
+                .withHeader("Content-Type", equalTo(KERLINK_APPLICATION_TYPE))
+                .willReturn(aResponse()
+                        .withStatus(500).withBody("Something went really wrong.")));
+    }
+
+    private void stubConnectionFaultOnDownlinkRequest() {
+        stubFor(post(urlPathMatching(KERLINK_URL_DOWNLINK))
+                .withHeader("Content-Type", equalTo(KERLINK_APPLICATION_TYPE))
+                .willReturn(aResponse().withFault(Fault.MALFORMED_RESPONSE_CHUNK)));
     }
 }

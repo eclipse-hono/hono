@@ -59,6 +59,7 @@
     <spring-security-crypto.version>4.2.12.RELEASE</spring-security-crypto.version>
     <truth.version>0.28</truth.version>
     <vertx.version>3.6.3</vertx.version>
+    <wiremock.version>2.22.0</wiremock.version>
 
     <!-- The port at which the Prometheus scraping endpoint is exposed -->
     <prometheus.scraping.port>8088</prometheus.scraping.port>
@@ -193,6 +194,12 @@
         <groupId>org.apache.qpid</groupId>
         <artifactId>qpid-jms-client</artifactId>
         <version>${qpid-jms.version}</version>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>com.github.tomakehurst</groupId>
+        <artifactId>wiremock</artifactId>
+        <version>${wiremock.version}</version>
         <scope>test</scope>
       </dependency>
       <dependency>

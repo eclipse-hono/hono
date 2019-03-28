@@ -17,7 +17,11 @@ import java.net.URL;
 import java.nio.file.Files;
 import java.util.List;
 
+import com.github.tomakehurst.wiremock.client.WireMock;
+import com.github.tomakehurst.wiremock.matching.RequestPatternBuilder;
+
 import io.vertx.core.json.JsonObject;
+import io.vertx.ext.unit.TestContext;
 
 /**
  * Utility methods for testing functionality of LoRa providers.
@@ -43,6 +47,36 @@ public class LoraTestUtil {
             return new JsonObject(fullJson);
         } catch (final Exception e) {
             throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * Verifies a request matches the given pattern.
+     *
+     * @param context the corresponding context
+     * @param requestPatternBuilder the request pattern to match
+     */
+    public static void verifyAsync(final TestContext context, final RequestPatternBuilder requestPatternBuilder) {
+        try {
+            WireMock.verify(requestPatternBuilder);
+        } catch (final AssertionError e) {
+            context.fail(e);
+        }
+    }
+
+    /**
+     * Verifies multiple requests match the given pattern.
+     *
+     * @param context the corresponding context
+     * @param count the number of requests to match
+     * @param requestPatternBuilder the request pattern to match
+     */
+    public static void verifyAsync(final TestContext context, final int count,
+            final RequestPatternBuilder requestPatternBuilder) {
+        try {
+            WireMock.verify(count, requestPatternBuilder);
+        } catch (final AssertionError e) {
+            context.fail(e);
         }
     }
 }
