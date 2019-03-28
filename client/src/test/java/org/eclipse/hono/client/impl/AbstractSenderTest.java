@@ -14,17 +14,23 @@
 package org.eclipse.hono.client.impl;
 
 import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.net.HttpURLConnection;
 
-import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.config.ClientConfigProperties;
-import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
 import org.junit.Before;
 import org.junit.Test;
@@ -63,31 +69,6 @@ public class AbstractSenderTest {
     }
 
     /**
-     * Verifies that registration assertions are not required if
-     * the peer does not support validation of assertions.
-     */
-    @Test
-    public void testIsRegistrationAssertionRequiredReturnsFalse() {
-
-        when(protonSender.getRemoteOfferedCapabilities()).thenReturn(null);
-        final AbstractSender sender = newSender("tenant", "endpoint");
-        assertFalse(sender.isRegistrationAssertionRequired());
-    }
-
-    /**
-     * Verifies that registration assertions are required if
-     * the peer supports validation of assertions.
-     */
-    @Test
-    public void testIsRegistrationAssertionRequiredReturnsTrue() {
-
-        when(protonSender.getRemoteOfferedCapabilities())
-            .thenReturn(new Symbol[] { Constants.CAP_REG_ASSERTION_VALIDATION });
-        final AbstractSender sender = newSender("tenant", "endpoint");
-        assertTrue(sender.isRegistrationAssertionRequired());
-    }
-
-    /**
      * Verifies that the sender removes the registration assertion
      * from a message if the peer does not support validation of
      * assertions.
@@ -103,7 +84,7 @@ public class AbstractSenderTest {
         final AbstractSender sender = newSender("tenant", "endpoint");
 
         // WHEN sending a message
-        sender.send("device", "some payload", "application/text", "token");
+        sender.send("device", "some payload", "application/text");
 
         // THEN the message is sent without the registration assertion
         final ArgumentCaptor<Message> sentMessage = ArgumentCaptor.forClass(Message.class);
@@ -122,7 +103,7 @@ public class AbstractSenderTest {
         final AbstractSender sender = newSender("tenant", "endpoint");
 
         // WHEN trying to send a message
-        final Future<ProtonDelivery> result = sender.send("device", "some payload", "application/text", "token");
+        final Future<ProtonDelivery> result = sender.send("device", "some payload", "application/text");
 
         // THEN the message is not sent
         assertFalse(result.succeeded());

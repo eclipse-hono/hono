@@ -631,7 +631,6 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                                 .orElse(null);
                         final Message downstreamMessage = newMessage(
                                 ResourceIdentifier.from(endpoint.getCanonicalName(), tenant, deviceId),
-                                sender.isRegistrationAssertionRequired(),
                                 ctx.request().uri(),
                                 contentType,
                                 payload,

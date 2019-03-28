@@ -60,18 +60,6 @@ public interface MessageSender extends CreditBasedSender {
     boolean isOpen();
 
     /**
-     * Checks if the peer that this sender is connected to
-     * requires messages to contain a registration assertion.
-     * <p>
-     * The result of this method should only be considered
-     * if this sender is open.
-     * 
-     * @return {@code true} if messages must contain an assertion,
-     *         {@code false} otherwise.
-     */
-    boolean isRegistrationAssertionRequired();
-
-    /**
      * Sends an AMQP 1.0 message to the endpoint configured for this client.
      * 
      * @param message The message to send.
@@ -179,11 +167,6 @@ public interface MessageSender extends CreditBasedSender {
      *                    This parameter will be used as the value for the message's <em>content-type</em> property.
      *                    If the content type specifies a particular character set, this character set will be used to
      *                    encode the payload to its byte representation. Otherwise, UTF-8 will be used.
-     * @param registrationAssertion A JSON Web Token asserting that the device is enabled and belongs to the tenant that
-     *                              this sender has been created for.
-     *                              <p>
-     *                              The {@linkplain RegistrationClient#assertRegistration(String) registration
-     *                              client} can be used to obtain such an assertion.
      * @return A future indicating the outcome of the operation.
      *         <p>
      *         The future will be succeeded if the message has been sent to the endpoint.
@@ -197,10 +180,10 @@ public interface MessageSender extends CreditBasedSender {
      *         If an event is sent which cannot be processed by the peer the future will
      *         be failed with either a {@code ServerErrorException} or a {@link ClientErrorException}
      *         depending on the reason for the failure to process the message.
-     * @throws NullPointerException if any of the parameters is {@code null}.
+     * @throws NullPointerException if any of the parameters are {@code null}.
      * @throws IllegalArgumentException if the content type specifies an unsupported character set.
      */
-    Future<ProtonDelivery> send(String deviceId, String payload, String contentType, String registrationAssertion);
+    Future<ProtonDelivery> send(String deviceId, String payload, String contentType);
 
     /**
      * Sends a message for a given device to the endpoint configured for this client.
@@ -214,11 +197,6 @@ public interface MessageSender extends CreditBasedSender {
      * @param contentType The content type of the payload.
      *                    <p>
      *                    This parameter will be used as the value for the message's <em>content-type</em> property.
-     * @param registrationAssertion A JSON Web Token asserting that the device is enabled and belongs to the tenant that
-     *                              this sender has been created for.
-     *                              <p>
-     *                              The {@linkplain RegistrationClient#assertRegistration(String) registration
-     *                              client} can be used to obtain such an assertion.
      * @return A future indicating the outcome of the operation.
      *         <p>
      *         The future will be succeeded if the message has been sent to the endpoint.
@@ -232,10 +210,10 @@ public interface MessageSender extends CreditBasedSender {
      *         If an event is sent which cannot be processed by the peer the future will
      *         be failed with either a {@code ServerErrorException} or a {@link ClientErrorException}
      *         depending on the reason for the failure to process the message.
-     * @throws NullPointerException if any of the parameters is {@code null}.
+     * @throws NullPointerException if any of the parameters are {@code null}.
      * @throws IllegalArgumentException if the content type specifies an unsupported character set.
      */
-    Future<ProtonDelivery> send(String deviceId, byte[] payload, String contentType, String registrationAssertion);
+    Future<ProtonDelivery> send(String deviceId, byte[] payload, String contentType);
 
     /**
      * Sends a message for a given device to the endpoint configured for this client.
@@ -255,11 +233,6 @@ public interface MessageSender extends CreditBasedSender {
      *                    This parameter will be used as the value for the message's <em>content-type</em> property.
      *                    If the content type specifies a particular character set, this character set will be used to
      *                    encode the payload to its byte representation. Otherwise, UTF-8 will be used.
-     * @param registrationAssertion A JSON Web Token asserting that the device is enabled and belongs to the tenant that
-     *                              this sender has been created for.
-     *                              <p>
-     *                              The {@linkplain RegistrationClient#assertRegistration(String) registration
-     *                              client} can be used to obtain such an assertion.
      * @return A future indicating the outcome of the operation.
      *         <p>
      *         The future will be succeeded if the message has been sent to the endpoint.
@@ -273,16 +246,14 @@ public interface MessageSender extends CreditBasedSender {
      *         If an event is sent which cannot be processed by the peer the future will
      *         be failed with either a {@code ServerErrorException} or a {@link ClientErrorException}
      *         depending on the reason for the failure to process the message.
-     * @throws NullPointerException if any of device id, payload, content type or registration assertion
-     *                              is {@code null}.
+     * @throws NullPointerException if any of device id, payload or content type are {@code null}.
      * @throws IllegalArgumentException if the content type specifies an unsupported character set.
      */
     Future<ProtonDelivery> send(
             String deviceId,
             Map<String, ?> properties,
             String payload,
-            String contentType,
-            String registrationAssertion);
+            String contentType);
 
     /**
      * Sends a message for a given device to the endpoint configured for this client.
@@ -299,11 +270,6 @@ public interface MessageSender extends CreditBasedSender {
      * @param contentType The content type of the payload.
      *                    <p>
      *                    This parameter will be used as the value for the message's <em>content-type</em> property.
-     * @param registrationAssertion A JSON Web Token asserting that the device is enabled and belongs to the tenant that
-     *                              this sender has been created for.
-     *                              <p>
-     *                              The {@linkplain RegistrationClient#assertRegistration(String) registration
-     *                              client} can be used to obtain such an assertion.
      * @return A future indicating the outcome of the operation.
      *         <p>
      *         The future will be succeeded if the message has been sent to the endpoint.
@@ -317,13 +283,12 @@ public interface MessageSender extends CreditBasedSender {
      *         If an event is sent which cannot be processed by the peer the future will
      *         be failed with either a {@code ServerErrorException} or a {@link ClientErrorException}
      *         depending on the reason for the failure to process the message.
-     * @throws NullPointerException if any of device id, payload, content type or registration assertion is {@code null}.
+     * @throws NullPointerException if any of device id, payload or content type are {@code null}.
      * @throws IllegalArgumentException if the content type specifies an unsupported character set.
      */
     Future<ProtonDelivery> send(
             String deviceId,
             Map<String, ?> properties,
             byte[] payload,
-            String contentType,
-            String registrationAssertion);
+            String contentType);
 }

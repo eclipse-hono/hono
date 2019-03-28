@@ -83,7 +83,7 @@ public class TelemetrySenderImplTest {
         }).when(sender).send(any(Message.class), any(Handler.class));
 
         // WHEN trying to send a message
-        final Future<ProtonDelivery> result = messageSender.send("device", "some payload", "application/text", "token");
+        final Future<ProtonDelivery> result = messageSender.send("device", "some payload", "application/text");
         // which gets rejected by the peer
         final ProtonDelivery rejected = mock(ProtonDelivery.class);
         when(rejected.remotelySettled()).thenReturn(Boolean.TRUE);

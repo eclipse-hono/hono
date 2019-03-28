@@ -13,17 +13,16 @@
 
 package org.eclipse.hono.jmeter;
 
+import static org.eclipse.hono.jmeter.HonoSamplerUtils.getIntValueOrDefault;
+
 import java.util.concurrent.CompletionException;
 
 import org.apache.jmeter.samplers.Entry;
 import org.apache.jmeter.samplers.SampleResult;
 import org.apache.jmeter.testelement.ThreadListener;
 import org.eclipse.hono.jmeter.client.HonoSender;
-import org.eclipse.hono.jmeter.ui.ServerOptionsPanel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import static org.eclipse.hono.jmeter.HonoSamplerUtils.getIntValueOrDefault;
 
 /**
  * JMeter creates an instance of a sampler class for every occurrence of the element in every thread. [some additional
@@ -42,12 +41,6 @@ public class HonoSenderSampler extends HonoSampler implements ThreadListener {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(HonoSenderSampler.class);
 
-    private static final String REGISTRY_HOST = "registryHost";
-    private static final String REGISTRY_USER = "registryUser";
-    private static final String REGISTRY_PWD = "registryPwd";
-    private static final String REGISTRY_PORT = "registryPort";
-    private static final String REGISTRY_TRUSTSTORE_PATH = "registryTrustStorePath";
-
     private static final String DEVICE_ID = "deviceId";
     private static final String SET_SENDER_TIME = "setSenderTime";
     private static final String CONTENT_TYPE = "contentType";
@@ -57,109 +50,8 @@ public class HonoSenderSampler extends HonoSampler implements ThreadListener {
     private static final String WAIT_FOR_RECEIVERS_TIMEOUT = "waitForReceiversTimeout";
     private static final String SEND_TIMEOUT = "sendTimeout";
     private static final String MESSAGE_COUNT_PER_SAMPLER_RUN = "messageCountPerSamplerRun";
-    private static final String PROPERTY_REGISTRATION_ASSERTION = "PROPERTY_REGISTRATION_ASSERTION";
 
     private HonoSender honoSender;
-
-    /**
-     * Applies the options to the local UI.
-     * 
-     * @param serverOptions The options to apply.
-     */
-    public void modifyRegistrationServiceOptions(final ServerOptionsPanel serverOptions) {
-        setRegistryHost(serverOptions.getHost());
-        setRegistryPort(serverOptions.getPort());
-        setRegistryUser(serverOptions.getUser());
-        setRegistryPwd(serverOptions.getPwd());
-        setRegistryTrustStorePath(serverOptions.getTrustStorePath());
-    }
-
-    /**
-     * Apply the local UI options to the provided object.
-     * 
-     * @param serverOptions The options to change.
-     */
-    public void configureRegistrationServiceOptions(final ServerOptionsPanel serverOptions) {
-        serverOptions.setHost(getRegistryHost());
-        serverOptions.setPort(getRegistryPort());
-        serverOptions.setUser(getRegistryUser());
-        serverOptions.setPwd(getRegistryPwd());
-        serverOptions.setTrustStorePath(getRegistryTrustStorePath());
-    }
-
-    public String getRegistryTrustStorePath() {
-        return getPropertyAsString(REGISTRY_TRUSTSTORE_PATH);
-    }
-
-    /**
-     * Sets the path to the trust store of the registry.
-     * 
-     * @param trustStorePath The path to the registry trust store.
-     */
-    public void setRegistryTrustStorePath(final String trustStorePath) {
-        setProperty(REGISTRY_TRUSTSTORE_PATH, trustStorePath);
-    }
-
-    public String getRegistryHost() {
-        return getPropertyAsString(REGISTRY_HOST);
-    }
-
-    /**
-     * Sets the host of the registry.
-     * 
-     * @param host The hostname of the registry.
-     */
-    public void setRegistryHost(final String host) {
-        setProperty(REGISTRY_HOST, host);
-    }
-
-    public String getRegistryUser() {
-        return getPropertyAsString(REGISTRY_USER);
-    }
-
-    /**
-     * Get the user to use for the registry.
-     * 
-     * @param user The username to use.
-     */
-    public void setRegistryUser(final String user) {
-        setProperty(REGISTRY_USER, user);
-    }
-
-    public String getRegistryPwd() {
-        return getPropertyAsString(REGISTRY_PWD);
-    }
-
-    /**
-     * Get the password to use for the registry.
-     * 
-     * @param pwd The password to use.
-     */
-    public void setRegistryPwd(final String pwd) {
-        setProperty(REGISTRY_PWD, pwd);
-    }
-
-    /**
-     * Gets the port of the registry as integer.
-     * 
-     * @return The registry port as integer, {@code 0} if the value cannot be parsed as an integer.
-     */
-    public int getRegistryPortAsInt() {
-        return getIntValueOrDefault(getRegistryPort(), 0);
-    }
-
-    public String getRegistryPort() {
-        return getPropertyAsString(REGISTRY_PORT);
-    }
-
-    /**
-     * Sets the port of the registry.
-     * 
-     * @param port The port of the registry.
-     */
-    public void setRegistryPort(final String port) {
-        setProperty(REGISTRY_PORT, port);
-    }
 
     /**
      * Gets the number of receivers as integer.
@@ -338,19 +230,6 @@ public class HonoSenderSampler extends HonoSampler implements ThreadListener {
      */
     public void setData(final String data) {
         setProperty(DATA, data);
-    }
-
-    public String getRegistrationAssertion() {
-        return getPropertyAsString(PROPERTY_REGISTRATION_ASSERTION);
-    }
-
-    /**
-     * Sets the registration assertion to use.
-     * 
-     * @param assertion The registration assertion.
-     */
-    public void setRegistrationAssertion(final String assertion) {
-        setProperty(PROPERTY_REGISTRATION_ASSERTION, assertion);
     }
 
     @Override

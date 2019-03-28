@@ -266,8 +266,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * Based on this recommendation, Hono's standard HTTP adapter for instance might report <em>hono-http</em> as its
      * type name.
      * <p>
-     * The name returned by this method is added to a downstream message by the
-     * {@link #addProperties(Message, JsonObject, boolean)} method.
+     * The name returned by this method is added to message that are forwarded to downstream consumers.
      *
      * @return The adapter's name.
      */
@@ -955,11 +954,9 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * order to have required Hono specific properties being set on the message automatically.
      * <p>
      * This method creates a new {@code Message}, sets its content type and payload as an AMQP <em>Data</em> section
-     * and then invokes {@link #addProperties(Message, ResourceIdentifier, boolean, String, JsonObject, Integer)}.
+     * and then invokes {@link #addProperties(Message, ResourceIdentifier, String, JsonObject, Integer)}.
      *
      * @param target The resource that the message is targeted at.
-     * @param regAssertionRequired {@code true} if the downstream peer requires the registration assertion to
-     *            be included in the message.
      * @param publishAddress The address that the message has been published to originally by the device. (may be
      *            {@code null}).
      *            <p>
@@ -976,7 +973,6 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      */
     protected final Message newMessage(
             final ResourceIdentifier target,
-            final boolean regAssertionRequired,
             final String publishAddress,
             final String contentType,
             final Buffer payload,
@@ -990,7 +986,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         MessageHelper.setPayload(msg, contentType, payload);
         msg.setContentType(contentType);
 
-        return addProperties(msg, target, regAssertionRequired, publishAddress, registrationInfo, timeUntilDisconnect);
+        return addProperties(msg, target, publishAddress, registrationInfo, timeUntilDisconnect);
     }
 
     /**
@@ -1003,13 +999,11 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * <li>application property <em>device_id</em> will be set to the target's resourceId property</li>
      * <li>application property <em>orig_address</em> will be set to the given publish address</li>
      * <li>application property <em>ttd</em> will be set to the given time til disconnect</li>
-     * <li>additional properties set by {@link #addProperties(Message, JsonObject, boolean)}</li>
+     * <li>additional properties set by {@link #addProperties(Message, JsonObject)}</li>
      * </ul>
      *
      * @param msg The message to add the properties to.
      * @param target The resource that the message is targeted at.
-     * @param regAssertionRequired {@code true} if the downstream peer requires the registration assertion to
-     *            be included in the message.
      * @param publishAddress The address that the message has been published to originally by the device. (may be
      *            {@code null}).
      *            <p>
@@ -1025,7 +1019,6 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     protected final Message addProperties(
             final Message msg,
             final ResourceIdentifier target,
-            final boolean regAssertionRequired,
             final String publishAddress,
             final JsonObject registrationInfo,
             final Integer timeUntilDisconnect) {
@@ -1045,25 +1038,8 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         }
 
         MessageHelper.setCreationTime(msg);
-        addProperties(msg, registrationInfo, regAssertionRequired);
+        addProperties(msg, registrationInfo);
         return msg;
-    }
-
-    /**
-     * Adds message properties based on a device's registration information.
-     * <p>
-     * This methods simply invokes {@link #addProperties(Message, JsonObject, boolean)} with
-     * with {@code true} as the value for the regAssertionRequired parameter.
-     *
-     * @param message The message to set the properties on.
-     * @param registrationInfo The values to set.
-     * @throws NullPointerException if any of the parameters is {@code null}.
-     */
-    protected final void addProperties(
-            final Message message,
-            final JsonObject registrationInfo) {
-
-        addProperties(message, registrationInfo, true);
     }
 
     /**
@@ -1071,8 +1047,6 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * <p>
      * Sets the following properties on the message:
      * <ul>
-     * <li>Adds the registration assertion found in the {@link RegistrationConstants#FIELD_ASSERTION} property of the
-     * given registration information (if required by downstream peer).</li>
      * <li>Adds {@linkplain #getTypeName() the adapter's name} to the message in application property
      * {@link MessageHelper#APP_PROPERTY_ORIG_ADAPTER}</li>
      * <li>Augments the message with missing (application) properties corresponding to the
@@ -1083,19 +1057,12 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      *
      * @param message The message to set the properties on.
      * @param registrationInfo The values to set.
-     * @param regAssertionRequired {@code true} if the downstream peer requires the registration assertion to
-     *            be included in the message.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
     protected final void addProperties(
             final Message message,
-            final JsonObject registrationInfo,
-            final boolean regAssertionRequired) {
+            final JsonObject registrationInfo) {
 
-        if (regAssertionRequired) {
-            final String registrationAssertion = registrationInfo.getString(RegistrationConstants.FIELD_ASSERTION);
-            MessageHelper.addRegistrationAssertion(message, registrationAssertion);
-        }
         MessageHelper.addProperty(message, MessageHelper.APP_PROPERTY_ORIG_ADAPTER, getTypeName());
         if (getConfig().isDefaultsEnabled()) {
             final JsonObject defaults = registrationInfo.getJsonObject(RegistrationConstants.FIELD_DEFAULTS);
@@ -1379,7 +1346,6 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
                 final MessageSender sender = senderTracker.result();
                 final Message msg = newMessage(
                         ResourceIdentifier.from(EventConstants.EVENT_ENDPOINT, tenant, deviceId),
-                        senderTracker.result().isRegistrationAssertionRequired(),
                         EventConstants.EVENT_ENDPOINT,
                         EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION,
                         null,

@@ -36,11 +36,9 @@ public class HonoSenderSamplerUI extends HonoSamplerUI {
     private final JCheckBox          waitForDeliveryResult;
     private final JLabeledTextField  contentType;
     private final JLabeledTextArea   data;
-    private final JLabeledTextField  assertion;
     private final JLabeledTextField  waitForReceivers;
     private final JLabeledTextField  waitForReceiversTimeout;
     private final JLabeledTextField  sampleSendTimeout;
-    private final ServerOptionsPanel registrationServiceOptions;
     private final JLabeledTextField  tenant;
     private final JLabeledTextField  container;
     private final JLabeledChoice     endpoint;
@@ -63,8 +61,6 @@ public class HonoSenderSamplerUI extends HonoSamplerUI {
         endpoint.setToolTipText("<html>The name of the endpoint to send the AMQP message to.</html>");
         deviceId = new JLabeledTextField("Device ID");
         deviceId.setToolTipText("<html>The device identifier to put into the <em>device_id</em> application property of the AMQP message to send.</html>");
-        registrationServiceOptions = new ServerOptionsPanel("Device Registration Service");
-        assertion = new JLabeledTextField("Registration Assertion");
         contentType = new JLabeledTextField("Content type");
         data = new JLabeledTextArea("Message data");
         waitForDeliveryResult = new JCheckBox("Wait for delivery result");
@@ -91,8 +87,6 @@ public class HonoSenderSamplerUI extends HonoSamplerUI {
         addOption(deviceId);
         addOption(contentType);
         addOption(data);
-        addOption(assertion);
-        addOption(registrationServiceOptions);
         addOption(waitForDeliveryResult);
         addOption(setSenderTime);
         addOption(waitForReceivers);
@@ -131,9 +125,6 @@ public class HonoSenderSamplerUI extends HonoSamplerUI {
         sampler.setMessageCountPerSamplerRun(msgCountPerSamplerRun.getText());
         sampler.setContentType(contentType.getText());
         sampler.setData(data.getText());
-        sampler.setRegistrationAssertion(assertion.getText());
-        // device registration service
-        sampler.modifyRegistrationServiceOptions(registrationServiceOptions);
     }
 
     @Override
@@ -153,9 +144,6 @@ public class HonoSenderSamplerUI extends HonoSamplerUI {
         waitForDeliveryResult.setSelected(sampler.isWaitForDeliveryResult());
         contentType.setText(sampler.getContentType());
         data.setText(sampler.getData());
-        assertion.setText(sampler.getRegistrationAssertion());
-        // device registration service
-        sampler.configureRegistrationServiceOptions(registrationServiceOptions);
     }
 
     @Override
@@ -169,13 +157,10 @@ public class HonoSenderSamplerUI extends HonoSamplerUI {
         setSenderTime.setSelected(true);
         contentType.setText("text/plain");
         data.setText("");
-        assertion.setText("");
         waitForDeliveryResult.setSelected(true);
         waitForReceivers.setText("0");
         waitForReceiversTimeout.setText("5000");
         sampleSendTimeout.setText(Integer.toString(HonoSenderSampler.DEFAULT_SEND_TIMEOUT));
         msgCountPerSamplerRun.setText("1");
-        // device registration service
-        registrationServiceOptions.clearGui();
     }
 }

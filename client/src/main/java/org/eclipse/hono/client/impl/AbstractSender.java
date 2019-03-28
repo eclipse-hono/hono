@@ -38,7 +38,6 @@ import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.tracing.TracingHelper;
-import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -82,7 +81,6 @@ public abstract class AbstractSender extends AbstractHonoClient implements Messa
     protected final String targetAddress;
 
     private Handler<Void> drainHandler;
-    private boolean registrationAssertionRequired;
 
     /**
      * Creates a new sender.
@@ -112,7 +110,6 @@ public abstract class AbstractSender extends AbstractHonoClient implements Messa
             this.offeredCapabilities = Optional.ofNullable(sender.getRemoteOfferedCapabilities())
                     .map(caps -> Collections.unmodifiableList(Arrays.asList(caps)))
                     .orElse(Collections.emptyList());
-            this.registrationAssertionRequired = supportsCapability(Constants.CAP_REG_ASSERTION_VALIDATION);
         }
     }
 
@@ -165,10 +162,6 @@ public abstract class AbstractSender extends AbstractHonoClient implements Messa
 
         Objects.requireNonNull(rawMessage);
 
-        if (!isRegistrationAssertionRequired()) {
-            MessageHelper.getAndRemoveRegistrationAssertion(rawMessage);
-        }
-
         final Span span = startSpan(parent, rawMessage);
         Tags.MESSAGE_BUS_DESTINATION.set(span, targetAddress);
         span.setTag(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId);
@@ -188,36 +181,33 @@ public abstract class AbstractSender extends AbstractHonoClient implements Messa
     }
 
     @Override
-    public final Future<ProtonDelivery> send(final String deviceId, final byte[] payload, final String contentType, final String registrationAssertion) {
-        return send(deviceId, null, payload, contentType, registrationAssertion);
+    public final Future<ProtonDelivery> send(final String deviceId, final byte[] payload, final String contentType) {
+        return send(deviceId, null, payload, contentType);
     }
 
     @Override
-    public final Future<ProtonDelivery> send(final String deviceId, final String payload, final String contentType, final String registrationAssertion) {
-        return send(deviceId, null, payload, contentType, registrationAssertion);
+    public final Future<ProtonDelivery> send(final String deviceId, final String payload, final String contentType) {
+        return send(deviceId, null, payload, contentType);
     }
 
     @Override
-    public final Future<ProtonDelivery> send(final String deviceId, final Map<String, ?> properties, final String payload, final String contentType,
-            final String registrationAssertion) {
+    public final Future<ProtonDelivery> send(final String deviceId, final Map<String, ?> properties, final String payload, final String contentType) {
         Objects.requireNonNull(payload);
         final Charset charset = getCharsetForContentType(Objects.requireNonNull(contentType));
-        return send(deviceId, properties, payload.getBytes(charset), contentType, registrationAssertion);
+        return send(deviceId, properties, payload.getBytes(charset), contentType);
     }
 
     @Override
-    public final Future<ProtonDelivery> send(final String deviceId, final Map<String, ?> properties, final byte[] payload, final String contentType,
-                              final String registrationAssertion) {
+    public final Future<ProtonDelivery> send(final String deviceId, final Map<String, ?> properties, final byte[] payload, final String contentType) {
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(payload);
         Objects.requireNonNull(contentType);
-        Objects.requireNonNull(registrationAssertion);
 
         final Message msg = ProtonHelper.message();
         msg.setAddress(getTo(deviceId));
         MessageHelper.setPayload(msg, contentType, payload);
         setApplicationProperties(msg, properties);
-        addProperties(msg, deviceId, registrationAssertion);
+        addProperties(msg, deviceId);
         return send(msg);
     }
 
@@ -278,11 +268,8 @@ public abstract class AbstractSender extends AbstractHonoClient implements Messa
      */
     protected abstract String getTo(String deviceId);
 
-    private void addProperties(final Message msg, final String deviceId, final String registrationAssertion) {
+    private void addProperties(final Message msg, final String deviceId) {
         MessageHelper.addDeviceId(msg, deviceId);
-        if (isRegistrationAssertionRequired()) {
-            MessageHelper.addRegistrationAssertion(msg, registrationAssertion);
-        }
     }
 
     private Charset getCharsetForContentType(final String contentType) {
@@ -293,11 +280,6 @@ public abstract class AbstractSender extends AbstractHonoClient implements Messa
         } else {
             return StandardCharsets.UTF_8;
         }
-    }
-
-    @Override
-    public final boolean isRegistrationAssertionRequired() {
-        return registrationAssertionRequired;
     }
 
     /**
