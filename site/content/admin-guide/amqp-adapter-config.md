@@ -37,6 +37,8 @@ The following table provides an overview of the configuration variables and corr
 | `HONO_AMQP_PORT`<br>`--hono.amqp.port` | no | `4041` | The secure port that the protocol adapter should listen on.<br>See [Port Configuration]({{< relref "#port-configuration" >}}) below for details. |
 | `HONO_AMQP_SECURE_PROTOCOLS`<br>`--hono.amqp.secureProtocols` | no | `TLSv1.2` | A (comma separated) list of secure protocols that are supported when negotiating TLS sessions. Please refer to the [vert.x documentation](https://vertx.io/docs/vertx-core/java/#ssl) for a list of supported protocol names. |
 | `HONO_VERTX_DNS_QUERY_TIMEOUT`<br>`--hono.vertx.dnsQueryTimeout` | no | `5000` | The amount of time after which a DNS query is considered to be failed. Setting this variable to a smaller value may help to reduce the time required to establish connections to the services this adapter depends on. However, setting it to a value that is too small for any DNS query to succeed will effectively prevent any connections to be established at all. |
+| `HONO_PLAN_PROMETHEUS_BASED_HOST`<br>`--hono.plan.prometheusBased.host` | no | none | The host of the prometheus server which will be used by the default implementation to retrieve the live metrics data. This need to be configured to enable the prometheus based default implementation.|
+| `HONO_PLAN_PROMETHEUS_BASED_PORT`<br>`--hono.plan.prometheusBased.port` | no | `9090` | The port of the prometheus server which will be used by the default implementation to retrieve the live metrics data.|
 
 The variables only need to be set if the default values do not match your environment.
 

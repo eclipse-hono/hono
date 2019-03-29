@@ -38,6 +38,10 @@ When a device uses a client certificate for authentication, the TLS handshake is
 
 NB: The AMQP adapter needs to be configured for TLS in order to support this mechanism.
 
+## Connection Limits
+
+After verifying the credentials, the number of existing connections is checked against the configured [resource-limits] ({{< ref "/concepts/resource-limits.md" >}}) by the AMQP adapter.  If the limit is exceeded then the connection request is not accepted.
+
 ## Link Establishment
 
 Clients can publish all types of messages to the AMQP adapter via a single *anonymous* sender link. Using *AT MOST ONCE* delivery semantics, the client will not wait for the message to be accepted and settled by the downstream consumer. However, with *AT LEAST ONCE*, the client sends the message and waits for the message to be delivered to and accepted by the downstream consumer. If the message cannot be delivered due to a failure, the client will be notified.

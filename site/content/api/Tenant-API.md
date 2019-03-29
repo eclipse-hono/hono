@@ -284,6 +284,7 @@ The table below provides an overview of the standard members defined for the JSO
 | *enabled*                | *no*      | *boolean*     | `true`       | If set to `false` the tenant is currently disabled. Protocol adapters MUST NOT allow devices of a disabled tenant to connect and MUST NOT accept data published by such devices. |
 | *trusted-ca*             | *no*      | *JSON object* | `-`          | The trusted certificate authority to use for validating certificates presented by devices of the tenant for authentication purposes. See [Trusted Certificate Authority Format]({{< relref "#trusted-ca-format" >}}) for a definition of the content model of the object. |
 | *adapters*               | *no*      | *array*       | `-`          | A list of configuration options valid for certain adapters only. The format of a configuration option is described here [Adapter Configuration Format]({{< relref "#adapter-configuration-format" >}}). **NB** If the element is provided then the list MUST NOT be empty. **NB** Only a single entry per *type* is allowed. If multiple entries for the same *type* are present it is handled as an error. **NB** If the element is omitted then all adapters are *enabled* in their default configuration. |
+| *resource-limits*         | *no*      | *JSON object* | `-`          | The resource-limits such as the maximum number of connections can be set. The format of a configuration option is described here [Resource Limits Configuration Format]({{< relref "#resource-limits-configuration-format" >}}).|
 
 If any of the mandatory members is either missing or contains invalid data, implementations MUST NOT accept the payload and return *400 Bad Request* status code.
 
@@ -376,6 +377,12 @@ Protocol adapters SHOULD use the configuration properties set for a tenant when 
 
 The JSON object MAY contain an arbitrary number of additional members with arbitrary names of either scalar or complex type.
 
+## Resource Limits Configuration Format
+The table below provides an overview of the members defined for the *resource-limits* JSON object:
+
+| Name                     | Mandatory | Type          | Default Value | Description |
+| :------------------------| :-------: | :------------ | :------------ | :---------- |
+| *max-connections*        | *no*      | *number*      | *-1*          | The maximum number of device connections to be allowed per tenant. Default value -1 indicates that no limit is set.|
 ### Examples
 
 Below is an example for a payload of the response to a *get* request for tenant `TEST_TENANT`. Note that the payload contains some custom properties at both the tenant (*plan*) as well as the adapter configuration level (*deployment*).
