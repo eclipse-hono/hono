@@ -28,6 +28,7 @@ import org.junit.jupiter.api.Test;
 
 import javax.security.auth.x500.X500Principal;
 import java.net.HttpURLConnection;
+import java.util.List;
 
 /**
  * Abstract class used as a base for verifying behavior of {@link CompleteTenantService} in device registry implementations.
@@ -82,7 +83,7 @@ public abstract class AbstractCompleteTenantServiceTest {
 
         addTenant("tenant", JsonObject.mapFrom(tenant)).map(ok -> {
             final TenantObject newTenant = TenantObject.from("newTenant", true)
-                    .setProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, trustedCa);
+                    .setTrustConfiguration(new JsonArray().add(trustedCa));
             getCompleteTenantService().add(
                     "newTenant",
                     JsonObject.mapFrom(newTenant),
@@ -148,8 +149,9 @@ public abstract class AbstractCompleteTenantServiceTest {
                 assertEquals(HttpURLConnection.HTTP_OK, s.getStatus());
                 final TenantObject obj = s.getPayload().mapTo(TenantObject.class);
                 assertEquals("tenant", obj.getTenantId());
-                final JsonObject ca = obj.getProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA);
-                assertEquals(trustedCa, ca);
+                final List<JsonObject> cas = obj.getTrustConfigurations();
+                assertEquals(cas.size(), 1);
+                assertEquals(trustedCa, cas.get(0));
                 ctx.completeNow();
             })));
             return null;
@@ -252,7 +254,7 @@ public abstract class AbstractCompleteTenantServiceTest {
                 .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, "CN=taken")
                 .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, "NOTAKEY");
         final TenantObject tenantOne = TenantObject.from("tenantOne", true)
-                .setProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, trustedCa);
+                .setTrustConfiguration(new JsonArray().add(trustedCa));
         final TenantObject tenantTwo = TenantObject.from("tenantTwo", true);
         addTenant("tenantOne", JsonObject.mapFrom(tenantOne))
         .compose(ok -> addTenant("tenantTwo", JsonObject.mapFrom(tenantTwo)))

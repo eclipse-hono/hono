@@ -465,11 +465,12 @@ public abstract class HttpTestBase {
         // GIVEN a tenant configured with a trust anchor
         helper.getCertificate(deviceCert.certificatePath())
         .compose(cert -> {
-            tenant.setProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA,
-                       new JsonObject()
+            tenant.setTrustConfiguration(new JsonArray()
+                    .add(new JsonObject()
                         .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, cert.getIssuerX500Principal().getName(X500Principal.RFC2253))
                         .put(TenantConstants.FIELD_ADAPTERS_TYPE, "EC")
-                        .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, Base64.getEncoder().encodeToString(keyPair.getPublic().getEncoded())));
+                        .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, Base64.getEncoder().encodeToString(keyPair.getPublic().getEncoded())))
+                    );
             return helper.registry.addDeviceForTenant(tenant, deviceId, cert);
         })
         .setHandler(ctx.asyncAssertSuccess(ok -> setup.complete()));

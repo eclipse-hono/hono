@@ -251,21 +251,41 @@ public abstract class CompleteBaseTenantService<T> extends BaseTenantService<T> 
     }
 
     /**
-     * Checks if a payload contains a valid trusted CA specification.
+     * Checks if a tenant payload contains a valid trusted CA specification.
      *
-     * @param payload The payload to check.
-     * @return boolean {@code true} if the payload is valid.
+     * @param payload The tenant payload to check.
+     * @return boolean {@code true} if the tenant payload is valid.
      */
     private boolean hasValidTrustedCaSpec(final JsonObject payload) {
 
-       final Object trustConfig = payload.getValue(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA);
-       if (trustConfig == null) {
-           return true;
-       } else if (JsonObject.class.isInstance(trustConfig)) {
-           return isValidTrustedCaSpec((JsonObject) trustConfig);
-       } else {
-           return false;
-       }
+        final Object object = payload.getValue(TenantConstants.FIELD_PAYLOAD_TRUST_STORE);
+        if (object == null) {
+            return true;
+        } else if (!JsonArray.class.isInstance(object)) {
+            return false;
+        } else {
+            final JsonArray trustConfigs = (JsonArray) object;
+            if (trustConfigs.size() == 0) {
+                return false;
+            } else {
+                return isValidTrustedCaSpec(trustConfigs);
+            }
+        }
+    }
+
+    private boolean isValidTrustedCaSpec(final JsonArray trustConfigs) {
+        final boolean containsInvalidTrustedCa = trustConfigs.stream()
+                .anyMatch(obj -> !JsonObject.class.isInstance(obj));
+        if (containsInvalidTrustedCa) {
+            return false;
+        } else {
+            final boolean containsInvalidConfig = trustConfigs.stream().anyMatch(trustedCa -> !isValidTrustedCaSpec((JsonObject) trustedCa));
+            if (containsInvalidConfig) {
+                return false;
+            } else {
+                return true;
+            }
+        }
     }
 
     /**

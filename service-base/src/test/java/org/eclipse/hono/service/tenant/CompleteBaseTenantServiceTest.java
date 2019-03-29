@@ -164,7 +164,7 @@ public class CompleteBaseTenantServiceTest {
         final JsonObject malformedTrustedCa = new JsonObject()
                 .put(TenantConstants.FIELD_PAYLOAD_CERT, "certificate");
         final JsonObject testPayload = createValidTenantPayload();
-        testPayload.put(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, malformedTrustedCa);
+        testPayload.put(TenantConstants.FIELD_PAYLOAD_TRUST_STORE, new JsonArray().add(malformedTrustedCa));
 
         final EventBusMessage msg = createRequest(TenantConstants.TenantAction.add, testPayload);
         tenantService.processRequest(msg).setHandler(ctx.asyncAssertFailure(t -> {
@@ -184,7 +184,7 @@ public class CompleteBaseTenantServiceTest {
         final JsonObject malformedTrustedCa = new JsonObject()
                 .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, "CN=test");
         final JsonObject testPayload = createValidTenantPayload();
-        testPayload.put(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, malformedTrustedCa);
+        testPayload.put(TenantConstants.FIELD_PAYLOAD_TRUST_STORE, new JsonArray().add(malformedTrustedCa));
 
         final EventBusMessage msg = createRequest(TenantConstants.TenantAction.add, testPayload);
         tenantService.processRequest(msg).setHandler(ctx.asyncAssertFailure(t -> {
@@ -207,7 +207,7 @@ public class CompleteBaseTenantServiceTest {
                 .put(TenantConstants.FIELD_PAYLOAD_CERT, "certificate")
                 .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, "key");
         final JsonObject testPayload = createValidTenantPayload();
-        testPayload.put(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, malformedTrustedCa);
+        testPayload.put(TenantConstants.FIELD_PAYLOAD_TRUST_STORE, new JsonArray().add(malformedTrustedCa));
 
         final EventBusMessage msg = createRequest(TenantConstants.TenantAction.add, testPayload);
         tenantService.processRequest(msg).setHandler(ctx.asyncAssertFailure(t -> {
@@ -230,7 +230,7 @@ public class CompleteBaseTenantServiceTest {
                 .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, "CN=test")
                 .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, cert.getPublicKey().getEncoded());
         final JsonObject testPayload = createValidTenantPayload();
-        testPayload.put(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, validTrustedCa);
+        testPayload.put(TenantConstants.FIELD_PAYLOAD_TRUST_STORE, new JsonArray().add(validTrustedCa));
 
         final EventBusMessage msg = createRequest(TenantConstants.TenantAction.add, testPayload);
         tenantService.processRequest(msg).setHandler(ctx.asyncAssertSuccess());
@@ -251,7 +251,7 @@ public class CompleteBaseTenantServiceTest {
                 .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, "CN=test")
                 .put(TenantConstants.FIELD_PAYLOAD_CERT, cert.getEncoded());
         final JsonObject testPayload = createValidTenantPayload();
-        testPayload.put(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, validTrustedCa);
+        testPayload.put(TenantConstants.FIELD_PAYLOAD_TRUST_STORE, new JsonArray().add(validTrustedCa));
 
         final EventBusMessage msg = createRequest(TenantConstants.TenantAction.add, testPayload);
         tenantService.processRequest(msg).setHandler(ctx.asyncAssertSuccess());
@@ -272,7 +272,7 @@ public class CompleteBaseTenantServiceTest {
                 .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, "NOTAPUBLICKEY");
 
         final JsonObject testPayloadPK = createValidTenantPayload()
-                .put(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, malformedPKTrustedCa);
+                .put(TenantConstants.FIELD_PAYLOAD_TRUST_STORE, new JsonArray().add(malformedPKTrustedCa));
 
         // WHEN there is a request to add the tenant with such malformed payload
         final EventBusMessage msgPK = createRequest(TenantConstants.TenantAction.add, testPayloadPK);
@@ -296,13 +296,78 @@ public class CompleteBaseTenantServiceTest {
                 .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, "CN=test")
                 .put(TenantConstants.FIELD_PAYLOAD_CERT, "NOTACERTIFICATE");
         final JsonObject testPayloadCert = createValidTenantPayload()
-                .put(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, malformedCertTrustedCa);
+                .put(TenantConstants.FIELD_PAYLOAD_TRUST_STORE, new JsonArray().add(malformedCertTrustedCa));
 
         // WHEN there is a request to add the tenant with such malformed payload
         final EventBusMessage msgCert = createRequest(TenantConstants.TenantAction.add, testPayloadCert);
         tenantService.processRequest(msgCert).setHandler(ctx.asyncAssertFailure(t -> {
             // THEN the base tenant service rejects the request.
             ctx.assertEquals(HttpURLConnection.HTTP_BAD_REQUEST, ((ServiceInvocationException) t).getErrorCode());
+        }));
+    }
+
+    /**
+     * Verifies that the base service rejects a tenant add request with payload having multiple
+     * trusted CA configurations that contains at least one invalid trusted CA.
+     * 
+     * @param ctx The Vert.x test context.
+     * @throws CertificateException if the test certificate cannot be created.
+     */
+    @Test
+    public void testAddFailsForAnyInvalidTrustConfiguration(final TestContext ctx) throws CertificateException {
+        // GIVEN a tenant payload containing at least ONE invalid trust configuration
+        final X509Certificate certOne = getSelfSignedCertificate();
+        final X509Certificate certTwo = getSelfSignedCertificate();
+
+        final JsonObject validTrustedCaOne = new JsonObject()
+                .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, "CN=test-one")
+                .put(TenantConstants.FIELD_PAYLOAD_CERT, certOne.getEncoded());
+        final JsonObject validTrustedCaTwo = new JsonObject()
+                .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, "CN=test-two")
+                .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, certTwo.getPublicKey().getEncoded());
+        final JsonObject malformedCertTrustedCa = new JsonObject()
+                .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, "CN=test-three")
+                .put(TenantConstants.FIELD_PAYLOAD_CERT, "NOTACERTIFICATE");
+
+        final JsonObject tenantPayload = createValidTenantPayload()
+                .put(TenantConstants.FIELD_PAYLOAD_TRUST_STORE,
+                        new JsonArray().add(validTrustedCaOne).add(validTrustedCaTwo).add(malformedCertTrustedCa));
+
+        // WHEN there is a request to add the tenant with such malformed payload
+        final EventBusMessage msgCert = createRequest(TenantConstants.TenantAction.add, tenantPayload);
+        tenantService.processRequest(msgCert).setHandler(ctx.asyncAssertFailure(t -> {
+            // THEN the base tenant service rejects the request.
+            ctx.assertEquals(HttpURLConnection.HTTP_BAD_REQUEST, ((ServiceInvocationException) t).getErrorCode());
+        }));
+
+    }
+
+    /**
+     * Verifies that a tenant add request with payload containing multiple (valid) trust configurations succeeds.
+     * 
+     * @param ctx The Vert.x test context.
+     * @throws CertificateException if the test certificate cannot be created.
+     */
+    @Test
+    public void testAddTenantSucceedsWithMultipleValidTrustConfigurations(final TestContext ctx) throws CertificateException {
+        // GIVEN a tenant payload containing multiple (valid) trust configurations
+        final X509Certificate testCertificate = getSelfSignedCertificate();
+        final JsonArray trustConfigs = new JsonArray();
+        int index = 0;
+        while (index++ < 10) {
+            final JsonObject trustedCa = new JsonObject()
+                    .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, "test-dn")
+                    .put(TenantConstants.FIELD_PAYLOAD_CERT, testCertificate.getEncoded());
+            trustConfigs.add(trustedCa);
+        }
+        final JsonObject tenantPayload = createValidTenantPayload()
+                .put(TenantConstants.FIELD_PAYLOAD_TRUST_STORE, trustConfigs);
+
+        // WHEN there is a request to add the tenant with such valid payload
+        final EventBusMessage msgCert = createRequest(TenantConstants.TenantAction.add, tenantPayload);
+        tenantService.processRequest(msgCert).setHandler(ctx.asyncAssertSuccess(t -> {
+            // THEN the service creates the tenant
+            ctx.assertEquals(HttpURLConnection.HTTP_CREATED, t.getStatus());
         }));
     }
 

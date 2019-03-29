@@ -253,7 +253,7 @@ public class TenantHttpIT {
                 .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, "test-dn")
                 .put(TenantConstants.FIELD_PAYLOAD_CERT, "NotBased64Encoded");
         final JsonObject requestBody = buildTenantPayload(tenantId)
-                .put(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, trustConfig);
+                .put(TenantConstants.FIELD_PAYLOAD_TRUST_STORE, new JsonArray().add(trustConfig));
         registry.addTenant(requestBody, "application/json", HttpURLConnection.HTTP_BAD_REQUEST).setHandler(context.asyncAssertSuccess());
     }
 

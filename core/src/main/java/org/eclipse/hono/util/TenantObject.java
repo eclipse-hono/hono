@@ -25,13 +25,17 @@ import java.security.cert.TrustAnchor;
 import java.security.cert.X509Certificate;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.X509EncodedKeySpec;
+import java.util.ArrayList;
 import java.util.Base64;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import javax.security.auth.x500.X500Principal;
 
@@ -54,7 +58,14 @@ public final class TenantObject extends JsonBackedValueObject {
     @JsonIgnore
     private Map<String, JsonObject> adapterConfigurations;
     @JsonIgnore
-    private TrustAnchor trustAnchor;
+    private List<JsonObject> trustedCaList;
+    @JsonIgnore
+    private List<TrustAnchor> trustAnchors;
+    @JsonIgnore
+    private List<X500Principal> subjectNames;
+    //<subjectDn, configs>
+    @JsonIgnore
+    private Map<String, List<JsonObject>> trustConfigurations;
 
     /**
      * Adds a property to this tenant.
@@ -114,28 +125,23 @@ public final class TenantObject extends JsonBackedValueObject {
 
     /**
      * Gets the subject DN of this tenant's configured trusted
-     * certificate authority.
+     * certificate authority. This method assumes that this tenant is
+     * configured with a single trusted CA.
      * 
      * @return The DN or {@code null} if no CA has been set.
      */
     @JsonIgnore
     public X500Principal getTrustedCaSubjectDn() {
-
-        final JsonObject trustedCa = getProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA);
-        if (trustedCa == null) {
-            return null;
-        } else {
-            return Optional.ofNullable((String) getProperty(trustedCa, TenantConstants.FIELD_PAYLOAD_SUBJECT_DN))
-                    .map(dn -> new X500Principal(dn)).orElse(null);
-        }
+        final List<X500Principal> subjectdns = Optional.ofNullable(getTrustedCaSubjectNames()).orElse(null);
+        return subjectdns == null ? null : subjectdns.get(0);
     }
 
     /**
-     * Sets the trusted certificate authority to use for authenticating
-     * devices of this tenant.
+     * Sets the trusted anchor for this tenant's Trusted CA using the given public key and subject DN.
      * 
-     * @param publicKey The CA's public key.
-     * @param subjectDn The CA's subject DN.
+     * @param publicKey The trusted CA's public key.
+     * @param subjectDn The trusted CA's subject DN.
+     * 
      * @return This tenant for command chaining.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
@@ -150,11 +156,14 @@ public final class TenantObject extends JsonBackedValueObject {
         trustedCa.put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, publicKey.getEncoded());
         trustedCa.put(TenantConstants.FIELD_PAYLOAD_KEY_ALGORITHM, publicKey.getAlgorithm());
         return setProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, trustedCa);
+
+        // return addTrustedCaConfiguration(trustedCa);
     }
 
     /**
      * Sets the trusted certificate authority to use for authenticating
-     * devices of this tenant.
+     * devices of this tenant. The certificate must contain a {@code NonNull} and non-empty
+     * subject DN value.
      * 
      * @param certificate The CA certificate.
      * @return This tenant for command chaining.
@@ -168,15 +177,17 @@ public final class TenantObject extends JsonBackedValueObject {
 
         try {
             final JsonObject trustedCa = new JsonObject()
+                    .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, certificate.getSubjectX500Principal().getName())
                     .put(TenantConstants.FIELD_PAYLOAD_CERT, certificate.getEncoded());
-            return setProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, trustedCa);
-        } catch (CertificateEncodingException e) {
+            return addTrustedCaConfiguration(trustedCa);
+        } catch (final CertificateEncodingException e) {
             throw new IllegalArgumentException("cannot encode certificate");
         }
     }
 
     /**
      * Gets the trusted certificate authority configured for this tenant.
+     * This method assumes that the tenant is configured with a single Trusted CA.
      * <p>
      * This method tries to extract the certificate from the data contained in
      * the JSON object of the <em>trusted-ca</em> property.
@@ -185,39 +196,31 @@ public final class TenantObject extends JsonBackedValueObject {
      * value as the <em>printable</em> form but without the leading
      * {@code -----BEGIN CERTIFICATE-----} and trailing {@code -----END CERTIFICATE-----}.
      * 
+     * 
      * @return The certificate or {@code null} if no certificate authority
      *         has been set.
      * @throws CertificateException if the value of <em>cert</em> property cannot be parsed into
-     *             an X.509 certificate.
+     *              an X.509 certificate.
      */
     @JsonIgnore
     public X509Certificate getTrustedCertificateAuthority() throws CertificateException {
 
-        final JsonObject trustedCa = getProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA);
-        if (trustedCa == null) {
+        final List<X509Certificate> certs = getTrustedCertificateAuthorities();
+        if (certs == null) {
             return null;
         } else {
-            final Object obj = trustedCa.getValue(TenantConstants.FIELD_PAYLOAD_CERT);
-            if (obj instanceof String) {
-                try {
-                    final byte[] derEncodedCert = Base64.getDecoder().decode(((String) obj));
-                    final CertificateFactory factory = CertificateFactory.getInstance("X.509");
-                    return (X509Certificate) factory.generateCertificate(new ByteArrayInputStream(derEncodedCert));
-                } catch (final IllegalArgumentException e) {
-                    // Base64 decoding failed
-                    throw new CertificateParsingException("cert property does not contain valid Base64 scheme", e);
-                }
-            } else {
-                return null;
-            }
+            return certs.get(0);
         }
     }
 
     /**
-     * Gets the trust anchor for this tenant.
+     * Gets the trust anchor for this tenant. This method assumes that this tenant is
+     * configured with a single trusted CA.
      * <p>
      * This method tries to create the trust anchor based on the information
-     * from the JSON object contained in the <em>trusted-ca</em> property.
+     * from the JSON array contained in the <em>trusted-ca-store</em> property. The JSON
+     * array should contain a single JSON object, which stores the config. info for this
+     * tenant's trusted CA.
      * <ol>
      * <li>If the object contains a <em>cert</em> property then its content is
      * expected to contain the Base64 encoded (binary) DER encoding of the
@@ -235,23 +238,12 @@ public final class TenantObject extends JsonBackedValueObject {
      * @return The trust anchor or {@code null} if no trusted certificate authority
      *         has been set.
      * @throws GeneralSecurityException if the value of the <em>trusted-ca</em> property
-     *             cannot be parsed into a trust anchor, e.g. because of unsupported
-     *             key type, malformed certificate or public key encoding etc. 
+     *              cannot be parsed into a trust anchor, e.g. because of unsupported
+     *              key type, malformed certificate or public key encoding etc.
      */
     @JsonIgnore
     public TrustAnchor getTrustAnchor() throws GeneralSecurityException {
-
-        if (trustAnchor != null) {
-            return trustAnchor;
-        } else {
-            final X509Certificate cert = getTrustedCertificateAuthority();
-            if (cert != null) {
-                trustAnchor = new TrustAnchor(cert, null);
-                return trustAnchor;
-            } else {
-                return getTrustAnchorForPublicKey(getProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA));
-            }
-        }
+        return (getTrustAnchors() == null ? null : getTrustAnchors().get(0));
     }
 
     @JsonIgnore
@@ -262,6 +254,7 @@ public final class TenantObject extends JsonBackedValueObject {
         } else {
             final String subjectDn = getProperty(keyProps, TenantConstants.FIELD_PAYLOAD_SUBJECT_DN);
             final String encodedKey = getProperty(keyProps, TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY);
+
             if (subjectDn == null || encodedKey == null) {
                 return null;
             } else {
@@ -270,8 +263,7 @@ public final class TenantObject extends JsonBackedValueObject {
                     final X509EncodedKeySpec keySpec = new X509EncodedKeySpec(Base64.getDecoder().decode(encodedKey));
                     final KeyFactory factory = KeyFactory.getInstance(type);
                     final PublicKey publicKey = factory.generatePublic(keySpec);
-                    trustAnchor = new TrustAnchor(subjectDn, publicKey, null);
-                    return trustAnchor;
+                    return new TrustAnchor(subjectDn, publicKey, null);
                 } catch (final IllegalArgumentException e) {
                     // Base64 decoding failed
                     throw new InvalidKeySpecException("cannot decode Base64 encoded public key", e);
@@ -540,5 +532,305 @@ public final class TenantObject extends JsonBackedValueObject {
     @JsonIgnore
     public void setDefaults(final JsonObject defaultProperties) {
         setProperty(TenantConstants.FIELD_PAYLOAD_DEFAULTS, Objects.requireNonNull(defaultProperties));
+    }
+
+    /** 
+     * Sets the configuration information for this tenant's configured trusted CA's. The RSA public key type is assumed
+     * if the trusted CA JSON object does not contain a type property.
+     * 
+     * @param configurations A list of configuration properties, one set of properties for each configured trusted CA.
+     * @return This tenant for command chaining.
+     * 
+     * @throws IllegalArgumentException if the any of the trusted CA configuration is missing the required
+     *             <em>subject-dn</em> property or either the {@code public-key} or {@code cert} property does not
+     *             contain a valid Base64 encoding.
+     */
+    @JsonProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA)
+    public TenantObject setTrustStore(final List<Map<String, Object>> configurations) {
+        if (configurations == null) {
+            this.trustConfigurations = null;
+        } else {
+            configurations.stream().forEach(map -> {
+                final JsonObject trustedCa = new JsonObject(map);
+                addTrustedCaConfiguration(trustedCa);
+            });
+        }
+        return this;
+    }
+
+    /**
+     * Gets the configuration information for this tenant's
+     * configured trusted certificate authorities.
+     * 
+     * @return An unmodifiable list of configuration properties or
+     *         {@code null} if no trust configuration has been
+     *         set for this tenant.
+     */
+    @JsonProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA)
+    public List<Map<String, Object>> getTrustConfigurationsAsMaps() {
+        if (trustConfigurations == null) {
+            return null;
+        } else {
+            final List<Map<String, Object>> result = new LinkedList<>();
+            trustConfigurations.values().stream().flatMap(Collection::stream).forEach(config -> result.add(config.getMap()));
+            return result;
+        }
+    }
+
+    /**
+     * Sets the configuration information for this tenant's
+     * configured trusted certificate authorities.
+     * 
+     * @param configurations The configuration properties for this tenant's
+     *                       configured trusted CAs or {@code null} in order to
+     *                       remove any existing configuration.
+     * @return This tenant for command chaining.
+     * 
+     * @throws IllegalArgumentException if the required {@code subject-dn} property is missing or
+     *          if the {@code public-key} or {@code cert} property does not contain a valid Base64 encoding.
+     */
+    @JsonIgnore
+    public TenantObject setTrustConfiguration(final JsonArray configurations) {
+        if (configurations == null) {
+            this.trustConfigurations = null;
+        } else {
+            configurations.stream().filter(obj -> JsonObject.class.isInstance(obj)).forEach(config -> addTrustedCaConfiguration((JsonObject) config));
+        }
+        return this;
+    }
+
+    /**
+     * Get the list of subject distinguished names that are configured for this
+     * tenant's trusted certificate authorities. The list of subject DNs is cached on a first call
+     * and return in subsequent invocations of this method.
+     * 
+     * @return The list of subject distinguished names or {@code null} if no CA has been set for this tenant.
+     */
+    @JsonIgnore
+    public List<X500Principal> getTrustedCaSubjectNames() {
+        if (subjectNames != null) {
+            return subjectNames;
+        }
+        if (trustConfigurations == null) {
+            return null;
+        } else {
+            final List<JsonObject> trustedcas = Optional.ofNullable(getTrustConfigurations()).orElse(Collections.emptyList());
+            trustedcas.forEach(config -> {
+                if (subjectNames == null) {
+                    subjectNames = new ArrayList<>();
+                }
+                final String subjectDn = getProperty(config, TenantConstants.FIELD_PAYLOAD_SUBJECT_DN);
+                subjectNames.add(new X500Principal(subjectDn));
+            });
+            return subjectNames;
+        }
+    }
+
+    /**
+     * Get the list of trust anchors that are configured for this tenant. The list of trust anchors is created and cached the first
+     * time this method is called. Subsequent calls returns the cached list.
+     * 
+     * @return The list of trust anchors or {@code null} if this tenant is does not contain any trusted CA.
+     * @throws GeneralSecurityException if the value of the <em>trusted-ca-store</em> property
+     *              cannot be parsed into a list of trust anchor, e.g. because of unsupported
+     *              key type, malformed certificate or public key encoding etc. 
+     */
+    @JsonIgnore
+    public List<TrustAnchor> getTrustAnchors() throws GeneralSecurityException {
+        if (trustAnchors != null) {
+            return trustAnchors;
+        } else {
+            trustAnchors = new ArrayList<>();
+            final List<JsonObject> configs = Optional.ofNullable(getTrustConfigurations()).orElse(Collections.emptyList());
+            for (JsonObject config : configs) {
+                final TrustAnchor anchor = getTrustAnchor(config);
+                if (anchor != null) {
+                    trustAnchors.add(anchor);
+                }
+            }
+            return trustAnchors;
+        }
+
+    }
+
+    /**
+     * Get the list of trust anchors matching the specified subject DN. The list of trust anchors is created and cached
+     * the first time this method is called. Subsequent calls returns the cached list.
+     * 
+     * @param subjectDn The subjectDn of the configured trusted certificate authorities for this tenant.
+     * @return The list of trust anchors matching the specified tenant or {@code null} if there is no trusted CA
+     *         matching the specified subject DN.
+     * @throws GeneralSecurityException if an instance of a trust anchor cannot be created from a configured trusted CA 
+     *                  JSON object (e.g due to TODO)
+     */
+    @JsonIgnore
+    public List<TrustAnchor> getTrustAnchors(final String subjectDn) throws GeneralSecurityException {
+        List<TrustAnchor> anchors = null;
+        final List<JsonObject> configs = Optional.ofNullable(getTrustedCaConfigurations(subjectDn))
+                        .orElse(Collections.emptyList());
+        for (JsonObject config : configs) {
+            if (anchors == null) {
+                anchors = new ArrayList<>();
+            }
+            anchors.add(getTrustAnchor(config));
+        }
+       return anchors;
+    }
+
+    /**
+     * Get all the trusted certificate authorities configured for this tenant.
+     * 
+     * @return A list of trusted CA configurations for this tenant 
+     *         or {@code null} if no trusted CA has been set for this tenant.
+     */
+    @JsonIgnore
+    public List<JsonObject> getTrustConfigurations() {
+        if (trustedCaList != null) {
+            return trustedCaList;
+        } else {
+            if (trustConfigurations == null) {
+                return null;
+            } else {
+                trustedCaList = new ArrayList<>();
+                trustedCaList = trustConfigurations.values().stream().flatMap(Collection::stream).collect(Collectors.toList());
+                return trustedCaList;
+            }
+        }
+    }
+
+    /**
+     * Gets all the trusted CA configurations matching the specified subject DN.
+     * 
+     * @param subjectDn The subject DN to match for.
+     * @return A list of trusted CA configurations matching the specified subjectDn or
+     *          {@code null} if no configuration exist for the specified subjectDn.
+     */
+    @JsonIgnore
+    private List<JsonObject> getTrustedCaConfigurations(final String subjectDn) {
+        if (trustConfigurations == null) {
+            return null;
+        } else {
+            return trustConfigurations.get(subjectDn);
+        }
+    }
+
+    @JsonIgnore
+    private TrustAnchor getTrustAnchor(final JsonObject trustedCa) throws GeneralSecurityException {
+        final X509Certificate cert = getTrustedCertificateAuthority(trustedCa);
+        if (cert != null) {
+            return new TrustAnchor(cert, null);
+        } else {
+            return getTrustAnchorForPublicKey(trustedCa);
+        }
+    }
+
+    /**
+     * Get the X.509 certificate from the specified trusted CA configuration.
+     * 
+     * @param trustedCa The trusted CA configuration to construct an X.509 certificate from.
+     * 
+     * @return The certificate or {@code null} if no certificate authority
+     *          has been set.
+     * @throws CertificateException if the value of <em>cert</em> property cannot be parsed into
+     *              an X.509 certificate.
+     */
+    @JsonIgnore
+    private X509Certificate getTrustedCertificateAuthority(final JsonObject trustedCa) throws CertificateException {
+
+        final String obj = (String) trustedCa.getValue(TenantConstants.FIELD_PAYLOAD_CERT);
+        if (obj != null) {
+            try {
+                final byte[] derEncodedCert = Base64.getDecoder().decode(((String) obj));
+                final CertificateFactory factory = CertificateFactory.getInstance("X.509");
+                return (X509Certificate) factory.generateCertificate(new ByteArrayInputStream(derEncodedCert));
+            } catch (final IllegalArgumentException e) {
+                // ignore -> should never happen
+                throw new CertificateParsingException("cert property does not contain valid Base64 encoding scheme", e);
+            }
+        } else {
+            return null;
+        }
+
+    }
+
+    /**
+     * Gets the single trusted CA that has been configured for this tenant. This method assumes that this tenant
+     * is configured with a single trusted CA.
+     * 
+     * @return The trusted CA that has been set for this tenant or {@code null} if no trusted CA
+     *         has been set.
+     */
+    @JsonIgnore
+    private JsonObject getSingleTrustedCa() {
+        if (trustConfigurations == null) {
+            return null;
+        } else {
+            return (JsonObject) trustConfigurations.keySet().stream().map(key -> trustConfigurations.get(key));
+        }
+    }
+
+    private TenantObject addTrustedCaConfiguration(final JsonObject trustedCa) {
+        final String subjectDn = getProperty(trustedCa, TenantConstants.FIELD_PAYLOAD_SUBJECT_DN);
+        if (trustConfigurations == null) {
+            trustConfigurations = new HashMap<>();
+        }
+        List<JsonObject> trustedCas = trustConfigurations.get(subjectDn);
+        if (trustedCas == null) {
+            trustedCas = new ArrayList<>();
+        }
+        trustedCas.add(trustedCa);
+        trustConfigurations.put(subjectDn, trustedCas);
+        return this;
+    }
+
+    /**
+     * Like {@link #getTrustAnchors(String)}, this method returns a list of X.509 certificates matching the specified
+     * subject DN.
+     * 
+     * @param subjectDn The subject DN of the certificates to retrieve.
+     * 
+     * @return The list of trusted CA certificates or {@code null} if no trusted CA configuration with the given
+     *         subject DN has been set for this tenant.
+     * 
+     * @throws CertificateException if any of the configured trusted CA JSON objects cannot be parsed into a
+     *             certificate.
+     */
+    @JsonIgnore
+    public List<X509Certificate> getTrustedCertificateAuthorities(final String subjectDn) throws CertificateException {
+        final List<JsonObject> configs = Optional.ofNullable(getTrustedCaConfigurations(subjectDn)).orElse(Collections.emptyList());
+        List<X509Certificate> certs = null;
+        for (JsonObject config : configs) {
+            if (certs == null) {
+                certs = new ArrayList<>();
+            }
+            certs.add(getTrustedCertificateAuthority(config));
+        }
+        return certs;
+    }
+
+    /**
+     * Gets all the trusted certificate authorities configured for this tenant.
+     * 
+     * @return The list of X.509 certificates or {@code null} if no certificate authority
+     *         has been set.
+     *         
+     * @throws CertificateException CertificateException if any of the trusted CA configurations
+     *         cannot be parsed into an X.509 certificate.
+     */
+    @JsonIgnore
+    public List<X509Certificate> getTrustedCertificateAuthorities() throws CertificateException {
+        final List<JsonObject> configs = getTrustConfigurations();
+        if (configs == null) {
+            return null;
+        } else {
+            final List<X509Certificate> result = new ArrayList<>();
+            for (final JsonObject config : configs) {
+                final X509Certificate cert = getTrustedCertificateAuthority(config);
+                if (cert != null) {
+                    result.add(cert);
+                }
+            }
+            return result;
+        }
     }
 }

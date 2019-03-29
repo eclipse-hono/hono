@@ -293,7 +293,8 @@ The table below provides an overview of the standard members defined for the JSO
 | *defaults*               | *no*      | *object*      | `-`          | Arbitrary *default* properties for devices belonging to the tenant. The properties can be used by protocol adapters to augment downstream messages with missing information, e.g. setting a default content type or TTL. |
 | *enabled*                | *no*      | *boolean*     | `true`       | If set to `false` the tenant is currently disabled. Protocol adapters MUST NOT allow devices of a disabled tenant to connect and MUST NOT accept data published by such devices. |
 | *resource-limits*         | *no*      | *object*     | `-`          | The resource-limits such as the maximum number of connections and the maximum data volume for a given period can be set. The format of a configuration option is described here [Resource Limits Configuration Format]({{< relref "#resource-limits-configuration-format" >}}).|
-| *trusted-ca*             | *no*      | *object*      | `-`          | The trusted certificate authority to use for validating certificates presented by devices of the tenant for authentication purposes. See [Trusted Certificate Authority Format]({{< relref "#trusted-ca-format" >}}) for a definition of the content model of the object. |
+| *trust-ca*             | *no*      | *JSON array* | `-`          | The list of trusted certificate authorities to use for validating certificates presented by devices of the tenant for authentication purposes. The JSON array consist of JSON objects, each describing the configuration information of a trusted CA. See [Trusted Certificate Authority Format]({{< relref "#trusted-ca-format" >}}) for a definition of the content model of the object and an example tenant configured to use two trusted certification authorities. |
+| *adapters*               | *no*      | *array*       | `-`          | A list of configuration options valid for certain adapters only. The format of a configuration option is described here [Adapter Configuration Format]({{< relref "#adapter-configuration-format" >}}). **NB** If the element is provided then the list MUST NOT be empty. **NB** Only a single entry per *type* is allowed. If multiple entries for the same *type* are present it is handled as an error. **NB** If the element is omitted then all adapters are *enabled* in their default configuration. |
 
 If any of the mandatory members is either missing or contains invalid data, implementations MUST NOT accept the payload and return *400 Bad Request* status code.
 
@@ -342,15 +343,15 @@ In the following example the tenant is allowed to use **all** adapters, as the *
 }
 ~~~
 
-The following example contains information for a tenant including the public key of the trusted root certificate authority. Note that the example does not contain the complete Base64 encoding of the public key for reasons of brevity:
+The following example contains information which includes the public key of a single trusted root CA configured for a tenant. Note that the example does not contain the complete Base64 encoding of the public key for reasons of brevity:
 
 ~~~json
 {
   "enabled": true,
-  "trusted-ca": {
+  "trust-store": [{
     "subject-dn": "CN=devices,O=ACME Corporation",
     "public-key": "MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEApK5L6yUknQnj4FREQqs/ ..."
-  }
+  }]
 }
 ~~~
 
@@ -409,7 +410,7 @@ Below is an example for a payload of the response to a *get* request for tenant 
 
 ## Trusted CA Format
 
-The table below provides an overview of the members defined for the *trusted-ca* JSON object:
+The table below provides an overview of the members defined in a trusted CA JSON object contained in the *trust-store* JSON array:
 
 | Name                     | Mandatory  | Type          | Default Value | Description |
 | :------------------------| :--------: | :------------ | :------------ | :---------- |
@@ -421,6 +422,28 @@ The table below provides an overview of the members defined for the *trusted-ca*
 * The *subject-dn* MUST be unique among all registered tenants.
   * Implementations MUST reject requests to add or update a tenant with payload that contains a subject DN that is already configured for another tenant and return a status code of *409 Conflict*.
 * Either the *cert* or the *public-key* MUST be set.
+
+### Examples
+
+Below is an example for a payload of the response to a *get* request for tenant `TEST_TENANT` configured with two trusted certificate authorities.
+
+~~~json
+ {
+   "tenant-id" : "TEST_TENANT",
+   "enabled" : true,
+   "trust-store": [ {
+	    "subject-dn": "CN=ca,OU=Hono,O=Eclipse",
+	    "public-key": "NOTAPUBLICKEY",
+	    "not-before": "2015-01-01T00:00:00+0000",
+	    "not-after": "2025-01-01T00:00:00+0000"
+	  }, {
+	    "subject-dn": "CN=ca,OU=Hono,O=Eclipse",
+	    "public-key": "NOTAPUBLICKEY",
+	    "not-before": "2024-01-01T00:00:00+0000",
+	    "not-after": "2034-01-01T00:00:00+0000"
+	  } ]
+ }
+~~~
 
 ## Adapter Configuration Format
 
@@ -454,3 +477,4 @@ The table below contains the properties which are used to configure a tenant's d
 | *max-bytes*              | *no*      | *number*      | `-1`          | The maximum number of bytes allowed for the tenant for the given period defined by *period-in-days*. The default value `-1` indicates that no limit is set. |
 | *period-in-days*         | *no*      | *number*      | `30`          | The number of days for which the data usage is to be calculated. The default value  is `30` days.|
 | *effective-since*        | *yes*     | *string*      | `-`           | The date on which the data volume limit came into effect. The value MUST be an [ISO 8601 compliant *combined date and time representation in extended format*](https://en.wikipedia.org/wiki/ISO_8601#Combined_date_and_time_representations).
+

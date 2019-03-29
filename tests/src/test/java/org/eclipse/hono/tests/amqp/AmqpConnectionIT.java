@@ -32,6 +32,7 @@ import org.junit.Test;
 import org.junit.rules.Timeout;
 import org.junit.runner.RunWith;
 
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.net.SelfSignedCertificate;
 import io.vertx.ext.unit.TestContext;
@@ -237,11 +238,11 @@ public class AmqpConnectionIT extends AmqpAdapterTestBase {
         // GIVEN a tenant configured with a trust anchor
         helper.getCertificate(deviceCert.certificatePath())
         .compose(cert -> {
-            tenant.setProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA,
-                    new JsonObject()
-                        .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, cert.getIssuerX500Principal().getName(X500Principal.RFC2253))
-                        .put(TenantConstants.FIELD_ADAPTERS_TYPE, "EC")
-                        .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, Base64.getEncoder().encodeToString(keyPair.getPublic().getEncoded())));
+            final JsonObject trustedCa = new JsonObject()
+                    .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, cert.getIssuerX500Principal().getName(X500Principal.RFC2253))
+                    .put(TenantConstants.FIELD_ADAPTERS_TYPE, "EC")
+                    .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, Base64.getEncoder().encodeToString(keyPair.getPublic().getEncoded()));
+            tenant.setTrustConfiguration(new JsonArray().add(trustedCa));
             return helper.registry.addDeviceForTenant(tenant, deviceId, cert);
         })
         .compose(ok -> {

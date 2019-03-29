@@ -18,6 +18,7 @@ import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import javax.security.auth.x500.X500Principal;
@@ -38,6 +39,7 @@ import org.junit.rules.Timeout;
 import org.junit.runner.RunWith;
 
 import io.vertx.core.Vertx;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
@@ -191,9 +193,10 @@ public class TenantAmqpIT {
                 .setHandler(ctx.asyncAssertSuccess(tenantObject -> {
 
                     ctx.assertEquals(tenantId, tenantObject.getTenantId());
-                    final JsonObject trustedCa = tenantObject.getProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA);
-                    ctx.assertNotNull(trustedCa);
-                    final X500Principal trustedSubjectDn = new X500Principal(trustedCa.getString(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN));
+                    final List<JsonObject> trustedCas = tenantObject.getTrustConfigurations();
+                    ctx.assertEquals(1, trustedCas.size());
+                    ctx.assertNotNull(trustedCas.get(0));
+                    final X500Principal trustedSubjectDn = new X500Principal(trustedCas.get(0).getString(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN));
                     ctx.assertEquals(subjectDn, trustedSubjectDn);
                 }));
     }
@@ -243,7 +246,7 @@ public class TenantAmqpIT {
 
         final String tenantId = Constants.DEFAULT_TENANT;
         final TenantObject payload = TenantObject.from(tenantId, true)
-                .setProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, malformedTrustedCa);
+                .setTrustConfiguration(new JsonArray().add(malformedTrustedCa));
 
         helper.registry.addTenant(JsonObject.mapFrom(payload))
         .setHandler(ctx.asyncAssertFailure(t -> {

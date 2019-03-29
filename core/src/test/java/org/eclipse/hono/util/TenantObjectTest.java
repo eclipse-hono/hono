@@ -218,11 +218,10 @@ public class TenantObjectTest {
     public void testGetTrustAnchorFailsForInvalidBase64EncodingOfPublicKey() {
 
         final TenantObject obj = TenantObject.from(Constants.DEFAULT_TENANT, Boolean.TRUE)
-                .setProperty(
-                        TenantConstants.FIELD_PAYLOAD_TRUSTED_CA,
-                        new JsonObject()
-                        .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, "CN=test")
-                        .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, "noBase64"));
+                .setTrustConfiguration(new JsonArray()
+                        .add(new JsonObject()
+                                .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, "CN=test")
+                                .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, "noBase64")));
 
         try {
             obj.getTrustAnchor();
@@ -240,11 +239,10 @@ public class TenantObjectTest {
     public void testGetTrustAnchorFailsForInvalidBase64EncodingOfCert() {
 
         final TenantObject obj = TenantObject.from(Constants.DEFAULT_TENANT, Boolean.TRUE)
-                .setProperty(
-                        TenantConstants.FIELD_PAYLOAD_TRUSTED_CA,
-                        new JsonObject()
-                        .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, "CN=test")
-                        .put(TenantConstants.FIELD_PAYLOAD_CERT, "noBase64"));
+                .setTrustConfiguration(new JsonArray()
+                        .add(new JsonObject()
+                                .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, "CN=test")
+                                .put(TenantConstants.FIELD_PAYLOAD_CERT, "noBase64")));
 
         try {
             obj.getTrustAnchor();
