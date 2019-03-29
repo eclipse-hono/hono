@@ -101,3 +101,7 @@ spec:
 ~~~
 
 The `resources` property defines the overall limit of 256 MB of memory that the pod may use. The `_JAVA_OPTIONS` environment variable is again used to configure the JVM to use 80% of the total memory for its heap.
+
+## Limiting the number of device connections
+Resource limits namely the maximum number of device connections allowed per tenant can be set in Hono. Please refer to the [connections limit concept] ({{< ref "/concepts/resource-limits.md#connections-limit" >}}) for more information. The resource-limits for a tenant can be set using the tenant configuration and please refer to the [Tenant API]({{< relref "/api/Tenant-API.md#request-payload" >}}) for the configuration details.
+

@@ -37,6 +37,10 @@ When running the Hono example installation as described in the [Getting Started 
 There is a subtle difference between the *device identifier* (*device-id*) and the *auth-id* a device uses for authentication. See [Device Identity]({{< ref "/concepts/device-identity.md" >}}) for a discussion of the concepts.
 {{% /note %}}
 
+## Connection Limits
+
+After verifying the credentials, the number of existing connections is checked against the configured [resource-limits] ({{< ref "/concepts/resource-limits.md" >}}) by the MQTT adapter.  If the limit is exceeded then a return code `0x05` indicating `Connection Refused: not authorised` is sent back.
+
 ## Publishing Telemetry Data
 
 The MQTT adapter supports the publishing of telemetry data by means of MQTT *PUBLISH* packets using either QoS 0 or QoS 1.
