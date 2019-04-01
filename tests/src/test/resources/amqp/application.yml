@@ -56,6 +56,10 @@ hono:
     flowLatency: ${flow.latency}
   vertx:
     maxEventLoopExecuteTime: ${max.event-loop.execute-time}
+  plan:
+    prometheusBased:
+      host: prometheus-operated
+      port: 9090
 
 spring:
   jmx:

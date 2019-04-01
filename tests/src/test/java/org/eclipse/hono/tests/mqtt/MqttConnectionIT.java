@@ -349,4 +349,29 @@ public class MqttConnectionIT extends MqttTestBase {
                     MqttConnectReturnCode.CONNECTION_REFUSED_NOT_AUTHORIZED);
         }));
     }
+
+    /**
+     * Verifies that the adapter opens a connection to registered devices even though the Prometheus backend is not
+     * reachable.
+     *
+     * @param context The Vert.x test context.
+     */
+    @Test
+    public void testConnectSucceedsPrometheusNotReachable(final TestContext context) {
+        final String tenantId = helper.getRandomTenantId();
+        final String password = "secret";
+        final TenantObject tenant = TenantObject.from(tenantId, true);
+        final JsonObject limitsConfig = new JsonObject()
+                .put(TenantConstants.MAX_CONNECTIONS, 1);
+        tenant.setProperty(TenantConstants.LIMITS, limitsConfig);
+
+        final String device1Id = helper.getRandomDeviceId(tenantId);
+        final String device2Id = helper.getRandomDeviceId(tenantId);
+        helper.registry.addTenant(JsonObject.mapFrom(tenant))
+                .compose(ok -> helper.registry.addDeviceToTenant(tenantId, device1Id, password))
+                .compose(ok -> helper.registry.addDeviceToTenant(tenantId, device2Id, password))
+                .compose(ok -> connectToAdapter(IntegrationTestSupport.getUsername(device1Id, tenantId), password))
+                .compose(ok -> connectToAdapter(IntegrationTestSupport.getUsername(device2Id, tenantId), password))
+                .setHandler(context.asyncAssertSuccess());
+    }
 }
