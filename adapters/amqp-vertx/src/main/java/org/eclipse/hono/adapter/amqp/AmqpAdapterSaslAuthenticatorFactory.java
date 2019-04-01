@@ -26,6 +26,7 @@ import javax.net.ssl.SSLPeerUnverifiedException;
 import javax.security.auth.login.CredentialException;
 import javax.security.auth.x500.X500Principal;
 
+import io.vertx.core.CompositeFuture;
 import org.apache.qpid.proton.engine.Sasl;
 import org.apache.qpid.proton.engine.Sasl.SaslOutcome;
 import org.apache.qpid.proton.engine.Transport;
@@ -40,6 +41,7 @@ import org.eclipse.hono.service.auth.device.UsernamePasswordAuthProvider;
 import org.eclipse.hono.service.auth.device.UsernamePasswordCredentials;
 import org.eclipse.hono.service.auth.device.X509AuthProvider;
 import org.eclipse.hono.service.limiting.ConnectionLimitManager;
+import org.eclipse.hono.service.plan.ResourceLimitChecks;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.AuthenticationConstants;
 import org.eclipse.hono.util.Constants;
@@ -79,6 +81,7 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
     private final Tracer tracer;
     private final Supplier<Span> spanFactory;
     private final ConnectionLimitManager connectionLimitManager;
+    private final ResourceLimitChecks resourceLimitChecks;
 
     /**
      * Creates a new SASL authenticator factory for an authentication provider. If the AMQP adapter supports
@@ -92,6 +95,8 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
      * @param spanFactory The factory to use for creating and starting an OpenTracing span to
      *                    trace the authentication of the device.
      * @param connectionLimitManager The connection limit manager to use to monitor the number of connections.
+     * @param resourceLimitChecks The resource limit checks instance to check if the maximum number of connections are
+     *            exceeded or not.
      *
      * @throws NullPointerException if any of the parameters are null.
      */
@@ -101,7 +106,8 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
             final ProtocolAdapterProperties config,
             final Tracer tracer,
             final Supplier<Span> spanFactory,
-            final ConnectionLimitManager connectionLimitManager) {
+            final ConnectionLimitManager connectionLimitManager,
+            final ResourceLimitChecks resourceLimitChecks) {
 
         this.tenantServiceClient = Objects.requireNonNull(tenantServiceClient, "Tenant client cannot be null");
         this.credentialsServiceClient = Objects.requireNonNull(credentialsServiceClient, "Credentials client cannot be null");
@@ -109,12 +115,13 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
         this.tracer = Objects.requireNonNull(tracer);
         this.spanFactory = Objects.requireNonNull(spanFactory);
         this.connectionLimitManager = Objects.requireNonNull(connectionLimitManager);
+        this.resourceLimitChecks = Objects.requireNonNull(resourceLimitChecks);
     }
 
     @Override
     public ProtonSaslAuthenticator create() {
         return new AmqpAdapterSaslAuthenticator(tenantServiceClient, credentialsServiceClient, config, tracer,
-                spanFactory.get(), connectionLimitManager);
+                spanFactory.get(), connectionLimitManager, resourceLimitChecks);
     }
 
     /**
@@ -130,6 +137,7 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
         private final Tracer tracer;
         private final Span currentSpan;
         private final ConnectionLimitManager connectionLimitManager;
+        private final ResourceLimitChecks resourceLimitChecks;
 
         private Sasl sasl;
         private boolean succeeded;
@@ -145,7 +153,8 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
                 final ProtocolAdapterProperties config,
                 final Tracer tracer,
                 final Span currentSpan,
-                final ConnectionLimitManager connectionLimitManager) {
+                final ConnectionLimitManager connectionLimitManager,
+                final ResourceLimitChecks resourceLimitChecks) {
 
             this.tenantServiceClient = tenantServiceClient;
             this.credentialsServiceClient = credentialsServiceClient;
@@ -153,6 +162,7 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
             this.tracer = tracer;
             this.currentSpan = currentSpan;
             this.connectionLimitManager = connectionLimitManager;
+            this.resourceLimitChecks = resourceLimitChecks;
         }
 
         @Override
@@ -259,7 +269,9 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
                             authenticationTracker);
                     authenticationTracker
                             .compose(user -> getTenantObject(credentials.getTenantId())
-                                    .compose(tenant -> checkTenantIsEnabled(tenant)
+                                    .compose(tenant -> CompositeFuture
+                                            .all(checkTenantIsEnabled(tenant),
+                                                    resourceLimitChecks.isConnectionLimitExceeded(tenant))
                                             .map(ok -> user)))
                             .setHandler(completer);
                 }
@@ -303,7 +315,9 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
                             getCertificateAuthProvider().authenticate(credentials, currentSpan.context(), user);
                             return user;
                         })
-                        .compose(user -> checkTenantIsEnabled(tenantTracker.result())
+                        .compose(user -> CompositeFuture
+                                .all(checkTenantIsEnabled(tenantTracker.result()),
+                                        resourceLimitChecks.isConnectionLimitExceeded(tenantTracker.result()))
                                 .map(ok -> user))
                         .setHandler(completer);
             }

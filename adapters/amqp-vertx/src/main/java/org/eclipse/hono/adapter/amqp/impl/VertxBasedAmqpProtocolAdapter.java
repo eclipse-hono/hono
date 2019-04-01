@@ -161,7 +161,8 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                                     .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_SERVER)
                                     .withTag(Tags.COMPONENT.getKey(), getTypeName())
                                     .start(),
-                                connectionLimitManager);
+                                connectionLimitManager,
+                                getResourceLimitChecks());
                     }
                     return Future.succeededFuture();
                 }).compose(succcess -> {
