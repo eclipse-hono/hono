@@ -319,7 +319,7 @@ public abstract class BaseRegistrationService<T> extends EventBusService<T> impl
     }
 
     private RegistrationResult createSuccessfulRegistrationResult(final String tenantId, final String deviceId, final JsonObject deviceData) {
-        final CacheDirective cacheDirective = isDeviceWithMultipleVias(deviceData) ? CacheDirective.noCacheDirective()
+        final CacheDirective cacheDirective = isDeviceWithOneOrMoreVias(deviceData) ? CacheDirective.noCacheDirective()
                 : CacheDirective.maxAgeDirective(assertionFactory.getAssertionLifetime());
         return RegistrationResult.from(
                 HttpURLConnection.HTTP_OK,
@@ -329,7 +329,7 @@ public abstract class BaseRegistrationService<T> extends EventBusService<T> impl
 
     private Future<Void> updateDeviceLastViaIfNeeded(final String tenantId, final String deviceId,
             final String gatewayId, final JsonObject deviceData, final Span span) {
-        if (!isDeviceWithMultipleVias(deviceData)) {
+        if (!isDeviceWithOneOrMoreVias(deviceData)) {
             return Future.succeededFuture();
         }
         return updateDeviceLastVia(tenantId, deviceId, gatewayId, deviceData)
@@ -340,9 +340,10 @@ public abstract class BaseRegistrationService<T> extends EventBusService<T> impl
                 });
     }
 
-    private boolean isDeviceWithMultipleVias(final JsonObject deviceData) {
+    private boolean isDeviceWithOneOrMoreVias(final JsonObject deviceData) {
         final Object viaObj = deviceData.getValue(PROPERTY_VIA);
-        return viaObj instanceof JsonArray && ((JsonArray) viaObj).size() > 1;
+        return (viaObj instanceof String && !((String) viaObj).isEmpty())
+                || (viaObj instanceof JsonArray && !((JsonArray) viaObj).isEmpty());
     }
 
     /**
@@ -350,7 +351,7 @@ public abstract class BaseRegistrationService<T> extends EventBusService<T> impl
      * as well as the current date.
      * <p>
      * This method this called by this class' default implementation of <em>assertRegistration</em> for a device that
-     * has multiple gateway entries in its 'via' definition.
+     * has one or more gateway entries in its 'via' definition.
      * <p>
      * If such a device connects directly instead of through a gateway, the device identifier is to be used as value
      * for the <em>gatewayId</em> parameter.

@@ -86,7 +86,7 @@ public interface RegistrationService extends Verticle {
      * Such a check might be based on a specific role that the client needs to have or on an
      * explicitly defined relation between the gateway and the device(s).
      * <br>
-     * In the case of a device configured with multiple <em>via</em> gateways, implementing classes should
+     * In the case of a device configured with one or more <em>via</em> gateways, implementing classes should
      * update the device's registration information with the given gateway in the form of a <em>last-via</em>
      * property.
      *
@@ -120,7 +120,7 @@ public interface RegistrationService extends Verticle {
      * Such a check might be based on a specific role that the client needs to have or on an
      * explicitly defined relation between the gateway and the device(s).
      * <br>
-     * In the case of a device configured with multiple <em>via</em> gateways, implementing classes should
+     * In the case of a device configured with one or more <em>via</em> gateways, implementing classes should
      * update the device's registration information with the given gateway in the form of a <em>last-via</em>
      * property.
      * <p>
