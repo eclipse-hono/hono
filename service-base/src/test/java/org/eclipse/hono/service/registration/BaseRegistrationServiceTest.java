@@ -92,33 +92,6 @@ public class BaseRegistrationServiceTest {
     }
 
     /**
-     * Verifies that an enabled device's status can be asserted successfully.
-     * 
-     * @param ctx The vertx unit test context.
-     */
-    @Test
-    public void testAssertDeviceRegistrationReturnsToken(final TestContext ctx) {
-
-        // GIVEN a registry that contains an enabled device with a default content type set
-        final BaseRegistrationService<ServiceConfigProperties> registrationService = newRegistrationService();
-        registrationService.setRegistrationAssertionFactory(RegistrationAssertionHelperImpl.forSigning(vertx, props));
-
-        // WHEN trying to assert the device's registration status
-        registrationService.assertRegistration(Constants.DEFAULT_TENANT, "4711", ctx.asyncAssertSuccess(result -> {
-            ctx.assertEquals(result.getStatus(), HttpURLConnection.HTTP_OK);
-            final JsonObject payload = result.getPayload();
-            ctx.assertNotNull(payload);
-            // THEN the response contains a JWT token asserting the device's registration status
-            final String compactJws = payload.getString(RegistrationConstants.FIELD_ASSERTION);
-            ctx.assertNotNull(compactJws);
-            // and contains the registered default content type
-            final JsonObject defaults = payload.getJsonObject(RegistrationConstants.FIELD_DEFAULTS);
-            ctx.assertNotNull(defaults);
-            ctx.assertEquals("application/default", defaults.getString(MessageHelper.SYS_PROPERTY_CONTENT_TYPE));
-        }));
-    }
-
-    /**
      * Verifies that a disabled device's status cannot be asserted.
      * 
      * @param ctx The vertx unit test context.
@@ -155,30 +128,6 @@ public class BaseRegistrationServiceTest {
             // THEN the response does not contain a JWT token
             ctx.assertEquals(result.getStatus(), HttpURLConnection.HTTP_NOT_FOUND);
             ctx.assertNull(result.getPayload());
-        }));
-    }
-
-    /**
-     * Verifies that a device's status can be asserted by an existing gateway.
-     * 
-     * @param ctx The vertx unit test context.
-     */
-    @Test
-    public void testAssertDeviceRegistrationSucceedsForExistingGateway(final TestContext ctx) {
-
-        // GIVEN a registry that contains an enabled device that is configured to
-        // be connected to an enabled gateway
-        final BaseRegistrationService<ServiceConfigProperties> registrationService = newRegistrationService();
-        registrationService.setRegistrationAssertionFactory(RegistrationAssertionHelperImpl.forSigning(vertx, props));
-
-        // WHEN trying to assert the device's registration status for gateway 1
-        registrationService.assertRegistration(Constants.DEFAULT_TENANT, "4711", "gw-1", ctx.asyncAssertSuccess(result -> {
-            // THEN the response contains a 200 status
-            ctx.assertEquals(HttpURLConnection.HTTP_OK, result.getStatus());
-            final JsonObject payload = result.getPayload();
-            ctx.assertNotNull(payload);
-            // and contains a JWT token
-            ctx.assertNotNull(payload.getString(RegistrationConstants.FIELD_ASSERTION));
         }));
     }
 
