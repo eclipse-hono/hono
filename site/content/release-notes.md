@@ -18,6 +18,10 @@ title = "Release Notes"
   type *hashed-password* and *x509-cert* for a configurable amount of time. Please refer to the
   [Device Registry Admin Guide]({{< ref "/admin-guide/device-registry-config.md" >}}) for details
   regarding the configuration properties to use.
+* There is now an official HTTP API for managing devices served by the
+  device registry. The API is defined using an OpenAPI v3 specification and is
+  part of the Git repository, and served at
+  https://eclipse.org/hono/api/device-registry-v1.yaml.
 
 ### API Changes
 
