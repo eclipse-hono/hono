@@ -47,6 +47,7 @@ import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.TenantClient;
+import org.eclipse.hono.client.TenantClientFactory;
 import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.service.auth.device.AuthHandler;
 import org.eclipse.hono.service.metric.MetricsTags;
@@ -105,7 +106,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
     @Rule
     public Timeout globalTimeout = new Timeout(5000, TimeUnit.SECONDS);
 
-    private HonoClient tenantServiceClient;
+    private TenantClientFactory tenantClientFactory;
     private HonoClient credentialsServiceClient;
     private HonoClient messagingClient;
     private HonoClient deviceRegistrationServiceClient;
@@ -147,10 +148,10 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
             return Future.succeededFuture(TenantObject.from(invocation.getArgument(0), true));
         });
 
-        tenantServiceClient = mock(HonoClient.class);
-        when(tenantServiceClient.isConnected()).thenReturn(Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE)));
-        when(tenantServiceClient.connect(any(Handler.class))).thenReturn(Future.succeededFuture(tenantServiceClient));
-        when(tenantServiceClient.getOrCreateTenantClient()).thenReturn(Future.succeededFuture(tenantClient));
+        tenantClientFactory = mock(TenantClientFactory.class);
+        when(tenantClientFactory.isConnected()).thenReturn(Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE)));
+        when(tenantClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoClient.class)));
+        when(tenantClientFactory.getOrCreateTenantClient()).thenReturn(Future.succeededFuture(tenantClient));
 
         credentialsServiceClient = mock(HonoClient.class);
         when(credentialsServiceClient.isConnected()).thenReturn(Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE)));
@@ -1031,7 +1032,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
     }
 
     private void forceClientMocksToConnected() {
-        when(tenantServiceClient.isConnected()).thenReturn(Future.succeededFuture());
+        when(tenantClientFactory.isConnected()).thenReturn(Future.succeededFuture());
         when(messagingClient.isConnected()).thenReturn(Future.succeededFuture());
         when(deviceRegistrationServiceClient.isConnected()).thenReturn(Future.succeededFuture());
         when(credentialsServiceClient.isConnected()).thenReturn(Future.succeededFuture());
@@ -1088,7 +1089,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         };
         adapter.setConfig(config);
         adapter.setMetrics(metrics);
-        adapter.setTenantServiceClient(tenantServiceClient);
+        adapter.setTenantClientFactory(tenantClientFactory);
         adapter.setHonoMessagingClient(messagingClient);
         adapter.setRegistrationServiceClient(deviceRegistrationServiceClient);
         adapter.setCredentialsServiceClient(credentialsServiceClient);

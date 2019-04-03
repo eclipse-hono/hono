@@ -19,6 +19,7 @@ import org.eclipse.hono.cache.CacheProvider;
 import org.eclipse.hono.client.CommandConsumerFactory;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
+import org.eclipse.hono.client.TenantClientFactory;
 import org.eclipse.hono.client.impl.CommandConsumerFactoryImpl;
 import org.eclipse.hono.client.impl.HonoClientImpl;
 import org.eclipse.hono.config.ApplicationConfigProperties;
@@ -254,14 +255,14 @@ public abstract class AbstractAdapterConfig {
     }
 
     /**
-     * Exposes a client for the <em>Tenant</em> API as a Spring bean.
+     * Exposes a factory for creating clients for the <em>Tenant</em> API as a Spring bean.
      *
-     * @return The client.
+     * @return The factory.
      */
     @Bean
     @Qualifier(TenantConstants.TENANT_ENDPOINT)
     @Scope("prototype")
-    public HonoClient tenantServiceClient() {
+    public TenantClientFactory tenantClientFactory() {
 
         final HonoClientImpl result = new HonoClientImpl(vertx(), tenantServiceClientConfig());
 

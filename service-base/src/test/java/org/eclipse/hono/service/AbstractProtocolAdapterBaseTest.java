@@ -36,6 +36,7 @@ import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.ReconnectListener;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.client.TenantClientFactory;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
@@ -81,7 +82,7 @@ public class AbstractProtocolAdapterBaseTest {
     private ProtocolAdapterProperties properties;
     private AbstractProtocolAdapterBase<ProtocolAdapterProperties> adapter;
     private RegistrationClient registrationClient;
-    private HonoClient tenantService;
+    private TenantClientFactory tenantService;
     private HonoClient registrationService;
     private HonoClient credentialsService;
     private HonoClient messagingService;
@@ -94,10 +95,8 @@ public class AbstractProtocolAdapterBaseTest {
     @Before
     public void setup() {
 
-        final HonoClient connection = mock(HonoClient.class);
-
-        tenantService = mock(HonoClient.class);
-        when(tenantService.connect(any(Handler.class))).thenReturn(Future.succeededFuture(tenantService));
+        tenantService = mock(TenantClientFactory.class);
+        when(tenantService.connect()).thenReturn(Future.succeededFuture(mock(HonoClient.class)));
 
         registrationService = mock(HonoClient.class);
         when(registrationService.connect(any(Handler.class))).thenReturn(Future.succeededFuture(registrationService));
@@ -112,11 +111,11 @@ public class AbstractProtocolAdapterBaseTest {
         when(messagingService.connect(any(Handler.class))).thenReturn(Future.succeededFuture(messagingService));
 
         commandConsumerFactory = mock(CommandConsumerFactory.class);
-        when(commandConsumerFactory.connect()).thenReturn(Future.succeededFuture(connection));
+        when(commandConsumerFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoClient.class)));
 
         properties = new ProtocolAdapterProperties();
         adapter = newProtocolAdapter(properties);
-        adapter.setTenantServiceClient(tenantService);
+        adapter.setTenantClientFactory(tenantService);
         adapter.setRegistrationServiceClient(registrationService);
         adapter.setCredentialsServiceClient(credentialsService);
         adapter.setHonoMessagingClient(messagingService);
@@ -171,7 +170,7 @@ public class AbstractProtocolAdapterBaseTest {
         // WHEN starting the adapter
         adapter.startInternal().setHandler(ctx.asyncAssertSuccess(ok -> {
             // THEN the service clients have connected
-            verify(tenantService).connect(any(Handler.class));
+            verify(tenantService).connect();
             verify(registrationService).connect(any(Handler.class));
             verify(messagingService).connect(any(Handler.class));
             verify(credentialsService).connect(any(Handler.class));
@@ -227,7 +226,7 @@ public class AbstractProtocolAdapterBaseTest {
         adapter.setCredentialsServiceClient(credentialsService);
         adapter.setHonoMessagingClient(messagingService);
         adapter.setRegistrationServiceClient(registrationService);
-        adapter.setTenantServiceClient(tenantService);
+        adapter.setTenantClientFactory(tenantService);
         adapter.setCommandConsumerFactory(commandConsumerFactory);
     }
 

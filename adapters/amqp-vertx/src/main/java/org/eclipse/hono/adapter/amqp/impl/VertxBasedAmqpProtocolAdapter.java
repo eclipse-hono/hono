@@ -152,7 +152,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                                 getConnectionLimitManager()).orElse(createConnectionLimitManager());
                         setConnectionLimitManager(connectionLimitManager);
                         authenticatorFactory = new AmqpAdapterSaslAuthenticatorFactory(
-                                getTenantServiceClient(),
+                                getTenantClientFactory(),
                                 getCredentialsServiceClient(),
                                 getConfig(),
                                 tracer,
