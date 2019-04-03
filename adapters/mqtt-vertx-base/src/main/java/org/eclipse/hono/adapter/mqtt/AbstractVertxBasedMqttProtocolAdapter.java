@@ -169,7 +169,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
 
         return new ChainAuthHandler<MqttContext>()
                 .append(new X509AuthHandler(
-                        new TenantServiceBasedX509Authentication(getTenantServiceClient(), tracer),
+                        new TenantServiceBasedX509Authentication(getTenantClientFactory(), tracer),
                         new X509AuthProvider(getCredentialsServiceClient(), getConfig(), tracer)))
                 .append(new ConnectPacketAuthHandler(
                         new UsernamePasswordAuthProvider(

@@ -33,6 +33,7 @@ import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.TenantClient;
+import org.eclipse.hono.client.TenantClientFactory;
 import org.eclipse.hono.config.AbstractConfig;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.auth.ValidityBasedTrustOptions;
@@ -90,7 +91,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
 
     private HonoClient messagingClient;
     private HonoClient registrationServiceClient;
-    private HonoClient tenantServiceClient;
+    private TenantClientFactory tenantClientFactory;
     private HonoClient credentialsServiceClient;
     private CommandConsumerFactory commandConsumerFactory;
     private ConnectionLimitManager connectionLimitManager;
@@ -152,8 +153,8 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      */
     @Qualifier(TenantConstants.TENANT_ENDPOINT)
     @Autowired
-    public final void setTenantServiceClient(final HonoClient tenantClient) {
-        this.tenantServiceClient = Objects.requireNonNull(tenantClient);
+    public final void setTenantClientFactory(final TenantClientFactory tenantClient) {
+        this.tenantClientFactory = Objects.requireNonNull(tenantClient);
     }
 
     /**
@@ -161,8 +162,8 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      *
      * @return The client.
      */
-    public final HonoClient getTenantServiceClient() {
-        return tenantServiceClient;
+    public final TenantClientFactory getTenantClientFactory() {
+        return tenantClientFactory;
     }
 
     /**
@@ -171,7 +172,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * @return The client.
      */
     protected final Future<TenantClient> getTenantClient() {
-        return getTenantServiceClient().getOrCreateTenantClient();
+        return getTenantClientFactory().getOrCreateTenantClient();
     }
 
     /**
@@ -356,8 +357,8 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
 
         if (Strings.isNullOrEmpty(getTypeName())) {
             result.fail(new IllegalStateException("adapter does not define a typeName"));
-        } else if (tenantServiceClient == null) {
-            result.fail(new IllegalStateException("Tenant service client must be set"));
+        } else if (tenantClientFactory == null) {
+            result.fail(new IllegalStateException("Tenant client factory must be set"));
         } else if (messagingClient == null) {
             result.fail(new IllegalStateException("AMQP Messaging Network client must be set"));
         } else if (registrationServiceClient == null) {
@@ -367,17 +368,18 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         } else if (commandConsumerFactory == null) {
             result.fail(new IllegalStateException("Command & Control client factory must be set"));
         } else {
-            connectToService(tenantServiceClient, "Tenant service");
+            connectToService(tenantClientFactory, "Tenant service");
             connectToService(messagingClient, "AMQP Messaging Network");
             connectToService(registrationServiceClient, "Device Registration service");
             connectToService(credentialsServiceClient, "Credentials service");
-            commandConsumerFactory.connect().setHandler(c -> {
+
+            commandConsumerFactory.addDisconnectListener(this::onCommandConnectionLost);
+            commandConsumerFactory.addReconnectListener(this::onCommandConnectionEstablished);
+            connectToService(commandConsumerFactory, "Command & Control").setHandler(c -> {
                 if (c.succeeded()) {
                     onCommandConnectionEstablished(c.result());
                 }
             });
-            commandConsumerFactory.addDisconnectListener(this::onCommandConnectionLost);
-            commandConsumerFactory.addReconnectListener(this::onCommandConnectionEstablished);
             doStart(result);
         }
         return result;
@@ -419,7 +421,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
 
         return CompositeFuture.all(
                 closeServiceClient(messagingClient),
-                closeServiceClient(tenantServiceClient),
+                disconnectFromService(tenantClientFactory),
                 closeServiceClient(registrationServiceClient),
                 closeServiceClient(credentialsServiceClient),
                 disconnectFromService(commandConsumerFactory));
@@ -538,6 +540,28 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
                 device.getDeviceId(),
                 null,
                 context).map(assertion -> null);
+    }
+
+    /**
+     * Establishes a connection to a Hono Service component.
+     *
+     * @param factory The client factory for the service that is to be connected.
+     * @param serviceName The name of the service that is to be connected (used for logging).
+     * @return A future that will succeed once the connection has been established. The future will fail if the
+     *         connection cannot be established.
+     * @throws NullPointerException if serviceName is {@code null}.
+     * @throws IllegalArgumentException if factory is {@code null}.
+     */
+    protected final Future<HonoClient> connectToService(final ConnectionLifecycle factory, final String serviceName) {
+
+        Objects.requireNonNull(factory);
+        return factory.connect().map(c -> {
+            LOG.info("connected to {}", serviceName);
+            return c;
+        }).recover(t -> {
+            LOG.warn("failed to connect to {}", serviceName, t);
+            return Future.failedFuture(t);
+        });
     }
 
     /**
@@ -666,10 +690,10 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      */
     protected Future<Void> isConnected() {
 
-        final Future<Void> tenantCheck = Optional.ofNullable(tenantServiceClient)
+        final Future<Void> tenantCheck = Optional.ofNullable(tenantClientFactory)
                 .map(client -> client.isConnected())
                 .orElse(Future.failedFuture(new ServerErrorException(
-                        HttpURLConnection.HTTP_UNAVAILABLE, "Tenant service client is not set")));
+                        HttpURLConnection.HTTP_UNAVAILABLE, "Tenant client factory is not set")));
         final Future<Void> registrationCheck = Optional.ofNullable(registrationServiceClient)
                 .map(client -> client.isConnected())
                 .orElse(Future
@@ -686,7 +710,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         final Future<Void> commandCheck = Optional.ofNullable(commandConsumerFactory)
                 .map(client -> client.isConnected())
                 .orElse(Future.failedFuture(new ServerErrorException(
-                        HttpURLConnection.HTTP_UNAVAILABLE, "Command & Control client is not set")));
+                        HttpURLConnection.HTTP_UNAVAILABLE, "Command & Control client factory is not set")));
         return CompositeFuture.all(tenantCheck, registrationCheck, credentialsCheck, messagingCheck, commandCheck).map(ok -> null);
     }
 

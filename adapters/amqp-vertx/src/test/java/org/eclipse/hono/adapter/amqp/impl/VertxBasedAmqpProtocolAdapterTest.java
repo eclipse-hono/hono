@@ -55,6 +55,7 @@ import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.TenantClient;
+import org.eclipse.hono.client.TenantClientFactory;
 import org.eclipse.hono.service.metric.MetricsTags.Direction;
 import org.eclipse.hono.service.metric.MetricsTags.EndpointType;
 import org.eclipse.hono.service.metric.MetricsTags.ProcessingOutcome;
@@ -112,7 +113,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
     @Rule
     public Timeout globalTimeout = new Timeout(5, TimeUnit.SECONDS);
 
-    private HonoClient tenantServiceClient;
+    private TenantClientFactory tenantClientFactory;
     private HonoClient credentialsServiceClient;
     private HonoClient messagingServiceClient;
     private HonoClient registrationServiceClient;
@@ -140,9 +141,9 @@ public class VertxBasedAmqpProtocolAdapterTest {
            return Future.succeededFuture(TenantObject.from(invocation.getArgument(0), true));
         });
 
-        tenantServiceClient = mock(HonoClient.class);
-        when(tenantServiceClient.connect(any(Handler.class))).thenReturn(Future.succeededFuture(tenantServiceClient));
-        when(tenantServiceClient.getOrCreateTenantClient()).thenReturn(Future.succeededFuture(tenantClient));
+        tenantClientFactory = mock(TenantClientFactory.class);
+        when(tenantClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoClient.class)));
+        when(tenantClientFactory.getOrCreateTenantClient()).thenReturn(Future.succeededFuture(tenantClient));
 
         credentialsServiceClient = mock(HonoClient.class);
         when(credentialsServiceClient.connect(any(Handler.class)))
@@ -852,7 +853,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
 
         adapter.setConfig(config);
         adapter.setInsecureAmqpServer(server);
-        adapter.setTenantServiceClient(tenantServiceClient);
+        adapter.setTenantClientFactory(tenantClientFactory);
         adapter.setHonoMessagingClient(messagingServiceClient);
         adapter.setRegistrationServiceClient(registrationServiceClient);
         adapter.setCredentialsServiceClient(credentialsServiceClient);

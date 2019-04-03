@@ -42,6 +42,7 @@ import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.ResourceConflictException;
 import org.eclipse.hono.client.TenantClient;
+import org.eclipse.hono.client.TenantClientFactory;
 import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.service.metric.MetricsTags.Direction;
@@ -101,7 +102,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
     public Timeout globalTimeout = Timeout.seconds(5);
 
     private HonoClient                    credentialsServiceClient;
-    private HonoClient                    tenantServiceClient;
+    private TenantClientFactory           tenantClientFactory;
     private HonoClient                    messagingClient;
     private HonoClient                    registrationServiceClient;
     private RegistrationClient            regClient;
@@ -143,9 +144,9 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
             return Future.succeededFuture(TenantObject.from(invocation.getArgument(0), true));
         });
 
-        tenantServiceClient = mock(HonoClient.class);
-        when(tenantServiceClient.connect(any(Handler.class))).thenReturn(Future.succeededFuture(tenantServiceClient));
-        when(tenantServiceClient.getOrCreateTenantClient()).thenReturn(Future.succeededFuture(tenantClient));
+        tenantClientFactory = mock(TenantClientFactory.class);
+        when(tenantClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoClient.class)));
+        when(tenantClientFactory.getOrCreateTenantClient()).thenReturn(Future.succeededFuture(tenantClient));
 
         credentialsServiceClient = mock(HonoClient.class);
         when(credentialsServiceClient.connect(any(Handler.class))).thenReturn(Future.succeededFuture(credentialsServiceClient));
@@ -845,7 +846,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         adapter.setConfig(config);
         adapter.setMetrics(metrics);
         adapter.setInsecureHttpServer(server);
-        adapter.setTenantServiceClient(tenantServiceClient);
+        adapter.setTenantClientFactory(tenantClientFactory);
         adapter.setHonoMessagingClient(messagingClient);
         adapter.setRegistrationServiceClient(registrationServiceClient);
         adapter.setCredentialsServiceClient(credentialsServiceClient);

@@ -169,7 +169,7 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
     private void setupAuthorization(final Router router) {
         final ChainAuthHandler authHandler = ChainAuthHandler.create();
         authHandler.append(new X509AuthHandler(
-                new TenantServiceBasedX509Authentication(getTenantServiceClient(), tracer),
+                new TenantServiceBasedX509Authentication(getTenantClientFactory(), tracer),
                 Optional.ofNullable(clientCertAuthProvider).orElse(
                         new X509AuthProvider(getCredentialsServiceClient(), getConfig(), tracer))));
         authHandler.append(new HonoBasicAuthHandler(

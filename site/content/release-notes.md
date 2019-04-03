@@ -27,6 +27,19 @@ title = "Release Notes"
   *newMessage* and *addProperties* methods no longer require a boolean parameter indicating
   whether to include the assertion token in the message being created/amended.
   Custom protocol adapters should simply omit the corresponding parameter.
+* The `org.eclipse.hono.service.AbstractProtocolAdapterBase` class now uses
+  `org.eclipse.hono.client.CommandConsumerFactory` instead of
+  `org.eclipse.hono.client.CommandConnection` for creating
+  `org.eclipse.hono.client.CommandConsumer` instances.
+  The `setCommandConnection` and `getCommandConnection` methods have been
+  renamed to `setCommandConsumerFactory` and `getCommandConsumerFactory`
+  correspondingly.
+* The `org.eclipse.hono.service.AbstractProtocolAdapterBase` class now uses
+  `org.eclipse.hono.client.TenantClientFactory` instead of
+  `org.eclipse.hono.client.HonoClient` for creating `org.eclipse.hono.client.TenantClient`
+  instances.
+  The `setTenantServiceClient` and `getTenantServiceClient` methods have been
+  renamed to `setTenantClientFactory` and `getTenantClientFactory` correspondingly.
 
 ## 1.0-M1
 

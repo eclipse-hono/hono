@@ -48,6 +48,7 @@ import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.TenantClient;
+import org.eclipse.hono.client.TenantClientFactory;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantObject;
@@ -87,7 +88,7 @@ public class AbstractVertxBasedCoapAdapterTest {
     public final Timeout globalTimeout = Timeout.seconds(5);
 
     private HonoClient credentialsServiceClient;
-    private HonoClient tenantServiceClient;
+    private TenantClientFactory tenantClientFactory;
     private HonoClient messagingClient;
     private HonoClient registrationServiceClient;
     private RegistrationClient regClient;
@@ -115,9 +116,9 @@ public class AbstractVertxBasedCoapAdapterTest {
             return Future.succeededFuture(TenantObject.from(invocation.getArgument(0), true));
         });
 
-        tenantServiceClient = mock(HonoClient.class);
-        when(tenantServiceClient.connect(any(Handler.class))).thenReturn(Future.succeededFuture(tenantServiceClient));
-        when(tenantServiceClient.getOrCreateTenantClient()).thenReturn(Future.succeededFuture(tenantClient));
+        tenantClientFactory = mock(TenantClientFactory.class);
+        when(tenantClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoClient.class)));
+        when(tenantClientFactory.getOrCreateTenantClient()).thenReturn(Future.succeededFuture(tenantClient));
 
         credentialsServiceClient = mock(HonoClient.class);
         when(credentialsServiceClient.connect(any(Handler.class)))
@@ -512,7 +513,7 @@ public class AbstractVertxBasedCoapAdapterTest {
 
         adapter.setConfig(config);
         adapter.setCoapServer(server);
-        adapter.setTenantServiceClient(tenantServiceClient);
+        adapter.setTenantClientFactory(tenantClientFactory);
         adapter.setHonoMessagingClient(messagingClient);
         adapter.setRegistrationServiceClient(registrationServiceClient);
         if (complete) {

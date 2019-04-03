@@ -32,6 +32,7 @@ import org.apache.qpid.proton.engine.Sasl.SaslOutcome;
 import org.apache.qpid.proton.engine.Transport;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.HonoClient;
+import org.eclipse.hono.client.TenantClientFactory;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.service.auth.device.DeviceCertificateValidator;
@@ -76,7 +77,7 @@ import io.vertx.proton.sasl.ProtonSaslAuthenticatorFactory;
 public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthenticatorFactory {
 
     private final ProtocolAdapterProperties config;
-    private final HonoClient tenantServiceClient;
+    private final TenantClientFactory tenantClientFactory;
     private final HonoClient credentialsServiceClient;
     private final Tracer tracer;
     private final Supplier<Span> spanFactory;
@@ -88,7 +89,7 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
      * multi-tenancy, then the authentication identifier contained in the SASL response should have the pattern
      * {@code [<authId>@<tenantId>]}.
      *
-     * @param tenantServiceClient The service client to use for determining the device's tenant.
+     * @param tenantClientFactory The factory to use for creating tenant a Tenant service client.
      * @param credentialsServiceClient The service client to use for verifying credentials.
      * @param config The protocol adapter configuration object.
      * @param tracer The tracer instance.
@@ -101,7 +102,7 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
      * @throws NullPointerException if any of the parameters are null.
      */
     public AmqpAdapterSaslAuthenticatorFactory(
-            final HonoClient tenantServiceClient,
+            final TenantClientFactory tenantClientFactory,
             final HonoClient credentialsServiceClient,
             final ProtocolAdapterProperties config,
             final Tracer tracer,
@@ -109,7 +110,7 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
             final ConnectionLimitManager connectionLimitManager,
             final ResourceLimitChecks resourceLimitChecks) {
 
-        this.tenantServiceClient = Objects.requireNonNull(tenantServiceClient, "Tenant client cannot be null");
+        this.tenantClientFactory = Objects.requireNonNull(tenantClientFactory, "Tenant client factory cannot be null");
         this.credentialsServiceClient = Objects.requireNonNull(credentialsServiceClient, "Credentials client cannot be null");
         this.config = Objects.requireNonNull(config, "configuration cannot be null");
         this.tracer = Objects.requireNonNull(tracer);
@@ -120,8 +121,14 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
 
     @Override
     public ProtonSaslAuthenticator create() {
-        return new AmqpAdapterSaslAuthenticator(tenantServiceClient, credentialsServiceClient, config, tracer,
-                spanFactory.get(), connectionLimitManager, resourceLimitChecks);
+        return new AmqpAdapterSaslAuthenticator(
+                tenantClientFactory,
+                credentialsServiceClient,
+                config,
+                tracer,
+                spanFactory.get(),
+                connectionLimitManager,
+                resourceLimitChecks);
     }
 
     /**
@@ -132,7 +139,7 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
         private static final Logger LOG = LoggerFactory.getLogger(AmqpAdapterSaslAuthenticator.class);
 
         private final ProtocolAdapterProperties config;
-        private final HonoClient tenantServiceClient;
+        private final TenantClientFactory tenantClientFactory;
         private final HonoClient credentialsServiceClient;
         private final Tracer tracer;
         private final Span currentSpan;
@@ -148,7 +155,7 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
         private DeviceCertificateValidator certValidator;
 
         AmqpAdapterSaslAuthenticator(
-                final HonoClient tenantServiceClient,
+                final TenantClientFactory tenantClientFactory,
                 final HonoClient credentialsServiceClient,
                 final ProtocolAdapterProperties config,
                 final Tracer tracer,
@@ -156,7 +163,7 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
                 final ConnectionLimitManager connectionLimitManager,
                 final ResourceLimitChecks resourceLimitChecks) {
 
-            this.tenantServiceClient = tenantServiceClient;
+            this.tenantClientFactory = tenantClientFactory;
             this.credentialsServiceClient = credentialsServiceClient;
             this.config = config;
             this.tracer = tracer;
@@ -324,12 +331,12 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
         }
 
         private Future<TenantObject> getTenantObject(final X500Principal issuerDn) {
-            return tenantServiceClient.getOrCreateTenantClient()
+            return tenantClientFactory.getOrCreateTenantClient()
                     .compose(tenantClient -> tenantClient.get(issuerDn, currentSpan.context()));
         }
 
         private Future<TenantObject> getTenantObject(final String tenantId) {
-            return tenantServiceClient.getOrCreateTenantClient()
+            return tenantClientFactory.getOrCreateTenantClient()
                     .compose(tenantClient -> tenantClient.get(tenantId, currentSpan.context()));
         }
 
