@@ -52,11 +52,20 @@ scrape_configs:
     port: ${prometheus.scraping.port}
     refresh_interval: 10s
 
-- job_name: hono-adapter-kura-vertx
+- job_name: hono-adapter-kura
   metrics_path: /prometheus
   dns_sd_configs:
   - names:
-      - tasks.hono-adapter-kura-vertx.hono
+      - tasks.hono-adapter-kura.hono
+    type: A
+    port: ${prometheus.scraping.port}
+    refresh_interval: 10s
+
+- job_name: hono-adapter-coap-vertx
+  metrics_path: /prometheus
+  dns_sd_configs:
+  - names:
+      - tasks.hono-adapter-coap-vertx.hono
     type: A
     port: ${prometheus.scraping.port}
     refresh_interval: 10s
