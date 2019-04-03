@@ -230,6 +230,8 @@
                             </resources>
                             <filters>
                                 <filter>${project.basedir}/src/main/kubernetes-config.properties</filter>
+                                <filter>${project.build.directory}/config/hono-demo-certs-jar/trust-anchor.properties</filter>
+                                <filter>${project.build.directory}/config/hono-demo-certs-jar/device-certs.properties</filter>
                             </filters>
                         </configuration>
                     </execution>
