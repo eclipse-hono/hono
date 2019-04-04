@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -24,13 +24,13 @@ public final class Hostnames {
     static {
 
         // works on Linux
-        var hostname = System.getenv("HOSTNAME");
+        String hostname = System.getenv("HOSTNAME");
 
         if (hostname == null) {
             // this can produce all kinds of unexpected results
             // but better than nothing
             try {
-                final var localhost = InetAddress.getLocalHost();
+                final InetAddress localhost = InetAddress.getLocalHost();
                 hostname = localhost.getHostAddress();
             } catch (final Exception e) {
             }

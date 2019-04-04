@@ -16,6 +16,8 @@ title = "Release Notes"
 * The base classes for implementing the AMQP and HTTP endpoints for the Credentials, Tenant
   and Device Registration APIs now create an OpenTracing Span for tracking the
   processing of requests at a high level.
+* The `hono-client` and `hono-core` artifacts use Java 8 level again so that they
+  can be used in applications using Java 8.
 
 ### API Changes
 

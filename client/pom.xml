@@ -29,6 +29,10 @@
   <description>A library providing a Vert.x based client for accessing Hono's APIs.</description>
   <url>https://www.eclipse.org/hono</url>
 
+  <properties>
+    <java.level>1.8</java.level>
+  </properties>
+
   <dependencies>
     <dependency>
       <groupId>org.slf4j</groupId>
@@ -86,6 +90,28 @@
   <build>
     <plugins>
       <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <configuration>
+          <source>${java.level}</source>
+          <target>${java.level}</target>
+          <encoding>UTF-8</encoding>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>animal-sniffer-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>verify_java8_compatibility</id>
+            <phase>test</phase>
+            <goals>
+              <goal>check</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
         <!-- 
           Copy legal documents from "legal" module to "target/classes" folder
           so that we make sure to include legal docs in all modules.
@@ -106,6 +132,9 @@
             <Export-Package>
               {local-packages}
             </Export-Package>
+            <Require-Capability>
+              osgi.ee;filter:="(&amp;(osgi.ee=JavaSE)(version=${java.level}))"
+            </Require-Capability>
           </instructions>
         </configuration>
       </plugin>

@@ -162,7 +162,7 @@ public final class AuthenticationConstants {
         } else if (fields.get(2) == null || fields.get(2).length() == 0) {
             throw new CredentialException("PLAIN response must contain a password");
         } else {
-            return fields.toArray(String[]::new);
+            return fields.toArray(new String[fields.size()]);
         }
     }
 }
