@@ -14,7 +14,6 @@
 package org.eclipse.hono.service.registration;
 
 import static java.net.HttpURLConnection.HTTP_NO_CONTENT;
-import static org.eclipse.hono.service.registration.BaseRegistrationService.PROPERTY_LAST_VIA_UPDATE_DATE;
 import static org.eclipse.hono.util.Constants.JSON_FIELD_DEVICE_ID;
 import static org.mockito.Mockito.mock;
 
@@ -283,10 +282,11 @@ public class CompleteBaseRegistrationServiceTest {
                 ctx.assertNotNull(getDeviceResult.getPayload(), "payload not set");
                 final JsonObject data = getDeviceResult.getPayload().getJsonObject(RegistrationConstants.FIELD_DATA);
                 ctx.assertNotNull(data, "payload data not set");
-                final JsonObject lastViaObj = data.getJsonObject(BaseRegistrationService.PROPERTY_LAST_VIA);
-                ctx.assertNotNull(lastViaObj, BaseRegistrationService.PROPERTY_LAST_VIA + " property not set");
+                final JsonObject lastViaObj = data.getJsonObject(RegistrationConstants.FIELD_LAST_VIA);
+                ctx.assertNotNull(lastViaObj, RegistrationConstants.FIELD_LAST_VIA + " property not set");
                 ctx.assertEquals("gw-1", lastViaObj.getString(JSON_FIELD_DEVICE_ID));
-                ctx.assertNotNull(lastViaObj.getString(PROPERTY_LAST_VIA_UPDATE_DATE), PROPERTY_LAST_VIA_UPDATE_DATE + " property not set");
+                ctx.assertNotNull(lastViaObj.getString(RegistrationConstants.FIELD_LAST_VIA_UPDATE_DATE),
+                        RegistrationConstants.FIELD_LAST_VIA_UPDATE_DATE + " property not set");
             }));
         }));
     }
@@ -320,10 +320,11 @@ public class CompleteBaseRegistrationServiceTest {
                 ctx.assertNotNull(getDeviceResult.getPayload(), "payload not set");
                 final JsonObject data = getDeviceResult.getPayload().getJsonObject(RegistrationConstants.FIELD_DATA);
                 ctx.assertNotNull(data, "payload data not set");
-                final JsonObject lastViaObj = data.getJsonObject(BaseRegistrationService.PROPERTY_LAST_VIA);
-                ctx.assertNotNull(lastViaObj, BaseRegistrationService.PROPERTY_LAST_VIA + " property not set");
+                final JsonObject lastViaObj = data.getJsonObject(RegistrationConstants.FIELD_LAST_VIA);
+                ctx.assertNotNull(lastViaObj, RegistrationConstants.FIELD_LAST_VIA + " property not set");
                 ctx.assertEquals("gw-1", lastViaObj.getString(JSON_FIELD_DEVICE_ID));
-                ctx.assertNotNull(lastViaObj.getString(PROPERTY_LAST_VIA_UPDATE_DATE), PROPERTY_LAST_VIA_UPDATE_DATE + " property not set");
+                ctx.assertNotNull(lastViaObj.getString(RegistrationConstants.FIELD_LAST_VIA_UPDATE_DATE),
+                                        RegistrationConstants.FIELD_LAST_VIA_UPDATE_DATE + " property not set");
             }));
         }));
     }
@@ -357,10 +358,11 @@ public class CompleteBaseRegistrationServiceTest {
                 ctx.assertNotNull(getDeviceResult.getPayload(), "payload not set");
                 final JsonObject data = getDeviceResult.getPayload().getJsonObject(RegistrationConstants.FIELD_DATA);
                 ctx.assertNotNull(data, "payload data not set");
-                final JsonObject lastViaObj = data.getJsonObject(BaseRegistrationService.PROPERTY_LAST_VIA);
-                ctx.assertNotNull(lastViaObj, BaseRegistrationService.PROPERTY_LAST_VIA + " property not set");
+                final JsonObject lastViaObj = data.getJsonObject(RegistrationConstants.FIELD_LAST_VIA);
+                ctx.assertNotNull(lastViaObj, RegistrationConstants.FIELD_LAST_VIA + " property not set");
                 ctx.assertEquals("4714", lastViaObj.getString(JSON_FIELD_DEVICE_ID));
-                ctx.assertNotNull(lastViaObj.getString(PROPERTY_LAST_VIA_UPDATE_DATE), PROPERTY_LAST_VIA_UPDATE_DATE + " property not set");
+                ctx.assertNotNull(lastViaObj.getString(RegistrationConstants.FIELD_LAST_VIA_UPDATE_DATE),
+                        RegistrationConstants.FIELD_LAST_VIA_UPDATE_DATE + " property not set");
             }));
         }));
     }
@@ -434,7 +436,7 @@ public class CompleteBaseRegistrationServiceTest {
                             .put(RegistrationConstants.FIELD_ENABLED, true)
                             .put(RegistrationConstants.FIELD_DEFAULTS, new JsonObject()
                                     .put(MessageHelper.SYS_PROPERTY_CONTENT_TYPE, "application/default"))
-                            .put(BaseRegistrationService.PROPERTY_VIA, "gw-1"));
+                            .put(RegistrationConstants.FIELD_VIA, "gw-1"));
             return Future.succeededFuture(RegistrationResult.from(HttpURLConnection.HTTP_OK, responsePayload));
         } else if ("4712".equals(deviceId)) {
             final JsonObject responsePayload = BaseRegistrationService.getResultPayload(
@@ -446,7 +448,7 @@ public class CompleteBaseRegistrationServiceTest {
                     "4713",
                     new JsonObject()
                             .put(RegistrationConstants.FIELD_ENABLED, true)
-                            .put(BaseRegistrationService.PROPERTY_VIA, "gw-3"));
+                            .put(RegistrationConstants.FIELD_VIA, "gw-3"));
             return Future.succeededFuture(RegistrationResult.from(HttpURLConnection.HTTP_OK, responsePayload));
         } else if ("4714".equals(deviceId)) {
             final JsonObject responsePayload = BaseRegistrationService.getResultPayload(
@@ -455,7 +457,7 @@ public class CompleteBaseRegistrationServiceTest {
                             .put(RegistrationConstants.FIELD_ENABLED, true)
                             .put(RegistrationConstants.FIELD_DEFAULTS, new JsonObject()
                                     .put(MessageHelper.SYS_PROPERTY_CONTENT_TYPE, "application/default"))
-                            .put(BaseRegistrationService.PROPERTY_VIA, new JsonArray().add("gw-1").add("gw-4")));
+                            .put(RegistrationConstants.FIELD_VIA, new JsonArray().add("gw-1").add("gw-4")));
             return Future.succeededFuture(RegistrationResult.from(HttpURLConnection.HTTP_OK, responsePayload));
         } else if ("gw-1".equals(deviceId)) {
             final JsonObject responsePayload = BaseRegistrationService.getResultPayload(

@@ -156,7 +156,7 @@ public abstract class CompleteBaseRegistrationService<T> extends BaseRegistratio
     protected Future<Void> updateDeviceLastVia(final String tenantId, final String deviceId, final String gatewayId,
             final JsonObject deviceData) {
         final Future<Void> resultFuture = Future.future();
-        deviceData.put(PROPERTY_LAST_VIA, createLastViaObject(gatewayId));
+        deviceData.put(RegistrationConstants.FIELD_LAST_VIA, createLastViaObject(gatewayId));
         updateDevice(tenantId, deviceId, deviceData, res -> {
             if (res.failed() || res.result() == null) {
                 resultFuture.fail(res.cause());
@@ -178,7 +178,8 @@ public abstract class CompleteBaseRegistrationService<T> extends BaseRegistratio
     protected final JsonObject createLastViaObject(final String gatewayId) {
         final JsonObject lastViaObj = new JsonObject();
         lastViaObj.put(JSON_FIELD_DEVICE_ID, gatewayId);
-        lastViaObj.put(PROPERTY_LAST_VIA_UPDATE_DATE, ZonedDateTime.now(ZoneOffset.UTC).format(DateTimeFormatter.ISO_INSTANT));
+        lastViaObj.put(RegistrationConstants.FIELD_LAST_VIA_UPDATE_DATE,
+                ZonedDateTime.now(ZoneOffset.UTC).format(DateTimeFormatter.ISO_INSTANT));
         return lastViaObj;
     }
 

@@ -60,22 +60,6 @@ import io.vertx.core.json.JsonObject;
  */
 public abstract class BaseRegistrationService<T> extends EventBusService<T> implements RegistrationService {
 
-    /**
-     * The name of the field in a device's registration information that contains
-     * the identifier of the gateway that it is connected to (either as string value or inside a JSON array). 
-     */
-    public static final String PROPERTY_VIA = "via";
-    /**
-     * The name of the field in a device's registration information that contains
-     * the identifier of the gateway that it was last connected to as well as the date when this information was updated.
-     */
-    public static final String PROPERTY_LAST_VIA = "last-via";
-    /**
-     * The name of the field in a device's registration information that contains
-     * the date when the 'last-via' device id was last updated.
-     */
-    public static final String PROPERTY_LAST_VIA_UPDATE_DATE = "update-date";
-
     private static final String SPAN_NAME_ASSERT_DEVICE_REGISTRATION = "assert Device Registration";
 
     private RegistrationAssertionHelper assertionFactory;
@@ -341,7 +325,7 @@ public abstract class BaseRegistrationService<T> extends EventBusService<T> impl
     }
 
     private boolean isDeviceWithOneOrMoreVias(final JsonObject deviceData) {
-        final Object viaObj = deviceData.getValue(PROPERTY_VIA);
+        final Object viaObj = deviceData.getValue(RegistrationConstants.FIELD_VIA);
         return (viaObj instanceof String && !((String) viaObj).isEmpty())
                 || (viaObj instanceof JsonArray && !((JsonArray) viaObj).isEmpty());
     }
@@ -418,7 +402,7 @@ public abstract class BaseRegistrationService<T> extends EventBusService<T> impl
      * Checks if a gateway is authorized to act <em>on behalf of</em> a device.
      * <p>
      * This default implementation checks if the gateway's identifier matches the
-     * value of the {@link #PROPERTY_VIA} property in the device's registration information.
+     * value of the {@link RegistrationConstants#FIELD_VIA} property in the device's registration information.
      * The property may either contain a single String value or a JSON array of Strings.
      * <p>
      * Subclasses may override this method in order to implement a more
@@ -439,7 +423,7 @@ public abstract class BaseRegistrationService<T> extends EventBusService<T> impl
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(deviceData);
 
-        final Object obj = deviceData.getValue(PROPERTY_VIA);
+        final Object obj = deviceData.getValue(RegistrationConstants.FIELD_VIA);
         if (obj instanceof String) {
             return gatewayId.equals(obj);
         } else if (obj instanceof JsonArray) {

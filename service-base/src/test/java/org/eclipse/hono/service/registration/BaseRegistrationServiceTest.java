@@ -263,7 +263,7 @@ public class BaseRegistrationServiceTest {
                         .put(RegistrationConstants.FIELD_ENABLED, true)
                         .put(RegistrationConstants.FIELD_DEFAULTS, new JsonObject()
                                 .put(MessageHelper.SYS_PROPERTY_CONTENT_TYPE, "application/default"))
-                        .put(BaseRegistrationService.PROPERTY_VIA, "gw-1"));
+                        .put(RegistrationConstants.FIELD_VIA, "gw-1"));
             return Future.succeededFuture(RegistrationResult.from(HttpURLConnection.HTTP_OK, responsePayload));
         } else if ("4712".equals(deviceId)) {
                 final JsonObject responsePayload = BaseRegistrationService.getResultPayload(
@@ -275,7 +275,7 @@ public class BaseRegistrationServiceTest {
                     "4713",
                     new JsonObject()
                         .put(RegistrationConstants.FIELD_ENABLED, true)
-                        .put(BaseRegistrationService.PROPERTY_VIA, "gw-3"));
+                        .put(RegistrationConstants.FIELD_VIA, "gw-3"));
             return Future.succeededFuture(RegistrationResult.from(HttpURLConnection.HTTP_OK, responsePayload));
         } else if ("4714".equals(deviceId)) {
             final JsonObject responsePayload = BaseRegistrationService.getResultPayload(
@@ -284,7 +284,7 @@ public class BaseRegistrationServiceTest {
                         .put(RegistrationConstants.FIELD_ENABLED, true)
                         .put(RegistrationConstants.FIELD_DEFAULTS, new JsonObject()
                                 .put(MessageHelper.SYS_PROPERTY_CONTENT_TYPE, "application/default"))
-                        .put(BaseRegistrationService.PROPERTY_VIA, new JsonArray().add("gw-1").add("gw-4")));
+                        .put(RegistrationConstants.FIELD_VIA, new JsonArray().add("gw-1").add("gw-4")));
             return Future.succeededFuture(RegistrationResult.from(HttpURLConnection.HTTP_OK, responsePayload));
         } else if ("gw-1".equals(deviceId)) {
             final JsonObject responsePayload = BaseRegistrationService.getResultPayload(
