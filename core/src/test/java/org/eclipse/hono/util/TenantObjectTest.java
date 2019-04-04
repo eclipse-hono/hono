@@ -14,6 +14,7 @@
 package org.eclipse.hono.util;
 
 import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.nullValue;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThat;
@@ -288,24 +289,28 @@ public class TenantObjectTest {
     }
 
     /**
-     * Verifies that the default value for connections limit is set to {@link TenantConstants#DEFAULT_MAX_CONNECTIONS}.
+     * Verifies that the resource-limits are set based on the configuration.
      */
     @Test
-    public void testGetConnectionsLimitDefaultValue() {
-        final TenantObject obj = TenantObject.from(Constants.DEFAULT_TENANT, true);
-        assertThat(obj.getConnectionsLimit(), is(TenantConstants.DEFAULT_MAX_CONNECTIONS));
+    public void testGetResourceLimits() {
+        final JsonObject limitsConfig = new JsonObject()
+                .put("max-connections", 2)
+                .put("data-volume",
+                        new JsonObject().put("max-bytes", 20_000_000)
+                                .put("period-in-days", 90)
+                                .put("effective-since", "2019-04-26"));
+        final TenantObject tenantObject = TenantObject.from(Constants.DEFAULT_TENANT, true);
+        tenantObject.setResourceLimits(limitsConfig);
+        assertThat(tenantObject.getResourceLimits(), is(limitsConfig));
     }
 
     /**
-     * Verifies if the connections limit is set based on the configuration.
+     * Verifies that {@code null} is returned when resource limits are not set.
      */
     @Test
-    public void testGetConnectionsLimit() {
-        final JsonObject limitsConfig = new JsonObject()
-                .put(TenantConstants.MAX_CONNECTIONS, 2);
-        final TenantObject obj = TenantObject.from(Constants.DEFAULT_TENANT, true);
-        obj.setProperty(TenantConstants.LIMITS, limitsConfig);
-        assertThat(obj.getConnectionsLimit(), is(2L));
+    public void testGetResourceLimitsWhenNotSet() {
+        final TenantObject tenantObject = TenantObject.from(Constants.DEFAULT_TENANT, true);
+        assertThat(tenantObject.getResourceLimits(), is(nullValue()));
     }
 
     private X509Certificate getCaCertificate() {
