@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-    Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+    Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
    
     See the NOTICE file(s) distributed with this work for additional
     information regarding copyright ownership.
@@ -28,6 +28,10 @@
   <description>Basic classes used by all other modules.</description>
   <inceptionYear>2016</inceptionYear>
   <url>https://www.eclipse.org/hono</url>
+
+  <properties>
+    <java.level>1.8</java.level>
+  </properties>
 
   <dependencies>
     <dependency>
@@ -111,6 +115,28 @@
   <build>
     <plugins>
       <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <configuration>
+          <source>${java.level}</source>
+          <target>${java.level}</target>
+          <encoding>UTF-8</encoding>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>animal-sniffer-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>verify_java8_compatibility</id>
+            <phase>test</phase>
+            <goals>
+              <goal>check</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
         <!-- 
           Copy legal documents from "legal" module to "target/classes" folder
           so that we make sure to include legal docs in all modules.
@@ -160,6 +186,9 @@
               opentracing-noop;inline=true,
               spring-security-crypto;inline=true
             </Embed-Dependency>
+            <Require-Capability>
+              osgi.ee;filter:="(&amp;(osgi.ee=JavaSE)(version=${java.level}))"
+            </Require-Capability>
           </instructions>
         </configuration>
       </plugin>

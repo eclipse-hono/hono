@@ -59,7 +59,7 @@ public class MessageAnnotationsExtractAdapter implements TextMap {
             return Collections.emptyIterator();
         }
         final Iterator<? extends Entry<?, ?>> entriesIterator = propertiesMap.entrySet().iterator();
-        return new Iterator<>() {
+        return new Iterator<Entry<String, String>>() {
 
             @Override
             public boolean hasNext() {

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -60,7 +60,7 @@ public final class ResourceIdentifier {
         if (assumeDefaultTenant) {
             pathSegments.add(1, Constants.DEFAULT_TENANT);
         }
-        setResourcePath(pathSegments.toArray(String[]::new));
+        setResourcePath(pathSegments.toArray(new String[pathSegments.size()]));
     }
 
     private ResourceIdentifier(final String endpoint, final String tenantId, final String resourceId) {
@@ -94,7 +94,7 @@ public final class ResourceIdentifier {
                 pathSegments.add(segment);
             }
         }
-        this.resourcePath = pathSegments.toArray(String[]::new);
+        this.resourcePath = pathSegments.toArray(new String[pathSegments.size()]);
         if (resourcePath.length > IDX_TENANT_ID && resourcePath[IDX_TENANT_ID].length() == 0) {
             resourcePath[IDX_TENANT_ID] = null;
         }
