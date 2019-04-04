@@ -44,7 +44,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
-
 /**
  * Encapsulates the tenant information that was found by the get operation of the
  * <a href="https://www.eclipse.org/hono/api/tenant-api/">Tenant API</a>.
@@ -498,16 +497,25 @@ public final class TenantObject extends JsonBackedValueObject {
     }
 
     /**
-     * Gets the connections limit for the tenant if configured, else returns
-     * {@link TenantConstants#DEFAULT_MAX_CONNECTIONS}.
+     * Gets the resource limits for the tenant.
      *
-     * @return The connections limit.
+     * @return The resource limits or {@code null} if not set.
      */
     @JsonIgnore
-    public long getConnectionsLimit() {
-        return Optional.ofNullable(getProperty(TenantConstants.LIMITS))
-                .map(limits -> getProperty((JsonObject) limits, TenantConstants.MAX_CONNECTIONS,
-                        (Number) TenantConstants.DEFAULT_MAX_CONNECTIONS).longValue())
-                .orElse(TenantConstants.DEFAULT_MAX_CONNECTIONS);
+    public JsonObject getResourceLimits() {
+        return getProperty(TenantConstants.FIELD_RESOURCE_LIMITS);
+    }
+
+    /**
+     * Sets the resource limits for the tenant.
+     *
+     * @param resourceLimits The resource limits configuration to add.
+     * @return The TenantObject.
+     * @throws NullPointerException if resource limits to be set is {@code null}.
+     */
+    @JsonIgnore
+    public TenantObject setResourceLimits(final JsonObject resourceLimits) {
+        Objects.requireNonNull(resourceLimits);
+        return setProperty(TenantConstants.FIELD_RESOURCE_LIMITS, resourceLimits);
     }
 }

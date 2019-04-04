@@ -12,7 +12,11 @@
  *******************************************************************************/
 package org.eclipse.hono.service.plan;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.Objects;
+import java.util.Optional;
 
 import javax.annotation.PostConstruct;
 
@@ -37,10 +41,49 @@ import io.vertx.ext.web.codec.BodyCodec;
  */
 public final class PrometheusBasedResourceLimitChecks implements ResourceLimitChecks {
 
+    /**
+     * The default value for the maximum number of connections to be allowed is -1, which implies no limit.
+     */
+    static final long DEFAULT_MAX_CONNECTIONS = -1;
+
+    /**
+     * The name of the property that contains the maximum number of connections to be allowed for a tenant.
+     */
+    static final String FIELD_MAX_CONNECTIONS = "max-connections";
+
+    /**
+     * The name of the property that contains the configuration options for the data volume.
+     */
+    static final String FIELD_DATA_VOLUME = "data-volume";
+
+    /**
+     * The default value for the maximum number of bytes to be allowed for a tenant is set to -1, which implies no
+     * limit.
+     */
+    static final long DEFAULT_MAX_BYTES = -1;
+
+    /**
+     * The name of the property that contains the maximum number of bytes to be allowed for a tenant.
+     */
+    static final String FIELD_MAX_BYTES = "max-bytes";
+
+    /**
+     * The default number of days for which the data usage being calculated, is set to 30 days.
+     */
+    static final long DEFAULT_PERIOD_IN_DAYS = 30;
+
+    /**
+     * The name of the property that contains the number of days for which the data usage is calculated.
+     */
+    static final String FIELD_PERIOD_IN_DAYS = "period-in-days";
+
+    /**
+     * The name of the property that contains the date on which the data volume limit came into effect.
+     */
+    static final String FIELD_EFFECTIVE_SINCE = "effective-since";
     private static final String CONNECTIONS_METRIC_NAME = MicrometerBasedMetrics.METER_CONNECTIONS_AUTHENTICATED
             .replace(".", "_");
     private static final Logger log = LoggerFactory.getLogger(PrometheusBasedResourceLimitChecks.class);
-
     private final WebClient client;
     private String host;
     private int port = 9090;
@@ -60,22 +103,23 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
     public Future<Boolean> isConnectionLimitReached(final TenantObject tenant) {
 
         Objects.requireNonNull(tenant);
+        final long maxConnections = getConnectionsLimit(tenant);
 
-        log.trace("connection limit for tenant [{}] is [{}]", tenant.getTenantId(), tenant.getConnectionsLimit());
+        log.trace("connection limit for tenant [{}] is [{}]", tenant.getTenantId(), maxConnections);
 
-        if (tenant.getConnectionsLimit() == -1) {
+        if (maxConnections == -1) {
             return Future.succeededFuture(Boolean.FALSE);
         } else {
             final String queryParams = String.format("sum(%s{tenant=\"%s\"})", CONNECTIONS_METRIC_NAME,
                     tenant.getTenantId());
             return executeQuery(queryParams)
                     .map(currentConnections -> {
-                        if (currentConnections < tenant.getConnectionsLimit()) {
+                        if (currentConnections < maxConnections) {
                             return Boolean.FALSE;
                         } else {
                             log.trace(
                                     "connection limit exceeded [tenant: {}, current connections: {}, max-connections: {}]",
-                                    tenant.getTenantId(), currentConnections, tenant.getConnectionsLimit());
+                                    tenant.getTenantId(), currentConnections, maxConnections);
                             return Boolean.TRUE;
                         }
                     }).otherwise(Boolean.FALSE);
@@ -125,6 +169,64 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
         } else {
             throw new IllegalArgumentException("invalid port number");
         }
+    }
+
+    /**
+     * Gets the connections limit for the tenant if configured, else returns {@link #DEFAULT_MAX_CONNECTIONS}.
+     *
+     * @param tenant The tenant configuration object.
+     * @return The connections limit.
+     */
+    long getConnectionsLimit(final TenantObject tenant) {
+        return Optional.ofNullable(tenant.getResourceLimits())
+                .map(resourceLimits -> resourceLimits.getLong(FIELD_MAX_CONNECTIONS, DEFAULT_MAX_CONNECTIONS))
+                .orElse(DEFAULT_MAX_CONNECTIONS);
+    }
+
+    /**
+     * Gets the maximum number of bytes to be allowed for the time period defined by the
+     * {@link #getPeriodInDays(TenantObject)}.
+     *
+     * @param tenant The tenant configuration object.
+     * @return The maximum number of bytes or {@link #DEFAULT_MAX_BYTES} if not set.
+     */
+    long getMaximumNumberOfBytes(final TenantObject tenant) {
+        return Optional.ofNullable(tenant.getResourceLimits())
+                .map(limits -> limits.getJsonObject(FIELD_DATA_VOLUME))
+                .map(dataVolumeLimits -> dataVolumeLimits.getLong(FIELD_MAX_BYTES, DEFAULT_MAX_BYTES))
+                .orElse(DEFAULT_MAX_BYTES);
+    }
+
+    /**
+     * Gets the number of days for which the data usage is calculated and compared against the
+     * {@link #getMaximumNumberOfBytes(TenantObject)}.
+     *
+     * @param tenant The tenant configuration object.
+     * @return The number of days for which the data usage is calculated or {@link #DEFAULT_PERIOD_IN_DAYS} if not set.
+     */
+    long getPeriodInDays(final TenantObject tenant) {
+        return Optional.ofNullable(tenant.getResourceLimits())
+                .map(limits -> limits.getJsonObject(FIELD_DATA_VOLUME))
+                .map(dataVolumeLimits -> dataVolumeLimits.getLong(FIELD_PERIOD_IN_DAYS, DEFAULT_PERIOD_IN_DAYS))
+                .orElse(DEFAULT_PERIOD_IN_DAYS);
+    }
+
+    /**
+     * Gets the date on which the data volume limit came into effect.
+     * <p>
+     * The date string should comply to the {@link DateTimeFormatter#ISO_LOCAL_DATE}
+     *
+     * @param tenant The tenant configuration object.
+     * @return The date on which the data volume limit came into effective or {@code null} if not set.
+     * @throws DateTimeParseException if the date string fails to comply with the
+     *             {@link DateTimeFormatter#ISO_LOCAL_DATE} format.
+     */
+    LocalDate getEffectiveSince(final TenantObject tenant) {
+        return Optional.ofNullable(tenant.getResourceLimits())
+                .map(limits -> limits.getJsonObject(FIELD_DATA_VOLUME))
+                .map(dataVolumeLimits -> dataVolumeLimits.getString(FIELD_EFFECTIVE_SINCE))
+                .map(effectiveSince -> LocalDate.parse(effectiveSince, DateTimeFormatter.ISO_LOCAL_DATE))
+                .orElse(null);
     }
 
     @PostConstruct
