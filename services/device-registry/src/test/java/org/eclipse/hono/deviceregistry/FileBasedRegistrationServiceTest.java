@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -255,7 +255,7 @@ public class FileBasedRegistrationServiceTest extends AbstractCompleteRegistrati
         registrationService.getDevice(TENANT, DEVICE, ctx.asyncAssertSuccess());
         registrationService.getDevice(TENANT, "4712", ctx.asyncAssertSuccess(result -> {
             final JsonObject data = result.getPayload().getJsonObject(RegistrationConstants.FIELD_DATA);
-            ctx.assertEquals(data.getString(FileBasedRegistrationService.PROPERTY_VIA), GW);
+            ctx.assertEquals(data.getString(RegistrationConstants.FIELD_VIA), GW);
         }));
         registrationService.getDevice(TENANT, GW, ctx.asyncAssertSuccess());
 

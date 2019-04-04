@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -57,6 +57,22 @@ public final class RegistrationConstants extends RequestResponseApiConstants {
      * by the device.
      */
     public static final String FIELD_DEFAULTS     = "defaults";
+
+    /**
+     * The name of the field in a device's registration information that contains
+     * the identifier of the gateway that it is connected to (either as string value or inside a JSON array).
+     */
+    public static final String FIELD_VIA = "via";
+    /**
+     * The name of the field in a device's registration information that contains
+     * the identifier of the gateway that it was last connected to as well as the date when this information was updated.
+     */
+    public static final String FIELD_LAST_VIA = "last-via";
+    /**
+     * The name of the field in a device's registration information that contains
+     * the date when the 'last-via' device id was last updated.
+     */
+    public static final String FIELD_LAST_VIA_UPDATE_DATE = "update-date";
 
     /**
      * The name of the Device Registration API endpoint.
