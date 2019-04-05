@@ -45,6 +45,7 @@ import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.RegistrationClient;
+import org.eclipse.hono.client.RegistrationClientFactory;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.TenantClient;
 import org.eclipse.hono.client.TenantClientFactory;
@@ -109,7 +110,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
     private TenantClientFactory tenantClientFactory;
     private HonoClient credentialsServiceClient;
     private HonoClient messagingClient;
-    private HonoClient deviceRegistrationServiceClient;
+    private RegistrationClientFactory registrationClientFactory;
     private RegistrationClient regClient;
     private TenantClient tenantClient;
     private AuthHandler<MqttContext> authHandler;
@@ -164,12 +165,11 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         when(messagingClient.getOrCreateEventSender(anyString())).thenReturn(Future.succeededFuture(mock(MessageSender.class)));
         when(messagingClient.getOrCreateTelemetrySender(anyString())).thenReturn(Future.succeededFuture(mock(MessageSender.class)));
 
-        deviceRegistrationServiceClient = mock(HonoClient.class);
-        when(deviceRegistrationServiceClient.isConnected()).thenReturn(
+        registrationClientFactory = mock(RegistrationClientFactory.class);
+        when(registrationClientFactory.isConnected()).thenReturn(
                 Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE)));
-        when(deviceRegistrationServiceClient.connect(any(Handler.class)))
-                .thenReturn(Future.succeededFuture(deviceRegistrationServiceClient));
-        when(deviceRegistrationServiceClient.getOrCreateRegistrationClient(anyString()))
+        when(registrationClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoClient.class)));
+        when(registrationClientFactory.getOrCreateRegistrationClient(anyString()))
                 .thenReturn(Future.succeededFuture(regClient));
 
         commandConsumerFactory = mock(CommandConsumerFactory.class);
@@ -1034,7 +1034,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
     private void forceClientMocksToConnected() {
         when(tenantClientFactory.isConnected()).thenReturn(Future.succeededFuture());
         when(messagingClient.isConnected()).thenReturn(Future.succeededFuture());
-        when(deviceRegistrationServiceClient.isConnected()).thenReturn(Future.succeededFuture());
+        when(registrationClientFactory.isConnected()).thenReturn(Future.succeededFuture());
         when(credentialsServiceClient.isConnected()).thenReturn(Future.succeededFuture());
         when(commandConsumerFactory.isConnected()).thenReturn(Future.succeededFuture());
     }
@@ -1091,7 +1091,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         adapter.setMetrics(metrics);
         adapter.setTenantClientFactory(tenantClientFactory);
         adapter.setHonoMessagingClient(messagingClient);
-        adapter.setRegistrationServiceClient(deviceRegistrationServiceClient);
+        adapter.setRegistrationClientFactory(registrationClientFactory);
         adapter.setCredentialsServiceClient(credentialsServiceClient);
         adapter.setCommandConsumerFactory(commandConsumerFactory);
         adapter.setAuthHandler(authHandler);

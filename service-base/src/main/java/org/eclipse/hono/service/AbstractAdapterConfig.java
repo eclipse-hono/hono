@@ -18,6 +18,7 @@ import java.util.Optional;
 import org.eclipse.hono.cache.CacheProvider;
 import org.eclipse.hono.client.CommandConsumerFactory;
 import org.eclipse.hono.client.HonoClient;
+import org.eclipse.hono.client.RegistrationClientFactory;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.client.TenantClientFactory;
 import org.eclipse.hono.client.impl.CommandConsumerFactoryImpl;
@@ -137,14 +138,14 @@ public abstract class AbstractAdapterConfig {
     @Qualifier(RegistrationConstants.REGISTRATION_ENDPOINT)
     @ConfigurationProperties(prefix = "hono.registration")
     @Bean
-    public RequestResponseClientConfigProperties registrationServiceClientConfig() {
+    public RequestResponseClientConfigProperties registrationClientFactoryConfig() {
         final RequestResponseClientConfigProperties config = new RequestResponseClientConfigProperties();
-        customizeRegistrationServiceClientConfig(config);
+        customizeRegistrationClientFactoryConfig(config);
         return config;
     }
 
     /**
-     * Further customizes the properties provided by the {@link #registrationServiceClientConfig()}
+     * Further customizes the properties provided by the {@link #registrationClientFactoryConfig()}
      * method.
      * <p>
      * This method does nothing by default. Subclasses may override this method to set additional
@@ -152,21 +153,21 @@ public abstract class AbstractAdapterConfig {
      *
      * @param config The configuration to customize.
      */
-    protected void customizeRegistrationServiceClientConfig(final RequestResponseClientConfigProperties config) {
+    protected void customizeRegistrationClientFactoryConfig(final RequestResponseClientConfigProperties config) {
         // empty by default
     }
 
     /**
-     * Exposes a client for the <em>Device Registration</em> API as a Spring bean.
+     * Exposes a factory for creating clients for the <em>Device Registration</em> API as a Spring bean.
      *
-     * @return The client.
+     * @return The factory.
      */
     @Bean
     @Qualifier(RegistrationConstants.REGISTRATION_ENDPOINT)
     @Scope("prototype")
-    public HonoClient registrationServiceClient() {
+    public RegistrationClientFactory registrationClientFactory() {
         final HonoClientImpl result =
-                new HonoClientImpl(vertx(), registrationServiceClientConfig());
+                new HonoClientImpl(vertx(), registrationClientFactoryConfig());
 
         final CacheProvider cacheProvider = registrationCacheProvider();
         if (cacheProvider != null) {
@@ -185,7 +186,7 @@ public abstract class AbstractAdapterConfig {
     @Qualifier(RegistrationConstants.REGISTRATION_ENDPOINT)
     @Scope("prototype")
     public CacheProvider registrationCacheProvider() {
-        return newGuavaCache(registrationServiceClientConfig());
+        return newGuavaCache(registrationClientFactoryConfig());
     }
 
     /**

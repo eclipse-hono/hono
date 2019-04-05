@@ -40,6 +40,7 @@ import org.eclipse.hono.client.CommandResponseSender;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.RegistrationClient;
+import org.eclipse.hono.client.RegistrationClientFactory;
 import org.eclipse.hono.client.ResourceConflictException;
 import org.eclipse.hono.client.TenantClient;
 import org.eclipse.hono.client.TenantClientFactory;
@@ -104,7 +105,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
     private HonoClient                    credentialsServiceClient;
     private TenantClientFactory           tenantClientFactory;
     private HonoClient                    messagingClient;
-    private HonoClient                    registrationServiceClient;
+    private RegistrationClientFactory     registrationClientFactory;
     private RegistrationClient            regClient;
     private TenantClient                  tenantClient;
     private HttpProtocolAdapterProperties config;
@@ -154,9 +155,9 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         messagingClient = mock(HonoClient.class);
         when(messagingClient.connect(any(Handler.class))).thenReturn(Future.succeededFuture(messagingClient));
 
-        registrationServiceClient = mock(HonoClient.class);
-        when(registrationServiceClient.connect(any(Handler.class))).thenReturn(Future.succeededFuture(registrationServiceClient));
-        when(registrationServiceClient.getOrCreateRegistrationClient(anyString())).thenReturn(Future.succeededFuture(regClient));
+        registrationClientFactory = mock(RegistrationClientFactory.class);
+        when(registrationClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoClient.class)));
+        when(registrationClientFactory.getOrCreateRegistrationClient(anyString())).thenReturn(Future.succeededFuture(regClient));
 
         commandConsumer = mock(CommandConsumer.class);
         doAnswer(invocation -> {
@@ -848,7 +849,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         adapter.setInsecureHttpServer(server);
         adapter.setTenantClientFactory(tenantClientFactory);
         adapter.setHonoMessagingClient(messagingClient);
-        adapter.setRegistrationServiceClient(registrationServiceClient);
+        adapter.setRegistrationClientFactory(registrationClientFactory);
         adapter.setCredentialsServiceClient(credentialsServiceClient);
         adapter.setCommandConsumerFactory(commandConsumerFactory);
         return adapter;

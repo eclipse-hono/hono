@@ -26,10 +26,13 @@ import org.eclipse.hono.client.CommandContext;
 import org.eclipse.hono.client.CommandResponse;
 import org.eclipse.hono.client.CommandResponseSender;
 import org.eclipse.hono.client.ConnectionLifecycle;
+import org.eclipse.hono.client.DisconnectListener;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.MessageSender;
+import org.eclipse.hono.client.ReconnectListener;
 import org.eclipse.hono.client.RegistrationClient;
+import org.eclipse.hono.client.RegistrationClientFactory;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.TenantClient;
@@ -90,7 +93,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     protected static final String KEY_MICROMETER_SAMPLE = "micrometer.sample";
 
     private HonoClient messagingClient;
-    private HonoClient registrationServiceClient;
+    private RegistrationClientFactory registrationClientFactory;
     private TenantClientFactory tenantClientFactory;
     private HonoClient credentialsServiceClient;
     private CommandConsumerFactory commandConsumerFactory;
@@ -197,24 +200,24 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     }
 
     /**
-     * Sets the client to use for connecting to the Device Registration service.
+     * Sets the factory to use for creating a client for the Device Registration service.
      *
-     * @param registrationServiceClient The client.
-     * @throws NullPointerException if the client is {@code null}.
+     * @param factory The factory.
+     * @throws NullPointerException if the factory is {@code null}.
      */
     @Qualifier(RegistrationConstants.REGISTRATION_ENDPOINT)
     @Autowired
-    public final void setRegistrationServiceClient(final HonoClient registrationServiceClient) {
-        this.registrationServiceClient = Objects.requireNonNull(registrationServiceClient);
+    public final void setRegistrationClientFactory(final RegistrationClientFactory factory) {
+        this.registrationClientFactory = Objects.requireNonNull(factory);
     }
 
     /**
-     * Gets the client used for connecting to the Device Registration service.
+     * Gets the factory used for creating a client for the Device Registration service.
      *
-     * @return The client.
+     * @return The factory.
      */
-    public final HonoClient getRegistrationServiceClient() {
-        return registrationServiceClient;
+    public final RegistrationClientFactory getRegistrationClientFactory() {
+        return registrationClientFactory;
     }
 
     /**
@@ -361,8 +364,8 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
             result.fail(new IllegalStateException("Tenant client factory must be set"));
         } else if (messagingClient == null) {
             result.fail(new IllegalStateException("AMQP Messaging Network client must be set"));
-        } else if (registrationServiceClient == null) {
-            result.fail(new IllegalStateException("Device Registration service client must be set"));
+        } else if (registrationClientFactory == null) {
+            result.fail(new IllegalStateException("Device Registration client factory must be set"));
         } else if (credentialsServiceClient == null) {
             result.fail(new IllegalStateException("Credentials service client must be set"));
         } else if (commandConsumerFactory == null) {
@@ -370,12 +373,15 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         } else {
             connectToService(tenantClientFactory, "Tenant service");
             connectToService(messagingClient, "AMQP Messaging Network");
-            connectToService(registrationServiceClient, "Device Registration service");
+            connectToService(registrationClientFactory, "Device Registration service");
             connectToService(credentialsServiceClient, "Credentials service");
 
-            commandConsumerFactory.addDisconnectListener(this::onCommandConnectionLost);
-            commandConsumerFactory.addReconnectListener(this::onCommandConnectionEstablished);
-            connectToService(commandConsumerFactory, "Command & Control").setHandler(c -> {
+            connectToService(
+                    commandConsumerFactory,
+                    "Command & Control",
+                    this::onCommandConnectionLost,
+                    this::onCommandConnectionEstablished)
+            .setHandler(c -> {
                 if (c.succeeded()) {
                     onCommandConnectionEstablished(c.result());
                 }
@@ -422,7 +428,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         return CompositeFuture.all(
                 closeServiceClient(messagingClient),
                 disconnectFromService(tenantClientFactory),
-                closeServiceClient(registrationServiceClient),
+                disconnectFromService(registrationClientFactory),
                 closeServiceClient(credentialsServiceClient),
                 disconnectFromService(commandConsumerFactory));
     }
@@ -553,8 +559,43 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * @throws IllegalArgumentException if factory is {@code null}.
      */
     protected final Future<HonoClient> connectToService(final ConnectionLifecycle factory, final String serviceName) {
+        return connectToService(factory, serviceName, null, null);
+    }
+
+    /**
+     * Establishes a connection to a Hono Service component.
+     *
+     * @param factory The client factory for the service that is to be connected.
+     * @param serviceName The name of the service that is to be connected (used for logging).
+     * @param disconnectListener A listener to invoke when the connection is lost unexpectedly
+     *                           or {@code null} if no listener should be invoked. 
+     * @param reconnectListener A listener to invoke when the connection has been re-established
+     *                          after it had been lost unexpectedly or {@code null} if no listener
+     *                          should be invoked. 
+     * @return A future that will succeed once the connection has been established. The future will fail if the
+     *         connection cannot be established.
+     * @throws NullPointerException if serviceName is {@code null}.
+     * @throws IllegalArgumentException if factory is {@code null}.
+     */
+    protected final Future<HonoClient> connectToService(
+            final ConnectionLifecycle factory,
+            final String serviceName,
+            final DisconnectListener disconnectListener,
+            final ReconnectListener reconnectListener) {
 
         Objects.requireNonNull(factory);
+        factory.addDisconnectListener(c -> {
+            LOG.info("lost connection to {}", serviceName);
+            if (disconnectListener != null) {
+                disconnectListener.onDisconnect(c);
+            }
+        });
+        factory.addReconnectListener(c -> {
+            LOG.info("connection to {} re-established", serviceName);
+            if (reconnectListener != null) {
+                reconnectListener.onReconnect(c);
+            }
+        });
         return factory.connect().map(c -> {
             LOG.info("connected to {}", serviceName);
             return c;
@@ -575,7 +616,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * @throws IllegalArgumentException if client is {@code null}.
      */
     protected final Future<HonoClient> connectToService(final HonoClient client, final String serviceName) {
-        return connectToService(client, serviceName, onConnect -> {}, onConnectionLost -> {});
+        return connectToService(client, serviceName, (Handler<HonoClient>) onConnect -> {}, (Handler<HonoClient>) onConnectionLost -> {});
     }
 
     /**
@@ -694,11 +735,11 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
                 .map(client -> client.isConnected())
                 .orElse(Future.failedFuture(new ServerErrorException(
                         HttpURLConnection.HTTP_UNAVAILABLE, "Tenant client factory is not set")));
-        final Future<Void> registrationCheck = Optional.ofNullable(registrationServiceClient)
+        final Future<Void> registrationCheck = Optional.ofNullable(registrationClientFactory)
                 .map(client -> client.isConnected())
                 .orElse(Future
                         .failedFuture(new ServerErrorException(
-                                HttpURLConnection.HTTP_UNAVAILABLE, "Device Registration service client is not set")));
+                                HttpURLConnection.HTTP_UNAVAILABLE, "Device Registration client factory is not set")));
         final Future<Void> credentialsCheck = Optional.ofNullable(credentialsServiceClient)
                 .map(client -> client.isConnected())
                 .orElse(Future.failedFuture(new ServerErrorException(
@@ -837,7 +878,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * @return The client.
      */
     protected final Future<RegistrationClient> getRegistrationClient(final String tenantId) {
-        return getRegistrationServiceClient().getOrCreateRegistrationClient(tenantId);
+        return getRegistrationClientFactory().getOrCreateRegistrationClient(tenantId);
     }
 
     /**

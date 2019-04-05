@@ -31,15 +31,21 @@ title = "Release Notes"
   `org.eclipse.hono.client.CommandConsumerFactory` instead of
   `org.eclipse.hono.client.CommandConnection` for creating
   `org.eclipse.hono.client.CommandConsumer` instances.
-  The `setCommandConnection` and `getCommandConnection` methods have been
-  renamed to `setCommandConsumerFactory` and `getCommandConsumerFactory`
+  The *setCommandConnection* and *getCommandConnection* methods have been
+  renamed to *setCommandConsumerFactory* and *getCommandConsumerFactory*
   correspondingly.
 * The `org.eclipse.hono.service.AbstractProtocolAdapterBase` class now uses
   `org.eclipse.hono.client.TenantClientFactory` instead of
   `org.eclipse.hono.client.HonoClient` for creating `org.eclipse.hono.client.TenantClient`
   instances.
-  The `setTenantServiceClient` and `getTenantServiceClient` methods have been
-  renamed to `setTenantClientFactory` and `getTenantClientFactory` correspondingly.
+  The *setTenantServiceClient* and *getTenantServiceClient* methods have been
+  renamed to *setTenantClientFactory* and *getTenantClientFactory* correspondingly.
+* The `org.eclipse.hono.service.AbstractProtocolAdapterBase` class now uses
+  `org.eclipse.hono.client.RegistrationClientFactory` instead of
+  `org.eclipse.hono.client.HonoClient` for creating
+  `org.eclipse.hono.client.RegistrationClient` instances.
+  The *setRegistrationServiceClient* and *getRegistrationServiceClient* methods have been
+  renamed to *setRegistrationClientFactory* and *getRegistrationClientFactory* correspondingly.
 
 ## 1.0-M1
 
