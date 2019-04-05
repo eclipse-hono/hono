@@ -96,21 +96,6 @@
         <version>${project.version}</version>
       </dependency>
       <dependency>
-        <groupId>io.vertx</groupId>
-        <artifactId>vertx-core</artifactId>
-        <version>${vertx.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>io.vertx</groupId>
-        <artifactId>vertx-proton</artifactId>
-        <version>${vertx.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>io.vertx</groupId>
-        <artifactId>vertx-web-client</artifactId>
-        <version>${vertx.version}</version>
-      </dependency>
-      <dependency>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot</artifactId>
         <version>${spring-boot.version}</version>
@@ -304,6 +289,16 @@
       </dependency>
       <dependency>
         <groupId>io.vertx</groupId>
+        <artifactId>vertx-core</artifactId>
+        <version>${vertx.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.vertx</groupId>
+        <artifactId>vertx-proton</artifactId>
+        <version>${vertx.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.vertx</groupId>
         <artifactId>vertx-mqtt</artifactId>
         <version>${vertx.version}</version>
       </dependency>
@@ -326,11 +321,6 @@
         <groupId>io.vertx</groupId>
         <artifactId>vertx-health-check</artifactId>
         <version>${vertx.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.eclipse.hono</groupId>
-        <artifactId>hono-dispatch-router</artifactId>
-        <version>${project.version}</version>
       </dependency>
       <dependency>
           <groupId>javax.annotation</groupId>
