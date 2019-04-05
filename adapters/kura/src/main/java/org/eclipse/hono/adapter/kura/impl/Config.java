@@ -57,7 +57,7 @@ public class Config extends AbstractAdapterConfig {
     }
 
     @Override
-    protected void customizeRegistrationServiceClientConfig(final RequestResponseClientConfigProperties props) {
+    protected void customizeRegistrationClientFactoryConfig(final RequestResponseClientConfigProperties props) {
         if (props.getName() == null) {
             props.setName(CONTAINER_ID_KURA_ADAPTER);
         }

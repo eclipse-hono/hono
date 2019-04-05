@@ -54,6 +54,7 @@ import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.RegistrationClient;
+import org.eclipse.hono.client.RegistrationClientFactory;
 import org.eclipse.hono.client.TenantClient;
 import org.eclipse.hono.client.TenantClientFactory;
 import org.eclipse.hono.service.metric.MetricsTags.Direction;
@@ -116,7 +117,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
     private TenantClientFactory tenantClientFactory;
     private HonoClient credentialsServiceClient;
     private HonoClient messagingServiceClient;
-    private HonoClient registrationServiceClient;
+    private RegistrationClientFactory registrationClientFactory;
     private CommandConsumerFactory commandConsumerFactory;
 
     private RegistrationClient registrationClient;
@@ -158,10 +159,9 @@ public class VertxBasedAmqpProtocolAdapterTest {
         when(registrationClient.assertRegistration(anyString(), any(), (SpanContext) any()))
                 .thenReturn(Future.succeededFuture(regAssertion));
 
-        registrationServiceClient = mock(HonoClient.class);
-        when(registrationServiceClient.connect(any(Handler.class)))
-                .thenReturn(Future.succeededFuture(registrationServiceClient));
-        when(registrationServiceClient.getOrCreateRegistrationClient(anyString()))
+        registrationClientFactory = mock(RegistrationClientFactory.class);
+        when(registrationClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoClient.class)));
+        when(registrationClientFactory.getOrCreateRegistrationClient(anyString()))
                 .thenReturn(Future.succeededFuture(registrationClient));
 
         commandConsumerFactory = mock(CommandConsumerFactory.class);
@@ -855,7 +855,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
         adapter.setInsecureAmqpServer(server);
         adapter.setTenantClientFactory(tenantClientFactory);
         adapter.setHonoMessagingClient(messagingServiceClient);
-        adapter.setRegistrationServiceClient(registrationServiceClient);
+        adapter.setRegistrationClientFactory(registrationClientFactory);
         adapter.setCredentialsServiceClient(credentialsServiceClient);
         adapter.setCommandConsumerFactory(commandConsumerFactory);
         adapter.setMetrics(metrics);

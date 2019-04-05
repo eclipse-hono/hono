@@ -35,6 +35,7 @@ import org.eclipse.hono.client.DisconnectListener;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.ReconnectListener;
 import org.eclipse.hono.client.RegistrationClient;
+import org.eclipse.hono.client.RegistrationClientFactory;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.TenantClientFactory;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
@@ -83,7 +84,7 @@ public class AbstractProtocolAdapterBaseTest {
     private AbstractProtocolAdapterBase<ProtocolAdapterProperties> adapter;
     private RegistrationClient registrationClient;
     private TenantClientFactory tenantService;
-    private HonoClient registrationService;
+    private RegistrationClientFactory registrationClientFactory;
     private HonoClient credentialsService;
     private HonoClient messagingService;
     private CommandConsumerFactory commandConsumerFactory;
@@ -98,11 +99,11 @@ public class AbstractProtocolAdapterBaseTest {
         tenantService = mock(TenantClientFactory.class);
         when(tenantService.connect()).thenReturn(Future.succeededFuture(mock(HonoClient.class)));
 
-        registrationService = mock(HonoClient.class);
-        when(registrationService.connect(any(Handler.class))).thenReturn(Future.succeededFuture(registrationService));
+        registrationClientFactory = mock(RegistrationClientFactory.class);
+        when(registrationClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoClient.class)));
 
         registrationClient = mock(RegistrationClient.class);
-        when(registrationService.getOrCreateRegistrationClient(anyString())).thenReturn(Future.succeededFuture(registrationClient));
+        when(registrationClientFactory.getOrCreateRegistrationClient(anyString())).thenReturn(Future.succeededFuture(registrationClient));
 
         credentialsService = mock(HonoClient.class);
         when(credentialsService.connect(any(Handler.class))).thenReturn(Future.succeededFuture(credentialsService));
@@ -116,7 +117,7 @@ public class AbstractProtocolAdapterBaseTest {
         properties = new ProtocolAdapterProperties();
         adapter = newProtocolAdapter(properties);
         adapter.setTenantClientFactory(tenantService);
-        adapter.setRegistrationServiceClient(registrationService);
+        adapter.setRegistrationClientFactory(registrationClientFactory);
         adapter.setCredentialsServiceClient(credentialsService);
         adapter.setHonoMessagingClient(messagingService);
         adapter.setCommandConsumerFactory(commandConsumerFactory);
@@ -143,7 +144,7 @@ public class AbstractProtocolAdapterBaseTest {
 
         // GIVEN an adapter that does not define a type name
         adapter = newProtocolAdapter(properties, null);
-        adapter.setRegistrationServiceClient(mock(HonoClient.class));
+        adapter.setRegistrationClientFactory(mock(HonoClient.class));
 
         // WHEN starting the adapter
         // THEN startup fails
@@ -171,7 +172,7 @@ public class AbstractProtocolAdapterBaseTest {
         adapter.startInternal().setHandler(ctx.asyncAssertSuccess(ok -> {
             // THEN the service clients have connected
             verify(tenantService).connect();
-            verify(registrationService).connect(any(Handler.class));
+            verify(registrationClientFactory).connect();
             verify(messagingService).connect(any(Handler.class));
             verify(credentialsService).connect(any(Handler.class));
             verify(commandConsumerFactory).connect();
@@ -225,7 +226,7 @@ public class AbstractProtocolAdapterBaseTest {
                 commandConnectionEstablishedHandler, commandConnectionLostHandler);
         adapter.setCredentialsServiceClient(credentialsService);
         adapter.setHonoMessagingClient(messagingService);
-        adapter.setRegistrationServiceClient(registrationService);
+        adapter.setRegistrationClientFactory(registrationClientFactory);
         adapter.setTenantClientFactory(tenantService);
         adapter.setCommandConsumerFactory(commandConsumerFactory);
     }

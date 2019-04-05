@@ -47,6 +47,7 @@ import org.eclipse.hono.client.CommandConsumerFactory;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.RegistrationClient;
+import org.eclipse.hono.client.RegistrationClientFactory;
 import org.eclipse.hono.client.TenantClient;
 import org.eclipse.hono.client.TenantClientFactory;
 import org.eclipse.hono.util.RegistrationConstants;
@@ -90,7 +91,7 @@ public class AbstractVertxBasedCoapAdapterTest {
     private HonoClient credentialsServiceClient;
     private TenantClientFactory tenantClientFactory;
     private HonoClient messagingClient;
-    private HonoClient registrationServiceClient;
+    private RegistrationClientFactory registrationClientFactory;
     private RegistrationClient regClient;
     private TenantClient tenantClient;
     private CoapAdapterProperties config;
@@ -127,10 +128,9 @@ public class AbstractVertxBasedCoapAdapterTest {
         messagingClient = mock(HonoClient.class);
         when(messagingClient.connect(any(Handler.class))).thenReturn(Future.succeededFuture(messagingClient));
 
-        registrationServiceClient = mock(HonoClient.class);
-        when(registrationServiceClient.connect(any(Handler.class)))
-                .thenReturn(Future.succeededFuture(registrationServiceClient));
-        when(registrationServiceClient.getOrCreateRegistrationClient(anyString()))
+        registrationClientFactory = mock(RegistrationClientFactory.class);
+        when(registrationClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoClient.class)));
+        when(registrationClientFactory.getOrCreateRegistrationClient(anyString()))
                 .thenReturn(Future.succeededFuture(regClient));
 
         commandConsumerFactory = mock(CommandConsumerFactory.class);
@@ -515,7 +515,7 @@ public class AbstractVertxBasedCoapAdapterTest {
         adapter.setCoapServer(server);
         adapter.setTenantClientFactory(tenantClientFactory);
         adapter.setHonoMessagingClient(messagingClient);
-        adapter.setRegistrationServiceClient(registrationServiceClient);
+        adapter.setRegistrationClientFactory(registrationClientFactory);
         if (complete) {
             adapter.setCredentialsServiceClient(credentialsServiceClient);
         }

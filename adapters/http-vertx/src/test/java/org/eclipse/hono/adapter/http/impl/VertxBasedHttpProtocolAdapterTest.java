@@ -37,6 +37,7 @@ import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.RegistrationClient;
+import org.eclipse.hono.client.RegistrationClientFactory;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.TenantClient;
 import org.eclipse.hono.client.TenantClientFactory;
@@ -92,7 +93,7 @@ public class VertxBasedHttpProtocolAdapterTest {
     private static HonoClient messagingClient;
     private static MessageSender telemetrySender;
     private static MessageSender eventSender;
-    private static HonoClient registrationServiceClient;
+    private static RegistrationClientFactory registrationClientFactory;
     private static HonoClientBasedAuthProvider<UsernamePasswordCredentials> usernamePasswordAuthProvider;
     private static HttpProtocolAdapterProperties config;
     private static VertxBasedHttpProtocolAdapter httpAdapter;
@@ -150,13 +151,13 @@ public class VertxBasedHttpProtocolAdapterTest {
             return null;
         }).when(messagingClient).shutdown(any(Handler.class));
 
-        registrationServiceClient = mock(HonoClient.class);
-        when(registrationServiceClient.connect(any(Handler.class))).thenReturn(Future.succeededFuture(registrationServiceClient));
+        registrationClientFactory = mock(RegistrationClientFactory.class);
+        when(registrationClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoClient.class)));
         doAnswer(invocation -> {
             final Handler<AsyncResult<Void>> shutdownHandler = invocation.getArgument(0);
             shutdownHandler.handle(Future.succeededFuture());
             return null;
-        }).when(registrationServiceClient).shutdown(any(Handler.class));
+        }).when(registrationClientFactory).disconnect(any(Handler.class));
 
         commandConsumerFactory = mock(CommandConsumerFactory.class);
         when(commandConsumerFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoClient.class)));
@@ -182,7 +183,7 @@ public class VertxBasedHttpProtocolAdapterTest {
         httpAdapter.setTenantClientFactory(tenantClientFactory);
         httpAdapter.setCredentialsServiceClient(credentialsServiceClient);
         httpAdapter.setHonoMessagingClient(messagingClient);
-        httpAdapter.setRegistrationServiceClient(registrationServiceClient);
+        httpAdapter.setRegistrationClientFactory(registrationClientFactory);
         httpAdapter.setCommandConsumerFactory(commandConsumerFactory);
         httpAdapter.setUsernamePasswordAuthProvider(usernamePasswordAuthProvider);
 
@@ -206,7 +207,7 @@ public class VertxBasedHttpProtocolAdapterTest {
 
         final RegistrationClient regClient = mock(RegistrationClient.class);
         when(regClient.assertRegistration(anyString(), any(), (SpanContext) any())).thenReturn(Future.succeededFuture(new JsonObject()));
-        when(registrationServiceClient.getOrCreateRegistrationClient(anyString())).thenReturn(Future.succeededFuture(regClient));
+        when(registrationClientFactory.getOrCreateRegistrationClient(anyString())).thenReturn(Future.succeededFuture(regClient));
 
         final TenantClient tenantClient = mock(TenantClient.class);
         doAnswer(invocation -> {
