@@ -27,6 +27,7 @@ import org.eclipse.hono.util.TenantObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.PostConstruct;
 import java.net.HttpURLConnection;
 import java.util.Objects;
 import java.util.Optional;
@@ -42,7 +43,7 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
     private final WebClient client;
     private String host;
     private int port = 9090;
-
+    private String queryUrl;
     /**
      * Creates a new PrometheusBasedResourceLimitChecks instance.
      *
@@ -58,11 +59,13 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
         Objects.requireNonNull(tenant);
         log.trace("Connections limit for tenant [{}] is [{}]", tenant.getTenantId(), tenant.getConnectionsLimit());
         if (tenant.getConnectionsLimit() != -1) {
-            return queryForSumInPrometheus(CONNECTIONS_METRIC_NAME, tenant)
+            final String queryParams = String.format("sum(%s{tenant=\"%s\"})", CONNECTIONS_METRIC_NAME,
+                    tenant.getTenantId());
+            return executeQuery(queryParams)
                     .recover(failure -> Future.succeededFuture(0L))
                     .compose(noOfConnections -> {
                         if (Optional.ofNullable(noOfConnections).orElse(0L) < tenant.getConnectionsLimit()) {
-                            return Future.succeededFuture();
+                            return Future.succeededFuture(tenant);
                         } else {
                             log.trace(
                                     "Connections limit exceeded for tenant. [tenant: {}, no.-Connections:{}, connections-limit:{}]",
@@ -118,11 +121,14 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
         }
     }
 
-    private Future<Long> queryForSumInPrometheus(final String metricName, final TenantObject tenant) {
+    @PostConstruct
+    private void init() {
+        queryUrl = String.format("http://%s:%s/api/v1/query", getHost(), getPort());
+    }
+
+    private Future<Long> executeQuery(final String queryParams) {
         final Future<Long> result = Future.future();
-        final String queryUrl = String.format("http://%s:%s/api/v1/query", getHost(), getPort());
-        final String queryParams = String.format("sum(%s{tenant=\"%s\"})", metricName, tenant.getTenantId());
-        log.debug("Prometheus backend url: {}, queryParams: {}", queryUrl, queryParams);
+        log.trace("Prometheus backend url: {}, queryParams: {}", queryUrl, queryParams);
         client.getAbs(queryUrl)
                 .addQueryParam("query", queryParams)
                 .expect(ResponsePredicate.SC_OK)
@@ -133,13 +139,13 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
                             Objects.requireNonNull(response);
                             result.complete(extractValue(response.bodyAsJsonObject()));
                         } catch (final Exception e) {
-                            log.warn("Error fetching result from prometheus for tenant [{}]. Reason [{}]",
-                                    tenant.getTenantId(), e.getMessage());
+                            log.warn("Error fetching result from prometheus [url:{}, params:{}]. Reason [{}]",
+                                    queryUrl, queryParams, e.getMessage());
                             result.fail(String.format("Error fetching result from prometheus [%s]", e.getMessage()));
                         }
                     } else {
-                        log.warn("Error fetching result from prometheus for tenant [{}]. Reason [{}]",
-                                tenant.getTenantId(), sendResult.cause().getMessage());
+                        log.warn("Error fetching result from prometheus [url:{}, params:{}]. Reason [{}]",
+                                queryUrl, queryParams, sendResult.cause().getMessage());
                         result.fail(String.format("Error fetching result from prometheus [%s]",
                                 sendResult.cause().getMessage()));
                     }
