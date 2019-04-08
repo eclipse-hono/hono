@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -17,7 +17,7 @@ import java.util.Objects;
 import java.util.Optional;
 
 import org.eclipse.hono.auth.Device;
-import org.eclipse.hono.client.HonoClient;
+import org.eclipse.hono.client.CredentialsClientFactory;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
@@ -41,14 +41,14 @@ public class X509AuthProvider extends CredentialsApiAuthProvider<SubjectDnCreden
     /**
      * Creates a new provider for a given configuration.
      * 
-     * @param credentialsServiceClient The client.
+     * @param credentialsClientFactory The factory to use for creating a Credentials service client.
      * @param config The configuration.
      * @param tracer The tracer instance.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
     @Autowired
-    public X509AuthProvider(final HonoClient credentialsServiceClient, final ServiceConfigProperties config, final Tracer tracer) {
-        super(credentialsServiceClient, tracer);
+    public X509AuthProvider(final CredentialsClientFactory credentialsClientFactory, final ServiceConfigProperties config, final Tracer tracer) {
+        super(credentialsClientFactory, tracer);
         this.config = Objects.requireNonNull(config);
     }
 

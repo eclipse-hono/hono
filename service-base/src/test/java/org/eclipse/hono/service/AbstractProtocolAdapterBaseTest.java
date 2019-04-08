@@ -31,6 +31,7 @@ import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.CommandConsumerFactory;
+import org.eclipse.hono.client.CredentialsClientFactory;
 import org.eclipse.hono.client.DisconnectListener;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.ReconnectListener;
@@ -85,7 +86,7 @@ public class AbstractProtocolAdapterBaseTest {
     private RegistrationClient registrationClient;
     private TenantClientFactory tenantService;
     private RegistrationClientFactory registrationClientFactory;
-    private HonoClient credentialsService;
+    private CredentialsClientFactory credentialsClientFactory;
     private HonoClient messagingService;
     private CommandConsumerFactory commandConsumerFactory;
 
@@ -105,8 +106,8 @@ public class AbstractProtocolAdapterBaseTest {
         registrationClient = mock(RegistrationClient.class);
         when(registrationClientFactory.getOrCreateRegistrationClient(anyString())).thenReturn(Future.succeededFuture(registrationClient));
 
-        credentialsService = mock(HonoClient.class);
-        when(credentialsService.connect(any(Handler.class))).thenReturn(Future.succeededFuture(credentialsService));
+        credentialsClientFactory = mock(CredentialsClientFactory.class);
+        when(credentialsClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoClient.class)));
 
         messagingService = mock(HonoClient.class);
         when(messagingService.connect(any(Handler.class))).thenReturn(Future.succeededFuture(messagingService));
@@ -118,7 +119,7 @@ public class AbstractProtocolAdapterBaseTest {
         adapter = newProtocolAdapter(properties);
         adapter.setTenantClientFactory(tenantService);
         adapter.setRegistrationClientFactory(registrationClientFactory);
-        adapter.setCredentialsServiceClient(credentialsService);
+        adapter.setCredentialsClientFactory(credentialsClientFactory);
         adapter.setHonoMessagingClient(messagingService);
         adapter.setCommandConsumerFactory(commandConsumerFactory);
 
@@ -174,7 +175,7 @@ public class AbstractProtocolAdapterBaseTest {
             verify(tenantService).connect();
             verify(registrationClientFactory).connect();
             verify(messagingService).connect(any(Handler.class));
-            verify(credentialsService).connect(any(Handler.class));
+            verify(credentialsClientFactory).connect();
             verify(commandConsumerFactory).connect();
             verify(commandConsumerFactory).addDisconnectListener(any(DisconnectListener.class));
             verify(commandConsumerFactory).addReconnectListener(any(ReconnectListener.class));
@@ -224,7 +225,7 @@ public class AbstractProtocolAdapterBaseTest {
 
         adapter = newProtocolAdapter(properties, "test", startupHandler,
                 commandConnectionEstablishedHandler, commandConnectionLostHandler);
-        adapter.setCredentialsServiceClient(credentialsService);
+        adapter.setCredentialsClientFactory(credentialsClientFactory);
         adapter.setHonoMessagingClient(messagingService);
         adapter.setRegistrationClientFactory(registrationClientFactory);
         adapter.setTenantClientFactory(tenantService);

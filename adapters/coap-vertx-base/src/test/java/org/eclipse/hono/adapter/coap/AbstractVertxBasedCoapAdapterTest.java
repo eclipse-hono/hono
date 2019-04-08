@@ -44,6 +44,7 @@ import org.eclipse.californium.core.server.resources.Resource;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.CommandConsumerFactory;
+import org.eclipse.hono.client.CredentialsClientFactory;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.RegistrationClient;
@@ -88,7 +89,7 @@ public class AbstractVertxBasedCoapAdapterTest {
     @Rule
     public final Timeout globalTimeout = Timeout.seconds(5);
 
-    private HonoClient credentialsServiceClient;
+    private CredentialsClientFactory credentialsClientFactory;
     private TenantClientFactory tenantClientFactory;
     private HonoClient messagingClient;
     private RegistrationClientFactory registrationClientFactory;
@@ -121,9 +122,8 @@ public class AbstractVertxBasedCoapAdapterTest {
         when(tenantClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoClient.class)));
         when(tenantClientFactory.getOrCreateTenantClient()).thenReturn(Future.succeededFuture(tenantClient));
 
-        credentialsServiceClient = mock(HonoClient.class);
-        when(credentialsServiceClient.connect(any(Handler.class)))
-                .thenReturn(Future.succeededFuture(credentialsServiceClient));
+        credentialsClientFactory = mock(CredentialsClientFactory.class);
+        when(credentialsClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoClient.class)));
 
         messagingClient = mock(HonoClient.class);
         when(messagingClient.connect(any(Handler.class))).thenReturn(Future.succeededFuture(messagingClient));
@@ -517,7 +517,7 @@ public class AbstractVertxBasedCoapAdapterTest {
         adapter.setHonoMessagingClient(messagingClient);
         adapter.setRegistrationClientFactory(registrationClientFactory);
         if (complete) {
-            adapter.setCredentialsServiceClient(credentialsServiceClient);
+            adapter.setCredentialsClientFactory(credentialsClientFactory);
         }
         adapter.setCommandConsumerFactory(commandConsumerFactory);
         adapter.setMetrics(mock(CoapAdapterMetrics.class));

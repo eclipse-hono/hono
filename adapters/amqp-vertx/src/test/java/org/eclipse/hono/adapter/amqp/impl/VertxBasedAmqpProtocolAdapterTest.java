@@ -50,6 +50,7 @@ import org.eclipse.hono.client.CommandConsumerFactory;
 import org.eclipse.hono.client.CommandContext;
 import org.eclipse.hono.client.CommandResponse;
 import org.eclipse.hono.client.CommandResponseSender;
+import org.eclipse.hono.client.CredentialsClientFactory;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.MessageSender;
@@ -115,7 +116,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
     public Timeout globalTimeout = new Timeout(5, TimeUnit.SECONDS);
 
     private TenantClientFactory tenantClientFactory;
-    private HonoClient credentialsServiceClient;
+    private CredentialsClientFactory credentialsClientFactory;
     private HonoClient messagingServiceClient;
     private RegistrationClientFactory registrationClientFactory;
     private CommandConsumerFactory commandConsumerFactory;
@@ -146,9 +147,8 @@ public class VertxBasedAmqpProtocolAdapterTest {
         when(tenantClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoClient.class)));
         when(tenantClientFactory.getOrCreateTenantClient()).thenReturn(Future.succeededFuture(tenantClient));
 
-        credentialsServiceClient = mock(HonoClient.class);
-        when(credentialsServiceClient.connect(any(Handler.class)))
-                .thenReturn(Future.succeededFuture(credentialsServiceClient));
+        credentialsClientFactory = mock(CredentialsClientFactory.class);
+        when(credentialsClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoClient.class)));
 
         messagingServiceClient = mock(HonoClient.class);
         when(messagingServiceClient.connect(any(Handler.class)))
@@ -856,7 +856,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
         adapter.setTenantClientFactory(tenantClientFactory);
         adapter.setHonoMessagingClient(messagingServiceClient);
         adapter.setRegistrationClientFactory(registrationClientFactory);
-        adapter.setCredentialsServiceClient(credentialsServiceClient);
+        adapter.setCredentialsClientFactory(credentialsClientFactory);
         adapter.setCommandConsumerFactory(commandConsumerFactory);
         adapter.setMetrics(metrics);
         return adapter;

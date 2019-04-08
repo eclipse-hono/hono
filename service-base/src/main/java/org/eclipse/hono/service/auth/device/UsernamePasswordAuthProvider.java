@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -20,7 +20,7 @@ import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.auth.HonoPasswordEncoder;
 import org.eclipse.hono.auth.SpringBasedHonoPasswordEncoder;
 import org.eclipse.hono.client.ClientErrorException;
-import org.eclipse.hono.client.HonoClient;
+import org.eclipse.hono.client.CredentialsClientFactory;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.util.CredentialsObject;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -44,20 +44,20 @@ public final class UsernamePasswordAuthProvider extends CredentialsApiAuthProvid
     /**
      * Creates a new provider for a given configuration.
      * 
-     * @param credentialsServiceClient The client.
+     * @param credentialsClientFactory The factory to use for creating a Credentials service client.
      * @param config The configuration.
      * @param tracer The tracer instance.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
     @Autowired
-    public UsernamePasswordAuthProvider(final HonoClient credentialsServiceClient, final ServiceConfigProperties config, final Tracer tracer) {
-        this(credentialsServiceClient, new SpringBasedHonoPasswordEncoder(), config, tracer);
+    public UsernamePasswordAuthProvider(final CredentialsClientFactory credentialsClientFactory, final ServiceConfigProperties config, final Tracer tracer) {
+        this(credentialsClientFactory, new SpringBasedHonoPasswordEncoder(), config, tracer);
     }
 
     /**
      * Creates a new provider for a given configuration.
      * 
-     * @param credentialsServiceClient The client.
+     * @param credentialsClientFactory The factory to use for creating a Credentials service client.
      * @param pwdEncoder The object to use for validating hashed passwords.
      * @param config The configuration.
      * @param tracer The tracer instance.
@@ -65,12 +65,12 @@ public final class UsernamePasswordAuthProvider extends CredentialsApiAuthProvid
      */
     @Autowired
     public UsernamePasswordAuthProvider(
-            final HonoClient credentialsServiceClient,
+            final CredentialsClientFactory credentialsClientFactory,
             final HonoPasswordEncoder pwdEncoder,
             final ServiceConfigProperties config,
             final Tracer tracer) {
 
-        super(credentialsServiceClient, tracer);
+        super(credentialsClientFactory, tracer);
         this.config = Objects.requireNonNull(config);
         this.pwdEncoder = Objects.requireNonNull(pwdEncoder);
     }

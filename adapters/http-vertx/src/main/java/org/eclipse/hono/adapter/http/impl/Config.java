@@ -63,7 +63,7 @@ public class Config extends AbstractAdapterConfig {
     }
 
     @Override
-    protected void customizeCredentialsServiceClientConfig(final RequestResponseClientConfigProperties props) {
+    protected void customizeCredentialsClientFactoryConfig(final RequestResponseClientConfigProperties props) {
         if (props.getName() == null) {
             props.setName(CONTAINER_ID_HONO_HTTP_ADAPTER);
         }

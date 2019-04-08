@@ -171,10 +171,10 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
         authHandler.append(new X509AuthHandler(
                 new TenantServiceBasedX509Authentication(getTenantClientFactory(), tracer),
                 Optional.ofNullable(clientCertAuthProvider).orElse(
-                        new X509AuthProvider(getCredentialsServiceClient(), getConfig(), tracer))));
+                        new X509AuthProvider(getCredentialsClientFactory(), getConfig(), tracer))));
         authHandler.append(new HonoBasicAuthHandler(
                 Optional.ofNullable(usernamePasswordAuthProvider).orElse(
-                        new UsernamePasswordAuthProvider(getCredentialsServiceClient(), getConfig(), tracer)),
+                        new UsernamePasswordAuthProvider(getCredentialsClientFactory(), getConfig(), tracer)),
                 getConfig().getRealm(), tracer));
 
         router.route().handler(authHandler);
@@ -521,7 +521,7 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
 
     private Future<CredentialsObject> getGatewayCredentials(final String tenantId, final JsonObject data) {
         final String authId = data.getString(LoraConstants.FIELD_AUTH_ID);
-        return getCredentialsServiceClient().getOrCreateCredentialsClient(tenantId)
+        return getCredentialsClientFactory().getOrCreateCredentialsClient(tenantId)
                 .compose(credentialsClient -> credentialsClient.get(LoraConstants.FIELD_PSK, authId));
     }
 

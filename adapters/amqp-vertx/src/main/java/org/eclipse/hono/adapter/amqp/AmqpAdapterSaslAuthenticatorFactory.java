@@ -26,12 +26,11 @@ import javax.net.ssl.SSLPeerUnverifiedException;
 import javax.security.auth.login.CredentialException;
 import javax.security.auth.x500.X500Principal;
 
-import io.vertx.core.CompositeFuture;
 import org.apache.qpid.proton.engine.Sasl;
 import org.apache.qpid.proton.engine.Sasl.SaslOutcome;
 import org.apache.qpid.proton.engine.Transport;
 import org.eclipse.hono.auth.Device;
-import org.eclipse.hono.client.HonoClient;
+import org.eclipse.hono.client.CredentialsClientFactory;
 import org.eclipse.hono.client.TenantClientFactory;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.auth.DeviceUser;
@@ -55,6 +54,7 @@ import org.slf4j.LoggerFactory;
 import io.opentracing.Span;
 import io.opentracing.Tracer;
 import io.vertx.core.AsyncResult;
+import io.vertx.core.CompositeFuture;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -78,7 +78,7 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
 
     private final ProtocolAdapterProperties config;
     private final TenantClientFactory tenantClientFactory;
-    private final HonoClient credentialsServiceClient;
+    private final CredentialsClientFactory credentialsClientFactory;
     private final Tracer tracer;
     private final Supplier<Span> spanFactory;
     private final ConnectionLimitManager connectionLimitManager;
@@ -90,7 +90,7 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
      * {@code [<authId>@<tenantId>]}.
      *
      * @param tenantClientFactory The factory to use for creating tenant a Tenant service client.
-     * @param credentialsServiceClient The service client to use for verifying credentials.
+     * @param credentialsClientFactory The factory to use for creating a Credentials service client.
      * @param config The protocol adapter configuration object.
      * @param tracer The tracer instance.
      * @param spanFactory The factory to use for creating and starting an OpenTracing span to
@@ -103,7 +103,7 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
      */
     public AmqpAdapterSaslAuthenticatorFactory(
             final TenantClientFactory tenantClientFactory,
-            final HonoClient credentialsServiceClient,
+            final CredentialsClientFactory credentialsClientFactory,
             final ProtocolAdapterProperties config,
             final Tracer tracer,
             final Supplier<Span> spanFactory,
@@ -111,7 +111,7 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
             final ResourceLimitChecks resourceLimitChecks) {
 
         this.tenantClientFactory = Objects.requireNonNull(tenantClientFactory, "Tenant client factory cannot be null");
-        this.credentialsServiceClient = Objects.requireNonNull(credentialsServiceClient, "Credentials client cannot be null");
+        this.credentialsClientFactory = Objects.requireNonNull(credentialsClientFactory, "Credentials client factory cannot be null");
         this.config = Objects.requireNonNull(config, "configuration cannot be null");
         this.tracer = Objects.requireNonNull(tracer);
         this.spanFactory = Objects.requireNonNull(spanFactory);
@@ -123,7 +123,7 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
     public ProtonSaslAuthenticator create() {
         return new AmqpAdapterSaslAuthenticator(
                 tenantClientFactory,
-                credentialsServiceClient,
+                credentialsClientFactory,
                 config,
                 tracer,
                 spanFactory.get(),
@@ -140,7 +140,7 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
 
         private final ProtocolAdapterProperties config;
         private final TenantClientFactory tenantClientFactory;
-        private final HonoClient credentialsServiceClient;
+        private final CredentialsClientFactory credentialsClientFactory;
         private final Tracer tracer;
         private final Span currentSpan;
         private final ConnectionLimitManager connectionLimitManager;
@@ -156,7 +156,7 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
 
         AmqpAdapterSaslAuthenticator(
                 final TenantClientFactory tenantClientFactory,
-                final HonoClient credentialsServiceClient,
+                final CredentialsClientFactory credentialsClientFactory,
                 final ProtocolAdapterProperties config,
                 final Tracer tracer,
                 final Span currentSpan,
@@ -164,7 +164,7 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
                 final ResourceLimitChecks resourceLimitChecks) {
 
             this.tenantClientFactory = tenantClientFactory;
-            this.credentialsServiceClient = credentialsServiceClient;
+            this.credentialsClientFactory = credentialsClientFactory;
             this.config = config;
             this.tracer = tracer;
             this.currentSpan = currentSpan;
@@ -350,14 +350,14 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
 
         private HonoClientBasedAuthProvider<UsernamePasswordCredentials> getUsernamePasswordAuthProvider() {
             if (usernamePasswordAuthProvider == null) {
-                usernamePasswordAuthProvider = new UsernamePasswordAuthProvider(credentialsServiceClient, config, tracer);
+                usernamePasswordAuthProvider = new UsernamePasswordAuthProvider(credentialsClientFactory, config, tracer);
             }
             return usernamePasswordAuthProvider;
         }
 
         private HonoClientBasedAuthProvider<SubjectDnCredentials> getCertificateAuthProvider() {
             if (clientCertAuthProvider == null) {
-                clientCertAuthProvider = new X509AuthProvider(credentialsServiceClient, config, tracer);
+                clientCertAuthProvider = new X509AuthProvider(credentialsClientFactory, config, tracer);
             }
             return clientCertAuthProvider;
         }
