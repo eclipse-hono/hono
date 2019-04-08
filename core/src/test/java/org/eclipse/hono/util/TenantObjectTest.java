@@ -304,7 +304,7 @@ public class TenantObjectTest {
         final JsonObject limitsConfig = new JsonObject()
                 .put(TenantConstants.MAX_CONNECTIONS, 2);
         final TenantObject obj = TenantObject.from(Constants.DEFAULT_TENANT, true);
-        obj.setProperty(TenantConstants.LIMITS, limitsConfig);
+        obj.setProperty(TenantConstants.RESOURCE_LIMITS, limitsConfig);
         assertThat(obj.getConnectionsLimit(), is(2L));
     }
 

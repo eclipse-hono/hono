@@ -505,7 +505,7 @@ public final class TenantObject extends JsonBackedValueObject {
      */
     @JsonIgnore
     public long getConnectionsLimit() {
-        return Optional.ofNullable(getProperty(TenantConstants.LIMITS))
+        return Optional.ofNullable(getProperty(TenantConstants.RESOURCE_LIMITS))
                 .map(limits -> getProperty((JsonObject) limits, TenantConstants.MAX_CONNECTIONS,
                         (Number) TenantConstants.DEFAULT_MAX_CONNECTIONS).longValue())
                 .orElse(TenantConstants.DEFAULT_MAX_CONNECTIONS);

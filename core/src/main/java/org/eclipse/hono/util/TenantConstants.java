@@ -75,9 +75,9 @@ public final class TenantConstants extends RequestResponseApiConstants {
     public static final String EVENT_BUS_ADDRESS_TENANT_IN = "tenant.in";
 
     /**
-     * The name of the property that contains the configuration options for limits.
+     * The name of the property that contains the configuration options for the resource limits.
      */
-    public static final String LIMITS = "limits";
+    public static final String RESOURCE_LIMITS = "resource-limits";
 
     /**
      * The default value for the maximum number of connections to be allowed is -1, which implies no limit.
