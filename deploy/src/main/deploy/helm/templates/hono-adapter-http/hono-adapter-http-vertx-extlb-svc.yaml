@@ -1,3 +1,4 @@
+{{if eq .Values.useLoadBalancer true}}
 ---
 apiVersion: v1
 kind: Service
@@ -7,24 +8,16 @@ metadata:
     version: "{{ .Chart.AppVersion }}"
     group: {{ .Values.project.groupId }}
     hono-metrics: prometheus
-  name: hono-adapter-http-vertx
+  name: hono-adapter-http-vertx-extlb
 spec:
+  type: LoadBalancer
   ports:
-  {{- if eq .Values.useLoadBalancer false}}
   - name: http
-    nodePort: 30080
     port: 8080
-    protocol: TCP
     targetPort: 8080
   - name: https
-    nodePort: 30443
     port: 8443
-    protocol: TCP
     targetPort: 8443
-  {{- end}}
-  - name: health
-    port: {{ .Values.monitoring.prometheus.port }}
   selector:
     app: hono-adapter-http-vertx
-    group: {{ .Values.project.groupId }}
-  type: NodePort
+{{end}}

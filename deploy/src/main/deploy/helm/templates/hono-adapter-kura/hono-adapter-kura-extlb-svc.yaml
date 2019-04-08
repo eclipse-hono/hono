@@ -1,3 +1,4 @@
+{{if eq .Values.useLoadBalancer true}}
 ---
 apiVersion: v1
 kind: Service
@@ -7,24 +8,16 @@ metadata:
     version: "{{ .Chart.AppVersion }}"
     group: {{ .Values.project.groupId }}
     hono-metrics: prometheus
-  name: hono-adapter-kura
+  name: hono-adapter-kura-extlb
 spec:
+  type: LoadBalancer
   ports:
-  {{- if eq .Values.useLoadBalancer false}}
   - name: mqtt
-    nodePort: 31884
-    port: 1883
-    protocol: TCP
+    port: 11883
     targetPort: 1883
   - name: secure-mqtt
-    nodePort: 30884
-    port: 8883
-    protocol: TCP
+    port: 18883
     targetPort: 8883
-  {{- end}}
-  - name: health
-    port: {{ .Values.monitoring.prometheus.port }}
   selector:
     app: hono-adapter-kura
-    group: {{ .Values.project.groupId }}
-  type: NodePort
+{{end}}

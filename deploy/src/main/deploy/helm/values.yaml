@@ -13,6 +13,10 @@ artemis:
   image:
     name: ${artemis.image.name}
 
+hono:
+  image:
+    repoPrefix: eclipse
+
 defaultJavaOptions: ${default-java-options}
 
 # the port that the Hono components' Prometheus scraping endpoint is exposed
@@ -23,9 +27,13 @@ monitoring:
 # the port that the Hono components' health check resources are exposed at
 healthCheckPort: ${vertx.health.port}
 
-# whether we are deploying to OpenShift (true) or plain Kubernetes (false)
+# whether we are deploying to OpenShift (platform: openshift) or plain Kubernetes (platform: kubernetes)
 # this flag is used to determine whether we need to deploy Route resources as well
-openshift: false
+platform: kubernetes
+
+# this flag is used to determine whether we need to deploy service type "LoadBalancer" for external services
+# do not use with "platform: openshift".
+useLoadBalancer: false
 
 # Default values for prometheus-operator.
 # This is a YAML-formatted file.

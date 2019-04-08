@@ -21,7 +21,7 @@ spec:
         group: {{ .Values.project.groupId }}
     spec:
       containers:
-      - image: eclipse/hono-adapter-kura:{{ .Chart.AppVersion }}
+      - image: {{ .Values.hono.image.repoPrefix }}/hono-adapter-kura:{{ .Chart.AppVersion }}
         imagePullPolicy: IfNotPresent
         name: eclipse-hono-adapter-kura
         ports:

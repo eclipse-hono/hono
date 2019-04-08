@@ -1,4 +1,4 @@
-{{if eq .Values.useLoadBalancer false}}
+{{if eq .Values.useLoadBalancer true}}
 ---
 apiVersion: v1
 kind: Service
@@ -7,22 +7,17 @@ metadata:
     app: amqp-messaging-network
     version: "{{ .Chart.AppVersion }}"
     group: {{ .Values.project.groupId }}
-  name: hono-dispatch-router-ext
+  name: hono-dispatch-router-extlb
 spec:
+  type: LoadBalancer
   ports:
   - name: amqps
-    nodePort: 30671
-    port: 5671
-    protocol: TCP
+    port: 15671
     targetPort: 5671
   - name: amqp
-    nodePort: 30672
-    port: 5672
-    protocol: TCP
+    port: 15672
     targetPort: 5672
   selector:
     app: amqp-messaging-network
     role: router
-    group: {{ .Values.project.groupId }}
-  type: NodePort
 {{end}}
