@@ -15,6 +15,7 @@ spec:
     port: 5671
     protocol: TCP
     targetPort: 5671
+  {{- if eq .Values.useLoadBalancer false}}
   - name: http
     nodePort: 31080
     port: 8080
@@ -25,6 +26,7 @@ spec:
     port: 8443
     protocol: TCP
     targetPort: 8443
+  {{- end}}
   - name: health
     port: {{ .Values.monitoring.prometheus.port }}
   selector:

@@ -1,3 +1,4 @@
+{{if eq .Values.useLoadBalancer true}}
 ---
 apiVersion: v1
 kind: Service
@@ -7,24 +8,16 @@ metadata:
     version: "{{ .Chart.AppVersion }}"
     group: {{ .Values.project.groupId }}
     hono-metrics: prometheus
-  name: hono-adapter-amqp-vertx
+  name: hono-adapter-amqp-vertx-extlb
 spec:
+  type: LoadBalancer
   ports:
-  {{- if eq .Values.useLoadBalancer false}}
   - name: amqp
-    nodePort: 32672
     port: 5672
-    protocol: TCP
     targetPort: 5672
   - name: amqps
-    nodePort: 32671
     port: 5671
-    protocol: TCP
     targetPort: 5671
-  {{- end}}
-  - name: health
-    port: {{ .Values.monitoring.prometheus.port }}
   selector:
     app: hono-adapter-amqp-vertx
-    group: {{ .Values.project.groupId }}
-  type: NodePort
+{{end}}

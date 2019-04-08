@@ -21,7 +21,7 @@ spec:
         group: {{ .Values.project.groupId }}
     spec:
       containers:
-      - image: eclipse/hono-adapter-mqtt-vertx:{{ .Chart.AppVersion }}
+      - image: {{ .Values.hono.image.repoPrefix }}/hono-adapter-mqtt-vertx:{{ .Chart.AppVersion }}
         imagePullPolicy: IfNotPresent
         name: eclipse-hono-adapter-mqtt-vertx
         ports:

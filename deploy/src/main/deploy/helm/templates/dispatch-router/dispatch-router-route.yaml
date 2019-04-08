@@ -1,4 +1,4 @@
-{{if eq .Values.openshift true}}
+{{if eq .Values.platform "openshift"}}
 ---
 apiVersion: v1
 kind: Route
