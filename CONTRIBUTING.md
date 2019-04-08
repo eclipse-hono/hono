@@ -8,7 +8,7 @@ Here is a (non-exclusive, non-prioritized) list of things you might be able to h
 * bug reports
 * bug fixes
 * improvements regarding code quality e.g. improving readability, performance, modularity etc.
-* documentation (Getting Started guide, Examples, Deployment instructions ni cloud environments)
+* documentation (Getting Started guide, Examples, Deployment instructions for cloud environments)
 * features (both ideas and code are welcome)
 
 In order to get you started as fast as possible we need to go through some organizational issues first, though.
@@ -27,7 +27,7 @@ In order to do so:
 If you don't already have an account simply [register on the Eclipse web site](https://dev.eclipse.org/site_login/createaccount.php).
   * Once you have your account, log in to the [projects portal](https://projects.eclipse.org/), select *My Account* and then the *Contributor License Agreement* tab.
 
-* Add your GiHub username to your Eclipse Foundation account. Log in to Eclipse and go to [Edit my account](https://dev.eclipse.org/site_login/myaccount.php).
+* Add your GitHub username to your Eclipse Foundation account. Log in to Eclipse and go to [Edit my account](https://dev.eclipse.org/site_login/myaccount.php).
 
 The easiest way to contribute code/patches/whatever is by creating a GitHub pull request (PR). When you do make sure that you *Sign-off* your commit records using the same email address used for your Eclipse account.
 
