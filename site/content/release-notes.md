@@ -25,6 +25,10 @@ title = "Release Notes"
 
 ### API Changes
 
+* The optional operations defined by the Tenant, Device Registration and Credentials API
+  have been deprecated. They will be removed from Hono 1.0 altogether.
+  A new HTTP based API will be defined instead which can then be used to *manage* the content
+  of a device registry.
 * The `org.eclipse.hono.client.MessageSender` interface's *send* methods have been changed
   to no longer accept a *registration assertion token* which became obsolete with the removal
   of the *Hono Messaging* component. The *isRegistrationAssertionRequired* method has also been

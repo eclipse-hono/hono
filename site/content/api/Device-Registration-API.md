@@ -3,7 +3,7 @@ title = "Device Registration API"
 weight = 425
 +++
 
-The *Device Registration API* is used to make Hono aware of devices that will connect to the service and send telemetry data.
+The *Device Registration API* is used to make Eclipse Hono&trade; aware of devices that will connect to the service and send telemetry data.
 It can be used by *Protocol Adapters* to register devices that are not directly connected to Hono using an AMQP 1.0 connection.
 *Solutions* and other consumers may use the API to obtain information about a single device that is registered to Hono.
 <!--more-->
@@ -24,12 +24,80 @@ This flow of messages is illustrated by the following sequence diagram (showing 
 
 ![Device Registration message flow preconditions](../connectToDeviceRegistration.png)
 
-# Operations
+# Mandatory Operations
+
+The operations described in the following sections are invoked by Hono's components during run time and are therefore mandatory to implement.
+
+## Assert Device Registration
+
+Clients use this command to get a signed *assertion* that a device is registered for a particular tenant and is enabled. The assertion is supposed to be included when [uploading telemetry data]({{< relref "Telemetry-API.md#upload-telemetry-data" >}}) or [publishing an event]({{< relref "Event-API.md#send-event" >}}) for a device so that the Telemetry or Event service implementation does not need to call out to the Device Registration service on every message in order to verify the device's registration status.
+
+This operation is *mandatory* to implement.
+
+**Message Flow**
+
+The following sequence diagram illustrates the flow of messages involved in a *Client* getting an assertion of a device registration.
+
+![Assert Device Registration message flow](../assertDeviceRegistration_Success.png)
+
+
+**Request Message Format**
+
+The following table provides an overview of the properties a client needs to set on a message to get registration information in addition to the [Standard Request Properties]({{< relref "#standard-request-properties" >}}).
+
+| Name         | Mandatory | Location                 | AMQP Type | Description |
+| :----------- | :-------: | :----------------------- | :-------- | :---------- |
+| *subject*    | yes       | *properties*             | *string*  | MUST be set to `assert`. |
+| *gateway_id* | no        | *application-properties* | *string*  | The identifier of the gateway that wants to get an assertion *on behalf* of another device (given in the *device_id* property).<br>An implementation SHOULD verify that the gateway exists, is enabled and is authorized to get an assertion for, and thus send data on behalf of, the device. |
+
+The body of the message SHOULD be empty and will be ignored if it is not.
+
+**Response Message Format**
+
+A response to an *assertion* request contains the [Standard Response Properties]({{< relref "#standard-response-properties" >}}).
+
+The body of the response message consists of a single *Data* section containing a UTF-8 encoded string representation of a single JSON object having the following properties:
+
+| Name             | Mandatory | JSON Type     | Description |
+| :--------------- | :-------: | :------------ | :---------- |
+| *device-id*      | *yes*     | *string*      | The ID of the device that is subject of the assertion. |
+| *assertion*      | *yes*     | *string*      | A [JSON Web Token](https://jwt.io/introduction/) which MUST contain the device id (`sub` claim), the tenant id (private `ten` claim) and an expiration time (`exp` claim). The token MAY contain additional claims as well. A client SHOULD silently ignore claims it does not understand. |
+| *defaults*       | *no*      | *object*      | Default values to be used by protocol adapters for augmenting messages from devices with missing information like a *content type*. It is up to the discretion of a protocol adapter if and how to use the given default values when processing messages published by the device. |
+
+Below is an example for a payload of a response to an *assert* request for device `4711` which also includes a default *content-type*:
+~~~json
+{
+  "device-id" : "4711",
+  "assertion" : "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI0NzExIiwidGVuIjoiREVGQVVMVF9URU5BTlQiLCJleHAiOjE1MDMwMTY0MzJ9.Gz8VYpLso-IuasLrSm6YVg1irofz7RKEYS4kM2CUQ5o",
+  "defaults": {
+    "content-type": "application/vnd.acme+json"
+  }
+}
+~~~
+
+The response message's *status* property may contain the following codes:
+
+| Code  | Description |
+| :---- | :---------- |
+| *200* | OK, the device is registered for the given tenant and is enabled. The payload contains the signed assertion. |
+| *403* | Forbidden, the gateway with the given *gateway id* either does not exist, is not enabled or is not authorized to get an assertion for the device with the given *device id*. |
+| *404* | Not Found, there is no device registered with the given *device id* within the given *tenant id* or the device is not enabled. |
+
+For status codes indicating an error (codes in the `400 - 499` range) the message body MAY contain a detailed description of the error that occurred.
+
+# Optional Operations
 
 The operations described in the following sections can be used by clients to manage device registration information. In real world scenarios the provisioning of devices will most likely be an orchestrated process spanning multiple components of which Hono will only be one.
 
 Conducting and orchestrating the overall provisioning process is not in scope of Hono. However, Hono's device registration API can easily be used as part of such an overall provisioning process.
 
+Hono's components do not invoke any of the operations in this section. Therefore, these operations are *optional* to implement.
+
+{{% warning title="Deprecated" %}}
+All of the optional operation have been deprecated as of 1.0-M2 and will be removed in Hono 1.0.
+Functionality for *managing* the content of a device registry will be defined by means of an HTTP based
+API that will be specified as part of Hono 1.0.
+{{% /warning %}}
 
 ## Register Device
 
@@ -48,9 +116,9 @@ The following sequence diagram illustrates the flow of messages involved in a *C
 
 The following table provides an overview of the properties a client needs to set on a *register device* message in addition to the [Standard Request Properties]({{< relref "#standard-request-properties" >}}).
 
-| Name        | Mandatory | Location                 | Type     | Description |
-| :---------- | :-------: | :----------------------- | :------- | :---------- |
-| *subject*   | yes       | *properties*             | *string* | MUST be set to `register`. |
+| Name        | Mandatory | Location                 | AMQP Type | Description |
+| :---------- | :-------: | :----------------------- | :-------- | :---------- |
+| *subject*   | yes       | *properties*             | *string*  | MUST be set to `register`. |
 
 The request message MAY include payload as defined in the [Payload Format]({{< relref "#payload-format" >}}) section below.
 
@@ -87,9 +155,9 @@ The following sequence diagram illustrates the flow of messages involved in a *C
 
 The following table provides an overview of the properties a client needs to set on a message to get registration information in addition to the [Standard Request Properties]({{< relref "#standard-request-properties" >}}).
 
-| Name        | Mandatory | Location                 | Type     | Description |
-| :---------- | :-------: | :----------------------- | :------- | :---------- |
-| *subject*   | yes       | *properties*             | *string* | MUST be set to `get`. |
+| Name        | Mandatory | Location                 | AMQP Type | Description |
+| :---------- | :-------: | :----------------------- | :-------- | :---------- |
+| *subject*   | yes       | *properties*             | *string*  | MUST be set to `get`. |
 
 The body of the message SHOULD be empty and will be ignored if it is not.
 
@@ -105,63 +173,6 @@ The response message's *status* property may contain the following codes:
 | :--- | :---------- |
 | *200* | OK, the payload contains the registration information for the device. |
 | *404* | Not Found, there is no device registered with the given *device_id* within the given *tenant_id*. |
-
-For status codes indicating an error (codes in the `400 - 499` range) the message body MAY contain a detailed description of the error that occurred.
-
-## Assert Device Registration
-
-Clients use this command to get a signed *assertion* that a device is registered for a particular tenant and is enabled. The assertion is supposed to be included when [uploading telemetry data]({{< relref "Telemetry-API.md#upload-telemetry-data" >}}) or [publishing an event]({{< relref "Event-API.md#send-event" >}}) for a device so that the Telemetry or Event service implementation does not need to call out to the Device Registration service on every message in order to verify the device's registration status.
-
-This operation is *mandatory* to implement.
-
-**Message Flow**
-
-The following sequence diagram illustrates the flow of messages involved in a *Client* getting an assertion of a device registration.
-
-![Assert Device Registration message flow](../assertDeviceRegistration_Success.png)
-
-
-**Request Message Format**
-
-The following table provides an overview of the properties a client needs to set on a message to get registration information in addition to the [Standard Request Properties]({{< relref "#standard-request-properties" >}}).
-
-| Name         | Mandatory | Location                 | Type     | Description |
-| :----------- | :-------: | :----------------------- | :------- | :---------- |
-| *subject*    | yes       | *properties*             | *string* | MUST be set to `assert`. |
-| *gateway_id* | no        | *application-properties* | *string* | The identifier of the gateway that wants to get an assertion *on behalf* of another device (given in the *device_id* property).<br>An implementation SHOULD verify that the gateway exists, is enabled and is authorized to get an assertion for, and thus send data on behalf of, the device. |
-
-The body of the message SHOULD be empty and will be ignored if it is not.
-
-**Response Message Format**
-
-A response to an *assertion* request contains the [Standard Response Properties]({{< relref "#standard-response-properties" >}}).
-
-The body of the response message consists of a single *Data* section containing a UTF-8 encoded string representation of a single JSON object having the following properties:
-
-| Name             | Mandatory | Type          | Description |
-| :--------------- | :-------: | :------------ | :---------- |
-| *device-id*      | *yes*     | *string*      | The ID of the device that is subject of the assertion. |
-| *assertion*      | *yes*     | *string*      | A [JSON Web Token](https://jwt.io/introduction/) which MUST contain the device id (`sub` claim), the tenant id (private `ten` claim) and an expiration time (`exp` claim). The token MAY contain additional claims as well. A client SHOULD silently ignore claims it does not understand. |
-| *defaults*       | *no*      | *JSON object* | Default values to be used by protocol adapters for augmenting messages from devices with missing information like a *content type*. It is up to the discretion of a protocol adapter if and how to use the given default values when processing messages published by the device. |
-
-Below is an example for a payload of a response to an *assert* request for device `4711` which also includes a default *content-type*:
-~~~json
-{
-  "device-id" : "4711",
-  "assertion" : "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI0NzExIiwidGVuIjoiREVGQVVMVF9URU5BTlQiLCJleHAiOjE1MDMwMTY0MzJ9.Gz8VYpLso-IuasLrSm6YVg1irofz7RKEYS4kM2CUQ5o",
-  "defaults": {
-    "content-type": "application/vnd.acme+json"
-  }
-}
-~~~
-
-The response message's *status* property may contain the following codes:
-
-| Code  | Description |
-| :---- | :---------- |
-| *200* | OK, the device is registered for the given tenant and is enabled. The payload contains the signed assertion. |
-| *403* | Forbidden, the gateway with the given *gateway id* either does not exist, is not enabled or is not authorized to get an assertion for the device with the given *device id*. |
-| *404* | Not Found, there is no device registered with the given *device id* within the given *tenant id* or the device is not enabled. |
 
 For status codes indicating an error (codes in the `400 - 499` range) the message body MAY contain a detailed description of the error that occurred.
 
@@ -182,9 +193,9 @@ The following sequence diagram illustrates the flow of messages involved in a *C
 
 The following table provides an overview of the properties a client needs to set on an *update registration* message in addition to the [Standard Request Properties]({{< relref "#standard-request-properties" >}}).
 
-| Name        | Mandatory | Location                 | Type     | Description |
-| :---------- | :-------: | :----------------------- | :------- | :---------- |
-| *subject*   | yes       | *properties*             | *string* | MUST be set to `update`. |
+| Name        | Mandatory | Location                 | AMQP Type | Description |
+| :---------- | :-------: | :----------------------- | :-------- | :---------- |
+| *subject*   | yes       | *properties*             | *string*  | MUST be set to `update`. |
 
 The request message MAY include payload as defined in the [Payload Format]({{< relref "#payload-format" >}}) section below.
  
@@ -218,9 +229,9 @@ The following sequence diagram illustrates the flow of messages involved in a *C
 
 The following table provides an overview of the properties a client needs to set on a *deregister device* message in addition to the [Standard Request Properties]({{< relref "#standard-request-properties" >}}).
 
-| Name        | Mandatory | Location                 | Type     | Description |
-| :---------- | :-------: | :----------------------- | :------- | :---------- |
-| *subject*   | yes       | *properties*             | *string* | MUST be set to `deregister`. |
+| Name        | Mandatory | Location                 | AMQP Type | Description |
+| :---------- | :-------: | :----------------------- | :-------- | :---------- |
+| *subject*   | yes       | *properties*             | *string*  | MUST be set to `deregister`. |
 
 The body of the message SHOULD be empty and will be ignored if it is not.
 
@@ -246,7 +257,7 @@ Due to the nature of the request/response message pattern of the operations of t
 
 The following table provides an overview of the properties shared by all request messages regardless of the particular operation being invoked.
 
-| Name             | Mandatory | Location                 | Type         | Description |
+| Name             | Mandatory | Location                 | AMQP Type    | Description |
 | :--------------- | :-------: | :----------------------- | :----------- | :---------- |
 | *subject*        | yes       | *properties*             | *string*     | MUST be set to the value defined by the particular operation being invoked. |
 | *correlation-id* | no        | *properties*             | *message-id* | MAY contain an ID used to correlate a response message to the original request. If set, it is used as the *correlation-id* property in the response, otherwise the value of the *message-id* property is used. |
@@ -259,7 +270,7 @@ The following table provides an overview of the properties shared by all request
 
 The following table provides an overview of the properties shared by all response messages regardless of the particular operation being invoked.
 
-| Name             | Mandatory | Location                 | Type         | Description |
+| Name             | Mandatory | Location                 | AMQP Type    | Description |
 | :--------------- | :-------: | :----------------------- | :----------- | :---------- |
 | *correlation-id* | yes       | *properties*             | *message-id* | Contains the *message-id* (or the *correlation-id*, if specified) of the request message that this message is the response to. |
 | *content-type*   | yes       | *properties*             | *string*     | MUST be set to `application/json`. |

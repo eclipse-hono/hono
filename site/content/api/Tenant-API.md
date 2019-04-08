@@ -3,7 +3,7 @@ title = "Tenant API"
 weight = 420
 +++
 
-The *Tenant API* is used to make Hono aware of the tenants that are available in an installation. 
+The *Tenant API* is used to make Eclipse Hono&trade; aware of the tenants that are available in an installation. 
 A tenant is a logical entity, which groups together a set of devices and consists of meta information which should be used by other Hono components. 
 The tenant meta information is used for example to determine if a given tenant is allowed to use a certain protocol adapter or if devices are required to use authentication.
 <!--more-->
@@ -15,7 +15,7 @@ This API has been added in Hono 0.6. Previous versions do not support nor implem
 This document *describes* the Tenant API by means of available operations and data structure format only. 
 Please refer to [Multi Tenancy]({{< ref "/concepts/tenancy.md" >}}) for details regarding the way Hono supports multiple tenants.
 
-Note, however, that in real world applications the tenant information will probably be kept and managed by an existing *system of record*, using e.g. a database for persisting the data. The Tenant API accounts for this fact by means of defining only the [Get Tenant Information]({{< relref "#get-tenant-information" >}}) operation as *mandatory*, i.e. this operation is strictly required by a Hono instance for it to work properly, whereas the remaining operations are defined as *optional* from a Hono perspective.
+Note, however, that in real world applications the tenant information will probably be kept and managed in an existing *system of record*, using e.g. a database for persisting the data. The Tenant API accounts for this fact by means of defining only the [Get Tenant Information]({{< relref "#get-tenant-information" >}}) operation as *mandatory*, i.e. this operation is strictly required by a Hono instance for it to work properly, whereas the remaining operations are defined as *optional* from a Hono perspective.
 
 The Tenant API is defined by means of AMQP 1.0 message exchanges, i.e. a client needs to connect to Hono using an AMQP 1.0 client in order to invoke operations of the API as described in the following sections.
 
@@ -31,50 +31,9 @@ This flow of messages is illustrated by the following sequence diagram (showing 
 
 ![Tenant message flow preconditions](../tenant_ConnectToTenant.png)
 
-# Operations
+# Mandatory Operations
 
-The operations described in the following sections can be used by clients to manage tenants and their meta information. In real world scenarios the provisioning of tenants will most likely be an orchestrated process spanning multiple components of which Hono will only be one.
-
-Conducting and orchestrating the overall provisioning process is not in scope of Hono. However, Hono's Tenant API can easily be used as part of such an overall provisioning process.
-
-
-## Add Tenant
-
-Clients use this command to initially *add* a new tenant including tenant specific meta information to Hono.
-
-This operation is *optional*, implementors of this API may provide other means for adding tenant information, e.g. a RESTful API or a configuration file.
-
-**Message Flow**
-
-The following sequence diagram illustrates the flow of messages involved in a *Client* creating a tenant.
-
-![Add tenant message flow](../tenant_AddTenantSuccess.png)
-
-
-**Request Message Format**
-
-The following table provides an overview of the properties a client needs to set on an *add tenant* message in addition to the [Standard Request Properties]({{< relref "#standard-request-properties" >}}).
-
-| Name        | Mandatory | Location                 | Type     | Description |
-| :---------- | :-------: | :----------------------- | :------- | :---------- |
-| *subject*   | yes       | *properties*             | *string* | MUST be set to `add`. |
-| *tenant_id* | yes       | *application-properties* | *string* | MUST contain the ID of the tenant to add. |
-
-The request message MUST contain a tenant payload as defined in the [Request Payload]({{< relref "#request-payload" >}}) section below.
-
-**Response Message Format**
-
-A response to an *add tenant* request contains the [Standard Response Properties]({{< relref "#standard-response-properties" >}}).
-
-The response message's *status* property may contain the following codes:
-
-| Code  | Description |
-| :---- | :---------- |
-| *201* | Created, the tenant has been successfully created. |
-| *400* | Bad Request, the tenant has NOT been created due to invalid data in the request. |
-| *409* | Conflict, there already exists a tenant with the same *tenant_id* or using a trusted certificate authority with the same subject DN. |
-
-For status codes indicating an error (codes in the `400 - 499` range) the message body MAY contain a detailed description of the error that occurred.
+The operations described in the following sections are invoked by Hono's components during run time and are therefore mandatory to implement.
 
 ## Get Tenant Information
 
@@ -92,13 +51,13 @@ The following sequence diagram illustrates the flow of messages involved in a *C
 
 The following table provides an overview of the properties a client needs to set on a message to get tenant information in addition to the [Standard Request Properties]({{< relref "#standard-request-properties" >}}).
 
-| Name           | Mandatory | Location                 | Type     | Description |
-| :------------- | :-------: | :----------------------- | :------- | :---------- |
-| *subject*      | yes       | *properties*             | *string* | MUST be set to `get`. |
+| Name           | Mandatory | Location                 | AMQP Type | Description |
+| :------------- | :-------: | :----------------------- | :-------- | :---------- |
+| *subject*      | yes       | *properties*             | *string*  | MUST be set to `get`. |
 
 The body of the request MUST consist of a single *Data* section containing a UTF-8 encoded string representation of a single JSON object containing *exactly one* of the following search criteria properties:
 
-| Name             | Mandatory | Type       | Description |
+| Name             | Mandatory | JSON Type  | Description |
 | :--------------- | :-------: | :--------- | :---------- |
 | *subject-dn*     | *no*      | *string*   | The subject DN of the trusted certificate authority's public key in the format defined by [RFC 2253](https://www.ietf.org/rfc/rfc2253.txt). |
 | *tenant-id*      | *no*      | *string*   | The identifier of the tenant to get. |
@@ -134,6 +93,59 @@ The response message's *status* property may contain the following codes:
 
 For status codes indicating an error (codes in the `400 - 499` range) the message body MAY contain a detailed description of the error that occurred.
 
+
+# Optional Operations
+
+The operations described in the following sections can be used by clients to manage tenants and their meta information. In real world scenarios the provisioning of tenants will most likely be an orchestrated process spanning multiple components of which Hono will only be one.
+
+Conducting and orchestrating the overall provisioning process is not in scope of Hono. However, Hono's Tenant API can easily be used as part of such an overall provisioning process.
+
+Hono's components do not invoke any of the operations in this section. Therefore, these operations are *optional* to implement.
+
+{{% warning title="Deprecated" %}}
+All of the optional operation have been deprecated as of 1.0-M2 and will be removed in Hono 1.0.
+Functionality for *managing* the content of a device registry will be defined by means of an HTTP based
+API that will be specified as part of Hono 1.0.
+{{% /warning %}}
+
+## Add Tenant
+
+Clients use this command to initially *add* a new tenant including tenant specific meta information to Hono.
+
+This operation is *optional*, implementors of this API may provide other means for adding tenant information, e.g. a RESTful API or a configuration file.
+
+**Message Flow**
+
+The following sequence diagram illustrates the flow of messages involved in a *Client* creating a tenant.
+
+![Add tenant message flow](../tenant_AddTenantSuccess.png)
+
+
+**Request Message Format**
+
+The following table provides an overview of the properties a client needs to set on an *add tenant* message in addition to the [Standard Request Properties]({{< relref "#standard-request-properties" >}}).
+
+| Name        | Mandatory | Location                 | AMQP Type | Description |
+| :---------- | :-------: | :----------------------- | :-------- | :---------- |
+| *subject*   | yes       | *properties*             | *string*  | MUST be set to `add`. |
+| *tenant_id* | yes       | *application-properties* | *string*  | MUST contain the ID of the tenant to add. |
+
+The request message MUST contain a tenant payload as defined in the [Request Payload]({{< relref "#request-payload" >}}) section below.
+
+**Response Message Format**
+
+A response to an *add tenant* request contains the [Standard Response Properties]({{< relref "#standard-response-properties" >}}).
+
+The response message's *status* property may contain the following codes:
+
+| Code  | Description |
+| :---- | :---------- |
+| *201* | Created, the tenant has been successfully created. |
+| *400* | Bad Request, the tenant has NOT been created due to invalid data in the request. |
+| *409* | Conflict, there already exists a tenant with the same *tenant_id* or using a trusted certificate authority with the same subject DN. |
+
+For status codes indicating an error (codes in the `400 - 499` range) the message body MAY contain a detailed description of the error that occurred.
+
 ## Update Tenant
 
 Clients use this command to *update* information about an already existing tenant. All of the information that has been previously provided for the tenant gets *replaced* with the information contained in the request message.
@@ -160,10 +172,10 @@ The following sequence diagram illustrates the flow of messages involved in a *C
 
 The following table provides an overview of the properties a client needs to set on an *update tenant* message in addition to the [Standard Request Properties]({{< relref "#standard-request-properties" >}}).
 
-| Name        | Mandatory | Location                 | Type     | Description |
-| :---------- | :-------: | :----------------------- | :------- | :---------- |
-| *subject*   | yes       | *properties*             | *string* | MUST be set to `update`. |
-| *tenant_id* | yes       | *application-properties* | *string* | MUST contain the ID of the tenant to update. |
+| Name        | Mandatory | Location                 | AMQP Type | Description |
+| :---------- | :-------: | :----------------------- | :-------- | :---------- |
+| *subject*   | yes       | *properties*             | *string*  | MUST be set to `update`. |
+| *tenant_id* | yes       | *application-properties* | *string*  | MUST contain the ID of the tenant to update. |
 
 The request message MUST include payload as defined in the [Request Payload]({{< relref "#request-payload" >}}) section below.
  
@@ -209,10 +221,10 @@ The following sequence diagram illustrates the flow of messages involved in a *C
 
 The following table provides an overview of the properties a client needs to set on a *remove tenant* message in addition to the [Standard Request Properties]({{< relref "#standard-request-properties" >}}).
 
-| Name        | Mandatory | Location                 | Type     | Description |
-| :---------- | :-------: | :----------------------- | :------- | :---------- |
-| *subject*   | yes       | *properties*             | *string* | MUST be set to `remove`. |
-| *tenant_id* | yes       | *application-properties* | *string* | MUST contain the ID of the tenant to remove. |
+| Name        | Mandatory | Location                 | AMQP Type | Description |
+| :---------- | :-------: | :----------------------- | :-------- | :---------- |
+| *subject*   | yes       | *properties*             | *string*  | MUST be set to `remove`. |
+| *tenant_id* | yes       | *application-properties* | *string*  | MUST contain the ID of the tenant to remove. |
 
 The body of the message SHOULD be empty and will be ignored if it is not.
 
@@ -238,7 +250,7 @@ Due to the nature of the request/response message pattern of the operations of t
 
 The following table provides an overview of the properties shared by all request messages regardless of the particular operation being invoked.
 
-| Name             | Mandatory | Location                 | Type         | Description |
+| Name             | Mandatory | Location                 | AMQP Type    | Description |
 | :--------------- | :-------: | :----------------------- | :----------- | :---------- |
 | *subject*        | yes       | *properties*             | *string*     | MUST be set to the value defined by the particular operation being invoked. |
 | *correlation-id* | no        | *properties*             | *message-id* | MAY contain an ID used to correlate a response message to the original request. If set, it is used as the *correlation-id* property in the response, otherwise the value of the *message-id* property is used. |
@@ -250,7 +262,7 @@ The following table provides an overview of the properties shared by all request
 
 The following table provides an overview of the properties shared by all response messages regardless of the particular operation being invoked.
 
-| Name             | Mandatory | Location                 | Type         | Description |
+| Name             | Mandatory | Location                 | AMQP Type    | Description |
 | :--------------- | :-------: | :----------------------- | :----------- | :---------- |
 | *correlation-id* | yes       | *properties*             | *message-id* | Contains the *message-id* (or the *correlation-id*, if specified) of the request message that this message is the response to. |
 | *content-type*   | yes       | *properties*             | *string*     | MUST be set to `application/json`. |
@@ -279,10 +291,10 @@ The tenant data is carried in the payload as a UTF-8 encoded string representati
 
 The table below provides an overview of the standard members defined for the JSON request object:
 
-| Name                     | Mandatory | Type          | Default Value | Description |
+| Name                     | Mandatory | JSON Type     | Default Value | Description |
 | :------------------------| :-------: | :------------ | :------------ | :---------- |
 | *enabled*                | *no*      | *boolean*     | `true`       | If set to `false` the tenant is currently disabled. Protocol adapters MUST NOT allow devices of a disabled tenant to connect and MUST NOT accept data published by such devices. |
-| *trusted-ca*             | *no*      | *JSON object* | `-`          | The trusted certificate authority to use for validating certificates presented by devices of the tenant for authentication purposes. See [Trusted Certificate Authority Format]({{< relref "#trusted-ca-format" >}}) for a definition of the content model of the object. |
+| *trusted-ca*             | *no*      | *object*      | `-`          | The trusted certificate authority to use for validating certificates presented by devices of the tenant for authentication purposes. See [Trusted Certificate Authority Format]({{< relref "#trusted-ca-format" >}}) for a definition of the content model of the object. |
 | *adapters*               | *no*      | *array*       | `-`          | A list of configuration options valid for certain adapters only. The format of a configuration option is described here [Adapter Configuration Format]({{< relref "#adapter-configuration-format" >}}). **NB** If the element is provided then the list MUST NOT be empty. **NB** Only a single entry per *type* is allowed. If multiple entries for the same *type* are present it is handled as an error. **NB** If the element is omitted then all adapters are *enabled* in their default configuration. |
 | *resource-limits*         | *no*      | *JSON object* | `-`          | The resource-limits such as the maximum number of connections can be set. The format of a configuration option is described here [Resource Limits Configuration Format]({{< relref "#resource-limits-configuration-format" >}}).|
 
@@ -341,13 +353,18 @@ The following example contains information for a tenant including the public key
 
 The table below provides an overview of the standard members defined for the JSON response object:
 
-| Name                     | Mandatory | Type          | Description |
+| Name                     | Mandatory | JSON Type     | Description |
 | :------------------------| :-------: | :------------ | :---------- |
 | *tenant-id*              | *yes*     | *string*      | The ID of the tenant. |
 | *enabled*                | *yes*     | *boolean*     | If set to `false` the tenant is currently disabled. Protocol adapters MUST NOT allow devices of a disabled tenant to connect and MUST NOT accept data published by such devices. |
+<<<<<<< Upstream, based on origin/master
 | *trusted-ca*             | *no*      | *JSON object* | The trusted certificate authority to use for validating certificates presented by devices of the tenant for authentication purposes. See [Trusted Certificate Authority Format]({{< relref "#trusted-ca-format" >}}) for a definition of the content model of the object. |
 | *adapters*               | *no*      | *JSON array*  | A list of configuration options valid for certain adapters only. The format of a configuration option is described here [Adapter Configuration Format]({{< relref "#adapter-configuration-format" >}}). **NB** If the element is provided then the list MUST NOT be empty. **NB** Only a single entry per *type* is allowed. If multiple entries for the same *type* are present it is handled as an error. **NB** If the element is omitted then all adapters are *enabled* in their default configuration. |
 | *resource-limits*         | *no*      | *JSON object* | The resource-limits such as the maximum number of connections can be set. The format of a configuration option is described here [Resource Limits Configuration Format]({{< relref "#resource-limits-configuration-format" >}}).|
+=======
+| *trusted-ca*             | *no*      | *object*      | The trusted certificate authority to use for validating certificates presented by devices of the tenant for authentication purposes. See [Trusted Certificate Authority Format]({{< relref "#trusted-ca-format" >}}) for a definition of the content model of the object. |
+| *adapters*               | *no*      | *array*       | A list of configuration options valid for certain adapters only. The format of a configuration option is described here [Adapter Configuration Format]({{< relref "#adapter-configuration-format" >}}). **NB** If the element is provided then the list MUST NOT be empty. **NB** Only a single entry per *type* is allowed. If multiple entries for the same *type* are present it is handled as an error. **NB** If the element is omitted then all adapters are *enabled* in their default configuration. |
+>>>>>>> 361ca91 Split operations into mandatory and optional to implement.
 
 Additionally to the specified properties the JSON object MAY contain an arbitrary number of members with arbitrary names which can be of a scalar or a complex type. 
 This allows for future *well-known* additions and also allows *clients* to add further information which might be relevant to a *custom* adapter only.
