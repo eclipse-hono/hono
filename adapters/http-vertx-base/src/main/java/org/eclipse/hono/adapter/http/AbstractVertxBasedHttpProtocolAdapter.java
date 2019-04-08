@@ -876,6 +876,8 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                                         ProcessingOutcome.UNDELIVERABLE,
                                         command.getPayloadSize(),
                                         commandSample);
+                                LOG.debug("command for device has already fired [tenantId: {}, deviceId: {}]", tenantId,
+                                        deviceId);
                                 commandContext.release();
                             } else {
                                 addMicrometerSample(commandContext, commandSample);
