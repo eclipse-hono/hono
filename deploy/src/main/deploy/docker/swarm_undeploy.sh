@@ -101,6 +101,8 @@ docker config rm \
 docker service rm prometheus-operated
 docker secret rm prometheus.yml
 
+docker service rm jaeger
+
 docker secret rm trusted-certs.pem
 
 docker network rm $NS

@@ -20,6 +20,7 @@ CERTS=$CONFIG/hono-demo-certs-jar
 NS=hono
 CREATE_OPTIONS="-l project=$NS --network $NS --detach=false"
 DEPLOY_ADAPTERS=YES
+DEPLOY_JAEGER=NO
 COAP_ENABLED=NO
 
 # parse command line switches
@@ -43,6 +44,12 @@ do
       echo "Cannot enable CoAP adapter if adapters are disabled"
       echo
     fi
+    ;;
+    --jaeger)
+    echo
+    echo "Enabling deployment of Jaeger tracing component"
+    echo
+    DEPLOY_JAEGER=YES
     ;;
     *)
       echo "Ignoring unknown option: $i"
@@ -140,6 +147,23 @@ docker service create $CREATE_OPTIONS --name hono-dispatch-router ${PORT_FORWARD
   ${dispatch-router.image.name} /sbin/qdrouterd -c /run/secrets/qdrouterd.json
 echo ... done
 
+if [ $DEPLOY_JAEGER = "YES" ]
+then
+  echo
+  echo Deploying Jaeger tracing component ...
+  JAEGER_ENV_VARS="\
+        --env JAEGER_AGENT_HOST=jaeger.hono \
+        --env JAEGER_AGENT_PORT=6831 \
+        --env JAEGER_SAMPLER_TYPE=const \
+        --env JAEGER_SAMPLER_PARAM=1 "
+  docker service create $CREATE_OPTIONS --name jaeger \
+    -p 6831:6831/udp -p 6832:6832/udp -p 5778:5778 -p 16686:16686 -p 14268:14268 \
+    jaegertracing/all-in-one:${jaeger-all-in-one.image.version}
+  echo ... done
+else
+  JAEGER_ENV_VARS=""
+fi
+
 echo
 echo Deploying Authentication Server ...
 docker secret create -l project=$NS auth-server-key.pem $CERTS/auth-server-key.pem
@@ -188,8 +212,10 @@ docker service create $CREATE_OPTIONS --name hono-service-device-registry -p 256
   --limit-memory 256m \
   --env _JAVA_OPTIONS="${default-java-options}" \
   --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-service-device-registry-config.yml \
-  --env LOGGING_CONFIG=classpath:logback-spring.xml \
   --env SPRING_PROFILES_ACTIVE=dev \
+  --env LOGGING_CONFIG=classpath:logback-spring.xml \
+  --env JAEGER_SERVICE_NAME=hono-service-device-registry \
+  ${JAEGER_ENV_VARS} \
   --mount type=volume,source=device-registry,target=/var/lib/hono/device-registry \
   ${docker.image.org-name}/hono-service-device-registry:${project.version}
 
@@ -213,6 +239,8 @@ docker service create $CREATE_OPTIONS --name hono-adapter-http-vertx -p 8080:808
   --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-adapter-http-vertx-config.yml \
   --env SPRING_PROFILES_ACTIVE=dev \
   --env LOGGING_CONFIG=classpath:logback-spring.xml \
+  --env JAEGER_SERVICE_NAME=hono-adapter-http \
+  ${JAEGER_ENV_VARS} \
   ${docker.image.org-name}/hono-adapter-http-vertx:${project.version}
 echo ... done
 
@@ -233,6 +261,8 @@ docker service create $CREATE_OPTIONS --name hono-adapter-mqtt-vertx -p 1883:188
   --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-adapter-mqtt-vertx-config.yml \
   --env SPRING_PROFILES_ACTIVE=dev \
   --env LOGGING_CONFIG=classpath:logback-spring.xml \
+  --env JAEGER_SERVICE_NAME=hono-adapter-mqtt \
+  ${JAEGER_ENV_VARS} \
   ${docker.image.org-name}/hono-adapter-mqtt-vertx:${project.version}
 echo ... done
 
@@ -253,6 +283,8 @@ docker service create $CREATE_OPTIONS --name hono-adapter-amqp-vertx -p 5672:567
   --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-adapter-amqp-vertx-config.yml \
   --env SPRING_PROFILES_ACTIVE=dev \
   --env LOGGING_CONFIG=classpath:logback-spring.xml \
+  --env JAEGER_SERVICE_NAME=hono-adapter-amqp \
+  ${JAEGER_ENV_VARS} \
   ${docker.image.org-name}/hono-adapter-amqp-vertx:${project.version}
 echo ... done
 
@@ -273,6 +305,8 @@ docker service create $CREATE_OPTIONS --name hono-adapter-kura -p 1884:1883 -p 8
   --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-adapter-kura-config.yml \
   --env SPRING_PROFILES_ACTIVE=dev \
   --env LOGGING_CONFIG=classpath:logback-spring.xml \
+  --env JAEGER_SERVICE_NAME=hono-adapter-kura \
+  ${JAEGER_ENV_VARS} \
   ${docker.image.org-name}/hono-adapter-kura:${project.version}
 echo ... done
 
@@ -295,6 +329,8 @@ docker service create $CREATE_OPTIONS --name hono-adapter-coap-vertx -p 5683:568
   --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-adapter-coap-vertx-config.yml \
   --env SPRING_PROFILES_ACTIVE=dev \
   --env LOGGING_CONFIG=classpath:logback-spring.xml \
+  --env JAEGER_SERVICE_NAME=hono-adapter-coap \
+  ${JAEGER_ENV_VARS} \
   ${docker.image.org-name}/hono-adapter-coap-vertx:${project.version}
 echo ... done
 fi
