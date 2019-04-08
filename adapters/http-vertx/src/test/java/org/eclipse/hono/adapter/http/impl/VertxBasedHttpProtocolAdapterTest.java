@@ -33,6 +33,7 @@ import org.eclipse.hono.client.CommandConsumerFactory;
 import org.eclipse.hono.client.CommandContext;
 import org.eclipse.hono.client.CommandResponse;
 import org.eclipse.hono.client.CommandResponseSender;
+import org.eclipse.hono.client.CredentialsClientFactory;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.MessageSender;
@@ -89,7 +90,7 @@ public class VertxBasedHttpProtocolAdapterTest {
     private static final String CMD_REQ_ID = "12fcmd-client-c925910f-ea2a-455c-a3f9-a339171f335474f48a55-c60d-4b99-8950-a2fbb9e8f1b6";
 
     private static TenantClientFactory tenantClientFactory;
-    private static HonoClient credentialsServiceClient;
+    private static CredentialsClientFactory credentialsClientFactory;
     private static HonoClient messagingClient;
     private static MessageSender telemetrySender;
     private static MessageSender eventSender;
@@ -135,13 +136,13 @@ public class VertxBasedHttpProtocolAdapterTest {
             return null;
         }).when(tenantClientFactory).disconnect(any(Handler.class));
 
-        credentialsServiceClient = mock(HonoClient.class);
-        when(credentialsServiceClient.connect(any(Handler.class))).thenReturn(Future.succeededFuture(credentialsServiceClient));
+        credentialsClientFactory = mock(CredentialsClientFactory.class);
+        when(credentialsClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoClient.class)));
         doAnswer(invocation -> {
             final Handler<AsyncResult<Void>> shutdownHandler = invocation.getArgument(0);
             shutdownHandler.handle(Future.succeededFuture());
             return null;
-        }).when(credentialsServiceClient).shutdown(any(Handler.class));
+        }).when(credentialsClientFactory).disconnect(any(Handler.class));
 
         messagingClient = mock(HonoClient.class);
         when(messagingClient.connect(any(Handler.class))).thenReturn(Future.succeededFuture(messagingClient));
@@ -181,7 +182,7 @@ public class VertxBasedHttpProtocolAdapterTest {
         httpAdapter = new VertxBasedHttpProtocolAdapter();
         httpAdapter.setConfig(config);
         httpAdapter.setTenantClientFactory(tenantClientFactory);
-        httpAdapter.setCredentialsServiceClient(credentialsServiceClient);
+        httpAdapter.setCredentialsClientFactory(credentialsClientFactory);
         httpAdapter.setHonoMessagingClient(messagingClient);
         httpAdapter.setRegistrationClientFactory(registrationClientFactory);
         httpAdapter.setCommandConsumerFactory(commandConsumerFactory);

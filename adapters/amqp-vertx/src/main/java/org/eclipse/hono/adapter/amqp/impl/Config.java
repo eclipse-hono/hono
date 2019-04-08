@@ -64,7 +64,7 @@ public class Config extends AbstractAdapterConfig {
     }
 
     @Override
-    protected void customizeCredentialsServiceClientConfig(final RequestResponseClientConfigProperties config) {
+    protected void customizeCredentialsClientFactoryConfig(final RequestResponseClientConfigProperties config) {
         if (config.getName() == null) {
             config.setName(CONTAINER_ID_HONO_AMQP_ADAPTER);
         }

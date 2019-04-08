@@ -17,6 +17,7 @@ import java.util.Optional;
 
 import org.eclipse.hono.cache.CacheProvider;
 import org.eclipse.hono.client.CommandConsumerFactory;
+import org.eclipse.hono.client.CredentialsClientFactory;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.RegistrationClientFactory;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
@@ -197,14 +198,14 @@ public abstract class AbstractAdapterConfig {
     @Qualifier(CredentialsConstants.CREDENTIALS_ENDPOINT)
     @ConfigurationProperties(prefix = "hono.credentials")
     @Bean
-    public ClientConfigProperties credentialsServiceClientConfig() {
+    public ClientConfigProperties credentialsClientFactoryConfig() {
         final RequestResponseClientConfigProperties config = new RequestResponseClientConfigProperties();
-        customizeCredentialsServiceClientConfig(config);
+        customizeCredentialsClientFactoryConfig(config);
         return config;
     }
 
     /**
-     * Further customizes the properties provided by the {@link #credentialsServiceClientConfig()}
+     * Further customizes the properties provided by the {@link #credentialsClientFactoryConfig()}
      * method.
      * <p>
      * This method does nothing by default. Subclasses may override this method to set additional
@@ -212,20 +213,20 @@ public abstract class AbstractAdapterConfig {
      *
      * @param config The configuration to customize.
      */
-    protected void customizeCredentialsServiceClientConfig(final RequestResponseClientConfigProperties config) {
+    protected void customizeCredentialsClientFactoryConfig(final RequestResponseClientConfigProperties config) {
         // empty by default
     }
 
     /**
-     * Exposes a client for the <em>Credentials</em> API as a Spring bean.
+     * Exposes a factory for creating clients for the <em>Credentials</em> API as a Spring bean.
      *
-     * @return The client.
+     * @return The factory.
      */
     @Bean
     @Qualifier(CredentialsConstants.CREDENTIALS_ENDPOINT)
     @Scope("prototype")
-    public HonoClient credentialsServiceClient() {
-        return new HonoClientImpl(vertx(), credentialsServiceClientConfig());
+    public CredentialsClientFactory credentialsClientFactory() {
+        return new HonoClientImpl(vertx(), credentialsClientFactoryConfig());
     }
 
     /**

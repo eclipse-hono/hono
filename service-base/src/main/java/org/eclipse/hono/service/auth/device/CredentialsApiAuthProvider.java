@@ -19,7 +19,7 @@ import java.util.Objects;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.CredentialsClient;
-import org.eclipse.hono.client.HonoClient;
+import org.eclipse.hono.client.CredentialsClientFactory;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.service.auth.DeviceUser;
@@ -52,18 +52,18 @@ public abstract class CredentialsApiAuthProvider<T extends AbstractDeviceCredent
      * A logger to be used by subclasses.
      */
     protected final Logger log = LoggerFactory.getLogger(getClass());
-    private final HonoClient credentialsServiceClient;
+    private final CredentialsClientFactory credentialsServiceClient;
     private final Tracer tracer;
 
     /**
-     * Creates a new authentication provider for a credentials service client.
+     * Creates a new authentication provider for a credentials client factory.
      * 
-     * @param credentialsServiceClient The client.
+     * @param credentialsClientFactory The factory.
      * @param tracer The tracer instance.
-     * @throws NullPointerException if the client or the tracer is {@code null}
+     * @throws NullPointerException if the factory or the tracer are {@code null}
      */
-    public CredentialsApiAuthProvider(final HonoClient credentialsServiceClient, final Tracer tracer) {
-        this.credentialsServiceClient = Objects.requireNonNull(credentialsServiceClient);
+    public CredentialsApiAuthProvider(final CredentialsClientFactory credentialsClientFactory, final Tracer tracer) {
+        this.credentialsServiceClient = Objects.requireNonNull(credentialsClientFactory);
         this.tracer = Objects.requireNonNull(tracer);
     }
 

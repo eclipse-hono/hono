@@ -218,7 +218,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
     private void bindSecureEndpoint(final CoapServer startingServer, final NetworkConfig config) {
 
         final CoapPreSharedKeyHandler pskHandler = new CoapPreSharedKeyHandler(context, getConfig(),
-                getCredentialsServiceClient());
+                getCredentialsClientFactory());
         authenticationHandlerMap.put(pskHandler.getType(), pskHandler);
 
         final DtlsConnectorConfig.Builder dtlsConfig = new DtlsConnectorConfig.Builder();

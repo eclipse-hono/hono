@@ -41,6 +41,7 @@ import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.CommandConsumerFactory;
+import org.eclipse.hono.client.CredentialsClientFactory;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.MessageSender;
@@ -108,7 +109,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
     public Timeout globalTimeout = new Timeout(5000, TimeUnit.SECONDS);
 
     private TenantClientFactory tenantClientFactory;
-    private HonoClient credentialsServiceClient;
+    private CredentialsClientFactory credentialsClientFactory;
     private HonoClient messagingClient;
     private RegistrationClientFactory registrationClientFactory;
     private RegistrationClient regClient;
@@ -154,10 +155,9 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         when(tenantClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoClient.class)));
         when(tenantClientFactory.getOrCreateTenantClient()).thenReturn(Future.succeededFuture(tenantClient));
 
-        credentialsServiceClient = mock(HonoClient.class);
-        when(credentialsServiceClient.isConnected()).thenReturn(Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE)));
-        when(credentialsServiceClient.connect(any(Handler.class)))
-                .thenReturn(Future.succeededFuture(credentialsServiceClient));
+        credentialsClientFactory = mock(CredentialsClientFactory.class);
+        when(credentialsClientFactory.isConnected()).thenReturn(Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE)));
+        when(credentialsClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoClient.class)));
 
         messagingClient = mock(HonoClient.class);
         when(messagingClient.isConnected()).thenReturn(Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE)));
@@ -1035,7 +1035,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         when(tenantClientFactory.isConnected()).thenReturn(Future.succeededFuture());
         when(messagingClient.isConnected()).thenReturn(Future.succeededFuture());
         when(registrationClientFactory.isConnected()).thenReturn(Future.succeededFuture());
-        when(credentialsServiceClient.isConnected()).thenReturn(Future.succeededFuture());
+        when(credentialsClientFactory.isConnected()).thenReturn(Future.succeededFuture());
         when(commandConsumerFactory.isConnected()).thenReturn(Future.succeededFuture());
     }
 
@@ -1092,7 +1092,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         adapter.setTenantClientFactory(tenantClientFactory);
         adapter.setHonoMessagingClient(messagingClient);
         adapter.setRegistrationClientFactory(registrationClientFactory);
-        adapter.setCredentialsServiceClient(credentialsServiceClient);
+        adapter.setCredentialsClientFactory(credentialsClientFactory);
         adapter.setCommandConsumerFactory(commandConsumerFactory);
         adapter.setAuthHandler(authHandler);
         adapter.setResourceLimitChecks(resourceLimitChecks);

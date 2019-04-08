@@ -31,7 +31,7 @@ import org.eclipse.californium.scandium.dtls.pskstore.PskStore;
 import org.eclipse.californium.scandium.util.ServerNames;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
-import org.eclipse.hono.client.HonoClient;
+import org.eclipse.hono.client.CredentialsClientFactory;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsObject;
@@ -59,7 +59,7 @@ public class CoapPreSharedKeyHandler implements PskStore, CoapAuthenticationHand
     /**
      * Credentials provider for pre-shared-key secrets.
      */
-    private final HonoClient credentialsServiceClient;
+    private final CredentialsClientFactory credentialsClientFactory;
     /**
      * Cache mapping principal information to hono devices.
      */
@@ -75,15 +75,18 @@ public class CoapPreSharedKeyHandler implements PskStore, CoapAuthenticationHand
      * @param context The vert.x context to run on.
      * @param config The adapter configuration. Specify the minimum and maximum cache size and the split of the identity
      *            into authentication id and tenant
-     * @param credentialsServiceClient The credentials service client.
+     * @param credentialsClientFactory The factory to use for creating a Credentials service client.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
     @Autowired
-    public CoapPreSharedKeyHandler(final Context context, final CoapAdapterProperties config,
-            final HonoClient credentialsServiceClient) {
+    public CoapPreSharedKeyHandler(
+            final Context context,
+            final CoapAdapterProperties config,
+            final CredentialsClientFactory credentialsClientFactory) {
+
         this.context = Objects.requireNonNull(context);
         this.config = Objects.requireNonNull(config);
-        this.credentialsServiceClient = Objects.requireNonNull(credentialsServiceClient);
+        this.credentialsClientFactory = Objects.requireNonNull(credentialsClientFactory);
         final CacheBuilder<Object, Object> builder = CacheBuilder.newBuilder()
                 .concurrencyLevel(1)
                 .softValues()
@@ -104,7 +107,7 @@ public class CoapPreSharedKeyHandler implements PskStore, CoapAuthenticationHand
     protected final Future<byte[]> getSharedKeyForDevice(final PreSharedKeyDeviceIdentity handshakeIdentity) {
 
         Objects.requireNonNull(handshakeIdentity);
-        return credentialsServiceClient.getOrCreateCredentialsClient(handshakeIdentity.getTenantId())
+        return credentialsClientFactory.getOrCreateCredentialsClient(handshakeIdentity.getTenantId())
                 .compose(client -> client.get(handshakeIdentity.getType(), handshakeIdentity.getAuthId()))
                 .compose((credentials) -> {
                     final byte[] key = getCandidateKey(credentials);

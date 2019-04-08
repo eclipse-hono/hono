@@ -26,6 +26,7 @@ import org.eclipse.hono.client.CommandContext;
 import org.eclipse.hono.client.CommandResponse;
 import org.eclipse.hono.client.CommandResponseSender;
 import org.eclipse.hono.client.ConnectionLifecycle;
+import org.eclipse.hono.client.CredentialsClientFactory;
 import org.eclipse.hono.client.DisconnectListener;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageConsumer;
@@ -95,7 +96,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     private HonoClient messagingClient;
     private RegistrationClientFactory registrationClientFactory;
     private TenantClientFactory tenantClientFactory;
-    private HonoClient credentialsServiceClient;
+    private CredentialsClientFactory credentialsClientFactory;
     private CommandConsumerFactory commandConsumerFactory;
     private ConnectionLimitManager connectionLimitManager;
 
@@ -221,24 +222,24 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     }
 
     /**
-     * Sets the client to use for connecting to the Credentials service.
+     * Sets the factory to use for creating a client for the Credentials service.
      *
-     * @param credentialsServiceClient The client.
-     * @throws NullPointerException if the client is {@code null}.
+     * @param credentialsClientFactory The factory.
+     * @throws NullPointerException if the factory is {@code null}.
      */
     @Qualifier(CredentialsConstants.CREDENTIALS_ENDPOINT)
     @Autowired
-    public final void setCredentialsServiceClient(final HonoClient credentialsServiceClient) {
-        this.credentialsServiceClient = Objects.requireNonNull(credentialsServiceClient);
+    public final void setCredentialsClientFactory(final CredentialsClientFactory credentialsClientFactory) {
+        this.credentialsClientFactory = Objects.requireNonNull(credentialsClientFactory);
     }
 
     /**
-     * Gets the client used for connecting to the Credentials service.
+     * Gets the factory used for creating a client for the Credentials service.
      *
-     * @return The client.
+     * @return The factory.
      */
-    public final HonoClient getCredentialsServiceClient() {
-        return credentialsServiceClient;
+    public final CredentialsClientFactory getCredentialsClientFactory() {
+        return credentialsClientFactory;
     }
 
     /**
@@ -366,15 +367,15 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
             result.fail(new IllegalStateException("AMQP Messaging Network client must be set"));
         } else if (registrationClientFactory == null) {
             result.fail(new IllegalStateException("Device Registration client factory must be set"));
-        } else if (credentialsServiceClient == null) {
-            result.fail(new IllegalStateException("Credentials service client must be set"));
+        } else if (credentialsClientFactory == null) {
+            result.fail(new IllegalStateException("Credentials client factory must be set"));
         } else if (commandConsumerFactory == null) {
             result.fail(new IllegalStateException("Command & Control client factory must be set"));
         } else {
             connectToService(tenantClientFactory, "Tenant service");
             connectToService(messagingClient, "AMQP Messaging Network");
             connectToService(registrationClientFactory, "Device Registration service");
-            connectToService(credentialsServiceClient, "Credentials service");
+            connectToService(credentialsClientFactory, "Credentials service");
 
             connectToService(
                     commandConsumerFactory,
@@ -429,7 +430,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
                 closeServiceClient(messagingClient),
                 disconnectFromService(tenantClientFactory),
                 disconnectFromService(registrationClientFactory),
-                closeServiceClient(credentialsServiceClient),
+                disconnectFromService(credentialsClientFactory),
                 disconnectFromService(commandConsumerFactory));
     }
 
@@ -740,10 +741,10 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
                 .orElse(Future
                         .failedFuture(new ServerErrorException(
                                 HttpURLConnection.HTTP_UNAVAILABLE, "Device Registration client factory is not set")));
-        final Future<Void> credentialsCheck = Optional.ofNullable(credentialsServiceClient)
+        final Future<Void> credentialsCheck = Optional.ofNullable(credentialsClientFactory)
                 .map(client -> client.isConnected())
                 .orElse(Future.failedFuture(new ServerErrorException(
-                        HttpURLConnection.HTTP_UNAVAILABLE, "Credentials service client is not set")));
+                        HttpURLConnection.HTTP_UNAVAILABLE, "Credentials client factory is not set")));
         final Future<Void> messagingCheck = Optional.ofNullable(messagingClient)
                 .map(client -> client.isConnected())
                 .orElse(Future.failedFuture(new ServerErrorException(
