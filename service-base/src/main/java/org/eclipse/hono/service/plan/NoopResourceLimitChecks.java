@@ -21,7 +21,7 @@ import org.eclipse.hono.util.TenantObject;
 public class NoopResourceLimitChecks implements ResourceLimitChecks {
 
     @Override
-    public Future<?> isConnectionLimitExceeded(final TenantObject tenantObject) {
-        return Future.succeededFuture(tenantObject);
+    public Future<Boolean> isConnectionLimitExceeded(final TenantObject tenantObject) {
+        return Future.succeededFuture(Boolean.FALSE);
     }
 }

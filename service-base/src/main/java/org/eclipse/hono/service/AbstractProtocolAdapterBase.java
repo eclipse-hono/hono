@@ -470,9 +470,14 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * 
      * @param tenantConfig The tenant to check for.
      * @return A succeeded future if this adapter is enabled for the tenant.
-     *         Otherwise the future will be failed with a {@link ClientErrorException}.
+     *         Otherwise the future will be failed with a {@link ClientErrorException}
+     *         containing the 403 Forbidden status code.
+     * @throws NullPointerException if tenant is {@code null}.
      */
     protected final Future<TenantObject> isAdapterEnabled(final TenantObject tenantConfig) {
+
+        Objects.requireNonNull(tenantConfig);
+
         if (tenantConfig.isAdapterEnabled(getTypeName())) {
             LOG.debug("protocol adapter [{}] is enabled for tenant [{}]",
                     getTypeName(), tenantConfig.getTenantId());
@@ -503,7 +508,14 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
 
         Objects.requireNonNull(tenantConfig);
         return resourceLimitChecks.isConnectionLimitExceeded(tenantConfig)
-                .map(r -> (Void) null);
+                .recover(t -> Future.succeededFuture(Boolean.FALSE))
+                .compose(isExceeded -> {
+                    if (isExceeded) {
+                        return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_FORBIDDEN));
+                    } else {
+                        return Future.succeededFuture();
+                    }
+                });
     }
 
     /**

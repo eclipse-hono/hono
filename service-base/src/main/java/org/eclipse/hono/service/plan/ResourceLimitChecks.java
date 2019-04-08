@@ -12,9 +12,10 @@
  *******************************************************************************/
 package org.eclipse.hono.service.plan;
 
-import io.vertx.core.Future;
-import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.util.TenantObject;
+
+import io.vertx.core.Future;
 
 /**
  * Interface to check if further connections or messages are allowed based on the configured limits.
@@ -22,11 +23,14 @@ import org.eclipse.hono.util.TenantObject;
 public interface ResourceLimitChecks {
 
     /**
-     * Check if the number of connections exceeded the configured limit.
+     * Checks if the maximum number of connections configured for a tenant
+     * have been exceeded.
      * 
-     * @param tenantObject The TenantObject that contains the connections limit configured.
-     * @return A future indicating the outcome of the check. If the connection limit exceeds, then the future will fail
-     *         with a {@link ClientErrorException} containing <em>403 Forbidden</em> status.
+     * @param tenantObject The tenant configuration to check the limit against.
+     * @return A future indicating the outcome of the check.
+     *         <p>
+     *         The future will be failed with a {@link ServiceInvocationException}
+     *         if the check could not be performed.
      */
-    Future<?> isConnectionLimitExceeded(TenantObject tenantObject);
+    Future<Boolean> isConnectionLimitExceeded(TenantObject tenantObject);
 }

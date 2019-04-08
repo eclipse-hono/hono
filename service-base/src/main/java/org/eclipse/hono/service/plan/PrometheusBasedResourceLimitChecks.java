@@ -12,42 +12,44 @@
  *******************************************************************************/
 package org.eclipse.hono.service.plan;
 
-import io.vertx.core.Future;
-import io.vertx.core.Vertx;
-import io.vertx.core.buffer.Buffer;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
-import io.vertx.ext.web.client.HttpResponse;
-import io.vertx.ext.web.client.WebClient;
-import io.vertx.ext.web.client.predicate.ResponsePredicate;
-import org.eclipse.hono.client.ClientErrorException;
+import java.util.Objects;
+
+import javax.annotation.PostConstruct;
+
 import org.eclipse.hono.service.metric.MicrometerBasedMetrics;
 import org.eclipse.hono.util.PortConfigurationHelper;
 import org.eclipse.hono.util.TenantObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.annotation.PostConstruct;
-import java.net.HttpURLConnection;
-import java.util.Objects;
-import java.util.Optional;
+import io.vertx.core.Future;
+import io.vertx.core.Vertx;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
+import io.vertx.ext.web.client.HttpResponse;
+import io.vertx.ext.web.client.WebClient;
+import io.vertx.ext.web.client.predicate.ResponsePredicate;
+import io.vertx.ext.web.codec.BodyCodec;
 
 /**
- * An implementation of {@link ResourceLimitChecks} which uses metrics data from the prometheus backend to check if
- * further connections or messages are allowed by comparing with the configured limits.
+ * Resource limit checks which compare configured limits with live metrics retrieved
+ * from a <em>Prometheus</em> server.
  */
 public final class PrometheusBasedResourceLimitChecks implements ResourceLimitChecks {
+
     private static final String CONNECTIONS_METRIC_NAME = MicrometerBasedMetrics.METER_CONNECTIONS_AUTHENTICATED
             .replace(".", "_");
-    private final Logger log = LoggerFactory.getLogger(getClass());
+    private static final Logger log = LoggerFactory.getLogger(PrometheusBasedResourceLimitChecks.class);
+
     private final WebClient client;
     private String host;
     private int port = 9090;
     private String queryUrl;
+
     /**
-     * Creates a new PrometheusBasedResourceLimitChecks instance.
+     * Creates new checks.
      *
-     * @param vertx The Vertx instance to use.
+     * @param vertx The vert.x instance to use for creating a web client.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
     public PrometheusBasedResourceLimitChecks(final Vertx vertx) {
@@ -55,62 +57,66 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
     }
 
     @Override
-    public Future<?> isConnectionLimitExceeded(final TenantObject tenant) {
+    public Future<Boolean> isConnectionLimitExceeded(final TenantObject tenant) {
+
         Objects.requireNonNull(tenant);
-        log.trace("Connections limit for tenant [{}] is [{}]", tenant.getTenantId(), tenant.getConnectionsLimit());
-        if (tenant.getConnectionsLimit() != -1) {
+
+        log.trace("connection limit for tenant [{}] is [{}]", tenant.getTenantId(), tenant.getConnectionsLimit());
+
+        if (tenant.getConnectionsLimit() == -1) {
+            return Future.succeededFuture(Boolean.FALSE);
+        } else {
             final String queryParams = String.format("sum(%s{tenant=\"%s\"})", CONNECTIONS_METRIC_NAME,
                     tenant.getTenantId());
             return executeQuery(queryParams)
-                    .recover(failure -> Future.succeededFuture(0L))
-                    .compose(noOfConnections -> {
-                        if (Optional.ofNullable(noOfConnections).orElse(0L) < tenant.getConnectionsLimit()) {
-                            return Future.succeededFuture(tenant);
+                    .map(currentConnections -> {
+                        if (currentConnections <= tenant.getConnectionsLimit()) {
+                            return Boolean.FALSE;
                         } else {
                             log.trace(
-                                    "Connections limit exceeded for tenant. [tenant: {}, no.-Connections:{}, connections-limit:{}]",
-                                    tenant.getTenantId(), noOfConnections, tenant.getConnectionsLimit());
-                            return Future
-                                    .failedFuture(new ClientErrorException(HttpURLConnection.HTTP_FORBIDDEN,
-                                            String.format("Connections limit exceeded for tenant: [%s]",
-                                                    tenant.getTenantId())));
+                                    "connection limit exceeded [tenant: {}, current connections: {}, max-connections: {}]",
+                                    tenant.getTenantId(), currentConnections, tenant.getConnectionsLimit());
+                            return Boolean.TRUE;
                         }
-                    });
+                    }).otherwise(Boolean.FALSE);
         }
-        return Future.succeededFuture(tenant);
     }
 
     /**
-     * Gets the host of the prometheus backend.
+     * Gets the host of the Prometheus server to retrieve metrics from.
      *
-     * @return host The host of the Prometheus backend.
+     * @return host The host name or IP address.
      */
     public String getHost() {
         return host;
     }
 
     /**
-     * Sets the host of the prometheus backend. The default value of this property is empty.
+     * Sets the host of the Prometheus server to retrieve metrics from.
+     * <p>
+     * The default value of this property is {@code null}.
      *
-     * @param host The host of the Prometheus backend.
+     * @param host The host name or IP address.
      */
     public void setHost(final String host) {
         this.host = Objects.requireNonNull(host);
     }
 
     /**
-     * Gets the port of the prometheus backend.
+     * Gets the port of the Prometheus server to retrieve metrics from.
      *
-     * @return port The port of the Prometheus backend.
+     * @return port The port number.
      */
     public int getPort() {
         return port;
     }
 
     /**
-     * Sets the port of the prometheus backend. The default value of this property is 9090.
+     * Sets the port of the Prometheus server to retrieve metrics from.
+     * <p>
+     * The default value of this property is 9090.
      *
-     * @param port The port of the Prometheus backend.
+     * @param port The port number.
      * @throws IllegalArgumentException if the port number is &lt; 0 or &gt; 2^16 - 1
      */
     public void setPort(final int port) {
@@ -126,39 +132,62 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
         queryUrl = String.format("http://%s:%s/api/v1/query", getHost(), getPort());
     }
 
-    private Future<Long> executeQuery(final String queryParams) {
+    private Future<Long> executeQuery(final String query) {
+
         final Future<Long> result = Future.future();
-        log.trace("Prometheus backend url: {}, queryParams: {}", queryUrl, queryParams);
+        log.trace("running query [] against Prometheus backend [{}]", query, queryUrl);
         client.getAbs(queryUrl)
-                .addQueryParam("query", queryParams)
-                .expect(ResponsePredicate.SC_OK)
-                .send(sendResult -> {
-                    if (sendResult.succeeded()) {
-                        final HttpResponse<Buffer> response = sendResult.result();
-                        try {
-                            Objects.requireNonNull(response);
-                            result.complete(extractValue(response.bodyAsJsonObject()));
-                        } catch (final Exception e) {
-                            log.warn("Error fetching result from prometheus [url:{}, params:{}]. Reason [{}]",
-                                    queryUrl, queryParams, e.getMessage());
-                            result.fail(String.format("Error fetching result from prometheus [%s]", e.getMessage()));
-                        }
-                    } else {
-                        log.warn("Error fetching result from prometheus [url:{}, params:{}]. Reason [{}]",
-                                queryUrl, queryParams, sendResult.cause().getMessage());
-                        result.fail(String.format("Error fetching result from prometheus [%s]",
-                                sendResult.cause().getMessage()));
-                    }
-                });
+        .addQueryParam("query", query)
+        .expect(ResponsePredicate.SC_OK)
+        .as(BodyCodec.jsonObject())
+        .send(sendAttempt -> {
+            if (sendAttempt.succeeded()) {
+                final HttpResponse<JsonObject> response = sendAttempt.result();
+                result.complete(extractLongValue(response.body()));
+            } else {
+                log.debug("error fetching result from Prometheus [url: {}, query: {}]: {}",
+                        queryUrl, query, sendAttempt.cause().getMessage());
+                result.fail(sendAttempt.cause());
+            }
+        });
         return result;
     }
 
-    private Long extractValue(final JsonObject jsonObject) {
-        Objects.requireNonNull(jsonObject);
-        final String status = jsonObject.getString("status");
-        if ("success".equals(status)) {
-            final JsonObject data = jsonObject.getJsonObject("data");
-            if (data != null) {
+    /**
+     * Extracts a long value from the JSON result returned by the Prometheus
+     * server.
+     * <p>
+     * The result is expected to have the following structure:
+     * <pre>
+     * {
+     *   "status": "success",
+     *   "data": {
+     *     "result": [
+     *       {
+     *         "value": [ $timestamp, "$value" ]
+     *       }
+     *     ]
+     *   }
+     * }
+     * </pre>
+     * 
+     * @param response The response object.
+     * @return The extracted value.
+     * @see <a href="https://prometheus.io/docs/prometheus/latest/querying/api/">Prometheus HTTP API</a>
+     */
+    private Long extractLongValue(final JsonObject response) {
+
+        Objects.requireNonNull(response);
+
+        try {
+            final String status = response.getString("status");
+            if ("error".equals(status)) {
+                log.debug("error while executing query [status: {}, error type: {}, error: {}]",
+                        status, response.getString("errorType"), response.getString("error"));
+                return 0L;
+            } else {
+                // success
+                final JsonObject data = response.getJsonObject("data", new JsonObject());
                 final JsonArray result = data.getJsonArray("result");
                 if (result != null && result.size() == 1 && result.getJsonObject(0) != null) {
                     final JsonArray valueArray = result.getJsonObject(0).getJsonArray("value");
@@ -169,11 +198,11 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
                         }
                     }
                 }
+                log.debug("received malformed response from Prometheus server: {}", response.encodePrettily());
             }
-            log.debug("No value available.");
-        } else {
-            log.warn("Error in query execution. [status:{}]", status);
+        } catch (Exception e) {
+            log.debug("received malformed response from Prometheus server: {}", response.encodePrettily(), e);
         }
-        return null;
+        return 0L;
     }
 }
