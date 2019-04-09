@@ -104,6 +104,7 @@
         "$default": {
           "remoteHosts": "*",
           "allowUserIdProxy": true,
+          "allowAnonymousSender": true,
           "targets": "telemetry/*, event/*, control/*",
           "sources": "control/*"
         }

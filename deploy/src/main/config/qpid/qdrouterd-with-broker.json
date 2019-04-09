@@ -113,6 +113,7 @@
           "maxSessionWindow": 6553600,
           "maxMessageSize": 131072,
           "allowUserIdProxy": true,
+          "allowAnonymousSender": true,
           "sources": "control/*",
           "targets": "telemetry/*, event/*, control/*"
         }
