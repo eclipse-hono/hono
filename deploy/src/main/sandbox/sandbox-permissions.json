@@ -18,6 +18,10 @@
         "activities": [ "EXECUTE" ]
       },
       {
+        "operation": "registration/*:get",
+        "activities": [ "EXECUTE" ]
+      },
+      {
         "resource": "credentials/*",
         "activities": [ "READ", "WRITE" ]
       },
