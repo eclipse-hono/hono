@@ -144,7 +144,10 @@ public final class HonoProtonHelper {
      */
     public static boolean isLinkEstablished(final ProtonLink<?> link) {
         if (link instanceof ProtonSender) {
-            return link.getRemoteTarget() != null && link.getRemoteTarget().getAddress() != null;
+            // check for non-null remote target address - or if it is null, for an anonymous sender link (with empty local target address)
+            return link.getRemoteTarget() != null
+                    && (link.getRemoteTarget().getAddress() != null
+                            || (link.getTarget() != null && link.getTarget().getAddress() != null && link.getTarget().getAddress().isEmpty()));
         } else if (link instanceof ProtonReceiver) {
             return link.getRemoteSource() != null && link.getRemoteSource().getAddress() != null;
         } else {
