@@ -162,7 +162,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                                     .withTag(Tags.COMPONENT.getKey(), getTypeName())
                                     .start(),
                                 connectionLimitManager,
-                                getResourceLimitChecks());
+                                this::checkConnectionLimit);
                     }
                     return Future.succeededFuture();
                 }).compose(succcess -> {

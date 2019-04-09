@@ -486,6 +486,27 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     }
 
     /**
+     * Checks if this adapter may accept another connection from a device.
+     * <p>
+     * This default implementation uses the
+     * {@link ResourceLimitChecks#isConnectionLimitExceeded(TenantObject)} method
+     * to verify if the tenant's connection limit has been reached.
+     * 
+     * @param tenantConfig The tenant to check the connection limit for.
+     * @return A succeeded future if the connection limit has not been reached yet
+     *         or if the limits could not be checked.
+     *         Otherwise the future will be failed with a {@link ClientErrorException}
+     *         containing the 403 Forbidden status code.
+     * @throws NullPointerException if tenant is {@code null}.
+     */
+    protected Future<Void> checkConnectionLimit(final TenantObject tenantConfig) {
+
+        Objects.requireNonNull(tenantConfig);
+        return resourceLimitChecks.isConnectionLimitExceeded(tenantConfig)
+                .map(r -> (Void) null);
+    }
+
+    /**
      * Validates a message's target address for consistency with Hono's addressing rules.
      *
      * @param address The address to validate.

@@ -20,6 +20,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 import javax.net.ssl.SSLPeerUnverifiedException;
@@ -41,7 +42,6 @@ import org.eclipse.hono.service.auth.device.UsernamePasswordAuthProvider;
 import org.eclipse.hono.service.auth.device.UsernamePasswordCredentials;
 import org.eclipse.hono.service.auth.device.X509AuthProvider;
 import org.eclipse.hono.service.limiting.ConnectionLimitManager;
-import org.eclipse.hono.service.plan.ResourceLimitChecks;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.AuthenticationConstants;
 import org.eclipse.hono.util.Constants;
@@ -69,8 +69,8 @@ import io.vertx.proton.sasl.ProtonSaslAuthenticatorFactory;
  * <p>
  * On successful authentication of the device, a {@link Device} reflecting the device's credentials (as obtained from
  * the Credentials service) is stored in the attachments record of the {@code ProtonConnection} under key
- * {@link AmqpAdapterConstants#KEY_CLIENT_DEVICE}. The credentials supplied by the client is verified against the credentials that
- * the credentials service has on record for the device.
+ * {@link AmqpAdapterConstants#KEY_CLIENT_DEVICE}. The credentials supplied by the client are verified against
+ * the credentials that the Credentials service has on record for the device.
  * <p>
  * This factory supports the SASL PLAIN and SASL EXTERNAL mechanisms for authenticating devices.
  */
@@ -78,11 +78,12 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
 
     private final ProtocolAdapterProperties config;
     private final TenantClientFactory tenantClientFactory;
-    private final CredentialsClientFactory credentialsClientFactory;
-    private final Tracer tracer;
     private final Supplier<Span> spanFactory;
-    private final ConnectionLimitManager connectionLimitManager;
-    private final ResourceLimitChecks resourceLimitChecks;
+    private final ConnectionLimitManager adapterConnectionLimit;
+    private final Function<TenantObject, Future<Void>> tenantConnectionLimit;
+    private final DeviceCertificateValidator certValidator;
+    private final HonoClientBasedAuthProvider<UsernamePasswordCredentials> usernamePasswordAuthProvider;
+    private final HonoClientBasedAuthProvider<SubjectDnCredentials> clientCertAuthProvider;
 
     /**
      * Creates a new SASL authenticator factory for an authentication provider. If the AMQP adapter supports
@@ -95,10 +96,9 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
      * @param tracer The tracer instance.
      * @param spanFactory The factory to use for creating and starting an OpenTracing span to
      *                    trace the authentication of the device.
-     * @param connectionLimitManager The connection limit manager to use to monitor the number of connections.
-     * @param resourceLimitChecks The resource limit checks instance to check if the maximum number of connections are
-     *            exceeded or not.
-     *
+     * @param adapterConnectionLimit The adapter level connection limit to enforce.
+     * @param tenantConnectionLimit The tenant level connection limit to enforce. The function must return
+     *                              a succeeded future if the connection limit has not been reached yet.
      * @throws NullPointerException if any of the parameters are null.
      */
     public AmqpAdapterSaslAuthenticatorFactory(
@@ -107,69 +107,43 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
             final ProtocolAdapterProperties config,
             final Tracer tracer,
             final Supplier<Span> spanFactory,
-            final ConnectionLimitManager connectionLimitManager,
-            final ResourceLimitChecks resourceLimitChecks) {
+            final ConnectionLimitManager adapterConnectionLimit,
+            final Function<TenantObject, Future<Void>> tenantConnectionLimit) {
 
+
+        Objects.requireNonNull(credentialsClientFactory, "Credentials client cannot be null");
+        Objects.requireNonNull(tracer);
         this.tenantClientFactory = Objects.requireNonNull(tenantClientFactory, "Tenant client factory cannot be null");
-        this.credentialsClientFactory = Objects.requireNonNull(credentialsClientFactory, "Credentials client factory cannot be null");
         this.config = Objects.requireNonNull(config, "configuration cannot be null");
-        this.tracer = Objects.requireNonNull(tracer);
         this.spanFactory = Objects.requireNonNull(spanFactory);
-        this.connectionLimitManager = Objects.requireNonNull(connectionLimitManager);
-        this.resourceLimitChecks = Objects.requireNonNull(resourceLimitChecks);
+        this.adapterConnectionLimit = Objects.requireNonNull(adapterConnectionLimit);
+        this.tenantConnectionLimit = Objects.requireNonNull(tenantConnectionLimit);
+        this.certValidator = new DeviceCertificateValidator();
+        this.clientCertAuthProvider = new X509AuthProvider(credentialsClientFactory, config, tracer);
+        this.usernamePasswordAuthProvider = new UsernamePasswordAuthProvider(credentialsClientFactory, config, tracer);
     }
 
     @Override
     public ProtonSaslAuthenticator create() {
-        return new AmqpAdapterSaslAuthenticator(
-                tenantClientFactory,
-                credentialsClientFactory,
-                config,
-                tracer,
-                spanFactory.get(),
-                connectionLimitManager,
-                resourceLimitChecks);
+        return new AmqpAdapterSaslAuthenticator(spanFactory.get());
     }
 
     /**
      * Manage the SASL authentication process for the AMQP adapter.
      */
-    static final class AmqpAdapterSaslAuthenticator implements ProtonSaslAuthenticator {
+    final class AmqpAdapterSaslAuthenticator implements ProtonSaslAuthenticator {
 
-        private static final Logger LOG = LoggerFactory.getLogger(AmqpAdapterSaslAuthenticator.class);
+        private final Logger LOG = LoggerFactory.getLogger(getClass());
 
-        private final ProtocolAdapterProperties config;
-        private final TenantClientFactory tenantClientFactory;
-        private final CredentialsClientFactory credentialsClientFactory;
-        private final Tracer tracer;
         private final Span currentSpan;
-        private final ConnectionLimitManager connectionLimitManager;
-        private final ResourceLimitChecks resourceLimitChecks;
 
         private Sasl sasl;
         private boolean succeeded;
         private ProtonConnection protonConnection;
         private Certificate[] peerCertificateChain;
-        private HonoClientBasedAuthProvider<UsernamePasswordCredentials> usernamePasswordAuthProvider;
-        private HonoClientBasedAuthProvider<SubjectDnCredentials> clientCertAuthProvider;
-        private DeviceCertificateValidator certValidator;
 
-        AmqpAdapterSaslAuthenticator(
-                final TenantClientFactory tenantClientFactory,
-                final CredentialsClientFactory credentialsClientFactory,
-                final ProtocolAdapterProperties config,
-                final Tracer tracer,
-                final Span currentSpan,
-                final ConnectionLimitManager connectionLimitManager,
-                final ResourceLimitChecks resourceLimitChecks) {
-
-            this.tenantClientFactory = tenantClientFactory;
-            this.credentialsClientFactory = credentialsClientFactory;
-            this.config = config;
-            this.tracer = tracer;
+        AmqpAdapterSaslAuthenticator(final Span currentSpan) {
             this.currentSpan = currentSpan;
-            this.connectionLimitManager = connectionLimitManager;
-            this.resourceLimitChecks = resourceLimitChecks;
         }
 
         @Override
@@ -200,7 +174,7 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
                 return;
             }
 
-            if (connectionLimitManager.isLimitExceeded()) {
+            if (adapterConnectionLimit.isLimitExceeded()) {
                 LOG.debug("Connection limit exceeded, reject connection request");
                 sasl.done(SaslOutcome.PN_SASL_TEMP);
                 completionHandler.handle(Boolean.TRUE);
@@ -272,14 +246,13 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
                     currentSpan.log(items);
 
                     final Future<DeviceUser> authenticationTracker = Future.future();
-                    getUsernamePasswordAuthProvider().authenticate(credentials, currentSpan.context(),
+                    usernamePasswordAuthProvider.authenticate(credentials, currentSpan.context(),
                             authenticationTracker);
                     authenticationTracker
                             .compose(user -> getTenantObject(credentials.getTenantId())
-                                    .compose(tenant -> CompositeFuture
-                                            .all(checkTenantIsEnabled(tenant),
-                                                    resourceLimitChecks.isConnectionLimitExceeded(tenant))
-                                            .map(ok -> user)))
+                                    .compose(tenant -> CompositeFuture.all(
+                                            checkTenantIsEnabled(tenant),
+                                            tenantConnectionLimit.apply(tenant)).map(ok -> user)))
                             .setHandler(completer);
                 }
             } catch (CredentialException e) {
@@ -309,7 +282,7 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
                         .compose(tenant -> {
                             try {
                                 final TrustAnchor trustAnchor = tenantTracker.result().getTrustAnchor();
-                                return getValidator().validate(Collections.singletonList(deviceCert), trustAnchor);
+                                return certValidator.validate(Collections.singletonList(deviceCert), trustAnchor);
                             } catch(final GeneralSecurityException e) {
                                 LOG.debug("cannot retrieve trust anchor of tenant [{}]", tenant.getTenantId(), e);
                                 return Future.failedFuture(new CredentialException("validation of client certificate failed"));
@@ -319,13 +292,12 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
                             final Future<DeviceUser> user = Future.future();
                             final String tenantId = tenantTracker.result().getTenantId();
                             final SubjectDnCredentials credentials = SubjectDnCredentials.create(tenantId, deviceCert.getSubjectX500Principal());
-                            getCertificateAuthProvider().authenticate(credentials, currentSpan.context(), user);
+                            clientCertAuthProvider.authenticate(credentials, currentSpan.context(), user);
                             return user;
                         })
-                        .compose(user -> CompositeFuture
-                                .all(checkTenantIsEnabled(tenantTracker.result()),
-                                        resourceLimitChecks.isConnectionLimitExceeded(tenantTracker.result()))
-                                .map(ok -> user))
+                        .compose(user -> CompositeFuture.all(
+                                checkTenantIsEnabled(tenantTracker.result()),
+                                tenantConnectionLimit.apply(tenantTracker.result())).map(ok -> user))
                         .setHandler(completer);
             }
         }
@@ -346,27 +318,6 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
             } else {
                 return Future.failedFuture(new CredentialException("AMQP adapter is disabled for tenant"));
             }
-        }
-
-        private HonoClientBasedAuthProvider<UsernamePasswordCredentials> getUsernamePasswordAuthProvider() {
-            if (usernamePasswordAuthProvider == null) {
-                usernamePasswordAuthProvider = new UsernamePasswordAuthProvider(credentialsClientFactory, config, tracer);
-            }
-            return usernamePasswordAuthProvider;
-        }
-
-        private HonoClientBasedAuthProvider<SubjectDnCredentials> getCertificateAuthProvider() {
-            if (clientCertAuthProvider == null) {
-                clientCertAuthProvider = new X509AuthProvider(credentialsClientFactory, config, tracer);
-            }
-            return clientCertAuthProvider;
-        }
-
-        private DeviceCertificateValidator getValidator() {
-            if (certValidator == null) {
-                certValidator = new DeviceCertificateValidator();
-            }
-            return certValidator;
         }
     }
 }
