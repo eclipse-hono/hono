@@ -196,7 +196,7 @@ public final class MetricsTags {
         /**
          * Status indicating that the message from the device did not contain a TTD value.
          */
-        NONE(),
+        NONE("none"),
         /**
          * Status indicating that the TTD expired without any pending commands for the device.
          */
@@ -226,24 +226,6 @@ public final class MetricsTags {
         public Tag asTag() {
             return tag;
         }
-
-        /**
-         * Adds a tag for the TTD status to a given set of tags.
-         * <p>
-         * The tag is only added if the status is not {@link #NONE}.
-         * 
-         * @param tags The tags to add to.
-         * @return The tags.
-         * @throws NullPointerException if tags is {@code null}.
-         */
-        public Tags add(final Tags tags) {
-            Objects.requireNonNull(tags);
-            if (tag == null) {
-                return tags;
-            } else {
-                return tags.and(tag);
-            }
-        }
     }
 
     /**
@@ -254,7 +236,7 @@ public final class MetricsTags {
         /**
          * QoS indicating unknown delivery semantics.
          */
-        UNKNOWN(),
+        UNKNOWN("unknown"),
         /**
          * QoS (level 0) indicating at-most-once delivery semantics.
          */
@@ -300,24 +282,6 @@ public final class MetricsTags {
          */
         public Tag asTag() {
             return tag;
-        }
-
-        /**
-         * Adds a tag for the QoS level to a given set of tags.
-         * <p>
-         * The tag is only added if the status is not {@link #UNKNOWN}.
-         * 
-         * @param tags The tags to add to.
-         * @return The tags.
-         * @throws NullPointerException if tags is {@code null}.
-         */
-        public Tags add(final Tags tags) {
-            Objects.requireNonNull(tags);
-            if (tag == null) {
-                return tags;
-            } else {
-                return tags.and(tag);
-            }
         }
     }
 
