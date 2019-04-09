@@ -18,6 +18,10 @@ title = "Release Notes"
   processing of requests at a high level.
 * The `hono-client` and `hono-core` artifacts use Java 8 level again so that they
   can be used in applications using Java 8.
+* The protocol adapters now always specify values for the *ttd* and *qos* tags when
+  reporting telemetry messages using meter name *hono.messages.received*. This fixes
+  an issue when using the Prometheus back end where the HTTP adapter failed to report
+  messages that contained a TTD value and others that didn't.
 
 ### API Changes
 

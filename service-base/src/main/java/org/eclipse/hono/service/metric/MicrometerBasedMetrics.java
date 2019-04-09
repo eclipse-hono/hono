@@ -172,17 +172,19 @@ public class MicrometerBasedMetrics implements Metrics {
             throw new IllegalArgumentException("payload size must not be negative");
         }
 
-        final Tags baseTags = Tags.of(type.asTag())
+        final Tags tags = Tags.of(type.asTag())
                 .and(MetricsTags.getTenantTag(tenantId))
-                .and(outcome.asTag());
+                .and(outcome.asTag())
+                .and(qos.asTag())
+                .and(ttdStatus.asTag());
 
-        timer.stop(this.registry.timer(METER_MESSAGES_RECEIVED, ttdStatus.add(qos.add(baseTags))));
+        timer.stop(this.registry.timer(METER_MESSAGES_RECEIVED, tags));
 
         // record payload size
         DistributionSummary.builder(METER_MESSAGES_PAYLOAD)
             .baseUnit("bytes")
             .minimumExpectedValue(0L)
-            .tags(baseTags)
+            .tags(tags)
             .register(this.registry)
             .record(payloadSize);
 
@@ -233,17 +235,17 @@ public class MicrometerBasedMetrics implements Metrics {
             throw new IllegalArgumentException("payload size must not be negative");
         }
 
-        final Tags baseTags = Tags.of(direction.asTag())
+        final Tags tags = Tags.of(direction.asTag())
                 .and(MetricsTags.getTenantTag(tenantId))
                 .and(outcome.asTag());
 
-        timer.stop(this.registry.timer(METER_COMMANDS_RECEIVED, baseTags));
+        timer.stop(this.registry.timer(METER_COMMANDS_RECEIVED, tags));
 
         // record payload size
         DistributionSummary.builder(METER_COMMANDS_PAYLOAD)
             .baseUnit("bytes")
             .minimumExpectedValue(0L)
-            .tags(baseTags)
+            .tags(tags)
             .register(this.registry)
             .record(payloadSize);
 
@@ -284,7 +286,6 @@ public class MicrometerBasedMetrics implements Metrics {
             return this.registry.gauge(name, tags, instanceSupplier.get());
 
         });
-
     }
 
     /**
@@ -304,6 +305,5 @@ public class MicrometerBasedMetrics implements Metrics {
             final Supplier<V> instanceSupplier) {
 
         return gaugeForKey(name, map, tenant, Tags.of(MetricsTags.getTenantTag(tenant)), instanceSupplier);
-
     }
 }
