@@ -42,6 +42,8 @@ import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
+import org.eclipse.hono.service.auth.device.UsernamePasswordAuthProvider;
+import org.eclipse.hono.service.auth.device.X509AuthProvider;
 import org.eclipse.hono.service.limiting.ConnectionLimitManager;
 import org.eclipse.hono.service.limiting.DefaultConnectionLimitManager;
 import org.eclipse.hono.service.limiting.MemoryBasedConnectionLimitStrategy;
@@ -154,16 +156,16 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                         setConnectionLimitManager(connectionLimitManager);
                         authenticatorFactory = new AmqpAdapterSaslAuthenticatorFactory(
                                 getTenantClientFactory(),
-                                getCredentialsClientFactory(),
                                 getConfig(),
-                                tracer,
                                 () -> tracer.buildSpan("open connection")
                                     .ignoreActiveSpan()
                                     .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_SERVER)
                                     .withTag(Tags.COMPONENT.getKey(), getTypeName())
                                     .start(),
                                 connectionLimitManager,
-                                this::checkConnectionLimit);
+                                this::checkConnectionLimit,
+                                new UsernamePasswordAuthProvider(getCredentialsClientFactory(), getConfig(), tracer),
+                                new X509AuthProvider(getCredentialsClientFactory(), getConfig(), tracer));
                     }
                     return Future.succeededFuture();
                 }).compose(succcess -> {
