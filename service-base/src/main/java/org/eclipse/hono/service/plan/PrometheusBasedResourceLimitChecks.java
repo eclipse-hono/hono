@@ -70,7 +70,7 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
                     tenant.getTenantId());
             return executeQuery(queryParams)
                     .map(currentConnections -> {
-                        if (currentConnections <= tenant.getConnectionsLimit()) {
+                        if (currentConnections < tenant.getConnectionsLimit()) {
                             return Boolean.FALSE;
                         } else {
                             log.trace(
