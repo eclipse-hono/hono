@@ -43,6 +43,7 @@ import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
 import org.eclipse.hono.service.limiting.ConnectionLimitManager;
+import org.eclipse.hono.service.limiting.DefaultConnectionLimitManager;
 import org.eclipse.hono.service.limiting.MemoryBasedConnectionLimitStrategy;
 import org.eclipse.hono.service.metric.MetricsTags.Direction;
 import org.eclipse.hono.service.metric.MetricsTags.ProcessingOutcome;
@@ -174,7 +175,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
     }
 
     private ConnectionLimitManager createConnectionLimitManager() {
-        return new ConnectionLimitManager(
+        return new DefaultConnectionLimitManager(
                 new MemoryBasedConnectionLimitStrategy(
                         MINIMAL_MEMORY, MEMORY_PER_CONNECTION + getConfig().getMaxSessionWindowSize()),
                 () -> metrics.getNumberOfConnections(), getConfig());

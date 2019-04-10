@@ -43,6 +43,7 @@ import org.eclipse.hono.service.auth.device.UsernamePasswordAuthProvider;
 import org.eclipse.hono.service.auth.device.UsernamePasswordCredentials;
 import org.eclipse.hono.service.auth.device.X509AuthProvider;
 import org.eclipse.hono.service.limiting.ConnectionLimitManager;
+import org.eclipse.hono.service.limiting.DefaultConnectionLimitManager;
 import org.eclipse.hono.service.limiting.MemoryBasedConnectionLimitStrategy;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.service.metric.MetricsTags.Direction;
@@ -295,7 +296,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
     }
 
     private ConnectionLimitManager createConnectionLimitManager() {
-        return new ConnectionLimitManager(
+        return new DefaultConnectionLimitManager(
                 new MemoryBasedConnectionLimitStrategy(MINIMAL_MEMORY, MEMORY_PER_CONNECTION),
                 () -> metrics.getNumberOfConnections(), getConfig());
     }

@@ -13,7 +13,7 @@
 package org.eclipse.hono.service.limiting;
 
 /**
- * A strategy to calculate a recommended connection limit for {@link ConnectionLimitManager} based on the available
+ * A strategy to calculate a recommended connection limit for {@link DefaultConnectionLimitManager} based on the available
  * resources and the demand of a protocol adapter has to serve a connection.
  */
 public interface ConnectionLimitStrategy {
@@ -27,7 +27,7 @@ public interface ConnectionLimitStrategy {
 
     /**
      * Gives a descriptive text of the resources and their amount that the calculation took into account. It is intended
-     * to be logged by {@link ConnectionLimitManager}.
+     * to be logged by {@link DefaultConnectionLimitManager}.
      *
      * @return The description of the resources on which the strategy calculated the limit.
      */

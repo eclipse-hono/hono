@@ -24,9 +24,9 @@ import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.junit.Test;
 
 /**
- * Verifies the behavior of {@link ConnectionLimitManager}.
+ * Verifies the behavior of {@link DefaultConnectionLimitManager}.
  */
-public class ConnectionLimitManagerTest {
+public class DefaultConnectionLimitManagerTest {
 
     private ConnectionLimitStrategy strategy = mock(ConnectionLimitStrategy.class);
 
@@ -44,7 +44,7 @@ public class ConnectionLimitManagerTest {
         final Supplier<Integer> currentConnections = () -> 1;
 
         // THEN the limit is exceeded
-        assertTrue(new ConnectionLimitManager(strategy, currentConnections, config).isLimitExceeded());
+        assertTrue(new DefaultConnectionLimitManager(strategy, currentConnections, config).isLimitExceeded());
     }
 
     /**
@@ -60,7 +60,7 @@ public class ConnectionLimitManagerTest {
         final Supplier<Integer> currentConnections = () -> 2;
 
         // THEN the limit is exceeded
-        assertTrue(new ConnectionLimitManager(strategy, currentConnections, config).isLimitExceeded());
+        assertTrue(new DefaultConnectionLimitManager(strategy, currentConnections, config).isLimitExceeded());
     }
 
     /**
@@ -77,21 +77,22 @@ public class ConnectionLimitManagerTest {
         final Supplier<Integer> currentConnections = () -> 1;
 
         // THEN the limit is not exceeded
-        assertFalse(new ConnectionLimitManager(strategy, currentConnections, config).isLimitExceeded());
+        assertFalse(new DefaultConnectionLimitManager(strategy, currentConnections, config).isLimitExceeded());
     }
 
     /**
      * Verifies that the recommended value is used as connection limit if no limit has been configured.
      */
+    @SuppressWarnings("unchecked")
     @Test
     public void testAutoconfigIfNotConfigured() {
 
         final Supplier<Integer> currentConnections = mock(Supplier.class);
 
-        // GIVEN a ConnectionLimitManager with no limit set and the recommended limit is 2
+        // GIVEN a DefaultConnectionLimitManager with no limit set and the recommended limit is 2
         final ProtocolAdapterProperties config = new ProtocolAdapterProperties();
         when(strategy.getRecommendedLimit()).thenReturn(2);
-        final ConnectionLimitManager connectionLimitManager = new ConnectionLimitManager(strategy, currentConnections,
+        final ConnectionLimitManager connectionLimitManager = new DefaultConnectionLimitManager(strategy, currentConnections,
                 config);
 
         // WHEN there is one connection
@@ -108,15 +109,16 @@ public class ConnectionLimitManagerTest {
     /**
      * Verifies that the recommended value is used as connection limit if no config is provided.
      */
+    @SuppressWarnings("unchecked")
     @Test
     public void testAutoconfigIfConfigIsNull() {
 
         final Supplier<Integer> currentConnections = mock(Supplier.class);
 
-        // GIVEN a ConnectionLimitManager with no config and the recommended limit is 2
+        // GIVEN a DefaultConnectionLimitManager with no config and the recommended limit is 2
         final ProtocolAdapterProperties config = null;
         when(strategy.getRecommendedLimit()).thenReturn(2);
-        final ConnectionLimitManager connectionLimitManager = new ConnectionLimitManager(strategy, currentConnections,
+        final ConnectionLimitManager connectionLimitManager = new DefaultConnectionLimitManager(strategy, currentConnections,
                 config);
 
         // WHEN there is one connection
