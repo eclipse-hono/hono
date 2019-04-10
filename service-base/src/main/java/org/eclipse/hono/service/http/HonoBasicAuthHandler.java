@@ -11,10 +11,9 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package org.eclipse.hono.adapter.http;
+package org.eclipse.hono.service.http;
 
 import org.eclipse.hono.client.ServiceInvocationException;
-import org.eclipse.hono.service.http.AuthHandlerTools;
 import org.eclipse.hono.tracing.TracingHelper;
 
 import io.opentracing.SpanContext;

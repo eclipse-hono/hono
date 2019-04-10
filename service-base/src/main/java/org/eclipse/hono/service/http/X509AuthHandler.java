@@ -11,7 +11,7 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package org.eclipse.hono.adapter.http;
+package org.eclipse.hono.service.http;
 
 import java.net.HttpURLConnection;
 import java.security.cert.Certificate;
@@ -22,7 +22,6 @@ import javax.net.ssl.SSLPeerUnverifiedException;
 import org.eclipse.hono.service.auth.device.HonoClientBasedAuthProvider;
 import org.eclipse.hono.service.auth.device.SubjectDnCredentials;
 import org.eclipse.hono.service.auth.device.X509Authentication;
-import org.eclipse.hono.service.http.AuthHandlerTools;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

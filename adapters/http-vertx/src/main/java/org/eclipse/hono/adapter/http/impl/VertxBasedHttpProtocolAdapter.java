@@ -18,9 +18,7 @@ import java.util.Objects;
 import java.util.Optional;
 
 import org.eclipse.hono.adapter.http.AbstractVertxBasedHttpProtocolAdapter;
-import org.eclipse.hono.adapter.http.HonoBasicAuthHandler;
 import org.eclipse.hono.adapter.http.HttpProtocolAdapterProperties;
-import org.eclipse.hono.adapter.http.X509AuthHandler;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.service.auth.device.HonoClientBasedAuthProvider;
@@ -29,8 +27,10 @@ import org.eclipse.hono.service.auth.device.TenantServiceBasedX509Authentication
 import org.eclipse.hono.service.auth.device.UsernamePasswordAuthProvider;
 import org.eclipse.hono.service.auth.device.UsernamePasswordCredentials;
 import org.eclipse.hono.service.auth.device.X509AuthProvider;
+import org.eclipse.hono.service.http.HonoBasicAuthHandler;
 import org.eclipse.hono.service.http.HonoChainAuthHandler;
 import org.eclipse.hono.service.http.HttpUtils;
+import org.eclipse.hono.service.http.X509AuthHandler;
 import org.eclipse.hono.util.Constants;
 
 import io.vertx.core.Handler;

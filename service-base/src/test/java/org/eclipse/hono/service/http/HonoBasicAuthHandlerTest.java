@@ -11,7 +11,7 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package org.eclipse.hono.adapter.http;
+package org.eclipse.hono.service.http;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -23,6 +23,7 @@ import java.util.Base64;
 
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.service.http.HonoBasicAuthHandler;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;

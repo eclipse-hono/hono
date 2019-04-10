@@ -62,6 +62,11 @@ title = "Release Notes"
   `org.eclipse.hono.service.auth.device.X509AuthProvider` now accept a
   `org.eclipse.hono.client.CredentialsClientFactory` instead of a
   `org.eclipse.hono.client.HonoClient` in their constructors.
+* The `org.eclipse.hono.adapter.http.HonoBasicAuthHandler` and
+  `org.eclipse.hono.adapter.http.X509AuthHandler` classes have been moved to
+  package `org.eclipse.hono.service.http` in the *service-base* module for
+  consistency reasons as all other reusable classes for implementing HTTP services/
+  adapters are located in that package already.
 
 ## 1.0-M1
 

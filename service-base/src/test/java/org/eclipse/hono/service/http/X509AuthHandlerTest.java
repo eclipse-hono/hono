@@ -12,7 +12,7 @@
  */
 
 
-package org.eclipse.hono.adapter.http;
+package org.eclipse.hono.service.http;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -43,6 +43,7 @@ import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.service.auth.device.HonoClientBasedAuthProvider;
 import org.eclipse.hono.service.auth.device.SubjectDnCredentials;
 import org.eclipse.hono.service.auth.device.X509Authentication;
+import org.eclipse.hono.service.http.X509AuthHandler;
 import org.junit.Before;
 import org.junit.Test;
 
