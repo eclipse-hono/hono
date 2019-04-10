@@ -71,7 +71,7 @@ public class Config extends AbstractAdapterConfig {
     }
 
     @Override
-    protected void customizeTenantServiceClientConfig(final RequestResponseClientConfigProperties config) {
+    protected void customizeTenantClientFactoryConfig(final RequestResponseClientConfigProperties config) {
         if (config != null) {
             config.setName(CONTAINER_ID_HONO_AMQP_ADAPTER);
         }

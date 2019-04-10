@@ -239,7 +239,7 @@ public abstract class AbstractAdapterConfig {
     @Bean
     public RequestResponseClientConfigProperties tenantServiceClientConfig() {
         final RequestResponseClientConfigProperties config = new RequestResponseClientConfigProperties();
-        customizeTenantServiceClientConfig(config);
+        customizeTenantClientFactoryConfig(config);
         return config;
     }
 
@@ -252,7 +252,7 @@ public abstract class AbstractAdapterConfig {
      *
      * @param config The configuration to customize.
      */
-    protected void customizeTenantServiceClientConfig(final RequestResponseClientConfigProperties config) {
+    protected void customizeTenantClientFactoryConfig(final RequestResponseClientConfigProperties config) {
         // empty by default
     }
 
