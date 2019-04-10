@@ -71,7 +71,6 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.core.net.TrustOptions;
 import io.vertx.ext.healthchecks.HealthCheckHandler;
 import io.vertx.ext.healthchecks.Status;
-import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonDelivery;
 import io.vertx.proton.ProtonHelper;
 
@@ -629,55 +628,6 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     }
 
     /**
-     * Connects to a Hono Service component using the configured client.
-     *
-     * @param client The Hono client for the service that is to be connected.
-     * @param serviceName The name of the service that is to be connected (used for logging).
-     * @return A future that will succeed once the connection has been established. The future will fail if the
-     *         connection cannot be established.
-     * @throws NullPointerException if serviceName is {@code null}.
-     * @throws IllegalArgumentException if client is {@code null}.
-     */
-    protected final Future<HonoClient> connectToService(final HonoClient client, final String serviceName) {
-        return connectToService(client, serviceName, (Handler<HonoClient>) onConnect -> {}, (Handler<HonoClient>) onConnectionLost -> {});
-    }
-
-    /**
-     * Connects to a Hono Service component using the configured client.
-     *
-     * @param client The Hono client for the service that is to be connected.
-     * @param serviceName The name of the service that is to be connected (used for logging).
-     * @param connectionEstablishedHandler A handler to invoke once the connection is established.
-     * @param connectionLostHandler A handler to invoke when the connection is lost unexpectedly.
-     * @return A future that will succeed once the connection has been established. The future will fail if the
-     *         connection cannot be established.
-     * @throws NullPointerException if any of the parameters are {@code null}.
-     */
-    protected final Future<HonoClient> connectToService(
-            final HonoClient client,
-            final String serviceName,
-            final Handler<HonoClient> connectionEstablishedHandler,
-            final Handler<HonoClient> connectionLostHandler) {
-
-        Objects.requireNonNull(client);
-        Objects.requireNonNull(serviceName);
-        Objects.requireNonNull(connectionEstablishedHandler);
-        Objects.requireNonNull(connectionLostHandler);
-
-        final Handler<ProtonConnection> disconnectHandler = getHandlerForDisconnectHonoService(client, serviceName,
-                connectionEstablishedHandler, connectionLostHandler);
-
-        return client.connect(disconnectHandler).map(connectedClient -> {
-            LOG.info("connected to {}", serviceName);
-            connectionEstablishedHandler.handle(connectedClient);
-            return connectedClient;
-        }).recover(t -> {
-            LOG.warn("failed to connect to {}", serviceName, t);
-            return Future.failedFuture(t);
-        });
-    }
-
-    /**
      * Invoked when a connection for receiving commands and sending responses has been
      * unexpectedly lost.
      * <p>
@@ -711,28 +661,6 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      */
     protected void onCommandConnectionEstablished(final HonoClient commandConnection) {
         // empty by default
-    }
-
-    private Handler<ProtonConnection> getHandlerForDisconnectHonoService(
-            final HonoClient client,
-            final String serviceName,
-            final Handler<HonoClient> connectHandler,
-            final Handler<HonoClient> connectionLostHandler) {
-
-        return (connection) -> {
-            connectionLostHandler.handle(client);
-            vertx.setTimer(Constants.DEFAULT_RECONNECT_INTERVAL_MILLIS, reconnect -> {
-                LOG.info("attempting to reconnect to {}", serviceName);
-                client.connect(getHandlerForDisconnectHonoService(client, serviceName, connectHandler, connectionLostHandler)).setHandler(connectAttempt -> {
-                    if (connectAttempt.succeeded()) {
-                        LOG.info("reconnected to {}", serviceName);
-                        connectHandler.handle(connectAttempt.result());
-                    } else {
-                        LOG.debug("cannot reconnect to {}: {}", serviceName, connectAttempt.cause().getMessage());
-                    }
-                });
-            });
-        };
     }
 
     /**
