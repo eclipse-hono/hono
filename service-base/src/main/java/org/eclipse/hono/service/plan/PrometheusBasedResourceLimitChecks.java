@@ -135,7 +135,7 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
     private Future<Long> executeQuery(final String query) {
 
         final Future<Long> result = Future.future();
-        log.trace("running query [] against Prometheus backend [{}]", query, queryUrl);
+        log.trace("running query [{}] against Prometheus backend [{}]", query, queryUrl);
         client.getAbs(queryUrl)
         .addQueryParam("query", query)
         .expect(ResponsePredicate.SC_OK)
