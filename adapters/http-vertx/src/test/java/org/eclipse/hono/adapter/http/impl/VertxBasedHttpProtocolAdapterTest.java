@@ -297,6 +297,34 @@ public class VertxBasedHttpProtocolAdapterTest {
     }
 
     /**
+     * Verifies that a request to upload telemetry data using POST fails
+     * with a 503 status code if the credentials on record cannot be retrieved.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testPostTelemetryFailsForUnreachableCredentialsService(final TestContext ctx) {
+
+        doAnswer(invocation -> {
+            final Handler<AsyncResult<User>> resultHandler = invocation.getArgument(1);
+            resultHandler.handle(Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "service down")));
+            return null;
+        }).when(usernamePasswordAuthProvider).authenticate(any(JsonObject.class), any(Handler.class));
+
+        final Async async = ctx.async();
+        final String authHeader = getBasicAuth("testuser@DEFAULT_TENANT", "password123");
+
+        httpClient.post("/telemetry")
+                .putHeader(HttpHeaders.CONTENT_TYPE, HttpUtils.CONTENT_TYPE_JSON)
+                .putHeader(HttpHeaders.AUTHORIZATION, authHeader)
+                .handler(response -> {
+                    ctx.assertEquals(HttpURLConnection.HTTP_UNAVAILABLE, response.statusCode());
+                    async.complete();
+                }).exceptionHandler(ctx::fail).end();
+    }
+
+    /**
      * Verifies that a request to upload telemetry data using POST succeeds
      * if the request contains a Basic <em>Authorization</em> header with valid
      * credentials.

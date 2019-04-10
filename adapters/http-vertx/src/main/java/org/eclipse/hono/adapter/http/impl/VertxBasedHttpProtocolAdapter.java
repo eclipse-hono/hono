@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -29,6 +29,7 @@ import org.eclipse.hono.service.auth.device.TenantServiceBasedX509Authentication
 import org.eclipse.hono.service.auth.device.UsernamePasswordAuthProvider;
 import org.eclipse.hono.service.auth.device.UsernamePasswordCredentials;
 import org.eclipse.hono.service.auth.device.X509AuthProvider;
+import org.eclipse.hono.service.http.HonoChainAuthHandler;
 import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.util.Constants;
 
@@ -99,7 +100,7 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
 
         if (getConfig().isAuthenticationRequired()) {
 
-            final ChainAuthHandler authHandler = ChainAuthHandler.create();
+            final ChainAuthHandler authHandler = new HonoChainAuthHandler();
             authHandler.append(new X509AuthHandler(
                     new TenantServiceBasedX509Authentication(getTenantClientFactory(), tracer),
                     Optional.ofNullable(clientCertAuthProvider).orElse(

@@ -41,6 +41,7 @@ import org.eclipse.hono.service.auth.device.TenantServiceBasedX509Authentication
 import org.eclipse.hono.service.auth.device.UsernamePasswordAuthProvider;
 import org.eclipse.hono.service.auth.device.UsernamePasswordCredentials;
 import org.eclipse.hono.service.auth.device.X509AuthProvider;
+import org.eclipse.hono.service.http.HonoChainAuthHandler;
 import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.Constants;
@@ -167,7 +168,7 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
     }
 
     private void setupAuthorization(final Router router) {
-        final ChainAuthHandler authHandler = ChainAuthHandler.create();
+        final ChainAuthHandler authHandler = new HonoChainAuthHandler();
         authHandler.append(new X509AuthHandler(
                 new TenantServiceBasedX509Authentication(getTenantClientFactory(), tracer),
                 Optional.ofNullable(clientCertAuthProvider).orElse(
