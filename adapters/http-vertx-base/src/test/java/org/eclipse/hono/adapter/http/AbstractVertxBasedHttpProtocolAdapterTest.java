@@ -38,6 +38,7 @@ import org.eclipse.hono.client.CommandContext;
 import org.eclipse.hono.client.CommandResponse;
 import org.eclipse.hono.client.CommandResponseSender;
 import org.eclipse.hono.client.CredentialsClientFactory;
+import org.eclipse.hono.client.DownstreamSenderFactory;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.RegistrationClient;
@@ -105,7 +106,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
 
     private CredentialsClientFactory      credentialsClientFactory;
     private TenantClientFactory           tenantClientFactory;
-    private HonoClient                    messagingClient;
+    private DownstreamSenderFactory       downstreamSenderFactory;
     private RegistrationClientFactory     registrationClientFactory;
     private RegistrationClient            regClient;
     private TenantClient                  tenantClient;
@@ -153,8 +154,8 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         credentialsClientFactory = mock(CredentialsClientFactory.class);
         when(credentialsClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoClient.class)));
 
-        messagingClient = mock(HonoClient.class);
-        when(messagingClient.connect(any(Handler.class))).thenReturn(Future.succeededFuture(messagingClient));
+        downstreamSenderFactory = mock(DownstreamSenderFactory.class);
+        when(downstreamSenderFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoClient.class)));
 
         registrationClientFactory = mock(RegistrationClientFactory.class);
         when(registrationClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoClient.class)));
@@ -849,7 +850,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         adapter.setMetrics(metrics);
         adapter.setInsecureHttpServer(server);
         adapter.setTenantClientFactory(tenantClientFactory);
-        adapter.setHonoMessagingClient(messagingClient);
+        adapter.setDownstreamSenderFactory(downstreamSenderFactory);
         adapter.setRegistrationClientFactory(registrationClientFactory);
         adapter.setCredentialsClientFactory(credentialsClientFactory);
         adapter.setCommandConsumerFactory(commandConsumerFactory);
@@ -870,7 +871,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         final MessageSender sender = mock(MessageSender.class);
         when(sender.sendAndWaitForOutcome(any(Message.class), (SpanContext) any())).thenReturn(outcome);
 
-        when(messagingClient.getOrCreateEventSender(anyString())).thenReturn(Future.succeededFuture(sender));
+        when(downstreamSenderFactory.getOrCreateEventSender(anyString())).thenReturn(Future.succeededFuture(sender));
         return sender;
     }
 
@@ -879,7 +880,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         final MessageSender sender = mock(MessageSender.class);
         when(sender.send(any(Message.class), (SpanContext) any())).thenReturn(outcome);
 
-        when(messagingClient.getOrCreateTelemetrySender(anyString())).thenReturn(Future.succeededFuture(sender));
+        when(downstreamSenderFactory.getOrCreateTelemetrySender(anyString())).thenReturn(Future.succeededFuture(sender));
         return sender;
     }
 

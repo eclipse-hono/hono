@@ -58,6 +58,12 @@ title = "Release Notes"
   `org.eclipse.hono.client.CredentialsClient` instances.
   The *setCredentialsServiceClient* and *getCredentialsServiceClient* methods have been
   renamed to *setCredentialsClientFactory* and *getCredentialsClientFactory* correspondingly.
+* The `org.eclipse.hono.service.AbstractProtocolAdapterBase` class now uses
+  `org.eclipse.hono.client.DownstreamSendertFactory` instead of
+  `org.eclipse.hono.client.HonoClient` for creating
+  `org.eclipse.hono.client.MessageSender` instances.
+  The *setHonoMessagingClient* and *getHonoMessagingClient* methods have been
+  renamed to *setDownstreamSenderFactory* and *getDownstreamSenderFactory* correspondingly.
 * The `org.eclipse.hono.service.auth.device.UsernamePasswordAuthProvider` and the
   `org.eclipse.hono.service.auth.device.X509AuthProvider` now accept a
   `org.eclipse.hono.client.CredentialsClientFactory` instead of a

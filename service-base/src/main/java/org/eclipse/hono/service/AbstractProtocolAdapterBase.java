@@ -28,6 +28,7 @@ import org.eclipse.hono.client.CommandResponseSender;
 import org.eclipse.hono.client.ConnectionLifecycle;
 import org.eclipse.hono.client.CredentialsClientFactory;
 import org.eclipse.hono.client.DisconnectListener;
+import org.eclipse.hono.client.DownstreamSenderFactory;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.MessageSender;
@@ -93,7 +94,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      */
     protected static final String KEY_MICROMETER_SAMPLE = "micrometer.sample";
 
-    private HonoClient messagingClient;
+    private DownstreamSenderFactory downstreamSenderFactory;
     private RegistrationClientFactory registrationClientFactory;
     private TenantClientFactory tenantClientFactory;
     private CredentialsClientFactory credentialsClientFactory;
@@ -105,8 +106,8 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     private final ConnectionEventProducer.Context connectionEventProducerContext = new ConnectionEventProducer.Context() {
 
         @Override
-        public HonoClient getMessageSenderClient() {
-            return AbstractProtocolAdapterBase.this.messagingClient;
+        public DownstreamSenderFactory getMessageSenderClient() {
+            return AbstractProtocolAdapterBase.this.downstreamSenderFactory;
         }
 
     };
@@ -150,21 +151,21 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     }
 
     /**
-     * Sets the client to use for connecting to the Tenant service.
+     * Sets the factory to use for creating a client for the Tenant service.
      *
-     * @param tenantClient The client.
-     * @throws NullPointerException if the client is {@code null}.
+     * @param factory The factory.
+     * @throws NullPointerException if the factory is {@code null}.
      */
     @Qualifier(TenantConstants.TENANT_ENDPOINT)
     @Autowired
-    public final void setTenantClientFactory(final TenantClientFactory tenantClient) {
-        this.tenantClientFactory = Objects.requireNonNull(tenantClient);
+    public final void setTenantClientFactory(final TenantClientFactory factory) {
+        this.tenantClientFactory = Objects.requireNonNull(factory);
     }
 
     /**
-     * Gets the client used for connecting to the Tenant service.
+     * Sets the factory used for creating a client for the Tenant service.
      *
-     * @return The client.
+     * @return The factory.
      */
     public final TenantClientFactory getTenantClientFactory() {
         return tenantClientFactory;
@@ -180,24 +181,24 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     }
 
     /**
-     * Sets the client to use for connecting to the AMQP Messaging Network.
+     * Sets the factory to use for creating a client for the AMQP Messaging Network.
      *
-     * @param honoClient The client.
-     * @throws NullPointerException if hono client is {@code null}.
+     * @param factory The factory.
+     * @throws NullPointerException if the factory is {@code null}.
      */
     @Qualifier(Constants.QUALIFIER_MESSAGING)
     @Autowired
-    public final void setHonoMessagingClient(final HonoClient honoClient) {
-        this.messagingClient = Objects.requireNonNull(honoClient);
+    public final void setDownstreamSenderFactory(final DownstreamSenderFactory factory) {
+        this.downstreamSenderFactory = Objects.requireNonNull(factory);
     }
 
     /**
-     * Gets the client used for connecting to the AMQP Messaging Network.
+     * Sets the factory used for creating a client for the AMQP Messaging Network.
      *
-     * @return The client.
+     * @return The factory.
      */
-    public final HonoClient getHonoMessagingClient() {
-        return messagingClient;
+    public final DownstreamSenderFactory getDownstreamSenderFactory() {
+        return downstreamSenderFactory;
     }
 
     /**
@@ -224,13 +225,13 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     /**
      * Sets the factory to use for creating a client for the Credentials service.
      *
-     * @param credentialsClientFactory The factory.
+     * @param factory The factory.
      * @throws NullPointerException if the factory is {@code null}.
      */
     @Qualifier(CredentialsConstants.CREDENTIALS_ENDPOINT)
     @Autowired
-    public final void setCredentialsClientFactory(final CredentialsClientFactory credentialsClientFactory) {
-        this.credentialsClientFactory = Objects.requireNonNull(credentialsClientFactory);
+    public final void setCredentialsClientFactory(final CredentialsClientFactory factory) {
+        this.credentialsClientFactory = Objects.requireNonNull(factory);
     }
 
     /**
@@ -363,7 +364,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
             result.fail(new IllegalStateException("adapter does not define a typeName"));
         } else if (tenantClientFactory == null) {
             result.fail(new IllegalStateException("Tenant client factory must be set"));
-        } else if (messagingClient == null) {
+        } else if (downstreamSenderFactory == null) {
             result.fail(new IllegalStateException("AMQP Messaging Network client must be set"));
         } else if (registrationClientFactory == null) {
             result.fail(new IllegalStateException("Device Registration client factory must be set"));
@@ -373,7 +374,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
             result.fail(new IllegalStateException("Command & Control client factory must be set"));
         } else {
             connectToService(tenantClientFactory, "Tenant service");
-            connectToService(messagingClient, "AMQP Messaging Network");
+            connectToService(downstreamSenderFactory, "AMQP Messaging Network");
             connectToService(registrationClientFactory, "Device Registration service");
             connectToService(credentialsClientFactory, "Credentials service");
 
@@ -427,23 +428,11 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     private Future<?> closeServiceClients() {
 
         return CompositeFuture.all(
-                closeServiceClient(messagingClient),
+                disconnectFromService(downstreamSenderFactory),
                 disconnectFromService(tenantClientFactory),
                 disconnectFromService(registrationClientFactory),
                 disconnectFromService(credentialsClientFactory),
                 disconnectFromService(commandConsumerFactory));
-    }
-
-    private Future<Void> closeServiceClient(final HonoClient client) {
-
-        final Future<Void> shutdownTracker = Future.future();
-        if (client == null) {
-            shutdownTracker.complete();
-        } else {
-            client.shutdown(shutdownTracker.completer());
-        }
-
-        return shutdownTracker;
     }
 
     private Future<Void> disconnectFromService(final ConnectionLifecycle connection) {
@@ -778,7 +767,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
                 .map(client -> client.isConnected())
                 .orElse(Future.failedFuture(new ServerErrorException(
                         HttpURLConnection.HTTP_UNAVAILABLE, "Credentials client factory is not set")));
-        final Future<Void> messagingCheck = Optional.ofNullable(messagingClient)
+        final Future<Void> messagingCheck = Optional.ofNullable(downstreamSenderFactory)
                 .map(client -> client.isConnected())
                 .orElse(Future.failedFuture(new ServerErrorException(
                         HttpURLConnection.HTTP_UNAVAILABLE, "Messaging client is not set")));
@@ -892,7 +881,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * @return The client.
      */
     protected final Future<MessageSender> getTelemetrySender(final String tenantId) {
-        return getHonoMessagingClient().getOrCreateTelemetrySender(tenantId);
+        return getDownstreamSenderFactory().getOrCreateTelemetrySender(tenantId);
     }
 
     /**
@@ -902,7 +891,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * @return The client.
      */
     protected final Future<MessageSender> getEventSender(final String tenantId) {
-        return getHonoMessagingClient().getOrCreateEventSender(tenantId);
+        return getDownstreamSenderFactory().getOrCreateEventSender(tenantId);
     }
 
     /**

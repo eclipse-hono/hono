@@ -45,6 +45,7 @@ import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.CommandConsumerFactory;
 import org.eclipse.hono.client.CredentialsClientFactory;
+import org.eclipse.hono.client.DownstreamSenderFactory;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.RegistrationClient;
@@ -91,7 +92,7 @@ public class AbstractVertxBasedCoapAdapterTest {
 
     private CredentialsClientFactory credentialsClientFactory;
     private TenantClientFactory tenantClientFactory;
-    private HonoClient messagingClient;
+    private DownstreamSenderFactory downstreamSenderFactory;
     private RegistrationClientFactory registrationClientFactory;
     private RegistrationClient regClient;
     private TenantClient tenantClient;
@@ -101,7 +102,6 @@ public class AbstractVertxBasedCoapAdapterTest {
     /**
      * Sets up common fixture.
      */
-    @SuppressWarnings("unchecked")
     @Before
     public void setup() {
 
@@ -125,8 +125,8 @@ public class AbstractVertxBasedCoapAdapterTest {
         credentialsClientFactory = mock(CredentialsClientFactory.class);
         when(credentialsClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoClient.class)));
 
-        messagingClient = mock(HonoClient.class);
-        when(messagingClient.connect(any(Handler.class))).thenReturn(Future.succeededFuture(messagingClient));
+        downstreamSenderFactory = mock(DownstreamSenderFactory.class);
+        when(downstreamSenderFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoClient.class)));
 
         registrationClientFactory = mock(RegistrationClientFactory.class);
         when(registrationClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoClient.class)));
@@ -313,7 +313,7 @@ public class AbstractVertxBasedCoapAdapterTest {
 
         // GIVEN an adapter
         final MessageSender sender = mock(MessageSender.class);
-        when(messagingClient.getOrCreateTelemetrySender(anyString())).thenReturn(Future.succeededFuture(sender));
+        when(downstreamSenderFactory.getOrCreateTelemetrySender(anyString())).thenReturn(Future.succeededFuture(sender));
         // which is disabled for tenant "my-tenant"
         final TenantObject myTenantConfig = TenantObject.from("my-tenant", true);
         myTenantConfig.addAdapterConfiguration(new JsonObject()
@@ -514,7 +514,7 @@ public class AbstractVertxBasedCoapAdapterTest {
         adapter.setConfig(config);
         adapter.setCoapServer(server);
         adapter.setTenantClientFactory(tenantClientFactory);
-        adapter.setHonoMessagingClient(messagingClient);
+        adapter.setDownstreamSenderFactory(downstreamSenderFactory);
         adapter.setRegistrationClientFactory(registrationClientFactory);
         if (complete) {
             adapter.setCredentialsClientFactory(credentialsClientFactory);
@@ -531,7 +531,7 @@ public class AbstractVertxBasedCoapAdapterTest {
         final MessageSender sender = mock(MessageSender.class);
         when(sender.sendAndWaitForOutcome(any(Message.class))).thenReturn(outcome);
 
-        when(messagingClient.getOrCreateEventSender(anyString())).thenReturn(Future.succeededFuture(sender));
+        when(downstreamSenderFactory.getOrCreateEventSender(anyString())).thenReturn(Future.succeededFuture(sender));
     }
 
     private void givenATelemetrySenderForOutcome(final Future<ProtonDelivery> outcome) {
@@ -539,7 +539,7 @@ public class AbstractVertxBasedCoapAdapterTest {
         final MessageSender sender = mock(MessageSender.class);
         when(sender.sendAndWaitForOutcome(any(Message.class))).thenReturn(outcome);
 
-        when(messagingClient.getOrCreateTelemetrySender(anyString())).thenReturn(Future.succeededFuture(sender));
+        when(downstreamSenderFactory.getOrCreateTelemetrySender(anyString())).thenReturn(Future.succeededFuture(sender));
     }
 
     private void givenATelemetrySender(final Future<ProtonDelivery> outcome) {
@@ -547,7 +547,7 @@ public class AbstractVertxBasedCoapAdapterTest {
         final MessageSender sender = mock(MessageSender.class);
         when(sender.send(any(Message.class))).thenReturn(outcome);
 
-        when(messagingClient.getOrCreateTelemetrySender(anyString())).thenReturn(Future.succeededFuture(sender));
+        when(downstreamSenderFactory.getOrCreateTelemetrySender(anyString())).thenReturn(Future.succeededFuture(sender));
     }
 
 }

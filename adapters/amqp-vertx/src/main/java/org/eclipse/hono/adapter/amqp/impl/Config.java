@@ -50,7 +50,7 @@ public class Config extends AbstractAdapterConfig {
     }
 
     @Override
-    protected void customizeMessagingClientConfig(final ClientConfigProperties config) {
+    protected void customizeDownstreamSenderFactoryConfig(final ClientConfigProperties config) {
         if (config.getName() == null) {
             config.setName(CONTAINER_ID_HONO_AMQP_ADAPTER);
         }
