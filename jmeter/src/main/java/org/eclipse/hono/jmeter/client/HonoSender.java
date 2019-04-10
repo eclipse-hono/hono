@@ -25,6 +25,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.jmeter.samplers.SampleResult;
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.client.DownstreamSenderFactory;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.ServiceInvocationException;
@@ -54,7 +55,7 @@ public class HonoSender extends AbstractClient {
 
     private final AtomicBoolean running = new AtomicBoolean(false);
     private final HonoSenderSampler sampler;
-    private final HonoClient honoClient;
+    private final DownstreamSenderFactory downstreamSenderFactory;
     private final byte[] payload;
     private final Context ctx;
 
@@ -80,7 +81,7 @@ public class HonoSender extends AbstractClient {
         honoProps.setPassword(sampler.getPwd());
         honoProps.setTrustStorePath(sampler.getTrustStorePath());
         honoProps.setReconnectAttempts(MAX_RECONNECT_ATTEMPTS);
-        honoClient = new HonoClientImpl(vertx, honoProps);
+        downstreamSenderFactory = new HonoClientImpl(vertx, honoProps);
     }
 
     /**
@@ -121,7 +122,7 @@ public class HonoSender extends AbstractClient {
 
     private Future<HonoClient> connectToAmqpMessagingNetwork() {
 
-        return honoClient
+        return downstreamSenderFactory
                 .connect()
                 .map(client -> {
                     LOGGER.info("connected to AMQP Messaging Network [{}:{}]", sampler.getHost(), sampler.getPort());
@@ -133,10 +134,10 @@ public class HonoSender extends AbstractClient {
 
         if (endpoint.equals(HonoSampler.Endpoint.telemetry.toString())) {
             LOGGER.trace("getting telemetry sender for tenant [{}]", tenant);
-            return honoClient.getOrCreateTelemetrySender(tenant);
+            return downstreamSenderFactory.getOrCreateTelemetrySender(tenant);
         } else {
             LOGGER.trace("getting event sender for tenant [{}]", tenant);
-            return honoClient.getOrCreateEventSender(tenant);
+            return downstreamSenderFactory.getOrCreateEventSender(tenant);
         }
     }
 
@@ -304,8 +305,8 @@ public class HonoSender extends AbstractClient {
         if (running.compareAndSet(true, false)) {
 
             final Future<Void> honoTracker = Future.future();
-            if (honoClient != null) {
-                honoClient.shutdown(honoTracker.completer());
+            if (downstreamSenderFactory != null) {
+                downstreamSenderFactory.disconnect(honoTracker.completer());
             } else {
                 honoTracker.complete();
             }

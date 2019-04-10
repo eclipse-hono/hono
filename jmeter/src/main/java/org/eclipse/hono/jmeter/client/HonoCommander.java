@@ -1,6 +1,6 @@
 /*
  * ******************************************************************************
- *  * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ *  * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *  *
  *  * See the NOTICE file(s) distributed with this work for additional
  *  * information regarding copyright ownership.
@@ -28,6 +28,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.jmeter.samplers.SampleResult;
 import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.client.ApplicationClientFactory;
 import org.eclipse.hono.client.CommandClient;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageConsumer;
@@ -42,13 +43,13 @@ import io.vertx.core.Future;
 import io.vertx.core.buffer.Buffer;
 
 /**
- * Hono commander, which creates command client, send commands to devices and receive responses from devices;
+ * Hono commander, which creates command applicationClientFactory, send commands to devices and receive responses from devices;
  * asynchronous API needs to be used synchronous for JMeters threading model.
  */
 public class HonoCommander extends AbstractClient {
 
     private static final org.slf4j.Logger LOG = LoggerFactory.getLogger(HonoCommander.class);
-    private final HonoClient client;
+    private final ApplicationClientFactory applicationClientFactory;
     private final HonoCommanderSampler sampler;
     private final List<String> devicesReadyToReceiveCommands = new CopyOnWriteArrayList<>();
     private final AtomicInteger successCount = new AtomicInteger(0);
@@ -81,7 +82,7 @@ public class HonoCommander extends AbstractClient {
         tenant = sampler.getTenant();
         commandTimeoutInMs = sampler.getCommandTimeoutAsInt();
         triggerType = sampler.getTriggerType();
-        client = new HonoClientImpl(vertx, clientConfig);
+        applicationClientFactory = new HonoClientImpl(vertx, clientConfig);
     }
 
     /**
@@ -147,7 +148,7 @@ public class HonoCommander extends AbstractClient {
         final CompletableFuture<Void> shutdownTracker = new CompletableFuture<>();
         final Future<Void> clientTracker = Future.future();
         LOG.debug("Clean resources...");
-        client.shutdown(clientTracker.completer());
+        applicationClientFactory.disconnect(clientTracker.completer());
         clientTracker
                 .compose(ok -> closeVertx())
                 .recover(error -> closeVertx())
@@ -156,7 +157,7 @@ public class HonoCommander extends AbstractClient {
     }
 
     private Future<HonoClient> connect() {
-        return client
+        return applicationClientFactory
                 .connect()
                 .map(client -> {
                     LOG.info("connected to Hono [{}:{}]", sampler.getHost(), sampler.getPort());
@@ -165,12 +166,12 @@ public class HonoCommander extends AbstractClient {
     }
 
     private Future<MessageConsumer> createMessageConsumers() {
-        return client
+        return applicationClientFactory
                 .createEventConsumer(tenant,
                         getConsumer(message -> handleMessage("Event", message),
                                 this::handleCommandReadinessNotification),
                         closeHook -> LOG.error("remotely detached consumer link"))
-                .compose(consumer -> client.createTelemetryConsumer(tenant,
+                .compose(consumer -> applicationClientFactory.createTelemetryConsumer(tenant,
                         getConsumer(message -> handleMessage("Telemetry", message),
                                 this::handleCommandReadinessNotification),
                         closeHook -> LOG.error("remotely detached consumer link")))
@@ -207,7 +208,7 @@ public class HonoCommander extends AbstractClient {
     }
 
     private void sendCommandAndReceiveResponse(final String tenantId, final String deviceId) {
-        client.getOrCreateCommandClient(tenantId, deviceId)
+        applicationClientFactory.getOrCreateCommandClient(tenantId, deviceId)
                 .map(this::setCommandTimeOut)
                 .compose(commandClient -> commandClient
                         .sendCommand(sampler.getCommand(), Buffer.buffer(sampler.getCommandPayload()))

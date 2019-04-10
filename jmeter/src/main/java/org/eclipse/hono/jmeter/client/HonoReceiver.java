@@ -19,6 +19,7 @@ import javax.jms.IllegalStateException;
 
 import org.apache.jmeter.samplers.SampleResult;
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.client.ApplicationClientFactory;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.impl.HonoClientImpl;
@@ -41,7 +42,7 @@ public class HonoReceiver extends AbstractClient {
 
     private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(HonoReceiver.class);
 
-    private final HonoClient          amqpNetworkClient;
+    private final ApplicationClientFactory applicationClientFactory;
     private final HonoReceiverSampler sampler;
 
     private final transient Object lock = new Object();
@@ -78,7 +79,7 @@ public class HonoReceiver extends AbstractClient {
         clientConfig.setInitialCredits(Integer.parseInt(sampler.getPrefetch()));
         clientConfig.setReconnectAttempts(Integer.parseInt(sampler.getReconnectAttempts()));
         // amqp network config
-        amqpNetworkClient = new HonoClientImpl(vertx, clientConfig);
+        applicationClientFactory = new HonoClientImpl(vertx, clientConfig);
     }
 
     /**
@@ -104,7 +105,7 @@ public class HonoReceiver extends AbstractClient {
     }
 
     private Future<HonoClient> connect() {
-        return amqpNetworkClient
+        return applicationClientFactory
                 .connect()
                 .map(client -> {
                     LOGGER.info("connected to AMQP Messaging Network [{}:{}]", sampler.getHost(), sampler.getPort());
@@ -114,10 +115,10 @@ public class HonoReceiver extends AbstractClient {
 
     private Future<MessageConsumer> createConsumer(final String endpoint, final String tenant) {
 
-        if (amqpNetworkClient == null) {
+        if (applicationClientFactory == null) {
             return Future.failedFuture(new IllegalStateException("not connected to Hono"));
         } else if (endpoint.equals(HonoSampler.Endpoint.telemetry.toString())) {
-            return amqpNetworkClient
+            return applicationClientFactory
                     .createTelemetryConsumer(tenant, this::messageReceived, closeHook -> {
                         LOGGER.error("telemetry consumer was closed");
                     }).map(consumer -> {
@@ -125,7 +126,7 @@ public class HonoReceiver extends AbstractClient {
                         return consumer;
                     });
         } else {
-            return amqpNetworkClient
+            return applicationClientFactory
                     .createEventConsumer(tenant, this::messageReceived, closeHook -> {
                         LOGGER.error("event consumer was closed");
                     }).map(consumer -> {
@@ -283,7 +284,7 @@ public class HonoReceiver extends AbstractClient {
 
         final CompletableFuture<Void> result = new CompletableFuture<>();
         final Future<Void> clientTracker = Future.future();
-        amqpNetworkClient.shutdown(clientTracker.completer());
+        applicationClientFactory.disconnect(clientTracker.completer());
         clientTracker.otherwiseEmpty().compose(ok -> closeVertx()).setHandler(attempt -> result.complete(null));
         return result;
     }
