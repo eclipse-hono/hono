@@ -1,0 +1,13 @@
+*                                     @sophokles73
+
+/deploy/                              @dejanb
+/deploy/src/main/deploy/openshift/    @ctron
+
+/adapters/http-vertx/                 @ctron
+/adapters/http-vertx-base/            @ctron
+/adapters/mqtt-vertx/                 @ctron
+/adapters/mqtt-vertx-base/            @ctron
+
+/service-base/                        @dejanb
+/services/                            @dejanb
+/services/device-registry/            @ctron
