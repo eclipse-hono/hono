@@ -34,6 +34,7 @@ import org.eclipse.hono.client.CommandContext;
 import org.eclipse.hono.client.CommandResponse;
 import org.eclipse.hono.client.CommandResponseSender;
 import org.eclipse.hono.client.CredentialsClientFactory;
+import org.eclipse.hono.client.DownstreamSenderFactory;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.MessageSender;
@@ -91,7 +92,7 @@ public class VertxBasedHttpProtocolAdapterTest {
 
     private static TenantClientFactory tenantClientFactory;
     private static CredentialsClientFactory credentialsClientFactory;
-    private static HonoClient messagingClient;
+    private static DownstreamSenderFactory downstreamSenderFactory;
     private static MessageSender telemetrySender;
     private static MessageSender eventSender;
     private static RegistrationClientFactory registrationClientFactory;
@@ -144,13 +145,13 @@ public class VertxBasedHttpProtocolAdapterTest {
             return null;
         }).when(credentialsClientFactory).disconnect(any(Handler.class));
 
-        messagingClient = mock(HonoClient.class);
-        when(messagingClient.connect(any(Handler.class))).thenReturn(Future.succeededFuture(messagingClient));
+        downstreamSenderFactory = mock(DownstreamSenderFactory.class);
+        when(downstreamSenderFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoClient.class)));
         doAnswer(invocation -> {
             final Handler<AsyncResult<Void>> shutdownHandler = invocation.getArgument(0);
             shutdownHandler.handle(Future.succeededFuture());
             return null;
-        }).when(messagingClient).shutdown(any(Handler.class));
+        }).when(downstreamSenderFactory).disconnect(any(Handler.class));
 
         registrationClientFactory = mock(RegistrationClientFactory.class);
         when(registrationClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoClient.class)));
@@ -183,7 +184,7 @@ public class VertxBasedHttpProtocolAdapterTest {
         httpAdapter.setConfig(config);
         httpAdapter.setTenantClientFactory(tenantClientFactory);
         httpAdapter.setCredentialsClientFactory(credentialsClientFactory);
-        httpAdapter.setHonoMessagingClient(messagingClient);
+        httpAdapter.setDownstreamSenderFactory(downstreamSenderFactory);
         httpAdapter.setRegistrationClientFactory(registrationClientFactory);
         httpAdapter.setCommandConsumerFactory(commandConsumerFactory);
         httpAdapter.setUsernamePasswordAuthProvider(usernamePasswordAuthProvider);
@@ -231,12 +232,12 @@ public class VertxBasedHttpProtocolAdapterTest {
         when(telemetrySender.send(any(Message.class), (SpanContext) any())).thenReturn(Future.succeededFuture(mock(ProtonDelivery.class)));
         when(telemetrySender.sendAndWaitForOutcome(any(Message.class), (SpanContext) any())).thenReturn(
                 Future.succeededFuture(mock(ProtonDelivery.class)));
-        when(messagingClient.getOrCreateTelemetrySender(anyString())).thenReturn(Future.succeededFuture(telemetrySender));
+        when(downstreamSenderFactory.getOrCreateTelemetrySender(anyString())).thenReturn(Future.succeededFuture(telemetrySender));
 
         eventSender = mock(MessageSender.class);
         when(eventSender.send(any(Message.class), (SpanContext) any())).thenThrow(new UnsupportedOperationException());
         when(eventSender.sendAndWaitForOutcome(any(Message.class), (SpanContext) any())).thenReturn(Future.succeededFuture(mock(ProtonDelivery.class)));
-        when(messagingClient.getOrCreateEventSender(anyString())).thenReturn(Future.succeededFuture(eventSender));
+        when(downstreamSenderFactory.getOrCreateEventSender(anyString())).thenReturn(Future.succeededFuture(eventSender));
 
         doAnswer(invocation -> {
             final Handler<AsyncResult<User>> resultHandler = invocation.getArgument(1);

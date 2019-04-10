@@ -51,6 +51,7 @@ import org.eclipse.hono.client.CommandContext;
 import org.eclipse.hono.client.CommandResponse;
 import org.eclipse.hono.client.CommandResponseSender;
 import org.eclipse.hono.client.CredentialsClientFactory;
+import org.eclipse.hono.client.DownstreamSenderFactory;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.MessageSender;
@@ -117,7 +118,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
 
     private TenantClientFactory tenantClientFactory;
     private CredentialsClientFactory credentialsClientFactory;
-    private HonoClient messagingServiceClient;
+    private DownstreamSenderFactory downstreamSenderFactory;
     private RegistrationClientFactory registrationClientFactory;
     private CommandConsumerFactory commandConsumerFactory;
 
@@ -132,7 +133,6 @@ public class VertxBasedAmqpProtocolAdapterTest {
      * 
      * @param context The vert.x test context.
      */
-    @SuppressWarnings("unchecked")
     @Before
     public void setup(final TestContext context) {
 
@@ -150,9 +150,8 @@ public class VertxBasedAmqpProtocolAdapterTest {
         credentialsClientFactory = mock(CredentialsClientFactory.class);
         when(credentialsClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoClient.class)));
 
-        messagingServiceClient = mock(HonoClient.class);
-        when(messagingServiceClient.connect(any(Handler.class)))
-                .thenReturn(Future.succeededFuture(messagingServiceClient));
+        downstreamSenderFactory = mock(DownstreamSenderFactory.class);
+        when(downstreamSenderFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoClient.class)));
 
         registrationClient = mock(RegistrationClient.class);
         final JsonObject regAssertion = new JsonObject().put(RegistrationConstants.FIELD_ASSERTION, "assert-token");
@@ -812,7 +811,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
 
     private MessageSender givenATelemetrySenderForAnyTenant() {
         final MessageSender sender = mock(MessageSender.class);
-        when(messagingServiceClient.getOrCreateTelemetrySender(anyString())).thenReturn(Future.succeededFuture(sender));
+        when(downstreamSenderFactory.getOrCreateTelemetrySender(anyString())).thenReturn(Future.succeededFuture(sender));
         return sender;
     }
 
@@ -827,7 +826,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
         final MessageSender sender = mock(MessageSender.class);
         when(sender.sendAndWaitForOutcome(any(Message.class), (SpanContext) any())).thenReturn(outcome);
 
-        when(messagingServiceClient.getOrCreateEventSender(anyString())).thenReturn(Future.succeededFuture(sender));
+        when(downstreamSenderFactory.getOrCreateEventSender(anyString())).thenReturn(Future.succeededFuture(sender));
         return sender;
     }
 
@@ -854,7 +853,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
         adapter.setConfig(config);
         adapter.setInsecureAmqpServer(server);
         adapter.setTenantClientFactory(tenantClientFactory);
-        adapter.setHonoMessagingClient(messagingServiceClient);
+        adapter.setDownstreamSenderFactory(downstreamSenderFactory);
         adapter.setRegistrationClientFactory(registrationClientFactory);
         adapter.setCredentialsClientFactory(credentialsClientFactory);
         adapter.setCommandConsumerFactory(commandConsumerFactory);

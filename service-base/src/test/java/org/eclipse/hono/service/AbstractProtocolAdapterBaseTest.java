@@ -33,6 +33,7 @@ import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.CommandConsumerFactory;
 import org.eclipse.hono.client.CredentialsClientFactory;
 import org.eclipse.hono.client.DisconnectListener;
+import org.eclipse.hono.client.DownstreamSenderFactory;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.ReconnectListener;
 import org.eclipse.hono.client.RegistrationClient;
@@ -87,7 +88,7 @@ public class AbstractProtocolAdapterBaseTest {
     private TenantClientFactory tenantService;
     private RegistrationClientFactory registrationClientFactory;
     private CredentialsClientFactory credentialsClientFactory;
-    private HonoClient messagingService;
+    private DownstreamSenderFactory downstreamSenderFactory;
     private CommandConsumerFactory commandConsumerFactory;
 
     /**
@@ -109,8 +110,8 @@ public class AbstractProtocolAdapterBaseTest {
         credentialsClientFactory = mock(CredentialsClientFactory.class);
         when(credentialsClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoClient.class)));
 
-        messagingService = mock(HonoClient.class);
-        when(messagingService.connect(any(Handler.class))).thenReturn(Future.succeededFuture(messagingService));
+        downstreamSenderFactory = mock(DownstreamSenderFactory.class);
+        when(downstreamSenderFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoClient.class)));
 
         commandConsumerFactory = mock(CommandConsumerFactory.class);
         when(commandConsumerFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoClient.class)));
@@ -120,7 +121,7 @@ public class AbstractProtocolAdapterBaseTest {
         adapter.setTenantClientFactory(tenantService);
         adapter.setRegistrationClientFactory(registrationClientFactory);
         adapter.setCredentialsClientFactory(credentialsClientFactory);
-        adapter.setHonoMessagingClient(messagingService);
+        adapter.setDownstreamSenderFactory(downstreamSenderFactory);
         adapter.setCommandConsumerFactory(commandConsumerFactory);
 
         vertx = mock(Vertx.class);
@@ -174,7 +175,7 @@ public class AbstractProtocolAdapterBaseTest {
             // THEN the service clients have connected
             verify(tenantService).connect();
             verify(registrationClientFactory).connect();
-            verify(messagingService).connect(any(Handler.class));
+            verify(downstreamSenderFactory).connect();
             verify(credentialsClientFactory).connect();
             verify(commandConsumerFactory).connect();
             verify(commandConsumerFactory).addDisconnectListener(any(DisconnectListener.class));
@@ -226,7 +227,7 @@ public class AbstractProtocolAdapterBaseTest {
         adapter = newProtocolAdapter(properties, "test", startupHandler,
                 commandConnectionEstablishedHandler, commandConnectionLostHandler);
         adapter.setCredentialsClientFactory(credentialsClientFactory);
-        adapter.setHonoMessagingClient(messagingService);
+        adapter.setDownstreamSenderFactory(downstreamSenderFactory);
         adapter.setRegistrationClientFactory(registrationClientFactory);
         adapter.setTenantClientFactory(tenantService);
         adapter.setCommandConsumerFactory(commandConsumerFactory);

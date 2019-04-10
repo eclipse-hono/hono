@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,7 +12,7 @@
  *******************************************************************************/
 package org.eclipse.hono.service.monitoring;
 
-import org.eclipse.hono.client.HonoClient;
+import org.eclipse.hono.client.DownstreamSenderFactory;
 
 /**
  * A connection event producer based on the Hono <em>Event API</em>.
@@ -23,7 +23,6 @@ public class HonoEventConnectionEventProducer extends AbstractMessageSenderConne
      * Create a new <em>connection event producer</em> based on the Hono <em>Event API</em>.
      */
     public HonoEventConnectionEventProducer() {
-        super(HonoClient::getOrCreateEventSender);
+        super(DownstreamSenderFactory::getOrCreateEventSender);
     }
-
 }

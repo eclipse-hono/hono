@@ -64,7 +64,7 @@ public class Config extends AbstractAdapterConfig {
     }
 
     @Override
-    protected void customizeMessagingClientConfig(final ClientConfigProperties props) {
+    protected void customizeDownstreamSenderFactoryConfig(final ClientConfigProperties props) {
         if (props.getName() == null) {
             props.setName(CONTAINER_ID_HONO_LORA_ADAPTER);
         }

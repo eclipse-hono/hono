@@ -17,7 +17,7 @@ import java.util.Objects;
 import java.util.function.BiFunction;
 
 import org.eclipse.hono.auth.Device;
-import org.eclipse.hono.client.HonoClient;
+import org.eclipse.hono.client.DownstreamSenderFactory;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.util.EventConstants;
 
@@ -30,9 +30,9 @@ import io.vertx.core.json.JsonObject;
 public abstract class AbstractMessageSenderConnectionEventProducer implements ConnectionEventProducer {
 
     /**
-     * The function to derive the {@link MessageSender} from the provided <em>Message Sender Client</em>.
+     * The function to derive the {@link MessageSender} from the provided sender factory.
      */
-    private final BiFunction<HonoClient, String, Future<MessageSender>> messageSenderSource;
+    private final BiFunction<DownstreamSenderFactory, String, Future<MessageSender>> messageSenderSource;
 
     /**
      * A {@link ConnectionEventProducer} which will send events using a provided {@link MessageSender}.
@@ -41,7 +41,8 @@ public abstract class AbstractMessageSenderConnectionEventProducer implements Co
      *            should be used for actually sending the events.
      */
     protected AbstractMessageSenderConnectionEventProducer(
-            final BiFunction<HonoClient, String, Future<MessageSender>> messageSenderSource) {
+            final BiFunction<DownstreamSenderFactory,
+            String, Future<MessageSender>> messageSenderSource) {
 
         Objects.requireNonNull(messageSenderSource);
 
@@ -49,19 +50,34 @@ public abstract class AbstractMessageSenderConnectionEventProducer implements Co
     }
 
     @Override
-    public Future<?> connected(final Context context, final String remoteId, final String protocolAdapter,
-            final Device authenticatedDevice, final JsonObject data) {
+    public Future<?> connected(
+            final Context context,
+            final String remoteId,
+            final String protocolAdapter,
+            final Device authenticatedDevice,
+            final JsonObject data) {
+
         return sendNotificationEvent(context, authenticatedDevice, protocolAdapter, remoteId, "connected", data);
     }
 
     @Override
-    public Future<?> disconnected(final Context context, final String remoteId, final String protocolAdapter,
-            final Device authenticatedDevice, final JsonObject data) {
+    public Future<?> disconnected(
+            final Context context,
+            final String remoteId,
+            final String protocolAdapter,
+            final Device authenticatedDevice,
+            final JsonObject data) {
+
         return sendNotificationEvent(context, authenticatedDevice, protocolAdapter, remoteId, "disconnected", data);
     }
 
-    private Future<?> sendNotificationEvent(final Context context, final Device authenticatedDevice,
-            final String protocolAdapter, final String remoteId, final String cause, final JsonObject data) {
+    private Future<?> sendNotificationEvent(
+            final Context context,
+            final Device authenticatedDevice,
+            final String protocolAdapter,
+            final String remoteId,
+            final String cause,
+            final JsonObject data) {
 
         if (authenticatedDevice == null) {
             // we only handle authenticated devices
@@ -88,7 +104,7 @@ public abstract class AbstractMessageSenderConnectionEventProducer implements Co
                 });
     }
 
-    private Future<MessageSender> getOrCreateSender(final HonoClient messageSenderClient, final String tenant) {
+    private Future<MessageSender> getOrCreateSender(final DownstreamSenderFactory messageSenderClient, final String tenant) {
         return messageSenderSource.apply(messageSenderClient, tenant);
     }
 }

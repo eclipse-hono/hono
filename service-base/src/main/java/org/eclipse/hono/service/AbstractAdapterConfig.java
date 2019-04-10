@@ -18,7 +18,7 @@ import java.util.Optional;
 import org.eclipse.hono.cache.CacheProvider;
 import org.eclipse.hono.client.CommandConsumerFactory;
 import org.eclipse.hono.client.CredentialsClientFactory;
-import org.eclipse.hono.client.HonoClient;
+import org.eclipse.hono.client.DownstreamSenderFactory;
 import org.eclipse.hono.client.RegistrationClientFactory;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.client.TenantClientFactory;
@@ -28,8 +28,8 @@ import org.eclipse.hono.config.ApplicationConfigProperties;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.config.VertxProperties;
 import org.eclipse.hono.service.cache.SpringCacheProvider;
-import org.eclipse.hono.service.plan.ResourceLimitChecks;
 import org.eclipse.hono.service.plan.PrometheusBasedResourceLimitChecks;
+import org.eclipse.hono.service.plan.ResourceLimitChecks;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
@@ -89,21 +89,21 @@ public abstract class AbstractAdapterConfig {
      * Exposes configuration properties for accessing the AMQP Messaging Network as a Spring bean.
      * <p>
      * The properties can be customized in subclasses by means of overriding the
-     * {@link #customizeMessagingClientConfig(ClientConfigProperties)} method.
+     * {@link #customizeDownstreamSenderFactoryConfig(ClientConfigProperties)} method.
      *
      * @return The properties.
      */
     @Qualifier(Constants.QUALIFIER_MESSAGING)
     @ConfigurationProperties(prefix = "hono.messaging")
     @Bean
-    public ClientConfigProperties messagingClientConfig() {
+    public ClientConfigProperties downstreamSenderFactoryConfig() {
         final ClientConfigProperties config = new ClientConfigProperties();
-        customizeMessagingClientConfig(config);
+        customizeDownstreamSenderFactoryConfig(config);
         return config;
     }
 
     /**
-     * Further customizes the client properties provided by the {@link #messagingClientConfig()}
+     * Further customizes the client properties provided by the {@link #downstreamSenderFactoryConfig()}
      * method.
      * <p>
      * This method does nothing by default. Subclasses may override this method to set additional
@@ -111,22 +111,22 @@ public abstract class AbstractAdapterConfig {
      *
      * @param config The client configuration to customize.
      */
-    protected void customizeMessagingClientConfig(final ClientConfigProperties config) {
+    protected void customizeDownstreamSenderFactoryConfig(final ClientConfigProperties config) {
         // empty by default
     }
 
     /**
-     * Exposes a client for the <em>AMQP Messaging Network</em> as a Spring bean.
+     * Exposes a factory for creating clients for the <em>AMQP Messaging Network</em> as a Spring bean.
      * <p>
-     * The client is configured with the properties provided by {@link #messagingClientConfig()}.
+     * The factory is configured with the properties provided by {@link #downstreamSenderFactoryConfig()}.
      *
-     * @return The client.
+     * @return The factory.
      */
     @Qualifier(Constants.QUALIFIER_MESSAGING)
     @Bean
     @Scope("prototype")
-    public HonoClient messagingClient() {
-        return new HonoClientImpl(vertx(), messagingClientConfig());
+    public DownstreamSenderFactory downstreamSenderFactory() {
+        return new HonoClientImpl(vertx(), downstreamSenderFactoryConfig());
     }
 
     /**

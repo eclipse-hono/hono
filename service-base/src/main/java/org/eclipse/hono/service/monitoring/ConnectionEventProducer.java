@@ -13,10 +13,11 @@
 package org.eclipse.hono.service.monitoring;
 
 
+import org.eclipse.hono.auth.Device;
+import org.eclipse.hono.client.DownstreamSenderFactory;
+
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
-import org.eclipse.hono.auth.Device;
-import org.eclipse.hono.client.HonoClient;
 
 /**
  * Produces connection events.
@@ -50,7 +51,7 @@ public interface ConnectionEventProducer {
          * @return The instance of the message sender client which the {@link ConnectionEventProducer} method should
          *         use. This client has to be initialized and started.
          */
-        HonoClient getMessageSenderClient();
+        DownstreamSenderFactory getMessageSenderClient();
     }
 
     /**
