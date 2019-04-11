@@ -61,6 +61,10 @@ public class DefaultConnectionLimitManager implements ConnectionLimitManager {
 
         final int recommendedLimit = strategy.getRecommendedLimit();
 
+        if (recommendedLimit == 0) {
+            throw new RuntimeException("Not enough memory to handle connections. To override this check, configure a connection limit.");
+        }
+
         LOG.info("Setting connection limit to {} (based on {})", recommendedLimit, strategy.getResourcesDescription());
 
         return recommendedLimit;
