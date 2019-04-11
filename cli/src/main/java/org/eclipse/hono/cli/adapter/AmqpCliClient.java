@@ -10,13 +10,13 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
-package org.eclipse.hono.cli;
+package org.eclipse.hono.cli.adapter;
 
 import java.io.PrintWriter;
 import java.util.Objects;
 import java.util.Optional;
 
-
+import org.eclipse.hono.cli.AbstractCliClient;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.util.Strings;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,19 +29,24 @@ import io.vertx.proton.ProtonSender;
 import io.vertx.proton.sasl.impl.ProtonSaslPlainImpl;
 
 /**
- * Abstract base CLI client for interacting with the AMQP adapter.
+ * Abstract base CLI connection for interacting with Hono's AMQP adapter.
  */
 public abstract class AmqpCliClient extends AbstractCliClient {
 
+    /**
+     * A writer to stdout.
+     */
     protected PrintWriter writer = new PrintWriter(System.out);
-
+    /**
+     * The connection to the AMQP org.eclipse.hono.cli.app.adapter.
+     */
     protected ProtonConnection adapterConnection;
 
     private ClientConfigProperties properties = new ClientConfigProperties();
 
     /**
      * Sets the configuration properties to use for connecting
-     * to the AMQP adapter.
+     * to the AMQP org.eclipse.hono.cli.app.adapter.
      * 
      * @param props The properties.
      * @throws NullPointerException if properties are {@code null}.
@@ -51,16 +56,33 @@ public abstract class AmqpCliClient extends AbstractCliClient {
         this.properties = Objects.requireNonNull(props);
     }
 
+    /**
+     * Creates anonymous sender link on the established connection
+     * to the AMQP org.eclipse.hono.cli.app.adapter.
+     * 
+     * @return A future containing the sender. The future will be succeeded
+     *         once the link is open.
+     * @throws IllegalStateException if the connection to the org.eclipse.hono.cli.app.adapter is
+     *         not established.
+     */
     protected Future<ProtonSender> createSender() {
-        final Future<ProtonSender> senderTracker = Future.future();
+        if (adapterConnection == null || adapterConnection.isDisconnected()) {
+            throw new IllegalStateException("connection to AMQP org.eclipse.hono.cli.app.adapter not established");
+        }
+
+        final Future<ProtonSender> result = Future.future();
         final ProtonSender sender = adapterConnection.createSender(null);
-        sender.openHandler(senderTracker);
+        sender.openHandler(result);
         sender.open();
-        return senderTracker;
+        return result;
     }
 
-    // ----------------------------------< Vertx-proton >---
-
+    /**
+     * Connects to the AMQP org.eclipse.hono.cli.app.adapter.
+     * 
+     * @return A future containing the established connection. The future will
+     *         be succeeded once the connection is open.
+     */
     protected Future<ProtonConnection> connectToAdapter() {
 
         final Future<ProtonConnection> connectAttempt = Future.future();
@@ -75,7 +97,7 @@ public abstract class AmqpCliClient extends AbstractCliClient {
             // SASL PLAIN auth
             options.addEnabledSaslMechanism(ProtonSaslPlainImpl.MECH_NAME);
 
-            LOG.info("connecting to AMQP adapter using SASL PLAIN [host: {}, port: {}, username: {}]",
+            LOG.info("connecting to AMQP org.eclipse.hono.cli.app.adapter using SASL PLAIN [host: {}, port: {}, username: {}]",
                     properties.getHost(), properties.getPort(), properties.getUsername());
 
             client.connect(
@@ -94,17 +116,15 @@ public abstract class AmqpCliClient extends AbstractCliClient {
             } else {
                 // SASL ANONYMOUS auth
             }
-
-            LOG.info("connecting to AMQP adapter [host: {}, port: {}]", properties.getHost(), properties.getPort());
+            LOG.info("connecting to AMQP org.eclipse.hono.cli.app.adapter [host: {}, port: {}]", properties.getHost(), properties.getPort());
             client.connect(options, properties.getHost(), properties.getPort(), connectAttempt);
         }
 
-        return connectAttempt
-                .compose(unopenedConnection -> {
-                    final Future<ProtonConnection> con = Future.future();
-                    unopenedConnection.openHandler(con);
-                    unopenedConnection.open();
-                    return con;
-                });
+        return connectAttempt.compose(unopenedConnection -> {
+            final Future<ProtonConnection> con = Future.future();
+            unopenedConnection.openHandler(con);
+            unopenedConnection.open();
+            return con;
+        });
     }
 }

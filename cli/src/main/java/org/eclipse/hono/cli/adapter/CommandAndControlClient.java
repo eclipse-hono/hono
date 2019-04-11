@@ -11,7 +11,7 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package org.eclipse.hono.cli;
+package org.eclipse.hono.cli.adapter;
 
 import java.net.HttpURLConnection;
 
@@ -32,8 +32,8 @@ import io.vertx.proton.ProtonReceiver;
 import io.vertx.proton.ProtonSender;
 
 /**
- * A client for accessing Hono's Command and Control APIs to
- * receive commands and sends command response messages via the AMQP adapter.
+ * A connection for accessing Hono's Command and Control APIs to
+ * receive commands and sends command response messages via the AMQP org.eclipse.hono.cli.app.adapter.
  */
 @Component
 @Profile("amqp-command")
@@ -50,24 +50,30 @@ public class CommandAndControlClient extends AmqpCliClient {
                 final byte[] body = (((Data) m.getBody()).getValue()).getArray();
                 commandPayload = new String(body);
             }
-            writer.printf("Received Command Message : [Command name: %s, Command payload: %s] %n", m.getSubject(),
-                    commandPayload).flush();
-
-            final Message commandResponse = ProtonHelper.message(m.getReplyTo(), "OK: " + m.getSubject());
-            commandResponse.setCorrelationId(m.getCorrelationId());
-            MessageHelper.addProperty(commandResponse, MessageHelper.APP_PROPERTY_STATUS, HttpURLConnection.HTTP_OK);
-            commandResponse.setContentType(m.getContentType());
-            sender.send(commandResponse, delivery -> {
-                if (delivery.remotelySettled()) {
-                    writer.printf("Command response sent [outcome: %s] %n", delivery.getRemoteState());
-                } else {
-                    writer.println("Application did not settle command response message");
-                }
+            final boolean isOneWay = m.getReplyTo() == null;
+            if (isOneWay) {
+                writer.printf("received one-way command [name: %s]: %s%n", m.getSubject(), commandPayload);
                 writer.flush();
-            });
+            } else {
+                writer.printf("received command [name: %s]: %s%n", m.getSubject(), commandPayload);
+                writer.flush();
+
+                final Message commandResponse = ProtonHelper.message(m.getReplyTo(), "OK: " + m.getSubject());
+                commandResponse.setCorrelationId(m.getCorrelationId());
+                MessageHelper.addProperty(commandResponse, MessageHelper.APP_PROPERTY_STATUS, HttpURLConnection.HTTP_OK);
+                commandResponse.setContentType(m.getContentType());
+                sender.send(commandResponse, delivery -> {
+                    if (delivery.remotelySettled()) {
+                        writer.printf("sent response to command [name: %s, outcome: %s]%n", m.getSubject(), delivery.getRemoteState().getType());
+                    } else {
+                        writer.println("application did not settle command response message");
+                    }
+                    writer.flush();
+                });
+            }
         })
         .otherwise(t -> {
-            writer.printf("Fail to create command receiver link [reason: %s] %n", t.getMessage()).flush();
+            writer.printf("failed to create command receiver link: %s%n", t.getMessage()).flush();
             System.exit(1);
             return null;
         });
@@ -76,6 +82,7 @@ public class CommandAndControlClient extends AmqpCliClient {
     private Future<ProtonReceiver> startCommandReceiver(final ProtonMessageHandler msgHandler) {
         return connectToAdapter()
         .compose(con -> {
+            LOG.info("connection to AMQP adapter established");
             adapterConnection = con;
             return createSender();
         }).compose(s -> {
@@ -85,7 +92,7 @@ public class CommandAndControlClient extends AmqpCliClient {
     }
 
     /**
-     * Opens a receiver link to receive commands from the adapter.
+     * Opens a receiver link to receive commands from the org.eclipse.hono.cli.app.adapter.
      *
      * @param msgHandler The handler to invoke when a command message is received.
      * @return A succeeded future with the created receiver link or a failed future

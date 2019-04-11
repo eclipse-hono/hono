@@ -1,6 +1,6 @@
 /*
  * ******************************************************************************
- *  * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ *  * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *  *
  *  * See the NOTICE file(s) distributed with this work for additional
  *  * information regarding copyright ownership.
@@ -14,33 +14,34 @@
  *
  */
 
-package org.eclipse.hono.cli;
-
-import javax.annotation.PostConstruct;
-
-import io.vertx.core.AsyncResult;
-import io.vertx.core.Future;
-import io.vertx.core.WorkerExecutor;
-import io.vertx.core.buffer.Buffer;
-import org.eclipse.hono.client.CommandClient;
-import org.eclipse.hono.client.HonoClient;
-import org.eclipse.hono.util.BufferResult;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Profile;
-import org.springframework.stereotype.Component;
+package org.eclipse.hono.cli.app;
 
 import java.util.Optional;
 import java.util.Scanner;
 import java.util.concurrent.TimeUnit;
 
+import javax.annotation.PostConstruct;
+
+import org.eclipse.hono.client.ApplicationClientFactory;
+import org.eclipse.hono.client.CommandClient;
+import org.eclipse.hono.util.BufferResult;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Profile;
+import org.springframework.stereotype.Component;
+
+import io.vertx.core.Future;
+import io.vertx.core.WorkerExecutor;
+import io.vertx.core.buffer.Buffer;
+
 /**
- * A command line client for sending <em>commands</em> to devices connected to Hono.
+ * A command line client for sending commands to devices connected
+ * to one of Hono's protocol adapters.
  * <p>
- * The client connects to Hono and reads commands from System.in.
+ * The commands to send are read from stdin.
  */
 @Component
 @Profile("command")
-public class Commander extends AbstractClient {
+public class Commander extends AbstractApplicationClient {
 
     private final Scanner scanner = new Scanner(System.in);
     @Value(value = "${command.timeoutInSeconds}")
@@ -54,22 +55,27 @@ public class Commander extends AbstractClient {
     @PostConstruct
     void start() {
         workerExecutor = vertx.createSharedWorkerExecutor("user-input-pool", 3, TimeUnit.HOURS.toNanos(1));
-        startCommandClient(client.connect(x -> onDisconnect()));
+        clientFactory.connect().setHandler(connectAttempt -> {
+            if (connectAttempt.succeeded()) {
+                clientFactory.addReconnectListener(this::startCommandClient);
+                startCommandClient(clientFactory);
+            } else {
+                close(connectAttempt.cause());
+            }
+        });
     }
 
-    private void startCommandClient(final Future<HonoClient> clientFuture) {
-        clientFuture
-                .setHandler(this::handleClientConnectionStatus)
-                .compose(x -> getCommandFromUser())
-                .compose(this::processCommand)
-                .setHandler(x -> startCommandClient(clientFuture));
+    private void startCommandClient(final ApplicationClientFactory clientFactory) {
+        getCommandFromUser()
+        .compose(this::processCommand)
+        .setHandler(sendAttempt -> startCommandClient(clientFactory));
     }
 
     private Future<Void> processCommand(final Command command) {
 
         LOG.info("Command sent to device... [request will timeout in {} seconds]", requestTimeoutInSecs);
 
-        final Future<CommandClient> commandClient = client.getOrCreateCommandClient(tenantId, deviceId);
+        final Future<CommandClient> commandClient = clientFactory.getOrCreateCommandClient(tenantId, deviceId);
         return commandClient
                 .map(this::setRequestTimeOut)
                 .compose(c -> {
@@ -101,7 +107,7 @@ public class Commander extends AbstractClient {
     }
 
     private Void closeCommandClient(final CommandClient commandClient) {
-        LOG.trace("Close command client to device [{}:{}]", tenantId, deviceId);
+        LOG.trace("Close command connection to device [{}:{}]", tenantId, deviceId);
         commandClient.close(closeHandler -> {
         });
         return null;
@@ -132,21 +138,10 @@ public class Commander extends AbstractClient {
         return commandFuture;
     }
 
-    private void onDisconnect() {
-        LOG.info("Connecting client...");
-        vertx.setTimer(connectionRetryInterval, reconnect -> {
-            LOG.info("attempting to re-connect to Hono ...");
-            client.connect(con -> onDisconnect());
-        });
-    }
-
-    private void handleClientConnectionStatus(final AsyncResult<HonoClient> result) {
-        if (result.failed()) {
-            workerExecutor.close();
-            vertx.close();
-            LOG.error("Error: {}", result.cause().getMessage());
-            throw new RuntimeException("Error connecting hono client", result.cause());
-        }
+    private void close(final Throwable t) {
+        workerExecutor.close();
+        vertx.close();
+        LOG.error("Error: {}", t.getMessage());
     }
 
     /**

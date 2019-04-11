@@ -11,7 +11,7 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package org.eclipse.hono.cli;
+package org.eclipse.hono.cli.adapter;
 
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
@@ -31,7 +31,7 @@ import io.vertx.proton.ProtonHelper;
 
 /**
  * A Client for accessing Hono's Telemetry and Event APIs to send
- * telemetry data respectively events via the AMQP adapter.
+ * telemetry data respectively events via the AMQP org.eclipse.hono.cli.app.adapter.
  */
 @Component
 @Profile("amqp-send")
@@ -72,7 +72,7 @@ public class TelemetryAndEventCli extends AmqpCliClient {
     }
 
     /**
-     * Connects to the AMQP adapter and send a telemetry/event message to the adapter.
+     * Connects to the AMQP org.eclipse.hono.cli.app.adapter and send a telemetry/event message to the org.eclipse.hono.cli.app.adapter.
      *
      * @param messageTracker The future to notify when the message is sent. The future is completed with the delivery
      *            upon success or completed with an exception.

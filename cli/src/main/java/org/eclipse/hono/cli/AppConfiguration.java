@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,8 +13,8 @@
 
 package org.eclipse.hono.cli;
 
+import org.eclipse.hono.client.ApplicationClientFactory;
 import org.eclipse.hono.client.HonoClient;
-import org.eclipse.hono.client.impl.HonoClientImpl;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -56,7 +56,7 @@ public class AppConfiguration {
     }
 
     /**
-     * Exposes client configuration properties as a Spring bean.
+     * Exposes connection configuration properties as a Spring bean.
      *
      * @return The properties.
      */
@@ -68,12 +68,12 @@ public class AppConfiguration {
     }
 
     /**
-     * Exposes a {@code HonoClient} as a Spring bean.
+     * Exposes a factory for creating clients for Hono's northbound APIs as a Spring bean.
      *
-     * @return The Hono client.
+     * @return The factory.
      */
     @Bean
-    public HonoClient honoClient() {
-        return new HonoClientImpl(vertx(), honoClientConfig());
+    public ApplicationClientFactory clientFactory() {
+        return HonoClient.newClient(vertx(), honoClientConfig());
     }
 }

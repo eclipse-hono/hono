@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -11,7 +11,7 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package org.eclipse.hono.cli;
+package org.eclipse.hono.cli.app;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -21,9 +21,9 @@ import static org.mockito.Mockito.when;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
+import org.eclipse.hono.client.ApplicationClientFactory;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageConsumer;
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -63,28 +63,17 @@ public class ReceiverTest {
         final Vertx vertx = mock(Vertx.class);
         when(vertx.getOrCreateContext()).thenReturn(mock(Context.class));
 
-        final HonoClient client = mock(HonoClient.class);
-        when(client.connect(any(Handler.class))).thenReturn(Future.succeededFuture(client));
-        when(client.connect()).thenReturn(Future.succeededFuture(client));
-        when(client.createTelemetryConsumer(anyString(), any(Consumer.class), any(Handler.class)))
+        final ApplicationClientFactory connection = mock(ApplicationClientFactory.class);
+        when(connection.connect()).thenReturn(Future.succeededFuture(mock(HonoClient.class)));
+        when(connection.createTelemetryConsumer(anyString(), any(Consumer.class), any(Handler.class)))
                 .thenReturn(Future.succeededFuture(mock(MessageConsumer.class)));
-        when(client.createEventConsumer(anyString(), any(Consumer.class), any(Handler.class)))
+        when(connection.createEventConsumer(anyString(), any(Consumer.class), any(Handler.class)))
                 .thenReturn(Future.succeededFuture(mock(MessageConsumer.class)));
 
         receiver = new Receiver();
-        receiver.setHonoClient(client);
+        receiver.setHonoConnection(connection);
         receiver.setVertx(vertx);
         receiver.tenantId = "TEST_TENANT";
-    }
-
-    /**
-     * Cleans up after each test.
-     */
-    @After
-    public void destroy() {
-        if (receiver.vertx != null) {
-            receiver.vertx.close();
-        }
     }
 
     /**

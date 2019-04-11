@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -10,39 +10,38 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
-package org.eclipse.hono.cli;
+package org.eclipse.hono.cli.app;
+
+import java.util.ArrayList;
+import java.util.List;
 
 import javax.annotation.PostConstruct;
 
-import io.vertx.core.AsyncResult;
-import io.vertx.core.CompositeFuture;
-import io.vertx.core.Handler;
-import io.vertx.core.buffer.Buffer;
-
 import org.apache.qpid.proton.message.Message;
-import org.eclipse.hono.client.HonoClient;
+import org.eclipse.hono.client.ApplicationClientFactory;
 import org.eclipse.hono.util.MessageHelper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
+import io.vertx.core.AsyncResult;
+import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
-import io.vertx.proton.ProtonConnection;
-
-import java.util.ArrayList;
-import java.util.List;
+import io.vertx.core.Handler;
+import io.vertx.core.buffer.Buffer;
 
 /**
- * A client that connects to Hono's northbound Telemetry and/or Event API,
- * waits for incoming messages and logs any received messages to the console.
+ * A command line client for receiving messages from via Hono's northbound Telemetry and/or Event API
  * <p>
- * Note that this example intentionally does not support Command and Control and rather is the most simple version of a
- * receiver for downstream data. Please refer to the documentation of Command and Control for the example that supports
+ * Messages are output to stdout.
+ * <p>
+ * Note that this example intentionally does not support Command &amp; Control and rather is the most simple version of a
+ * receiver for downstream data. Please refer to the documentation of Command &amp; Control for the example that supports
  * it (found in the User Guide section).
  */
 @Component
 @Profile("receiver")
-public class Receiver extends AbstractClient {
+public class Receiver extends AbstractApplicationClient {
 
     private static final String TYPE_TELEMETRY = "telemetry";
     private static final String TYPE_EVENT = "event";
@@ -61,17 +60,21 @@ public class Receiver extends AbstractClient {
      */
     @PostConstruct
     Future<CompositeFuture> start() {
-        return client.connect(this::onDisconnect)
-                .compose(this::createConsumer)
+        return clientFactory.connect()
+                .compose(con -> {
+                    clientFactory.addReconnectListener(this::createConsumer);
+                    return createConsumer(clientFactory);
+                })
                 .setHandler(this::handleCreateConsumerStatus);
     }
 
-    private CompositeFuture createConsumer(final HonoClient connectedClient) {
+    private CompositeFuture createConsumer(final ApplicationClientFactory clientFactory) {
+
         final Handler<Void> closeHandler = closeHook -> {
             LOG.info("close handler of consumer is called");
             vertx.setTimer(connectionRetryInterval, reconnect -> {
                 LOG.info("attempting to re-open the consumer link ...");
-                createConsumer(connectedClient);
+                createConsumer(clientFactory);
             });
         };
 
@@ -79,11 +82,11 @@ public class Receiver extends AbstractClient {
         final List<Future> consumerFutures = new ArrayList<>();
         if (messageType.equals(TYPE_EVENT) || messageType.equals(TYPE_ALL)) {
             consumerFutures.add(
-                    connectedClient.createEventConsumer(tenantId, msg -> handleMessage(TYPE_EVENT, msg), closeHandler));
+                    clientFactory.createEventConsumer(tenantId, msg -> handleMessage(TYPE_EVENT, msg), closeHandler));
         }
 
         if (messageType.equals(TYPE_TELEMETRY) || messageType.equals(TYPE_ALL)) {
-            consumerFutures.add(connectedClient
+            consumerFutures.add(clientFactory
                     .createTelemetryConsumer(tenantId, msg -> handleMessage(TYPE_TELEMETRY, msg), closeHandler));
         }
 
@@ -94,15 +97,6 @@ public class Receiver extends AbstractClient {
                             messageType)));
         }
         return CompositeFuture.all(consumerFutures);
-    }
-
-    private void onDisconnect(final ProtonConnection con) {
-        // give Vert.x some time to clean up NetClient
-        vertx.setTimer(connectionRetryInterval, reconnect -> {
-            LOG.info("attempting to re-connect to Hono ...");
-            client.connect(this::onDisconnect)
-                    .compose(this::createConsumer);
-        });
     }
 
     private void handleMessage(final String endpoint, final Message msg) {

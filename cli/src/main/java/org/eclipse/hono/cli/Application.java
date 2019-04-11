@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -21,8 +21,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 /**
- * A CLI(Command Line Interface) Application using HonoClient for receiving telemetry data and event messages to/from
- * Hono.
+ * A Command Line Interface for interacting with Hono APIs.
  */
 @SpringBootApplication
 public class Application {
@@ -38,7 +37,7 @@ public class Application {
     }
 
     /**
-     * Starts the client.
+     * Starts the connection.
      * 
      * @param args Command line arguments passed on to the Spring Boot application.
      */
