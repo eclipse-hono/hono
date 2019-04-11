@@ -20,24 +20,23 @@ import java.util.concurrent.CountDownLatch;
 import java.util.function.Consumer;
 
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.client.ApplicationClientFactory;
 import org.eclipse.hono.client.CommandClient;
 import org.eclipse.hono.client.HonoClient;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.ServiceInvocationException;
-import org.eclipse.hono.client.impl.HonoClientImpl;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.MessageTap;
 import org.eclipse.hono.util.TimeUntilDisconnectNotification;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
-import io.vertx.proton.ProtonConnection;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 
 /**
@@ -59,7 +58,7 @@ public class HonoExampleApplicationBase {
     protected final int DEFAULT_CONNECT_TIMEOUT_MILLIS = 1000;
 
     private final Vertx vertx = Vertx.vertx();
-    private final HonoClient honoClient;
+    private final ApplicationClientFactory clientFactory;
 
     /**
      * A map holding a handler to cancel a timer that was started to send commands periodically to a device.
@@ -93,7 +92,7 @@ public class HonoExampleApplicationBase {
             props.setHostnameVerificationRequired(false);
         }
 
-        honoClient = new HonoClientImpl(vertx, props);
+        clientFactory = HonoClient.newClient(vertx, props);
     }
 
     /**
@@ -108,21 +107,29 @@ public class HonoExampleApplicationBase {
 
         consumerFuture.setHandler(result -> {
             if (!result.succeeded()) {
-                LOG.error("honoClient could not create downstream consumer for [{}:{}]",
+                LOG.error("clientFactory could not create downstream consumer for [{}:{}]",
                         HonoExampleConstants.HONO_AMQP_CONSUMER_HOST,
                         HonoExampleConstants.HONO_AMQP_CONSUMER_PORT, result.cause());
             }
             latch.countDown();
         });
 
-        honoClient.connect(this::onDisconnect).
-                compose(connectedClient -> createConsumer()).
-                setHandler(consumerFuture.completer());
+        clientFactory.connect()
+        .compose(connectedClient -> {
+            clientFactory.addDisconnectListener(c -> {
+                LOG.info("lost connection to Hono, trying to reconnect ...");
+            });
+            clientFactory.addReconnectListener(c -> {
+                LOG.info("reconnected to Hono");
+            });
+            return createConsumer();
+        })
+        .setHandler(consumerFuture.completer());
 
         latch.await();
 
         if (consumerFuture.succeeded()) {
-            final int ignored = System.in.read();
+            System.in.read();
         }
         vertx.close();
     }
@@ -145,10 +152,10 @@ public class HonoExampleApplicationBase {
         final Consumer<Message> telemetryHandler = MessageTap.getConsumer(
                 this::handleTelemetryMessage, this::handleCommandReadinessNotification);
 
-        return honoClient.createEventConsumer(HonoExampleConstants.TENANT_ID,
+        return clientFactory.createEventConsumer(HonoExampleConstants.TENANT_ID,
                 eventHandler,
                 closeHook -> LOG.error("remotely detached consumer link")
-        ).compose(messageConsumer -> honoClient.createTelemetryConsumer(HonoExampleConstants.TENANT_ID,
+        ).compose(messageConsumer -> clientFactory.createTelemetryConsumer(HonoExampleConstants.TENANT_ID,
                 telemetryHandler, closeHook -> LOG.error("remotely detached consumer link")
         ).compose(telemetryMessageConsumer -> {
             LOG.info("Consumer ready for telemetry and event messages.");
@@ -156,29 +163,6 @@ public class HonoExampleApplicationBase {
         }).recover(t ->
                 Future.failedFuture(t)
         ));
-    }
-
-    /**
-     * Method to act as a disconnect handler. If called, it tries to reconnect to Hono by creating the MessageConsumer
-     * again and continue to wait for incoming downstream messages.
-     * <p>
-     * The reconnection attempt is delayed by {@link #DEFAULT_CONNECT_TIMEOUT_MILLIS} milliseconds and set this method
-     * as disconnect handler again (for potential future disconnect handling).
-     *
-     * @param con The ProtonConnection for that the connection was lost.
-     */
-    private void onDisconnect(final ProtonConnection con) {
-
-        // give Vert.x some time to clean up NetClient
-        vertx.setTimer(DEFAULT_CONNECT_TIMEOUT_MILLIS, reconnect -> {
-            LOG.info("attempting to re-connect to Hono ...");
-            honoClient.connect(this::onDisconnect).
-                    compose(connectedClient -> createConsumer()).
-                    map(messageConsumer -> {
-                        LOG.info("Reconnected to Hono.");
-                        return null;
-                    });
-        });
     }
 
     private void printMessage(final String tenantId, final Message msg, final String messageType) {
@@ -290,7 +274,7 @@ public class HonoExampleApplicationBase {
      * @param notification The notification that was received for the device.
      */
     private Future<CommandClient> createCommandClientAndSendCommand(final TimeUntilDisconnectNotification notification) {
-        return honoClient.getOrCreateCommandClient(notification.getTenantId(), notification.getDeviceId())
+        return clientFactory.getOrCreateCommandClient(notification.getTenantId(), notification.getDeviceId())
                 .map(commandClient -> {
                     commandClient.setRequestTimeout(calculateCommandTimeout(notification));
 
