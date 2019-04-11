@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,13 +13,17 @@
 
 package org.eclipse.hono.tests.registry;
 
+import org.eclipse.hono.client.ConnectionLifecycle;
+import org.eclipse.hono.client.CredentialsClientFactory;
+import org.eclipse.hono.client.HonoClient;
+import org.eclipse.hono.client.RegistrationClientFactory;
+import org.eclipse.hono.client.TenantClientFactory;
+import org.eclipse.hono.config.ClientConfigProperties;
+import org.eclipse.hono.tests.IntegrationTestSupport;
+
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.ext.unit.TestContext;
-import org.eclipse.hono.client.HonoClient;
-import org.eclipse.hono.client.impl.HonoClientImpl;
-import org.eclipse.hono.config.ClientConfigProperties;
-import org.eclipse.hono.tests.IntegrationTestSupport;
 
 /**
  * Helper class to support integration tests for the device registry.
@@ -31,48 +35,73 @@ public final class DeviceRegistryAmqpTestSupport {
         // prevent instantiation
     }
 
-    /**
-     * Build a HonoClient to access the device registry service.
-     *
-     * @param vertx The Vert.x instance to execute the client on, if {@code null} a new Vert.x instance is used.
-     * @param username The username to use for authenticating to the Device Registry.
-     * @param password The password to use for authenticating to the Device Registry.
-     * @return The client that is configured for accessing the device registry.
-     */
-    protected static HonoClient prepareDeviceRegistryClient(final Vertx vertx, final String username, final String password) {
-
+    private static ClientConfigProperties getClientConfig(final String username, final String password) {
         final ClientConfigProperties clientProps = new ClientConfigProperties();
         clientProps.setName("test");
         clientProps.setHost(IntegrationTestSupport.HONO_DEVICEREGISTRY_HOST);
         clientProps.setPort(IntegrationTestSupport.HONO_DEVICEREGISTRY_AMQP_PORT);
         clientProps.setUsername(username);
         clientProps.setPassword(password);
-        return new HonoClientImpl(vertx, clientProps);
+        return clientProps;
     }
 
     /**
-     * Closes the connection of the provided client to the device registry service.
+     * Gets a factory for creating a client for accessing the Tenant service.
+     *
+     * @param vertx The Vert.x instance to run on, if {@code null} a new Vert.x instance is used.
+     * @param username The username to use for authenticating to the service.
+     * @param password The password to use for authenticating to the service.
+     * @return The factory.
+     */
+    protected static TenantClientFactory prepareTenantClientFactory(final Vertx vertx, final String username, final String password) {
+
+        return HonoClient.newClient(vertx, getClientConfig(username, password));
+    }
+
+    /**
+     * Gets a factory for creating a client for accessing the Credentials service.
+     *
+     * @param vertx The Vert.x instance to run on, if {@code null} a new Vert.x instance is used.
+     * @param username The username to use for authenticating to the service.
+     * @param password The password to use for authenticating to the service.
+     * @return The factory.
+     */
+    protected static CredentialsClientFactory prepareCredentialsClientFactory(final Vertx vertx, final String username, final String password) {
+
+        return HonoClient.newClient(vertx, getClientConfig(username, password));
+    }
+
+    /**
+     * Gets a factory for creating a client for accessing the Device Registration service.
+     *
+     * @param vertx The Vert.x instance to run on, if {@code null} a new Vert.x instance is used.
+     * @param username The username to use for authenticating to the service.
+     * @param password The password to use for authenticating to the service.
+     * @return The factory.
+     */
+    protected static RegistrationClientFactory prepareRegistrationClientFactory(final Vertx vertx, final String username, final String password) {
+
+        return HonoClient.newClient(vertx, getClientConfig(username, password));
+    }
+
+    /**
+     * Closes the connection of the provided factory.
      * <p>
      * Any senders or consumers opened by this client will be implicitly closed as well. Any subsequent attempts to
      * connect this client again will fail.
      *
-     * @param vertx The Vert.x instance on which the client is executed on.
      * @param ctx The test context that the tests are executed on.
-     * @param client The client to shutdown.
+     * @param factory The factory to disconnect.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    protected static void shutdownDeviceRegistryClient(final TestContext ctx, final Vertx vertx, final HonoClient client) {
+    protected static void disconnect(final TestContext ctx, final ConnectionLifecycle factory) {
 
         final Future<Void> clientTracker = Future.future();
-        if (client != null) {
-            client.shutdown(clientTracker.completer());
+        if (factory != null) {
+            factory.disconnect(clientTracker.completer());
         } else {
             clientTracker.complete();
         }
-        clientTracker.otherwiseEmpty().compose(s -> {
-            final Future<Void> vertxTracker = Future.future();
-            vertx.close(vertxTracker.completer());
-            return vertxTracker;
-        }).setHandler(ctx.asyncAssertSuccess());
+        clientTracker.otherwiseEmpty().setHandler(ctx.asyncAssertSuccess());
     }
 }

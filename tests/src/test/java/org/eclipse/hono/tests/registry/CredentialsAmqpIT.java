@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -29,17 +29,17 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import org.eclipse.hono.client.CredentialsClient;
-import org.eclipse.hono.client.HonoClient;
+import org.eclipse.hono.client.CredentialsClientFactory;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsObject;
 import org.junit.After;
-import org.junit.BeforeClass;
 import org.junit.AfterClass;
-import org.junit.Test;
+import org.junit.BeforeClass;
 import org.junit.Rule;
+import org.junit.Test;
 import org.junit.rules.Timeout;
 import org.junit.runner.RunWith;
 
@@ -48,7 +48,6 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
-import io.vertx.proton.ProtonClientOptions;
 
 /**
  * Tests verifying the behavior of the Device Registry component's Credentials AMQP endpoint.
@@ -63,7 +62,7 @@ public class CredentialsAmqpIT {
 
     private static final Vertx vertx = Vertx.vertx();
 
-    private static HonoClient client;
+    private static CredentialsClientFactory client;
     private static CredentialsClient credentialsClient;
     private static IntegrationTestSupport helper;
 
@@ -84,11 +83,11 @@ public class CredentialsAmqpIT {
         helper = new IntegrationTestSupport(vertx);
         helper.initRegistryClient(ctx);
 
-        client = DeviceRegistryAmqpTestSupport.prepareDeviceRegistryClient(vertx,
+        client = DeviceRegistryAmqpTestSupport.prepareCredentialsClientFactory(vertx,
                 IntegrationTestSupport.HONO_USER, IntegrationTestSupport.HONO_PWD);
 
-        client.connect(new ProtonClientOptions())
-            .compose(c -> c.getOrCreateCredentialsClient(Constants.DEFAULT_TENANT))
+        client.connect()
+            .compose(c -> client.getOrCreateCredentialsClient(Constants.DEFAULT_TENANT))
             .setHandler(ctx.asyncAssertSuccess(r -> {
                 credentialsClient = r;
             }));
@@ -112,8 +111,7 @@ public class CredentialsAmqpIT {
     @AfterClass
     public static void shutdown(final TestContext ctx) {
 
-        DeviceRegistryAmqpTestSupport.shutdownDeviceRegistryClient(ctx, vertx, client);
-
+        DeviceRegistryAmqpTestSupport.disconnect(ctx, client);
     }
 
     /**
