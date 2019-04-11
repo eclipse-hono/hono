@@ -13,7 +13,7 @@ This API has been added in Hono 0.6. Previous versions do not support nor implem
 {{% /note %}}
 
 This document *describes* the Tenant API by means of available operations and data structure format only. 
-For a full outline of the multi tenancy handling in Eclipse Hono please have a look at the [Multi Tenancy]({{< relref "tenancy.md" >}}) page in the concepts section of this documentation.
+Please refer to [Multi Tenancy]({{< ref "/concepts/tenancy.md" >}}) for details regarding the way Hono supports multiple tenants.
 
 Note, however, that in real world applications the tenant information will probably be kept and managed by an existing *system of record*, using e.g. a database for persisting the data. The Tenant API accounts for this fact by means of defining only the [Get Tenant Information]({{< relref "#get-tenant-information" >}}) operation as *mandatory*, i.e. this operation is strictly required by a Hono instance for it to work properly, whereas the remaining operations are defined as *optional* from a Hono perspective.
 
@@ -314,12 +314,14 @@ Devices belonging to the tenant can connect to Hono via the rest-adapter only an
 }
 ~~~
 
-In the following example the tenant is allowed to use **all** adapters, as the *adapters* property is omitted in the tenant configuration. Note that the payload also contains a custom property *plan* which might be used to indicate the customer's service level:
+In the following example the tenant is allowed to use **all** adapters, as the *adapters* property is omitted in the tenant configuration. Note that the payload also contains a *resource-limits* property which limits the number of concurrently connected devices to 10000 for the tenant:
 
 ~~~json
 {
-  "enabled": true
-  "plan": "gold",
+  "enabled": true,
+  "resource-limits": {
+    "max-connections": 10000
+  }
 }
 ~~~
 
@@ -345,9 +347,39 @@ The table below provides an overview of the standard members defined for the JSO
 | *enabled*                | *yes*     | *boolean*     | If set to `false` the tenant is currently disabled. Protocol adapters MUST NOT allow devices of a disabled tenant to connect and MUST NOT accept data published by such devices. |
 | *trusted-ca*             | *no*      | *JSON object* | The trusted certificate authority to use for validating certificates presented by devices of the tenant for authentication purposes. See [Trusted Certificate Authority Format]({{< relref "#trusted-ca-format" >}}) for a definition of the content model of the object. |
 | *adapters*               | *no*      | *JSON array*  | A list of configuration options valid for certain adapters only. The format of a configuration option is described here [Adapter Configuration Format]({{< relref "#adapter-configuration-format" >}}). **NB** If the element is provided then the list MUST NOT be empty. **NB** Only a single entry per *type* is allowed. If multiple entries for the same *type* are present it is handled as an error. **NB** If the element is omitted then all adapters are *enabled* in their default configuration. |
+| *resource-limits*         | *no*      | *JSON object* | The resource-limits such as the maximum number of connections can be set. The format of a configuration option is described here [Resource Limits Configuration Format]({{< relref "#resource-limits-configuration-format" >}}).|
 
 Additionally to the specified properties the JSON object MAY contain an arbitrary number of members with arbitrary names which can be of a scalar or a complex type. 
 This allows for future *well-known* additions and also allows *clients* to add further information which might be relevant to a *custom* adapter only.
+
+### Examples
+
+Below is an example for a payload of the response to a *get* request for tenant `TEST_TENANT`. Note that the payload contains some custom properties at both the tenant (*customer*) as well as the adapter configuration level (*deployment*).
+
+~~~json
+{
+  "tenant-id" : "TEST_TENANT",
+  "enabled" : true,
+  "customer": "ACME Inc.",
+  "resource-limits": {
+    "max-connections": 100000
+  },
+  "adapters" : [
+    {
+      "type" : "hono-mqtt",
+      "enabled" : true,
+      "device-authentication-required" : true
+    }, {
+      "type" : "hono-http",
+      "enabled" : true,
+      "device-authentication-required" : true,
+      "deployment": {
+        "maxInstances": 4
+      }
+    }
+  ]
+}
+~~~
 
 ## Trusted CA Format
 
@@ -378,31 +410,9 @@ Protocol adapters SHOULD use the configuration properties set for a tenant when 
 The JSON object MAY contain an arbitrary number of additional members with arbitrary names of either scalar or complex type.
 
 ## Resource Limits Configuration Format
-The table below provides an overview of the members defined for the *resource-limits* JSON object:
+
+The table below contains the properties which are used to configure a tenant's resource limits:
 
 | Name                     | Mandatory | Type          | Default Value | Description |
 | :------------------------| :-------: | :------------ | :------------ | :---------- |
-| *max-connections*        | *no*      | *number*      | *-1*          | The maximum number of device connections to be allowed per tenant. Default value -1 indicates that no limit is set.|
-### Examples
-
-Below is an example for a payload of the response to a *get* request for tenant `TEST_TENANT`. Note that the payload contains some custom properties at both the tenant (*plan*) as well as the adapter configuration level (*deployment*).
-
-~~~json
-{
-  "tenant-id" : "TEST_TENANT",
-  "enabled" : true,
-  "plan": "gold",
-  "adapters" : [ {
-    "type" : "hono-mqtt",
-    "enabled" : true,
-    "device-authentication-required" : true
-  }, {
-    "type" : "hono-http",
-    "enabled" : true,
-    "device-authentication-required" : true,
-    "deployment": {
-      "maxInstances": 4
-    }
-  } ]
-}
-~~~
+| *max-connections*        | *no*      | *number*      | `-1`          | The maximum number of concurrent connections allowed from devices of this tenant. The default value `-1` indicates that no limit is set. |
