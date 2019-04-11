@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -26,7 +26,7 @@ import java.util.concurrent.TimeUnit;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.CredentialsClient;
-import org.eclipse.hono.client.HonoClient;
+import org.eclipse.hono.client.CredentialsClientFactory;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.util.CredentialsObject;
 import org.junit.Before;
@@ -57,7 +57,7 @@ public class CredentialsApiAuthProviderTest {
     public Timeout globalTimeout = new Timeout(5, TimeUnit.SECONDS);
 
     private CredentialsApiAuthProvider<AbstractDeviceCredentials> provider;
-    private HonoClient honoClient;
+    private CredentialsClientFactory credentialsClientFactory;
     private CredentialsClient credentialsClient;
 
     /**
@@ -68,8 +68,8 @@ public class CredentialsApiAuthProviderTest {
 
         credentialsClient = mock(CredentialsClient.class);
         when(credentialsClient.isOpen()).thenReturn(Boolean.TRUE);
-        honoClient = mock(HonoClient.class);
-        when(honoClient.getOrCreateCredentialsClient(anyString())).thenReturn(Future.succeededFuture(credentialsClient));
+        credentialsClientFactory = mock(CredentialsClientFactory.class);
+        when(credentialsClientFactory.getOrCreateCredentialsClient(anyString())).thenReturn(Future.succeededFuture(credentialsClient));
         provider = getProvider(getDeviceCredentials("type", "TENANT", "user"), NoopTracerFactory.create());
     }
 
@@ -148,7 +148,7 @@ public class CredentialsApiAuthProviderTest {
 
     private CredentialsApiAuthProvider<AbstractDeviceCredentials> getProvider(final AbstractDeviceCredentials credentials, final Tracer tracer) {
 
-        return new CredentialsApiAuthProvider<AbstractDeviceCredentials>(honoClient, tracer) {
+        return new CredentialsApiAuthProvider<AbstractDeviceCredentials>(credentialsClientFactory, tracer) {
 
             @Override
             protected AbstractDeviceCredentials getCredentials(final JsonObject authInfo) {

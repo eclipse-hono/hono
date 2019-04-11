@@ -26,7 +26,7 @@ import java.util.concurrent.TimeUnit;
 import org.eclipse.hono.auth.HonoPasswordEncoder;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.CredentialsClient;
-import org.eclipse.hono.client.HonoClient;
+import org.eclipse.hono.client.CredentialsClientFactory;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.util.CredentialsConstants;
@@ -64,7 +64,7 @@ public class UsernamePasswordAuthProviderTest {
 
     private UsernamePasswordCredentials deviceCredentials = UsernamePasswordCredentials.create("device@DEFAULT_TENANT", "the-secret", false);
     private UsernamePasswordAuthProvider provider;
-    private HonoClient credentialsServiceClient;
+    private CredentialsClientFactory credentialsClientFactory;
     private CredentialsClient credentialsClient;
     private HonoPasswordEncoder pwdEncoder;
 
@@ -83,12 +83,12 @@ public class UsernamePasswordAuthProviderTest {
     public void setUp() {
 
         credentialsClient = mock(CredentialsClient.class);
-        credentialsServiceClient = mock(HonoClient.class);
-        when(credentialsServiceClient.getOrCreateCredentialsClient("DEFAULT_TENANT")).thenReturn(Future.succeededFuture(credentialsClient));
+        credentialsClientFactory = mock(CredentialsClientFactory.class);
+        when(credentialsClientFactory.getOrCreateCredentialsClient("DEFAULT_TENANT")).thenReturn(Future.succeededFuture(credentialsClient));
         pwdEncoder = mock(HonoPasswordEncoder.class);
         when(pwdEncoder.matches(eq("the-secret"), any(JsonObject.class))).thenReturn(true);
 
-        provider = new UsernamePasswordAuthProvider(credentialsServiceClient, pwdEncoder, new ServiceConfigProperties(), NoopTracerFactory.create());
+        provider = new UsernamePasswordAuthProvider(credentialsClientFactory, pwdEncoder, new ServiceConfigProperties(), NoopTracerFactory.create());
         givenCredentialsOnRecord(CredentialsObject.fromClearTextPassword("4711", "device", "the-secret", null, null));
 
     }
