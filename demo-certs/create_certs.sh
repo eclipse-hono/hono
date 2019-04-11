@@ -62,7 +62,7 @@ function create_client_cert {
   echo "creating client key and certificate for device $1"
   create_key device-$1-key.pem
   openssl req -new -key "$DIR/device-$1-key.pem" -subj "/C=CA/L=Ottawa/O=Eclipse IoT/OU=Hono/CN=Device $1" | \
-    openssl x509 -req -out "$DIR/device-$1-cert.pem" -days 365 -CA $DIR/ca-cert.pem -CAkey $DIR/ca-key.pem -CAcreateserial
+    openssl x509 -req -out "$DIR/device-$1-cert.pem" -days 365 -CA $DIR/default_tenant-cert.pem -CAkey $DIR/default_tenant-key.pem -CAcreateserial
   SUBJECT=$(openssl x509 -in "$DIR/device-$1-cert.pem" -noout -subject -nameopt RFC2253)
   echo "cert.device-$1.$SUBJECT" >> $DIR/device-certs.properties
 }
@@ -97,9 +97,14 @@ keytool -import -trustcacerts -noprompt -alias root -file $DIR/root-cert.pem -ke
 keytool -import -trustcacerts -noprompt -alias ca -file $DIR/ca-cert.pem -keystore $DIR/$HONO_TRUST_STORE -storepass $HONO_TRUST_STORE_PWD
 
 echo ""
-echo "extracting trust anchor information from CA cert"
-CA_SUBJECT=$(openssl x509 -in $DIR/ca-cert.pem -noout -subject -nameopt RFC2253 | sed s/^subject=//)
-PK=$(openssl x509 -in $DIR/ca-cert.pem -noout -pubkey | sed /^---/d | sed -z 's/\n//g')
+echo "creating CA key and certificate for DEFAULT_TENANT"
+create_key default_tenant-key.pem
+openssl req -x509 -key $DIR/default_tenant-key.pem -out $DIR/default_tenant-cert.pem -days 365 -subj "/C=CA/L=Ottawa/O=Eclipse IoT/OU=Hono/CN=DEFAULT_TENANT_CA"
+
+echo ""
+echo "extracting trust anchor information from tenant CA cert"
+CA_SUBJECT=$(openssl x509 -in $DIR/default_tenant-cert.pem -noout -subject -nameopt RFC2253 | sed s/^subject=//)
+PK=$(openssl x509 -in $DIR/default_tenant-cert.pem -noout -pubkey | sed /^---/d | sed -z 's/\n//g')
 echo "trusted-ca.subject-dn=$CA_SUBJECT" > $DIR/trust-anchor.properties
 echo "trusted-ca.public-key=$PK" >> $DIR/trust-anchor.properties
 
