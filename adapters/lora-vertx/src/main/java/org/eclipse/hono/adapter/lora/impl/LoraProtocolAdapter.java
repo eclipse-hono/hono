@@ -11,9 +11,11 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package org.eclipse.hono.adapter.lora;
+package org.eclipse.hono.adapter.lora.impl;
 
-import static java.net.HttpURLConnection.*;
+import static java.net.HttpURLConnection.HTTP_FORBIDDEN;
+import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
+import static java.net.HttpURLConnection.HTTP_OK;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -25,6 +27,9 @@ import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.adapter.http.AbstractVertxBasedHttpProtocolAdapter;
 import org.eclipse.hono.adapter.http.HttpProtocolAdapterProperties;
+import org.eclipse.hono.adapter.lora.LoraCommandProperties;
+import org.eclipse.hono.adapter.lora.LoraConstants;
+import org.eclipse.hono.adapter.lora.LoraMessageType;
 import org.eclipse.hono.adapter.lora.providers.LoraProvider;
 import org.eclipse.hono.adapter.lora.providers.LoraProviderMalformedPayloadException;
 import org.eclipse.hono.adapter.lora.providers.LoraUtils;
@@ -540,7 +545,7 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
     }
 
     private HttpResponse<Buffer> getHttpResponseWithCode(final int statusCode, final String message) {
-        return new HttpResponse<Buffer>() {
+        return new HttpResponse<>() {
 
             @Override
             public HttpVersion version() {

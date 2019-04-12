@@ -11,11 +11,12 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package org.eclipse.hono.adapter.lora;
+package org.eclipse.hono.adapter.lora.impl;
 
 import javax.annotation.PostConstruct;
 
 import org.eclipse.hono.adapter.http.HttpProtocolAdapterProperties;
+import org.eclipse.hono.adapter.lora.LoraCommandProperties;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.service.AbstractAdapterConfig;

@@ -11,7 +11,7 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package org.eclipse.hono.adapter.lora;
+package org.eclipse.hono.adapter.lora.impl;
 
 import org.eclipse.hono.service.AbstractApplication;
 import org.springframework.boot.SpringApplication;
@@ -21,8 +21,9 @@ import org.springframework.context.annotation.ComponentScan;
 /**
  * The Hono LoRa adapter main application class.
  */
-@ComponentScan(basePackages = { "org.eclipse.hono.adapter.lora", "org.eclipse.hono.adapter.http",
-                        "org.eclipse.hono.service.metric" })
+@ComponentScan("org.eclipse.hono.adapter.lora")
+@ComponentScan("org.eclipse.hono.adapter.http")
+@ComponentScan("org.eclipse.hono.service.metric")
 @SpringBootApplication
 public class Application extends AbstractApplication {
 
