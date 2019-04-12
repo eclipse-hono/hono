@@ -15,17 +15,20 @@ package org.eclipse.hono.client.impl;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.util.concurrent.atomic.AtomicReference;
 
-import io.vertx.core.Context;
-import io.vertx.core.Vertx;
-import io.vertx.proton.ProtonSender;
 import org.apache.qpid.proton.amqp.messaging.Accepted;
 import org.apache.qpid.proton.amqp.messaging.Rejected;
 import org.apache.qpid.proton.message.Message;
-import org.eclipse.hono.client.MessageSender;
+import org.eclipse.hono.client.DownstreamSender;
+import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.junit.Before;
 import org.junit.Test;
@@ -33,10 +36,12 @@ import org.junit.runner.RunWith;
 
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Vertx;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.proton.ProtonDelivery;
 import io.vertx.proton.ProtonHelper;
+import io.vertx.proton.ProtonSender;
 
 /**
  * Tests verifying behavior of {@link EventSenderImpl}.
@@ -46,10 +51,9 @@ import io.vertx.proton.ProtonHelper;
 public class EventSenderImplTest {
 
     private Vertx vertx;
-    private Context context;
     private ProtonSender sender;
-
     private ClientConfigProperties config;
+    private HonoConnection connection;
 
     /**
      * Sets up the fixture.
@@ -58,10 +62,9 @@ public class EventSenderImplTest {
     public void setUp() {
 
         vertx = mock(Vertx.class);
-        context = HonoClientUnitTestHelper.mockContext(vertx);
         sender = HonoClientUnitTestHelper.mockProtonSender();
-
         config = new ClientConfigProperties();
+        connection = HonoClientUnitTestHelper.mockHonoConnection(vertx, config);
     }
 
     /**
@@ -76,7 +79,7 @@ public class EventSenderImplTest {
 
         // GIVEN a sender that has credit
         when(sender.sendQueueFull()).thenReturn(Boolean.FALSE);
-        final MessageSender messageSender = new EventSenderImpl(config, sender, "tenant", "telemetry/tenant", context);
+        final DownstreamSender messageSender = new EventSenderImpl(connection, sender, "tenant", "telemetry/tenant");
         final AtomicReference<Handler<ProtonDelivery>> handlerRef = new AtomicReference<>();
         doAnswer(invocation -> {
             handlerRef.set(invocation.getArgument(1));
@@ -111,7 +114,7 @@ public class EventSenderImplTest {
 
         // GIVEN a sender that has credit
         when(sender.sendQueueFull()).thenReturn(Boolean.FALSE);
-        final MessageSender messageSender = new EventSenderImpl(config, sender, "tenant", "telemetry/tenant", context);
+        final DownstreamSender messageSender = new EventSenderImpl(connection, sender, "tenant", "telemetry/tenant");
         final AtomicReference<Handler<ProtonDelivery>> handlerRef = new AtomicReference<>();
         doAnswer(invocation -> {
             handlerRef.set(invocation.getArgument(1));
@@ -144,7 +147,7 @@ public class EventSenderImplTest {
 
         // GIVEN a sender that has credit
         when(sender.sendQueueFull()).thenReturn(Boolean.TRUE);
-        final MessageSender messageSender = new EventSenderImpl(config, sender, "tenant", "event/tenant", context);
+        final DownstreamSender messageSender = new EventSenderImpl(connection, sender, "tenant", "event/tenant");
 
         // WHEN trying to send a message
         final Message event = ProtonHelper.message("event/tenant", "hello");
@@ -166,7 +169,7 @@ public class EventSenderImplTest {
 
         // GIVEN a sender that has credit
         when(sender.sendQueueFull()).thenReturn(Boolean.FALSE);
-        final MessageSender messageSender = new EventSenderImpl(config, sender, "tenant", "telemetry/tenant", context);
+        final DownstreamSender messageSender = new EventSenderImpl(connection, sender, "tenant", "telemetry/tenant");
         when(sender.send(any(Message.class), any(Handler.class))).thenReturn(mock(ProtonDelivery.class));
 
         // WHEN trying to send a message
@@ -190,7 +193,7 @@ public class EventSenderImplTest {
 
         // GIVEN a sender that has credit
         when(sender.sendQueueFull()).thenReturn(Boolean.FALSE);
-        final MessageSender messageSender = new EventSenderImpl(config, sender, "tenant", "telemetry/tenant", context);
+        final DownstreamSender messageSender = new EventSenderImpl(connection, sender, "tenant", "telemetry/tenant");
         when(sender.send(any(Message.class), any(Handler.class))).thenReturn(mock(ProtonDelivery.class));
 
         // WHEN trying to send a message

@@ -37,8 +37,8 @@ import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.Command;
 import org.eclipse.hono.client.CommandContext;
 import org.eclipse.hono.client.CommandResponse;
+import org.eclipse.hono.client.DownstreamSender;
 import org.eclipse.hono.client.MessageConsumer;
-import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
@@ -856,7 +856,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
     private Future<ProtonDelivery> doUploadMessage(
             final AmqpContext context,
             final ResourceIdentifier resource,
-            final Future<MessageSender> senderFuture,
+            final Future<DownstreamSender> senderFuture,
             final Span currentSpan) {
 
         LOG.trace("forwarding {} message", context.getEndpoint().getCanonicalName());
@@ -869,7 +869,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         return CompositeFuture.all(tenantEnabledFuture, tokenFuture, senderFuture)
                 .compose(ok -> {
 
-                    final MessageSender sender = senderFuture.result();
+                    final DownstreamSender sender = senderFuture.result();
                     final Message downstreamMessage = addProperties(
                             context.getMessage(),
                             ResourceIdentifier.from(context.getEndpoint().getCanonicalName(), resource.getTenantId(), resource.getResourceId()),

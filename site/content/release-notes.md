@@ -25,49 +25,44 @@ title = "Release Notes"
 
 ### API Changes
 
-* The optional operations defined by the Tenant, Device Registration and Credentials API
-  have been deprecated. They will be removed from Hono 1.0 altogether.
-  A new HTTP based API will be defined instead which can then be used to *manage* the content
-  of a device registry.
-* The `org.eclipse.hono.client.MessageSender` interface's *send* methods have been changed
-  to no longer accept a *registration assertion token* which became obsolete with the removal
-  of the *Hono Messaging* component. The *isRegistrationAssertionRequired* method has also been
-  removed from the interface.
-* Consequently, the `org.eclipse.hono.service.AbstractProtocolAdapterBase` class's
-  *newMessage* and *addProperties* methods no longer require a boolean parameter indicating
-  whether to include the assertion token in the message being created/amended.
-  Custom protocol adapters should simply omit the corresponding parameter.
-* The `org.eclipse.hono.service.AbstractProtocolAdapterBase` class now uses
-  `org.eclipse.hono.client.CommandConsumerFactory` instead of
-  `org.eclipse.hono.client.CommandConnection` for creating
-  `org.eclipse.hono.client.CommandConsumer` instances.
-  The *setCommandConnection* and *getCommandConnection* methods have been
-  renamed to *setCommandConsumerFactory* and *getCommandConsumerFactory*
-  correspondingly.
-* The `org.eclipse.hono.service.AbstractProtocolAdapterBase` class now uses
-  `org.eclipse.hono.client.TenantClientFactory` instead of
-  `org.eclipse.hono.client.HonoClient` for creating `org.eclipse.hono.client.TenantClient`
-  instances.
-  The *setTenantServiceClient* and *getTenantServiceClient* methods have been
-  renamed to *setTenantClientFactory* and *getTenantClientFactory* correspondingly.
-* The `org.eclipse.hono.service.AbstractProtocolAdapterBase` class now uses
-  `org.eclipse.hono.client.RegistrationClientFactory` instead of
-  `org.eclipse.hono.client.HonoClient` for creating
-  `org.eclipse.hono.client.RegistrationClient` instances.
-  The *setRegistrationServiceClient* and *getRegistrationServiceClient* methods have been
-  renamed to *setRegistrationClientFactory* and *getRegistrationClientFactory* correspondingly.
-* The `org.eclipse.hono.service.AbstractProtocolAdapterBase` class now uses
-  `org.eclipse.hono.client.CredentialsClientFactory` instead of
-  `org.eclipse.hono.client.HonoClient` for creating
-  `org.eclipse.hono.client.CredentialsClient` instances.
-  The *setCredentialsServiceClient* and *getCredentialsServiceClient* methods have been
-  renamed to *setCredentialsClientFactory* and *getCredentialsClientFactory* correspondingly.
-* The `org.eclipse.hono.service.AbstractProtocolAdapterBase` class now uses
-  `org.eclipse.hono.client.DownstreamSendertFactory` instead of
-  `org.eclipse.hono.client.HonoClient` for creating
-  `org.eclipse.hono.client.MessageSender` instances.
-  The *setHonoMessagingClient* and *getHonoMessagingClient* methods have been
-  renamed to *setDownstreamSenderFactory* and *getDownstreamSenderFactory* correspondingly.
+* Several changes have been made to the `org.eclipse.hono.client.MessageSender` interface:
+  * The *send* methods have been changed to no longer accept a *registration assertion token*
+    which became obsolete with the removal of the *Hono Messaging* component.
+  * The *isRegistrationAssertionRequired* method has been removed from the interface.
+  * All *send* method variants which accept specific message parameters have been moved into
+    the new `org.eclipse.hono.client.DownstreamSender` interface which extends
+    `MessageSender`.
+* Several changes have been made to the `org.eclipse.hono.service.AbstractProtocolAdapterBase`
+  class:
+  * The *newMessage* and *addProperties* methods no longer require a boolean parameter indicating
+    whether to include the assertion token in the message being created/amended.
+    Custom protocol adapters should simply omit the corresponding parameter.
+  * The base class now uses `org.eclipse.hono.client.CommandConsumerFactory` instead of
+    `org.eclipse.hono.client.CommandConnection` for creating
+    `org.eclipse.hono.client.CommandConsumer` instances.
+    The *setCommandConnection* and *getCommandConnection* methods have been
+    renamed to *setCommandConsumerFactory* and *getCommandConsumerFactory*
+    correspondingly.
+  * The base class now uses `org.eclipse.hono.client.TenantClientFactory` instead of
+    `org.eclipse.hono.client.HonoClient` for creating `org.eclipse.hono.client.TenantClient`
+    instances.
+    The *setTenantServiceClient* and *getTenantServiceClient* methods have been
+    renamed to *setTenantClientFactory* and *getTenantClientFactory* correspondingly.
+  * The base class now uses `org.eclipse.hono.client.RegistrationClientFactory` instead of
+    `org.eclipse.hono.client.HonoClient` for creating
+    `org.eclipse.hono.client.RegistrationClient` instances.
+    The *setRegistrationServiceClient* and *getRegistrationServiceClient* methods have been
+    renamed to *setRegistrationClientFactory* and *getRegistrationClientFactory* correspondingly.
+  * The base class now uses `org.eclipse.hono.client.CredentialsClientFactory` instead of
+    `org.eclipse.hono.client.HonoClient` for creating
+    `org.eclipse.hono.client.CredentialsClient` instances.
+    The *setCredentialsServiceClient* and *getCredentialsServiceClient* methods have been
+    renamed to *setCredentialsClientFactory* and *getCredentialsClientFactory* correspondingly.
+  * The base class now uses `org.eclipse.hono.client.DownstreamSendertFactory` instead of
+    `org.eclipse.hono.client.HonoClient` for creating
+    `org.eclipse.hono.client.DownstreamSender` instances.
+    The *setHonoMessagingClient* and *getHonoMessagingClient* methods have been
+    renamed to *setDownstreamSenderFactory* and *getDownstreamSenderFactory* correspondingly.
 * The `org.eclipse.hono.service.auth.device.UsernamePasswordAuthProvider` and the
   `org.eclipse.hono.service.auth.device.X509AuthProvider` now accept a
   `org.eclipse.hono.client.CredentialsClientFactory` instead of a
@@ -80,6 +75,13 @@ title = "Release Notes"
 * The `org.eclipse.hono.client.HonoClient` class has been renamed to
   `org.eclipse.hono.client.HonoConnection` to better reflect its sole responsibility
   for establishing (and maintaining) the connection to a Hono service endpoint.
+
+### Depreciations
+
+* The optional operations defined by the Tenant, Device Registration and Credentials API
+  have been deprecated. They will be removed from Hono 1.0 altogether.
+  A new HTTP based API will be defined instead which can then be used to *manage* the content
+  of a device registry.
 
 ## 1.0-M1
 

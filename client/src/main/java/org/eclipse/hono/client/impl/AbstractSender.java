@@ -14,8 +14,6 @@
 package org.eclipse.hono.client.impl;
 
 import java.net.HttpURLConnection;
-import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -23,8 +21,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import org.apache.qpid.proton.amqp.messaging.Accepted;
 import org.apache.qpid.proton.amqp.messaging.Modified;
@@ -33,6 +29,7 @@ import org.apache.qpid.proton.amqp.messaging.Released;
 import org.apache.qpid.proton.amqp.transport.DeliveryState;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
@@ -44,14 +41,11 @@ import org.slf4j.LoggerFactory;
 
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
-import io.opentracing.Tracer;
 import io.opentracing.tag.Tags;
 import io.vertx.core.AsyncResult;
-import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.proton.ProtonDelivery;
-import io.vertx.proton.ProtonHelper;
 import io.vertx.proton.ProtonSender;
 
 /**
@@ -63,8 +57,6 @@ public abstract class AbstractSender extends AbstractHonoClient implements Messa
      * A counter to be used for creating message IDs.
      */
     protected static final AtomicLong MESSAGE_COUNTER = new AtomicLong();
-
-    private static final Pattern CHARSET_PATTERN = Pattern.compile("^.*;charset=(.*)$");
 
     /**
      * A logger to be shared with subclasses.
@@ -85,24 +77,20 @@ public abstract class AbstractSender extends AbstractHonoClient implements Messa
     /**
      * Creates a new sender.
      * 
-     * @param config The configuration properties to use.
+     * @param connection The connection to use for interacting with the server.
      * @param sender The sender link to send messages over.
      * @param tenantId The identifier of the tenant that the
      *           devices belong to which have published the messages
      *           that this sender is used to send downstream.
      * @param targetAddress The target address to send the messages to.
-     * @param context The vert.x context to use for sending the messages.
-     * @param tracer The tracer to use.
      */
     protected AbstractSender(
-            final ClientConfigProperties config,
+            final HonoConnection connection,
             final ProtonSender sender,
             final String tenantId,
-            final String targetAddress,
-            final Context context,
-            final Tracer tracer) {
+            final String targetAddress) {
 
-        super(context, config, tracer);
+        super(connection);
         this.sender = Objects.requireNonNull(sender);
         this.tenantId = Objects.requireNonNull(tenantId);
         this.targetAddress = targetAddress;
@@ -166,9 +154,9 @@ public abstract class AbstractSender extends AbstractHonoClient implements Messa
         Tags.MESSAGE_BUS_DESTINATION.set(span, targetAddress);
         span.setTag(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId);
         span.setTag(MessageHelper.APP_PROPERTY_DEVICE_ID, MessageHelper.getDeviceId(rawMessage));
-        TracingHelper.injectSpanContext(tracer, span.context(), rawMessage);
+        TracingHelper.injectSpanContext(connection.getTracer(), span.context(), rawMessage);
 
-        return executeOrRunOnContext(result -> {
+        return connection.executeOrRunOnContext(result -> {
             if (sender.sendQueueFull()) {
                 final ServiceInvocationException e = new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "no credit available");
                 logError(span, e);
@@ -178,37 +166,6 @@ public abstract class AbstractSender extends AbstractHonoClient implements Messa
                 sendMessage(rawMessage, span).setHandler(result.completer());
             }
         });
-    }
-
-    @Override
-    public final Future<ProtonDelivery> send(final String deviceId, final byte[] payload, final String contentType) {
-        return send(deviceId, null, payload, contentType);
-    }
-
-    @Override
-    public final Future<ProtonDelivery> send(final String deviceId, final String payload, final String contentType) {
-        return send(deviceId, null, payload, contentType);
-    }
-
-    @Override
-    public final Future<ProtonDelivery> send(final String deviceId, final Map<String, ?> properties, final String payload, final String contentType) {
-        Objects.requireNonNull(payload);
-        final Charset charset = getCharsetForContentType(Objects.requireNonNull(contentType));
-        return send(deviceId, properties, payload.getBytes(charset), contentType);
-    }
-
-    @Override
-    public final Future<ProtonDelivery> send(final String deviceId, final Map<String, ?> properties, final byte[] payload, final String contentType) {
-        Objects.requireNonNull(deviceId);
-        Objects.requireNonNull(payload);
-        Objects.requireNonNull(contentType);
-
-        final Message msg = ProtonHelper.message();
-        msg.setAddress(getTo(deviceId));
-        MessageHelper.setPayload(msg, contentType, payload);
-        setApplicationProperties(msg, properties);
-        addProperties(msg, deviceId);
-        return send(msg);
     }
 
     /**
@@ -268,20 +225,6 @@ public abstract class AbstractSender extends AbstractHonoClient implements Messa
      */
     protected abstract String getTo(String deviceId);
 
-    private void addProperties(final Message msg, final String deviceId) {
-        MessageHelper.addDeviceId(msg, deviceId);
-    }
-
-    private Charset getCharsetForContentType(final String contentType) {
-
-        final Matcher m = CHARSET_PATTERN.matcher(contentType);
-        if (m.matches()) {
-            return Charset.forName(m.group(1));
-        } else {
-            return StandardCharsets.UTF_8;
-        }
-    }
-
     /**
      * Sends an AMQP 1.0 message to the peer this client is configured for
      * and waits for the outcome of the transfer.
@@ -314,14 +257,14 @@ public abstract class AbstractSender extends AbstractHonoClient implements Messa
         details.put(TracingHelper.TAG_QOS.getKey(), sender.getQoS().toString());
         currentSpan.log(details);
 
-        final Long timerId = config.getSendMessageTimeout() > 0
-                ? context.owner().setTimer(config.getSendMessageTimeout(), id -> {
+        final Long timerId = connection.getConfig().getSendMessageTimeout() > 0
+                ? connection.getVertx().setTimer(connection.getConfig().getSendMessageTimeout(), id -> {
                     if (!result.isComplete()) {
                         final ServerErrorException exception = new ServerErrorException(
                                 HttpURLConnection.HTTP_UNAVAILABLE,
-                                "waiting for delivery update timed out after " + config.getSendMessageTimeout() + "ms");
+                                "waiting for delivery update timed out after " + connection.getConfig().getSendMessageTimeout() + "ms");
                         LOG.debug("waiting for delivery update timed out for message [message ID: {}] after {}ms",
-                                messageId, config.getSendMessageTimeout());
+                                messageId, connection.getConfig().getSendMessageTimeout());
                         result.fail(exception);
                     }
                 })
@@ -329,7 +272,7 @@ public abstract class AbstractSender extends AbstractHonoClient implements Messa
 
         sender.send(message, deliveryUpdated -> {
             if (timerId != null) {
-                context.owner().cancelTimer(timerId);
+                connection.getVertx().cancelTimer(timerId);
             }
             final DeliveryState remoteState = deliveryUpdated.getRemoteState();
             if (result.isComplete()) {

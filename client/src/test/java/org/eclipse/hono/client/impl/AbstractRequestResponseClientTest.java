@@ -13,12 +13,18 @@
 
 package org.eclipse.hono.client.impl;
 
-import static org.hamcrest.CoreMatchers.*;
+import static org.hamcrest.CoreMatchers.instanceOf;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.junit.Assert.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.net.HttpURLConnection;
 import java.time.Duration;
@@ -33,9 +39,9 @@ import org.apache.qpid.proton.amqp.messaging.Rejected;
 import org.apache.qpid.proton.amqp.transport.Target;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.cache.ExpiringValueCache;
+import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.client.ServerErrorException;
-import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.MessageHelper;
 import org.junit.Before;
@@ -47,7 +53,6 @@ import org.mockito.ArgumentCaptor;
 
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
-import io.vertx.core.Context;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
@@ -79,7 +84,6 @@ public class AbstractRequestResponseClientTest  {
     private AbstractRequestResponseClient<SimpleRequestResponseResult> client;
     private ExpiringValueCache<Object, SimpleRequestResponseResult> cache;
     private Vertx vertx;
-    private Context context;
     private ProtonReceiver receiver;
     private ProtonSender sender;
 
@@ -92,7 +96,6 @@ public class AbstractRequestResponseClientTest  {
     public void setUp() {
 
         vertx = mock(Vertx.class);
-        context = HonoClientUnitTestHelper.mockContext(vertx);
         receiver = HonoClientUnitTestHelper.mockProtonReceiver();
         sender = HonoClientUnitTestHelper.mockProtonSender();
 
@@ -467,7 +470,8 @@ public class AbstractRequestResponseClientTest  {
 
     private AbstractRequestResponseClient<SimpleRequestResponseResult> getClient(final String tenant, final ProtonSender sender, final ProtonReceiver receiver) {
 
-        return new AbstractRequestResponseClient<SimpleRequestResponseResult>(context, new ClientConfigProperties(), tenant, sender, receiver) {
+        final HonoConnection connection = HonoClientUnitTestHelper.mockHonoConnection(vertx);
+        return new AbstractRequestResponseClient<SimpleRequestResponseResult>(connection, tenant, sender, receiver) {
 
             @Override
             protected String getName() {

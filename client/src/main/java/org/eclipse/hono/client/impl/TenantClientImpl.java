@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -25,9 +25,9 @@ import javax.security.auth.x500.X500Principal;
 import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
 import org.eclipse.hono.cache.CacheProvider;
 import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.client.TenantClient;
-import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.MessageHelper;
@@ -44,11 +44,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
-import io.opentracing.Tracer;
-import io.opentracing.noop.NoopTracerFactory;
 import io.opentracing.tag.StringTag;
-import io.vertx.core.AsyncResult;
-import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.buffer.Buffer;
@@ -69,58 +65,32 @@ public class TenantClientImpl extends AbstractRequestResponseClient<TenantResult
     private static final StringTag TAG_SUBJECT_DN = new StringTag("subject_dn");
 
     /**
-     * Creates a tenant API client.
+     * Creates a client for invoking operations of the Tenant API.
+     * <p>
+     * The client will be ready to use after invoking {@link #createLinks(ProtonConnection)} or
+     * {@link #createLinks(ProtonConnection, Handler, Handler)} only.
      *
-     * @param context The Vert.x context to run message exchanges with the peer on.
-     * @param config The configuration properties to use.
-     * @throws NullPointerException if any of the parameters is {@code null}.
+     * @param connection The connection to Hono.
+     * @throws NullPointerException if any of the parameters are {@code null}.
      */
-    protected TenantClientImpl(final Context context, final ClientConfigProperties config) {
-        this(context, config, NoopTracerFactory.create());
+    TenantClientImpl(final HonoConnection connection) {
+        super(connection, null);
     }
 
     /**
-     * Creates a tenant API client.
+     * Creates a client for invoking operations of the Tenant API.
      *
-     * @param context The Vert.x context to run message exchanges with the peer on.
-     * @param config The configuration properties to use.
-     * @param tracer The tracer to use for tracking request processing
-     *               across process boundaries.
-     * @throws NullPointerException if any of the parameters is {@code null}.
-     */
-    protected TenantClientImpl(final Context context, final ClientConfigProperties config, final Tracer tracer) {
-        super(context, config, tracer, null);
-    }
-
-    /**
-     * Creates a tenant API client.
-     *
-     * @param context The Vert.x context to run message exchanges with the peer on.
-     * @param config The configuration properties to use.
+     * @param connection The connection to Hono.
      * @param sender The AMQP 1.0 link to use for sending requests to the peer.
      * @param receiver The AMQP 1.0 link to use for receiving responses from the peer.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    protected TenantClientImpl(final Context context, final ClientConfigProperties config,
-                           final ProtonSender sender, final ProtonReceiver receiver) {
+    protected TenantClientImpl(
+            final HonoConnection connection,
+            final ProtonSender sender,
+            final ProtonReceiver receiver) {
 
-        this(context, config, null, sender, receiver);
-    }
-
-    /**
-     * Creates a tenant API client.
-     *
-     * @param context The Vert.x context to run message exchanges with the peer on.
-     * @param config The configuration properties to use.
-     * @param tracer The tracer to use for tracking request processing
-     *               across process boundaries.
-     * @param sender The AMQP 1.0 link to use for sending requests to the peer.
-     * @param receiver The AMQP 1.0 link to use for receiving responses from the peer.
-     * @throws NullPointerException if any of the parameters is {@code null}.
-     */
-    protected TenantClientImpl(final Context context, final ClientConfigProperties config,
-                           final Tracer tracer, final ProtonSender sender, final ProtonReceiver receiver) {
-        super(context, config, tracer, null, sender, receiver);
+        super(connection, null, sender, receiver);
     }
 
     @Override
@@ -172,42 +142,33 @@ public class TenantClientImpl extends AbstractRequestResponseClient<TenantResult
     /**
      * Creates a new tenant client.
      *
-     * @param context The vert.x context to run all interactions with the server on.
-     * @param clientConfig The configuration properties to use.
      * @param cacheProvider A factory for cache instances for tenant configuration results. If {@code null}
      *                     the client will not cache any results from the Tenant service.
-     * @param tracer The tracer to use for tracking request processing
-     *               across process boundaries.
-     * @param con The AMQP connection to the server.
+     * @param con The connection to the server.
      * @param senderCloseHook A handler to invoke if the peer closes the sender link unexpectedly.
      * @param receiverCloseHook A handler to invoke if the peer closes the receiver link unexpectedly.
-     * @param creationHandler The handler to invoke with the outcome of the creation attempt.
-     * @throws NullPointerException if any of the parameters, except for senderCloseHook and receiverCloseHook, is {@code null}.
+     * @return A future indicating the outcome of the creation attempt.
+     * @throws NullPointerException if any of the parameters, except for senderCloseHook and receiverCloseHook are {@code null}.
      */
-    public static final void create(
-            final Context context,
-            final ClientConfigProperties clientConfig,
+    public static final Future<TenantClient> create(
             final CacheProvider cacheProvider,
-            final Tracer tracer,
-            final ProtonConnection con,
+            final HonoConnection con,
             final Handler<String> senderCloseHook,
-            final Handler<String> receiverCloseHook,
-            final Handler<AsyncResult<TenantClient>> creationHandler) {
+            final Handler<String> receiverCloseHook) {
 
         LOG.debug("creating new tenant client");
-        final TenantClientImpl client = new TenantClientImpl(context, clientConfig, tracer);
+        final TenantClientImpl client = new TenantClientImpl(con);
         if (cacheProvider != null) {
             client.setResponseCache(cacheProvider.getCache(TenantClientImpl.getTargetAddress()));
         }
-        client.createLinks(con, senderCloseHook, receiverCloseHook).setHandler(s -> {
-            if (s.succeeded()) {
+        return client.createLinks(senderCloseHook, receiverCloseHook)
+            .map(ok -> {
                 LOG.debug("successfully created tenant client");
-                creationHandler.handle(Future.succeededFuture(client));
-            } else {
-                LOG.debug("failed to create tenant client", s.cause());
-                creationHandler.handle(Future.failedFuture(s.cause()));
-            }
-        });
+                return (TenantClient) client;
+            }).recover(t -> {
+                LOG.debug("failed to create tenant client", t);
+                return Future.failedFuture(t);
+            });
     }
 
     /**

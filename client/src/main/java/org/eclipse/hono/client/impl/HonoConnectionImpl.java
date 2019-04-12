@@ -34,6 +34,7 @@ import java.util.function.Supplier;
 import javax.security.sasl.AuthenticationException;
 
 import org.apache.qpid.proton.amqp.Symbol;
+import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.cache.CacheProvider;
 import org.eclipse.hono.client.AsyncCommandClient;
@@ -49,6 +50,7 @@ import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.RequestResponseClient;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.client.TenantClient;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.connection.ConnectionFactory;
@@ -70,6 +72,11 @@ import io.vertx.core.Vertx;
 import io.vertx.proton.ProtonClientOptions;
 import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonDelivery;
+import io.vertx.proton.ProtonLink;
+import io.vertx.proton.ProtonMessageHandler;
+import io.vertx.proton.ProtonQoS;
+import io.vertx.proton.ProtonReceiver;
+import io.vertx.proton.ProtonSender;
 import io.vertx.proton.sasl.SaslSystemException;
 
 /**
@@ -186,6 +193,14 @@ public class HonoConnectionImpl implements HonoConnection {
     }
 
     /**
+     * {@inheritDoc}
+     */
+    @Override
+    public final Vertx getVertx() {
+        return vertx;
+    }
+
+    /**
      * Sets the OpenTracing {@code Tracer} to use for tracing messages
      * published by devices across Hono's components.
      * <p>
@@ -211,6 +226,11 @@ public class HonoConnectionImpl implements HonoConnection {
     }
 
     @Override
+    public final ClientConfigProperties getConfig() {
+        return clientConfigProperties;
+    }
+
+    @Override
     public final void addDisconnectListener(final DisconnectListener listener) {
         disconnectListeners.add(listener);
     }
@@ -232,7 +252,8 @@ public class HonoConnectionImpl implements HonoConnection {
      *         be failed with a {@link ServerErrorException} if the <em>context</em>
      *         property is {@code null}.
      */
-    protected final <T> Future<T> executeOrRunOnContext(final Handler<Future<T>> codeToRun) {
+    @Override
+    public final <T> Future<T> executeOrRunOnContext(final Handler<Future<T>> codeToRun) {
 
         if (context == null) {
             // this means that the connection to the peer is not established (yet)
@@ -583,60 +604,6 @@ public class HonoConnectionImpl implements HonoConnection {
     }
 
     /**
-     * {@inheritDoc}
-     */
-    @Override
-    public final Future<MessageSender> getOrCreateTelemetrySender(final String tenantId) {
-
-        Objects.requireNonNull(tenantId);
-        return getOrCreateSender(
-                getResourcesKeyForSender(TelemetrySenderImpl.class, TelemetrySenderImpl.getTargetAddress(tenantId,
-                        null)),
-                () -> createTelemetrySender(tenantId));
-    }
-
-    private Future<MessageSender> createTelemetrySender(final String tenantId) {
-
-        return checkConnected().compose(connected -> {
-            final Future<MessageSender> result = Future.future();
-            TelemetrySenderImpl.create(context, clientConfigProperties, connection, tenantId, null,
-                    onSenderClosed -> {
-                        activeSenders.remove(getResourcesKeyForSender(TelemetrySenderImpl.class,
-                                TelemetrySenderImpl.getTargetAddress(tenantId,
-                                        null)));
-                    },
-                    result.completer(), tracer);
-            return result;
-        });
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public final Future<MessageSender> getOrCreateEventSender(final String tenantId) {
-
-        Objects.requireNonNull(tenantId);
-        return getOrCreateSender(
-                getResourcesKeyForSender(EventSenderImpl.class, EventSenderImpl.getTargetAddress(tenantId, null)),
-                () -> createEventSender(tenantId));
-    }
-
-    private Future<MessageSender> createEventSender(final String tenantId) {
-
-        return checkConnected().compose(connected -> {
-            final Future<MessageSender> result = Future.future();
-            EventSenderImpl.create(context, clientConfigProperties, connection, tenantId, null,
-                    onSenderClosed -> {
-                        activeSenders.remove(getResourcesKeyForSender(EventSenderImpl.class,
-                                EventSenderImpl.getTargetAddress(tenantId, null)));
-                    },
-                    result.completer(), tracer);
-            return result;
-        });
-    }
-
-    /**
      * Gets an existing or creates a new message sender.
      * <p>
      * This method will first try to look up an already existing
@@ -732,13 +699,9 @@ public class HonoConnectionImpl implements HonoConnection {
             final Consumer<Message> messageConsumer,
             final Handler<Void> closeHandler) {
 
-        return checkConnected().compose(con -> {
-            final Future<MessageConsumer> result = Future.future();
-            TelemetryConsumerImpl.create(context, clientConfigProperties, connection, tenantId,
-                    connectionFactory.getPathSeparator(), messageConsumer, result.completer(),
-                    closeHook -> closeHandler.handle(null));
-            return result;
-        });
+        return checkConnected().compose(con -> 
+            TelemetryConsumerImpl.create(this, tenantId, messageConsumer, closeHook -> closeHandler.handle(null))
+        );
     }
 
     /**
@@ -772,13 +735,9 @@ public class HonoConnectionImpl implements HonoConnection {
             final BiConsumer<ProtonDelivery, Message> messageConsumer,
             final Handler<Void> closeHandler) {
 
-        return checkConnected().compose(con -> {
-            final Future<MessageConsumer> result = Future.future();
-            EventConsumerImpl.create(context, clientConfigProperties, connection, tenantId,
-                    connectionFactory.getPathSeparator(), messageConsumer, result.completer(),
-                    closeHook -> closeHandler.handle(null));
-            return result;
-        });
+        return checkConnected().compose(con -> 
+            EventConsumerImpl.create(this, tenantId, messageConsumer, closeHook -> closeHandler.handle(null))
+        );
     }
 
     /**
@@ -815,11 +774,12 @@ public class HonoConnectionImpl implements HonoConnection {
             final Handler<Void> closeHandler) {
 
         return checkConnected().compose(con -> {
-            final Future<MessageConsumer> result = Future.future();
-            AsyncCommandResponseConsumerImpl.create(context, clientConfigProperties, connection, tenantId, replyId,
-                    connectionFactory.getPathSeparator(), messageConsumer, result.completer(),
+            return AsyncCommandResponseConsumerImpl.create(
+                    this,
+                    tenantId,
+                    replyId,
+                    messageConsumer,
                     closeHook -> closeHandler.handle(null));
-            return result;
         });
     }
 
@@ -892,17 +852,12 @@ public class HonoConnectionImpl implements HonoConnection {
 
         return checkConnected().compose(connected -> {
 
-            final Future<CredentialsClient> result = Future.future();
-            CredentialsClientImpl.create(
-                    context,
-                    clientConfigProperties,
-                    tracer,
-                    connection,
+            return CredentialsClientImpl.create(
+                    this,
                     tenantId,
                     this::removeCredentialsClient,
-                    this::removeCredentialsClient,
-                    result.completer());
-            return result.map(client -> (RequestResponseClient) client);
+                    this::removeCredentialsClient)
+            .map(client -> (RequestResponseClient) client);
         });
     }
 
@@ -961,18 +916,13 @@ public class HonoConnectionImpl implements HonoConnection {
 
         return checkConnected().compose(connected -> {
 
-            final Future<RegistrationClient> result = Future.future();
-            RegistrationClientImpl.create(
-                    context,
-                    clientConfigProperties,
+            return RegistrationClientImpl.create(
                     cacheProvider,
-                    tracer,
-                    connection,
+                    this,
                     tenantId,
                     this::removeRegistrationClient,
-                    this::removeRegistrationClient,
-                    result.completer());
-            return result.map(client -> (RequestResponseClient) client);
+                    this::removeRegistrationClient)
+            .map(client -> (RequestResponseClient) client);
         });
     }
 
@@ -1015,17 +965,12 @@ public class HonoConnectionImpl implements HonoConnection {
 
         return checkConnected().compose(connected -> {
 
-            final Future<TenantClient> result = Future.future();
-            TenantClientImpl.create(
-                    context,
-                    clientConfigProperties,
+            return TenantClientImpl.create(
                     cacheProvider,
-                    tracer,
-                    connection,
+                    this,
                     this::removeTenantClient,
-                    this::removeTenantClient,
-                    result.completer());
-            return result.map(client -> (RequestResponseClient) client);
+                    this::removeTenantClient)
+            .map(client -> (RequestResponseClient) client);
         });
     }
 
@@ -1078,16 +1023,14 @@ public class HonoConnectionImpl implements HonoConnection {
     private Future<RequestResponseClient> newCommandClient(final String tenantId, final String deviceId,
             final String replyId) {
         return checkConnected().compose(connected -> {
-            final Future<CommandClient> result = Future.future();
-            CommandClientImpl.create(
-                    context,
-                    clientConfigProperties,
-                    connection,
-                    tenantId, deviceId, replyId,
+            return CommandClientImpl.create(
+                    this,
+                    tenantId,
+                    deviceId,
+                    replyId,
                     this::removeActiveRequestResponseClient,
-                    this::removeActiveRequestResponseClient,
-                    result.completer());
-            return result.map(client -> (RequestResponseClient) client);
+                    this::removeActiveRequestResponseClient)
+             .map(client -> (RequestResponseClient) client);
         });
     }
 
@@ -1104,15 +1047,16 @@ public class HonoConnectionImpl implements HonoConnection {
 
     private Future<MessageSender> newAsyncCommandClient(final String tenantId, final String deviceId) {
         return checkConnected().compose(connected -> {
-            final Future<AsyncCommandClient> result = Future.future();
-            AsyncCommandClientImpl.create(context, clientConfigProperties, connection, tenantId, deviceId,
+            return AsyncCommandClientImpl.create(
+                    this,
+                    tenantId,
+                    deviceId,
                     onSenderClosed -> {
                         activeSenders.remove(getResourcesKeyForSender(AsyncCommandClientImpl.class,
                                 AsyncCommandClientImpl.getTargetAddress(tenantId,
                                         deviceId)));
-                    },
-                    result.completer());
-            return result.map(client -> (MessageSender) client);
+                    })
+             .map(client -> (MessageSender) client);
         });
     }
 
@@ -1170,6 +1114,221 @@ public class HonoConnectionImpl implements HonoConnection {
             log.debug("already trying to create a client [target: {}]", key);
             result.fail(new ServerErrorException(
                     HttpURLConnection.HTTP_UNAVAILABLE, "no connection to service"));
+        }
+    }
+
+    /**
+     * {@inheritDoc}
+     * 
+     * This method simply invokes {@link HonoProtonHelper#closeAndFree(Context, ProtonLink, Handler)}
+     * with this connection's vert.x context.
+     *
+     * @param link The link to close. If {@code null}, the given handler is invoked immediately.
+     * @param closeHandler The handler to notify once the link has been closed.
+     * @throws NullPointerException if context or close handler are {@code null}.
+     */
+    @Override
+    public void closeAndFree(
+            final ProtonLink<?> link,
+            final Handler<Void> closeHandler) {
+
+        HonoProtonHelper.closeAndFree(context, link, closeHandler);
+    }
+
+    /**
+     * {@inheritDoc}
+     * 
+     * This method simply invokes {@link HonoProtonHelper#closeAndFree(Context, ProtonLink, long, Handler)}
+     * with this connection's vert.x context.
+     */
+    @Override
+    public void closeAndFree(
+            final ProtonLink<?> link,
+            final long detachTimeOut,
+            final Handler<Void> closeHandler) {
+
+        HonoProtonHelper.closeAndFree(context, link, detachTimeOut, closeHandler);
+    }
+
+    /**
+     * Creates a sender link.
+     * 
+     * @param targetAddress The target address of the link.
+     * @param qos The quality of service to use for the link.
+     * @param closeHook The handler to invoke when the link is closed by the peer (may be {@code null}).
+     * @return A future for the created link. The future will be completed once the link is open.
+     *         The future will fail with a {@link ServiceInvocationException} if the link cannot be opened.
+     * @throws NullPointerException if any of the arguments other than close hook is {@code null}.
+     */
+    @Override
+    public final Future<ProtonSender> createSender(
+            final String targetAddress,
+            final ProtonQoS qos,
+            final Handler<String> closeHook) {
+
+        Objects.requireNonNull(targetAddress);
+        Objects.requireNonNull(qos);
+
+        return executeOrRunOnContext(result -> {
+
+            final ProtonSender sender = connection.createSender(targetAddress);
+            sender.setQoS(qos);
+            sender.setAutoSettle(true);
+            sender.openHandler(senderOpen -> {
+
+                // we only "try" to complete/fail the result future because
+                // it may already have been failed if the connection broke
+                // away after we have sent our attach frame but before we have
+                // received the peer's attach frame
+
+                if (senderOpen.failed()) {
+                    // this means that we have received the peer's attach
+                    // and the subsequent detach frame in one TCP read
+                    final ErrorCondition error = sender.getRemoteCondition();
+                    if (error == null) {
+                        log.debug("opening sender [{}] failed", targetAddress, senderOpen.cause());
+                        result.tryFail(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND, "cannot open sender", senderOpen.cause()));
+                    } else {
+                        log.debug("opening sender [{}] failed: {} - {}", targetAddress, error.getCondition(), error.getDescription());
+                        result.tryFail(StatusCodeMapper.from(error));
+                    }
+
+                } else if (HonoProtonHelper.isLinkEstablished(sender)) {
+
+                    log.debug("sender open [target: {}, sendQueueFull: {}]", targetAddress, sender.sendQueueFull());
+                    // wait on credits a little time, if not already given
+                    if (sender.getCredit() <= 0) {
+                        vertx.setTimer(clientConfigProperties.getFlowLatency(), timerID -> {
+                            log.debug("sender [target: {}] has {} credits after grace period of {}ms", targetAddress,
+                                    sender.getCredit(), clientConfigProperties.getFlowLatency());
+                            result.tryComplete(sender);
+                        });
+                    } else {
+                        result.tryComplete(sender);
+                    }
+
+                } else {
+                    // this means that the peer did not create a local terminus for the link
+                    // and will send a detach frame for closing the link very shortly
+                    // see AMQP 1.0 spec section 2.6.3
+                    log.debug("peer did not create terminus for target [{}] and will detach the link", targetAddress);
+                    result.tryFail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE));
+                }
+            });
+            HonoProtonHelper.setDetachHandler(sender, remoteDetached -> onRemoteDetach(sender, connection.getRemoteContainer(), false, closeHook));
+            HonoProtonHelper.setCloseHandler(sender, remoteClosed -> onRemoteDetach(sender, connection.getRemoteContainer(), true, closeHook));
+            sender.open();
+            vertx.setTimer(clientConfigProperties.getLinkEstablishmentTimeout(), tid -> onTimeOut(sender, clientConfigProperties, result));
+        });
+    }
+
+    @Override
+    public Future<ProtonReceiver> createReceiver(
+            final String sourceAddress,
+            final ProtonQoS qos,
+            final ProtonMessageHandler messageHandler,
+            final Handler<String> remoteCloseHook) {
+        return createReceiver(sourceAddress, qos, messageHandler, clientConfigProperties.getInitialCredits(), remoteCloseHook);
+    }
+
+    @Override
+    public Future<ProtonReceiver> createReceiver(
+            final String sourceAddress,
+            final ProtonQoS qos,
+            final ProtonMessageHandler messageHandler,
+            final int preFetchSize,
+            final Handler<String> remoteCloseHook) {
+
+        Objects.requireNonNull(sourceAddress);
+        Objects.requireNonNull(qos);
+        Objects.requireNonNull(messageHandler);
+        if (preFetchSize < 0) {
+            throw new IllegalArgumentException("pre-fetch size must be >= 0");
+        }
+
+        return executeOrRunOnContext(result -> {
+            final ProtonReceiver receiver = connection.createReceiver(sourceAddress);
+            receiver.setAutoAccept(true);
+            receiver.setQoS(qos);
+            receiver.setPrefetch(preFetchSize);
+            receiver.handler((delivery, message) -> {
+                messageHandler.handle(delivery, message);
+                if (log.isTraceEnabled()) {
+                    final int remainingCredits = receiver.getCredit() - receiver.getQueued();
+                    log.trace("handling message [remotely settled: {}, queued messages: {}, remaining credit: {}]",
+                            delivery.remotelySettled(), receiver.getQueued(), remainingCredits);
+                }
+            });
+            receiver.openHandler(recvOpen -> {
+
+                // we only "try" to complete/fail the result future because
+                // it may already have been failed if the connection broke
+                // away after we have sent our attach frame but before we have
+                // received the peer's attach frame
+
+                if (recvOpen.failed()) {
+                    // this means that we have received the peer's attach
+                    // and the subsequent detach frame in one TCP read
+                    final ErrorCondition error = receiver.getRemoteCondition();
+                    if (error == null) {
+                        log.debug("opening receiver [{}] failed", sourceAddress, recvOpen.cause());
+                        result.tryFail(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND, "cannot open receiver", recvOpen.cause()));
+                    } else {
+                        log.debug("opening receiver [{}] failed: {} - {}", sourceAddress, error.getCondition(), error.getDescription());
+                        result.tryFail(StatusCodeMapper.from(error));
+                    }
+                } else if (HonoProtonHelper.isLinkEstablished(receiver)) {
+                    log.debug("receiver open [source: {}]", sourceAddress);
+                    result.tryComplete(recvOpen.result());
+                } else {
+                    // this means that the peer did not create a local terminus for the link
+                    // and will send a detach frame for closing the link very shortly
+                    // see AMQP 1.0 spec section 2.6.3
+                    log.debug("peer did not create terminus for source [{}] and will detach the link", sourceAddress);
+                    result.tryFail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE));
+                }
+            });
+            HonoProtonHelper.setDetachHandler(receiver, remoteDetached -> onRemoteDetach(receiver, connection.getRemoteContainer(), false, remoteCloseHook));
+            HonoProtonHelper.setCloseHandler(receiver, remoteClosed -> onRemoteDetach(receiver, connection.getRemoteContainer(), true, remoteCloseHook));
+            receiver.open();
+            vertx.setTimer(clientConfigProperties.getLinkEstablishmentTimeout(), tid -> onTimeOut(receiver, clientConfigProperties, result));
+        });
+    }
+
+    private void onTimeOut(
+            final ProtonLink<?> link,
+            final ClientConfigProperties clientConfig,
+            final Future<?> result) {
+
+        if (link.isOpen() && !HonoProtonHelper.isLinkEstablished(link)) {
+            log.info("link establishment [peer: {}] timed out after {}ms",
+                    clientConfig.getHost(), clientConfig.getLinkEstablishmentTimeout());
+            link.close();
+            link.free();
+            result.tryFail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE));
+        }
+    }
+
+    private void onRemoteDetach(
+            final ProtonLink<?> link,
+            final String remoteContainer,
+            final boolean closed,
+            final Handler<String> closeHook) {
+
+        final ErrorCondition error = link.getRemoteCondition();
+        final String type = link instanceof ProtonSender ? "sender" : "receiver";
+        final String address = link instanceof ProtonSender ? link.getTarget().getAddress() :
+            link.getSource().getAddress();
+        if (error == null) {
+            log.debug("{} [{}] detached (with closed={}) by peer [{}]",
+                    type, address, closed, remoteContainer);
+        } else {
+            log.debug("{} [{}] detached (with closed={}) by peer [{}]: {} - {}",
+                    type, address, closed, remoteContainer, error.getCondition(), error.getDescription());
+        }
+        link.close();
+        if (HonoProtonHelper.isLinkEstablished(link) && closeHook != null) {
+            closeHook.handle(address);
         }
     }
 

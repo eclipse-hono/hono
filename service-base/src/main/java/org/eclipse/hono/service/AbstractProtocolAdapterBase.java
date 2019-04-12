@@ -20,7 +20,6 @@ import java.util.function.BiConsumer;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
-import org.eclipse.hono.client.CommandConsumer;
 import org.eclipse.hono.client.CommandConsumerFactory;
 import org.eclipse.hono.client.CommandContext;
 import org.eclipse.hono.client.CommandResponse;
@@ -28,10 +27,10 @@ import org.eclipse.hono.client.CommandResponseSender;
 import org.eclipse.hono.client.ConnectionLifecycle;
 import org.eclipse.hono.client.CredentialsClientFactory;
 import org.eclipse.hono.client.DisconnectListener;
+import org.eclipse.hono.client.DownstreamSender;
 import org.eclipse.hono.client.DownstreamSenderFactory;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.MessageConsumer;
-import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.ReconnectListener;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.RegistrationClientFactory;
@@ -738,7 +737,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * 
      * @param tenantId The tenant that the device belongs to.
      * @param deviceId The identifier of the device.
-     * @deprecated This method will be removed in Hono 1.0. Use {@link CommandConsumer#close(Handler)} instead.
+     * @deprecated This method will be removed in Hono 1.0. Use {@link MessageConsumer#close(Handler)} instead.
      */
     @Deprecated
     protected final void closeCommandConsumer(final String tenantId, final String deviceId) {
@@ -808,7 +807,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * @param tenantId The tenant to send the telemetry data for.
      * @return The client.
      */
-    protected final Future<MessageSender> getTelemetrySender(final String tenantId) {
+    protected final Future<DownstreamSender> getTelemetrySender(final String tenantId) {
         return getDownstreamSenderFactory().getOrCreateTelemetrySender(tenantId);
     }
 
@@ -818,7 +817,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * @param tenantId The tenant to send the events for.
      * @return The client.
      */
-    protected final Future<MessageSender> getEventSender(final String tenantId) {
+    protected final Future<DownstreamSender> getEventSender(final String tenantId) {
         return getDownstreamSenderFactory().getOrCreateEventSender(tenantId);
     }
 
@@ -1365,11 +1364,11 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
 
         final Future<JsonObject> tokenTracker = getRegistrationAssertion(tenant, deviceId, authenticatedDevice, context);
         final Future<TenantObject> tenantConfigTracker = getTenantConfiguration(tenant, context);
-        final Future<MessageSender> senderTracker = getEventSender(tenant);
+        final Future<DownstreamSender> senderTracker = getEventSender(tenant);
 
         return CompositeFuture.all(tokenTracker, tenantConfigTracker, senderTracker).compose(ok -> {
             if (tenantConfigTracker.result().isAdapterEnabled(getTypeName())) {
-                final MessageSender sender = senderTracker.result();
+                final DownstreamSender sender = senderTracker.result();
                 final Message msg = newMessage(
                         ResourceIdentifier.from(EventConstants.EVENT_ENDPOINT, tenant, deviceId),
                         EventConstants.EVENT_ENDPOINT,
@@ -1403,7 +1402,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     }
 
     /**
-     * This method may be set as the close handler of the {@link CommandConsumer}.
+     * This method may be set as the close handler of the command consumer.
      * <p>
      * The implementation only logs that the link was closed and does not try to reopen it. Any other functionality must be
      * implemented by overwriting the method in a subclass.

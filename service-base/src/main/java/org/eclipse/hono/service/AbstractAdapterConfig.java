@@ -19,6 +19,7 @@ import org.eclipse.hono.cache.CacheProvider;
 import org.eclipse.hono.client.CommandConsumerFactory;
 import org.eclipse.hono.client.CredentialsClientFactory;
 import org.eclipse.hono.client.DownstreamSenderFactory;
+import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.RegistrationClientFactory;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.client.TenantClientFactory;
@@ -126,7 +127,7 @@ public abstract class AbstractAdapterConfig {
     @Bean
     @Scope("prototype")
     public DownstreamSenderFactory downstreamSenderFactory() {
-        return new HonoConnectionImpl(vertx(), downstreamSenderFactoryConfig());
+        return DownstreamSenderFactory.create(HonoConnection.newConnection(vertx(), downstreamSenderFactoryConfig()));
     }
 
     /**

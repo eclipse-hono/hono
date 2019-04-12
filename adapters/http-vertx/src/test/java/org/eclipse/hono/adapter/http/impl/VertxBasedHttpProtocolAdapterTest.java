@@ -34,10 +34,10 @@ import org.eclipse.hono.client.CommandContext;
 import org.eclipse.hono.client.CommandResponse;
 import org.eclipse.hono.client.CommandResponseSender;
 import org.eclipse.hono.client.CredentialsClientFactory;
+import org.eclipse.hono.client.DownstreamSender;
 import org.eclipse.hono.client.DownstreamSenderFactory;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.MessageConsumer;
-import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.RegistrationClientFactory;
 import org.eclipse.hono.client.ServerErrorException;
@@ -93,8 +93,8 @@ public class VertxBasedHttpProtocolAdapterTest {
     private static TenantClientFactory tenantClientFactory;
     private static CredentialsClientFactory credentialsClientFactory;
     private static DownstreamSenderFactory downstreamSenderFactory;
-    private static MessageSender telemetrySender;
-    private static MessageSender eventSender;
+    private static DownstreamSender telemetrySender;
+    private static DownstreamSender eventSender;
     private static RegistrationClientFactory registrationClientFactory;
     private static HonoClientBasedAuthProvider<UsernamePasswordCredentials> usernamePasswordAuthProvider;
     private static HttpProtocolAdapterProperties config;
@@ -228,13 +228,13 @@ public class VertxBasedHttpProtocolAdapterTest {
         when(commandConsumerFactory.createCommandConsumer(anyString(), anyString(), any(Handler.class), any(Handler.class))).
                 thenReturn(Future.succeededFuture(commandConsumer));
 
-        telemetrySender = mock(MessageSender.class);
+        telemetrySender = mock(DownstreamSender.class);
         when(telemetrySender.send(any(Message.class), (SpanContext) any())).thenReturn(Future.succeededFuture(mock(ProtonDelivery.class)));
         when(telemetrySender.sendAndWaitForOutcome(any(Message.class), (SpanContext) any())).thenReturn(
                 Future.succeededFuture(mock(ProtonDelivery.class)));
         when(downstreamSenderFactory.getOrCreateTelemetrySender(anyString())).thenReturn(Future.succeededFuture(telemetrySender));
 
-        eventSender = mock(MessageSender.class);
+        eventSender = mock(DownstreamSender.class);
         when(eventSender.send(any(Message.class), (SpanContext) any())).thenThrow(new UnsupportedOperationException());
         when(eventSender.sendAndWaitForOutcome(any(Message.class), (SpanContext) any())).thenReturn(Future.succeededFuture(mock(ProtonDelivery.class)));
         when(downstreamSenderFactory.getOrCreateEventSender(anyString())).thenReturn(Future.succeededFuture(eventSender));

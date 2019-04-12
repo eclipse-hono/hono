@@ -20,7 +20,6 @@ import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.eclipse.hono.auth.Device;
-import org.eclipse.hono.client.CommandConsumer;
 import org.eclipse.hono.client.CommandConsumerFactory;
 import org.eclipse.hono.client.CommandContext;
 import org.eclipse.hono.client.CommandResponseSender;
@@ -208,12 +207,9 @@ public class CommandConsumerFactoryImpl extends HonoConnectionImpl implements Co
             final Handler<Void> remoteCloseHandler) {
 
         return checkConnected().compose(con -> {
-            final Future<MessageConsumer> result = Future.future();
             final String key = Device.asAddress(tenantId, deviceId);
-            CommandConsumer.create(
-                    context,
-                    clientConfigProperties,
-                    connection,
+            return CommandConsumer.create(
+                    this,
                     tenantId,
                     deviceId,
                     commandConsumer,
@@ -225,10 +221,8 @@ public class CommandConsumerFactoryImpl extends HonoConnectionImpl implements Co
                     sourceAddress -> { // remote close hook
                         commandConsumers.remove(key);
                         remoteCloseHandler.handle(null);
-                    },
-                    result,
-                    getTracer());
-            return result;
+                    })
+            .map(c -> (MessageConsumer) c);
         });
     }
 
@@ -267,16 +261,9 @@ public class CommandConsumerFactoryImpl extends HonoConnectionImpl implements Co
         Objects.requireNonNull(replyId);
 
         return executeOrRunOnContext(result -> {
-            checkConnected().setHandler(check -> {
-                if (check.succeeded()) {
-                    CommandResponseSenderImpl.create(context, clientConfigProperties, connection, tenantId, replyId,
-                            onSenderClosed -> {},
-                            result,
-                            getTracer());
-                } else {
-                    result.fail(check.cause());
-                }
-            });
+            checkConnected()
+            .compose(ok -> CommandResponseSenderImpl.create(this, tenantId, replyId, onSenderClosed -> {}))
+            .setHandler(result);
         });
     }
 }

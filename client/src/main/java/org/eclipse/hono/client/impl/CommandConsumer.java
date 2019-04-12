@@ -10,15 +10,16 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
-package org.eclipse.hono.client;
+package org.eclipse.hono.client.impl;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.eclipse.hono.client.impl.AbstractConsumer;
-import org.eclipse.hono.config.ClientConfigProperties;
+import org.eclipse.hono.client.Command;
+import org.eclipse.hono.client.CommandContext;
+import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.MessageHelper;
@@ -32,11 +33,8 @@ import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.opentracing.log.Fields;
 import io.opentracing.tag.Tags;
-import io.vertx.core.AsyncResult;
-import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
-import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonQoS;
 import io.vertx.proton.ProtonReceiver;
 
@@ -47,13 +45,8 @@ public class CommandConsumer extends AbstractConsumer {
 
     private static final Logger LOG = LoggerFactory.getLogger(CommandConsumer.class);
 
-    private CommandConsumer(
-            final Context context,
-            final ClientConfigProperties config,
-            final ProtonReceiver protonReceiver,
-            final Tracer tracer) {
-
-        super(context, config, protonReceiver, tracer);
+    private CommandConsumer(final HonoConnection connection, final ProtonReceiver receiver) {
+        super(connection, receiver);
     }
 
     /**
@@ -66,9 +59,7 @@ public class CommandConsumer extends AbstractConsumer {
      * However, the sender will be issued one credit on link establishment.</li>
      * </ul>
      *
-     * @param context The vert.x context to run all interactions with the server on.
-     * @param clientConfig The configuration properties to use.
-     * @param con The AMQP connection to the server.
+     * @param con The connection to the server.
      * @param tenantId The tenant to consume commands from.
      * @param deviceId The device for which the commands should be consumed.
      * @param commandHandler The handler to invoke for each command received.
@@ -80,51 +71,36 @@ public class CommandConsumer extends AbstractConsumer {
      * @param remoteCloseHandler A handler to be invoked after the link has been closed
      *                     at the remote peer's request. The handler will be invoked with the
      *                     link's source address.
-     * @param creationHandler The handler to invoke with the outcome of the creation attempt.
-     * @param tracer The tracer to use for tracking the processing of received
-     *               messages. If {@code null}, OpenTracing's {@code NoopTracer} will
-     *               be used.
-     * @throws NullPointerException if any of the parameters other than tracer are {@code null}.
+     * @return A future indicating the outcome of the creation attempt.
+     * @throws NullPointerException if any of the parameters are {@code null}.
      */
-    public static final void create(
-            final Context context,
-            final ClientConfigProperties clientConfig,
-            final ProtonConnection con,
+    public static final Future<CommandConsumer> create(
+            final HonoConnection con,
             final String tenantId,
             final String deviceId,
             final Handler<CommandContext> commandHandler,
             final Handler<String> localCloseHandler,
-            final Handler<String> remoteCloseHandler,
-            final Handler<AsyncResult<MessageConsumer>> creationHandler,
-            final Tracer tracer) {
+            final Handler<String> remoteCloseHandler) {
 
-        Objects.requireNonNull(context);
-        Objects.requireNonNull(clientConfig);
         Objects.requireNonNull(con);
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(commandHandler);
         Objects.requireNonNull(remoteCloseHandler);
-        Objects.requireNonNull(creationHandler);
 
         LOG.trace("creating new command consumer [tenant-id: {}, device-id: {}]", tenantId, deviceId);
 
         final String address = ResourceIdentifier.from(CommandConstants.COMMAND_ENDPOINT, tenantId, deviceId).toString();
-        final ClientConfigProperties props = new ClientConfigProperties(clientConfig);
-        props.setInitialCredits(0);
 
         final AtomicReference<ProtonReceiver> receiverRef = new AtomicReference<>();
 
-        createReceiver(
-                context,
-                props,
-                con,
+        return con.createReceiver(
                 address,
                 ProtonQoS.AT_LEAST_ONCE,
                 (delivery, msg) -> {
 
                     final Command command = Command.from(msg, tenantId, deviceId);
-
+                    final Tracer tracer = con.getTracer();
                     // try to extract Span context from incoming message
                     final SpanContext spanContext = TracingHelper.extractSpanContext(tracer, msg);
                     // start a Span to use for tracing the delivery of the command to the device
@@ -150,28 +126,26 @@ public class CommandConsumer extends AbstractConsumer {
                     currentSpan.log(items);
                     commandHandler.handle(CommandContext.from(command, delivery, receiverRef.get(), currentSpan));
                 },
+                0, // no pre-fetching
                 sourceAddress -> {
                     LOG.debug("command receiver link [tenant-id: {}, device-id: {}] closed remotely",
                             tenantId, deviceId);
                     remoteCloseHandler.handle(sourceAddress);
-                }).setHandler(s -> {
-
-                    if (s.succeeded()) {
-                        final ProtonReceiver receiver = s.result();
-                        LOG.debug("successfully created command consumer [{}]", address);
-                        receiverRef.set(receiver);
-                        receiver.flow(1); // allow sender to send one command
-                        final CommandConsumer consumer = new CommandConsumer(context, props, receiver, tracer);
-                        consumer.setLocalCloseHandler(sourceAddress -> {
-                            LOG.debug("command receiver link [tenant-id: {}, device-id: {}] closed locally",
-                                    tenantId, deviceId);
-                            localCloseHandler.handle(sourceAddress);
-                        });
-                        creationHandler.handle(Future.succeededFuture(consumer));
-                    } else {
-                        LOG.debug("failed to create command consumer [tenant-id: {}, device-id: {}]", tenantId, deviceId, s.cause());
-                        creationHandler.handle(Future.failedFuture(s.cause()));
-                    }
+                }).map(receiver -> {
+                    LOG.debug("successfully created command consumer [{}]", address);
+                    receiverRef.set(receiver);
+                    receiver.flow(1); // allow sender to send one command
+                    final CommandConsumer consumer = new CommandConsumer(con, receiver);
+                    consumer.setLocalCloseHandler(sourceAddress -> {
+                        LOG.debug("command receiver link [tenant-id: {}, device-id: {}] closed locally",
+                                tenantId, deviceId);
+                        localCloseHandler.handle(sourceAddress);
+                    });
+                    return consumer;
+                }).recover(t -> {
+                    LOG.debug("failed to create command consumer [tenant-id: {}, device-id: {}]",
+                            tenantId, deviceId, t);
+                    return Future.failedFuture(t);
                 });
     }
 }

@@ -14,8 +14,11 @@
 package org.eclipse.hono.client.impl;
 
 import io.opentracing.Span;
+import io.opentracing.Tracer;
 import io.opentracing.Tracer.SpanBuilder;
+import io.opentracing.noop.NoopTracerFactory;
 import io.vertx.core.Context;
+import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.proton.ProtonQoS;
@@ -29,6 +32,8 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import org.eclipse.hono.client.HonoConnection;
+import org.eclipse.hono.config.ClientConfigProperties;
 import org.mockito.Mockito;
 
 /**
@@ -103,5 +108,44 @@ public final class HonoClientUnitTestHelper {
         when(spanBuilder.withTag(anyString(), (Number) any())).thenReturn(spanBuilder);
         when(spanBuilder.start()).thenReturn(spanToCreate);
         return spanBuilder;
+    }
+
+    /**
+     * Creates a mocked Hono connection that returns a
+     * Noop Tracer.
+     * <p>
+     * Invokes {@link #mockHonoConnection(Vertx, ClientConfigProperties)}
+     * with default {@link ClientConfigProperties}.
+     * 
+     * @param vertx The vert.x instance to use.
+     * @return The connection.
+     */
+    public static HonoConnection mockHonoConnection(final Vertx vertx) {
+        return mockHonoConnection(vertx, new ClientConfigProperties());
+    }
+
+    /**
+     * Creates a mocked Hono connection that returns a
+     * Noop Tracer.
+     * 
+     * @param vertx The vert.x instance to use.
+     * @param props The client properties to use.
+     * @return The connection.
+     */
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    public static HonoConnection mockHonoConnection(final Vertx vertx, final ClientConfigProperties props) {
+
+        final Tracer tracer = NoopTracerFactory.create();
+        final HonoConnection connection = mock(HonoConnection.class);
+        when(connection.getVertx()).thenReturn(vertx);
+        when(connection.getConfig()).thenReturn(props);
+        when(connection.getTracer()).thenReturn(tracer);
+        when(connection.executeOrRunOnContext(any(Handler.class))).then(invocation -> {
+            final Future result = Future.future();
+            final Handler<Future> handler = invocation.getArgument(0);
+            handler.handle(result);
+            return result;
+        });
+        return connection;
     }
 }

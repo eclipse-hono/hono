@@ -21,8 +21,13 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
+import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.util.Constants;
 import org.junit.Before;
 import org.junit.Rule;
@@ -31,7 +36,6 @@ import org.junit.rules.Timeout;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 
-import io.vertx.core.Context;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
@@ -39,9 +43,6 @@ import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.proton.ProtonReceiver;
 import io.vertx.proton.ProtonSender;
-
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * Tests verifying behavior of {@link CommandClientImpl}.
@@ -59,7 +60,6 @@ public class CommandClientImplTest {
     public Timeout globalTimeout = Timeout.seconds(3);
 
     private Vertx vertx;
-    private Context context;
     private ProtonSender sender;
     private ProtonReceiver receiver;
     private CommandClientImpl client;
@@ -71,14 +71,12 @@ public class CommandClientImplTest {
     public void setUp() {
 
         vertx = mock(Vertx.class);
-        context = HonoClientUnitTestHelper.mockContext(vertx);
         receiver = HonoClientUnitTestHelper.mockProtonReceiver();
         sender = HonoClientUnitTestHelper.mockProtonSender();
-
-        final RequestResponseClientConfigProperties config = new RequestResponseClientConfigProperties();
+        final ClientConfigProperties config = new RequestResponseClientConfigProperties();
+        final HonoConnection connection = HonoClientUnitTestHelper.mockHonoConnection(vertx, config);
         client = new CommandClientImpl(
-                context,
-                config,
+                connection,
                 Constants.DEFAULT_TENANT,
                 DEVICE_ID,
                 REPLY_ID,

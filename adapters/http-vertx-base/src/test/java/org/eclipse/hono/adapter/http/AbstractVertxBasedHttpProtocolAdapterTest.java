@@ -32,15 +32,15 @@ import java.net.HttpURLConnection;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ClientErrorException;
-import org.eclipse.hono.client.CommandConsumer;
 import org.eclipse.hono.client.CommandConsumerFactory;
 import org.eclipse.hono.client.CommandContext;
 import org.eclipse.hono.client.CommandResponse;
 import org.eclipse.hono.client.CommandResponseSender;
 import org.eclipse.hono.client.CredentialsClientFactory;
+import org.eclipse.hono.client.DownstreamSender;
 import org.eclipse.hono.client.DownstreamSenderFactory;
 import org.eclipse.hono.client.HonoConnection;
-import org.eclipse.hono.client.MessageSender;
+import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.RegistrationClientFactory;
 import org.eclipse.hono.client.ResourceConflictException;
@@ -112,7 +112,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
     private TenantClient                  tenantClient;
     private HttpProtocolAdapterProperties config;
     private CommandConsumerFactory        commandConsumerFactory;
-    private CommandConsumer               commandConsumer;
+    private MessageConsumer               commandConsumer;
     private Vertx                         vertx;
     private Context                       context;
     private HttpAdapterMetrics            metrics;
@@ -161,7 +161,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         when(registrationClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
         when(registrationClientFactory.getOrCreateRegistrationClient(anyString())).thenReturn(Future.succeededFuture(regClient));
 
-        commandConsumer = mock(CommandConsumer.class);
+        commandConsumer = mock(MessageConsumer.class);
         doAnswer(invocation -> {
             final Handler<AsyncResult<Void>> resultHandler = invocation.getArgument(0);
             if (resultHandler != null) {
@@ -264,7 +264,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
 
         // GIVEN an adapter
         final HttpServer server = getHttpServer(false);
-        final MessageSender sender = givenATelemetrySenderForOutcome(Future.succeededFuture());
+        final DownstreamSender sender = givenATelemetrySenderForOutcome(Future.succeededFuture());
 
         // which is disabled for tenant "my-tenant"
         final TenantObject myTenantConfig = TenantObject.from("my-tenant", true);
@@ -310,7 +310,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
 
         // GIVEN an adapter
         final HttpServer server = getHttpServer(false);
-        final MessageSender sender = givenATelemetrySenderForOutcome(Future.succeededFuture());
+        final DownstreamSender sender = givenATelemetrySenderForOutcome(Future.succeededFuture());
 
         // with an enabled tenant
         final TenantObject myTenantConfig = TenantObject.from("my-tenant", true);
@@ -642,7 +642,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         // GIVEN an adapter with a downstream telemetry consumer attached
         final HttpServer server = getHttpServer(false);
         final AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> adapter = getAdapter(server, null);
-        final MessageSender sender = givenATelemetrySenderForOutcome(Future.succeededFuture());
+        final DownstreamSender sender = givenATelemetrySenderForOutcome(Future.succeededFuture());
 
         // WHEN a device publishes a telemetry message with a TTD
         final Buffer payload = Buffer.buffer("some payload");
@@ -689,7 +689,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         // GIVEN an adapter with a downstream event consumer attached
         final HttpServer server = getHttpServer(false);
         final AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> adapter = getAdapter(server, null);
-        final MessageSender sender = givenAnEventSenderForOutcome(Future.succeededFuture());
+        final DownstreamSender sender = givenAnEventSenderForOutcome(Future.succeededFuture());
 
         // WHEN a device publishes an empty notification event with a TTD
         final HttpServerResponse response = mock(HttpServerResponse.class);
@@ -726,7 +726,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         // GIVEN an adapter with a downstream telemetry consumer attached
         final HttpServer server = getHttpServer(false);
         final AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> adapter = getAdapter(server, null);
-        final MessageSender sender = givenATelemetrySenderForOutcome(Future.succeededFuture());
+        final DownstreamSender sender = givenATelemetrySenderForOutcome(Future.succeededFuture());
 
         // WHEN a device publishes a telemetry message that belongs to a tenant with
         // a max TTD of 20 secs
@@ -866,18 +866,18 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         return sender;
     }
 
-    private MessageSender givenAnEventSenderForOutcome(final Future<ProtonDelivery> outcome) {
+    private DownstreamSender givenAnEventSenderForOutcome(final Future<ProtonDelivery> outcome) {
 
-        final MessageSender sender = mock(MessageSender.class);
+        final DownstreamSender sender = mock(DownstreamSender.class);
         when(sender.sendAndWaitForOutcome(any(Message.class), (SpanContext) any())).thenReturn(outcome);
 
         when(downstreamSenderFactory.getOrCreateEventSender(anyString())).thenReturn(Future.succeededFuture(sender));
         return sender;
     }
 
-    private MessageSender givenATelemetrySenderForOutcome(final Future<ProtonDelivery> outcome) {
+    private DownstreamSender givenATelemetrySenderForOutcome(final Future<ProtonDelivery> outcome) {
 
-        final MessageSender sender = mock(MessageSender.class);
+        final DownstreamSender sender = mock(DownstreamSender.class);
         when(sender.send(any(Message.class), (SpanContext) any())).thenReturn(outcome);
 
         when(downstreamSenderFactory.getOrCreateTelemetrySender(anyString())).thenReturn(Future.succeededFuture(sender));

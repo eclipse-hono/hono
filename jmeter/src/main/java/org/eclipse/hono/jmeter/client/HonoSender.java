@@ -25,11 +25,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.jmeter.samplers.SampleResult;
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.client.DownstreamSender;
 import org.eclipse.hono.client.DownstreamSenderFactory;
 import org.eclipse.hono.client.HonoConnection;
-import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.ServiceInvocationException;
-import org.eclipse.hono.client.impl.HonoConnectionImpl;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.jmeter.HonoSampler;
 import org.eclipse.hono.jmeter.HonoSenderSampler;
@@ -81,7 +80,7 @@ public class HonoSender extends AbstractClient {
         honoProps.setPassword(sampler.getPwd());
         honoProps.setTrustStorePath(sampler.getTrustStorePath());
         honoProps.setReconnectAttempts(MAX_RECONNECT_ATTEMPTS);
-        downstreamSenderFactory = new HonoConnectionImpl(vertx, honoProps);
+        downstreamSenderFactory = DownstreamSenderFactory.create(HonoConnection.newConnection(vertx, honoProps));
     }
 
     /**
@@ -130,7 +129,7 @@ public class HonoSender extends AbstractClient {
                 });
     }
 
-    private Future<MessageSender> getSender(final String endpoint, final String tenant) {
+    private Future<DownstreamSender> getSender(final String endpoint, final String tenant) {
 
         if (endpoint.equals(HonoSampler.Endpoint.telemetry.toString())) {
             LOGGER.trace("getting telemetry sender for tenant [{}]", tenant);
@@ -207,7 +206,7 @@ public class HonoSender extends AbstractClient {
         final String endpoint = sampler.getEndpoint();
         final String tenant = sampler.getTenant();
 
-        final Future<MessageSender> senderFuture = getSender(endpoint, tenant);
+        final Future<DownstreamSender> senderFuture = getSender(endpoint, tenant);
         final CompletableFuture<SampleResult> tracker = new CompletableFuture<>();
         final Future<ProtonDelivery> deliveryTracker = Future.future();
         deliveryTracker.setHandler(s -> {

@@ -29,8 +29,8 @@ import static org.mockito.Mockito.when;
 import java.net.HttpURLConnection;
 
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.ServerErrorException;
-import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.util.MessageHelper;
 import org.junit.Before;
 import org.junit.Test;
@@ -38,11 +38,11 @@ import org.mockito.ArgumentCaptor;
 
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
-import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.proton.ProtonDelivery;
+import io.vertx.proton.ProtonHelper;
 import io.vertx.proton.ProtonSender;
 
 
@@ -53,8 +53,6 @@ import io.vertx.proton.ProtonSender;
 public class AbstractSenderTest {
 
     private ProtonSender protonSender;
-    private ClientConfigProperties config;
-    private Context context;
     private Vertx vertx;
 
     /**
@@ -63,9 +61,7 @@ public class AbstractSenderTest {
     @Before
     public void setUp() {
         protonSender = HonoClientUnitTestHelper.mockProtonSender();
-        config = new ClientConfigProperties();
         vertx = mock(Vertx.class);
-        context = HonoClientUnitTestHelper.mockContext(vertx);
     }
 
     /**
@@ -84,7 +80,10 @@ public class AbstractSenderTest {
         final AbstractSender sender = newSender("tenant", "endpoint");
 
         // WHEN sending a message
-        sender.send("device", "some payload", "application/text");
+        final Message msg = ProtonHelper.message("some payload");
+        msg.setContentType("application/text");
+        MessageHelper.addDeviceId(msg, "device");
+        sender.send(msg);
 
         // THEN the message is sent without the registration assertion
         final ArgumentCaptor<Message> sentMessage = ArgumentCaptor.forClass(Message.class);
@@ -103,7 +102,8 @@ public class AbstractSenderTest {
         final AbstractSender sender = newSender("tenant", "endpoint");
 
         // WHEN trying to send a message
-        final Future<ProtonDelivery> result = sender.send("device", "some payload", "application/text");
+        final Message msg = ProtonHelper.message("test");
+        final Future<ProtonDelivery> result = sender.send(msg);
 
         // THEN the message is not sent
         assertFalse(result.succeeded());
@@ -155,13 +155,12 @@ public class AbstractSenderTest {
 
     private AbstractSender newSender(final String tenantId, final String targetAddress) {
 
+        final HonoConnection connection = HonoClientUnitTestHelper.mockHonoConnection(vertx);
         return new AbstractSender(
-                config,
+                connection,
                 protonSender,
                 tenantId,
-                targetAddress,
-                context,
-                null) {
+                targetAddress) {
 
             @Override
             public String getEndpoint() {

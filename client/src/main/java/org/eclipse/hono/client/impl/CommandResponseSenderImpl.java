@@ -12,33 +12,27 @@
  *******************************************************************************/
 package org.eclipse.hono.client.impl;
 
-import java.util.Map;
 import java.util.Objects;
 
-import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
 import org.apache.qpid.proton.message.Message;
-import org.eclipse.hono.client.CommandResponseSender;
 import org.eclipse.hono.client.CommandResponse;
+import org.eclipse.hono.client.CommandResponseSender;
+import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.util.CommandConstants;
-import org.eclipse.hono.util.MessageHelper;
+
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
-import io.opentracing.Tracer;
 import io.opentracing.tag.Tags;
-import io.vertx.core.AsyncResult;
-import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
-import io.vertx.core.buffer.Buffer;
-import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonDelivery;
-import io.vertx.proton.ProtonHelper;
 import io.vertx.proton.ProtonQoS;
 import io.vertx.proton.ProtonSender;
 
 /**
- * The response sender for a received command.
+ * A wrapper around an AMQP link for sending response messages to
+ * commands downstream.
  */
 public class CommandResponseSenderImpl extends AbstractSender implements CommandResponseSender {
 
@@ -49,14 +43,12 @@ public class CommandResponseSenderImpl extends AbstractSender implements Command
     public static final long DEFAULT_COMMAND_FLOW_LATENCY = 200L; // ms
 
     CommandResponseSenderImpl(
-            final ClientConfigProperties config,
+            final HonoConnection connection,
             final ProtonSender sender,
             final String tenantId,
-            final String targetAddress,
-            final Context context,
-            final Tracer tracer) {
+            final String targetAddress) {
 
-        super(config, sender, tenantId, targetAddress, context, tracer);
+        super(connection, sender, tenantId, targetAddress);
     }
 
     @Override
@@ -91,25 +83,6 @@ public class CommandResponseSenderImpl extends AbstractSender implements Command
     /**
      * {@inheritDoc}
      */
-    @Deprecated
-    @Override
-    public Future<ProtonDelivery> sendCommandResponse(
-            final String correlationId,
-            final String contentType,
-            final Buffer payload,
-            final Map<String, Object> properties,
-            final int status,
-            final SpanContext context) {
-
-        LOG.trace("sending command response [correlationId: {}, status: {}]", correlationId, status);
-        return sendAndWaitForOutcome(
-                createResponseMessage(targetAddress, correlationId, contentType, payload, properties, status),
-                context);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public Future<ProtonDelivery> sendCommandResponse(final CommandResponse commandResponse,
             final SpanContext context) {
@@ -121,28 +94,6 @@ public class CommandResponseSenderImpl extends AbstractSender implements Command
         return sendAndWaitForOutcome(message, context);
     }
 
-    private static Message createResponseMessage(
-            final String targetAddress,
-            final String correlationId,
-            final String contentType,
-            final Buffer payload,
-            final Map<String, Object> properties,
-            final int status) {
-
-        Objects.requireNonNull(targetAddress);
-        Objects.requireNonNull(correlationId);
-        final Message msg = ProtonHelper.message();
-        msg.setCorrelationId(correlationId);
-        msg.setAddress(targetAddress);
-        MessageHelper.setPayload(msg, contentType, payload);
-        if (properties != null) {
-            msg.setApplicationProperties(new ApplicationProperties(properties));
-        }
-        MessageHelper.setCreationTime(msg);
-        MessageHelper.addProperty(msg, MessageHelper.APP_PROPERTY_STATUS, status);
-        return msg;
-    }
-
     /**
      * Creates a new sender to send responses for commands back to the business application.
      * <p>
@@ -152,55 +103,39 @@ public class CommandResponseSenderImpl extends AbstractSender implements Command
      * smaller than the default</li>
      * </ul>
      *
-     * @param context The vert.x context to run all interactions with the server on.
-     * @param clientConfig The configuration properties to use.
      * @param con The connection to the AMQP network.
      * @param tenantId The tenant that the command response will be send for and the device belongs to.
      * @param replyId The reply id as the unique postfix of the replyTo address.
      * @param closeHook A handler to invoke if the peer closes the link unexpectedly.
-     * @param creationHandler The handler to invoke with the result of the creation attempt.
-     * @param tracer The tracer to use for tracking the processing of received messages. If {@code null}, OpenTracing's
-     *            {@code NoopTracer} will be used.
-     * @throws NullPointerException if any of context, clientConfig, con, tenantId, deviceId or replyId are
-     *             {@code null}.
+     * @return A future indicating the result of the creation attempt.
+     * @throws NullPointerException if any of con, tenantId or replyId are {@code null}.
      */
-    public static void create(
-            final Context context,
-            final ClientConfigProperties clientConfig,
-            final ProtonConnection con,
+    public static Future<CommandResponseSender> create(
+            final HonoConnection con,
             final String tenantId,
             final String replyId,
-            final Handler<String> closeHook,
-            final Handler<AsyncResult<CommandResponseSender>> creationHandler,
-            final Tracer tracer) {
+            final Handler<String> closeHook) {
 
-        Objects.requireNonNull(context);
-        Objects.requireNonNull(clientConfig);
         Objects.requireNonNull(con);
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(replyId);
 
         final String targetAddress = CommandResponseSenderImpl.getTargetAddress(tenantId, replyId);
-        final ClientConfigProperties props = new ClientConfigProperties(clientConfig);
+        final ClientConfigProperties props = new ClientConfigProperties(con.getConfig());
         if (props.getFlowLatency() < DEFAULT_COMMAND_FLOW_LATENCY) {
             props.setFlowLatency(DEFAULT_COMMAND_FLOW_LATENCY);
         }
 
-        createSender(context, props, con, targetAddress, ProtonQoS.AT_LEAST_ONCE, closeHook)
-                .map(sender -> (CommandResponseSender) new CommandResponseSenderImpl(clientConfig, sender, tenantId,
-                        targetAddress, context, tracer))
-                .setHandler(creationHandler);
+        return con.createSender(targetAddress, ProtonQoS.AT_LEAST_ONCE, closeHook)
+                .map(sender -> (CommandResponseSender) new CommandResponseSenderImpl(con, sender, tenantId,
+                        targetAddress));
     }
 
     @Override
     protected Span startSpan(final SpanContext parent, final Message rawMessage) {
 
-        if (tracer == null) {
-            throw new IllegalStateException("no tracer configured");
-        } else {
-            final Span span = newChildSpan(parent, "forward Command response");
-            Tags.SPAN_KIND.set(span, Tags.SPAN_KIND_CLIENT);
-            return span;
-        }
+        final Span span = newChildSpan(parent, "forward Command response");
+        Tags.SPAN_KIND.set(span, Tags.SPAN_KIND_CLIENT);
+        return span;
     }
 }

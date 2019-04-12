@@ -25,7 +25,8 @@ import org.apache.qpid.proton.amqp.messaging.Rejected;
 import org.apache.qpid.proton.amqp.messaging.Released;
 import org.apache.qpid.proton.amqp.transport.DeliveryState;
 import org.apache.qpid.proton.message.Message;
-import org.eclipse.hono.client.MessageSender;
+import org.eclipse.hono.client.DownstreamSender;
+import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ClientConfigProperties;
@@ -35,14 +36,10 @@ import org.eclipse.hono.util.TelemetryConstants;
 
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
-import io.opentracing.Tracer;
 import io.opentracing.log.Fields;
 import io.opentracing.tag.Tags;
-import io.vertx.core.AsyncResult;
-import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
-import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonDelivery;
 import io.vertx.proton.ProtonQoS;
 import io.vertx.proton.ProtonSender;
@@ -50,16 +47,15 @@ import io.vertx.proton.ProtonSender;
 /**
  * A Vertx-Proton based client for uploading telemetry data to a Hono server.
  */
-public final class TelemetrySenderImpl extends AbstractSender {
+public final class TelemetrySenderImpl extends AbstractDownstreamSender {
 
-    TelemetrySenderImpl(final ClientConfigProperties config, final ProtonSender sender, final String tenantId,
-            final String targetAddress, final Context context) {
-        this(config, sender, tenantId, targetAddress, context, null);
-    }
+    TelemetrySenderImpl(
+            final HonoConnection con,
+            final ProtonSender sender,
+            final String tenantId,
+            final String targetAddress) {
 
-    TelemetrySenderImpl(final ClientConfigProperties config, final ProtonSender sender, final String tenantId,
-            final String targetAddress, final Context context, final Tracer tracer) {
-        super(config, sender, tenantId, targetAddress, context, tracer);
+        super(con, sender, tenantId, targetAddress);
     }
 
     /**
@@ -93,40 +89,24 @@ public final class TelemetrySenderImpl extends AbstractSender {
     /**
      * Creates a new sender for publishing telemetry data to a Hono server.
      * 
-     * @param context The vertx context to run all interactions with the server on.
-     * @param clientConfig The configuration properties to use.
      * @param con The connection to the Hono server.
      * @param tenantId The tenant that the telemetry data will be uploaded for.
-     * @param deviceId The device that the telemetry data will be uploaded for or {@code null}
-     *                 if the data to be uploaded will be produced by arbitrary devices of the
-     *                 tenant.
-     * @param closeHook The handler to invoke when the Hono server closes the sender. The sender's
-     *                  target address is provided as an argument to the handler.
-     * @param creationHandler The handler to invoke with the result of the creation attempt.
-     * @param tracer The <em>OpenTracing</em> {@code Tracer} to keep track of the messages sent
-     *               by the sender returned.
+     * @param remoteCloseHook The handler to invoke when the Hono server closes the sender. The sender's
+     *                        target address is provided as an argument to the handler.
+     * @return A future indicating the outcome.
      * @throws NullPointerException if any of context, connection, tenant or handler is {@code null}.
      */
-    public static void create(
-            final Context context,
-            final ClientConfigProperties clientConfig,
-            final ProtonConnection con,
+    public static Future<DownstreamSender> create(
+            final HonoConnection con,
             final String tenantId,
-            final String deviceId,
-            final Handler<String> closeHook,
-            final Handler<AsyncResult<MessageSender>> creationHandler,
-            final Tracer tracer) {
+            final Handler<String> remoteCloseHook) {
 
-        Objects.requireNonNull(context);
         Objects.requireNonNull(con);
         Objects.requireNonNull(tenantId);
-        Objects.requireNonNull(creationHandler);
 
-        final String targetAddress = getTargetAddress(tenantId, deviceId);
-        createSender(context, clientConfig, con, targetAddress, ProtonQoS.AT_LEAST_ONCE, closeHook).compose(sender -> {
-            return Future.<MessageSender> succeededFuture(
-                    new TelemetrySenderImpl(clientConfig, sender, tenantId, targetAddress, context, tracer));
-        }).setHandler(creationHandler);
+        final String targetAddress = getTargetAddress(tenantId, null);
+        return con.createSender(targetAddress, ProtonQoS.AT_LEAST_ONCE, remoteCloseHook)
+        .compose(sender -> Future.succeededFuture(new TelemetrySenderImpl(con, sender, tenantId, targetAddress)));
     }
 
     /**
@@ -152,9 +132,9 @@ public final class TelemetrySenderImpl extends AbstractSender {
         Tags.MESSAGE_BUS_DESTINATION.set(span, targetAddress);
         span.setTag(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId);
         span.setTag(MessageHelper.APP_PROPERTY_DEVICE_ID, MessageHelper.getDeviceId(rawMessage));
-        TracingHelper.injectSpanContext(tracer, span.context(), rawMessage);
+        TracingHelper.injectSpanContext(connection.getTracer(), span.context(), rawMessage);
 
-        return executeOrRunOnContext(result -> {
+        return connection.executeOrRunOnContext(result -> {
             if (sender.sendQueueFull()) {
                 final ServiceInvocationException e = new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "no credit available");
                 logError(span, e);
@@ -198,9 +178,10 @@ public final class TelemetrySenderImpl extends AbstractSender {
         details.put(TracingHelper.TAG_QOS.getKey(), sender.getQoS().toString());
         currentSpan.log(details);
 
+        final ClientConfigProperties config = connection.getConfig();
         final AtomicBoolean timeoutReached = new AtomicBoolean(false);
         final Long timerId = config.getSendMessageTimeout() > 0
-                ? context.owner().setTimer(config.getSendMessageTimeout(), id -> {
+                ? connection.getVertx().setTimer(config.getSendMessageTimeout(), id -> {
                     if (timeoutReached.compareAndSet(false, true)) {
                         final ServerErrorException exception = new ServerErrorException(
                                 HttpURLConnection.HTTP_UNAVAILABLE,
@@ -216,7 +197,7 @@ public final class TelemetrySenderImpl extends AbstractSender {
 
         final ProtonDelivery result = sender.send(message, deliveryUpdated -> {
             if (timerId != null) {
-                context.owner().cancelTimer(timerId);
+                connection.getVertx().cancelTimer(timerId);
             }
             final DeliveryState remoteState = deliveryUpdated.getRemoteState();
             if (timeoutReached.get()) {
@@ -272,23 +253,15 @@ public final class TelemetrySenderImpl extends AbstractSender {
     @Override
     protected Span startSpan(final SpanContext parent, final Message rawMessage) {
 
-        if (tracer == null) {
-            throw new IllegalStateException("no tracer configured");
-        } else {
-            final Span span = newFollowingSpan(parent, "forward Telemetry data");
-            Tags.SPAN_KIND.set(span, Tags.SPAN_KIND_PRODUCER);
-            return span;
-        }
+        final Span span = newFollowingSpan(parent, "forward Telemetry data");
+        Tags.SPAN_KIND.set(span, Tags.SPAN_KIND_PRODUCER);
+        return span;
     }
 
     private Span startChildSpan(final SpanContext parent, final Message rawMessage) {
 
-        if (tracer == null) {
-            throw new IllegalStateException("no tracer configured");
-        } else {
-            final Span span = newChildSpan(parent, "forward Telemetry data");
-            Tags.SPAN_KIND.set(span, Tags.SPAN_KIND_PRODUCER);
-            return span;
-        }
+        final Span span = newChildSpan(parent, "forward Telemetry data");
+        Tags.SPAN_KIND.set(span, Tags.SPAN_KIND_PRODUCER);
+        return span;
     }
 }

@@ -31,8 +31,8 @@ import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.Command;
 import org.eclipse.hono.client.CommandContext;
 import org.eclipse.hono.client.CommandResponse;
+import org.eclipse.hono.client.DownstreamSender;
 import org.eclipse.hono.client.MessageConsumer;
-import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
 import org.eclipse.hono.service.auth.DeviceUser;
@@ -983,7 +983,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
             final String tenant,
             final String deviceId,
             final Buffer payload,
-            final Future<? extends MessageSender> senderTracker,
+            final Future<DownstreamSender> senderTracker,
             final MetricsTags.EndpointType endpoint) {
 
         if (!isPayloadOfIndicatedType(payload, ctx.contentType())) {
@@ -1008,7 +1008,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
 
             return CompositeFuture.all(tokenTracker, tenantEnabledTracker, senderTracker).compose(ok -> {
 
-                    final MessageSender sender = senderTracker.result();
+                    final DownstreamSender sender = senderTracker.result();
                     final Message downstreamMessage = newMessage(
                             ResourceIdentifier.from(endpoint.getCanonicalName(), tenant, deviceId),
                             ctx.message().topicName(),
@@ -1303,8 +1303,8 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
 
     private Future<Device> createLinks(final Device authenticatedDevice, final Span currentSpan) {
 
-        final Future<MessageSender> telemetrySender = getTelemetrySender(authenticatedDevice.getTenantId());
-        final Future<MessageSender> eventSender = getEventSender(authenticatedDevice.getTenantId());
+        final Future<DownstreamSender> telemetrySender = getTelemetrySender(authenticatedDevice.getTenantId());
+        final Future<DownstreamSender> eventSender = getEventSender(authenticatedDevice.getTenantId());
 
         return CompositeFuture
                 .all(telemetrySender, eventSender)

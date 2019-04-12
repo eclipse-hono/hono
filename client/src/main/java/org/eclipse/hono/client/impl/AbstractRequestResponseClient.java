@@ -30,12 +30,12 @@ import org.apache.qpid.proton.amqp.transport.DeliveryState;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.cache.ExpiringValueCache;
 import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.RequestResponseClient;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.StatusCodeMapper;
-import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.MessageHelper;
@@ -46,14 +46,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.opentracing.Span;
-import io.opentracing.Tracer;
 import io.opentracing.tag.Tags;
 import io.vertx.core.AsyncResult;
-import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.buffer.Buffer;
-import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonDelivery;
 import io.vertx.proton.ProtonHelper;
 import io.vertx.proton.ProtonQoS;
@@ -98,23 +95,6 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
     /**
      * Creates a request-response client.
      * <p>
-     * This constructor simply invokes
-     * {@link #AbstractRequestResponseClient(Context, ClientConfigProperties, Tracer, String)}
-     * with {@code null} as the tracer.
-     * 
-     * @param context The vert.x context to run message exchanges with the peer on.
-     * @param config The configuration properties to use.
-     * @param tenantId The tenant that the client should be scoped to or {@code null} if the
-     *                 client should not be scoped to a tenant.
-     * @throws NullPointerException if any of context or configuration are {@code null}.
-     */
-    protected AbstractRequestResponseClient(final Context context, final ClientConfigProperties config, final String tenantId) {
-        this(context, config, (Tracer) null, tenantId);
-    }
-
-    /**
-     * Creates a request-response client.
-     * <p>
      * The created instance's sender link's target address is set to
      * <em>${name}[/${tenantId}]</em> and the receiver link's source
      * address is set to <em>${name}[/${tenantId}]/${UUID}</em>
@@ -124,25 +104,20 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      * The latter address is also used as the value of the <em>reply-to</em>
      * property of all request messages sent by this client.
      * <p>
-     * The client will be ready to use after invoking {@link #createLinks(ProtonConnection)} or
-     * {@link #createLinks(ProtonConnection, Handler, Handler)} only.
+     * The client will be ready to use after invoking {@link #createLinks()} or
+     * {@link #createLinks(Handler, Handler)} only.
      * 
-     * @param context The vert.x context to run message exchanges with the peer on.
-     * @param config The configuration properties to use.
-     * @param tracer The tracer to use for tracking request processing across process
-     *               boundaries or {@code null} to disable tracing.
+     * @param connection The connection to the service.
      * @param tenantId The tenant that the client should be scoped to or {@code null} if the
      *                 client should not be scoped to a tenant.
      * @throws NullPointerException if any of context or configuration are {@code null}.
      */
     protected AbstractRequestResponseClient(
-            final Context context,
-            final ClientConfigProperties config,
-            final Tracer tracer,
+            final HonoConnection connection,
             final String tenantId) {
 
-        super(context, config, tracer);
-        this.requestTimeoutMillis = config.getRequestTimeout();
+        super(connection);
+        this.requestTimeoutMillis = connection.getConfig().getRequestTimeout();
         if (tenantId == null) {
             this.targetAddress = getName();
             this.replyToAddress = String.format("%s/%s", getName(), UUID.randomUUID());
@@ -151,29 +126,6 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
             this.replyToAddress = String.format("%s/%s/%s", getName(), tenantId, UUID.randomUUID());
         }
         this.tenantId = tenantId;
-    }
-
-    /**
-     * Creates a request-response client.
-     * <p>
-     * This methods simply invokes
-     * {@link #AbstractRequestResponseClient(Context, ClientConfigProperties, Tracer, String, String, String)}
-     * with {@code null} as the tracer.
-     *
-     * @param context The vert.x context to run message exchanges with the peer on.
-     * @param config The configuration properties to use.
-     * @param tenantId The tenant that the device belongs to.
-     * @param deviceId The device to create the client for.
-     * @param replyId The replyId to use in the reply-to address.
-     * @throws NullPointerException if any of the parameters are {@code null}.
-     */
-    protected AbstractRequestResponseClient(
-            final Context context,
-            final ClientConfigProperties config,
-            final String tenantId,
-            final String deviceId,
-            final String replyId) {
-        this(context, config, null, tenantId, deviceId, replyId);
     }
 
     /**
@@ -188,32 +140,27 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      * The latter address is also used as the value of the <em>reply-to</em>
      * property of all request messages sent by this client.
      * <p>
-     * The client will be ready to use after invoking {@link #createLinks(ProtonConnection)} or
-     * {@link #createLinks(ProtonConnection, Handler, Handler)} only.
+     * The client will be ready to use after invoking {@link #createLinks()} or
+     * {@link #createLinks(Handler, Handler)} only.
      *
-     * @param context The vert.x context to run message exchanges with the peer on.
-     * @param config The configuration properties to use.
-     * @param tracer The tracer to use for tracking request processing across process
-     *               boundaries or {@code null} to disable tracing.
+     * @param connection The connection to the service.
      * @param tenantId The tenant that the device belongs to.
      * @param deviceId The device to create the client for.
      * @param replyId The replyId to use in the reply-to address.
      * @throws NullPointerException if any of the parameters other than tracer are {@code null}.
      */
     protected AbstractRequestResponseClient(
-            final Context context,
-            final ClientConfigProperties config,
-            final Tracer tracer,
+            final HonoConnection connection,
             final String tenantId,
             final String deviceId,
             final String replyId) {
 
-        super(context, config, tracer);
+        super(connection);
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(replyId);
 
-        this.requestTimeoutMillis = config.getRequestTimeout();
+        this.requestTimeoutMillis = connection.getConfig().getRequestTimeout();
         this.targetAddress = String.format("%s/%s/%s", getName(), tenantId, deviceId);
         this.replyToAddress = String.format("%s/%s/%s/%s", getName(), tenantId, deviceId, replyId);
         this.tenantId = tenantId;
@@ -222,8 +169,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
     /**
      * Creates a request-response client for a sender and receiver link.
      * 
-     * @param context The vert.x context to run message exchanges with the peer on.
-     * @param config The configuration properties to use.
+     * @param connection The connection to the service.
      * @param tenantId The tenant that the client should be scoped to or {@code null} if the
      *                 client should not be scoped to a tenant.
      * @param sender The AMQP 1.0 link to use for sending requests to the peer.
@@ -231,38 +177,12 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      * @throws NullPointerException if any of the parameters other than tenant are {@code null}.
      */
     protected AbstractRequestResponseClient(
-            final Context context,
-            final ClientConfigProperties config,
+            final HonoConnection connection,
             final String tenantId,
             final ProtonSender sender,
             final ProtonReceiver receiver) {
 
-        this(context, config, null, tenantId, sender, receiver);
-    }
-
-    /**
-     * Creates a request-response client for a sender and receiver link.
-     * 
-     * @param context The vert.x context to run message exchanges with the peer on.
-     * @param config The configuration properties to use.
-     * @param tracer The tracer to use for tracking request processing across process
-     *               boundaries or {@code null} to disable tracing.
-     * @param tenantId The tenant that the client should be scoped to or {@code null} if the
-     *                 client should not be scoped to a tenant.
-     * @param sender The AMQP 1.0 link to use for sending requests to the peer.
-     * @param receiver The AMQP 1.0 link to use for receiving responses from the peer.
-     * @throws NullPointerException if any of the parameters other than tracer or tenant
-     *                              are {@code null}.
-     */
-    protected AbstractRequestResponseClient(
-            final Context context,
-            final ClientConfigProperties config,
-            final Tracer tracer,
-            final String tenantId,
-            final ProtonSender sender,
-            final ProtonReceiver receiver) {
-
-        this(context, config, tracer, tenantId);
+        this(connection, tenantId);
         this.sender = Objects.requireNonNull(sender);
         this.receiver = Objects.requireNonNull(receiver);
     }
@@ -292,8 +212,8 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      * @return The timeout period in seconds.
      */
     protected final long getResponseCacheDefaultTimeout() {
-        if (config instanceof RequestResponseClientConfigProperties) {
-            return ((RequestResponseClientConfigProperties) config).getResponseCacheDefaultTimeout();
+        if (connection.getConfig() instanceof RequestResponseClientConfigProperties) {
+            return ((RequestResponseClientConfigProperties) connection.getConfig()).getResponseCacheDefaultTimeout();
         } else {
             return RequestResponseClientConfigProperties.DEFAULT_RESPONSE_CACHE_TIMEOUT;
         }
@@ -387,50 +307,46 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      * Creates the sender and receiver links to the peer for sending requests
      * and receiving responses.
      * 
-     * @param con The AMQP 1.0 connection to the peer.
      * @return A future indicating the outcome. The future will succeed if the links
      *         have been created.
      * @throws NullPointerException if con is {@code null}.
      */
-    protected final Future<Void> createLinks(final ProtonConnection con) {
-        return createLinks(con, null, null);
+    protected final Future<Void> createLinks() {
+        return createLinks(null, null);
     }
 
     /**
      * Creates the sender and receiver links to the peer for sending requests
      * and receiving responses.
      * 
-     * @param con The AMQP 1.0 connection to the peer.
      * @param senderCloseHook A handler to invoke if the peer closes the sender link unexpectedly.
      * @param receiverCloseHook A handler to invoke if the peer closes the receiver link unexpectedly.
      * @return A future indicating the outcome. The future will succeed if the links
      *         have been created.
      * @throws NullPointerException if connection is {@code null}.
      */
-    protected final Future<Void> createLinks(final ProtonConnection con, final Handler<String> senderCloseHook,
+    protected final Future<Void> createLinks(final Handler<String> senderCloseHook,
             final Handler<String> receiverCloseHook) {
 
-        Objects.requireNonNull(con);
-
-        return createReceiver(con, replyToAddress, receiverCloseHook)
+        return createReceiver(replyToAddress, receiverCloseHook)
                 .compose(recv -> {
                     this.receiver = recv;
-                    return createSender(con, targetAddress, senderCloseHook);
+                    return createSender(targetAddress, senderCloseHook);
                 }).compose(sender -> {
-                    LOG.debug("request-response client for peer [{}] created", con.getRemoteContainer());
+                    LOG.debug("request-response client for peer [{}] created", connection.getConfig().getHost());
                     this.sender = sender;
                     return Future.succeededFuture();
                 });
     }
 
-    private Future<ProtonSender> createSender(final ProtonConnection con, final String targetAddress, final Handler<String> closeHook) {
+    private Future<ProtonSender> createSender(final String targetAddress, final Handler<String> closeHook) {
 
-        return AbstractHonoClient.createSender(context, config, con, targetAddress, ProtonQoS.AT_LEAST_ONCE, closeHook);
+        return connection.createSender(targetAddress, ProtonQoS.AT_LEAST_ONCE, closeHook);
     }
 
-    private Future<ProtonReceiver> createReceiver(final ProtonConnection con, final String sourceAddress, final Handler<String> closeHook) {
+    private Future<ProtonReceiver> createReceiver(final String sourceAddress, final Handler<String> closeHook) {
 
-        return AbstractHonoClient.createReceiver(context, config, con, sourceAddress, ProtonQoS.AT_LEAST_ONCE, this::handleResponse, closeHook);
+        return connection.createReceiver(sourceAddress, ProtonQoS.AT_LEAST_ONCE, this::handleResponse, closeHook);
     }
 
     /**
@@ -790,7 +706,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
             currentSpan.setTag(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId);
         }
 
-        executeOrRunOnContext(res -> {
+        connection.executeOrRunOnContext(res -> {
             if (sender.sendQueueFull()) {
                 LOG.debug("cannot send request to peer, no credit left for link [target: {}]", targetAddress);
                 Tags.HTTP_STATUS.set(currentSpan, HttpURLConnection.HTTP_UNAVAILABLE);
@@ -807,7 +723,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
                 details.put(TracingHelper.TAG_QOS.getKey(), sender.getQoS().toString());
                 currentSpan.log(details);
                 final TriTuple<Handler<AsyncResult<R>>, Object, Span> handler = TriTuple.of(resultHandler, cacheKey, currentSpan);
-                TracingHelper.injectSpanContext(tracer, currentSpan.context(), request);
+                TracingHelper.injectSpanContext(connection.getTracer(), currentSpan.context(), request);
                 replyMap.put(correlationId, handler);
 
                 sender.send(request, deliveryUpdated -> {
@@ -851,7 +767,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
                     }
                 });
                 if (requestTimeoutMillis > 0) {
-                    context.owner().setTimer(requestTimeoutMillis, tid -> {
+                    connection.getVertx().setTimer(requestTimeoutMillis, tid -> {
                         cancelRequest(correlationId, Future.failedFuture(new ServerErrorException(
                                 HttpURLConnection.HTTP_UNAVAILABLE, "request timed out after " + requestTimeoutMillis + "ms")));
                     });

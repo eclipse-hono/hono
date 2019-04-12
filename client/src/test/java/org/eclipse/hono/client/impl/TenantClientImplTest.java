@@ -34,6 +34,7 @@ import javax.security.auth.x500.X500Principal;
 import org.apache.qpid.proton.amqp.messaging.Rejected;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.cache.ExpiringValueCache;
+import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.MessageHelper;
@@ -54,7 +55,6 @@ import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.opentracing.Tracer.SpanBuilder;
 import io.opentracing.tag.Tags;
-import io.vertx.core.Context;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
@@ -81,12 +81,12 @@ public class TenantClientImplTest {
     public Timeout globalTimeout = Timeout.seconds(5);
 
     private Vertx vertx;
-    private Context context;
     private ProtonSender sender;
     private TenantClientImpl client;
     private ExpiringValueCache<Object, TenantResult<TenantObject>> cache;
     private Tracer tracer;
     private Span span;
+    private HonoConnection connection;
 
     /**
      * Sets up the fixture.
@@ -105,13 +105,15 @@ public class TenantClientImplTest {
         when(tracer.buildSpan(anyString())).thenReturn(spanBuilder);
 
         vertx = mock(Vertx.class);
-        context = HonoClientUnitTestHelper.mockContext(vertx);
         final ProtonReceiver receiver = HonoClientUnitTestHelper.mockProtonReceiver();
         sender = HonoClientUnitTestHelper.mockProtonSender();
 
-        cache = mock(ExpiringValueCache.class);
         final RequestResponseClientConfigProperties config = new RequestResponseClientConfigProperties();
-        client = new TenantClientImpl(context, config, tracer, sender, receiver);
+        connection = HonoClientUnitTestHelper.mockHonoConnection(vertx, config);
+        when(connection.getTracer()).thenReturn(tracer);
+
+        cache = mock(ExpiringValueCache.class);
+        client = new TenantClientImpl(connection, sender, receiver);
     }
 
     /**

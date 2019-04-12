@@ -17,12 +17,18 @@ import org.apache.qpid.proton.amqp.Symbol;
 import org.eclipse.hono.client.impl.HonoConnectionImpl;
 import org.eclipse.hono.config.ClientConfigProperties;
 
+import io.opentracing.Tracer;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.proton.ProtonClientOptions;
 import io.vertx.proton.ProtonConnection;
+import io.vertx.proton.ProtonLink;
+import io.vertx.proton.ProtonMessageHandler;
+import io.vertx.proton.ProtonQoS;
+import io.vertx.proton.ProtonReceiver;
+import io.vertx.proton.ProtonSender;
 
 /**
  * A factory for creating clients for Hono's arbitrary APIs.
@@ -64,7 +70,6 @@ import io.vertx.proton.ProtonConnection;
  * the {@code Context}'s <em>runOnContext</em> method.
  */
 public interface HonoConnection extends ConnectionLifecycle,
-                                    DownstreamSenderFactory,
                                     ApplicationClientFactory,
                                     CredentialsClientFactory,
                                     RegistrationClientFactory,
@@ -85,6 +90,30 @@ public interface HonoConnection extends ConnectionLifecycle,
     static HonoConnection newConnection(final Vertx vertx, final ClientConfigProperties clientConfigProperties) {
         return new HonoConnectionImpl(vertx, clientConfigProperties);
     }
+
+    /**
+     * Gets the vert.x instance used by this connection.
+     * <p>
+     * The returned instance may be used to e.g. schedule timers.
+     * 
+     * @return The vert.x instance.
+     */
+    Vertx getVertx();
+
+    /**
+     * Gets the <em>OpenTracing</em> {@code Tracer} used for tracking
+     * distributed interactions across process boundaries.
+     * 
+     * @return The tracer.
+     */
+    Tracer getTracer();
+
+    /**
+     * Gets the configuration properties used for creating this connection.
+     * 
+     * @return The configuration.
+     */
+    ClientConfigProperties getConfig();
 
     /**
      * {@inheritDoc}
@@ -267,4 +296,114 @@ public interface HonoConnection extends ConnectionLifecycle,
      *         AMQP <em>open</em> frame, {@code false} otherwise.
      */
     boolean supportsCapability(Symbol capability);
+
+
+    /**
+     * Executes some code on the vert.x Context that has been used to establish the
+     * connection to the peer.
+     * 
+     * @param <T> The type of the result that the code produces.
+     * @param codeToRun The code to execute. The code is required to either complete or
+     *                  fail the future that is passed into the handler.
+     * @return The future passed into the handler for executing the code. The future
+     *         thus indicates the outcome of executing the code. The future will
+     *         be failed with a {@link ServerErrorException} if the <em>context</em>
+     *         property is {@code null}.
+     */
+    <T> Future<T> executeOrRunOnContext(Handler<Future<T>> codeToRun);
+
+    /**
+     * Creates a sender link.
+     * 
+     * @param targetAddress The target address of the link.
+     * @param qos The quality of service to use for the link.
+     * @param remoteCloseHook The handler to invoke when the link is closed by the peer (may be {@code null}).
+     * @return A future for the created link. The future will be completed once the link is open.
+     *         The future will fail with a {@link ServiceInvocationException} if the link cannot be opened.
+     * @throws NullPointerException if any of the arguments other than close hook is {@code null}.
+     */
+    Future<ProtonSender> createSender(
+            String targetAddress,
+            ProtonQoS qos,
+            Handler<String> remoteCloseHook);
+
+    /**
+     * Creates a receiver link.
+     * <p>
+     * The receiver will be created with its <em>autoAccept</em> property set to {@code true}
+     * and with the connection's default pre-fetch size.
+     *
+     * @param sourceAddress The address to receive messages from.
+     * @param qos The quality of service to use for the link.
+     * @param messageHandler The handler to invoke with every message received.
+     * @param remoteCloseHook The handler to invoke when the link is closed at the peer's request (may be {@code null}).
+     * @return A future for the created link. The future will be completed once the link is open.
+     *         The future will fail with a {@link ServiceInvocationException} if the link cannot be opened.
+     * @throws NullPointerException if any of the arguments other than close hook is {@code null}.
+     */
+    Future<ProtonReceiver> createReceiver(
+            String sourceAddress,
+            ProtonQoS qos,
+            ProtonMessageHandler messageHandler,
+            Handler<String> remoteCloseHook);
+
+    /**
+     * Creates a receiver link.
+     * <p>
+     * The receiver will be created with its <em>autoAccept</em> property set to {@code true}.
+     *
+     * @param sourceAddress The address to receive messages from.
+     * @param qos The quality of service to use for the link.
+     * @param messageHandler The handler to invoke with every message received.
+     * @param preFetchSize The number of credits to flow to the peer as soon as the link
+     *                     has been established. A value of 0 prevents pre-fetching and
+     *                     allows for manual flow control using the returned receiver's
+     *                     <em>flow</em> method.
+     * @param remoteCloseHook The handler to invoke when the link is closed at the peer's request (may be {@code null}).
+     * @return A future for the created link. The future will be completed once the link is open.
+     *         The future will fail with a {@link ServiceInvocationException} if the link cannot be opened.
+     * @throws NullPointerException if any of the arguments other than close hook is {@code null}.
+     * @throws IllegalArgumentException if the pre-fetch size is &lt; 0.
+     */
+    Future<ProtonReceiver> createReceiver(
+            String sourceAddress,
+            ProtonQoS qos,
+            ProtonMessageHandler messageHandler,
+            int preFetchSize,
+            Handler<String> remoteCloseHook);
+
+    /**
+     * Closes an AMQP link and frees up its allocated resources.
+     * <p>
+     * This method is equivalent to {@link #closeAndFree(ProtonLink, long, Handler)}
+     * but will use an implementation specific default time-out value.
+     *
+     * @param link The link to close. If {@code null}, the given handler is invoked immediately.
+     * @param closeHandler The handler to notify once the link has been closed.
+     * @throws NullPointerException if context or close handler are {@code null}.
+     */
+    void closeAndFree(ProtonLink<?> link, Handler<Void> closeHandler);
+
+    /**
+     * Closes an AMQP link and frees up its allocated resources.
+     * <p>
+     * This method will invoke the given handler as soon as
+     * <ul>
+     * <li>the peer's <em>detach</em> frame has been received or</li>
+     * <li>the given number of milliseconds have passed</li>
+     * </ul>
+     * Afterwards the link's resources are freed up.
+     *
+     * @param link The link to close. If {@code null}, the given handler is invoked immediately.
+     * @param detachTimeOut The maximum number of milliseconds to wait for the peer's
+     *                      detach frame or 0, if this method should wait indefinitely
+     *                      for the peer's detach frame.
+     * @param closeHandler The handler to notify once the link has been closed.
+     * @throws NullPointerException if context or close handler are {@code null}.
+     * @throws IllegalArgumentException if detach time-out is &lt; 0.
+     */
+    void closeAndFree(
+            ProtonLink<?> link,
+            long detachTimeOut,
+            Handler<Void> closeHandler);
 }

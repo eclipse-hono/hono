@@ -14,6 +14,8 @@
 
 package org.eclipse.hono.client;
 
+import org.eclipse.hono.client.impl.DownstreamSenderFactoryImpl;
+
 import io.vertx.core.Future;
 
 /**
@@ -21,6 +23,17 @@ import io.vertx.core.Future;
  *
  */
 public interface DownstreamSenderFactory extends ConnectionLifecycle {
+
+    /**
+     * Creates a new factory for an existing connection.
+     *
+     * @param connection The connection to use.
+     * @return The factory.
+     * @throws NullPointerException if connection is {@code null}
+     */
+    static DownstreamSenderFactory create(final HonoConnection connection) {
+        return new DownstreamSenderFactoryImpl(connection);
+    }
 
     /**
      * Gets a client for sending data to Hono's south bound <em>Telemetry</em> API.
@@ -34,7 +47,7 @@ public interface DownstreamSenderFactory extends ConnectionLifecycle {
      *         create a sender for the same tenant is already being executed.
      * @throws NullPointerException if the tenant is {@code null}.
      */
-    Future<MessageSender> getOrCreateTelemetrySender(String tenantId);
+    Future<DownstreamSender> getOrCreateTelemetrySender(String tenantId);
 
     /**
      * Gets a client for sending data to Hono's south bound <em>Event</em> API.
@@ -48,5 +61,5 @@ public interface DownstreamSenderFactory extends ConnectionLifecycle {
      *         create a sender for the same tenant is already being executed.
      * @throws NullPointerException if the tenant is {@code null}.
      */
-    Future<MessageSender> getOrCreateEventSender(String tenantId);
+    Future<DownstreamSender> getOrCreateEventSender(String tenantId);
 }

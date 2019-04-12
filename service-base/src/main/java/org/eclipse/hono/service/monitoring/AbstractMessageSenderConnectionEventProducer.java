@@ -17,32 +17,30 @@ import java.util.Objects;
 import java.util.function.BiFunction;
 
 import org.eclipse.hono.auth.Device;
+import org.eclipse.hono.client.DownstreamSender;
 import org.eclipse.hono.client.DownstreamSenderFactory;
-import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.util.EventConstants;
 
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 
 /**
- * A connection event producer based on a {@link MessageSender}.
+ * A connection event producer based on a {@link DownstreamSender}.
  */
 public abstract class AbstractMessageSenderConnectionEventProducer implements ConnectionEventProducer {
 
     /**
-     * The function to derive the {@link MessageSender} from the provided sender factory.
+     * The function to derive the sender from the provided sender factory.
      */
-    private final BiFunction<DownstreamSenderFactory, String, Future<MessageSender>> messageSenderSource;
+    private final BiFunction<DownstreamSenderFactory, String, Future<DownstreamSender>> messageSenderSource;
 
     /**
-     * A {@link ConnectionEventProducer} which will send events using a provided {@link MessageSender}.
+     * Creates an event producer which will send events using a downstream sender.
      * 
-     * @param messageSenderSource A function to get the {@link MessageSender} of the {@code messageSenderClient} which
-     *            should be used for actually sending the events.
+     * @param messageSenderSource A function to get a sender for a tenant.
      */
     protected AbstractMessageSenderConnectionEventProducer(
-            final BiFunction<DownstreamSenderFactory,
-            String, Future<MessageSender>> messageSenderSource) {
+            final BiFunction<DownstreamSenderFactory, String, Future<DownstreamSender>> messageSenderSource) {
 
         Objects.requireNonNull(messageSenderSource);
 
@@ -104,7 +102,7 @@ public abstract class AbstractMessageSenderConnectionEventProducer implements Co
                 });
     }
 
-    private Future<MessageSender> getOrCreateSender(final DownstreamSenderFactory messageSenderClient, final String tenant) {
+    private Future<DownstreamSender> getOrCreateSender(final DownstreamSenderFactory messageSenderClient, final String tenant) {
         return messageSenderSource.apply(messageSenderClient, tenant);
     }
 }

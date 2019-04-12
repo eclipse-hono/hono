@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -17,30 +17,27 @@ import java.net.HttpURLConnection;
 import java.util.Map;
 import java.util.Objects;
 
-import io.opentracing.Span;
-import io.opentracing.tag.Tags;
-import io.vertx.proton.ProtonHelper;
-
 import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.CommandClient;
+import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.StatusCodeMapper;
-import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.tracing.TracingHelper;
+import org.eclipse.hono.util.BufferResult;
 import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.CommandConstants;
-import org.eclipse.hono.util.BufferResult;
 import org.eclipse.hono.util.MessageHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.vertx.core.AsyncResult;
-import io.vertx.core.Context;
+import io.opentracing.Span;
+import io.opentracing.tag.Tags;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.proton.ProtonConnection;
+import io.vertx.proton.ProtonHelper;
 import io.vertx.proton.ProtonReceiver;
 import io.vertx.proton.ProtonSender;
 
@@ -55,33 +52,30 @@ public class CommandClientImpl extends AbstractRequestResponseClient<BufferResul
     private long messageCounter;
 
     /**
-     * Creates a request-response client.
+     * Creates a client for sending commands to devices.
      * <p>
      * The client will be ready to use after invoking {@link #createLinks(ProtonConnection)} or
      * {@link #createLinks(ProtonConnection, Handler, Handler)} only.
      *
-     * @param context The vert.x context to run message exchanges with the peer on.
-     * @param config The configuration properties to use.
+     * @param connection The connection to Hono.
      * @param tenantId The tenant that the device belongs to.
      * @param deviceId The device to create the client for.
      * @param replyId The replyId to use in the reply-to address.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
     CommandClientImpl(
-            final Context context,
-            final ClientConfigProperties config,
+            final HonoConnection connection,
             final String tenantId,
             final String deviceId,
             final String replyId) {
 
-        super(context, config, tenantId, deviceId, replyId);
+        super(connection, tenantId, deviceId, replyId);
     }
 
     /**
-     * Creates a request-response client.
+     * Creates a client for sending commands to devices.
      *
-     * @param context The vert.x context to run message exchanges with the peer on.
-     * @param config The configuration properties to use.
+     * @param connection The connection to Hono.
      * @param tenantId The tenant that the device belongs to.
      * @param deviceId The device to create the client for.
      * @param replyId The replyId to use in the reply-to address.
@@ -90,15 +84,14 @@ public class CommandClientImpl extends AbstractRequestResponseClient<BufferResul
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
     CommandClientImpl(
-            final Context context,
-            final ClientConfigProperties config,
+            final HonoConnection connection,
             final String tenantId,
             final String deviceId,
             final String replyId,
             final ProtonSender sender,
             final ProtonReceiver receiver) {
 
-        this(context, config, tenantId, deviceId, replyId);
+        this(connection, tenantId, deviceId, replyId);
         this.sender = Objects.requireNonNull(sender);
         this.receiver = Objects.requireNonNull(receiver);
     }
@@ -220,38 +213,32 @@ public class CommandClientImpl extends AbstractRequestResponseClient<BufferResul
      * This address is also used as the value of the <em>reply-to</em>
      * property of all command request messages sent by this client.
      *
-     * @param context The vert.x context to run all interactions with the server on.
-     * @param clientConfig The configuration properties to use.
-     * @param con The AMQP connection to the server.
+     * @param con The connection to Hono.
      * @param tenantId The tenant that the device belongs to.
      * @param deviceId The device to create the client for.
      * @param replyId The replyId to use in the reply-to address.
      * @param senderCloseHook A handler to invoke if the peer closes the sender link unexpectedly.
      * @param receiverCloseHook A handler to invoke if the peer closes the receiver link unexpectedly.
-     * @param creationHandler The handler to invoke with the outcome of the creation attempt.
+     * @return A future indicating the outcome.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
-    public static final void create(
-            final Context context,
-            final ClientConfigProperties clientConfig,
-            final ProtonConnection con,
+    public static final Future<CommandClient> create(
+            final HonoConnection con,
             final String tenantId,
             final String deviceId,
             final String replyId,
             final Handler<String> senderCloseHook,
-            final Handler<String> receiverCloseHook,
-            final Handler<AsyncResult<CommandClient>> creationHandler) {
+            final Handler<String> receiverCloseHook) {
 
-        final CommandClientImpl client = new CommandClientImpl(context, clientConfig, tenantId, deviceId, replyId);
-        client.createLinks(con, senderCloseHook, receiverCloseHook).setHandler(s -> {
-            if (s.succeeded()) {
-                LOG.debug("successfully created command client for [{}]", tenantId);
-                creationHandler.handle(Future.succeededFuture(client));
-            } else {
-                LOG.debug("failed to create command client for [{}]", tenantId, s.cause());
-                creationHandler.handle(Future.failedFuture(s.cause()));
-            }
-        });
+        final CommandClientImpl client = new CommandClientImpl(con, tenantId, deviceId, replyId);
+        return client.createLinks(senderCloseHook, receiverCloseHook)
+                .map(ok -> {
+                    LOG.debug("successfully created command client for [{}]", tenantId);
+                    return (CommandClient) client;
+                }).recover(t -> {
+                    LOG.debug("failed to create command client for [{}]", tenantId, t);
+                    return Future.failedFuture(t);
+                });
     }
 
 }

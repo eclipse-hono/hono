@@ -37,7 +37,7 @@ import org.eclipse.californium.scandium.DTLSConnector;
 import org.eclipse.californium.scandium.config.DtlsConnectorConfig;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
-import org.eclipse.hono.client.MessageSender;
+import org.eclipse.hono.client.DownstreamSender;
 import org.eclipse.hono.config.KeyLoader;
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
 import org.eclipse.hono.service.metric.MetricsTags;
@@ -496,7 +496,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
             final boolean waitForOutcome,
             final Buffer payload,
             final String contentType,
-            final Future<MessageSender> senderTracker,
+            final Future<DownstreamSender> senderTracker,
             final MetricsTags.EndpointType endpoint) {
 
         if (contentType == null) {
@@ -512,7 +512,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
             final Future<TenantObject> tenantEnabledTracker = getTenantConfiguration(device.getTenantId(), null)
                     .compose(tenantObject -> isAdapterEnabled(tenantObject));
             CompositeFuture.all(tokenTracker, senderTracker, tenantEnabledTracker).compose(ok -> {
-                    final MessageSender sender = senderTracker.result();
+                    final DownstreamSender sender = senderTracker.result();
                     final Message downstreamMessage = newMessage(
                             ResourceIdentifier.from(endpoint.getCanonicalName(), device.getTenantId(), device.getDeviceId()),
                             "/" + context.getExchange().getRequestOptions().getUriPathString(),

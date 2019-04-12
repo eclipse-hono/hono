@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -21,8 +21,8 @@ import java.util.UUID;
 import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.CredentialsClient;
+import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.StatusCodeMapper;
-import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsObject;
@@ -36,15 +36,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
-import io.opentracing.Tracer;
 import io.opentracing.tag.Tags;
-import io.vertx.core.AsyncResult;
-import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
-import io.vertx.proton.ProtonConnection;
 
 /**
  * A Vertx-Proton based client for Hono's Credentials API.
@@ -60,20 +56,15 @@ public class CredentialsClientImpl extends AbstractRequestResponseClient<Credent
 
     /**
      * Creates a new client for accessing the Credentials service.
+     * <p>
+     * The client will be ready to use after invoking {@link #createLinks()} or
+     * {@link #createLinks(Handler, Handler)} only.
      * 
-     * @param context The vert.x context to use for interacting with the service.
-     * @param config The configuration properties.
+     * @param connection The connection to Hono.
      * @param tenantId The identifier of the tenant for which the client should be created.
-     * @param tracer The <em>OpenTracing</em> tracer to use for tracking the processing of
-     *               requests across process boundaries or {@code null} to disable tracing.
      */
-    protected CredentialsClientImpl(
-            final Context context,
-            final ClientConfigProperties config,
-            final String tenantId,
-            final Tracer tracer) {
-
-        super(context, config, tracer, tenantId);
+    CredentialsClientImpl(final HonoConnection connection, final String tenantId) {
+        super(connection, tenantId);
     }
 
     @Override
@@ -126,37 +117,29 @@ public class CredentialsClientImpl extends AbstractRequestResponseClient<Credent
     /**
      * Creates a new credentials client for a tenant.
      *
-     * @param context The vert.x context to run all interactions with the server on.
-     * @param clientConfig The configuration properties to use.
-     * @param tracer The tracer instance.
-     * @param con The AMQP connection to the server.
+     * @param con The connection to the server.
      * @param tenantId The tenant for which credentials are handled.
      * @param senderCloseHook A handler to invoke if the peer closes the sender link unexpectedly.
      * @param receiverCloseHook A handler to invoke if the peer closes the receiver link unexpectedly.
-     * @param creationHandler The handler to invoke with the outcome of the creation attempt.
+     * @return A future indicating the outcome of the creation attempt.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    public static final void create(
-            final Context context,
-            final ClientConfigProperties clientConfig,
-            final Tracer tracer,
-            final ProtonConnection con,
+    public static final Future<CredentialsClient> create(
+            final HonoConnection con,
             final String tenantId,
             final Handler<String> senderCloseHook,
-            final Handler<String> receiverCloseHook,
-            final Handler<AsyncResult<CredentialsClient>> creationHandler) {
+            final Handler<String> receiverCloseHook) {
 
         LOG.debug("creating new credentials client for [{}]", tenantId);
-        final CredentialsClientImpl client = new CredentialsClientImpl(context, clientConfig, tenantId, tracer);
-        client.createLinks(con, senderCloseHook, receiverCloseHook).setHandler(s -> {
-            if (s.succeeded()) {
-                LOG.debug("successfully created credentials client for [{}]", tenantId);
-                creationHandler.handle(Future.succeededFuture(client));
-            } else {
-                LOG.debug("failed to create credentials client for [{}]", tenantId, s.cause());
-                creationHandler.handle(Future.failedFuture(s.cause()));
-            }
-        });
+        final CredentialsClientImpl client = new CredentialsClientImpl(con, tenantId);
+        return client.createLinks(senderCloseHook, receiverCloseHook)
+                .map(ok -> {
+                    LOG.debug("successfully created credentials client for [{}]", tenantId);
+                    return (CredentialsClient) client;
+                }).recover(t -> {
+                    LOG.debug("failed to create credentials client for [{}]", tenantId, t);
+                    return Future.failedFuture(t);
+                });
     }
 
     /**

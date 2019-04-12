@@ -12,48 +12,14 @@
  *******************************************************************************/
 package org.eclipse.hono.client;
 
-import java.util.Map;
-
 import io.opentracing.SpanContext;
 import io.vertx.core.Future;
-import io.vertx.core.buffer.Buffer;
 import io.vertx.proton.ProtonDelivery;
 
 /**
  * A sender to send back the response message of a command.
  */
 public interface CommandResponseSender extends MessageSender {
-
-    /**
-     * Sends a response message to a command back to the business application.
-     *
-     * @param correlationId The correlation id of the command.
-     * @param contentType The content type describing the response message's payload (may be {@code null}).
-     * @param payload The payload or {@code null}.
-     * @param properties The properties or {@code null}.
-     * @param status The status of the command, which was send to the device.
-     * @param context The currently active OpenTracing span or {@code null} if no
-     *         span is currently active. An implementation should use this as the
-     *         parent for any new span(s) it creates for tracing the execution of
-     *         this operation.
-     * @return A future indicating the outcome of the operation.
-     *         <p>
-     *         The future will succeed if the message has been accepted (and settled)
-     *         by the application.
-     *         <p>
-     *         The future will be failed with a {@link ServiceInvocationException} if the
-     *         message could not be sent or has not been accepted by the application.
-     * @throws NullPointerException if any of tenantId, deviceId, replyId or correlationId is {@code null}.
-     * @deprecated Use {@link #sendCommandResponse(CommandResponse, SpanContext)} instead.
-     */
-    @Deprecated
-    Future<ProtonDelivery> sendCommandResponse(
-            String correlationId,
-            String contentType,
-            Buffer payload,
-            Map<String, Object> properties,
-            int status,
-            SpanContext context);
 
     /**
      * Sends a response message to a command back to the business application.

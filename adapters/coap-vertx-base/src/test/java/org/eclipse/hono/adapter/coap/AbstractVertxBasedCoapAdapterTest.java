@@ -45,9 +45,9 @@ import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.CommandConsumerFactory;
 import org.eclipse.hono.client.CredentialsClientFactory;
+import org.eclipse.hono.client.DownstreamSender;
 import org.eclipse.hono.client.DownstreamSenderFactory;
 import org.eclipse.hono.client.HonoConnection;
-import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.RegistrationClientFactory;
 import org.eclipse.hono.client.TenantClient;
@@ -312,7 +312,7 @@ public class AbstractVertxBasedCoapAdapterTest {
     public void testUploadTelemetryFailsForDisabledTenant() {
 
         // GIVEN an adapter
-        final MessageSender sender = mock(MessageSender.class);
+        final DownstreamSender sender = mock(DownstreamSender.class);
         when(downstreamSenderFactory.getOrCreateTelemetrySender(anyString())).thenReturn(Future.succeededFuture(sender));
         // which is disabled for tenant "my-tenant"
         final TenantObject myTenantConfig = TenantObject.from("my-tenant", true);
@@ -528,7 +528,7 @@ public class AbstractVertxBasedCoapAdapterTest {
 
     private void givenAnEventSenderForOutcome(final Future<ProtonDelivery> outcome) {
 
-        final MessageSender sender = mock(MessageSender.class);
+        final DownstreamSender sender = mock(DownstreamSender.class);
         when(sender.sendAndWaitForOutcome(any(Message.class))).thenReturn(outcome);
 
         when(downstreamSenderFactory.getOrCreateEventSender(anyString())).thenReturn(Future.succeededFuture(sender));
@@ -536,7 +536,7 @@ public class AbstractVertxBasedCoapAdapterTest {
 
     private void givenATelemetrySenderForOutcome(final Future<ProtonDelivery> outcome) {
 
-        final MessageSender sender = mock(MessageSender.class);
+        final DownstreamSender sender = mock(DownstreamSender.class);
         when(sender.sendAndWaitForOutcome(any(Message.class))).thenReturn(outcome);
 
         when(downstreamSenderFactory.getOrCreateTelemetrySender(anyString())).thenReturn(Future.succeededFuture(sender));
@@ -544,7 +544,7 @@ public class AbstractVertxBasedCoapAdapterTest {
 
     private void givenATelemetrySender(final Future<ProtonDelivery> outcome) {
 
-        final MessageSender sender = mock(MessageSender.class);
+        final DownstreamSender sender = mock(DownstreamSender.class);
         when(sender.send(any(Message.class))).thenReturn(outcome);
 
         when(downstreamSenderFactory.getOrCreateTelemetrySender(anyString())).thenReturn(Future.succeededFuture(sender));

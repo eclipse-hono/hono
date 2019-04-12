@@ -13,6 +13,8 @@
 
 package org.eclipse.hono.client;
 
+import org.eclipse.hono.client.impl.CommandConsumer;
+
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -21,14 +21,12 @@ import org.apache.qpid.proton.amqp.messaging.Accepted;
 import org.apache.qpid.proton.amqp.messaging.Released;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.impl.AbstractHonoClient;
-import org.eclipse.hono.config.ClientConfigProperties;
 
-import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
-import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonDelivery;
 import io.vertx.proton.ProtonQoS;
 import io.vertx.proton.ProtonSender;
@@ -43,24 +41,20 @@ public class GenericMessageSender extends AbstractHonoClient {
     /**
      * Creates a sender.
      * 
-     * @param config The configuration properties to use.
+     * @param con The connection to the Hono server.
      * @param sender The sender link to send messages over.
-     * @param context The vert.x context to use for sending the messages.
      */
     public GenericMessageSender(
-            final Context context,
-            final ClientConfigProperties config,
+            final HonoConnection con,
             final ProtonSender sender) {
 
-        super(context, config);
+        super(con);
         this.sender = sender;
     }
 
     /**
      * Creates a new sender for sending messages.
      * 
-     * @param context The vert.x context to run all interactions with the server on.
-     * @param clientConfig The configuration properties to use.
      * @param con The connection to the peer.
      * @param targetAddress The target address of the sender.
      * @param closeHook The handler to invoke when the Hono server closes the sender. The sender's
@@ -69,19 +63,15 @@ public class GenericMessageSender extends AbstractHonoClient {
      * @throws NullPointerException if any of context, connection, tenant or handler is {@code null}.
      */
     public static Future<GenericMessageSender> create(
-            final Context context,
-            final ClientConfigProperties clientConfig,
-            final ProtonConnection con,
+            final HonoConnection con,
             final String targetAddress,
             final Handler<String> closeHook) {
 
-        Objects.requireNonNull(context);
         Objects.requireNonNull(con);
         Objects.requireNonNull(targetAddress);
-        Objects.requireNonNull(clientConfig);
 
-        return createSender(context, clientConfig, con, targetAddress, ProtonQoS.AT_LEAST_ONCE, closeHook).map(sender -> {
-            return new GenericMessageSender(context, clientConfig, sender);
+        return con.createSender(targetAddress, ProtonQoS.AT_LEAST_ONCE, closeHook).map(sender -> {
+            return new GenericMessageSender(con, sender);
         });
     }
 
@@ -110,7 +100,7 @@ public class GenericMessageSender extends AbstractHonoClient {
      */
     public Future<ProtonDelivery> sendAndWaitForOutcome(final Message message) {
         final Future<ProtonDelivery> result = Future.future();
-        context.runOnContext(go -> {
+        connection.executeOrRunOnContext(go -> {
             if (sender.isOpen() && sender.getCredit() > 0) {
                 sender.send(message, updatedDelivery -> {
                     if (updatedDelivery.getRemoteState() instanceof Accepted) {

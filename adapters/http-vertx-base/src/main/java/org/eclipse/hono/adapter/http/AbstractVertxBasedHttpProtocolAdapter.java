@@ -28,8 +28,8 @@ import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.Command;
 import org.eclipse.hono.client.CommandContext;
 import org.eclipse.hono.client.CommandResponse;
+import org.eclipse.hono.client.DownstreamSender;
 import org.eclipse.hono.client.MessageConsumer;
-import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.ResourceConflictException;
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
 import org.eclipse.hono.service.auth.DeviceUser;
@@ -574,7 +574,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
             final String deviceId,
             final Buffer payload,
             final String contentType,
-            final Future<MessageSender> senderTracker,
+            final Future<DownstreamSender> senderTracker,
             final MetricsTags.EndpointType endpoint) {
 
         if (!isPayloadOfIndicatedType(payload, contentType)) {
@@ -625,7 +625,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                 CompositeFuture.all(senderTracker, commandConsumerTracker)
                 .compose(ok -> {
 
-                        final MessageSender sender = senderTracker.result();
+                        final DownstreamSender sender = senderTracker.result();
 
                         final Integer ttd = Optional.ofNullable(commandConsumerTracker.result()).map(c -> ttdTracker.result())
                                 .orElse(null);

@@ -13,19 +13,30 @@
 
 package org.eclipse.hono.client.impl;
 
+import static org.hamcrest.CoreMatchers.is;
+import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.net.HttpURLConnection;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.BiConsumer;
+import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 import javax.security.sasl.AuthenticationException;
 
+import org.apache.qpid.proton.amqp.transport.AmqpError;
+import org.apache.qpid.proton.amqp.transport.ErrorCondition;
+import org.apache.qpid.proton.amqp.transport.Source;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.MessageSender;
@@ -52,6 +63,10 @@ import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.proton.ProtonClientOptions;
 import io.vertx.proton.ProtonConnection;
+import io.vertx.proton.ProtonMessageHandler;
+import io.vertx.proton.ProtonQoS;
+import io.vertx.proton.ProtonReceiver;
+import io.vertx.proton.ProtonSender;
 import io.vertx.proton.sasl.SaslSystemException;
 
 /**
@@ -82,6 +97,7 @@ public class HonoConnectionImplTest {
         vertx = mock(Vertx.class);
         final Context context = HonoClientUnitTestHelper.mockContext(vertx);
         when(vertx.getOrCreateContext()).thenReturn(context);
+        // run any timer immediately
         when(vertx.setTimer(anyLong(), any(Handler.class))).thenAnswer(invocation -> {
             final Handler<Void> handler = invocation.getArgument(1);
             handler.handle(null);
@@ -608,5 +624,272 @@ public class HonoConnectionImplTest {
                     // THEN three attempts have been made to connect
                     ctx.assertTrue(connectAttempts.get() == 3);
                 }));
+    }
+
+    /**
+     * Verifies that the close handler set on a receiver link calls
+     * the close hook passed in when creating the receiver.
+     *
+     * @param ctx The test context.
+     */
+    @Test
+    public void testCloseHandlerCallsCloseHook(final TestContext ctx) {
+        testHandlerCallsCloseHook(ctx, (receiver, captor) -> verify(receiver).closeHandler(captor.capture()));
+    }
+
+    /**
+     * Verifies that the detach handler set on a receiver link calls
+     * the close hook passed in when creating the receiver.
+     *
+     * @param ctx The test context.
+     */
+    @Test
+    public void testDetachHandlerCallsCloseHook(final TestContext ctx) {
+        testHandlerCallsCloseHook(ctx, (receiver, captor) -> verify(receiver).detachHandler(captor.capture()));
+    }
+
+    @SuppressWarnings("unchecked")
+    private void testHandlerCallsCloseHook(
+            final TestContext ctx,
+            final BiConsumer<ProtonReceiver, ArgumentCaptor<Handler<AsyncResult<ProtonReceiver>>>> handlerCaptor) {
+
+        // GIVEN an established connection
+        final Async connectAttempt = ctx.async();
+        honoConnection.connect().setHandler(ctx.asyncAssertSuccess(ok -> connectAttempt.complete()));
+        connectAttempt.await();
+        final Source source = mock(Source.class);
+        when(source.getAddress()).thenReturn("source/address");
+        final ProtonReceiver receiver = mock(ProtonReceiver.class);
+        when(receiver.isOpen()).thenReturn(Boolean.TRUE);
+        when(receiver.getSource()).thenReturn(source);
+        when(receiver.getRemoteSource()).thenReturn(source);
+        when(con.createReceiver(anyString())).thenReturn(receiver);
+
+        // WHEN creating a receiver link with a close hook
+        final Handler<String> remoteCloseHook = mock(Handler.class);
+        final ArgumentCaptor<Handler<AsyncResult<ProtonReceiver>>> captor = ArgumentCaptor.forClass(Handler.class);
+
+        final Async consumerCreation = ctx.async();
+        honoConnection.createReceiver(
+                "source",
+                ProtonQoS.AT_LEAST_ONCE,
+                mock(ProtonMessageHandler.class),
+                remoteCloseHook).setHandler(ctx.asyncAssertSuccess(rec -> consumerCreation.complete()));
+
+        // wait for peer's attach frame
+        final ArgumentCaptor<Handler<AsyncResult<ProtonReceiver>>> openHandlerCaptor = ArgumentCaptor.forClass(Handler.class);
+        verify(receiver).openHandler(openHandlerCaptor.capture());
+        openHandlerCaptor.getValue().handle(Future.succeededFuture(receiver));
+        consumerCreation.await();
+
+        // WHEN the peer sends a detach frame
+        handlerCaptor.accept(receiver, captor);
+        captor.getValue().handle(Future.succeededFuture(receiver));
+
+        // THEN the close hook is called
+        verify(remoteCloseHook).handle(any());
+
+        // and the receiver link is closed
+        verify(receiver).close();
+        verify(receiver).free();
+    }
+
+    /**
+     * Verifies that the attempt to create a receiver fails with a
+     * {@code ServiceInvocationException} if the remote peer refuses
+     * to open the link with an error condition.
+     * 
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testCreateReceiverFailsForErrorCondition(final TestContext ctx) {
+
+        testCreateReceiverFails(ctx, () -> new ErrorCondition(AmqpError.RESOURCE_LIMIT_EXCEEDED, "unauthorized"), cause -> {
+            return cause instanceof ServiceInvocationException;
+        });
+    }
+
+    /**
+     * Verifies that the attempt to create a receiver fails with a
+     * {@code ClientErrorException} if the remote peer refuses
+     * to open the link without an error condition.
+     * 
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testCreateReceiverFailsWithoutErrorCondition(final TestContext ctx) {
+
+        testCreateReceiverFails(ctx, () -> (ErrorCondition) null, cause -> {
+            return cause instanceof ClientErrorException &&
+                    ((ClientErrorException) cause).getErrorCode() == HttpURLConnection.HTTP_NOT_FOUND;
+        });
+    }
+
+    @SuppressWarnings({ "unchecked" })
+    private void testCreateReceiverFails(
+            final TestContext ctx,
+            final Supplier<ErrorCondition> errorSupplier,
+            final Predicate<Throwable> failureAssertion) {
+
+        final ProtonReceiver receiver = mock(ProtonReceiver.class);
+        when(receiver.getRemoteCondition()).thenReturn(errorSupplier.get());
+        when(con.createReceiver(anyString())).thenReturn(receiver);
+        final Handler<String> remoteCloseHook = mock(Handler.class);
+        when(vertx.setTimer(anyLong(), any(Handler.class))).thenAnswer(invocation -> {
+            // do not run timers immediately
+            return 0L;
+        });
+
+        // GIVEN an established connection
+        final Async connectAttempt = ctx.async();
+        honoConnection.connect().setHandler(ctx.asyncAssertSuccess(ok -> connectAttempt.complete()));
+        connectAttempt.await();
+
+        // WHEN creating a receiver
+        final Future<ProtonReceiver> result = honoConnection.createReceiver(
+                "source", ProtonQoS.AT_LEAST_ONCE, (delivery, msg) -> {}, remoteCloseHook);
+
+        // THEN link establishment is failed after the configured amount of time
+        verify(vertx).setTimer(eq(props.getLinkEstablishmentTimeout()), any(Handler.class));
+        // and when the peer rejects to open the link
+        final ArgumentCaptor<Handler<AsyncResult<ProtonReceiver>>> openHandler = ArgumentCaptor.forClass(Handler.class);
+        verify(receiver).openHandler(openHandler.capture());
+        openHandler.getValue().handle(Future.failedFuture(new IllegalStateException()));
+        // THEN the attempt is failed
+        assertTrue(result.failed());
+        // with the expected error condition
+        assertTrue(failureAssertion.test(result.cause()));
+        verify(remoteCloseHook, never()).handle(anyString());
+    }
+
+    /**
+     * Verifies that the attempt to create a receiver fails with a
+     * {@code ServerErrorException} if the remote peer doesn't
+     * send its attach frame in time.
+     * 
+     * @param ctx The vert.x test context.
+     */
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testCreateReceiverFailsOnTimeout(final TestContext ctx) {
+
+        final ProtonReceiver receiver = mock(ProtonReceiver.class);
+        when(receiver.isOpen()).thenReturn(Boolean.TRUE);
+        when(con.createReceiver(anyString())).thenReturn(receiver);
+        final Handler<String> remoteCloseHook = mock(Handler.class);
+
+        // GIVEN an established connection
+        final Async connectAttempt = ctx.async();
+        honoConnection.connect().setHandler(ctx.asyncAssertSuccess(ok -> connectAttempt.complete()));
+        connectAttempt.await();
+
+        final Future<ProtonReceiver> result = honoConnection.createReceiver(
+                "source", ProtonQoS.AT_LEAST_ONCE, (delivery, msg) -> {}, remoteCloseHook);
+        assertTrue(result.failed());
+        assertThat(((ServerErrorException) result.cause()).getErrorCode(), is(HttpURLConnection.HTTP_UNAVAILABLE));
+        verify(receiver).open();
+        verify(receiver).close();
+        verify(receiver).free();
+        verify(remoteCloseHook, never()).handle(anyString());
+    }
+
+    /**
+     * Verifies that the attempt to create a sender fails with a
+     * {@code ServiceInvocationException} if the remote peer refuses
+     * to open the link with an error condition.
+     * 
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testCreateSenderFailsForErrorCondition(final TestContext ctx) {
+
+        testCreateSenderFails(
+                ctx,
+                () -> (ErrorCondition) new ErrorCondition(AmqpError.RESOURCE_LIMIT_EXCEEDED, "unauthorized"),
+                cause -> {
+                    return cause instanceof ServiceInvocationException;
+                });
+    }
+
+    /**
+     * Verifies that the attempt to create a sender fails with a
+     * {@code ClientErrorException} if the remote peer refuses
+     * to open the link without an error condition.
+     * 
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testCreateSenderFailsWithoutErrorCondition(final TestContext ctx) {
+
+        testCreateSenderFails(
+                ctx,
+                () -> (ErrorCondition) null,
+                cause -> {
+                    return cause instanceof ClientErrorException &&
+                        ((ClientErrorException) cause).getErrorCode() == HttpURLConnection.HTTP_NOT_FOUND;
+                });
+    }
+
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    private void testCreateSenderFails(
+            final TestContext ctx,
+            final Supplier<ErrorCondition> errorSupplier,
+            final Predicate<Throwable> failureAssertion) {
+
+        final ProtonSender sender = mock(ProtonSender.class);
+        when(sender.getRemoteCondition()).thenReturn(errorSupplier.get());
+        when(con.createSender(anyString())).thenReturn(sender);
+        final Handler<String> remoteCloseHook = mock(Handler.class);
+        when(vertx.setTimer(anyLong(), any(Handler.class))).thenAnswer(invocation -> {
+            // do not run timers immediately
+            return 0L;
+        });
+
+        // GIVEN an established connection
+        final Async connectAttempt = ctx.async();
+        honoConnection.connect().setHandler(ctx.asyncAssertSuccess(ok -> connectAttempt.complete()));
+        connectAttempt.await();
+
+        final Future<ProtonSender> result = honoConnection.createSender(
+                "target", ProtonQoS.AT_LEAST_ONCE, remoteCloseHook);
+
+        verify(vertx).setTimer(eq(props.getLinkEstablishmentTimeout()), any(Handler.class));
+        final ArgumentCaptor<Handler> openHandler = ArgumentCaptor.forClass(Handler.class);
+        verify(sender).openHandler(openHandler.capture());
+        openHandler.getValue().handle(Future.failedFuture(new IllegalStateException()));
+        assertTrue(result.failed());
+        assertTrue(failureAssertion.test(result.cause()));
+        verify(remoteCloseHook, never()).handle(anyString());
+    }
+
+    /**
+     * Verifies that the attempt to create a sender fails with a
+     * {@code ServerErrorException} if the remote peer doesn't
+     * send its attach frame in time.
+     * 
+     * @param ctx The vert.x test context.
+     */
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testCreateSenderFailsOnTimeout(final TestContext ctx) {
+
+        final ProtonSender sender = mock(ProtonSender.class);
+        when(sender.isOpen()).thenReturn(Boolean.TRUE);
+        when(con.createSender(anyString())).thenReturn(sender);
+        final Handler<String> remoteCloseHook = mock(Handler.class);
+
+        // GIVEN an established connection
+        final Async connectAttempt = ctx.async();
+        honoConnection.connect().setHandler(ctx.asyncAssertSuccess(ok -> connectAttempt.complete()));
+        connectAttempt.await();
+
+        final Future<ProtonSender> result = honoConnection.createSender(
+                "target", ProtonQoS.AT_LEAST_ONCE, remoteCloseHook);
+        assertTrue(result.failed());
+        assertThat(((ServerErrorException) result.cause()).getErrorCode(), is(HttpURLConnection.HTTP_UNAVAILABLE));
+        verify(sender).open();
+        verify(sender).close();
+        verify(sender).free();
+        verify(remoteCloseHook, never()).handle(anyString());
     }
 }
