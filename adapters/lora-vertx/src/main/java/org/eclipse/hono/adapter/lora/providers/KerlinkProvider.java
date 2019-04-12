@@ -25,7 +25,7 @@ import java.util.Base64;
 import java.util.List;
 
 import org.eclipse.hono.adapter.lora.LoraConstants;
-import org.eclipse.hono.adapter.lora.LoraProtocolAdapter;
+import org.eclipse.hono.adapter.lora.impl.LoraProtocolAdapter;
 import org.eclipse.hono.cache.ExpiringValueCache;
 import org.eclipse.hono.client.Command;
 import org.eclipse.hono.service.cache.SpringBasedExpiringValueCache;
