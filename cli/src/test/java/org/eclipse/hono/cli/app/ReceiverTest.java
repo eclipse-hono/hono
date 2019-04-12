@@ -22,7 +22,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 import org.eclipse.hono.client.ApplicationClientFactory;
-import org.eclipse.hono.client.HonoClient;
+import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.MessageConsumer;
 import org.junit.Before;
 import org.junit.Rule;
@@ -64,7 +64,7 @@ public class ReceiverTest {
         when(vertx.getOrCreateContext()).thenReturn(mock(Context.class));
 
         final ApplicationClientFactory connection = mock(ApplicationClientFactory.class);
-        when(connection.connect()).thenReturn(Future.succeededFuture(mock(HonoClient.class)));
+        when(connection.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
         when(connection.createTelemetryConsumer(anyString(), any(Consumer.class), any(Handler.class)))
                 .thenReturn(Future.succeededFuture(mock(MessageConsumer.class)));
         when(connection.createEventConsumer(anyString(), any(Consumer.class), any(Handler.class)))

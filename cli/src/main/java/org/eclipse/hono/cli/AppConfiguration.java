@@ -14,7 +14,7 @@
 package org.eclipse.hono.cli;
 
 import org.eclipse.hono.client.ApplicationClientFactory;
-import org.eclipse.hono.client.HonoClient;
+import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -74,6 +74,6 @@ public class AppConfiguration {
      */
     @Bean
     public ApplicationClientFactory clientFactory() {
-        return HonoClient.newClient(vertx(), honoClientConfig());
+        return HonoConnection.newConnection(vertx(), honoClientConfig());
     }
 }

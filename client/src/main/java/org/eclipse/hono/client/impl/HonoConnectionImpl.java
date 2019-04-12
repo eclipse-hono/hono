@@ -41,7 +41,7 @@ import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.CommandClient;
 import org.eclipse.hono.client.CredentialsClient;
 import org.eclipse.hono.client.DisconnectListener;
-import org.eclipse.hono.client.HonoClient;
+import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.ReconnectListener;
@@ -85,12 +85,12 @@ import io.vertx.proton.sasl.SaslSystemException;
  * invocation of any of the connect methods will then use the same approach as
  * described above to determine the Context to use.
  */
-public class HonoClientImpl implements HonoClient {
+public class HonoConnectionImpl implements HonoConnection {
 
     /**
      * A logger to be shared with subclasses.
      */
-    protected final Logger log = LoggerFactory.getLogger(HonoClientImpl.class);
+    protected final Logger log = LoggerFactory.getLogger(HonoConnectionImpl.class);
     /**
      * The configuration properties for this client.
      */
@@ -141,7 +141,7 @@ public class HonoClientImpl implements HonoClient {
      * @param clientConfigProperties The configuration properties to use.
      * @throws NullPointerException if clientConfigProperties is {@code null}
      */
-    public HonoClientImpl(final Vertx vertx, final ClientConfigProperties clientConfigProperties) {
+    public HonoConnectionImpl(final Vertx vertx, final ClientConfigProperties clientConfigProperties) {
         this(vertx, null, clientConfigProperties);
     }
 
@@ -156,7 +156,7 @@ public class HonoClientImpl implements HonoClient {
      * @param clientConfigProperties The configuration properties to use.
      * @throws NullPointerException if clientConfigProperties is {@code null}
      */
-    public HonoClientImpl(final Vertx vertx, final ConnectionFactory connectionFactory,
+    public HonoConnectionImpl(final Vertx vertx, final ConnectionFactory connectionFactory,
             final ClientConfigProperties clientConfigProperties) {
 
         Objects.requireNonNull(clientConfigProperties);
@@ -340,7 +340,7 @@ public class HonoClientImpl implements HonoClient {
      * {@inheritDoc}
      */
     @Override
-    public final Future<HonoClient> connect() {
+    public final Future<HonoConnection> connect() {
         return connect(null, null);
     }
 
@@ -348,7 +348,7 @@ public class HonoClientImpl implements HonoClient {
      * {@inheritDoc}
      */
     @Override
-    public final Future<HonoClient> connect(final ProtonClientOptions options) {
+    public final Future<HonoConnection> connect(final ProtonClientOptions options) {
         return connect(Objects.requireNonNull(options), null);
     }
 
@@ -356,7 +356,7 @@ public class HonoClientImpl implements HonoClient {
      * {@inheritDoc}
      */
     @Override
-    public final Future<HonoClient> connect(final Handler<ProtonConnection> disconnectHandler) {
+    public final Future<HonoConnection> connect(final Handler<ProtonConnection> disconnectHandler) {
         return connect(null, Objects.requireNonNull(disconnectHandler));
     }
 
@@ -364,11 +364,11 @@ public class HonoClientImpl implements HonoClient {
      * {@inheritDoc}
      */
     @Override
-    public final Future<HonoClient> connect(
+    public final Future<HonoConnection> connect(
             final ProtonClientOptions options,
             final Handler<ProtonConnection> disconnectHandler) {
 
-        final Future<HonoClient> result = Future.future();
+        final Future<HonoConnection> result = Future.future();
         if (shuttingDown.get()) {
             result.fail(new ClientErrorException(HttpURLConnection.HTTP_CONFLICT, "client is already shut down"));
         } else {
@@ -379,7 +379,7 @@ public class HonoClientImpl implements HonoClient {
 
     private void connect(
             final ProtonClientOptions options,
-            final Handler<AsyncResult<HonoClient>> connectionHandler,
+            final Handler<AsyncResult<HonoConnection>> connectionHandler,
             final Handler<ProtonConnection> disconnectHandler) {
 
         context = vertx.getOrCreateContext();
@@ -479,7 +479,7 @@ public class HonoClientImpl implements HonoClient {
         }
     }
 
-    private void notifyReconnectHandlers(final AsyncResult<HonoClient> reconnectAttempt) {
+    private void notifyReconnectHandlers(final AsyncResult<HonoConnection> reconnectAttempt) {
         if (reconnectAttempt.succeeded()) {
             for (ReconnectListener listener : reconnectListeners) {
                 listener.onReconnect(this);
@@ -517,14 +517,14 @@ public class HonoClientImpl implements HonoClient {
         }
     }
 
-    private void reconnect(final Handler<AsyncResult<HonoClient>> connectionHandler,
+    private void reconnect(final Handler<AsyncResult<HonoConnection>> connectionHandler,
             final Handler<ProtonConnection> disconnectHandler) {
         reconnect(null, connectionHandler, disconnectHandler);
     }
 
     private void reconnect(
             final Throwable connectionFailureCause,
-            final Handler<AsyncResult<HonoClient>> connectionHandler,
+            final Handler<AsyncResult<HonoConnection>> connectionHandler,
             final Handler<ProtonConnection> disconnectHandler) {
 
         if (shuttingDown.get()) {
@@ -558,7 +558,7 @@ public class HonoClientImpl implements HonoClient {
                 (connectionFailureCause instanceof SaslSystemException && ((SaslSystemException) connectionFailureCause).isPermanent());
     }
 
-    private void failConnectionAttempt(final Throwable connectionFailureCause, final Handler<AsyncResult<HonoClient>> connectionHandler) {
+    private void failConnectionAttempt(final Throwable connectionFailureCause, final Handler<AsyncResult<HonoConnection>> connectionHandler) {
 
         log.info("stopping connection attempt to server [host: {}, port: {}] due to terminal error",
                 connectionFactory.getHost(), connectionFactory.getPort(), connectionFailureCause);
@@ -881,7 +881,7 @@ public class HonoClientImpl implements HonoClient {
      * Creates a new instance of {@link CredentialsClient} scoped for the given tenant identifier.
      * <p>
      * Custom implementation of {@link CredentialsClient} can be instantiated by overriding this method. Any such
-     * instance should be scoped to the given tenantId. Custom extension of {@link HonoClientImpl} must invoke
+     * instance should be scoped to the given tenantId. Custom extension of {@link HonoConnectionImpl} must invoke
      * {@link #removeCredentialsClient(String)} to cleanup when finished with the client.
      *
      * @param tenantId tenant scope for which the client is instantiated
@@ -948,7 +948,7 @@ public class HonoClientImpl implements HonoClient {
      * Creates a new instance of {@link RegistrationClient} scoped for the given tenantId.
      * <p>
      * Custom implementation of {@link RegistrationClient} can be instantiated by overriding this method. Any such
-     * instance should be scoped to the given tenantId. Custom extension of {@link HonoClientImpl} must invoke
+     * instance should be scoped to the given tenantId. Custom extension of {@link HonoConnectionImpl} must invoke
      * {@link #removeRegistrationClient(String)} to cleanup when finished with the client.
      *
      * @param tenantId tenant scope for which the client is instantiated
@@ -1005,7 +1005,7 @@ public class HonoClientImpl implements HonoClient {
      * Creates a new instance of {@link TenantClient}.
      * <p>
      * Custom implementation of {@link TenantClient} can be instantiated by overriding this method.
-     * Custom extension of {@link HonoClientImpl} must invoke
+     * Custom extension of {@link HonoConnectionImpl} must invoke
      * {@link #removeTenantClient()} to cleanup when finished with the client.
      *
      * @return a future containing an instance of {@link TenantClient}

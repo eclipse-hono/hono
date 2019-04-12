@@ -15,7 +15,7 @@ package org.eclipse.hono.tests.registry;
 
 import org.eclipse.hono.client.ConnectionLifecycle;
 import org.eclipse.hono.client.CredentialsClientFactory;
-import org.eclipse.hono.client.HonoClient;
+import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.RegistrationClientFactory;
 import org.eclipse.hono.client.TenantClientFactory;
 import org.eclipse.hono.config.ClientConfigProperties;
@@ -55,7 +55,7 @@ public final class DeviceRegistryAmqpTestSupport {
      */
     protected static TenantClientFactory prepareTenantClientFactory(final Vertx vertx, final String username, final String password) {
 
-        return HonoClient.newClient(vertx, getClientConfig(username, password));
+        return HonoConnection.newConnection(vertx, getClientConfig(username, password));
     }
 
     /**
@@ -68,7 +68,7 @@ public final class DeviceRegistryAmqpTestSupport {
      */
     protected static CredentialsClientFactory prepareCredentialsClientFactory(final Vertx vertx, final String username, final String password) {
 
-        return HonoClient.newClient(vertx, getClientConfig(username, password));
+        return HonoConnection.newConnection(vertx, getClientConfig(username, password));
     }
 
     /**
@@ -81,7 +81,7 @@ public final class DeviceRegistryAmqpTestSupport {
      */
     protected static RegistrationClientFactory prepareRegistrationClientFactory(final Vertx vertx, final String username, final String password) {
 
-        return HonoClient.newClient(vertx, getClientConfig(username, password));
+        return HonoConnection.newConnection(vertx, getClientConfig(username, password));
     }
 
     /**

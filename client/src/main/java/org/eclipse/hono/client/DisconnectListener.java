@@ -27,5 +27,5 @@ public interface DisconnectListener {
      * 
      * @param client The client representing the connection to the service.
      */
-    void onDisconnect(HonoClient client);
+    void onDisconnect(HonoConnection client);
 }

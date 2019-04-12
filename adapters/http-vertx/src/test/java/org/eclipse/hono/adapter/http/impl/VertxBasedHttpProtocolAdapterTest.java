@@ -35,7 +35,7 @@ import org.eclipse.hono.client.CommandResponse;
 import org.eclipse.hono.client.CommandResponseSender;
 import org.eclipse.hono.client.CredentialsClientFactory;
 import org.eclipse.hono.client.DownstreamSenderFactory;
-import org.eclipse.hono.client.HonoClient;
+import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.RegistrationClient;
@@ -130,7 +130,7 @@ public class VertxBasedHttpProtocolAdapterTest {
         vertx = Vertx.vertx();
 
         tenantClientFactory = mock(TenantClientFactory.class);
-        when(tenantClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoClient.class)));
+        when(tenantClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
         doAnswer(invocation -> {
             final Handler<AsyncResult<Void>> shutdownHandler = invocation.getArgument(0);
             shutdownHandler.handle(Future.succeededFuture());
@@ -138,7 +138,7 @@ public class VertxBasedHttpProtocolAdapterTest {
         }).when(tenantClientFactory).disconnect(any(Handler.class));
 
         credentialsClientFactory = mock(CredentialsClientFactory.class);
-        when(credentialsClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoClient.class)));
+        when(credentialsClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
         doAnswer(invocation -> {
             final Handler<AsyncResult<Void>> shutdownHandler = invocation.getArgument(0);
             shutdownHandler.handle(Future.succeededFuture());
@@ -146,7 +146,7 @@ public class VertxBasedHttpProtocolAdapterTest {
         }).when(credentialsClientFactory).disconnect(any(Handler.class));
 
         downstreamSenderFactory = mock(DownstreamSenderFactory.class);
-        when(downstreamSenderFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoClient.class)));
+        when(downstreamSenderFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
         doAnswer(invocation -> {
             final Handler<AsyncResult<Void>> shutdownHandler = invocation.getArgument(0);
             shutdownHandler.handle(Future.succeededFuture());
@@ -154,7 +154,7 @@ public class VertxBasedHttpProtocolAdapterTest {
         }).when(downstreamSenderFactory).disconnect(any(Handler.class));
 
         registrationClientFactory = mock(RegistrationClientFactory.class);
-        when(registrationClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoClient.class)));
+        when(registrationClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
         doAnswer(invocation -> {
             final Handler<AsyncResult<Void>> shutdownHandler = invocation.getArgument(0);
             shutdownHandler.handle(Future.succeededFuture());
@@ -162,7 +162,7 @@ public class VertxBasedHttpProtocolAdapterTest {
         }).when(registrationClientFactory).disconnect(any(Handler.class));
 
         commandConsumerFactory = mock(CommandConsumerFactory.class);
-        when(commandConsumerFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoClient.class)));
+        when(commandConsumerFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
         doAnswer(invocation -> {
             final Handler<AsyncResult<Void>> shutdownHandler = invocation.getArgument(0);
             shutdownHandler.handle(Future.succeededFuture());

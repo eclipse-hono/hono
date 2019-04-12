@@ -37,7 +37,7 @@ public interface ConnectionLifecycle {
      *         <li>the maximum number of (unsuccessful) connection attempts have been made.</li>
      *         </ul>
      */
-    Future<HonoClient> connect();
+    Future<HonoConnection> connect();
 
     /**
      * Adds a listener to be notified when the connection is lost unexpectedly.

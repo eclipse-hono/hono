@@ -23,7 +23,7 @@ import org.eclipse.hono.client.RegistrationClientFactory;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.client.TenantClientFactory;
 import org.eclipse.hono.client.impl.CommandConsumerFactoryImpl;
-import org.eclipse.hono.client.impl.HonoClientImpl;
+import org.eclipse.hono.client.impl.HonoConnectionImpl;
 import org.eclipse.hono.config.ApplicationConfigProperties;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.config.VertxProperties;
@@ -126,7 +126,7 @@ public abstract class AbstractAdapterConfig {
     @Bean
     @Scope("prototype")
     public DownstreamSenderFactory downstreamSenderFactory() {
-        return new HonoClientImpl(vertx(), downstreamSenderFactoryConfig());
+        return new HonoConnectionImpl(vertx(), downstreamSenderFactoryConfig());
     }
 
     /**
@@ -167,8 +167,8 @@ public abstract class AbstractAdapterConfig {
     @Qualifier(RegistrationConstants.REGISTRATION_ENDPOINT)
     @Scope("prototype")
     public RegistrationClientFactory registrationClientFactory() {
-        final HonoClientImpl result =
-                new HonoClientImpl(vertx(), registrationClientFactoryConfig());
+        final HonoConnectionImpl result =
+                new HonoConnectionImpl(vertx(), registrationClientFactoryConfig());
 
         final CacheProvider cacheProvider = registrationCacheProvider();
         if (cacheProvider != null) {
@@ -226,7 +226,7 @@ public abstract class AbstractAdapterConfig {
     @Qualifier(CredentialsConstants.CREDENTIALS_ENDPOINT)
     @Scope("prototype")
     public CredentialsClientFactory credentialsClientFactory() {
-        return new HonoClientImpl(vertx(), credentialsClientFactoryConfig());
+        return new HonoConnectionImpl(vertx(), credentialsClientFactoryConfig());
     }
 
     /**
@@ -266,7 +266,7 @@ public abstract class AbstractAdapterConfig {
     @Scope("prototype")
     public TenantClientFactory tenantClientFactory() {
 
-        final HonoClientImpl result = new HonoClientImpl(vertx(), tenantServiceClientConfig());
+        final HonoConnectionImpl result = new HonoConnectionImpl(vertx(), tenantServiceClientConfig());
 
         final CacheProvider cacheProvider = tenantCacheProvider();
         if (cacheProvider != null) {

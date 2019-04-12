@@ -36,7 +36,7 @@ import io.vertx.core.Vertx;
 /**
  * Implements a connection between an Adapter and the AMQP 1.0 network to receive commands and send a response.
  */
-public class CommandConsumerFactoryImpl extends HonoClientImpl implements CommandConsumerFactory {
+public class CommandConsumerFactoryImpl extends HonoConnectionImpl implements CommandConsumerFactory {
 
     /**
      * The minimum number of milliseconds to wait between checking a

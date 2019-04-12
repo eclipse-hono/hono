@@ -30,9 +30,9 @@ import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ApplicationClientFactory;
 import org.eclipse.hono.client.CommandClient;
-import org.eclipse.hono.client.HonoClient;
+import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.MessageConsumer;
-import org.eclipse.hono.client.impl.HonoClientImpl;
+import org.eclipse.hono.client.impl.HonoConnectionImpl;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.jmeter.HonoCommanderSampler;
 import org.eclipse.hono.jmeter.sampleresult.HonoCommanderSampleResult;
@@ -82,7 +82,7 @@ public class HonoCommander extends AbstractClient {
         tenant = sampler.getTenant();
         commandTimeoutInMs = sampler.getCommandTimeoutAsInt();
         triggerType = sampler.getTriggerType();
-        applicationClientFactory = new HonoClientImpl(vertx, clientConfig);
+        applicationClientFactory = new HonoConnectionImpl(vertx, clientConfig);
     }
 
     /**
@@ -156,7 +156,7 @@ public class HonoCommander extends AbstractClient {
         return shutdownTracker;
     }
 
-    private Future<HonoClient> connect() {
+    private Future<HonoConnection> connect() {
         return applicationClientFactory
                 .connect()
                 .map(client -> {

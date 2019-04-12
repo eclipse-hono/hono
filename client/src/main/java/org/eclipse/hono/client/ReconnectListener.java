@@ -29,5 +29,5 @@ public interface ReconnectListener {
      * 
      * @param client The client representing the (re-established) connection to the service.
      */
-    void onReconnect(HonoClient client);
+    void onReconnect(HonoConnection client);
 }

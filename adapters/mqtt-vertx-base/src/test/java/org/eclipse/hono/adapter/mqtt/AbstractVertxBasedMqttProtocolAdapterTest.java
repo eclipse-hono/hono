@@ -43,7 +43,7 @@ import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.CommandConsumerFactory;
 import org.eclipse.hono.client.CredentialsClientFactory;
 import org.eclipse.hono.client.DownstreamSenderFactory;
-import org.eclipse.hono.client.HonoClient;
+import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.RegistrationClient;
@@ -153,28 +153,28 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
 
         tenantClientFactory = mock(TenantClientFactory.class);
         when(tenantClientFactory.isConnected()).thenReturn(Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE)));
-        when(tenantClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoClient.class)));
+        when(tenantClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
         when(tenantClientFactory.getOrCreateTenantClient()).thenReturn(Future.succeededFuture(tenantClient));
 
         credentialsClientFactory = mock(CredentialsClientFactory.class);
         when(credentialsClientFactory.isConnected()).thenReturn(Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE)));
-        when(credentialsClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoClient.class)));
+        when(credentialsClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
 
         downstreamSenderFactory = mock(DownstreamSenderFactory.class);
         when(downstreamSenderFactory.isConnected()).thenReturn(Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE)));
-        when(downstreamSenderFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoClient.class)));
+        when(downstreamSenderFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
         when(downstreamSenderFactory.getOrCreateEventSender(anyString())).thenReturn(Future.succeededFuture(mock(MessageSender.class)));
         when(downstreamSenderFactory.getOrCreateTelemetrySender(anyString())).thenReturn(Future.succeededFuture(mock(MessageSender.class)));
 
         registrationClientFactory = mock(RegistrationClientFactory.class);
         when(registrationClientFactory.isConnected()).thenReturn(
                 Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE)));
-        when(registrationClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoClient.class)));
+        when(registrationClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
         when(registrationClientFactory.getOrCreateRegistrationClient(anyString()))
                 .thenReturn(Future.succeededFuture(regClient));
 
         commandConsumerFactory = mock(CommandConsumerFactory.class);
-        when(commandConsumerFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoClient.class)));
+        when(commandConsumerFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
         when(commandConsumerFactory.isConnected()).thenReturn(
                 Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE)));
 

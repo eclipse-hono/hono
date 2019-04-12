@@ -14,7 +14,7 @@
 package org.eclipse.hono.client;
 
 import org.apache.qpid.proton.amqp.Symbol;
-import org.eclipse.hono.client.impl.HonoClientImpl;
+import org.eclipse.hono.client.impl.HonoConnectionImpl;
 import org.eclipse.hono.config.ClientConfigProperties;
 
 import io.vertx.core.AsyncResult;
@@ -63,7 +63,7 @@ import io.vertx.proton.ProtonConnection;
  * from the same Context or to make sure that the handlers are running on the correct Context, e.g. by using
  * the {@code Context}'s <em>runOnContext</em> method.
  */
-public interface HonoClient extends ConnectionLifecycle,
+public interface HonoConnection extends ConnectionLifecycle,
                                     DownstreamSenderFactory,
                                     ApplicationClientFactory,
                                     CredentialsClientFactory,
@@ -71,18 +71,19 @@ public interface HonoClient extends ConnectionLifecycle,
                                     TenantClientFactory {
 
     /**
-     * Creates a new client using the default implementation.
+     * Creates a new connection using the default implementation.
      * <p>
-     * <strong>Note:</strong> Instances of {@link ClientConfigProperties} are not thread safe and not immutable. They
-     * must not be modified after calling this method.
+     * <strong>Note:</strong> Instances of {@link ClientConfigProperties} are not thread safe and not immutable.
+     * They must therefore not be modified after calling this method.
      *
      * @param vertx The vert.x instance to use or {@code null}, if a new vert.x instance should be created.
      * @param clientConfigProperties The client properties to use.
-     * @return The created client.
+     * @return The newly created connection. Note that the underlying AMQP connection will not be established
+     *         until one of its <em>connect</em> methods is invoked.
      * @throws NullPointerException if properties are {@code null}.
      */
-    static HonoClient newClient(final Vertx vertx, final ClientConfigProperties clientConfigProperties) {
-        return new HonoClientImpl(vertx, clientConfigProperties);
+    static HonoConnection newConnection(final Vertx vertx, final ClientConfigProperties clientConfigProperties) {
+        return new HonoConnectionImpl(vertx, clientConfigProperties);
     }
 
     /**
@@ -100,7 +101,7 @@ public interface HonoClient extends ConnectionLifecycle,
      * <p>
      * The number of times that the client should try to establish the AMQP connection with the peer
      * can be configured by means of the <em>connectAttempts</em> property of the 
-     * {@code ClientConfigProperties} passed in to the {@link #newClient(Vertx, ClientConfigProperties)}
+     * {@code ClientConfigProperties} passed in to the {@link #newConnection(Vertx, ClientConfigProperties)}
      * method.
      * <p>
      * When an established connection to the peer fails, the client will automatically try to re-connect
@@ -117,7 +118,7 @@ public interface HonoClient extends ConnectionLifecycle,
      *         </ul>
      */
     @Override
-    Future<HonoClient> connect();
+    Future<HonoConnection> connect();
 
     /**
      * Connects to the Hono server using given TCP client options.
@@ -133,7 +134,7 @@ public interface HonoClient extends ConnectionLifecycle,
      * <p>
      * The number of times that the client should try to establish the AMQP connection with the peer
      * can be configured by means of the <em>connectAttempts</em> property of the 
-     * {@code ClientConfigProperties} passed in to the {@link #newClient(Vertx, ClientConfigProperties)}
+     * {@code ClientConfigProperties} passed in to the {@link #newConnection(Vertx, ClientConfigProperties)}
      * method.
      * <p>
      * When an established connection to the peer fails, the client will automatically try to re-connect
@@ -150,7 +151,7 @@ public interface HonoClient extends ConnectionLifecycle,
      *         </ul>
      * @throws NullPointerException if the options are {@code null}.
      */
-    Future<HonoClient> connect(ProtonClientOptions options);
+    Future<HonoConnection> connect(ProtonClientOptions options);
 
     /**
      * Connects to the Hono server using default options.
@@ -166,7 +167,7 @@ public interface HonoClient extends ConnectionLifecycle,
      * <p>
      * The number of times that the client should try to establish the AMQP connection with the peer
      * can be configured by means of the <em>connectAttempts</em> property of the 
-     * {@code ClientConfigProperties} passed in to the {@link #newClient(Vertx, ClientConfigProperties)}
+     * {@code ClientConfigProperties} passed in to the {@link #newConnection(Vertx, ClientConfigProperties)}
      * method.
      * <p>
      * When an established connection to the peer fails, the given disconnect handler will be invoked.
@@ -182,7 +183,7 @@ public interface HonoClient extends ConnectionLifecycle,
      *         </ul>
      * @throws NullPointerException if the disconnect handler is {@code null}.
      */
-    Future<HonoClient> connect(Handler<ProtonConnection> disconnectHandler);
+    Future<HonoConnection> connect(Handler<ProtonConnection> disconnectHandler);
 
     /**
      * Connects to the Hono server using given options.
@@ -198,7 +199,7 @@ public interface HonoClient extends ConnectionLifecycle,
      * <p>
      * The number of times that the client should try to establish the AMQP connection with the peer
      * can be configured by means of the <em>connectAttempts</em> property of the 
-     * {@code ClientConfigProperties} passed in to the {@link #newClient(Vertx, ClientConfigProperties)}
+     * {@code ClientConfigProperties} passed in to the {@link #newConnection(Vertx, ClientConfigProperties)}
      * method.
      * <p>
      * When an established connection to the peer fails, the given disconnect handler will be invoked.
@@ -217,7 +218,7 @@ public interface HonoClient extends ConnectionLifecycle,
      *         <li>the maximum number of (unsuccessful) (re-)connection attempts have been made.</li>
      *         </ul>
      */
-    Future<HonoClient> connect(
+    Future<HonoConnection> connect(
             ProtonClientOptions options,
             Handler<ProtonConnection> disconnectHandler);
 

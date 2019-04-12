@@ -29,7 +29,7 @@ import org.eclipse.hono.client.ConnectionLifecycle;
 import org.eclipse.hono.client.CredentialsClientFactory;
 import org.eclipse.hono.client.DisconnectListener;
 import org.eclipse.hono.client.DownstreamSenderFactory;
-import org.eclipse.hono.client.HonoClient;
+import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.ReconnectListener;
@@ -580,7 +580,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * @throws NullPointerException if serviceName is {@code null}.
      * @throws IllegalArgumentException if factory is {@code null}.
      */
-    protected final Future<HonoClient> connectToService(final ConnectionLifecycle factory, final String serviceName) {
+    protected final Future<HonoConnection> connectToService(final ConnectionLifecycle factory, final String serviceName) {
         return connectToService(factory, serviceName, null, null);
     }
 
@@ -599,7 +599,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * @throws NullPointerException if serviceName is {@code null}.
      * @throws IllegalArgumentException if factory is {@code null}.
      */
-    protected final Future<HonoClient> connectToService(
+    protected final Future<HonoConnection> connectToService(
             final ConnectionLifecycle factory,
             final String serviceName,
             final DisconnectListener disconnectListener,
@@ -640,7 +640,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * 
      * @param commandConnection The lost connection.
      */
-    protected void onCommandConnectionLost(final HonoClient commandConnection) {
+    protected void onCommandConnectionLost(final HonoConnection commandConnection) {
         // empty by default
     }
 
@@ -659,7 +659,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * 
      * @param commandConnection The (re-)established connection.
      */
-    protected void onCommandConnectionEstablished(final HonoClient commandConnection) {
+    protected void onCommandConnectionEstablished(final HonoConnection commandConnection) {
         // empty by default
     }
 

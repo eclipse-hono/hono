@@ -20,9 +20,9 @@ import javax.jms.IllegalStateException;
 import org.apache.jmeter.samplers.SampleResult;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ApplicationClientFactory;
-import org.eclipse.hono.client.HonoClient;
+import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.MessageConsumer;
-import org.eclipse.hono.client.impl.HonoClientImpl;
+import org.eclipse.hono.client.impl.HonoConnectionImpl;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.jmeter.HonoReceiverSampler;
 import org.eclipse.hono.jmeter.HonoSampler;
@@ -79,7 +79,7 @@ public class HonoReceiver extends AbstractClient {
         clientConfig.setInitialCredits(Integer.parseInt(sampler.getPrefetch()));
         clientConfig.setReconnectAttempts(Integer.parseInt(sampler.getReconnectAttempts()));
         // amqp network config
-        applicationClientFactory = new HonoClientImpl(vertx, clientConfig);
+        applicationClientFactory = new HonoConnectionImpl(vertx, clientConfig);
     }
 
     /**
@@ -104,7 +104,7 @@ public class HonoReceiver extends AbstractClient {
         return result;
     }
 
-    private Future<HonoClient> connect() {
+    private Future<HonoConnection> connect() {
         return applicationClientFactory
                 .connect()
                 .map(client -> {

@@ -34,7 +34,7 @@ import org.eclipse.hono.client.CommandConsumerFactory;
 import org.eclipse.hono.client.CredentialsClientFactory;
 import org.eclipse.hono.client.DisconnectListener;
 import org.eclipse.hono.client.DownstreamSenderFactory;
-import org.eclipse.hono.client.HonoClient;
+import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.ReconnectListener;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.RegistrationClientFactory;
@@ -99,22 +99,22 @@ public class AbstractProtocolAdapterBaseTest {
     public void setup() {
 
         tenantService = mock(TenantClientFactory.class);
-        when(tenantService.connect()).thenReturn(Future.succeededFuture(mock(HonoClient.class)));
+        when(tenantService.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
 
         registrationClientFactory = mock(RegistrationClientFactory.class);
-        when(registrationClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoClient.class)));
+        when(registrationClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
 
         registrationClient = mock(RegistrationClient.class);
         when(registrationClientFactory.getOrCreateRegistrationClient(anyString())).thenReturn(Future.succeededFuture(registrationClient));
 
         credentialsClientFactory = mock(CredentialsClientFactory.class);
-        when(credentialsClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoClient.class)));
+        when(credentialsClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
 
         downstreamSenderFactory = mock(DownstreamSenderFactory.class);
-        when(downstreamSenderFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoClient.class)));
+        when(downstreamSenderFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
 
         commandConsumerFactory = mock(CommandConsumerFactory.class);
-        when(commandConsumerFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoClient.class)));
+        when(commandConsumerFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
 
         properties = new ProtocolAdapterProperties();
         adapter = newProtocolAdapter(properties);
@@ -146,7 +146,7 @@ public class AbstractProtocolAdapterBaseTest {
 
         // GIVEN an adapter that does not define a type name
         adapter = newProtocolAdapter(properties, null);
-        adapter.setRegistrationClientFactory(mock(HonoClient.class));
+        adapter.setRegistrationClientFactory(mock(HonoConnection.class));
 
         // WHEN starting the adapter
         // THEN startup fails
@@ -209,11 +209,11 @@ public class AbstractProtocolAdapterBaseTest {
             final ArgumentCaptor<ReconnectListener> reconnectHandlerCaptor = ArgumentCaptor.forClass(ReconnectListener.class);
             verify(commandConsumerFactory).addReconnectListener(reconnectHandlerCaptor.capture());
             // WHEN the command connection is lost
-            disconnectHandlerCaptor.getValue().onDisconnect(mock(HonoClient.class));
+            disconnectHandlerCaptor.getValue().onDisconnect(mock(HonoConnection.class));
             // THEN the onCommandConnectionLost hook is being invoked,
             verify(commandConnectionLostHandler).handle(null);
             // and when the connection is re-established
-            reconnectHandlerCaptor.getValue().onReconnect(mock(HonoClient.class));
+            reconnectHandlerCaptor.getValue().onReconnect(mock(HonoConnection.class));
             // the onCommandConnectionEstablished hook is being invoked
             verify(commandConnectionEstablishedHandler, times(2)).handle(null);
         }));
@@ -416,14 +416,14 @@ public class AbstractProtocolAdapterBaseTest {
             }
 
             @Override
-            protected void onCommandConnectionEstablished(final HonoClient connectedClient) {
+            protected void onCommandConnectionEstablished(final HonoConnection connectedClient) {
                 if (commandConnectionEstablishedHandler != null) {
                     commandConnectionEstablishedHandler.handle(null);
                 }
             }
 
             @Override
-            protected void onCommandConnectionLost(final HonoClient commandConnection) {
+            protected void onCommandConnectionLost(final HonoConnection commandConnection) {
                 if (commandConnectionLostHandler != null) {
                     commandConnectionLostHandler.handle(null);
                 }

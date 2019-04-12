@@ -22,7 +22,7 @@ import java.util.function.Consumer;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ApplicationClientFactory;
 import org.eclipse.hono.client.CommandClient;
-import org.eclipse.hono.client.HonoClient;
+import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ClientConfigProperties;
@@ -92,7 +92,7 @@ public class HonoExampleApplicationBase {
             props.setHostnameVerificationRequired(false);
         }
 
-        clientFactory = HonoClient.newClient(vertx, props);
+        clientFactory = HonoConnection.newConnection(vertx, props);
     }
 
     /**

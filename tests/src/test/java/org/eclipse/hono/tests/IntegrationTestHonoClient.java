@@ -16,7 +16,7 @@ package org.eclipse.hono.tests;
 
 import java.util.Objects;
 
-import org.eclipse.hono.client.impl.HonoClientImpl;
+import org.eclipse.hono.client.impl.HonoConnectionImpl;
 import org.eclipse.hono.config.ClientConfigProperties;
 
 import io.vertx.core.Future;
@@ -27,7 +27,7 @@ import io.vertx.core.Vertx;
  * A Hono client that also allows to create generic links to a peer.
  *
  */
-public class IntegrationTestHonoClient extends HonoClientImpl {
+public class IntegrationTestHonoClient extends HonoConnectionImpl {
 
     /**
      * Creates a new client.

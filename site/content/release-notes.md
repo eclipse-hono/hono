@@ -77,6 +77,9 @@ title = "Release Notes"
   package `org.eclipse.hono.service.http` in the *service-base* module for
   consistency reasons as all other reusable classes for implementing HTTP services/
   adapters are located in that package already.
+* The `org.eclipse.hono.client.HonoClient` class has been renamed to
+  `org.eclipse.hono.client.HonoConnection` to better reflect its sole responsibility
+  for establishing (and maintaining) the connection to a Hono service endpoint.
 
 ## 1.0-M1
 

@@ -26,10 +26,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.jmeter.samplers.SampleResult;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.DownstreamSenderFactory;
-import org.eclipse.hono.client.HonoClient;
+import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.ServiceInvocationException;
-import org.eclipse.hono.client.impl.HonoClientImpl;
+import org.eclipse.hono.client.impl.HonoConnectionImpl;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.jmeter.HonoSampler;
 import org.eclipse.hono.jmeter.HonoSenderSampler;
@@ -81,7 +81,7 @@ public class HonoSender extends AbstractClient {
         honoProps.setPassword(sampler.getPwd());
         honoProps.setTrustStorePath(sampler.getTrustStorePath());
         honoProps.setReconnectAttempts(MAX_RECONNECT_ATTEMPTS);
-        downstreamSenderFactory = new HonoClientImpl(vertx, honoProps);
+        downstreamSenderFactory = new HonoConnectionImpl(vertx, honoProps);
     }
 
     /**
@@ -120,7 +120,7 @@ public class HonoSender extends AbstractClient {
         return result;
     }
 
-    private Future<HonoClient> connectToAmqpMessagingNetwork() {
+    private Future<HonoConnection> connectToAmqpMessagingNetwork() {
 
         return downstreamSenderFactory
                 .connect()
