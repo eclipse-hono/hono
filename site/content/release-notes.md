@@ -27,6 +27,9 @@ title = "Release Notes"
 * The concept and implementation of *message limit* have been added. The protocol adapters can be now 
   enabled to verify this *message limit* for each tenant before accepting any telemetry/event messages.
   Please refer to the [resource limits]({{< ref "/concepts/resource-limits.md" >}}) for details.  
+* A basic Sigfox protocol adapter, for use with the Sigfox backend. Please read
+  the [Sigfox protocol adapter]({{< ref "/user-guide/sigfox-adapter" >}})
+  documentation to learn more about pre-requisites and limitations.
 
 ### Fixes & Enhancements
 
