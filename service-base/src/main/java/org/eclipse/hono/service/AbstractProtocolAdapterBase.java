@@ -482,7 +482,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * Checks if this adapter may accept another connection from a device.
      * <p>
      * This default implementation uses the
-     * {@link ResourceLimitChecks#isConnectionLimitExceeded(TenantObject)} method
+     * {@link ResourceLimitChecks#isConnectionLimitReached(TenantObject)} method
      * to verify if the tenant's connection limit has been reached.
      * 
      * @param tenantConfig The tenant to check the connection limit for.
@@ -495,7 +495,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     protected Future<Void> checkConnectionLimit(final TenantObject tenantConfig) {
 
         Objects.requireNonNull(tenantConfig);
-        return resourceLimitChecks.isConnectionLimitExceeded(tenantConfig)
+        return resourceLimitChecks.isConnectionLimitReached(tenantConfig)
                 .recover(t -> Future.succeededFuture(Boolean.FALSE))
                 .compose(isExceeded -> {
                     if (isExceeded) {
