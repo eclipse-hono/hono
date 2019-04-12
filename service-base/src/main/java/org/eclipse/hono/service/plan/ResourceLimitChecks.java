@@ -24,7 +24,7 @@ public interface ResourceLimitChecks {
 
     /**
      * Checks if the maximum number of connections configured for a tenant
-     * have been exceeded.
+     * have been reached.
      * 
      * @param tenantObject The tenant configuration to check the limit against.
      * @return A future indicating the outcome of the check.
@@ -32,5 +32,5 @@ public interface ResourceLimitChecks {
      *         The future will be failed with a {@link ServiceInvocationException}
      *         if the check could not be performed.
      */
-    Future<Boolean> isConnectionLimitExceeded(TenantObject tenantObject);
+    Future<Boolean> isConnectionLimitReached(TenantObject tenantObject);
 }

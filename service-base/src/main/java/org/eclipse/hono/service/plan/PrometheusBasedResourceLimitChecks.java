@@ -57,7 +57,7 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
     }
 
     @Override
-    public Future<Boolean> isConnectionLimitExceeded(final TenantObject tenant) {
+    public Future<Boolean> isConnectionLimitReached(final TenantObject tenant) {
 
         Objects.requireNonNull(tenant);
 

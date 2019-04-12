@@ -180,7 +180,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
 
         authHandler = mock(AuthHandler.class);
         resourceLimitChecks = mock(ResourceLimitChecks.class);
-        when(resourceLimitChecks.isConnectionLimitExceeded(any(TenantObject.class))).thenReturn(Future.succeededFuture(Boolean.FALSE));
+        when(resourceLimitChecks.isConnectionLimitReached(any(TenantObject.class))).thenReturn(Future.succeededFuture(Boolean.FALSE));
     }
 
     /**
@@ -1021,7 +1021,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         // WHEN a device tries to establish a connection
         when(authHandler.authenticateDevice(any(MqttContext.class)))
                 .thenReturn(Future.succeededFuture(new DeviceUser("DEFAULT_TENANT", "4711")));
-        when(resourceLimitChecks.isConnectionLimitExceeded(any(TenantObject.class)))
+        when(resourceLimitChecks.isConnectionLimitReached(any(TenantObject.class)))
                 .thenReturn(Future.succeededFuture(Boolean.TRUE));
         final MqttEndpoint endpoint = getMqttEndpointAuthenticated();
         adapter.handleEndpointConnection(endpoint);
