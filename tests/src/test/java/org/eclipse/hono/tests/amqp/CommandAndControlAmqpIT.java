@@ -31,7 +31,7 @@ import org.eclipse.hono.client.AsyncCommandClient;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.CommandClient;
 import org.eclipse.hono.client.MessageConsumer;
-import org.eclipse.hono.tests.GenericMessageSender;
+import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.EventConstants;
@@ -83,7 +83,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
 
     private Future<MessageConsumer> createEventConsumer(final String tenantId, final Consumer<Message> messageConsumer) {
 
-        return helper.honoClient.createEventConsumer(tenantId, messageConsumer, remoteClose -> {});
+        return helper.applicationClientFactory.createEventConsumer(tenantId, messageConsumer, remoteClose -> {});
     }
 
     private Future<ProtonReceiver> subscribeToCommands(
@@ -200,7 +200,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
 
         final Async commandClientCreation = ctx.async();
 
-        final Future<MessageConsumer> asyncResponseConsumer = helper.honoClient.createAsyncCommandResponseConsumer(
+        final Future<MessageConsumer> asyncResponseConsumer = helper.applicationClientFactory.createAsyncCommandResponseConsumer(
                 tenantId,
                 replyId,
                 response -> {
@@ -211,7 +211,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
                     }
                 },
                 null);
-        final Future<AsyncCommandClient> asyncCommandClient = helper.honoClient.getOrCreateAsyncCommandClient(tenantId, deviceId);
+        final Future<AsyncCommandClient> asyncCommandClient = helper.applicationClientFactory.getOrCreateAsyncCommandClient(tenantId, deviceId);
 
         CompositeFuture.all(asyncResponseConsumer, asyncCommandClient).setHandler(ctx.asyncAssertSuccess(ok -> commandClientCreation.complete()));
         commandClientCreation.await();
@@ -287,7 +287,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
         final long start = System.currentTimeMillis();
 
         final Async commandClientCreation = ctx.async();
-        final Future<CommandClient> commandClient = helper.honoClient.getOrCreateCommandClient(tenantId, deviceId, "test-client")
+        final Future<CommandClient> commandClient = helper.applicationClientFactory.getOrCreateCommandClient(tenantId, deviceId, "test-client")
                 .setHandler(ctx.asyncAssertSuccess(c -> {
                     c.setRequestTimeout(200);
                     commandClientCreation.complete();
@@ -357,11 +357,11 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
         setup.await();
         notificationReceived.await();
 
-        final AtomicReference<GenericMessageSender> sender = new AtomicReference<>();
+        final AtomicReference<MessageSender> sender = new AtomicReference<>();
         final Async senderCreation = ctx.async();
         final String targetAddress = String.format(COMMAND_ADDRESS_TEMPLATE, tenantId, deviceId);
 
-        helper.honoClient.createGenericMessageSender(targetAddress).map(s -> {
+        helper.applicationClientFactory.createGenericMessageSender(targetAddress).map(s -> {
             log.debug("created generic sender for sending commands [target address: {}]", targetAddress);
             sender.set(s);
             senderCreation.complete();

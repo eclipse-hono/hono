@@ -18,6 +18,7 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.client.impl.ApplicationClientFactoryImpl;
 
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -28,6 +29,17 @@ import io.vertx.proton.ProtonDelivery;
  *
  */
 public interface ApplicationClientFactory extends ConnectionLifecycle {
+
+    /**
+     * Creates a new factory for an existing connection.
+     *
+     * @param connection The connection to use.
+     * @return The factory.
+     * @throws NullPointerException if connection is {@code null}
+     */
+    static ApplicationClientFactory create(final HonoConnection connection) {
+        return new ApplicationClientFactoryImpl(connection);
+    }
 
     /**
      * Creates a client for consuming data from Hono's north bound <em>Telemetry API</em>.

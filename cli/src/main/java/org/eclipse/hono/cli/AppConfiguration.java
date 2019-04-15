@@ -74,6 +74,6 @@ public class AppConfiguration {
      */
     @Bean
     public ApplicationClientFactory clientFactory() {
-        return HonoConnection.newConnection(vertx(), honoClientConfig());
+        return ApplicationClientFactory.create(HonoConnection.newConnection(vertx(), honoClientConfig()));
     }
 }

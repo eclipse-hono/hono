@@ -16,44 +16,32 @@ import java.net.HttpURLConnection;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.BiConsumer;
-import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import javax.security.sasl.AuthenticationException;
 
 import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
-import org.apache.qpid.proton.message.Message;
-import org.eclipse.hono.client.AsyncCommandClient;
 import org.eclipse.hono.client.ClientErrorException;
-import org.eclipse.hono.client.CommandClient;
 import org.eclipse.hono.client.DisconnectListener;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.MessageConsumer;
-import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.ReconnectListener;
-import org.eclipse.hono.client.RequestResponseClient;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.connection.ConnectionFactory;
-import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.HonoProtonHelper;
-import org.eclipse.hono.util.ResourceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -67,7 +55,6 @@ import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.proton.ProtonClientOptions;
 import io.vertx.proton.ProtonConnection;
-import io.vertx.proton.ProtonDelivery;
 import io.vertx.proton.ProtonLink;
 import io.vertx.proton.ProtonMessageHandler;
 import io.vertx.proton.ProtonQoS;
@@ -99,11 +86,6 @@ public class HonoConnectionImpl implements HonoConnection {
      */
     protected final ClientConfigProperties clientConfigProperties;
     /**
-     * The senders that can be used to send telemetry and or event messages.
-     * The target address is used as the key, e.g. <em>telemetry/DEFAULT_TENANT</em>.
-     */
-    protected final Map<String, MessageSender> activeSenders = new HashMap<>();
-    /**
      * The vert.x instance to run on.
      */
     protected final Vertx vertx;
@@ -117,8 +99,6 @@ public class HonoConnectionImpl implements HonoConnection {
      */
     protected volatile Context context;
 
-    private final Map<String, RequestResponseClient> activeRequestResponseClients = new HashMap<>();
-    private final Map<String, Boolean> creationLocks = new HashMap<>();
     private final List<Handler<Void>> creationRequests = new ArrayList<>();
     private final List<DisconnectListener> disconnectListeners = new ArrayList<>();
     private final List<ReconnectListener> reconnectListeners = new ArrayList<>();
@@ -500,8 +480,6 @@ public class HonoConnectionImpl implements HonoConnection {
 
         setConnection(null);
 
-        activeSenders.clear();
-        activeRequestResponseClients.clear();
         failAllCreationRequests();
         notifyDisconnectHandlers();
         // make sure we make configured number of attempts to re-connect
@@ -589,186 +567,6 @@ public class HonoConnectionImpl implements HonoConnection {
     }
 
     /**
-     * Gets an existing or creates a new message sender.
-     * <p>
-     * This method will first try to look up an already existing
-     * sender using the given key. If no sender exists yet, a new
-     * instance is created using the given factory and put to the cache.
-     * 
-     * @param key The key to cache the sender under.
-     * @param newSenderSupplier The factory to use for creating a
-     *        new sender (if necessary).
-     * @return A future indicating the outcome. The future will be
-     *         completed with the sender or failed with a
-     *         {@link ServiceInvocationException} if no sender could be
-     *         created using the factory.
-     */
-    protected Future<MessageSender> getOrCreateSender(
-            final String key,
-            final Supplier<Future<MessageSender>> newSenderSupplier) {
-
-        return executeOrRunOnContext(result -> getOrCreateSender(key, newSenderSupplier, result));
-    }
-
-    /**
-     * Builds a unique resources key for the given message sender class and target address for caching.
-     *
-     * @param senderClass The class of the sender.
-     * @param targetAddress The target address of the sender.
-     * @return A key to cache the sender.
-     */
-    private static String getResourcesKeyForSender(final Class<?> senderClass, final String targetAddress) {
-        return senderClass.getSimpleName() + '#' + targetAddress;
-    }
-
-    private void getOrCreateSender(
-            final String key,
-            final Supplier<Future<MessageSender>> newSenderSupplier,
-            final Future<MessageSender> result) {
-
-        final MessageSender sender = activeSenders.get(key);
-        if (sender != null && sender.isOpen()) {
-            log.debug("reusing existing message sender [target: {}, credit: {}]", key, sender.getCredit());
-            result.tryComplete(sender);
-        } else if (!creationLocks.computeIfAbsent(key, k -> Boolean.FALSE)) {
-            // register a handler to be notified if the underlying connection to the server fails
-            // so that we can fail the result handler passed in
-            final Handler<Void> connectionFailureHandler = connectionLost -> {
-                // remove lock so that next attempt to open a sender doesn't fail
-                creationLocks.remove(key);
-                result.tryFail(
-                        new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "no connection to service"));
-            };
-            creationRequests.add(connectionFailureHandler);
-            creationLocks.put(key, Boolean.TRUE);
-            log.debug("creating new message sender for {}", key);
-
-            newSenderSupplier.get().setHandler(creationAttempt -> {
-                creationLocks.remove(key);
-                creationRequests.remove(connectionFailureHandler);
-                if (creationAttempt.succeeded()) {
-                    final MessageSender newSender = creationAttempt.result();
-                    log.debug("successfully created new message sender for {}", key);
-                    activeSenders.put(key, newSender);
-                    result.complete(newSender);
-                } else {
-                    log.debug("failed to create new message sender for {}", key, creationAttempt.cause());
-                    activeSenders.remove(key);
-                    result.tryFail(creationAttempt.cause());
-                }
-            });
-
-        } else {
-            log.debug("already trying to create a message sender for {}", key);
-            result.tryFail(new ServerErrorException(
-                    HttpURLConnection.HTTP_UNAVAILABLE, "no connection to service"));
-        }
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public final Future<MessageConsumer> createTelemetryConsumer(
-            final String tenantId,
-            final Consumer<Message> messageConsumer,
-            final Handler<Void> closeHandler) {
-
-        return createConsumer(
-                tenantId,
-                () -> newTelemetryConsumer(tenantId, messageConsumer, closeHandler));
-    }
-
-    private Future<MessageConsumer> newTelemetryConsumer(
-            final String tenantId,
-            final Consumer<Message> messageConsumer,
-            final Handler<Void> closeHandler) {
-
-        return checkConnected().compose(con -> 
-            TelemetryConsumerImpl.create(this, tenantId, messageConsumer, closeHook -> closeHandler.handle(null))
-        );
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public final Future<MessageConsumer> createEventConsumer(
-            final String tenantId,
-            final Consumer<Message> eventConsumer,
-            final Handler<Void> closeHandler) {
-
-        return createEventConsumer(tenantId, (delivery, message) -> eventConsumer.accept(message), closeHandler);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public final Future<MessageConsumer> createEventConsumer(
-            final String tenantId,
-            final BiConsumer<ProtonDelivery, Message> messageConsumer,
-            final Handler<Void> closeHandler) {
-
-        return createConsumer(
-                tenantId,
-                () -> newEventConsumer(tenantId, messageConsumer, closeHandler));
-    }
-
-    private Future<MessageConsumer> newEventConsumer(
-            final String tenantId,
-            final BiConsumer<ProtonDelivery, Message> messageConsumer,
-            final Handler<Void> closeHandler) {
-
-        return checkConnected().compose(con -> 
-            EventConsumerImpl.create(this, tenantId, messageConsumer, closeHook -> closeHandler.handle(null))
-        );
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public final Future<MessageConsumer> createAsyncCommandResponseConsumer(
-            final String tenantId, final String replyId,
-            final Consumer<Message> consumer,
-            final Handler<Void> closeHandler) {
-
-        return createAsyncCommandResponseConsumer(tenantId, replyId,
-                (delivery, message) -> consumer.accept(message), closeHandler);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public final Future<MessageConsumer> createAsyncCommandResponseConsumer(
-            final String tenantId, final String replyId,
-            final BiConsumer<ProtonDelivery, Message> consumer,
-            final Handler<Void> closeHandler) {
-
-        return createConsumer(
-                tenantId,
-                () -> newAsyncCommandResponseConsumer(tenantId, replyId, consumer, closeHandler));
-    }
-
-    private Future<MessageConsumer> newAsyncCommandResponseConsumer(
-            final String tenantId,
-            final String replyId,
-            final BiConsumer<ProtonDelivery, Message> messageConsumer,
-            final Handler<Void> closeHandler) {
-
-        return checkConnected().compose(con -> {
-            return AsyncCommandResponseConsumerImpl.create(
-                    this,
-                    tenantId,
-                    replyId,
-                    messageConsumer,
-                    closeHook -> closeHandler.handle(null));
-        });
-    }
-
-    /**
      * Creates a new message consumer for a tenant.
      * 
      * @param tenantId The tenant to create the consumer for.
@@ -807,139 +605,6 @@ public class HonoConnectionImpl implements HonoConnection {
                 result.tryFail(attempt.cause());
             }
         });
-    }
-
-    private void removeActiveRequestResponseClient(final String targetAddress) {
-
-        final RequestResponseClient client = activeRequestResponseClients.remove(targetAddress);
-        if (client != null) {
-            client.close(s -> {
-            });
-            log.debug("closed and removed client for [{}]", targetAddress);
-        }
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public Future<CommandClient> getOrCreateCommandClient(final String tenantId, final String deviceId) {
-        return getOrCreateCommandClient(tenantId, deviceId, UUID.randomUUID().toString());
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public Future<CommandClient> getOrCreateCommandClient(final String tenantId, final String deviceId,
-            final String replyId) {
-
-        Objects.requireNonNull(tenantId);
-        Objects.requireNonNull(deviceId);
-        Objects.requireNonNull(replyId);
-
-        log.debug("get or create command client for [tenantId: {}, deviceId: {}, replyId: {}]", tenantId, deviceId,
-                replyId);
-        return getOrCreateRequestResponseClient(
-                ResourceIdentifier.from(CommandConstants.COMMAND_ENDPOINT, tenantId, deviceId).toString(),
-                () -> newCommandClient(tenantId, deviceId, replyId)).map(c -> (CommandClient) c);
-    }
-
-    private Future<RequestResponseClient> newCommandClient(final String tenantId, final String deviceId,
-            final String replyId) {
-        return checkConnected().compose(connected -> {
-            return CommandClientImpl.create(
-                    this,
-                    tenantId,
-                    deviceId,
-                    replyId,
-                    this::removeActiveRequestResponseClient,
-                    this::removeActiveRequestResponseClient)
-             .map(client -> (RequestResponseClient) client);
-        });
-    }
-
-    @Override
-    public Future<AsyncCommandClient> getOrCreateAsyncCommandClient(final String tenantId, final String deviceId) {
-        Objects.requireNonNull(tenantId);
-        Objects.requireNonNull(deviceId);
-
-        return getOrCreateSender(
-                getResourcesKeyForSender(AsyncCommandClientImpl.class, AsyncCommandClientImpl.getTargetAddress(tenantId,
-                        deviceId)),
-                () -> newAsyncCommandClient(tenantId, deviceId)).map(client -> (AsyncCommandClient) client);
-    }
-
-    private Future<MessageSender> newAsyncCommandClient(final String tenantId, final String deviceId) {
-        return checkConnected().compose(connected -> {
-            return AsyncCommandClientImpl.create(
-                    this,
-                    tenantId,
-                    deviceId,
-                    onSenderClosed -> {
-                        activeSenders.remove(getResourcesKeyForSender(AsyncCommandClientImpl.class,
-                                AsyncCommandClientImpl.getTargetAddress(tenantId,
-                                        deviceId)));
-                    })
-             .map(client -> (MessageSender) client);
-        });
-    }
-
-    /**
-     * Gets an existing or creates a new request-response client for a particular service.
-     *
-     * @param key The key to look-up the client by.
-     * @param clientSupplier A consumer for an attempt to create a new client.
-     * @return A future indicating the outcome of the operation.
-     */
-    protected Future<RequestResponseClient> getOrCreateRequestResponseClient(
-            final String key,
-            final Supplier<Future<RequestResponseClient>> clientSupplier) {
-
-        return executeOrRunOnContext(result -> getOrCreateRequestResponseClient(key, clientSupplier, result));
-    }
-
-    private void getOrCreateRequestResponseClient(
-            final String key,
-            final Supplier<Future<RequestResponseClient>> clientSupplier,
-            final Future<RequestResponseClient> result) {
-
-        final RequestResponseClient client = activeRequestResponseClients.get(key);
-        if (client != null && client.isOpen()) {
-            log.debug("reusing existing client [target: {}]", key);
-            result.complete(client);
-        } else if (!creationLocks.computeIfAbsent(key, k -> Boolean.FALSE)) {
-
-            // register a handler to be notified if the underlying connection to the server fails
-            // so that we can fail the result handler passed in
-            final Handler<Void> connectionFailureHandler = connectionLost -> {
-                // remove lock so that next attempt to open a sender doesn't fail
-                creationLocks.remove(key);
-                result.tryFail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "no connection to service"));
-            };
-            creationRequests.add(connectionFailureHandler);
-            creationLocks.put(key, Boolean.TRUE);
-            log.debug("creating new client [target: {}]", key);
-
-            clientSupplier.get().setHandler(creationAttempt -> {
-                if (creationAttempt.succeeded()) {
-                    log.debug("successfully created new client [target: {}]", key);
-                    activeRequestResponseClients.put(key, creationAttempt.result());
-                    result.tryComplete(creationAttempt.result());
-                } else {
-                    log.debug("failed to create new client [target: {}]", key, creationAttempt.cause());
-                    activeRequestResponseClients.remove(key);
-                    result.tryFail(creationAttempt.cause());
-                }
-                creationLocks.remove(key);
-                creationRequests.remove(connectionFailureHandler);
-            });
-
-        } else {
-            log.debug("already trying to create a client [target: {}]", key);
-            result.fail(new ServerErrorException(
-                    HttpURLConnection.HTTP_UNAVAILABLE, "no connection to service"));
-        }
     }
 
     /**

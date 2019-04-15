@@ -25,7 +25,7 @@ import java.util.function.Function;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.MessageConsumer;
-import org.eclipse.hono.tests.GenericMessageSender;
+import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.EventConstants;
@@ -78,7 +78,7 @@ public class CommandAndControlMqttIT extends MqttTestBase {
 
     private Future<MessageConsumer> createConsumer(final String tenantId, final Consumer<Message> messageConsumer) {
 
-        return helper.honoClient.createEventConsumer(tenantId, messageConsumer, remoteClose -> {});
+        return helper.applicationClientFactory.createEventConsumer(tenantId, messageConsumer, remoteClose -> {});
     }
 
     private Future<Void> subscribeToCommands(final Handler<MqttPublishMessage> msgHandler, final int qos) {
@@ -285,11 +285,11 @@ public class CommandAndControlMqttIT extends MqttTestBase {
         setup.await();
         notificationReceived.await();
 
-        final AtomicReference<GenericMessageSender> sender = new AtomicReference<>();
+        final AtomicReference<MessageSender> sender = new AtomicReference<>();
         final Async senderCreation = ctx.async();
         final String commandTopic = String.format(COMMAND_TOPIC_TEMPLATE, tenantId, deviceId);
 
-        helper.honoClient.createGenericMessageSender(commandTopic).map(s -> {
+        helper.applicationClientFactory.createGenericMessageSender(commandTopic).map(s -> {
             sender.set(s);
             senderCreation.complete();
             return s;

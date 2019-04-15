@@ -36,7 +36,7 @@ abstract class AbstractApplicationClient extends AbstractCliClient {
     protected ApplicationClientFactory clientFactory;
 
     @Autowired
-    public final void setHonoConnection(final ApplicationClientFactory connection) {
-        this.clientFactory = Objects.requireNonNull(connection);
+    public final void setApplicationClientFactory(final ApplicationClientFactory factory) {
+        this.clientFactory = Objects.requireNonNull(factory);
     }
 }

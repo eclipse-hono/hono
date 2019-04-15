@@ -77,8 +77,8 @@ public class HonoExampleApplicationBase {
      * <p>
      * The client for receiving data is instantiated here.
      * <p>
-     * NB: if you want to integrate this code with your own software, it might be necessary to copy the truststore to
-     * your project as well and adopt the file path.
+     * NB: if you want to integrate this code with your own software, it might be necessary to copy the trust
+     * store to your project as well and adopt the file path.
      */
     public HonoExampleApplicationBase() {
 
@@ -92,7 +92,7 @@ public class HonoExampleApplicationBase {
             props.setHostnameVerificationRequired(false);
         }
 
-        clientFactory = HonoConnection.newConnection(vertx, props);
+        clientFactory = ApplicationClientFactory.create(HonoConnection.newConnection(vertx, props));
     }
 
     /**

@@ -18,7 +18,7 @@ import java.util.List;
 import javax.annotation.PostConstruct;
 
 import org.apache.qpid.proton.message.Message;
-import org.eclipse.hono.client.ApplicationClientFactory;
+import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.util.MessageHelper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
@@ -31,7 +31,7 @@ import io.vertx.core.Handler;
 import io.vertx.core.buffer.Buffer;
 
 /**
- * A command line client for receiving messages from via Hono's northbound Telemetry and/or Event API
+ * A command line client for receiving messages from via Hono's north bound Telemetry and/or Event API
  * <p>
  * Messages are output to stdout.
  * <p>
@@ -63,18 +63,18 @@ public class Receiver extends AbstractApplicationClient {
         return clientFactory.connect()
                 .compose(con -> {
                     clientFactory.addReconnectListener(this::createConsumer);
-                    return createConsumer(clientFactory);
+                    return createConsumer(con);
                 })
                 .setHandler(this::handleCreateConsumerStatus);
     }
 
-    private CompositeFuture createConsumer(final ApplicationClientFactory clientFactory) {
+    private CompositeFuture createConsumer(final HonoConnection connection) {
 
         final Handler<Void> closeHandler = closeHook -> {
             LOG.info("close handler of consumer is called");
             vertx.setTimer(connectionRetryInterval, reconnect -> {
                 LOG.info("attempting to re-open the consumer link ...");
-                createConsumer(clientFactory);
+                createConsumer(connection);
             });
         };
 
@@ -86,8 +86,8 @@ public class Receiver extends AbstractApplicationClient {
         }
 
         if (messageType.equals(TYPE_TELEMETRY) || messageType.equals(TYPE_ALL)) {
-            consumerFutures.add(clientFactory
-                    .createTelemetryConsumer(tenantId, msg -> handleMessage(TYPE_TELEMETRY, msg), closeHandler));
+            consumerFutures.add(
+                    clientFactory.createTelemetryConsumer(tenantId, msg -> handleMessage(TYPE_TELEMETRY, msg), closeHandler));
         }
 
         if (consumerFutures.isEmpty()) {

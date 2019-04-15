@@ -22,7 +22,6 @@ import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ApplicationClientFactory;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.MessageConsumer;
-import org.eclipse.hono.client.impl.HonoConnectionImpl;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.jmeter.HonoReceiverSampler;
 import org.eclipse.hono.jmeter.HonoSampler;
@@ -79,7 +78,7 @@ public class HonoReceiver extends AbstractClient {
         clientConfig.setInitialCredits(Integer.parseInt(sampler.getPrefetch()));
         clientConfig.setReconnectAttempts(Integer.parseInt(sampler.getReconnectAttempts()));
         // amqp network config
-        applicationClientFactory = new HonoConnectionImpl(vertx, clientConfig);
+        applicationClientFactory = ApplicationClientFactory.create(HonoConnection.newConnection(vertx, clientConfig));
     }
 
     /**

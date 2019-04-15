@@ -22,9 +22,11 @@ import org.apache.qpid.proton.amqp.messaging.Released;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.HonoConnection;
+import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.impl.AbstractHonoClient;
 
+import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.proton.ProtonDelivery;
@@ -36,7 +38,7 @@ import io.vertx.proton.ProtonSender;
  * A generic sender for arbitrary target addresses.
  *
  */
-public class GenericMessageSender extends AbstractHonoClient {
+public class GenericMessageSenderImpl extends AbstractHonoClient implements MessageSender {
 
     /**
      * Creates a sender.
@@ -44,7 +46,7 @@ public class GenericMessageSender extends AbstractHonoClient {
      * @param con The connection to the Hono server.
      * @param sender The sender link to send messages over.
      */
-    public GenericMessageSender(
+    public GenericMessageSenderImpl(
             final HonoConnection con,
             final ProtonSender sender) {
 
@@ -62,7 +64,7 @@ public class GenericMessageSender extends AbstractHonoClient {
      * @return The sender.
      * @throws NullPointerException if any of context, connection, tenant or handler is {@code null}.
      */
-    public static Future<GenericMessageSender> create(
+    public static Future<MessageSender> create(
             final HonoConnection con,
             final String targetAddress,
             final Handler<String> closeHook) {
@@ -71,7 +73,7 @@ public class GenericMessageSender extends AbstractHonoClient {
         Objects.requireNonNull(targetAddress);
 
         return con.createSender(targetAddress, ProtonQoS.AT_LEAST_ONCE, closeHook).map(sender -> {
-            return new GenericMessageSender(con, sender);
+            return new GenericMessageSenderImpl(con, sender);
         });
     }
 
@@ -80,6 +82,68 @@ public class GenericMessageSender extends AbstractHonoClient {
      */
     public void close() {
         closeLinks(closeAttempt -> {});
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public int getCredit() {
+        return sender.getCredit();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void sendQueueDrainHandler(final Handler<Void> handler) {
+        sender.sendQueueDrainHandler(replenishedSender -> handler.handle(null));
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public String getEndpoint() {
+        return null;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void close(final Handler<AsyncResult<Void>> closeHandler) {
+        sender.closeHandler(closeAttempt -> {
+            if (closeAttempt.succeeded()) {
+                closeHandler.handle(Future.succeededFuture());
+            } else {
+                closeHandler.handle(Future.failedFuture(closeAttempt.cause()));
+            }
+        });
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public boolean isOpen() {
+        return sender != null && sender.isOpen();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public Future<ProtonDelivery> send(final Message message) {
+        final Future<ProtonDelivery> result = Future.future();
+        connection.executeOrRunOnContext(go -> {
+            if (sender.isOpen() && sender.getCredit() > 0) {
+                result.complete(sender.send(message));
+            } else {
+                result.fail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE));
+            }
+        });
+        return result;
     }
 
     /**
@@ -98,6 +162,7 @@ public class GenericMessageSender extends AbstractHonoClient {
      *         been accepted by the peer.
      * @throws NullPointerException if the message is {@code null}.
      */
+    @Override
     public Future<ProtonDelivery> sendAndWaitForOutcome(final Message message) {
         final Future<ProtonDelivery> result = Future.future();
         connection.executeOrRunOnContext(go -> {

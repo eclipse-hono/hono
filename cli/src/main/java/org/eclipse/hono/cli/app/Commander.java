@@ -1,18 +1,15 @@
-/*
- * ******************************************************************************
- *  * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
- *  *
- *  * See the NOTICE file(s) distributed with this work for additional
- *  * information regarding copyright ownership.
- *  *
- *  * This program and the accompanying materials are made available under the
- *  * terms of the Eclipse Public License 2.0 which is available at
- *  * http://www.eclipse.org/legal/epl-2.0
- *  *
- *  * SPDX-License-Identifier: EPL-2.0
- *  ******************************************************************************
- *
- */
+/*******************************************************************************
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * 
+ * See the NOTICE file(s) distributed with this work for additional
+ * information regarding copyright ownership.
+ * 
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License 2.0 which is available at
+ * http://www.eclipse.org/legal/epl-2.0
+ * 
+ * SPDX-License-Identifier: EPL-2.0
+ *******************************************************************************/
 
 package org.eclipse.hono.cli.app;
 
@@ -22,8 +19,8 @@ import java.util.concurrent.TimeUnit;
 
 import javax.annotation.PostConstruct;
 
-import org.eclipse.hono.client.ApplicationClientFactory;
 import org.eclipse.hono.client.CommandClient;
+import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.util.BufferResult;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
@@ -58,17 +55,17 @@ public class Commander extends AbstractApplicationClient {
         clientFactory.connect().setHandler(connectAttempt -> {
             if (connectAttempt.succeeded()) {
                 clientFactory.addReconnectListener(this::startCommandClient);
-                startCommandClient(clientFactory);
+                startCommandClient(connectAttempt.result());
             } else {
                 close(connectAttempt.cause());
             }
         });
     }
 
-    private void startCommandClient(final ApplicationClientFactory clientFactory) {
+    private void startCommandClient(final HonoConnection connection) {
         getCommandFromUser()
         .compose(this::processCommand)
-        .setHandler(sendAttempt -> startCommandClient(clientFactory));
+        .setHandler(sendAttempt -> startCommandClient(connection));
     }
 
     private Future<Void> processCommand(final Command command) {

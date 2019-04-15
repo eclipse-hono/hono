@@ -14,9 +14,10 @@ package org.eclipse.hono.tests.client;
 
 import java.net.HttpURLConnection;
 
+import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ClientConfigProperties;
-import org.eclipse.hono.tests.IntegrationTestHonoClient;
+import org.eclipse.hono.tests.IntegrationTestApplicationClientFactory;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -26,7 +27,6 @@ import io.vertx.core.Vertx;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
-import io.vertx.proton.ProtonClientOptions;
 
 /**
  * Test cases verifying the behavior of {@code HonoClient}.
@@ -36,7 +36,7 @@ public class HonoClientImplIT {
 
     private static Vertx vertx;
 
-    public IntegrationTestHonoClient honoClient;
+    private IntegrationTestApplicationClientFactory clientFactory;
 
     /**
      * Sets up vert.x.
@@ -63,12 +63,10 @@ public class HonoClientImplIT {
         downstreamProps.setReconnectAttempts(-1);
 
         final Async async = ctx.async();
-        honoClient = new IntegrationTestHonoClient(vertx, downstreamProps);
-        final ProtonClientOptions protonClientOptions = new ProtonClientOptions();
-        protonClientOptions.setReconnectInterval(20L);
+        clientFactory = IntegrationTestApplicationClientFactory.create(HonoConnection.newConnection(vertx, downstreamProps));
         // WHEN the client tries to connect
-        honoClient.connect(protonClientOptions).setHandler(res -> {
-            // THEN the connection attempt fails due do lack of authorization
+        clientFactory.connect().setHandler(res -> {
+            // THEN the connection attempt fails due to lack of authorization
             ctx.assertTrue(res.failed());
             ctx.assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED, ServiceInvocationException.extractStatusCode(res.cause()));
             ctx.assertEquals("no suitable SASL mechanism found for authentication with server", res.cause().getMessage());

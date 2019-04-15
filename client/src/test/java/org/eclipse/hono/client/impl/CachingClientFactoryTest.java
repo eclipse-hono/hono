@@ -35,6 +35,29 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
 public class CachingClientFactoryTest {
 
     /**
+     * Verifies that a request to create a client fails if the given
+     * supplier fails.
+     * 
+     * @param ctx The helper to use for running async tests.
+     */
+    @Test
+    public void testGetOrCreateClientFailsIfSupplierFails(final TestContext ctx) {
+
+        // GIVEN a factory
+        final CachingClientFactory<Object> factory = new CachingClientFactory<>(o -> true);
+        // WHEN creating a client instance and the supplier returns a failed future
+        factory.getOrCreateClient(
+                "bumlux",
+                () -> Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE)),
+                ctx.asyncAssertFailure(t -> {
+                    // THEN the creation fails with the exception conveyed by the supplier
+                    ctx.assertEquals(
+                            HttpURLConnection.HTTP_UNAVAILABLE,
+                            ((ServerErrorException) t).getErrorCode());
+                }));
+    }
+
+    /**
      * Verifies that a concurrent request to create a client fails the given
      * future for tracking the attempt.
      * 

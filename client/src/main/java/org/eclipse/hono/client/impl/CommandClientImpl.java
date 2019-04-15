@@ -96,6 +96,21 @@ public class CommandClientImpl extends AbstractRequestResponseClient<BufferResul
         this.receiver = Objects.requireNonNull(receiver);
     }
 
+    /**
+     * Gets the AMQP <em>target</em> address to use for sending command requests
+     * to Hono's Command &amp; Control API endpoint.
+     * 
+     * @param tenantId The tenant that the device belongs to.
+     * @param deviceId The identifier of the device.
+     * @return The target address.
+     * @throws NullPointerException if tenant is {@code null}.
+     */
+    public static final String getTargetAddress(final String tenantId, final String deviceId) {
+        Objects.requireNonNull(tenantId);
+        Objects.requireNonNull(deviceId);
+        return String.format("%s/%s/%s", CommandConstants.COMMAND_ENDPOINT, tenantId, deviceId);
+    }
+
     @Override
     protected String getName() {
         return CommandConstants.COMMAND_ENDPOINT;

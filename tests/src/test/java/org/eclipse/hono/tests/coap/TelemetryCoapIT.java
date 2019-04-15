@@ -46,7 +46,7 @@ public class TelemetryCoapIT extends CoapTestBase {
     @Override
     protected Future<MessageConsumer> createConsumer(final String tenantId, final Consumer<Message> messageConsumer) {
 
-        return helper.honoClient.createTelemetryConsumer(tenantId, messageConsumer, remoteClose -> {});
+        return helper.applicationClientFactory.createTelemetryConsumer(tenantId, messageConsumer, remoteClose -> {});
     }
 
     @Override

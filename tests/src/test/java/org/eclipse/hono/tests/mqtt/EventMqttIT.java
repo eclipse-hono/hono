@@ -62,7 +62,7 @@ public class EventMqttIT extends MqttPublishTestBase {
     @Override
     protected Future<MessageConsumer> createConsumer(final String tenantId, final Consumer<Message> messageConsumer) {
 
-        return helper.honoClient.createEventConsumer(tenantId, messageConsumer, remoteClose -> {});
+        return helper.applicationClientFactory.createEventConsumer(tenantId, messageConsumer, remoteClose -> {});
     }
 
     @Override

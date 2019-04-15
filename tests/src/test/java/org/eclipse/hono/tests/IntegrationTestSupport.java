@@ -33,6 +33,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.util.BufferResult;
@@ -152,10 +153,10 @@ public final class IntegrationTestSupport {
      */
     public DeviceRegistryHttpClient registry;
     /**
-     * A client for connecting to the AMQP Messaging Network.
-     * This can be used for downstream <em>or</em> upstream messages.
+     * A client for connecting to Hono's north bound APIs
+     * via the AMQP Messaging Network.
      */
-    public IntegrationTestHonoClient honoClient;
+    public IntegrationTestApplicationClientFactory applicationClientFactory;
 
     private final Set<String> tenantsToDelete = new HashSet<>();
     private final Map<String, Set<String>> devicesToDelete = new HashMap<>();
@@ -202,8 +203,8 @@ public final class IntegrationTestSupport {
 
         initRegistryClient(ctx);
         final Async amqpNetworkConnection = ctx.async();
-        honoClient = new IntegrationTestHonoClient(vertx, downstreamProps);
-        honoClient.connect().setHandler(ctx.asyncAssertSuccess(ok -> {
+        applicationClientFactory = IntegrationTestApplicationClientFactory.create(HonoConnection.newConnection(vertx, downstreamProps));
+        applicationClientFactory.connect().setHandler(ctx.asyncAssertSuccess(ok -> {
             LOGGER.info("connected to AMQP Messaging Network [{}:{}]", downstreamProps.getHost(), downstreamProps.getPort());
             amqpNetworkConnection.complete();
         }));
@@ -259,7 +260,7 @@ public final class IntegrationTestSupport {
     public void disconnect(final TestContext ctx) {
 
         final Async shutdown = ctx.async();
-        honoClient.shutdown(ctx.asyncAssertSuccess(ok -> {
+        applicationClientFactory.disconnect(ctx.asyncAssertSuccess(ok -> {
             LOGGER.info("connection to AMQP Messaging Network closed");
             shutdown.complete();
         }));
@@ -344,7 +345,7 @@ public final class IntegrationTestSupport {
             final Map<String, Object> properties,
             final long requestTimeout) {
 
-        return honoClient.getOrCreateCommandClient(tenantId, deviceId).compose(commandClient -> {
+        return applicationClientFactory.getOrCreateCommandClient(tenantId, deviceId).compose(commandClient -> {
 
             commandClient.setRequestTimeout(requestTimeout);
             final Future<BufferResult> result = Future.future();
@@ -421,7 +422,7 @@ public final class IntegrationTestSupport {
             final Map<String, Object> properties,
             final long requestTimeout) {
 
-        return honoClient.getOrCreateCommandClient(tenantId, deviceId).compose(commandClient -> {
+        return applicationClientFactory.getOrCreateCommandClient(tenantId, deviceId).compose(commandClient -> {
 
             commandClient.setRequestTimeout(requestTimeout);
             final Future<Void> result = Future.future();

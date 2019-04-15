@@ -32,7 +32,6 @@ import org.eclipse.hono.client.ApplicationClientFactory;
 import org.eclipse.hono.client.CommandClient;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.MessageConsumer;
-import org.eclipse.hono.client.impl.HonoConnectionImpl;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.jmeter.HonoCommanderSampler;
 import org.eclipse.hono.jmeter.sampleresult.HonoCommanderSampleResult;
@@ -82,7 +81,7 @@ public class HonoCommander extends AbstractClient {
         tenant = sampler.getTenant();
         commandTimeoutInMs = sampler.getCommandTimeoutAsInt();
         triggerType = sampler.getTriggerType();
-        applicationClientFactory = new HonoConnectionImpl(vertx, clientConfig);
+        applicationClientFactory = ApplicationClientFactory.create(HonoConnection.newConnection(vertx, clientConfig));
     }
 
     /**

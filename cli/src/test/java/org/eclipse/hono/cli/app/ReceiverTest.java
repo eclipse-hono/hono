@@ -71,7 +71,7 @@ public class ReceiverTest {
                 .thenReturn(Future.succeededFuture(mock(MessageConsumer.class)));
 
         receiver = new Receiver();
-        receiver.setHonoConnection(connection);
+        receiver.setApplicationClientFactory(connection);
         receiver.setVertx(vertx);
         receiver.tenantId = "TEST_TENANT";
     }

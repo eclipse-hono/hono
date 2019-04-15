@@ -39,9 +39,6 @@ import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.amqp.transport.Source;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.HonoConnection;
-import org.eclipse.hono.client.MessageSender;
-import org.eclipse.hono.client.RegistrationClient;
-import org.eclipse.hono.client.RequestResponseClient;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ClientConfigProperties;
@@ -248,146 +245,6 @@ public class HonoConnectionImplTest {
     }
 
     /**
-     * Verifies that a request to create a request-response client fails the given
-     * future for tracking the attempt if the client is not connected to the peer.
-     * 
-     * @param ctx The helper to use for running async tests.
-     */
-    @Test
-    public void testGetOrCreateRequestResponseClientFailsWhenNotConnected(final TestContext ctx) {
-
-        honoConnection.getOrCreateRequestResponseClient("the-key", () -> Future.succeededFuture(mock(RequestResponseClient.class)))
-        .setHandler(ctx.asyncAssertFailure(t -> {
-            ctx.assertTrue(t instanceof ServerErrorException);
-        }));
-    }
-
-    /**
-     * Verifies that a concurrent request to create a request-response client fails the given
-     * future for tracking the attempt.
-     * 
-     * @param ctx The helper to use for running async tests.
-     */
-    @Test
-    public void testGetOrCreateRequestResponseClientFailsIfInvokedConcurrently(final TestContext ctx) {
-
-        // GIVEN a client that already tries to create a registration client for "tenant"
-        final Async connected = ctx.async();
-        honoConnection.connect(new ProtonClientOptions()).setHandler(ctx.asyncAssertSuccess(ok -> connected.complete()));
-        connected.await();
-
-        honoConnection.getOrCreateRequestResponseClient(
-                "registration/tenant",
-                () -> Future.future());
-
-        // WHEN an additional, concurrent attempt is made to create a client for "tenant"
-        honoConnection.getOrCreateRequestResponseClient(
-                "registration/tenant",
-                () -> {
-                    ctx.fail("should not create concurrent client");
-                    return Future.succeededFuture(mock(RegistrationClient.class));
-                }).setHandler(ctx.asyncAssertFailure(t -> {
-                    // THEN the concurrent attempt fails without any attempt being made to create another client
-                    ctx.assertTrue(ServerErrorException.class.isInstance(t));
-                }));
-    }
-
-    /**
-     * Verifies that a request to create a request-response client is failed immediately when the
-     * underlying connection to the server fails.
-     * 
-     * @param ctx The Vertx test context.
-     */
-    @Test
-    public void testGetOrCreateRequestResponseClientFailsOnConnectionFailure(final TestContext ctx) {
-
-        // GIVEN a client that tries to create a registration client for "tenant"
-        final Async connected = ctx.async();
-        honoConnection.connect(new ProtonClientOptions()).setHandler(ctx.asyncAssertSuccess(ok -> connected.complete()));
-        connected.await();
-
-        final Async creationFailure = ctx.async();
-        final Async supplierInvocation = ctx.async();
-
-        honoConnection.getOrCreateRequestResponseClient(
-                "registration/tenant",
-                () -> {
-                    ctx.assertFalse(creationFailure.isCompleted());
-                    supplierInvocation.complete();
-                    return Future.future();
-                }).setHandler(ctx.asyncAssertFailure(cause -> creationFailure.complete()));
-
-        // WHEN the underlying connection fails
-        supplierInvocation.await();
-        connectionFactory.getDisconnectHandler().handle(con);
-
-        // THEN all creation requests are failed
-        creationFailure.await();
-    }
-
-    /**
-     * Verifies that a concurrent request to create a sender fails the given future for tracking the attempt.
-     * 
-     * @param ctx The helper to use for running async tests.
-     */
-    @Test
-    public void testGetOrCreateTelemetrySenderFailsIfInvokedConcurrently(final TestContext ctx) {
-
-        // GIVEN a client that already tries to create a telemetry sender for "tenant"
-        final Async connected = ctx.async();
-        honoConnection.connect(new ProtonClientOptions()).setHandler(ctx.asyncAssertSuccess(ok -> connected.complete()));
-        connected.await();
-
-        honoConnection.getOrCreateSender("telemetry/tenant", () -> Future.future());
-
-        // WHEN an additional, concurrent attempt is made to create a telemetry sender for "tenant"
-        honoConnection.getOrCreateSender(
-                "telemetry/tenant",
-                () -> {
-                    ctx.fail("should not create concurrent client");
-                    return Future.succeededFuture(mock(MessageSender.class));
-                }).setHandler(ctx.asyncAssertFailure(t -> {
-                    // THEN the concurrent attempt fails without any attempt being made to create another sender
-                    ctx.assertTrue(ServerErrorException.class.isInstance(t));
-                }));
-    }
-
-    /**
-     * Verifies that a request to create a message sender is failed immediately when the
-     * underlying connection to the server fails.
-     * 
-     * @param ctx The Vertx test context.
-     */
-    @Test
-    public void testGetOrCreateSenderFailsOnConnectionFailure(final TestContext ctx) {
-
-        // GIVEN a client that tries to create a telemetry sender for "tenant"
-        final Async connected = ctx.async();
-        honoConnection.connect(new ProtonClientOptions()).setHandler(ctx.asyncAssertSuccess(ok -> connected.complete()));
-        connected.await();
-
-        final Async disconnected = ctx.async();
-        final Async supplierInvocation = ctx.async();
-
-        honoConnection.getOrCreateSender(
-                "telemetry/tenant",
-                () -> {
-                    ctx.assertFalse(disconnected.isCompleted());
-                    supplierInvocation.complete();
-                    return Future.future();
-                }).setHandler(ctx.asyncAssertFailure(cause -> {
-                    disconnected.complete();
-                }));
-
-        // WHEN the underlying connection fails
-        supplierInvocation.await();
-        connectionFactory.getDisconnectHandler().handle(con);
-
-        // THEN all creation requests are failed
-        disconnected.await();
-    }
-
-    /**
      * Verifies that a request to create a consumer is failed immediately when the
      * underlying connection to the server fails.
      * 
@@ -419,41 +276,6 @@ public class HonoConnectionImplTest {
 
         // THEN all creation requests are failed
         creationFailure.await();
-    }
-
-    /**
-     * Verifies that all sender creation locks are cleared when the connection to the server fails.
-     * 
-     * @param ctx The Vertx test context.
-     */
-    @Test
-    public void testDownstreamDisconnectClearsSenderCreationLocks(final TestContext ctx) {
-
-        // GIVEN a client connected to a peer
-        connectionFactory = new DisconnectHandlerProvidingConnectionFactory(con);
-        final ProtonClientOptions options = new ProtonClientOptions()
-                .setReconnectInterval(50)
-                .setReconnectAttempts(0);
-        honoConnection = new HonoConnectionImpl(vertx, connectionFactory, props);
-        honoConnection.connect(options).setHandler(ctx.asyncAssertSuccess());
-        assertTrue(connectionFactory.await());
-        connectionFactory.setExpectedSucceedingConnectionAttempts(1);
-
-        // WHEN the downstream connection fails just when the client wants to open a sender link
-        final Async senderCreationFailure = ctx.async();
-        honoConnection.getOrCreateSender("telemetry/tenant", () -> {
-            connectionFactory.getDisconnectHandler().handle(con);
-            return Future.future();
-        }).setHandler(ctx.asyncAssertFailure(cause -> senderCreationFailure.complete()));
-
-        // THEN the sender creation fails,
-        senderCreationFailure.await();
-        // the connection is re-established
-        assertTrue(connectionFactory.await());
-        // and the next attempt to create a sender succeeds
-        honoConnection.getOrCreateSender(
-                "telemetry/tenant",
-                () -> Future.succeededFuture(mock(MessageSender.class))).setHandler(ctx.asyncAssertSuccess());
     }
 
     /**

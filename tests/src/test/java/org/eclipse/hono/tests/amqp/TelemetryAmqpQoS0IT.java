@@ -32,7 +32,7 @@ public class TelemetryAmqpQoS0IT extends AmqpUploadTestBase {
 
     @Override
     protected Future<MessageConsumer> createConsumer(final String tenantId, final Consumer<Message> messageConsumer) {
-        return helper.honoClient.createTelemetryConsumer(tenantId, messageConsumer, close -> {});
+        return helper.applicationClientFactory.createTelemetryConsumer(tenantId, messageConsumer, close -> {});
     }
 
     @Override
