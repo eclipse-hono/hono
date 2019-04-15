@@ -36,7 +36,7 @@ In order to use Helm, you need to have it installed properly on your system. Ple
 ### Deploying Hono using Helm's Tiller Service
 
 You can deploy Hono using Helm with or without the *Tiller* service.
-To deploy Eclipse Hono to the cluster with installed Tiller service, simply run
+To deploy Eclipse Hono to the cluster with installed Tiller service, simply run:
 
 ~~~sh
 # in directory: hono/deploy/
@@ -45,7 +45,7 @@ helm install --dep-up --name eclipse-hono --namespace hono target/deploy/helm/
 
 This will create a new `hono` namespace in the cluster and install all the components to that namespace. The name of the Helm release will be `eclipse-hono`.
 
-You can check the status of the deployment with one of the following commands
+You can check the status of the deployment with one of the following commands:
 
 ~~~sh
 helm list
@@ -56,7 +56,7 @@ helm get eclipse-hono
 ### Deploying Hono without using Helm's Tiller Service
 
 If, for whatever reason, you can't or don't want to install Helm's Tiller service in your cluster, you can still use the resources created by Helm and deploy them manually using the `kubectl` command line tool.
-To generate the resources locally with Helm, run
+To generate the resources locally with Helm, run:
 
 ~~~sh
 # in directory: hono/deploy/
@@ -64,11 +64,14 @@ helm dep update target/deploy/helm/
 helm template --name eclipse-hono --namespace hono --output-dir . target/deploy/helm/
 ~~~
 
-This should create an `eclipse-hono` folder with all the resources. Now, you can use `kubectl` to deploy them to any Kubernetes cluster
+This should create an `eclipse-hono` folder with all the resources. Now, you can use `kubectl` to deploy them to any Kubernetes cluster using the following commands:
 
 ~~~sh
 # in directory: hono/deploy/
-kubectl apply -f ./eclipse-hono --namespace hono
+kubectl create namespace hono
+kubectl config set-context $(kubectl config current-context) --namespace=hono
+find . -path "./eclipse-hono/*" -name crd*.yaml -exec kubectl apply -f {} \;
+kubectl apply -f ./eclipse-hono -R
 ~~~
 
 ### Using Hono
@@ -77,7 +80,7 @@ After successful installation, you can proceed and [access your Hono services](#
 
 ### Undeploying Hono
 
-To undeploy a Hono instance that has been deployed using Helm's Tiller service, run
+To undeploy a Hono instance that has been deployed using Helm's Tiller service, run:
 
 ~~~sh
 # in directory: hono/deploy/
@@ -87,11 +90,11 @@ kubectl delete crd prometheuses.monitoring.coreos.com prometheusrules.monitoring
 
 The additional `kubectl delete` command is necessary to remove [Prometheus operator CRDs](https://github.com/helm/charts/tree/master/stable/prometheus-operator#uninstalling-the-chart).
 
-To undeploy a Hono instance that has been deployed manually from the resource files, run
+To undeploy a Hono instance that has been deployed manually from the resource files, run:
 
 ~~~sh
 # in directory: hono/deploy/
-kubectl delete -f ./eclipse-hono --namespace hono
+kubectl delete -f ./eclipse-hono -R
 ~~~
 
 ## Script based Deployment
