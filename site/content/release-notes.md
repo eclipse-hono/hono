@@ -10,7 +10,11 @@ title = "Release Notes"
   of telemetry data and events from devices connected to LoRa network providers and/or
   LoRa gateways. Note that this adapter is *not* considered production ready yet.
   Any help in improving and enhancing the adapter is more than welcome.
-
+* The concept and implementation of *resource limits* have been added. Now a connection limit to define 
+  the maximum number of device connections to be allowed per tenant can be configured. The MQTT and AMQP 
+  adapters can be enabled to verify this connection limit before accepting any new connections. Please 
+  refer to the [resource limits]({{< relref "/concepts/resource-limits.md" >}}) for details.
+ 
 ### Fixes & Enhancements
 
 * The base classes for implementing the AMQP and HTTP endpoints for the Credentials, Tenant
