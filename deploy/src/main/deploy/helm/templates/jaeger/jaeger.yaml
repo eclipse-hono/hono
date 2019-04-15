@@ -1,0 +1,14 @@
+{{if eq .Values.jaeger.enabled true}}
+apiVersion: jaegertracing.io/v1
+kind: "Jaeger"
+metadata:
+  labels:
+    app: jaeger
+    version: "{{ .Chart.AppVersion }}"
+    group: {{ .Values.project.groupId }}
+  name: "jaeger"
+spec:
+{{- if .Values.jaeger.deploy.spec }}
+{{ toYaml .Values.jaeger.deploy.spec | indent 2 }}
+{{- end }}
+{{end}}

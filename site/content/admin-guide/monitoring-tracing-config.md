@@ -120,7 +120,7 @@ All jar files can then be found in the directory `target/dependency`.
 ## Configuring usage of Jaeger tracing (included in Docker images)
 
 In case [Jaeger tracing](https://www.jaegertracing.io/) shall be used, there is an alternative to putting the jar files in the container's `/opt/hono/extensions` folder as described above.
-This is to have the Jaeger tracing jar files be included in the Hono Docker images by using the `jaeger` maven profile when building Hono.
+This is to have the Jaeger tracing jar files be included in the Hono Docker images by using the `jaeger` Maven profile when building Hono.
 
 For example, building the HTTP adapter image with the Jaeger client included:
 
