@@ -45,6 +45,20 @@ helm install --dep-up --name eclipse-hono --namespace hono target/deploy/helm/
 
 This will create a new `hono` namespace in the cluster and install all the components to that namespace. The name of the Helm release will be `eclipse-hono`.
 
+#### Adding Jaeger support
+
+In order to deploy the Jaeger tracing component along with Hono, first make sure that the Hono Docker images have been built with the Jaeger client included. That is done using the `jaeger` Maven profile, see [Monitoring & Tracing]({{< relref "monitoring-tracing-config.md#configuring-usage-of-jaeger-tracing-included-in-docker-images" >}}).
+The deployment can then be done using the `jaeger.enabled=true` option:
+ 
+~~~sh
+# in directory: hono/deploy/
+helm install --dep-up --name eclipse-hono --set jaeger.enabled=true --namespace hono target/deploy/helm/
+~~~
+
+For information on how to access the Jaeger UI, see the [Jaeger Operator documentation](https://github.com/jaegertracing/jaeger-operator#accessing-the-ui).
+
+#### View deployment status
+
 You can check the status of the deployment with one of the following commands:
 
 ~~~sh
@@ -89,6 +103,12 @@ kubectl delete crd prometheuses.monitoring.coreos.com prometheusrules.monitoring
 ~~~
 
 The additional `kubectl delete` command is necessary to remove [Prometheus operator CRDs](https://github.com/helm/charts/tree/master/stable/prometheus-operator#uninstalling-the-chart).
+
+If the Jaeger tracing component has been deployed, additional resources have to be deleted manually:
+~~~sh
+kubectl delete crd jaegers.jaegertracing.io
+kubectl delete svc -n hono eclipse-hono-jaeger-operator 
+~~~sh
 
 To undeploy a Hono instance that has been deployed manually from the resource files, run:
 

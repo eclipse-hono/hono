@@ -20,6 +20,12 @@ spec:
         version: "{{ .Chart.AppVersion }}"
         group: {{ .Values.project.groupId }}
     spec:
+      {{- if eq .Values.jaeger.enabled true}}
+      initContainers:
+        - name: wait-for-jaeger-agent
+          image: busybox:1.28
+          command: ['sh', '-c', 'until nslookup {{ .Values.jaeger.agentHost }}; do echo waiting for {{ .Values.jaeger.agentHost }}; sleep 2; done;']
+      {{- end}}
       containers:
       - image: {{ .Values.hono.image.repoPrefix }}/hono-adapter-amqp-vertx:{{ .Chart.AppVersion }}
         imagePullPolicy: IfNotPresent
@@ -40,6 +46,14 @@ spec:
           value: dev
         - name: LOGGING_CONFIG
           value: classpath:logback-spring.xml
+        {{- if eq .Values.jaeger.enabled true}}
+        - name: JAEGER_SERVICE_NAME
+          value: hono-adapter-amqp
+        {{- range $key, $value := .Values.jaeger.env }}
+        - name: {{ $key }}
+          value: {{ $value | quote }}
+        {{- end }}
+        {{- end}}
         - name: _JAVA_OPTIONS
           value: "{{ .Values.defaultJavaOptions }}"
         - name: KUBERNETES_NAMESPACE

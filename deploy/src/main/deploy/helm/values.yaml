@@ -35,6 +35,27 @@ platform: kubernetes
 # do not use with "platform: openshift".
 useLoadBalancer: false
 
+jaeger:
+  # whether the Jaeger tracing component should be deployed
+  enabled: false
+  agentHost: jaeger-agent.hono
+  # environment variables for containers that provide tracing data
+  env:
+    JAEGER_AGENT_HOST: jaeger-agent.hono
+    JAEGER_AGENT_PORT: "6831"
+    JAEGER_SAMPLER_TYPE: const
+    JAEGER_SAMPLER_PARAM: 1
+  deploy:
+    # configuration of Jaeger deployment
+    # see examples of spec definitions here: https://github.com/jaegertracing/jaeger-operator/tree/master/deploy/examples
+    spec:
+      strategy: allInOne
+      storage:
+        options:
+          memory:
+            max-traces: 100000
+
+
 # Default values for prometheus-operator.
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
