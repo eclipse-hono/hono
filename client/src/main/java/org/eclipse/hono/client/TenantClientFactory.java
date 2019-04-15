@@ -14,6 +14,9 @@
 
 package org.eclipse.hono.client;
 
+import org.eclipse.hono.cache.CacheProvider;
+import org.eclipse.hono.client.impl.TenantClientFactoryImpl;
+
 import io.vertx.core.Future;
 
 /**
@@ -21,6 +24,30 @@ import io.vertx.core.Future;
  *
  */
 public interface TenantClientFactory extends ConnectionLifecycle {
+
+    /**
+     * Creates a new factory for an existing connection.
+     *
+     * @param connection The connection to use.
+     * @return The factory.
+     * @throws NullPointerException if connection is {@code null}
+     */
+    static TenantClientFactory create(final HonoConnection connection) {
+        return new TenantClientFactoryImpl(connection, null);
+    }
+
+    /**
+     * Creates a new factory for an existing connection.
+     *
+     * @param connection The connection to use.
+     * @param cacheProvider The provider to use for creating caches for tenant objects
+     *                      or {@code null} if tenant objects should not be cached.
+     * @return The factory.
+     * @throws NullPointerException if connection is {@code null}
+     */
+    static TenantClientFactory create(final HonoConnection connection, final CacheProvider cacheProvider) {
+        return new TenantClientFactoryImpl(connection, cacheProvider);
+    }
 
     /**
      * Gets a client for interacting with Hono's <em>Tenant</em> API.

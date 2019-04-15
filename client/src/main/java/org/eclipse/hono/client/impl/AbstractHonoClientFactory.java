@@ -44,6 +44,7 @@ abstract class AbstractHonoClientFactory implements ConnectionLifecycle {
 
     /**
      * @param connection The connection to use.
+     * @throws NullPointerException if connection is {@code null}.
      */
     AbstractHonoClientFactory(final HonoConnection connection) {
         this.connection = Objects.requireNonNull(connection);

@@ -267,14 +267,9 @@ public abstract class AbstractAdapterConfig {
     @Scope("prototype")
     public TenantClientFactory tenantClientFactory() {
 
-        final HonoConnectionImpl result = new HonoConnectionImpl(vertx(), tenantServiceClientConfig());
-
-        final CacheProvider cacheProvider = tenantCacheProvider();
-        if (cacheProvider != null) {
-            result.setCacheProvider(cacheProvider);
-        }
-
-        return result;
+        return TenantClientFactory.create(
+                HonoConnection.newConnection(vertx(), tenantServiceClientConfig()),
+                tenantCacheProvider());
     }
 
     /**

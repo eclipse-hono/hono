@@ -51,7 +51,6 @@ import org.eclipse.hono.client.RequestResponseClient;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.StatusCodeMapper;
-import org.eclipse.hono.client.TenantClient;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.connection.ConnectionFactory;
 import org.eclipse.hono.util.CommandConstants;
@@ -937,60 +936,6 @@ public class HonoConnectionImpl implements HonoConnection {
     protected final void removeRegistrationClient(final String tenantId) {
 
         final String targetAddress = RegistrationClientImpl.getTargetAddress(tenantId);
-        removeActiveRequestResponseClient(targetAddress);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public Future<TenantClient> getOrCreateTenantClient() {
-
-        return getOrCreateRequestResponseClient(
-                TenantClientImpl.getTargetAddress(),
-                () -> newTenantClient()).map(c -> (TenantClient) c);
-    }
-
-    /**
-     * Creates a new instance of {@link TenantClient}.
-     * <p>
-     * Custom implementation of {@link TenantClient} can be instantiated by overriding this method.
-     * Custom extension of {@link HonoConnectionImpl} must invoke
-     * {@link #removeTenantClient()} to cleanup when finished with the client.
-     *
-     * @return a future containing an instance of {@link TenantClient}
-     * @see TenantClient
-     */
-    protected Future<RequestResponseClient> newTenantClient() {
-
-        return checkConnected().compose(connected -> {
-
-            return TenantClientImpl.create(
-                    cacheProvider,
-                    this,
-                    this::removeTenantClient,
-                    this::removeTenantClient)
-            .map(client -> (RequestResponseClient) client);
-        });
-    }
-
-    private void removeTenantClient(final String tenantId) {
-        // the tenantId is not relevant for this client, so ignore it
-        removeTenantClient();
-    }
-
-    /**
-     *
-     * Removes a tenant client from the list of active clients.
-     * <p>
-     * Once a client has been removed, the next invocation
-     * of the corresponding <em>getOrCreateTenantClient</em>
-     * method will result in a new client being created
-     * (and added to the list of active clients).
-     *
-     */
-    protected void removeTenantClient() {
-        final String targetAddress = TenantClientImpl.getTargetAddress();
         removeActiveRequestResponseClient(targetAddress);
     }
 

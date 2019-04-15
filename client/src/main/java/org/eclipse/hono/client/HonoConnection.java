@@ -72,8 +72,7 @@ import io.vertx.proton.ProtonSender;
 public interface HonoConnection extends ConnectionLifecycle,
                                     ApplicationClientFactory,
                                     CredentialsClientFactory,
-                                    RegistrationClientFactory,
-                                    TenantClientFactory {
+                                    RegistrationClientFactory {
 
     /**
      * Creates a new connection using the default implementation.
