@@ -16,7 +16,6 @@ import java.net.HttpURLConnection;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -24,7 +23,6 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Supplier;
 
 import javax.security.sasl.AuthenticationException;
 
@@ -33,7 +31,6 @@ import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.DisconnectListener;
 import org.eclipse.hono.client.HonoConnection;
-import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.ReconnectListener;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
@@ -63,9 +60,10 @@ import io.vertx.proton.ProtonSender;
 import io.vertx.proton.sasl.SaslSystemException;
 
 /**
- * A helper class for creating Vert.x based clients for Hono's arbitrary APIs.
+ * A helper class for managing a vertx-proton based AMQP connection to a
+ * Hono service endpoint.
  * <p>
- * The client ensures that all interactions with the peer are performed on the
+ * The connection ensures that all interactions with the peer are performed on the
  * same vert.x {@code Context}. For this purpose the <em>connect</em> methods
  * either use the current Context or create a new Context for connecting to
  * the peer. This same Context is then used for all consecutive interactions with
@@ -99,7 +97,6 @@ public class HonoConnectionImpl implements HonoConnection {
      */
     protected volatile Context context;
 
-    private final List<Handler<Void>> creationRequests = new ArrayList<>();
     private final List<DisconnectListener> disconnectListeners = new ArrayList<>();
     private final List<ReconnectListener> reconnectListeners = new ArrayList<>();
     private final AtomicBoolean connecting = new AtomicBoolean(false);
@@ -271,13 +268,8 @@ public class HonoConnectionImpl implements HonoConnection {
         return connection != null && !connection.isDisconnected();
     }
 
-    /**
-     * Checks if this client is shut down.
-     * 
-     * @return {@code true} if this client is shut down already or is
-     *         in the process of shutting down.
-     */
-    protected final boolean isShutdown() {
+    @Override
+    public final boolean isShutdown() {
         return shuttingDown.get();
     }
 
@@ -341,6 +333,7 @@ public class HonoConnectionImpl implements HonoConnection {
     /**
      * {@inheritDoc}
      */
+    @Deprecated(forRemoval = true, since = "1.0-M2")
     @Override
     public final Future<HonoConnection> connect(final Handler<ProtonConnection> disconnectHandler) {
         return connect(null, Objects.requireNonNull(disconnectHandler));
@@ -349,6 +342,7 @@ public class HonoConnectionImpl implements HonoConnection {
     /**
      * {@inheritDoc}
      */
+    @Deprecated(forRemoval = true, since = "1.0-M2")
     @Override
     public final Future<HonoConnection> connect(
             final ProtonClientOptions options,
@@ -480,7 +474,6 @@ public class HonoConnectionImpl implements HonoConnection {
 
         setConnection(null);
 
-        failAllCreationRequests();
         notifyDisconnectHandlers();
         // make sure we make configured number of attempts to re-connect
         connectAttempts = new AtomicInteger(0);
@@ -490,14 +483,6 @@ public class HonoConnectionImpl implements HonoConnection {
 
         for (DisconnectListener listener : disconnectListeners) {
             listener.onDisconnect(this);
-        }
-    }
-
-    private void failAllCreationRequests() {
-
-        for (final Iterator<Handler<Void>> iter = creationRequests.iterator(); iter.hasNext();) {
-            iter.next().handle(null);
-            iter.remove();
         }
     }
 
@@ -564,47 +549,6 @@ public class HonoConnectionImpl implements HonoConnection {
                     new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "failed to connect",
                             connectionFailureCause)));
         }
-    }
-
-    /**
-     * Creates a new message consumer for a tenant.
-     * 
-     * @param tenantId The tenant to create the consumer for.
-     * @param newConsumerSupplier The factory to use for creating a new
-     *        consumer.
-     * @return A future indicating the outcome of the operation. The future
-     *         will be succeeded with the created consumer or will be
-     *         failed with a {@link ServiceInvocationException}
-     *         if the consumer cannot be created.
-     */
-    protected Future<MessageConsumer> createConsumer(
-            final String tenantId,
-            final Supplier<Future<MessageConsumer>> newConsumerSupplier) {
-
-        return executeOrRunOnContext(result -> createConsumer(tenantId, newConsumerSupplier, result));
-    }
-
-    private void createConsumer(
-            final String tenantId,
-            final Supplier<Future<MessageConsumer>> newConsumerSupplier,
-            final Future<MessageConsumer> result) {
-
-        // register a handler to be notified if the underlying connection to the server fails
-        // so that we can fail the returned future
-        final Handler<Void> connectionFailureHandler = connectionLost -> {
-            result.tryFail(
-                    new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "connection to server lost"));
-        };
-        creationRequests.add(connectionFailureHandler);
-
-        newConsumerSupplier.get().setHandler(attempt -> {
-            creationRequests.remove(connectionFailureHandler);
-            if (attempt.succeeded()) {
-                result.tryComplete(attempt.result());
-            } else {
-                result.tryFail(attempt.cause());
-            }
-        });
     }
 
     /**

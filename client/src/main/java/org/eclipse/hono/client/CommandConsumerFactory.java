@@ -14,6 +14,7 @@
 package org.eclipse.hono.client;
 
 import org.eclipse.hono.client.impl.CommandConsumer;
+import org.eclipse.hono.client.impl.CommandConsumerFactoryImpl;
 
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -23,6 +24,17 @@ import io.vertx.core.Handler;
  * receive commands and send responses.
  */
 public interface CommandConsumerFactory extends ConnectionLifecycle {
+
+    /**
+     * Creates a new factory for an existing connection.
+     *
+     * @param connection The connection to use.
+     * @return The factory.
+     * @throws NullPointerException if connection is {@code null}
+     */
+    static CommandConsumerFactory create(final HonoConnection connection) {
+        return new CommandConsumerFactoryImpl(connection);
+    }
 
     /**
      * Creates a command consumer for a device.

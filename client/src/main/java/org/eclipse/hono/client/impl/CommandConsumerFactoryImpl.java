@@ -23,19 +23,19 @@ import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.CommandConsumerFactory;
 import org.eclipse.hono.client.CommandContext;
 import org.eclipse.hono.client.CommandResponseSender;
+import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.ResourceConflictException;
-import org.eclipse.hono.config.ClientConfigProperties;
-import org.eclipse.hono.connection.ConnectionFactory;
+import org.eclipse.hono.client.impl.CommandConsumer;
 
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
-import io.vertx.core.Vertx;
 
 /**
- * Implements a connection between an Adapter and the AMQP 1.0 network to receive commands and send a response.
+ * A factory for creating clients for the <em>AMQP 1.0 Messaging Network</em> to
+ * receive commands and send responses.
  */
-public class CommandConsumerFactoryImpl extends HonoConnectionImpl implements CommandConsumerFactory {
+public class CommandConsumerFactoryImpl extends AbstractHonoClientFactory implements CommandConsumerFactory {
 
     /**
      * The minimum number of milliseconds to wait between checking a
@@ -43,11 +43,8 @@ public class CommandConsumerFactoryImpl extends HonoConnectionImpl implements Co
      */
     public static final long MIN_LIVENESS_CHECK_INTERVAL_MILLIS = 2000;
 
-    /**
-     * The consumers that can be used to receive command messages.
-     * The device, which belongs to a tenant is used as the key, e.g. <em>DEFAULT_TENANT/4711</em>.
-     */
-    private final Map<String, MessageConsumer> commandConsumers = new HashMap<>();
+    private final CachingClientFactory<MessageConsumer> commandConsumerFactory;
+
     /**
      * A mapping of command consumer addresses to vert.x timer IDs which represent the
      * liveness checks for the consumers.
@@ -55,41 +52,22 @@ public class CommandConsumerFactoryImpl extends HonoConnectionImpl implements Co
     private final Map<String, Long> livenessChecks = new HashMap<>();
 
     /**
-     * Creates a new client for a set of configuration properties.
-     * <p>
-     * This constructor creates a connection factory using
-     * {@link ConnectionFactory#newConnectionFactory(Vertx, ClientConfigProperties)}.
-     *
-     * @param vertx The Vert.x instance to execute the client on, if {@code null} a new Vert.x instance is used.
-     * @param clientConfigProperties The configuration properties to use.
-     * @throws NullPointerException if clientConfigProperties is {@code null}
+     * Creates a new factory for an existing connection.
+     * 
+     * @param connection The connection to use.
      */
-    public CommandConsumerFactoryImpl(final Vertx vertx, final ClientConfigProperties clientConfigProperties) {
-        super(vertx, clientConfigProperties);
+    public CommandConsumerFactoryImpl(final HonoConnection connection) {
+        super(connection);
+        commandConsumerFactory = new CachingClientFactory<>(c -> true);
     }
 
-    /**
-     * Creates a new client for a set of configuration properties.
-     * <p>
-     * This constructor creates a connection factory using
-     * {@link ConnectionFactory#newConnectionFactory(Vertx, ClientConfigProperties)}.
-     *
-     * @param vertx The Vert.x instance to execute the client on, if {@code null} a new Vert.x instance is used.
-     * @param connectionFactory Factory to invoke for a new connection.
-     * @param clientConfigProperties The configuration properties to use.
-     * @throws NullPointerException if clientConfigProperties is {@code null}
-     */
-    public CommandConsumerFactoryImpl(final Vertx vertx, final ConnectionFactory connectionFactory, final ClientConfigProperties clientConfigProperties) {
-        super(vertx, connectionFactory, clientConfigProperties);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
     @Override
-    protected void clearState() {
-        super.clearState();
-        commandConsumers.clear();
+    protected void onDisconnect() {
+        commandConsumerFactory.clearState();
+    }
+
+    private String getKey(final String tenantId, final String deviceId) {
+        return Device.asAddress(tenantId, deviceId);
     }
 
     /**
@@ -99,28 +77,24 @@ public class CommandConsumerFactoryImpl extends HonoConnectionImpl implements Co
     public final Future<MessageConsumer> createCommandConsumer(
             final String tenantId,
             final String deviceId,
-            final Handler<CommandContext> commandConsumer,
+            final Handler<CommandContext> commandHandler,
             final Handler<Void> remoteCloseHandler) {
 
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
-        Objects.requireNonNull(commandConsumer);
+        Objects.requireNonNull(commandHandler);
 
-        return executeOrRunOnContext(result -> {
-            final String key = Device.asAddress(tenantId, deviceId);
-            final MessageConsumer messageConsumer = commandConsumers.get(key);
-            if (messageConsumer != null) {
+        return connection.executeOrRunOnContext(result -> {
+            final String key = getKey(tenantId, deviceId);
+            final MessageConsumer commandConsumer = commandConsumerFactory.getClient(key);
+            if (commandConsumer != null) {
                 log.debug("cannot create concurrent command consumer [tenant: {}, device-id: {}]", tenantId, deviceId);
                 result.fail(new ResourceConflictException("message consumer already in use"));
             } else {
-                createConsumer(
-                        tenantId,
-                        () -> newCommandConsumer(tenantId, deviceId, commandConsumer, remoteCloseHandler))
-                .map(consumer -> {
-                    commandConsumers.put(key, consumer);
-                    return consumer;
-                })
-                .setHandler(result);
+                commandConsumerFactory.getOrCreateClient(
+                        key,
+                        () -> newCommandConsumer(tenantId, deviceId, commandHandler, remoteCloseHandler),
+                        result);
             }
         });
     }
@@ -147,16 +121,17 @@ public class CommandConsumerFactoryImpl extends HonoConnectionImpl implements Co
             throw new IllegalArgumentException("liveness check interval must be > 0");
         }
 
-        return createCommandConsumer(tenantId, deviceId, commandConsumer, remoteCloseHandler).map(c -> {
+        return createCommandConsumer(tenantId, deviceId, commandConsumer, remoteCloseHandler)
+                .map(c -> {
 
-            final String key = Device.asAddress(tenantId, deviceId);
-            final long effectiveCheckInterval = Math.max(MIN_LIVENESS_CHECK_INTERVAL_MILLIS, checkInterval);
-            final long livenessCheckId = vertx.setPeriodic(
-                    effectiveCheckInterval,
-                    newLivenessCheck(tenantId, deviceId, key, commandConsumer, remoteCloseHandler));
-            livenessChecks.put(key, livenessCheckId);
-            return c;
-        });
+                    final String key = getKey(tenantId, deviceId);
+                    final long effectiveCheckInterval = Math.max(MIN_LIVENESS_CHECK_INTERVAL_MILLIS, checkInterval);
+                    final long livenessCheckId = connection.getVertx().setPeriodic(
+                            effectiveCheckInterval,
+                            newLivenessCheck(tenantId, deviceId, key, commandConsumer, remoteCloseHandler));
+                    livenessChecks.put(key, livenessCheckId);
+                    return c;
+                });
     }
 
     Handler<Long> newLivenessCheck(
@@ -168,34 +143,40 @@ public class CommandConsumerFactoryImpl extends HonoConnectionImpl implements Co
 
         final AtomicBoolean recreating = new AtomicBoolean(false);
         return timerId -> {
-            if (isShutdown()) {
-                vertx.cancelTimer(timerId);
-            } else if (isConnectedInternal() && !commandConsumers.containsKey(key)) {
-                // when a connection is lost unexpectedly,
-                // all consumers will be removed from the cache
-                if (recreating.compareAndSet(false, true)) {
-                    // set a lock in order to prevent spawning multiple attempts
-                    // to re-create the consumer
-                    log.debug("trying to re-create command consumer [tenant: {}, device-id: {}]",
-                            tenantId, deviceId);
-                    // we try to re-create the link using the original parameters
-                    // which will put the consumer into the cache again, if successful
-                    createCommandConsumer(tenantId, deviceId, commandConsumer, remoteCloseHandler)
-                    .map(consumer -> {
-                        log.debug("successfully re-created command consumer [tenant: {}, device-id: {}]",
-                                tenantId, deviceId);
-                        return consumer;
-                    })
-                    .otherwise(t -> {
-                        log.info("failed to re-create command consumer [tenant: {}, device-id: {}]: {}",
-                                tenantId, deviceId, t.getMessage());
-                        return null;
-                    })
-                    .setHandler(s -> recreating.compareAndSet(true, false));
-                } else {
-                    log.debug("already trying to re-create command consumer [tenant: {}, device-id: {}], yielding ...",
-                            tenantId, deviceId);
-                }
+            if (connection.isShutdown()) {
+                connection.getVertx().cancelTimer(timerId);
+            } else {
+                connection.isConnected().map(ok -> {
+                    if (commandConsumerFactory.getClient(key) == null) {
+                        // when a connection is lost unexpectedly,
+                        // all consumers will have been removed from the cache
+                        // so we need to recreate the consumer
+                        if (recreating.compareAndSet(false, true)) {
+                            // set a lock in order to prevent spawning multiple attempts
+                            // to re-create the consumer
+                            log.debug("trying to re-create command consumer [tenant: {}, device-id: {}]",
+                                    tenantId, deviceId);
+                            // we try to re-create the link using the original parameters
+                            // which will put the consumer into the cache again, if successful
+                            createCommandConsumer(tenantId, deviceId, commandConsumer, remoteCloseHandler)
+                            .map(consumer -> {
+                                log.debug("successfully re-created command consumer [tenant: {}, device-id: {}]",
+                                        tenantId, deviceId);
+                                return consumer;
+                            })
+                            .otherwise(t -> {
+                                log.info("failed to re-create command consumer [tenant: {}, device-id: {}]: {}",
+                                        tenantId, deviceId, t.getMessage());
+                                return null;
+                            })
+                            .setHandler(s -> recreating.compareAndSet(true, false));
+                        } else {
+                            log.debug("already trying to re-create command consumer [tenant: {}, device-id: {}], yielding ...",
+                                    tenantId, deviceId);
+                        }
+                    }
+                    return null;
+                });
             }
         };
     }
@@ -206,45 +187,21 @@ public class CommandConsumerFactoryImpl extends HonoConnectionImpl implements Co
             final Handler<CommandContext> commandConsumer,
             final Handler<Void> remoteCloseHandler) {
 
-        return checkConnected().compose(con -> {
-            final String key = Device.asAddress(tenantId, deviceId);
-            return CommandConsumer.create(
-                    this,
+        final String key = Device.asAddress(tenantId, deviceId);
+        return CommandConsumer.create(
+                    connection,
                     tenantId,
                     deviceId,
                     commandConsumer,
                     sourceAddress -> { // local close hook
                         // stop liveness check
-                        Optional.ofNullable(livenessChecks.remove(key)).ifPresent(vertx::cancelTimer);
-                        commandConsumers.remove(key);
+                        Optional.ofNullable(livenessChecks.remove(key)).ifPresent(connection.getVertx()::cancelTimer);
+                        commandConsumerFactory.removeClient(key);
                     },
                     sourceAddress -> { // remote close hook
-                        commandConsumers.remove(key);
+                        commandConsumerFactory.removeClient(key);
                         remoteCloseHandler.handle(null);
-                    })
-            .map(c -> (MessageConsumer) c);
-        });
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Deprecated
-    @Override
-    public Future<Void> closeCommandConsumer(final String tenantId, final String deviceId) {
-
-        Objects.requireNonNull(tenantId);
-        Objects.requireNonNull(deviceId);
-
-        return executeOrRunOnContext(result -> {
-            final String deviceAddress = Device.asAddress(tenantId, deviceId);
-            // stop liveness check
-            Optional.ofNullable(livenessChecks.remove(deviceAddress)).ifPresent(vertx::cancelTimer);
-            // close and remove link from cache 
-            Optional.ofNullable(commandConsumers.remove(deviceAddress)).ifPresent(consumer -> {
-                consumer.close(result);
-            });
-        });
+                    }).map(c -> (MessageConsumer) c);
     }
 
     /**
@@ -260,10 +217,34 @@ public class CommandConsumerFactoryImpl extends HonoConnectionImpl implements Co
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(replyId);
 
-        return executeOrRunOnContext(result -> {
-            checkConnected()
-            .compose(ok -> CommandResponseSenderImpl.create(this, tenantId, replyId, onSenderClosed -> {}))
+        return connection.executeOrRunOnContext(result -> {
+            CommandResponseSenderImpl.create(
+                    connection,
+                    tenantId,
+                    replyId,
+                    onRemoteClose -> {})
             .setHandler(result);
+        });
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Deprecated
+    @Override
+    public Future<Void> closeCommandConsumer(final String tenantId, final String deviceId) {
+
+        Objects.requireNonNull(tenantId);
+        Objects.requireNonNull(deviceId);
+
+        return connection.executeOrRunOnContext(result -> {
+            final String key = getKey(tenantId, deviceId);
+            // stop liveness check
+            Optional.ofNullable(livenessChecks.remove(key)).ifPresent(connection.getVertx()::cancelTimer);
+            // close and remove link from cache 
+            commandConsumerFactory.removeClient(key, consumer -> {
+                consumer.close(result);
+            });
         });
     }
 }

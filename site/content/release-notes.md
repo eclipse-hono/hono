@@ -25,12 +25,33 @@ title = "Release Notes"
 
 ### API Changes
 
-* Several changes have been made to the `org.eclipse.hono.client.MessageSender` interface:
+* The `hono-client` module has undergone several major and incompatible changes. The most
+  important change affects the `HonoClient` interface which no longer serves as a factory
+  for the arbitrary clients to the Hono service endpoints.
+  It has been renamed to `HonoConnection` and now only represents the underlying
+  AMQP connection to a peer and provides methods for managing the connection state
+  and registering listeners for arbitrary life-cycle events of the connection.
+  In addition to this, several factory interfaces have been added which can be used
+  to create specific clients to Hono's arbitrary services. All of the former `HonoClient`
+  interface's factory methods have been distributed accordingly to:
+  * `org.eclipse.hono.client.ApplicationClientFactory` for creating clients to
+    Hono's north bound Telemetry, Event and Command &amp; Control API.
+  * `org.eclipse.hono.client.DownstreamSenderFactory` for creating clients to
+    Hono's south bound Telemetry and Event APIs.
+  * `org.eclipse.hono.client.CommandConsumerFactory` for creating clients to
+    Hono's south bound Command &amp; Control API.
+  * `org.eclipse.hono.client.TenantClientFactory` for creating clients to
+    Hono's Tenant API.
+  * `org.eclipse.hono.client.RegistrationClientFactory` for creating clients to
+    Hono's Device Registration API.
+  * `org.eclipse.hono.client.CredentialsClientFactory` for creating clients to
+    Hono's Credentials API.
+* In this context the `org.eclipse.hono.client.MessageSender` interface has been changed as follows:
   * The *send* methods have been changed to no longer accept a *registration assertion token*
     which became obsolete with the removal of the *Hono Messaging* component.
   * The *isRegistrationAssertionRequired* method has been removed from the interface.
   * All *send* method variants which accept specific message parameters have been moved into
-    the new `org.eclipse.hono.client.DownstreamSender` interface which extends
+    the new `org.eclipse.hono.client.DownstreamSender` interface which extends the existing
     `MessageSender`.
 * Several changes have been made to the `org.eclipse.hono.service.AbstractProtocolAdapterBase`
   class:
@@ -82,6 +103,12 @@ title = "Release Notes"
   have been deprecated. They will be removed from Hono 1.0 altogether.
   A new HTTP based API will be defined instead which can then be used to *manage* the content
   of a device registry.
+* `org.eclipse.hono.client.HonoConnection`'s *connect* method variants accepting
+  a disconnect handler have been deprecated and will be removed in Hono 1.0.
+  Client code should use one of the other *connect* methods instead and register a
+  `org.eclipse.hono.client.DisconnectListener` and/or a
+  `org.eclipse.hono.client.ReconnectListener` to get notified about life-cycle
+  events of the underlying AMQP connection.
 
 ## 1.0-M1
 

@@ -31,43 +31,38 @@ import io.vertx.proton.ProtonReceiver;
 import io.vertx.proton.ProtonSender;
 
 /**
- * A factory for creating clients for Hono's arbitrary APIs.
+ * A wrapper around a single AMQP 1.0 connection and a single session to a Hono service endpoint.
  * <p>
- * A factory maintains a single AMQP 1.0 connection and a single session to the peer. This session is shared by all AMQP
- * 1.0 links established for <em>senders</em>, <em>consumers</em> and <em>clients</em> created using the corresponding
- * factory methods.
+ * The session is shared by all AMQP 1.0 links established for <em>sender</em> and <em>receiver</em>
+ * links created using the corresponding factory methods.
  * <p>
- * The <em>getOrCreate</em> factory methods return an existing client for the given address if available. Note that
- * factory methods for creating consumers <em>always</em> return a new instance so that all messages received are only
- * processed by the handler passed in to the factory method.
+ * Before any links can be created, the underlying AMQP connection needs to be established. This is done by
+ * invoking one of the <em>connect</em> methods.
  * <p>
- * Before any of the factory methods can be invoked successfully, the client needs to connect to Hono. This is done by
- * invoking one of the client's <em>connect</em> methods.
- * <p>
- * An AMQP connection is established in multiple stages:
+ * This class represents the <em>client</em> side when establishing the AMQP connection:
  * <ol>
- * <li>The client establishes a TCP connection to the peer. For this to succeed, the peer must have registered a
+ * <li>The client tries to establish a TCP/TLS connection to the peer. For this to succeed, the peer must have registered a
  * socket listener on the IP address and port that the client is configured to use.</li>
- * <li>The client performs a SASL handshake with the peer if required by the peer. The client needs to be
+ * <li>The client initiates a SASL handshake if requested by the peer. The client needs to be
  * configured with correct credentials in order for this stage to succeed.</li>
  * <li>Finally, the client and the peer need to agree on AMQP 1.0 specific connection parameters like capabilities
  * and session window size.</li>
  * </ol>
  * Some of the <em>connect</em> methods accept a {@code ProtonClientOptions} type parameter. Note that these options
- * only influence the client's behavior when establishing the TCP connection with the peer. The overall behavior of
+ * only influence the client's behavior when establishing the TCP/TLS connection with the peer. The overall behavior of
  * the client regarding the establishment of the AMQP connection must be configured using the
- * {@link ClientConfigProperties} passed in to the <em>newClient</em> method. In particular, the
- * {@link ClientConfigProperties#setReconnectAttempts(int)} method can be used to specify, how many
- * times the client should try to establish a connection to the peer before giving up.
+ * {@link ClientConfigProperties} passed in to the {@link #newConnection(Vertx, ClientConfigProperties)} method.
+ * In particular, the {@link ClientConfigProperties#setReconnectAttempts(int)} method can be used to specify,
+ * how many times the client should try to establish a connection to the peer before giving up.
  * <p>
  * <em>NB</em> When the client tries to establish a connection to the peer, it stores the <em>current</em>
  * vert.x {@code Context} in a local variable and performs all further interactions with the peer running
- * on this Context. Invoking any of the methods of the client from a vert.x Context other than the one
- * used for establishing the connection may cause race conditions or even deadlocks because the handlers
+ * on this Context. Invoking any of the connection's methods from a vert.x Context other than the one
+ * used for establishing the connection may cause race conditions or even deadlocks, because the handlers
  * registered on the {@code Future}s returned by these methods will be invoked from the stored Context.
- * It is the invoking code's responsibility to either ensure that the client's methods are always invoked
+ * It is the invoking code's responsibility to either ensure that the connection's methods are always invoked
  * from the same Context or to make sure that the handlers are running on the correct Context, e.g. by using
- * the {@code Context}'s <em>runOnContext</em> method.
+ * the {@link #executeOrRunOnContext(Handler)} method. 
  */
 public interface HonoConnection extends ConnectionLifecycle {
 
@@ -115,19 +110,19 @@ public interface HonoConnection extends ConnectionLifecycle {
      * {@inheritDoc}
      *
      * The connection will be established using default options.
-     * With the default options a client will try three times to establish a TCP connection to the peer
-     * before giving up. Each attempt will be canceled after 200ms and the client will wait 500ms
-     * before making the next attempt. Note that each connection attempt is made using the same IP
-     * address that has been resolved when the method was initially invoked.
+     * <p>
+     * With the default options the client will try to establish a TCP connection to the peer a single
+     * time and then give up.
      * <p>
      * Once a TCP connection is established, the client performs a SASL handshake (if requested by the
      * peer) using the credentials set in the {@link ClientConfigProperties}. Finally, the client
      * opens the AMQP connection to the peer, based on the negotiated parameters.
      * <p>
-     * The number of times that the client should try to establish the AMQP connection with the peer
+     * The overall number of times that the client should try to establish the AMQP connection with the peer
      * can be configured by means of the <em>connectAttempts</em> property of the 
      * {@code ClientConfigProperties} passed in to the {@link #newConnection(Vertx, ClientConfigProperties)}
-     * method.
+     * method. The client will perform a new DNS lookup of the peer's hostname with each attempt to 
+     * establish the AMQP connection. 
      * <p>
      * When an established connection to the peer fails, the client will automatically try to re-connect
      * to the peer using the same options and behavior as used for establishing the initial connection.
@@ -160,7 +155,8 @@ public interface HonoConnection extends ConnectionLifecycle {
      * The number of times that the client should try to establish the AMQP connection with the peer
      * can be configured by means of the <em>connectAttempts</em> property of the 
      * {@code ClientConfigProperties} passed in to the {@link #newConnection(Vertx, ClientConfigProperties)}
-     * method.
+     * method. The client will perform a new DNS lookup of the peer's hostname with each attempt to 
+     * establish the AMQP connection.
      * <p>
      * When an established connection to the peer fails, the client will automatically try to re-connect
      * to the peer using the same options and behavior as used for establishing the initial connection.
@@ -193,7 +189,8 @@ public interface HonoConnection extends ConnectionLifecycle {
      * The number of times that the client should try to establish the AMQP connection with the peer
      * can be configured by means of the <em>connectAttempts</em> property of the 
      * {@code ClientConfigProperties} passed in to the {@link #newConnection(Vertx, ClientConfigProperties)}
-     * method.
+     * method. The client will perform a new DNS lookup of the peer's hostname with each attempt to 
+     * establish the AMQP connection.
      * <p>
      * When an established connection to the peer fails, the given disconnect handler will be invoked.
      * Note that the client will <em>not</em> automatically try to re-connect to the peer in this case.
@@ -207,7 +204,10 @@ public interface HonoConnection extends ConnectionLifecycle {
      *         established.</li>
      *         </ul>
      * @throws NullPointerException if the disconnect handler is {@code null}.
+     * @deprecated Use one of the other connect methods instead and use {@link #addDisconnectListener(DisconnectListener)}
+     *             to be notified when the underlying AMQP connection fails unexpectedly.
      */
+    @Deprecated(forRemoval = true, since = "1.0-M2")
     Future<HonoConnection> connect(Handler<ProtonConnection> disconnectHandler);
 
     /**
@@ -225,7 +225,8 @@ public interface HonoConnection extends ConnectionLifecycle {
      * The number of times that the client should try to establish the AMQP connection with the peer
      * can be configured by means of the <em>connectAttempts</em> property of the 
      * {@code ClientConfigProperties} passed in to the {@link #newConnection(Vertx, ClientConfigProperties)}
-     * method.
+     * method. The client will perform a new DNS lookup of the peer's hostname with each attempt to 
+     * establish the AMQP connection.
      * <p>
      * When an established connection to the peer fails, the given disconnect handler will be invoked.
      * Note that the client will <em>not</em> automatically try to re-connect to the peer in this case.
@@ -242,7 +243,10 @@ public interface HonoConnection extends ConnectionLifecycle {
      *         established, or</li>
      *         <li>the maximum number of (unsuccessful) (re-)connection attempts have been made.</li>
      *         </ul>
+     * @deprecated Use one of the other connect methods instead and use {@link #addDisconnectListener(DisconnectListener)}
+     *             to be notified when the underlying AMQP connection fails unexpectedly.
      */
+    @Deprecated(forRemoval = true, since = "1.0-M2")
     Future<HonoConnection> connect(
             ProtonClientOptions options,
             Handler<ProtonConnection> disconnectHandler);
@@ -281,6 +285,14 @@ public interface HonoConnection extends ConnectionLifecycle {
      * @throws NullPointerException if the handler is {@code null}.
      */
     void shutdown(Handler<AsyncResult<Void>> completionHandler);
+
+    /**
+     * Checks if this connection is shut down.
+     * 
+     * @return {@code true} if this connection is shut down already
+     *         or is in the process of shutting down.
+     */
+    boolean isShutdown();
 
     /**
      * Checks if this client supports a certain capability.

@@ -15,6 +15,7 @@ package org.eclipse.hono.client.impl;
 
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -26,11 +27,12 @@ import static org.mockito.Mockito.when;
 
 import java.net.HttpURLConnection;
 
-import org.apache.qpid.proton.amqp.transport.AmqpError;
-import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.amqp.transport.Source;
 import org.eclipse.hono.client.CommandContext;
+import org.eclipse.hono.client.DisconnectListener;
+import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.MessageConsumer;
+import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.junit.Before;
@@ -40,15 +42,14 @@ import org.junit.rules.Timeout;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 
-import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
-import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
-import io.vertx.proton.ProtonConnection;
+import io.vertx.proton.ProtonMessageHandler;
+import io.vertx.proton.ProtonQoS;
 import io.vertx.proton.ProtonReceiver;
 
 
@@ -63,15 +64,13 @@ public class CommandConsumerFactoryImplTest {
      * Global timeout for each test case.
      */
     @Rule
-    public Timeout timeout = Timeout.seconds(3);
+    public Timeout timeout = Timeout.seconds(300);
 
     private Vertx vertx;
     private Context context;
     private ClientConfigProperties props;
-    private ProtonConnection con;
-
-    private CommandConsumerFactoryImpl factory;
-    private DisconnectHandlerProvidingConnectionFactory connectionFactory;
+    private HonoConnection connection;
+    private CommandConsumerFactoryImpl commandConnection;
     private ProtonReceiver receiver;
 
     /**
@@ -93,11 +92,15 @@ public class CommandConsumerFactoryImplTest {
         props = new ClientConfigProperties();
 
         receiver = mock(ProtonReceiver.class);
-        con = mock(ProtonConnection.class);
-        when(con.createReceiver(anyString())).thenReturn(receiver);
+        connection = HonoClientUnitTestHelper.mockHonoConnection(vertx, props);
+        when(connection.createReceiver(
+                anyString(),
+                any(ProtonQoS.class),
+                any(ProtonMessageHandler.class),
+                anyInt(),
+                any(Handler.class))).thenReturn(Future.succeededFuture(receiver));
 
-        connectionFactory = new DisconnectHandlerProvidingConnectionFactory(con);
-        factory = new CommandConsumerFactoryImpl(vertx, connectionFactory, props);
+        commandConnection = new CommandConsumerFactoryImpl(connection);
     }
 
     /**
@@ -112,20 +115,17 @@ public class CommandConsumerFactoryImplTest {
 
         final Handler<CommandContext> commandHandler = mock(Handler.class);
         final Handler<Void> closeHandler = mock(Handler.class);
-        final Source source = mock(Source.class);
-        when(source.getAddress()).thenReturn(null);
-        when(receiver.getRemoteSource()).thenReturn(source);
+        final ServerErrorException ex = new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE);
+        when(connection.createReceiver(
+                anyString(),
+                any(ProtonQoS.class),
+                any(ProtonMessageHandler.class),
+                anyInt(),
+                any(Handler.class)))
+        .thenReturn(Future.failedFuture(ex));
 
-        factory.connect()
-            .compose(c -> {
-                final ArgumentCaptor<Handler<AsyncResult<ProtonReceiver>>> linkOpenHandler = ArgumentCaptor.forClass(Handler.class);
-                final Future<MessageConsumer> consumer = factory.createCommandConsumer("theTenant", "theDevice", commandHandler, closeHandler);
-                verify(con).createReceiver("control/theTenant/theDevice");
-                verify(receiver).openHandler(linkOpenHandler.capture());
-                verify(receiver).open();
-                linkOpenHandler.getValue().handle(Future.succeededFuture());
-                return consumer;
-            }).setHandler(ctx.asyncAssertFailure(t -> {
+        commandConnection.createCommandConsumer("theTenant", "theDevice", commandHandler, closeHandler)
+        .setHandler(ctx.asyncAssertFailure(t -> {
                 ctx.assertEquals(HttpURLConnection.HTTP_UNAVAILABLE, ((ServiceInvocationException) t).getErrorCode());
             }));
     }
@@ -140,24 +140,11 @@ public class CommandConsumerFactoryImplTest {
     @Test
     public void testCreateCommandConsumerSucceeds(final TestContext ctx) {
 
-        final String address = "control/theTenant/theDevice";
         final Handler<CommandContext> commandHandler = mock(Handler.class);
         final Handler<Void> closeHandler = mock(Handler.class);
-        final Source source = mock(Source.class);
-        when(source.getAddress()).thenReturn(address);
-        when(receiver.getSource()).thenReturn(source);
-        when(receiver.getRemoteSource()).thenReturn(source);
 
-        factory.connect()
-            .compose(c -> {
-                final ArgumentCaptor<Handler<AsyncResult<ProtonReceiver>>> linkOpenHandler = ArgumentCaptor.forClass(Handler.class);
-                final Future<MessageConsumer> consumer = factory.createCommandConsumer("theTenant", "theDevice", commandHandler, closeHandler);
-                verify(con).createReceiver(address);
-                verify(receiver).openHandler(linkOpenHandler.capture());
-                verify(receiver).open();
-                linkOpenHandler.getValue().handle(Future.succeededFuture(receiver));
-                return consumer;
-            }).setHandler(ctx.asyncAssertSuccess());
+        commandConnection.createCommandConsumer("theTenant", "theDevice", commandHandler, closeHandler)
+        .setHandler(ctx.asyncAssertSuccess());
     }
 
     /**
@@ -173,35 +160,21 @@ public class CommandConsumerFactoryImplTest {
         final String address = "control/theTenant/theDevice";
         final Handler<CommandContext> commandHandler = mock(Handler.class);
         final Handler<Void> closeHandler = mock(Handler.class);
-        final Source source = mock(Source.class);
-        when(source.getAddress()).thenReturn(address);
-        when(receiver.getSource()).thenReturn(source);
-        when(receiver.getRemoteSource()).thenReturn(source);
 
-        // GIVEN a command consumer for which a close handler
-        // has been registered
-        factory.connect()
-            .compose(c -> {
-                final Future<MessageConsumer> consumer = factory.createCommandConsumer("theTenant", "theDevice", commandHandler, closeHandler);
-                verify(con).createReceiver(address);
-                final ArgumentCaptor<Handler<AsyncResult<ProtonReceiver>>> linkOpenHandler = ArgumentCaptor.forClass(Handler.class);
-                verify(receiver).openHandler(linkOpenHandler.capture());
-                verify(receiver).open();
-                linkOpenHandler.getValue().handle(Future.succeededFuture(receiver));
-                return consumer;
-            }).map(c -> {
-                final ArgumentCaptor<Handler<AsyncResult<ProtonReceiver>>> remoteCloseHandler = ArgumentCaptor.forClass(Handler.class);
-                verify(receiver).closeHandler(remoteCloseHandler.capture());
-                // WHEN the peer closes the link
-                remoteCloseHandler.getValue().handle(Future.succeededFuture(receiver));
-                // THEN the close handler is invoked
-                verify(closeHandler).handle(null);
-                return c;
-            }).setHandler(ctx.asyncAssertSuccess());
+        commandConnection.createCommandConsumer("theTenant", "theDevice", commandHandler, closeHandler);
+        final ArgumentCaptor<Handler<String>> captor = ArgumentCaptor.forClass(Handler.class);
+        verify(connection).createReceiver(
+                eq(address),
+                eq(ProtonQoS.AT_LEAST_ONCE),
+                any(ProtonMessageHandler.class),
+                eq(0),
+                captor.capture());
+        captor.getValue().handle(address);
+        verify(closeHandler).handle(null);
     }
 
     /**
-     * Verifies that a command consumer's <em>close</em> method is invoked,
+     * Verifies that when a command consumer's <em>close</em> method is invoked,
      * then
      * <ul>
      * <li>the underlying link is closed,</li>
@@ -221,43 +194,35 @@ public class CommandConsumerFactoryImplTest {
         when(source.getAddress()).thenReturn(address);
         when(receiver.getSource()).thenReturn(source);
         when(receiver.getRemoteSource()).thenReturn(source);
+        when(receiver.isOpen()).thenReturn(Boolean.TRUE);
         when(vertx.setPeriodic(anyLong(), any(Handler.class))).thenReturn(10L);
 
         // GIVEN a command consumer
-        factory.connect()
-            .compose(client -> {
-                final Future<MessageConsumer> consumer = factory.createCommandConsumer("theTenant", "theDevice", commandHandler, null, 5000L);
-                verify(con).createReceiver(address);
-                final ArgumentCaptor<Handler<AsyncResult<ProtonReceiver>>> linkOpenHandler = ArgumentCaptor.forClass(Handler.class);
-                verify(receiver).closeHandler(any(Handler.class));
-                verify(receiver).openHandler(linkOpenHandler.capture());
-                verify(receiver).open();
-                linkOpenHandler.getValue().handle(Future.succeededFuture(receiver));
-                when(receiver.isOpen()).thenReturn(Boolean.TRUE);
-                verify(vertx).setPeriodic(eq(5000L), any(Handler.class));
-                return consumer;
-            }).map(consumer -> {
-                // WHEN closing the link locally
-                final Future<Void> localCloseHandler = Future.future();
-                consumer.close(localCloseHandler.completer());
-                final ArgumentCaptor<Handler<AsyncResult<ProtonReceiver>>> closeHandler = ArgumentCaptor.forClass(Handler.class);
-                verify(receiver, times(2)).closeHandler(closeHandler.capture());
-                verify(receiver).close();
-                // and the peer sends its detach frame
-                closeHandler.getValue().handle(Future.succeededFuture(receiver));
-                return null;
-            }).map(ok -> {
-                // THEN the liveness check is canceled
-                verify(vertx).cancelTimer(10L);
-                // and the next attempt to create a command consumer for the same address
-                final Future<MessageConsumer> newConsumer = factory.createCommandConsumer("theTenant", "theDevice", commandHandler, null);
-                // results in a new link to be opened
-                verify(con, times(2)).createReceiver(address);
-                final ArgumentCaptor<Handler<AsyncResult<ProtonReceiver>>> linkOpenHandler = ArgumentCaptor.forClass(Handler.class);
-                verify(receiver, times(2)).openHandler(linkOpenHandler.capture());
-                linkOpenHandler.getValue().handle(Future.succeededFuture(receiver));
-                return newConsumer;
-            }).setHandler(ctx.asyncAssertSuccess());
+        commandConnection.createCommandConsumer("theTenant", "theDevice", commandHandler, null, 5000L)
+        .map(consumer -> {
+            verify(vertx).setPeriodic(eq(5000L), any(Handler.class));
+            // WHEN closing the link locally
+            final Future<Void> localCloseHandler = Future.future();
+            consumer.close(localCloseHandler);
+            final ArgumentCaptor<Handler<Void>> closeHandler = ArgumentCaptor.forClass(Handler.class);
+            verify(connection).closeAndFree(eq(receiver), closeHandler.capture());
+            // and the peer sends its detach frame
+            closeHandler.getValue().handle(null);
+            return null;
+        }).map(ok -> {
+            // THEN the liveness check is canceled
+            verify(vertx).cancelTimer(10L);
+            // and the next attempt to create a command consumer for the same address
+            final Future<MessageConsumer> newConsumer = commandConnection.createCommandConsumer("theTenant", "theDevice", commandHandler, null);
+            // results in a new link to be opened
+            verify(connection, times(2)).createReceiver(
+                    eq(address),
+                    eq(ProtonQoS.AT_LEAST_ONCE),
+                    any(ProtonMessageHandler.class),
+                    eq(0),
+                    any(Handler.class));
+            return newConsumer;
+        }).setHandler(ctx.asyncAssertSuccess());
     }
 
     /**
@@ -278,49 +243,42 @@ public class CommandConsumerFactoryImplTest {
         when(receiver.getSource()).thenReturn(source);
         when(receiver.getRemoteSource()).thenReturn(source);
         when(vertx.setPeriodic(anyLong(), any(Handler.class))).thenReturn(10L);
+        doAnswer(invocation -> {
+            final Handler<Void> handler = invocation.getArgument(1);
+            handler.handle(null);
+            return null;
+        }).when(connection).closeAndFree(any(), any(Handler.class));
 
         // GIVEN a command connection with an established command consumer
         // which is checked periodically for liveness
-        factory.connect().setHandler(ctx.asyncAssertSuccess());
-        assertTrue(connectionFactory.await());
-        connectionFactory.setExpectedSucceedingConnectionAttempts(1);
 
         // intentionally using a check interval that is smaller than the minimum
         final long livenessCheckInterval = CommandConsumerFactoryImpl.MIN_LIVENESS_CHECK_INTERVAL_MILLIS - 1;
-        final Async consumerCreation = ctx.async();
-        final Future<MessageConsumer> commandConsumer = factory.createCommandConsumer(
-                "theTenant", "theDevice", commandHandler, closeHandler, eq(livenessCheckInterval));
-        commandConsumer.setHandler(ctx.asyncAssertSuccess(ok -> consumerCreation.complete()));
-        verify(con).createReceiver(address);
-        final ArgumentCaptor<Handler<AsyncResult<ProtonReceiver>>> linkOpenHandler = ArgumentCaptor.forClass(Handler.class);
-        verify(receiver).openHandler(linkOpenHandler.capture());
-        verify(receiver).open();
-        linkOpenHandler.getValue().handle(Future.succeededFuture(receiver));
+        final Future<MessageConsumer> commandConsumer = commandConnection.createCommandConsumer(
+                "theTenant", "theDevice", commandHandler, closeHandler, livenessCheckInterval);
+        assertTrue(commandConsumer.isComplete());
         final ArgumentCaptor<Handler<Long>> livenessCheck = ArgumentCaptor.forClass(Handler.class);
         // the liveness check is registered with the minimum interval length
         verify(vertx).setPeriodic(eq(CommandConsumerFactoryImpl.MIN_LIVENESS_CHECK_INTERVAL_MILLIS), livenessCheck.capture());
-        consumerCreation.await();
 
         // WHEN the command connection fails
-        connectionFactory.getDisconnectHandler().handle(con);
+        final ArgumentCaptor<DisconnectListener> disconnectListener = ArgumentCaptor.forClass(DisconnectListener.class);
+        verify(connection).addDisconnectListener(disconnectListener.capture());
+        disconnectListener.getValue().onDisconnect(connection);
 
         // THEN the connection is re-established
-        assertTrue(connectionFactory.await());
+        when(connection.isConnected()).thenReturn(Future.succeededFuture());
         // and the liveness check re-creates the command consumer
-        final Async consumerRecreation = ctx.async();
-        when(receiver.open()).thenAnswer(invocation -> {
-            consumerRecreation.complete();
-            return receiver;
-        });
         livenessCheck.getValue().handle(10L);
-        verify(con, times(2)).createReceiver(address);
-        verify(receiver, times(2)).openHandler(any(Handler.class));
-        verify(receiver, times(2)).open();
-        consumerRecreation.await();
+        verify(connection, times(2)).createReceiver(
+                eq(address),
+                eq(ProtonQoS.AT_LEAST_ONCE),
+                any(ProtonMessageHandler.class),
+                eq(0),
+                any(Handler.class));
 
-        // and when the consumer is finally closed
-        final Future<Void> localCloseHandler = mock(Future.class);
-        commandConsumer.result().close(localCloseHandler);
+        // and when the consumer is finally closed locally
+        commandConsumer.result().close(null);
         // then the liveness check has been canceled
         verify(vertx).cancelTimer(10L);
     }
@@ -340,13 +298,15 @@ public class CommandConsumerFactoryImplTest {
         final String address = "control/theTenant/theDevice";
         final Handler<CommandContext> commandHandler = mock(Handler.class);
         final Handler<Void> remoteCloseHandler = mock(Handler.class);
-
-        // GIVEN an established command connection
-        factory.connect().setHandler(ctx.asyncAssertSuccess());
-        assertTrue(connectionFactory.await());
-        connectionFactory.setExpectedSucceedingConnectionAttempts(1);
-
-        final Handler<Long> livenessCheck = factory.newLivenessCheck("theTenant", "theDevice", "key", commandHandler, remoteCloseHandler);
+        final Handler<Long> livenessCheck = commandConnection.newLivenessCheck("theTenant", "theDevice", "key", commandHandler, remoteCloseHandler);
+        final Future<ProtonReceiver> createdReceiver = Future.future();
+        when(connection.isConnected()).thenReturn(Future.succeededFuture());
+        when(connection.createReceiver(
+                eq(address),
+                eq(ProtonQoS.AT_LEAST_ONCE),
+                any(ProtonMessageHandler.class),
+                anyInt(),
+                any(Handler.class))).thenReturn(createdReceiver);
 
         // WHEN the liveness check fires
         livenessCheck.handle(10L);
@@ -354,17 +314,24 @@ public class CommandConsumerFactoryImplTest {
         livenessCheck.handle(10L);
 
         // THEN only one attempt has been made to recreate the consumer link
-        verify(con, times(1)).createReceiver(address);
+        verify(connection, times(1)).createReceiver(
+                eq(address),
+                eq(ProtonQoS.AT_LEAST_ONCE),
+                any(ProtonMessageHandler.class),
+                eq(0),
+                any(Handler.class));
 
         // and when the first attempt has finally timed out
-        when(receiver.getRemoteCondition()).thenReturn(new ErrorCondition(AmqpError.INTERNAL_ERROR, "internal error"));
-        final ArgumentCaptor<Handler<AsyncResult<ProtonReceiver>>> linkOpenHandler = ArgumentCaptor.forClass(Handler.class);
-        verify(receiver).openHandler(linkOpenHandler.capture());
-        linkOpenHandler.getValue().handle(Future.failedFuture("internal error"));
+        createdReceiver.fail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE));
 
         // then the next run of the liveness check
         livenessCheck.handle(10L);
         // will start a new attempt to re-create the consumer link 
-        verify(con, times(2)).createReceiver(address);
+        verify(connection, times(2)).createReceiver(
+                eq(address),
+                eq(ProtonQoS.AT_LEAST_ONCE),
+                any(ProtonMessageHandler.class),
+                eq(0),
+                any(Handler.class));
     }
 }

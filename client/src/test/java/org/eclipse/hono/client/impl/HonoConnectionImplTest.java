@@ -245,40 +245,6 @@ public class HonoConnectionImplTest {
     }
 
     /**
-     * Verifies that a request to create a consumer is failed immediately when the
-     * underlying connection to the server fails.
-     * 
-     * @param ctx The vert.x test context.
-     */
-    @Test
-    public void testCreateConsumerFailsOnConnectionFailure(final TestContext ctx) {
-
-        // GIVEN a connected client that already tries to create a telemetry sender for "tenant"
-        final Async connected = ctx.async();
-        honoConnection.connect(new ProtonClientOptions()).setHandler(ctx.asyncAssertSuccess(ok -> connected.complete()));
-        connected.await();
-
-        final Async creationFailure = ctx.async();
-        final Async supplierInvocation = ctx.async();
-        honoConnection.createConsumer("tenant", () -> {
-            supplierInvocation.complete();
-            return Future.future();
-        }).setHandler(ctx.asyncAssertFailure(cause -> {
-            creationFailure.complete();
-        }));
-        // wait until the consumer supplier has been invoked
-        // so that we can be sure that the disconnect handler for
-        // for the creation request has been registered
-        supplierInvocation.await();
-
-        // WHEN the underlying connection fails
-        connectionFactory.getDisconnectHandler().handle(con);
-
-        // THEN all creation requests are failed
-        creationFailure.await();
-    }
-
-    /**
      * Verifies that the client tries to re-establish a lost connection to a server.
      * 
      * @param ctx The vert.x test context.
