@@ -39,7 +39,6 @@ import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.AsyncCommandClient;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.CommandClient;
-import org.eclipse.hono.client.CredentialsClient;
 import org.eclipse.hono.client.DisconnectListener;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.MessageConsumer;
@@ -808,57 +807,6 @@ public class HonoConnectionImpl implements HonoConnection {
                 result.tryFail(attempt.cause());
             }
         });
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public final Future<CredentialsClient> getOrCreateCredentialsClient(
-            final String tenantId) {
-
-        Objects.requireNonNull(tenantId);
-        return getOrCreateRequestResponseClient(
-                CredentialsClientImpl.getTargetAddress(tenantId),
-                () -> newCredentialsClient(tenantId)).map(c -> (CredentialsClient) c);
-    }
-
-    /**
-     * Creates a new instance of {@link CredentialsClient} scoped for the given tenant identifier.
-     * <p>
-     * Custom implementation of {@link CredentialsClient} can be instantiated by overriding this method. Any such
-     * instance should be scoped to the given tenantId. Custom extension of {@link HonoConnectionImpl} must invoke
-     * {@link #removeCredentialsClient(String)} to cleanup when finished with the client.
-     *
-     * @param tenantId tenant scope for which the client is instantiated
-     * @return a future containing an instance of {@link CredentialsClient}
-     * @see CredentialsClient
-     */
-    protected Future<RequestResponseClient> newCredentialsClient(final String tenantId) {
-
-        return checkConnected().compose(connected -> {
-
-            return CredentialsClientImpl.create(
-                    this,
-                    tenantId,
-                    this::removeCredentialsClient,
-                    this::removeCredentialsClient)
-            .map(client -> (RequestResponseClient) client);
-        });
-    }
-
-    /**
-     * Removes a credentials client from the list of active clients.
-     * <p>
-     * Once a client has been removed, the next invocation of the corresponding <em>getOrCreateCredentialsClient</em>
-     * method will result in a new client being created (and added to the list of active clients).
-     *
-     * @param tenantId The tenant that the client is scoped to.
-     */
-    protected final void removeCredentialsClient(final String tenantId) {
-
-        final String targetAddress = CredentialsClientImpl.getTargetAddress(tenantId);
-        removeActiveRequestResponseClient(targetAddress);
     }
 
     private void removeActiveRequestResponseClient(final String targetAddress) {

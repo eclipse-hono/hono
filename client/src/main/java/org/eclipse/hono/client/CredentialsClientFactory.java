@@ -14,6 +14,8 @@
 
 package org.eclipse.hono.client;
 
+import org.eclipse.hono.client.impl.CredentialsClientFactoryImpl;
+
 import io.vertx.core.Future;
 
 /**
@@ -21,6 +23,17 @@ import io.vertx.core.Future;
  *
  */
 public interface CredentialsClientFactory extends ConnectionLifecycle {
+
+    /**
+     * Creates a new factory for an existing connection.
+     *
+     * @param connection The connection to use.
+     * @return The factory.
+     * @throws NullPointerException if connection is {@code null}
+     */
+    static CredentialsClientFactory create(final HonoConnection connection) {
+        return new CredentialsClientFactoryImpl(connection);
+    }
 
     /**
      * Gets a client for interacting with Hono's <em>Credentials</em> API.

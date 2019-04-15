@@ -70,8 +70,7 @@ import io.vertx.proton.ProtonSender;
  * the {@code Context}'s <em>runOnContext</em> method.
  */
 public interface HonoConnection extends ConnectionLifecycle,
-                                    ApplicationClientFactory,
-                                    CredentialsClientFactory {
+                                    ApplicationClientFactory {
 
     /**
      * Creates a new connection using the default implementation.

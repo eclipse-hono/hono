@@ -24,7 +24,6 @@ import org.eclipse.hono.client.RegistrationClientFactory;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.client.TenantClientFactory;
 import org.eclipse.hono.client.impl.CommandConsumerFactoryImpl;
-import org.eclipse.hono.client.impl.HonoConnectionImpl;
 import org.eclipse.hono.config.ApplicationConfigProperties;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.config.VertxProperties;
@@ -222,7 +221,7 @@ public abstract class AbstractAdapterConfig {
     @Qualifier(CredentialsConstants.CREDENTIALS_ENDPOINT)
     @Scope("prototype")
     public CredentialsClientFactory credentialsClientFactory() {
-        return new HonoConnectionImpl(vertx(), credentialsClientFactoryConfig());
+        return CredentialsClientFactory.create(HonoConnection.newConnection(vertx(), credentialsClientFactoryConfig()));
     }
 
     /**

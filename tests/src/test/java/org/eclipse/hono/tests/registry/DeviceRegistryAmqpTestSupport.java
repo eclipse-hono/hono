@@ -68,7 +68,7 @@ public final class DeviceRegistryAmqpTestSupport {
      */
     protected static CredentialsClientFactory prepareCredentialsClientFactory(final Vertx vertx, final String username, final String password) {
 
-        return HonoConnection.newConnection(vertx, getClientConfig(username, password));
+        return CredentialsClientFactory.create(HonoConnection.newConnection(vertx, getClientConfig(username, password)));
     }
 
     /**
