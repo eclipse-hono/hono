@@ -14,6 +14,9 @@
 
 package org.eclipse.hono.client;
 
+import org.eclipse.hono.cache.CacheProvider;
+import org.eclipse.hono.client.impl.RegistrationClientFactoryImpl;
+
 import io.vertx.core.Future;
 
 /**
@@ -21,6 +24,30 @@ import io.vertx.core.Future;
  *
  */
 public interface RegistrationClientFactory extends ConnectionLifecycle {
+
+    /**
+     * Creates a new factory for an existing connection.
+     *
+     * @param connection The connection to use.
+     * @return The factory.
+     * @throws NullPointerException if connection is {@code null}
+     */
+    static RegistrationClientFactory create(final HonoConnection connection) {
+        return new RegistrationClientFactoryImpl(connection, null);
+    }
+
+    /**
+     * Creates a new factory for an existing connection.
+     *
+     * @param connection The connection to use.
+     * @param cacheProvider The cache provider to use for creating caches for tenant objects
+     *                      or {@code null} if tenant objects should not be cached.
+     * @return The factory.
+     * @throws NullPointerException if connection is {@code null}
+     */
+    static RegistrationClientFactory create(final HonoConnection connection, final CacheProvider cacheProvider) {
+        return new RegistrationClientFactoryImpl(connection, cacheProvider);
+    }
 
     /**
      * Gets a client for invoking operations on a service implementing Hono's <em>Device Registration</em> API.

@@ -36,7 +36,6 @@ import javax.security.sasl.AuthenticationException;
 import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.message.Message;
-import org.eclipse.hono.cache.CacheProvider;
 import org.eclipse.hono.client.AsyncCommandClient;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.CommandClient;
@@ -46,7 +45,6 @@ import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.client.ReconnectListener;
-import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.RequestResponseClient;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
@@ -132,7 +130,6 @@ public class HonoConnectionImpl implements HonoConnection {
     private final Object connectionLock = new Object();
 
     private ProtonClientOptions clientOptions;
-    private CacheProvider cacheProvider;
     private AtomicInteger connectAttempts;
     private List<Symbol> offeredCapabilities = Collections.emptyList();
     private Tracer tracer = NoopTracerFactory.create();
@@ -179,16 +176,6 @@ public class HonoConnectionImpl implements HonoConnection {
         }
         this.clientConfigProperties = clientConfigProperties;
         this.connectAttempts = new AtomicInteger(0);
-    }
-
-    /**
-     * Sets a provider for creating cache instances to be used in Hono clients.
-     *
-     * @param cacheProvider The cache provider.
-     * @throws NullPointerException if manager is {@code null}.
-     */
-    public final void setCacheProvider(final CacheProvider cacheProvider) {
-        this.cacheProvider = Objects.requireNonNull(cacheProvider);
     }
 
     /**
@@ -882,61 +869,6 @@ public class HonoConnectionImpl implements HonoConnection {
             });
             log.debug("closed and removed client for [{}]", targetAddress);
         }
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public final Future<RegistrationClient> getOrCreateRegistrationClient(
-            final String tenantId) {
-
-        Objects.requireNonNull(tenantId);
-
-        return getOrCreateRequestResponseClient(
-                RegistrationClientImpl.getTargetAddress(tenantId),
-                () -> newRegistrationClient(tenantId)).map(c -> (RegistrationClient) c);
-    }
-
-    /**
-     * Creates a new instance of {@link RegistrationClient} scoped for the given tenantId.
-     * <p>
-     * Custom implementation of {@link RegistrationClient} can be instantiated by overriding this method. Any such
-     * instance should be scoped to the given tenantId. Custom extension of {@link HonoConnectionImpl} must invoke
-     * {@link #removeRegistrationClient(String)} to cleanup when finished with the client.
-     *
-     * @param tenantId tenant scope for which the client is instantiated
-     * @return a future containing an instance of {@link RegistrationClient}
-     * @see RegistrationClient
-     */
-    protected Future<RequestResponseClient> newRegistrationClient(final String tenantId) {
-
-        Objects.requireNonNull(tenantId);
-
-        return checkConnected().compose(connected -> {
-
-            return RegistrationClientImpl.create(
-                    cacheProvider,
-                    this,
-                    tenantId,
-                    this::removeRegistrationClient,
-                    this::removeRegistrationClient)
-            .map(client -> (RequestResponseClient) client);
-        });
-    }
-
-    /**
-     * Removes a registration client from the list of active clients.
-     * <p>
-     * Once a client has been removed, the next invocation of the corresponding <em>getOrCreateRegistrationClient</em>
-     * method will result in a new client being created (and added to the list of active clients).
-     *
-     * @param tenantId The tenant that the client is scoped to.
-     */
-    protected final void removeRegistrationClient(final String tenantId) {
-
-        final String targetAddress = RegistrationClientImpl.getTargetAddress(tenantId);
-        removeActiveRequestResponseClient(targetAddress);
     }
 
     /**

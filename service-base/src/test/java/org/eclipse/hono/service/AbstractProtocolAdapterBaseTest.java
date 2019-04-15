@@ -146,11 +146,17 @@ public class AbstractProtocolAdapterBaseTest {
 
         // GIVEN an adapter that does not define a type name
         adapter = newProtocolAdapter(properties, null);
-        adapter.setRegistrationClientFactory(mock(HonoConnection.class));
+        adapter.setTenantClientFactory(tenantService);
+        adapter.setRegistrationClientFactory(registrationClientFactory);
+        adapter.setCredentialsClientFactory(credentialsClientFactory);
+        adapter.setDownstreamSenderFactory(downstreamSenderFactory);
+        adapter.setCommandConsumerFactory(commandConsumerFactory);
 
         // WHEN starting the adapter
-        // THEN startup fails
-        adapter.startInternal().setHandler(ctx.asyncAssertFailure());
+        adapter.startInternal().setHandler(ctx.asyncAssertFailure(t -> {
+            // THEN startup fails
+            ctx.assertTrue(t instanceof IllegalStateException);
+        }));
     }
 
     /**

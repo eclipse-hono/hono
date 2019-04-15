@@ -168,15 +168,10 @@ public abstract class AbstractAdapterConfig {
     @Qualifier(RegistrationConstants.REGISTRATION_ENDPOINT)
     @Scope("prototype")
     public RegistrationClientFactory registrationClientFactory() {
-        final HonoConnectionImpl result =
-                new HonoConnectionImpl(vertx(), registrationClientFactoryConfig());
 
-        final CacheProvider cacheProvider = registrationCacheProvider();
-        if (cacheProvider != null) {
-            result.setCacheProvider(cacheProvider);
-        }
-
-        return result;
+        return RegistrationClientFactory.create(
+                HonoConnection.newConnection(vertx(), registrationClientFactoryConfig()),
+                registrationCacheProvider());
     }
 
     /**
