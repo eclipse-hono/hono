@@ -3,7 +3,6 @@ title = "Frequently Asked Questions"
 menu = "main"
 menuTitle = "FAQs"
 weight = 550
-pre = '<i class="far fa-question-circle"></i> '
 +++
 
 
@@ -13,14 +12,14 @@ pre = '<i class="far fa-question-circle"></i> '
 #### Why do I get `HTTP/1.1 503 Service Unavailable` when sending messages to the HTTP protocol adapter?
 
 Please check if you have a [consumer connected]({{< relref "getting-started.md#starting-a-consumer" >}}) 
-and that you do not filter out the message type.  
+and that your consumer is for the same type of message (telemetry or event) that you are sending.  
 
 
-#### Why do I get the exception `io.vertx.core.VertxException: OpenSSL is not available`?
+#### Why do I get the exception `io.vertx.core.VertxException: OpenSSL is not available` during startup of a protocol adapter?
 
-Please check if you have set the property `nativeTlsRequired` in the protocol adapter's configuration. The default Hono
+Please check if you have set the property `nativeTlsRequired` in the protocol adapter's configuration to `true`. The default Hono
 containers do not contain `netty-tcnative`. To enable this option, please follow the explanation in the 
-[Admin Guide]({{< relref "admin-guide/secure_communication.md#using-openssl" >}}) or build your own images.
+[Admin Guide]({{< relref "admin-guide/secure_communication.md#using-openssl" >}}) or build your own container images.
 
 
 #### Why do I see `ConnectionLimitManager - Connection limit (<VALUE>) exceeded` in the logs of a protocol adapter? 
@@ -34,7 +33,8 @@ the protocol adapter determines a reasonable value based on the available resour
 
 #### Why do I see `MemoryBasedConnectionLimitStrategy - Not enough memory` in the logs of a protocol adapter? 
 
-The protocol adapter can not allocate enough memory. Please provide more memory. To try it anyways, configure the 
+The protocol adapter can not allocate enough memory for handle even a small number of connections reliably. 
+Please provide more memory. To try it anyways, configure the 
 maximum number of concurrent connections, as documented in the Admin Guides of the protocol adapter
 ([MQTT]({{< relref "admin-guide/mqtt-adapter-config.md#service-configuration" >}}),
 [AMQP]({{< relref "admin-guide/amqp-adapter-config.md#service-configuration" >}})).
