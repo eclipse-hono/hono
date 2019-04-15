@@ -32,8 +32,8 @@ public class MessageDigestPasswordEncoder implements PasswordEncoder {
     private static final Character PREFIX = '{';
     private static final Character SUFFIX = '}';
 
-    private final MessageDigest messageDigest;
     private final SecureRandom rng;
+    private final String hashFunction;
 
     /**
      * Creates message digest password encoder with specified hash function.
@@ -62,11 +62,13 @@ public class MessageDigestPasswordEncoder implements PasswordEncoder {
         Objects.requireNonNull(rng);
 
         try {
-            messageDigest = MessageDigest.getInstance(hashFunction);
-            this.rng = rng;
+            MessageDigest.getInstance(hashFunction);
         } catch (NoSuchAlgorithmException e) {
             throw new IllegalArgumentException("hash function [" + hashFunction + "] not supported on JVM", e);
         }
+
+        this.hashFunction = hashFunction;
+        this.rng = rng;
     }
 
     /**
@@ -126,10 +128,15 @@ public class MessageDigestPasswordEncoder implements PasswordEncoder {
      * @return The salted hash.
      */
     private byte[] digest(final byte[] salt, final String password) {
-        if (salt != null) {
-            messageDigest.update(salt);
+        try {
+            final MessageDigest messageDigest = MessageDigest.getInstance(hashFunction);
+            if (salt != null) {
+                messageDigest.update(salt);
+            }
+            return messageDigest.digest(password.getBytes(StandardCharsets.UTF_8));
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("hash function [" + hashFunction + "] not supported on JVM", e);
         }
-        return messageDigest.digest(password.getBytes(StandardCharsets.UTF_8));
     }
 
     private byte[] randomSalt() {
