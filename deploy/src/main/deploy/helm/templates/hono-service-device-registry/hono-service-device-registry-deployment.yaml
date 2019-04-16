@@ -75,7 +75,8 @@ spec:
       - command:
         - sh
         - -c
-        - cp -u /tmp/hono/example-credentials.json /var/lib/hono/device-registry/credentials.json;
+        - cp -u /tmp/hono/example-device-identities.json /var/lib/hono/device-registry/device-identities.json;
+          cp -u /tmp/hono/example-credentials.json /var/lib/hono/device-registry/credentials.json;
           cp -u /tmp/hono/example-tenants.json /var/lib/hono/device-registry/tenants.json
         image: busybox
         name: copy-example-data
