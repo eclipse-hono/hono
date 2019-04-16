@@ -149,7 +149,7 @@ public abstract class CredentialsApiAuthProvider<T extends AbstractDeviceCredent
      * 
      * @param deviceCredentials The credentials provided by the device.
      * @param credentialsOnRecord The credentials to match against.
-     * @param span The OpenTracing context to use for tracking the operation.
+     * @param spanContext The OpenTracing context to use for tracking the operation.
      * @return A future that is succeeded with the authenticated device if the
      *         credentials have been validated successfully. Otherwise, the
      *         future is failed with a {@link ServiceInvocationException}.
