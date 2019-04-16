@@ -44,6 +44,8 @@ public class DefaultConnectionLimitManager implements ConnectionLimitManager {
      * @param currentConnections The supplier to invoke for getting the current number of connections.
      * @param config The configuration of the adapter or {@code null}.
      * @throws NullPointerException if strategy or currentConnections are {@code null}.
+     * @throws ConnectionLimitAutoConfigException if no connection limit is configured and the auto-configuration
+     *             calculates a limit of 0.
      */
     public DefaultConnectionLimitManager(final ConnectionLimitStrategy strategy, final Supplier<Integer> currentConnections,
             final ProtocolAdapterProperties config) {
@@ -60,6 +62,11 @@ public class DefaultConnectionLimitManager implements ConnectionLimitManager {
     private int autoconfigureConnectionLimit() {
 
         final int recommendedLimit = strategy.getRecommendedLimit();
+
+        if (recommendedLimit == 0) {
+            throw new ConnectionLimitAutoConfigException("The connection limit would be auto-configured to 0 (based on "
+                    + strategy.getResourcesDescription() + "). To override this check, configure a connection limit.");
+        }
 
         LOG.info("Setting connection limit to {} (based on {})", recommendedLimit, strategy.getResourcesDescription());
 
