@@ -26,6 +26,8 @@ title = "Release Notes"
   reporting telemetry messages using meter name *hono.messages.received*. This fixes
   an issue when using the Prometheus back end where the HTTP adapter failed to report
   messages that contained a TTD value and others that didn't.
+* The Helm based deployment of the device registry has been fixed by adding the secret
+  and deployment entries for the `device-identities.json`.
 
 ### API Changes
 
