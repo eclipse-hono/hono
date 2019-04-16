@@ -56,7 +56,6 @@ class CachingClientFactory<T> extends ClientFactory<T> {
     private final Map<String, Boolean> creationLocks = new HashMap<>();
 
     /**
-     * @param contextSupplier A supplier of the vert.x context to run on.
      * @param livenessCheck A predicate for checking if a cached client is usable.
      */
     CachingClientFactory(final Predicate<T> livenessCheck) {
