@@ -119,7 +119,7 @@ Now, you should see a list of containers with 2 tags:
 
 Copy a second one and put as 1st parameter for following script:
 ```bash
-sudo ./push_hono_images_private.sh 1.0-M2-SNAPSHOT $ACR_NAME.azurecr.io
+sudo ./push_hono_images.sh 1.0-M2-SNAPSHOT $ACR_NAME.azurecr.io
 ```
 This script will tag and push container to your private repo.
 #### Modify resource descriptors with new container names
@@ -139,7 +139,7 @@ grep -rl 'eclipse/' ./ | xargs sudo sed -i 's/eclipse\//'"$ACR_NAME"'.azurecr.io
 ## Create AKS cluster and deploy HONO
 ---
 If you have skipped a previous block, you can use one of the deployment package from [here](https://www.eclipse.org/hono/download/). Make sure you have all required files (They can be found in [Eclipse Hono GitHub](https://github.com/eclipse/hono)):
- - push_hono_images_private.sh in ~/hono
+ - push_hono_images.sh in ~/hono
  - dispatch-router-ext-svc.yaml in ~/hono/deploy/resource-descriptors/azure
  - hono-adapter-amqp-vertx-ext-svc.yaml in ~/hono/deploy/resource-descriptors/azure
  - hono-adapter-http-vertx-ext-svc.yaml in ~/hono/deploy/resource-descriptors/azure
