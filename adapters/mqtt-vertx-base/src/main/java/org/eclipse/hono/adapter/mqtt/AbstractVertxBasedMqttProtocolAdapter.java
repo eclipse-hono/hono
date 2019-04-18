@@ -936,8 +936,15 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                            .withTag(Constants.HEADER_COMMAND_REQUEST_ID, reqId)
                            .withTag(TracingHelper.TAG_AUTHENTICATED.getKey(), ctx.authenticatedDevice() != null)
                            .start();
+                    final Future<JsonObject> tokenTracker = getRegistrationAssertion(targetAddress.getTenantId(),
+                            targetAddress.getResourceId(), ctx.authenticatedDevice(), currentSpan.context());
+                    final Future<TenantObject> tenantEnabledTracker = getTenantConfiguration(
+                            targetAddress.getTenantId(), currentSpan.context())
+                                    .compose(tenantObject -> isAdapterEnabled(tenantObject));
 
-                   return sendCommandResponse(targetAddress.getTenantId(), commandResponse, currentSpan.context())
+                    return CompositeFuture.all(tokenTracker, tenantEnabledTracker)
+                            .compose(ok -> sendCommandResponse(targetAddress.getTenantId(), commandResponse,
+                                    currentSpan.context()))
                            .map(delivery -> {
                                LOG.trace("successfully forwarded command response from device [tenant-id: {}, device-id: {}]",
                                        targetAddress.getTenantId(), targetAddress.getResourceId());
