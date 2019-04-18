@@ -936,8 +936,13 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             items.put(MessageHelper.APP_PROPERTY_STATUS, commandResponse.getStatus());
             currentSpan.log(items);
 
-            return sendCommandResponse(resource.getTenantId(), commandResponse, currentSpan.context());
+            final Future<JsonObject> tokenFuture = getRegistrationAssertion(resource.getTenantId(),
+                    resource.getResourceId(), context.getAuthenticatedDevice(), currentSpan.context());
+            final Future<TenantObject> tenantEnabledFuture = getTenantConfiguration(resource.getTenantId(),
+                    currentSpan.context()).compose(tenantObject -> isAdapterEnabled(tenantObject));
 
+            return CompositeFuture.all(tenantEnabledFuture, tokenFuture)
+                    .compose(ok -> sendCommandResponse(resource.getTenantId(), commandResponse, currentSpan.context()));
         }).map(delivery -> {
 
             LOG.trace("forwarded command response from device [tenant: {}, device-id: {}]",
