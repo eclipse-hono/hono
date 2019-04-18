@@ -28,6 +28,8 @@ title = "Release Notes"
   messages that contained a TTD value and others that didn't.
 * The Helm based deployment of the device registry has been fixed by adding the secret
   and deployment entries for the `device-identities.json`.
+* Before uploading command responses, the MQTT and AMQP adapters now check whether the device is 
+  registered and also the adapter is enabled for the tenant.
 
 ### API Changes
 
