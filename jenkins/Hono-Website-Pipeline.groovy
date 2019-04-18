@@ -76,7 +76,7 @@ def build() {
         sh '''
             #!/bin/sh
             echo "scrubbing web site target directory..."
-            rm -rf $WORKSPACE/hono-web-site/*
+            rm -rf $WORKSPACE/hono-web-site/!(copyrighted-logos)
             cd $WORKSPACE/hono/site
             echo "building web site using Hugo `/shared/common/hugo/latest/hugo version`"
             /shared/common/hugo/latest/hugo -v -d $WORKSPACE/hono-web-site
