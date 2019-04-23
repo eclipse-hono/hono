@@ -256,7 +256,7 @@ public class RegistrationClientImplTest {
                 .compact();
         final JsonObject result = new JsonObject().put(RegistrationConstants.FIELD_ASSERTION, token);
         if (defaultContentType != null) {
-            result.put(RegistrationConstants.FIELD_DEFAULTS, new JsonObject()
+            result.put(RegistrationConstants.FIELD_PAYLOAD_DEFAULTS, new JsonObject()
                     .put(MessageHelper.SYS_PROPERTY_CONTENT_TYPE, defaultContentType));
         }
         return result;

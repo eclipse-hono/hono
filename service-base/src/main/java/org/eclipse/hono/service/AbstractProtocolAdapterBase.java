@@ -838,7 +838,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * {@link RegistrationConstants#FIELD_ASSERTION}.
      * <p>
      * In addition to the assertion the returned object may include <em>default</em> values for properties to set on
-     * messages published by the device under property {@link RegistrationConstants#FIELD_DEFAULTS}.
+     * messages published by the device under property {@link RegistrationConstants#FIELD_PAYLOAD_DEFAULTS}.
      *
      * @param tenantId The tenant that the device belongs to.
      * @param deviceId The device to get the assertion for.
@@ -878,7 +878,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * <p>
      * In addition to the assertion the returned object may include <em>default</em>
      * values for properties to set on messages published by the device under
-     * property {@link RegistrationConstants#FIELD_DEFAULTS}.
+     * property {@link RegistrationConstants#FIELD_PAYLOAD_DEFAULTS}.
      * 
      * @param tenantId The tenant that the device belongs to.
      * @param deviceId The device to get the assertion for.
@@ -1075,7 +1075,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * <li>Adds {@linkplain #getTypeName() the adapter's name} to the message in application property
      * {@link MessageHelper#APP_PROPERTY_ORIG_ADAPTER}</li>
      * <li>Augments the message with missing (application) properties corresponding to the
-     * {@link RegistrationConstants#FIELD_DEFAULTS} contained in the registration information.</li>
+     * {@link RegistrationConstants#FIELD_PAYLOAD_DEFAULTS} contained in the registration information.</li>
      * <li>Adds JMS vendor properties if configuration property <em>jmsVendorPropertiesEnabled</em> is set to
      * {@code true}.</li>
      * </ul>
@@ -1090,7 +1090,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
 
         MessageHelper.addProperty(message, MessageHelper.APP_PROPERTY_ORIG_ADAPTER, getTypeName());
         if (getConfig().isDefaultsEnabled()) {
-            final JsonObject defaults = registrationInfo.getJsonObject(RegistrationConstants.FIELD_DEFAULTS);
+            final JsonObject defaults = registrationInfo.getJsonObject(RegistrationConstants.FIELD_PAYLOAD_DEFAULTS);
             if (defaults != null) {
                 addDefaults(message, defaults);
             }

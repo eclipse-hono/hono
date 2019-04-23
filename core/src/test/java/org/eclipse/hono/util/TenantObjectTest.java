@@ -50,13 +50,18 @@ public class TenantObjectTest {
     private static final String TRUST_STORE_PATH = "target/certs/trustStore.jks";
     private static final String TRUST_STORE_PASSWORD = "honotrust";
     private static ObjectMapper mapper;
+    private static X509Certificate trustedCaCert;
 
     /**
-     * Initializes static fields.
+     * Sets up static fixture.
+     * 
+     * @throws IOException if the trust store could not be read.
+     * @throws GeneralSecurityException if the trust store could not be read.
      */
     @BeforeClass
-    public static void init() {
+    public static void init() throws GeneralSecurityException, IOException {
         mapper = new ObjectMapper();
+        trustedCaCert = getCaCertificate();
     }
 
     /**
@@ -68,6 +73,7 @@ public class TenantObjectTest {
     @Test
     public void testDeserializationOfCustomConfigProperties() throws Exception {
 
+        final JsonObject defaults = new JsonObject().put("time-to-live", 60);
         final JsonObject deploymentValue = new JsonObject().put("maxInstances", 4);
         final JsonObject adapterConfig = new JsonObject()
                 .put(TenantConstants.FIELD_ADAPTERS_TYPE, "custom")
@@ -77,7 +83,8 @@ public class TenantObjectTest {
                 .put(TenantConstants.FIELD_PAYLOAD_TENANT_ID, "my-tenant")
                 .put(TenantConstants.FIELD_ENABLED, true)
                 .put("plan", "gold")
-                .put(TenantConstants.FIELD_ADAPTERS, new JsonArray().add(adapterConfig));
+                .put(TenantConstants.FIELD_ADAPTERS, new JsonArray().add(adapterConfig))
+                .put(TenantConstants.FIELD_PAYLOAD_DEFAULTS, defaults);
         final String jsonString = config.encode();
 
         final TenantObject obj = mapper.readValue(jsonString, TenantObject.class);
@@ -87,6 +94,9 @@ public class TenantObjectTest {
         final JsonObject customAdapterConfig = obj.getAdapterConfiguration("custom");
         assertNotNull(customAdapterConfig);
         assertThat(customAdapterConfig.getJsonObject("deployment"), is(deploymentValue));
+
+        final JsonObject defaultProperties = obj.getDefaults();
+        assertThat(defaultProperties.getInteger("time-to-live"), is(60));
     }
 
     /**
@@ -97,18 +107,17 @@ public class TenantObjectTest {
     @Test
     public void testDeserializationOfPublicKeyTrustAnchor() throws GeneralSecurityException {
 
-        final X509Certificate cert = getCaCertificate();
         final JsonObject config = new JsonObject()
                 .put(TenantConstants.FIELD_PAYLOAD_TENANT_ID, "my-tenant")
                 .put(TenantConstants.FIELD_ENABLED, true)
                 .put(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA,
                         new JsonObject()
-                        .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, cert.getSubjectX500Principal().getName(X500Principal.RFC2253))
-                        .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, Base64.getEncoder().encodeToString(cert.getPublicKey().getEncoded())));
+                        .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, trustedCaCert.getSubjectX500Principal().getName(X500Principal.RFC2253))
+                        .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, Base64.getEncoder().encodeToString(trustedCaCert.getPublicKey().getEncoded())));
 
         final TenantObject tenant = config.mapTo(TenantObject.class);
-        assertThat(tenant.getTrustedCaSubjectDn(), is(cert.getSubjectX500Principal()));
-        assertThat(tenant.getTrustAnchor().getCAPublicKey(), is(cert.getPublicKey()));
+        assertThat(tenant.getTrustedCaSubjectDn(), is(trustedCaCert.getSubjectX500Principal()));
+        assertThat(tenant.getTrustAnchor().getCAPublicKey(), is(trustedCaCert.getPublicKey()));
     }
 
     /**
@@ -119,18 +128,17 @@ public class TenantObjectTest {
     @Test
     public void testDeserializationOfCertificateTrustAnchor() throws GeneralSecurityException {
 
-        final X509Certificate cert = getCaCertificate();
         final JsonObject config = new JsonObject()
                 .put(TenantConstants.FIELD_PAYLOAD_TENANT_ID, "my-tenant")
                 .put(TenantConstants.FIELD_ENABLED, true)
                 .put(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA,
                         new JsonObject()
-                        .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, cert.getSubjectX500Principal().getName(X500Principal.RFC2253))
-                        .put(TenantConstants.FIELD_PAYLOAD_CERT, Base64.getEncoder().encodeToString(cert.getEncoded())));
+                        .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, trustedCaCert.getSubjectX500Principal().getName(X500Principal.RFC2253))
+                        .put(TenantConstants.FIELD_PAYLOAD_CERT, Base64.getEncoder().encodeToString(trustedCaCert.getEncoded())));
 
         final TenantObject tenant = config.mapTo(TenantObject.class);
-        assertThat(tenant.getTrustedCaSubjectDn(), is(cert.getSubjectX500Principal()));
-        assertThat(tenant.getTrustAnchor().getTrustedCert(), is(cert));
+        assertThat(tenant.getTrustedCaSubjectDn(), is(trustedCaCert.getSubjectX500Principal()));
+        assertThat(tenant.getTrustAnchor().getTrustedCert(), is(trustedCaCert));
     }
 
     /**
@@ -178,7 +186,6 @@ public class TenantObjectTest {
     @Test
     public void testGetTrustAnchorUsesCertificate() throws GeneralSecurityException {
 
-        final X509Certificate trustedCaCert = getCaCertificate();
         final TenantObject obj = TenantObject.from(Constants.DEFAULT_TENANT, Boolean.TRUE)
                 .setTrustAnchor(trustedCaCert);
 
@@ -194,7 +201,6 @@ public class TenantObjectTest {
     @Test
     public void testGetTrustAnchorUsesPublicKey() throws GeneralSecurityException {
 
-        final X509Certificate trustedCaCert = getCaCertificate();
         final TenantObject obj = TenantObject.from(Constants.DEFAULT_TENANT, Boolean.TRUE)
                 .setTrustAnchor(trustedCaCert.getPublicKey(), trustedCaCert.getSubjectX500Principal());
 
@@ -313,15 +319,12 @@ public class TenantObjectTest {
         assertThat(tenantObject.getResourceLimits(), is(nullValue()));
     }
 
-    private X509Certificate getCaCertificate() {
+    private static X509Certificate getCaCertificate() throws GeneralSecurityException, IOException {
 
         try (InputStream is = new FileInputStream(TRUST_STORE_PATH)) {
             final KeyStore store = KeyStore.getInstance("JKS");
             store.load(is, TRUST_STORE_PASSWORD.toCharArray());
             return (X509Certificate) store.getCertificate("ca");
-        } catch (GeneralSecurityException | IOException e) {
-            e.printStackTrace();
-            return null;
         }
     }
 }
