@@ -35,7 +35,14 @@ public abstract class RequestResponseApiConstants {
      */
     public static final String CONTENT_TYPE_APPLICATION_JSON = MessageHelper.CONTENT_TYPE_APPLICATION_JSON;
 
-    /* message payload fields */
+    /**
+     * The name of the property which contains default properties that protocol adapters
+     * should add to messages published by a device.
+     */
+    public static final String FIELD_PAYLOAD_DEFAULTS  = "defaults";
+    /**
+     * The name of the property that contains the identifier of a device.
+     */
     public static final String FIELD_PAYLOAD_DEVICE_ID = Constants.JSON_FIELD_DEVICE_ID;
     /**
      * The name of the property that contains the <em>subject DN</em> of the CA certificate
@@ -43,10 +50,23 @@ public abstract class RequestResponseApiConstants {
      * <a href="https://tools.ietf.org/html/rfc2253#section-2">RFC 2253, Section 2</a>.
      */
     public static final String FIELD_PAYLOAD_SUBJECT_DN = "subject-dn";
+    /**
+     * The name of the property that contains the identifier of a tenant.
+     */
     public static final String FIELD_PAYLOAD_TENANT_ID = Constants.JSON_FIELD_TENANT_ID;
 
+    /**
+     * The name of the field that contains a boolean indicating the status of an entity.
+     */
     public static final String FIELD_ENABLED   = "enabled";
+    /**
+     * The name of the field that contains additional information about an error
+     * that has occurred while processing a request message.
+     */
     public static final String FIELD_ERROR     = "error";
+    /**
+     * The name of the field that contains the payload of a request or response message.
+     */
     public static final String FIELD_PAYLOAD   = "payload";
 
     /**

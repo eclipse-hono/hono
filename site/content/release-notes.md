@@ -2,6 +2,13 @@
 title = "Release Notes"
 +++
 
+## 1.0-M4 (not released yet)
+
+### API Changes
+
+* The `org.eclipse.hono.util.RegistrationConstants.FIELD_DEFAULTS` constant
+  has been renamed to `org.eclipse.hono.util.RegistrationConstants.FIELD_PAYLOAD_DEFAULTS`.
+
 ## 1.0-M3
 
 ### Fixes & Enhancements

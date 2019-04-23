@@ -518,4 +518,26 @@ public final class TenantObject extends JsonBackedValueObject {
         Objects.requireNonNull(resourceLimits);
         return setProperty(TenantConstants.FIELD_RESOURCE_LIMITS, resourceLimits);
     }
+
+    /**
+     * Gets the default property values used for all devices of this tenant.
+     * 
+     * @return The default properties or an empty JSON object if no default properties
+     *         have been defined for this tenant.
+     */
+    @JsonIgnore
+    public JsonObject getDefaults() {
+        return getProperty(TenantConstants.FIELD_PAYLOAD_DEFAULTS, new JsonObject());
+    }
+
+    /**
+     * Sets the default property values to use for all devices of this tenant.
+     * 
+     * @param defaultProperties The properties or an empty JSON object if no default properties
+     *         have been defined for this tenant.
+     */
+    @JsonIgnore
+    public void setDefaults(final JsonObject defaultProperties) {
+        setProperty(TenantConstants.FIELD_PAYLOAD_DEFAULTS, Objects.requireNonNull(defaultProperties));
+    }
 }

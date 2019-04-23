@@ -446,7 +446,7 @@ public abstract class BaseRegistrationService<T> extends EventBusService<T> impl
      * Creates a registration assertion token for a device and wraps it in a JSON object.
      * <p>
      * The returned JSON object may also contain <em>default</em> values registered for the
-     * device under key {@link RegistrationConstants#FIELD_DEFAULTS}.
+     * device under key {@link RegistrationConstants#FIELD_PAYLOAD_DEFAULTS}.
      * 
      * @param tenantId The tenant the device belongs to.
      * @param deviceId The device to create the assertion token for.
@@ -458,9 +458,9 @@ public abstract class BaseRegistrationService<T> extends EventBusService<T> impl
         final JsonObject result = new JsonObject()
                 .put(RegistrationConstants.FIELD_PAYLOAD_DEVICE_ID, deviceId)
                 .put(RegistrationConstants.FIELD_ASSERTION, assertionFactory.getAssertion(tenantId, deviceId));
-        final JsonObject defaults = registrationInfo.getJsonObject(RegistrationConstants.FIELD_DEFAULTS);
+        final JsonObject defaults = registrationInfo.getJsonObject(RegistrationConstants.FIELD_PAYLOAD_DEFAULTS);
         if (defaults != null) {
-            result.put(RegistrationConstants.FIELD_DEFAULTS, defaults);
+            result.put(RegistrationConstants.FIELD_PAYLOAD_DEFAULTS, defaults);
         }
         return result;
     }

@@ -51,12 +51,6 @@ public final class RegistrationConstants extends RequestResponseApiConstants {
      * that contains a device's registration information.
      */
     public static final String FIELD_DATA         = "data";
-    /**
-     * The name of the field in a device's registration information that contains
-     * <em>defaults</em> to be used by protocol adapters when processing messages published
-     * by the device.
-     */
-    public static final String FIELD_DEFAULTS     = "defaults";
 
     /**
      * The name of the field in a device's registration information that contains

@@ -269,7 +269,7 @@ public class BaseRegistrationServiceTest {
                     "4711",
                     new JsonObject()
                         .put(RegistrationConstants.FIELD_ENABLED, true)
-                        .put(RegistrationConstants.FIELD_DEFAULTS, new JsonObject()
+                        .put(RegistrationConstants.FIELD_PAYLOAD_DEFAULTS, new JsonObject()
                                 .put(MessageHelper.SYS_PROPERTY_CONTENT_TYPE, "application/default"))
                         .put(RegistrationConstants.FIELD_VIA, "gw-1"));
             return Future.succeededFuture(RegistrationResult.from(HttpURLConnection.HTTP_OK, responsePayload));
@@ -290,7 +290,7 @@ public class BaseRegistrationServiceTest {
                     "4714",
                     new JsonObject()
                         .put(RegistrationConstants.FIELD_ENABLED, true)
-                        .put(RegistrationConstants.FIELD_DEFAULTS, new JsonObject()
+                        .put(RegistrationConstants.FIELD_PAYLOAD_DEFAULTS, new JsonObject()
                                 .put(MessageHelper.SYS_PROPERTY_CONTENT_TYPE, "application/default"))
                         .put(RegistrationConstants.FIELD_VIA, new JsonArray().add("gw-1").add("gw-4")));
             return Future.succeededFuture(RegistrationResult.from(HttpURLConnection.HTTP_OK, responsePayload));
