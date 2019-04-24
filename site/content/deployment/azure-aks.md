@@ -131,7 +131,7 @@ Backup a "resource-descriptors" directory:
 ```bash
 cp -r ./resource-descriptors/ ./resource-descriptors-backup/
 ```
-Modify container image in all yaml files to match with newely created and pushed:
+Modify container image in all yaml files to match with newly created and pushed:
 ```bash
 cd ~/repos/hono-test/deploy/target/deploy/resource-descriptors
 grep -rl 'eclipse/' ./ | xargs sudo sed -i 's/eclipse\//'"$ACR_NAME"'.azurecr.io\/eclipse\//g'

@@ -100,4 +100,4 @@ via the HTTP protocol adapter:
 The following sequence diagram shows a **Time until disconnect notification** by sending an empty event message downstream
 via the HTTP protocol adapter:
 
-![Device command readiness with explict event](../device_commandReadinessExplicit.png)
+![Device command readiness with explicit event](../device_commandReadinessExplicit.png)
