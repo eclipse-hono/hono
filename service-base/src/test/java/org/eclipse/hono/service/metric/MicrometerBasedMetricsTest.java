@@ -14,23 +14,18 @@
 
 package org.eclipse.hono.service.metric;
 
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
-import java.util.Arrays;
-import java.util.Collection;
+import java.util.stream.Stream;
 
 import org.eclipse.hono.service.metric.MetricsTags.EndpointType;
 import org.eclipse.hono.service.metric.MetricsTags.QoS;
 import org.eclipse.hono.service.metric.MetricsTags.TtdStatus;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameter;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import io.micrometer.core.instrument.Clock;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -46,43 +41,31 @@ import io.micrometer.prometheus.PrometheusMeterRegistry;
  * Verifies behavior of {@link MicrometerBasedMetrics}.
  *
  */
-@RunWith(Parameterized.class)
 public class MicrometerBasedMetricsTest {
-
-    /**
-     * The Micrometer registry to run the tests against.
-     */
-    @Parameter
-    public MeterRegistry registry;
-    private MicrometerBasedMetrics metrics;
 
     /**
      * Gets the Micrometer registries that the tests should be run against.
      * 
      * @return The registries.
      */
-    @Parameters(name = "{0}")
-    public static Collection<MeterRegistry> registries() {
-        return Arrays.asList(new MeterRegistry[] {
+    public static Stream<MeterRegistry> registries() {
+        return Stream.of(new MeterRegistry[] {
                                 new PrometheusMeterRegistry(PrometheusConfig.DEFAULT),
                                 new GraphiteMeterRegistry(GraphiteConfig.DEFAULT, Clock.SYSTEM)
                                 });
     }
 
     /**
-     * Sets up the fixture.
-     */
-    @Before
-    public void setUp() {
-        metrics = new MicrometerBasedMetrics(registry);
-    }
-
-    /**
      * Verifies that arbitrary telemetry messages with or without a QoS
      * can be reported successfully.
+     *
+     * @param registry : the registry that the tests should be run against.
      */
-    @Test
-    public void testReportTelemetryWithOptionalQos() {
+    @ParameterizedTest
+    @MethodSource("registries")
+    public void testReportTelemetryWithOptionalQos(final MeterRegistry registry) {
+
+        final MicrometerBasedMetrics metrics = new MicrometerBasedMetrics(registry);
 
         // GIVEN a sample
         final Sample sample = metrics.startTimer();
@@ -122,9 +105,14 @@ public class MicrometerBasedMetricsTest {
     /**
      * Verifies that when reporting a downstream message no tags for
      * {@link QoS#UNKNOWN} nor {@link TtdStatus#NONE} are included.
+     *
+     * @param registry : the registry that the tests should be run against.
      */
-    @Test
-    public void testReportTelemetryWithUnknownTagValues() {
+    @ParameterizedTest
+    @MethodSource("registries")
+    public void testReportTelemetryWithUnknownTagValues(final MeterRegistry registry) {
+
+        final MicrometerBasedMetrics metrics = new MicrometerBasedMetrics(registry);
 
         metrics.reportTelemetry(
                 MetricsTags.EndpointType.TELEMETRY,
@@ -147,9 +135,14 @@ public class MicrometerBasedMetricsTest {
     /**
      * Verifies that when reporting a downstream message the legacy metrics
      * are also reported, if set.
+     *
+     * @param registry : the registry that the tests should be run against.
      */
-    @Test
-    public void testReportTelemetryInvokesLegacyMetrics() {
+    @ParameterizedTest
+    @MethodSource("registries")
+    public void testReportTelemetryInvokesLegacyMetrics(final MeterRegistry registry) {
+
+        final MicrometerBasedMetrics metrics = new MicrometerBasedMetrics(registry);
 
         final LegacyMetrics legacyMetrics = mock(LegacyMetrics.class);
         metrics.setLegacyMetrics(legacyMetrics);

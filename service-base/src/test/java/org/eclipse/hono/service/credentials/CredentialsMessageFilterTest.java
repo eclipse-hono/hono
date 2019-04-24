@@ -12,8 +12,8 @@
  *******************************************************************************/
 package org.eclipse.hono.service.credentials;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.apache.qpid.proton.amqp.Binary;
 import org.apache.qpid.proton.amqp.messaging.AmqpValue;
@@ -22,8 +22,8 @@ import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.ResourceIdentifier;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import io.vertx.core.json.JsonObject;
 import io.vertx.proton.ProtonHelper;
@@ -42,7 +42,7 @@ public class CredentialsMessageFilterTest {
     /**
      * Sets up the fixture.
      */
-    @Before
+    @BeforeEach
     public void setUp() {
         target = ResourceIdentifier.from(CredentialsConstants.CREDENTIALS_ENDPOINT, Constants.DEFAULT_TENANT, null);
     }

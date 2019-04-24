@@ -14,14 +14,13 @@
 
 package org.eclipse.hono.service.metric;
 
-import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.TelemetryConstants;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import io.micrometer.core.instrument.Meter.Id;
 import io.micrometer.core.instrument.Meter.Type;
@@ -50,7 +49,7 @@ public class LegacyMetricsConfigTest {
     /**
      * Sets up the fixture.
      */
-    @Before
+    @BeforeEach
     public void setUp() {
 
         config = new LegacyMetricsConfig();
@@ -162,6 +161,6 @@ public class LegacyMetricsConfigTest {
     private void assertMapping(final Id orig, final String expectedMapping) {
 
         final String metricName = mapper.toHierarchicalName(filter(orig), NamingConvention.dot);
-        assertThat(metricName, is(expectedMapping));
+        assertEquals(expectedMapping, metricName);
     }
 }

@@ -13,15 +13,15 @@
 
 package org.eclipse.hono.service.limiting;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.util.function.Supplier;
 
 import org.eclipse.hono.config.ProtocolAdapterProperties;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * Verifies the behavior of {@link DefaultConnectionLimitManager}.

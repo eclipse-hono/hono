@@ -14,7 +14,8 @@
 package org.eclipse.hono.service;
 
 import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertThat;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -46,11 +47,11 @@ import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.TelemetryConstants;
-import org.junit.Before;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.Rule;
-import org.junit.Test;
 import org.junit.rules.Timeout;
-import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 
 import io.opentracing.SpanContext;
@@ -60,8 +61,9 @@ import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
-import io.vertx.ext.unit.TestContext;
-import io.vertx.ext.unit.junit.VertxUnitRunner;
+import io.vertx.junit5.Checkpoint;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 import io.vertx.proton.ProtonHelper;
 
 
@@ -69,7 +71,7 @@ import io.vertx.proton.ProtonHelper;
  * Tests verifying behavior of {@link AbstractProtocolAdapterBase}.
  *
  */
-@RunWith(VertxUnitRunner.class)
+@ExtendWith(VertxExtension.class)
 public class AbstractProtocolAdapterBaseTest {
 
     private static final String ADAPTER_NAME = "abstract-adapter";
@@ -95,7 +97,7 @@ public class AbstractProtocolAdapterBaseTest {
      * Sets up the fixture.
      */
     @SuppressWarnings("unchecked")
-    @Before
+    @BeforeEach
     public void setup() {
 
         tenantService = mock(TenantClientFactory.class);
@@ -142,7 +144,7 @@ public class AbstractProtocolAdapterBaseTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testStartInternalFailsIfNoTypeNameIsDefined(final TestContext ctx) {
+    public void testStartInternalFailsIfNoTypeNameIsDefined(final VertxTestContext ctx) {
 
         // GIVEN an adapter that does not define a type name
         adapter = newProtocolAdapter(properties, null);
@@ -153,10 +155,11 @@ public class AbstractProtocolAdapterBaseTest {
         adapter.setCommandConsumerFactory(commandConsumerFactory);
 
         // WHEN starting the adapter
-        adapter.startInternal().setHandler(ctx.asyncAssertFailure(t -> {
+        adapter.startInternal().setHandler(ctx.failing(t -> ctx.verify(() -> {
             // THEN startup fails
-            ctx.assertTrue(t instanceof IllegalStateException);
-        }));
+            assertTrue(t instanceof IllegalStateException);
+            ctx.completeNow();
+        })));
     }
 
     /**
@@ -168,7 +171,7 @@ public class AbstractProtocolAdapterBaseTest {
      */
     @SuppressWarnings("unchecked")
     @Test
-    public void testStartInternalConnectsToServices(final TestContext ctx) {
+    public void testStartInternalConnectsToServices(final VertxTestContext ctx) {
 
         // GIVEN an adapter configured with service clients
         // that can connect to the corresponding services
@@ -177,7 +180,7 @@ public class AbstractProtocolAdapterBaseTest {
         final Handler<Void> commandConnectionLostHandler = mock(Handler.class);
         givenAnAdapterConfiguredWithServiceClients(startupHandler, commandConnectionHandler, commandConnectionLostHandler);
         // WHEN starting the adapter
-        adapter.startInternal().setHandler(ctx.asyncAssertSuccess(ok -> {
+        adapter.startInternal().setHandler(ctx.succeeding(ok -> ctx.verify(() -> {
             // THEN the service clients have connected
             verify(tenantService).connect();
             verify(registrationClientFactory).connect();
@@ -191,7 +194,9 @@ public class AbstractProtocolAdapterBaseTest {
             // is signaled
             verify(commandConnectionHandler).handle(null);
             verify(commandConnectionLostHandler, never()).handle(null);
-        }));
+
+            ctx.completeNow();
+        })));
     }
 
     /**
@@ -203,13 +208,13 @@ public class AbstractProtocolAdapterBaseTest {
      */
     @SuppressWarnings("unchecked")
     @Test
-    public void testCallbacksInvokedOnReconnect(final TestContext ctx) {
+    public void testCallbacksInvokedOnReconnect(final VertxTestContext ctx) {
 
         // GIVEN an adapter connected to Hono services
         final Handler<Void> commandConnectionEstablishedHandler = mock(Handler.class);
         final Handler<Void> commandConnectionLostHandler = mock(Handler.class);
         givenAnAdapterConfiguredWithServiceClients(mock(Handler.class), commandConnectionEstablishedHandler, commandConnectionLostHandler);
-        adapter.startInternal().setHandler(ctx.asyncAssertSuccess(ok -> {
+        adapter.startInternal().setHandler(ctx.succeeding(ok -> ctx.verify(() -> {
             final ArgumentCaptor<DisconnectListener> disconnectHandlerCaptor = ArgumentCaptor.forClass(DisconnectListener.class);
             verify(commandConsumerFactory).addDisconnectListener(disconnectHandlerCaptor.capture());
             final ArgumentCaptor<ReconnectListener> reconnectHandlerCaptor = ArgumentCaptor.forClass(ReconnectListener.class);
@@ -222,7 +227,9 @@ public class AbstractProtocolAdapterBaseTest {
             reconnectHandlerCaptor.getValue().onReconnect(mock(HonoConnection.class));
             // the onCommandConnectionEstablished hook is being invoked
             verify(commandConnectionEstablishedHandler, times(2)).handle(null);
-        }));
+
+            ctx.completeNow();
+        })));
     }
 
     private void givenAnAdapterConfiguredWithServiceClients(
@@ -298,22 +305,27 @@ public class AbstractProtocolAdapterBaseTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testGetRegistrationAssertionSucceedsForExistingDevice(final TestContext ctx) {
+    public void testGetRegistrationAssertionSucceedsForExistingDevice(final VertxTestContext ctx) {
 
         // GIVEN an adapter connected to a registration service
         final JsonObject assertionResult = newRegistrationAssertionResult("token");
         when(registrationClient.assertRegistration(eq("device"), any())).thenReturn(Future.succeededFuture(assertionResult));
         when(registrationClient.assertRegistration(eq("device"), any(), any())).thenReturn(Future.succeededFuture(assertionResult));
 
+        final Checkpoint assertion = ctx.checkpoint();
         // WHEN an assertion for the device is retrieved
-        adapter.getRegistrationAssertion("tenant", "device", null).setHandler(ctx.asyncAssertSuccess(result -> {
+        adapter.getRegistrationAssertion("tenant", "device", null)
+                .setHandler(ctx.succeeding(result -> ctx.verify(() -> {
             // THEN the result contains the registration assertion
-            ctx.assertEquals(assertionResult, result);
-        }));
-        adapter.getRegistrationAssertion("tenant", "device", null, mock(SpanContext.class)).setHandler(ctx.asyncAssertSuccess(result -> {
+            assertEquals(assertionResult, result);
+            assertion.flag();
+        })));
+        adapter.getRegistrationAssertion("tenant", "device", null, mock(SpanContext.class))
+                .setHandler(ctx.succeeding(result -> ctx.verify(() -> {
             // THEN the result contains the registration assertion
-            ctx.assertEquals(assertionResult, result);
-        }));
+            assertEquals(assertionResult, result);
+            assertion.flag();
+        })));
     }
 
     /**
@@ -323,7 +335,7 @@ public class AbstractProtocolAdapterBaseTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testGetRegistrationAssertionFailsWith404ForNonExistingDevice(final TestContext ctx) {
+    public void testGetRegistrationAssertionFailsWith404ForNonExistingDevice(final VertxTestContext ctx) {
 
         // GIVEN an adapter connected to a registration service
         when(registrationClient.assertRegistration(eq("non-existent"), any())).thenReturn(
@@ -331,15 +343,20 @@ public class AbstractProtocolAdapterBaseTest {
         when(registrationClient.assertRegistration(eq("non-existent"), any(), any())).thenReturn(
                 Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND)));
 
+        final Checkpoint assertion = ctx.checkpoint();
         // WHEN an assertion for a non-existing device is retrieved
-        adapter.getRegistrationAssertion("tenant", "non-existent", null).setHandler(ctx.asyncAssertFailure(t -> {
+        adapter.getRegistrationAssertion("tenant", "non-existent", null)
+                .setHandler(ctx.failing(t -> ctx.verify(() -> {
             // THEN the request fails with a 404
-            ctx.assertEquals(HttpURLConnection.HTTP_NOT_FOUND, ((ServiceInvocationException) t).getErrorCode());
-        }));
-        adapter.getRegistrationAssertion("tenant", "non-existent", null, mock(SpanContext.class)).setHandler(ctx.asyncAssertFailure(t -> {
+            assertEquals(HttpURLConnection.HTTP_NOT_FOUND, ((ServiceInvocationException) t).getErrorCode());
+            assertion.flag();
+        })));
+        adapter.getRegistrationAssertion("tenant", "non-existent", null, mock(SpanContext.class))
+                .setHandler(ctx.failing(t -> ctx.verify(() -> {
             // THEN the request fails with a 404
-            ctx.assertEquals(HttpURLConnection.HTTP_NOT_FOUND, ((ServiceInvocationException) t).getErrorCode());
-        }));
+            assertEquals(HttpURLConnection.HTTP_NOT_FOUND, ((ServiceInvocationException) t).getErrorCode());
+            assertion.flag();
+        })));
     }
 
     /**
@@ -349,7 +366,7 @@ public class AbstractProtocolAdapterBaseTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testGetRegistrationAssertionFailsWith403ForNonMatchingTenant(final TestContext ctx) {
+    public void testGetRegistrationAssertionFailsWith403ForNonMatchingTenant(final VertxTestContext ctx) {
 
         // GIVEN an adapter
         adapter = newProtocolAdapter(properties, null);
@@ -359,10 +376,11 @@ public class AbstractProtocolAdapterBaseTest {
                 "tenant A",
                 "device",
                 new Device("tenant B", "gateway"),
-                mock(SpanContext.class)).setHandler(ctx.asyncAssertFailure(t -> {
+                mock(SpanContext.class)).setHandler(ctx.failing(t -> ctx.verify(() -> {
                     // THEN the request fails with a 403 Forbidden error
-                    ctx.assertEquals(HttpURLConnection.HTTP_FORBIDDEN, ((ClientErrorException) t).getErrorCode());
-                }));
+                    assertEquals(HttpURLConnection.HTTP_FORBIDDEN, ((ClientErrorException) t).getErrorCode());
+                    ctx.completeNow();
+                })));
     }
 
     private AbstractProtocolAdapterBase<ProtocolAdapterProperties> newProtocolAdapter(final ProtocolAdapterProperties props) {
@@ -458,10 +476,9 @@ public class AbstractProtocolAdapterBaseTest {
     /**
      * Verifies that the helper approves empty notification without payload.
      *
-     * @param ctx The vert.x test context.
      */
     @Test
-    public void testEmptyNotificationWithoutPayload(final TestContext ctx) {
+    public void testEmptyNotificationWithoutPayload() {
         // GIVEN an adapter
         adapter = newProtocolAdapter(properties, null);
 
@@ -469,16 +486,15 @@ public class AbstractProtocolAdapterBaseTest {
         final Buffer payload = null;
         final String contentType = EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION;
 
-        ctx.assertTrue(adapter.isPayloadOfIndicatedType(payload, contentType));
+        assertTrue(adapter.isPayloadOfIndicatedType(payload, contentType));
     }
 
     /**
      * Verifies that any empty notification with a payload is an error.
      *
-     * @param ctx The vert.x test context.
      */
     @Test
-    public void testEmptyNotificationWithPayload(final TestContext ctx) {
+    public void testEmptyNotificationWithPayload() {
         // GIVEN an adapter
         adapter = newProtocolAdapter(properties, null);
 
@@ -486,16 +502,15 @@ public class AbstractProtocolAdapterBaseTest {
         final Buffer payload = Buffer.buffer("test");
         final String contentType = EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION;
 
-        ctx.assertFalse(adapter.isPayloadOfIndicatedType(payload, contentType));
+        assertFalse(adapter.isPayloadOfIndicatedType(payload, contentType));
     }
 
     /**
      * Verifies that any general message with a payload is approved.
      *
-     * @param ctx The vert.x test context.
      */
     @Test
-    public void testNonEmptyGeneralMessage(final TestContext ctx) {
+    public void testNonEmptyGeneralMessage() {
         // GIVEN an adapter
         adapter = newProtocolAdapter(properties, null);
 
@@ -504,16 +519,15 @@ public class AbstractProtocolAdapterBaseTest {
         final String arbitraryContentType = "bum/lux";
 
         // arbitrary content-type needs non empty payload
-        ctx.assertTrue(adapter.isPayloadOfIndicatedType(payload, arbitraryContentType));
+        assertTrue(adapter.isPayloadOfIndicatedType(payload, arbitraryContentType));
     }
 
     /**
      * Verifies that any non empty message without a content type is approved.
      *
-     * @param ctx The vert.x test context.
      */
     @Test
-    public void testNonEmptyMessageWithoutContentType(final TestContext ctx) {
+    public void testNonEmptyMessageWithoutContentType() {
         // GIVEN an adapter
         adapter = newProtocolAdapter(properties, null);
 
@@ -521,16 +535,15 @@ public class AbstractProtocolAdapterBaseTest {
         final Buffer payload = Buffer.buffer("test");
 
         // arbitrary content-type needs non empty payload
-        ctx.assertTrue(adapter.isPayloadOfIndicatedType(payload, null));
+        assertTrue(adapter.isPayloadOfIndicatedType(payload, null));
     }
 
     /**
      * Verifies that any empty general message is an error.
      *
-     * @param ctx The vert.x test context.
      */
     @Test
-    public void testEmptyGeneralMessage(final TestContext ctx) {
+    public void testEmptyGeneralMessage() {
         // GIVEN an adapter
         adapter = newProtocolAdapter(properties, null);
 
@@ -539,7 +552,7 @@ public class AbstractProtocolAdapterBaseTest {
         final String arbitraryContentType = "bum/lux";
 
         // arbitrary content-type needs non empty payload
-        ctx.assertFalse(adapter.isPayloadOfIndicatedType(payload, arbitraryContentType));
+        assertFalse(adapter.isPayloadOfIndicatedType(payload, arbitraryContentType));
     }
 
     /**
@@ -549,16 +562,17 @@ public class AbstractProtocolAdapterBaseTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testValidateAddressUsesDeviceIdentityForAddressWithoutTenant(final TestContext ctx) {
+    public void testValidateAddressUsesDeviceIdentityForAddressWithoutTenant(final VertxTestContext ctx) {
 
         // WHEN an authenticated device publishes a message to an address that does not contain a tenant ID
         final Device authenticatedDevice = new Device("my-tenant", "4711");
         final ResourceIdentifier address = ResourceIdentifier.fromString(TelemetryConstants.TELEMETRY_ENDPOINT);
-        adapter.validateAddress(address, authenticatedDevice).setHandler(ctx.asyncAssertSuccess(r -> {
+        adapter.validateAddress(address, authenticatedDevice).setHandler(ctx.succeeding(r -> ctx.verify(() -> {
             // THEN the validated address contains the authenticated device's tenant and device ID
-            ctx.assertEquals("my-tenant", r.getTenantId());
-            ctx.assertEquals("4711", r.getResourceId());
-        }));
+            assertEquals("my-tenant", r.getTenantId());
+            assertEquals("4711", r.getResourceId());
+            ctx.completeNow();
+        })));
     }
 
 

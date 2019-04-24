@@ -12,12 +12,17 @@
  *******************************************************************************/
 package org.eclipse.hono.service.registration;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
-import io.vertx.ext.unit.TestContext;
+import io.vertx.junit5.Checkpoint;
+import io.vertx.junit5.VertxTestContext;
+
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.RegistrationResult;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.net.HttpURLConnection;
 
@@ -43,12 +48,13 @@ public abstract class AbstractCompleteRegistrationServiceTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testGetUnknownDeviceReturnsNotFound(final TestContext ctx) {
+    public void testGetUnknownDeviceReturnsNotFound(final VertxTestContext ctx) {
 
         getCompleteRegistrationService()
-                .getDevice(TENANT, DEVICE, ctx.asyncAssertSuccess(response -> {
-                    ctx.assertEquals(HttpURLConnection.HTTP_NOT_FOUND, response.getStatus());
-                }));
+                .getDevice(TENANT, DEVICE, ctx.succeeding(response -> ctx.verify(() -> {
+                    assertEquals(HttpURLConnection.HTTP_NOT_FOUND, response.getStatus());
+                    ctx.completeNow();
+                })));
     }
 
     /**
@@ -57,13 +63,13 @@ public abstract class AbstractCompleteRegistrationServiceTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testDeregisterUnknownDeviceReturnsNotFound(final TestContext ctx) {
+    public void testDeregisterUnknownDeviceReturnsNotFound(final VertxTestContext ctx) {
 
         getCompleteRegistrationService()
-                .removeDevice(TENANT, DEVICE,
-                        ctx.asyncAssertSuccess(response -> {
-                            ctx.assertEquals(HttpURLConnection.HTTP_NOT_FOUND, response.getStatus());
-                        }));
+                .removeDevice(TENANT, DEVICE, ctx.succeeding(response -> ctx.verify(() -> {
+                            assertEquals(HttpURLConnection.HTTP_NOT_FOUND, response.getStatus());
+                            ctx.completeNow();
+                        })));
     }
 
     /**
@@ -72,22 +78,25 @@ public abstract class AbstractCompleteRegistrationServiceTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testDuplicateRegistrationFails(final TestContext ctx) {
+    public void testDuplicateRegistrationFails(final VertxTestContext ctx) {
 
         final Future<RegistrationResult> result = Future.future();
+        final Checkpoint register = ctx.checkpoint(2);
 
         getCompleteRegistrationService().addDevice(TENANT, DEVICE, new JsonObject(), result.completer());
         result.map(response -> {
-            ctx.assertEquals(HttpURLConnection.HTTP_CREATED, response.getStatus());
+            assertEquals(HttpURLConnection.HTTP_CREATED, response.getStatus());
+            register.flag();
             return response;
         }).compose(ok -> {
             final Future<RegistrationResult> addResult = Future.future();
             getCompleteRegistrationService().addDevice(TENANT, DEVICE, new JsonObject(), addResult.completer());
             return addResult;
         }).setHandler(
-                ctx.asyncAssertSuccess(response -> {
-                    ctx.assertEquals(HttpURLConnection.HTTP_CONFLICT, response.getStatus());
-                }));
+                ctx.succeeding(response -> ctx.verify(() -> {
+                    assertEquals(HttpURLConnection.HTTP_CONFLICT, response.getStatus());
+                    register.flag();
+                })));
     }
 
     /**
@@ -96,22 +105,25 @@ public abstract class AbstractCompleteRegistrationServiceTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testGetSucceedsForRegisteredDevice(final TestContext ctx) {
+    public void testGetSucceedsForRegisteredDevice(final VertxTestContext ctx) {
 
         final Future<RegistrationResult> result = Future.future();
+        final Checkpoint get = ctx.checkpoint(2);
 
         getCompleteRegistrationService().addDevice(TENANT, DEVICE, new JsonObject(), result.completer());
         result.compose(response -> {
-            ctx.assertEquals(HttpURLConnection.HTTP_CREATED, response.getStatus());
+            assertEquals(HttpURLConnection.HTTP_CREATED, response.getStatus());
+            get.flag();
             final Future<RegistrationResult> addResult = Future.future();
             getCompleteRegistrationService().getDevice(TENANT, DEVICE, addResult.completer());
             return addResult;
         }).setHandler(
-                ctx.asyncAssertSuccess(s -> {
-                            ctx.assertEquals(HttpURLConnection.HTTP_OK, s.getStatus());
-                            ctx.assertNotNull(s.getPayload());
+                ctx.succeeding(s -> ctx.verify(() -> {
+                            assertEquals(HttpURLConnection.HTTP_OK, s.getStatus());
+                            assertNotNull(s.getPayload());
+                            get.flag();
                         }
-                ));
+                )));
     }
 
     /**
@@ -120,23 +132,27 @@ public abstract class AbstractCompleteRegistrationServiceTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testGetFailsForDeregisteredDevice(final TestContext ctx) {
+    public void testGetFailsForDeregisteredDevice(final VertxTestContext ctx) {
 
         final Future<RegistrationResult> result = Future.future();
+        final Checkpoint get = ctx.checkpoint(3);
 
         getCompleteRegistrationService().addDevice(TENANT, DEVICE, new JsonObject(), result.completer());
         result.compose(response -> {
-            ctx.assertEquals(HttpURLConnection.HTTP_CREATED, response.getStatus());
+            assertEquals(HttpURLConnection.HTTP_CREATED, response.getStatus());
+            get.flag();
             final Future<RegistrationResult> deregisterResult = Future.future();
             getCompleteRegistrationService().removeDevice(TENANT, DEVICE, deregisterResult.completer());
             return deregisterResult;
         }).compose(response -> {
-            ctx.assertEquals(HttpURLConnection.HTTP_NO_CONTENT, response.getStatus());
+            assertEquals(HttpURLConnection.HTTP_NO_CONTENT, response.getStatus());
+            get.flag();
             final Future<RegistrationResult> getResult = Future.future();
             getCompleteRegistrationService().getDevice(TENANT, DEVICE, getResult.completer());
             return getResult;
-        }).setHandler(ctx.asyncAssertSuccess(response -> {
-            ctx.assertEquals(HttpURLConnection.HTTP_NOT_FOUND, response.getStatus());
-        }));
+        }).setHandler(ctx.succeeding(response -> ctx.verify(() -> {
+            assertEquals(HttpURLConnection.HTTP_NOT_FOUND, response.getStatus());
+            get.flag();
+        })));
     }
 }

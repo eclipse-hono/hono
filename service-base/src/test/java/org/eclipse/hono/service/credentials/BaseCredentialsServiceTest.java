@@ -12,6 +12,8 @@
  *******************************************************************************/
 package org.eclipse.hono.service.credentials;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import java.net.HttpURLConnection;
 
 import org.eclipse.hono.client.ServiceInvocationException;
@@ -20,22 +22,22 @@ import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsObject;
 import org.eclipse.hono.util.CredentialsResult;
 import org.eclipse.hono.util.EventBusMessage;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.rules.Timeout;
-import org.junit.runner.RunWith;
 
 import io.opentracing.Span;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
 import io.vertx.core.json.JsonObject;
-import io.vertx.ext.unit.TestContext;
-import io.vertx.ext.unit.junit.VertxUnitRunner;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 
 /**
  * Tests verifying behavior of {@link BaseCredentialsService}.
  */
-@RunWith(VertxUnitRunner.class)
+@ExtendWith(VertxExtension.class)
 public class BaseCredentialsServiceTest {
 
     private static BaseCredentialsService<ServiceConfigProperties> service;
@@ -50,7 +52,7 @@ public class BaseCredentialsServiceTest {
     /**
      * Sets up the fixture.
      */
-    @BeforeClass
+    @BeforeAll
     public static void setUp() {
         service = createBaseCredentialsService();
     }
@@ -62,7 +64,7 @@ public class BaseCredentialsServiceTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testGetFailsForMissingType(final TestContext ctx) {
+    public void testGetFailsForMissingType(final VertxTestContext ctx) {
 
         // GIVEN a request for getting credentials that does not specify a type
         final CredentialsObject malformedPayload = new CredentialsObject()
@@ -73,10 +75,11 @@ public class BaseCredentialsServiceTest {
                 JsonObject.mapFrom(malformedPayload));
 
         // WHEN processing the request
-        service.processRequest(request).setHandler(ctx.asyncAssertFailure(t -> {
+        service.processRequest(request).setHandler(ctx.failing(t -> ctx.verify(() -> {
             // THEN the response contains a 400 error code
-            ctx.assertEquals(HttpURLConnection.HTTP_BAD_REQUEST, ((ServiceInvocationException) t).getErrorCode());
-        }));
+            assertEquals(HttpURLConnection.HTTP_BAD_REQUEST, ((ServiceInvocationException) t).getErrorCode());
+            ctx.completeNow();
+        })));
     }
 
     /**
@@ -86,7 +89,7 @@ public class BaseCredentialsServiceTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testGetFailsForMissingAuthId(final TestContext ctx) {
+    public void testGetFailsForMissingAuthId(final VertxTestContext ctx) {
 
         // GIVEN a request for getting credentials that does not specify an auth ID
         final CredentialsObject malformedPayload = new CredentialsObject()
@@ -97,10 +100,11 @@ public class BaseCredentialsServiceTest {
                 JsonObject.mapFrom(malformedPayload));
 
         // WHEN processing the request
-        service.processRequest(request).setHandler(ctx.asyncAssertFailure(t -> {
+        service.processRequest(request).setHandler(ctx.failing(t -> ctx.verify(() -> {
             // THEN the response contains a 400 error code
-            ctx.assertEquals(HttpURLConnection.HTTP_BAD_REQUEST, ((ServiceInvocationException) t).getErrorCode());
-        }));
+            assertEquals(HttpURLConnection.HTTP_BAD_REQUEST, ((ServiceInvocationException) t).getErrorCode());
+            ctx.completeNow();
+        })));
     }
 
     private static EventBusMessage createRequestForPayload(final CredentialsConstants.CredentialsAction operation, final JsonObject payload) {

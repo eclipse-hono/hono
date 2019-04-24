@@ -13,6 +13,7 @@
 
 package org.eclipse.hono.deviceregistry;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
@@ -20,20 +21,18 @@ import static org.mockito.Mockito.*;
 import java.net.HttpURLConnection;
 import java.nio.charset.StandardCharsets;
 
-import io.vertx.ext.unit.junit.VertxUnitRunner;
 import org.eclipse.hono.auth.HonoPasswordEncoder;
 import org.eclipse.hono.service.credentials.AbstractCompleteCredentialsServiceTest;
 import org.eclipse.hono.service.credentials.CompleteBaseCredentialsService;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsObject;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 
+import io.vertx.core.CompositeFuture;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -42,24 +41,19 @@ import io.vertx.core.buffer.Buffer;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.file.FileSystem;
 import io.vertx.core.json.JsonObject;
-import io.vertx.ext.unit.Async;
-import io.vertx.ext.unit.TestContext;
-
+import io.vertx.junit5.Checkpoint;
+import io.vertx.junit5.VertxTestContext;
+import io.vertx.junit5.VertxExtension;
 
 /**
  * Tests verifying behavior of {@link FileBasedCredentialsService}.
  *
  */
-@RunWith(VertxUnitRunner.class)
+@ExtendWith(VertxExtension.class)
 public class FileBasedCredentialsServiceTest extends AbstractCompleteCredentialsServiceTest {
 
     private static final String FILE_NAME = "/credentials.json";
 
-    /**
-     * Time out each test case after 5 seconds.
-     */
-    @Rule
-    public Timeout timeout = Timeout.seconds(5);
 
     private Vertx vertx;
     private EventBus eventBus;
@@ -70,7 +64,7 @@ public class FileBasedCredentialsServiceTest extends AbstractCompleteCredentials
     /**
      * Sets up fixture.
      */
-    @Before
+    @BeforeEach
     public void setUp() {
         fileSystem = mock(FileSystem.class);
         final Context ctx = mock(Context.class);
@@ -98,7 +92,7 @@ public class FileBasedCredentialsServiceTest extends AbstractCompleteCredentials
      */
     @SuppressWarnings({ "unchecked", "rawtypes" })
     @Test
-    public void testDoStartCreatesFile(final TestContext ctx) {
+    public void testDoStartCreatesFile(final VertxTestContext ctx) {
 
         // GIVEN a registration service configured to persist data to a not yet existing file
         props.setSaveToFile(true);
@@ -116,16 +110,15 @@ public class FileBasedCredentialsServiceTest extends AbstractCompleteCredentials
         }).when(fileSystem).readFile(eq(props.getFilename()), any(Handler.class));
 
         // WHEN starting the service
-        final Async startup = ctx.async();
         final Future<Void> startupTracker = Future.future();
-        startupTracker.setHandler(ctx.asyncAssertSuccess(started -> {
-            startup.complete();
-        }));
+        startupTracker.setHandler(ctx.succeeding(started -> ctx.verify(() -> {
+            // THEN the file gets created
+            verify(fileSystem).createFile(eq(FILE_NAME), any(Handler.class));
+            ctx.completeNow();
+        })));
         svc.doStart(startupTracker);
 
-        // THEN the file gets created
-        startup.await();
-        verify(fileSystem).createFile(eq(FILE_NAME), any(Handler.class));
+
     }
 
     /**
@@ -136,7 +129,7 @@ public class FileBasedCredentialsServiceTest extends AbstractCompleteCredentials
      */
     @SuppressWarnings({ "unchecked", "rawtypes" })
     @Test
-    public void testDoStartFailsIfFileCannotBeCreated(final TestContext ctx) {
+    public void testDoStartFailsIfFileCannotBeCreated(final VertxTestContext ctx) {
 
         // GIVEN a registration service configured to persist data to a not yet existing file
         props.setSaveToFile(true);
@@ -149,15 +142,12 @@ public class FileBasedCredentialsServiceTest extends AbstractCompleteCredentials
             handler.handle(Future.failedFuture("no access"));
             return null;
         }).when(fileSystem).createFile(eq(props.getFilename()), any(Handler.class));
-        final Async startup = ctx.async();
+
         final Future<Void> startupTracker = Future.future();
-        startupTracker.setHandler(ctx.asyncAssertFailure(started -> {
-            startup.complete();
+        startupTracker.setHandler(ctx.failing(started -> {
+            ctx.completeNow();
         }));
         svc.doStart(startupTracker);
-
-        // THEN startup has failed
-        startup.await();
     }
 
     /**
@@ -168,7 +158,7 @@ public class FileBasedCredentialsServiceTest extends AbstractCompleteCredentials
      */
     @SuppressWarnings({ "unchecked", "rawtypes" })
     @Test
-    public void testDoStartIgnoresMalformedJson(final TestContext ctx) {
+    public void testDoStartIgnoresMalformedJson(final VertxTestContext ctx) {
 
         // GIVEN a registration service configured to read data from a file
         // that contains malformed JSON
@@ -183,15 +173,11 @@ public class FileBasedCredentialsServiceTest extends AbstractCompleteCredentials
         }).when(fileSystem).readFile(eq(props.getFilename()), any(Handler.class));
 
         // WHEN starting the service
-        final Async startup = ctx.async();
         final Future<Void> startupTracker = Future.future();
-        startupTracker.setHandler(ctx.asyncAssertSuccess(started -> {
-            startup.complete();
+        startupTracker.setHandler(ctx.succeeding(started -> {
+            ctx.completeNow();
         }));
         svc.doStart(startupTracker);
-
-        // THEN startup succeeds
-        startup.await();
     }
 
     /**
@@ -201,7 +187,7 @@ public class FileBasedCredentialsServiceTest extends AbstractCompleteCredentials
      */
     @SuppressWarnings({ "unchecked", "rawtypes" })
     @Test
-    public void testDoStartLoadsCredentials(final TestContext ctx) {
+    public void testDoStartLoadsCredentials(final VertxTestContext ctx) {
 
         // GIVEN a service configured with a file name
         props.setFilename(FILE_NAME);
@@ -214,16 +200,14 @@ public class FileBasedCredentialsServiceTest extends AbstractCompleteCredentials
         }).when(fileSystem).readFile(eq(props.getFilename()), any(Handler.class));
 
         // WHEN the service is started
-        final Async startup = ctx.async();
         final Future<Void> startFuture = Future.future();
-        startFuture.setHandler(ctx.asyncAssertSuccess(s -> {
-            startup.complete();
-        }));
-        svc.doStart(startFuture);
+        startFuture.setHandler(ctx.succeeding(s -> ctx.verify(() -> {
+            // THEN the credentials from the file are loaded
+            assertRegistered(svc, Constants.DEFAULT_TENANT, "sensor1", CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, ctx);
+            ctx.completeNow();
+        })));
 
-        // THEN the credentials from the file are loaded
-        startup.await();
-        assertRegistered(svc, Constants.DEFAULT_TENANT, "sensor1", CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, ctx);
+        svc.doStart(startFuture);
     }
 
     /**
@@ -233,7 +217,7 @@ public class FileBasedCredentialsServiceTest extends AbstractCompleteCredentials
      */
     @SuppressWarnings({ "unchecked", "rawtypes" })
     @Test
-    public void testDoStartIgnoreCredentialIfStartEmptyIsSet(final TestContext ctx) {
+    public void testDoStartIgnoreCredentialIfStartEmptyIsSet(final VertxTestContext ctx) {
 
         // GIVEN a service configured with a file name and startEmpty set to true
         props.setFilename(FILE_NAME);
@@ -241,16 +225,13 @@ public class FileBasedCredentialsServiceTest extends AbstractCompleteCredentials
         when(fileSystem.existsBlocking(props.getFilename())).thenReturn(Boolean.TRUE);
 
         // WHEN the service is started
-        final Async startup = ctx.async();
         final Future<Void> startFuture = Future.future();
-        startFuture.setHandler(ctx.asyncAssertSuccess(s -> {
-            startup.complete();
-        }));
+        startFuture.setHandler(ctx.succeeding(s -> ctx.verify(() -> {
+            // THEN the credentials from the file are not loaded
+            verify(fileSystem, never()).readFile(anyString(), any(Handler.class));
+            ctx.completeNow();
+        })));
         svc.doStart(startFuture);
-
-        // THEN the credentials from the file are not loaded
-        startup.await();
-        verify(fileSystem, never()).readFile(anyString(), any(Handler.class));
     }
 
 
@@ -262,14 +243,19 @@ public class FileBasedCredentialsServiceTest extends AbstractCompleteCredentials
      */
     @SuppressWarnings({ "unchecked", "rawtypes" })
     @Test
-    public void testLoadCredentialsCanReadOutputOfSaveToFile(final TestContext ctx) {
+    public void testLoadCredentialsCanReadOutputOfSaveToFile(final VertxTestContext ctx){
 
         // GIVEN a service configured to persist credentials to file
         // that contains some credentials
         props.setFilename(FILE_NAME);
         props.setSaveToFile(true);
         when(fileSystem.existsBlocking(FILE_NAME)).thenReturn(Boolean.TRUE);
-        final Async add = ctx.async(2);
+
+        final Checkpoint test = ctx.checkpoint(4);
+        final Future add = Future.future();
+        final Future add2 = Future.future();
+        final Future write = Future.future();
+
         final CredentialsObject hashedPassword = CredentialsObject.fromHashedPassword(
                 "4700",
                 "bumlux",
@@ -281,48 +267,64 @@ public class FileBasedCredentialsServiceTest extends AbstractCompleteCredentials
         svc.add(
                 Constants.DEFAULT_TENANT,
                 JsonObject.mapFrom(psk),
-                ctx.asyncAssertSuccess(s -> {
-                    ctx.assertEquals(HttpURLConnection.HTTP_CREATED, s.getStatus());
-                    add.countDown();
+                ctx.succeeding(s -> {
+                    assertEquals(HttpURLConnection.HTTP_CREATED, s.getStatus());
+                    add.complete();
+                    test.flag();
                 }));
         svc.add(
                 "OTHER_TENANT",
                 JsonObject.mapFrom(hashedPassword),
-                ctx.asyncAssertSuccess(s -> {
-                    ctx.assertEquals(HttpURLConnection.HTTP_CREATED, s.getStatus());
-                    add.countDown();
-                }));
-        add.await();
+                ctx.succeeding(s -> ctx.verify(() -> {
+                    assertEquals(HttpURLConnection.HTTP_CREATED, s.getStatus());
+                    add2.complete();
+                    test.flag();
+                })));
 
-        // WHEN saving the registry content to the file and clearing the registry
-        final Async write = ctx.async();
-        doAnswer(invocation -> {
-            final Handler handler = invocation.getArgument(2);
-            handler.handle(Future.succeededFuture());
-            write.complete();
-            return null;
-        }).when(fileSystem).writeFile(eq(FILE_NAME), any(Buffer.class), any(Handler.class));
+        CompositeFuture.all(add, add2).setHandler(a -> {
 
-        svc.saveToFile();
-        write.await();
-        final ArgumentCaptor<Buffer> buffer = ArgumentCaptor.forClass(Buffer.class);
-        verify(fileSystem).writeFile(eq(FILE_NAME), buffer.capture(), any(Handler.class));
-        svc.clear();
-        assertNotRegistered(svc, Constants.DEFAULT_PATH_SEPARATOR, "sensor1", CredentialsConstants.SECRETS_TYPE_PRESHARED_KEY, ctx);
+            // WHEN saving the registry content to the file and clearing the registry
+            doAnswer(invocation -> {
+                final Handler handler = invocation.getArgument(2);
+                handler.handle(Future.succeededFuture());
+                write.complete();
+                return null;
+            }).when(fileSystem).writeFile(eq(FILE_NAME), any(Buffer.class), any(Handler.class));
 
-        // THEN the credentials can be loaded back in from the file
-        final Async read = ctx.async();
-        doAnswer(invocation -> {
-            final Handler handler = invocation.getArgument(1);
-            handler.handle(Future.succeededFuture(buffer.getValue()));
-            read.complete();
-            return null;
-        }).when(fileSystem).readFile(eq(FILE_NAME), any(Handler.class));
-        svc.loadCredentials();
-        read.await();
-        assertRegistered(svc, Constants.DEFAULT_TENANT, "sensor1", CredentialsConstants.SECRETS_TYPE_PRESHARED_KEY, ctx);
-        assertRegistered(svc, "OTHER_TENANT", "bumlux", CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, ctx);
+            svc.saveToFile();
 
+            write.setHandler( w -> {
+                final ArgumentCaptor<Buffer> buffer = ArgumentCaptor.forClass(Buffer.class);
+                verify(fileSystem).writeFile(eq(FILE_NAME), buffer.capture(), any(Handler.class));
+                svc.clear();
+                ctx.verify(() -> {
+                    assertNotRegistered(svc, Constants.DEFAULT_PATH_SEPARATOR, "sensor1",
+                            CredentialsConstants.SECRETS_TYPE_PRESHARED_KEY, ctx);
+                    test.flag();
+                });
+
+                // THEN the credentials can be loaded back in from the file
+                final Future read = Future.future();
+                doAnswer(invocation -> {
+                    final Handler handler = invocation.getArgument(1);
+                    handler.handle(Future.succeededFuture(buffer.getValue()));
+                    read.complete();
+                    return null;
+                }).when(fileSystem).readFile(eq(FILE_NAME), any(Handler.class));
+                svc.loadCredentials();
+                read.setHandler(r -> {
+                    ctx.verify(() -> {
+                        assertRegistered(svc, Constants.DEFAULT_TENANT, "sensor1",
+                                CredentialsConstants.SECRETS_TYPE_PRESHARED_KEY,
+                                ctx);
+                        assertRegistered(svc, "OTHER_TENANT", "bumlux",
+                                CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD,
+                                ctx);
+                        test.flag();
+                    });
+                });
+            });
+        });
     }
 
     /**
@@ -331,7 +333,7 @@ public class FileBasedCredentialsServiceTest extends AbstractCompleteCredentials
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testUpdateCredentialsFailsIfModificationIsDisabled(final TestContext ctx) {
+    public void testUpdateCredentialsFailsIfModificationIsDisabled(final VertxTestContext ctx) {
 
         // GIVEN a registry containing a set of credentials
         // that has been configured to not allow modification of entries
@@ -339,14 +341,12 @@ public class FileBasedCredentialsServiceTest extends AbstractCompleteCredentials
         register(getCompleteCredentialsService(), "tenant", "device", "myId", "myType", ctx);
 
         // WHEN trying to update the credentials
-        final Async updateFailure = ctx.async();
-        svc.update("tenant", new JsonObject(), ctx.asyncAssertSuccess(s -> {
-            ctx.assertEquals(HttpURLConnection.HTTP_FORBIDDEN, s.getStatus());
-            updateFailure.complete();
-        }));
+        svc.update("tenant", new JsonObject(), ctx.succeeding(s -> ctx.verify(() -> {
+            // THEN the update fails
+            assertEquals(HttpURLConnection.HTTP_FORBIDDEN, s.getStatus());
+            ctx.completeNow();
+        })));
 
-        // THEN the update fails
-        updateFailure.await();
     }
 
     /**
@@ -355,7 +355,7 @@ public class FileBasedCredentialsServiceTest extends AbstractCompleteCredentials
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testRemoveDeviceFailsIfModificationIsDisabled(final TestContext ctx) {
+    public void testRemoveDeviceFailsIfModificationIsDisabled(final VertxTestContext ctx) {
 
         // GIVEN a registry containing a set of credentials
         // that has been configured to not allow modification of entries
@@ -363,13 +363,10 @@ public class FileBasedCredentialsServiceTest extends AbstractCompleteCredentials
         register(getCompleteCredentialsService(), "tenant", "device", "myId", "myType", ctx);
 
         // WHEN trying to remove the credentials
-        final Async removeFailure = ctx.async();
-        svc.update("tenant", new JsonObject(), ctx.asyncAssertSuccess(s -> {
-            ctx.assertEquals(HttpURLConnection.HTTP_FORBIDDEN, s.getStatus());
-            removeFailure.complete();
-        }));
-
-        // THEN the removal fails
-        removeFailure.await();
+        svc.update("tenant", new JsonObject(), ctx.succeeding(s -> ctx.verify(() -> {
+            // THEN the removal fails
+            assertEquals(HttpURLConnection.HTTP_FORBIDDEN, s.getStatus());
+            ctx.completeNow();
+        })));
     }
 }
