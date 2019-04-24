@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -82,6 +82,10 @@ public abstract class AbstractHttpEndpoint<T> extends AbstractEndpoint implement
     @Autowired(required = false)
     public final void setConfiguration(final T props) {
         this.config = Objects.requireNonNull(props);
+    }
+
+    protected String getCorsAllowedOriginPattern() {
+        return "*";
     }
 
     /**

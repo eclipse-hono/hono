@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,9 +14,12 @@
 package org.eclipse.hono.service.credentials;
 
 import java.net.HttpURLConnection;
+import java.util.EnumSet;
 import java.util.Objects;
 
 import io.vertx.core.http.HttpHeaders;
+import io.vertx.core.http.HttpMethod;
+
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.http.AbstractHttpEndpoint;
@@ -29,6 +32,7 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
+import io.vertx.ext.web.handler.CorsHandler;
 
 /**
  * An {@code HttpEndpoint} for managing device credentials.
@@ -70,6 +74,25 @@ public final class CredentialsHttpEndpoint extends AbstractHttpEndpoint<ServiceC
 
         final BodyHandler bodyHandler = BodyHandler.create();
         bodyHandler.setBodyLimit(config.getMaxPayloadSize());
+
+        // CORS handling
+        router.route(pathWithTenant)
+                .handler(CorsHandler.create(getCorsAllowedOriginPattern())
+                        .allowedMethod(HttpMethod.POST)
+                        .allowedHeader(HttpHeaders.CONTENT_TYPE.toString()));
+        router.route(pathWithTenantAndDeviceId)
+                .handler(CorsHandler.create(getCorsAllowedOriginPattern())
+                        .allowedMethods(EnumSet.of(
+                                HttpMethod.GET,
+                                HttpMethod.DELETE))
+                        .allowedHeader(HttpHeaders.CONTENT_TYPE.toString()));
+        router.route(pathWithTenantAndAuthIdAndType)
+                .handler(CorsHandler.create(getCorsAllowedOriginPattern())
+                        .allowedMethods(EnumSet.of(
+                                HttpMethod.GET,
+                                HttpMethod.PUT,
+                                HttpMethod.DELETE))
+                        .allowedHeader(HttpHeaders.CONTENT_TYPE.toString()));
 
         // add credentials
         router.post(pathWithTenant).handler(bodyHandler);

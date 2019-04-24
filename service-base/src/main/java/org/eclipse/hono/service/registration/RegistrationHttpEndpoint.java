@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,6 +14,7 @@
 package org.eclipse.hono.service.registration;
 
 import java.net.HttpURLConnection;
+import java.util.EnumSet;
 import java.util.Objects;
 
 import org.eclipse.hono.config.ServiceConfigProperties;
@@ -31,6 +32,7 @@ import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
+import io.vertx.ext.web.handler.CorsHandler;
 
 /**
  * An {@code HttpEndpoint} for managing device registration information.
@@ -65,15 +67,33 @@ public final class RegistrationHttpEndpoint extends AbstractHttpEndpoint<Service
     @Override
     public void addRoutes(final Router router) {
 
-        final String pathWithTenant = String.format("/%s/:%s", RegistrationConstants.REGISTRATION_ENDPOINT, PARAM_TENANT_ID);
+        final String pathWithTenant = String.format("/%s/:%s",
+                RegistrationConstants.REGISTRATION_ENDPOINT, PARAM_TENANT_ID);
+        final String pathWithTenantAndDeviceId = String.format("/%s/:%s/:%s",
+                RegistrationConstants.REGISTRATION_ENDPOINT, PARAM_TENANT_ID, PARAM_DEVICE_ID);
+
+        // CORS handling
+        router.route(pathWithTenant)
+                .handler(CorsHandler.create(getCorsAllowedOriginPattern())
+                        .allowedMethod(HttpMethod.POST)
+                        .allowedHeader(HttpHeaders.CONTENT_TYPE.toString()));
+
+        router.route(pathWithTenantAndDeviceId)
+                .handler(CorsHandler.create(getCorsAllowedOriginPattern())
+                        .allowedMethods(EnumSet.of(
+                                HttpMethod.GET,
+                                HttpMethod.PUT,
+                                HttpMethod.DELETE))
+                        .allowedHeader(HttpHeaders.CONTENT_TYPE.toString())
+                );
+
         // ADD device registration
         router.route(HttpMethod.POST, pathWithTenant).consumes(HttpUtils.CONTENT_TYPE_JSON)
                 .handler(this::doRegisterDeviceJson);
         router.route(HttpMethod.POST, pathWithTenant)
                 .handler(ctx -> HttpUtils.badRequest(ctx, "missing or unsupported content-type"));
 
-        final String pathWithTenantAndDeviceId = String.format("/%s/:%s/:%s",
-                RegistrationConstants.REGISTRATION_ENDPOINT, PARAM_TENANT_ID, PARAM_DEVICE_ID);
+
         // GET device registration
         router.route(HttpMethod.GET, pathWithTenantAndDeviceId).handler(this::doGetDevice);
 

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,12 +14,14 @@
 package org.eclipse.hono.service.tenant;
 
 import java.net.HttpURLConnection;
+import java.util.EnumSet;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Predicate;
 
 import io.vertx.core.Handler;
 import io.vertx.core.http.HttpHeaders;
+import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServerResponse;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.config.ServiceConfigProperties;
@@ -33,6 +35,7 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
+import io.vertx.ext.web.handler.CorsHandler;
 
 /**
  * An {@code HttpEndpoint} for managing tenant information.
@@ -68,17 +71,24 @@ public final class TenantHttpEndpoint extends AbstractHttpEndpoint<ServiceConfig
     public void addRoutes(final Router router) {
 
         final String path = String.format("/%s", TenantConstants.TENANT_ENDPOINT);
+        final String pathWithTenant = String.format("/%s/:%s", TenantConstants.TENANT_ENDPOINT, PARAM_TENANT_ID);
 
         final BodyHandler bodyHandler = BodyHandler.create();
         bodyHandler.setBodyLimit(config.getMaxPayloadSize());
+
+        // CORS handling
+        router.route(path).handler(CorsHandler.create(getCorsAllowedOriginPattern())
+                .allowedMethod(HttpMethod.POST)
+                .allowedHeader(HttpHeaders.CONTENT_TYPE.toString()));
+        router.route(pathWithTenant).handler(CorsHandler.create(getCorsAllowedOriginPattern())
+                .allowedMethods(EnumSet.of(HttpMethod.PUT, HttpMethod.GET, HttpMethod.DELETE))
+                .allowedHeader(HttpHeaders.CONTENT_TYPE.toString()));
 
         // ADD tenant
         router.post(path).handler(bodyHandler);
         router.post(path).handler(this::extractRequiredJsonPayload);
         router.post(path).handler(this::checkPayloadForTenantId);
         router.post(path).handler(this::addTenant);
-
-        final String pathWithTenant = String.format("/%s/:%s", TenantConstants.TENANT_ENDPOINT, PARAM_TENANT_ID);
 
         // GET tenant
         router.get(pathWithTenant).handler(this::getTenant);
