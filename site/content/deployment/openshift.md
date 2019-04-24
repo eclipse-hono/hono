@@ -449,9 +449,9 @@ to 10.000 devices per tenant:
 
 ### Adding Jaeger support
 
-By default Hono has the capability to work with "open tracing", and it also
+By default Hono has the capability to work with OpenTracing, and it also
 provides a build profile for enabling the "Jaeger" implementation of
-"open tracing".
+OpenTracing.
 
 There are a few manual steps required to modify the default Hono deployment
 for OpenShift in order to enable this profile.
@@ -705,7 +705,7 @@ All examples in the following sub-sections assume that you are located in the
 ### Extract certificates
 
 In order to connect the external consumer to Enmasse, we need to extract the
-certificate which messaging enpoint of EnMasse uses. This allows to validate
+certificate which messaging endpoint of EnMasse uses. This allows to validate
 the connection to the endpoint and encrypt the communication using TLS.
 
 The following command extracts the certificate of the endpoint (not the key):

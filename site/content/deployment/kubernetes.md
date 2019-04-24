@@ -108,7 +108,7 @@ If the Jaeger tracing component has been deployed, additional resources have to 
 ~~~sh
 kubectl delete crd jaegers.jaegertracing.io
 kubectl delete svc -n hono eclipse-hono-jaeger-operator 
-~~~sh
+~~~
 
 To undeploy a Hono instance that has been deployed manually from the resource files, run:
 
