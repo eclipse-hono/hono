@@ -13,6 +13,7 @@
 
 package org.eclipse.hono.client;
 
+import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.CoreMatchers.nullValue;
@@ -48,10 +49,10 @@ public class CommandTest {
     public void testFromMessageSucceeds() {
         final String replyToId = "the-reply-to-id";
         final String correlationId = "the-correlation-id";
-        final Message message = mock(Message.class);
-        when(message.getSubject()).thenReturn("doThis");
-        when(message.getCorrelationId()).thenReturn(correlationId);
-        when(message.getReplyTo()).thenReturn(String.format("%s/%s/%s/%s",
+        final Message message = ProtonHelper.message("input data");
+        message.setSubject("doThis");
+        message.setCorrelationId(correlationId);
+        message.setReplyTo(String.format("%s/%s/%s/%s",
                 CommandConstants.COMMAND_ENDPOINT, Constants.DEFAULT_TENANT, "4711", replyToId));
         final Command cmd = Command.from(message, Constants.DEFAULT_TENANT, "4711");
         assertTrue(cmd.isValid());
@@ -59,6 +60,8 @@ public class CommandTest {
         assertThat(cmd.getReplyToId(), is(String.format("4711/%s", replyToId)));
         assertThat(cmd.getCorrelationId(), is(correlationId));
         assertFalse(cmd.isOneWay());
+        assertThat(cmd.getCommandMessage().getReplyTo(), is(String.format("%s/%s/%s/0%s",
+                CommandConstants.COMMAND_ENDPOINT, Constants.DEFAULT_TENANT, "4711", replyToId)));
     }
 
     /**
@@ -70,7 +73,6 @@ public class CommandTest {
         final String replyToId = "the-reply-to-id";
         final String correlationId = "the-correlation-id";
         final Message message = ProtonHelper.message("input data");
-        message.setReplyTo(replyToId);
         message.setSubject("doThis");
         message.setCorrelationId(correlationId);
         message.setReplyTo(String.format("%s/%s/%s",
@@ -93,7 +95,6 @@ public class CommandTest {
         final String replyToId = "the-reply-to-id";
         final String correlationId = "the-correlation-id";
         final Message message = ProtonHelper.message("input data");
-        message.setReplyTo(replyToId);
         message.setSubject("doThis");
         message.setCorrelationId(correlationId);
         message.setReplyTo(String.format("%s/%s/%s/%s",
@@ -211,5 +212,20 @@ public class CommandTest {
         when(message.getReplyTo()).thenReturn(String.format("%s/%s",
                 CommandConstants.COMMAND_ENDPOINT, replyToId));
         assertFalse(Command.from(message, Constants.DEFAULT_TENANT, "4712").isValid());
+    }
+
+    /**
+     * Verifies the return value of getInvalidCommandReason().
+     */
+    @Test
+    public void testGetInvalidCommandReason() {
+        final Message message = mock(Message.class);
+        when(message.getReplyTo()).thenReturn("invalid-reply-to");
+        final Command command = Command.from(message, Constants.DEFAULT_TENANT, "4712");
+        assertFalse(command.isValid());
+        // verify the returned validation error contains all missing fields
+        assertThat(command.getInvalidCommandReason(), containsString("subject"));
+        assertThat(command.getInvalidCommandReason(), containsString("message/correlation-id"));
+        assertThat(command.getInvalidCommandReason(), containsString("reply-to"));
     }
 }

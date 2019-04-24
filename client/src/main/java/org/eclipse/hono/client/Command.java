@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -16,6 +16,7 @@ package org.eclipse.hono.client;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.StringJoiner;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.util.CommandConstants;
@@ -30,7 +31,10 @@ import io.vertx.core.buffer.Buffer;
  */
 public final class Command {
 
-    private final boolean valid;
+    /**
+     * If present, the command is invalid.
+     */
+    private final Optional<String> validationError;
     private final Message message;
     private final String tenantId;
     private final String deviceId;
@@ -39,14 +43,14 @@ public final class Command {
     private final String requestId;
 
     private Command(
-            final boolean valid,
+            final Optional<String> validationError,
             final Message message,
             final String tenantId,
             final String deviceId,
             final String correlationId,
             final String replyToId) {
 
-        this.valid = valid;
+        this.validationError = validationError;
         this.message = message;
         this.tenantId = tenantId;
         this.deviceId = deviceId;
@@ -61,13 +65,17 @@ public final class Command {
      * The message is expected to contain
      * <ul>
      * <li>a non-null <em>subject</em></li>
-     * <li>a non-null <em>reply-to</em> address that matches the tenant and device IDs and consists
+     * <li>either a null <em>reply-to</em> address (for a one-way command)
+     * or a non-null <em>reply-to</em> address that matches the tenant and device IDs and consists
      * of four segments</li>
      * <li>a String valued <em>correlation-id</em> and/or <em>message-id</em></li>
      * </ul>
      * <p>
      * If any of the requirements above are not met, then the returned command's {@link Command#isValid()}
      * method will return {@code false}.
+     * <p>
+     * Note that, if set, the <em>reply-to</em> address of the given message will be adapted, making sure it contains
+     * the device id.
      *
      * @param message The message containing the command.
      * @param tenantId The tenant that the device belongs to.
@@ -84,7 +92,10 @@ public final class Command {
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
 
-        boolean valid = message.getSubject() != null;
+        final StringJoiner validationErrorJoiner = new StringJoiner(", ");
+        if (message.getSubject() == null) {
+            validationErrorJoiner.add("subject not set");
+        }
 
         final String correlationId = Optional.ofNullable(message.getCorrelationId()).map(obj -> {
             if (obj instanceof String) {
@@ -102,42 +113,42 @@ public final class Command {
         });
 
         if (correlationId == null) {
-            valid = false;
+            validationErrorJoiner.add("message/correlation-id not set");
         }
 
-        String replyToId = null;
+        String originalReplyToId = null;
 
         if (message.getReplyTo() != null) {
             try {
                 final ResourceIdentifier replyTo = ResourceIdentifier.fromString(message.getReplyTo());
                 if (!CommandConstants.COMMAND_ENDPOINT.equals(replyTo.getEndpoint())) {
                     // not a command message
-                    valid = false;
+                    validationErrorJoiner.add("reply-to not a command address: " + message.getReplyTo());
                 } else if (!tenantId.equals(replyTo.getTenantId())) {
                     // command response is targeted at wrong tenant
-                    valid = false;
+                    validationErrorJoiner.add("reply-to not targeted at tenant " + tenantId + ": " + message.getReplyTo());
                 } else {
-                    replyToId = replyTo.getPathWithoutBase();
-                    if (replyToId == null) {
-                        valid = false;
+                    originalReplyToId = replyTo.getPathWithoutBase();
+                    if (originalReplyToId == null) {
+                        validationErrorJoiner.add("reply-to part after tenant not set: " + message.getReplyTo());
                     } else {
                         message.setReplyTo(
-                                String.format("%s/%s", replyTo.getBasePath(), processForDeviceId(replyToId, deviceId)));
+                                String.format("%s/%s", replyTo.getBasePath(), getDeviceFacingReplyToId(originalReplyToId, deviceId)));
                     }
                 }
             } catch (IllegalArgumentException e) {
                 // reply-to could not be parsed
-                valid = false;
+                validationErrorJoiner.add("reply-to cannot be parsed: " + message.getReplyTo());
             }
         }
 
         final Command result = new Command(
-                valid,
+                validationErrorJoiner.length() > 0 ? Optional.of(validationErrorJoiner.toString()) : Optional.empty(),
                 message,
                 tenantId,
                 deviceId,
                 correlationId,
-                replyToId);
+                originalReplyToId);
 
         return result;
     }
@@ -166,7 +177,20 @@ public final class Command {
      * @return {@code true} if this is a valid command.
      */
     public boolean isValid() {
-        return valid;
+        return !validationError.isPresent();
+    }
+
+    /**
+     * Gets info about why the command is invalid.
+     *
+     * @return Info string.
+     * @throws IllegalStateException if this command is valid.
+     */
+    public String getInvalidCommandReason() {
+        if (isValid()) {
+            throw new IllegalStateException("command is valid");
+        }
+        return validationError.get();
     }
 
     /**
@@ -265,7 +289,10 @@ public final class Command {
     }
 
     /**
-     * Gets this command's reply-to-id.
+     * Gets this command's reply-to-id as given in the incoming command message.
+     * <p>
+     * Note that an outgoing command message targeted at the device will contain an
+     * adapted reply-to address containing the device id.
      *
      * @return The identifier.
      * @throws IllegalStateException if this command is invalid.
@@ -334,15 +361,27 @@ public final class Command {
 
     @Override
     public String toString() {
-        if (valid) {
+        if (isValid()) {
             return String.format("Command [name: %s, tenant-id: %s, device-id %s, request-id: %s]",
                     getName(), getTenant(), getDeviceId(), getRequestId());
         } else {
-            return "Invalid Command";
+            return String.format("Invalid Command [tenant-id: %s, device-id: %s. error: %s]", tenantId, deviceId, validationError.get());
         }
     }
 
-    private static String processForDeviceId(final String replyToId, final String deviceId) {
+    /**
+     * Gets the reply-to-id that will be set when forwarding the command to the device.
+     * <p>
+     * It is ensured that this id starts with the device id.
+     * <p>
+     * See {@link CommandResponse#getReplyToId(ResourceIdentifier)} for the conversion in the opposite direction.
+     *
+     * @param replyToId The reply-to-id as extracted from the 'reply-to' of the command AMQP message. Potentially not
+     *            containing the device id.
+     * @param deviceId The device id.
+     * @return The reply-to-id, starting with the device id.
+     */
+    static String getDeviceFacingReplyToId(final String replyToId, final String deviceId) {
         if (replyToId.startsWith(deviceId + "/")) {
             return replyToId.replaceFirst(deviceId + "/", deviceId + "/0");
         }
