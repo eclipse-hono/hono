@@ -634,6 +634,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                                 ctx.request().uri(),
                                 contentType,
                                 payload,
+                                tenantTracker.result(),
                                 tokenTracker.result(),
                                 ttd);
                         customizeDownstreamMessage(downstreamMessage, ctx);

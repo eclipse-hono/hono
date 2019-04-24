@@ -42,11 +42,13 @@ import org.eclipse.hono.client.RegistrationClientFactory;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.TenantClientFactory;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
+import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.TelemetryConstants;
+import org.eclipse.hono.util.TenantObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -250,16 +252,29 @@ public class AbstractProtocolAdapterBaseTest {
      * Verifies that the adapter's name is set on a downstream message.
      */
     @Test
-    public void testAddPropertiesAddsAdapterName() {
+    public void testAddPropertiesAddsStandardProperties() {
 
         final Message message = ProtonHelper.message();
-        adapter.addProperties(message, newRegistrationAssertionResult("token"));
+        final ResourceIdentifier target = ResourceIdentifier.from(TelemetryConstants.TELEMETRY_ENDPOINT, Constants.DEFAULT_TENANT, "4711");
+        final TenantObject tenant = TenantObject.from(Constants.DEFAULT_TENANT, true);
+
+        adapter.addProperties(message, target, "/status", tenant, newRegistrationAssertionResult("token"), 15);
+
+        assertThat(
+                MessageHelper.getApplicationProperty(
+                        message.getApplicationProperties(),
+                        MessageHelper.APP_PROPERTY_ORIG_ADDRESS,
+                        String.class),
+                is("/status"));
         assertThat(
                 MessageHelper.getApplicationProperty(
                         message.getApplicationProperties(),
                         MessageHelper.APP_PROPERTY_ORIG_ADAPTER,
                         String.class),
                 is(ADAPTER_NAME));
+        assertThat(MessageHelper.getDeviceId(message), is("4711"));
+        assertThat(MessageHelper.getTimeUntilDisconnect(message), is(15));
+        assertThat(message.getTtl(), is(0L));
     }
 
     /**
@@ -269,7 +284,11 @@ public class AbstractProtocolAdapterBaseTest {
     public void testAddPropertiesAddsDefaultContentType() {
 
         final Message message = ProtonHelper.message();
-        adapter.addProperties(message, newRegistrationAssertionResult("token", "application/hono"));
+        final ResourceIdentifier target = ResourceIdentifier.from(TelemetryConstants.TELEMETRY_ENDPOINT, Constants.DEFAULT_TENANT, "4711");
+        final TenantObject tenant = TenantObject.from(Constants.DEFAULT_TENANT, true);
+
+        adapter.addProperties(message, target, null, tenant, newRegistrationAssertionResult("token", "application/hono"), null);
+
         assertThat(message.getContentType(), is("application/hono"));
     }
 
@@ -282,7 +301,11 @@ public class AbstractProtocolAdapterBaseTest {
 
         final Message message = ProtonHelper.message();
         message.setContentType("application/existing");
-        adapter.addProperties(message, newRegistrationAssertionResult("token", "application/hono"));
+        final ResourceIdentifier target = ResourceIdentifier.from(TelemetryConstants.TELEMETRY_ENDPOINT, Constants.DEFAULT_TENANT, "4711");
+        final TenantObject tenant = TenantObject.from(Constants.DEFAULT_TENANT, true);
+
+        adapter.addProperties(message, target, null, tenant, newRegistrationAssertionResult("token", "application/hono"), null);
+
         assertThat(message.getContentType(), is("application/existing"));
     }
 
@@ -294,8 +317,39 @@ public class AbstractProtocolAdapterBaseTest {
     public void testAddPropertiesAddsFallbackContentType() {
 
         final Message message = ProtonHelper.message();
-        adapter.addProperties(message, newRegistrationAssertionResult("token"));
+        final ResourceIdentifier target = ResourceIdentifier.from(TelemetryConstants.TELEMETRY_ENDPOINT, Constants.DEFAULT_TENANT, "4711");
+        final TenantObject tenant = TenantObject.from(Constants.DEFAULT_TENANT, true);
+
+        adapter.addProperties(message, target, null, tenant, newRegistrationAssertionResult("token"), null);
+
         assertThat(message.getContentType(), is(AbstractProtocolAdapterBase.CONTENT_TYPE_OCTET_STREAM));
+    }
+
+    /**
+     * Verifies that default properties configured at the tenant and/or device level
+     * are set on a downstream message.
+     */
+    @Test
+    public void testAddPropertiesAddsCustomProperties() {
+
+        final Message message = ProtonHelper.message();
+        final ResourceIdentifier target = ResourceIdentifier.from(EventConstants.EVENT_ENDPOINT, Constants.DEFAULT_TENANT, "4711");
+        final TenantObject tenant = TenantObject.from(Constants.DEFAULT_TENANT, true);
+        tenant.setDefaults(new JsonObject().put(MessageHelper.SYS_HEADER_PROPERTY_TTL, 60).put("custom-tenant", "foo"));
+        final JsonObject assertion = newRegistrationAssertionResult("token");
+        assertion.put(
+                RegistrationConstants.FIELD_PAYLOAD_DEFAULTS,
+                new JsonObject().put(MessageHelper.SYS_HEADER_PROPERTY_TTL, 30).put("custom-device", true));
+
+        adapter.addProperties(message, target, null, tenant, assertion, null);
+
+        assertThat(
+                MessageHelper.getApplicationProperty(message.getApplicationProperties(), "custom-tenant", String.class),
+                is("foo"));
+        assertThat(
+                MessageHelper.getApplicationProperty(message.getApplicationProperties(), "custom-device", Boolean.class),
+                is(Boolean.TRUE));
+        assertThat(message.getTtl(), is(30L));
     }
 
     /**

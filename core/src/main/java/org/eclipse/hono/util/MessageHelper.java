@@ -105,6 +105,27 @@ public final class MessageHelper {
     public static final String APP_PROPERTY_TENANT_ID = "tenant_id";
 
     /**
+     * The AMQP 1.0 <em>delivery-count</em> message header property.
+     */
+    public static final String SYS_HEADER_PROPERTY_DELIVERY_COUNT = "delivery-count";
+    /**
+     * The AMQP 1.0 <em>durable</em> message header property.
+     */
+    public static final String SYS_HEADER_PROPERTY_DURABLE = "durable";
+    /**
+     * The AMQP 1.0 <em>first-acquirer</em> message header property.
+     */
+    public static final String SYS_HEADER_PROPERTY_FIRST_ACQUIRER = "first-acquirer";
+    /**
+     * The AMQP 1.0 <em>priority</em> message header property.
+     */
+    public static final String SYS_HEADER_PROPERTY_PRIORITY = "priority";
+    /**
+     * The AMQP 1.0 <em>ttl</em> message header property.
+     */
+    public static final String SYS_HEADER_PROPERTY_TTL = "ttl";
+
+    /**
      * The AMQP 1.0 <em>absolute-expiry-time</em> message property.
      */
     public static final String SYS_PROPERTY_ABSOLUTE_EXPIRY_TIME = "absolute-expiry-time";
@@ -155,7 +176,7 @@ public final class MessageHelper {
     /**
      * The AMQP 1.0 <em>to</em> message property.
      */
-    public static final String SYS_PROPERTY_TO                     = "to";
+    public static final String SYS_PROPERTY_TO = "to";
 
     /**
      * The time-til-disconnect value to use for indicating that a device will remain connected until further notice.

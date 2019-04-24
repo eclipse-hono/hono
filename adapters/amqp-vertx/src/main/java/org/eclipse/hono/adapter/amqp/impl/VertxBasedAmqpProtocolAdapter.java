@@ -874,6 +874,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                             context.getMessage(),
                             ResourceIdentifier.from(context.getEndpoint().getCanonicalName(), resource.getTenantId(), resource.getResourceId()),
                             context.getAddress().toString(),
+                            tenantEnabledFuture.result(),
                             tokenFuture.result(),
                             null); // no TTD
 

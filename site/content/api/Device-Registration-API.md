@@ -298,7 +298,15 @@ The registration data is carried in the payload as a UTF-8 encoded string repres
 
 ## Request Payload
 
-The JSON object conveyed in the payload MAY contain an arbitrary number of members with arbitrary names. Clients may register *default* values for a device which can be used by protocol adapters to augment messages with missing information that have been published by the device. Protocol adapters extract default values from the `defaults` JSON object registered for a device.
+The table below provides an overview of the standard members defined for the JSON request object:
+
+| Name                     | Mandatory | JSON Type     | Default Value | Description |
+| :------------------------| :-------: | :------------ | :------------ | :---------- |
+| *enabled*                | *no*      | *boolean*     | `true`       | If set to `false` the device is currently disabled. Protocol adapters MUST NOT allow disabled devices to connect and MUST NOT accept data published by such devices. |
+| *defaults*               | *no*      | *object*      | `-`          | Arbitrary *default* properties for the device which can be used by protocol adapters to augment downstream messages with missing information, e.g. setting a default content type or TTL. |
+
+The JSON object MAY contain an arbitrary number of additional members with arbitrary names which can be of a scalar or a complex type.
+This allows for future *well-known* additions and also allows *clients* to add further information which might be relevant to a *custom* adapter only.
 
 Below is an example for a payload of a request for registering a device with a default content type:
 ~~~json
@@ -318,8 +326,17 @@ if the payload does not contain the *enabled* property.
 
 ## Response Payload
 
+
 The JSON object conveyed in a response payload always contains a string typed member of name `device-id` whose value is the ID of the device as provided during registration.
-In addition, the object contains a member with name `data` of type `json object`. The `data` object always contains a property called `enabled` which indicates whether the device may be interacted with or not.
+In addition, the object contains a property with name `data` of type JSON *object* with the following structure:
+
+| Name                     | Mandatory | JSON Type     | Default Value | Description |
+| :------------------------| :-------: | :------------ | :------------ | :---------- |
+| *enabled*                | *no*      | *boolean*     | `true`       | If set to `false` the device is currently disabled. Protocol adapters MUST NOT allow disabled devices to connect and MUST NOT accept data published by such devices. |
+| *defaults*               | *no*      | *object*      | `-`          | Arbitrary *default* properties for the device which can be used by protocol adapters to augment downstream messages with missing information, e.g. setting a default content type or TTL. |
+
+The `data` object MAY contain an arbitrary number of additional members with arbitrary names which can be of a scalar or a complex type.
+This allows for future *well-known* additions and also allows *clients* to add further information which might be relevant to a *custom* adapter only.
 
 Below is an example for a payload of a response to a *get* request for device `4711`:
 ~~~json

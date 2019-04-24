@@ -4,10 +4,20 @@ title = "Release Notes"
 
 ## 1.0-M4 (not released yet)
 
+### New Features
+
+* Default properties can now also be set at the tenant level, affecting all devices
+  belonging to the tenant. Please refer to the [protocol adapter user guides]({{< ref "/user-guide" >}})
+  for details.
+
 ### API Changes
 
 * The `org.eclipse.hono.util.RegistrationConstants.FIELD_DEFAULTS` constant
   has been renamed to `org.eclipse.hono.util.RegistrationConstants.FIELD_PAYLOAD_DEFAULTS`.
+* The `org.eclipse.hono.service.AbstractProtocolAdapterBase.newMessage` and
+  `org.eclipse.hono.service.AbstractProtocolAdapterBase.addProperties` methods have
+  been changed to accept an additional parameter of type `TenantObject` which may contain default
+  properties defined for the tenant to be included in downstream messages.
 
 ## 1.0-M3
 

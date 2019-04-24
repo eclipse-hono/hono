@@ -13,6 +13,7 @@
 package org.eclipse.hono.service;
 
 import java.net.HttpURLConnection;
+import java.time.Instant;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.BiConsumer;
@@ -978,8 +979,13 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * Subclasses are encouraged to use this method for creating {@code Message} instances to be sent downstream in
      * order to have required Hono specific properties being set on the message automatically.
      * <p>
-     * This method creates a new {@code Message}, sets its content type and payload as an AMQP <em>Data</em> section
-     * and then invokes {@link #addProperties(Message, ResourceIdentifier, String, JsonObject, Integer)}.
+     * This method creates a new {@code Message} and sets
+     * <ul>
+     * <li>its <em>content-type</em> to the given value,</li>
+     * <li>its <em>creation-time</em> to the current system time and</li>
+     * <li>its payload as an AMQP <em>Data</em> section</li>
+     * </ul>
+     * The message is then passed to {@link #addProperties(Message, ResourceIdentifier, String, TenantObject, JsonObject, Integer)}.
      *
      * @param target The resource that the message is targeted at.
      * @param publishAddress The address that the message has been published to originally by the device. (may be
@@ -987,8 +993,10 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      *            <p>
      *            This address will be transport protocol specific, e.g. an HTTP based adapter will probably use URIs
      *            here whereas an MQTT based adapter might use the MQTT message's topic.
-     * @param contentType The content type describing the message's payload (may be {@code null}).
+     * @param contentType The content type describing the message's payload or {@code null} if no content type
+     *                    should be set.
      * @param payload The message payload.
+     * @param tenant The tenant that the device belongs to.
      * @param registrationInfo The device's registration information as retrieved by the <em>Device Registration</em>
      *            service's <em>assert Device Registration</em> operation.
      * @param timeUntilDisconnect The number of milliseconds until the device that has published the message
@@ -1001,6 +1009,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
             final String publishAddress,
             final String contentType,
             final Buffer payload,
+            final TenantObject tenant,
             final JsonObject registrationInfo,
             final Integer timeUntilDisconnect) {
 
@@ -1008,10 +1017,11 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         Objects.requireNonNull(registrationInfo);
 
         final Message msg = ProtonHelper.message();
-        MessageHelper.setPayload(msg, contentType, payload);
         msg.setContentType(contentType);
+        msg.setCreationTime(Instant.now().toEpochMilli());
+        MessageHelper.setPayload(msg, contentType, payload);
 
-        return addProperties(msg, target, publishAddress, registrationInfo, timeUntilDisconnect);
+        return addProperties(msg, target, publishAddress, tenant, registrationInfo, timeUntilDisconnect);
     }
 
     /**
@@ -1023,10 +1033,24 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * <li><em>creation-time</em> will be set to the current number of milliseconds since 1970-01-01T00:00:00Z</li>
      * <li>application property <em>device_id</em> will be set to the target's resourceId property</li>
      * <li>application property <em>orig_address</em> will be set to the given publish address</li>
-     * <li>application property <em>ttd</em> will be set to the given time til disconnect</li>
-     * <li>additional properties set by {@link #addProperties(Message, JsonObject)}</li>
+     * <li>application property <em>orig_adapter</em> will be set to the {@linkplain #getTypeName() adapter's name}</li>
+     * <li>application property <em>ttd</em> will be set to the given time-til-disconnect</li>
      * </ul>
-     *
+     * 
+     * In addition, this method
+     * <ul>
+     * <li>augments the message with missing (application) properties corresponding to the
+     * default properties contained in the {@linkplain TenantObject#getDefaults() tenant object}
+     * and the {@linkplain RegistrationConstants#FIELD_PAYLOAD_DEFAULTS registration information}.
+     * Default properties defined at the device level take precedence over properties
+     * with the same name defined at the tenant level,</li>
+     * <li>adds JMS vendor properties if configuration property <em>jmsVendorPropertiesEnabled</em> is set to
+     * {@code true},</li>
+     * <li>sets the message's <em>content-type</em> to the {@linkplain #CONTENT_TYPE_OCTET_STREAM fall back
+     * content type}, if the default properties do not contain a content type and the message has no
+     * content type set yet</li>
+     * </ul>
+
      * @param msg The message to add the properties to.
      * @param target The resource that the message is targeted at.
      * @param publishAddress The address that the message has been published to originally by the device. (may be
@@ -1034,6 +1058,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      *            <p>
      *            This address will be transport protocol specific, e.g. an HTTP based adapter will probably use URIs
      *            here whereas an MQTT based adapter might use the MQTT message's topic.
+     * @param tenant The tenant that the device belongs to.
      * @param registrationInfo The device's registration information as retrieved by the <em>Device Registration</em>
      *            service's <em>assert Device Registration</em> operation.
      * @param timeUntilDisconnect The number of seconds until the device that has published the message
@@ -1045,6 +1070,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
             final Message msg,
             final ResourceIdentifier target,
             final String publishAddress,
+            final TenantObject tenant,
             final JsonObject registrationInfo,
             final Integer timeUntilDisconnect) {
 
@@ -1054,6 +1080,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
 
         msg.setAddress(target.getBasePath());
         MessageHelper.addDeviceId(msg, target.getResourceId());
+        MessageHelper.addProperty(msg, MessageHelper.APP_PROPERTY_ORIG_ADAPTER, getTypeName());
         MessageHelper.annotate(msg, target);
         if (publishAddress != null) {
             MessageHelper.addProperty(msg, MessageHelper.APP_PROPERTY_ORIG_ADDRESS, publishAddress);
@@ -1063,36 +1090,24 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         }
 
         MessageHelper.setCreationTime(msg);
-        addProperties(msg, registrationInfo);
+        addProperties(msg, target, tenant, registrationInfo);
         return msg;
     }
 
-    /**
-     * Adds message properties based on a device's registration information.
-     * <p>
-     * Sets the following properties on the message:
-     * <ul>
-     * <li>Adds {@linkplain #getTypeName() the adapter's name} to the message in application property
-     * {@link MessageHelper#APP_PROPERTY_ORIG_ADAPTER}</li>
-     * <li>Augments the message with missing (application) properties corresponding to the
-     * {@link RegistrationConstants#FIELD_PAYLOAD_DEFAULTS} contained in the registration information.</li>
-     * <li>Adds JMS vendor properties if configuration property <em>jmsVendorPropertiesEnabled</em> is set to
-     * {@code true}.</li>
-     * </ul>
-     *
-     * @param message The message to set the properties on.
-     * @param registrationInfo The values to set.
-     * @throws NullPointerException if any of the parameters is {@code null}.
-     */
-    protected final void addProperties(
+    private void addProperties(
             final Message message,
+            final ResourceIdentifier target,
+            final TenantObject tenant,
             final JsonObject registrationInfo) {
 
-        MessageHelper.addProperty(message, MessageHelper.APP_PROPERTY_ORIG_ADAPTER, getTypeName());
         if (getConfig().isDefaultsEnabled()) {
-            final JsonObject defaults = registrationInfo.getJsonObject(RegistrationConstants.FIELD_PAYLOAD_DEFAULTS);
-            if (defaults != null) {
-                addDefaults(message, defaults);
+            final JsonObject defaults = tenant.getDefaults().copy();
+            final JsonObject deviceDefaults = registrationInfo.getJsonObject(RegistrationConstants.FIELD_PAYLOAD_DEFAULTS);
+            if (deviceDefaults != null) {
+                defaults.mergeIn(deviceDefaults);
+            }
+            if (!defaults.isEmpty()) {
+                addDefaults(message, target, defaults);
             }
         }
         if (Strings.isNullOrEmpty(message.getContentType())) {
@@ -1105,11 +1120,17 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         }
     }
 
-    private void addDefaults(final Message message, final JsonObject defaults) {
+    private void addDefaults(final Message message, final ResourceIdentifier target, final JsonObject defaults) {
 
         defaults.forEach(prop -> {
 
             switch (prop.getKey()) {
+            case MessageHelper.SYS_HEADER_PROPERTY_TTL:
+                final boolean isEvent = target.getEndpoint().equals(EventConstants.EVENT_ENDPOINT);
+                if (isEvent && message.getTtl() == 0 && Number.class.isInstance(prop.getValue())) {
+                    message.setTtl(((Number) prop.getValue()).longValue());
+                }
+                break;
             case MessageHelper.SYS_PROPERTY_CONTENT_TYPE:
                 if (Strings.isNullOrEmpty(message.getContentType()) && String.class.isInstance(prop.getValue())) {
                     // set to default type registered for device or fall back to default content type
@@ -1121,6 +1142,10 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
                     message.setContentEncoding((String) prop.getValue());
                 }
                 break;
+            case MessageHelper.SYS_HEADER_PROPERTY_DELIVERY_COUNT:
+            case MessageHelper.SYS_HEADER_PROPERTY_DURABLE:
+            case MessageHelper.SYS_HEADER_PROPERTY_FIRST_ACQUIRER:
+            case MessageHelper.SYS_HEADER_PROPERTY_PRIORITY:
             case MessageHelper.SYS_PROPERTY_ABSOLUTE_EXPIRY_TIME:
             case MessageHelper.SYS_PROPERTY_CORRELATION_ID:
             case MessageHelper.SYS_PROPERTY_CREATION_TIME:
@@ -1258,7 +1283,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
             final Device authenticatedDevice,
             final SpanContext context) {
 
-        return sendTtdEvent(tenant, deviceId, authenticatedDevice, -1, context);
+        return sendTtdEvent(tenant, deviceId, authenticatedDevice, MessageHelper.TTD_VALUE_UNLIMITED, context);
     }
 
     /**
@@ -1374,6 +1399,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
                         EventConstants.EVENT_ENDPOINT,
                         EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION,
                         null,
+                        tenantConfigTracker.result(),
                         tokenTracker.result(),
                         ttd);
                 return sender.sendAndWaitForOutcome(msg, context);
