@@ -278,17 +278,22 @@ The adapter includes the following meta data in messages being sent downstream:
 
 | Name               | Location                | Type      | Description                                                     |
 | :----------------- | :---------------------- | :-------- | :-------------------------------------------------------------- |
+| *device_id*        | *application*           | *string*  | The identifier of the device that the message originates from.  |
 | *orig_adapter*     | *application*           | *string*  | Contains the adapter's *type name* which can be used by downstream consumers to determine the protocol adapter that the message has been received over. The MQTT adapter's type name is `hono-mqtt`. |
 | *orig_address*     | *application*           | *string*  | Contains the name of the MQTT topic that the device has originally published the data to. |
 | *x-opt-retain*     | * *message-annotations* | *boolean* | Contains `true` if the device has published an event or telemetry message with its *retain* flag set to `1` |
 
-The adapter also considers [*defaults* registered for the device]({{< relref "api/Device-Registration-API.md#payload-format" >}}). For each default value the adapter checks if a corresponding property is already set on the message and if not, sets the message's property to the registered default value or adds a corresponding application property.
+The adapter also considers *defaults* registered for the device at either the [tenant]({{< ref "/api/Tenant-API.md#payload-format" >}}) or the [device level]({{< ref "/api/Device-Registration-API.md#payload-format" >}}). The values of the default properties are determined as follows:
 
-Note that of the standard AMQP 1.0 message properties only the *content-type* can be set this way to a registered default value.
+1. If the message already contains a non-empty property of the same name, the value if unchanged.
+2. Otherwise, if a default property of the same name is defined in the device's registration information, that value is used.
+3. Otherwise, if a default property of the same name is defined for the tenant that the device belongs to, that value is used.
+
+Note that of the standard AMQP 1.0 message properties only the *content-type* and *ttl* can be set this way to a default value.
 
 ## Tenant specific Configuration
 
-The adapter uses the [Tenant API]({{< relref "api/Tenant-API.md#get-tenant-information" >}}) to retrieve *tenant specific configuration* for adapter type `hono-mqtt`.
+The adapter uses the [Tenant API]({{< ref "/api/Tenant-API.md#get-tenant-information" >}}) to retrieve *tenant specific configuration* for adapter type `hono-mqtt`.
 The following properties are (currently) supported:
 
 | Name               | Type       | Default Value | Description                                                     |

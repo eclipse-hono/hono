@@ -13,16 +13,25 @@
 
 package org.eclipse.hono.tests.mqtt;
 
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.MessageConsumer;
+import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.EventConstants;
+import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.util.TenantObject;
+import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import io.netty.handler.codec.mqtt.MqttQoS;
+import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.buffer.Buffer;
+import io.vertx.core.json.JsonObject;
+import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 
@@ -42,6 +51,15 @@ public class EventMqttIT extends MqttPublishTestBase {
             final String deviceId,
             final Buffer payload,
             final boolean useShortTopicName) {
+        return send(tenantId, deviceId, payload, useShortTopicName, this::handlePublishAttempt);
+    }
+
+    private Future<Void> send(
+            final String tenantId,
+            final String deviceId,
+            final Buffer payload,
+            final boolean useShortTopicName,
+            final BiConsumer<AsyncResult<Integer>, Future<Void>> sendAttemptHandler) {
 
         final String topic = String.format(
                 TOPIC_TEMPLATE,
@@ -55,7 +73,7 @@ public class EventMqttIT extends MqttPublishTestBase {
                 MqttQoS.AT_LEAST_ONCE,
                 false, // is duplicate
                 false, // is retained
-                sendAttempt -> handlePublishAttempt(sendAttempt, result));
+                sendAttempt -> sendAttemptHandler.accept(sendAttempt, result));
         return result;
     }
 
@@ -69,5 +87,57 @@ public class EventMqttIT extends MqttPublishTestBase {
     protected void assertAdditionalMessageProperties(final TestContext ctx, final Message msg) {
         // assert that events are marked as "durable"
         ctx.assertTrue(msg.isDurable());
+    }
+
+    /**
+     * Verifies that an event frmo a device for which a default TTL has been
+     * specified cannot be consumed after the TTL has expired.
+     * 
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testMessagesExpire(final TestContext ctx) {
+
+        // GIVEN a tenant for which all messages have a TTL of 500ms
+        final String tenantId = helper.getRandomTenantId();
+        final String deviceId = helper.getRandomDeviceId(tenantId);
+        final TenantObject tenant = TenantObject.from(tenantId, true);
+        tenant.setDefaults(new JsonObject().put(MessageHelper.SYS_HEADER_PROPERTY_TTL, 500));
+        final Async setup = ctx.async();
+
+        helper.registry.addDeviceForTenant(tenant, deviceId, "secret")
+        .setHandler(ctx.asyncAssertSuccess(ok -> setup.complete()));
+        setup.await();
+
+        // WHEN a device that belongs to the tenant publishes an event
+        final AtomicInteger receivedMessageCount = new AtomicInteger(0);
+        connectToAdapter(IntegrationTestSupport.getUsername(deviceId, tenantId), "secret")
+        .compose(connack -> send(tenantId, deviceId, Buffer.buffer("hello"), false, (sendAttempt, result) -> {
+            if (sendAttempt.succeeded()) {
+                LOGGER.info("successfully sent event [tenant-id: {}, device-id: {}", tenantId, deviceId);
+                result.complete();
+            } else {
+                result.fail(sendAttempt.cause());
+            }
+        })).compose(ok -> {
+            final Future<MessageConsumer> consumerCreated = Future.future();
+            VERTX.setTimer(1000, tid -> {
+                LOGGER.info("opening event consumer for tenant [{}]", tenantId);
+                // THEN no messages can be consumed after the TTL has expired
+                createConsumer(tenantId, msg -> receivedMessageCount.incrementAndGet())
+                .compose(c -> consumerCreated.complete(), consumerCreated);
+            });
+            return consumerCreated;
+        }).compose(c -> {
+            final Future<Void> done = Future.future();
+            VERTX.setTimer(500, tid -> {
+                if (receivedMessageCount.get() > 0) {
+                    done.fail(new IllegalStateException("should not have received any events after TTL has expired"));
+                } else {
+                    done.complete();
+                }
+            });
+            return done;
+        }).setHandler(ctx.asyncAssertSuccess());
     }
 }

@@ -518,6 +518,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                             "/" + context.getExchange().getRequestOptions().getUriPathString(),
                             contentType,
                             payload,
+                            tenantEnabledTracker.result(),
                             tokenTracker.result(),
                             null);
                     customizeDownstreamMessage(downstreamMessage, context);

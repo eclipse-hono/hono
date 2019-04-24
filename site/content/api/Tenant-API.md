@@ -293,10 +293,11 @@ The table below provides an overview of the standard members defined for the JSO
 
 | Name                     | Mandatory | JSON Type     | Default Value | Description |
 | :------------------------| :-------: | :------------ | :------------ | :---------- |
-| *enabled*                | *no*      | *boolean*     | `true`       | If set to `false` the tenant is currently disabled. Protocol adapters MUST NOT allow devices of a disabled tenant to connect and MUST NOT accept data published by such devices. |
-| *trusted-ca*             | *no*      | *object*      | `-`          | The trusted certificate authority to use for validating certificates presented by devices of the tenant for authentication purposes. See [Trusted Certificate Authority Format]({{< relref "#trusted-ca-format" >}}) for a definition of the content model of the object. |
 | *adapters*               | *no*      | *array*       | `-`          | A list of configuration options valid for certain adapters only. The format of a configuration option is described here [Adapter Configuration Format]({{< relref "#adapter-configuration-format" >}}). **NB** If the element is provided then the list MUST NOT be empty. **NB** Only a single entry per *type* is allowed. If multiple entries for the same *type* are present it is handled as an error. **NB** If the element is omitted then all adapters are *enabled* in their default configuration. |
+| *defaults*               | *no*      | *object*      | `-`          | Arbitrary *default* properties for devices belonging to the tenant. The properties can be used by protocol adapters to augment downstream messages with missing information, e.g. setting a default content type or TTL. |
+| *enabled*                | *no*      | *boolean*     | `true`       | If set to `false` the tenant is currently disabled. Protocol adapters MUST NOT allow devices of a disabled tenant to connect and MUST NOT accept data published by such devices. |
 | *resource-limits*         | *no*      | *object*     | `-`          | The resource-limits such as the maximum number of connections can be set. The format of a configuration option is described here [Resource Limits Configuration Format]({{< relref "#resource-limits-configuration-format" >}}).|
+| *trusted-ca*             | *no*      | *object*      | `-`          | The trusted certificate authority to use for validating certificates presented by devices of the tenant for authentication purposes. See [Trusted Certificate Authority Format]({{< relref "#trusted-ca-format" >}}) for a definition of the content model of the object. |
 
 If any of the mandatory members is either missing or contains invalid data, implementations MUST NOT accept the payload and return *400 Bad Request* status code.
 
@@ -306,13 +307,16 @@ This allows for future *well-known* additions and also allows *clients* to add f
 ### Examples
 
 Below is an example for a request payload defining an *enabled* tenant.
-Devices belonging to the tenant can connect to Hono via the rest-adapter only and are required to authenticate with the adapter on connection.
+Devices belonging to the tenant can connect to Hono via the HTTP adapter only and are required to authenticate with the adapter on connection.
 
 **NB** The id of the tenant is not part of the JSON as it is defined in the application properties of the AMQP 1.0 message.
 
 ~~~json
 {
   "enabled": true,
+  "defaults": {
+    "ttl": 30
+  },
   "adapters": [
     {
       "type": "hono-http",
@@ -355,22 +359,26 @@ The table below provides an overview of the standard members defined for the JSO
 
 | Name                     | Mandatory | JSON Type     | Description |
 | :------------------------| :-------: | :------------ | :---------- |
-| *tenant-id*              | *yes*     | *string*      | The ID of the tenant. |
-| *enabled*                | *yes*     | *boolean*     | If set to `false` the tenant is currently disabled. Protocol adapters MUST NOT allow devices of a disabled tenant to connect and MUST NOT accept data published by such devices. |
-| *trusted-ca*             | *no*      | *object*      | The trusted certificate authority to use for validating certificates presented by devices of the tenant for authentication purposes. See [Trusted Certificate Authority Format]({{< relref "#trusted-ca-format" >}}) for a definition of the content model of the object. |
 | *adapters*               | *no*      | *array*       | A list of configuration options valid for certain adapters only. The format of a configuration option is described here [Adapter Configuration Format]({{< relref "#adapter-configuration-format" >}}). **NB** If the element is provided then the list MUST NOT be empty. **NB** Only a single entry per *type* is allowed. If multiple entries for the same *type* are present it is handled as an error. **NB** If the element is omitted then all adapters are *enabled* in their default configuration. |
+| *defaults*               | *no*      | *object*      | `-`          | Arbitrary *default* properties for devices belonging to the tenant. The properties can be used by protocol adapters to augment downstream messages with missing information, e.g. setting a default content type or TTL. |
+| *enabled*                | *yes*     | *boolean*     | If set to `false` the tenant is currently disabled. Protocol adapters MUST NOT allow devices of a disabled tenant to connect and MUST NOT accept data published by such devices. |
 | *resource-limits*        | *no*      | *object*      | Any resource limits that should be enforced for the tenant, e.g. the maximum number of concurrent connections. Refer to [Resource Limits Configuration Format]({{< relref "#resource-limits-configuration-format" >}}) for details. |
+| *tenant-id*              | *yes*     | *string*      | The ID of the tenant. |
+| *trusted-ca*             | *no*      | *object*      | The trusted certificate authority to use for validating certificates presented by devices of the tenant for authentication purposes. See [Trusted Certificate Authority Format]({{< relref "#trusted-ca-format" >}}) for a definition of the content model of the object. |
 
-Additionally to the specified properties the JSON object MAY contain an arbitrary number of members with arbitrary names which can be of a scalar or a complex type. 
+The JSON object MAY contain an arbitrary number of additional members with arbitrary names which can be of a scalar or a complex type.
 This allows for future *well-known* additions and also allows *clients* to add further information which might be relevant to a *custom* adapter only.
 
 ### Examples
 
-Below is an example for a payload of the response to a *get* request for tenant `TEST_TENANT`. Note that the payload contains some custom properties at both the tenant (*customer*) as well as the adapter configuration level (*deployment*).
+Below is an example for a payload of the response to a *get* request for tenant `TEST_TENANT`. Note that the payload contains some custom properties at both the tenant (*customer*) as well as the adapter configuration level (*deployment*) and also defines a default TTL for downstream messages.
 
 ~~~json
 {
   "tenant-id" : "TEST_TENANT",
+  "defaults": {
+    "ttl": 30
+  },
   "enabled" : true,
   "customer": "ACME Inc.",
   "resource-limits": {

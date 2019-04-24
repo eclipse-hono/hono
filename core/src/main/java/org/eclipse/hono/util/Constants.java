@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -42,40 +42,43 @@ public final class Constants {
     public static final Symbol AMQP_ERROR_INACTIVITY= Symbol.valueOf("hono:inactivity");
 
     /**
+     * The default separator character for target addresses.
+     */
+    public static final String DEFAULT_PATH_SEPARATOR = "/";
+    /**
+     * The default number of milliseconds to wait before trying to reconnect to a service.
+     */
+    public static final long DEFAULT_RECONNECT_INTERVAL_MILLIS = 500;
+    /**
      * The name of the default tenant.
      */
     public static final String DEFAULT_TENANT = "DEFAULT_TENANT";
 
+    /**
+     * The type of the AMQP protocol adapter.
+     */
+    public static final String PROTOCOL_ADAPTER_TYPE_AMQP= "hono-amqp";
+    /**
+     * The type of the Eclipse coap adapter.
+     */
+    public static final String PROTOCOL_ADAPTER_TYPE_COAP= "hono-coap";
+    /**
+     * The type of the http protocol adapter.
+     */
+    public static final String PROTOCOL_ADAPTER_TYPE_HTTP= "hono-http";
+    /**
+     * The type of the Eclipse Kura protocol adapter.
+     */
+    public static final String PROTOCOL_ADAPTER_TYPE_KURA= "hono-kura-mqtt";
     /**
      * The type of the mqtt protocol adapter.
      */
     public static final String PROTOCOL_ADAPTER_TYPE_MQTT= "hono-mqtt";
 
     /**
-     * The type of the http protocol adapter.
-     */
-    public static final String PROTOCOL_ADAPTER_TYPE_HTTP= "hono-http";
-
-    /**
-     * The type of the Eclipse Kura protocol adapter.
-     */
-    public static final String PROTOCOL_ADAPTER_TYPE_KURA= "hono-kura-mqtt";
-
-    /**
-     * The type of the AMQP protocol adapter.
-     */
-    public static final String PROTOCOL_ADAPTER_TYPE_AMQP= "hono-amqp";
-
-    /**
-     * The type of the Eclipse coap adapter.
-     */
-    public static final String PROTOCOL_ADAPTER_TYPE_COAP= "hono-coap";
-
-    /**
      * The (short) name of the Auth Server component.
      */
     public static final String SERVICE_NAME_AUTH = "hono-auth";
-
     /**
      * The (short) name of the Device Registry component.
      */
@@ -94,16 +97,10 @@ public final class Constants {
     public static final Symbol CAP_REG_ASSERTION_VALIDATION = Symbol.valueOf("hono-reg-assertion");
 
     /**
-     * The default number of milliseconds to wait before trying to reconnect to a service.
-     */
-    public static final long DEFAULT_RECONNECT_INTERVAL_MILLIS = 500;
-
-    /**
      * The key that an authenticated client's principal is stored under in a {@code ProtonConnection}'s
      * attachments.
      */
     public static final String KEY_CLIENT_PRINCIPAL = "CLIENT_PRINCIPAL";
-
     /**
      * The key that the (surrogate) ID of a connection is stored under in a {@code ProtonConnection}'s
      * and/or {@code ProtonLink}'s attachments.
@@ -116,20 +113,13 @@ public final class Constants {
     public static final String EVENT_BUS_ADDRESS_CONNECTION_CLOSED = "hono.connection.closed";
 
     /**
-     * The default separator character for target addresses.
+     * The AMQP 1.0 port defined by IANA for unencrypted connections.
      */
-    public static final String DEFAULT_PATH_SEPARATOR = "/";
-
+    public static final int PORT_AMQP = 5672;
     /**
      * The AMQP 1.0 port defined by IANA for TLS encrypted connections.
      */
     public static final int PORT_AMQPS = 5671;
-
-    /**
-     * The AMQP 1.0 port defined by IANA for unencrypted connections.
-     */
-    public static final int PORT_AMQP = 5672;
-
     /**
      * Default value for a port that is not explicitly configured.
      */
@@ -144,17 +134,14 @@ public final class Constants {
      * The qualifier to use for referring to AMQP based components.
      */
     public static final String QUALIFIER_AMQP = "amqp";
-
     /**
      * The qualifier to use for referring to components scoped to the AMQP 1.0 messaging network.
      */
     public static final String QUALIFIER_DOWNSTREAM = "downstream";
-
     /**
      * The qualifier to use for referring to the AMQP Messaging Network.
      */
     public static final String QUALIFIER_MESSAGING = "messaging";
-
     /**
      * The qualifier to use for referring to REST based components.
      */
@@ -166,14 +153,13 @@ public final class Constants {
     public static final String SUBJECT_ANONYMOUS = "ANONYMOUS";
 
     /**
-     * The field name of JSON payloads containing a tenant ID.
-     */
-    public static final String JSON_FIELD_TENANT_ID = "tenant-id";
-
-    /**
      * The field name of JSON payloads containing a device ID.
      */
     public static final String JSON_FIELD_DEVICE_ID = "device-id";
+    /**
+     * The field name of JSON payloads containing a tenant ID.
+     */
+    public static final String JSON_FIELD_TENANT_ID = "tenant-id";
 
     /**
      * The principal to use for anonymous clients.

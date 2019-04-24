@@ -1021,6 +1021,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                             ctx.message().topicName(),
                             ctx.contentType(),
                             payload,
+                            tenantEnabledTracker.result(),
                             tokenTracker.result(),
                             null);
 
