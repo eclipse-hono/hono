@@ -16,12 +16,12 @@ package org.eclipse.hono.client;
 import java.util.Optional;
 import java.util.function.Predicate;
 
-import io.vertx.proton.ProtonHelper;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
 
 import io.vertx.core.buffer.Buffer;
+import io.vertx.proton.ProtonHelper;
 
 /**
  * A wrapper around payload that has been sent by a device in
@@ -130,7 +130,7 @@ public final class CommandResponse {
                 final ResourceIdentifier resource = ResourceIdentifier.fromString(message.getAddress());
                 MessageHelper.addProperty(message, MessageHelper.APP_PROPERTY_TENANT_ID, resource.getTenantId());
                 MessageHelper.addProperty(message, MessageHelper.APP_PROPERTY_DEVICE_ID, resource.getResourceId());
-                return new CommandResponse(message, getReplyId(resource));
+                return new CommandResponse(message, getReplyToId(resource));
             } catch (NullPointerException | IllegalArgumentException e) {
                 return null;
             }
@@ -175,7 +175,15 @@ public final class CommandResponse {
         return message;
     }
 
-    private static String getReplyId(final ResourceIdentifier resource) {
+    /**
+     * Gets the command reply-to-id from the resource of the command response, received from the device.
+     * <p>
+     * See {@link Command#getDeviceFacingReplyToId(String, String)} for the conversion in the opposite direction.
+     *
+     * @param resource The command response resource string.
+     * @return The reply-to-id.
+     */
+    static String getReplyToId(final ResourceIdentifier resource) {
         final String deviceId = resource.getResourceId();
         final String pathWithoutBase = resource.getPathWithoutBase();
         if (pathWithoutBase.startsWith(deviceId + "/1")) {
