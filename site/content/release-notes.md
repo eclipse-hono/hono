@@ -480,7 +480,7 @@ instance. It also makes more use of ConfigMaps and service key/cert management.
 * The result type of `org.eclipse.hono.util.MessageHelper.getPayload(Message msg)` has been changed from `String` to the more generic `io.vertx.core.buffer.Buffer` to be able to handle e.g. binary data. 
 
 * The default way how `HonoClient` instances are being created has changed.
-As the default implemention `HonoClientImpl` was located in an internal
+As the default implementation `HonoClientImpl` was located in an internal
 `impl` package, it wasn't accessible when using OSGi as this was package wasn't
 exported. The old constructor is still available. In combination with that the
 `ConnectionFactoryImpl` builder concept was removed as it didn't add anything
