@@ -13,6 +13,9 @@
 
 package org.eclipse.hono.service.http;
 
+import static org.hamcrest.CoreMatchers.instanceOf;
+import static org.hamcrest.CoreMatchers.is;
+import static org.junit.Assert.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
@@ -21,9 +24,10 @@ import java.net.HttpURLConnection;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 
+import io.vertx.ext.web.Route;
+import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
-import org.eclipse.hono.service.http.HonoBasicAuthHandler;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -40,7 +44,7 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.ext.auth.AuthProvider;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.ext.web.RoutingContext;
-
+import org.mockito.ArgumentCaptor;
 
 /**
  * Tests verifying behavior of {@link HonoBasicAuthHandler}.
@@ -103,4 +107,34 @@ public class HonoBasicAuthHandlerTest {
         verify(ctx).fail(error);
     }
 
+    /**
+     * Verifies that the handler returns the status code {@link HttpURLConnection#HTTP_BAD_REQUEST} in case of malformed
+     * authorization header.
+     */
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    @Test
+    public void testHandleFailsForMalformedAuthorizationHeader() {
+
+        authHandler = new HonoBasicAuthHandler(authProvider, "test", NoopTracerFactory.create());
+        final ArgumentCaptor<Throwable> exceptionCaptor = ArgumentCaptor.forClass(Throwable.class);
+        // WHEN trying to authenticate a request using the HTTP BASIC scheme
+        final String authorization = "BASIC test test";
+        final MultiMap headers = mock(MultiMap.class);
+        when(headers.get(eq(HttpHeaders.AUTHORIZATION))).thenReturn(authorization);
+        final HttpServerRequest req = mock(HttpServerRequest.class);
+        when(req.headers()).thenReturn(headers);
+        final HttpServerResponse resp = mock(HttpServerResponse.class);
+        final RoutingContext ctx = mock(RoutingContext.class);
+        when(ctx.request()).thenReturn(req);
+        when(ctx.response()).thenReturn(resp);
+        when(ctx.currentRoute()).thenReturn(mock(Route.class));
+        authHandler.parseCredentials(ctx, mock(Handler.class));
+
+        // THEN the request context is failed with the 400 error code
+        verify(ctx).fail(exceptionCaptor.capture());
+        assertThat(exceptionCaptor.getValue(), instanceOf(ClientErrorException.class));
+        assertThat(((ClientErrorException) exceptionCaptor.getValue()).getErrorCode(),
+                is(HttpURLConnection.HTTP_BAD_REQUEST));
+
+    }
 }

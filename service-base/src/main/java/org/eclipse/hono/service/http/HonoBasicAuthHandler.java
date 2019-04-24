@@ -13,6 +13,7 @@
 
 package org.eclipse.hono.service.http;
 
+import io.vertx.ext.web.impl.RoutingContextDecorator;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.tracing.TracingHelper;
 
@@ -70,7 +71,18 @@ public class HonoBasicAuthHandler extends BasicAuthHandlerImpl {
 
     @Override
     public void parseCredentials(final RoutingContext context, final Handler<AsyncResult<JsonObject>> handler) {
-        super.parseCredentials(context, ar -> {
+        // In case of exception due to malformed authorisation header, Vertx BasicAuthHandlerImpl invokes
+        // context.fail(e) thereby the DefaultFailureHandler is being invoked. This sends http status code 500
+        // instead of 400. To resolve this, the RoutingContextDecorator is used. The overridden fail(Throwable) method
+        // ensures that http status code 400 is returned.
+        final RoutingContextDecorator routingContextDecorator = new RoutingContextDecorator(context.currentRoute(),
+                context) {
+
+            public void fail(final Throwable throwable) {
+                HttpUtils.badRequest(context, "Malformed authorization header");
+            }
+        };
+        super.parseCredentials(routingContextDecorator, ar -> {
             if (ar.succeeded()) {
                 final SpanContext spanContext = TracingHandler.serverSpanContext(context);
                 if (spanContext != null && !(spanContext instanceof NoopSpanContext)) {
