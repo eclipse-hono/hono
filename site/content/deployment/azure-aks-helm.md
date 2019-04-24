@@ -1,6 +1,10 @@
-# Eclipse Hono deployment on Microsoft Azure with Helm
++++
+title = "Eclipse Hono deployment on Microsoft Azure with Helm"
+weight = 490
++++
 
 This guide describes the installation of Eclipse Hono on Microsoft Azure. It is not meant for productive use but rather for evaluation as well as demonstration or development purposes or as a baseline to evolve a production grade [Application architecture](https://docs.microsoft.com/en-us/azure/architecture/guide/) out of it which includes Eclipse Hono.
+<!--more-->
 
 ## Prepare environment
 
@@ -119,6 +123,7 @@ Now let's check a docker images labels, that has been build earlier:
 sudo docker images
 ```
 Now, you should see a list of containers with 2 tags:
+
 - "latest"
 - Specific version of containers (ex.: "1.0-M2-SNAPSHOT")
 
@@ -130,7 +135,8 @@ This script will tag and push container to your private repo.
 
 ## Create AKS cluster and deploy HONO
 ---
-If you have skipped a previous block, you can use one of the deployment package from [here](https://www.eclipse.org/hono/download/). Make sure you have all required files (They can be found in [Eclipse Hono GitHub](https://github.com/eclipse/hono)):
+If you have skipped a previous block, you can use one of the deployment packages from [here](https://www.eclipse.org/hono/download/). Make sure you have all required files (they can be found in [Eclipse Hono GitHub](https://github.com/eclipse/hono)):
+
  - push_hono_images.sh in ~/hono
  - dispatch-router-extlb-svc.yaml in ~/hono/deploy/helm/templates/dispatch-router
  - hono-adapter-amqp-vertx-extlb-svc.yaml in ~/hono/deploy/helm/templates/hono-adapter-amqp
@@ -138,6 +144,7 @@ If you have skipped a previous block, you can use one of the deployment package 
  - hono-adapter-kura-extlb-svc.yaml in ~/hono/deploy/helm/templates/hono-adapter-kura
  - hono-adapter-mqtt-vertx-extlb-svc.yaml in ~/hono/deploy/helm/templates/hono-adapter-mqtt
  - hono-service-device-registry-extlb-svc.yaml in ~/hono/deploy/helm/templates/hono-service-device-registry
+
 ---
 
 Now it's time to create Azure Kubernetes Services cluster.
@@ -199,7 +206,7 @@ kubectl get pods -n hono
 ```
 #### Service ports configuration
 |Service|Type|Ports|
-|-|-|-|
+|---|---|---|
 |hono-adapter-amqp-vertx-extlb|LoadBalancer|5672,5671|
 |hono-adapter-http-vertx-extlb|LoadBalancer|8080,8443|
 |hono-adapter-kura-extlb|LoadBalancer|11883,18883|
