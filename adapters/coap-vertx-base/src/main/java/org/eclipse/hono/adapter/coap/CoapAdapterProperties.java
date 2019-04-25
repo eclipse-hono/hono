@@ -44,10 +44,27 @@ public class CoapAdapterProperties extends ProtocolAdapterProperties {
     private int deviceCacheMinSize = DEFAULT_DEVICE_CACHE_MIN_SIZE;
     private long deviceCacheMaxSize = DEFAULT_DEVICE_CACHE_MAX_SIZE;
 
+    /**
+     * Gets the regular expression used for splitting up
+     * a username into the auth-id and tenant.
+     * <p>
+     * The default value of this property is {@link #DEFAULT_ID_SPLIT_REGEX}.
+     * 
+     * @return The regex.
+     */
     public final String getIdSplitRegex() {
         return idSplitRegex;
     }
 
+    /**
+     * Sets the regular expression to use for splitting up
+     * a username into the auth-id and tenant.
+     * <p>
+     * The default value of this property is {@link #DEFAULT_ID_SPLIT_REGEX}.
+     * 
+     * @param idSplitRegex The regex.
+     * @throws NullPointerException if regex is {@code null}.
+     */
     public final void setIdSplitRegex(final String idSplitRegex) {
         this.idSplitRegex = Objects.requireNonNull(idSplitRegex);
     }
