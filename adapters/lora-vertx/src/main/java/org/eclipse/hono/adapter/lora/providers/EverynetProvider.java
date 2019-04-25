@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -60,7 +60,7 @@ public class EverynetProvider implements LoraProvider {
     }
 
     @Override
-    public String extractPayloadEncodedInBase64(final JsonObject loraMessage) {
+    public String extractPayload(final JsonObject loraMessage) {
         return loraMessage.getJsonObject(FIELD_EVERYNET_ROOT_PARAMS_OBJECT, new JsonObject())
                 .getString(FIELD_EVERYNET_PAYLOAD);
     }

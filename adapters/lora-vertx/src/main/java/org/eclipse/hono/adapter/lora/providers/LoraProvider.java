@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -22,6 +22,8 @@ import io.vertx.core.Future;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonObject;
 
+import java.util.Map;
+
 /**
  * A LoraWAN provider which can send and receive messages from and to LoRa devices.
  */
@@ -37,7 +39,7 @@ public interface LoraProvider {
 
     /**
      * The url path prefix which is used for this provider. E.g. "/myloraprovider".
-     * 
+     *
      * @return The url path prefix with leading slash. E.g. "/myloraprovider".
      */
     String pathPrefix();
@@ -83,10 +85,30 @@ public interface LoraProvider {
      * Extracts the payload from an incoming message of the LoRa Provider.
      * 
      * @param loraMessage from which the payload should be extracted.
-     * @return Payload Encoded in Base64 format.
+     * @return Payload
      * @throws LoraProviderMalformedPayloadException if payload cannot be extracted.
      */
-    String extractPayloadEncodedInBase64(JsonObject loraMessage);
+    String extractPayload(JsonObject loraMessage);
+
+    /**
+     * Extracts the normalizable data from an incoming message of the LoRa Provider.
+     *
+     * @param loraMessage from which the payload should be extracted.
+     * @return Normalized data map.
+     */
+    default Map<String, Object> extractNormalizedData(JsonObject loraMessage){
+        return null;
+    }
+
+    /**
+     * Extracts the payload from an incoming message of the LoRa Provider.
+     *
+     * @param loraMessage from which the payload should be extracted.
+     * @return Data which could not be normalized as a JsonObject.
+     */
+    default JsonObject extractAdditionalData(JsonObject loraMessage){
+        return null;
+    }
 
     /**
      * Sends the given payload using this lora provider.

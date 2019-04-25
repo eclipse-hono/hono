@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -46,10 +46,8 @@ public class ObjeniousProvider implements LoraProvider {
     }
 
     @Override
-    public String extractPayloadEncodedInBase64(final JsonObject loraMessage) {
-        final String hexPayload = loraMessage.getString(FIELD_PAYLOAD);
-
-        return LoraUtils.convertFromHexToBase64(hexPayload);
+    public String extractPayload(final JsonObject loraMessage) {
+        return loraMessage.getString(FIELD_PAYLOAD);
     }
 
     @Override

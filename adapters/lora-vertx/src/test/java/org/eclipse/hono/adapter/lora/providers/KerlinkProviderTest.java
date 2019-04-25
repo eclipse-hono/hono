@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -93,7 +93,7 @@ public class KerlinkProviderTest {
     @Test
     public void extractPayloadFromLoraMessage() {
         final JsonObject loraMessage = LoraTestUtil.loadTestFile("kerlink.uplink");
-        final String payload = provider.extractPayloadEncodedInBase64(loraMessage);
+        final String payload = provider.extractPayload(loraMessage);
 
         Assert.assertEquals("YnVtbHV4", payload);
     }
