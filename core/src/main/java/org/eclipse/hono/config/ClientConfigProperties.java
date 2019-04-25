@@ -95,6 +95,7 @@ public class ClientConfigProperties extends AbstractConfig {
         this.flowLatency = otherProperties.flowLatency;
         this.host = otherProperties.host;
         this.hostnameVerificationRequired = otherProperties.hostnameVerificationRequired;
+        this.idleTimeoutMillis = otherProperties.idleTimeoutMillis;
         this.initialCredits = otherProperties.initialCredits;
         this.linkEstablishmentTimeout = otherProperties.linkEstablishmentTimeout;
         this.name = otherProperties.name;
