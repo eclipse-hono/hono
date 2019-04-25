@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -94,7 +94,8 @@ public final class RegistrationAssertionHelperImpl extends JwtHelper implements 
             throw new IllegalStateException("no algorithm set");
         }
 
-        return Jwts.builder().signWith(algorithm, key)
+        return Jwts.builder()
+                .signWith(key, algorithm)
                 .setSubject(deviceId)
                 .claim("ten", tenantId)
                 .setExpiration(Date.from(Instant.now().plus(tokenLifetime)))
@@ -112,7 +113,7 @@ public final class RegistrationAssertionHelperImpl extends JwtHelper implements 
                     .setAllowedClockSkewSeconds(10)
                     .parse(token);
             return true;
-        } catch (JwtException e) {
+        } catch (final JwtException e) {
             // token is invalid for some reason
             LOG.debug("failed to validate token", e);
             return false;
