@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -89,7 +89,7 @@ public class AuthTokenHelperImpl extends JwtHelper implements AuthTokenHelper {
     public String createToken(final String authorizationId, final Authorities authorities) {
 
         final JwtBuilder builder = Jwts.builder()
-                .signWith(algorithm, key)
+                .signWith(key, algorithm)
                 .setIssuer("Hono")
                 .setSubject(Objects.requireNonNull(authorizationId))
                 .setExpiration(Date.from(Instant.now().plus(tokenLifetime)));

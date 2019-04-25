@@ -40,7 +40,7 @@
     <java-base-image.name>openjdk:11-jre-slim</java-base-image.name>
     <jaxb.api.version>2.2.12</jaxb.api.version>
     <javax.annotation.api.version>1.3.2</javax.annotation.api.version>
-    <jjwt.version>0.7.0</jjwt.version>
+    <jjwt.version>0.10.6</jjwt.version>
     <jmeter.version>3.3</jmeter.version>
     <junit.version>4.12</junit.version>
     <logback.version>1.2.3</logback.version>
@@ -280,7 +280,17 @@
       </dependency>
       <dependency>
         <groupId>io.jsonwebtoken</groupId>
-        <artifactId>jjwt</artifactId>
+        <artifactId>jjwt-api</artifactId>
+        <version>${jjwt.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.jsonwebtoken</groupId>
+        <artifactId>jjwt-impl</artifactId>
+        <version>${jjwt.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.jsonwebtoken</groupId>
+        <artifactId>jjwt-jackson</artifactId>
         <version>${jjwt.version}</version>
       </dependency>
       <dependency>

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -26,6 +26,9 @@ import java.net.HttpURLConnection;
 import java.sql.Date;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Random;
+
+import javax.crypto.SecretKey;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.cache.ExpiringValueCache;
@@ -45,6 +48,7 @@ import org.mockito.ArgumentCaptor;
 
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.security.Keys;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
@@ -214,11 +218,15 @@ public class RegistrationClientImplTest {
 
     private static JsonObject newRegistrationAssertionResult(final String defaultContentType) {
 
+        final byte[] bits = new byte[32];
+        new Random().nextBytes(bits);
+        final SecretKey key = Keys.hmacShaKeyFor(bits);
+
         final String token = Jwts.builder()
-            .signWith(SignatureAlgorithm.HS256, "asecretkeywithatleastthirtytwobytes")
-            .setExpiration(Date.from(Instant.now().plusSeconds(10)))
-            .setIssuer("test")
-            .compact();
+                .signWith(key, SignatureAlgorithm.HS256)
+                .setExpiration(Date.from(Instant.now().plusSeconds(10)))
+                .setIssuer("test")
+                .compact();
         final JsonObject result = new JsonObject().put(RegistrationConstants.FIELD_ASSERTION, token);
         if (defaultContentType != null) {
             result.put(RegistrationConstants.FIELD_DEFAULTS, new JsonObject()
