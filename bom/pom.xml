@@ -34,6 +34,7 @@
     <dispatch-router.image.name>enmasseproject/qdrouterd-base:1.6.0-patched</dispatch-router.image.name>
     <grafana.version>5.3.2</grafana.version>
     <guava.version>25.0-jre</guava.version>
+    <hamcrest-core.version>2.1</hamcrest-core.version>
     <jackson.version>2.9.8</jackson.version>
     <jaeger.version>0.32.0</jaeger.version>
     <jaeger-all-in-one.image.version>1.11</jaeger-all-in-one.image.version>
@@ -42,7 +43,7 @@
     <javax.annotation.api.version>1.3.2</javax.annotation.api.version>
     <jjwt.version>0.10.6</jjwt.version>
     <jmeter.version>3.3</jmeter.version>
-    <junit.version>4.12</junit.version>
+    <junit.jupiter.version>5.4.2</junit.jupiter.version>
     <logback.version>1.2.3</logback.version>
     <micrometer.version>1.1.4</micrometer.version>
     <mockito.version>2.24.5</mockito.version>
@@ -216,16 +217,32 @@
         <scope>test</scope>
       </dependency>
       <dependency>
-        <groupId>junit</groupId>
-        <artifactId>junit</artifactId>
-        <version>${junit.version}</version>
+        <groupId>org.junit.jupiter</groupId>
+        <artifactId>junit-jupiter-engine</artifactId>
+        <version>${junit.jupiter.version}</version>
         <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.junit.vintage</groupId>
+        <artifactId>junit-vintage-engine</artifactId>
+        <version>${junit.jupiter.version}</version>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>io.vertx</groupId>
+        <artifactId>vertx-junit5</artifactId>
+        <version>${vertx.version}</version>
       </dependency>
       <dependency>
         <groupId>org.assertj</groupId>
         <artifactId>assertj-core</artifactId>
         <version>${assertj-core.version}</version>
         <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.hamcrest</groupId>
+        <artifactId>hamcrest-core</artifactId>
+        <version>${hamcrest-core.version}</version>
       </dependency>
       <dependency>
         <groupId>org.eclipse.hono</groupId>
