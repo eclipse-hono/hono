@@ -106,6 +106,26 @@
         </plugins>
       </build>
     </profile>
+    <profile>
+      <id>docker-push-image</id>
+      <build>
+          <plugins>
+              <plugin>
+                  <groupId>io.fabric8</groupId>
+                  <artifactId>docker-maven-plugin</artifactId>
+                  <executions>
+                      <execution>
+                          <id>docker-push-image</id>
+                          <phase>install</phase>
+                          <goals>
+                              <goal>push</goal>
+                          </goals>
+                      </execution>
+                  </executions>
+              </plugin>
+          </plugins>
+      </build>
+  </profile>
   </profiles>
 
 </project>
