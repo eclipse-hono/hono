@@ -49,7 +49,6 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
-import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonReceiver;
 import io.vertx.proton.ProtonSender;
 
@@ -67,8 +66,8 @@ public class TenantClientImpl extends AbstractRequestResponseClient<TenantResult
     /**
      * Creates a client for invoking operations of the Tenant API.
      * <p>
-     * The client will be ready to use after invoking {@link #createLinks(ProtonConnection)} or
-     * {@link #createLinks(ProtonConnection, Handler, Handler)} only.
+     * The client will be ready to use after invoking {@link #createLinks()} or
+     * {@link #createLinks(Handler, Handler)} only.
      *
      * @param connection The connection to Hono.
      * @throws NullPointerException if any of the parameters are {@code null}.

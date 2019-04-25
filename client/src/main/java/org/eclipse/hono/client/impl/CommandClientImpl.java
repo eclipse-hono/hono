@@ -36,7 +36,6 @@ import io.opentracing.tag.Tags;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.buffer.Buffer;
-import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonHelper;
 import io.vertx.proton.ProtonReceiver;
 import io.vertx.proton.ProtonSender;
@@ -54,8 +53,8 @@ public class CommandClientImpl extends AbstractRequestResponseClient<BufferResul
     /**
      * Creates a client for sending commands to devices.
      * <p>
-     * The client will be ready to use after invoking {@link #createLinks(ProtonConnection)} or
-     * {@link #createLinks(ProtonConnection, Handler, Handler)} only.
+     * The client will be ready to use after invoking {@link #createLinks()} or
+     * {@link #createLinks(Handler, Handler)} only.
      *
      * @param connection The connection to Hono.
      * @param tenantId The tenant that the device belongs to.
