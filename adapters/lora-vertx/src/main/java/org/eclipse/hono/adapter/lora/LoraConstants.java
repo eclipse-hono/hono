@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -35,6 +35,19 @@ public class LoraConstants {
     public static final String FIELD_LORA_DEVICE_PORT = "lora-port";
     public static final String FIELD_LORA_DOWNLINK_PAYLOAD = "payload";
     public static final String EMPTY = "";
+    public static final String CONTENT_TYPE_LORA_POST_FIX = "+json";
+    public static final String CONTENT_TYPE_LORA_BASE = "application/vnd.eclipse-hono.lora.";
+    public static final String NORMALIZED_PROPERTIES = "normalized_properties";
+    public static final String ADDITIONAL_DATA = "additional_data";
+    public static final String APP_PROPERTY_RSS = "rss";
+    public static final String APP_PROPERTY_TX_POWER = "tx_power";
+    public static final String APP_PROPERTY_CHANNEL = "channel";
+    public static final String APP_PROPERTY_SUB_BAND = "sub_band";
+    public static final String APP_PROPERTY_SPREADING_FACTOR = "spreading_factor";
+    public static final String APP_PROPERTY_SNR = "snr";
+    public static final String APP_PROPERTY_FUNCTION_PORT = "function_port";
+    public static final String APP_PROPERTY_FUNCTION_LATITUDE = "latitude";
+    public static final String APP_PROPERTY_FUNCTION_LONGITUDE = "longitude";
 
     private LoraConstants() {
         // prevent instantiation

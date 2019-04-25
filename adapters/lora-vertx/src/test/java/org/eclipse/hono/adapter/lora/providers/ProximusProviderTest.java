@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -43,7 +43,7 @@ public class ProximusProviderTest {
     @Test
     public void extractPayloadFromLoraMessage() {
         final JsonObject loraMessage = LoraTestUtil.loadTestFile("proximus.uplink");
-        final String payload = this.provider.extractPayloadEncodedInBase64(loraMessage);
+        final String payload = this.provider.extractPayload(loraMessage);
 
         Assert.assertEquals("2205630000328c", payload);
     }

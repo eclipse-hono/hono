@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -43,9 +43,9 @@ public class ActilityProviderTest {
     @Test
     public void extractPayloadFromLoraMessage() {
         final JsonObject loraMessage = LoraTestUtil.loadTestFile("actility.uplink");
-        final String payload = provider.extractPayloadEncodedInBase64(loraMessage);
+        final String payload = provider.extractPayload(loraMessage);
 
-        Assert.assertEquals("AA==", payload);
+        Assert.assertEquals("00", payload);
     }
 
     /**

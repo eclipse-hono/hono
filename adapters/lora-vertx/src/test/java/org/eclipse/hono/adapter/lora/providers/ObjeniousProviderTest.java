@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -43,9 +43,9 @@ public class ObjeniousProviderTest {
     @Test
     public void extractPayloadFromLoraMessage() {
         final JsonObject loraMessage = LoraTestUtil.loadTestFile("objenious.uplink");
-        final String payload = provider.extractPayloadEncodedInBase64(loraMessage);
+        final String payload = provider.extractPayload(loraMessage);
 
-        Assert.assertEquals("AAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==", payload);
+        Assert.assertEquals("00000000004000000000000000000000000000000000000000000000000000000000", payload);
     }
 
     /**

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -18,11 +18,13 @@ import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
 import static java.net.HttpURLConnection.HTTP_OK;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Collections;
 
+import io.vertx.core.buffer.impl.BufferImpl;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.adapter.http.AbstractVertxBasedHttpProtocolAdapter;
@@ -76,6 +78,7 @@ import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.handler.ChainAuthHandler;
 
+
 /**
  * A Vert.x based Hono protocol adapter for receiving HTTP push messages from and sending commands to LoRa backends.
  */
@@ -89,6 +92,8 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
     private static final String TAG_LORA_PROVIDER = "lora_provider";
     private static final String JSON_MISSING_REQUIRED_FIELDS = "JSON Body does not contain required fields";
     private static final String INVALID_PAYLOAD = "Invalid payload";
+    private static final String FIELD_BINARY_PAYLOAD = "payload";
+    private static final String FIELD_ORIG_UPLINK_MESSAGE = "orig-message";
 
     private final List<LoraProvider> loraProviders = new ArrayList<>();
 
@@ -170,6 +175,20 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
     protected void customizeDownstreamMessage(final Message downstreamMessage, final RoutingContext ctx) {
         MessageHelper.addProperty(downstreamMessage, LoraConstants.APP_PROPERTY_ORIG_LORA_PROVIDER,
                 ctx.get(LoraConstants.APP_PROPERTY_ORIG_LORA_PROVIDER));
+
+        final Object normalizedProperties = ctx.get(LoraConstants.NORMALIZED_PROPERTIES);
+        if (normalizedProperties != null && normalizedProperties instanceof Map) {
+            for (Map.Entry<String, Object> entry:
+                 ((Map<String, Object>) normalizedProperties).entrySet()) {
+                MessageHelper.addProperty(downstreamMessage, entry.getKey(), entry.getValue());
+            }
+        }
+
+        final Object additionalData = ctx.get(LoraConstants.ADDITIONAL_DATA);
+        if (additionalData != null) {
+            MessageHelper.addProperty(downstreamMessage, LoraConstants.ADDITIONAL_DATA, additionalData);
+        }
+
     }
 
     private void setupAuthorization(final Router router) {
@@ -205,8 +224,21 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
                 currentSpan.setTag(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId);
 
                 if (LoraMessageType.UPLINK.equals(type)) {
-                    final String payloadBase64 = provider.extractPayloadEncodedInBase64(loraMessage);
-                    doUpload(ctx, gatewayDevice, deviceId, payloadBase64);
+                    final String payload = provider.extractPayload(loraMessage);
+                    if (payload == null){
+                        throw new LoraProviderMalformedPayloadException("Payload == null", new NullPointerException("payload"));
+                    }
+                    final Buffer payloadInBuffer = new BufferImpl().appendString(payload);
+
+                    final Map<String, Object> normalizedData = provider.extractNormalizedData(loraMessage);
+                    ctx.put(LoraConstants.NORMALIZED_PROPERTIES, normalizedData);
+
+                    final JsonObject additionalData = provider.extractAdditionalData(loraMessage);
+                    ctx.put(LoraConstants.ADDITIONAL_DATA, additionalData);
+
+                    final String contentType = LoraConstants.CONTENT_TYPE_LORA_BASE +  provider.getProviderName() + LoraConstants.CONTENT_TYPE_LORA_POST_FIX;
+
+                    doUpload(ctx, gatewayDevice, deviceId, payloadInBuffer, contentType);
                 } else {
                     LOG.debug("Received message '{}' of type [{}] for device [{}], will discard message.", loraMessage,
                             type, deviceId);
@@ -248,25 +280,21 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
     }
 
     private void doUpload(final RoutingContext ctx, final Device device, final String deviceId,
-            final String payloadBase64) {
+                          final Buffer payload, final String contentType) {
         LOG.trace("Got push message for tenant '{}' and device '{}'", device.getTenantId(), deviceId);
-        if (deviceId != null && payloadBase64 != null) {
-            uploadTelemetryMessage(ctx, device.getTenantId(), deviceId, createDownstreamJson(payloadBase64).toBuffer(),
-                    HttpUtils.CONTENT_TYPE_JSON);
+        if (deviceId != null && payload != null) {
+            uploadTelemetryMessage(ctx, device.getTenantId(), deviceId, payload,
+                    contentType);
         } else {
             LOG.debug("Got payload without mandatory fields: {}", ctx.getBodyAsJson());
             if (deviceId == null) {
                 TracingHelper.logError(getCurrentSpan(ctx), "Got message without deviceId");
             }
-            if (payloadBase64 == null) {
+            if (payload == null) {
                 TracingHelper.logError(getCurrentSpan(ctx), "Got message without valid payload");
             }
             handle400(ctx, JSON_MISSING_REQUIRED_FIELDS);
         }
-    }
-
-    private JsonObject createDownstreamJson(final String base64Payload) {
-        return new JsonObject().put("payload", base64Payload);
     }
 
     private void handle202(final RoutingContext ctx) {

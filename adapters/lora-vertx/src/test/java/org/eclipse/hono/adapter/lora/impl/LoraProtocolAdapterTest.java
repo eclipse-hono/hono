@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -17,6 +17,7 @@ import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
+import io.vertx.core.buffer.impl.BufferImpl;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.adapter.http.HttpProtocolAdapterProperties;
 import org.eclipse.hono.adapter.lora.LoraConstants;
@@ -26,7 +27,6 @@ import org.eclipse.hono.adapter.lora.providers.LoraProvider;
 import org.eclipse.hono.adapter.lora.providers.LoraProviderMalformedPayloadException;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.service.auth.DeviceUser;
-import org.eclipse.hono.service.http.HttpUtils;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
@@ -77,8 +77,8 @@ public class LoraProtocolAdapterTest {
         verify(routingContextMock).put(LoraConstants.APP_PROPERTY_ORIG_LORA_PROVIDER, TEST_PROVIDER);
 
         verify(adapter).uploadTelemetryMessage(any(), eq(TEST_TENANT_ID), eq(TEST_DEVICE_ID),
-                argThat(buffer -> buffer.toJsonObject().getString("payload").equals(TEST_PAYLOAD)),
-                eq(HttpUtils.CONTENT_TYPE_JSON));
+                argThat(buffer -> buffer.equals(new BufferImpl().appendString(TEST_PAYLOAD))),
+                eq(LoraConstants.CONTENT_TYPE_LORA_BASE + TEST_PROVIDER + LoraConstants.CONTENT_TYPE_LORA_POST_FIX));
 
         verify(routingContextMock.response()).setStatusCode(HttpResponseStatus.ACCEPTED.code());
     }
@@ -181,7 +181,7 @@ public class LoraProtocolAdapterTest {
     @Test
     public void handleProviderRouteCausesBadRequestForMissingPayload() {
         final LoraProvider providerMock = getLoraProviderMock();
-        when(providerMock.extractPayloadEncodedInBase64(any())).thenReturn(null);
+        when(providerMock.extractPayload(any())).thenReturn(null);
         final RoutingContext routingContextMock = getRoutingContextMock();
 
         adapter.handleProviderRoute(routingContextMock, providerMock);
@@ -197,7 +197,7 @@ public class LoraProtocolAdapterTest {
     @Test
     public void handleProviderRouteCausesBadRequestForInvalidPayload() {
         final LoraProvider providerMock = getLoraProviderMock();
-        when(providerMock.extractPayloadEncodedInBase64(any())).thenThrow(ClassCastException.class);
+        when(providerMock.extractPayload(any())).thenThrow(ClassCastException.class);
         final RoutingContext routingContextMock = getRoutingContextMock();
 
         adapter.handleProviderRoute(routingContextMock, providerMock);
@@ -212,7 +212,7 @@ public class LoraProtocolAdapterTest {
     @Test
     public void handleProviderRouteCausesBadRequestInCaseOfPayloadTransformationException() {
         final LoraProvider providerMock = getLoraProviderMock();
-        when(providerMock.extractPayloadEncodedInBase64(any())).thenThrow(LoraProviderMalformedPayloadException.class);
+        when(providerMock.extractPayload(any())).thenThrow(LoraProviderMalformedPayloadException.class);
         final RoutingContext routingContextMock = getRoutingContextMock();
 
         adapter.handleProviderRoute(routingContextMock, providerMock);
@@ -242,7 +242,7 @@ public class LoraProtocolAdapterTest {
         when(provider.pathPrefix()).thenReturn("/bumlux");
         when(provider.extractMessageType(any())).thenReturn(LoraMessageType.UPLINK);
         when(provider.extractDeviceId(any())).thenReturn(TEST_DEVICE_ID);
-        when(provider.extractPayloadEncodedInBase64(any())).thenReturn(TEST_PAYLOAD);
+        when(provider.extractPayload(any())).thenReturn(TEST_PAYLOAD);
 
         return provider;
     }
