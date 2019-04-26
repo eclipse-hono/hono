@@ -123,28 +123,24 @@ Now let's check a docker images labels, that has been build earlier:
 sudo docker images
 ```
 Now, you should see a list of containers with 2 tags:
-
 - "latest"
-- Specific version of containers (ex.: "1.0-M2-SNAPSHOT")
+- Specific version of containers (ex.: "1.0-M3-SNAPSHOT")
 
 Copy a second one and put as 1st parameter for following script:
 ```bash
-sudo ./push_hono_images.sh 1.0-M2-SNAPSHOT $ACR_NAME.azurecr.io
+sudo ./push_hono_images.sh latest $ACR_NAME.azurecr.io
 ```
 This script will tag and push container to your private repo.
 
 ## Create AKS cluster and deploy HONO
 ---
-If you have skipped a previous block, you can use one of the deployment packages from [here](https://www.eclipse.org/hono/download/). Make sure you have all required files (they can be found in [Eclipse Hono GitHub](https://github.com/eclipse/hono)):
-
- - push_hono_images.sh in ~/hono
+If you have skipped a previous block, you can use one of the deployment package from [here](https://www.eclipse.org/hono/download/). Make sure you have all required files (They can be found in [Eclipse Hono GitHub](https://github.com/eclipse/hono)):
  - dispatch-router-extlb-svc.yaml in ~/hono/deploy/helm/templates/dispatch-router
  - hono-adapter-amqp-vertx-extlb-svc.yaml in ~/hono/deploy/helm/templates/hono-adapter-amqp
  - hono-adapter-http-vertx-extlb-svc.yaml in ~/hono/deploy/helm/templates/hono-adapter-http
  - hono-adapter-kura-extlb-svc.yaml in ~/hono/deploy/helm/templates/hono-adapter-kura
  - hono-adapter-mqtt-vertx-extlb-svc.yaml in ~/hono/deploy/helm/templates/hono-adapter-mqtt
  - hono-service-device-registry-extlb-svc.yaml in ~/hono/deploy/helm/templates/hono-service-device-registry
-
 ---
 
 Now it's time to create Azure Kubernetes Services cluster.
@@ -157,7 +153,9 @@ If success, appId and password will be displayed.
 #### Create Azure Kubernetes Service
 ```bash
 #It is recommended to use kubernetes 1.12.5 or higher
-az aks create --name $AKS_CLUSTER_NAME --resource-group $AKS_RESOURCE_GROUP --node-count 3 --generate-ssh-keys --service-principal "{appId}" --client-secret "{password}" --enable-addons monitoring --kubernetes-version 1.12.6
+#To list avalible versions run:
+#az aks get-versions --location westeurope --output table
+az aks create --name $AKS_CLUSTER_NAME --resource-group $AKS_RESOURCE_GROUP --node-count 3 --generate-ssh-keys --service-principal "{appId}" --client-secret "{password}" --enable-addons monitoring --kubernetes-version 1.13.5
 ```
 #### Merge cluster as current context for kubectl
 ```bash
@@ -168,10 +166,13 @@ az aks get-credentials --resource-group $AKS_RESOURCE_GROUP --name $AKS_CLUSTER_
 #By default, AKS deployed with RBAC enabled. Refer to this doc: https://docs.microsoft.com/en-us/azure/aks/kubernetes-dashboard
 kubectl create clusterrolebinding kubernetes-dashboard --clusterrole=cluster-admin --serviceaccount=kube-system:kubernetes-dashboard
 ```
-#### Create Serviceaccount and ClusterRoleBinding for tiller
+#### Create Serviceaccount, ClusterRoleBinding and deploy tiller
 ```bash
 kubectl create serviceaccount --namespace kube-system tiller
 kubectl create clusterrolebinding tiller-cluster-rule --clusterrole=cluster-admin --serviceaccount=kube-system:tiller
+
+helm init
+
 kubectl patch deploy --namespace kube-system tiller-deploy -p '{"spec":{"template":{"spec":{"serviceAccount":"tiller"}}}}'
 ```
 #### Grant Azure Kubernetes Service access to Container Registry
@@ -184,10 +185,6 @@ ACR_ID=$(az acr show --name $ACR_NAME --resource-group $AKS_RESOURCE_GROUP --que
 
 # Create role assignment
 az role assignment create --assignee $CLIENT_ID --role acrpull --scope $ACR_ID
-```
-#### Init Helm
-```bash
-helm init
 ```
 #### Deploy HONO
 Navigate to "kubernetes" directory:

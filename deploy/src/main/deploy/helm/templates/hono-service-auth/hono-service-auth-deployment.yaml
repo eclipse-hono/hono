@@ -21,7 +21,7 @@ spec:
         group: {{ .Values.project.groupId }}
     spec:
       containers:
-      - image: eclipse/hono-service-auth:{{ .Chart.AppVersion }}
+      - image: {{ .Values.hono.image.repoPrefix }}/hono-service-auth:{{ .Chart.AppVersion }}
         imagePullPolicy: IfNotPresent
         name: eclipse-hono-service-auth
         ports:
