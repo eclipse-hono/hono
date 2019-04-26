@@ -14,18 +14,11 @@ package org.eclipse.hono.client.impl;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
-import java.util.concurrent.atomic.AtomicReference;
 
 import org.eclipse.hono.client.Command;
-import org.eclipse.hono.client.CommandContext;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.tracing.TracingHelper;
-import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.MessageHelper;
-import org.eclipse.hono.util.ResourceIdentifier;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import io.opentracing.References;
 import io.opentracing.Span;
@@ -33,119 +26,58 @@ import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.opentracing.log.Fields;
 import io.opentracing.tag.Tags;
-import io.vertx.core.Future;
-import io.vertx.core.Handler;
-import io.vertx.proton.ProtonQoS;
 import io.vertx.proton.ProtonReceiver;
 
 /**
  * A wrapper around an AMQP receiver link for consuming commands.
  */
-public class CommandConsumer extends AbstractConsumer {
+public abstract class CommandConsumer extends AbstractConsumer {
 
-    private static final Logger LOG = LoggerFactory.getLogger(CommandConsumer.class);
-
-    private CommandConsumer(final HonoConnection connection, final ProtonReceiver receiver) {
+    protected CommandConsumer(final HonoConnection connection, final ProtonReceiver receiver) {
         super(connection, receiver);
     }
 
     /**
-     * Creates a new command consumer.
-     * <p>
-     * The underlying receiver link will be created with the following properties:
-     * <ul>
-     * <li><em>auto accept</em> will be set to {@code true}</li>
-     * <li><em>pre-fetch size</em> will be set to {@code 0} to enforce manual flow control.
-     * However, the sender will be issued one credit on link establishment.</li>
-     * </ul>
+     * Creates and starts an <em>OpenTracing</em> span for a CommandConsumer operation.
      *
-     * @param con The connection to the server.
-     * @param tenantId The tenant to consume commands from.
-     * @param deviceId The device for which the commands should be consumed.
-     * @param commandHandler The handler to invoke for each command received.
-     * @param localCloseHandler A handler to be invoked after the link has been closed
-     *                     at this peer's request using the {@link #close(Handler)} method.
-     *                     The handler will be invoked with the link's source address <em>after</em>
-     *                     the link has been closed but <em>before</em> the handler that has been
-     *                     passed into the <em>close</em> method is invoked.
-     * @param remoteCloseHandler A handler to be invoked after the link has been closed
-     *                     at the remote peer's request. The handler will be invoked with the
-     *                     link's source address.
-     * @return A future indicating the outcome of the creation attempt.
-     * @throws NullPointerException if any of the parameters are {@code null}.
+     * @param operationName The name of the operation.
+     * @param tenantId The tenant identifier.
+     * @param deviceId The device identifier.
+     * @param tracer The tracer instance.
+     * @param spanContext Existing span context.
+     * @return The created and started span.
      */
-    public static final Future<CommandConsumer> create(
-            final HonoConnection con,
-            final String tenantId,
-            final String deviceId,
-            final Handler<CommandContext> commandHandler,
-            final Handler<String> localCloseHandler,
-            final Handler<String> remoteCloseHandler) {
+    public static Span createSpan(final String operationName, final String tenantId,
+            final String deviceId, final Tracer tracer, final SpanContext spanContext) {
+        // we set the component tag to the class name because we have no access to
+        // the name of the enclosing component we are running in
+        return tracer.buildSpan(operationName)
+                .addReference(References.CHILD_OF, spanContext)
+                .ignoreActiveSpan()
+                .withTag(Tags.COMPONENT.getKey(), CommandConsumer.class.getSimpleName())
+                .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CONSUMER)
+                .withTag(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId)
+                .withTag(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId)
+                .start();
+    }
 
-        Objects.requireNonNull(con);
-        Objects.requireNonNull(tenantId);
-        Objects.requireNonNull(deviceId);
-        Objects.requireNonNull(commandHandler);
-        Objects.requireNonNull(remoteCloseHandler);
-
-        LOG.trace("creating new command consumer [tenant-id: {}, device-id: {}]", tenantId, deviceId);
-
-        final String address = ResourceIdentifier.from(CommandConstants.COMMAND_ENDPOINT, tenantId, deviceId).toString();
-
-        final AtomicReference<ProtonReceiver> receiverRef = new AtomicReference<>();
-
-        return con.createReceiver(
-                address,
-                ProtonQoS.AT_LEAST_ONCE,
-                (delivery, msg) -> {
-
-                    final Command command = Command.from(msg, tenantId, deviceId);
-                    final Tracer tracer = con.getTracer();
-                    // try to extract Span context from incoming message
-                    final SpanContext spanContext = TracingHelper.extractSpanContext(tracer, msg);
-                    // start a Span to use for tracing the delivery of the command to the device
-                    // we set the component tag to the class name because we have no access to
-                    // the name of the enclosing component we are running in
-                    final Span currentSpan = tracer.buildSpan("send command")
-                            .addReference(References.CHILD_OF, spanContext)
-                            .ignoreActiveSpan()
-                            .withTag(Tags.COMPONENT.getKey(), CommandConsumer.class.getSimpleName())
-                            .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CONSUMER)
-                            .withTag(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId)
-                            .withTag(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId)
-                            .start();
-
-                    final Map<String, String> items = new HashMap<>(4);
-                    items.put(Fields.EVENT, "received command message");
-                    if (command.isValid()) {
-                        TracingHelper.TAG_CORRELATION_ID.set(currentSpan, command.getCorrelationId());
-                        items.put("reply-to", command.getCommandMessage().getReplyTo());
-                        items.put("name", command.getName());
-                        items.put("content-type", command.getContentType());
-                    }
-                    currentSpan.log(items);
-                    commandHandler.handle(CommandContext.from(command, delivery, receiverRef.get(), currentSpan));
-                },
-                0, // no pre-fetching
-                sourceAddress -> {
-                    LOG.debug("command receiver link [tenant-id: {}, device-id: {}] closed remotely",
-                            tenantId, deviceId);
-                    remoteCloseHandler.handle(sourceAddress);
-                }).map(receiver -> {
-                    LOG.debug("successfully created command consumer [{}]", address);
-                    receiverRef.set(receiver);
-                    receiver.flow(1); // allow sender to send one command
-                    final CommandConsumer consumer = new CommandConsumer(con, receiver);
-                    consumer.setLocalCloseHandler(sourceAddress -> {
-                        LOG.debug("command receiver link [tenant-id: {}, device-id: {}] closed locally",
-                                tenantId, deviceId);
-                        localCloseHandler.handle(sourceAddress);
-                    });
-                    return consumer;
-                }).recover(t -> {
-                    LOG.debug("failed to create command consumer [tenant-id: {}, device-id: {}]",
-                            tenantId, deviceId, t);
-                    return Future.failedFuture(t);
-                });
+    /**
+     * Logs information about the given command to the given span.
+     *
+     * @param command The command to log.
+     * @param span The span to log to.
+     */
+    public static void logReceivedCommandToSpan(final Command command, final Span span) {
+        if (command.isValid()) {
+            final Map<String, String> items = new HashMap<>(4);
+            items.put(Fields.EVENT, "received command message");
+            TracingHelper.TAG_CORRELATION_ID.set(span, command.getCorrelationId());
+            items.put("reply-to", command.getCommandMessage().getReplyTo());
+            items.put("name", command.getName());
+            items.put("content-type", command.getContentType());
+            span.log(items);
+        } else {
+            TracingHelper.logError(span, "received invalid command message [" + command + "]");
+        }
     }
 }

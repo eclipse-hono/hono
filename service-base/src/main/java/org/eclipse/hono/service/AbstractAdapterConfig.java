@@ -19,10 +19,12 @@ import org.eclipse.hono.cache.CacheProvider;
 import org.eclipse.hono.client.CommandConsumerFactory;
 import org.eclipse.hono.client.CredentialsClientFactory;
 import org.eclipse.hono.client.DownstreamSenderFactory;
+import org.eclipse.hono.client.GatewayMapper;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.RegistrationClientFactory;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.client.TenantClientFactory;
+import org.eclipse.hono.client.impl.GatewayMapperImpl;
 import org.eclipse.hono.config.ApplicationConfigProperties;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.config.VertxProperties;
@@ -343,7 +345,7 @@ public abstract class AbstractAdapterConfig {
     @Bean
     @Scope("prototype")
     public CommandConsumerFactory commandConsumerFactory() {
-        return CommandConsumerFactory.create(commandConsumerConnection());
+        return CommandConsumerFactory.create(commandConsumerConnection(), gatewayMapper());
     }
 
     /**
@@ -355,6 +357,17 @@ public abstract class AbstractAdapterConfig {
     @Scope("prototype")
     public HonoConnection commandConsumerConnection() {
         return HonoConnection.newConnection(vertx(), commandConsumerFactoryConfig());
+    }
+
+    /**
+     * Exposes the component for mapping a device id to a corresponding gateway id.
+     *
+     * @return New GatewayMapper instance.
+     */
+    @Bean
+    @Scope("prototype")
+    public GatewayMapper gatewayMapper() {
+        return new GatewayMapperImpl(registrationClientFactory());
     }
 
     /**

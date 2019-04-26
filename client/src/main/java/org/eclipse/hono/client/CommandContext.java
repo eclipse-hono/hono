@@ -97,6 +97,24 @@ public final class CommandContext extends MapBasedExecutionContext {
     }
 
     /**
+     * Gets the AMQP link over which the command has been received.
+     *
+     * @return The receiver.
+     */
+    public ProtonReceiver getReceiver() {
+        return receiver;
+    }
+
+    /**
+     * Gets the delivery corresponding to the command message.
+     *
+     * @return The delivery.
+     */
+    public ProtonDelivery getDelivery() {
+        return delivery;
+    }
+
+    /**
      * Gets the OpenTracing span to use for tracking the processing of the command.
      * 
      * @return The span.
@@ -249,7 +267,7 @@ public final class CommandContext extends MapBasedExecutionContext {
      */
     private void flow(final int credits) {
         if (credits < 1) {
-            throw new IllegalArgumentException("credits must be positve");
+            throw new IllegalArgumentException("credits must be positive");
         }
         currentSpan.log(String.format("flowing %d credits to sender", credits));
         receiver.flow(credits);

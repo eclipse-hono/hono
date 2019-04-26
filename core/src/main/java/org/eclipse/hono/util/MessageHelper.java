@@ -25,6 +25,7 @@ import org.apache.qpid.proton.amqp.messaging.AmqpValue;
 import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
 import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.amqp.messaging.MessageAnnotations;
+import org.apache.qpid.proton.amqp.messaging.Properties;
 import org.apache.qpid.proton.amqp.messaging.Rejected;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.message.Message;
@@ -35,6 +36,7 @@ import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonObject;
 import io.vertx.proton.ProtonDelivery;
+import io.vertx.proton.ProtonHelper;
 
 /**
  * Utility methods for working with Proton {@code Message}s.
@@ -758,4 +760,24 @@ public final class MessageHelper {
         return message.getBody() instanceof Data;
     }
 
+    /**
+     * Returns a copy of the given message.
+     * <p>
+     * This is a shallow copy of the <em>Message</em> object, except for the copied <em>Properties</em>.
+     *
+     * @param message The message to copy.
+     * @return The message copy.
+     */
+    public static Message getShallowCopy(final Message message) {
+        final Message copy = ProtonHelper.message();
+        copy.setDeliveryAnnotations(message.getDeliveryAnnotations());
+        copy.setMessageAnnotations(message.getMessageAnnotations());
+        if (message.getProperties() != null) {
+            copy.setProperties(new Properties(message.getProperties()));
+        }
+        copy.setApplicationProperties(message.getApplicationProperties());
+        copy.setBody(message.getBody());
+        copy.setFooter(message.getFooter());
+        return copy;
+    }
 }
