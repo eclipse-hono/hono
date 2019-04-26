@@ -111,10 +111,10 @@ public class VertxBasedAmqpProtocolAdapterTest {
     private static final String TEST_DEVICE = "test-device";
 
     /**
-     * Time out all tests after five seconds.
+     * Global timeout for all test cases.
      */
     @Rule
-    public Timeout globalTimeout = new Timeout(5, TimeUnit.SECONDS);
+    public Timeout globalTimeout = new Timeout(6, TimeUnit.SECONDS);
 
     private TenantClientFactory tenantClientFactory;
     private CredentialsClientFactory credentialsClientFactory;

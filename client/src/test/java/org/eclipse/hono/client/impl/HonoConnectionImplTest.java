@@ -77,7 +77,7 @@ public class HonoConnectionImplTest {
      * Global timeout for each test case.
      */
     @Rule
-    public Timeout timeout = Timeout.seconds(3);
+    public Timeout timeout = Timeout.seconds(4);
 
     private Vertx vertx;
     private ProtonConnection con;

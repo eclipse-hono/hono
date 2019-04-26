@@ -102,7 +102,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
      * Global timeout for all test cases.
      */
     @Rule
-    public Timeout globalTimeout = Timeout.seconds(5);
+    public Timeout globalTimeout = Timeout.seconds(6);
 
     private CredentialsClientFactory      credentialsClientFactory;
     private TenantClientFactory           tenantClientFactory;
