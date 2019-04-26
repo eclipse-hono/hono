@@ -107,7 +107,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
      * Global timeout for all test cases.
      */
     @Rule
-    public Timeout globalTimeout = new Timeout(5000, TimeUnit.SECONDS);
+    public Timeout globalTimeout = new Timeout(5, TimeUnit.SECONDS);
 
     private TenantClientFactory tenantClientFactory;
     private CredentialsClientFactory credentialsClientFactory;
