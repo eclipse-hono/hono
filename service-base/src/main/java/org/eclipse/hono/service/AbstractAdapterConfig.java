@@ -117,7 +117,7 @@ public abstract class AbstractAdapterConfig {
     /**
      * Exposes a factory for creating clients for the <em>AMQP Messaging Network</em> as a Spring bean.
      * <p>
-     * The factory is configured with the properties provided by {@link #downstreamSenderFactoryConfig()}.
+     * The factory is initialized with the connection provided by {@link #downstreamConnection()}.
      *
      * @return The factory.
      */
@@ -125,7 +125,21 @@ public abstract class AbstractAdapterConfig {
     @Bean
     @Scope("prototype")
     public DownstreamSenderFactory downstreamSenderFactory() {
-        return DownstreamSenderFactory.create(HonoConnection.newConnection(vertx(), downstreamSenderFactoryConfig()));
+        return DownstreamSenderFactory.create(downstreamConnection());
+    }
+
+    /**
+     * Exposes the connection to the <em>AMQP Messaging Network</em> as a Spring bean.
+     * <p>
+     * The connection is configured with the properties provided by {@link #downstreamSenderFactoryConfig()}.
+     *
+     * @return The connection.
+     */
+    @Qualifier(Constants.QUALIFIER_MESSAGING)
+    @Bean
+    @Scope("prototype")
+    public HonoConnection downstreamConnection() {
+        return HonoConnection.newConnection(vertx(), downstreamSenderFactoryConfig());
     }
 
     /**
@@ -166,10 +180,19 @@ public abstract class AbstractAdapterConfig {
     @Qualifier(RegistrationConstants.REGISTRATION_ENDPOINT)
     @Scope("prototype")
     public RegistrationClientFactory registrationClientFactory() {
+        return RegistrationClientFactory.create(registrationServiceConnection(), registrationCacheProvider());
+    }
 
-        return RegistrationClientFactory.create(
-                HonoConnection.newConnection(vertx(), registrationClientFactoryConfig()),
-                registrationCacheProvider());
+    /**
+     * Exposes the connection used for accessing the registration service as a Spring bean.
+     *
+     * @return The connection.
+     */
+    @Bean
+    @Qualifier(RegistrationConstants.REGISTRATION_ENDPOINT)
+    @Scope("prototype")
+    public HonoConnection registrationServiceConnection() {
+        return HonoConnection.newConnection(vertx(), registrationClientFactoryConfig());
     }
 
     /**
@@ -220,7 +243,19 @@ public abstract class AbstractAdapterConfig {
     @Qualifier(CredentialsConstants.CREDENTIALS_ENDPOINT)
     @Scope("prototype")
     public CredentialsClientFactory credentialsClientFactory() {
-        return CredentialsClientFactory.create(HonoConnection.newConnection(vertx(), credentialsClientFactoryConfig()));
+        return CredentialsClientFactory.create(credentialsServiceConnection());
+    }
+
+    /**
+     * Exposes the connection used for accessing the credentials service as a Spring bean.
+     *
+     * @return The connection.
+     */
+    @Bean
+    @Qualifier(CredentialsConstants.CREDENTIALS_ENDPOINT)
+    @Scope("prototype")
+    public HonoConnection credentialsServiceConnection() {
+        return HonoConnection.newConnection(vertx(), credentialsClientFactoryConfig());
     }
 
     /**
@@ -259,10 +294,19 @@ public abstract class AbstractAdapterConfig {
     @Qualifier(TenantConstants.TENANT_ENDPOINT)
     @Scope("prototype")
     public TenantClientFactory tenantClientFactory() {
+        return TenantClientFactory.create(tenantServiceConnection(), tenantCacheProvider());
+    }
 
-        return TenantClientFactory.create(
-                HonoConnection.newConnection(vertx(), tenantServiceClientConfig()),
-                tenantCacheProvider());
+    /**
+     * Exposes the connection used for accessing the tenant service as a Spring bean.
+     *
+     * @return The connection.
+     */
+    @Bean
+    @Qualifier(TenantConstants.TENANT_ENDPOINT)
+    @Scope("prototype")
+    public HonoConnection tenantServiceConnection() {
+        return HonoConnection.newConnection(vertx(), tenantServiceClientConfig());
     }
 
     /**
@@ -298,7 +342,18 @@ public abstract class AbstractAdapterConfig {
     @Bean
     @Scope("prototype")
     public CommandConsumerFactory commandConsumerFactory() {
-        return CommandConsumerFactory.create(HonoConnection.newConnection(vertx(), commandConsumerFactoryConfig()));
+        return CommandConsumerFactory.create(commandConsumerConnection());
+    }
+
+    /**
+     * Exposes the connection used for receiving upstream commands as a Spring bean.
+     *
+     * @return The connection.
+     */
+    @Bean
+    @Scope("prototype")
+    public HonoConnection commandConsumerConnection() {
+        return HonoConnection.newConnection(vertx(), commandConsumerFactoryConfig());
     }
 
     /**
