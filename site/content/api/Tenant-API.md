@@ -296,7 +296,7 @@ The table below provides an overview of the standard members defined for the JSO
 | *enabled*                | *no*      | *boolean*     | `true`       | If set to `false` the tenant is currently disabled. Protocol adapters MUST NOT allow devices of a disabled tenant to connect and MUST NOT accept data published by such devices. |
 | *trusted-ca*             | *no*      | *object*      | `-`          | The trusted certificate authority to use for validating certificates presented by devices of the tenant for authentication purposes. See [Trusted Certificate Authority Format]({{< relref "#trusted-ca-format" >}}) for a definition of the content model of the object. |
 | *adapters*               | *no*      | *array*       | `-`          | A list of configuration options valid for certain adapters only. The format of a configuration option is described here [Adapter Configuration Format]({{< relref "#adapter-configuration-format" >}}). **NB** If the element is provided then the list MUST NOT be empty. **NB** Only a single entry per *type* is allowed. If multiple entries for the same *type* are present it is handled as an error. **NB** If the element is omitted then all adapters are *enabled* in their default configuration. |
-| *resource-limits*         | *no*      | *JSON object* | `-`          | The resource-limits such as the maximum number of connections can be set. The format of a configuration option is described here [Resource Limits Configuration Format]({{< relref "#resource-limits-configuration-format" >}}).|
+| *resource-limits*         | *no*      | *object*     | `-`          | The resource-limits such as the maximum number of connections can be set. The format of a configuration option is described here [Resource Limits Configuration Format]({{< relref "#resource-limits-configuration-format" >}}).|
 
 If any of the mandatory members is either missing or contains invalid data, implementations MUST NOT accept the payload and return *400 Bad Request* status code.
 
@@ -357,14 +357,9 @@ The table below provides an overview of the standard members defined for the JSO
 | :------------------------| :-------: | :------------ | :---------- |
 | *tenant-id*              | *yes*     | *string*      | The ID of the tenant. |
 | *enabled*                | *yes*     | *boolean*     | If set to `false` the tenant is currently disabled. Protocol adapters MUST NOT allow devices of a disabled tenant to connect and MUST NOT accept data published by such devices. |
-<<<<<<< Upstream, based on origin/master
-| *trusted-ca*             | *no*      | *JSON object* | The trusted certificate authority to use for validating certificates presented by devices of the tenant for authentication purposes. See [Trusted Certificate Authority Format]({{< relref "#trusted-ca-format" >}}) for a definition of the content model of the object. |
-| *adapters*               | *no*      | *JSON array*  | A list of configuration options valid for certain adapters only. The format of a configuration option is described here [Adapter Configuration Format]({{< relref "#adapter-configuration-format" >}}). **NB** If the element is provided then the list MUST NOT be empty. **NB** Only a single entry per *type* is allowed. If multiple entries for the same *type* are present it is handled as an error. **NB** If the element is omitted then all adapters are *enabled* in their default configuration. |
-| *resource-limits*         | *no*      | *JSON object* | The resource-limits such as the maximum number of connections can be set. The format of a configuration option is described here [Resource Limits Configuration Format]({{< relref "#resource-limits-configuration-format" >}}).|
-=======
 | *trusted-ca*             | *no*      | *object*      | The trusted certificate authority to use for validating certificates presented by devices of the tenant for authentication purposes. See [Trusted Certificate Authority Format]({{< relref "#trusted-ca-format" >}}) for a definition of the content model of the object. |
 | *adapters*               | *no*      | *array*       | A list of configuration options valid for certain adapters only. The format of a configuration option is described here [Adapter Configuration Format]({{< relref "#adapter-configuration-format" >}}). **NB** If the element is provided then the list MUST NOT be empty. **NB** Only a single entry per *type* is allowed. If multiple entries for the same *type* are present it is handled as an error. **NB** If the element is omitted then all adapters are *enabled* in their default configuration. |
->>>>>>> 361ca91 Split operations into mandatory and optional to implement.
+| *resource-limits*        | *no*      | *object*      | Any resource limits that should be enforced for the tenant, e.g. the maximum number of concurrent connections. Refer to [Resource Limits Configuration Format]({{< relref "#resource-limits-configuration-format" >}}) for details. |
 
 Additionally to the specified properties the JSON object MAY contain an arbitrary number of members with arbitrary names which can be of a scalar or a complex type. 
 This allows for future *well-known* additions and also allows *clients* to add further information which might be relevant to a *custom* adapter only.
@@ -416,7 +411,7 @@ The table below provides an overview of the members defined for the *trusted-ca*
 
 The table below contains the properties which are used to configure a *Hono protocol adapter*:
 
-| Name                               | Mandatory | Type       | Default Value | Description |
+| Name                               | Mandatory | JSON Type  | Default Value | Description |
 | :--------------------------------- | :-------: | :--------- | :------------ | :---------- |
 | *type*                             | *yes*     | *string*   | `-`          | The type of the adapter which this configuration belongs to.|
 | *enabled*                          | *no*      | *boolean*  | `false`      | If set to false the tenant is not allowed to receive / send data utilizing the given adapter. |
@@ -430,6 +425,6 @@ The JSON object MAY contain an arbitrary number of additional members with arbit
 
 The table below contains the properties which are used to configure a tenant's resource limits:
 
-| Name                     | Mandatory | Type          | Default Value | Description |
+| Name                     | Mandatory | JSON Type     | Default Value | Description |
 | :------------------------| :-------: | :------------ | :------------ | :---------- |
 | *max-connections*        | *no*      | *number*      | `-1`          | The maximum number of concurrent connections allowed from devices of this tenant. The default value `-1` indicates that no limit is set. |
