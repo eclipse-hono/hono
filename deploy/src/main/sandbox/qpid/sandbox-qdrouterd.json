@@ -14,11 +14,13 @@
 
   ["sslProfile", {
     "name": "internal",
+    "protocols": "TLSv1.2",
     "caCertFile": "/run/secrets/trusted-certs.pem"
   }],
 
   ["sslProfile", {
     "name": "external",
+    "protocols": "TLSv1.2",
     "caCertFile": "/run/secrets/trusted-certs.pem",
     "certFile": "/run/secrets/hono.eclipse.org-cert.pem",
     "privateKeyFile": "/run/secrets/hono.eclipse.org-key.pem"
@@ -31,6 +33,7 @@
     "port": 5671,
     "initialHandshakeTimeoutSeconds": 3,
     "maxSessionFrames": 100,
+    "linkCapacity": 100,
     "authenticatePeer": true,
     "saslMechanisms": "PLAIN",
     "saslPlugin": "Hono Auth"
@@ -41,6 +44,7 @@
     "port": 5672,
     "initialHandshakeTimeoutSeconds": 3,
     "maxSessionFrames": 100,
+    "linkCapacity": 100,
     "authenticatePeer": true,
     "saslMechanisms": "PLAIN",
     "saslPlugin": "Hono Auth"
@@ -50,7 +54,8 @@
     "host": "0.0.0.0",
     "port": 5673,
     "initialHandshakeTimeoutSeconds": 3,
-    "maxSessionFrames": 100,
+    "maxSessionFrames": 300,
+    "linkCapacity": 100,
     "authenticatePeer": false,
     "logMessage": "none"
   }],
