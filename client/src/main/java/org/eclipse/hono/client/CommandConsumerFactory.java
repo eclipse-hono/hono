@@ -28,12 +28,13 @@ public interface CommandConsumerFactory extends ConnectionLifecycle {
     /**
      * Creates a new factory for an existing connection.
      *
-     * @param connection The connection to use.
+     * @param connection The connection to the AMQP network.
+     * @param gatewayMapper The component mapping a command device id to the corresponding gateway device id.
      * @return The factory.
-     * @throws NullPointerException if connection is {@code null}
+     * @throws NullPointerException if connection or gatewayMapper is {@code null}.
      */
-    static CommandConsumerFactory create(final HonoConnection connection) {
-        return new CommandConsumerFactoryImpl(connection);
+    static CommandConsumerFactory create(final HonoConnection connection, final GatewayMapper gatewayMapper) {
+        return new CommandConsumerFactoryImpl(connection, gatewayMapper);
     }
 
     /**

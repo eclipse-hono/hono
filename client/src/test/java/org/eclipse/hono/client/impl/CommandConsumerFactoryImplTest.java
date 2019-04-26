@@ -30,11 +30,14 @@ import java.net.HttpURLConnection;
 import org.apache.qpid.proton.amqp.transport.Source;
 import org.eclipse.hono.client.CommandContext;
 import org.eclipse.hono.client.DisconnectListener;
+import org.eclipse.hono.client.GatewayMapper;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ClientConfigProperties;
+import org.eclipse.hono.util.CommandConstants;
+import org.eclipse.hono.util.ResourceIdentifier;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -70,8 +73,14 @@ public class CommandConsumerFactoryImplTest {
     private Context context;
     private ClientConfigProperties props;
     private HonoConnection connection;
-    private CommandConsumerFactoryImpl commandConnection;
-    private ProtonReceiver receiver;
+    private CommandConsumerFactoryImpl commandConsumerFactory;
+    private GatewayMapper gatewayMapper;
+    private ProtonReceiver deviceSpecificCommandReceiver;
+    private ProtonReceiver tenantScopedCommandReceiver;
+    private String deviceSpecificCommandAddress;
+    private String tenantCommandAddress;
+    private String tenantId;
+    private String deviceId;
 
     /**
      * Sets up fixture.
@@ -89,18 +98,29 @@ public class CommandConsumerFactoryImplTest {
             return null;
         }).when(vertx).setTimer(anyLong(), any(Handler.class));
 
+        deviceId = "theDevice";
+        tenantId = "theTenant";
+
         props = new ClientConfigProperties();
 
-        receiver = mock(ProtonReceiver.class);
         connection = HonoClientUnitTestHelper.mockHonoConnection(vertx, props);
+        deviceSpecificCommandReceiver = mock(ProtonReceiver.class);
+        deviceSpecificCommandAddress = ResourceIdentifier.from(CommandConstants.COMMAND_ENDPOINT, tenantId, deviceId).toString();
         when(connection.createReceiver(
-                anyString(),
+                eq(deviceSpecificCommandAddress),
                 any(ProtonQoS.class),
                 any(ProtonMessageHandler.class),
                 anyInt(),
-                any(Handler.class))).thenReturn(Future.succeededFuture(receiver));
-
-        commandConnection = new CommandConsumerFactoryImpl(connection);
+                any(Handler.class))).thenReturn(Future.succeededFuture(deviceSpecificCommandReceiver));
+        tenantScopedCommandReceiver = mock(ProtonReceiver.class);
+        tenantCommandAddress = ResourceIdentifier.from(CommandConstants.COMMAND_ENDPOINT, tenantId, null).toString();
+        when(connection.createReceiver(
+                eq(tenantCommandAddress),
+                any(ProtonQoS.class),
+                any(ProtonMessageHandler.class),
+                any(Handler.class))).thenReturn(Future.succeededFuture(tenantScopedCommandReceiver));
+        gatewayMapper = mock(GatewayMapper.class);
+        commandConsumerFactory = new CommandConsumerFactoryImpl(connection, gatewayMapper);
     }
 
     /**
@@ -124,7 +144,7 @@ public class CommandConsumerFactoryImplTest {
                 any(Handler.class)))
         .thenReturn(Future.failedFuture(ex));
 
-        commandConnection.createCommandConsumer("theTenant", "theDevice", commandHandler, closeHandler)
+        commandConsumerFactory.createCommandConsumer(tenantId, deviceId, commandHandler, closeHandler)
         .setHandler(ctx.asyncAssertFailure(t -> {
                 ctx.assertEquals(HttpURLConnection.HTTP_UNAVAILABLE, ((ServiceInvocationException) t).getErrorCode());
             }));
@@ -143,7 +163,7 @@ public class CommandConsumerFactoryImplTest {
         final Handler<CommandContext> commandHandler = mock(Handler.class);
         final Handler<Void> closeHandler = mock(Handler.class);
 
-        commandConnection.createCommandConsumer("theTenant", "theDevice", commandHandler, closeHandler)
+        commandConsumerFactory.createCommandConsumer(tenantId, deviceId, commandHandler, closeHandler)
         .setHandler(ctx.asyncAssertSuccess());
     }
 
@@ -157,19 +177,18 @@ public class CommandConsumerFactoryImplTest {
     @Test
     public void testCreateCommandConsumerSetsRemoteCloseHandler(final TestContext ctx) {
 
-        final String address = "control/theTenant/theDevice";
         final Handler<CommandContext> commandHandler = mock(Handler.class);
         final Handler<Void> closeHandler = mock(Handler.class);
 
-        commandConnection.createCommandConsumer("theTenant", "theDevice", commandHandler, closeHandler);
+        commandConsumerFactory.createCommandConsumer(tenantId, deviceId, commandHandler, closeHandler);
         final ArgumentCaptor<Handler<String>> captor = ArgumentCaptor.forClass(Handler.class);
         verify(connection).createReceiver(
-                eq(address),
+                eq(deviceSpecificCommandAddress),
                 eq(ProtonQoS.AT_LEAST_ONCE),
                 any(ProtonMessageHandler.class),
                 eq(0),
                 captor.capture());
-        captor.getValue().handle(address);
+        captor.getValue().handle(deviceSpecificCommandAddress);
         verify(closeHandler).handle(null);
     }
 
@@ -188,24 +207,23 @@ public class CommandConsumerFactoryImplTest {
     @Test
     public void testLocalCloseRemovesCommandConsumerFromCache(final TestContext ctx) {
 
-        final String address = "control/theTenant/theDevice";
         final Handler<CommandContext> commandHandler = mock(Handler.class);
         final Source source = mock(Source.class);
-        when(source.getAddress()).thenReturn(address);
-        when(receiver.getSource()).thenReturn(source);
-        when(receiver.getRemoteSource()).thenReturn(source);
-        when(receiver.isOpen()).thenReturn(Boolean.TRUE);
+        when(source.getAddress()).thenReturn(deviceSpecificCommandAddress);
+        when(deviceSpecificCommandReceiver.getSource()).thenReturn(source);
+        when(deviceSpecificCommandReceiver.getRemoteSource()).thenReturn(source);
+        when(deviceSpecificCommandReceiver.isOpen()).thenReturn(Boolean.TRUE);
         when(vertx.setPeriodic(anyLong(), any(Handler.class))).thenReturn(10L);
 
         // GIVEN a command consumer
-        commandConnection.createCommandConsumer("theTenant", "theDevice", commandHandler, null, 5000L)
+        commandConsumerFactory.createCommandConsumer(tenantId, deviceId, commandHandler, null, 5000L)
         .map(consumer -> {
             verify(vertx).setPeriodic(eq(5000L), any(Handler.class));
             // WHEN closing the link locally
             final Future<Void> localCloseHandler = Future.future();
             consumer.close(localCloseHandler);
             final ArgumentCaptor<Handler<Void>> closeHandler = ArgumentCaptor.forClass(Handler.class);
-            verify(connection).closeAndFree(eq(receiver), closeHandler.capture());
+            verify(connection).closeAndFree(eq(deviceSpecificCommandReceiver), closeHandler.capture());
             // and the peer sends its detach frame
             closeHandler.getValue().handle(null);
             return null;
@@ -213,10 +231,10 @@ public class CommandConsumerFactoryImplTest {
             // THEN the liveness check is canceled
             verify(vertx).cancelTimer(10L);
             // and the next attempt to create a command consumer for the same address
-            final Future<MessageConsumer> newConsumer = commandConnection.createCommandConsumer("theTenant", "theDevice", commandHandler, null);
+            final Future<MessageConsumer> newConsumer = commandConsumerFactory.createCommandConsumer(tenantId, deviceId, commandHandler, null);
             // results in a new link to be opened
             verify(connection, times(2)).createReceiver(
-                    eq(address),
+                    eq(deviceSpecificCommandAddress),
                     eq(ProtonQoS.AT_LEAST_ONCE),
                     any(ProtonMessageHandler.class),
                     eq(0),
@@ -235,13 +253,12 @@ public class CommandConsumerFactoryImplTest {
     @Test
     public void testConsumerIsRecreatedOnConnectionFailure(final TestContext ctx) {
 
-        final String address = "control/theTenant/theDevice";
         final Handler<CommandContext> commandHandler = mock(Handler.class);
         final Handler<Void> closeHandler = mock(Handler.class);
         final Source source = mock(Source.class);
-        when(source.getAddress()).thenReturn(address);
-        when(receiver.getSource()).thenReturn(source);
-        when(receiver.getRemoteSource()).thenReturn(source);
+        when(source.getAddress()).thenReturn(deviceSpecificCommandAddress);
+        when(deviceSpecificCommandReceiver.getSource()).thenReturn(source);
+        when(deviceSpecificCommandReceiver.getRemoteSource()).thenReturn(source);
         when(vertx.setPeriodic(anyLong(), any(Handler.class))).thenReturn(10L);
         doAnswer(invocation -> {
             final Handler<Void> handler = invocation.getArgument(1);
@@ -254,8 +271,8 @@ public class CommandConsumerFactoryImplTest {
 
         // intentionally using a check interval that is smaller than the minimum
         final long livenessCheckInterval = CommandConsumerFactoryImpl.MIN_LIVENESS_CHECK_INTERVAL_MILLIS - 1;
-        final Future<MessageConsumer> commandConsumer = commandConnection.createCommandConsumer(
-                "theTenant", "theDevice", commandHandler, closeHandler, livenessCheckInterval);
+        final Future<MessageConsumer> commandConsumer = commandConsumerFactory.createCommandConsumer(
+                tenantId, deviceId, commandHandler, closeHandler, livenessCheckInterval);
         assertTrue(commandConsumer.isComplete());
         final ArgumentCaptor<Handler<Long>> livenessCheck = ArgumentCaptor.forClass(Handler.class);
         // the liveness check is registered with the minimum interval length
@@ -271,7 +288,7 @@ public class CommandConsumerFactoryImplTest {
         // and the liveness check re-creates the command consumer
         livenessCheck.getValue().handle(10L);
         verify(connection, times(2)).createReceiver(
-                eq(address),
+                eq(deviceSpecificCommandAddress),
                 eq(ProtonQoS.AT_LEAST_ONCE),
                 any(ProtonMessageHandler.class),
                 eq(0),
@@ -295,14 +312,13 @@ public class CommandConsumerFactoryImplTest {
     public void testLivenessCheckLocksRecreationAttempt(final TestContext ctx) {
 
         // GIVEN a liveness check for a command consumer
-        final String address = "control/theTenant/theDevice";
         final Handler<CommandContext> commandHandler = mock(Handler.class);
         final Handler<Void> remoteCloseHandler = mock(Handler.class);
-        final Handler<Long> livenessCheck = commandConnection.newLivenessCheck("theTenant", "theDevice", "key", commandHandler, remoteCloseHandler);
+        final Handler<Long> livenessCheck = commandConsumerFactory.newLivenessCheck(tenantId, deviceId, "key", commandHandler, remoteCloseHandler);
         final Future<ProtonReceiver> createdReceiver = Future.future();
         when(connection.isConnected()).thenReturn(Future.succeededFuture());
         when(connection.createReceiver(
-                eq(address),
+                eq(deviceSpecificCommandAddress),
                 eq(ProtonQoS.AT_LEAST_ONCE),
                 any(ProtonMessageHandler.class),
                 anyInt(),
@@ -315,7 +331,7 @@ public class CommandConsumerFactoryImplTest {
 
         // THEN only one attempt has been made to recreate the consumer link
         verify(connection, times(1)).createReceiver(
-                eq(address),
+                eq(deviceSpecificCommandAddress),
                 eq(ProtonQoS.AT_LEAST_ONCE),
                 any(ProtonMessageHandler.class),
                 eq(0),
@@ -328,7 +344,7 @@ public class CommandConsumerFactoryImplTest {
         livenessCheck.handle(10L);
         // will start a new attempt to re-create the consumer link 
         verify(connection, times(2)).createReceiver(
-                eq(address),
+                eq(deviceSpecificCommandAddress),
                 eq(ProtonQoS.AT_LEAST_ONCE),
                 any(ProtonMessageHandler.class),
                 eq(0),

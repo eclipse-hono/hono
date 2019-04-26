@@ -242,11 +242,12 @@ public abstract class AbstractSender extends AbstractHonoClient implements Messa
      *         message could not be sent or has not been accepted by the peer or if no delivery update
      *         was received from the peer within the configured timeout period
      *         (see {@link ClientConfigProperties#getSendMessageTimeout()}).
-     * @throws NullPointerException if the message is {@code null}.
+     * @throws NullPointerException if either of the parameters is {@code null}.
      */
     protected Future<ProtonDelivery> sendMessageAndWaitForOutcome(final Message message, final Span currentSpan) {
 
         Objects.requireNonNull(message);
+        Objects.requireNonNull(currentSpan);
 
         final Future<ProtonDelivery> result = Future.future();
         final String messageId = String.format("%s-%d", getClass().getSimpleName(), MESSAGE_COUNTER.getAndIncrement());
