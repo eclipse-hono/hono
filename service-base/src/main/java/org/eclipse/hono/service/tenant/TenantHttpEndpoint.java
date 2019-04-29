@@ -109,7 +109,7 @@ public final class TenantHttpEndpoint extends AbstractHttpEndpoint<ServiceConfig
                     String.format("'%s' param is required", TenantConstants.FIELD_PAYLOAD_TENANT_ID)));
         } else if (!(tenantId instanceof String)) {
             ctx.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
-                    String.format(String.format("'%s' must be a string", TenantConstants.FIELD_PAYLOAD_TENANT_ID))));
+                    String.format("'%s' must be a string", TenantConstants.FIELD_PAYLOAD_TENANT_ID)));
         }
         ctx.next();
     }
