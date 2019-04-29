@@ -49,6 +49,8 @@ Installation works in the same way as for the latest stable release.
 * [Eclipse Hono 1.0-M1 Command Line Client](https://www.eclipse.org/downloads/download.php?file=/hono/hono-cli-1.0-M1-exec.jar)
 * [Eclipse Hono 1.0-M2 Archive](https://www.eclipse.org/downloads/download.php?file=/hono/eclipse-hono-deploy-1.0-M2.tar.gz)
 * [Eclipse Hono 1.0-M2 Command Line Client](https://www.eclipse.org/downloads/download.php?file=/hono/hono-cli-1.0-M2-exec.jar)
+* [Eclipse Hono 1.0-M3 Archive](https://www.eclipse.org/downloads/download.php?file=/hono/eclipse-hono-deploy-1.0-M3.tar.gz)
+* [Eclipse Hono 1.0-M3 Command Line Client](https://www.eclipse.org/downloads/download.php?file=/hono/hono-cli-1.0-M3-exec.jar)
 
 ### Older Versions
 

@@ -2,6 +2,14 @@
 title = "Release Notes"
 +++
 
+## 1.0-M3
+
+### Fixes & Enhancements
+
+* The protocol adapters add tracing information about invocations of the Device Registry
+  services again.
+* The example deployment now uses Qpid Dispatch Router 1.6.0.
+
 ## 1.0-M2
 
 ### New Features
