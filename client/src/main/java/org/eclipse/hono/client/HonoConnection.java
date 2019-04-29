@@ -207,7 +207,7 @@ public interface HonoConnection extends ConnectionLifecycle {
      * @deprecated Use one of the other connect methods instead and use {@link #addDisconnectListener(DisconnectListener)}
      *             to be notified when the underlying AMQP connection fails unexpectedly.
      */
-    @Deprecated(forRemoval = true, since = "1.0-M2")
+    @Deprecated
     Future<HonoConnection> connect(Handler<ProtonConnection> disconnectHandler);
 
     /**
@@ -246,7 +246,7 @@ public interface HonoConnection extends ConnectionLifecycle {
      * @deprecated Use one of the other connect methods instead and use {@link #addDisconnectListener(DisconnectListener)}
      *             to be notified when the underlying AMQP connection fails unexpectedly.
      */
-    @Deprecated(forRemoval = true, since = "1.0-M2")
+    @Deprecated
     Future<HonoConnection> connect(
             ProtonClientOptions options,
             Handler<ProtonConnection> disconnectHandler);
