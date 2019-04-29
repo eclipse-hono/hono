@@ -183,6 +183,7 @@ public class HonoConnectionImpl implements HonoConnection {
      * 
      * @return The tracer.
      */
+    @Override
     public final Tracer getTracer() {
         return tracer;
     }
@@ -333,7 +334,7 @@ public class HonoConnectionImpl implements HonoConnection {
     /**
      * {@inheritDoc}
      */
-    @Deprecated(forRemoval = true, since = "1.0-M2")
+    @Deprecated
     @Override
     public final Future<HonoConnection> connect(final Handler<ProtonConnection> disconnectHandler) {
         return connect(null, Objects.requireNonNull(disconnectHandler));
@@ -342,7 +343,7 @@ public class HonoConnectionImpl implements HonoConnection {
     /**
      * {@inheritDoc}
      */
-    @Deprecated(forRemoval = true, since = "1.0-M2")
+    @Deprecated
     @Override
     public final Future<HonoConnection> connect(
             final ProtonClientOptions options,
