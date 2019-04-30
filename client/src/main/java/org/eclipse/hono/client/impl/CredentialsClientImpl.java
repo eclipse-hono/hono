@@ -18,7 +18,10 @@ import java.net.HttpURLConnection;
 import java.util.Objects;
 import java.util.UUID;
 
+import io.vertx.proton.ProtonReceiver;
+import io.vertx.proton.ProtonSender;
 import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
+import org.eclipse.hono.cache.CacheProvider;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.CredentialsClient;
 import org.eclipse.hono.client.HonoConnection;
@@ -30,6 +33,7 @@ import org.eclipse.hono.util.CredentialsObject;
 import org.eclipse.hono.util.CredentialsResult;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RequestResponseApiConstants;
+import org.eclipse.hono.util.TriTuple;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -66,6 +70,19 @@ public class CredentialsClientImpl extends AbstractRequestResponseClient<Credent
      */
     CredentialsClientImpl(final HonoConnection connection, final String tenantId) {
         super(connection, tenantId);
+    }
+
+    /**
+     * Creates a new client for accessing the Credentials service.
+     *
+     * @param connection The connection to Hono.
+     * @param tenantId The identifier of the tenant for which the client should be created.
+     * @param sender The AMQP link to use for sending requests to the service.
+     * @param receiver The AMQP link to use for receiving responses from the service.
+     */
+    CredentialsClientImpl(final HonoConnection connection, final String tenantId, final ProtonSender sender,
+            final ProtonReceiver receiver) {
+        super(connection, tenantId, sender, receiver);
     }
 
     @Override
@@ -118,6 +135,8 @@ public class CredentialsClientImpl extends AbstractRequestResponseClient<Credent
     /**
      * Creates a new credentials client for a tenant.
      *
+     * @param cacheProvider The cache provider to use for creating caches for credential objects
+     *                      or {@code null} if credential objects should not be cached.
      * @param con The connection to the server.
      * @param tenantId The tenant for which credentials are handled.
      * @param senderCloseHook A handler to invoke if the peer closes the sender link unexpectedly.
@@ -126,6 +145,7 @@ public class CredentialsClientImpl extends AbstractRequestResponseClient<Credent
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
     public static final Future<CredentialsClient> create(
+            final CacheProvider cacheProvider,
             final HonoConnection con,
             final String tenantId,
             final Handler<String> senderCloseHook,
@@ -133,6 +153,9 @@ public class CredentialsClientImpl extends AbstractRequestResponseClient<Credent
 
         LOG.debug("creating new credentials client for [{}]", tenantId);
         final CredentialsClientImpl client = new CredentialsClientImpl(con, tenantId);
+        if (cacheProvider != null) {
+            client.setResponseCache(cacheProvider.getCache(CredentialsClientImpl.getTargetAddress(tenantId)));
+        }
         return client.createLinks(senderCloseHook, receiverCloseHook)
                 .map(ok -> {
                     LOG.debug("successfully created credentials client for [{}]", tenantId);
@@ -174,28 +197,35 @@ public class CredentialsClientImpl extends AbstractRequestResponseClient<Credent
 
         Objects.requireNonNull(type);
         Objects.requireNonNull(authId);
+        Objects.requireNonNull(clientContext);
 
         final Future<CredentialsResult<CredentialsObject>> responseTracker = Future.future();
         final JsonObject specification = new JsonObject()
                 .put(CredentialsConstants.FIELD_TYPE, type)
                 .put(CredentialsConstants.FIELD_AUTH_ID, authId)
                 .mergeIn(clientContext);
+        final TriTuple<CredentialsConstants.CredentialsAction, String, Integer> key = TriTuple
+                .of(CredentialsConstants.CredentialsAction.get, String.format("%s-%s", type, authId), clientContext.hashCode());
 
         final Span span = newChildSpan(spanContext, "get Credentials");
         span.setTag(MessageHelper.APP_PROPERTY_TENANT_ID, getTenantId());
         span.setTag(TAG_CREDENTIALS_TYPE, type);
         span.setTag(TAG_AUTH_ID, authId);
 
-        createAndSendRequest(
-                CredentialsConstants.CredentialsAction.get.toString(),
-                null,
-                specification.toBuffer(),
-                RequestResponseApiConstants.CONTENT_TYPE_APPLICATION_JSON,
-                responseTracker,
-                null,
-                span);
 
-        return responseTracker.recover(t -> {
+        TracingHelper.TAG_CACHE_HIT.set(span, true);
+        return getResponseFromCache(key).recover(cacheMiss -> {
+            TracingHelper.TAG_CACHE_HIT.set(span, false);
+            createAndSendRequest(
+                    CredentialsConstants.CredentialsAction.get.toString(),
+                    null,
+                    specification.toBuffer(),
+                    RequestResponseApiConstants.CONTENT_TYPE_APPLICATION_JSON,
+                    responseTracker,
+                    key,
+                    span);
+            return responseTracker;
+        }).recover(t -> {
             TracingHelper.logError(span, t);
             span.finish();
             return Future.failedFuture(t);

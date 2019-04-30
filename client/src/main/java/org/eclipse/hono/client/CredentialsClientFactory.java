@@ -14,6 +14,7 @@
 
 package org.eclipse.hono.client;
 
+import org.eclipse.hono.cache.CacheProvider;
 import org.eclipse.hono.client.impl.CredentialsClientFactoryImpl;
 
 import io.vertx.core.Future;
@@ -32,7 +33,20 @@ public interface CredentialsClientFactory extends ConnectionLifecycle {
      * @throws NullPointerException if connection is {@code null}
      */
     static CredentialsClientFactory create(final HonoConnection connection) {
-        return new CredentialsClientFactoryImpl(connection);
+        return new CredentialsClientFactoryImpl(connection, null);
+    }
+
+    /**
+     * Creates a new factory for an existing connection.
+     *
+     * @param connection The connection to use.
+     * @param cacheProvider The cache provider to use for creating caches for credential objects
+     *                      or {@code null} if credential objects should not be cached.
+     * @return The factory.
+     * @throws NullPointerException if connection is {@code null}
+     */
+    static CredentialsClientFactory create(final HonoConnection connection, final CacheProvider cacheProvider) {
+        return new CredentialsClientFactoryImpl(connection, cacheProvider);
     }
 
     /**
