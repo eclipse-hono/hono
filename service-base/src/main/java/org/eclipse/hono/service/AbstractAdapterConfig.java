@@ -218,7 +218,7 @@ public abstract class AbstractAdapterConfig {
     @Qualifier(CredentialsConstants.CREDENTIALS_ENDPOINT)
     @ConfigurationProperties(prefix = "hono.credentials")
     @Bean
-    public ClientConfigProperties credentialsClientFactoryConfig() {
+    public RequestResponseClientConfigProperties credentialsClientFactoryConfig() {
         final RequestResponseClientConfigProperties config = new RequestResponseClientConfigProperties();
         customizeCredentialsClientFactoryConfig(config);
         return config;
@@ -246,7 +246,7 @@ public abstract class AbstractAdapterConfig {
     @Qualifier(CredentialsConstants.CREDENTIALS_ENDPOINT)
     @Scope("prototype")
     public CredentialsClientFactory credentialsClientFactory() {
-        return CredentialsClientFactory.create(credentialsServiceConnection());
+        return CredentialsClientFactory.create(credentialsServiceConnection(), credentialsCacheProvider());
     }
 
     /**
@@ -259,6 +259,18 @@ public abstract class AbstractAdapterConfig {
     @Scope("prototype")
     public HonoConnection credentialsServiceConnection() {
         return HonoConnection.newConnection(vertx(), credentialsClientFactoryConfig());
+    }
+
+    /**
+     * Exposes the provider for caches as a Spring bean.
+     *
+     * @return The provider instance.
+     */
+    @Bean
+    @Qualifier(CredentialsConstants.CREDENTIALS_ENDPOINT)
+    @Scope("prototype")
+    public CacheProvider credentialsCacheProvider() {
+        return newGuavaCache(credentialsClientFactoryConfig());
     }
 
     /**
