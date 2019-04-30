@@ -234,7 +234,7 @@ public class TenantClientImplTest {
         when(update.getRemoteState()).thenReturn(new Rejected());
         when(update.remotelySettled()).thenReturn(true);
         when(sender.send(any(Message.class), any(Handler.class))).thenAnswer(invocation -> {
-            final Handler<ProtonDelivery> dispositionHandler = invocation.getArgument(0);
+            final Handler<ProtonDelivery> dispositionHandler = invocation.getArgument(1);
             dispositionHandler.handle(update);
             return mock(ProtonDelivery.class);
         });
@@ -242,7 +242,7 @@ public class TenantClientImplTest {
         // WHEN getting tenant information
         client.get("tenant").setHandler(ctx.asyncAssertFailure(t -> {
             // THEN the invocation fails and the span is marked as erroneous
-            verify(span).setTag(eq(Tags.ERROR.getKey()), eq(Boolean.TRUE));
+            verify(span, atLeast(1)).setTag(eq(Tags.ERROR.getKey()), eq(Boolean.TRUE));
             // and the span is finished
             verify(span).finish();
         }));
