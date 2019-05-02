@@ -12,14 +12,20 @@
  *******************************************************************************/
 package org.eclipse.hono.service.plan;
 
+import static java.time.temporal.ChronoUnit.DAYS;
+
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.Objects;
 import java.util.Optional;
 
+import org.eclipse.hono.cache.CacheProvider;
+import org.eclipse.hono.cache.ExpiringValueCache;
+import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.service.metric.MicrometerBasedMetrics;
-import org.eclipse.hono.util.PortConfigurationHelper;
 import org.eclipse.hono.util.TenantObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -81,21 +87,32 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
 
     private static final String CONNECTIONS_METRIC_NAME = MicrometerBasedMetrics.METER_CONNECTIONS_AUTHENTICATED
             .replace(".", "_");
+    private static final String MESSAGES_PAYLOAD_SIZE_METRIC_NAME = String.format("%s_bytes_sum",
+            MicrometerBasedMetrics.METER_MESSAGES_PAYLOAD.replace(".", "_"));
     private static final Logger log = LoggerFactory.getLogger(PrometheusBasedResourceLimitChecks.class);
     private static final String QUERY_URI = "/api/v1/query";
+    private static final String LIMITS_CACHE_NAME = "resource-limits";
 
     private final WebClient client;
-    private String host;
-    private int port = 9090;
+    private final PrometheusBasedResourceLimitChecksConfig config;
+    private final ExpiringValueCache<Object, Object> limitsCache;
 
     /**
      * Creates new checks.
      *
      * @param webClient The client to use for querying the Prometheus server.
-     * @throws NullPointerException if any of the parameters are {@code null}.
+     * @param config The PrometheusBasedResourceLimitChecks configuration object.
+     * @param cacheProvider The cache provider to use for creating caches for metrics data retrieved
+     *                      from the prometheus backend or {@code null} if they should not be cached.
+     * @throws NullPointerException if any of the parameters except cacheProvider are {@code null}.
      */
-    public PrometheusBasedResourceLimitChecks(final WebClient webClient) {
+    public PrometheusBasedResourceLimitChecks(final WebClient webClient,
+            final PrometheusBasedResourceLimitChecksConfig config, final CacheProvider cacheProvider) {
         this.client = Objects.requireNonNull(webClient);
+        this.config = Objects.requireNonNull(config);
+        this.limitsCache = Optional.ofNullable(cacheProvider)
+                .map(provider -> provider.getCache(LIMITS_CACHE_NAME))
+                .orElse(null);
     }
 
     @Override
@@ -126,47 +143,58 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
     }
 
     /**
-     * Gets the host of the Prometheus server to retrieve metrics from.
-     *
-     * @return host The host name or IP address.
+     * Checks if the maximum data volume for the messages configured for a tenant
+     * have been reached.
+     * @param tenant The tenant configuration to check the limit against.
+     * @param payloadSize The message payload size in bytes.
+     * @return A future indicating the outcome of the check.
+     *         <p>
+     *         The future will be failed with a {@link ServiceInvocationException}
+     *         if the check could not be performed.
      */
-    public String getHost() {
-        return host;
-    }
+    public Future<Boolean> isMessageLimitReached(final TenantObject tenant,
+            final long payloadSize) {
 
-    /**
-     * Sets the host of the Prometheus server to retrieve metrics from.
-     * <p>
-     * The default value of this property is {@code null}.
-     *
-     * @param host The host name or IP address.
-     */
-    public void setHost(final String host) {
-        this.host = Objects.requireNonNull(host);
-    }
+        Objects.requireNonNull(tenant);
+        final long maxBytes = getMaximumNumberOfBytes(tenant);
+        final LocalDate effectiveSince = getEffectiveSince(tenant);
+        final long periodInDays = getPeriodInDays(tenant);
 
-    /**
-     * Gets the port of the Prometheus server to retrieve metrics from.
-     *
-     * @return port The port number.
-     */
-    public int getPort() {
-        return port;
-    }
+        log.trace("message limit config for tenant [{}] are [{}:{}, {}:{}, {}:{}]", tenant.getTenantId(),
+                FIELD_MAX_BYTES, maxBytes, FIELD_EFFECTIVE_SINCE, effectiveSince, FIELD_PERIOD_IN_DAYS, periodInDays);
 
-    /**
-     * Sets the port of the Prometheus server to retrieve metrics from.
-     * <p>
-     * The default value of this property is 9090.
-     *
-     * @param port The port number.
-     * @throws IllegalArgumentException if the port number is &lt; 0 or &gt; 2^16 - 1
-     */
-    public void setPort(final int port) {
-        if (PortConfigurationHelper.isValidPort(port)) {
-            this.port = port;
+        if (maxBytes == -1 || effectiveSince == null || periodInDays <= 0 || payloadSize <= 0) {
+            return Future.succeededFuture(Boolean.FALSE);
         } else {
-            throw new IllegalArgumentException("invalid port number");
+            final long dataUsagePeriod = calculateDataUsagePeriod(effectiveSince, periodInDays);
+
+            if (dataUsagePeriod <= 0) {
+                return Future.succeededFuture(Boolean.FALSE);
+            }
+
+            final String queryParams = String.format("floor(sum(increase(%s{status=~\"%s|%s\", tenant=\"%s\"} [%sd])))",
+                    MESSAGES_PAYLOAD_SIZE_METRIC_NAME,
+                    MetricsTags.ProcessingOutcome.FORWARDED.asTag().getValue(),
+                    MetricsTags.ProcessingOutcome.UNPROCESSABLE.asTag().getValue(),
+                    tenant.getTenantId(),
+                    dataUsagePeriod);
+            final String key = String.format("%s_bytes_consumed", tenant.getTenantId());
+
+            return Optional.ofNullable(limitsCache)
+                    .map(success -> limitsCache.get(key))
+                    .map(cachedValue -> Future.succeededFuture((long) cachedValue))
+                    .orElseGet(() -> executeQuery(queryParams)
+                            .map(bytesConsumed -> addToCache(limitsCache, key, bytesConsumed)))
+                    .map(bytesConsumed -> {
+                        if ((bytesConsumed + payloadSize) <= maxBytes) {
+                            return Boolean.FALSE;
+                        } else {
+                            log.trace("data limit exceeded for tenant. [{}] are [bytesUsed:{}, {}:{}, {}:{}, {}:{}]",
+                                    tenant.getTenantId(), bytesConsumed, FIELD_MAX_BYTES, maxBytes,
+                                    FIELD_EFFECTIVE_SINCE, effectiveSince, FIELD_PERIOD_IN_DAYS, periodInDays);
+                            return Boolean.TRUE;
+                        }
+                    }).otherwise(Boolean.FALSE);
         }
     }
 
@@ -232,8 +260,8 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
 
         final Future<Long> result = Future.future();
         log.trace("running query [{}] against Prometheus backend [http://{}:{}{}]",
-                query, host, port, QUERY_URI);
-        client.get(port, host, QUERY_URI)
+                query, config.getHost(), config.getPort(), QUERY_URI);
+        client.get(config.getPort(), config.getHost(), QUERY_URI)
         .addQueryParam("query", query)
         .expect(ResponsePredicate.SC_OK)
         .as(BodyCodec.jsonObject())
@@ -300,5 +328,27 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
             log.debug("received malformed response from Prometheus server: {}", response.encodePrettily(), e);
         }
         return 0L;
+    }
+
+    /**
+     * Calculate the period for which the data usage is to be retrieved from the prometheus server.
+     * 
+     * @param effectiveSince The date on which the data volume limit came into effect.
+     * @param periodInDays The number of days for which the data usage is to be calculated.
+     * @return The period for which the data usage is to be calculated.
+     */
+    private long calculateDataUsagePeriod(final LocalDate effectiveSince, final long periodInDays) {
+        final long inclusiveDaysBetween = DAYS.between(effectiveSince, LocalDate.now()) + 1;
+        if (inclusiveDaysBetween > 0 && periodInDays > 0) {
+            return inclusiveDaysBetween % periodInDays;
+        }
+        return -1L;
+    }
+
+    private long addToCache(final ExpiringValueCache<Object, Object> cache, final String key, final long result) {
+        Optional.ofNullable(cache)
+                .ifPresent(success -> cache.put(key, result,
+                        Duration.ofSeconds(config.getCacheTimeout())));
+        return result;
     }
 }
