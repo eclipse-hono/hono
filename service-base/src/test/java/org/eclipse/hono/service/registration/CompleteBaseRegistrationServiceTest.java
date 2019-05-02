@@ -161,27 +161,6 @@ public class CompleteBaseRegistrationServiceTest {
     }
 
     /**
-    * Verifies that the getDevice method returns not implemented.
-    *
-    * @param ctx The vertx unit test context.
-    */
-    @Test
-    public void testGetDevice(final VertxTestContext ctx) {
-
-        // GIVEN an empty registry
-        final CompleteBaseRegistrationService<ServiceConfigProperties> registrationService = newCompleteRegistrationServiceWithoutImpls();
-        registrationService.setRegistrationAssertionFactory(RegistrationAssertionHelperImpl.forSigning(vertx, props));
-
-        // WHEN trying to get a device's data
-        registrationService.getDevice(Constants.DEFAULT_TENANT, "4711", ctx.succeeding(result -> ctx.verify(() -> {
-            // THEN the response contain a JWT token with an empty result with status code 501.
-            assertEquals(HttpURLConnection.HTTP_NOT_IMPLEMENTED, result.getStatus());
-            assertNull(result.getPayload());
-            ctx.completeNow();
-        })));
-    }
-
-    /**
      * Verifies that the registry returns 400 when issuing a request with an unsupported action.
      *
      * @param ctx The vert.x test context.
@@ -216,7 +195,7 @@ public class CompleteBaseRegistrationServiceTest {
 
         // WHEN trying to assert the device's registration status
         registrationService.assertRegistration(Constants.DEFAULT_TENANT, "4711", ctx.succeeding(result -> ctx.verify(() -> {
-            assertEquals(result.getStatus(), HttpURLConnection.HTTP_OK);
+            assertEquals(HttpURLConnection.HTTP_OK, result.getStatus());
             assertFalse(result.getCacheDirective().isCachingAllowed());
             final JsonObject payload = result.getPayload();
             assertNotNull(payload);
@@ -417,7 +396,7 @@ public class CompleteBaseRegistrationServiceTest {
 
         return new CompleteBaseRegistrationService<>() {
 
-            private final Map<String, JsonObject> updatedDevicesMap = new HashMap<>(); 
+            private final Map<String, JsonObject> updatedDevicesMap = new HashMap<>();
 
             @Override
             protected String getEventBusAddress() {

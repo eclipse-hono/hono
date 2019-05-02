@@ -8,7 +8,7 @@ It can be used by *Protocol Adapters* to register devices that are not directly 
 *Solutions* and other consumers may use the API to obtain information about a single device that is registered to Hono.
 <!--more-->
 
-Note, however, that in real world applications the registration information will probably be kept and managed by an existing *system of record*, using e.g. a database for persisting the data. The Device Registration API accounts for this fact by means of defining only the [Assert Device Registration]({{< relref "#assert-device-registration" >}}) operation as *mandatory*, i.e. this operation is strictly required by a Hono instance for it to work properly, whereas the remaining operations are defined as *optional* from a Hono perspective.
+Note, however, that in real world applications the registration information will probably be kept and managed by an existing *system of record*, using e.g. a database for persisting the data. The Device Registration API accounts for this fact by means of defining only the [Assert Device Registration]({{< relref "#assert-device-registration" >}}) operation and the [Get Registration Information]({{< relref "#get-device-registration" >}}) operation as *mandatory*, i.e. these operations are strictly required by a Hono instance for it to work properly, whereas the remaining operations are defined as *optional* from a Hono perspective.
 
 The Device Registration API is defined by means of AMQP 1.0 message exchanges, i.e. a client needs to connect to Hono using an AMQP 1.0 client in order to invoke operations of the API as described in the following sections.
 
@@ -85,6 +85,46 @@ The response message's *status* property may contain the following codes:
 
 For status codes indicating an error (codes in the `400 - 499` range) the message body MAY contain a detailed description of the error that occurred.
 
+
+## Get Registration Information
+
+Clients use this command to *retrieve* information about a registered device.
+
+This operation is *mandatory* to implement.
+
+**Message Flow**
+
+
+The following sequence diagram illustrates the flow of messages involved in a *Client* retrieving registration information.
+
+![Get Registration Information message flow](../getDeviceInformation_Success.png)
+
+
+**Request Message Format**
+
+The following table provides an overview of the properties a client needs to set on a message to get registration information in addition to the [Standard Request Properties]({{< relref "#standard-request-properties" >}}).
+
+| Name        | Mandatory | Location                 | AMQP Type | Description |
+| :---------- | :-------: | :----------------------- | :-------- | :---------- |
+| *subject*   | yes       | *properties*             | *string*  | MUST be set to `get`. |
+
+The body of the message SHOULD be empty and will be ignored if it is not.
+
+**Response Message Format**
+
+A response to a *get registration information* request contains the [Standard Response Properties]({{< relref "#standard-response-properties" >}}).
+
+The response message includes payload as defined in the [Payload Format]({{< relref "#payload-format" >}}) section below. The `data` member contains the key/value pairs that have been registered for the device.
+
+The response message's *status* property may contain the following codes:
+
+| Code | Description |
+| :--- | :---------- |
+| *200* | OK, the payload contains the registration information for the device. |
+| *404* | Not Found, there is no device registered with the given *device_id* within the given *tenant_id*. |
+
+For status codes indicating an error (codes in the `400 - 499` range) the message body MAY contain a detailed description of the error that occurred.
+
 # Optional Operations
 
 The operations described in the following sections can be used by clients to manage device registration information. In real world scenarios the provisioning of devices will most likely be an orchestrated process spanning multiple components of which Hono will only be one.
@@ -134,45 +174,6 @@ The response message's *status* property may contain the following codes:
 | :---- | :---------- |
 | *201* | Created, the device has been successfully registered. |
 | *409* | Conflict, there already exists a device registration for the given *device_id* within this tenant. |
-
-For status codes indicating an error (codes in the `400 - 499` range) the message body MAY contain a detailed description of the error that occurred.
-
-## Get Registration Information
-
-Clients use this command to *retrieve* information about a registered device.
-
-This operation is *optional*, implementors of this API may provide other means for retrieving registration information, e.g. a RESTful API.
-
-**Message Flow**
-
-
-The following sequence diagram illustrates the flow of messages involved in a *Client* retrieving registration information.
-
-![Get Registration Information message flow](../getDeviceInformation_Success.png)
-
-
-**Request Message Format**
-
-The following table provides an overview of the properties a client needs to set on a message to get registration information in addition to the [Standard Request Properties]({{< relref "#standard-request-properties" >}}).
-
-| Name        | Mandatory | Location                 | AMQP Type | Description |
-| :---------- | :-------: | :----------------------- | :-------- | :---------- |
-| *subject*   | yes       | *properties*             | *string*  | MUST be set to `get`. |
-
-The body of the message SHOULD be empty and will be ignored if it is not.
-
-**Response Message Format**
-
-A response to a *get registration information* request contains the [Standard Response Properties]({{< relref "#standard-response-properties" >}}).
-
-The response message includes payload as defined in the [Payload Format]({{< relref "#payload-format" >}}) section below. The `data` member contains the key/value pairs that have been registered for the device.
-
-The response message's *status* property may contain the following codes:
-
-| Code | Description |
-| :--- | :---------- |
-| *200* | OK, the payload contains the registration information for the device. |
-| *404* | Not Found, there is no device registered with the given *device_id* within the given *tenant_id*. |
 
 For status codes indicating an error (codes in the `400 - 499` range) the message body MAY contain a detailed description of the error that occurred.
 

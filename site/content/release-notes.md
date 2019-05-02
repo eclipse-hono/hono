@@ -18,6 +18,10 @@ title = "Release Notes"
   `org.eclipse.hono.service.AbstractProtocolAdapterBase.addProperties` methods have
   been changed to accept an additional parameter of type `TenantObject` which may contain default
   properties defined for the tenant to be included in downstream messages.
+* The `Get Registration Information` operation of the Device Registration API is not optional anymore, 
+  it is now mandatory to implement. For device registry implementations based on the
+  `CompleteRegistrationService` interface, there is no change needed as the operation is already
+  defined there.
 
 ## 1.0-M3
 
