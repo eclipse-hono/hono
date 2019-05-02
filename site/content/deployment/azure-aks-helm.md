@@ -128,7 +128,7 @@ Now, you should see a list of containers with 2 tags:
 
 Copy a second one and put as 1st parameter for following script:
 ```bash
-sudo ./push_hono_images.sh latest $ACR_NAME.azurecr.io
+sudo ./push_hono_images.sh 1.0-M3-SNAPSHOT $ACR_NAME.azurecr.io
 ```
 This script will tag and push container to your private repo.
 
