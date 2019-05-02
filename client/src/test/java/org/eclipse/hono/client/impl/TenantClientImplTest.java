@@ -20,7 +20,6 @@ import static org.junit.Assert.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -36,6 +35,7 @@ import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.cache.ExpiringValueCache;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
+import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.TenantConstants;
@@ -214,7 +214,7 @@ public class TenantClientImplTest {
         // WHEN getting tenant information
         client.get("tenant").setHandler(ctx.asyncAssertFailure(t -> {
             // THEN the invocation fails and the span is marked as erroneous
-            verify(span, atLeast(1)).setTag(eq(Tags.ERROR.getKey()), eq(Boolean.TRUE));
+            verify(span).setTag(eq(Tags.ERROR.getKey()), eq(Boolean.TRUE));
             // and the span is finished
             verify(span).finish();
         }));
@@ -234,13 +234,14 @@ public class TenantClientImplTest {
         when(update.getRemoteState()).thenReturn(new Rejected());
         when(update.remotelySettled()).thenReturn(true);
         when(sender.send(any(Message.class), any(Handler.class))).thenAnswer(invocation -> {
-            final Handler<ProtonDelivery> dispositionHandler = invocation.getArgument(0);
+            final Handler<ProtonDelivery> dispositionHandler = invocation.getArgument(1);
             dispositionHandler.handle(update);
             return mock(ProtonDelivery.class);
         });
 
         // WHEN getting tenant information
         client.get("tenant").setHandler(ctx.asyncAssertFailure(t -> {
+            ctx.assertEquals(HttpURLConnection.HTTP_BAD_REQUEST, ((ServiceInvocationException) t).getErrorCode());
             // THEN the invocation fails and the span is marked as erroneous
             verify(span).setTag(eq(Tags.ERROR.getKey()), eq(Boolean.TRUE));
             // and the span is finished

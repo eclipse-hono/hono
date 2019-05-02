@@ -45,6 +45,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.tag.StringTag;
+import io.opentracing.tag.Tags;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.buffer.Buffer;
@@ -192,14 +193,7 @@ public class TenantClientImpl extends AbstractRequestResponseClient<TenantResult
         return get(
                 key,
                 () -> new JsonObject().put(TenantConstants.FIELD_PAYLOAD_TENANT_ID, tenantId),
-                span).map(tenant -> {
-                    span.finish();
-                    return tenant;
-                }).recover(t -> {
-                    logError(span, t);
-                    span.finish();
-                    return Future.failedFuture(t);
-                });
+                span);
     }
 
 
@@ -226,14 +220,7 @@ public class TenantClientImpl extends AbstractRequestResponseClient<TenantResult
         return get(
                 key,
                 () -> new JsonObject().put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, subjectDnRfc2253),
-                span).map(tenant -> {
-                    span.finish();
-                    return tenant;
-                }).recover(t -> {
-                    logError(span, t);
-                    span.finish();
-                    return Future.failedFuture(t);
-                });
+                span);
     }
 
     private <T> Future<TenantObject> get(
@@ -243,28 +230,37 @@ public class TenantClientImpl extends AbstractRequestResponseClient<TenantResult
 
         TracingHelper.TAG_CACHE_HIT.set(currentSpan, true);
 
-        return getResponseFromCache(key).recover(cacheMiss -> {
-            TracingHelper.TAG_CACHE_HIT.set(currentSpan, false);
-            final Future<TenantResult<TenantObject>> tenantResult = Future.future();
-            createAndSendRequest(
-                    TenantConstants.TenantAction.get.toString(),
-                    customizeRequestApplicationProperties(),
-                    payloadSupplier.get().toBuffer(),
-                    RegistrationConstants.CONTENT_TYPE_APPLICATION_JSON,
-                    tenantResult.completer(),
-                    key,
-                    currentSpan);
-            return tenantResult;
-        }).map(tenantResult -> {
-            switch(tenantResult.getStatus()) {
-            case HttpURLConnection.HTTP_OK:
-                return tenantResult.getPayload();
-            case HttpURLConnection.HTTP_NOT_FOUND:
-                throw new ClientErrorException(tenantResult.getStatus(), "no such tenant");
-            default:
-                throw StatusCodeMapper.from(tenantResult);
-            }
-        });
+        return getResponseFromCache(key)
+                .recover(cacheMiss -> {
+                    TracingHelper.TAG_CACHE_HIT.set(currentSpan, false);
+                    final Future<TenantResult<TenantObject>> tenantResult = Future.future();
+                    createAndSendRequest(
+                            TenantConstants.TenantAction.get.toString(),
+                            customizeRequestApplicationProperties(),
+                            payloadSupplier.get().toBuffer(),
+                            RegistrationConstants.CONTENT_TYPE_APPLICATION_JSON,
+                            tenantResult.completer(),
+                            key,
+                            currentSpan);
+                    return tenantResult;
+                }).recover(t -> {
+                    TracingHelper.logError(currentSpan, t);
+                    currentSpan.finish();
+                    return Future.failedFuture(t);
+                }).map(tenantResult -> {
+                    if (tenantResult.isError()) {
+                        Tags.ERROR.set(currentSpan, Boolean.TRUE);
+                    }
+                    currentSpan.finish();
+                    switch(tenantResult.getStatus()) {
+                    case HttpURLConnection.HTTP_OK:
+                        return tenantResult.getPayload();
+                    case HttpURLConnection.HTTP_NOT_FOUND:
+                        throw new ClientErrorException(tenantResult.getStatus(), "no such tenant");
+                    default:
+                        throw StatusCodeMapper.from(tenantResult);
+                    }
+                });
     }
 
     /**

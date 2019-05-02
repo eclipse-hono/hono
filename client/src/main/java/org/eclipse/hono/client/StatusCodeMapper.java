@@ -19,6 +19,7 @@ import java.util.Optional;
 
 import org.apache.qpid.proton.amqp.transport.AmqpError;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
+import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.RegistrationResult;
 import org.eclipse.hono.util.RequestResponseResult;
@@ -104,6 +105,8 @@ public abstract class StatusCodeMapper {
             return new ClientErrorException(HttpURLConnection.HTTP_FORBIDDEN, error.getDescription());
         } else if (AmqpError.INTERNAL_ERROR.equals(error.getCondition())) {
             return new ServerErrorException(HttpURLConnection.HTTP_INTERNAL_ERROR, error.getDescription());
+        } else if (Constants.AMQP_BAD_REQUEST.equals(error.getCondition())) {
+            return new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, error.getDescription());
         } else {
             return new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND, error.getDescription());
         }

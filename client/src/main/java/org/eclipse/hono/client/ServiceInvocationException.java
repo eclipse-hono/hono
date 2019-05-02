@@ -111,7 +111,7 @@ public class ServiceInvocationException extends RuntimeException {
             if (cause instanceof ServiceInvocationException) {
                 return ((ServiceInvocationException) cause).getErrorCode();
             } else {
-                return null;
+                return HttpURLConnection.HTTP_INTERNAL_ERROR;
             }
         }).orElse(HttpURLConnection.HTTP_INTERNAL_ERROR);
     }

@@ -255,11 +255,13 @@ public class RegistrationClientImpl extends AbstractRequestResponseClient<Regist
 
         Objects.requireNonNull(deviceId);
         final Future<RegistrationResult> resultTracker = Future.future();
+
         createAndSendRequest(
                 RegistrationConstants.ACTION_GET,
                 createDeviceIdProperties(deviceId),
                 null,
-                resultTracker.completer());
+                resultTracker);
+
         return resultTracker.map(regResult -> {
             switch (regResult.getStatus()) {
             case HttpURLConnection.HTTP_OK:
@@ -315,7 +317,9 @@ public class RegistrationClientImpl extends AbstractRequestResponseClient<Regist
         span.setTag(MessageHelper.APP_PROPERTY_TENANT_ID, getTenantId());
         span.setTag(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId);
         span.setTag(MessageHelper.APP_PROPERTY_GATEWAY_ID, gatewayId);
+
         final AtomicBoolean cacheHit = new AtomicBoolean(true);
+
         return getResponseFromCache(key).recover(t -> {
             cacheHit.set(false);
             final Future<RegistrationResult> regResult = Future.future();
@@ -333,11 +337,11 @@ public class RegistrationClientImpl extends AbstractRequestResponseClient<Regist
                     span);
             return regResult;
         }).recover(t -> {
+            TracingHelper.logError(span, t);
             span.finish();
             return Future.failedFuture(t);
         }).map(result -> {
             TracingHelper.TAG_CACHE_HIT.set(span, cacheHit.get());
-            Tags.HTTP_STATUS.set(span, result.getStatus());
             if (result.isError()) {
                 Tags.ERROR.set(span, Boolean.TRUE);
             }

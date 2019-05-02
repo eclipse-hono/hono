@@ -362,6 +362,10 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      * If the client has specified a cache key for the response when sending the request, then the
      * {@link #addToCache(Object, RequestResponseResult)} method is invoked
      * in order to add the response to the configured cache.
+     * <p>
+     * If an OpenTracing {@code Span} has been used to track the request,
+     * its {@code Tags.HTTP_STATUS} tag will be set to the value conveyed in
+     * the response message.
      * 
      * @param delivery The handle for accessing the message's disposition.
      * @param message The response message.
@@ -385,11 +389,10 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
                 LOG.debug("discarding malformed response [reply-to: {}, correlation ID: {}]",
                         replyToAddress, message.getCorrelationId());
                 if (span != null) {
-                    TracingHelper.logError(span, "malformed response from " + getName() + " endpoint");
                     Tags.HTTP_STATUS.set(span, HttpURLConnection.HTTP_INTERNAL_ERROR);
                 }
                 handler.one().handle(Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_INTERNAL_ERROR,
-                        "malformed response from " + getName() + " endpoint")));
+                        "cannot process response from service [" + getName() + "]")));
                 ProtonHelper.released(delivery, true);
             } else {
                 LOG.debug("received response [reply-to: {}, subject: {}, correlation ID: {}, status: {}]",
@@ -408,11 +411,15 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
 
     /**
      * Cancels an outstanding request with a given result.
+     * <p>
+     * If an OpenTracing {@code Span} has been used to track the request,
+     * its {@code Tags.HTTP_STATUS} tag will be set to the value determined from the
+     * failed result's cause.
      * 
-     * @param correlationId The correlation id of the request to cancel.
-     * @param result The result to pass to the request's result handler.
+     * @param correlationId The identifier of the request to cancel.
+     * @param result The result to pass to the result handler registered for the correlation ID.
      * @throws NullPointerException if any of the parameters is {@code null}.
-     * @throws IllegalArgumentException if the result has not failed.
+     * @throws IllegalArgumentException if the result is succeeded.
      */
     protected final void cancelRequest(final Object correlationId, final AsyncResult<R> result) {
 
@@ -430,7 +437,6 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
                         targetAddress, correlationId, result.cause().getMessage());
                 final Span span = handler.three();
                 if (span != null) {
-                    TracingHelper.logError(span, result.cause());
                     Tags.HTTP_STATUS.set(span, ServiceInvocationException.extractStatusCode(result.cause()));
                 }
                 handler.one().handle(result);
@@ -522,7 +528,6 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
             final Handler<AsyncResult<R>> resultHandler,
             final Span currentSpan) {
 
-        Objects.requireNonNull(currentSpan);
         createAndSendRequest(action, null, payload, null, resultHandler, null, currentSpan);
     }
 
@@ -641,6 +646,9 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      * This method first checks if the sender has any credit left. If not, the result handler is failed immediately.
      * Otherwise, the request message is sent and a timer is started which fails the result handler,
      * if no response is received within <em>requestTimeoutMillis</em> milliseconds.
+     * <p>
+     * In case of an error the {@code Tags.HTTP_STATUS} tag of the span is set accordingly.
+     * However, the span is never finished by this method.
      * 
      * @param action The operation that the request is supposed to trigger/invoke.
      * @param properties The headers to include in the request message as AMQP application properties.
@@ -674,7 +682,6 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
             MessageHelper.setPayload(request, contentType, payload);
             sendRequest(request, resultHandler, cacheKey, currentSpan);
         } else {
-            TracingHelper.logError(currentSpan, "sender and/or receiver link is not open");
             Tags.HTTP_STATUS.set(currentSpan, HttpURLConnection.HTTP_UNAVAILABLE);
             resultHandler.handle(Future.failedFuture(new ServerErrorException(
                     HttpURLConnection.HTTP_UNAVAILABLE, "sender and/or receiver link is not open")));
@@ -687,6 +694,9 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      * This method first checks if the sender has any credit left. If not, the result handler is failed immediately.
      * Otherwise, the request message is sent and a timer is started which fails the result handler,
      * if no response is received within <em>requestTimeoutMillis</em> milliseconds.
+     * <p>
+     * In case of an error the {@code Tags.HTTP_STATUS} tag of the span is set accordingly.
+     * However, the span is never finished by this method.
      * 
      * @param request The message to send.
      * @param resultHandler The handler to notify about the outcome of the request.
@@ -707,13 +717,14 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
         }
 
         connection.executeOrRunOnContext(res -> {
+
             if (sender.sendQueueFull()) {
                 LOG.debug("cannot send request to peer, no credit left for link [target: {}]", targetAddress);
                 Tags.HTTP_STATUS.set(currentSpan, HttpURLConnection.HTTP_UNAVAILABLE);
-                TracingHelper.logError(currentSpan, "no credit available for sending request");
                 resultHandler.handle(Future.failedFuture(new ServerErrorException(
                         HttpURLConnection.HTTP_UNAVAILABLE, "no credit available for sending request")));
             } else {
+
                 final Map<String, Object> details = new HashMap<>(3);
                 final Object correlationId = Optional.ofNullable(request.getCorrelationId()).orElse(request.getMessageId());
                 if (correlationId instanceof String) {
@@ -722,6 +733,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
                 details.put(TracingHelper.TAG_CREDIT.getKey(), sender.getCredit());
                 details.put(TracingHelper.TAG_QOS.getKey(), sender.getQoS().toString());
                 currentSpan.log(details);
+
                 final TriTuple<Handler<AsyncResult<R>>, Object, Span> handler = TriTuple.of(resultHandler, cacheKey, currentSpan);
                 TracingHelper.injectSpanContext(connection.getTracer(), currentSpan.context(), request);
                 replyMap.put(correlationId, handler);

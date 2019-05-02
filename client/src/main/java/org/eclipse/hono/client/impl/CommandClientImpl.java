@@ -162,16 +162,27 @@ public class CommandClientImpl extends AbstractRequestResponseClient<BufferResul
 
         Objects.requireNonNull(command);
 
-        final Future<BufferResult> responseTracker = Future.future();
-        createAndSendRequest(command, properties, data, contentType, responseTracker, null);
+        final Span currentSpan = newChildSpan(null, command);
 
-        return responseTracker.map(response -> {
-            if (response.isOk()) {
-                return response;
-            } else {
-                throw StatusCodeMapper.from(response);
-            }
-        });
+        final Future<BufferResult> responseTracker = Future.future();
+        createAndSendRequest(command, properties, data, contentType, responseTracker, null, currentSpan);
+
+        return responseTracker
+                .recover(t -> {
+                    TracingHelper.logError(currentSpan, t);
+                    currentSpan.finish();
+                    return Future.failedFuture(t);
+                }).map(response -> {
+                    if (response.isError()) {
+                        Tags.ERROR.set(currentSpan, Boolean.TRUE);
+                    }
+                    currentSpan.finish();
+                    if (response.isOk()) {
+                        return response;
+                    } else {
+                        throw StatusCodeMapper.from(response);
+                    }
+                });
     }
 
     @Override
@@ -202,6 +213,7 @@ public class CommandClientImpl extends AbstractRequestResponseClient<BufferResul
             sendRequest(request, responseTracker.completer(), null, currentSpan);
 
             return responseTracker.recover(t -> {
+                TracingHelper.logError(currentSpan, t);
                 currentSpan.finish();
                 return Future.failedFuture(t);
             }).map(ignore -> {

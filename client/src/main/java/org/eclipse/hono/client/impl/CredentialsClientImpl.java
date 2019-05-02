@@ -23,6 +23,7 @@ import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.CredentialsClient;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.StatusCodeMapper;
+import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsObject;
@@ -184,14 +185,21 @@ public class CredentialsClientImpl extends AbstractRequestResponseClient<Credent
         span.setTag(MessageHelper.APP_PROPERTY_TENANT_ID, getTenantId());
         span.setTag(TAG_CREDENTIALS_TYPE, type);
         span.setTag(TAG_AUTH_ID, authId);
-        createAndSendRequest(CredentialsConstants.CredentialsAction.get.toString(), null, specification.toBuffer(),
-                RequestResponseApiConstants.CONTENT_TYPE_APPLICATION_JSON, responseTracker.completer(), null,
+
+        createAndSendRequest(
+                CredentialsConstants.CredentialsAction.get.toString(),
+                null,
+                specification.toBuffer(),
+                RequestResponseApiConstants.CONTENT_TYPE_APPLICATION_JSON,
+                responseTracker,
+                null,
                 span);
+
         return responseTracker.recover(t -> {
+            TracingHelper.logError(span, t);
             span.finish();
             return Future.failedFuture(t);
         }).map(response -> {
-            Tags.HTTP_STATUS.set(span, response.getStatus());
             if (response.isError()) {
                 Tags.ERROR.set(span, Boolean.TRUE);
             }

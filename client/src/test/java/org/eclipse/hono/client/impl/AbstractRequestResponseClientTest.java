@@ -42,7 +42,9 @@ import org.eclipse.hono.cache.ExpiringValueCache;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.client.ServerErrorException;
+import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.util.CacheDirective;
+import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
 import org.junit.Before;
 import org.junit.Rule;
@@ -53,6 +55,7 @@ import org.mockito.ArgumentCaptor;
 
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
+import io.opentracing.tag.Tags;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
@@ -86,7 +89,7 @@ public class AbstractRequestResponseClientTest  {
     private Vertx vertx;
     private ProtonReceiver receiver;
     private ProtonSender sender;
-
+    private Span span;
 
     /**
      * Sets up the fixture.
@@ -94,6 +97,11 @@ public class AbstractRequestResponseClientTest  {
     @SuppressWarnings("unchecked")
     @Before
     public void setUp() {
+
+        final SpanContext spanContext = mock(SpanContext.class);
+
+        span = mock(Span.class);
+        when(span.context()).thenReturn(spanContext);
 
         vertx = mock(Vertx.class);
         receiver = HonoClientUnitTestHelper.mockProtonReceiver();
@@ -125,15 +133,16 @@ public class AbstractRequestResponseClientTest  {
         when(sender.sendQueueFull()).thenReturn(Boolean.TRUE);
 
         // WHEN sending a request message
-        final Async sendFailure = ctx.async();
-        client.createAndSendRequest("get", null, ctx.asyncAssertFailure(t -> {
-            ctx.assertTrue(ServerErrorException.class.isInstance(t));
-            sendFailure.complete();
-        }));
-
-        // THEN the message is not sent and the request result handler is failed
-        sendFailure.await();
-        verify(sender, never()).send(any(Message.class));
+        client.createAndSendRequest(
+                "get",
+                Buffer.buffer("hello"),
+                ctx.asyncAssertFailure(t -> {
+                    // THEN the message is not sent
+                    verify(sender, never()).send(any(Message.class));
+                    // and the request result handler is failed with a 503
+                    assertFailureCause(ctx, span, t, HttpURLConnection.HTTP_UNAVAILABLE);
+                }),
+                span);
     }
 
     /**
@@ -182,22 +191,23 @@ public class AbstractRequestResponseClientTest  {
         client.setRequestTimeout(200);
 
         // WHEN sending a request message with some headers and payload
-        final Async sendFailure = ctx.async();
         final JsonObject payload = new JsonObject().put("key", "value");
-        client.createAndSendRequest("get", null, payload.toBuffer(), ctx.asyncAssertFailure(t -> {
-            sendFailure.complete();
-        }));
+        client.createAndSendRequest(
+                "get",
+                payload.toBuffer(),
+                ctx.asyncAssertFailure(t -> {
+                    // THEN the result handler is failed with a 400 status code
+                    assertFailureCause(ctx, span, t, HttpURLConnection.HTTP_BAD_REQUEST);
+                }),
+                span);
         // and the peer rejects the message
         final Rejected rejected = new Rejected();
-        rejected.setError(ProtonHelper.condition("bad-request", "request message is malformed"));
+        rejected.setError(ProtonHelper.condition(Constants.AMQP_BAD_REQUEST, "request message is malformed"));
         final ProtonDelivery delivery = mock(ProtonDelivery.class);
         when(delivery.getRemoteState()).thenReturn(rejected);
         final ArgumentCaptor<Handler> dispositionHandlerCaptor = ArgumentCaptor.forClass(Handler.class);
         verify(sender).send(any(Message.class), dispositionHandlerCaptor.capture());
         dispositionHandlerCaptor.getValue().handle(delivery);
-
-        // THEN the result handler is failed
-        sendFailure.await();
     }
 
     /**
@@ -212,11 +222,15 @@ public class AbstractRequestResponseClientTest  {
 
         // GIVEN a request message that has been sent to a peer
         final Async responseReceived = ctx.async();
-        client.createAndSendRequest("request", null, (Buffer) null, ctx.asyncAssertSuccess(s -> {
-            ctx.assertEquals(200, s.getStatus());
-            ctx.assertEquals("payload", s.getPayload().toString());
-            responseReceived.complete();
-        }));
+        client.createAndSendRequest(
+                "request",
+                Buffer.buffer("hello"),
+                ctx.asyncAssertSuccess(s -> {
+                    ctx.assertEquals(200, s.getStatus());
+                    ctx.assertEquals("payload", s.getPayload().toString());
+                    responseReceived.complete();
+                }),
+                span);
 
         // WHEN a response is received for the request
         final Message response = ProtonHelper.message("payload");
@@ -227,13 +241,16 @@ public class AbstractRequestResponseClientTest  {
 
         // THEN the response is passed to the handler registered with the request
         responseReceived.await();
+        // and the status code conveyed in the response is set on the span
+        verify(span).setTag(Tags.HTTP_STATUS.getKey(), 200);
+        // and no response time-out handler has been set
         verify(vertx, never()).setTimer(anyLong(), any(Handler.class));
     }
 
     /**
      * Verifies that the client cancels and fails a request for which no response
      * has been received after a certain amount of time. The request is then
-     * failed with a {@link ServerErrorException}.
+     * failed with a {@link ServerErrorException} with a 503 status code.
      * 
      * @param ctx The vert.x test context.
      */
@@ -252,14 +269,19 @@ public class AbstractRequestResponseClientTest  {
             task.handle(1L);
             return null;
         }).when(vertx).setTimer(anyLong(), any(Handler.class));
-        final Async requestFailure = ctx.async();
-        client.createAndSendRequest("request", null, (Buffer) null, ctx.asyncAssertFailure(t -> {
-            ctx.assertTrue(ServerErrorException.class.isInstance(t));
-            requestFailure.complete();
-        }));
 
-        // THEN the request handler is failed
-        requestFailure.await();
+        client.createAndSendRequest(
+                "request",
+                Buffer.buffer("hello"),
+                ctx.asyncAssertFailure(t -> {
+                    // THEN the request handler is failed
+                    ctx.assertEquals(
+                            HttpURLConnection.HTTP_UNAVAILABLE,
+                            ((ServerErrorException) t).getErrorCode());
+                    verify(span).setTag(Tags.HTTP_STATUS.getKey(), HttpURLConnection.HTTP_UNAVAILABLE);
+                    verify(span, never()).finish();
+                }),
+                span);
     }
 
     /**
@@ -268,21 +290,23 @@ public class AbstractRequestResponseClientTest  {
      * 
      * @param ctx The vert.x test context.
      */
+    @SuppressWarnings("unchecked")
     @Test
     public void testCreateAndSendRequestFailsIfSenderIsNotOpen(final TestContext ctx) {
 
-        // GIVEN a client whose sender and receiver are not open
+        // GIVEN a client whose sender is not open
         when(sender.isOpen()).thenReturn(Boolean.FALSE);
 
         // WHEN sending a request
-        final Async requestFailure = ctx.async();
-        client.createAndSendRequest("get", null, ctx.asyncAssertFailure(t -> {
-            ctx.assertTrue(ServerErrorException.class.isInstance(t));
-            requestFailure.complete();
-        }));
-
-        // THEN the request fails immediately
-        requestFailure.await();
+        client.createAndSendRequest(
+                "get",
+                Buffer.buffer("hello"),
+                ctx.asyncAssertFailure(t -> {
+                    // THEN the request fails immediately with a 503
+                    verify(sender, never()).send(any(Message.class), any(Handler.class));
+                    assertFailureCause(ctx, span, t, HttpURLConnection.HTTP_UNAVAILABLE);
+                }),
+                span);
     }
 
     /**
@@ -294,7 +318,7 @@ public class AbstractRequestResponseClientTest  {
     @Test
     public void testCreateAndSendRequestFailsIfReceiverIsNotOpen(final TestContext ctx) {
 
-        // GIVEN a client whose sender and receiver are not open
+        // GIVEN a client whose receiver is not open
         when(receiver.isOpen()).thenReturn(Boolean.FALSE);
 
         // WHEN sending a request
@@ -468,6 +492,17 @@ public class AbstractRequestResponseClientTest  {
         sendSuccess.await();
     }
 
+    /**
+     * Verifies credits available.
+     *
+     */
+    @Test
+    public void testGetCreditsReturnsCreditsOfSenderLink() {
+        when(sender.getCredit()).thenReturn(10, 0);
+        assertThat(client.getCredit(), is(10));
+        assertThat(client.getCredit(), is(0));
+    }
+
     private AbstractRequestResponseClient<SimpleRequestResponseResult> getClient(final String tenant, final ProtonSender sender, final ProtonReceiver receiver) {
 
         final HonoConnection connection = HonoClientUnitTestHelper.mockHonoConnection(vertx);
@@ -495,15 +530,16 @@ public class AbstractRequestResponseClientTest  {
         };
     }
 
-    /**
-     * Verifies credits available.
-     *
-     */
-    @Test
-    public void testCredits() {
-        when(sender.getCredit()).thenReturn(10);
-        assertThat(client.getCredit(), is(10));
-        when(sender.getCredit()).thenReturn(0);
-        assertThat(client.getCredit(), is(0));
+    private void assertFailureCause(
+            final TestContext ctx,
+            final Span span,
+            final Throwable cause,
+            final int expectedErrorCode) {
+
+        ctx.assertEquals(
+                expectedErrorCode,
+                ((ServiceInvocationException) cause).getErrorCode());
+        verify(span).setTag(Tags.HTTP_STATUS.getKey(), expectedErrorCode);
+        verify(span, never()).finish();
     }
 }
