@@ -153,4 +153,24 @@ public interface RegistrationService extends Verticle {
         assertRegistration(tenantId, deviceId, gatewayId, resultHandler);
     }
 
+    /**
+     * Gets device registration data by device ID.
+     *
+     * @param tenantId The tenant the device belongs to.
+     * @param deviceId The ID of the device to get registration data for.
+     * @param resultHandler The handler to invoke with the result of the operation.
+     *             The <em>status</em> will be
+     *             <ul>
+     *             <li><em>200 OK</em> if a device with the given ID is registered
+     *             for the tenant. The <em>payload</em> will contain the properties
+     *             registered for the device.</li>
+     *             <li><em>404 Not Found</em> if no device with the given identifier
+     *             is registered for the tenant.</li>
+     *             </ul>
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     * @see <a href="https://www.eclipse.org/hono/api/device-registration-api/#get-registration-information">
+     *      Device Registration API - Get Registration Information</a>
+     */
+    void getDevice(String tenantId, String deviceId, Handler<AsyncResult<RegistrationResult>> resultHandler);
+
 }
