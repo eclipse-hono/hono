@@ -12,22 +12,22 @@
  *******************************************************************************/
 package org.eclipse.hono.service.tenant;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import io.vertx.ext.unit.TestContext;
+import io.vertx.junit5.Checkpoint;
+import io.vertx.junit5.VertxTestContext;
 import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantObject;
 import org.eclipse.hono.util.TenantResult;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import javax.security.auth.x500.X500Principal;
 import java.net.HttpURLConnection;
-
-import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertThat;
 
 /**
  * Abstract class used as a base for verifying behavior of {@link CompleteTenantService} in device registry implementations.
@@ -48,15 +48,16 @@ public abstract class AbstractCompleteTenantServiceTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testAddTenantFailsForDuplicateTenantId(final TestContext ctx) {
+    public void testAddTenantFailsForDuplicateTenantId(final VertxTestContext ctx) {
 
         addTenant("tenant").map(ok -> {
             getCompleteTenantService().add(
                     "tenant",
                     buildTenantPayload("tenant"),
-                    ctx.asyncAssertSuccess(s -> {
-                        ctx.assertEquals(HttpURLConnection.HTTP_CONFLICT, s.getStatus());
-                    }));
+                    ctx.succeeding(s -> ctx.verify(() -> {
+                        assertEquals(HttpURLConnection.HTTP_CONFLICT, s.getStatus());
+                        ctx.completeNow();
+                    })));
             return null;
         });
     }
@@ -68,7 +69,7 @@ public abstract class AbstractCompleteTenantServiceTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testAddTenantFailsForDuplicateCa(final TestContext ctx) {
+    public void testAddTenantFailsForDuplicateCa(final VertxTestContext ctx) {
 
         final JsonObject trustedCa = new JsonObject()
                 .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, "CN=taken")
@@ -81,9 +82,10 @@ public abstract class AbstractCompleteTenantServiceTest {
             getCompleteTenantService().add(
                     "newTenant",
                     JsonObject.mapFrom(newTenant),
-                    ctx.asyncAssertSuccess(s -> {
-                        ctx.assertEquals(HttpURLConnection.HTTP_CONFLICT, s.getStatus());
-                    }));
+                    ctx.succeeding(s -> ctx.verify(() -> {
+                        assertEquals(HttpURLConnection.HTTP_CONFLICT, s.getStatus());
+                        ctx.completeNow();
+                    })));
             return null;
         });
     }
@@ -94,11 +96,12 @@ public abstract class AbstractCompleteTenantServiceTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testGetTenantFailsForNonExistingTenant(final TestContext ctx) {
+    public void testGetTenantFailsForNonExistingTenant(final VertxTestContext ctx) {
 
-        getCompleteTenantService().get("notExistingTenant" , null, ctx.asyncAssertSuccess(s -> {
-            assertThat(s.getStatus(), is(HttpURLConnection.HTTP_NOT_FOUND));
-        }));
+        getCompleteTenantService().get("notExistingTenant" , null, ctx.succeeding(s -> ctx.verify(() -> {
+            assertEquals(HttpURLConnection.HTTP_NOT_FOUND, s.getStatus());
+            ctx.completeNow();
+        })));
     }
 
     /**
@@ -107,14 +110,15 @@ public abstract class AbstractCompleteTenantServiceTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testGetTenantSucceedsForExistingTenants(final TestContext ctx) {
+    public void testGetTenantSucceedsForExistingTenants(final VertxTestContext ctx) {
 
         addTenant("tenant").map(ok -> {
-            getCompleteTenantService().get("tenant", null, ctx.asyncAssertSuccess(s -> {
-                assertThat(s.getStatus(), is(HttpURLConnection.HTTP_OK));
-                assertThat(s.getPayload().getString(TenantConstants.FIELD_PAYLOAD_TENANT_ID), is("tenant"));
-                assertThat(s.getPayload().getBoolean(TenantConstants.FIELD_ENABLED), is(Boolean.TRUE));
-            }));
+            getCompleteTenantService().get("tenant", null, ctx.succeeding(s -> ctx.verify(() -> {
+                assertEquals(HttpURLConnection.HTTP_OK, s.getStatus());
+                assertEquals("tenant", s.getPayload().getString(TenantConstants.FIELD_PAYLOAD_TENANT_ID));
+                assertEquals(Boolean.TRUE, s.getPayload().getBoolean(TenantConstants.FIELD_ENABLED));
+                ctx.completeNow();
+            })));
             return null;
         });
     }
@@ -126,7 +130,7 @@ public abstract class AbstractCompleteTenantServiceTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testGetForCertificateAuthoritySucceeds(final TestContext ctx) {
+    public void testGetForCertificateAuthoritySucceeds(final VertxTestContext ctx) {
 
         final X500Principal subjectDn = new X500Principal("O=Eclipse, OU=Hono, CN=ca");
         final JsonObject trustedCa = new JsonObject()
@@ -136,13 +140,14 @@ public abstract class AbstractCompleteTenantServiceTest {
                 .put(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, trustedCa);
 
         addTenant("tenant", tenant).map(ok -> {
-            getCompleteTenantService().get(subjectDn, null, ctx.asyncAssertSuccess(s -> {
-                assertThat(s.getStatus(), is(HttpURLConnection.HTTP_OK));
+            getCompleteTenantService().get(subjectDn, null, ctx.succeeding(s -> ctx.verify(() -> {
+                assertEquals(HttpURLConnection.HTTP_OK, s.getStatus());
                 final TenantObject obj = s.getPayload().mapTo(TenantObject.class);
-                assertThat(obj.getTenantId(), is("tenant"));
+                assertEquals("tenant", obj.getTenantId());
                 final JsonObject ca = obj.getProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA);
-                assertThat(ca, is(trustedCa));
-            }));
+                assertEquals(trustedCa, ca);
+                ctx.completeNow();
+            })));
             return null;
         });
     }
@@ -153,7 +158,7 @@ public abstract class AbstractCompleteTenantServiceTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testGetForCertificateAuthorityFailsForUnknownSubjectDn(final TestContext ctx) {
+    public void testGetForCertificateAuthorityFailsForUnknownSubjectDn(final VertxTestContext ctx) {
 
         final X500Principal unknownSubjectDn = new X500Principal("O=Eclipse, OU=NotHono, CN=ca");
         final X500Principal subjectDn = new X500Principal("O=Eclipse, OU=Hono, CN=ca");
@@ -165,9 +170,10 @@ public abstract class AbstractCompleteTenantServiceTest {
                 .put(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, trustedCa);
 
         addTenant("tenant", tenant).map(ok -> {
-            getCompleteTenantService().get(unknownSubjectDn, null, ctx.asyncAssertSuccess(s -> {
-                assertThat(s.getStatus(), is(HttpURLConnection.HTTP_NOT_FOUND));
-            }));
+            getCompleteTenantService().get(unknownSubjectDn, null, ctx.succeeding(s -> ctx.verify(() -> {
+                assertEquals(HttpURLConnection.HTTP_NOT_FOUND, s.getStatus());
+                ctx.completeNow();
+            })));
             return null;
         });
     }
@@ -178,13 +184,14 @@ public abstract class AbstractCompleteTenantServiceTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testRemoveTenantsSucceeds(final TestContext ctx) {
+    public void testRemoveTenantsSucceeds(final VertxTestContext ctx) {
 
         addTenant("tenant").map(ok -> {
-            getCompleteTenantService().remove("tenant", ctx.asyncAssertSuccess(s -> {
-                assertThat(s.getStatus(), is(HttpURLConnection.HTTP_NO_CONTENT));
+            getCompleteTenantService().remove("tenant", ctx.succeeding(s -> ctx.verify(() -> {
+                assertEquals(HttpURLConnection.HTTP_NO_CONTENT, s.getStatus());
                 assertTenantDoesNotExist(getCompleteTenantService(), "tenant", ctx);
-            }));
+                ctx.completeNow();
+            })));
             return null;
         });
     }
@@ -195,24 +202,28 @@ public abstract class AbstractCompleteTenantServiceTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testUpdateTenantsSucceeds(final TestContext ctx) {
+    public void testUpdateTenantsSucceeds(final VertxTestContext ctx) {
 
         final JsonObject updatedPayload = buildTenantPayload("tenant");
         updatedPayload.put("custom-prop", "something");
+
+        final Checkpoint update = ctx.checkpoint(2);
 
         addTenant("tenant").compose(ok -> {
             final Future<TenantResult<JsonObject>> updateResult = Future.future();
             getCompleteTenantService().update("tenant", updatedPayload.copy(), updateResult.completer());
             return updateResult;
         }).compose(updateResult -> {
-            ctx.assertEquals(HttpURLConnection.HTTP_NO_CONTENT, updateResult.getStatus());
+            assertEquals(HttpURLConnection.HTTP_NO_CONTENT, updateResult.getStatus());
+            update.flag();
             final Future<TenantResult<JsonObject>> getResult = Future.future();
             getCompleteTenantService().get("tenant", null, getResult.completer());
             return getResult;
-        }).setHandler(ctx.asyncAssertSuccess(getResult -> {
-            assertThat(getResult.getStatus(), is(HttpURLConnection.HTTP_OK));
-            assertThat(getResult.getPayload().getString("custom-prop"), is("something"));
-        }));
+        }).setHandler(ctx.succeeding(getResult -> ctx.verify(() -> {
+            assertEquals(HttpURLConnection.HTTP_OK, getResult.getStatus());
+            assertEquals("something", getResult.getPayload().getString("custom-prop") );
+            update.flag();
+        })));
     }
 
 
@@ -224,7 +235,7 @@ public abstract class AbstractCompleteTenantServiceTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testUpdateTenantFailsForDuplicateCa(final TestContext ctx) {
+    public void testUpdateTenantFailsForDuplicateCa(final VertxTestContext ctx) {
 
         // GIVEN two tenants, one with a CA configured, the other with no CA
         final JsonObject trustedCa = new JsonObject()
@@ -241,26 +252,29 @@ public abstract class AbstractCompleteTenantServiceTest {
                     getCompleteTenantService().update(
                             "tenantTwo",
                             JsonObject.mapFrom(tenantTwo),
-                            ctx.asyncAssertSuccess(s -> {
+                            ctx.succeeding(s -> ctx.verify(() -> {
                                 // THEN the update fails with a 409
-                                ctx.assertEquals(HttpURLConnection.HTTP_CONFLICT, s.getStatus());
-                            }));
+                                assertEquals(HttpURLConnection.HTTP_CONFLICT, s.getStatus());
+                                ctx.completeNow();
+                            })));
                     return null;
                 });
     }
 
-    protected static void assertTenantExists(final TenantService svc, final String tenant, final TestContext ctx) {
+    protected static void assertTenantExists(final TenantService svc, final String tenant, final VertxTestContext ctx) {
 
-        svc.get(tenant, null, ctx.asyncAssertSuccess(t -> {
-            assertThat(t.getStatus(), is(HttpURLConnection.HTTP_OK));
-        }));
+        svc.get(tenant, null, ctx.succeeding(t -> ctx.verify(() -> {
+            assertEquals(HttpURLConnection.HTTP_OK, t.getStatus());
+            ctx.completeNow();
+        })));
     }
 
-    protected static void assertTenantDoesNotExist(final TenantService svc, final String tenant, final TestContext ctx) {
+    protected static void assertTenantDoesNotExist(final TenantService svc, final String tenant, final VertxTestContext ctx) {
 
-        svc.get(tenant, null, ctx.asyncAssertSuccess(t -> {
-            assertThat(t.getStatus(), is(HttpURLConnection.HTTP_NOT_FOUND));
-        }));
+        svc.get(tenant, null, ctx.succeeding(t -> ctx.verify(() -> {
+            assertEquals(HttpURLConnection.HTTP_NOT_FOUND, t.getStatus());
+            ctx.completeNow();
+        })));
     }
 
     protected Future<Void> addTenant(final String tenantId) {

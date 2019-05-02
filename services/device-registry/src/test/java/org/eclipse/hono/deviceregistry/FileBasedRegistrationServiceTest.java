@@ -12,24 +12,21 @@
  *******************************************************************************/
 package org.eclipse.hono.deviceregistry;
 
-import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 import java.net.HttpURLConnection;
 import java.nio.charset.StandardCharsets;
 
-import io.vertx.ext.unit.junit.VertxUnitRunner;
 import org.eclipse.hono.service.registration.AbstractCompleteRegistrationServiceTest;
 import org.eclipse.hono.service.registration.CompleteBaseRegistrationService;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.RegistrationResult;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.vertx.core.Context;
 import io.vertx.core.Future;
@@ -39,23 +36,18 @@ import io.vertx.core.buffer.Buffer;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.file.FileSystem;
 import io.vertx.core.json.JsonObject;
-import io.vertx.ext.unit.Async;
-import io.vertx.ext.unit.TestContext;
-import org.junit.runner.RunWith;
+import io.vertx.junit5.Checkpoint;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 
 /**
  * Tests {@link FileBasedRegistrationService}.
  */
-@RunWith(VertxUnitRunner.class)
+@ExtendWith(VertxExtension.class)
 public class FileBasedRegistrationServiceTest extends AbstractCompleteRegistrationServiceTest {
 
     private static final String FILE_NAME = "/device-identities.json";
 
-    /**
-     * Time out each test after 5 seconds.
-     */
-    @Rule
-    public Timeout timeout = Timeout.seconds(5);
 
     private FileBasedRegistrationConfigProperties props;
     private FileBasedRegistrationService registrationService;
@@ -66,7 +58,7 @@ public class FileBasedRegistrationServiceTest extends AbstractCompleteRegistrati
     /**
      * Sets up the fixture.
      */
-    @Before
+    @BeforeEach
     public void setUp() {
         fileSystem = mock(FileSystem.class);
         final Context ctx = mock(Context.class);
@@ -95,7 +87,7 @@ public class FileBasedRegistrationServiceTest extends AbstractCompleteRegistrati
      */
     @SuppressWarnings({ "unchecked", "rawtypes" })
     @Test
-    public void testSaveToFileCreatesFile(final TestContext ctx) {
+    public void testSaveToFileCreatesFile(final VertxTestContext ctx) {
 
         // GIVEN a registration service configured with a non-existing file
         props.setSaveToFile(true);
@@ -113,14 +105,11 @@ public class FileBasedRegistrationServiceTest extends AbstractCompleteRegistrati
 
         // WHEN persisting a dirty registry
         registrationService.addDevice(TENANT, DEVICE, null);
-        final Async saving = ctx.async();
-        registrationService.saveToFile().setHandler(ctx.asyncAssertSuccess(s -> {
-            saving.complete();
-        }));
-
-        // THEN the file has been created
-        saving.await();
-        verify(fileSystem).createFile(eq(props.getFilename()), any(Handler.class));
+        registrationService.saveToFile().setHandler(ctx.succeeding(s -> ctx.verify(() -> {
+            // THEN the file has been created
+            verify(fileSystem).createFile(eq(props.getFilename()), any(Handler.class));
+            ctx.completeNow();
+        })));
     }
 
     /**
@@ -131,7 +120,7 @@ public class FileBasedRegistrationServiceTest extends AbstractCompleteRegistrati
      */
     @SuppressWarnings({ "unchecked", "rawtypes" })
     @Test
-    public void testDoStartCreatesFile(final TestContext ctx) {
+    public void testDoStartCreatesFile(final VertxTestContext ctx) {
 
         // GIVEN a registration service configured to persist data to a not yet existing file
         props.setSaveToFile(true);
@@ -148,16 +137,13 @@ public class FileBasedRegistrationServiceTest extends AbstractCompleteRegistrati
         }).when(fileSystem).readFile(eq(props.getFilename()), any(Handler.class));
 
         // WHEN starting the service
-        final Async startup = ctx.async();
         final Future<Void> startupTracker = Future.future();
-        startupTracker.setHandler(ctx.asyncAssertSuccess(started -> {
-            startup.complete();
-        }));
+        startupTracker.setHandler(ctx.succeeding(started -> ctx.verify(() -> {
+            // THEN the file gets created
+            verify(fileSystem).createFile(eq(props.getFilename()), any(Handler.class));
+            ctx.completeNow();
+        })));
         registrationService.doStart(startupTracker);
-
-        // THEN the file gets created
-        startup.await();
-        verify(fileSystem).createFile(eq(props.getFilename()), any(Handler.class));
     }
 
     /**
@@ -168,7 +154,7 @@ public class FileBasedRegistrationServiceTest extends AbstractCompleteRegistrati
      */
     @SuppressWarnings({ "unchecked", "rawtypes" })
     @Test
-    public void testDoStartFailsIfFileCannotBeCreated(final TestContext ctx) {
+    public void testDoStartFailsIfFileCannotBeCreated(final VertxTestContext ctx) {
 
         // GIVEN a registration service configured to persist data to a not yet existing file
         props.setSaveToFile(true);
@@ -180,15 +166,16 @@ public class FileBasedRegistrationServiceTest extends AbstractCompleteRegistrati
             handler.handle(Future.failedFuture("no access"));
             return null;
         }).when(fileSystem).createFile(eq(props.getFilename()), any(Handler.class));
-        final Async startup = ctx.async();
+
         final Future<Void> startupTracker = Future.future();
-        startupTracker.setHandler(ctx.asyncAssertFailure(started -> {
-            startup.complete();
+        startupTracker.setHandler(ctx.failing(started -> {
+            // THEN startup has failed
+            ctx.completeNow();
         }));
         registrationService.doStart(startupTracker);
 
-        // THEN startup has failed
-        startup.await();
+
+
     }
 
     /**
@@ -199,7 +186,7 @@ public class FileBasedRegistrationServiceTest extends AbstractCompleteRegistrati
      */
     @SuppressWarnings({ "unchecked", "rawtypes" })
     @Test
-    public void testDoStartIgnoresMalformedJson(final TestContext ctx) {
+    public void testDoStartIgnoresMalformedJson(final VertxTestContext ctx) {
 
         // GIVEN a registration service configured to read data from a file
         // that contains malformed JSON
@@ -213,15 +200,14 @@ public class FileBasedRegistrationServiceTest extends AbstractCompleteRegistrati
         }).when(fileSystem).readFile(eq(props.getFilename()), any(Handler.class));
 
         // WHEN starting the service
-        final Async startup = ctx.async();
         final Future<Void> startupTracker = Future.future();
-        startupTracker.setHandler(ctx.asyncAssertSuccess(started -> {
-            startup.complete();
+        startupTracker.setHandler(ctx.succeeding(started -> {
+            // THEN startup succeeds
+            ctx.completeNow();
         }));
         registrationService.doStart(startupTracker);
 
-        // THEN startup succeeds
-        startup.await();
+
     }
 
     /**
@@ -231,7 +217,7 @@ public class FileBasedRegistrationServiceTest extends AbstractCompleteRegistrati
      */
     @SuppressWarnings({ "unchecked", "rawtypes" })
     @Test
-    public void testDoStartLoadsDeviceIdentities(final TestContext ctx) {
+    public void testDoStartLoadsDeviceIdentities(final VertxTestContext ctx) {
 
         // GIVEN a service configured with a file name
         when(fileSystem.existsBlocking(props.getFilename())).thenReturn(Boolean.TRUE);
@@ -242,23 +228,22 @@ public class FileBasedRegistrationServiceTest extends AbstractCompleteRegistrati
             return null;
         }).when(fileSystem).readFile(eq(props.getFilename()), any(Handler.class));
 
+        final Checkpoint loaded = ctx.checkpoint(2);
         // WHEN the service is started
-        final Async startup = ctx.async();
         final Future<Void> startFuture = Future.future();
-        startFuture.setHandler(ctx.asyncAssertSuccess(s -> {
-            startup.complete();
+        startFuture.setHandler(ctx.succeeding(s -> {
+
+            // THEN the device identities from the file are loaded
+            registrationService.getDevice(TENANT, DEVICE, ctx.succeeding());
+            registrationService.getDevice(TENANT, "4712", ctx.succeeding(result -> ctx.verify(() -> {
+                final JsonObject data = result.getPayload().getJsonObject(RegistrationConstants.FIELD_DATA);
+                assertEquals(data.getString(RegistrationConstants.FIELD_VIA), GW);
+                loaded.flag();
+            })));
+            registrationService.getDevice(TENANT, GW, ctx.succeeding());
+            loaded.flag();
         }));
         registrationService.doStart(startFuture);
-
-        // THEN the device identities from the file are loaded
-        startup.await();
-        registrationService.getDevice(TENANT, DEVICE, ctx.asyncAssertSuccess());
-        registrationService.getDevice(TENANT, "4712", ctx.asyncAssertSuccess(result -> {
-            final JsonObject data = result.getPayload().getJsonObject(RegistrationConstants.FIELD_DATA);
-            ctx.assertEquals(data.getString(RegistrationConstants.FIELD_VIA), GW);
-        }));
-        registrationService.getDevice(TENANT, GW, ctx.asyncAssertSuccess());
-
     }
 
     /**
@@ -268,7 +253,7 @@ public class FileBasedRegistrationServiceTest extends AbstractCompleteRegistrati
      */
     @SuppressWarnings({ "unchecked", "rawtypes" })
     @Test
-    public void testDoStartIgnoreIdentitiesIfStartEmptyIsSet(final TestContext ctx) {
+    public void testDoStartIgnoreIdentitiesIfStartEmptyIsSet(final VertxTestContext ctx) {
 
         // GIVEN a service configured with a file name and startEmpty set to true
         props.setFilename(FILE_NAME);
@@ -276,16 +261,13 @@ public class FileBasedRegistrationServiceTest extends AbstractCompleteRegistrati
         when(fileSystem.existsBlocking(props.getFilename())).thenReturn(Boolean.TRUE);
 
         // WHEN the service is started
-        final Async startup = ctx.async();
         final Future<Void> startFuture = Future.future();
-        startFuture.setHandler(ctx.asyncAssertSuccess(s -> {
-            startup.complete();
-        }));
+        startFuture.setHandler(ctx.succeeding(s -> ctx.verify(() -> {
+            // THEN the device identities from the file are not loaded
+            verify(fileSystem, never()).readFile(anyString(), any(Handler.class));
+            ctx.completeNow();
+        })));
         registrationService.doStart(startFuture);
-
-        // THEN the device identities from the file are not loaded
-        startup.await();
-        verify(fileSystem, never()).readFile(anyString(), any(Handler.class));
     }
 
     /**
@@ -302,8 +284,8 @@ public class FileBasedRegistrationServiceTest extends AbstractCompleteRegistrati
         final RegistrationResult result = registrationService.addDevice(TENANT, "newDevice", null);
 
         // THEN the result contains a FORBIDDEN status code and the device has not been added to the registry
-        assertThat(result.getStatus(), is(HttpURLConnection.HTTP_FORBIDDEN));
-        assertThat(registrationService.getDevice(TENANT, "newDevice").getStatus(), is(HttpURLConnection.HTTP_NOT_FOUND));
+        assertEquals(HttpURLConnection.HTTP_FORBIDDEN, result.getStatus());
+        assertEquals(HttpURLConnection.HTTP_NOT_FOUND, registrationService.getDevice(TENANT, "newDevice").getStatus());
     }
 
     /**
@@ -321,7 +303,7 @@ public class FileBasedRegistrationServiceTest extends AbstractCompleteRegistrati
         final RegistrationResult result = registrationService.updateDevice(TENANT, DEVICE, new JsonObject().put("updated", true));
 
         // THEN the result contains a FORBIDDEN status code and the device has not been updated
-        assertThat(result.getStatus(), is(HttpURLConnection.HTTP_FORBIDDEN));
+        assertEquals(HttpURLConnection.HTTP_FORBIDDEN, result.getStatus());
         assertFalse(registrationService.getDevice(TENANT, DEVICE).getPayload().containsKey("updated"));
     }
 
@@ -340,8 +322,8 @@ public class FileBasedRegistrationServiceTest extends AbstractCompleteRegistrati
         final RegistrationResult result = registrationService.removeDevice(TENANT, DEVICE);
 
         // THEN the result contains a FORBIDDEN status code and the device has not been removed
-        assertThat(result.getStatus(), is(HttpURLConnection.HTTP_FORBIDDEN));
-        assertThat(registrationService.getDevice(TENANT, DEVICE).getStatus(), is(HttpURLConnection.HTTP_OK));
+        assertEquals(HttpURLConnection.HTTP_FORBIDDEN, result.getStatus());
+        assertEquals(HttpURLConnection.HTTP_OK, registrationService.getDevice(TENANT, DEVICE).getStatus());
     }
 
     /**
@@ -352,7 +334,7 @@ public class FileBasedRegistrationServiceTest extends AbstractCompleteRegistrati
      */
     @SuppressWarnings({ "rawtypes", "unchecked" })
     @Test
-    public void testPeriodicSafeJobIsNotScheduledIfSavingIfDisabled(final TestContext ctx) {
+    public void testPeriodicSafeJobIsNotScheduledIfSavingIfDisabled(final VertxTestContext ctx) {
 
         props.setSaveToFile(false);
         when(fileSystem.existsBlocking(props.getFilename())).thenReturn(Boolean.TRUE);
@@ -362,15 +344,12 @@ public class FileBasedRegistrationServiceTest extends AbstractCompleteRegistrati
             return null;
         }).when(fileSystem).readFile(eq(props.getFilename()), any(Handler.class));
 
-        final Async startup = ctx.async();
         final Future<Void> startupTracker = Future.future();
-        startupTracker.setHandler(ctx.asyncAssertSuccess(done -> {
-            startup.complete();
-        }));
+        startupTracker.setHandler(ctx.succeeding(done -> ctx.verify(() -> {
+            verify(vertx, never()).setPeriodic(anyLong(), any(Handler.class));
+            ctx.completeNow();
+        })));
         registrationService.doStart(startupTracker);
-
-        startup.await();
-        verify(vertx, never()).setPeriodic(anyLong(), any(Handler.class));
     }
 
     /**
@@ -381,7 +360,7 @@ public class FileBasedRegistrationServiceTest extends AbstractCompleteRegistrati
      */
     @SuppressWarnings({ "unchecked", "rawtypes" })
     @Test
-    public void testContentsNotSavedOnShutdownIfSavingIfDisabled(final TestContext ctx) {
+    public void testContentsNotSavedOnShutdownIfSavingIfDisabled(final VertxTestContext ctx) {
 
         // GIVEN a registration service configured to not persist data
         props.setSaveToFile(false);
@@ -391,26 +370,22 @@ public class FileBasedRegistrationServiceTest extends AbstractCompleteRegistrati
             handler.handle(Future.failedFuture("malformed data"));
             return null;
         }).when(fileSystem).readFile(eq(props.getFilename()), any(Handler.class));
-        final Async startup = ctx.async();
+
+        final Checkpoint startup = ctx.checkpoint();
         final Future<Void> startupTracker = Future.future();
-        startupTracker.setHandler(ctx.asyncAssertSuccess(started -> {
-            startup.complete();
+        startupTracker.setHandler(ctx.succeeding(started -> {
+            // WHEN adding a device
+            registrationService.addDevice(TENANT, DEVICE, new JsonObject());
+            // and shutting down the service
+            final Future<Void> shutdownTracker = Future.future();
+            shutdownTracker.setHandler(ctx.succeeding(done -> ctx.verify(() -> {
+                // THEN no data has been written to the file system
+                verify(fileSystem, never()).createFile(eq(props.getFilename()), any(Handler.class));
+                startup.flag();
+            })));
+            registrationService.doStop(shutdownTracker);
+            startup.flag();
         }));
         registrationService.doStart(startupTracker);
-        startup.await();
-
-        // WHEN adding a device
-        registrationService.addDevice(TENANT, DEVICE, new JsonObject());
-        // and shutting down the service
-        final Async shutdown = ctx.async();
-        final Future<Void> shutdownTracker = Future.future();
-        shutdownTracker.setHandler(ctx.asyncAssertSuccess(done -> {
-            shutdown.complete();
-        }));
-        registrationService.doStop(shutdownTracker);
-
-        // THEN no data has been written to the file system
-        shutdown.await();
-        verify(fileSystem, never()).createFile(eq(props.getFilename()), any(Handler.class));
     }
 }

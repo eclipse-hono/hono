@@ -19,8 +19,8 @@ import io.vertx.core.net.NetServerOptions;
 
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.util.Constants;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.*;
@@ -46,7 +46,7 @@ public class AbstractServiceBaseTest {
     /**
      * Sets up common mock objects used by the test cases.
      */
-    @Before
+    @BeforeEach
     public void initMocks() {
         eventBus = mock(EventBus.class);
         vertx = mock(Vertx.class);

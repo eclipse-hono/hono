@@ -13,10 +13,12 @@
 
 package org.eclipse.hono.service.registration;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.eclipse.hono.config.SignatureSupportingConfigProperties;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import io.vertx.core.Vertx;
 
@@ -32,11 +34,12 @@ public class RegistrationAssertionHelperImplTest {
     /**
      * Verifies that the helper asserts a minimum length of 32 bytes for shared secrets.
      */
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testForSigningRejectsShortSecret() {
 
         final String shortSecret = "01234567890123456"; // not 32 bytes long
-        RegistrationAssertionHelperImpl.forSharedSecret(shortSecret, 10);
+        assertThrows(IllegalArgumentException.class, () ->
+                RegistrationAssertionHelperImpl.forSharedSecret(shortSecret, 10));
     }
 
     /**

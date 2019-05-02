@@ -12,6 +12,7 @@
  *******************************************************************************/
 package org.eclipse.hono.service.credentials;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
@@ -28,10 +29,10 @@ import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsObject;
 import org.eclipse.hono.util.CredentialsResult;
 import org.eclipse.hono.util.EventBusMessage;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.rules.Timeout;
-import org.junit.runner.RunWith;
 
 import io.opentracing.Span;
 import io.vertx.core.AsyncResult;
@@ -40,13 +41,14 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
-import io.vertx.ext.unit.TestContext;
-import io.vertx.ext.unit.junit.VertxUnitRunner;
+import io.vertx.junit5.Checkpoint;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 
 /**
  * Tests verifying behavior of {@link CompleteBaseCredentialsService}.
  */
-@RunWith(VertxUnitRunner.class)
+@ExtendWith(VertxExtension.class)
 public class CompleteBaseCredentialsServiceTest {
 
     private static final String TEST_TENANT = "dummy";
@@ -66,7 +68,7 @@ public class CompleteBaseCredentialsServiceTest {
      * Sets up the fixture.
      */
     @SuppressWarnings("unchecked")
-    @Before
+    @BeforeEach
     public void setUp() {
         context = mock(Context.class);
         vertx = mock(Vertx.class);
@@ -98,13 +100,14 @@ public class CompleteBaseCredentialsServiceTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testAddSucceedsForMinimalData(final TestContext ctx) {
+    public void testAddSucceedsForMinimalData(final VertxTestContext ctx) {
         final JsonObject testData = createValidCredentialsObject();
 
         final EventBusMessage msg = createRequestForPayload(CredentialsConstants.CredentialsAction.add, testData);
-        service.processRequest(msg).setHandler(ctx.asyncAssertSuccess(response -> {
-            ctx.assertEquals(HttpURLConnection.HTTP_CREATED, response.getStatus());
-        }));
+        service.processRequest(msg).setHandler(ctx.succeeding( response ->  ctx.verify(() -> {
+            assertEquals(HttpURLConnection.HTTP_CREATED, response.getStatus());
+            ctx.completeNow();
+        })));
     }
 
     /**
@@ -115,7 +118,7 @@ public class CompleteBaseCredentialsServiceTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testAddSucceedsForLongTimestamp(final TestContext ctx) {
+    public void testAddSucceedsForLongTimestamp(final VertxTestContext ctx) {
 
         final JsonObject secret = new JsonObject()
                 .put(CredentialsConstants.FIELD_SECRETS_NOT_BEFORE, "2007-04-05T12:30-02:00");
@@ -123,9 +126,10 @@ public class CompleteBaseCredentialsServiceTest {
         final JsonObject testData = createValidCredentialsObject(secret);
 
         final EventBusMessage msg = createRequestForPayload(CredentialsConstants.CredentialsAction.add, testData);
-        service.processRequest(msg).setHandler(ctx.asyncAssertSuccess(response -> {
-            ctx.assertEquals(HttpURLConnection.HTTP_CREATED, response.getStatus());
-        }));
+        service.processRequest(msg).setHandler(ctx.succeeding( response -> ctx.verify(() -> {
+            assertEquals(HttpURLConnection.HTTP_CREATED, response.getStatus());
+            ctx.completeNow();
+        })));
     }
 
     /**
@@ -136,7 +140,7 @@ public class CompleteBaseCredentialsServiceTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testAddFailsForShortTimestamp(final TestContext ctx) {
+    public void testAddFailsForShortTimestamp(final VertxTestContext ctx) {
 
         final JsonObject secret = new JsonObject()
                 .put(CredentialsConstants.FIELD_SECRETS_NOT_BEFORE, "2007-04-05T14:30");
@@ -144,9 +148,10 @@ public class CompleteBaseCredentialsServiceTest {
         final JsonObject testData = createValidCredentialsObject(secret);
 
         final EventBusMessage msg = createRequestForPayload(CredentialsConstants.CredentialsAction.add, testData);
-        service.processRequest(msg).setHandler(ctx.asyncAssertFailure(t -> {
-            ctx.assertEquals(HttpURLConnection.HTTP_BAD_REQUEST, ((ServiceInvocationException) t).getErrorCode());
-        }));
+        service.processRequest(msg).setHandler(ctx.failing( t -> ctx.verify(() -> {
+            assertEquals(HttpURLConnection.HTTP_BAD_REQUEST, ((ServiceInvocationException) t).getErrorCode());
+            ctx.completeNow();
+        })));
     }
 
     /**
@@ -156,7 +161,7 @@ public class CompleteBaseCredentialsServiceTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testAddFailsForMalformedTimestamp(final TestContext ctx) {
+    public void testAddFailsForMalformedTimestamp(final VertxTestContext ctx) {
 
         final JsonObject secret = new JsonObject()
                 .put(CredentialsConstants.FIELD_SECRETS_NOT_BEFORE, "no-timestamp");
@@ -164,9 +169,10 @@ public class CompleteBaseCredentialsServiceTest {
         final JsonObject testData = createValidCredentialsObject(secret);
 
         final EventBusMessage msg = createRequestForPayload(CredentialsConstants.CredentialsAction.add, testData);
-        service.processRequest(msg).setHandler(ctx.asyncAssertFailure(t -> {
-            ctx.assertEquals(HttpURLConnection.HTTP_BAD_REQUEST, ((ServiceInvocationException) t).getErrorCode());
-        }));
+        service.processRequest(msg).setHandler(ctx.failing( t -> ctx.verify(() -> {
+            assertEquals(HttpURLConnection.HTTP_BAD_REQUEST, ((ServiceInvocationException) t).getErrorCode());
+            ctx.completeNow();
+        })));
     }
 
     /**
@@ -176,16 +182,17 @@ public class CompleteBaseCredentialsServiceTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testAddFailsForMissingSecrets(final TestContext ctx) {
+    public void testAddFailsForMissingSecrets(final VertxTestContext ctx) {
 
         final JsonObject testData = createValidCredentialsObject();
 
         testData.remove(CredentialsConstants.FIELD_SECRETS);
 
         final EventBusMessage msg = createRequestForPayload(CredentialsConstants.CredentialsAction.add, testData);
-        service.processRequest(msg).setHandler(ctx.asyncAssertFailure(t -> {
-            ctx.assertEquals(HttpURLConnection.HTTP_BAD_REQUEST, ((ServiceInvocationException) t).getErrorCode());
-        }));
+        service.processRequest(msg).setHandler(ctx.failing( t -> ctx.verify(() -> {
+            assertEquals(HttpURLConnection.HTTP_BAD_REQUEST, ((ServiceInvocationException) t).getErrorCode());
+            ctx.completeNow();
+        })));
     }
 
     /**
@@ -195,14 +202,15 @@ public class CompleteBaseCredentialsServiceTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testAddFailsForEmptySecrets(final TestContext ctx) {
+    public void testAddFailsForEmptySecrets(final VertxTestContext ctx) {
 
         final JsonObject testData = createValidCredentialsObject(null);
 
         final EventBusMessage msg = createRequestForPayload(CredentialsConstants.CredentialsAction.add, testData);
-        service.processRequest(msg).setHandler(ctx.asyncAssertFailure(t -> {
-            ctx.assertEquals(HttpURLConnection.HTTP_BAD_REQUEST, ((ServiceInvocationException) t).getErrorCode());
-        }));
+        service.processRequest(msg).setHandler(ctx.failing( t -> ctx.verify(() -> {
+            assertEquals(HttpURLConnection.HTTP_BAD_REQUEST, ((ServiceInvocationException) t).getErrorCode());
+            ctx.completeNow();
+        })));
     }
 
     /**
@@ -212,7 +220,7 @@ public class CompleteBaseCredentialsServiceTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testAddSucceedsForValidBcryptSecret(final TestContext ctx) {
+    public void testAddSucceedsForValidBcryptSecret(final VertxTestContext ctx) {
 
         // see https://www.dailycred.com/article/bcrypt-calculator
         final CredentialsObject credentials = CredentialsObject.fromHashedPassword(
@@ -223,19 +231,20 @@ public class CompleteBaseCredentialsServiceTest {
                 null, null, null);
 
         final EventBusMessage msg = createRequestForPayload(CredentialsConstants.CredentialsAction.add, JsonObject.mapFrom(credentials));
-        service.processRequest(msg).setHandler(ctx.asyncAssertSuccess(response -> {
-            ctx.assertEquals(HttpURLConnection.HTTP_CREATED, response.getStatus());
-        }));
+        service.processRequest(msg).setHandler(ctx.succeeding( response -> ctx.verify(() -> {
+            assertEquals(HttpURLConnection.HTTP_CREATED, response.getStatus());
+            ctx.completeNow();
+        })));
     }
 
     /**
      * Verifies that the base service accepts a request for adding and updating clear text
      * hashed password credentials.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testUpdateSucceedsForClearTextPassword(final TestContext ctx) {
+    public void testUpdateSucceedsForClearTextPassword(final VertxTestContext ctx) {
 
         final JsonObject secret = new JsonObject().put(CredentialsConstants.FIELD_SECRETS_PWD_PLAIN, "initial");
         final JsonObject credentials = createValidCredentialsObject(
@@ -243,21 +252,27 @@ public class CompleteBaseCredentialsServiceTest {
                 secret);
 
         final EventBusMessage msg = createRequestForPayload(CredentialsConstants.CredentialsAction.add, credentials);
+
+        final JsonObject updatedSecret = new JsonObject().put(CredentialsConstants.FIELD_SECRETS_PWD_PLAIN, "updated");
+        final JsonObject updatedCredentials = createValidCredentialsObject(
+                CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD,
+                updatedSecret);
+        secret.put(CredentialsConstants.FIELD_SECRETS_PWD_PLAIN, "updated");
+        final EventBusMessage updateMsg = createRequestForPayload(CredentialsConstants.CredentialsAction.update, updatedCredentials);
+
+        final Checkpoint create = ctx.checkpoint();
+        final Checkpoint update = ctx.checkpoint();
         service.processRequest(msg)
             .compose(r -> {
-                ctx.assertEquals(HttpURLConnection.HTTP_CREATED, r.getStatus());
+                assertEquals(HttpURLConnection.HTTP_CREATED, r.getStatus());
                 verify(pwdEncoder).encode("initial");
-                final JsonObject updatedSecret = new JsonObject().put(CredentialsConstants.FIELD_SECRETS_PWD_PLAIN, "updated");
-                final JsonObject updatedCredentials = createValidCredentialsObject(
-                        CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD,
-                        updatedSecret);
-                secret.put(CredentialsConstants.FIELD_SECRETS_PWD_PLAIN, "updated");
-                final EventBusMessage updateMsg = createRequestForPayload(CredentialsConstants.CredentialsAction.update, updatedCredentials);
+                create.flag();
                 return service.processRequest(updateMsg);
-            }).setHandler(ctx.asyncAssertSuccess(r -> {
-                ctx.assertEquals(HttpURLConnection.HTTP_NO_CONTENT, r.getStatus());
+            }).setHandler(ctx.succeeding(r ->  ctx.verify(() -> {
+                assertEquals(HttpURLConnection.HTTP_NO_CONTENT, r.getStatus());
                 verify(pwdEncoder).encode("updated");
-            }));
+                update.flag();
+            })));
     }
 
     /**
@@ -267,7 +282,7 @@ public class CompleteBaseCredentialsServiceTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testAddFailsForMalformedBcryptSecrets(final TestContext ctx) {
+    public void testAddFailsForMalformedBcryptSecrets(final VertxTestContext ctx) {
 
         final JsonObject malformedSecret = new JsonObject()
                 .put(CredentialsConstants.FIELD_SECRETS_HASH_FUNCTION, CredentialsConstants.HASH_FUNCTION_BCRYPT)
@@ -276,9 +291,11 @@ public class CompleteBaseCredentialsServiceTest {
         final JsonObject credentials = createValidCredentialsObject(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, malformedSecret);
 
         final EventBusMessage msg = createRequestForPayload(CredentialsConstants.CredentialsAction.add, credentials);
-        service.processRequest(msg).setHandler(ctx.asyncAssertFailure(t -> {
-            ctx.assertEquals(HttpURLConnection.HTTP_BAD_REQUEST, ((ServiceInvocationException) t).getErrorCode());
-        }));
+
+        service.processRequest(msg).setHandler(ctx.failing(t -> ctx.verify(() -> {
+            assertEquals(HttpURLConnection.HTTP_BAD_REQUEST, ((ServiceInvocationException) t).getErrorCode());
+            ctx.completeNow();
+        })));
     }
 
     /**
@@ -289,7 +306,7 @@ public class CompleteBaseCredentialsServiceTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testAddFailsForBcryptSecretsWithTooManyIterations(final TestContext ctx) {
+    public void testAddFailsForBcryptSecretsWithTooManyIterations(final VertxTestContext ctx) {
 
         // GIVEN a bcrypted password using more than the configured max iterations
         // see https://www.dailycred.com/article/bcrypt-calculator
@@ -301,10 +318,11 @@ public class CompleteBaseCredentialsServiceTest {
                 null, null, null);
         final EventBusMessage msg = createRequestForPayload(CredentialsConstants.CredentialsAction.add, JsonObject.mapFrom(credentials));
         // WHEN a client tries to add hashed password credentials
-        service.processRequest(msg).setHandler(ctx.asyncAssertFailure(t -> {
+        service.processRequest(msg).setHandler(ctx.failing(t -> ctx.verify(() -> {
             // THEN the request fails
-            ctx.assertEquals(HttpURLConnection.HTTP_BAD_REQUEST, ((ServiceInvocationException) t).getErrorCode());
-        }));
+            assertEquals(HttpURLConnection.HTTP_BAD_REQUEST, ((ServiceInvocationException) t).getErrorCode());
+            ctx.completeNow();
+        })));
     }
 
     private static EventBusMessage createRequestForPayload(final CredentialsConstants.CredentialsAction operation, final JsonObject payload) {

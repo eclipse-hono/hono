@@ -12,9 +12,9 @@
  *******************************************************************************/
 package org.eclipse.hono.service.limiting;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * Verifies the behavior of {@link MemoryBasedConnectionLimitStrategy}.

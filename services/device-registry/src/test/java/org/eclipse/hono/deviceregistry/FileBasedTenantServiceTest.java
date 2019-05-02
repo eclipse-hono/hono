@@ -13,6 +13,7 @@
 
 package org.eclipse.hono.deviceregistry;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.*;
@@ -20,15 +21,12 @@ import static org.mockito.Mockito.*;
 import java.net.HttpURLConnection;
 import java.nio.charset.StandardCharsets;
 
-import io.vertx.ext.unit.junit.VertxUnitRunner;
 import org.eclipse.hono.service.tenant.AbstractCompleteTenantServiceTest;
 import org.eclipse.hono.service.tenant.CompleteBaseTenantService;
 import org.eclipse.hono.util.Constants;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 
 import io.vertx.core.Context;
@@ -39,24 +37,20 @@ import io.vertx.core.buffer.Buffer;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.file.FileSystem;
 import io.vertx.core.json.JsonObject;
-import io.vertx.ext.unit.Async;
-import io.vertx.ext.unit.TestContext;
+import io.vertx.junit5.Checkpoint;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 
 
 /**
  * Tests verifying behavior of {@link FileBasedTenantService}.
  *
  */
-@RunWith(VertxUnitRunner.class)
+@ExtendWith(VertxExtension.class)
 public class FileBasedTenantServiceTest extends AbstractCompleteTenantServiceTest {
 
     private static final String FILE_NAME = "/tenants.json";
 
-    /**
-     * Time out each test after five seconds.
-     */
-    @Rule
-    public final Timeout timeout = Timeout.seconds(5);
 
     private Vertx vertx;
     private EventBus eventBus;
@@ -67,7 +61,7 @@ public class FileBasedTenantServiceTest extends AbstractCompleteTenantServiceTes
     /**
      * Sets up fixture.
      */
-    @Before
+    @BeforeEach
     public void setUp() {
         fileSystem = mock(FileSystem.class);
         final Context ctx = mock(Context.class);
@@ -95,7 +89,7 @@ public class FileBasedTenantServiceTest extends AbstractCompleteTenantServiceTes
      */
     @SuppressWarnings({ "unchecked", "rawtypes" })
     @Test
-    public void testDoStartCreatesFile(final TestContext ctx) {
+    public void testDoStartCreatesFile(final VertxTestContext ctx) {
 
         // GIVEN a tenant service configured to persist data to a not yet existing file
         props.setSaveToFile(true);
@@ -113,16 +107,13 @@ public class FileBasedTenantServiceTest extends AbstractCompleteTenantServiceTes
         }).when(fileSystem).readFile(eq(props.getFilename()), any(Handler.class));
 
         // WHEN starting the service
-        final Async startup = ctx.async();
         final Future<Void> startupTracker = Future.future();
-        startupTracker.setHandler(ctx.asyncAssertSuccess(started -> {
-            startup.complete();
-        }));
+        startupTracker.setHandler(ctx.succeeding(started -> ctx.verify(() -> {
+            // THEN the file gets created
+            verify(fileSystem).createFile(eq(FILE_NAME), any(Handler.class));
+            ctx.completeNow();
+        })));
         svc.doStart(startupTracker);
-
-        // THEN the file gets created
-        startup.await();
-        verify(fileSystem).createFile(eq(FILE_NAME), any(Handler.class));
     }
 
     /**
@@ -133,7 +124,7 @@ public class FileBasedTenantServiceTest extends AbstractCompleteTenantServiceTes
      */
     @SuppressWarnings({ "unchecked", "rawtypes" })
     @Test
-    public void testDoStartFailsIfFileCannotBeCreated(final TestContext ctx) {
+    public void testDoStartFailsIfFileCannotBeCreated(final VertxTestContext ctx) {
 
         // GIVEN a tenant service configured to persist data to a not yet existing file
         props.setSaveToFile(true);
@@ -147,7 +138,9 @@ public class FileBasedTenantServiceTest extends AbstractCompleteTenantServiceTes
             return null;
         }).when(fileSystem).createFile(eq(props.getFilename()), any(Handler.class));
         final Future<Void> startupTracker = Future.future();
-        startupTracker.setHandler(ctx.asyncAssertFailure());
+        startupTracker.setHandler(ctx.failing(started -> {
+            ctx.completeNow();
+        }));
         svc.doStart(startupTracker);
     }
 
@@ -159,7 +152,7 @@ public class FileBasedTenantServiceTest extends AbstractCompleteTenantServiceTes
      */
     @SuppressWarnings({ "unchecked", "rawtypes" })
     @Test
-    public void testDoStartIgnoresMalformedJson(final TestContext ctx) {
+    public void testDoStartIgnoresMalformedJson(final VertxTestContext ctx) {
 
         // GIVEN a tenant service configured to read data from a file
         // that contains malformed JSON
@@ -175,9 +168,9 @@ public class FileBasedTenantServiceTest extends AbstractCompleteTenantServiceTes
 
         // WHEN starting the service
         final Future<Void> startupTracker = Future.future();
-        startupTracker.setHandler(ctx.asyncAssertSuccess(started -> {
+        startupTracker.setHandler(ctx.completing(
             // THEN startup succeeds
-        }));
+        ));
         svc.doStart(startupTracker);
     }
 
@@ -188,7 +181,7 @@ public class FileBasedTenantServiceTest extends AbstractCompleteTenantServiceTes
      */
     @SuppressWarnings({ "unchecked", "rawtypes" })
     @Test
-    public void testDoStartLoadsTenants(final TestContext ctx) {
+    public void testDoStartLoadsTenants(final VertxTestContext ctx) {
 
         // GIVEN a service configured with a file name
         props.setFilename(FILE_NAME);
@@ -201,16 +194,14 @@ public class FileBasedTenantServiceTest extends AbstractCompleteTenantServiceTes
         }).when(fileSystem).readFile(eq(props.getFilename()), any(Handler.class));
 
         // WHEN the service is started
-        final Async startup = ctx.async();
         final Future<Void> startFuture = Future.future();
-        startFuture.setHandler(ctx.asyncAssertSuccess(s -> {
-            startup.complete();
-        }));
+        startFuture.setHandler(ctx.succeeding(s -> ctx.verify(() -> {
+            // THEN the credentials from the file are loaded
+            assertTenantExists(svc, Constants.DEFAULT_TENANT, ctx);
+        })));
         svc.doStart(startFuture);
 
-        // THEN the credentials from the file are loaded
-        startup.await();
-        assertTenantExists(svc, Constants.DEFAULT_TENANT, ctx);
+
     }
 
     /**
@@ -220,7 +211,7 @@ public class FileBasedTenantServiceTest extends AbstractCompleteTenantServiceTes
      */
     @SuppressWarnings({ "unchecked", "rawtypes" })
     @Test
-    public void testDoStartwithStartEmptyIgnoreTenants(final TestContext ctx) {
+    public void testDoStartwithStartEmptyIgnoreTenants(final VertxTestContext ctx) {
 
         // GIVEN a service configured with a file name
         props.setFilename(FILE_NAME);
@@ -228,16 +219,13 @@ public class FileBasedTenantServiceTest extends AbstractCompleteTenantServiceTes
         when(fileSystem.existsBlocking(props.getFilename())).thenReturn(Boolean.TRUE);
 
         // WHEN the service is started
-        final Async startup = ctx.async();
         final Future<Void> startFuture = Future.future();
-        startFuture.setHandler(ctx.asyncAssertSuccess(s -> {
-            startup.complete();
-        }));
+        startFuture.setHandler(ctx.succeeding(s -> ctx.verify(() -> {
+            // THEN the credentials from the file are loaded
+            verify(fileSystem, never()).readFile(anyString(), any(Handler.class));
+            ctx.completeNow();
+        })));
         svc.doStart(startFuture);
-
-        // THEN the credentials from the file are loaded
-        startup.await();
-        verify(fileSystem, never()).readFile(anyString(), any(Handler.class));
     }
 
     /**
@@ -248,46 +236,55 @@ public class FileBasedTenantServiceTest extends AbstractCompleteTenantServiceTes
      */
     @SuppressWarnings({ "unchecked", "rawtypes" })
     @Test
-    public void testLoadTenantsCanReadOutputOfSaveToFile(final TestContext ctx) {
+    public void testLoadTenantsCanReadOutputOfSaveToFile(final VertxTestContext ctx) {
 
         // GIVEN a service configured to persist tenants to file
         // that contains some tenants
         props.setFilename(FILE_NAME);
         props.setSaveToFile(true);
         when(fileSystem.existsBlocking(FILE_NAME)).thenReturn(Boolean.TRUE);
-        final Async countDown = ctx.async();
+
+        final Checkpoint test = ctx.checkpoint(3);
+
+        final Future countDown = Future.future();
+
         addTenant(Constants.DEFAULT_TENANT).compose(ok -> addTenant("OTHER_TENANT"))
-            .setHandler(ctx.asyncAssertSuccess(ok -> countDown.complete()));
-        countDown.await();
+            .setHandler(ctx.succeeding(ok -> {
+                countDown.complete();
+                test.flag();
+            }));
 
-        // WHEN saving the content to the file and clearing the tenant registry
-        final Async write = ctx.async();
-        doAnswer(invocation -> {
-            final Handler handler = invocation.getArgument(2);
-            handler.handle(Future.succeededFuture());
-            write.complete();
-            return null;
-        }).when(fileSystem).writeFile(eq(FILE_NAME), any(Buffer.class), any(Handler.class));
+        countDown.setHandler( r -> {
 
-        svc.saveToFile();
-        write.await();
-        final ArgumentCaptor<Buffer> buffer = ArgumentCaptor.forClass(Buffer.class);
-        verify(fileSystem).writeFile(eq(FILE_NAME), buffer.capture(), any(Handler.class));
-        svc.clear();
-        assertTenantDoesNotExist(svc, Constants.DEFAULT_TENANT, ctx);
+            final Future write = Future.future();
+            // WHEN saving the content to the file and clearing the tenant registry
+            doAnswer(invocation -> {
+                final Handler handler = invocation.getArgument(2);
+                handler.handle(Future.succeededFuture());
+                write.complete();
+                test.flag();
+                return null;
+            }).when(fileSystem).writeFile(eq(FILE_NAME), any(Buffer.class), any(Handler.class));
 
-        // THEN the tenants can be loaded back in from the file
-        final Async read = ctx.async();
-        doAnswer(invocation -> {
-            final Handler handler = invocation.getArgument(1);
-            handler.handle(Future.succeededFuture(buffer.getValue()));
-            read.complete();
-            return null;
-        }).when(fileSystem).readFile(eq(FILE_NAME), any(Handler.class));
-        svc.loadTenantData();
-        read.await();
-        assertTenantExists(svc, Constants.DEFAULT_TENANT, ctx);
-        assertTenantExists(svc, "OTHER_TENANT", ctx);
+            svc.saveToFile();
+            write.setHandler( w -> {
+                final ArgumentCaptor<Buffer> buffer = ArgumentCaptor.forClass(Buffer.class);
+                verify(fileSystem).writeFile(eq(FILE_NAME), buffer.capture(), any(Handler.class));
+                svc.clear();
+                assertTenantDoesNotExist(svc, Constants.DEFAULT_TENANT, ctx);
+
+                // THEN the tenants can be loaded back in from the file
+                doAnswer(invocation -> {
+                    final Handler handler = invocation.getArgument(1);
+                    handler.handle(Future.succeededFuture(buffer.getValue()));
+                    assertTenantExists(svc, Constants.DEFAULT_TENANT, ctx);
+                    assertTenantExists(svc, "OTHER_TENANT", ctx);
+                    test.flag();
+                    return null;
+                }).when(fileSystem).readFile(eq(FILE_NAME), any(Handler.class));
+                svc.loadTenantData();
+            });
+        });
     }
 
     /**
@@ -297,17 +294,18 @@ public class FileBasedTenantServiceTest extends AbstractCompleteTenantServiceTes
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testAddTenantSucceedsIfModificationIsDisabled(final TestContext ctx) {
+    public void testAddTenantSucceedsIfModificationIsDisabled(final VertxTestContext ctx) {
 
         // GIVEN a service containing a set of tenants
         // that has been configured to not allow modification of entries
         props.setModificationEnabled(false);
 
         // WHEN trying to add a new tenant
-        svc.add("fancy-new-tenant", new JsonObject(), ctx.asyncAssertSuccess(s -> {
+        svc.add("fancy-new-tenant", new JsonObject(), ctx.succeeding(s -> ctx.verify(() -> {
             // THEN the request succeeds
-            ctx.assertEquals(HttpURLConnection.HTTP_CREATED, s.getStatus());
-        }));
+            assertEquals(HttpURLConnection.HTTP_CREATED, s.getStatus());
+            ctx.completeNow();
+        })));
     }
 
     /**
@@ -316,17 +314,18 @@ public class FileBasedTenantServiceTest extends AbstractCompleteTenantServiceTes
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testRemoveTenantsFailsIfModificationIsDisabled(final TestContext ctx) {
+    public void testRemoveTenantsFailsIfModificationIsDisabled(final VertxTestContext ctx) {
 
         // GIVEN a service containing a set of tenants
         // that has been configured to not allow modification of entries
         props.setModificationEnabled(false);
 
         // WHEN trying to update the tenant
-        svc.remove("tenant", ctx.asyncAssertSuccess(s -> {
+        svc.remove("tenant", ctx.succeeding(s -> ctx.verify(() -> {
             // THEN the update fails
-            ctx.assertEquals(HttpURLConnection.HTTP_FORBIDDEN, s.getStatus());
-        }));
+            assertEquals(HttpURLConnection.HTTP_FORBIDDEN, s.getStatus());
+            ctx.completeNow();
+        })));
     }
 
     /**
@@ -335,17 +334,18 @@ public class FileBasedTenantServiceTest extends AbstractCompleteTenantServiceTes
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testUpdateTenantsFailsIfModificationIsDisabled(final TestContext ctx) {
+    public void testUpdateTenantsFailsIfModificationIsDisabled(final VertxTestContext ctx) {
 
         // GIVEN a service containing a set of tenants
         // that has been configured to not allow modification of entries
         props.setModificationEnabled(false);
 
         // WHEN trying to update the tenant
-        svc.update("tenant", new JsonObject(), ctx.asyncAssertSuccess(s -> {
+        svc.update("tenant", new JsonObject(), ctx.succeeding(s -> ctx.verify(() -> {
             // THEN the update fails
-            ctx.assertEquals(HttpURLConnection.HTTP_FORBIDDEN, s.getStatus());
-        }));
+            assertEquals(HttpURLConnection.HTTP_FORBIDDEN, s.getStatus());
+            ctx.completeNow();
+        })));
     }
 
 }

@@ -13,6 +13,8 @@
 
 package org.eclipse.hono.service.registration;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.Mockito.mock;
 
 import java.net.HttpURLConnection;
@@ -25,11 +27,11 @@ import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.RegistrationResult;
-import org.junit.BeforeClass;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.Rule;
-import org.junit.Test;
 import org.junit.rules.Timeout;
-import org.junit.runner.RunWith;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
@@ -37,16 +39,15 @@ import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import io.vertx.ext.unit.Async;
-import io.vertx.ext.unit.TestContext;
-import io.vertx.ext.unit.junit.VertxUnitRunner;
+import io.vertx.junit5.VertxTestContext;
+import io.vertx.junit5.VertxExtension;
 
 
 /**
  * Tests verifying behavior of {@link BaseRegistrationService}.
  *
  */
-@RunWith(VertxUnitRunner.class)
+@ExtendWith(VertxExtension.class)
 public class BaseRegistrationServiceTest {
 
     private static String secret = "dafhkjsdahfuksahuioahgfdahsgjkhfdjkg";
@@ -62,7 +63,7 @@ public class BaseRegistrationServiceTest {
     /**
      * Initializes common properties.
      */
-    @BeforeClass
+    @BeforeAll
     public static void init() {
         vertx = mock(Vertx.class);
         props = new SignatureSupportingConfigProperties();
@@ -76,19 +77,20 @@ public class BaseRegistrationServiceTest {
      * @param ctx The vertx unit test context.
      */
     @Test
-    public void testStartupFailsIfNoRegistrationAssertionFactoryIsSet(final TestContext ctx) {
+    public void testStartupFailsIfNoRegistrationAssertionFactoryIsSet(final VertxTestContext ctx) {
 
         // GIVEN a registry without an assertion factory being set
         final BaseRegistrationService<ServiceConfigProperties> registrationService = newRegistrationService();
 
         // WHEN starting the service
-        final Async startupFailure = ctx.async();
+
         final Future<Void> startFuture = Future.future();
-        startFuture.setHandler(ctx.asyncAssertFailure(t -> startupFailure.complete()));
+        startFuture.setHandler(ctx.failing(t -> {
+            // THEN startup fails
+            ctx.completeNow();
+        }));
         registrationService.doStart(startFuture);
 
-        // THEN startup fails
-        startupFailure.await();
     }
 
     /**
@@ -97,18 +99,19 @@ public class BaseRegistrationServiceTest {
      * @param ctx The vertx unit test context.
      */
     @Test
-    public void testAssertDeviceRegistrationFailsForDisabledDevice(final TestContext ctx) {
+    public void testAssertDeviceRegistrationFailsForDisabledDevice(final VertxTestContext ctx) {
 
         // GIVEN a registry that contains a disabled device
         final BaseRegistrationService<ServiceConfigProperties> registrationService = newRegistrationService();
         registrationService.setRegistrationAssertionFactory(RegistrationAssertionHelperImpl.forSigning(vertx, props));
 
         // WHEN trying to assert the device's registration status
-        registrationService.assertRegistration(Constants.DEFAULT_TENANT, "4712", ctx.asyncAssertSuccess(result -> {
+        registrationService.assertRegistration(Constants.DEFAULT_TENANT, "4712", ctx.succeeding(result -> ctx.verify(() -> {
             // THEN the response does not contain a JWT token
-            ctx.assertEquals(result.getStatus(), HttpURLConnection.HTTP_NOT_FOUND);
-            ctx.assertNull(result.getPayload());
-        }));
+            assertEquals(result.getStatus(), HttpURLConnection.HTTP_NOT_FOUND);
+            assertNull(result.getPayload());
+            ctx.completeNow();
+        })));
     }
 
     /**
@@ -117,18 +120,19 @@ public class BaseRegistrationServiceTest {
      * @param ctx The vertx unit test context.
      */
     @Test
-    public void testAssertDeviceRegistrationFailsForNonExistingDevice(final TestContext ctx) {
+    public void testAssertDeviceRegistrationFailsForNonExistingDevice(final VertxTestContext ctx) {
 
         // GIVEN a registry that does not contain any devices
         final BaseRegistrationService<ServiceConfigProperties> registrationService = newRegistrationService();
         registrationService.setRegistrationAssertionFactory(RegistrationAssertionHelperImpl.forSigning(vertx, props));
 
         // WHEN trying to assert a device's registration status
-        registrationService.assertRegistration(Constants.DEFAULT_TENANT, "non-existent", ctx.asyncAssertSuccess(result -> {
+        registrationService.assertRegistration(Constants.DEFAULT_TENANT, "non-existent", ctx.succeeding(result -> ctx.verify(() -> {
             // THEN the response does not contain a JWT token
-            ctx.assertEquals(result.getStatus(), HttpURLConnection.HTTP_NOT_FOUND);
-            ctx.assertNull(result.getPayload());
-        }));
+            assertEquals(result.getStatus(), HttpURLConnection.HTTP_NOT_FOUND);
+            assertNull(result.getPayload());
+            ctx.completeNow();
+        })));
     }
 
     /**
@@ -137,19 +141,20 @@ public class BaseRegistrationServiceTest {
      * @param ctx The vertx unit test context.
      */
     @Test
-    public void testAssertDeviceRegistrationFailsForNonExistingGateway(final TestContext ctx) {
+    public void testAssertDeviceRegistrationFailsForNonExistingGateway(final VertxTestContext ctx) {
 
         // GIVEN a registry that contains an enabled device but no gateway
         final BaseRegistrationService<ServiceConfigProperties> registrationService = newRegistrationService();
         registrationService.setRegistrationAssertionFactory(RegistrationAssertionHelperImpl.forSigning(vertx, props));
 
         // WHEN trying to assert the device's registration status for a gateway
-        registrationService.assertRegistration(Constants.DEFAULT_TENANT, "4711", "non-existent-gw", ctx.asyncAssertSuccess(result -> {
+        registrationService.assertRegistration(Constants.DEFAULT_TENANT, "4711", "non-existent-gw", ctx.succeeding(result -> ctx.verify(() -> {
             // THEN the response contains a 403 status
-            ctx.assertEquals(result.getStatus(), HttpURLConnection.HTTP_FORBIDDEN);
+            assertEquals(result.getStatus(), HttpURLConnection.HTTP_FORBIDDEN);
             // and does not contain a JWT token
-            ctx.assertNull(result.getPayload());
-        }));
+            assertNull(result.getPayload());
+            ctx.completeNow();
+        })));
     }
 
     /**
@@ -160,7 +165,7 @@ public class BaseRegistrationServiceTest {
      * @param ctx The vertx unit test context.
      */
     @Test
-    public void testAssertDeviceRegistrationFailsForDeviceWithMultipleVias(final TestContext ctx) {
+    public void testAssertDeviceRegistrationFailsForDeviceWithMultipleVias(final VertxTestContext ctx) {
 
         // GIVEN a registry that contains an enabled device that is configured to
         // be connected to an enabled gateway
@@ -168,12 +173,13 @@ public class BaseRegistrationServiceTest {
         registrationService.setRegistrationAssertionFactory(RegistrationAssertionHelperImpl.forSigning(vertx, props));
 
         // WHEN trying to assert the device's registration status for the gateway
-        registrationService.assertRegistration(Constants.DEFAULT_TENANT, "4714", "gw-1", ctx.asyncAssertSuccess(result -> {
+        registrationService.assertRegistration(Constants.DEFAULT_TENANT, "4714", "gw-1", ctx.succeeding(result -> ctx.verify(() -> {
             // THEN the response contains a 501 status
-            ctx.assertEquals(result.getStatus(), HttpURLConnection.HTTP_NOT_IMPLEMENTED);
+            assertEquals(result.getStatus(), HttpURLConnection.HTTP_NOT_IMPLEMENTED);
             // and does not contain a JWT token
-            ctx.assertNull(result.getPayload());
-        }));
+            assertNull(result.getPayload());
+            ctx.completeNow();
+        })));
     }
 
     /**
@@ -182,7 +188,7 @@ public class BaseRegistrationServiceTest {
      * @param ctx The vertx unit test context.
      */
     @Test
-    public void testAssertDeviceRegistrationFailsForDisabledGateway(final TestContext ctx) {
+    public void testAssertDeviceRegistrationFailsForDisabledGateway(final VertxTestContext ctx) {
 
         // GIVEN a registry that contains an enabled device
         // and a gateway that the device is configured for but
@@ -191,12 +197,13 @@ public class BaseRegistrationServiceTest {
         registrationService.setRegistrationAssertionFactory(RegistrationAssertionHelperImpl.forSigning(vertx, props));
 
         // WHEN trying to assert the device's registration status for a gateway
-        registrationService.assertRegistration(Constants.DEFAULT_TENANT, "4713", "gw-3", ctx.asyncAssertSuccess(result -> {
+        registrationService.assertRegistration(Constants.DEFAULT_TENANT, "4713", "gw-3", ctx.succeeding(result -> ctx.verify(() -> {
             // THEN the response contains a 403 status
-            ctx.assertEquals(result.getStatus(), HttpURLConnection.HTTP_FORBIDDEN);
+            assertEquals(result.getStatus(), HttpURLConnection.HTTP_FORBIDDEN);
             // and does not contain a JWT token
-            ctx.assertNull(result.getPayload());
-        }));
+            assertNull(result.getPayload());
+            ctx.completeNow();
+        })));
     }
 
     /**
@@ -206,7 +213,7 @@ public class BaseRegistrationServiceTest {
      * @param ctx The vertx unit test context.
      */
     @Test
-    public void testAssertDeviceRegistrationFailsForWrongGateway(final TestContext ctx) {
+    public void testAssertDeviceRegistrationFailsForWrongGateway(final VertxTestContext ctx) {
 
         // GIVEN a registry that contains an enabled device and two gateways:
         // 1. the gateway that the device is configured for.
@@ -215,12 +222,13 @@ public class BaseRegistrationServiceTest {
         registrationService.setRegistrationAssertionFactory(RegistrationAssertionHelperImpl.forSigning(vertx, props));
 
         // WHEN trying to assert the device's registration status for the wrong gateway
-        registrationService.assertRegistration(Constants.DEFAULT_TENANT, "4711", "gw-2", ctx.asyncAssertSuccess(result -> {
+        registrationService.assertRegistration(Constants.DEFAULT_TENANT, "4711", "gw-2", ctx.succeeding(result -> ctx.verify(() -> {
             // THEN the response contains a 403 status
-            ctx.assertEquals(result.getStatus(), HttpURLConnection.HTTP_FORBIDDEN);
+            assertEquals(result.getStatus(), HttpURLConnection.HTTP_FORBIDDEN);
             // and does not contain a JWT token
-            ctx.assertNull(result.getPayload());
-        }));
+            assertNull(result.getPayload());
+            ctx.completeNow();
+        })));
     }
 
     private BaseRegistrationService<ServiceConfigProperties> newRegistrationService() {

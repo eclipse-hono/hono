@@ -14,12 +14,13 @@
 package org.eclipse.hono.service;
 
 import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertThat;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import org.eclipse.hono.util.EventBusMessage;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
@@ -36,7 +37,7 @@ public class EventBusServiceTest {
     /**
      * Sets up the fixture.
      */
-    @BeforeClass
+    @BeforeAll
     public static void setUp() {
         service = new EventBusService<Object>() {
 
@@ -90,13 +91,13 @@ public class EventBusServiceTest {
                 .put("intValue", 42);
 
         final String stringValue = EventBusService.getTypesafeValueForField(String.class, payload, "stringValue");
-        Assert.assertEquals("foo", stringValue);
+        assertEquals("foo", stringValue);
 
         final Integer intValue = EventBusService.getTypesafeValueForField(Integer.class, payload, "intValue");
-        Assert.assertEquals(Integer.valueOf(42), intValue);
+       assertEquals(Integer.valueOf(42), intValue);
 
         final Boolean booleanValue = EventBusService.getTypesafeValueForField(Boolean.class, payload, "booleanValue");
-        Assert.assertEquals(Boolean.TRUE, booleanValue);
+        assertEquals(Boolean.TRUE, booleanValue);
     }
 
     /**
@@ -107,10 +108,10 @@ public class EventBusServiceTest {
         final JsonObject device = new JsonObject().put("device-id", "someValue");
 
         final String stringValue = EventBusService.getTypesafeValueForField(String.class, device, "device-id");
-        Assert.assertEquals("someValue", stringValue);
+        assertEquals("someValue", stringValue);
 
         final Integer intValue = EventBusService.getTypesafeValueForField(Integer.class, device, "device-id");
-        Assert.assertNull(intValue);
+        assertNull(intValue);
     }
 
     /**
@@ -121,7 +122,6 @@ public class EventBusServiceTest {
         final JsonObject device = new JsonObject().put("device-id", (String) null);
 
         final String value = EventBusService.getTypesafeValueForField(String.class, device, "device-id");
-        Assert.assertNull(value);
+        assertNull(value);
     }
-
 }
