@@ -30,6 +30,7 @@ import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.config.VertxProperties;
 import org.eclipse.hono.service.cache.SpringCacheProvider;
 import org.eclipse.hono.service.plan.PrometheusBasedResourceLimitChecks;
+import org.eclipse.hono.service.plan.PrometheusBasedResourceLimitChecksConfig;
 import org.eclipse.hono.service.plan.ResourceLimitChecks;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
@@ -384,7 +385,7 @@ public abstract class AbstractAdapterConfig {
 
     /**
      * Exposes configuration properties for vert.x.
-     * 
+     *
      * @return The properties.
      */
     @ConfigurationProperties("hono.vertx")
@@ -400,8 +401,17 @@ public abstract class AbstractAdapterConfig {
      * @return A new cache provider or {@code null} if no cache should be used.
      */
     private static CacheProvider newGuavaCache(final RequestResponseClientConfigProperties config) {
-        final int minCacheSize = config.getResponseCacheMinSize();
-        final long maxCacheSize = config.getResponseCacheMaxSize();
+        return newGuavaCache(config.getResponseCacheMinSize(), config.getResponseCacheMaxSize());
+    }
+
+    /**
+     * Create a new cache provider based on Guava and Spring Cache.
+     *
+     * @param minCacheSize The minimum size of the cache.
+     * @param maxCacheSize the maximum size of the cache.
+     * @return A new cache provider or {@code null} if no cache should be used.
+     */
+    private static CacheProvider newGuavaCache(final int minCacheSize, final long maxCacheSize) {
 
         if (maxCacheSize <= 0) {
             return null;
@@ -441,14 +451,27 @@ public abstract class AbstractAdapterConfig {
     }
 
     /**
+     * Exposes configuration properties for ResourceLimitChecks as a Spring bean.
+     *
+     * @return The properties.
+     */
+    @Bean
+    @ConfigurationProperties(prefix = "hono.plan.prometheusBased")
+    @ConditionalOnProperty(name = "hono.plan.prometheusBased.host")
+    public PrometheusBasedResourceLimitChecksConfig resourceLimitChecksConfig() {
+        return new PrometheusBasedResourceLimitChecksConfig();
+    }
+
+    /**
      * Creates a new instance of {@link ResourceLimitChecks} based on prometheus metrics data.
      * 
      * @return A ResourceLimitChecks instance.
      */
     @Bean
-    @ConfigurationProperties(prefix = "hono.plan.prometheusBased")
     @ConditionalOnProperty(name = "hono.plan.prometheusBased.host")
     public ResourceLimitChecks resourceLimitChecks() {
-        return new PrometheusBasedResourceLimitChecks(WebClient.create(vertx()));
+        final PrometheusBasedResourceLimitChecksConfig config = resourceLimitChecksConfig();
+        return new PrometheusBasedResourceLimitChecks(WebClient.create(vertx()), config,
+                newGuavaCache(config.getCacheMinSize(), config.getCacheMaxSize()));
     }
 }

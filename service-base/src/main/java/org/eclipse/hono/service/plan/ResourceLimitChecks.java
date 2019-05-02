@@ -33,4 +33,17 @@ public interface ResourceLimitChecks {
      *         if the check could not be performed.
      */
     Future<Boolean> isConnectionLimitReached(TenantObject tenantObject);
+
+    /**
+     * Checks if the maximum limit for the messages configured for a tenant
+     * have been reached.
+     *
+     * @param tenantObject The tenant configuration to check the limit against.
+     * @param payloadSize The message payload size in bytes.
+     * @return A future indicating the outcome of the check.
+     *         <p>
+     *         The future will be failed with a {@link ServiceInvocationException}
+     *         if the check could not be performed.
+     */
+    Future<Boolean> isMessageLimitReached(TenantObject tenantObject, long payloadSize);
 }
