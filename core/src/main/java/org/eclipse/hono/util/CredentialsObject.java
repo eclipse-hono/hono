@@ -189,7 +189,6 @@ public final class CredentialsObject extends JsonBackedValueObject {
     @JsonIgnore
     public JsonArray getSecrets() {
         return Optional.ofNullable((JsonArray) getProperty(CredentialsConstants.FIELD_SECRETS))
-                .map(secrets -> secrets)
                 .orElseGet(() -> {
                     final JsonArray result = new JsonArray();
                     setProperty(CredentialsConstants.FIELD_SECRETS, result);
