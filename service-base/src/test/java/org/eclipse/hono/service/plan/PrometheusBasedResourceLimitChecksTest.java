@@ -16,7 +16,15 @@ import static java.time.format.DateTimeFormatter.ISO_LOCAL_DATE;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.core.IsNull.nullValue;
 import static org.junit.Assert.assertThat;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.time.LocalDate;
 
@@ -25,23 +33,91 @@ import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantObject;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 
-import io.vertx.core.Vertx;
+import io.vertx.core.AsyncResult;
+import io.vertx.core.Future;
+import io.vertx.core.Handler;
+import io.vertx.core.buffer.Buffer;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import io.vertx.ext.unit.TestContext;
+import io.vertx.ext.unit.junit.VertxUnitRunner;
+import io.vertx.ext.web.client.HttpRequest;
+import io.vertx.ext.web.client.HttpResponse;
+import io.vertx.ext.web.client.WebClient;
+import io.vertx.ext.web.client.predicate.ResponsePredicate;
+import io.vertx.ext.web.codec.BodyCodec;
 
 /**
  * Verifies the behavior of {@link PrometheusBasedResourceLimitChecks}.
  */
+@RunWith(VertxUnitRunner.class)
 public class PrometheusBasedResourceLimitChecksTest {
 
+    private static final int DEFAULT_PORT = 8080;
+    private static final String DEFAULT_HOST = "localhost";
+
     private PrometheusBasedResourceLimitChecks limitChecksImpl;
+    private WebClient webClient;
+    private HttpRequest<Buffer> request;
 
     /**
      * Sets up the fixture.
      */
+    @SuppressWarnings("unchecked")
     @Before
     public void setup() {
-        limitChecksImpl = new PrometheusBasedResourceLimitChecks(mock(Vertx.class));
+
+        request = mock(HttpRequest.class);
+        when(request.addQueryParam(anyString(), anyString())).thenReturn(request);
+        when(request.expect(any(ResponsePredicate.class))).thenReturn(request);
+        when(request.as(any(BodyCodec.class))).thenReturn(request);
+        webClient = mock(WebClient.class);
+        when(webClient.get(anyInt(), anyString(), anyString())).thenReturn(request);
+        limitChecksImpl = new PrometheusBasedResourceLimitChecks(webClient);
+        limitChecksImpl.setHost(DEFAULT_HOST);
+        limitChecksImpl.setPort(DEFAULT_PORT);
+    }
+
+    /**
+     * Verifies that the connection limit check returns {@code false} if the limit
+     * is not yet reached.
+     * 
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testConnectionLimitIsNotReached(final TestContext ctx) {
+
+        givenCurrentConnections(9);
+        final JsonObject limitsConfig = new JsonObject()
+                .put(PrometheusBasedResourceLimitChecks.FIELD_MAX_CONNECTIONS, 10);
+        final TenantObject tenant = TenantObject.from(Constants.DEFAULT_TENANT, true);
+        tenant.setProperty(TenantConstants.FIELD_RESOURCE_LIMITS, limitsConfig);
+        limitChecksImpl.isConnectionLimitReached(tenant).setHandler(ctx.asyncAssertSuccess(b -> {
+            ctx.assertEquals(Boolean.FALSE, b);
+            verify(webClient).get(eq(DEFAULT_PORT), eq(DEFAULT_HOST), anyString());
+        }));
+    }
+
+    /**
+     * Verifies that the connection limit check returns {@code true} if the limit
+     * is reached.
+     * 
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testConnectionLimitIsReached(final TestContext ctx) {
+
+        givenCurrentConnections(10);
+        final JsonObject limitsConfig = new JsonObject()
+                .put(PrometheusBasedResourceLimitChecks.FIELD_MAX_CONNECTIONS, 10);
+        final TenantObject tenant = TenantObject.from(Constants.DEFAULT_TENANT, true);
+        tenant.setProperty(TenantConstants.FIELD_RESOURCE_LIMITS, limitsConfig);
+        limitChecksImpl.isConnectionLimitReached(tenant).setHandler(ctx.asyncAssertSuccess(b -> {
+            ctx.assertEquals(Boolean.TRUE, b);
+            verify(webClient).get(eq(DEFAULT_PORT), eq(DEFAULT_HOST), anyString());
+        }));
     }
 
     /**
@@ -118,5 +194,24 @@ public class PrometheusBasedResourceLimitChecksTest {
     public void testEffectiveSinceWhenNotSet() {
         final TenantObject tenant = TenantObject.from(Constants.DEFAULT_TENANT, true);
         assertThat(limitChecksImpl.getEffectiveSince(tenant), is(nullValue()));
+    }
+
+    @SuppressWarnings("unchecked")
+    private void givenCurrentConnections(final int currentConnections) {
+        doAnswer(invocation -> {
+            final Handler<AsyncResult<HttpResponse<JsonObject>>> responseHandler = invocation.getArgument(0);
+            final HttpResponse<JsonObject> response = mock(HttpResponse.class);
+            when(response.body()).thenReturn(createPrometheusResponse(currentConnections));
+            responseHandler.handle(Future.succeededFuture(response));
+            return null;
+        }).when(request).send(any(Handler.class));
+    }
+
+    private JsonObject createPrometheusResponse(final int connections) {
+        return new JsonObject()
+                .put("status", "success")
+                .put("data", new JsonObject()
+                        .put("result", new JsonArray().add(new JsonObject()
+                                .put("value", new JsonArray().add("timestamp").add(String.valueOf(connections))))));
     }
 }

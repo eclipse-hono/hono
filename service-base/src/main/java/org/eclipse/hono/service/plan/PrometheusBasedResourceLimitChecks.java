@@ -18,8 +18,6 @@ import java.time.format.DateTimeParseException;
 import java.util.Objects;
 import java.util.Optional;
 
-import javax.annotation.PostConstruct;
-
 import org.eclipse.hono.service.metric.MicrometerBasedMetrics;
 import org.eclipse.hono.util.PortConfigurationHelper;
 import org.eclipse.hono.util.TenantObject;
@@ -27,7 +25,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.vertx.core.Future;
-import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.HttpResponse;
@@ -81,22 +78,24 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
      * The name of the property that contains the date on which the data volume limit came into effect.
      */
     static final String FIELD_EFFECTIVE_SINCE = "effective-since";
+
     private static final String CONNECTIONS_METRIC_NAME = MicrometerBasedMetrics.METER_CONNECTIONS_AUTHENTICATED
             .replace(".", "_");
     private static final Logger log = LoggerFactory.getLogger(PrometheusBasedResourceLimitChecks.class);
+    private static final String QUERY_URI = "/api/v1/query";
+
     private final WebClient client;
     private String host;
     private int port = 9090;
-    private String queryUrl;
 
     /**
      * Creates new checks.
      *
-     * @param vertx The vert.x instance to use for creating a web client.
+     * @param webClient The client to use for querying the Prometheus server.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
-    public PrometheusBasedResourceLimitChecks(final Vertx vertx) {
-        this.client = WebClient.create(Objects.requireNonNull(vertx));
+    public PrometheusBasedResourceLimitChecks(final WebClient webClient) {
+        this.client = Objects.requireNonNull(webClient);
     }
 
     @Override
@@ -229,16 +228,12 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
                 .orElse(null);
     }
 
-    @PostConstruct
-    private void init() {
-        queryUrl = String.format("http://%s:%s/api/v1/query", getHost(), getPort());
-    }
-
     private Future<Long> executeQuery(final String query) {
 
         final Future<Long> result = Future.future();
-        log.trace("running query [{}] against Prometheus backend [{}]", query, queryUrl);
-        client.getAbs(queryUrl)
+        log.trace("running query [{}] against Prometheus backend [http://{}:{}{}]",
+                query, host, port, QUERY_URI);
+        client.get(port, host, QUERY_URI)
         .addQueryParam("query", query)
         .expect(ResponsePredicate.SC_OK)
         .as(BodyCodec.jsonObject())
@@ -247,8 +242,7 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
                 final HttpResponse<JsonObject> response = sendAttempt.result();
                 result.complete(extractLongValue(response.body()));
             } else {
-                log.debug("error fetching result from Prometheus [url: {}, query: {}]: {}",
-                        queryUrl, query, sendAttempt.cause().getMessage());
+                log.debug("error fetching result from Prometheus: {}", sendAttempt.cause().getMessage());
                 result.fail(sendAttempt.cause());
             }
         });
