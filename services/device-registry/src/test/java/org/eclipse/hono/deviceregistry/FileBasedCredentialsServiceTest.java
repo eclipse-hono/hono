@@ -338,15 +338,17 @@ public class FileBasedCredentialsServiceTest extends AbstractCompleteCredentials
         // GIVEN a registry containing a set of credentials
         // that has been configured to not allow modification of entries
         props.setModificationEnabled(false);
-        register(getCompleteCredentialsService(), "tenant", "device", "myId", "myType", ctx);
+        final Future registration = Future.future();
+        register(getCompleteCredentialsService(), "tenant", "device", "myId", "myType", ctx, registration);
 
         // WHEN trying to update the credentials
-        svc.update("tenant", new JsonObject(), ctx.succeeding(s -> ctx.verify(() -> {
-            // THEN the update fails
-            assertEquals(HttpURLConnection.HTTP_FORBIDDEN, s.getStatus());
-            ctx.completeNow();
-        })));
-
+        registration.setHandler(r-> {
+            svc.update("tenant", new JsonObject(), ctx.succeeding(s -> ctx.verify(() -> {
+                // THEN the update fails
+                assertEquals(HttpURLConnection.HTTP_FORBIDDEN, s.getStatus());
+                ctx.completeNow();
+            })));
+        });
     }
 
     /**
@@ -360,13 +362,16 @@ public class FileBasedCredentialsServiceTest extends AbstractCompleteCredentials
         // GIVEN a registry containing a set of credentials
         // that has been configured to not allow modification of entries
         props.setModificationEnabled(false);
-        register(getCompleteCredentialsService(), "tenant", "device", "myId", "myType", ctx);
+        final Future registration = Future.future();
+        register(getCompleteCredentialsService(), "tenant", "device", "myId", "myType", ctx, registration);
 
         // WHEN trying to remove the credentials
-        svc.update("tenant", new JsonObject(), ctx.succeeding(s -> ctx.verify(() -> {
-            // THEN the removal fails
-            assertEquals(HttpURLConnection.HTTP_FORBIDDEN, s.getStatus());
-            ctx.completeNow();
-        })));
+        registration.setHandler(r-> {
+            svc.update("tenant", new JsonObject(), ctx.succeeding(s -> ctx.verify(() -> {
+                // THEN the removal fails
+                assertEquals(HttpURLConnection.HTTP_FORBIDDEN, s.getStatus());
+                ctx.completeNow();
+            })));
+        });
     }
 }
