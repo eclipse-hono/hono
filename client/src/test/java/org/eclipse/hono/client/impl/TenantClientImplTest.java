@@ -117,6 +117,12 @@ public class TenantClientImplTest {
     }
 
     /**
+     * Verifies that the client retrieves registration information from the
+     * Device Registration service if no cache is configured.
+     * 
+     * @param ctx The vert.x test context.
+     */
+    /**
      * Verifies that the client includes the required information in the request
      * message sent to the Tenant service.
      * 
@@ -126,18 +132,29 @@ public class TenantClientImplTest {
     @Test
     public void testGetTenantInvokesServiceIfNoCacheConfigured(final TestContext ctx) {
 
-        // GIVEN an adapter
+        // GIVEN an adapter with no cache configured
+        client.setResponseCache(null);
+        final JsonObject tenantResult = newTenantResult("tenant");
 
         // WHEN getting tenant information by ID
-        client.get("tenant");
+        final Async assertion = ctx.async();
+        client.get("tenant").setHandler(ctx.asyncAssertSuccess(r -> assertion.complete()));
 
-        // THEN the message being sent contains the tenant ID as search criteria
         final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
         verify(sender).send(messageCaptor.capture(), any(Handler.class));
-        final Message sentMessage = messageCaptor.getValue();
-        assertNull(MessageHelper.getTenantId(sentMessage));
-        assertThat(sentMessage.getSubject(), is(TenantConstants.TenantAction.get.toString()));
-        assertThat(MessageHelper.getJsonPayload(sentMessage).getString(TenantConstants.FIELD_PAYLOAD_TENANT_ID), is("tenant"));
+        final Message response = ProtonHelper.message(tenantResult.encode());
+        MessageHelper.addProperty(response, MessageHelper.APP_PROPERTY_STATUS, HttpURLConnection.HTTP_OK);
+        MessageHelper.addCacheDirective(response, CacheDirective.maxAgeDirective(60));
+        response.setCorrelationId(messageCaptor.getValue().getMessageId());
+        final ProtonDelivery delivery = mock(ProtonDelivery.class);
+        client.handleResponse(delivery, response);
+
+        // THEN the registration information has been retrieved from the service
+        assertion.await();
+        // and not been put to the cache
+        verify(cache, never()).put(any(), any(TenantResult.class), any(Duration.class));
+        // and the span is finished
+        verify(span).finish();
     }
 
     /**
@@ -170,6 +187,8 @@ public class TenantClientImplTest {
         // THEN the tenant result has been added to the cache
         get.await();
         verify(cache).put(eq(TriTuple.of(TenantAction.get, "tenant", null)), any(TenantResult.class), any(Duration.class));
+        // and the span is finished
+        verify(span).finish();
     }
 
     /**
@@ -178,6 +197,7 @@ public class TenantClientImplTest {
      *
      * @param ctx The vert.x test context.
      */
+    @SuppressWarnings("unchecked")
     @Test
     public void testGetTenantReturnsValueFromCache(final TestContext ctx) {
 
@@ -194,7 +214,8 @@ public class TenantClientImplTest {
         client.get("tenant").setHandler(ctx.asyncAssertSuccess(result -> {
             // THEN the tenant information is read from the cache
             ctx.assertEquals(tenantResult.getPayload(), result);
-            verify(sender, never()).send(any(Message.class));
+            // and no request message is sent to the service
+            verify(sender, never()).send(any(Message.class), any(Handler.class));
             // and the span is finished
             verify(span).finish();
         }));
@@ -275,24 +296,28 @@ public class TenantClientImplTest {
     }
 
     /**
-     * Verifies that the client uses the correct message id prefix defined for the tenant client.
-     *
+     * Verifies that the client includes the required information in the request
+     * message sent to the Tenant service.
+     * 
      * @param ctx The vert.x test context.
      */
     @SuppressWarnings("unchecked")
     @Test
-    public void testMessageIdPrefixStartsWithApiSpecificPrefix(final TestContext ctx) {
+    public void testGetTenantIncludesRequiredInformationInRequest(final TestContext ctx) {
 
-        // GIVEN an adapter
+        // GIVEN an adapter without a cache
 
         // WHEN getting tenant information
         client.get("tenant");
 
-        // THEN the message being sent uses the correct message id prefix
+        // THEN the message being sent contains the tenant ID as search criteria
         final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
         verify(sender).send(messageCaptor.capture(), any(Handler.class));
         final Message sentMessage = messageCaptor.getValue();
+        assertNull(MessageHelper.getTenantId(sentMessage));
         assertThat(sentMessage.getMessageId().toString(), startsWith(TenantConstants.MESSAGE_ID_PREFIX));
+        assertThat(sentMessage.getSubject(), is(TenantConstants.TenantAction.get.toString()));
+        assertThat(MessageHelper.getJsonPayload(sentMessage).getString(TenantConstants.FIELD_PAYLOAD_TENANT_ID), is("tenant"));
     }
 
     private JsonObject newTenantResult(final String tenantId) {

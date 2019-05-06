@@ -16,6 +16,7 @@ package org.eclipse.hono.client.impl;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -49,6 +50,10 @@ import org.mockito.ArgumentCaptor;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
+import io.opentracing.Span;
+import io.opentracing.SpanContext;
+import io.opentracing.Tracer;
+import io.opentracing.Tracer.SpanBuilder;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
@@ -78,6 +83,8 @@ public class RegistrationClientImplTest {
     private ProtonSender sender;
     private RegistrationClientImpl client;
     private ExpiringValueCache<Object, RegistrationResult> cache;
+    private Tracer tracer;
+    private Span span;
     private HonoConnection connection;
 
     /**
@@ -87,6 +94,15 @@ public class RegistrationClientImplTest {
     @Before
     public void setUp() {
 
+        final SpanContext spanContext = mock(SpanContext.class);
+
+        span = mock(Span.class);
+        when(span.context()).thenReturn(spanContext);
+        final SpanBuilder spanBuilder = HonoClientUnitTestHelper.mockSpanBuilder(span);
+
+        tracer = mock(Tracer.class);
+        when(tracer.buildSpan(anyString())).thenReturn(spanBuilder);
+
         vertx = mock(Vertx.class);
         final ProtonReceiver receiver = HonoClientUnitTestHelper.mockProtonReceiver();
         sender = HonoClientUnitTestHelper.mockProtonSender();
@@ -94,6 +110,8 @@ public class RegistrationClientImplTest {
         cache = mock(ExpiringValueCache.class);
         final RequestResponseClientConfigProperties config = new RequestResponseClientConfigProperties();
         connection = HonoClientUnitTestHelper.mockHonoConnection(vertx, config);
+        when(connection.getTracer()).thenReturn(tracer);
+
         client = new RegistrationClientImpl(connection, "tenant", sender, receiver);
     }
 
@@ -127,6 +145,8 @@ public class RegistrationClientImplTest {
         // THEN the registration information has been added to the cache
         assertion.await();
         verify(cache).put(eq(TriTuple.of("assert", "myDevice", null)), any(RegistrationResult.class), any(Duration.class));
+        // and the span is finished
+        verify(span).finish();
     }
 
     /**
@@ -143,6 +163,7 @@ public class RegistrationClientImplTest {
         final JsonObject registrationAssertion = newRegistrationAssertionResult();
         final Message response = ProtonHelper.message(registrationAssertion.encode());
         MessageHelper.addProperty(response, MessageHelper.APP_PROPERTY_STATUS, HttpURLConnection.HTTP_OK);
+        MessageHelper.addCacheDirective(response, CacheDirective.maxAgeDirective(60));
 
         // WHEN getting registration information
         final Async assertion = ctx.async();
@@ -158,6 +179,8 @@ public class RegistrationClientImplTest {
         assertion.await();
         // and not been put to the cache
         verify(cache, never()).put(any(), any(RegistrationResult.class), any(Duration.class));
+        // and the span is finished
+        verify(span).finish();
     }
 
     /**
@@ -165,6 +188,7 @@ public class RegistrationClientImplTest {
      * 
      * @param ctx The vert.x test context.
      */
+    @SuppressWarnings("unchecked")
     @Test
     public void testGetRegistrationInfoReturnsValueFromCache(final TestContext ctx) {
 
@@ -179,7 +203,10 @@ public class RegistrationClientImplTest {
         client.assertRegistration("device", "gateway").setHandler(ctx.asyncAssertSuccess(result -> {
             // THEN the registration information is read from the cache
             ctx.assertEquals(registrationAssertion, result);
-            verify(sender, never()).send(any(Message.class));
+            // and no request message is sent to the service
+            verify(sender, never()).send(any(Message.class), any(Handler.class));
+            // and the span is finished
+            verify(span).finish();
         }));
 
     }
