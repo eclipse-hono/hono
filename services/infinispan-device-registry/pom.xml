@@ -15,7 +15,7 @@
   <parent>
     <groupId>org.eclipse.hono</groupId>
     <artifactId>hono-services</artifactId>
-    <version>1.0-M1-SNAPSHOT</version>
+    <version>1.0-M4-SNAPSHOT</version>
   </parent>
   <artifactId>infinispan-device-registry</artifactId>
   <name>Hono Device Registry built with Infinispan</name>
@@ -29,22 +29,59 @@
         </dependency>
         <dependency>
             <groupId>org.infinispan</groupId>
-            <artifactId>infinispan-core</artifactId>
-            <version>9.4.6.Final</version>
-        </dependency>
-        <dependency>
-            <groupId>org.infinispan</groupId>
             <artifactId>infinispan-query</artifactId>
             <version>9.4.6.Final</version>
         </dependency>
-        <dependency>
-            <groupId>org.eclipse.hono</groupId>
-            <artifactId>hono-service-base</artifactId>
-            <version>${project.version}</version>
-            <classifier>tests</classifier>
-            <type>test-jar</type>
-            <scope>test</scope>
-        </dependency>
+      <dependency>
+        <groupId>org.infinispan</groupId>
+        <artifactId>infinispan-client-hotrod</artifactId>
+        <version> 9.4.6.Final</version>
+      </dependency>
+      <dependency>
+        <groupId>org.infinispan</groupId>
+        <artifactId>infinispan-remote-query-client</artifactId>
+        <version>9.4.6.Final</version>
+      </dependency>
+
+      <!-- Test dependencies -->
+
+      <dependency>
+          <groupId>org.eclipse.hono</groupId>
+          <artifactId>hono-service-base</artifactId>
+          <version>${project.version}</version>
+          <classifier>tests</classifier>
+          <type>test-jar</type>
+          <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.junit.jupiter</groupId>
+        <artifactId>junit-jupiter-engine</artifactId>
+      </dependency>
+      <dependency>
+        <groupId>org.eclipse.hono</groupId>
+        <artifactId>hono-service-base</artifactId>
+        <classifier>tests</classifier>
+        <version>1.0-M4-SNAPSHOT</version>
+        <type>test-jar</type>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>io.vertx</groupId>
+        <artifactId>vertx-junit5</artifactId>
+        <version>3.6.3</version>
+      </dependency>
+      <dependency>
+        <groupId>org.infinispan</groupId>
+        <artifactId>infinispan-server-hotrod</artifactId>
+        <version>9.4.6.Final</version>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.infinispan</groupId>
+        <artifactId>infinispan-remote-query-server</artifactId>
+        <version>9.4.6.Final</version>
+        <scope>test</scope>
+      </dependency>
     </dependencies>
 
     <build>

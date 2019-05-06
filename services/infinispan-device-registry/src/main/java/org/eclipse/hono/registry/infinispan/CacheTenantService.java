@@ -21,9 +21,11 @@ import org.eclipse.hono.service.tenant.CompleteBaseTenantService;
 import org.eclipse.hono.util.TenantObject;
 import org.eclipse.hono.util.TenantResult;
 import org.infinispan.Cache;
+import org.infinispan.client.hotrod.Flag;
+import org.infinispan.client.hotrod.RemoteCache;
+import org.infinispan.client.hotrod.Search;
 import org.infinispan.configuration.cache.ConfigurationBuilder;
 import org.infinispan.manager.EmbeddedCacheManager;
-import org.infinispan.query.Search;
 import org.infinispan.query.dsl.Query;
 import org.infinispan.query.dsl.QueryFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -48,11 +50,11 @@ import java.util.Optional;
 @Primary
 public class CacheTenantService extends CompleteBaseTenantService<CacheTenantConfigProperties> {
 
-    Cache<String, RegistryTenantObject> tenantsCache;
+    private final RemoteCache<String, RegistryTenantObject> tenantsCache;
 
     @Autowired
-    protected CacheTenantService(final EmbeddedCacheManager cacheManager) {
-        this.tenantsCache = cacheManager.createCache("tenants", new ConfigurationBuilder().build());
+    protected CacheTenantService(final RemoteCache cache) {
+        this.tenantsCache = cache;
     }
 
     @Override
@@ -75,7 +77,7 @@ public class CacheTenantService extends CompleteBaseTenantService<CacheTenantCon
             }
         }
 
-        tenantsCache.putIfAbsentAsync(tenantId, new RegistryTenantObject(tenantDetails)).thenAccept(result -> {
+        tenantsCache.withFlags(Flag.FORCE_RETURN_VALUE).putIfAbsentAsync(tenantId, new RegistryTenantObject(tenantDetails)).thenAccept(result -> {
             if (result == null) {
                 resultHandler.handle(Future.succeededFuture(TenantResult.from(HttpURLConnection.HTTP_CREATED)));
             } else {
@@ -114,7 +116,7 @@ public class CacheTenantService extends CompleteBaseTenantService<CacheTenantCon
     @Override
     public void remove(final String tenantId, final Handler<AsyncResult<TenantResult<JsonObject>>> resultHandler) {
 
-        tenantsCache.removeAsync(tenantId).thenAccept(result -> {
+        tenantsCache.withFlags(Flag.FORCE_RETURN_VALUE).removeAsync(tenantId).thenAccept(result -> {
             if (result != null) {
                 resultHandler.handle(Future.succeededFuture(TenantResult.from(HttpURLConnection.HTTP_NO_CONTENT)));
             } else {

@@ -12,7 +12,10 @@
  *******************************************************************************/
 package org.eclipse.hono.registry.infinispan;
 
+import java.io.Serializable;
 import java.util.Objects;
+import org.infinispan.protostream.annotations.ProtoDoc;
+import org.infinispan.protostream.annotations.ProtoField;
 
 /**
  * A custom class to be used as key in the backend key-value storage.
@@ -20,11 +23,18 @@ import java.util.Objects;
  *
  *  See {@link CacheCredentialService CacheCredentialService} class.
  */
-public class CredentialsKey {
+@ProtoDoc("@Indexed")
+public class CredentialsKey implements Serializable {
 
-    String tenantId;
-    String authId;
-    String type;
+    private String tenantId;
+    private String authId;
+    private String type;
+
+    /**
+     * Constructor without arguments for the protobuilder.
+     */
+    public CredentialsKey() {
+    }
 
     /**
      * Creates a new CredentialsKey. Used by CacheCredentialsService.
@@ -56,5 +66,35 @@ public class CredentialsKey {
     @Override
     public int hashCode() {
         return Objects.hash(tenantId, authId, type);
+    }
+
+    public void setTenantId(String tenantId) {
+        this.tenantId = tenantId;
+    }
+
+    public void setAuthId(String authId) {
+        this.authId = authId;
+    }
+
+    public void setType(String type) {
+        this.type = type;
+    }
+
+    @ProtoDoc("@Field")
+    @ProtoField(number = 1, required = true)
+    public String getTenantId() {
+        return tenantId;
+    }
+
+    @ProtoDoc("@Field")
+    @ProtoField(number = 2, required = true)
+    public String getAuthId() {
+        return authId;
+    }
+
+    @ProtoDoc("@Field")
+    @ProtoField(number = 3, required = true)
+    public String getType() {
+        return type;
     }
 }

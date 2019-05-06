@@ -12,7 +12,10 @@
  *******************************************************************************/
 package org.eclipse.hono.registry.infinispan;
 
+import java.io.Serializable;
 import java.util.Objects;
+import org.infinispan.protostream.annotations.ProtoDoc;
+import org.infinispan.protostream.annotations.ProtoField;
 
 /**
  * A custom class to be used as key in the backend key-value storage.
@@ -20,10 +23,17 @@ import java.util.Objects;
  *
  *  See {@link CacheRegistrationService CacheRegistrationService} class.
  */
-public class RegistrationKey {
+@ProtoDoc("@Indexed")
+public class RegistrationKey implements Serializable {
 
-    String tenantId;
-    String deviceId;
+    private String tenantId;
+    private String deviceId;
+
+    /**
+     * Constructor without arguments for the protobuilder.
+     */
+    public RegistrationKey() {
+    }
 
     /**
      * Creates a new RegistrationKey. Used by CacheRegistrationService.
@@ -52,5 +62,25 @@ public class RegistrationKey {
     @Override
     public int hashCode() {
         return Objects.hash(tenantId, deviceId);
+    }
+
+    @ProtoDoc("@Field")
+    @ProtoField(number = 1, required = true)
+    public String getTenantId() {
+        return tenantId;
+    }
+
+    public void setTenantId(String tenantId) {
+        this.tenantId = tenantId;
+    }
+
+    @ProtoDoc("@Field")
+    @ProtoField(number = 2, required = true)
+    public String getDeviceId() {
+        return deviceId;
+    }
+
+    public void setDeviceId(String deviceId) {
+        this.deviceId = deviceId;
     }
 }

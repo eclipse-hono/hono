@@ -26,9 +26,11 @@ import org.eclipse.hono.util.CredentialsObject;
 import org.eclipse.hono.util.CredentialsResult;
 import org.infinispan.Cache;
 
+import org.infinispan.client.hotrod.Flag;
+import org.infinispan.client.hotrod.RemoteCache;
+import org.infinispan.client.hotrod.Search;
 import org.infinispan.configuration.cache.ConfigurationBuilder;
 import org.infinispan.manager.EmbeddedCacheManager;
-import org.infinispan.query.Search;
 import org.infinispan.query.dsl.Query;
 import org.infinispan.query.dsl.QueryFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -55,7 +57,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @Primary
 public class CacheCredentialService extends CompleteBaseCredentialsService<CacheCredentialConfigProperties> {
 
-     private final Cache<CredentialsKey, RegistryCredentialObject> credentialsCache;
+    private final RemoteCache<CredentialsKey, RegistryCredentialObject> credentialsCache;
 
     /**
      * Creates a new service instance for a password encoder.
@@ -64,9 +66,9 @@ public class CacheCredentialService extends CompleteBaseCredentialsService<Cache
      * @throws NullPointerException if encoder is {@code null}.
      */
     @Autowired
-    protected CacheCredentialService(final EmbeddedCacheManager cacheManager, final HonoPasswordEncoder pwdEncoder) {
+    protected CacheCredentialService(final RemoteCache cache, final HonoPasswordEncoder pwdEncoder) {
         super(pwdEncoder);
-        this.credentialsCache = cacheManager.createCache("credentials", new ConfigurationBuilder().build());
+        this.credentialsCache = cache;
     }
 
     @Override
@@ -75,14 +77,13 @@ public class CacheCredentialService extends CompleteBaseCredentialsService<Cache
 
     @Override
     public void add(final String tenantId, final JsonObject credentialsJson, final Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
-
         final CredentialsObject credentials = Optional.ofNullable(credentialsJson)
                 .map(json -> json.mapTo(CredentialsObject.class)).orElse(null);
 
         final CredentialsKey key = new CredentialsKey(tenantId, credentials.getAuthId(), credentials.getType());
         final RegistryCredentialObject registryCredential = new RegistryCredentialObject(credentials, tenantId, credentialsJson);
 
-        credentialsCache.putIfAbsentAsync(key, registryCredential).thenAccept(result -> {
+        credentialsCache.withFlags(Flag.FORCE_RETURN_VALUE).putIfAbsentAsync(key, registryCredential).thenAccept(result -> {
             if (result == null) {
                 resultHandler.handle(Future.succeededFuture(CredentialsResult.from(HttpURLConnection.HTTP_CREATED)));
             } else {
@@ -98,7 +99,7 @@ public class CacheCredentialService extends CompleteBaseCredentialsService<Cache
      */
     @Override
     public void get(final String tenantId, final String type, final String authId, final Span span,
-                    final Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
+            final Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
         get(tenantId, type, authId, null, span, resultHandler);
     }
 
@@ -127,7 +128,7 @@ public class CacheCredentialService extends CompleteBaseCredentialsService<Cache
             if (credential == null) {
                 resultHandler.handle(Future.succeededFuture(CredentialsResult.from(HttpURLConnection.HTTP_NOT_FOUND)));
             } else if (clientContext != null && !clientContext.isEmpty()) {
-                if (contextMatches(clientContext, credential.getOriginalJson())) {
+                if (contextMatches(clientContext, new JsonObject(credential.getOriginalJson()))) {
                     resultHandler.handle(Future.succeededFuture(
                             CredentialsResult.from(HttpURLConnection.HTTP_OK,
                                     JsonObject.mapFrom(credential.getOriginalJson()), CacheDirective.noCacheDirective())));
@@ -164,7 +165,7 @@ public class CacheCredentialService extends CompleteBaseCredentialsService<Cache
     public void remove(final String tenantId, final String type, final String authId, final Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
 
         final CredentialsKey key = new CredentialsKey(tenantId, authId, type);
-        credentialsCache.removeAsync(key).thenAccept(result -> {
+        credentialsCache.withFlags(Flag.FORCE_RETURN_VALUE).removeAsync(key).thenAccept(result -> {
                     if (result == null){
                         resultHandler.handle(Future.succeededFuture(CredentialsResult.from(HttpURLConnection.HTTP_NOT_FOUND)));
                     } else {
@@ -174,7 +175,6 @@ public class CacheCredentialService extends CompleteBaseCredentialsService<Cache
         );
     }
 
-    //TODO : use futures and composeAll to be Async.
     @Override
     public void removeAll(final String tenantId, final String deviceId, final Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
 
@@ -186,13 +186,13 @@ public class CacheCredentialService extends CompleteBaseCredentialsService<Cache
             matches.forEach(registryCredential -> {
                 final CredentialsKey key = new CredentialsKey(
                         tenantId,
-                        registryCredential.getOriginalJson().getString(CredentialsConstants.FIELD_AUTH_ID),
-                        registryCredential.getOriginalJson().getString(CredentialsConstants.FIELD_TYPE));
+                        new JsonObject(registryCredential.getOriginalJson()).getString(CredentialsConstants.FIELD_AUTH_ID),
+                        new JsonObject(registryCredential.getOriginalJson()).getString(CredentialsConstants.FIELD_TYPE));
                 futureResultList.add( credentialsCache.removeAsync(key));
             });
             CompletableFuture.allOf(futureResultList.toArray(new CompletableFuture[futureResultList.size()]))
                     .thenAccept( r->
-                        resultHandler.handle(Future.succeededFuture(CredentialsResult.from(HttpURLConnection.HTTP_NO_CONTENT))));
+                            resultHandler.handle(Future.succeededFuture(CredentialsResult.from(HttpURLConnection.HTTP_NO_CONTENT))));
         }
     }
 
@@ -225,7 +225,6 @@ public class CacheCredentialService extends CompleteBaseCredentialsService<Cache
                 .having("deviceId").eq(deviceId)
                 .and().having("tenantId").eq(tenantId)
                 .build();
-
         // Execute the query
         return query.list();
     }

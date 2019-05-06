@@ -13,7 +13,10 @@
 package org.eclipse.hono.registry.infinispan;
 
 import io.vertx.core.json.JsonObject;
+import java.io.Serializable;
 import org.eclipse.hono.util.CredentialsObject;
+import org.infinispan.protostream.annotations.ProtoDoc;
+import org.infinispan.protostream.annotations.ProtoField;
 
 /**
  * A custom class to be used as value in the backend key-value storage.
@@ -21,11 +24,18 @@ import org.eclipse.hono.util.CredentialsObject;
  *
  *  See {@link CacheTenantService CacheTenantService} class.
  */
-public class RegistryCredentialObject {
+@ProtoDoc("@Indexed")
+public class RegistryCredentialObject implements Serializable {
 
-    private final String tenantId;
-    private final String deviceId;
-    private final JsonObject originalJson;
+    private String tenantId;
+    private String deviceId;
+    private String originalJson;
+
+    /**
+     * Constructor without arguments for the protobuilder.
+     */
+    public RegistryCredentialObject(){
+    }
 
     /**
      * Create a a RegistryCredentialObject with the credentials details.
@@ -37,14 +47,36 @@ public class RegistryCredentialObject {
     public RegistryCredentialObject(final CredentialsObject honoCredential, final String tenantId, final JsonObject originalJson){
         this.tenantId = tenantId;
         this.deviceId = honoCredential.getDeviceId();
-        this.originalJson = originalJson;
+        this.originalJson = originalJson.encode();
     }
 
-    public JsonObject getOriginalJson() {
+    @ProtoDoc("@Field")
+    @ProtoField(number = 3, required = true)
+    public String getOriginalJson() {
         return originalJson;
     }
 
+    @ProtoDoc("@Field")
+    @ProtoField(number = 2, required = true)
     public String getDeviceId(){
         return deviceId;
+    }
+
+    @ProtoDoc("@Field")
+    @ProtoField(number = 1, required = true)
+    public String getTenantId() {
+        return tenantId;
+    }
+
+    public void setTenantId(String tenantId) {
+        this.tenantId = tenantId;
+    }
+
+    public void setDeviceId(String deviceId) {
+        this.deviceId = deviceId;
+    }
+
+    public void setOriginalJson(String originalJson) {
+        this.originalJson = originalJson;
     }
 }
