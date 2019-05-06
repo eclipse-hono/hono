@@ -46,6 +46,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.opentracing.Span;
+import io.opentracing.SpanContext;
 import io.opentracing.tag.Tags;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
@@ -549,7 +550,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
             final Handler<AsyncResult<R>> resultHandler,
             final Object cacheKey) {
 
-        createAndSendRequest(action, null, payload, resultHandler, cacheKey);
+        createAndSendRequest(action, null, payload, resultHandler, cacheKey, null);
     }
 
     /**
@@ -572,7 +573,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
             final Buffer payload,
             final Handler<AsyncResult<R>> resultHandler) {
 
-        createAndSendRequest(action, properties, payload, resultHandler, null);
+        createAndSendRequest(action, properties, payload, resultHandler, null, null);
     }
 
     /**
@@ -590,6 +591,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      *                      e.g. because there is no connection to the service or there are no credits available
      *                      for sending the request or the request timed out.
      * @param cacheKey The key to use for caching the response (if the service allows caching).
+     * @param spanContext The currently active OpenTracing span context or {@code null}.
      * @throws NullPointerException if action or result handler are {@code null}.
      * @throws IllegalArgumentException if the properties contain any non-primitive typed values.
      * @see AbstractHonoClient#setApplicationProperties(Message, Map)
@@ -599,10 +601,11 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
             final Map<String, Object> properties,
             final Buffer payload,
             final Handler<AsyncResult<R>> resultHandler,
-            final Object cacheKey) {
+            final Object cacheKey,
+            final SpanContext spanContext) {
 
         createAndSendRequest(action, properties, payload, RequestResponseApiConstants.CONTENT_TYPE_APPLICATION_JSON,
-                resultHandler, cacheKey);
+                resultHandler, cacheKey, spanContext);
     }
 
     /**
@@ -621,6 +624,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      *                      e.g. because there is no connection to the service or there are no credits available
      *                      for sending the request or the request timed out.
      * @param cacheKey The key to use for caching the response (if the service allows caching).
+     * @param spanContext The currently active OpenTracing span context or {@code null}.
      * @throws NullPointerException if action or result handler are {@code null}.
      * @throws IllegalArgumentException if the properties contain any non-primitive typed values.
      * @see AbstractHonoClient#setApplicationProperties(Message, Map)
@@ -631,9 +635,10 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
             final Buffer payload,
             final String contentType,
             final Handler<AsyncResult<R>> resultHandler,
-            final Object cacheKey) {
+            final Object cacheKey,
+            final SpanContext spanContext) {
 
-        final Span currentSpan = newChildSpan(null, action);
+        final Span currentSpan = newChildSpan(spanContext, "invoke '" + action + "' on " + getName() + " endpoint");
         createAndSendRequest(action, properties, payload, contentType, ar -> {
             currentSpan.finish();
             resultHandler.handle(ar);
@@ -660,7 +665,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      *                      for sending the request or the request timed out.
      * @param cacheKey The key to use for caching the response (if the service allows caching).
      * @param currentSpan The <em>Opentracing</em> span used to trace the request execution.
-     * @throws NullPointerException if any of action or result handler is {@code null}.
+     * @throws NullPointerException if any of action, result handler or currentSpan is {@code null}.
      * @throws IllegalArgumentException if the properties contain any non-primitive typed values.
      * @see AbstractHonoClient#setApplicationProperties(Message, Map)
      */

@@ -121,6 +121,31 @@ public interface RegistrationClient extends RequestResponseClient {
     Future<JsonObject> get(String deviceId);
 
     /**
+     * Gets registration information for a device.
+     * <p>
+     * This default implementation simply returns the result of {@link #get(String)}.
+     *
+     * @param deviceId The id of the device to check.
+     * @param context The currently active OpenTracing span. An implementation
+     *         should use this as the parent for any span it creates for tracing
+     *         the execution of this operation.
+     * @return A future indicating the result of the operation.
+     *         <p>
+     *         The future will succeed if a response with status 200 has been received from the registration service.
+     *         The JSON object will then contain values as defined in
+     *         <a href="https://www.eclipse.org/hono/api/device-registration-api/#get-registration-information"> Get
+     *         Registration Information</a>.
+     *         <p>
+     *         Otherwise, the future will fail with a {@link ServiceInvocationException} containing the (error) status
+     *         code returned by the service.
+     * @throws NullPointerException if device ID is {@code null}.
+     * @see RequestResponseClient#setRequestTimeout(long)
+     */
+    default Future<JsonObject> get(String deviceId, final SpanContext context) {
+        return get(deviceId);
+    }
+
+    /**
      * Registers a device with Hono.
      * <p>
      * A device needs to be (successfully) registered before a client can upload
