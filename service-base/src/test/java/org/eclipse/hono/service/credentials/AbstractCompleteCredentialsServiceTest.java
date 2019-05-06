@@ -16,7 +16,6 @@ import static org.junit.Assert.assertEquals;
 
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxTestContext;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.junit.jupiter.api.Test;
@@ -223,7 +222,6 @@ public abstract class AbstractCompleteCredentialsServiceTest {
             data.mergeIn(clientContext);
         }
 
-        final Checkpoint registration = ctx.checkpoint();
         svc.add("tenant", data, ctx.succeeding(s -> ctx.verify(() -> {
             assertEquals(HttpURLConnection.HTTP_CREATED, s.getStatus());
         })));
