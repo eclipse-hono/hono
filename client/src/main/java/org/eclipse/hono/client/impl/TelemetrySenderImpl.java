@@ -14,15 +14,9 @@
 package org.eclipse.hono.client.impl;
 
 import java.net.HttpURLConnection;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.qpid.proton.amqp.messaging.Accepted;
-import org.apache.qpid.proton.amqp.messaging.Modified;
-import org.apache.qpid.proton.amqp.messaging.Rejected;
-import org.apache.qpid.proton.amqp.messaging.Released;
 import org.apache.qpid.proton.amqp.transport.DeliveryState;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.DownstreamSender;
@@ -36,7 +30,6 @@ import org.eclipse.hono.util.TelemetryConstants;
 
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
-import io.opentracing.log.Fields;
 import io.opentracing.tag.Tags;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -172,11 +165,7 @@ public final class TelemetrySenderImpl extends AbstractDownstreamSender {
 
         final String messageId = String.format("%s-%d", getClass().getSimpleName(), MESSAGE_COUNTER.getAndIncrement());
         message.setMessageId(messageId);
-        final Map<String, Object> details = new HashMap<>(3);
-        details.put(TracingHelper.TAG_MESSAGE_ID.getKey(), messageId);
-        details.put(TracingHelper.TAG_CREDIT.getKey(), sender.getCredit());
-        details.put(TracingHelper.TAG_QOS.getKey(), sender.getQoS().toString());
-        currentSpan.log(details);
+        logMessageIdAndSenderInfo(currentSpan, messageId);
 
         final ClientConfigProperties config = connection.getConfig();
         final AtomicBoolean timeoutReached = new AtomicBoolean(false);
@@ -203,39 +192,7 @@ public final class TelemetrySenderImpl extends AbstractDownstreamSender {
             if (timeoutReached.get()) {
                 LOG.debug("ignoring received delivery update for message [message ID: {}]: waiting for the update has already timed out", messageId);
             } else if (deliveryUpdated.remotelySettled()) {
-                if (Accepted.class.isInstance(remoteState)) {
-                    LOG.trace("message [message ID: {}] accepted by peer", messageId);
-                    currentSpan.log("message accepted by peer");
-                    Tags.HTTP_STATUS.set(currentSpan, HttpURLConnection.HTTP_ACCEPTED);
-                } else {
-                    final Map<String, Object> events = new HashMap<>();
-                    if (Rejected.class.isInstance(remoteState)) {
-                        final Rejected rejected = (Rejected) deliveryUpdated.getRemoteState();
-                        Tags.HTTP_STATUS.set(currentSpan, HttpURLConnection.HTTP_BAD_REQUEST);
-                        if (rejected.getError() == null) {
-                            LOG.debug("message [message ID: {}] rejected by peer", messageId);
-                            events.put(Fields.MESSAGE, "message rejected by peer");
-                        } else {
-                            LOG.debug("message [message ID: {}] rejected by peer: {}, {}", messageId,
-                                    rejected.getError().getCondition(), rejected.getError().getDescription());
-                            events.put(Fields.MESSAGE, String.format("message rejected by peer: %s, %s",
-                                    rejected.getError().getCondition(), rejected.getError().getDescription()));
-                        }
-                    } else if (Released.class.isInstance(remoteState)) {
-                        LOG.debug("message [message ID: {}] not accepted by peer, remote state: {}",
-                                messageId, remoteState.getClass().getSimpleName());
-                        Tags.HTTP_STATUS.set(currentSpan, HttpURLConnection.HTTP_UNAVAILABLE);
-                        events.put(Fields.MESSAGE, "message not accepted by peer, remote state: " + remoteState);
-                    } else if (Modified.class.isInstance(remoteState)) {
-                        final Modified modified = (Modified) deliveryUpdated.getRemoteState();
-                        LOG.debug("message [message ID: {}] not accepted by peer, remote state: {}",
-                                messageId, modified);
-                        Tags.HTTP_STATUS.set(currentSpan, modified.getUndeliverableHere() ? HttpURLConnection.HTTP_NOT_FOUND
-                                        : HttpURLConnection.HTTP_UNAVAILABLE);
-                        events.put(Fields.MESSAGE, "message not accepted by peer, remote state: " + remoteState);
-                    }
-                    TracingHelper.logError(currentSpan, events);
-                }
+                logUpdatedDeliveryState(currentSpan, messageId, deliveryUpdated);
             } else {
                 LOG.warn("peer did not settle message [message ID: {}, remote state: {}]",
                         messageId, remoteState.getClass().getSimpleName());
