@@ -41,6 +41,7 @@ import org.slf4j.LoggerFactory;
 
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
+import io.opentracing.log.Fields;
 import io.opentracing.tag.Tags;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
@@ -252,11 +253,7 @@ public abstract class AbstractSender extends AbstractHonoClient implements Messa
         final Future<ProtonDelivery> result = Future.future();
         final String messageId = String.format("%s-%d", getClass().getSimpleName(), MESSAGE_COUNTER.getAndIncrement());
         message.setMessageId(messageId);
-        final Map<String, Object> details = new HashMap<>(2);
-        details.put(TracingHelper.TAG_MESSAGE_ID.getKey(), messageId);
-        details.put(TracingHelper.TAG_CREDIT.getKey(), sender.getCredit());
-        details.put(TracingHelper.TAG_QOS.getKey(), sender.getQoS().toString());
-        currentSpan.log(details);
+        logMessageIdAndSenderInfo(currentSpan, messageId);
 
         final Long timerId = connection.getConfig().getSendMessageTimeout() > 0
                 ? connection.getVertx().setTimer(connection.getConfig().getSendMessageTimeout(), id -> {
@@ -279,27 +276,19 @@ public abstract class AbstractSender extends AbstractHonoClient implements Messa
             if (result.isComplete()) {
                 LOG.debug("ignoring received delivery update for message [message ID: {}]: waiting for the update has already timed out", messageId);
             } else if (deliveryUpdated.remotelySettled()) {
+                logUpdatedDeliveryState(currentSpan, messageId, deliveryUpdated);
                 if (Accepted.class.isInstance(remoteState)) {
-                    LOG.trace("message [message ID: {}] accepted by peer", messageId);
-                    currentSpan.log("message accepted by peer");
                     result.complete(deliveryUpdated);
                 } else {
                     ServiceInvocationException e = null;
                     if (Rejected.class.isInstance(remoteState)) {
                         final Rejected rejected = (Rejected) remoteState;
-                        if (rejected.getError() == null) {
-                            LOG.debug("message [message ID: {}] rejected by peer", messageId);
-                            e = new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST);
-                        } else {
-                            LOG.debug("message [message ID: {}] rejected by peer: {}, {}", messageId,
-                                    rejected.getError().getCondition(), rejected.getError().getDescription());
-                            e = new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, rejected.getError().getDescription());
-                        }
+                        e = rejected.getError() == null
+                                ? new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST)
+                                : new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, rejected.getError().getDescription());
                     } else if (Released.class.isInstance(remoteState)) {
-                        LOG.debug("message [message ID: {}] not accepted by peer, remote state: {}", messageId, remoteState);
                         e = new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE);
                     } else if (Modified.class.isInstance(remoteState)) {
-                        LOG.debug("message [message ID: {}] not accepted by peer, remote state: {}", messageId, remoteState);
                         final Modified modified = (Modified) deliveryUpdated.getRemoteState();
                         e = modified.getUndeliverableHere() ? new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND)
                                 : new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE);
@@ -328,5 +317,69 @@ public abstract class AbstractSender extends AbstractHonoClient implements Messa
             currentSpan.finish();
             return Future.failedFuture(t);
         });
+    }
+
+    /**
+     * Creates a log entry in the given span with the message id and information about the sender (credits, QOS).
+     * 
+     * @param currentSpan The current span to log to.
+     * @param messageId The message id.
+     * @throws NullPointerException if currentSpan is {@code null}.
+     */
+    protected final void logMessageIdAndSenderInfo(final Span currentSpan, final String messageId) {
+        final Map<String, Object> details = new HashMap<>(3);
+        details.put(TracingHelper.TAG_MESSAGE_ID.getKey(), messageId);
+        details.put(TracingHelper.TAG_CREDIT.getKey(), sender.getCredit());
+        details.put(TracingHelper.TAG_QOS.getKey(), sender.getQoS().toString());
+        currentSpan.log(details);
+    }
+
+    /**
+     * Creates a log entry in the given span with information about the message delivery outcome given in the delivery
+     * parameter. Sets the {@link Tags#HTTP_STATUS} as well.
+     * <p>
+     * Also corresponding log output is created.
+     *
+     * @param currentSpan The current span to log to.
+     * @param messageId The message id.
+     * @param delivery The updated delivery.
+     * @throws NullPointerException if currentSpan or delivery is {@code null}.
+     */
+    protected final void logUpdatedDeliveryState(final Span currentSpan, final String messageId, final ProtonDelivery delivery) {
+        Objects.requireNonNull(currentSpan);
+        final DeliveryState remoteState = delivery.getRemoteState();
+        if (Accepted.class.isInstance(remoteState)) {
+            LOG.trace("message [message ID: {}] accepted by peer", messageId);
+            currentSpan.log("message accepted by peer");
+            Tags.HTTP_STATUS.set(currentSpan, HttpURLConnection.HTTP_ACCEPTED);
+        } else {
+            final Map<String, Object> events = new HashMap<>();
+            if (Rejected.class.isInstance(remoteState)) {
+                final Rejected rejected = (Rejected) delivery.getRemoteState();
+                Tags.HTTP_STATUS.set(currentSpan, HttpURLConnection.HTTP_BAD_REQUEST);
+                if (rejected.getError() == null) {
+                    LOG.debug("message [message ID: {}] rejected by peer", messageId);
+                    events.put(Fields.MESSAGE, "message rejected by peer");
+                } else {
+                    LOG.debug("message [message ID: {}] rejected by peer: {}, {}", messageId,
+                            rejected.getError().getCondition(), rejected.getError().getDescription());
+                    events.put(Fields.MESSAGE, String.format("message rejected by peer: %s, %s",
+                            rejected.getError().getCondition(), rejected.getError().getDescription()));
+                }
+            } else if (Released.class.isInstance(remoteState)) {
+                LOG.debug("message [message ID: {}] not accepted by peer, remote state: {}",
+                        messageId, remoteState.getClass().getSimpleName());
+                Tags.HTTP_STATUS.set(currentSpan, HttpURLConnection.HTTP_UNAVAILABLE);
+                events.put(Fields.MESSAGE, "message not accepted by peer, remote state: " + remoteState);
+            } else if (Modified.class.isInstance(remoteState)) {
+                final Modified modified = (Modified) delivery.getRemoteState();
+                LOG.debug("message [message ID: {}] not accepted by peer, remote state: {}",
+                        messageId, modified);
+                Tags.HTTP_STATUS.set(currentSpan, modified.getUndeliverableHere() ? HttpURLConnection.HTTP_NOT_FOUND
+                        : HttpURLConnection.HTTP_UNAVAILABLE);
+                events.put(Fields.MESSAGE, "message not accepted by peer, remote state: " + remoteState);
+            }
+            TracingHelper.logError(currentSpan, events);
+        }
     }
 }

@@ -16,12 +16,14 @@ package org.eclipse.hono.client.impl;
 import java.net.HttpURLConnection;
 import java.util.Objects;
 
+import org.apache.qpid.proton.amqp.transport.DeliveryState;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.Command;
 import org.eclipse.hono.client.DelegatedCommandSender;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.MessageHelper;
@@ -88,11 +90,88 @@ public class DelegatedCommandSenderImpl extends AbstractSender implements Delega
                 span.finish();
                 result.fail(e);
             } else {
-                // TODO improve error-handling: we have to use a different kind of sendMessageAndWaitForOutcome() here
-                //  where a non-Accepted updatedProtonDelivery.getRemoteState() does not fail the returned Future
-                //  (we want to transfer such errors as is, not by way of translating them to/from ServiceInvocationExceptions)
                 sendMessageAndWaitForOutcome(rawMessage, span).setHandler(result);
             }
+        });
+    }
+
+    /**
+     * Sends an AMQP 1.0 message to the peer this client is configured for and waits for the outcome of the transfer.
+     * <p>
+     * This method overrides the base implementation to also return a succeeded Future if a delivery update other than
+     * <em>Accepted</em> was received.
+     *
+     * @param message The message to send.
+     * @param currentSpan The <em>OpenTracing</em> span used to trace the sending of the message.
+     *              The span will be finished by this method and will contain an error log if
+     *              the message has not been accepted by the peer.
+     * @return A future indicating the outcome of the operation.
+     *         <p>
+     *         The future will succeed if the message has been accepted (and settled)
+     *         by the consumer.
+     *         <p>
+     *         The future will be failed with a {@link ServiceInvocationException} if the
+     *         message could not be sent or if no delivery update
+     *         was received from the peer within the configured timeout period
+     *         (see {@link ClientConfigProperties#getSendMessageTimeout()}).
+     * @throws NullPointerException if either of the parameters is {@code null}.
+     */
+    @Override
+    protected Future<ProtonDelivery> sendMessageAndWaitForOutcome(final Message message, final Span currentSpan) {
+
+        Objects.requireNonNull(message);
+        Objects.requireNonNull(currentSpan);
+
+        final Future<ProtonDelivery> result = Future.future();
+        final String messageId = String.format("%s-%d", getClass().getSimpleName(), MESSAGE_COUNTER.getAndIncrement());
+        message.setMessageId(messageId);
+        logMessageIdAndSenderInfo(currentSpan, messageId);
+
+        final Long timerId = connection.getConfig().getSendMessageTimeout() > 0
+                ? connection.getVertx().setTimer(connection.getConfig().getSendMessageTimeout(), id -> {
+                    if (!result.isComplete()) {
+                        final ServerErrorException exception = new ServerErrorException(
+                                HttpURLConnection.HTTP_UNAVAILABLE,
+                                "waiting for delivery update timed out after "
+                                        + connection.getConfig().getSendMessageTimeout() + "ms");
+                        LOG.debug("waiting for delivery update timed out for message [message ID: {}] after {}ms",
+                                messageId, connection.getConfig().getSendMessageTimeout());
+                        result.fail(exception);
+                    }
+                })
+                : null;
+
+        sender.send(message, deliveryUpdated -> {
+            if (timerId != null) {
+                connection.getVertx().cancelTimer(timerId);
+            }
+            final DeliveryState remoteState = deliveryUpdated.getRemoteState();
+            if (result.isComplete()) {
+                LOG.debug("ignoring received delivery update for message [message ID: {}]: waiting for the update has already timed out", messageId);
+            } else if (deliveryUpdated.remotelySettled()) {
+                logUpdatedDeliveryState(currentSpan, messageId, deliveryUpdated);
+                result.complete(deliveryUpdated);
+            } else {
+                LOG.debug("peer did not settle message [message ID: {}, remote state: {}], failing delivery",
+                        messageId, remoteState.getClass().getSimpleName());
+                final ServiceInvocationException e = new ServerErrorException(
+                        HttpURLConnection.HTTP_INTERNAL_ERROR,
+                        "peer did not settle message, failing delivery");
+                result.fail(e);
+            }
+        });
+        LOG.trace("sent message [ID: {}], remaining credit: {}, queued messages: {}", messageId, sender.getCredit(), sender.getQueued());
+
+        return result.map(delivery -> {
+            LOG.trace("message [ID: {}] accepted by peer", messageId);
+            Tags.HTTP_STATUS.set(currentSpan, HttpURLConnection.HTTP_ACCEPTED);
+            currentSpan.finish();
+            return delivery;
+        }).recover(t -> {
+            TracingHelper.logError(currentSpan, t);
+            Tags.HTTP_STATUS.set(currentSpan, ServiceInvocationException.extractStatusCode(t));
+            currentSpan.finish();
+            return Future.failedFuture(t);
         });
     }
 
