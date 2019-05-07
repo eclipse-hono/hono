@@ -202,7 +202,7 @@ public class CacheCredentialService extends CompleteBaseCredentialsService<Cache
         final JsonArray creds = new JsonArray();
 
         queryAllCredentialsForDevice(tenantId, deviceId).forEach(result -> {
-            creds.add(JsonObject.mapFrom(result.getOriginalJson()));
+            creds.add(new JsonObject(result.getOriginalJson()));
         });
 
         if (creds.isEmpty()) {
