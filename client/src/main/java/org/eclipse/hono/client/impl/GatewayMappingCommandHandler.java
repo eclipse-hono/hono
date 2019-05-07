@@ -59,7 +59,8 @@ public class GatewayMappingCommandHandler implements Handler<CommandContext> {
         final String originalDeviceId = originalCommand.getDeviceId();
         // determine last used gateway device id
         LOG.trace("determine 'via' device to use for received command [{}]", originalCommand);
-        final Future<String> lastViaDeviceIdFuture = gatewayMapper.getMappedGatewayDevice(tenantId, originalDeviceId);
+        final Future<String> lastViaDeviceIdFuture = gatewayMapper.getMappedGatewayDevice(tenantId, originalDeviceId,
+                originalCommandContext.getTracingContext());
 
         lastViaDeviceIdFuture.setHandler(deviceIdFutureResult -> {
             if (deviceIdFutureResult.succeeded()) {
