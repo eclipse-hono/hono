@@ -137,7 +137,7 @@ public class CommandConsumerFactoryImpl extends AbstractHonoClientFactory implem
                 final Future<MessageConsumer> deviceSpecificConsumerFuture = Future.future();
                 deviceSpecificCommandConsumerFactory.getOrCreateClient(
                         key,
-                        () -> newCommandConsumer(tenantId, deviceId, commandHandler, remoteCloseHandler),
+                        () -> newDeviceSpecificCommandConsumer(tenantId, deviceId, commandHandler, remoteCloseHandler),
                         deviceSpecificConsumerFuture);
                 // create the tenant-scoped consumer that delegates/maps incoming commands to the right handler/consumer
                 final Future<MessageConsumer> tenantScopedCommandConsumerFuture = getOrCreateTenantScopedCommandConsumer(tenantId);
@@ -167,12 +167,22 @@ public class CommandConsumerFactoryImpl extends AbstractHonoClientFactory implem
 
         final AtomicReference<ProtonReceiver> receiverRefHolder = new AtomicReference<>();
 
-        final DelegatingCommandHandler delegatingCommandHandler = new DelegatingCommandHandler(
-                deviceIdParam -> deviceSpecificCommandHandlers.get(getKey(tenantId, deviceIdParam)),
+        final DelegateViaDownstreamPeerCommandHandler delegatingCommandHandler = new DelegateViaDownstreamPeerCommandHandler(
                 tenantIdParam -> getOrCreateDelegatedCommandSender(tenantIdParam));
 
         final GatewayMappingCommandHandler gatewayMappingCommandHandler = new GatewayMappingCommandHandler(
-                gatewayMapper, delegatingCommandHandler);
+                gatewayMapper, commandContext -> {
+                    final String deviceId = commandContext.getCommand().getDeviceId();
+                    final Handler<CommandContext> commandHandler = deviceSpecificCommandHandlers
+                            .get(getKey(tenantId, deviceId));
+                    if (commandHandler != null) {
+                        log.trace("use local command handler for device {}", deviceId);
+                        commandHandler.handle(commandContext);
+                    } else {
+                        // delegate to matching consumer via downstream peer
+                        delegatingCommandHandler.handle(commandContext);
+                    }
+                });
 
         return TenantScopedCommandConsumer.create(
                 connection,
@@ -321,7 +331,7 @@ public class CommandConsumerFactoryImpl extends AbstractHonoClientFactory implem
         };
     }
 
-    private Future<MessageConsumer> newCommandConsumer(
+    private Future<MessageConsumer> newDeviceSpecificCommandConsumer(
             final String tenantId,
             final String deviceId,
             final Handler<CommandContext> commandHandler,

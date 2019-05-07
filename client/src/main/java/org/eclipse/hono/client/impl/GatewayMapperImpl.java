@@ -20,6 +20,7 @@ import org.eclipse.hono.client.RegistrationClientFactory;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.RegistrationConstants;
 
+import io.opentracing.SpanContext;
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 
@@ -41,9 +42,9 @@ public class GatewayMapperImpl extends ConnectionLifecycleWrapper implements Gat
     }
 
     @Override
-    public Future<String> getMappedGatewayDevice(final String tenantId, final String deviceId) {
+    public Future<String> getMappedGatewayDevice(final String tenantId, final String deviceId, final SpanContext context) {
         return registrationClientFactory.getOrCreateRegistrationClient(tenantId).compose(client -> {
-            return client.get(deviceId);
+            return client.get(deviceId, context);
         }).map(deviceData -> {
             return getDeviceLastVia(deviceId, deviceData);
         });

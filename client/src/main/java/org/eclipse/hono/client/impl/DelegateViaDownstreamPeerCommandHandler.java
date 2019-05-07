@@ -29,53 +29,37 @@ import io.vertx.core.Handler;
 import io.vertx.proton.ProtonDelivery;
 
 /**
- * Handler for command messages that delegates command handling either to a given command handler or
- * to a matching consumer via the downstream peer.
+ * Handler for command messages that delegates command handling by setting a device-specific message target address and
+ * sending the message to the downstream peer.
+ * <p>
+ * That way, further command handling is delegated to the {@link DeviceSpecificCommandConsumer} eventually.
  */
-public class DelegatingCommandHandler implements Handler<CommandContext> {
+public class DelegateViaDownstreamPeerCommandHandler implements Handler<CommandContext> {
 
-    private static final Logger LOG = LoggerFactory.getLogger(DelegatingCommandHandler.class);
+    private static final Logger LOG = LoggerFactory.getLogger(DelegateViaDownstreamPeerCommandHandler.class);
 
-    private final Function<String, Handler<CommandContext>> deviceSpecificCommandHandlerSupplier;
     private final Function<String, Future<DelegatedCommandSender>> delegatedCommandSenderSupplier;
 
     /**
-     * Creates a new DelegatingCommandHandler.
+     * Creates a new DelegateViaDownstreamPeerCommandHandler.
      *
-     * @param deviceSpecificCommandHandlerSupplier Function to get an existing command handler. The function parameter
-     *            is the device id.
      * @param delegatedCommandSenderSupplier Function to get a Future with a sender to send the delegated command via
      *            the downstream peer. The function parameter is the tenant id. The function is supposed to get or
      *            create such a sender and, if successful, succeed the returned Future with it. If sender creation
      *            failed, a failed Future is to be returned.
      */
-    public DelegatingCommandHandler(final Function<String, Handler<CommandContext>> deviceSpecificCommandHandlerSupplier,
-                                    final Function<String, Future<DelegatedCommandSender>> delegatedCommandSenderSupplier) {
-        this.deviceSpecificCommandHandlerSupplier = deviceSpecificCommandHandlerSupplier;
+    public DelegateViaDownstreamPeerCommandHandler(final Function<String, Future<DelegatedCommandSender>> delegatedCommandSenderSupplier) {
         this.delegatedCommandSenderSupplier = delegatedCommandSenderSupplier;
     }
 
-
     @Override
     public void handle(final CommandContext commandContext) {
-        final String deviceId = commandContext.getCommand().getDeviceId();
-        final Handler<CommandContext> commandHandler = deviceSpecificCommandHandlerSupplier.apply(deviceId);
-        if (commandHandler != null) {
-            // delegate to existing local device-specific handler
-            LOG.trace("use existing command handler for device {}", deviceId);
-            commandHandler.handle(commandContext);
-        } else {
-            // delegate to matching consumer via downstream peer
-            LOG.trace("delegate command for device {} to matching consumer via downstream peer", deviceId);
-            delegateReceivedCommandMessageViaDownstreamPeer(commandContext);
-        }
-    }
-
-    private void delegateReceivedCommandMessageViaDownstreamPeer(final CommandContext commandContext) {
 
         final Command command = commandContext.getCommand();
         final String tenantId = command.getTenant();
         final String deviceId = command.getDeviceId();
+        LOG.trace("delegate command for device {} to matching consumer via downstream peer", deviceId);
+
         // send message to AMQP network
         final Future<DelegatedCommandSender> delegatedCommandSender = delegatedCommandSenderSupplier.apply(tenantId);
         delegatedCommandSender.setHandler(cmdSenderResult -> {

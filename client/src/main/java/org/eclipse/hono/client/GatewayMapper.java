@@ -13,6 +13,7 @@
 
 package org.eclipse.hono.client;
 
+import io.opentracing.SpanContext;
 import io.vertx.core.Future;
 
 /**
@@ -34,9 +35,10 @@ public interface GatewayMapper extends ConnectionLifecycle {
      *
      * @param tenantId The tenant identifier.
      * @param deviceId The device identifier.
+     * @param context The currently active OpenTracing span context or {@code null}.
      * @return A succeeded Future containing the mapped gateway device id or {@code null};
      *         or a failed Future if there was an error determining the mapped gateway device.
      */
-    Future<String> getMappedGatewayDevice(String tenantId, String deviceId);
+    Future<String> getMappedGatewayDevice(String tenantId, String deviceId, SpanContext context);
 
 }

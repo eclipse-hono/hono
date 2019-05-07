@@ -38,7 +38,7 @@ import io.vertx.proton.ProtonReceiver;
  * A context for passing around parameters relevant for processing a {@code Command}.
  *
  */
-public final class CommandContext extends MapBasedExecutionContext {
+public class CommandContext extends MapBasedExecutionContext {
 
     /**
      * The key under which the current CommandContext is stored.
@@ -62,6 +62,7 @@ public final class CommandContext extends MapBasedExecutionContext {
         this.delivery = delivery;
         this.receiver = receiver;
         this.currentSpan = currentSpan;
+        setTracingContext(currentSpan.context());
     }
 
     /**
