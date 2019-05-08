@@ -9,6 +9,10 @@ title = "Release Notes"
 * Default properties can now also be set at the tenant level, affecting all devices
   belonging to the tenant. Please refer to the [protocol adapter user guides]({{< ref "/user-guide" >}})
   for details.
+* `CredentialsClientImpl` now supports caching of response data received from a Credentials service based on 
+  *cache directives*. The protocol adapters are now equipped to cache the response from the Credentials Service.
+  The protocol adapters support configuration variables to set the default cache timeout, the minimum 
+  and maximum cache sizes for this service.
 
 ### API Changes
 
