@@ -42,7 +42,13 @@ import org.slf4j.LoggerFactory;
  */
 public class JmsIntegrationTestSupport {
 
+    /**
+     * The name of the connection factory for the AMQP protocol adapter.
+     */
     public static final String AMQP_ADAPTER = "amqp-adapter";
+    /**
+     * The name of the connection factory for the Qpid Dispatch Router.
+     */
     public static final String DISPATCH_ROUTER = "qdr";
 
     private static final String AMQP_URI_PATTERN = "amqp://%s:%d?jms.connectionIDPrefix=CON&%s";
