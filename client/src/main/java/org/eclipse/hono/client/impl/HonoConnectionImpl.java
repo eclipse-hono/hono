@@ -57,6 +57,7 @@ import io.vertx.proton.ProtonMessageHandler;
 import io.vertx.proton.ProtonQoS;
 import io.vertx.proton.ProtonReceiver;
 import io.vertx.proton.ProtonSender;
+import io.vertx.proton.sasl.MechanismMismatchException;
 import io.vertx.proton.sasl.SaslSystemException;
 
 /**
@@ -525,6 +526,7 @@ public class HonoConnectionImpl implements HonoConnection {
     private boolean isTerminalConnectionError(final Throwable connectionFailureCause) {
 
         return connectionFailureCause instanceof AuthenticationException ||
+                connectionFailureCause instanceof MechanismMismatchException ||
                 (connectionFailureCause instanceof SaslSystemException && ((SaslSystemException) connectionFailureCause).isPermanent());
     }
 
@@ -540,9 +542,7 @@ public class HonoConnectionImpl implements HonoConnection {
             // wrong credentials?
             connectionHandler.handle(Future.failedFuture(
                     new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED, "failed to authenticate with server")));
-        } else if (connectionFailureCause instanceof SaslSystemException
-                && connectionFailureCause.getMessage().contains("Could not find a suitable SASL mechanism")) {
-            // this check will have to be changed when using a future vert.x version where an AuthenticationException is thrown in this case
+        } else if (connectionFailureCause instanceof MechanismMismatchException) {
             connectionHandler.handle(Future.failedFuture(
                     new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED, "no suitable SASL mechanism found for authentication with server")));
         } else {

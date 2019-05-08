@@ -64,6 +64,7 @@ import io.vertx.proton.ProtonMessageHandler;
 import io.vertx.proton.ProtonQoS;
 import io.vertx.proton.ProtonReceiver;
 import io.vertx.proton.ProtonSender;
+import io.vertx.proton.sasl.MechanismMismatchException;
 import io.vertx.proton.sasl.SaslSystemException;
 
 /**
@@ -176,15 +177,14 @@ public class HonoConnectionImplTest {
         props.setConnectTimeout(10);
         connectionFactory = new DisconnectHandlerProvidingConnectionFactory(con)
                 .setExpectedFailingConnectionAttempts(1) // only one connection attempt expected here
-                .failWith(new SaslSystemException(
-                        true, "Could not find a suitable SASL mechanism for the remote peer using the available credentials."));
+                .failWith(new MechanismMismatchException(
+                        "Could not find a suitable SASL mechanism for the remote peer using the available credentials."));
         honoConnection = new HonoConnectionImpl(vertx, connectionFactory, props);
 
         // WHEN the client tries to connect
         honoConnection.connect().setHandler(ctx.asyncAssertFailure(t -> {
             // THEN the connection attempt fails due do lack of authorization
             ctx.assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED, ((ServiceInvocationException) t).getErrorCode());
-            ctx.assertEquals("no suitable SASL mechanism found for authentication with server", t.getMessage());
         }));
         // and the client has indeed tried three times in total
         assertTrue(connectionFactory.awaitFailure());
