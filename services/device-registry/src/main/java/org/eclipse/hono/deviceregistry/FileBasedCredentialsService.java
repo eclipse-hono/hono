@@ -280,6 +280,7 @@ public final class FileBasedCredentialsService extends CompleteBaseCredentialsSe
         if (data == null) {
             resultHandler.handle(Future.succeededFuture(CredentialsResult.from(HttpURLConnection.HTTP_NOT_FOUND)));
         } else {
+            log.debug(data.copy().encode());
             resultHandler.handle(Future.succeededFuture(
                     CredentialsResult.from(HttpURLConnection.HTTP_OK, data.copy(), CacheDirective.noCacheDirective())));
         }
