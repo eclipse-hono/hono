@@ -338,7 +338,7 @@ public class FileBasedCredentialsServiceTest extends AbstractCompleteCredentials
         // GIVEN a registry containing a set of credentials
         // that has been configured to not allow modification of entries
         props.setModificationEnabled(false);
-        Future registration = Future.future();
+        final Future registration = Future.future();
         register(getCompleteCredentialsService(), "tenant", "device", "myId", "myType", ctx, registration);
 
         // WHEN trying to update the credentials
@@ -362,7 +362,7 @@ public class FileBasedCredentialsServiceTest extends AbstractCompleteCredentials
         // GIVEN a registry containing a set of credentials
         // that has been configured to not allow modification of entries
         props.setModificationEnabled(false);
-        Future registration = Future.future();
+        final Future registration = Future.future();
         register(getCompleteCredentialsService(), "tenant", "device", "myId", "myType", ctx, registration);
 
         // WHEN trying to remove the credentials

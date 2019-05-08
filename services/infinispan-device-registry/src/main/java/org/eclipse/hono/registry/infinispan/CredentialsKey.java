@@ -68,15 +68,15 @@ public class CredentialsKey implements Serializable {
         return Objects.hash(tenantId, authId, type);
     }
 
-    public void setTenantId(String tenantId) {
+    public void setTenantId(final String tenantId) {
         this.tenantId = tenantId;
     }
 
-    public void setAuthId(String authId) {
+    public void setAuthId(final String authId) {
         this.authId = authId;
     }
 
-    public void setType(String type) {
+    public void setType(final String type) {
         this.type = type;
     }
 

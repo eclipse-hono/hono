@@ -72,15 +72,15 @@ public class RegistryTenantObject implements Serializable {
         return trustedCa;
     }
 
-    public void setTenantId(String tenantId) {
+    public void setTenantId(final String tenantId) {
         this.tenantId = tenantId;
     }
 
-    public void setTrustedCa(String trustedCa) {
+    public void setTrustedCa(final String trustedCa) {
         this.trustedCa = trustedCa;
     }
 
-    public void setTenantObject(String tenantObject) {
+    public void setTenantObject(final String tenantObject) {
         this.tenantObject = tenantObject;
     }
 }

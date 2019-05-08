@@ -28,7 +28,7 @@ import java.io.IOException;
  * Tests verifying behavior of {@link CacheCredentialService}.
  *
  */
-//@Disabled
+@Disabled
 @ExtendWith(VertxExtension.class)
 public class CacheCredentialsServiceTest extends AbstractCompleteCredentialsServiceTest {
 
@@ -37,6 +37,7 @@ public class CacheCredentialsServiceTest extends AbstractCompleteCredentialsServ
 
     /**
      * Spin up the service using Infinispan EmbeddedCache.
+     * @throws IOException : if the embedded cache cannot start
      */
     @BeforeEach
     public void setUp() throws IOException {

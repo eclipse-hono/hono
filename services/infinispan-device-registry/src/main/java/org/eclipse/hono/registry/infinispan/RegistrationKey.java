@@ -70,7 +70,7 @@ public class RegistrationKey implements Serializable {
         return tenantId;
     }
 
-    public void setTenantId(String tenantId) {
+    public void setTenantId(final String tenantId) {
         this.tenantId = tenantId;
     }
 
@@ -80,7 +80,7 @@ public class RegistrationKey implements Serializable {
         return deviceId;
     }
 
-    public void setDeviceId(String deviceId) {
+    public void setDeviceId(final String deviceId) {
         this.deviceId = deviceId;
     }
 }

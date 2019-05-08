@@ -19,12 +19,9 @@ import org.infinispan.client.hotrod.RemoteCache;
 import org.infinispan.client.hotrod.RemoteCacheManager;
 import org.infinispan.client.hotrod.marshall.ProtoStreamMarshaller;
 import org.infinispan.configuration.cache.ConfigurationBuilder;
-import org.infinispan.manager.DefaultCacheManager;
-import org.infinispan.manager.EmbeddedCacheManager;
 import org.infinispan.protostream.SerializationContext;
 import org.infinispan.protostream.annotations.ProtoSchemaBuilder;
 import org.infinispan.query.remote.client.ProtobufMetadataManagerConstants;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -51,7 +48,7 @@ public class InfinispanRegistryConfig extends ApplicationConfig {
         final SerializationContext serCtx = ProtoStreamMarshaller.getSerializationContext(remoteCacheManager);
 
         // genereate the protobuff schema
-        String generatedSchema = new ProtoSchemaBuilder()
+        final String generatedSchema = new ProtoSchemaBuilder()
                 .addClass(RegistryTenantObject.class)
                 .addClass(RegistryCredentialObject.class)
                 .addClass(CredentialsKey.class)

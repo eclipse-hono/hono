@@ -68,15 +68,15 @@ public class RegistryCredentialObject implements Serializable {
         return tenantId;
     }
 
-    public void setTenantId(String tenantId) {
+    public void setTenantId(final String tenantId) {
         this.tenantId = tenantId;
     }
 
-    public void setDeviceId(String deviceId) {
+    public void setDeviceId(final String deviceId) {
         this.deviceId = deviceId;
     }
 
-    public void setOriginalJson(String originalJson) {
+    public void setOriginalJson(final String originalJson) {
         this.originalJson = originalJson;
     }
 }

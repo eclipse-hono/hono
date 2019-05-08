@@ -44,7 +44,7 @@ public abstract class AbstractCompleteCredentialsServiceTest {
     @Test
     public void testAddCredentialsRefusesDuplicateRegistration(final VertxTestContext ctx) {
 
-        Future registration = Future.future();
+        final Future registration = Future.future();
         register(getCompleteCredentialsService(), "tenant", "device", "myId", "myType", ctx, registration);
 
         final JsonObject payload2 = new JsonObject()
@@ -83,7 +83,7 @@ public abstract class AbstractCompleteCredentialsServiceTest {
     @Test
     public void testGetCredentialsSucceedsForExistingCredentials(final VertxTestContext ctx) {
 
-        Future registration = Future.future();
+        final Future registration = Future.future();
         register(getCompleteCredentialsService(), "tenant", "device", "myId", "myType", ctx, registration);
 
         registration.setHandler(r -> {
@@ -106,7 +106,7 @@ public abstract class AbstractCompleteCredentialsServiceTest {
         final JsonObject clientContext = new JsonObject()
                 .put("client-id", "gateway-one");
 
-        Future registration = Future.future();
+        final Future registration = Future.future();
         register(getCompleteCredentialsService(), "tenant", "device", "myId", "myType", clientContext, new JsonArray(), ctx, registration);
 
         registration.setHandler( r-> {
@@ -132,7 +132,7 @@ public abstract class AbstractCompleteCredentialsServiceTest {
         final JsonObject clientContext = new JsonObject()
                 .put("client-id", "gateway-one");
 
-        Future registration = Future.future();
+        final Future registration = Future.future();
         register(getCompleteCredentialsService(), "tenant", "device", "myId", "myType", clientContext, new JsonArray(), ctx, registration);
 
         final JsonObject testContext = new JsonObject()
@@ -155,7 +155,7 @@ public abstract class AbstractCompleteCredentialsServiceTest {
     @Test
     public void testRemoveCredentialsByAuthIdAndTypeSucceeds(final VertxTestContext ctx) {
 
-        Future registration = Future.future();
+        final Future registration = Future.future();
         register(getCompleteCredentialsService(), "tenant", "device", "myId", "myType", ctx, registration);
 
         registration.setHandler(r-> {
@@ -176,9 +176,9 @@ public abstract class AbstractCompleteCredentialsServiceTest {
     @Test
     public void testRemoveCredentialsByDeviceSucceeds(final VertxTestContext ctx) {
 
-        Future registration1 = Future.future();
-        Future registration2 = Future.future();
-        Future registration3 = Future.future();
+        final Future registration1 = Future.future();
+        final Future registration2 = Future.future();
+        final Future registration3 = Future.future();
         register(getCompleteCredentialsService(), "tenant", "device", "myId", "myType", ctx, registration1);
         register(getCompleteCredentialsService(), "tenant", "device", "myOtherId", "myOtherType", ctx, registration2);
         register(getCompleteCredentialsService(), "tenant", "other-device", "thirdId", "myType", ctx, registration3);
@@ -229,7 +229,7 @@ public abstract class AbstractCompleteCredentialsServiceTest {
         register(svc, tenant, deviceId, authId, type, null, new JsonArray(), ctx, future);
     }
 
-    protected static void register (
+    protected static void register(
             final CompleteCredentialsService svc,
             final String tenant,
             final String deviceId,
