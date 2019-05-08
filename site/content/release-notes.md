@@ -22,6 +22,8 @@ title = "Release Notes"
   it is now mandatory to implement. For device registry implementations based on the
   `CompleteRegistrationService` interface, there is no change needed as the operation is already
   defined there.
+* The already deprecated `org.eclipse.hono.client.CommandConsumerFactory.closeCommandConsumer`
+  method has been removed.
 
 ## 1.0-M3
 

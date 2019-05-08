@@ -33,6 +33,13 @@ import io.vertx.proton.ProtonReceiver;
  */
 public abstract class CommandConsumer extends AbstractConsumer {
 
+    /**
+     * Creates a consumer for a connection and a receiver link.
+     * 
+     * @param connection The connection to the AMQP Messaging Network over which
+     *                   commands are received.
+     * @param receiver The receiver link for command messages.
+     */
     protected CommandConsumer(final HonoConnection connection, final ProtonReceiver receiver) {
         super(connection, receiver);
     }

@@ -732,25 +732,6 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     }
 
     /**
-     * Closes a command consumer for a device.
-     * <p>
-     * If no command consumer for the device is open, this method does nothing.
-     * 
-     * @param tenantId The tenant that the device belongs to.
-     * @param deviceId The identifier of the device.
-     * @deprecated This method will be removed in Hono 1.0. Use {@link MessageConsumer#close(Handler)} instead.
-     */
-    @Deprecated
-    protected final void closeCommandConsumer(final String tenantId, final String deviceId) {
-
-        getCommandConsumerFactory().closeCommandConsumer(tenantId, deviceId).otherwise(t -> {
-            LOG.warn("cannot close command consumer [tenant-id: {}, device-id: {}]: {}",
-                    tenantId, deviceId, t.getMessage());
-            return null;
-        });
-    }
-
-    /**
      * Creates a link for sending a command response downstream.
      *
      * @param tenantId The tenant that the device belongs to from which

@@ -369,27 +369,6 @@ public class CommandConsumerFactoryImpl extends AbstractHonoClientFactory implem
         });
     }
 
-    /**
-     * {@inheritDoc}
-     */
-    @Deprecated
-    @Override
-    public Future<Void> closeCommandConsumer(final String tenantId, final String deviceId) {
-
-        Objects.requireNonNull(tenantId);
-        Objects.requireNonNull(deviceId);
-
-        return connection.executeOrRunOnContext(result -> {
-            final String key = getKey(tenantId, deviceId);
-            // stop liveness check
-            Optional.ofNullable(livenessChecks.remove(key)).ifPresent(connection.getVertx()::cancelTimer);
-            // close and remove link from cache
-            deviceSpecificCommandConsumerFactory.removeClient(key, consumer -> {
-                consumer.close(result);
-            });
-        });
-    }
-
     // ------------- Override AbstractHonoClientFactory methods to also connect/disconnect the gatewayMapper ------------
 
     @Override
