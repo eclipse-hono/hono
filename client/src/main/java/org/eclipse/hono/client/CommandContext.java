@@ -14,10 +14,7 @@
 
 package org.eclipse.hono.client;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 
 import org.apache.qpid.proton.amqp.messaging.Rejected;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
@@ -27,8 +24,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.opentracing.Span;
-import io.opentracing.log.Fields;
-import io.opentracing.tag.Tags;
 import io.vertx.proton.ProtonDelivery;
 import io.vertx.proton.ProtonHelper;
 import io.vertx.proton.ProtonReceiver;
@@ -185,8 +180,7 @@ public class CommandContext extends MapBasedExecutionContext {
             throw new IllegalArgumentException("credit must be >= 0");
         }
         ProtonHelper.released(delivery, true);
-        currentSpan.log("released command for device");
-        currentSpan.log(Tags.ERROR.getKey());
+        TracingHelper.logError(currentSpan, "released command for device");
         if (credit > 0) {
             flow(credit);
         }
@@ -211,8 +205,9 @@ public class CommandContext extends MapBasedExecutionContext {
             throw new IllegalArgumentException("credit must be >= 0");
         }
         ProtonHelper.modified(delivery, true, deliveryFailed, undeliverableHere);
-        currentSpan.log("modified command for device");
-        currentSpan.log(Tags.ERROR.getKey());
+        TracingHelper.logError(currentSpan, "modified command for device"
+                + (deliveryFailed ? "; delivery failed" : "")
+                + (undeliverableHere ? "; undeliverable here" : ""));
         if (credit > 0) {
             flow(credit);
         }
@@ -245,15 +240,16 @@ public class CommandContext extends MapBasedExecutionContext {
      */
     public void reject(final ErrorCondition errorCondition, final int credit) {
 
+        if (credit < 0) {
+            throw new IllegalArgumentException("credit must be >= 0");
+        }
         final Rejected rejected = new Rejected();
-        final Map<String, Object> items = new HashMap<>(2);
-        items.put(Fields.EVENT, "rejected command for device");
         if (errorCondition != null) {
             rejected.setError(errorCondition);
-            Optional.ofNullable(errorCondition.getDescription()).ifPresent(s -> items.put(Fields.MESSAGE, s));
         }
-        TracingHelper.logError(currentSpan, items);
         delivery.disposition(rejected, true);
+        TracingHelper.logError(currentSpan, "rejected command for device"
+                + ((errorCondition != null && errorCondition.getDescription() != null) ? "; error: " + errorCondition.getDescription() : ""));
         if (credit > 0) {
             flow(credit);
         }
