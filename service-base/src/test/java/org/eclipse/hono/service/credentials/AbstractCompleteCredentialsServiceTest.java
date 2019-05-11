@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,12 +14,14 @@ package org.eclipse.hono.service.credentials;
 
 import static org.junit.Assert.assertEquals;
 
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.VertxTestContext;
+
+import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.util.CredentialsConstants;
+import org.eclipse.hono.util.CredentialsResult;
 import org.junit.jupiter.api.Test;
 
 import java.net.HttpURLConnection;
@@ -44,21 +46,23 @@ public abstract class AbstractCompleteCredentialsServiceTest {
     @Test
     public void testAddCredentialsRefusesDuplicateRegistration(final VertxTestContext ctx) {
 
-        final Future registration = Future.future();
-        register(getCompleteCredentialsService(), "tenant", "device", "myId", "myType", ctx, registration);
+        register(getCompleteCredentialsService(), "tenant", "device", "myId", "myType")
+        .compose(ok -> {
 
-        final JsonObject payload2 = new JsonObject()
-                .put(CredentialsConstants.FIELD_PAYLOAD_DEVICE_ID, "other-device")
-                .put(CredentialsConstants.FIELD_AUTH_ID, "myId")
-                .put(CredentialsConstants.FIELD_TYPE, "myType")
-                .put(CredentialsConstants.FIELD_SECRETS, new JsonArray());
+            final Future<CredentialsResult<JsonObject>> result = Future.future();
+            final JsonObject payload2 = new JsonObject()
+                    .put(CredentialsConstants.FIELD_PAYLOAD_DEVICE_ID, "other-device")
+                    .put(CredentialsConstants.FIELD_AUTH_ID, "myId")
+                    .put(CredentialsConstants.FIELD_TYPE, "myType")
+                    .put(CredentialsConstants.FIELD_SECRETS, new JsonArray());
 
-        registration.setHandler(r-> {
-            getCompleteCredentialsService().add("tenant", payload2, ctx.succeeding(s -> ctx.verify(() -> {
-                assertEquals(HttpURLConnection.HTTP_CONFLICT, s.getStatus());
-                ctx.completeNow();
-            })));
-        });
+            getCompleteCredentialsService().add("tenant", payload2, result);
+            return result;
+        }).setHandler(ctx.succeeding(s -> ctx.verify(() -> {
+            assertEquals(HttpURLConnection.HTTP_CONFLICT, s.getStatus());
+            ctx.completeNow();
+        })));
+;
     }
 
     /**
@@ -83,17 +87,18 @@ public abstract class AbstractCompleteCredentialsServiceTest {
     @Test
     public void testGetCredentialsSucceedsForExistingCredentials(final VertxTestContext ctx) {
 
-        final Future registration = Future.future();
-        register(getCompleteCredentialsService(), "tenant", "device", "myId", "myType", ctx, registration);
-
-        registration.setHandler(r -> {
-            getCompleteCredentialsService().get("tenant", "myType", "myId", ctx.succeeding(s -> ctx.verify(() -> {
-                assertEquals(HttpURLConnection.HTTP_OK, s.getStatus());
-                assertEquals("myId", s.getPayload().getString(CredentialsConstants.FIELD_AUTH_ID));
-                assertEquals("myType", s.getPayload().getString(CredentialsConstants.FIELD_TYPE));
-                ctx.completeNow();
-            })));
-        });
+        register(getCompleteCredentialsService(), "tenant", "device", "myId", "myType")
+        .compose(ok -> {
+            final Future<CredentialsResult<JsonObject>> result = Future.future();
+            getCompleteCredentialsService().get("tenant", "myType", "myId", result);
+            return result;
+        })
+        .setHandler(ctx.succeeding(r -> ctx.verify(() -> {
+            assertEquals(HttpURLConnection.HTTP_OK, r.getStatus());
+            assertEquals("myId", r.getPayload().getString(CredentialsConstants.FIELD_AUTH_ID));
+            assertEquals("myType", r.getPayload().getString(CredentialsConstants.FIELD_TYPE));
+            ctx.completeNow();
+        })));
     }
 
     /**
@@ -103,21 +108,21 @@ public abstract class AbstractCompleteCredentialsServiceTest {
      */
     @Test
     public void testGetCredentialsSucceedsForProperClientContext(final VertxTestContext ctx) {
-        final JsonObject clientContext = new JsonObject()
-                .put("client-id", "gateway-one");
 
-        final Future registration = Future.future();
-        register(getCompleteCredentialsService(), "tenant", "device", "myId", "myType", clientContext, new JsonArray(), ctx, registration);
+        final JsonObject clientContext = new JsonObject().put("client-id", "gateway-one");
 
-        registration.setHandler( r-> {
-            getCompleteCredentialsService()
-                    .get("tenant", "myType", "myId", clientContext, ctx.succeeding(s -> ctx.verify(() -> {
-                        assertEquals(HttpURLConnection.HTTP_OK, s.getStatus());
-                        assertEquals("myId", s.getPayload().getString(CredentialsConstants.FIELD_AUTH_ID));
-                        assertEquals("myType", s.getPayload().getString(CredentialsConstants.FIELD_TYPE));
-                        ctx.completeNow();
-                    })));
-        });
+        register(getCompleteCredentialsService(), "tenant", "device", "myId", "myType", clientContext, new JsonArray())
+        .compose(ok -> {
+            final Future<CredentialsResult<JsonObject>> result = Future.future();
+            getCompleteCredentialsService().get("tenant", "myType", "myId", clientContext, result);
+            return result;
+        })
+        .setHandler(ctx.succeeding(s -> ctx.verify(() -> {
+            assertEquals(HttpURLConnection.HTTP_OK, s.getStatus());
+            assertEquals("myId", s.getPayload().getString(CredentialsConstants.FIELD_AUTH_ID));
+            assertEquals("myType", s.getPayload().getString(CredentialsConstants.FIELD_TYPE));
+            ctx.completeNow();
+        })));
     }
 
     /**
@@ -127,22 +132,20 @@ public abstract class AbstractCompleteCredentialsServiceTest {
      */
     @Test
     public void testGetCredentialsFailsForWrongClientContext(final VertxTestContext ctx) {
-        final JsonObject clientContext = new JsonObject()
-                .put("client-id", "gateway-one");
 
-        final Future registration = Future.future();
-        register(getCompleteCredentialsService(), "tenant", "device", "myId", "myType", clientContext, new JsonArray(), ctx, registration);
+        final JsonObject clientContext = new JsonObject().put("client-id", "gateway-one");
 
-        final JsonObject testContext = new JsonObject()
-                .put("client-id", "gateway-two");
-
-        registration.setHandler(r -> {
-            getCompleteCredentialsService()
-                    .get("tenant", "myType", "myId", testContext, ctx.succeeding(s -> ctx.verify(() -> {
-                        assertEquals(HttpURLConnection.HTTP_NOT_FOUND, s.getStatus());
-                        ctx.completeNow();
-                    })));
-        });
+        register(getCompleteCredentialsService(), "tenant", "device", "myId", "myType", clientContext, new JsonArray())
+        .compose(ok -> {
+            final Future<CredentialsResult<JsonObject>> result = Future.future();
+            final JsonObject testContext = new JsonObject().put("client-id", "gateway-two");
+            getCompleteCredentialsService().get("tenant", "myType", "myId", testContext, result);
+            return result;
+        })
+        .setHandler(ctx.succeeding(s -> ctx.verify(() -> {
+            assertEquals(HttpURLConnection.HTTP_NOT_FOUND, s.getStatus());
+            ctx.completeNow();
+        })));
     }
 
     /**
@@ -153,16 +156,14 @@ public abstract class AbstractCompleteCredentialsServiceTest {
     @Test
     public void testRemoveCredentialsByAuthIdAndTypeSucceeds(final VertxTestContext ctx) {
 
-        final Future registration = Future.future();
-        register(getCompleteCredentialsService(), "tenant", "device", "myId", "myType", ctx, registration);
-
-        registration.setHandler(r-> {
-            getCompleteCredentialsService().remove("tenant", "myType", "myId", ctx.succeeding(s -> ctx.verify(() -> {
-                assertEquals(HttpURLConnection.HTTP_NO_CONTENT, s.getStatus());
-                assertNotRegistered(getCompleteCredentialsService(), "tenant", "myId", "myType", ctx);
-                ctx.completeNow();
-            })));
-        });
+        register(getCompleteCredentialsService(), "tenant", "device", "myId", "myType")
+        .compose(ok -> {
+            final Future<CredentialsResult<JsonObject>> result = Future.future();
+            getCompleteCredentialsService().remove("tenant", "myType", "myId", result);
+            return result;
+        }).map(s -> ctx.verify(() -> assertEquals(HttpURLConnection.HTTP_NO_CONTENT, s.getStatus())))
+        .compose(c -> assertNotRegistered(getCompleteCredentialsService(), "tenant", "myId", "myType"))
+        .setHandler(ctx.completing());
     }
 
     /**
@@ -174,69 +175,114 @@ public abstract class AbstractCompleteCredentialsServiceTest {
     @Test
     public void testRemoveCredentialsByDeviceSucceeds(final VertxTestContext ctx) {
 
-        final Future registration1 = Future.future();
-        final Future registration2 = Future.future();
-        final Future registration3 = Future.future();
-        register(getCompleteCredentialsService(), "tenant", "device", "myId", "myType", ctx, registration1);
-        register(getCompleteCredentialsService(), "tenant", "device", "myOtherId", "myOtherType", ctx, registration2);
-        register(getCompleteCredentialsService(), "tenant", "other-device", "thirdId", "myType", ctx, registration3);
+        register(getCompleteCredentialsService(), "tenant", "device", "myId", "myType")
+        .compose(ok -> register(getCompleteCredentialsService(), "tenant", "device", "myOtherId", "myOtherType"))
+        .compose(ok -> register(getCompleteCredentialsService(), "tenant", "other-device", "thirdId", "myType"))
+        .compose(ok -> {
+            final Future<CredentialsResult<JsonObject>> result = Future.future();
+            getCompleteCredentialsService().removeAll("tenant", "device", result);
+            return result;
+        }).map(s -> ctx.verify(() -> assertEquals(HttpURLConnection.HTTP_NO_CONTENT, s.getStatus())))
+        .compose(c -> assertNotRegistered(getCompleteCredentialsService(), "tenant", "myId", "myType"))
+        .compose(ok -> assertNotRegistered(getCompleteCredentialsService(), "tenant", "myOtherId", "myOtherType"))
+        .compose(ok -> assertRegistered(getCompleteCredentialsService(), "tenant", "thirdId", "myType"))
+        .setHandler(ctx.completing());
+    }
 
-        CompositeFuture.all(registration1, registration2, registration3).setHandler( r-> {
-            getCompleteCredentialsService().removeAll("tenant", "device", ctx.succeeding(s -> ctx.verify(() -> {
-                assertEquals(HttpURLConnection.HTTP_NO_CONTENT, s.getStatus());
-                assertNotRegistered(getCompleteCredentialsService(), "tenant", "myId", "myType", ctx);
-                assertNotRegistered(getCompleteCredentialsService(), "tenant", "myOtherId", "myOtherType", ctx);
-                assertRegistered(getCompleteCredentialsService(), "tenant", "thirdId", "myType", ctx);
-                ctx.completeNow();
-            })));
+    /**
+     * Verifies that credentials of a particular type are registered.
+     * 
+     * @param svc The credentials service to probe.
+     * @param tenant The tenant that the device belongs to.
+     * @param authId The authentication identifier used by the device.
+     * @param type The type of credentials.
+     * @return A succeeded future if the credentials exist.
+     */
+    protected static Future<Void> assertRegistered(
+            final CompleteCredentialsService svc,
+            final String tenant,
+            final String authId,
+            final String type) {
+
+        return assertGet(svc, tenant, authId, type, HttpURLConnection.HTTP_OK);
+    }
+
+    /**
+     * Verifies that credentials of a particular type are not registered.
+     * 
+     * @param svc The credentials service to probe.
+     * @param tenant The tenant that the device belongs to.
+     * @param authId The authentication identifier used by the device.
+     * @param type The type of credentials.
+     * @return A succeeded future if the credentials do not exist.
+     */
+    protected static Future<Void> assertNotRegistered(
+            final CompleteCredentialsService svc,
+            final String tenant,
+            final String authId,
+            final String type) {
+
+        return assertGet(svc, tenant, authId, type, HttpURLConnection.HTTP_NOT_FOUND);
+    }
+
+    private static Future<Void> assertGet(
+            final CompleteCredentialsService svc,
+            final String tenant,
+            final String authId,
+            final String type,
+            final int expectedStatusCode) {
+
+        final Future<CredentialsResult<JsonObject>> result = Future.future();
+        svc.get(tenant, type, authId, result);
+        return result.map(r -> {
+            if (r.getStatus() == expectedStatusCode) {
+                return null;
+            } else {
+                throw new ClientErrorException(HttpURLConnection.HTTP_PRECON_FAILED);
+            }
         });
     }
 
-    protected static void assertRegistered(
-            final CompleteCredentialsService svc,
-            final String tenant,
-            final String authId,
-            final String type,
-            final VertxTestContext ctx) {
-
-        svc.get(tenant, type, authId, ctx.succeeding(t -> ctx.verify(() -> {
-            assertEquals(HttpURLConnection.HTTP_OK, t.getStatus());
-        })));
-    }
-
-    protected static void assertNotRegistered(
-            final CompleteCredentialsService svc,
-            final String tenant,
-            final String authId,
-            final String type,
-            final VertxTestContext ctx) {
-
-        svc.get(tenant, type, authId, ctx.succeeding(t -> ctx.verify(() -> {
-            assertEquals(HttpURLConnection.HTTP_NOT_FOUND, t.getStatus());
-        })));
-    }
-
-    protected static void register(
+    /**
+     * Registers a set of empty credentials for a device.
+     * 
+     * @param svc The service to register the credentials with.
+     * @param tenant The tenant that the device belongs to.
+     * @param deviceId The identifier of the device.
+     * @param authId The authentication identifier to register the secret for.
+     * @param type The type of secret.
+     * @return A succeeded future if the credentials have been registered successfully.
+     */
+    protected static Future<CredentialsResult<JsonObject>> register(
             final CompleteCredentialsService svc,
             final String tenant,
             final String deviceId,
             final String authId,
-            final String type,
-            final VertxTestContext ctx,
-            final Future future) {
-        register(svc, tenant, deviceId, authId, type, null, new JsonArray(), ctx, future);
+            final String type) {
+
+        return register(svc, tenant, deviceId, authId, type, null, new JsonArray());
     }
 
-    protected static void register(
+    /**
+     * Registers a set of credentials for a device.
+     * 
+     * @param svc The service to register the credentials with.
+     * @param tenant The tenant that the device belongs to.
+     * @param deviceId The identifier of the device.
+     * @param authId The authentication identifier to register the secret for.
+     * @param type The type of secret.
+     * @param clientContext The client context to associate the credentials with.
+     * @param secrets The secrets to register for the authentication id.
+     * @return A succeeded future if the credentials have been registered successfully.
+     */
+    protected static Future<CredentialsResult<JsonObject>> register(
             final CompleteCredentialsService svc,
             final String tenant,
             final String deviceId,
             final String authId,
             final String type,
             final JsonObject clientContext,
-            final JsonArray secrets,
-            final VertxTestContext ctx,
-            final Future future) {
+            final JsonArray secrets) {
 
         final JsonObject data = new JsonObject()
                 .put(CredentialsConstants.FIELD_PAYLOAD_DEVICE_ID, deviceId)
@@ -248,9 +294,30 @@ public abstract class AbstractCompleteCredentialsServiceTest {
             data.mergeIn(clientContext);
         }
 
-        svc.add("tenant", data, ctx.succeeding(s -> ctx.verify(() -> {
-            assertEquals(HttpURLConnection.HTTP_CREATED, s.getStatus());
-            future.complete();
-        })));
+        return register(svc, tenant, data);
+    }
+
+    /**
+     * Registers a set of credentials for a device.
+     * 
+     * @param svc The service to register the credentials with.
+     * @param tenant The tenant that the device belongs to.
+     * @param credentials The credentials to register.
+     * @return A succeeded future if the credentials have been registered successfully.
+     */
+    protected static Future<CredentialsResult<JsonObject>> register(
+            final CompleteCredentialsService svc,
+            final String tenant,
+            final JsonObject credentials) {
+
+        final Future<CredentialsResult<JsonObject>> result = Future.future();
+        svc.add(tenant, credentials, result);
+        return result.map(r -> {
+            if (HttpURLConnection.HTTP_CREATED == r.getStatus()) {
+                return r;
+            } else {
+                throw new ClientErrorException(r.getStatus());
+            }
+        });
     }
 }

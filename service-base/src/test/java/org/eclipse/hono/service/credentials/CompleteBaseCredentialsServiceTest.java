@@ -32,7 +32,6 @@ import org.eclipse.hono.util.EventBusMessage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.rules.Timeout;
 
 import io.opentracing.Span;
 import io.vertx.core.AsyncResult;
@@ -41,7 +40,6 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
-import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 
@@ -53,11 +51,6 @@ public class CompleteBaseCredentialsServiceTest {
 
     private static final String TEST_TENANT = "dummy";
     private static final int MAX_ITERATIONS = 10;
-
-    /**
-     * Time out each test after 5 seconds.
-     */
-    public Timeout timeout = Timeout.seconds(5);
 
     private CompleteBaseCredentialsService<ServiceConfigProperties> service;
     private HonoPasswordEncoder pwdEncoder;
@@ -260,18 +253,17 @@ public class CompleteBaseCredentialsServiceTest {
         secret.put(CredentialsConstants.FIELD_SECRETS_PWD_PLAIN, "updated");
         final EventBusMessage updateMsg = createRequestForPayload(CredentialsConstants.CredentialsAction.update, updatedCredentials);
 
-        final Checkpoint create = ctx.checkpoint();
-        final Checkpoint update = ctx.checkpoint();
         service.processRequest(msg)
             .compose(r -> {
-                assertEquals(HttpURLConnection.HTTP_CREATED, r.getStatus());
-                verify(pwdEncoder).encode("initial");
-                create.flag();
+                ctx.verify(() -> {
+                    assertEquals(HttpURLConnection.HTTP_CREATED, r.getStatus());
+                    verify(pwdEncoder).encode("initial");
+                });
                 return service.processRequest(updateMsg);
             }).setHandler(ctx.succeeding(r ->  ctx.verify(() -> {
                 assertEquals(HttpURLConnection.HTTP_NO_CONTENT, r.getStatus());
                 verify(pwdEncoder).encode("updated");
-                update.flag();
+                ctx.completeNow();
             })));
     }
 

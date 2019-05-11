@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -25,7 +25,6 @@ import org.eclipse.hono.util.EventBusMessage;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.rules.Timeout;
 
 import io.opentracing.Span;
 import io.vertx.core.AsyncResult;
@@ -43,11 +42,6 @@ public class BaseCredentialsServiceTest {
     private static BaseCredentialsService<ServiceConfigProperties> service;
 
     private static final String TEST_TENANT = "dummy";
-
-    /**
-     * Time out each test after 5 seconds.
-     */
-    public Timeout timeout = Timeout.seconds(5);
 
     /**
      * Sets up the fixture.
