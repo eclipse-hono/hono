@@ -16,7 +16,11 @@ package org.eclipse.hono.client;
 
 import java.util.Objects;
 
+import org.apache.qpid.proton.amqp.messaging.Accepted;
+import org.apache.qpid.proton.amqp.messaging.Modified;
 import org.apache.qpid.proton.amqp.messaging.Rejected;
+import org.apache.qpid.proton.amqp.messaging.Released;
+import org.apache.qpid.proton.amqp.transport.DeliveryState;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.MapBasedExecutionContext;
@@ -257,8 +261,69 @@ public class CommandContext extends MapBasedExecutionContext {
     }
 
     /**
+     * Settles the command message with the given {@code DeliveryState} outcome.
+     * <p>
+     * This method also finishes the OpenTracing span returned by
+     * {@link #getCurrentSpan()}.
+     *
+     * @param deliveryState The deliveryState to set in the disposition frame.
+     * @throws NullPointerException if deliveryState is {@code null}.
+     */
+    public void disposition(final DeliveryState deliveryState) {
+        disposition(deliveryState, 0);
+    }
+
+    /**
+     * Settles the command message with the given {@code DeliveryState} outcome
+     * and flows credit to the peer.
+     * <p>
+     * This method also finishes the OpenTracing span returned by
+     * {@link #getCurrentSpan()}.
+     *
+     * @param deliveryState The deliveryState to set in the disposition frame.
+     * @param credit The number of credits to flow to the peer.
+     * @throws NullPointerException if deliveryState is {@code null}.
+     * @throws IllegalArgumentException if credit is negative.
+     */
+    public void disposition(final DeliveryState deliveryState, final int credit) {
+
+        Objects.requireNonNull(deliveryState);
+        if (credit < 0) {
+            throw new IllegalArgumentException("credit must be >= 0");
+        }
+        delivery.disposition(deliveryState, true);
+        if (Accepted.class.isInstance(deliveryState)) {
+            LOG.trace("accepted command message [{}]", getCommand());
+            currentSpan.log("accepted command for device");
+
+        } else if (Released.class.isInstance(deliveryState)) {
+            TracingHelper.logError(currentSpan, "released command for device");
+
+        } else if (Modified.class.isInstance(deliveryState)) {
+            final Modified modified = (Modified) deliveryState;
+            TracingHelper.logError(currentSpan, "modified command for device"
+                    + (Boolean.TRUE.equals(modified.getDeliveryFailed()) ? "; delivery failed" : "")
+                    + (Boolean.TRUE.equals(modified.getUndeliverableHere()) ? "; undeliverable here" : ""));
+
+        } else if (Rejected.class.isInstance(deliveryState)) {
+            final ErrorCondition errorCondition = ((Rejected) deliveryState).getError();
+            TracingHelper.logError(currentSpan, "rejected command for device"
+                    + ((errorCondition != null && errorCondition.getDescription() != null) ? "; error: " + errorCondition.getDescription() : ""));
+        } else {
+            LOG.warn("unexpected delivery state [{}] when settling command message [{}]", deliveryState, getCommand());
+            TracingHelper.logError(currentSpan, "unexpected delivery state: " + deliveryState);
+        }
+        if (credit > 0) {
+            flow(credit);
+        }
+        currentSpan.finish();
+    }
+
+    /**
      * Issues credits to the peer that the command has been received from.
-     * 
+     * <p>
+     * This will only be done if credit handling on the command receiver is manual (<em>prefetch</em> is <code>0</code>).
+     *
      * @param credits The number of credits.
      * @throws IllegalArgumentException if credits is &lt; 1
      */
@@ -266,7 +331,11 @@ public class CommandContext extends MapBasedExecutionContext {
         if (credits < 1) {
             throw new IllegalArgumentException("credits must be positive");
         }
-        currentSpan.log(String.format("flowing %d credits to sender", credits));
-        receiver.flow(credits);
+        if (receiver.getPrefetch() > 0) {
+            LOG.debug("will not flow credits because receiver prefetch is non-zero");
+        } else {
+            currentSpan.log(String.format("flowing %d credits to sender", credits));
+            receiver.flow(credits);
+        }
     }
 }
