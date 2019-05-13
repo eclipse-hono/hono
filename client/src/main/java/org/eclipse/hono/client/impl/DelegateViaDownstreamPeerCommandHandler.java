@@ -15,8 +15,6 @@ package org.eclipse.hono.client.impl;
 
 import java.util.function.Function;
 
-import org.apache.qpid.proton.amqp.messaging.Modified;
-import org.apache.qpid.proton.amqp.messaging.Rejected;
 import org.eclipse.hono.client.Command;
 import org.eclipse.hono.client.CommandContext;
 import org.eclipse.hono.client.DelegatedCommandSender;
@@ -71,7 +69,7 @@ public class DelegateViaDownstreamPeerCommandHandler implements Handler<CommandC
                         final ProtonDelivery delegatedMsgDelivery = sendResult.result();
                         LOG.trace("command for device {} sent to downstream peer; remote state of delivery: {}",
                                 deviceId, delegatedMsgDelivery.getRemoteState());
-                        applyDelegatedMessageDeliveryResultToCommandContext(delegatedMsgDelivery, commandContext);
+                        commandContext.disposition(delegatedMsgDelivery.getRemoteState());
                     } else {
                         // failed to send message
                         LOG.error("failed to send command message to downstream peer", sendResult.cause());
@@ -88,30 +86,5 @@ public class DelegateViaDownstreamPeerCommandHandler implements Handler<CommandC
                 commandContext.release();
             }
         });
-    }
-
-    private void applyDelegatedMessageDeliveryResultToCommandContext(final ProtonDelivery delegatedMsgDelivery, final CommandContext commandContext) {
-        switch (delegatedMsgDelivery.getRemoteState().getType()) {
-            case Accepted:
-                commandContext.accept();
-                break;
-            case Rejected:
-                final Rejected rejected = (Rejected) delegatedMsgDelivery.getRemoteState();
-                commandContext.reject(rejected.getError());
-                break;
-            case Modified:
-                final Modified modified = (Modified) delegatedMsgDelivery.getRemoteState();
-                commandContext.modify(modified.getDeliveryFailed(), modified.getUndeliverableHere(), 0);
-                break;
-            case Released:
-                commandContext.release();
-                break;
-            default:
-                LOG.warn("got unexpected delivery outcome; remote state: {}", delegatedMsgDelivery.getRemoteState());
-                TracingHelper.logError(commandContext.getCurrentSpan(), "got unexpected delivery outcome; remote state: "
-                        + delegatedMsgDelivery.getRemoteState());
-                commandContext.release();
-                break;
-        }
     }
 }

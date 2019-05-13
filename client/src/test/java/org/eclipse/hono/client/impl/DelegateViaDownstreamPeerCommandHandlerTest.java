@@ -13,6 +13,7 @@
 
 package org.eclipse.hono.client.impl;
 
+import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.mockito.Mockito.*;
@@ -22,6 +23,7 @@ import org.apache.qpid.proton.amqp.messaging.Accepted;
 import org.apache.qpid.proton.amqp.messaging.Modified;
 import org.apache.qpid.proton.amqp.messaging.Rejected;
 import org.apache.qpid.proton.amqp.messaging.Released;
+import org.apache.qpid.proton.amqp.transport.DeliveryState;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.Command;
@@ -48,6 +50,7 @@ public class DelegateViaDownstreamPeerCommandHandlerTest {
     private String tenantId;
     private String deviceId;
     private CommandContext commandContext;
+    private ProtonDelivery commandDelivery;
     private DelegateViaDownstreamPeerCommandHandler delegateViaDownstreamPeerCommandHandler;
     private DelegatedCommandSender delegatedCommandSender;
     private String replyTo;
@@ -67,10 +70,10 @@ public class DelegateViaDownstreamPeerCommandHandlerTest {
         when(commandMessage.getCorrelationId()).thenReturn("testCorrelationId");
         when(commandMessage.getReplyTo()).thenReturn(replyTo);
         final Command command = Command.from(commandMessage, tenantId, deviceId);
-        final ProtonDelivery delivery = mock(ProtonDelivery.class);
+        commandDelivery = mock(ProtonDelivery.class);
         final ProtonReceiver receiver = mock(ProtonReceiver.class);
         final Span currentSpan = mock(Span.class);
-        commandContext = spy(CommandContext.from(command, delivery, receiver, currentSpan));
+        commandContext = spy(CommandContext.from(command, commandDelivery, receiver, currentSpan));
 
         delegateViaDownstreamPeerCommandHandler = new DelegateViaDownstreamPeerCommandHandler(
                 tenantIdParam -> Future.succeededFuture(delegatedCommandSender));
@@ -102,8 +105,10 @@ public class DelegateViaDownstreamPeerCommandHandlerTest {
         // WHEN handle() is invoked
         delegateViaDownstreamPeerCommandHandler.handle(commandContext);
 
-        // THEN the command context is accepted
-        verify(commandContext).accept();
+        // THEN the command context delivery is updated with the 'accepted' outcome
+        final ArgumentCaptor<DeliveryState> deliveryStateArgumentCaptor = ArgumentCaptor.forClass(DeliveryState.class);
+        verify(commandDelivery).disposition(deliveryStateArgumentCaptor.capture(), anyBoolean());
+        assertThat(deliveryStateArgumentCaptor.getValue(), is(instanceOf(Accepted.class)));
     }
 
     /**
@@ -134,10 +139,11 @@ public class DelegateViaDownstreamPeerCommandHandlerTest {
         // WHEN handle() is invoked
         delegateViaDownstreamPeerCommandHandler.handle(commandContext);
 
-        // THEN the command context is rejected
-        final ArgumentCaptor<ErrorCondition> errorConditionArgumentCaptor = ArgumentCaptor.forClass(ErrorCondition.class);
-        verify(commandContext).reject(errorConditionArgumentCaptor.capture(), anyInt());
-        assertThat(errorConditionArgumentCaptor.getValue(), is(error));
+        // THEN the command context delivery is updated with the 'rejected' outcome
+        final ArgumentCaptor<DeliveryState> deliveryStateArgumentCaptor = ArgumentCaptor.forClass(DeliveryState.class);
+        verify(commandDelivery).disposition(deliveryStateArgumentCaptor.capture(), anyBoolean());
+        assertThat(deliveryStateArgumentCaptor.getValue(), is(instanceOf(Rejected.class)));
+        assertThat(((Rejected) deliveryStateArgumentCaptor.getValue()).getError(), is(error));
     }
 
     /**
@@ -168,8 +174,10 @@ public class DelegateViaDownstreamPeerCommandHandlerTest {
         // WHEN handle() is invoked
         delegateViaDownstreamPeerCommandHandler.handle(commandContext);
 
-        // THEN the command context is modified
-        verify(commandContext).modify(anyBoolean(), anyBoolean(), anyInt());
+        // THEN the command context delivery is updated with the 'modified' outcome
+        final ArgumentCaptor<DeliveryState> deliveryStateArgumentCaptor = ArgumentCaptor.forClass(DeliveryState.class);
+        verify(commandDelivery).disposition(deliveryStateArgumentCaptor.capture(), anyBoolean());
+        assertThat(deliveryStateArgumentCaptor.getValue(), is(instanceOf(Modified.class)));
     }
 
     /**
@@ -197,8 +205,10 @@ public class DelegateViaDownstreamPeerCommandHandlerTest {
         // WHEN handle() is invoked
         delegateViaDownstreamPeerCommandHandler.handle(commandContext);
 
-        // THEN the command context is released
-        verify(commandContext).release();
+        // THEN the command context delivery is updated with the 'released' outcome
+        final ArgumentCaptor<DeliveryState> deliveryStateArgumentCaptor = ArgumentCaptor.forClass(DeliveryState.class);
+        verify(commandDelivery).disposition(deliveryStateArgumentCaptor.capture(), anyBoolean());
+        assertThat(deliveryStateArgumentCaptor.getValue(), is(instanceOf(Released.class)));
     }
 
     /**
@@ -218,8 +228,10 @@ public class DelegateViaDownstreamPeerCommandHandlerTest {
         // WHEN handle() is invoked
         delegateViaDownstreamPeerCommandHandler.handle(commandContext);
 
-        // THEN the command context is released
-        verify(commandContext).release();
+        // THEN the command context delivery is updated with the 'released' outcome
+        final ArgumentCaptor<DeliveryState> deliveryStateArgumentCaptor = ArgumentCaptor.forClass(DeliveryState.class);
+        verify(commandDelivery).disposition(deliveryStateArgumentCaptor.capture(), anyBoolean());
+        assertThat(deliveryStateArgumentCaptor.getValue(), is(instanceOf(Released.class)));
     }
 
     /**
@@ -235,7 +247,9 @@ public class DelegateViaDownstreamPeerCommandHandlerTest {
         // WHEN handle() is invoked
         delegateViaDownstreamPeerCommandHandler.handle(commandContext);
 
-        // THEN the command context is released
-        verify(commandContext).release();
+        // THEN the command context delivery is updated with the 'released' outcome
+        final ArgumentCaptor<DeliveryState> deliveryStateArgumentCaptor = ArgumentCaptor.forClass(DeliveryState.class);
+        verify(commandDelivery).disposition(deliveryStateArgumentCaptor.capture(), anyBoolean());
+        assertThat(deliveryStateArgumentCaptor.getValue(), is(instanceOf(Released.class)));
     }
 }
