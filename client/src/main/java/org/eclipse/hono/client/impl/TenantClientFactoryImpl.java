@@ -41,7 +41,7 @@ public class TenantClientFactoryImpl extends AbstractHonoClientFactory implement
      */
     public TenantClientFactoryImpl(final HonoConnection connection, final CacheProvider cacheProvider) {
         super(connection);
-        this.tenantClientFactory = new CachingClientFactory<>(c -> c.isOpen());
+        this.tenantClientFactory = new CachingClientFactory<>(connection.getVertx(), c -> c.isOpen());
         this.cacheProvider = cacheProvider;
     }
 

@@ -17,10 +17,10 @@ package org.eclipse.hono.client.impl;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.notNull;
+import static org.mockito.Mockito.*;
 
 import org.eclipse.hono.client.DisconnectListener;
 import org.eclipse.hono.client.DownstreamSender;
@@ -47,21 +47,30 @@ import io.vertx.proton.ProtonSender;
 @RunWith(VertxUnitRunner.class)
 public class DownstreamSenderFactoryImplTest {
 
+    private Vertx vertx;
     private HonoConnection connection;
     private DownstreamSenderFactoryImpl factory;
 
     /**
      * Sets up the fixture.
      */
+    @SuppressWarnings("unchecked")
     @Before
     public void setUp() {
-        final Vertx vertx = mock(Vertx.class);
+        vertx = mock(Vertx.class);
+        // run timers immediately
+        when(vertx.setTimer(anyLong(), any(Handler.class))).thenAnswer(invocation -> {
+            final Handler<Void> task = invocation.getArgument(1);
+            task.handle(null);
+            return 1L;
+        });
         connection = HonoClientUnitTestHelper.mockHonoConnection(vertx);
         factory = new DownstreamSenderFactoryImpl(connection);
     }
 
     /**
-     * Verifies that a concurrent request to create a sender fails the given future for tracking the attempt.
+     * Verifies that a concurrent request to create a sender fails the given future for tracking the attempt if the
+     * initial request doesn't complete.
      * 
      * @param ctx The helper to use for running async tests.
      */
@@ -69,7 +78,7 @@ public class DownstreamSenderFactoryImplTest {
     @Test
     public void testGetTelemetrySenderFailsIfInvokedConcurrently(final TestContext ctx) {
 
-        // GIVEN a factory that already tries to create a telemetry sender for "tenant"
+        // GIVEN a factory that already tries to create a telemetry sender for "tenant" (and never completes doing so)
         final Future<ProtonSender> sender = Future.future();
         when(connection.createSender(anyString(), any(ProtonQoS.class), any(Handler.class))).thenReturn(sender);
         final Future<DownstreamSender> result = factory.getOrCreateTelemetrySender("telemetry/tenant");
@@ -77,9 +86,10 @@ public class DownstreamSenderFactoryImplTest {
 
         // WHEN an additional, concurrent attempt is made to create a telemetry sender for "tenant"
         factory.getOrCreateTelemetrySender("telemetry/tenant").setHandler(ctx.asyncAssertFailure(t -> {
-                    // THEN the concurrent attempt fails without any attempt being made to create another sender
-                    ctx.assertTrue(ServerErrorException.class.isInstance(t));
-                }));
+            // THEN the concurrent attempt fails after having done the default number of retries.
+            ctx.assertTrue(ServerErrorException.class.isInstance(t));
+            verify(vertx, times(CachingClientFactory.MAX_CREATION_RETRIES)).setTimer(anyLong(), notNull());
+        }));
         sender.complete(mock(ProtonSender.class));
         assertTrue(result.isComplete());
     }

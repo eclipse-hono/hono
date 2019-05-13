@@ -43,7 +43,7 @@ public class CredentialsClientFactoryImpl extends AbstractHonoClientFactory impl
      */
     public CredentialsClientFactoryImpl(final HonoConnection connection, final CacheProvider cacheProvider) {
         super(connection);
-        credentialsClientFactory = new CachingClientFactory<>(c -> c.isOpen());
+        credentialsClientFactory = new CachingClientFactory<>(connection.getVertx(), c -> c.isOpen());
         this.cacheProvider = cacheProvider;
     }
 
