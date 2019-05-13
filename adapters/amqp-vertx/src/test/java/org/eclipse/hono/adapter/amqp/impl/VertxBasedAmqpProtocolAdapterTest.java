@@ -67,7 +67,6 @@ import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
-import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.TelemetryConstants;
 import org.eclipse.hono.util.TenantObject;
@@ -154,7 +153,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
         when(downstreamSenderFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
 
         registrationClient = mock(RegistrationClient.class);
-        final JsonObject regAssertion = new JsonObject().put(RegistrationConstants.FIELD_ASSERTION, "assert-token");
+        final JsonObject regAssertion = new JsonObject();
         when(registrationClient.assertRegistration(anyString(), any(), (SpanContext) any()))
                 .thenReturn(Future.succeededFuture(regAssertion));
 

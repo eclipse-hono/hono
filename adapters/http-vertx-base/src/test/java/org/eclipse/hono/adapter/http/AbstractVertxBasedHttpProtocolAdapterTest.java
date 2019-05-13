@@ -56,7 +56,6 @@ import org.eclipse.hono.service.metric.MetricsTags.TtdStatus;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
-import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantObject;
 import org.junit.Before;
@@ -139,7 +138,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         metrics = mock(HttpAdapterMetrics.class);
 
         regClient = mock(RegistrationClient.class);
-        final JsonObject result = new JsonObject().put(RegistrationConstants.FIELD_ASSERTION, "token");
+        final JsonObject result = new JsonObject();
         when(regClient.assertRegistration(anyString(), any(), (SpanContext) any())).thenReturn(Future.succeededFuture(result));
 
         tenantClient = mock(TenantClient.class);

@@ -58,7 +58,6 @@ import org.eclipse.hono.service.metric.MetricsTags.EndpointType;
 import org.eclipse.hono.service.plan.ResourceLimitChecks;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
-import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.TelemetryConstants;
 import org.eclipse.hono.util.TenantConstants;
@@ -143,7 +142,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         metrics = mock(MqttAdapterMetrics.class);
 
         regClient = mock(RegistrationClient.class);
-        final JsonObject result = new JsonObject().put(RegistrationConstants.FIELD_ASSERTION, "token");
+        final JsonObject result = new JsonObject();
         when(regClient.assertRegistration(anyString(), (String) any(), (SpanContext) any())).thenReturn(Future.succeededFuture(result));
 
         tenantClient = mock(TenantClient.class);

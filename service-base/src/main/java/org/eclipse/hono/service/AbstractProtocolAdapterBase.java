@@ -816,10 +816,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     /**
      * Gets an assertion for a device's registration status.
      * <p>
-     * The returned JSON object contains the assertion for the device under property
-     * {@link RegistrationConstants#FIELD_ASSERTION}.
-     * <p>
-     * In addition to the assertion the returned object may include <em>default</em> values for properties to set on
+     * The returned JSON object may include <em>default</em> values for properties to set on
      * messages published by the device under property {@link RegistrationConstants#FIELD_PAYLOAD_DEFAULTS}.
      *
      * @param tenantId The tenant that the device belongs to.
@@ -855,10 +852,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     /**
      * Gets an assertion for a device's registration status.
      * <p>
-     * The returned JSON object contains the assertion for the device
-     * under property {@link RegistrationConstants#FIELD_ASSERTION}.
-     * <p>
-     * In addition to the assertion the returned object may include <em>default</em>
+     * The returned JSON object may include <em>default</em>
      * values for properties to set on messages published by the device under
      * property {@link RegistrationConstants#FIELD_PAYLOAD_DEFAULTS}.
      * 

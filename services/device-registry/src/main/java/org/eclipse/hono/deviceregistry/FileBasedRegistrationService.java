@@ -364,6 +364,14 @@ public final class FileBasedRegistrationService extends CompleteBaseRegistration
         return identities.computeIfAbsent(tenantId, id -> new ConcurrentHashMap<>());
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected CacheDirective getRegistrationAssertionCacheDirective(final String deviceId, final String tenantId) {
+        return getCacheDirective(deviceId, tenantId);
+    }
+
     private CacheDirective getCacheDirective(final String deviceId, final String tenantId) {
         if (getConfig().getCacheMaxAge() > 0) {
             return CacheDirective.maxAgeDirective(getConfig().getCacheMaxAge());

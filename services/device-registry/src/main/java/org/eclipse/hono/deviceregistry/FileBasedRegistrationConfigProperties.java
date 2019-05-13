@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,9 +13,6 @@
 
 package org.eclipse.hono.deviceregistry;
 
-import org.eclipse.hono.config.SignatureSupportingConfigProperties;
-
-
 /**
  * Configuration properties for Hono's registration API as own server.
  *
@@ -27,7 +24,6 @@ public final class FileBasedRegistrationConfigProperties extends AbstractFileBas
      */
     public static final int DEFAULT_MAX_DEVICES_PER_TENANT = 100;
     private static final String DEFAULT_DEVICES_FILENAME = "/var/lib/hono/device-registry/device-identities.json";
-    private final SignatureSupportingConfigProperties registrationAssertionProperties = new SignatureSupportingConfigProperties();
 
     private int maxDevicesPerTenant = DEFAULT_MAX_DEVICES_PER_TENANT;
 
@@ -55,15 +51,6 @@ public final class FileBasedRegistrationConfigProperties extends AbstractFileBas
             throw new IllegalArgumentException("max devices must be > 0");
         }
         this.maxDevicesPerTenant = maxDevices;
-    }
-
-    /**
-     * Gets the properties for determining key material for creating registration assertion tokens.
-     *
-     * @return The properties.
-     */
-    public SignatureSupportingConfigProperties getSigning() {
-        return registrationAssertionProperties;
     }
 
     /**

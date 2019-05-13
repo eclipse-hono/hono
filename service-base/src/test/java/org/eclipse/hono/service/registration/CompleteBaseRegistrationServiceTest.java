@@ -15,8 +15,10 @@ package org.eclipse.hono.service.registration;
 
 import static java.net.HttpURLConnection.HTTP_NO_CONTENT;
 import static org.eclipse.hono.util.Constants.JSON_FIELD_DEVICE_ID;
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.mock;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.net.HttpURLConnection;
 import java.util.HashMap;
@@ -25,25 +27,19 @@ import java.util.function.Function;
 
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ServiceConfigProperties;
-import org.eclipse.hono.config.SignatureSupportingConfigProperties;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventBusMessage;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.RegistrationResult;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.Rule;
 import org.junit.jupiter.api.Test;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
-import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 
@@ -56,62 +52,20 @@ import io.vertx.junit5.VertxTestContext;
 @ExtendWith(VertxExtension.class)
 public class CompleteBaseRegistrationServiceTest {
 
-    private static String secret = "dafhkjsdahfuksahuioahgfdahsgjkhfdjkg";
-    private static SignatureSupportingConfigProperties props;
-    private static Vertx vertx;
-
-    /**
-     * Time out each test case after 5 secs.
-     */
-    @Rule
-    public Timeout timeout = Timeout.seconds(5);
-
-    /**
-     * Initializes common properties.
-     */
-    @BeforeAll
-    public static void init() {
-        vertx = mock(Vertx.class);
-        props = new SignatureSupportingConfigProperties();
-        props.setSharedSecret(secret);
-    }
-
-    /**
-     * Verifies that the service cannot be started without either <em>signingSecret</em> or
-     * <em>signingKeyPath</em> being set.
-     * 
-     * @param ctx The vertx unit test context.
-     */
-    @Test
-    public void testStartupFailsIfNoRegistrationAssertionFactoryIsSet(final VertxTestContext ctx) {
-
-        // GIVEN a registry without an assertion factory being set
-        final CompleteBaseRegistrationService<ServiceConfigProperties> registrationService = newCompleteRegistrationServiceWithoutImpls();
-
-        // WHEN starting the service
-        final Future<Void> startFuture = Future.future();
-        startFuture.setHandler(ctx.failing(t -> {
-            // THEN startup fails
-            ctx.completeNow();
-        }));
-        registrationService.doStart(startFuture);
-    }
-
     /**
      * Verifies that the addDevice method returns not implemented.
      *
-     * @param ctx The vertx unit test context.
+     * @param ctx The vert.x unit test context.
      */
     @Test
     public void testAddDevice(final VertxTestContext ctx) {
 
         // GIVEN an empty registry
         final CompleteBaseRegistrationService<ServiceConfigProperties> registrationService = newCompleteRegistrationServiceWithoutImpls();
-        registrationService.setRegistrationAssertionFactory(RegistrationAssertionHelperImpl.forSigning(vertx, props));
 
         // WHEN trying to add a new device
         registrationService.addDevice(Constants.DEFAULT_TENANT, "4711", new JsonObject(), ctx.succeeding(result -> ctx.verify(() -> {
-            // THEN the response contain a JWT token with an empty result with status code 501.
+            // THEN the request fails with status code 501.
             assertEquals(HttpURLConnection.HTTP_NOT_IMPLEMENTED, result.getStatus());
             assertNull(result.getPayload());
             ctx.completeNow();
@@ -121,18 +75,17 @@ public class CompleteBaseRegistrationServiceTest {
     /**
      * Verifies that the updateDevice method returns not implemented.
      *
-     * @param ctx The vertx unit test context.
+     * @param ctx The vert.x unit test context.
      */
     @Test
     public void testUpdateDevice(final VertxTestContext ctx) {
 
         // GIVEN an empty registry
         final CompleteBaseRegistrationService<ServiceConfigProperties> registrationService = newCompleteRegistrationServiceWithoutImpls();
-        registrationService.setRegistrationAssertionFactory(RegistrationAssertionHelperImpl.forSigning(vertx, props));
 
         // WHEN trying to update a device
         registrationService.updateDevice(Constants.DEFAULT_TENANT, "4711", new JsonObject(), ctx.succeeding(result -> ctx.verify(() -> {
-            // THEN the response contain a JWT token with an empty result with status code 501.
+            // THEN the request fails with status code 501.
             assertEquals(HttpURLConnection.HTTP_NOT_IMPLEMENTED, result.getStatus());
             assertNull(result.getPayload());
             ctx.completeNow();
@@ -142,18 +95,17 @@ public class CompleteBaseRegistrationServiceTest {
     /**
      * Verifies that the removeDevice method returns not implemented.
      *
-     * @param ctx The vertx unit test context.
+     * @param ctx The vert.x unit test context.
      */
     @Test
     public void testRemoveDevice(final VertxTestContext ctx) {
 
         // GIVEN an empty registry
         final CompleteBaseRegistrationService<ServiceConfigProperties> registrationService = newCompleteRegistrationServiceWithoutImpls();
-        registrationService.setRegistrationAssertionFactory(RegistrationAssertionHelperImpl.forSigning(vertx, props));
 
         // WHEN trying to remove a device
         registrationService.removeDevice(Constants.DEFAULT_TENANT, "4711", ctx.succeeding(result -> ctx.verify(() -> {
-            // THEN the response contain a JWT token with an empty result with status code 501.
+            // THEN the request fails with status code 501.
             assertEquals(HttpURLConnection.HTTP_NOT_IMPLEMENTED, result.getStatus());
             assertNull(result.getPayload());
             ctx.completeNow();
@@ -170,7 +122,6 @@ public class CompleteBaseRegistrationServiceTest {
 
         // GIVEN an empty registry
         final CompleteBaseRegistrationService<ServiceConfigProperties> registrationService = newCompleteRegistrationServiceWithoutImpls();
-        registrationService.setRegistrationAssertionFactory(RegistrationAssertionHelperImpl.forSigning(vertx, props));
 
         registrationService
                 .processRequest(EventBusMessage.forOperation("unknown-action"))
@@ -180,88 +131,16 @@ public class CompleteBaseRegistrationServiceTest {
                 })));
     }
 
-
-    /**
-     * Verifies that the status of an enabled device with a 'via' property can be asserted successfully.
-     *
-     * @param ctx The vertx unit test context.
-     */
-    @Test
-    public void testAssertDeviceRegistrationSucceedsForDeviceWithViaProperty(final VertxTestContext ctx) {
-
-        // GIVEN a registry that contains an enabled device with a default content type set
-        final CompleteBaseRegistrationService<ServiceConfigProperties> registrationService = newCompleteRegistrationService();
-        registrationService.setRegistrationAssertionFactory(RegistrationAssertionHelperImpl.forSigning(vertx, props));
-
-        // WHEN trying to assert the device's registration status
-        registrationService.assertRegistration(Constants.DEFAULT_TENANT, "4711", ctx.succeeding(result -> ctx.verify(() -> {
-            assertEquals(HttpURLConnection.HTTP_OK, result.getStatus());
-            assertFalse(result.getCacheDirective().isCachingAllowed());
-            final JsonObject payload = result.getPayload();
-            assertNotNull(payload);
-
-            // THEN the response contains a JWT token asserting the device's registration status
-            final String compactJws = payload.getString(RegistrationConstants.FIELD_ASSERTION);
-            assertNotNull(compactJws);
-            // and contains the registered default content type
-            final JsonObject defaults = payload.getJsonObject(RegistrationConstants.FIELD_PAYLOAD_DEFAULTS);
-            assertNotNull(defaults);
-            assertEquals("application/default", defaults.getString(MessageHelper.SYS_PROPERTY_CONTENT_TYPE));
-            ctx.completeNow();
-        })));
-    }
-
-    /**
-     * Verifies that a device's status can be asserted by an existing gateway.
-     *
-     * @param ctx The vertx unit test context.
-     */
-    @Test
-    public void testAssertDeviceRegistrationSucceedsForExistingGateway(final VertxTestContext ctx) {
-
-        // GIVEN a registry that contains an enabled device that is configured to
-        // be connected to an enabled gateway
-        final CompleteBaseRegistrationService<ServiceConfigProperties> registrationService = newCompleteRegistrationService();
-        registrationService.setRegistrationAssertionFactory(RegistrationAssertionHelperImpl.forSigning(vertx, props));
-
-        final Checkpoint assertion = ctx.checkpoint(2);
-
-        // WHEN trying to assert the device's registration status for gateway 1
-        registrationService.assertRegistration(Constants.DEFAULT_TENANT, "4714", "gw-1", ctx.succeeding(result -> ctx.verify(() -> {
-            // THEN the response contains a 200 status
-            assertEquals(HttpURLConnection.HTTP_OK, result.getStatus());
-            assertFalse(result.getCacheDirective().isCachingAllowed());
-            final JsonObject payload = result.getPayload();
-            assertNotNull(payload);
-            // and contains a JWT token
-            assertNotNull(payload.getString(RegistrationConstants.FIELD_ASSERTION));
-            assertion.flag();
-        })));
-
-        // WHEN trying to assert the device's registration status for gateway 4
-        registrationService.assertRegistration(Constants.DEFAULT_TENANT, "4714", "gw-4", ctx.succeeding(result -> ctx.verify(() -> {
-            // THEN the response contains a 200 status
-            assertEquals(HttpURLConnection.HTTP_OK, result.getStatus());
-            assertFalse(result.getCacheDirective().isCachingAllowed());
-            final JsonObject payload = result.getPayload();
-            assertNotNull(payload);
-            // and contains a JWT token
-            assertNotNull(payload.getString(RegistrationConstants.FIELD_ASSERTION));
-            assertion.flag();
-        })));
-    }
-
     /**
      * Verifies that the updateDeviceLastVia method updates the 'last-via' property.
      *
-     * @param ctx The vertx unit test context.
+     * @param ctx The vert.x unit test context.
      */
     @Test
     public void testUpdateDeviceLastVia(final VertxTestContext ctx) {
 
         // GIVEN a registry that supports updating registration information
         final CompleteBaseRegistrationService<ServiceConfigProperties> registrationService = newCompleteRegistrationService();
-        registrationService.setRegistrationAssertionFactory(RegistrationAssertionHelperImpl.forSigning(vertx, props));
 
         // WHEN trying to update the 'last-via' property
         final Future<Void> updateLastViaFuture = registrationService.updateDeviceLastVia(Constants.DEFAULT_TENANT, "4714", "gw-1", new JsonObject());
@@ -286,7 +165,7 @@ public class CompleteBaseRegistrationServiceTest {
      * Verifies that the <em>assertRegistration</em> operation on a device with multiple 'via' entries updates
      * the 'last-via' property.
      *
-     * @param ctx The vertx unit test context.
+     * @param ctx The vert.x unit test context.
      */
     @Test
     public void testAssertDeviceRegistrationUpdatesLastViaProperty(final VertxTestContext ctx) {
@@ -294,41 +173,45 @@ public class CompleteBaseRegistrationServiceTest {
         // GIVEN a registry that contains an enabled device that is configured to
         // be connected to an enabled gateway
         final CompleteBaseRegistrationService<ServiceConfigProperties> registrationService = newCompleteRegistrationService();
-        registrationService.setRegistrationAssertionFactory(RegistrationAssertionHelperImpl.forSigning(vertx, props));
 
-        final Checkpoint via = ctx.checkpoint(2);
         // WHEN trying to assert the device's registration status for gateway 1
-        registrationService.assertRegistration(Constants.DEFAULT_TENANT, "4714", "gw-1", ctx.succeeding(result -> ctx.verify(() -> {
+        final Future<RegistrationResult> registrationResult = Future.future();
+        registrationService.assertRegistration(Constants.DEFAULT_TENANT, "4714", "gw-1", registrationResult);
+        registrationResult
+        .map(r -> ctx.verify(() -> {
             // THEN the response contains a 200 status
-            assertEquals(HttpURLConnection.HTTP_OK, result.getStatus());
-            assertFalse(result.getCacheDirective().isCachingAllowed());
-            final JsonObject payload = result.getPayload();
-            assertNotNull(payload);
-            // and contains a JWT token
-            assertNotNull(payload.getString(RegistrationConstants.FIELD_ASSERTION));
-            via.flag();
-
-            // and the device data contains a 'last-via' property
-            registrationService.getDevice(Constants.DEFAULT_TENANT, "4714", ctx.succeeding(getDeviceResult -> ctx.verify(() -> {
-                assertEquals(HttpURLConnection.HTTP_OK, getDeviceResult.getStatus());
-                assertNotNull(getDeviceResult.getPayload(), "payload not set");
-                final JsonObject data = getDeviceResult.getPayload().getJsonObject(RegistrationConstants.FIELD_DATA);
+            assertEquals(HttpURLConnection.HTTP_OK, r.getStatus());
+            assertFalse(r.getCacheDirective().isCachingAllowed());
+            assertNotNull(r.getPayload());
+        }))
+        .compose(ok -> {
+            // and when retrieving the device information
+            final Future<RegistrationResult> getResult = Future.future();
+            registrationService.getDevice(Constants.DEFAULT_TENANT, "4714", getResult);
+            return getResult;
+        })
+        .setHandler(ctx.succeeding(r -> {
+            // then the last-via property is set to gateway 1
+            ctx.verify(() -> {
+                assertEquals(HttpURLConnection.HTTP_OK, r.getStatus());
+                assertNotNull(r.getPayload(), "payload not set");
+                final JsonObject data = r.getPayload().getJsonObject(RegistrationConstants.FIELD_DATA);
                 assertNotNull(data, "payload data not set");
                 final JsonObject lastViaObj = data.getJsonObject(RegistrationConstants.FIELD_LAST_VIA);
                 assertNotNull(lastViaObj, RegistrationConstants.FIELD_LAST_VIA + " property not set");
                 assertEquals("gw-1", lastViaObj.getString(JSON_FIELD_DEVICE_ID));
                 assertNotNull(lastViaObj.getString(RegistrationConstants.FIELD_LAST_VIA_UPDATE_DATE),
                                         RegistrationConstants.FIELD_LAST_VIA_UPDATE_DATE + " property not set");
-                via.flag();
-            })));
-        })));
+            });
+            ctx.completeNow();
+        }));
     }
 
     /**
      * Verifies that the <em>assertRegistration</em> operation on a device with multiple 'via' entries updates
      * the 'last-via' property - here in the case where no gateway id is passed to the assertRegistration method.
      *
-     * @param ctx The vertx unit test context.
+     * @param ctx The vert.x unit test context.
      */
     @Test
     public void testAssertDeviceRegistrationWithoutGatewayUpdatesLastViaProperty(final VertxTestContext ctx) {
@@ -336,35 +219,35 @@ public class CompleteBaseRegistrationServiceTest {
         // GIVEN a registry that contains an enabled device that is configured to
         // be connected to an enabled gateway
         final CompleteBaseRegistrationService<ServiceConfigProperties> registrationService = newCompleteRegistrationService();
-        registrationService.setRegistrationAssertionFactory(RegistrationAssertionHelperImpl.forSigning(vertx, props));
-
-        final Checkpoint assertion = ctx.checkpoint(2);
 
         // WHEN trying to assert the device's registration status for gateway 1
-        registrationService.assertRegistration(Constants.DEFAULT_TENANT, "4714",  ctx.succeeding(result -> ctx.verify(() -> {
+        final Future<RegistrationResult> registrationResult = Future.future();
+        registrationService.assertRegistration(Constants.DEFAULT_TENANT, "4714", registrationResult);
+        registrationResult
+        .map(r -> ctx.verify(() -> {
             // THEN the response contains a 200 status
-            assertEquals(HttpURLConnection.HTTP_OK, result.getStatus());
-            assertFalse(result.getCacheDirective().isCachingAllowed());
-            final JsonObject payload = result.getPayload();
-            assertNotNull(payload);
-            // and contains a JWT token
-            assertNotNull(payload.getString(RegistrationConstants.FIELD_ASSERTION));
-            assertion.flag();
-
-            // and the device data contains a 'last-via' property
-            registrationService.getDevice(Constants.DEFAULT_TENANT, "4714", ctx.succeeding(getDeviceResult -> ctx.verify(() -> {
-                assertEquals(HttpURLConnection.HTTP_OK, getDeviceResult.getStatus());
-                assertNotNull(getDeviceResult.getPayload(), "payload not set");
-                final JsonObject data = getDeviceResult.getPayload().getJsonObject(RegistrationConstants.FIELD_DATA);
-                assertNotNull(data, "payload data not set");
-                final JsonObject lastViaObj = data.getJsonObject(RegistrationConstants.FIELD_LAST_VIA);
-                assertNotNull(lastViaObj, RegistrationConstants.FIELD_LAST_VIA + " property not set");
-                assertEquals("4714", lastViaObj.getString(JSON_FIELD_DEVICE_ID));
-                assertNotNull(lastViaObj.getString(RegistrationConstants.FIELD_LAST_VIA_UPDATE_DATE),
-                        RegistrationConstants.FIELD_LAST_VIA_UPDATE_DATE + " property not set");
-                assertion.flag();
-            })));
-        })));
+            assertEquals(HttpURLConnection.HTTP_OK, r.getStatus());
+            // and caching of the response payload is not allowed
+            assertFalse(r.getCacheDirective().isCachingAllowed());
+            assertNotNull(r.getPayload());
+        }))
+        .compose(ok -> {
+            final Future<RegistrationResult> getResult = Future.future();
+            registrationService.getDevice(Constants.DEFAULT_TENANT, "4714", getResult);
+            return getResult;
+        })
+        .setHandler(ctx.succeeding(r -> {
+            assertEquals(HttpURLConnection.HTTP_OK, r.getStatus());
+            assertNotNull(r.getPayload(), "payload not set");
+            final JsonObject data = r.getPayload().getJsonObject(RegistrationConstants.FIELD_DATA);
+            assertNotNull(data, "payload data not set");
+            final JsonObject lastViaObj = data.getJsonObject(RegistrationConstants.FIELD_LAST_VIA);
+            assertNotNull(lastViaObj, RegistrationConstants.FIELD_LAST_VIA + " property not set");
+            assertEquals("4714", lastViaObj.getString(JSON_FIELD_DEVICE_ID));
+            assertNotNull(lastViaObj.getString(RegistrationConstants.FIELD_LAST_VIA_UPDATE_DATE),
+                    RegistrationConstants.FIELD_LAST_VIA_UPDATE_DATE + " property not set");
+            ctx.completeNow();
+        }));
     }
 
     /**

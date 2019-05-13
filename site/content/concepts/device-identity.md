@@ -16,11 +16,11 @@ Hono supports the logical partitioning of devices into groups called *tenants*. 
 
 ## Device Registration
 
-Hono components use the [Device Registration API]({{< relref "api/Device-Registration-API.md" >}}) to access device registration information. The API defines a single mandatory to implement operation (*assert*) for retrieving a token asserting a device's registration status. In addition to that, it defines optional CRUD operations to register, update and remove device registration information. These operations are optional because Hono components do not require them during runtime. From a Hono perspective, it is not important how devices have been registered or how they are managed.
+Hono components use the [Device Registration API]({{< ref "/api/Device-Registration-API.md" >}}) to access device registration information. The API defines the mandatory to implement *assert Registration* operation for verifying a device's registration status. In addition to that, it defines optional CRUD operations to register, update and remove device registration information. These operations are optional because Hono components do not require them during runtime. From a Hono perspective, it is not important how devices have been registered or how they are managed.
 
 In many real world scenarios there will already be a component in place which keeps track of devices and which supports the particular *provisioning process* being used to bring devices into life. In such cases it makes sense to simply implement the mandatory operation of Hono's Device Registration API as a *facade* on top of the existing component.
 
-For demonstration purposes, Hono comes with a [simple default implementation]({{< relref "admin-guide/device-registry-config.md" >}}) of the Device Registration API which keeps all data in memory only. This component implements all mandatory and optional operations but is not supposed to be used in production scenarios.
+For demonstration purposes, Hono comes with a [simple default implementation]({{< ref "/admin-guide/device-registry-config.md" >}}) of the Device Registration API which keeps all data in memory only. This component implements all mandatory and optional operations but is not supposed to be used in production scenarios.
 
 ## Device Authentication
 
@@ -33,8 +33,8 @@ Hono relies on protocol adapters to establish a device's identity before it is a
 
 A device therefore presents an *auth-id* as part of its credentials during the authentication process which is then resolved to a *device identity* by the protocol adapter on successful verification of the credentials.
 
-In order to support the protocol adapters in the process of verifying credentials presented by a device, the [Credentials API]({{< relref "api/Credentials-API.md" >}}) provides means to look up *secrets* on record for the device and use this information to verify the credentials.
+In order to support the protocol adapters in the process of verifying credentials presented by a device, the [Credentials API]({{< ref "/api/Credentials-API.md" >}}) provides means to look up *secrets* on record for the device and use this information to verify the credentials.
 
-The Credentials API supports registration of multiple sets of credentials for each device. A set of credentials consists of an *auth-id* and some sort of *secret* information. The particular *type* of secret determines the kind of information kept. Please refer to the [Standard Credential Types]({{< relref "api/Credentials-API.md#standard-credential-types" >}}) defined in the Credentials API for details. Based on this approach, a device may be authenticated using different types of secrets, e.g. a *hashed password* or a *pre-shared key*, depending on the capabilities of the device and/or protocol adapter.
+The Credentials API supports registration of multiple sets of credentials for each device. A set of credentials consists of an *auth-id* and some sort of *secret* information. The particular *type* of secret determines the kind of information kept. Please refer to the [Standard Credential Types]({{< ref "/api/Credentials-API.md#standard-credential-types" >}}) defined in the Credentials API for details. Based on this approach, a device may be authenticated using different types of secrets, e.g. a *hashed password* or a *pre-shared key*, depending on the capabilities of the device and/or protocol adapter.
 
 Once the protocol adapter has resolved the *device-id* for a device, it uses this identity when referring to the device in all subsequent API invocations, e.g. when forwarding telemetry messages downstream to the AMQP Messaging Network.

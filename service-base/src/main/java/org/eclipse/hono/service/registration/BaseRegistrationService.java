@@ -24,8 +24,6 @@ import org.eclipse.hono.util.EventBusMessage;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.RegistrationResult;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 
 import io.opentracing.References;
 import io.opentracing.Span;
@@ -60,39 +58,13 @@ import io.vertx.core.json.JsonObject;
  */
 public abstract class BaseRegistrationService<T> extends EventBusService<T> implements RegistrationService {
 
+    /**
+     * The default number of seconds that information returned by this service's
+     * operations may be cached for.
+     */
+    public static final int DEFAULT_MAX_AGE_SECONDS = 300;
+
     private static final String SPAN_NAME_ASSERT_DEVICE_REGISTRATION = "assert Device Registration";
-
-    private RegistrationAssertionHelper assertionFactory;
-
-    /**
-     * Sets the factory to use for creating tokens asserting a device's registration status.
-     * 
-     * @param assertionFactory The factory.
-     * @throws NullPointerException if factory is {@code null}.
-     */
-    @Autowired
-    @Qualifier("signing")
-    public final void setRegistrationAssertionFactory(final RegistrationAssertionHelper assertionFactory) {
-        this.assertionFactory = Objects.requireNonNull(assertionFactory);
-    }
-
-    /**
-     * Asserts that the <em>assertionFactory</em> property is set.
-     * <p>
-     * The given future is succeeded if the property is not {@code null},
-     * otherwise it is failed.
-     * 
-     * @param startFuture future to invoke once start up is complete.
-     */
-    @Override
-    protected void doStart(final Future<Void> startFuture) {
-
-        if (assertionFactory == null) {
-            startFuture.fail(new IllegalStateException("registration assertion factory must be set"));
-        } else {
-            startFuture.complete();
-        }
-    }
 
     @Override
     protected String getEventBusAddress() {
@@ -269,8 +241,8 @@ public abstract class BaseRegistrationService<T> extends EventBusService<T> impl
         final Future<RegistrationResult> deviceInfoTracker = Future.future();
         final Future<RegistrationResult> gatewayInfoTracker = Future.future();
 
-        getDevice(tenantId, deviceId, deviceInfoTracker.completer());
-        getDevice(tenantId, gatewayId, gatewayInfoTracker.completer());
+        getDevice(tenantId, deviceId, deviceInfoTracker);
+        getDevice(tenantId, gatewayId, gatewayInfoTracker);
 
         CompositeFuture.all(deviceInfoTracker, gatewayInfoTracker).compose(ok -> {
 
@@ -302,9 +274,13 @@ public abstract class BaseRegistrationService<T> extends EventBusService<T> impl
         }).setHandler(resultHandler);
     }
 
-    private RegistrationResult createSuccessfulRegistrationResult(final String tenantId, final String deviceId, final JsonObject deviceData) {
+    private RegistrationResult createSuccessfulRegistrationResult(
+            final String tenantId,
+            final String deviceId,
+            final JsonObject deviceData) {
+
         final CacheDirective cacheDirective = isDeviceWithOneOrMoreVias(deviceData) ? CacheDirective.noCacheDirective()
-                : CacheDirective.maxAgeDirective(assertionFactory.getAssertionLifetime());
+                : getRegistrationAssertionCacheDirective(deviceId, tenantId);
         return RegistrationResult.from(
                 HttpURLConnection.HTTP_OK,
                 getAssertionPayload(tenantId, deviceId, deviceData),
@@ -443,7 +419,7 @@ public abstract class BaseRegistrationService<T> extends EventBusService<T> impl
     }
 
     /**
-     * Creates a registration assertion token for a device and wraps it in a JSON object.
+     * Creates the payload of the assert Registration response message.
      * <p>
      * The returned JSON object may also contain <em>default</em> values registered for the
      * device under key {@link RegistrationConstants#FIELD_PAYLOAD_DEFAULTS}.
@@ -456,13 +432,30 @@ public abstract class BaseRegistrationService<T> extends EventBusService<T> impl
     protected final JsonObject getAssertionPayload(final String tenantId, final String deviceId, final JsonObject registrationInfo) {
 
         final JsonObject result = new JsonObject()
-                .put(RegistrationConstants.FIELD_PAYLOAD_DEVICE_ID, deviceId)
-                .put(RegistrationConstants.FIELD_ASSERTION, assertionFactory.getAssertion(tenantId, deviceId));
+                .put(RegistrationConstants.FIELD_PAYLOAD_DEVICE_ID, deviceId);
         final JsonObject defaults = registrationInfo.getJsonObject(RegistrationConstants.FIELD_PAYLOAD_DEFAULTS);
         if (defaults != null) {
             result.put(RegistrationConstants.FIELD_PAYLOAD_DEFAULTS, defaults);
         }
         return result;
+    }
+
+    /**
+     * Gets the cache directive to include in responses to the assert Registration
+     * operation.
+     * <p>
+     * Subclasses should override this method in order to return a specific
+     * directive other than the default.
+     * <p>
+     * This default implementation returns a directive to cache values for
+     * {@link #DEFAULT_MAX_AGE_SECONDS} seconds.
+     * 
+     * @param deviceId The identifier of the device that is the subject of the assertion.
+     * @param tenantId The tenant that the device belongs to.
+     * @return The cache directive.
+     */
+    protected CacheDirective getRegistrationAssertionCacheDirective(final String deviceId, final String tenantId) {
+        return CacheDirective.maxAgeDirective(DEFAULT_MAX_AGE_SECONDS);
     }
 
     /**

@@ -24,12 +24,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.net.HttpURLConnection;
-import java.sql.Date;
 import java.time.Duration;
-import java.time.Instant;
-import java.util.Random;
-
-import javax.crypto.SecretKey;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.cache.ExpiringValueCache;
@@ -47,9 +42,6 @@ import org.junit.rules.Timeout;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
-import io.jsonwebtoken.security.Keys;
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
@@ -245,16 +237,7 @@ public class RegistrationClientImplTest {
 
     private static JsonObject newRegistrationAssertionResult(final String defaultContentType) {
 
-        final byte[] bits = new byte[32];
-        new Random().nextBytes(bits);
-        final SecretKey key = Keys.hmacShaKeyFor(bits);
-
-        final String token = Jwts.builder()
-                .signWith(key, SignatureAlgorithm.HS256)
-                .setExpiration(Date.from(Instant.now().plusSeconds(10)))
-                .setIssuer("test")
-                .compact();
-        final JsonObject result = new JsonObject().put(RegistrationConstants.FIELD_ASSERTION, token);
+        final JsonObject result = new JsonObject();
         if (defaultContentType != null) {
             result.put(RegistrationConstants.FIELD_PAYLOAD_DEFAULTS, new JsonObject()
                     .put(MessageHelper.SYS_PROPERTY_CONTENT_TYPE, defaultContentType));
