@@ -24,6 +24,7 @@ import java.nio.charset.StandardCharsets;
 import org.eclipse.hono.auth.HonoPasswordEncoder;
 import org.eclipse.hono.service.credentials.AbstractCompleteCredentialsServiceTest;
 import org.eclipse.hono.service.credentials.CompleteBaseCredentialsService;
+import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsObject;
@@ -73,6 +74,7 @@ public class FileBasedCredentialsServiceTest extends AbstractCompleteCredentials
         when(vertx.fileSystem()).thenReturn(fileSystem);
 
         props = new FileBasedCredentialsConfigProperties();
+        props.setCacheMaxAge(30);
         svc = new FileBasedCredentialsService(mock(HonoPasswordEncoder.class));
         svc.setConfig(props);
         svc.init(vertx, ctx);
@@ -81,6 +83,20 @@ public class FileBasedCredentialsServiceTest extends AbstractCompleteCredentials
     @Override
     public CompleteBaseCredentialsService<FileBasedCredentialsConfigProperties> getCompleteCredentialsService() {
         return svc;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected CacheDirective getExpectedCacheDirective(final String credentialsType) {
+        switch(credentialsType) {
+        case CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD:
+        case CredentialsConstants.SECRETS_TYPE_X509_CERT:
+            return CacheDirective.maxAgeDirective(props.getCacheMaxAge());
+        default:
+            return CacheDirective.noCacheDirective();
+        }
     }
 
     /**

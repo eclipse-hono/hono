@@ -13,6 +13,11 @@ title = "Release Notes"
   *cache directives*. The protocol adapters are now equipped to cache the response from the Credentials Service.
   The protocol adapters support configuration variables to set the default cache timeout, the minimum 
   and maximum cache sizes for this service.
+* The example device registry's Credentials service implementation now includes a *cache directive*
+  in its response to the *get Credentials* operation which allows clients to cache credentials of
+  type *hashed-password* and *x509-cert* for a configurable amount of time. Please refer to the
+  [Device Registry Admin Guide]({{< ref "/admin-guide/device-registry-config.md" >}}) for details
+  regarding the configuration properties to use.
 
 ### API Changes
 

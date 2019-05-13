@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -26,6 +26,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.eclipse.hono.service.registration.CompleteBaseRegistrationService;
+import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.RegistrationResult;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -245,7 +246,10 @@ public final class FileBasedRegistrationService extends CompleteBaseRegistration
     RegistrationResult getDevice(final String tenantId, final String deviceId) {
         final JsonObject data = getRegistrationData(tenantId, deviceId);
         if (data != null) {
-            return RegistrationResult.from(HTTP_OK, getResultPayload(deviceId, data));
+            return RegistrationResult.from(
+                    HTTP_OK,
+                    getResultPayload(deviceId, data),
+                    getCacheDirective(deviceId, tenantId));
         } else {
             return RegistrationResult.from(HTTP_NOT_FOUND);
         }
@@ -358,6 +362,14 @@ public final class FileBasedRegistrationService extends CompleteBaseRegistration
 
     private Map<String, JsonObject> getDevicesForTenant(final String tenantId) {
         return identities.computeIfAbsent(tenantId, id -> new ConcurrentHashMap<>());
+    }
+
+    private CacheDirective getCacheDirective(final String deviceId, final String tenantId) {
+        if (getConfig().getCacheMaxAge() > 0) {
+            return CacheDirective.maxAgeDirective(getConfig().getCacheMaxAge());
+        } else {
+            return CacheDirective.noCacheDirective();
+        }
     }
 
     /**

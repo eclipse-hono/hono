@@ -20,6 +20,7 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.VertxTestContext;
 
 import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsResult;
 import org.junit.jupiter.api.Test;
@@ -37,6 +38,19 @@ public abstract class AbstractCompleteCredentialsServiceTest {
      * @return The credentials service
      */
     public abstract CompleteCredentialsService getCompleteCredentialsService();
+
+    /**
+     * Gets the cache directive that is supposed to be used for a given type of
+     * credentials.
+     * <p>
+     * This default implementation always returns {@code CacheDirective#noCacheDirective()}.
+     * 
+     * @param credentialsType The type of credentials.
+     * @return The expected cache directive.
+     */
+    protected CacheDirective getExpectedCacheDirective(final String credentialsType) {
+        return CacheDirective.noCacheDirective();
+    }
 
     /**
      * Verifies that only one set of credentials can be registered for an auth-id and type (per tenant).
@@ -87,16 +101,17 @@ public abstract class AbstractCompleteCredentialsServiceTest {
     @Test
     public void testGetCredentialsSucceedsForExistingCredentials(final VertxTestContext ctx) {
 
-        register(getCompleteCredentialsService(), "tenant", "device", "myId", "myType")
+        register(getCompleteCredentialsService(), "tenant", "device", "myId", CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD)
         .compose(ok -> {
             final Future<CredentialsResult<JsonObject>> result = Future.future();
-            getCompleteCredentialsService().get("tenant", "myType", "myId", result);
+            getCompleteCredentialsService().get("tenant", CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, "myId", result);
             return result;
         })
         .setHandler(ctx.succeeding(r -> ctx.verify(() -> {
             assertEquals(HttpURLConnection.HTTP_OK, r.getStatus());
             assertEquals("myId", r.getPayload().getString(CredentialsConstants.FIELD_AUTH_ID));
-            assertEquals("myType", r.getPayload().getString(CredentialsConstants.FIELD_TYPE));
+            assertEquals(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, r.getPayload().getString(CredentialsConstants.FIELD_TYPE));
+            assertEquals(getExpectedCacheDirective(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD), r.getCacheDirective());
             ctx.completeNow();
         })));
     }
@@ -117,10 +132,11 @@ public abstract class AbstractCompleteCredentialsServiceTest {
             getCompleteCredentialsService().get("tenant", "myType", "myId", clientContext, result);
             return result;
         })
-        .setHandler(ctx.succeeding(s -> ctx.verify(() -> {
-            assertEquals(HttpURLConnection.HTTP_OK, s.getStatus());
-            assertEquals("myId", s.getPayload().getString(CredentialsConstants.FIELD_AUTH_ID));
-            assertEquals("myType", s.getPayload().getString(CredentialsConstants.FIELD_TYPE));
+        .setHandler(ctx.succeeding(r -> ctx.verify(() -> {
+            assertEquals(HttpURLConnection.HTTP_OK, r.getStatus());
+            assertEquals("myId", r.getPayload().getString(CredentialsConstants.FIELD_AUTH_ID));
+            assertEquals("myType", r.getPayload().getString(CredentialsConstants.FIELD_TYPE));
+            assertEquals(getExpectedCacheDirective("myType"), r.getCacheDirective());
             ctx.completeNow();
         })));
     }

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -24,6 +24,8 @@ public final class CacheDirective {
 
     private static final Pattern PATTERN_MAX_AGE = Pattern.compile("^\\s*max-age\\s*=\\s*(\\d*)\\s*$");
     private static final Pattern PATTERN_NO_CACHE = Pattern.compile("^\\s*no-cache\\s*$");
+
+    private static final CacheDirective NO_CACHE_DIRECTIVE = new CacheDirective(true, 0L);
 
     private final boolean noCache;
     private final long maxAge;
@@ -52,7 +54,7 @@ public final class CacheDirective {
      * @return The directive.
      */
     public static CacheDirective noCacheDirective() {
-        return new CacheDirective(true, 0);
+        return NO_CACHE_DIRECTIVE;
     }
 
     /**
@@ -116,5 +118,41 @@ public final class CacheDirective {
         } else {
             return String.format("max-age = %d", maxAge);
         }
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public int hashCode() {
+        final int prime = 31;
+        int result = 1;
+        result = prime * result + (int) (maxAge ^ (maxAge >>> 32));
+        result = prime * result + (noCache ? 1231 : 1237);
+        return result;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public boolean equals(final Object obj) {
+        if (this == obj) {
+            return true;
+        }
+        if (obj == null) {
+            return false;
+        }
+        if (getClass() != obj.getClass()) {
+            return false;
+        }
+        final CacheDirective other = (CacheDirective) obj;
+        if (maxAge != other.maxAge) {
+            return false;
+        }
+        if (noCache != other.noCache) {
+            return false;
+        }
+        return true;
     }
 }

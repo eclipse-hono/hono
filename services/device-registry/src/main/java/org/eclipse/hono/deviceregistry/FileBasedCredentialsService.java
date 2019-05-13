@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -260,7 +260,9 @@ public final class FileBasedCredentialsService extends CompleteBaseCredentialsSe
     /**
      * {@inheritDoc}
      * <p>
-     * The result object will include a <em>no-cache</em> directive.
+     * The result object will include a <em>max-age</em> cache directive for
+     * hashed password and X.509 credential types. Otherwise, a <em>no-cache</em>
+     * directive will be included.
      */
     @Override
     public void get(
@@ -281,7 +283,7 @@ public final class FileBasedCredentialsService extends CompleteBaseCredentialsSe
             resultHandler.handle(Future.succeededFuture(CredentialsResult.from(HttpURLConnection.HTTP_NOT_FOUND)));
         } else {
             resultHandler.handle(Future.succeededFuture(
-                    CredentialsResult.from(HttpURLConnection.HTTP_OK, data.copy(), CacheDirective.noCacheDirective())));
+                    CredentialsResult.from(HttpURLConnection.HTTP_OK, data.copy(), getCacheDirective(type))));
         }
     }
 
@@ -591,6 +593,21 @@ public final class FileBasedCredentialsService extends CompleteBaseCredentialsSe
 
     private JsonArray getAuthIdCredentials(final String authId, final Map<String, JsonArray> credentialsForTenant) {
         return credentialsForTenant.computeIfAbsent(authId, id -> new JsonArray());
+    }
+
+    private CacheDirective getCacheDirective(final String type) {
+
+        if (getConfig().getCacheMaxAge() > 0) {
+            switch(type) {
+            case CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD:
+            case CredentialsConstants.SECRETS_TYPE_X509_CERT:
+                return CacheDirective.maxAgeDirective(getConfig().getCacheMaxAge());
+            default:
+                return CacheDirective.noCacheDirective();
+            }
+        } else {
+            return CacheDirective.noCacheDirective();
+        }
     }
 
     /**

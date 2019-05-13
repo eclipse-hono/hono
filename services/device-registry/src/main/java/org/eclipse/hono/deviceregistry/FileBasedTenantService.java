@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -47,8 +47,6 @@ import io.vertx.core.json.JsonObject;
 @Repository
 @ConditionalOnProperty(name = "hono.app.type", havingValue = "file", matchIfMissing = true)
 public final class FileBasedTenantService extends CompleteBaseTenantService<FileBasedTenantsConfigProperties> {
-
-    private static final long MAX_AGE_GET_TENANT = 180L; // seconds
 
     // <ID, tenant>
     private final Map<String, TenantObject> tenants = new HashMap<>();
@@ -226,7 +224,7 @@ public final class FileBasedTenantService extends CompleteBaseTenantService<File
             return TenantResult.from(
                     HttpURLConnection.HTTP_OK,
                     JsonObject.mapFrom(tenant),
-                    CacheDirective.maxAgeDirective(MAX_AGE_GET_TENANT));
+                    getCacheDirective());
         }
     }
 
@@ -252,7 +250,7 @@ public final class FileBasedTenantService extends CompleteBaseTenantService<File
                 TracingHelper.logError(span, "no tenant found for subject DN");
                 return TenantResult.from(HttpURLConnection.HTTP_NOT_FOUND);
             } else {
-                return TenantResult.from(HttpURLConnection.HTTP_OK, JsonObject.mapFrom(tenant), CacheDirective.maxAgeDirective(MAX_AGE_GET_TENANT));
+                return TenantResult.from(HttpURLConnection.HTTP_OK, JsonObject.mapFrom(tenant), getCacheDirective());
             }
         }
     }
@@ -391,6 +389,14 @@ public final class FileBasedTenantService extends CompleteBaseTenantService<File
             return tenants.values().stream()
                     .filter(t -> subjectDn.equals(t.getTrustedCaSubjectDn()))
                     .findFirst().orElse(null);
+        }
+    }
+
+    private CacheDirective getCacheDirective() {
+        if (getConfig().getCacheMaxAge() > 0) {
+            return CacheDirective.maxAgeDirective(getConfig().getCacheMaxAge());
+        } else {
+            return CacheDirective.noCacheDirective();
         }
     }
 

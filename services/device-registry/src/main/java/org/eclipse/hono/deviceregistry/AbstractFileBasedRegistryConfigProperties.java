@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -18,12 +18,19 @@ package org.eclipse.hono.deviceregistry;
  * <p>
  * This class is intended to be used as base class for property classes that configure a specific file based API implementation.
  */
-abstract class AbstractFileBasedRegistryConfigProperties {
+public abstract class AbstractFileBasedRegistryConfigProperties {
+
+    /**
+     * The default number of seconds that information returned by the service's
+     * operations may be cached for.
+     */
+    public static final int DEFAULT_MAX_AGE_SECONDS = 180;
 
     private String filename = getDefaultFileName();
     private boolean saveToFile = false;
     private boolean modificationEnabled = true;
     private boolean startEmpty = false;
+    private int cacheMaxAge = DEFAULT_MAX_AGE_SECONDS;
 
     /**
      * Gets the path to the file that the registry should be persisted to periodically.
@@ -34,6 +41,34 @@ abstract class AbstractFileBasedRegistryConfigProperties {
     protected abstract String getDefaultFileName();
 
     /**
+     * Sets the maximum period of time that information returned by the service's
+     * operations may be cached for.
+     * <p>
+     * The default value of this property is {@link #DEFAULT_MAX_AGE_SECONDS} seconds.
+     * 
+     * @param maxAge The period of time in seconds.
+     * @throws IllegalArgumentException if max age is &lt; 0.
+     */
+    public final void setCacheMaxAge(final int maxAge) {
+        if (maxAge < 0) {
+            throw new IllegalArgumentException("max age must be >= 0");
+        }
+        this.cacheMaxAge = maxAge;
+    }
+
+    /**
+     * Gets the maximum period of time that information returned by the service's
+     * operations may be cached for.
+     * <p>
+     * The default value of this property is {@link #DEFAULT_MAX_AGE_SECONDS} seconds.
+     * 
+     * @return The period of time in seconds.
+     */
+    public final int getCacheMaxAge() {
+        return cacheMaxAge;
+    }
+
+    /**
      * Checks whether the content of the registry should be persisted to the file system
      * periodically.
      * <p>
@@ -41,7 +76,7 @@ abstract class AbstractFileBasedRegistryConfigProperties {
      *
      * @return {@code true} if registry content should be persisted.
      */
-    public boolean isSaveToFile() {
+    public final boolean isSaveToFile() {
         return saveToFile;
     }
 
@@ -54,7 +89,7 @@ abstract class AbstractFileBasedRegistryConfigProperties {
      * @param enabled {@code true} if registry content should be persisted.
      * @throws IllegalStateException if this registry is already running.
      */
-    public void setSaveToFile(final boolean enabled) {
+    public final void setSaveToFile(final boolean enabled) {
         this.saveToFile = enabled;
     }
 
@@ -67,7 +102,7 @@ abstract class AbstractFileBasedRegistryConfigProperties {
      *
      * @return The flag.
      */
-    public boolean isModificationEnabled() {
+    public final boolean isModificationEnabled() {
         return modificationEnabled;
     }
 
@@ -80,7 +115,7 @@ abstract class AbstractFileBasedRegistryConfigProperties {
      *
      * @param flag The flag.
      */
-    public void setModificationEnabled(final boolean flag) {
+    public final void setModificationEnabled(final boolean flag) {
         modificationEnabled = flag;
     }
 
@@ -91,7 +126,7 @@ abstract class AbstractFileBasedRegistryConfigProperties {
      *
      * @return The file name.
      */
-    public String getFilename() {
+    public final String getFilename() {
         return filename;
     }
 
@@ -102,7 +137,7 @@ abstract class AbstractFileBasedRegistryConfigProperties {
      *
      * @param filename The name of the file to persist to (can be a relative or absolute path).
      */
-    public void setFilename(final String filename) {
+    public final void setFilename(final String filename) {
         this.filename = filename;
     }
 
@@ -115,7 +150,7 @@ abstract class AbstractFileBasedRegistryConfigProperties {
      *
      * @return The flag.
      */
-    public boolean isStartEmpty() {
+    public final boolean isStartEmpty() {
         return startEmpty;
     }
 
@@ -126,7 +161,7 @@ abstract class AbstractFileBasedRegistryConfigProperties {
      *
      * @param flag {@code true} if registry content should be persisted.
      */
-    public void setStartEmpty(final boolean flag) {
+    public final void setStartEmpty(final boolean flag) {
         this.startEmpty = flag;
     }
 }
