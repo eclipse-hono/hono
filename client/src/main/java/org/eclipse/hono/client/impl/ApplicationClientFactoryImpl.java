@@ -49,8 +49,8 @@ public class ApplicationClientFactoryImpl extends AbstractHonoClientFactory impl
     public ApplicationClientFactoryImpl(final HonoConnection connection) {
         super(connection);
         consumerFactory = new ClientFactory<>();
-        commandClientFactory = new CachingClientFactory<>(c -> c.isOpen());
-        asyncCommandClientFactory = new CachingClientFactory<>(c -> c.isOpen());
+        commandClientFactory = new CachingClientFactory<>(connection.getVertx(), c -> c.isOpen());
+        asyncCommandClientFactory = new CachingClientFactory<>(connection.getVertx(), c -> c.isOpen());
     }
 
     /**

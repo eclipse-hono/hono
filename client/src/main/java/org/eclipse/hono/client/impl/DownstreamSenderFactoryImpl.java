@@ -36,7 +36,7 @@ public class DownstreamSenderFactoryImpl extends AbstractHonoClientFactory imple
      */
     public DownstreamSenderFactoryImpl(final HonoConnection connection) {
         super(connection);
-        clientFactory = new CachingClientFactory<>(s -> s.isOpen());
+        clientFactory = new CachingClientFactory<>(connection.getVertx(), s -> s.isOpen());
     }
 
     /**

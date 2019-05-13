@@ -29,6 +29,7 @@ import org.slf4j.LoggerFactory;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Vertx;
 
 /**
  * A factory for creating clients.
@@ -42,7 +43,19 @@ import io.vertx.core.Handler;
  */
 class CachingClientFactory<T> extends ClientFactory<T> {
 
+    /**
+     * The maximum number of retries for getting or creating a client while a concurrent request with the same key is
+     * still not completed.
+     */
+    static final int MAX_CREATION_RETRIES = 3;
+    /**
+     * The interval in milliseconds before a retry attempt is done to get or create a client.
+     */
+    static final int CREATION_RETRY_INTERVAL_MILLIS = 20;
+
     private static final Logger log = LoggerFactory.getLogger(CachingClientFactory.class);
+
+    private final Vertx vertx;
 
     private final Predicate<T> livenessCheck;
     /**
@@ -56,9 +69,11 @@ class CachingClientFactory<T> extends ClientFactory<T> {
     private final Map<String, Boolean> creationLocks = new HashMap<>();
 
     /**
+     * @param vertx The Vert.x instance to use for creating a timer.
      * @param livenessCheck A predicate for checking if a cached client is usable.
      */
-    CachingClientFactory(final Predicate<T> livenessCheck) {
+    CachingClientFactory(final Vertx vertx, final Predicate<T> livenessCheck) {
+        this.vertx = vertx;
         this.livenessCheck = Objects.requireNonNull(livenessCheck);
     }
 
@@ -128,6 +143,14 @@ class CachingClientFactory<T> extends ClientFactory<T> {
             final String key,
             final Supplier<Future<T>> clientInstanceSupplier,
             final Handler<AsyncResult<T>> result) {
+        getOrCreateClient(key, clientInstanceSupplier, result, 0);
+    }
+
+    private void getOrCreateClient(
+            final String key,
+            final Supplier<Future<T>> clientInstanceSupplier,
+            final Handler<AsyncResult<T>> result,
+            final int retry) {
 
         final T sender = activeClients.get(key);
 
@@ -163,9 +186,16 @@ class CachingClientFactory<T> extends ClientFactory<T> {
             });
 
         } else {
-            log.debug("already trying to create a client for [{}]", key);
-            result.handle(Future.failedFuture(new ServerErrorException(
-                    HttpURLConnection.HTTP_UNAVAILABLE, "already creating client for key")));
+            if (retry < MAX_CREATION_RETRIES) {
+                log.debug("already trying to create a client for [{}], retrying in {}ms", key, CREATION_RETRY_INTERVAL_MILLIS);
+                vertx.setTimer(CREATION_RETRY_INTERVAL_MILLIS, id -> {
+                    getOrCreateClient(key, clientInstanceSupplier, result, retry + 1);
+                });
+            } else {
+                log.debug("already trying to create a client for [{}] (max retries reached)", key);
+                result.handle(Future.failedFuture(new ServerErrorException(
+                        HttpURLConnection.HTTP_UNAVAILABLE, "already creating client for key")));
+            }
         }
     }
 }

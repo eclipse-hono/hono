@@ -44,7 +44,7 @@ public class RegistrationClientFactoryImpl extends AbstractHonoClientFactory imp
      */
     public RegistrationClientFactoryImpl(final HonoConnection connection, final CacheProvider cacheProvider) {
         super(connection);
-        this.registrationClientFactory = new CachingClientFactory<>(c -> c.isOpen());
+        this.registrationClientFactory = new CachingClientFactory<>(connection.getVertx(), c -> c.isOpen());
         this.cacheProvider = cacheProvider;
     }
 

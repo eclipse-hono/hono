@@ -96,9 +96,9 @@ public class CommandConsumerFactoryImpl extends AbstractHonoClientFactory implem
     public CommandConsumerFactoryImpl(final HonoConnection connection, final GatewayMapper gatewayMapper) {
         super(connection);
         this.gatewayMapper = Objects.requireNonNull(gatewayMapper);
-        deviceSpecificCommandConsumerFactory = new CachingClientFactory<>(c -> true);
-        tenantScopedCommandConsumerFactory = new CachingClientFactory<>(c -> true);
-        delegatedCommandSenderFactory = new CachingClientFactory<>(s -> s.isOpen());
+        deviceSpecificCommandConsumerFactory = new CachingClientFactory<>(connection.getVertx(), c -> true);
+        tenantScopedCommandConsumerFactory = new CachingClientFactory<>(connection.getVertx(), c -> true);
+        delegatedCommandSenderFactory = new CachingClientFactory<>(connection.getVertx(), s -> s.isOpen());
     }
 
     @Override
