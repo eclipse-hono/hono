@@ -42,11 +42,6 @@ public final class RegistrationConstants extends RequestResponseApiConstants {
     public static final String ACTION_UPDATE     = "update";
 
     /**
-     * The name of the field in a response to the <em>assert device registration</em> operation
-     * that contains the registration status assertion.
-     */
-    public static final String FIELD_ASSERTION    = "assertion";
-    /**
      * The name of the field in a response to the <em>get registration information</em> operation
      * that contains a device's registration information.
      */

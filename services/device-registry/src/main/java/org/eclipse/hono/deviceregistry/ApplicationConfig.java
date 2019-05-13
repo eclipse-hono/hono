@@ -26,8 +26,6 @@ import org.eclipse.hono.service.credentials.CredentialsAmqpEndpoint;
 import org.eclipse.hono.service.credentials.CredentialsHttpEndpoint;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.service.registration.RegistrationAmqpEndpoint;
-import org.eclipse.hono.service.registration.RegistrationAssertionHelper;
-import org.eclipse.hono.service.registration.RegistrationAssertionHelperImpl;
 import org.eclipse.hono.service.registration.RegistrationHttpEndpoint;
 import org.eclipse.hono.service.tenant.TenantAmqpEndpoint;
 import org.eclipse.hono.service.tenant.TenantHttpEndpoint;
@@ -285,23 +283,6 @@ public class ApplicationConfig {
     @ConfigurationProperties(prefix = "hono.tenant.svc")
     public FileBasedTenantsConfigProperties tenantsProperties() {
         return new FileBasedTenantsConfigProperties();
-    }
-
-    /**
-     * Exposes a factory for JWTs asserting a device's registration status as a Spring bean.
-     *
-     * @return The bean.
-     */
-    @Bean
-    @Qualifier("signing")
-    public RegistrationAssertionHelper registrationAssertionFactory() {
-        final ServiceConfigProperties amqpProps = amqpProperties();
-        final FileBasedRegistrationConfigProperties serviceProps = serviceProperties();
-        if (!serviceProps.getSigning().isAppropriateForCreating() && amqpProps.getKeyPath() != null) {
-            // fall back to TLS configuration
-            serviceProps.getSigning().setKeyPath(amqpProps.getKeyPath());
-        }
-        return RegistrationAssertionHelperImpl.forSigning(vertx(), serviceProps.getSigning());
     }
 
     /**

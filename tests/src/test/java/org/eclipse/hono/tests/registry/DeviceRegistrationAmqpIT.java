@@ -105,7 +105,6 @@ public class DeviceRegistrationAmqpIT {
                 .compose(client -> client.assertRegistration(deviceId))
                 .setHandler(ctx.asyncAssertSuccess(resp -> {
                     ctx.assertEquals(deviceId, resp.getString(RegistrationConstants.FIELD_PAYLOAD_DEVICE_ID));
-                    ctx.assertNotNull(resp.getString(RegistrationConstants.FIELD_ASSERTION));
                 }));
     }
 

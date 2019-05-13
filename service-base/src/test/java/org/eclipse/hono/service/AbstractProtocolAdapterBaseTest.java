@@ -15,7 +15,9 @@ package org.eclipse.hono.service;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -52,8 +54,6 @@ import org.eclipse.hono.util.TenantObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.Rule;
-import org.junit.rules.Timeout;
 import org.mockito.ArgumentCaptor;
 
 import io.opentracing.SpanContext;
@@ -77,12 +77,6 @@ import io.vertx.proton.ProtonHelper;
 public class AbstractProtocolAdapterBaseTest {
 
     private static final String ADAPTER_NAME = "abstract-adapter";
-
-    /**
-     * Time out each test after 5 seconds.
-     */
-    @Rule
-    public Timeout timeout = Timeout.seconds(5);
 
     private Vertx vertx;
     private Context context;
@@ -258,7 +252,7 @@ public class AbstractProtocolAdapterBaseTest {
         final ResourceIdentifier target = ResourceIdentifier.from(TelemetryConstants.TELEMETRY_ENDPOINT, Constants.DEFAULT_TENANT, "4711");
         final TenantObject tenant = TenantObject.from(Constants.DEFAULT_TENANT, true);
 
-        adapter.addProperties(message, target, "/status", tenant, newRegistrationAssertionResult("token"), 15);
+        adapter.addProperties(message, target, "/status", tenant, newRegistrationAssertionResult(), 15);
 
         assertThat(
                 MessageHelper.getApplicationProperty(
@@ -287,7 +281,7 @@ public class AbstractProtocolAdapterBaseTest {
         final ResourceIdentifier target = ResourceIdentifier.from(TelemetryConstants.TELEMETRY_ENDPOINT, Constants.DEFAULT_TENANT, "4711");
         final TenantObject tenant = TenantObject.from(Constants.DEFAULT_TENANT, true);
 
-        adapter.addProperties(message, target, null, tenant, newRegistrationAssertionResult("token", "application/hono"), null);
+        adapter.addProperties(message, target, null, tenant, newRegistrationAssertionResult("application/hono"), null);
 
         assertThat(message.getContentType(), is("application/hono"));
     }
@@ -304,7 +298,7 @@ public class AbstractProtocolAdapterBaseTest {
         final ResourceIdentifier target = ResourceIdentifier.from(TelemetryConstants.TELEMETRY_ENDPOINT, Constants.DEFAULT_TENANT, "4711");
         final TenantObject tenant = TenantObject.from(Constants.DEFAULT_TENANT, true);
 
-        adapter.addProperties(message, target, null, tenant, newRegistrationAssertionResult("token", "application/hono"), null);
+        adapter.addProperties(message, target, null, tenant, newRegistrationAssertionResult("application/hono"), null);
 
         assertThat(message.getContentType(), is("application/existing"));
     }
@@ -320,7 +314,7 @@ public class AbstractProtocolAdapterBaseTest {
         final ResourceIdentifier target = ResourceIdentifier.from(TelemetryConstants.TELEMETRY_ENDPOINT, Constants.DEFAULT_TENANT, "4711");
         final TenantObject tenant = TenantObject.from(Constants.DEFAULT_TENANT, true);
 
-        adapter.addProperties(message, target, null, tenant, newRegistrationAssertionResult("token"), null);
+        adapter.addProperties(message, target, null, tenant, newRegistrationAssertionResult(), null);
 
         assertThat(message.getContentType(), is(AbstractProtocolAdapterBase.CONTENT_TYPE_OCTET_STREAM));
     }
@@ -336,7 +330,7 @@ public class AbstractProtocolAdapterBaseTest {
         final ResourceIdentifier target = ResourceIdentifier.from(EventConstants.EVENT_ENDPOINT, Constants.DEFAULT_TENANT, "4711");
         final TenantObject tenant = TenantObject.from(Constants.DEFAULT_TENANT, true);
         tenant.setDefaults(new JsonObject().put(MessageHelper.SYS_HEADER_PROPERTY_TTL, 60).put("custom-tenant", "foo"));
-        final JsonObject assertion = newRegistrationAssertionResult("token");
+        final JsonObject assertion = newRegistrationAssertionResult();
         assertion.put(
                 RegistrationConstants.FIELD_PAYLOAD_DEFAULTS,
                 new JsonObject().put(MessageHelper.SYS_HEADER_PROPERTY_TTL, 30).put("custom-device", true));
@@ -362,7 +356,7 @@ public class AbstractProtocolAdapterBaseTest {
     public void testGetRegistrationAssertionSucceedsForExistingDevice(final VertxTestContext ctx) {
 
         // GIVEN an adapter connected to a registration service
-        final JsonObject assertionResult = newRegistrationAssertionResult("token");
+        final JsonObject assertionResult = newRegistrationAssertionResult();
         when(registrationClient.assertRegistration(eq("device"), any())).thenReturn(Future.succeededFuture(assertionResult));
         when(registrationClient.assertRegistration(eq("device"), any(), any())).thenReturn(Future.succeededFuture(assertionResult));
 
@@ -512,14 +506,13 @@ public class AbstractProtocolAdapterBaseTest {
         return result;
     }
 
-    private static JsonObject newRegistrationAssertionResult(final String token) {
-        return newRegistrationAssertionResult(token, null);
+    private static JsonObject newRegistrationAssertionResult() {
+        return newRegistrationAssertionResult(null);
     }
 
-    private static JsonObject newRegistrationAssertionResult(final String token, final String defaultContentType) {
+    private static JsonObject newRegistrationAssertionResult(final String defaultContentType) {
 
-        final JsonObject result = new JsonObject()
-                .put(RegistrationConstants.FIELD_ASSERTION, token);
+        final JsonObject result = new JsonObject();
         if (defaultContentType != null) {
             result.put(RegistrationConstants.FIELD_PAYLOAD_DEFAULTS, new JsonObject()
                     .put(MessageHelper.SYS_PROPERTY_CONTENT_TYPE, defaultContentType));
@@ -628,6 +621,4 @@ public class AbstractProtocolAdapterBaseTest {
             ctx.completeNow();
         })));
     }
-
-
 }

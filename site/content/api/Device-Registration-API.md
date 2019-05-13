@@ -30,7 +30,7 @@ The operations described in the following sections are invoked by Hono's compone
 
 ## Assert Device Registration
 
-Clients use this command to get a signed *assertion* that a device is registered for a particular tenant and is enabled. The assertion is supposed to be included when [uploading telemetry data]({{< relref "Telemetry-API.md#upload-telemetry-data" >}}) or [publishing an event]({{< relref "Event-API.md#send-event" >}}) for a device so that the Telemetry or Event service implementation does not need to call out to the Device Registration service on every message in order to verify the device's registration status.
+Clients use this command to verify that a device is registered for a particular tenant and is enabled.
 
 This operation is *mandatory* to implement.
 
@@ -61,14 +61,12 @@ The body of the response message consists of a single *Data* section containing 
 | Name             | Mandatory | JSON Type     | Description |
 | :--------------- | :-------: | :------------ | :---------- |
 | *device-id*      | *yes*     | *string*      | The ID of the device that is subject of the assertion. |
-| *assertion*      | *yes*     | *string*      | A [JSON Web Token](https://jwt.io/introduction/) which MUST contain the device id (`sub` claim), the tenant id (private `ten` claim) and an expiration time (`exp` claim). The token MAY contain additional claims as well. A client SHOULD silently ignore claims it does not understand. |
 | *defaults*       | *no*      | *object*      | Default values to be used by protocol adapters for augmenting messages from devices with missing information like a *content type*. It is up to the discretion of a protocol adapter if and how to use the given default values when processing messages published by the device. |
 
 Below is an example for a payload of a response to an *assert* request for device `4711` which also includes a default *content-type*:
 ~~~json
 {
   "device-id" : "4711",
-  "assertion" : "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI0NzExIiwidGVuIjoiREVGQVVMVF9URU5BTlQiLCJleHAiOjE1MDMwMTY0MzJ9.Gz8VYpLso-IuasLrSm6YVg1irofz7RKEYS4kM2CUQ5o",
   "defaults": {
     "content-type": "application/vnd.acme+json"
   }
@@ -79,7 +77,7 @@ The response message's *status* property may contain the following codes:
 
 | Code  | Description |
 | :---- | :---------- |
-| *200* | OK, the device is registered for the given tenant and is enabled. The payload contains the signed assertion. |
+| *200* | OK, the device is registered for the given tenant and is enabled. The payload contains the asserted device's default properties (if any). |
 | *403* | Forbidden, the gateway with the given *gateway id* either does not exist, is not enabled or is not authorized to get an assertion for the device with the given *device id*. |
 | *404* | Not Found, there is no device registered with the given *device id* within the given *tenant id* or the device is not enabled. |
 

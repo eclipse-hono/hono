@@ -52,7 +52,6 @@ import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.RegistrationClientFactory;
 import org.eclipse.hono.client.TenantClient;
 import org.eclipse.hono.client.TenantClientFactory;
-import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantObject;
 import org.junit.AfterClass;
@@ -110,7 +109,7 @@ public class AbstractVertxBasedCoapAdapterTest {
         config.setAuthenticationRequired(false);
 
         regClient = mock(RegistrationClient.class);
-        final JsonObject result = new JsonObject().put(RegistrationConstants.FIELD_ASSERTION, "token");
+        final JsonObject result = new JsonObject();
         when(regClient.assertRegistration(anyString(), any(), any())).thenReturn(Future.succeededFuture(result));
 
         tenantClient = mock(TenantClient.class);
