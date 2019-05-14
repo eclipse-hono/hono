@@ -20,6 +20,7 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxTestContext;
 
+import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.RegistrationResult;
 import org.junit.jupiter.api.Test;
@@ -32,8 +33,17 @@ import java.net.HttpURLConnection;
  */
 public abstract class AbstractCompleteRegistrationServiceTest {
 
+    /**
+     * The tenant used in tests.
+     */
     protected static final String TENANT = Constants.DEFAULT_TENANT;
+    /**
+     * The device identifier used in tests.
+     */
     protected static final String DEVICE = "4711";
+    /**
+     * The gateway identifier used in the tests.
+     */
     protected static final String GW = "gw-1";
 
     /**
@@ -154,5 +164,24 @@ public abstract class AbstractCompleteRegistrationServiceTest {
             assertEquals(HttpURLConnection.HTTP_NOT_FOUND, response.getStatus());
             get.flag();
         })));
+    }
+
+    /**
+     * Asserts that a device is registered.
+     * 
+     * @param tenantId The tenant that the device belongs to.
+     * @param deviceId The identifier of the device.
+     * @return A succeeded future if the device is registered.
+     */
+    protected final Future<RegistrationResult> assertRegistered(final String tenantId, final String deviceId) {
+        final Future<RegistrationResult> result = Future.future();
+        getCompleteRegistrationService().getDevice(tenantId, deviceId, result);
+        return result.map(r -> {
+            if (r.getStatus() == HttpURLConnection.HTTP_OK) {
+                return r;
+            } else {
+                throw new ClientErrorException(HttpURLConnection.HTTP_PRECON_FAILED);
+            }
+        });
     }
 }
