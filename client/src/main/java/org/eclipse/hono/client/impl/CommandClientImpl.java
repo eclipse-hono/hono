@@ -49,6 +49,7 @@ public class CommandClientImpl extends AbstractRequestResponseClient<BufferResul
     private static final Logger LOG = LoggerFactory.getLogger(CommandClientImpl.class);
 
     private long messageCounter;
+    private final String linkTargetAddress;
 
     /**
      * Creates a client for sending commands to devices.
@@ -69,6 +70,7 @@ public class CommandClientImpl extends AbstractRequestResponseClient<BufferResul
             final String replyId) {
 
         super(connection, tenantId, deviceId, replyId);
+        this.linkTargetAddress = String.format("%s/%s", getName(), tenantId);
     }
 
     /**
@@ -98,11 +100,11 @@ public class CommandClientImpl extends AbstractRequestResponseClient<BufferResul
     /**
      * Gets the AMQP <em>target</em> address to use for sending command requests
      * to Hono's Command &amp; Control API endpoint.
-     * 
+     *
      * @param tenantId The tenant that the device belongs to.
      * @param deviceId The identifier of the device.
      * @return The target address.
-     * @throws NullPointerException if tenant is {@code null}.
+     * @throws NullPointerException if tenant or device is {@code null}.
      */
     public static final String getTargetAddress(final String tenantId, final String deviceId) {
         Objects.requireNonNull(tenantId);
@@ -113,6 +115,11 @@ public class CommandClientImpl extends AbstractRequestResponseClient<BufferResul
     @Override
     protected String getName() {
         return CommandConstants.COMMAND_ENDPOINT;
+    }
+
+    @Override
+    protected String getLinkTargetAddress() {
+        return linkTargetAddress;
     }
 
     /**
@@ -206,6 +213,7 @@ public class CommandClientImpl extends AbstractRequestResponseClient<BufferResul
             AbstractHonoClient.setApplicationProperties(request, properties);
 
             final String messageId = createMessageId();
+            request.setAddress(targetAddress);
             request.setMessageId(messageId);
             request.setSubject(command);
 
