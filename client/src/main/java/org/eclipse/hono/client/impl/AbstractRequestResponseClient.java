@@ -80,10 +80,15 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
                             HttpURLConnection.HTTP_GONE
     };
 
+    /**
+     * Target address of the request message.
+     * Note that the target address of the sender link may be different, see {@link #getLinkTargetAddress()}.
+     */
+    protected final String targetAddress;
+
     private final Map<Object, TriTuple<Handler<AsyncResult<R>>, Object, Span>> replyMap = new HashMap<>();
     private Handler<Void> drainHandler;
     private final String replyToAddress;
-    private final String targetAddress;
     private final String tenantId;
 
     /**
@@ -305,6 +310,20 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
             ApplicationProperties applicationProperties);
 
     /**
+     * The target address of the sender link on which the request message is sent.
+     * <p>
+     * This default implementation returns the target address of the request message.
+     * <p>
+     * Subclasses may override this method in order to use a different address for creating the sender link.
+     * For example, an empty address could be returned here to create an anonymous relay link.
+     *
+     * @return The link target address.
+     */
+    protected String getLinkTargetAddress() {
+        return targetAddress;
+    }
+
+    /**
      * Creates the sender and receiver links to the peer for sending requests
      * and receiving responses.
      * 
@@ -332,7 +351,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
         return createReceiver(replyToAddress, receiverCloseHook)
                 .compose(recv -> {
                     this.receiver = recv;
-                    return createSender(targetAddress, senderCloseHook);
+                    return createSender(getLinkTargetAddress(), senderCloseHook);
                 }).compose(sender -> {
                     LOG.debug("request-response client for peer [{}] created", connection.getConfig().getHost());
                     this.sender = sender;
@@ -483,6 +502,9 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
         final Message msg = ProtonHelper.message();
         final String messageId = createMessageId();
         AbstractHonoClient.setApplicationProperties(msg, appProperties);
+        if (!targetAddress.equals(getLinkTargetAddress())) {
+            msg.setAddress(targetAddress);
+        }
         msg.setReplyTo(replyToAddress);
         msg.setMessageId(messageId);
         msg.setSubject(subject);

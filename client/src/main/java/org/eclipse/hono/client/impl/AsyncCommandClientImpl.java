@@ -72,8 +72,25 @@ public class AsyncCommandClientImpl extends AbstractSender implements AsyncComma
         return CommandConstants.COMMAND_ENDPOINT;
     }
 
+    /**
+     * Gets the address to use for a command message to be sent to a device.
+     *
+     * @param tenantId The tenant id.
+     * @param deviceId The device id.
+     * @return The target address of the command message.
+     */
     static String getTargetAddress(final String tenantId, final String deviceId) {
         return String.format("%s/%s/%s", CommandConstants.COMMAND_ENDPOINT, tenantId, deviceId);
+    }
+
+    /**
+     * Gets the target address to use for creating this client's sender link.
+     *
+     * @param tenantId The tenant id.
+     * @return The link target address.
+     */
+    static String getLinkTargetAddress(final String tenantId) {
+        return String.format("%s/%s", CommandConstants.COMMAND_ENDPOINT, tenantId);
     }
 
     @Override
@@ -99,6 +116,7 @@ public class AsyncCommandClientImpl extends AbstractSender implements AsyncComma
         MessageHelper.setCreationTime(message);
         MessageHelper.setPayload(message, contentType, data);
         message.setSubject(command);
+        message.setAddress(targetAddress);
         final String replyToAddress = String.format("%s/%s/%s", CommandConstants.COMMAND_ENDPOINT, tenantId, replyId);
         message.setReplyTo(replyToAddress);
 
@@ -129,7 +147,8 @@ public class AsyncCommandClientImpl extends AbstractSender implements AsyncComma
         Objects.requireNonNull(deviceId);
 
         final String targetAddress = AsyncCommandClientImpl.getTargetAddress(tenantId, deviceId);
-        return con.createSender(targetAddress, ProtonQoS.AT_LEAST_ONCE, closeHook)
+        final String linkTargetAddress = AsyncCommandClientImpl.getLinkTargetAddress(tenantId);
+        return con.createSender(linkTargetAddress, ProtonQoS.AT_LEAST_ONCE, closeHook)
                 .compose(sender -> Future.succeededFuture(new AsyncCommandClientImpl(con, sender, tenantId, targetAddress)));
     }
 }
