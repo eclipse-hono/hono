@@ -1011,7 +1011,9 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
             final Future<JsonObject> tokenTracker = getRegistrationAssertion(tenant, deviceId,
                     ctx.authenticatedDevice(), currentSpan.context());
             final Future<TenantObject> tenantEnabledTracker = getTenantConfiguration(tenant, currentSpan.context())
-                    .compose(tenantObject -> isAdapterEnabled(tenantObject));
+                    .compose(tenantObject -> CompositeFuture.all(isAdapterEnabled(tenantObject),
+                            checkMessageLimit(tenantObject, payload.length()))
+                            .map(success -> tenantObject));
 
             return CompositeFuture.all(tokenTracker, tenantEnabledTracker, senderTracker).compose(ok -> {
 

@@ -18,6 +18,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.function.BiConsumer;
 
+import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
@@ -500,6 +501,36 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
                 .compose(isExceeded -> {
                     if (isExceeded) {
                         return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_FORBIDDEN));
+                    } else {
+                        return Future.succeededFuture();
+                    }
+                });
+    }
+
+    /**
+     * Checks if this adapter may accept another telemetry or event message from a device.
+     * <p>
+     * This default implementation uses the
+     * {@link ResourceLimitChecks#isMessageLimitReached(TenantObject tenant, long payloadSize)} method
+     * to verify if the tenant's message limit has been reached.
+     *
+     * @param tenantConfig The tenant to check the message limit for.
+     * @param payloadSize  The size of the message payload in bytes.
+     * @return A succeeded future if the message limit has not been reached yet
+     *         or if the limits could not be checked.
+     *         Otherwise the future will be failed with a {@link ClientErrorException}
+     *         containing the 429 Too many requests status code.
+     * @throws NullPointerException if tenant is {@code null}.
+     */
+    protected Future<Void> checkMessageLimit(final TenantObject tenantConfig, final long payloadSize) {
+
+        Objects.requireNonNull(tenantConfig);
+        return resourceLimitChecks.isMessageLimitReached(tenantConfig, payloadSize)
+                .recover(t -> Future.succeededFuture(Boolean.FALSE))
+                .compose(isExceeded -> {
+                    if (isExceeded) {
+                        return Future.failedFuture(
+                                new ClientErrorException(HttpResponseStatus.TOO_MANY_REQUESTS.code()));
                     } else {
                         return Future.succeededFuture();
                     }
