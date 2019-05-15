@@ -29,6 +29,7 @@ import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.http.HttpServerOptions;
+import io.vertx.core.net.JksOptions;
 import io.vertx.ext.healthchecks.HealthCheckHandler;
 import io.vertx.ext.web.Router;
 
@@ -120,6 +121,15 @@ public final class VertxBasedHealthCheckServer implements HealthCheckServer {
         final HttpServerOptions options = new HttpServerOptions()
                 .setPort(config.getHealthCheckPort())
                 .setHost(config.getHealthCheckBindAddress());
+
+        if (config.isHealthCheckUseSsl()) {
+            options.setSsl(true);
+            final JksOptions keyOptions = new JksOptions();
+            keyOptions.setPath(config.getHealthCheckKeyStorePath());
+            keyOptions.setPassword(config.getHealthCheckKeyStorePassword());
+            options.setKeyStoreOptions(keyOptions);
+        }
+
         server = vertx.createHttpServer(options);
 
         registerAdditionalResources();
@@ -128,10 +138,11 @@ public final class VertxBasedHealthCheckServer implements HealthCheckServer {
 
         server.requestHandler(router).listen(startAttempt -> {
             if (startAttempt.succeeded()) {
-                LOG.info("readiness probe available at http://{}:{}{}", options.getHost(), options.getPort(),
-                        URI_READINESS_PROBE);
-                LOG.info("liveness probe available at http://{}:{}{}", options.getHost(), options.getPort(),
-                        URI_LIVENESS_PROBE);
+                final String healthCheckServerSchema = config.isHealthCheckUseSsl() ? "https" : "http";
+                LOG.info("readiness probe available at {}://{}:{}{}", healthCheckServerSchema, options.getHost(),
+                        options.getPort(), URI_READINESS_PROBE);
+                LOG.info("liveness probe available at {}://{}:{}{}", healthCheckServerSchema, options.getHost(),
+                        options.getPort(), URI_LIVENESS_PROBE);
                 result.complete();
             } else {
                 LOG.warn("failed to start health checks HTTP server: {}", startAttempt.cause().getMessage());

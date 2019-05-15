@@ -30,6 +30,9 @@ public class ApplicationConfigProperties {
 
     private int healthCheckPort = Constants.PORT_UNCONFIGURED;
     private String healthCheckBindAddress = Constants.LOOPBACK_DEVICE_ADDRESS;
+    private boolean healthCheckUseSsl = false;
+    private String healthCheckKeyStorePath;
+    private String healthCheckKeyStorePassword;
 
     /**
      * Gets the maximum time to wait for the server to start up.
@@ -135,4 +138,55 @@ public class ApplicationConfigProperties {
         this.healthCheckBindAddress = Objects.requireNonNull(address);
     }
 
+    /**
+     * Returns if for the health check server SSL is enabled.
+     * @return {@code true} if SSL is enabled, {@code false} otherwise.
+     */
+    public boolean isHealthCheckUseSsl() {
+        return healthCheckUseSsl;
+    }
+
+    /**
+     * Sets if the health check server should use SSL. The default value of this property is {@code false}.
+     * @param healthCheckUseSsl {@code true} if SSL should be enabled, {@code false} if not.
+     */
+    public void setHealthCheckUseSsl(final boolean healthCheckUseSsl) {
+        this.healthCheckUseSsl = healthCheckUseSsl;
+    }
+
+    /**
+     * Gets the absolute path to the PKCS12 key store containing the private key
+     * for the health check server.
+     *
+     * @return The path or {@code null} if no path has been set.
+     */
+    public String getHealthCheckKeyStorePath() {
+        return healthCheckKeyStorePath;
+    }
+
+    /**
+     * Sets the absolute path to the PKCS12 key store containing the private key for the health check server.
+     *
+     * @param healthCheckKeyStorePath The path.
+     */
+    public void setHealthCheckKeyStorePath(final String healthCheckKeyStorePath) {
+        this.healthCheckKeyStorePath = healthCheckKeyStorePath;
+    }
+
+    /**
+     * Gets the password for the PKCS12 key store containing the private key for the health check server.
+     *
+     * @return The password or {@code null} if no password has been set.
+     */
+    public String getHealthCheckKeyStorePassword() {
+        return healthCheckKeyStorePassword;
+    }
+
+    /**
+     * Sets the password for the PKCS12 key store containing the private key for the health check server.
+     * @param healthCheckKeyStorePassword The path.
+     */
+    public void setHealthCheckKeyStorePassword(final String healthCheckKeyStorePassword) {
+        this.healthCheckKeyStorePassword = healthCheckKeyStorePassword;
+    }
 }
