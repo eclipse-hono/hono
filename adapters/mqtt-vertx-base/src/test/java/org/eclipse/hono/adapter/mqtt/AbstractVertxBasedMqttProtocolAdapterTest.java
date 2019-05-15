@@ -37,6 +37,7 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 
+import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
@@ -179,7 +180,10 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
 
         authHandler = mock(AuthHandler.class);
         resourceLimitChecks = mock(ResourceLimitChecks.class);
-        when(resourceLimitChecks.isConnectionLimitReached(any(TenantObject.class))).thenReturn(Future.succeededFuture(Boolean.FALSE));
+        when(resourceLimitChecks.isConnectionLimitReached(any(TenantObject.class)))
+                .thenReturn(Future.succeededFuture(Boolean.FALSE));
+        when(resourceLimitChecks.isMessageLimitReached(any(TenantObject.class), anyLong()))
+                .thenReturn(Future.succeededFuture(Boolean.FALSE));
     }
 
     /**
@@ -1029,6 +1033,94 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         verify(authHandler).authenticateDevice(any(MqttContext.class));
         // THEN the connection request is rejected
         verify(endpoint).reject(MqttConnectReturnCode.CONNECTION_REFUSED_NOT_AUTHORIZED);
+    }
+
+    /**
+     * Verifies that a telemetry message is rejected due to the limit exceeded.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testMessageLimitExceededForATelemetryMessage(final TestContext ctx) {
+
+        // GIVEN an adapter
+        final AbstractVertxBasedMqttProtocolAdapter<MqttProtocolAdapterProperties> adapter = getAdapter(
+                getMqttServer(false));
+        forceClientMocksToConnected();
+
+        when(resourceLimitChecks.isMessageLimitReached(any(TenantObject.class), anyLong()))
+                .thenReturn(Future.succeededFuture(Boolean.TRUE));
+        final DownstreamSender sender = mock(DownstreamSender.class);
+        when(downstreamSenderFactory.getOrCreateTelemetrySender(anyString()))
+                .thenReturn(Future.succeededFuture(sender));
+
+        // WHEN a device of "my-tenant" publishes a telemetry message
+        final MqttPublishMessage msg = mock(MqttPublishMessage.class);
+        when(msg.topicName()).thenReturn("t/tenant/device");
+        when(msg.qosLevel()).thenReturn(MqttQoS.AT_LEAST_ONCE);
+        adapter.uploadTelemetryMessage(
+                newMqttContext(msg, mockEndpoint()),
+                "my-tenant",
+                "the-device",
+                Buffer.buffer("test")).setHandler(ctx.asyncAssertFailure(t -> {
+                    // THEN the message has not been sent downstream
+                    verify(sender, never()).send(any(Message.class));
+                    // because the message limit is exceeded
+                    ctx.assertEquals(HttpResponseStatus.TOO_MANY_REQUESTS.code(),
+                            ((ClientErrorException) t).getErrorCode());
+                    // and the message has been reported as unprocessable
+                    verify(metrics).reportTelemetry(
+                            any(MetricsTags.EndpointType.class),
+                            anyString(),
+                            eq(MetricsTags.ProcessingOutcome.UNPROCESSABLE),
+                            any(MetricsTags.QoS.class),
+                            anyInt(),
+                            any());
+                }));
+    }
+
+    /**
+     * Verifies that an event message is rejected due to the limit exceeded.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testMessageLimitExceededForAnEventMessage(final TestContext ctx) {
+
+        // GIVEN an adapter
+        final AbstractVertxBasedMqttProtocolAdapter<MqttProtocolAdapterProperties> adapter = getAdapter(
+                getMqttServer(false));
+        forceClientMocksToConnected();
+
+        when(resourceLimitChecks.isMessageLimitReached(any(TenantObject.class), anyLong()))
+                .thenReturn(Future.succeededFuture(Boolean.TRUE));
+        final DownstreamSender sender = mock(DownstreamSender.class);
+        when(downstreamSenderFactory.getOrCreateEventSender(anyString()))
+                .thenReturn(Future.succeededFuture(sender));
+
+        // WHEN a device of "my-tenant" publishes an event message
+        final MqttPublishMessage msg = mock(MqttPublishMessage.class);
+        when(msg.topicName()).thenReturn("e/tenant/device");
+        when(msg.qosLevel()).thenReturn(MqttQoS.AT_LEAST_ONCE);
+        adapter.uploadEventMessage(
+                newMqttContext(msg, mockEndpoint()),
+                "my-tenant",
+                "the-device",
+                Buffer.buffer("test")).setHandler(ctx.asyncAssertFailure(t -> {
+            // THEN the message has not been sent downstream
+            verify(sender, never()).send(any(Message.class));
+            // because the message limit is exceeded
+            ctx.assertEquals(HttpResponseStatus.TOO_MANY_REQUESTS.code(),
+                    ((ClientErrorException) t).getErrorCode());
+            // and the message has been reported as unprocessable
+            verify(metrics).reportTelemetry(
+                    any(MetricsTags.EndpointType.class),
+                    anyString(),
+                    eq(MetricsTags.ProcessingOutcome.UNPROCESSABLE),
+                    any(MetricsTags.QoS.class),
+                    anyInt(),
+                    any());
+        }));
     }
 
     private void forceClientMocksToConnected() {
