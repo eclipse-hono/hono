@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -127,9 +127,9 @@ public final class SimpleAuthenticationServer extends AmqpServiceBase<ServiceCon
         if (LOG.isDebugEnabled()) {
             final Map<Symbol, Object> remoteProperties = connection.getRemoteProperties();
             if (remoteProperties != null) {
-                final String props = remoteProperties.entrySet().stream().map(entry -> {
-                    return String.format("[%s: %s]", entry.getKey(), entry.getValue().toString());
-                }).collect(Collectors.joining(", "));
+                final String props = remoteProperties.entrySet().stream()
+                        .map(entry -> String.format("[%s: %s]", entry.getKey(), entry.getValue().toString()))
+                        .collect(Collectors.joining(", "));
                 LOG.debug("client connection [container: {}] includes properties: {}", connection.getRemoteContainer(), props);
             }
         }
@@ -145,7 +145,7 @@ public final class SimpleAuthenticationServer extends AmqpServiceBase<ServiceCon
         properties.put(PROPERTY_ADDRESS_AUTHZ, permissions);
         connection.setProperties(properties);
         connection.setOfferedCapabilities(new Symbol[] { CAPABILITY_ADDRESS_AUTHZ });
-        LOG.debug("transfering {} permissions of client [container: {}, user: {}] in open frame [legacy format: {}]",
+        LOG.debug("transferring {} permissions of client [container: {}, user: {}] in open frame [legacy format: {}]",
                 permissions.size(), connection.getRemoteContainer(), clientPrincipal.getName(), isLegacy);
     }
 
