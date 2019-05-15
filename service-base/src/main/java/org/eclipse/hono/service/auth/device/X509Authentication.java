@@ -43,7 +43,7 @@ public interface X509Authentication {
      *         the authentication identifier of the device and the tenant that it
      *         belongs to.
      *         <p>
-     *         Implementations should document the specific properties cotnained
+     *         Implementations should document the specific properties contained
      *         in the JSON object.
      * @throws NullPointerException if certificate path is {@code null}.
      */
