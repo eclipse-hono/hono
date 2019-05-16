@@ -138,11 +138,11 @@ public abstract class BaseRegistrationService<T> extends EventBusService<T> impl
             final Future<RegistrationResult> result = Future.future();
             if (gatewayId == null) {
                 log.debug("asserting registration of device [{}] with tenant [{}]", deviceId, tenantId);
-                assertRegistration(tenantId, deviceId, span, result.completer());
+                assertRegistration(tenantId, deviceId, span, result);
             } else {
                 log.debug("asserting registration of device [{}] with tenant [{}] for gateway [{}]",
                         deviceId, tenantId, gatewayId);
-                assertRegistration(tenantId, deviceId, gatewayId, span, result.completer());
+                assertRegistration(tenantId, deviceId, gatewayId, span, result);
             }
             resultFuture = result.map(res -> {
                 return request.getResponse(res.getStatus())
@@ -219,7 +219,7 @@ public abstract class BaseRegistrationService<T> extends EventBusService<T> impl
         Objects.requireNonNull(resultHandler);
 
         final Future<RegistrationResult> getResultTracker = Future.future();
-        getDevice(tenantId, deviceId, getResultTracker.completer());
+        getDevice(tenantId, deviceId, getResultTracker);
 
         getResultTracker.compose(result -> {
             if (isDeviceEnabled(result)) {
@@ -269,8 +269,8 @@ public abstract class BaseRegistrationService<T> extends EventBusService<T> impl
         final Future<RegistrationResult> deviceInfoTracker = Future.future();
         final Future<RegistrationResult> gatewayInfoTracker = Future.future();
 
-        getDevice(tenantId, deviceId, deviceInfoTracker.completer());
-        getDevice(tenantId, gatewayId, gatewayInfoTracker.completer());
+        getDevice(tenantId, deviceId, deviceInfoTracker);
+        getDevice(tenantId, gatewayId, gatewayInfoTracker);
 
         CompositeFuture.all(deviceInfoTracker, gatewayInfoTracker).compose(ok -> {
 

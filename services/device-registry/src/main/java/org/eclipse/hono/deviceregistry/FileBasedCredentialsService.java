@@ -93,7 +93,7 @@ public final class FileBasedCredentialsService extends CompleteBaseCredentialsSe
         } else if (vertx.fileSystem().existsBlocking(getConfig().getFilename())) {
             result.complete();
         } else if (createIfMissing) {
-            vertx.fileSystem().createFile(getConfig().getFilename(), result.completer());
+            vertx.fileSystem().createFile(getConfig().getFilename(), result);
         } else {
             log.debug("no such file [{}]", getConfig().getFilename());
             result.complete();
@@ -144,7 +144,7 @@ public final class FileBasedCredentialsService extends CompleteBaseCredentialsSe
         } else {
             final Future<Buffer> readResult = Future.future();
             log.debug("trying to load credentials from file {}", getConfig().getFilename());
-            vertx.fileSystem().readFile(getConfig().getFilename(), readResult.completer());
+            vertx.fileSystem().readFile(getConfig().getFilename(), readResult);
             return readResult.compose(buffer -> {
                 return addAll(buffer);
             }).recover(t -> {
@@ -230,7 +230,7 @@ public final class FileBasedCredentialsService extends CompleteBaseCredentialsSe
                 vertx.fileSystem().writeFile(
                         getConfig().getFilename(),
                         Buffer.buffer(tenants.encodePrettily(), StandardCharsets.UTF_8.name()),
-                        writeHandler.completer());
+                        writeHandler);
                 return writeHandler.map(ok -> {
                     dirty = false;
                     log.trace("successfully wrote {} credentials to file {}", idCount.get(), getConfig().getFilename());

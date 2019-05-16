@@ -183,7 +183,7 @@ public final class AuthenticationServerClient {
 
     private static Future<ProtonReceiver> openReceiver(final ProtonConnection openConnection, final ProtonMessageHandler messageHandler) {
         final Future<ProtonReceiver> result = Future.future();
-        openConnection.createReceiver(AuthenticationConstants.ENDPOINT_NAME_AUTHENTICATION).openHandler(result.completer()).handler(messageHandler).open();
+        openConnection.createReceiver(AuthenticationConstants.ENDPOINT_NAME_AUTHENTICATION).openHandler(result).handler(messageHandler).open();
         return result;
     }
 }

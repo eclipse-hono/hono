@@ -630,7 +630,7 @@ public final class IntegrationTestSupport {
     private Future<Buffer> loadFile(final String path) {
 
         final Future<Buffer> result = Future.future();
-        vertx.fileSystem().readFile(path, result.completer());
+        vertx.fileSystem().readFile(path, result);
         return result;
     }
 

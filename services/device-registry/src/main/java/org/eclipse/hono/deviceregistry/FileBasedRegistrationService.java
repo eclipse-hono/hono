@@ -111,7 +111,7 @@ public final class FileBasedRegistrationService extends CompleteBaseRegistration
             return Future.succeededFuture();
         } else {
             final Future<Buffer> readResult = Future.future();
-            vertx.fileSystem().readFile(getConfig().getFilename(), readResult.completer());
+            vertx.fileSystem().readFile(getConfig().getFilename(), readResult);
             return readResult.compose(buffer -> {
                 return addAll(buffer);
             }).recover(t -> {
@@ -129,7 +129,7 @@ public final class FileBasedRegistrationService extends CompleteBaseRegistration
         } else if (vertx.fileSystem().existsBlocking(getConfig().getFilename())) {
             result.complete();
         } else if (createIfMissing) {
-            vertx.fileSystem().createFile(getConfig().getFilename(), result.completer());
+            vertx.fileSystem().createFile(getConfig().getFilename(), result);
         } else {
             log.debug("no such file [{}]", getConfig().getFilename());
             result.complete();
@@ -219,7 +219,7 @@ public final class FileBasedRegistrationService extends CompleteBaseRegistration
                 }
 
                 final Future<Void> writeHandler = Future.future();
-                vertx.fileSystem().writeFile(getConfig().getFilename(), Buffer.factory.buffer(tenants.encodePrettily()), writeHandler.completer());
+                vertx.fileSystem().writeFile(getConfig().getFilename(), Buffer.factory.buffer(tenants.encodePrettily()), writeHandler);
                 return writeHandler.map(ok -> {
                     dirty = false;
                     log.trace("successfully wrote {} device identities to file {}", idCount.get(), getConfig().getFilename());

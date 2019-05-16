@@ -147,7 +147,7 @@ public class HonoCommander extends AbstractClient {
         final CompletableFuture<Void> shutdownTracker = new CompletableFuture<>();
         final Future<Void> clientTracker = Future.future();
         LOG.debug("Clean resources...");
-        applicationClientFactory.disconnect(clientTracker.completer());
+        applicationClientFactory.disconnect(clientTracker);
         clientTracker
                 .compose(ok -> closeVertx())
                 .recover(error -> closeVertx())

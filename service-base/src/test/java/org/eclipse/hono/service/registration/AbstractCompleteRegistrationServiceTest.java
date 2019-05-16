@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -93,14 +93,14 @@ public abstract class AbstractCompleteRegistrationServiceTest {
         final Future<RegistrationResult> result = Future.future();
         final Checkpoint register = ctx.checkpoint(2);
 
-        getCompleteRegistrationService().addDevice(TENANT, DEVICE, new JsonObject(), result.completer());
+        getCompleteRegistrationService().addDevice(TENANT, DEVICE, new JsonObject(), result);
         result.map(response -> {
             assertEquals(HttpURLConnection.HTTP_CREATED, response.getStatus());
             register.flag();
             return response;
         }).compose(ok -> {
             final Future<RegistrationResult> addResult = Future.future();
-            getCompleteRegistrationService().addDevice(TENANT, DEVICE, new JsonObject(), addResult.completer());
+            getCompleteRegistrationService().addDevice(TENANT, DEVICE, new JsonObject(), addResult);
             return addResult;
         }).setHandler(
                 ctx.succeeding(response -> ctx.verify(() -> {
@@ -120,12 +120,12 @@ public abstract class AbstractCompleteRegistrationServiceTest {
         final Future<RegistrationResult> result = Future.future();
         final Checkpoint get = ctx.checkpoint(2);
 
-        getCompleteRegistrationService().addDevice(TENANT, DEVICE, new JsonObject(), result.completer());
+        getCompleteRegistrationService().addDevice(TENANT, DEVICE, new JsonObject(), result);
         result.compose(response -> {
             assertEquals(HttpURLConnection.HTTP_CREATED, response.getStatus());
             get.flag();
             final Future<RegistrationResult> addResult = Future.future();
-            getCompleteRegistrationService().getDevice(TENANT, DEVICE, addResult.completer());
+            getCompleteRegistrationService().getDevice(TENANT, DEVICE, addResult);
             return addResult;
         }).setHandler(
                 ctx.succeeding(s -> ctx.verify(() -> {
@@ -147,18 +147,18 @@ public abstract class AbstractCompleteRegistrationServiceTest {
         final Future<RegistrationResult> result = Future.future();
         final Checkpoint get = ctx.checkpoint(3);
 
-        getCompleteRegistrationService().addDevice(TENANT, DEVICE, new JsonObject(), result.completer());
+        getCompleteRegistrationService().addDevice(TENANT, DEVICE, new JsonObject(), result);
         result.compose(response -> {
             assertEquals(HttpURLConnection.HTTP_CREATED, response.getStatus());
             get.flag();
             final Future<RegistrationResult> deregisterResult = Future.future();
-            getCompleteRegistrationService().removeDevice(TENANT, DEVICE, deregisterResult.completer());
+            getCompleteRegistrationService().removeDevice(TENANT, DEVICE, deregisterResult);
             return deregisterResult;
         }).compose(response -> {
             assertEquals(HttpURLConnection.HTTP_NO_CONTENT, response.getStatus());
             get.flag();
             final Future<RegistrationResult> getResult = Future.future();
-            getCompleteRegistrationService().getDevice(TENANT, DEVICE, getResult.completer());
+            getCompleteRegistrationService().getDevice(TENANT, DEVICE, getResult);
             return getResult;
         }).setHandler(ctx.succeeding(response -> ctx.verify(() -> {
             assertEquals(HttpURLConnection.HTTP_NOT_FOUND, response.getStatus());

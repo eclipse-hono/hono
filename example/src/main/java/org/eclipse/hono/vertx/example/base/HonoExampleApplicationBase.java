@@ -124,7 +124,7 @@ public class HonoExampleApplicationBase {
             });
             return createConsumer();
         })
-        .setHandler(consumerFuture.completer());
+        .setHandler(consumerFuture);
 
         latch.await();
 

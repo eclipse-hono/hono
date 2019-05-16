@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -89,7 +89,7 @@ public abstract class AbstractServiceBase<T extends ServiceConfigProperties> ext
     @Override
     public final void start(final Future<Void> startFuture) {
         healthCheckServer.registerHealthCheckResources(this);
-        startInternal().setHandler(startFuture.completer());
+        startInternal().setHandler(startFuture);
     }
 
     /**
@@ -114,7 +114,7 @@ public abstract class AbstractServiceBase<T extends ServiceConfigProperties> ext
      */
     @Override
     public final void stop(final Future<Void> stopFuture) {
-        stopInternal().setHandler(stopFuture.completer());
+        stopInternal().setHandler(stopFuture);
     }
 
     /**

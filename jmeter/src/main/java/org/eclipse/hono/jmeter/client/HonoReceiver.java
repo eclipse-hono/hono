@@ -283,7 +283,7 @@ public class HonoReceiver extends AbstractClient {
 
         final CompletableFuture<Void> result = new CompletableFuture<>();
         final Future<Void> clientTracker = Future.future();
-        applicationClientFactory.disconnect(clientTracker.completer());
+        applicationClientFactory.disconnect(clientTracker);
         clientTracker.otherwiseEmpty().compose(ok -> closeVertx()).setHandler(attempt -> result.complete(null));
         return result;
     }

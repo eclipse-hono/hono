@@ -84,7 +84,7 @@ public abstract class CompleteBaseRegistrationService<T> extends BaseRegistratio
         } else {
             log.debug("registering device [{}] for tenant [{}]", deviceId, tenantId);
             final Future<RegistrationResult> result = Future.future();
-            addDevice(tenantId, deviceId, payload, result.completer());
+            addDevice(tenantId, deviceId, payload, result);
             return result.map(res -> {
                 return request.getResponse(res.getStatus())
                         .setDeviceId(deviceId)
@@ -103,7 +103,7 @@ public abstract class CompleteBaseRegistrationService<T> extends BaseRegistratio
         } else {
             log.debug("retrieving device [{}] of tenant [{}]", deviceId, tenantId);
             final Future<RegistrationResult> result = Future.future();
-            getDevice(tenantId, deviceId, result.completer());
+            getDevice(tenantId, deviceId, result);
             return result.map(res -> {
                 return request.getResponse(res.getStatus())
                         .setDeviceId(deviceId)
@@ -124,7 +124,7 @@ public abstract class CompleteBaseRegistrationService<T> extends BaseRegistratio
         } else {
             log.debug("updating registration information for device [{}] of tenant [{}]", deviceId, tenantId);
             final Future<RegistrationResult> result = Future.future();
-            updateDevice(tenantId, deviceId, payload, result.completer());
+            updateDevice(tenantId, deviceId, payload, result);
             return result.map(res -> {
                 return request.getResponse(res.getStatus())
                         .setDeviceId(deviceId)
@@ -143,7 +143,7 @@ public abstract class CompleteBaseRegistrationService<T> extends BaseRegistratio
         } else {
             log.debug("deregistering device [{}] of tenant [{}]", deviceId, tenantId);
             final Future<RegistrationResult> result = Future.future();
-            removeDevice(tenantId, deviceId, result.completer());
+            removeDevice(tenantId, deviceId, result);
             return result.map(res -> {
                 return request.getResponse(res.getStatus())
                         .setDeviceId(deviceId)

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -189,7 +189,7 @@ public class AbstractApplication implements ApplicationRunner {
         for (final ObjectFactory<? extends AbstractServiceBase<?>> serviceFactory : serviceFactories) {
 
             final Future<String> deployTracker = Future.future();
-            vertx.deployVerticle(serviceFactory::getObject, deploymentOptions, deployTracker.completer());
+            vertx.deployVerticle(serviceFactory::getObject, deploymentOptions, deployTracker);
             deploymentTracker.add(deployTracker);
         }
 

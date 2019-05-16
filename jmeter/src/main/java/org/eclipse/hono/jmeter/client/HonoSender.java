@@ -305,7 +305,7 @@ public class HonoSender extends AbstractClient {
 
             final Future<Void> honoTracker = Future.future();
             if (downstreamSenderFactory != null) {
-                downstreamSenderFactory.disconnect(honoTracker.completer());
+                downstreamSenderFactory.disconnect(honoTracker);
             } else {
                 honoTracker.complete();
             }

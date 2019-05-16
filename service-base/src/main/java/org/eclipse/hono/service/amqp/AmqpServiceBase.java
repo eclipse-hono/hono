@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -395,7 +395,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
 
         if (server != null) {
             LOG.info("stopping secure AMQP server [{}:{}]", getBindAddress(), getActualPort());
-            server.close(secureTracker.completer());
+            server.close(secureTracker);
         } else {
             secureTracker.complete();
         }
@@ -408,7 +408,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
 
         if (insecureServer != null) {
             LOG.info("stopping insecure AMQP server [{}:{}]", getInsecurePortBindAddress(), getActualInsecurePort());
-            insecureServer.close(insecureTracker.completer());
+            insecureServer.close(insecureTracker);
         } else {
             insecureTracker.complete();
         }

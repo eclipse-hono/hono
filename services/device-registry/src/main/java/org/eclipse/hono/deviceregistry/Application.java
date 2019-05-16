@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -114,7 +114,7 @@ public class Application extends AbstractApplication {
     private Future<String> deployCredentialsService() {
         final Future<String> result = Future.future();
         log.info("Starting credentials service {}", credentialsService);
-        getVertx().deployVerticle(credentialsService, result.completer());
+        getVertx().deployVerticle(credentialsService, result);
         return result;
     }
 
@@ -124,7 +124,7 @@ public class Application extends AbstractApplication {
             result.fail("authentication service is not a verticle");
         } else {
             log.info("Starting authentication service {}", authenticationService);
-            getVertx().deployVerticle((Verticle) authenticationService, result.completer());
+            getVertx().deployVerticle((Verticle) authenticationService, result);
         }
         return result;
     }
@@ -132,14 +132,14 @@ public class Application extends AbstractApplication {
     private Future<String> deployRegistrationService() {
         final Future<String> result = Future.future();
         log.info("Starting registration service {}", registrationService);
-        getVertx().deployVerticle(registrationService, result.completer());
+        getVertx().deployVerticle(registrationService, result);
         return result;
     }
 
     private Future<String> deployTenantService() {
         final Future<String> result = Future.future();
         log.info("Starting tenant service {}", tenantService);
-        getVertx().deployVerticle(tenantService, result.completer());
+        getVertx().deployVerticle(tenantService, result);
         return result;
     }
 

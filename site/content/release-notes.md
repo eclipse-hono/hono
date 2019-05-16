@@ -19,6 +19,11 @@ title = "Release Notes"
   [Device Registry Admin Guide]({{< ref "/admin-guide/device-registry-config.md" >}}) for details
   regarding the configuration properties to use.
 
+### Fixes & Enhancements
+
+* vert.x has been updated to version 3.7.0.
+* The already deprecated method `io.vertx.core.Future.completer` is not used anymore.
+
 ### API Changes
 
 * The `org.eclipse.hono.util.RegistrationConstants.FIELD_DEFAULTS` constant

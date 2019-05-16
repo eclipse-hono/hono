@@ -210,7 +210,7 @@ public class CommandClientImpl extends AbstractRequestResponseClient<BufferResul
             request.setSubject(command);
 
             MessageHelper.setPayload(request, contentType, data);
-            sendRequest(request, responseTracker.completer(), null, currentSpan);
+            sendRequest(request, responseTracker, null, currentSpan);
 
             return responseTracker.recover(t -> {
                 TracingHelper.logError(currentSpan, t);

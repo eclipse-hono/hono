@@ -164,7 +164,7 @@ public abstract class AbstractSender extends AbstractHonoClient implements Messa
                 span.finish();
                 result.fail(e);
             } else {
-                sendMessage(rawMessage, span).setHandler(result.completer());
+                sendMessage(rawMessage, span).setHandler(result);
             }
         });
     }
