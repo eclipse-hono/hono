@@ -41,7 +41,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
-import io.opentracing.tag.Tags;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.buffer.Buffer;
@@ -231,7 +230,7 @@ public class CredentialsClientImpl extends AbstractRequestResponseClient<Credent
             return Future.failedFuture(t);
         }).map(response -> {
             if (response.isError()) {
-                Tags.ERROR.set(span, Boolean.TRUE);
+                TracingHelper.logError(span, "error code: " + response.getStatus());
             }
             span.finish();
             switch(response.getStatus()) {

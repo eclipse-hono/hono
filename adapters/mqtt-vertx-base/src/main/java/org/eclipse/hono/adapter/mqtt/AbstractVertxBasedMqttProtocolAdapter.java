@@ -538,10 +538,10 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                         return cmdSub;
                     }).recover(t -> {
                         final Map<String, Object> items = new HashMap<>(4);
-                        items.put(Fields.EVENT, "rejecting subscription");
+                        items.put(Fields.EVENT, Tags.ERROR.getKey());
                         items.put("filter", subscription.topicName());
                         items.put("requested QoS", subscription.qualityOfService());
-                        items.put(Fields.MESSAGE, t.getMessage());
+                        items.put(Fields.MESSAGE, "rejecting subscription: " + t.getMessage());
                         TracingHelper.logError(span, items);
                         LOG.debug("cannot create subscription [tenant: {}, device: {}, filter: {}, requested QoS: {}]",
                                 cmdSub.getTenant(), cmdSub.getDeviceId(), subscription.topicName(),

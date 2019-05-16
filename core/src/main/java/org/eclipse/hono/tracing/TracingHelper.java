@@ -13,7 +13,6 @@
 
 package org.eclipse.hono.tracing;
 
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -124,12 +123,12 @@ public final class TracingHelper {
      * @return The items to log.
      */
     public static Map<String, Object> getErrorLogItems(final Throwable error) {
-        final Map<String, Object> log = new HashMap<>(2);
-        log.put(Fields.EVENT, Tags.ERROR.getKey());
+        final Map<String, Object> items = new HashMap<>(2);
+        items.put(Fields.EVENT, Tags.ERROR.getKey());
         if (error != null) {
-            log.put(Fields.ERROR_OBJECT, error);
+            items.put(Fields.ERROR_OBJECT, error);
         }
-        return log;
+        return items;
     }
 
     /**
@@ -144,7 +143,10 @@ public final class TracingHelper {
     public static void logError(final Span span, final String message) {
         if (span != null) {
             Objects.requireNonNull(message);
-            logError(span, Collections.singletonMap(Fields.MESSAGE, message));
+            final Map<String, String> items = new HashMap<>(2);
+            items.put(Fields.MESSAGE, message);
+            items.put(Fields.EVENT, Tags.ERROR.getKey());
+            logError(span, items);
         }
     }
 
@@ -163,6 +165,7 @@ public final class TracingHelper {
         if (span != null) {
             Tags.ERROR.set(span, Boolean.TRUE);
             if (items != null && !items.isEmpty()) {
+                // ensure 'event' item is set and has value 'error'
                 final Object event = items.get(Fields.EVENT);
                 if (event == null || !Tags.ERROR.getKey().equals(event)) {
                     final HashMap<String, Object> itemsWithErrorEvent = new HashMap<>(items.size() + 1);
