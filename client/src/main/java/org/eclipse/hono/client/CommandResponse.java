@@ -13,12 +13,14 @@
 
 package org.eclipse.hono.client;
 
-import java.util.Optional;
+import java.util.Objects;
 import java.util.function.Predicate;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import io.vertx.core.buffer.Buffer;
 import io.vertx.proton.ProtonHelper;
@@ -29,6 +31,8 @@ import io.vertx.proton.ProtonHelper;
  *
  */
 public final class CommandResponse {
+
+    private static final Logger LOG = LoggerFactory.getLogger(CommandResponse.class);
 
     private static final Predicate<Integer> INVALID_STATUS_CODE = code ->
         code == null || code < 200 || (code >= 300 && code < 400) || code >= 600;
@@ -44,7 +48,7 @@ public final class CommandResponse {
         MessageHelper.addProperty(message, MessageHelper.APP_PROPERTY_TENANT_ID, tenantId);
         MessageHelper.addProperty(message, MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId);
         MessageHelper.addProperty(message, MessageHelper.APP_PROPERTY_STATUS, status);
-        MessageHelper.setPayload(this.message, contentType, payload);
+        MessageHelper.setPayload(message, contentType, payload);
         this.replyToId = replyToId;
     }
 
@@ -60,7 +64,7 @@ public final class CommandResponse {
      * @param tenantId The tenant ID of the device sending the response.
      * @param deviceId The device ID of the device sending the response.
      * @param payload The payload of the response.
-     * @param contentType The contentType of the response. Maybe {@code null} since it is not required.
+     * @param contentType The contentType of the response. May be {@code null} since it is not required.
      * @param status The HTTP status code indicating the outcome of the command.
      * @return The response or {@code null} if the request ID could not be parsed, the status is {@code null} or if the
      *         status code is &lt; 200 or &gt;= 600.
@@ -74,10 +78,13 @@ public final class CommandResponse {
             final Integer status) {
 
         if (requestId == null) {
+            LOG.debug("cannot create CommandResponse: request id is null");
             return null;
         } else if (INVALID_STATUS_CODE.test(status)) {
+            LOG.debug("cannot create CommandResponse: status is invalid: {}", status);
             return null;
         } else if (requestId.length() < 3) {
+            LOG.debug("cannot create CommandResponse: request id invalid: {}", requestId);
             return null;
         } else {
             try {
@@ -91,6 +98,7 @@ public final class CommandResponse {
                         requestId.substring(3, 3 + lengthStringOne), // correlation ID
                         addDeviceIdToReply ? deviceId + "/" + replyId : replyId);
             } catch (NumberFormatException | StringIndexOutOfBoundsException se) {
+                LOG.debug("error creating CommandResponse", se);
                 return null;
             }
         }
@@ -103,27 +111,20 @@ public final class CommandResponse {
      *
      * @return The command response or {@code null} if message or any of correlationId, address and status is null or if
      *         the status code is &lt; 200 or &gt;= 600.
+     * @throws NullPointerException if message is {@code null}.
      */
     public static CommandResponse from(final Message message) {
-        if (message == null) {
-            return null;
-        }
+        Objects.requireNonNull(message);
 
-        final String correlationId = Optional.ofNullable(message.getCorrelationId())
-                .map(id -> {
-                    if (id instanceof String) {
-                        return (String) id;
-                    } else {
-                        return null;
-                    }
-                }).orElse(null);
-
-        final Integer status = MessageHelper.getApplicationProperty(message.getApplicationProperties(),
-                MessageHelper.APP_PROPERTY_STATUS, Integer.class);
+        final String correlationId = message.getCorrelationId() instanceof String ? (String) message.getCorrelationId() : null;
+        final Integer status = MessageHelper.getStatus(message);
 
         if (correlationId == null || message.getAddress() == null || status == null) {
+            LOG.debug("cannot create CommandResponse: invalid message (correlationId: {}, address: {}, status: {})",
+                    correlationId, message.getAddress(), status);
             return null;
         } else if (INVALID_STATUS_CODE.test(status)) {
+            LOG.debug("cannot create CommandResponse: status is invalid: {}", status);
             return null;
         } else {
             try {
@@ -132,6 +133,7 @@ public final class CommandResponse {
                 MessageHelper.addProperty(message, MessageHelper.APP_PROPERTY_DEVICE_ID, resource.getResourceId());
                 return new CommandResponse(message, getReplyToId(resource));
             } catch (NullPointerException | IllegalArgumentException e) {
+                LOG.debug("error creating CommandResponse", e);
                 return null;
             }
         }
@@ -162,8 +164,7 @@ public final class CommandResponse {
      * @return The status code.
      */
     public int getStatus() {
-        return MessageHelper.getApplicationProperty(message.getApplicationProperties(),
-                MessageHelper.APP_PROPERTY_STATUS, Integer.class);
+        return MessageHelper.getStatus(message);
     }
 
     /**

@@ -513,9 +513,11 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
                 return null;
             }).setHandler(c -> currentSpan.finish());
         } else {
-            LOG.error("Error: commandResponse cannot be generated. Either invalid requestId provided in [{}]"
-                    + "or invalid response code was set in response [{}]", command, response);
-            LOG.warn("No response can be sent to the application for lora device [{}]", loraDeviceId);
+            final String errorMsg = String.format("command-request-id [%s] or status code [%s] is missing/invalid",
+                    command.getRequestId(), response.statusCode());
+            LOG.debug("cannot send command response from lora device [{}] to application: {}", loraDeviceId, errorMsg);
+            TracingHelper.logError(currentSpan, errorMsg);
+            currentSpan.finish();
         }
     }
 

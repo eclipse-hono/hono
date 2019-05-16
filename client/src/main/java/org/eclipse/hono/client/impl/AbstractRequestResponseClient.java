@@ -447,10 +447,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
 
     private R getRequestResponseResult(final Message message) {
 
-        final Integer status = MessageHelper.getApplicationProperty(
-                message.getApplicationProperties(),
-                MessageHelper.APP_PROPERTY_STATUS,
-                Integer.class);
+        final Integer status = MessageHelper.getStatus(message);
         if (status == null) {
             LOG.debug("response message has no status code application property [reply-to: {}, correlation ID: {}]",
                     replyToAddress, message.getCorrelationId());

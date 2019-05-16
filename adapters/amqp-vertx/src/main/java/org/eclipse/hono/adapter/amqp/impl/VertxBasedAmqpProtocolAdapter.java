@@ -922,8 +922,12 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
 
         final Future<CommandResponse> response = Optional.ofNullable(CommandResponse.from(context.getMessage()))
                 .map(r -> Future.succeededFuture(r))
-                .orElse(Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
-                    "malformed command response message")));
+                .orElseGet(() -> {
+                    TracingHelper.logError(currentSpan, String.format("invalid message (correlationId: %s, address: %s, status: %s)",
+                                    context.getMessage().getCorrelationId(), context.getMessage().getAddress(), MessageHelper.getStatus(context.getMessage())));
+                    return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
+                            "malformed command response message"));
+                });
 
         return response.compose(commandResponse -> {
 
