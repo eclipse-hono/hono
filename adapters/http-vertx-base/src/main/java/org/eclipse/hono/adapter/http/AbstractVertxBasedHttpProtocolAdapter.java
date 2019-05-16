@@ -435,14 +435,14 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
 
         final Future<Void> serverStopTracker = Future.future();
         if (server != null) {
-            server.close(serverStopTracker.completer());
+            server.close(serverStopTracker);
         } else {
             serverStopTracker.complete();
         }
 
         final Future<Void> insecureServerStopTracker = Future.future();
         if (insecureServer != null) {
-            insecureServer.close(insecureServerStopTracker.completer());
+            insecureServer.close(insecureServerStopTracker);
         } else {
             insecureServerStopTracker.complete();
         }

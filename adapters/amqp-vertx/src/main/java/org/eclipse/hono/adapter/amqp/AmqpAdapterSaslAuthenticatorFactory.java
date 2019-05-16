@@ -227,9 +227,9 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
             sasl.recv(saslResponse, 0, saslResponse.length);
 
             if (AuthenticationConstants.MECHANISM_PLAIN.equals(remoteMechanism)) {
-                verifyPlain(saslResponse, deviceAuthTracker.completer());
+                verifyPlain(saslResponse, deviceAuthTracker);
             } else if (AuthenticationConstants.MECHANISM_EXTERNAL.equals(remoteMechanism)) {
-                verifyExternal(deviceAuthTracker.completer());
+                verifyExternal(deviceAuthTracker);
             }
 
         }

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -128,7 +128,7 @@ public abstract class BaseTenantService<T> extends EventBusService<T> implements
             final Span span) {
 
         final Future<TenantResult<JsonObject>> getResult = Future.future();
-        get(tenantId, span, getResult.completer());
+        get(tenantId, span, getResult);
         return getResult.map(tr -> {
             return request.getResponse(tr.getStatus())
                     .setJsonPayload(tr.getPayload())
@@ -144,7 +144,7 @@ public abstract class BaseTenantService<T> extends EventBusService<T> implements
             final X500Principal dn = new X500Principal(subjectDn);
             log.debug("retrieving tenant [subject DN: {}]", subjectDn);
             final Future<TenantResult<JsonObject>> getResult = Future.future();
-            get(dn, span, getResult.completer());
+            get(dn, span, getResult);
             return getResult.map(tr -> {
                 final EventBusMessage response = request.getResponse(tr.getStatus())
                         .setJsonPayload(tr.getPayload())

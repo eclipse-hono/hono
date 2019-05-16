@@ -98,7 +98,7 @@ public final class DeviceRegistryAmqpTestSupport {
 
         final Future<Void> clientTracker = Future.future();
         if (factory != null) {
-            factory.disconnect(clientTracker.completer());
+            factory.disconnect(clientTracker);
         } else {
             clientTracker.complete();
         }

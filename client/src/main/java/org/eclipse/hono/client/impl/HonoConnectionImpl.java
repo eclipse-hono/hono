@@ -354,7 +354,7 @@ public class HonoConnectionImpl implements HonoConnection {
         if (shuttingDown.get()) {
             result.fail(new ClientErrorException(HttpURLConnection.HTTP_CONFLICT, "client is already shut down"));
         } else {
-            connect(options, result.completer(), disconnectHandler);
+            connect(options, result, disconnectHandler);
         }
         return result;
     }

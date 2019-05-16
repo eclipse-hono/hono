@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -111,7 +111,7 @@ public abstract class CompleteBaseCredentialsService<T> extends BaseCredentialsS
         try {
             payload.checkValidity(this::checkSecret);
             final Future<CredentialsResult<JsonObject>> result = Future.future();
-            add(tenantId, JsonObject.mapFrom(payload), result.completer());
+            add(tenantId, JsonObject.mapFrom(payload), result);
             return result.map(res -> {
                 return request.getResponse(res.getStatus())
                         .setDeviceId(payload.getDeviceId())
@@ -148,7 +148,7 @@ public abstract class CompleteBaseCredentialsService<T> extends BaseCredentialsS
         try {
             payload.checkValidity(this::checkSecret);
             final Future<CredentialsResult<JsonObject>> result = Future.future();
-            update(tenantId, JsonObject.mapFrom(payload), result.completer());
+            update(tenantId, JsonObject.mapFrom(payload), result);
             return result.map(res -> {
                 return request.getResponse(res.getStatus())
                         .setDeviceId(payload.getDeviceId())
@@ -183,7 +183,7 @@ public abstract class CompleteBaseCredentialsService<T> extends BaseCredentialsS
                 // delete a single credentials instance
                 log.debug("removing specific credentials [tenant: {}, type: {}, auth-id: {}]", tenantId, type, authId);
                 final Future<CredentialsResult<JsonObject>> result = Future.future();
-                remove(tenantId, type, authId, result.completer());
+                remove(tenantId, type, authId, result);
                 return result.map(res -> {
                     return request.getResponse(res.getStatus())
                             .setCacheDirective(res.getCacheDirective());
@@ -192,7 +192,7 @@ public abstract class CompleteBaseCredentialsService<T> extends BaseCredentialsS
                 // delete all credentials for device
                 log.debug("removing all credentials for device [tenant: {}, device-id: {}]", tenantId, deviceId);
                 final Future<CredentialsResult<JsonObject>> result = Future.future();
-                removeAll(tenantId, deviceId, result.completer());
+                removeAll(tenantId, deviceId, result);
                 return result.map(res -> {
                     return request.getResponse(res.getStatus())
                             .setDeviceId(deviceId)

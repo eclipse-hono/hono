@@ -239,7 +239,7 @@ public class TenantClientImpl extends AbstractRequestResponseClient<TenantResult
                             customizeRequestApplicationProperties(),
                             payloadSupplier.get().toBuffer(),
                             RegistrationConstants.CONTENT_TYPE_APPLICATION_JSON,
-                            tenantResult.completer(),
+                            tenantResult,
                             key,
                             currentSpan);
                     return tenantResult;

@@ -126,7 +126,7 @@ public abstract class BaseCredentialsService<T> extends EventBusService<T> imple
         TracingHelper.TAG_CREDENTIALS_TYPE.set(span, type);
         TracingHelper.TAG_AUTH_ID.set(span, authId);
         final Future<CredentialsResult<JsonObject>> result = Future.future();
-        get(tenantId, type, authId, payload, span, result.completer());
+        get(tenantId, type, authId, payload, span, result);
         return result.map(res -> {
             final String deviceIdFromPayload = Optional.ofNullable(res.getPayload())
                     .map(p -> getTypesafeValueForField(String.class, p,
@@ -148,7 +148,7 @@ public abstract class BaseCredentialsService<T> extends EventBusService<T> imple
         TracingHelper.TAG_CREDENTIALS_TYPE.set(span, type);
         span.setTag(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId);
         final Future<CredentialsResult<JsonObject>> result = Future.future();
-        getAll(tenantId, deviceId, span, result.completer());
+        getAll(tenantId, deviceId, span, result);
         return result.map(res -> {
             return request.getResponse(res.getStatus())
                     .setDeviceId(deviceId)

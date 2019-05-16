@@ -306,14 +306,14 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
 
         final Future<Void> serverTracker = Future.future();
         if (this.server != null) {
-            this.server.close(serverTracker.completer());
+            this.server.close(serverTracker);
         } else {
             serverTracker.complete();
         }
 
         final Future<Void> insecureServerTracker = Future.future();
         if (this.insecureServer != null) {
-            this.insecureServer.close(insecureServerTracker.completer());
+            this.insecureServer.close(insecureServerTracker);
         } else {
             insecureServerTracker.complete();
         }

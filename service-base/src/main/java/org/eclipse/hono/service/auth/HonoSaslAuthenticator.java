@@ -142,7 +142,7 @@ public final class HonoSaslAuthenticator implements ProtonSaslAuthenticator {
             final byte[] saslResponse = new byte[sasl.pending()];
             sasl.recv(saslResponse, 0, saslResponse.length);
 
-            verify(chosenMechanism, saslResponse, authTracker.completer());
+            verify(chosenMechanism, saslResponse, authTracker);
         }
     }
 

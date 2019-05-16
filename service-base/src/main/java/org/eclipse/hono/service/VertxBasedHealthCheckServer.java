@@ -164,7 +164,7 @@ public final class VertxBasedHealthCheckServer implements HealthCheckServer {
         final Future<Void> result = Future.future();
         if (server != null) {
             LOG.info("closing health check HTTP server [{}:{}]", config.getHealthCheckBindAddress(), server.actualPort());
-            server.close(result.completer());
+            server.close(result);
         } else {
             result.complete();
         }

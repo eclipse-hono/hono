@@ -181,7 +181,7 @@ public class RegistrationClientImpl extends AbstractRequestResponseClient<Regist
                 RegistrationConstants.ACTION_REGISTER,
                 createDeviceIdProperties(deviceId),
                 data != null ? data.toBuffer() : null,
-                regResultTracker.completer());
+                regResultTracker);
         return regResultTracker.map(response -> {
             switch(response.getStatus()) {
             case HttpURLConnection.HTTP_CREATED:
@@ -207,7 +207,7 @@ public class RegistrationClientImpl extends AbstractRequestResponseClient<Regist
                 RegistrationConstants.ACTION_UPDATE,
                 createDeviceIdProperties(deviceId),
                 data != null ? data.toBuffer() : null,
-                regResultTracker.completer());
+                regResultTracker);
         return regResultTracker.map(response -> {
             switch(response.getStatus()) {
             case HttpURLConnection.HTTP_NO_CONTENT:
@@ -233,7 +233,7 @@ public class RegistrationClientImpl extends AbstractRequestResponseClient<Regist
                 RegistrationConstants.ACTION_DEREGISTER,
                 createDeviceIdProperties(deviceId),
                 null,
-                regResultTracker.completer());
+                regResultTracker);
         return regResultTracker.map(response -> {
             switch(response.getStatus()) {
             case HttpURLConnection.HTTP_NO_CONTENT:
@@ -343,7 +343,7 @@ public class RegistrationClientImpl extends AbstractRequestResponseClient<Regist
                     properties,
                     null,
                     RegistrationConstants.CONTENT_TYPE_APPLICATION_JSON,
-                    regResult.completer(),
+                    regResult,
                     key,
                     span);
             return regResult;

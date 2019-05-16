@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -90,7 +90,7 @@ public abstract class CompleteBaseTenantService<T> extends BaseTenantService<T> 
             log.debug("creating tenant [{}]", tenantId);
             final Future<TenantResult<JsonObject>> addResult = Future.future();
             addNotPresentFieldsWithDefaultValuesForTenant(payload);
-            add(tenantId, payload, addResult.completer());
+            add(tenantId, payload, addResult);
             return addResult.map(tr -> {
                 return request.getResponse(tr.getStatus())
                         .setJsonPayload(tr.getPayload())
@@ -115,7 +115,7 @@ public abstract class CompleteBaseTenantService<T> extends BaseTenantService<T> 
             log.debug("updating tenant [{}]", tenantId);
             final Future<TenantResult<JsonObject>> updateResult = Future.future();
             addNotPresentFieldsWithDefaultValuesForTenant(payload);
-            update(tenantId, payload, updateResult.completer());
+            update(tenantId, payload, updateResult);
             return updateResult.map(tr -> {
                 return request.getResponse(tr.getStatus())
                         .setJsonPayload(tr.getPayload())
@@ -138,7 +138,7 @@ public abstract class CompleteBaseTenantService<T> extends BaseTenantService<T> 
         } else {
             log.debug("deleting tenant [{}]", tenantId);
             final Future<TenantResult<JsonObject>> removeResult = Future.future();
-            remove(tenantId, removeResult.completer());
+            remove(tenantId, removeResult);
             return removeResult.map(tr -> {
                 return request.getResponse(tr.getStatus())
                         .setJsonPayload(tr.getPayload())

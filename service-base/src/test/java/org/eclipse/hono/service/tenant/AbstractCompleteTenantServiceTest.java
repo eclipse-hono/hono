@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -221,13 +221,13 @@ public abstract class AbstractCompleteTenantServiceTest {
 
         addTenant("tenant").compose(ok -> {
             final Future<TenantResult<JsonObject>> updateResult = Future.future();
-            getCompleteTenantService().update("tenant", updatedPayload.copy(), updateResult.completer());
+            getCompleteTenantService().update("tenant", updatedPayload.copy(), updateResult);
             return updateResult;
         }).compose(updateResult -> {
             assertEquals(HttpURLConnection.HTTP_NO_CONTENT, updateResult.getStatus());
             update.flag();
             final Future<TenantResult<JsonObject>> getResult = Future.future();
-            getCompleteTenantService().get("tenant", null, getResult.completer());
+            getCompleteTenantService().get("tenant", null, getResult);
             return getResult;
         }).setHandler(ctx.succeeding(getResult -> ctx.verify(() -> {
             assertEquals(HttpURLConnection.HTTP_OK, getResult.getStatus());
@@ -331,7 +331,7 @@ public abstract class AbstractCompleteTenantServiceTest {
     protected Future<Void> addTenant(final String tenantId, final JsonObject payload) {
 
         final Future<TenantResult<JsonObject>> result = Future.future();
-        getCompleteTenantService().add(tenantId, payload, result.completer());
+        getCompleteTenantService().add(tenantId, payload, result);
         return result.map(response -> {
             if (response.getStatus() == HttpURLConnection.HTTP_CREATED) {
                 return null;

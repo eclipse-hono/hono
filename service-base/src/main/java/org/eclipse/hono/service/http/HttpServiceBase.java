@@ -386,7 +386,7 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
         final Future<Void> serverStopTracker = Future.future();
         if (server != null) {
             LOG.info("stopping secure HTTP server [{}:{}]", getBindAddress(), getActualPort());
-            server.close(serverStopTracker.completer());
+            server.close(serverStopTracker);
         } else {
             serverStopTracker.complete();
         }
@@ -397,7 +397,7 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
         final Future<Void> insecureServerStopTracker = Future.future();
         if (insecureServer != null) {
             LOG.info("stopping insecure HTTP server [{}:{}]", getInsecurePortBindAddress(), getActualInsecurePort());
-            insecureServer.close(insecureServerStopTracker.completer());
+            insecureServer.close(insecureServerStopTracker);
         } else {
             insecureServerStopTracker.complete();
         }

@@ -193,7 +193,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         final Future<Void> result = Future.future();
         if (insecureServer != null) {
             LOG.info("Shutting down insecure server");
-            insecureServer.close(result.completer());
+            insecureServer.close(result);
         } else {
             result.complete();
         }
@@ -205,7 +205,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         if (secureServer != null) {
 
             LOG.info("Shutting down secure server");
-            secureServer.close(result.completer());
+            secureServer.close(result);
 
         } else {
             result.complete();

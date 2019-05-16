@@ -56,7 +56,7 @@ public abstract class AbstractClient {
      */
     protected final Future<Void> closeVertx() {
         final Future<Void> result = Future.future();
-        vertx.close(result.completer());
+        vertx.close(result);
         return result;
     }
 }

@@ -112,7 +112,7 @@ public abstract class MqttTestBase {
             disconnectHandler.complete();
         } else {
             context.runOnContext(go -> {
-                mqttClient.disconnect(disconnectHandler.completer());
+                mqttClient.disconnect(disconnectHandler);
             });
         }
         disconnectHandler.setHandler(tidyUp -> {
@@ -187,7 +187,7 @@ public abstract class MqttTestBase {
                     .setUsername(username)
                     .setPassword(password);
             mqttClient = MqttClient.create(VERTX, options);
-            mqttClient.connect(IntegrationTestSupport.MQTT_PORT, IntegrationTestSupport.MQTT_HOST, result.completer());
+            mqttClient.connect(IntegrationTestSupport.MQTT_PORT, IntegrationTestSupport.MQTT_HOST, result);
         });
         return result.map(conAck -> {
             LOGGER.debug(
@@ -217,7 +217,7 @@ public abstract class MqttTestBase {
                     .setSsl(true);
             options.setHostnameVerificationAlgorithm("");
             mqttClient = MqttClient.create(VERTX, options);
-            mqttClient.connect(IntegrationTestSupport.MQTTS_PORT, IntegrationTestSupport.MQTT_HOST, result.completer());
+            mqttClient.connect(IntegrationTestSupport.MQTTS_PORT, IntegrationTestSupport.MQTT_HOST, result);
         });
         return result.map(conAck -> {
             LOGGER.debug(
