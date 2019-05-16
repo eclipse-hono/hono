@@ -366,7 +366,7 @@ public class RequestResponseEndpointTest {
     }
 
     private boolean hasStatusCode(final Message msg, final int expectedStatus) {
-        return MessageHelper.getApplicationProperty(msg.getApplicationProperties(), MessageHelper.APP_PROPERTY_STATUS, Integer.class) == expectedStatus;
+        return MessageHelper.getStatus(msg) == expectedStatus;
     }
 
     private RequestResponseEndpoint<ServiceConfigProperties> getEndpoint(final boolean passesFormalVerification) {

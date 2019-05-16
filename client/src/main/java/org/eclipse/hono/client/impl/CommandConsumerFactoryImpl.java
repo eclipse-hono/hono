@@ -202,6 +202,7 @@ public class CommandConsumerFactoryImpl extends AbstractHonoClientFactory implem
                             // let the device specific handler reject the command
                             commandHandler.handle(commandContext);
                         } else {
+                            log.debug("command message is invalid: {}", command);
                             commandContext.reject(new ErrorCondition(Constants.AMQP_BAD_REQUEST, "malformed command message"));
                         }
                     }

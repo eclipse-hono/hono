@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -499,6 +499,16 @@ public final class MessageHelper {
      */
     public static Integer getTimeUntilDisconnect(final Message msg) {
         return getApplicationProperty(msg.getApplicationProperties(), APP_PROPERTY_DEVICE_TTD, Integer.class);
+    }
+
+    /**
+     * Gets the value of a message's {@link #APP_PROPERTY_STATUS} application property.
+     *
+     * @param msg The message to get the property from.
+     * @return The property value or {@code null} if not set.
+     */
+    public static Integer getStatus(final Message msg) {
+        return getApplicationProperty(msg.getApplicationProperties(), APP_PROPERTY_STATUS, Integer.class);
     }
 
     /**

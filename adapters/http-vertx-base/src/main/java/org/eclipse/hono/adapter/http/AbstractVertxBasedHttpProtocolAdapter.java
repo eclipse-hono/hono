@@ -895,6 +895,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                                     ProcessingOutcome.UNPROCESSABLE,
                                     command.getPayloadSize(),
                                     commandSample);
+                            LOG.debug("command message is invalid: {}", command);
                             commandContext.reject(new ErrorCondition(Constants.AMQP_BAD_REQUEST, "malformed command message"));
                         }
                         // we do not issue any new credit because the
@@ -1005,9 +1006,21 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
         LOG.debug("processing response to command [tenantId: {}, deviceId: {}, cmd-req-id: {}, status code: {}]",
                 tenant, deviceId, commandRequestId, responseStatus);
 
+        final Device authenticatedDevice = getAuthenticatedDevice(ctx);
+        final Span currentSpan = tracer.buildSpan("upload Command response")
+                .asChildOf(TracingHandler.serverSpanContext(ctx))
+                .ignoreActiveSpan()
+                .withTag(Tags.COMPONENT.getKey(), getTypeName())
+                .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CLIENT)
+                .withTag(MessageHelper.APP_PROPERTY_TENANT_ID, tenant)
+                .withTag(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId)
+                .withTag(Constants.HEADER_COMMAND_RESPONSE_STATUS, responseStatus)
+                .withTag(Constants.HEADER_COMMAND_REQUEST_ID, commandRequestId)
+                .withTag(TracingHelper.TAG_AUTHENTICATED.getKey(), authenticatedDevice != null)
+                .start();
+
         final CommandResponse commandResponse = CommandResponse.from(commandRequestId, tenant, deviceId, payload,
                 contentType, responseStatus);
-
         if (commandResponse == null) {
             metrics.reportCommand(
                     Direction.RESPONSE,
@@ -1015,24 +1028,12 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                     ProcessingOutcome.UNPROCESSABLE,
                     payload.length(),
                     getMicrometerSample(ctx));
-            HttpUtils.badRequest(
-                    ctx,
-                    String.format("command-request-id [%s] or status code [%s] is missing/invalid",
-                            commandRequestId, responseStatus));
+            final String errorMsg = String.format("command-request-id [%s] or status code [%s] is missing/invalid",
+                    commandRequestId, responseStatus);
+            TracingHelper.logError(currentSpan, errorMsg);
+            currentSpan.finish();
+            HttpUtils.badRequest(ctx, errorMsg);
         } else {
-
-            final Device authenticatedDevice = getAuthenticatedDevice(ctx);
-            final Span currentSpan = tracer.buildSpan("upload Command response")
-                    .asChildOf(TracingHandler.serverSpanContext(ctx))
-                    .ignoreActiveSpan()
-                    .withTag(Tags.COMPONENT.getKey(), getTypeName())
-                    .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CLIENT)
-                    .withTag(MessageHelper.APP_PROPERTY_TENANT_ID, tenant)
-                    .withTag(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId)
-                    .withTag(Constants.HEADER_COMMAND_RESPONSE_STATUS, responseStatus)
-                    .withTag(Constants.HEADER_COMMAND_REQUEST_ID, commandRequestId)
-                    .withTag(TracingHelper.TAG_AUTHENTICATED.getKey(), authenticatedDevice != null)
-                    .start();
             final Future<JsonObject> deviceRegistrationTracker = getRegistrationAssertion(
                     tenant,
                     deviceId,
