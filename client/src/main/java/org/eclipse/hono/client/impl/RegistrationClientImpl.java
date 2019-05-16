@@ -37,7 +37,6 @@ import org.slf4j.LoggerFactory;
 
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
-import io.opentracing.tag.Tags;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.buffer.Buffer;
@@ -355,7 +354,7 @@ public class RegistrationClientImpl extends AbstractRequestResponseClient<Regist
         }).map(result -> {
             TracingHelper.TAG_CACHE_HIT.set(span, cacheHit.get());
             if (result.isError()) {
-                Tags.ERROR.set(span, Boolean.TRUE);
+                TracingHelper.logError(span, "error code: " + result.getStatus());
             }
             span.finish();
             switch(result.getStatus()) {
