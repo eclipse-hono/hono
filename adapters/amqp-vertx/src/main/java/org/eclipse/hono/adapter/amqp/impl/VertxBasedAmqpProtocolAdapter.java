@@ -479,7 +479,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             closeLinkWithError(receiver, ex, span);
         } else  if (receiver.getRemoteTarget() != null && receiver.getRemoteTarget().getAddress() != null) {
             if (!receiver.getRemoteTarget().getAddress().isEmpty()) {
-                LOG.debug("Closing link due to the present of Target [address : {}]", receiver.getRemoteTarget().getAddress());
+                LOG.debug("closing link due to the presence of target address [{}]", receiver.getRemoteTarget().getAddress());
             }
             final Exception ex = new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
                     "this adapter supports anonymous relay mode only");
@@ -736,39 +736,23 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             // release the command message when the device either
             // rejects or does not settle the command request message.
             final DeliveryState remoteState = delivery.getRemoteState();
-            final Map<String, Object> logItems = new HashMap<>(2);
             ProcessingOutcome outcome = null;
             if (delivery.remotelySettled()) {
+                commandContext.disposition(remoteState, 1);
                 if (Accepted.class.isInstance(remoteState)) {
-                    LOG.trace("device accepted command message [command: {}]", command.getName());
-                    logItems.put(Fields.EVENT, "device has accepted command");
-                    commandContext.getCurrentSpan().log(logItems);
-                    commandContext.accept(1);
                     outcome = ProcessingOutcome.FORWARDED;
                 } else if (Rejected.class.isInstance(remoteState)) {
-                    final ErrorCondition error = ((Rejected) remoteState).getError();
-                    LOG.debug("device rejected command message [command: {}, error: {}]", command.getName(), error);
-                    logItems.put(Fields.EVENT, "device has rejected command");
-                    commandContext.getCurrentSpan().log(logItems);
-                    commandContext.reject(error, 1);
                     outcome = ProcessingOutcome.UNPROCESSABLE;
                 } else if (Released.class.isInstance(remoteState)) {
-                    LOG.debug("device released command message [command: {}]", command.getName());
-                    logItems.put(Fields.EVENT, "device has released command");
-                    commandContext.getCurrentSpan().log(logItems);
-                    commandContext.release(1);
                     outcome = ProcessingOutcome.UNDELIVERABLE;
                 } else if (Modified.class.isInstance(remoteState)) {
                     final Modified modified = (Modified) remoteState;
-                    LOG.debug("device modified command message [command: {}]", command.getName());
-                    logItems.put(Fields.EVENT, "device has modified command");
-                    commandContext.getCurrentSpan().log(logItems);
-                    commandContext.modify(modified.getDeliveryFailed(), modified.getUndeliverableHere(), 1);
                     outcome = modified.getUndeliverableHere() ? ProcessingOutcome.UNPROCESSABLE : ProcessingOutcome.UNDELIVERABLE;
                 }
             } else {
                 LOG.debug("device did not settle command message [command: {}, remote state: {}]", command.getName(),
                         remoteState.getClass().getSimpleName());
+                final Map<String, Object> logItems = new HashMap<>(2);
                 logItems.put(Fields.EVENT, "device did not settle command");
                 logItems.put("remote state", remoteState.getClass().getSimpleName());
                 commandContext.getCurrentSpan().log(logItems);

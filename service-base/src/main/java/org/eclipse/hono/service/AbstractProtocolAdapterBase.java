@@ -545,7 +545,10 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
                 result.complete(address);
             }
         }
-        return result;
+        return result.recover(t -> {
+            LOG.debug("validation failed for address [{}], device [{}]: {}", address, authenticatedDevice, t.getMessage());
+            return Future.failedFuture(t);
+        });
     }
 
     /**

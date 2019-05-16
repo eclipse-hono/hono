@@ -297,16 +297,19 @@ public class CommandContext extends MapBasedExecutionContext {
             currentSpan.log("accepted command for device");
 
         } else if (Released.class.isInstance(deliveryState)) {
+            LOG.debug("released command message [{}]", getCommand());
             TracingHelper.logError(currentSpan, "released command for device");
 
         } else if (Modified.class.isInstance(deliveryState)) {
             final Modified modified = (Modified) deliveryState;
+            LOG.debug("modified command message [{}]", getCommand());
             TracingHelper.logError(currentSpan, "modified command for device"
                     + (Boolean.TRUE.equals(modified.getDeliveryFailed()) ? "; delivery failed" : "")
                     + (Boolean.TRUE.equals(modified.getUndeliverableHere()) ? "; undeliverable here" : ""));
 
         } else if (Rejected.class.isInstance(deliveryState)) {
             final ErrorCondition errorCondition = ((Rejected) deliveryState).getError();
+            LOG.debug("rejected command message [error: {}, command: {}]", errorCondition, getCommand());
             TracingHelper.logError(currentSpan, "rejected command for device"
                     + ((errorCondition != null && errorCondition.getDescription() != null) ? "; error: " + errorCondition.getDescription() : ""));
         } else {
