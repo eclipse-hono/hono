@@ -50,16 +50,19 @@ public abstract class AbstractCompleteTenantServiceTest {
     @Test
     public void testAddTenantFailsForDuplicateTenantId(final VertxTestContext ctx) {
 
-        addTenant("tenant").map(ok -> {
+        addTenant("tenant")
+        .compose(ok -> {
+            final Future<TenantResult<JsonObject>> result = Future.future();
             getCompleteTenantService().add(
                     "tenant",
                     buildTenantPayload("tenant"),
-                    ctx.succeeding(s -> ctx.verify(() -> {
-                        assertEquals(HttpURLConnection.HTTP_CONFLICT, s.getStatus());
-                        ctx.completeNow();
-                    })));
-            return null;
-        });
+                    result);
+            return result;
+        })
+        .map(r -> ctx.verify(() -> {
+            assertEquals(HttpURLConnection.HTTP_CONFLICT, r.getStatus());
+        }))
+        .setHandler(ctx.completing());
     }
 
     /**
@@ -76,6 +79,7 @@ public abstract class AbstractCompleteTenantServiceTest {
                 .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, "NOTAKEY");
         final TenantObject tenant = TenantObject.from("tenant", true)
                 .setProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, trustedCa);
+
         addTenant("tenant", JsonObject.mapFrom(tenant)).map(ok -> {
             final TenantObject newTenant = TenantObject.from("newTenant", true)
                     .setProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, trustedCa);
@@ -179,21 +183,27 @@ public abstract class AbstractCompleteTenantServiceTest {
     }
 
     /**
-     * Verifies that the service removes tenants for a given tenantId.
+     * Verifies that the service removes a tenant by identifier.
      *
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testRemoveTenantsSucceeds(final VertxTestContext ctx) {
+    public void testRemoveTenantSucceeds(final VertxTestContext ctx) {
 
-        addTenant("tenant").map(ok -> {
-            getCompleteTenantService().remove("tenant", ctx.succeeding(s -> ctx.verify(() -> {
+        addTenant("tenant")
+        .compose(ok -> assertTenantExists(getCompleteTenantService(), "tenant"))
+        .compose(ok -> {
+            final Future<TenantResult<JsonObject>> result = Future.future();
+            getCompleteTenantService().remove("tenant", result);
+            return result;
+        })
+        .compose(s -> {
+            ctx.verify(() -> {
                 assertEquals(HttpURLConnection.HTTP_NO_CONTENT, s.getStatus());
-                assertTenantDoesNotExist(getCompleteTenantService(), "tenant", ctx);
-                ctx.completeNow();
-            })));
-            return null;
-        });
+            });
+            return assertTenantDoesNotExist(getCompleteTenantService(), "tenant");
+        })
+        .setHandler(ctx.completing());
     }
 
     /**
@@ -245,43 +255,79 @@ public abstract class AbstractCompleteTenantServiceTest {
                 .setProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, trustedCa);
         final TenantObject tenantTwo = TenantObject.from("tenantTwo", true);
         addTenant("tenantOne", JsonObject.mapFrom(tenantOne))
-                .compose(ok -> addTenant("tenantTwo", JsonObject.mapFrom(tenantTwo)))
-                .map(ok -> {
-                    // WHEN updating the second tenant to use the same CA as the first tenant
-                    tenantTwo.setProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, trustedCa);
-                    getCompleteTenantService().update(
-                            "tenantTwo",
-                            JsonObject.mapFrom(tenantTwo),
-                            ctx.succeeding(s -> ctx.verify(() -> {
-                                // THEN the update fails with a 409
-                                assertEquals(HttpURLConnection.HTTP_CONFLICT, s.getStatus());
-                                ctx.completeNow();
-                            })));
-                    return null;
-                });
-    }
-
-    protected static void assertTenantExists(final TenantService svc, final String tenant, final VertxTestContext ctx) {
-
-        svc.get(tenant, null, ctx.succeeding(t -> ctx.verify(() -> {
-            assertEquals(HttpURLConnection.HTTP_OK, t.getStatus());
+        .compose(ok -> addTenant("tenantTwo", JsonObject.mapFrom(tenantTwo)))
+        .compose(ok -> {
+            // WHEN updating the second tenant to use the same CA as the first tenant
+            tenantTwo.setProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, trustedCa);
+            final Future<TenantResult<JsonObject>> result = Future.future();
+            getCompleteTenantService().update(
+                    "tenantTwo",
+                    JsonObject.mapFrom(tenantTwo),
+                    result);
+            return result;
+        })
+        .setHandler(ctx.succeeding(s -> ctx.verify(() -> {
+            // THEN the update fails with a 409
+            assertEquals(HttpURLConnection.HTTP_CONFLICT, s.getStatus());
             ctx.completeNow();
         })));
     }
 
-    protected static void assertTenantDoesNotExist(final TenantService svc, final String tenant, final VertxTestContext ctx) {
+    /**
+     * Verifies that a tenant is registered.
+     * 
+     * @param svc The credentials service to probe.
+     * @param tenant The tenant.
+     * @return A succeeded future if the tenant exists.
+     */
+    protected static Future<TenantResult<JsonObject>> assertTenantExists(final TenantService svc, final String tenant) {
 
-        svc.get(tenant, null, ctx.succeeding(t -> ctx.verify(() -> {
-            assertEquals(HttpURLConnection.HTTP_NOT_FOUND, t.getStatus());
-            ctx.completeNow();
-        })));
+        return assertGet(svc, tenant, HttpURLConnection.HTTP_OK);
     }
 
+    /**
+     * Verifies that a tenant is not registered.
+     * 
+     * @param svc The credentials service to probe.
+     * @param tenant The tenant.
+     * @return A succeeded future if the tenant does not exist.
+     */
+    protected static Future<TenantResult<JsonObject>> assertTenantDoesNotExist(final TenantService svc, final String tenant) {
+
+        return assertGet(svc, tenant, HttpURLConnection.HTTP_NOT_FOUND);
+    }
+
+    private static Future<TenantResult<JsonObject>> assertGet(final TenantService svc, final String tenantId, final int expectedStatusCode) {
+
+        final Future<TenantResult<JsonObject>> result = Future.future();
+        svc.get(tenantId, result);
+        return result.map(r -> {
+            if (r.getStatus() == expectedStatusCode) {
+                return r;
+            } else {
+                throw StatusCodeMapper.from(r);
+            }
+        });
+    }
+
+    /**
+     * Adds a tenant.
+     * 
+     * @param tenantId The identifier of the tenant.
+     * @return A succeeded future if the tenant has been created.
+     */
     protected Future<Void> addTenant(final String tenantId) {
 
         return addTenant(tenantId, buildTenantPayload(tenantId));
     }
 
+    /**
+     * Adds a tenant.
+     * 
+     * @param tenantId The identifier of the tenant.
+     * @param payload The properties to register for the tenant.
+     * @return A succeeded future if the tenant has been created.
+     */
     protected Future<Void> addTenant(final String tenantId, final JsonObject payload) {
 
         final Future<TenantResult<JsonObject>> result = Future.future();
