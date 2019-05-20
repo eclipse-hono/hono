@@ -21,11 +21,11 @@ The following diagram provides an overview of the components involved in use cas
 
 ### Device Auth
 
-Both the HTTP adapter as well as the MQTT adapter require devices to authenticate during connection establishment by default. Both rely on the [Credentials API]({{< relref "api/Credentials-API.md" >}}) to help in verifying credentials provided by a device. See [Device Authentication]({{< relref "concepts/device-identity.md" >}}) for a general overview of Hono's approach to authenticating devices and [HTTP adapter]({{< relref "user-guide/http-adapter.md" >}}) and [MQTT adapter]({{< relref "user-guide/mqtt-adapter.md" >}}) for specifics regarding how devices using HTTP and MQTT can authenticate to the corresponding protocol adapters.
+Both the HTTP adapter as well as the MQTT adapter require devices to authenticate during connection establishment by default. Both rely on the [Credentials API]({{< ref "/api/Credentials-API.md" >}}) to help in verifying credentials provided by a device. Please refer to [Device Authentication]({{< ref "/concepts/device-identity.md" >}}) for a general overview of Hono's approach to authenticating devices and to the [protocol adapter user guides]({{< ref "/user-guide" >}}) for specifics regarding how devices can authenticate to the corresponding protocol adapters.
 
 ### System Component Auth
 
-Client components opening an AMQP connection to a server component are authenticated using SASL PLAIN as specified in [RFC 4422](https://tools.ietf.org/html/rfc4422). The server component takes the authentication information provided by the client component and opens a connection to the *Auth Server*, using the credentials provided by the client in its SASL PLAIN exchange with the server component. On successful authentication the *Auth Server* issues a JSON Web Token (JWT) asserting the client's identity and its granted authorities to the server component. The server component then *attaches* this token to its AMQP connection with the client and from then on uses it to make authorization decisions regarding the client's requests. See [Authentication API]({{< relref "api/Authentication-API.md" >}}) for details regarding the authentication process and the format of the tokens issued by the *Auth Server*.
+Client components opening an AMQP connection to a server component are authenticated using SASL PLAIN as specified in [RFC 4422](https://tools.ietf.org/html/rfc4422). The server component takes the authentication information provided by the client component and opens a connection to the *Auth Server*, using the credentials provided by the client in its SASL PLAIN exchange with the server component. On successful authentication the *Auth Server* issues a JSON Web Token (JWT) asserting the client's identity and its granted authorities to the server component. The server component then *attaches* this token to its AMQP connection with the client and from then on uses it to make authorization decisions regarding the client's requests. See [Authentication API]({{< ref "/api/Authentication-API.md" >}}) for details regarding the authentication process and the format of the tokens issued by the *Auth Server*.
 
 Based on the components shown above, the following sequence diagram shows how the *MQTT Adapter* connects to the *Device Registry* and gets authenticated transparently using the *Auth Server*.
 
@@ -45,7 +45,7 @@ The Apache Qpid Dispatch Router which is used in Hono's example deployment can b
 
 The identities and corresponding authorities that the *Auth Server* uses for verifying credentials and issuing tokens are defined in a configuration file (`services/auth/src/main/resources/permissions.json`) read in during start-up of the *Auth Server*. These authorities are used for authenticating and authorizing system components as well as *Business Applications*.
 
-Please refer to the [Dispatch Router configuration guide](https://qpid.apache.org/releases/qpid-dispatch-1.1.0/man/qdrouterd.conf.html) and the [Policy documentation](https://github.com/apache/qpid-dispatch/blob/1.1.x/doc/book/policy.adoc) for details regarding configuration of *Dispatch Router* security.
+Please refer to the [Dispatch Router documentation](http://qpid.apache.org/components/dispatch-router/index.html) for details regarding configuration of *Dispatch Router* security.
 
 ## Future Approach
 
