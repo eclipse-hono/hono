@@ -31,7 +31,7 @@
     <artemis.image.name>enmasseproject/activemq-artemis:2.2.0-4</artemis.image.name>
     <assertj-core.version>3.11.1</assertj-core.version>
     <californium.version>2.0.0-M14</californium.version>
-    <dispatch-router.image.name>enmasseproject/qdrouterd-base:1.6.0-patched</dispatch-router.image.name>
+    <dispatch-router.image.name>quay.io/enmasse/qdrouterd-base:1.7.0</dispatch-router.image.name>
     <grafana.version>5.3.2</grafana.version>
     <guava.version>25.0-jre</guava.version>
     <hamcrest-core.version>2.1</hamcrest-core.version>
