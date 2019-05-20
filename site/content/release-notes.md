@@ -41,6 +41,9 @@ title = "Release Notes"
   has been adapted accordingly.
 * The already deprecated `org.eclipse.hono.client.CommandConsumerFactory.closeCommandConsumer`
   method has been removed.
+* The response message format of the *assert Device Registration* operation of the Device Registration API
+  has been changed to include an optional `gw-supported` boolean field. The value of this field refers to 
+  whether the device on which the operation is invoked allows one or more gateways to act on its behalf.
 
 ## 1.0-M3
 

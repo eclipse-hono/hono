@@ -64,6 +64,12 @@ public final class RegistrationConstants extends RequestResponseApiConstants {
     public static final String FIELD_LAST_VIA_UPDATE_DATE = "update-date";
 
     /**
+     * The name of the field in a response payload that contains the boolean value
+     * defining whether one or more gateways may act on behalf of the device.
+     */
+    public static final String FIELD_PAYLOAD_GATEWAY_SUPPORTED = "gw-supported";
+
+    /**
      * The name of the Device Registration API endpoint.
      */
     public static final String REGISTRATION_ENDPOINT = "registration";
