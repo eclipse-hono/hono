@@ -279,7 +279,7 @@ public abstract class BaseRegistrationService<T> extends EventBusService<T> impl
             final String deviceId,
             final JsonObject deviceData) {
 
-        final CacheDirective cacheDirective = isDeviceWithOneOrMoreVias(deviceData) ? CacheDirective.noCacheDirective()
+        final CacheDirective cacheDirective = isGatewaySupportedForDevice(tenantId, deviceId, deviceData) ? CacheDirective.noCacheDirective()
                 : getRegistrationAssertionCacheDirective(deviceId, tenantId);
         return RegistrationResult.from(
                 HttpURLConnection.HTTP_OK,
@@ -289,7 +289,7 @@ public abstract class BaseRegistrationService<T> extends EventBusService<T> impl
 
     private Future<Void> updateDeviceLastViaIfNeeded(final String tenantId, final String deviceId,
             final String gatewayId, final JsonObject deviceData, final Span span) {
-        if (!isDeviceWithOneOrMoreVias(deviceData)) {
+        if (!isGatewaySupportedForDevice(tenantId, deviceId, deviceData)) {
             return Future.succeededFuture();
         }
         return updateDeviceLastVia(tenantId, deviceId, gatewayId, deviceData)
@@ -300,8 +300,20 @@ public abstract class BaseRegistrationService<T> extends EventBusService<T> impl
                 });
     }
 
-    private boolean isDeviceWithOneOrMoreVias(final JsonObject deviceData) {
-        final Object viaObj = deviceData.getValue(RegistrationConstants.FIELD_VIA);
+    /**
+     * Checks if a gateway may act on behalf of the given device. This is determined by checking whether
+     * the 'via' property of the device registration data has one or more entries.
+     * <p>
+     * Subclasses may override this method to provide a different means to determine gateway support.
+     *
+     * @param tenantId The tenant id.
+     * @param deviceId The device id.
+     * @param registrationInfo The device's registration information.
+     * @return {@code true} if a gateway may act on behalf of the given device.
+     */
+    protected boolean isGatewaySupportedForDevice(final String tenantId, final String deviceId,
+            final JsonObject registrationInfo) {
+        final Object viaObj = registrationInfo.getValue(RegistrationConstants.FIELD_VIA);
         return (viaObj instanceof String && !((String) viaObj).isEmpty())
                 || (viaObj instanceof JsonArray && !((JsonArray) viaObj).isEmpty());
     }
@@ -421,8 +433,9 @@ public abstract class BaseRegistrationService<T> extends EventBusService<T> impl
     /**
      * Creates the payload of the assert Registration response message.
      * <p>
-     * The returned JSON object may also contain <em>default</em> values registered for the
-     * device under key {@link RegistrationConstants#FIELD_PAYLOAD_DEFAULTS}.
+     * The returned JSON object contains the <em>gw-supported</em> property, having a {@code true} value if a gateway
+     * may act on behalf of the device, and may also contain <em>default</em> values registered for the device under key
+     * {@link RegistrationConstants#FIELD_PAYLOAD_DEFAULTS}.
      * 
      * @param tenantId The tenant the device belongs to.
      * @param deviceId The device to create the assertion token for.
@@ -433,6 +446,7 @@ public abstract class BaseRegistrationService<T> extends EventBusService<T> impl
 
         final JsonObject result = new JsonObject()
                 .put(RegistrationConstants.FIELD_PAYLOAD_DEVICE_ID, deviceId);
+        result.put(RegistrationConstants.FIELD_PAYLOAD_GATEWAY_SUPPORTED, isGatewaySupportedForDevice(tenantId, deviceId, registrationInfo));
         final JsonObject defaults = registrationInfo.getJsonObject(RegistrationConstants.FIELD_PAYLOAD_DEFAULTS);
         if (defaults != null) {
             result.put(RegistrationConstants.FIELD_PAYLOAD_DEFAULTS, defaults);
