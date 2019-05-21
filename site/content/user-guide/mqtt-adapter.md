@@ -41,6 +41,10 @@ There is a subtle difference between the *device identifier* (*device-id*) and t
 
 After verifying the credentials, the number of existing connections is checked against the configured [resource-limits] ({{< ref "/concepts/resource-limits.md" >}}) by the MQTT adapter.  If the limit is exceeded then a return code `0x05` indicating `Connection Refused: not authorised` is sent back.
 
+## Message Limits
+
+Before accepting any telemetry or event messages, the MQTT adapter verifies that the configured [message limit] ({{< ref "/concepts/resource-limits.md" >}}) is not exceeded. The incoming message is discarded if the limit is exceeded. 
+
 ## Publishing Telemetry Data
 
 The MQTT adapter supports the publishing of telemetry data by means of MQTT *PUBLISH* packets using either QoS 0 or QoS 1.
@@ -50,6 +54,8 @@ This requires that
 
 * the AMQP 1.0 Messaging Network has capacity to process telemetry messages for the client's tenant and
 * the messages published by the client comply with the format defined by the Telemetry API.
+
+The protocol adapter checks the configured [message limit] ({{< ref "/concepts/resource-limits.md" >}}) before accepting any telemetry messages. If the message limit is exceeded then the incoming telemetry message is discarded. There is no provision in MQTT spec to inform the device on any negative responses and hence this information that the message has been discarded is not cascaded to the device. It is recommended that the device waits only for a reasonable amount of time for a response.
 
 ## Publish Telemetry Data (authenticated Device)
 
@@ -118,6 +124,8 @@ This requires that
 
 * the AMQP 1.0 Messaging Network has capacity to process events for the client's tenant and
 * the events published by the client comply with the format defined by the Event API.
+
+The protocol adapter checks the configured [message limit] ({{< ref "/concepts/resource-limits.md" >}}) before accepting any event messages. If the message limit is exceeded then the incoming event message is discarded. There is no provision in MQTT spec to inform the device on any negative responses and hence this information that the message has been discarded is not cascaded to the device. It is recommended that the device waits only for a reasonable amount of time for a response.
 
 ## Publish an Event (authenticated Device)
 

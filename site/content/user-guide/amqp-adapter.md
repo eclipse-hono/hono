@@ -42,6 +42,10 @@ NB: The AMQP adapter needs to be configured for TLS in order to support this mec
 
 After verifying the credentials, the number of existing connections is checked against the configured [resource-limits] ({{< ref "/concepts/resource-limits.md" >}}) by the AMQP adapter.  If the limit is exceeded then the connection request is not accepted.
 
+## Message Limits
+
+Before accepting any telemetry or event messages, the AMQP adapter verifies that the configured [message limit] ({{< ref "/concepts/resource-limits.md" >}}) is not exceeded. The incoming message is discarded if the limit is exceeded. 
+
 ## Link Establishment
 
 Clients can publish all types of messages to the AMQP adapter via a single *anonymous* sender link. Using *AT MOST ONCE* delivery semantics, the client will not wait for the message to be accepted and settled by the downstream consumer. However, with *AT LEAST ONCE*, the client sends the message and waits for the message to be delivered to and accepted by the downstream consumer. If the message cannot be delivered due to a failure, the client will be notified.
@@ -113,6 +117,7 @@ The AMQP adapter supports publishing of telemetry data to Hono's Telemetry API. 
         * (`hono:bad-request`): Request rejected due to a bad client request.
         * (`amqp:unauthorized-access`): Request rejected because the adapter is disabled for tenant.
         * (`amqp:precondition-failed`): Request does not fulfill certain requirements e.g adapter cannot assert device registration etc.
+        * (`amqp:resource-limit-exceeded`): Request rejected because the message limit for the given tenant is exceeded.
 
 When a device publishes data to the `telemetry` address, the AMQP adapter automatically determines the device's identity and tenant during the authentication process.
 
@@ -146,6 +151,7 @@ Publish some JSON data for device `4711` using a client certificate for authenti
         * (`hono:bad-request`): A bad client request (e.g invalid content-type).
         * (`amqp:unauthorized-access`): The adapter is disabled for tenant.
         * (`amqp:precondition-failed`): Request not fulfilling certain requirements.
+        * (`amqp:resource-limit-exceeded`): Request rejected because the message limit for the given tenant is exceeded.
 
 Note how verbose the address is for unauthenticated devices. This address can be used by devices that have not authenticated to the protocol adapter. This requires the `HONO_AMQP_AUTHENTICATION_REQUIRED` configuration property to be explicitly set to `false` before starting the protocol adapter.
 
@@ -189,6 +195,7 @@ The adapter supports *AT LEAST ONCE* delivery of *Event* messages only. A client
         * (`hono:bad-request`): A bad client request (e.g invalid content-type).
         * (`amqp:unauthorized-access`): The adapter is disabled for tenant.
         * (`amqp:precondition-failed`): Request not fulfilling certain requirements.
+        * (`amqp:resource-limit-exceeded`): Request rejected because the message limit for the given tenant is exceeded.
 
 This is the preferred way for devices to publish events. It is available only if the protocol adapter has been configured to require devices to authenticate (which is the default).
 
@@ -214,6 +221,7 @@ Upload a JSON string for device `4711`:
         * (`hono:bad-request`): A bad client request (e.g invalid content-type).
         * (`amqp:unauthorized-access`): The adapter is disabled for tenant.
         * (`amqp:precondition-failed`): Request not fulfilling certain requirements.
+        * (`amqp:resource-limit-exceeded`): Request rejected because the message limit for the given tenant is exceeded.
 
 This address format is used by devices that have not authenticated to the protocol adapter. Note that this requires the
 `HONO_AMQP_AUTHENTICATION_REQUIRED` configuration property to be explicitly set to `false`.

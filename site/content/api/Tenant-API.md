@@ -296,7 +296,7 @@ The table below provides an overview of the standard members defined for the JSO
 | *adapters*               | *no*      | *array*       | `-`          | A list of configuration options valid for certain adapters only. The format of a configuration option is described here [Adapter Configuration Format]({{< relref "#adapter-configuration-format" >}}). **NB** If the element is provided then the list MUST NOT be empty. **NB** Only a single entry per *type* is allowed. If multiple entries for the same *type* are present it is handled as an error. **NB** If the element is omitted then all adapters are *enabled* in their default configuration. |
 | *defaults*               | *no*      | *object*      | `-`          | Arbitrary *default* properties for devices belonging to the tenant. The properties can be used by protocol adapters to augment downstream messages with missing information, e.g. setting a default content type or TTL. |
 | *enabled*                | *no*      | *boolean*     | `true`       | If set to `false` the tenant is currently disabled. Protocol adapters MUST NOT allow devices of a disabled tenant to connect and MUST NOT accept data published by such devices. |
-| *resource-limits*         | *no*      | *object*     | `-`          | The resource-limits such as the maximum number of connections can be set. The format of a configuration option is described here [Resource Limits Configuration Format]({{< relref "#resource-limits-configuration-format" >}}).|
+| *resource-limits*         | *no*      | *object*     | `-`          | The resource-limits such as the maximum number of connections and the maximum data volume for a given period can be set. The format of a configuration option is described here [Resource Limits Configuration Format]({{< relref "#resource-limits-configuration-format" >}}).|
 | *trusted-ca*             | *no*      | *object*      | `-`          | The trusted certificate authority to use for validating certificates presented by devices of the tenant for authentication purposes. See [Trusted Certificate Authority Format]({{< relref "#trusted-ca-format" >}}) for a definition of the content model of the object. |
 
 If any of the mandatory members is either missing or contains invalid data, implementations MUST NOT accept the payload and return *400 Bad Request* status code.
@@ -330,13 +330,18 @@ Devices belonging to the tenant can connect to Hono via the HTTP adapter only an
 }
 ~~~
 
-In the following example the tenant is allowed to use **all** adapters, as the *adapters* property is omitted in the tenant configuration. Note that the payload also contains a *resource-limits* property which limits the number of concurrently connected devices to 10000 for the tenant:
+In the following example the tenant is allowed to use **all** adapters, as the *adapters* property is omitted in the tenant configuration. Note that the payload also contains a *resource-limits* property which limits the number of concurrently connected devices to 10000 and the data volume to 2GB for the tenant:
 
 ~~~json
 {
   "enabled": true,
   "resource-limits": {
-    "max-connections": 10000
+    "max-connections": 10000,
+    "data-volume": {
+      "max-bytes": 2147483648,
+      "period-in-days": 30,
+      "effective-since": "2019-04-27"
+    }
   }
 }
 ~~~
@@ -362,7 +367,7 @@ The table below provides an overview of the standard members defined for the JSO
 | *adapters*               | *no*      | *array*       | A list of configuration options valid for certain adapters only. The format of a configuration option is described here [Adapter Configuration Format]({{< relref "#adapter-configuration-format" >}}). **NB** If the element is provided then the list MUST NOT be empty. **NB** Only a single entry per *type* is allowed. If multiple entries for the same *type* are present it is handled as an error. **NB** If the element is omitted then all adapters are *enabled* in their default configuration. |
 | *defaults*               | *no*      | *object*      | `-`          | Arbitrary *default* properties for devices belonging to the tenant. The properties can be used by protocol adapters to augment downstream messages with missing information, e.g. setting a default content type or TTL. |
 | *enabled*                | *yes*     | *boolean*     | If set to `false` the tenant is currently disabled. Protocol adapters MUST NOT allow devices of a disabled tenant to connect and MUST NOT accept data published by such devices. |
-| *resource-limits*        | *no*      | *object*      | Any resource limits that should be enforced for the tenant, e.g. the maximum number of concurrent connections. Refer to [Resource Limits Configuration Format]({{< relref "#resource-limits-configuration-format" >}}) for details. |
+| *resource-limits*        | *no*      | *object*      | Any resource limits that should be enforced for the tenant, e.g. the maximum number of concurrent connections and the maximum data volume for a given period. Refer to [Resource Limits Configuration Format]({{< relref "#resource-limits-configuration-format" >}}) for details. |
 | *tenant-id*              | *yes*     | *string*      | The ID of the tenant. |
 | *trusted-ca*             | *no*      | *object*      | The trusted certificate authority to use for validating certificates presented by devices of the tenant for authentication purposes. See [Trusted Certificate Authority Format]({{< relref "#trusted-ca-format" >}}) for a definition of the content model of the object. |
 
@@ -382,7 +387,12 @@ Below is an example for a payload of the response to a *get* request for tenant 
   "enabled" : true,
   "customer": "ACME Inc.",
   "resource-limits": {
-    "max-connections": 100000
+    "max-connections": 100000,
+    "data-volume": {
+      "max-bytes": 2147483648,
+      "period-in-days": 30,
+      "effective-since": "2019-04-27"
+    }
   },
   "adapters" : [
     {
@@ -436,3 +446,14 @@ The table below contains the properties which are used to configure a tenant's r
 | Name                     | Mandatory | JSON Type     | Default Value | Description |
 | :------------------------| :-------: | :------------ | :------------ | :---------- |
 | *max-connections*        | *no*      | *number*      | `-1`          | The maximum number of concurrent connections allowed from devices of this tenant. The default value `-1` indicates that no limit is set. |
+| *data-volume*            | *no*      | *object*      | `-`           | The maximum data volume allowed for the given tenant. Refer to  [Data Volume Configuration Format]({{< relref "#data-volume-configuration-format" >}}) for details.|
+
+### Data Volume Configuration Format
+
+The table below contains the properties which are used to configure a tenant's data volume limit:
+
+| Name                     | Mandatory | JSON Type     | Default Value | Description |
+| :------------------------| :-------: | :------------ | :------------ | :---------- |
+| *max-bytes*              | *no*      | *number*      | `-1`          | The maximum number of bytes allowed for the tenant for the given period defined by *period-in-days*. The default value `-1` indicates that no limit is set. |
+| *period-in-days*         | *no*      | *number*      | `30`          | The number of days for which the data usage is to be calculated. The default value  is `30` days.|
+| *effective-since*        | *yes*     | *string*      | `-`           | The date on which the data volume limit came into effect. The value MUST be an [ISO 8601 compliant *combined date and time representation in extended format*](https://en.wikipedia.org/wiki/ISO_8601#Combined_date_and_time_representations).
