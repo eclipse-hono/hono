@@ -34,6 +34,16 @@ spec:
               fieldPath: metadata.namespace
         image: {{ .Values.dispatchRouter.image.name }}
         imagePullPolicy: IfNotPresent
+        ports:
+        - name: amqps
+          containerPort: 5671
+          protocol: TCP
+        - name: amqp
+          containerPort: 5672
+          protocol: TCP
+        - name: internal
+          containerPort: 5673
+          protocol: TCP
         resources:
           limits:
             memory: "512Mi"

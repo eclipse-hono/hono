@@ -1,4 +1,3 @@
-{{if eq .Values.useLoadBalancer false}}
 ---
 apiVersion: v1
 kind: Service
@@ -11,18 +10,21 @@ metadata:
 spec:
   ports:
   - name: amqps
+    port: 15671
+    protocol: TCP
+    targetPort: amqps
     nodePort: 30671
-    port: 5671
-    protocol: TCP
-    targetPort: 5671
   - name: amqp
-    nodePort: 30672
-    port: 5672
+    port: 15672
     protocol: TCP
-    targetPort: 5672
+    targetPort: amqp
+    nodePort: 30672
   selector:
     app: amqp-messaging-network
     role: router
     group: {{ .Values.project.groupId }}
+  {{- if and ( eq .Values.useLoadBalancer true ) ( ne .Values.platform "openshift" )}}
+  type: LoadBalancer
+  {{- else}}
   type: NodePort
-{{end}}
+  {{- end}}

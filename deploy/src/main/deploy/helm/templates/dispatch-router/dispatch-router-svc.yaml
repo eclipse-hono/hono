@@ -11,7 +11,7 @@ spec:
   ports:
   - port: 5673
     protocol: TCP
-    targetPort: 5673
+    targetPort: internal
   selector:
     app: amqp-messaging-network
     role: router

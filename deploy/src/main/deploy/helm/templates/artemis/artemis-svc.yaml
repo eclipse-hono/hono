@@ -9,9 +9,10 @@ metadata:
   name: ${hono.artemis.service}
 spec:
   ports:
-  - port: 5671
+  - name: amqps
+    port: 5671
     protocol: TCP
-    targetPort: 5671
+    targetPort: amqps
   selector:
     app: amqp-messaging-network
     role: broker

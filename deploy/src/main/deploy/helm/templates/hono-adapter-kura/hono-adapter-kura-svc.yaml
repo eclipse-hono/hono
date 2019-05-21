@@ -10,19 +10,21 @@ metadata:
   name: hono-adapter-kura
 spec:
   ports:
-  {{- if eq .Values.useLoadBalancer false}}
   - name: mqtt
-    nodePort: 31884
     port: 1883
     protocol: TCP
-    targetPort: 1883
+    targetPort: mqtt
+    nodePort: 31884
   - name: secure-mqtt
-    nodePort: 30884
     port: 8883
     protocol: TCP
-    targetPort: 8883
-  {{- end}}
+    targetPort: secure-mqtt
+    nodePort: 30884
   selector:
     app: hono-adapter-kura
     group: {{ .Values.project.groupId }}
+  {{- if and ( eq .Values.useLoadBalancer true ) ( ne .Values.platform "openshift" )}}
+  type: LoadBalancer
+  {{- else }}
   type: NodePort
+  {{- end}}

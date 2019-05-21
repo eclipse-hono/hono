@@ -10,19 +10,21 @@ metadata:
   name: hono-adapter-http-vertx
 spec:
   ports:
-  {{- if eq .Values.useLoadBalancer false}}
   - name: http
-    nodePort: 30080
     port: 8080
     protocol: TCP
-    targetPort: 8080
+    targetPort: http
+    nodePort: 30080
   - name: https
-    nodePort: 30443
     port: 8443
     protocol: TCP
-    targetPort: 8443
-  {{- end}}
+    targetPort: https
+    nodePort: 30443
   selector:
     app: hono-adapter-http-vertx
     group: {{ .Values.project.groupId }}
+  {{- if and ( eq .Values.useLoadBalancer true ) ( ne .Values.platform "openshift" )}}
+  type: LoadBalancer
+  {{- else}}
   type: NodePort
+  {{- end}}

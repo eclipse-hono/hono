@@ -31,11 +31,14 @@ spec:
         imagePullPolicy: IfNotPresent
         name: eclipse-hono-adapter-kura
         ports:
-        - containerPort: {{ .Values.healthCheckPort }}
+        - name: health
+          containerPort: {{ .Values.healthCheckPort }}
           protocol: TCP
-        - containerPort: 8883
+        - name: mqtt
+          containerPort: 1883
           protocol: TCP
-        - containerPort: 1883
+        - name: secure-mqtt
+          containerPort: 8883
           protocol: TCP
         securityContext:
           privileged: false

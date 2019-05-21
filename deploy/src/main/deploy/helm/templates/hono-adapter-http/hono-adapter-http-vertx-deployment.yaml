@@ -31,11 +31,14 @@ spec:
         imagePullPolicy: IfNotPresent
         name: eclipse-hono-adapter-http-vertx
         ports:
-        - containerPort: {{ .Values.healthCheckPort }}
+        - name: health
+          containerPort: {{ .Values.healthCheckPort }}
           protocol: TCP
-        - containerPort: 8080
+        - name: http
+          containerPort: 8080
           protocol: TCP
-        - containerPort: 8443
+        - name: https
+          containerPort: 8443
           protocol: TCP
         securityContext:
           privileged: false

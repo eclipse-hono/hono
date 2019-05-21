@@ -33,8 +33,9 @@ healthCheckPort: ${vertx.health.port}
 # this flag is used to determine whether we need to deploy Route resources as well
 platform: kubernetes
 
-# this flag is used to determine whether we need to deploy service type "LoadBalancer" for external services
-# do not use with "platform: openshift".
+# this flag is used to determine whether external services should be deployed using the
+# "LoadBalancer" type (true) or the "NodePort" type (false)
+# will always be false when deploying to "platform: openshift".
 useLoadBalancer: false
 
 jaeger:

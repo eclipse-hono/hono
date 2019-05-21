@@ -35,6 +35,10 @@ spec:
             fieldRef:
               fieldPath: metadata.namespace
         image: {{ .Values.artemis.image.name }}
+        ports:
+        - name: amqps
+          containerPort: 5671
+          protocol: TCP
         imagePullPolicy: IfNotPresent
         resources:
           limits:

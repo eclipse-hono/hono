@@ -11,23 +11,9 @@ metadata:
 spec:
   ports:
   - name: amqps
-    nodePort: 31671
     port: 5671
     protocol: TCP
-    targetPort: 5671
-  {{- if eq .Values.useLoadBalancer false}}
-  - name: http
-    nodePort: 31080
-    port: 8080
-    protocol: TCP
-    targetPort: 8080
-  - name: https
-    nodePort: 31443
-    port: 8443
-    protocol: TCP
-    targetPort: 8443
-  {{- end}}
+    targetPort: amqps
   selector:
     app: hono-service-device-registry
     group: {{ .Values.project.groupId }}
-  type: NodePort

@@ -13,7 +13,7 @@ spec:
   - name: amqps
     port: 5671
     protocol: TCP
-    targetPort: 5671
+    targetPort: amqps
   selector:
     app: hono-service-auth
     group: {{ .Values.project.groupId }}
