@@ -26,6 +26,10 @@ When running the Hono example installation as described in the [Getting Started 
 
 NB: There is a subtle difference between the *device identifier* (*device-id*) and the *auth-id* a device uses for authentication. See [Device Identity]({{< ref "/concepts/device-identity.md" >}}) for a discussion of the concepts.
 
+## Message Limits
+
+Before accepting any telemetry or event messages, the HTTP adapter verifies that the configured [message limit] ({{< ref "/concepts/resource-limits.md" >}}) is not exceeded. If the limit is exceeded then the incoming message is discarded with the status code `429 Too Many Requests`. 
+
 ## Publish Telemetry Data (authenticated Device)
 
 * URI: `/telemetry`
@@ -55,6 +59,7 @@ NB: There is a subtle difference between the *device identifier* (*device-id*) a
   * 403 (Forbidden): The request cannot be processed because the device's registration status cannot be asserted. Possible reasons for this include:
         * The given tenant is not allowed to use this protocol adapter.
   * 404 (Not Found): The request cannot be processed because the device is disabled or does not exist.
+  * 429 (Too Many Requests): The request cannot be processed because the message limit for the given period is exceeded.  
   * 503 (Service Unavailable): The request cannot be processed because there is no consumer of telemetry data for the given tenant connected to Hono.
 
 This is the preferred way for devices to publish telemetry data. It is available only if the protocol adapter is configured to require devices to authenticate (which is the default).
@@ -130,6 +135,7 @@ Publish some JSON data for device `4711` using a client certificate for authenti
         * The given tenant is not allowed to use this protocol adapter.
         * The given device does not belong to the given tenant.
   * 404 (Not Found): The request cannot be processed because the device is disabled or does not exist.
+  * 429 (Too Many Requests): The request cannot be processed because the message limit for the given period is exceeded.  
   * 503 (Service Unavailable): The request cannot be processed because there is no consumer of telemetry data for the given tenant connected to Hono.
 
 This resource MUST be used by devices that have not authenticated to the protocol adapter. Note that this requires the `HONO_HTTP_AUTHENTICATION_REQUIRED` configuration property to be explicitly set to `false`.
@@ -199,6 +205,7 @@ Publish some JSON data for device `4711`, indicating that the device will wait f
         * The gateway is not authorized to act *on behalf of* the device.
         * The gateway associated with the device is not registered or disabled.
   * 404 (Not Found): The request cannot be processed because the device is disabled or does not exist.
+  * 429 (Too Many Requests): The request cannot be processed because the message limit for the given period is exceeded.
   * 503 (Service Unavailable): The request cannot be processed because there is no consumer of telemetry data for the given tenant connected to Hono.
 
 This resource can be used by *gateway* components to publish data *on behalf of* other devices which do not connect to a protocol adapter directly but instead are connected to the gateway, e.g. using some low-bandwidth radio based technology like [SigFox](https://www.sigfox.com) or [LoRa](https://www.lora-alliance.org/). In this case the credentials provided by the gateway during connection establishment with the protocol adapter are used to authenticate the gateway whereas the parameters from the URI are used to identify the device that the gateway publishes data for.
@@ -266,6 +273,7 @@ Publish some JSON data for device `4712`, indicating that the gateway will wait 
   * 403 (Forbidden): The request cannot be processed because the device's registration status cannot be asserted. Possible reasons for this include:
         * The given tenant is not allowed to use this protocol adapter.
   * 404 (Not Found): The request cannot be processed because the device is disabled or does not exist.
+  * 429 (Too Many Requests): The request cannot be processed because the message limit for the given period is exceeded.
   * 503 (Service Unavailable): The request cannot be processed because there is no consumer of telemetry data for the given tenant connected to Hono.
 
 This is the preferred way for devices to publish events. It is available only if the protocol adapter is configured to require devices to authenticate (which is the default).
@@ -306,6 +314,7 @@ Publish some JSON data for device `4711`:
         * The given tenant is not allowed to use this protocol adapter.
         * The given device does not belong to the given tenant.
   * 404 (Not Found): The request cannot be processed because the device is disabled or does not exist.
+  * 429 (Too Many Requests): The request cannot be processed because the message limit for the given period is exceeded.
   * 503 (Service Unavailable): The request cannot be processed because there is no consumer of telemetry data for the given tenant connected to Hono.
 
 This resource MUST be used by devices that have not authenticated to the protocol adapter. Note that this requires the `HONO_HTTP_AUTHENTICATION_REQUIRED` configuration property to be explicitly set to `false`.
@@ -350,6 +359,7 @@ Publish some JSON data for device `4711`:
         * The gateway is not authorized to act *on behalf of* the device.
         * The gateway associated with the device is not registered or disabled.
   * 404 (Not Found): The request cannot be processed because the device is disabled or does not exist.
+  * 429 (Too Many Requests): The request cannot be processed because the message limit for the given period is exceeded.
   * 503 (Service Unavailable): The request cannot be processed because there is no consumer of telemetry data for the given tenant connected to Hono.
 
 This resource can be used by *gateway* components to publish data *on behalf of* other devices which do not connect to a protocol adapter directly but instead are connected to the gateway, e.g. using some low-bandwidth radio based technology like [SigFox](https://www.sigfox.com) or [LoRa](https://www.lora-alliance.org/). In this case the credentials provided by the gateway during connection establishment with the protocol adapter are used to authenticate the gateway whereas the parameters from the URI are used to identify the device that the gateway publishes data for.

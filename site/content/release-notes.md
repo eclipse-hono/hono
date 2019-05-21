@@ -24,6 +24,9 @@ title = "Release Notes"
   https://eclipse.org/hono/api/device-registry-v1.yaml.
 * The Command & Control feature now supports gateway agnostic addressing of devices. This means that applications are
   able to send commands to devices without knowing the particular gateway they may be connected to.
+* The concept and implementation of *message limit* have been added. The protocol adapters can be now 
+  enabled to verify this *message limit* for each tenant before accepting any telemetry/event messages.
+  Please refer to the [resource limits]({{< ref "/concepts/resource-limits.md" >}}) for details.  
 
 ### Fixes & Enhancements
 

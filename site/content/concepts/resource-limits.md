@@ -14,5 +14,8 @@ Before accepting a new connection request from a device, the number of existing 
 
 The MQTT and AMQP protocol adapters keep the connections longer opened than their counterparts such as HTTP. Thereby the MQTT and AMQP adapters are enabled to check the connection limits before accepting any new connection to a device.
 
+## Messages Limit
 
+Before accepting a telemetry or an event message from a device, it is checked by the protocol adapters that if the message limit is exceeded or not. The incoming message is declined if the limit is exceeded. 
 
+The default prometheus based implementation uses data volume as the factor to limit the messages. The data volume already consumed by a tenant over the given period of time is compared with the configured message limit before accepting any telemetry or event messages.
