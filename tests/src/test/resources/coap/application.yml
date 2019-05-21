@@ -13,7 +13,7 @@ hono:
     certPath: /etc/hono/certs/coap-adapter-cert.pem
   messaging:
     name: 'Hono CoAP Adapter'
-    host: hono-dispatch-router.hono
+    host: ${hono.amqp-network.host}
     port: 5673
     amqpHostname: hono-internal
     keyPath: /etc/hono/certs/coap-adapter-key.pem
@@ -23,7 +23,7 @@ hono:
     flowLatency: ${flow.latency}
   registration:
     name: 'Hono CoAP Adapter'
-    host: hono-service-device-registry.hono
+    host: ${hono.registration.host}
     port: 5672
     username: coap-adapter@HONO
     password: coap-secret
@@ -31,7 +31,7 @@ hono:
     flowLatency: ${flow.latency}
   credentials:
     name: 'Hono CoAP Adapter'
-    host: hono-service-device-registry.hono
+    host: ${hono.registration.host}
     port: 5672
     username: coap-adapter@HONO
     password: coap-secret
@@ -39,7 +39,7 @@ hono:
     flowLatency: ${flow.latency}
   tenant:
     name: 'Hono CoAP Adapter'
-    host: hono-service-device-registry.hono
+    host: ${hono.registration.host}
     port: 5672
     username: coap-adapter@HONO
     password: coap-secret
@@ -47,7 +47,7 @@ hono:
     flowLatency: ${flow.latency}
   command:
     name: 'Hono CoAP Adapter'
-    host: hono-dispatch-router.hono
+    host: ${hono.amqp-network.host}
     port: 5673
     amqpHostname: hono-internal
     keyPath: /etc/hono/certs/coap-adapter-key.pem

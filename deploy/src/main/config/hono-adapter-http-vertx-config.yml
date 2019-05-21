@@ -12,7 +12,7 @@ hono:
   messaging:
     name: 'Hono HTTP Adapter'
     amqpHostname: hono-internal
-    host: hono-dispatch-router.hono
+    host: ${hono.amqp-network.host}
     port: 5673
     keyPath: ${secret.path}/http-adapter-key.pem
     certPath: ${secret.path}/http-adapter-cert.pem
@@ -38,7 +38,7 @@ hono:
   command:
     name: 'Hono HTTP Adapter'
     amqpHostname: hono-internal
-    host: hono-dispatch-router.hono
+    host: ${hono.amqp-network.host}
     port: 5673
     keyPath: ${secret.path}/http-adapter-key.pem
     certPath: ${secret.path}/http-adapter-cert.pem

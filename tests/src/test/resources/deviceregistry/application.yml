@@ -5,7 +5,7 @@ hono:
     healthCheckPort: ${vertx.health.port}
     startupTimeout: 90
   auth:
-    host: hono-service-auth.hono
+    host: ${hono.auth.host}
     port: 5672
     name: device-registry
     validation:

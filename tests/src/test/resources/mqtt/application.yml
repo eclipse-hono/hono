@@ -13,7 +13,7 @@ hono:
     certPath: /etc/hono/certs/mqtt-adapter-cert.pem
   messaging:
     name: 'Hono MQTT Adapter'
-    host: hono-dispatch-router.hono
+    host: ${hono.amqp-network.host}
     port: 5673
     amqpHostname: hono-internal
     keyPath: /etc/hono/certs/mqtt-adapter-key.pem
@@ -23,7 +23,7 @@ hono:
     flowLatency: ${flow.latency}
   registration:
     name: 'Hono MQTT Adapter'
-    host: hono-service-device-registry.hono
+    host: ${hono.registration.host}
     port: 5672
     username: mqtt-adapter@HONO
     password: mqtt-secret
@@ -31,7 +31,7 @@ hono:
     flowLatency: ${flow.latency}
   credentials:
     name: 'Hono MQTT Adapter'
-    host: hono-service-device-registry.hono
+    host: ${hono.registration.host}
     port: 5672
     username: mqtt-adapter@HONO
     password: mqtt-secret
@@ -39,7 +39,7 @@ hono:
     flowLatency: ${flow.latency}
   tenant:
     name: 'Hono MQTT Adapter'
-    host: hono-service-device-registry.hono
+    host: ${hono.registration.host}
     port: 5672
     username: mqtt-adapter@HONO
     password: mqtt-secret
@@ -47,7 +47,7 @@ hono:
     flowLatency: ${flow.latency}
   command:
     name: 'Hono MQTT Adapter'
-    host: hono-dispatch-router.hono
+    host: ${hono.amqp-network.host}
     port: 5673
     amqpHostname: hono-internal
     keyPath: /etc/hono/certs/mqtt-adapter-key.pem

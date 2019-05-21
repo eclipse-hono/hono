@@ -10,7 +10,7 @@ hono:
   messaging:
     name: 'Hono COAP Adapter'
     amqpHostname: hono-internal
-    host: hono-dispatch-router.hono
+    host: ${hono.amqp-network.host}
     port: 5673
     keyPath: ${secret.path}/coap-adapter-key.pem
     certPath: ${secret.path}/coap-adapter-cert.pem
@@ -36,7 +36,7 @@ hono:
   command:
     name: 'Hono COAP Adapter'
     amqpHostname: hono-internal
-    host: hono-dispatch-router.hono
+    host: ${hono.amqp-network.host}
     port: 5673
     keyPath: ${secret.path}/coap-adapter-key.pem
     certPath: ${secret.path}/coap-adapter-cert.pem
