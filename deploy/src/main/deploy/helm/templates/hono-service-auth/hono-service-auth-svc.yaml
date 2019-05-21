@@ -14,8 +14,6 @@ spec:
     port: 5671
     protocol: TCP
     targetPort: 5671
-  - name: health
-    port: {{ .Values.monitoring.prometheus.port }}
   selector:
     app: hono-service-auth
     group: {{ .Values.project.groupId }}

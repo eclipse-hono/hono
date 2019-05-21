@@ -22,8 +22,6 @@ spec:
     protocol: TCP
     targetPort: 8883
   {{- end}}
-  - name: health
-    port: {{ .Values.monitoring.prometheus.port }}
   selector:
     app: hono-adapter-kura
     group: {{ .Values.project.groupId }}

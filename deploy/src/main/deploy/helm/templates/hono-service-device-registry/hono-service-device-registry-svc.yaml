@@ -27,8 +27,6 @@ spec:
     protocol: TCP
     targetPort: 8443
   {{- end}}
-  - name: health
-    port: {{ .Values.monitoring.prometheus.port }}
   selector:
     app: hono-service-device-registry
     group: {{ .Values.project.groupId }}

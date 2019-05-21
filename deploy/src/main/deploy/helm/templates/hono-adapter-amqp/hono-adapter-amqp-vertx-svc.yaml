@@ -22,8 +22,6 @@ spec:
     protocol: TCP
     targetPort: 5671
   {{- end}}
-  - name: health
-    port: {{ .Values.monitoring.prometheus.port }}
   selector:
     app: hono-adapter-amqp-vertx
     group: {{ .Values.project.groupId }}
