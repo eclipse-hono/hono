@@ -510,7 +510,9 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                     authenticatedDevice,
                     null);
             final Future<TenantObject> tenantEnabledTracker = getTenantConfiguration(device.getTenantId(), null)
-                    .compose(tenantObject -> isAdapterEnabled(tenantObject));
+                    .compose(tenantObject -> CompositeFuture
+                            .all(isAdapterEnabled(tenantObject), checkMessageLimit(tenantObject, payload.length()))
+                            .map(success -> tenantObject));
             CompositeFuture.all(tokenTracker, senderTracker, tenantEnabledTracker).compose(ok -> {
                     final DownstreamSender sender = senderTracker.result();
                     final Message downstreamMessage = newMessage(

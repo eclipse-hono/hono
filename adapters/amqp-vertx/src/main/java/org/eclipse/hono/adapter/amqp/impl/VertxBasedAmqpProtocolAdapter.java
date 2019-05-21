@@ -848,7 +848,11 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         final Future<JsonObject> tokenFuture = getRegistrationAssertion(resource.getTenantId(), resource.getResourceId(),
                 context.getAuthenticatedDevice(), currentSpan.context());
         final Future<TenantObject> tenantEnabledFuture = getTenantConfiguration(resource.getTenantId(),
-                currentSpan.context()).compose(tenantObject -> isAdapterEnabled(tenantObject));
+                currentSpan.context())
+                        .compose(tenantObject -> CompositeFuture
+                                .all(isAdapterEnabled(tenantObject),
+                                        checkMessageLimit(tenantObject, context.getPayloadSize()))
+                                .map(success -> tenantObject));
 
         return CompositeFuture.all(tenantEnabledFuture, tokenFuture, senderFuture)
                 .compose(ok -> {

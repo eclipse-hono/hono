@@ -604,8 +604,13 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                         deviceId,
                         authenticatedDevice,
                         currentSpan.context());
+                final int payloadSize = Optional.ofNullable(payload)
+                        .map(ok -> payload.length())
+                        .orElse(0);
                 final Future<TenantObject> tenantTracker = getTenantConfiguration(tenant, currentSpan.context())
-                        .compose(tenantObject -> isAdapterEnabled(tenantObject));
+                        .compose(tenantObject -> CompositeFuture
+                                .all(isAdapterEnabled(tenantObject), checkMessageLimit(tenantObject, payloadSize))
+                                .map(success -> tenantObject));
 
                 // we only need to consider TTD if the device and tenant are enabled and the adapter
                 // is enabled for the tenant
