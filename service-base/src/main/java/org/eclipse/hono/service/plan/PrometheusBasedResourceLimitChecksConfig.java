@@ -24,15 +24,15 @@ public final class PrometheusBasedResourceLimitChecksConfig {
     /**
      * The default minimum size of caches.
      */
-    static final int DEFAULT_CACHE_MIN_SIZE = 20;
+    public static final int DEFAULT_CACHE_MIN_SIZE = 20;
     /**
      * The default maximum size of caches.
      */
-    static final long DEFAULT_CACHE_MAX_SIZE = 1000L;
+    public static final long DEFAULT_CACHE_MAX_SIZE = 1000L;
     /**
      * The default timeout for cached data in seconds until they are considered invalid.
      */
-    static final long DEFAULT_CACHE_TIMEOUT = 600L;
+    public static final long DEFAULT_CACHE_TIMEOUT = 600L;
 
     private String host;
     private int port = 9090;
