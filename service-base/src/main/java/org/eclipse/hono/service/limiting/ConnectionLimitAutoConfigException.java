@@ -18,6 +18,8 @@ package org.eclipse.hono.service.limiting;
  */
 public class ConnectionLimitAutoConfigException extends RuntimeException {
 
+    private static final long serialVersionUID = 1L;
+
     /**
      * Creates a new exception for a detail message.
      *
