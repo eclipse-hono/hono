@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-    Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+    Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
    
     See the NOTICE file(s) distributed with this work for additional
     information regarding copyright ownership.
@@ -33,10 +33,6 @@
         <hono.messaging.host>hono-service-messaging.hono</hono.messaging.host>
         <hono.registration.host>hono-service-device-registry.hono</hono.registration.host>
         <hono.auth.host>hono-service-auth.hono</hono.auth.host>
-        <!--
-          The shared secret to use for creating/validating registration assertions.
-         -->
-        <hono.regAssertion.sharedSecret>g#aWO!BUm7aj*#%X*VGXKFhxkhNrMNj0</hono.regAssertion.sharedSecret>
         <default-java-options>-XX:MinRAMPercentage=80 -XX:MaxRAMPercentage=80</default-java-options>
 
         <!-- This is only used by the Docker Swarm deployment -->
@@ -47,19 +43,7 @@
     <dependencies>
         <dependency>
             <groupId>org.eclipse.hono</groupId>
-            <artifactId>hono-client</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>ch.qos.logback</groupId>
-            <artifactId>logback-classic</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.eclipse.hono</groupId>
             <artifactId>hono-legal</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.yaml</groupId>
-            <artifactId>snakeyaml</artifactId>
         </dependency>
         <dependency>
             <groupId>org.eclipse.hono</groupId>
@@ -89,10 +73,6 @@
         </resources>
 
         <plugins>
-            <!--<plugin>-->
-            <!--<groupId>org.apache.maven.plugins</groupId>-->
-            <!--<artifactId>maven-checkstyle-plugin</artifactId>-->
-            <!--</plugin>-->
             <plugin>
                 <!--
                   Copy legal documents from "legal" module to "target/classes" folder

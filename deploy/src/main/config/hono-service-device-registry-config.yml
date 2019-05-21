@@ -26,8 +26,6 @@ hono:
     svc:
       filename: /var/lib/hono/device-registry/device-identities.json
       saveToFile: true
-      signing:
-        sharedSecret: ${hono.regAssertion.sharedSecret}
   credentials:
     svc:
       filename: /var/lib/hono/device-registry/credentials.json

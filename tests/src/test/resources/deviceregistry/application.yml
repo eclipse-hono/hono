@@ -21,8 +21,6 @@ hono:
       filename: /etc/hono/device-identities.json
       saveToFile: false
       startEmpty: true
-      signing:
-        sharedSecret: sdgfsdafazufgsdafjhfgsdajfgwhriojsdafjlksdhfgsa8fg452368gdf
   credentials:
     svc:
       filename: /etc/hono/credentials.json
