@@ -16,6 +16,7 @@ package org.eclipse.hono.adapter.coap;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
@@ -52,6 +53,7 @@ import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.RegistrationClientFactory;
 import org.eclipse.hono.client.TenantClient;
 import org.eclipse.hono.client.TenantClientFactory;
+import org.eclipse.hono.service.plan.ResourceLimitChecks;
 import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantObject;
 import org.junit.AfterClass;
@@ -97,6 +99,7 @@ public class AbstractVertxBasedCoapAdapterTest {
     private TenantClient tenantClient;
     private CoapAdapterProperties config;
     private CommandConsumerFactory commandConsumerFactory;
+    private ResourceLimitChecks resourceLimitChecks;
 
     /**
      * Sets up common fixture.
@@ -134,6 +137,10 @@ public class AbstractVertxBasedCoapAdapterTest {
 
         commandConsumerFactory = mock(CommandConsumerFactory.class);
         when(commandConsumerFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
+
+        resourceLimitChecks = mock(ResourceLimitChecks.class);
+        when(resourceLimitChecks.isMessageLimitReached(any(TenantObject.class), anyLong()))
+                .thenReturn(Future.succeededFuture(Boolean.FALSE));
     }
 
     /**
@@ -460,6 +467,68 @@ public class AbstractVertxBasedCoapAdapterTest {
         verify(coapExchange).respond(ResponseCode.CHANGED);
     }
 
+    /**
+     * Verifies that a telemetry message is rejected due to the limit exceeded.
+     *
+     */
+    @Test
+    public void testMessageLimitExceededForATelemetryMessage() {
+
+        // GIVEN an adapter with a downstream telemetry consumer attached
+        final Future<ProtonDelivery> outcome = Future.future();
+        givenATelemetrySender(outcome);
+
+        final CoapServer server = getCoapServer(false);
+        final AbstractVertxBasedCoapAdapter<CoapAdapterProperties> adapter = getAdapter(server, true, null);
+
+        // WHEN the message limit exceeds
+        when(resourceLimitChecks.isMessageLimitReached(any(TenantObject.class), anyLong()))
+                .thenReturn(Future.succeededFuture(Boolean.TRUE));
+
+        // WHEN a device publishes a telemetry message
+        final Buffer payload = Buffer.buffer("some payload");
+        final CoapExchange coapExchange = newCoapExchange(payload);
+        final Device authenticatedDevice = new Device("tenant", "device");
+        final CoapContext ctx = CoapContext.fromRequest(coapExchange);
+        adapter.uploadTelemetryMessage(ctx, authenticatedDevice, authenticatedDevice, false);
+
+        // THEN the device gets a 4.29
+        final ArgumentCaptor<Response> captor = ArgumentCaptor.forClass(Response.class);
+        verify(coapExchange).respond(captor.capture());
+        assertThat(captor.getValue().getCode(), is(ResponseCode.TOO_MANY_REQUESTS));
+    }
+
+    /**
+     * Verifies that an event message is rejected due to the limit exceeded.
+     *
+     */
+    @Test
+    public void testMessageLimitExceededForAnEventMessage() {
+
+        // GIVEN an adapter with a downstream event consumer attached
+        final Future<ProtonDelivery> outcome = Future.future();
+        givenAnEventSenderForOutcome(outcome);
+
+        final CoapServer server = getCoapServer(false);
+        final AbstractVertxBasedCoapAdapter<CoapAdapterProperties> adapter = getAdapter(server, true, null);
+
+        // WHEN the message limit exceeds
+        when(resourceLimitChecks.isMessageLimitReached(any(TenantObject.class), anyLong()))
+                .thenReturn(Future.succeededFuture(Boolean.TRUE));
+
+        // WHEN a device publishes an event message
+        final Buffer payload = Buffer.buffer("some payload");
+        final CoapExchange coapExchange = newCoapExchange(payload);
+        final Device authenticatedDevice = new Device("tenant", "device");
+        final CoapContext ctx = CoapContext.fromRequest(coapExchange);
+        adapter.uploadEventMessage(ctx, authenticatedDevice, authenticatedDevice);
+
+        // THEN the device gets a 4.29
+        final ArgumentCaptor<Response> captor = ArgumentCaptor.forClass(Response.class);
+        verify(coapExchange).respond(captor.capture());
+        assertThat(captor.getValue().getCode(), is(ResponseCode.TOO_MANY_REQUESTS));
+    }
+
     private static CoapExchange newCoapExchange(final Buffer payload) {
 
         final OptionSet options = new OptionSet().setContentFormat(MediaTypeRegistry.TEXT_PLAIN);
@@ -520,6 +589,7 @@ public class AbstractVertxBasedCoapAdapterTest {
         }
         adapter.setCommandConsumerFactory(commandConsumerFactory);
         adapter.setMetrics(mock(CoapAdapterMetrics.class));
+        adapter.setResourceLimitChecks(resourceLimitChecks);
         adapter.init(vertx, mock(Context.class));
 
         return adapter;

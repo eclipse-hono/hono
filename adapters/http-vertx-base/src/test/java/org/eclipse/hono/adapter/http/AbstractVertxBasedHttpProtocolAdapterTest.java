@@ -30,6 +30,7 @@ import static org.mockito.Mockito.when;
 
 import java.net.HttpURLConnection;
 
+import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.CommandConsumerFactory;
@@ -53,6 +54,7 @@ import org.eclipse.hono.service.metric.MetricsTags.EndpointType;
 import org.eclipse.hono.service.metric.MetricsTags.ProcessingOutcome;
 import org.eclipse.hono.service.metric.MetricsTags.QoS;
 import org.eclipse.hono.service.metric.MetricsTags.TtdStatus;
+import org.eclipse.hono.service.plan.ResourceLimitChecks;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
@@ -115,6 +117,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
     private Vertx                         vertx;
     private Context                       context;
     private HttpAdapterMetrics            metrics;
+    private ResourceLimitChecks           resourceLimitChecks;
 
     /**
      * Sets up common fixture.
@@ -172,6 +175,9 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         when(commandConsumerFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
         when(commandConsumerFactory.createCommandConsumer(anyString(), anyString(), any(Handler.class), any(Handler.class)))
             .thenReturn(Future.succeededFuture(commandConsumer));
+        resourceLimitChecks = mock(ResourceLimitChecks.class);
+        when(resourceLimitChecks.isMessageLimitReached(any(TenantObject.class), anyLong()))
+                .thenReturn(Future.succeededFuture(Boolean.FALSE));
     }
 
     /**
@@ -750,6 +756,78 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         assertThat(MessageHelper.getTimeUntilDisconnect(messageCaptor.getValue()), is(20));
     }
 
+    /**
+     * Verifies that a telemetry message is rejected due to the limit exceeded.
+     *
+     */
+    @Test
+    public void testMessageLimitExceededForATelemetryMessage() {
+
+        // GIVEN an adapter with a downstream telemetry consumer attached
+        final Future<ProtonDelivery> outcome = Future.succeededFuture(mock(ProtonDelivery.class));
+        givenATelemetrySenderForOutcome(outcome);
+
+        final HttpServer server = getHttpServer(false);
+        final AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> adapter = getAdapter(server, null);
+
+        final Buffer payload = Buffer.buffer("some payload");
+        final RoutingContext routingContext = newRoutingContext(payload);
+
+        // WHEN the message limit exceeds
+        when(resourceLimitChecks.isMessageLimitReached(any(TenantObject.class), anyLong()))
+                .thenReturn(Future.succeededFuture(Boolean.TRUE));
+        // WHEN a device that belongs to "my-tenant" publishes a telemetry message
+        adapter.uploadTelemetryMessage(routingContext, "my-tenant", "the-device", payload, "application/text");
+
+        // THEN the device gets a 429
+        assertContextFailedWithClientError(routingContext, HttpResponseStatus.TOO_MANY_REQUESTS.code());
+        // the message has been reported
+        verify(metrics).reportTelemetry(
+                eq(EndpointType.TELEMETRY),
+                eq("my-tenant"),
+                eq(ProcessingOutcome.UNPROCESSABLE),
+                eq(QoS.AT_MOST_ONCE),
+                eq(payload.length()),
+                eq(TtdStatus.NONE),
+                any());
+    }
+
+    /**
+     * Verifies that an event message is rejected due to the limit exceeded.
+     *
+     */
+    @Test
+    public void testMessageLimitExceededForAnEventMessage() {
+
+        // GIVEN an adapter with a downstream event consumer attached
+        final Future<ProtonDelivery> outcome = Future.succeededFuture(mock(ProtonDelivery.class));
+        givenAnEventSenderForOutcome(outcome);
+
+        final HttpServer server = getHttpServer(false);
+        final AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> adapter = getAdapter(server, null);
+
+        final Buffer payload = Buffer.buffer("some payload");
+        final RoutingContext routingContext = newRoutingContext(payload);
+
+        // WHEN the message limit exceeds
+        when(resourceLimitChecks.isMessageLimitReached(any(TenantObject.class), anyLong()))
+                .thenReturn(Future.succeededFuture(Boolean.TRUE));
+        // WHEN a device that belongs to "my-tenant" publishes an event message
+        adapter.uploadEventMessage(routingContext, "my-tenant", "the-device", payload, "application/text");
+
+        // THEN the device gets a 429
+        assertContextFailedWithClientError(routingContext, HttpResponseStatus.TOO_MANY_REQUESTS.code());
+        // the message has been reported
+        verify(metrics).reportTelemetry(
+                eq(EndpointType.EVENT),
+                eq("my-tenant"),
+                eq(ProcessingOutcome.UNPROCESSABLE),
+                eq(QoS.AT_LEAST_ONCE),
+                eq(payload.length()),
+                eq(TtdStatus.NONE),
+                any());
+    }
+
     private RoutingContext newRoutingContext(final Buffer payload) {
         return newRoutingContext(payload, mock(HttpServerResponse.class));
     }
@@ -853,6 +931,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         adapter.setRegistrationClientFactory(registrationClientFactory);
         adapter.setCredentialsClientFactory(credentialsClientFactory);
         adapter.setCommandConsumerFactory(commandConsumerFactory);
+        adapter.setResourceLimitChecks(resourceLimitChecks);
         return adapter;
     }
 
