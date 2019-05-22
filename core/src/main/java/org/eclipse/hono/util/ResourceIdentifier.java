@@ -117,7 +117,9 @@ public final class ResourceIdentifier {
 
         final StringBuilder b = new StringBuilder();
         for (int i = startIdx; i < resourcePath.length; i++) {
-            b.append(resourcePath[i]);
+            if (resourcePath[i] != null) {
+                b.append(resourcePath[i]);
+            }
             if (i < resourcePath.length - 1) {
                 b.append("/");
             }
@@ -241,6 +243,10 @@ public final class ResourceIdentifier {
     }
 
     /**
+     * Gets the resourceId part of this identifier.
+     * <p>
+     * E.g. for a resource <em>telemetry/DEFAULT_TENANT/4711</em>, the return value will be <em>4711</em>.
+     *
      * @return the resourceId or {@code null} if not set.
      */
     public String getResourceId() {
@@ -275,8 +281,10 @@ public final class ResourceIdentifier {
     }
 
     /**
-     * Gets a string representation of this resource identifier's
-     * <em>endpoint</em> and <em>tenantId</em>.
+     * Gets a string representation of this resource identifier's <em>endpoint</em> and <em>tenantId</em>.
+     * <p>
+     * E.g. for a resource <em>telemetry/DEFAULT_TENANT/4711</em>, the return value will be
+     * <em>telemetry/DEFAULT_TENANT</em>.
      *
      * @return A string consisting of the properties separated by a forward slash.
      */
@@ -286,6 +294,12 @@ public final class ResourceIdentifier {
 
     /**
      * Gets a string representation of the resource identifiers' parts without the base path.
+     * <p>
+     * E.g. for a resource <em>control/myTenant/deviceId/some/path</em>, the return value will be
+     * <em>deviceId/some/path</em>.
+     * <p>
+     * If this resource identifier doesn't contain any additional path segments after the base path, an empty string is
+     * returned.
      *
      * @return A string with all parts after the base bath.
      * @see ResourceIdentifier#getBasePath()
