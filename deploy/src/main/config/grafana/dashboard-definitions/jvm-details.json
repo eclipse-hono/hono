@@ -1136,7 +1136,7 @@
         "multi": false,
         "name": "instance",
         "options": [],
-        "query": "label_values(jvm_threads_peak,host)",
+        "query": "label_values(jvm_threads_peak_threads,host)",
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,
