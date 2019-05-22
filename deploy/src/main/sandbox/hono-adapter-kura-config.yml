@@ -12,26 +12,26 @@ hono:
     maxPayloadSize: 8096
   messaging:
     name: 'Hono Kura Adapter'
-    host: hono-dispatch-router.hono
+    host: ${hono.amqp-network.service}${service.suffix}
     port: 5673
     amqpHostname: hono-internal
   registration:
     name: 'Hono Kura Adapter'
-    host: ${hono.registration.host}
+    host: ${hono.registration.service}${service.suffix}
     port: 5672
     credentialsPath: /run/secrets/kura-adapter.credentials
   credentials:
     name: 'Hono Kura Adapter'
-    host: ${hono.registration.host}
+    host: ${hono.registration.service}${service.suffix}
     port: 5672
     credentialsPath: /run/secrets/kura-adapter.credentials
   tenant:
     name: 'Hono Kura Adapter'
-    host: ${hono.registration.host}
+    host: ${hono.registration.service}${service.suffix}
     port: 5672
     credentialsPath: /run/secrets/kura-adapter.credentials
   command:
     name: 'Hono Kura Adapter'
-    host: hono-dispatch-router.hono
+    host: ${hono.amqp-network.service}${service.suffix}
     port: 5673
     amqpHostname: hono-internal

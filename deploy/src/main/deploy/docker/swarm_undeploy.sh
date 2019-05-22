@@ -1,6 +1,6 @@
 #!/bin/sh
 #*******************************************************************************
-# Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+# Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
 #
 # See the NOTICE file(s) distributed with this work for additional
 # information regarding copyright ownership.
@@ -18,7 +18,7 @@ NS=hono
 
 echo UNDEPLOYING ECLIPSE HONO FROM DOCKER SWARM
 
-docker service rm hono-adapter-coap-vertx
+docker service rm ${hono.adapter-coap.service}
 docker secret rm \
   coap-adapter-keyStore.jks \
   coap-adapter-trustStore.jks \
@@ -27,28 +27,28 @@ docker secret rm \
   coap-adapter-cert.pem \
   hono-adapter-coap-vertx-config.yml
 
-docker service rm hono-adapter-kura
+docker service rm ${hono.adapter-kura.service}
 docker secret rm \
   kura-adapter.credentials \
   kura-adapter-key.pem \
   kura-adapter-cert.pem \
   hono-adapter-kura-config.yml
 
-docker service rm hono-adapter-http-vertx
+docker service rm ${hono.adapter-http.service}
 docker secret rm \
   http-adapter.credentials \
   http-adapter-key.pem \
   http-adapter-cert.pem \
   hono-adapter-http-vertx-config.yml
 
-docker service rm hono-adapter-mqtt-vertx
+docker service rm ${hono.adapter-mqtt.service}
 docker secret rm \
   mqtt-adapter.credentials \
   mqtt-adapter-key.pem \
   mqtt-adapter-cert.pem \
   hono-adapter-mqtt-vertx-config.yml
 
-docker service rm hono-adapter-amqp-vertx
+docker service rm ${hono.adapter-amqp.service}
 docker secret rm \
   hono-adapter-amqp-vertx-config.yml \
   amqp-adapter.credentials \
@@ -59,26 +59,26 @@ docker service rm init-device-registry-data
 docker secret rm example-credentials.json
 docker secret rm example-tenants.json
 
-docker service rm hono-service-device-registry
+docker service rm ${hono.registration.service}
 docker secret rm \
   device-registry-key.pem \
   device-registry-cert.pem \
   hono-service-device-registry-config.yml
 
-docker service rm hono-service-auth
+docker service rm ${hono.auth.service}
 docker secret rm \
   permissions.json \
   auth-server-key.pem \
   auth-server-cert.pem \
   hono-service-auth-config.yml
 
-docker service rm hono-dispatch-router
+docker service rm ${hono.amqp-network.service}
 docker secret rm \
   qdrouter-key.pem \
   qdrouter-cert.pem \
   qdrouterd.json
 
-docker service rm hono-artemis
+docker service rm ${hono.artemis.service}
 docker secret rm \
   artemis-broker.xml \
   artemis-bootstrap.xml \
@@ -98,7 +98,7 @@ docker config rm \
   message-details.json \
   prometheus.yaml
 
-docker service rm prometheus-operated
+docker service rm ${hono.prometheus.service}
 docker secret rm prometheus.yml
 
 docker service rm jaeger

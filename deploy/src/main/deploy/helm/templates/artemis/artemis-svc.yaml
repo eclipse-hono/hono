@@ -6,7 +6,7 @@ metadata:
     app: amqp-messaging-network
     version: "{{ .Chart.AppVersion }}"
     group: {{ .Values.project.groupId }}
-  name: hono-artemis
+  name: ${hono.artemis.service}
 spec:
   ports:
   - port: 5671

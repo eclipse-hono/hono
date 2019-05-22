@@ -10,33 +10,33 @@ hono:
   messaging:
     name: 'Hono COAP Adapter'
     amqpHostname: hono-internal
-    host: ${hono.amqp-network.host}
+    host: ${hono.amqp-network.service}${service.suffix}
     port: 5673
     keyPath: ${secret.path}/coap-adapter-key.pem
     certPath: ${secret.path}/coap-adapter-cert.pem
     trustStorePath: ${secret.path}/trusted-certs.pem
   registration:
     name: 'Hono COAP Adapter'
-    host: ${hono.registration.host}
+    host: ${hono.registration.service}${service.suffix}
     port: 5671
     credentialsPath: ${secret.path}/coap-adapter.credentials
     trustStorePath: ${secret.path}/trusted-certs.pem
   credentials:
     name: 'Hono COAP Adapter'
-    host: ${hono.registration.host}
+    host: ${hono.registration.service}${service.suffix}
     port: 5671
     credentialsPath: ${secret.path}/coap-adapter.credentials
     trustStorePath: ${secret.path}/trusted-certs.pem
   tenant:
     name: 'Hono COAP Adapter'
-    host: ${hono.registration.host}
+    host: ${hono.registration.service}${service.suffix}
     port: 5671
     credentialsPath: ${secret.path}/coap-adapter.credentials
     trustStorePath: ${secret.path}/trusted-certs.pem
   command:
     name: 'Hono COAP Adapter'
     amqpHostname: hono-internal
-    host: ${hono.amqp-network.host}
+    host: ${hono.amqp-network.service}${service.suffix}
     port: 5673
     keyPath: ${secret.path}/coap-adapter-key.pem
     certPath: ${secret.path}/coap-adapter-cert.pem

@@ -11,7 +11,7 @@ scrape_configs:
   metrics_path: /prometheus
   dns_sd_configs:
   - names:
-      - tasks.hono-service-auth.hono
+      - tasks.${hono.auth.service}${service.suffix}
     type: A
     port: ${prometheus.scraping.port}
     refresh_interval: 10s
@@ -20,7 +20,7 @@ scrape_configs:
   metrics_path: /prometheus
   dns_sd_configs:
   - names:
-      - tasks.hono-service-device-registry.hono
+      - tasks.${hono.registration.service}${service.suffix}
     type: A
     port: ${prometheus.scraping.port}
     refresh_interval: 10s
@@ -29,7 +29,7 @@ scrape_configs:
   metrics_path: /prometheus
   dns_sd_configs:
   - names:
-      - tasks.hono-adapter-amqp-vertx.hono
+      - tasks.${hono.adapter-amqp.service}${service.suffix}
     type: A
     port: ${prometheus.scraping.port}
     refresh_interval: 10s
@@ -38,7 +38,7 @@ scrape_configs:
   metrics_path: /prometheus
   dns_sd_configs:
   - names:
-      - tasks.hono-adapter-http-vertx.hono
+      - tasks.${hono.adapter-http.service}${service.suffix}
     type: A
     port: ${prometheus.scraping.port}
     refresh_interval: 10s
@@ -47,7 +47,7 @@ scrape_configs:
   metrics_path: /prometheus
   dns_sd_configs:
   - names:
-      - tasks.hono-adapter-mqtt-vertx.hono
+      - tasks.${hono.adapter-mqtt.service}${service.suffix}
     type: A
     port: ${prometheus.scraping.port}
     refresh_interval: 10s
@@ -56,7 +56,7 @@ scrape_configs:
   metrics_path: /prometheus
   dns_sd_configs:
   - names:
-      - tasks.hono-adapter-kura-vertx.hono
+      - tasks.${hono.adapter-kura.service}${service.suffix}
     type: A
     port: ${prometheus.scraping.port}
     refresh_interval: 10s

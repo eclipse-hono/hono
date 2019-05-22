@@ -4,7 +4,7 @@ hono:
     healthCheckPort: ${vertx.health.port}
     healthCheckBindAddress: 0.0.0.0
   auth:
-    host: ${hono.auth.host}
+    host: ${hono.auth.service}${service.suffix}
     port: 5671
     keyPath: /run/secrets/device-registry-key.pem
     certPath: /run/secrets/device-registry-cert.pem
@@ -29,8 +29,6 @@ hono:
       filename: /var/lib/hono/device-registry/device-identities.json
       saveToFile: true
       modificationEnabled: false
-      signing:
-        sharedSecret: ${hono.regAssertion.sharedSecret}
   credentials:
     svc:
       filename: /var/lib/hono/device-registry/credentials.json

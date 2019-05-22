@@ -12,33 +12,33 @@ hono:
   messaging:
     name: 'Hono HTTP Adapter'
     amqpHostname: hono-internal
-    host: ${hono.amqp-network.host}
+    host: ${hono.amqp-network.service}${service.suffix}
     port: 5673
     keyPath: ${secret.path}/http-adapter-key.pem
     certPath: ${secret.path}/http-adapter-cert.pem
     trustStorePath: ${secret.path}/trusted-certs.pem
   registration:
     name: 'Hono HTTP Adapter'
-    host: ${hono.registration.host}
+    host: ${hono.registration.service}${service.suffix}
     port: 5671
     credentialsPath: ${secret.path}/http-adapter.credentials
     trustStorePath: ${secret.path}/trusted-certs.pem
   credentials:
     name: 'Hono HTTP Adapter'
-    host: ${hono.registration.host}
+    host: ${hono.registration.service}${service.suffix}
     port: 5671
     credentialsPath: ${secret.path}/http-adapter.credentials
     trustStorePath: ${secret.path}/trusted-certs.pem
   tenant:
     name: 'Hono HTTP Adapter'
-    host: ${hono.registration.host}
+    host: ${hono.registration.service}${service.suffix}
     port: 5671
     credentialsPath: ${secret.path}/http-adapter.credentials
     trustStorePath: ${secret.path}/trusted-certs.pem
   command:
     name: 'Hono HTTP Adapter'
     amqpHostname: hono-internal
-    host: ${hono.amqp-network.host}
+    host: ${hono.amqp-network.service}${service.suffix}
     port: 5673
     keyPath: ${secret.path}/http-adapter-key.pem
     certPath: ${secret.path}/http-adapter-cert.pem

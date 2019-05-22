@@ -1,6 +1,6 @@
 #!/bin/sh
 #*******************************************************************************
-# Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+# Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
 #
 # See the NOTICE file(s) distributed with this work for additional
 # information regarding copyright ownership.
@@ -41,7 +41,7 @@ docker secret create -l project=$NS trusted-certs.pem $CERTS/trusted-certs.pem
 echo
 echo Deploying Prometheus ...
 docker secret create -l project=$NS prometheus.yml $SCRIPTPATH/prometheus.yml
-docker service create $CREATE_OPTIONS --name prometheus-operated \
+docker service create $CREATE_OPTIONS --name ${hono.prometheus.service} \
   -p 9090:9090 \
   --limit-memory 256m \
   --secret prometheus.yml \
@@ -78,7 +78,7 @@ docker secret create -l $NS artemis-roles.properties $SCRIPTPATH/artemis/artemis
 docker secret create -l $NS login.config $SCRIPTPATH/artemis/login.config
 docker secret create -l $NS logging.properties $SCRIPTPATH/artemis/logging.properties
 docker secret create -l $NS artemis.profile $SCRIPTPATH/artemis/artemis.profile
-docker service create $CREATE_OPTIONS --name hono-artemis \
+docker service create $CREATE_OPTIONS --name ${hono.artemis.service} \
   --env ARTEMIS_CONFIGURATION=/run/secrets \
   --secret artemis-broker.xml \
   --secret artemis-bootstrap.xml \
@@ -95,7 +95,7 @@ echo ... done
 echo
 echo Deploying Qpid Dispatch Router ...
 docker secret create -l project=$NS qdrouterd.json $SCRIPTPATH/qpid/sandbox-qdrouterd.json
-docker service create $CREATE_OPTIONS --name hono-dispatch-router -p 15671:5671 -p 15672:5672 \
+docker service create $CREATE_OPTIONS --name ${hono.amqp-network.service} -p 15671:5671 -p 15672:5672 \
   --secret hono.eclipse.org-key.pem \
   --secret hono.eclipse.org-cert.pem \
   --secret trusted-certs.pem \
@@ -110,7 +110,7 @@ docker secret create -l project=$NS auth-server-key.pem $CERTS/auth-server-key.p
 docker secret create -l project=$NS auth-server-cert.pem $CERTS/auth-server-cert.pem
 docker secret create -l project=$NS hono-service-auth-config.yml $SCRIPTPATH/hono-service-auth-config.yml
 docker secret create -l project=$NS sandbox-permissions.json $SCRIPTPATH/sandbox-permissions.json
-docker service create $CREATE_OPTIONS --name hono-service-auth \
+docker service create $CREATE_OPTIONS --name ${hono.auth.service} \
   --secret auth-server-key.pem \
   --secret auth-server-cert.pem \
   --secret trusted-certs.pem \
@@ -147,7 +147,7 @@ fi
 docker secret create -l project=$NS device-registry-key.pem $CERTS/device-registry-key.pem
 docker secret create -l project=$NS device-registry-cert.pem $CERTS/device-registry-cert.pem
 docker secret create -l project=$NS hono-service-device-registry-config.yml $SCRIPTPATH/hono-service-device-registry-config.yml
-docker service create $CREATE_OPTIONS --name hono-service-device-registry -p 25671:5671 -p 28080:8080 -p 28443:8443 \
+docker service create $CREATE_OPTIONS --name ${hono.registration.service} -p 25671:5671 -p 28080:8080 -p 28443:8443 \
   --secret device-registry-key.pem \
   --secret device-registry-cert.pem \
   --secret hono.eclipse.org-key.pem \
@@ -169,7 +169,7 @@ echo
 echo Deploying HTTP adapter ...
 docker secret create -l project=$NS http-adapter.credentials $SCRIPTPATH/../deploy/http-adapter.credentials
 docker secret create -l project=$NS hono-adapter-http-vertx-config.yml $SCRIPTPATH/hono-adapter-http-vertx-config.yml
-docker service create $CREATE_OPTIONS --name hono-adapter-http-vertx -p 8080:8080 -p 8443:8443 \
+docker service create $CREATE_OPTIONS --name ${hono.adapter-http.service} -p 8080:8080 -p 8443:8443 \
   --secret hono.eclipse.org-key.pem \
   --secret hono.eclipse.org-cert.pem \
   --secret http-adapter.credentials \
@@ -187,7 +187,7 @@ echo
 echo Deploying MQTT adapter ...
 docker secret create -l project=$NS mqtt-adapter.credentials $SCRIPTPATH/../deploy/mqtt-adapter.credentials
 docker secret create -l project=$NS hono-adapter-mqtt-vertx-config.yml $SCRIPTPATH/hono-adapter-mqtt-vertx-config.yml
-docker service create $CREATE_OPTIONS --name hono-adapter-mqtt-vertx -p 1883:1883 -p 8883:8883 \
+docker service create $CREATE_OPTIONS --name ${hono.adapter-mqtt.service} -p 1883:1883 -p 8883:8883 \
   --secret hono.eclipse.org-key.pem \
   --secret hono.eclipse.org-cert.pem \
   --secret mqtt-adapter.credentials \
@@ -205,7 +205,7 @@ echo
 echo Deploying AMQP adapter ...
 docker secret create -l project=$NS amqp-adapter.credentials $SCRIPTPATH/../deploy/amqp-adapter.credentials
 docker secret create -l project=$NS hono-adapter-amqp-vertx-config.yml $SCRIPTPATH/hono-adapter-amqp-vertx-config.yml
-docker service create $CREATE_OPTIONS --name hono-adapter-amqp-vertx -p 5672:5672 -p 5671:5671 \
+docker service create $CREATE_OPTIONS --name ${hono.adapter-amqp.service} -p 5672:5672 -p 5671:5671 \
   --secret hono.eclipse.org-key.pem \
   --secret hono.eclipse.org-cert.pem \
   --secret amqp-adapter.credentials \
@@ -222,7 +222,7 @@ echo
 echo Deploying Kura adapter ...
 docker secret create -l project=$NS kura-adapter.credentials $SCRIPTPATH/../deploy/kura-adapter.credentials
 docker secret create -l project=$NS hono-adapter-kura-config.yml $SCRIPTPATH/hono-adapter-kura-config.yml
-docker service create $CREATE_OPTIONS --name hono-adapter-kura -p 1884:1883 -p 8884:8883 \
+docker service create $CREATE_OPTIONS --name ${hono.adapter-kura.service} -p 1884:1883 -p 8884:8883 \
   --secret hono.eclipse.org-key.pem \
   --secret hono.eclipse.org-cert.pem \
   --secret kura-adapter.credentials \

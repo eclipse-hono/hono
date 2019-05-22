@@ -12,25 +12,25 @@ hono:
   messaging:
     name: 'Hono AMQP Adapter'
     amqpHostname: hono-internal
-    host: hono-dispatch-router.hono
+    host: ${hono.amqp-network.service}${service.suffix}
     port: 5673
   registration:
     name: 'Hono AMQP Adapter'
-    host: ${hono.registration.host}
+    host: ${hono.registration.service}${service.suffix}
     port: 5672
     credentialsPath: /run/secrets/amqp-adapter.credentials
   credentials:
     name: 'Hono AMQP Adapter'
-    host: ${hono.registration.host}
+    host: ${hono.registration.service}${service.suffix}
     port: 5672
     credentialsPath: /run/secrets/amqp-adapter.credentials
   tenant:
     name: 'Hono AMQP Adapter'
-    host: ${hono.registration.host}
+    host: ${hono.registration.service}${service.suffix}
     port: 5672
     credentialsPath: /run/secrets/amqp-adapter.credentials
   command:
     name: 'Hono AMQP Adapter'
     amqpHostname: hono-internal
-    host: hono-dispatch-router.hono
+    host: ${hono.amqp-network.service}${service.suffix}
     port: 5673

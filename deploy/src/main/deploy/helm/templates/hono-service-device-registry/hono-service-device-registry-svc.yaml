@@ -7,7 +7,7 @@ metadata:
     version: "{{ .Chart.AppVersion }}"
     group: {{ .Values.project.groupId }}
     hono-metrics: prometheus
-  name: hono-service-device-registry
+  name: ${hono.registration.service}
 spec:
   ports:
   - name: amqps

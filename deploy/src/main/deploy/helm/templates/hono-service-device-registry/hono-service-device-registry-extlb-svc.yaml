@@ -8,7 +8,7 @@ metadata:
     version: "{{ .Chart.AppVersion }}"
     group: {{ .Values.project.groupId }}
     hono-metrics: prometheus
-  name: hono-service-device-registry-extlb
+  name: ${hono.registration.service}-extlb
 spec:
   type: LoadBalancer
   ports:

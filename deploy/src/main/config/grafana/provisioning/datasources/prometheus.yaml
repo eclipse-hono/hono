@@ -6,7 +6,7 @@ datasources:
   type: prometheus
   access: proxy
   orgId: 1
-  url: http://${hono.prometheus.host}:9090
+  url: http://${hono.prometheus.service}${service.suffix}:9090
   basicAuth: false
   isDefault: false
   editable: true

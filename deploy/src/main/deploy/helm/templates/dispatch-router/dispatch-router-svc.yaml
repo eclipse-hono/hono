@@ -6,7 +6,7 @@ metadata:
     app: amqp-messaging-network
     version: "{{ .Chart.AppVersion }}"
     group: {{ .Values.project.groupId }}
-  name: hono-dispatch-router
+  name: ${hono.amqp-network.service}
 spec:
   ports:
   - port: 5673

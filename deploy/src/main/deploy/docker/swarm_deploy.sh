@@ -1,6 +1,6 @@
 #!/bin/sh
 #*******************************************************************************
-# Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+# Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
 #
 # See the NOTICE file(s) distributed with this work for additional
 # information regarding copyright ownership.
@@ -72,7 +72,7 @@ docker secret create -l project=$NS trusted-certs.pem $CERTS/trusted-certs.pem
 echo
 echo Deploying Prometheus ...
 docker secret create -l project=$NS prometheus.yml $SCRIPTPATH/prometheus/prometheus.yml
-docker service create $CREATE_OPTIONS --name prometheus-operated \
+docker service create $CREATE_OPTIONS --name ${hono.prometheus.service} \
   -p 9090:9090 \
   --limit-memory 512m \
   --secret prometheus.yml \
@@ -111,7 +111,7 @@ docker secret create -l $NS logging.properties $SCRIPTPATH/artemis/logging.prope
 docker secret create -l $NS artemis.profile $SCRIPTPATH/artemis/artemis.profile
 docker secret create -l $NS artemisKeyStore.p12 $CERTS/artemisKeyStore.p12
 docker secret create -l $NS trustStore.jks $CERTS/trustStore.jks
-docker service create $CREATE_OPTIONS --name hono-artemis \
+docker service create $CREATE_OPTIONS --name ${hono.artemis.service} \
   --env ARTEMIS_CONFIGURATION=/run/secrets \
   --secret artemis-broker.xml \
   --secret artemis-bootstrap.xml \
@@ -138,7 +138,7 @@ fi
 docker secret create -l project=$NS qdrouter-key.pem $CERTS/qdrouter-key.pem
 docker secret create -l project=$NS qdrouter-cert.pem $CERTS/qdrouter-cert.pem
 docker secret create -l project=$NS qdrouterd.json $SCRIPTPATH/qpid/qdrouterd-with-broker.json
-docker service create $CREATE_OPTIONS --name hono-dispatch-router ${PORT_FORWARDS} \
+docker service create $CREATE_OPTIONS --name ${hono.amqp-network.service} $PORT_FORWARDS \
   --secret qdrouter-key.pem \
   --secret qdrouter-cert.pem \
   --secret trusted-certs.pem \
@@ -170,7 +170,7 @@ docker secret create -l project=$NS auth-server-key.pem $CERTS/auth-server-key.p
 docker secret create -l project=$NS auth-server-cert.pem $CERTS/auth-server-cert.pem
 docker secret create -l project=$NS permissions.json $SCRIPTPATH/../example-permissions.json
 docker secret create -l project=$NS hono-service-auth-config.yml $SCRIPTPATH/hono-service-auth-config.yml
-docker service create $CREATE_OPTIONS --name hono-service-auth \
+docker service create $CREATE_OPTIONS --name ${hono.auth.service} \
   --secret auth-server-key.pem \
   --secret auth-server-cert.pem \
   --secret trusted-certs.pem \
@@ -203,7 +203,7 @@ fi
 docker secret create -l project=$NS device-registry-key.pem $CERTS/device-registry-key.pem
 docker secret create -l project=$NS device-registry-cert.pem $CERTS/device-registry-cert.pem
 docker secret create -l project=$NS hono-service-device-registry-config.yml $SCRIPTPATH/hono-service-device-registry-config.yml
-docker service create $CREATE_OPTIONS --name hono-service-device-registry -p 25671:5671 -p 28080:8080 -p 28443:8443 \
+docker service create $CREATE_OPTIONS --name ${hono.registration.service} -p 25671:5671 -p 28080:8080 -p 28443:8443 \
   --secret device-registry-key.pem \
   --secret device-registry-cert.pem \
   --secret auth-server-cert.pem \
@@ -228,7 +228,7 @@ docker secret create -l project=$NS http-adapter-key.pem $CERTS/http-adapter-key
 docker secret create -l project=$NS http-adapter-cert.pem $CERTS/http-adapter-cert.pem
 docker secret create -l project=$NS http-adapter.credentials $SCRIPTPATH/../http-adapter.credentials
 docker secret create -l project=$NS hono-adapter-http-vertx-config.yml $SCRIPTPATH/hono-adapter-http-vertx-config.yml
-docker service create $CREATE_OPTIONS --name hono-adapter-http-vertx -p 8080:8080 -p 8443:8443 \
+docker service create $CREATE_OPTIONS --name ${hono.adapter-http.service} -p 8080:8080 -p 8443:8443 \
   --secret http-adapter-key.pem \
   --secret http-adapter-cert.pem \
   --secret trusted-certs.pem \
@@ -250,7 +250,7 @@ docker secret create -l project=$NS mqtt-adapter-key.pem $CERTS/mqtt-adapter-key
 docker secret create -l project=$NS mqtt-adapter-cert.pem $CERTS/mqtt-adapter-cert.pem
 docker secret create -l project=$NS mqtt-adapter.credentials $SCRIPTPATH/../mqtt-adapter.credentials
 docker secret create -l project=$NS hono-adapter-mqtt-vertx-config.yml $SCRIPTPATH/hono-adapter-mqtt-vertx-config.yml
-docker service create $CREATE_OPTIONS --name hono-adapter-mqtt-vertx -p 1883:1883 -p 8883:8883 \
+docker service create $CREATE_OPTIONS --name ${hono.adapter-mqtt.service} -p 1883:1883 -p 8883:8883 \
   --secret mqtt-adapter-key.pem \
   --secret mqtt-adapter-cert.pem \
   --secret trusted-certs.pem \
@@ -272,7 +272,7 @@ docker secret create -l project=$NS amqp-adapter-key.pem $CERTS/amqp-adapter-key
 docker secret create -l project=$NS amqp-adapter-cert.pem $CERTS/amqp-adapter-cert.pem
 docker secret create -l project=$NS amqp-adapter.credentials $SCRIPTPATH/../amqp-adapter.credentials
 docker secret create -l project=$NS hono-adapter-amqp-vertx-config.yml $SCRIPTPATH/hono-adapter-amqp-vertx-config.yml
-docker service create $CREATE_OPTIONS --name hono-adapter-amqp-vertx -p 5672:5672 -p 5671:5671 \
+docker service create $CREATE_OPTIONS --name ${hono.adapter-amqp.service} -p 5672:5672 -p 5671:5671 \
   --secret amqp-adapter-key.pem \
   --secret amqp-adapter-cert.pem \
   --secret trusted-certs.pem \
@@ -294,7 +294,7 @@ docker secret create -l project=$NS kura-adapter-key.pem $CERTS/kura-adapter-key
 docker secret create -l project=$NS kura-adapter-cert.pem $CERTS/kura-adapter-cert.pem
 docker secret create -l project=$NS kura-adapter.credentials $SCRIPTPATH/../kura-adapter.credentials
 docker secret create -l project=$NS hono-adapter-kura-config.yml $SCRIPTPATH/hono-adapter-kura-config.yml
-docker service create $CREATE_OPTIONS --name hono-adapter-kura -p 1884:1883 -p 8884:8883 \
+docker service create $CREATE_OPTIONS --name ${hono.adapter-kura.service} -p 1884:1883 -p 8884:8883 \
   --secret kura-adapter-key.pem \
   --secret kura-adapter-cert.pem \
   --secret trusted-certs.pem \
@@ -318,7 +318,7 @@ docker secret create -l project=$NS coap-adapter-key.pem $CERTS/coap-adapter-key
 docker secret create -l project=$NS coap-adapter-cert.pem $CERTS/coap-adapter-cert.pem
 docker secret create -l project=$NS coap-adapter.credentials $SCRIPTPATH/../coap-adapter.credentials
 docker secret create -l project=$NS hono-adapter-coap-vertx-config.yml $SCRIPTPATH/hono-adapter-coap-vertx-config.yml
-docker service create $CREATE_OPTIONS --name hono-adapter-coap-vertx -p 5683:5683/udp -p 5684:5684/udp \
+docker service create $CREATE_OPTIONS --name ${hono.adapter-coap.service} -p 5683:5683/udp -p 5684:5684/udp \
   --secret coap-adapter-key.pem \
   --secret coap-adapter-cert.pem \
   --secret trusted-certs.pem \
