@@ -556,7 +556,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
 
         // WHEN an unauthenticated device publishes a command response
         final String replyToAddress = String.format("%s/%s/%s", CommandConstants.COMMAND_ENDPOINT, TEST_TENANT_ID,
-                TEST_DEVICE);
+                Command.getDeviceFacingReplyToId("test-reply-id", TEST_DEVICE));
 
         final Map<String, Object> propertyMap = new HashMap<>();
         propertyMap.put(MessageHelper.APP_PROPERTY_STATUS, 200);
