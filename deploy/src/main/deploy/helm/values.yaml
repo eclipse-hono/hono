@@ -51,7 +51,7 @@ platform: kubernetes
 # indicates whether external services should be deployed using the
 # "LoadBalancer" type (true) or the "NodePort" type (false)
 # will always be false when deploying to "platform: openshift".
-useLoadBalancer: false
+useLoadBalancer: true
 
 jaeger:
   # whether the Jaeger tracing component should be deployed

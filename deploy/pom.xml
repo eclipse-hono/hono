@@ -125,7 +125,8 @@
                   <targetPath>deploy</targetPath>
                   <includes>
                     *.json,
-                    *.credentials
+                    *.credentials,
+                    services.sh
                   </includes>
                   <filtering>true</filtering>
                 </resource>
@@ -156,29 +157,6 @@
               </resources>
               <filters>
                 <filter>${project.basedir}/src/main/docker-config.properties</filter>
-              </filters>
-            </configuration>
-          </execution>
-          <execution>
-            <id>create_kubernetes_config_files</id>
-            <phase>process-resources</phase>
-            <goals>
-              <goal>copy-resources</goal>
-            </goals>
-            <configuration>
-              <outputDirectory>${project.build.directory}/deploy/kubernetes</outputDirectory>
-              <resources>
-                <resource>
-                  <directory>${project.basedir}/src/main/deploy/kubernetes</directory>
-                  <filtering>true</filtering>
-                </resource>
-                <resource>
-                  <directory>${project.basedir}/src/main/config</directory>
-                  <filtering>true</filtering>
-                </resource>
-              </resources>
-              <filters>
-                <filter>${project.basedir}/src/main/kubernetes-config.properties</filter>
               </filters>
             </configuration>
           </execution>
