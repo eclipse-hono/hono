@@ -32,6 +32,12 @@ import io.vertx.core.buffer.Buffer;
 public final class Command {
 
     /**
+     * Bit flag value for the boolean option that defines whether the original reply-to address of the command message
+     * contained the device id.
+     */
+    private static final byte FLAG_REPLY_TO_CONTAINED_DEVICE_ID = 1;
+
+    /**
      * If present, the command is invalid.
      */
     private final Optional<String> validationError;
@@ -349,14 +355,45 @@ public final class Command {
             return null;
         }
 
-        final String stringOne = Optional.ofNullable(correlationId).orElse("");
-        String stringTwo = Optional.ofNullable(replyToId).orElse("");
-        final boolean removeDeviceFromReplyTo = stringTwo.startsWith(deviceId + "/");
-        if (removeDeviceFromReplyTo) {
-            stringTwo = stringTwo.substring(deviceId.length() + 1);
+        final String correlationIdOrEmpty = Optional.ofNullable(correlationId).orElse("");
+        String replyToIdWithoutDeviceOrEmpty = Optional.ofNullable(replyToId).orElse("");
+        final boolean replyToContainedDeviceId = replyToIdWithoutDeviceOrEmpty.startsWith(deviceId + "/");
+        if (replyToContainedDeviceId) {
+            replyToIdWithoutDeviceOrEmpty = replyToIdWithoutDeviceOrEmpty.substring(deviceId.length() + 1);
         }
-        return String.format("%s%02x%s%s", removeDeviceFromReplyTo ? "1" : "0", stringOne.length(), stringOne,
-                stringTwo);
+        return String.format("%s%02x%s%s", encodeReplyToOptions(replyToContainedDeviceId), correlationIdOrEmpty.length(),
+                correlationIdOrEmpty, replyToIdWithoutDeviceOrEmpty);
+    }
+
+    /**
+     * Encodes the given boolean parameters related to the original reply-to address of the command message as a single
+     * digit string.
+     * 
+     * @param replyToContainedDeviceId Whether the original reply-to address of the command message contained the device
+     *            id.
+     * @return The encoded options as a single digit string.
+     */
+    static String encodeReplyToOptions(final boolean replyToContainedDeviceId) {
+        int bitFlag = 0;
+        if (replyToContainedDeviceId) {
+            bitFlag |= FLAG_REPLY_TO_CONTAINED_DEVICE_ID;
+        }
+        return String.valueOf(bitFlag);
+    }
+
+    /**
+     * Checks if the original reply-to address of the command message contained the device id.
+     *
+     * @param replyToOptionsBitFlag The bit flag returned by {@link #encodeReplyToOptions(boolean)}.
+     * @return Whether the original reply-to address of the command message contained the device id.
+     * @throws NumberFormatException If the given replyToOptionsBitFlag can't be parsed as an integer.
+     */
+    static boolean isReplyToContainedDeviceIdOptionSet(final String replyToOptionsBitFlag) {
+        return decodeReplyToOption(replyToOptionsBitFlag, FLAG_REPLY_TO_CONTAINED_DEVICE_ID);
+    }
+
+    private static boolean decodeReplyToOption(final String replyToOptionsBitFlag, final byte optionBitConstant) {
+        return (Integer.parseInt(replyToOptionsBitFlag) & optionBitConstant) == optionBitConstant;
     }
 
     @Override
@@ -373,18 +410,17 @@ public final class Command {
      * Gets the reply-to-id that will be set when forwarding the command to the device.
      * <p>
      * It is ensured that this id starts with the device id.
-     * <p>
-     * See {@link CommandResponse#getReplyToId(ResourceIdentifier)} for the conversion in the opposite direction.
      *
      * @param replyToId The reply-to-id as extracted from the 'reply-to' of the command AMQP message. Potentially not
      *            containing the device id.
      * @param deviceId The device id.
      * @return The reply-to-id, starting with the device id.
      */
-    static String getDeviceFacingReplyToId(final String replyToId, final String deviceId) {
-        if (replyToId.startsWith(deviceId + "/")) {
-            return replyToId.replaceFirst(deviceId + "/", deviceId + "/0");
-        }
-        return String.format("%s/1%s", deviceId, replyToId);
+    public static String getDeviceFacingReplyToId(final String replyToId, final String deviceId) {
+        final boolean replyToContainedDeviceId = replyToId.startsWith(deviceId + "/");
+        final String replyToIdWithoutDeviceId = replyToContainedDeviceId ? replyToId.substring(deviceId.length() + 1)
+                : replyToId;
+        final String bitFlagString = encodeReplyToOptions(replyToContainedDeviceId);
+        return String.format("%s/%s%s", deviceId, bitFlagString, replyToIdWithoutDeviceId);
     }
 }

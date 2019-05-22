@@ -88,7 +88,8 @@ public final class CommandResponse {
             return null;
         } else {
             try {
-                final boolean addDeviceIdToReply = "1".equals(requestId.substring(0, 1));
+                final String replyToOptionsBitFlag = requestId.substring(0, 1);
+                final boolean addDeviceIdToReply = Command.isReplyToContainedDeviceIdOptionSet(replyToOptionsBitFlag);
                 final int lengthStringOne = Integer.parseInt(requestId.substring(1, 3), 16);
                 final String replyId = requestId.substring(3 + lengthStringOne);
                 return new CommandResponse(
@@ -183,14 +184,18 @@ public final class CommandResponse {
      *
      * @param resource The command response resource string.
      * @return The reply-to-id.
+     * @throws IllegalArgumentException If the given resource has an invalid format.
      */
     static String getReplyToId(final ResourceIdentifier resource) {
         final String deviceId = resource.getResourceId();
         final String pathWithoutBase = resource.getPathWithoutBase();
-        if (pathWithoutBase.startsWith(deviceId + "/1")) {
-            return pathWithoutBase.replaceFirst(deviceId + "/1", "");
-        } else {
-            return pathWithoutBase.replaceFirst(deviceId + "/0", deviceId + "/");
+        if (pathWithoutBase.length() < deviceId.length() + 3) {
+            throw new IllegalArgumentException("invalid resource length");
         }
+        // pathWithoutBase starts with deviceId/[bit flag]
+        final String replyToOptionsBitFlag = pathWithoutBase.substring(deviceId.length() + 1, deviceId.length() + 2);
+        final boolean replyToContainedDeviceId = Command.isReplyToContainedDeviceIdOptionSet(replyToOptionsBitFlag);
+        return pathWithoutBase.replaceFirst(deviceId + "/" + replyToOptionsBitFlag,
+                replyToContainedDeviceId ? deviceId + "/" : "");
     }
 }
