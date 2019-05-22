@@ -11,24 +11,31 @@
    
     SPDX-License-Identifier: EPL-2.0
  -->
-<assembly
-    xmlns="http://maven.apache.org/ASSEMBLY/2.0.0"
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://maven.apache.org/ASSEMBLY/2.0.0 http://maven.apache.org/xsd/assembly-2.0.0.xsd">
+<assembly xmlns="http://maven.apache.org/ASSEMBLY/2.0.0"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/ASSEMBLY/2.0.0 http://maven.apache.org/xsd/assembly-2.0.0.xsd">
 
-    <id>chart</id>
+  <id>chart</id>
 
-    <formats>
-        <format>tar.gz</format>
-    </formats>
-    <includeBaseDirectory>false</includeBaseDirectory>
+  <formats>
+    <format>tar.gz</format>
+  </formats>
+  <includeBaseDirectory>false</includeBaseDirectory>
 
-    <fileSets>
-        <fileSet>
-            <outputDirectory>eclipse-hono</outputDirectory>
-            <directory>${project.build.directory}/deploy/helm</directory>
-            <fileMode>0755</fileMode>
-        </fileSet>
-    </fileSets>
+  <fileSets>
+    <fileSet>
+      <outputDirectory>eclipse-hono</outputDirectory>
+      <directory>${project.build.directory}/deploy/helm</directory>
+      <fileMode>0755</fileMode>
+    </fileSet>
+    <fileSet>
+      <outputDirectory></outputDirectory>
+      <directory>${project.build.directory}/deploy</directory>
+      <includes>
+        <include>*.sh</include>
+      </includes>
+      <fileMode>0755</fileMode>
+    </fileSet>
+  </fileSets>
 
 </assembly>

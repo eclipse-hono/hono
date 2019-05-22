@@ -56,6 +56,11 @@ title = "Release Notes"
   as sender link address is still possible but gateway agnostic addressing of devices is not supported for 
   such command messages.
 
+### Depreciations
+
+* Instructions for script based deployment to Kubernetes have been removed from the deployment guide.
+  Using Helm is now the only supported way of deploying Hono to Kubernetes.
+
 ## 1.0-M3
 
 ### Fixes & Enhancements
