@@ -38,10 +38,10 @@ useLoadBalancer: false
 jaeger:
   # whether the Jaeger tracing component should be deployed
   enabled: false
-  agentHost: jaeger-agent.hono
+  agentHost: jaeger-agent
   # environment variables for containers that provide tracing data
   env:
-    JAEGER_AGENT_HOST: jaeger-agent.hono
+    JAEGER_AGENT_HOST: jaeger-agent
     JAEGER_AGENT_PORT: "6831"
     JAEGER_SAMPLER_TYPE: const
     JAEGER_SAMPLER_PARAM: 1
@@ -112,6 +112,64 @@ prometheus-operator:
     ##
     imagePullSecrets: []
     # - name: "image-pull-secret"
+
+
+  ## Using default values from https://github.com/helm/charts/blob/master/stable/grafana/values.yaml
+  ##
+  grafana:
+    enabled: true
+
+    ## Deploy default dashboards.
+    ##
+    defaultDashboardsEnabled: false
+
+    adminPassword: admin
+
+    ingress:
+      ## If true, Prometheus Ingress will be created
+      ##
+      enabled: false
+
+      ## Annotations for Prometheus Ingress
+      ##
+      annotations: {}
+        # kubernetes.io/ingress.class: nginx
+        # kubernetes.io/tls-acme: "true"
+
+      ## Labels to be added to the Ingress
+      ##
+      labels: {}
+
+      ## Hostnames.
+      ## Must be provided if Ingress is enable.
+      ##
+      # hosts:
+      #   - prometheus.domain.com
+      hosts: []
+
+      ## TLS configuration for prometheus Ingress
+      ## Secret must be manually created in the namespace
+      ##
+      tls: []
+      # - secretName: prometheus-general-tls
+      #   hosts:
+      #   - prometheus.example.com
+
+    sidecar:
+      dashboards:
+        enabled: true
+        label: grafana_dashboard
+      datasources:
+        enabled: true
+        label: grafana_datasource
+
+    extraConfigmapMounts: []
+    # - name: certs-configmap
+    #   mountPath: /etc/grafana/ssl/
+    #   configMap: certs-configmap
+    #   readOnly: true
+
+
 
   ## Configuration for alertmanager
   ## ref: https://prometheus.io/docs/alerting/alertmanager/
@@ -350,65 +408,12 @@ prometheus-operator:
       ##
       additionalPeers: []
 
-  ## Using default values from https://github.com/helm/charts/blob/master/stable/grafana/values.yaml
-  ##
-  grafana:
-    enabled: true
 
-    ## Deploy default dashboards.
-    ##
-    defaultDashboardsEnabled: false
-
-    adminPassword: admin
-
-    ingress:
-      ## If true, Prometheus Ingress will be created
-      ##
-      enabled: false
-
-      ## Annotations for Prometheus Ingress
-      ##
-      annotations: {}
-        # kubernetes.io/ingress.class: nginx
-        # kubernetes.io/tls-acme: "true"
-
-      ## Labels to be added to the Ingress
-      ##
-      labels: {}
-
-      ## Hostnames.
-      ## Must be provided if Ingress is enable.
-      ##
-      # hosts:
-      #   - prometheus.domain.com
-      hosts: []
-
-      ## TLS configuration for prometheus Ingress
-      ## Secret must be manually created in the namespace
-      ##
-      tls: []
-      # - secretName: prometheus-general-tls
-      #   hosts:
-      #   - prometheus.example.com
-
-    sidecar:
-      dashboards:
-        enabled: true
-        label: grafana_dashboard
-      datasources:
-        enabled: true
-        label: grafana_datasource
-
-    extraConfigmapMounts: []
-    # - name: certs-configmap
-    #   mountPath: /etc/grafana/ssl/
-    #   configMap: certs-configmap
-    #   readOnly: true
 
   ## Component scraping the kube api server
   ##
   kubeApiServer:
-    enabled: true
+    enabled: false
     tlsConfig:
       serverName: kubernetes
       insecureSkipVerify: false
@@ -420,10 +425,12 @@ prometheus-operator:
           component: apiserver
           provider: kubernetes
 
+
+
   ## Component scraping the kubelet and kubelet-hosted cAdvisor
   ##
   kubelet:
-    enabled: true
+    enabled: false
     namespace: kube-system
 
     serviceMonitor:
@@ -432,10 +439,12 @@ prometheus-operator:
       ##
       https: false
 
+
+
   ## Component scraping the kube controller manager
   ##
   kubeControllerManager:
-    enabled: true
+    enabled: false
 
     ## If your kube controller manager is not deployed as a pod, specify IPs it can be found on
     ##
@@ -451,15 +460,19 @@ prometheus-operator:
       targetPort: 10252
       selector:
         k8s-app: kube-controller-manager
+
+
   ## Component scraping coreDns. Use either this or kubeDns
   ##
   coreDns:
-    enabled: true
+    enabled: false
     service:
       port: 9153
       targetPort: 9153
       selector:
         k8s-app: coredns
+
+
 
   ## Component scraping kubeDns. Use either this or coreDns
   ##
@@ -468,10 +481,12 @@ prometheus-operator:
     service:
       selector:
         k8s-app: kube-dns
+
+
   ## Component scraping etcd
   ##
   kubeEtcd:
-    enabled: true
+    enabled: false
 
     ## If your etcd is not deployed as a pod, specify IPs it can be found on
     ##
@@ -507,10 +522,12 @@ prometheus-operator:
       certFile: ""
       keyFile: ""
 
+
+
   ## Component scraping kube scheduler
   ##
   kubeScheduler:
-    enabled: true
+    enabled: false
 
     ## If your kube scheduler is not deployed as a pod, specify IPs it can be found on
     ##
@@ -527,10 +544,12 @@ prometheus-operator:
       selector:
         k8s-app: kube-scheduler
 
+
+
   ## Component scraping kube state metrics
   ##
   kubeStateMetrics:
-    enabled: true
+    enabled: false
 
   ## Configuration for kube-state-metrics subchart
   ##
@@ -703,6 +722,8 @@ prometheus-operator:
       repository: k8s.gcr.io/hyperkube
       tag: v1.12.1
       pullPolicy: IfNotPresent
+
+
 
   ## Deploy a Prometheus instance
   ##

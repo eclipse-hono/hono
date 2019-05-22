@@ -30,9 +30,6 @@
 
     <properties>
         <docker.skip.build>true</docker.skip.build>
-        <hono.amqp-network.host>hono-dispatch-router.hono</hono.amqp-network.host>
-        <hono.registration.host>hono-service-device-registry.hono</hono.registration.host>
-        <hono.auth.host>hono-service-auth.hono</hono.auth.host>
         <default-java-options>-XX:MinRAMPercentage=80 -XX:MaxRAMPercentage=80</default-java-options>
 
         <!-- This is only used by the Docker Swarm deployment -->
@@ -201,11 +198,6 @@
                                         *.credentials
                                     </includes>
                                     <filtering>true</filtering>
-                                </resource>
-                                <resource>
-                                    <directory>${project.basedir}/src/main/deploy/resource-descriptors/prometheus</directory>
-                                    <targetPath>templates/prometheus/</targetPath>
-                                    <includes>instance.yml</includes>
                                 </resource>
                             </resources>
                             <filters>
