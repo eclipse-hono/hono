@@ -340,7 +340,8 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
     private long calculateDataUsagePeriod(final LocalDate effectiveSince, final long periodInDays) {
         final long inclusiveDaysBetween = DAYS.between(effectiveSince, LocalDate.now()) + 1;
         if (inclusiveDaysBetween > 0 && periodInDays > 0) {
-            return inclusiveDaysBetween % periodInDays;
+            final long dataUsagePeriodInDays = inclusiveDaysBetween % periodInDays;
+            return dataUsagePeriodInDays == 0 ? periodInDays : dataUsagePeriodInDays;
         }
         return -1L;
     }
