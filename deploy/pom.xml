@@ -252,7 +252,7 @@
         <artifactId>maven-assembly-plugin</artifactId>
         <executions>
           <execution>
-            <id>eclipse-hono</id>
+            <id>create_downloadable_artifacts</id>
             <phase>package</phase>
             <goals>
               <goal>single</goal>
@@ -260,11 +260,11 @@
             <configuration>
               <attach>false</attach>
               <descriptors>
-                <descriptor>src/main/assembly/hono.xml</descriptor>
+                <descriptor>src/main/assembly/deploy.xml</descriptor>
+                <descriptor>src/main/assembly/chart.xml</descriptor>
               </descriptors>
               <tarLongFileMode>posix</tarLongFileMode>
-              <finalName>eclipse-hono-deploy-${project.version}</finalName>
-              <appendAssemblyId>false</appendAssemblyId>
+              <finalName>eclipse-hono-${project.version}</finalName>
             </configuration>
           </execution>
         </executions>

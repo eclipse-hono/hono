@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-    Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+    Copyright (c) 2019 Contributors to the Eclipse Foundation
    
     See the NOTICE file(s) distributed with this work for additional
     information regarding copyright ownership.
@@ -16,27 +16,19 @@
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:schemaLocation="http://maven.apache.org/ASSEMBLY/2.0.0 http://maven.apache.org/xsd/assembly-2.0.0.xsd">
 
-    <id>eclipse-hono</id>
+    <id>chart</id>
 
     <formats>
         <format>tar.gz</format>
     </formats>
+    <includeBaseDirectory>false</includeBaseDirectory>
 
     <fileSets>
-
         <fileSet>
-            <outputDirectory>deploy</outputDirectory>
-            <directory>${project.build.directory}/deploy</directory>
+            <outputDirectory>eclipse-hono</outputDirectory>
+            <directory>${project.build.directory}/deploy/helm</directory>
             <fileMode>0755</fileMode>
         </fileSet>
-
-        <fileSet>
-            <outputDirectory>config</outputDirectory>
-            <directory>${project.build.directory}/config</directory>
-            <fileMode>0644</fileMode>
-            <directoryMode>0755</directoryMode>
-        </fileSet>
-
     </fileSets>
 
 </assembly>
