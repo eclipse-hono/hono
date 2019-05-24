@@ -13,9 +13,11 @@ artemis:
   image:
     name: ${artemis.image.name}
 
-hono:
-  image:
-    repoPrefix: eclipse
+# the container registry to pull Hono images from
+# this can be set to e.g. a private container registry where
+# snapshot images have been pushed to
+# by default we pull from Docker Hub
+honoContainerRegistry: index.docker.io
 
 defaultJavaOptions: ${default-java-options}
 
