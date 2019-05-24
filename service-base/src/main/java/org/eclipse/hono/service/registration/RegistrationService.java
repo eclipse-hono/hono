@@ -173,4 +173,60 @@ public interface RegistrationService extends Verticle {
      */
     void getDevice(String tenantId, String deviceId, Handler<AsyncResult<RegistrationResult>> resultHandler);
 
+    /**
+     * Sets the given gateway as the last gateway that acted on behalf of the given device.
+     * <p>
+     * If a device connects directly instead of through a gateway, the device identifier is to be used as value for
+     * the <em>gatewayId</em> parameter.
+     * <p>
+     * This association between device and its last-used gateway is used for scenarios where devices with multiple
+     * potential gateways are used, along with gateways subscribing to command messages only using their gateway id.
+     * In such scenarios, the value set here is needed to route command messages to the right gateway.
+     *
+     * @param tenantId The tenant id.
+     * @param deviceId The device id.
+     * @param gatewayId The gateway id (or the device id if the last message came from the device directly).
+     * @param span The active OpenTracing span for this operation. It is not to be closed in this method!
+     *            An implementation should log (error) events on this span and it may set tags and use this span as the
+     *            parent for any spans created in this method.
+     * @param resultHandler The handler to invoke with the result of the operation.
+     *             The <em>status</em> will be
+     *             <ul>
+     *             <li><em>204 No Content</em> if the operation completed successfully.</li>
+     *             <li><em>404 Not Found</em> if no device with the given identifier
+     *             is registered for the tenant.</li>
+     *             </ul>
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     */
+    void setLastUsedGateway(String tenantId, String deviceId, String gatewayId, Span span,
+            Handler<AsyncResult<RegistrationResult>> resultHandler);
+
+    /**
+     * Gets the gateway that last acted on behalf of the given device.
+     * <p>
+     * If the given device doesn't support usage via a gateway, the result handler is invoked with a JSON containing the
+     * given device id itself.
+     * <p>
+     * If no last-used gateway has been set for the given device yet, the result handler is invoked with a <em>404 Not
+     * Found</em> status result.
+     *
+     * @param tenantId The tenant id.
+     * @param deviceId The device id.
+     * @param span The active OpenTracing span for this operation. It is not to be closed in this method! An
+     *            implementation should log (error) events on this span and it may set tags and use this span as the
+     *            parent for any spans created in this method.
+     * @param resultHandler The handler to invoke with the result of the operation.
+     *            The <em>status</em> will be
+     *            <ul>
+     *            <li><em>200 OK</em> if a result could be determined. The <em>payload</em>
+     *            will contain a <em>device-id</em> property with either the gateway id or with the device id if the
+     *            device doesn't support usage via a gateway.</li>
+     *            <li><em>404 Not Found</em> if the device supports usage via a gateway but there was no last-used
+     *            gateway assigned to the device, or if no device with the given identifier is registered for the
+     *            tenant.</li>
+     *            </ul>
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     */
+    void getLastUsedGateway(String tenantId, String deviceId, Span span,
+            Handler<AsyncResult<RegistrationResult>> resultHandler);
 }

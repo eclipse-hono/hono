@@ -205,4 +205,49 @@ public interface RegistrationClient extends RequestResponseClient {
      * @see RequestResponseClient#setRequestTimeout(long)
      */
     Future<Void> deregister(String deviceId);
+
+    /**
+     * Sets the given gateway as the last gateway that acted on behalf of the given device.
+     * <p>
+     * If a device connects directly instead of through a gateway, the device identifier is to be used as value for
+     * the <em>gatewayId</em> parameter.
+     * <p>
+     * This association between device and its last-used gateway is used for scenarios where devices with multiple
+     * potential gateways are used, along with gateways subscribing to command messages only using their gateway id.
+     * In such scenarios, the value set here is needed to route command messages to the right gateway.
+     *
+     * @param deviceId The device id.
+     * @param gatewayId The gateway id (or the device id if the last message came from the device directly).
+     * @param context The currently active OpenTracing span. An implementation
+     *         should use this as the parent for any span it creates for tracing
+     *         the execution of this operation.
+     * @return A future indicating whether the operation succeeded or not.
+     * @throws NullPointerException if tenant id, device id or gateway id is {@code null}.
+     */
+    Future<Void> setLastUsedGateway(String deviceId, String gatewayId, SpanContext context);
+
+    /**
+     * Gets the gateway that last acted on behalf of the given device.
+     * <p>
+     * If the given device doesn't support usage via a gateway, a succeeded future with the given device id itself is
+     * returned.
+     * <p>
+     * If no last-used gateway has been set for the given device yet, a failed future with status <em>Not Found</em>
+     * is returned.
+     *
+     * @param deviceId The device id.
+     * @param context The currently active OpenTracing span. An implementation
+     *         should use this as the parent for any span it creates for tracing
+     *         the execution of this operation.
+     * @return A future indicating the result of the operation.
+     *         <p>
+     *         The future will succeed if a response with status 200 has been received from the registration service.
+     *         In that case the value of the future will contain a <em>device-id</em> property with either the
+     *         gateway id or with the device id itself if the device doesn't support usage via a gateway.
+     *         <p>
+     *         In case a status other then 200 is received, the future will fail with a
+     *         {@link ServiceInvocationException} containing the (error) status code returned by the service.
+     * @throws NullPointerException if tenant id or device id is {@code null}.
+     */
+    Future<JsonObject> getLastUsedGateway(String deviceId, SpanContext context);
 }

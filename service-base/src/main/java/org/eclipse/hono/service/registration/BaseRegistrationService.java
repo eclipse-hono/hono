@@ -65,6 +65,8 @@ public abstract class BaseRegistrationService<T> extends EventBusService<T> impl
     public static final int DEFAULT_MAX_AGE_SECONDS = 300;
 
     private static final String SPAN_NAME_ASSERT_DEVICE_REGISTRATION = "assert Device Registration";
+    private static final String SPAN_NAME_GET_LAST_USED_GATEWAY = "get last-used gateway";
+    private static final String SPAN_NAME_SET_LAST_USED_GATEWAY = "set last-used gateway";
 
     @Override
     protected String getEventBusAddress() {
@@ -89,6 +91,10 @@ public abstract class BaseRegistrationService<T> extends EventBusService<T> impl
         switch (requestMessage.getOperation()) {
         case RegistrationConstants.ACTION_ASSERT:
             return processAssertRequest(requestMessage);
+        case RegistrationConstants.ACTION_GET_LAST_USED_GATEWAY:
+            return processGetLastUsedGatewayRequest(requestMessage);
+        case RegistrationConstants.ACTION_SET_LAST_USED_GATEWAY:
+            return processSetLastUsedGatewayRequest(requestMessage);
         default:
             return processCustomRegistrationMessage(requestMessage);
         }
@@ -116,6 +122,57 @@ public abstract class BaseRegistrationService<T> extends EventBusService<T> impl
                         deviceId, tenantId, gatewayId);
                 assertRegistration(tenantId, deviceId, gatewayId, span, result);
             }
+            resultFuture = result.map(res -> {
+                return request.getResponse(res.getStatus())
+                        .setDeviceId(deviceId)
+                        .setJsonPayload(res.getPayload())
+                        .setCacheDirective(res.getCacheDirective());
+            });
+        }
+        return finishSpanOnFutureCompletion(span, resultFuture);
+    }
+
+    private Future<EventBusMessage> processGetLastUsedGatewayRequest(final EventBusMessage request) {
+        final String tenantId = request.getTenant();
+        final String deviceId = request.getDeviceId();
+        final SpanContext spanContext = request.getSpanContext();
+
+        final Span span = newChildSpan(SPAN_NAME_GET_LAST_USED_GATEWAY, spanContext, tenantId, deviceId, null);
+        final Future<EventBusMessage> resultFuture;
+        if (tenantId == null || deviceId == null) {
+            TracingHelper.logError(span, "missing tenant and/or device");
+            resultFuture = Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
+        } else {
+            final Future<RegistrationResult> result = Future.future();
+            log.debug("getting last-used gateway for tenant [{}], device [{}]", tenantId, deviceId);
+            getLastUsedGateway(tenantId, deviceId, span, result);
+
+            resultFuture = result.map(res -> {
+                return request.getResponse(res.getStatus())
+                        .setDeviceId(deviceId)
+                        .setJsonPayload(res.getPayload())
+                        .setCacheDirective(res.getCacheDirective());
+            });
+        }
+        return finishSpanOnFutureCompletion(span, resultFuture);
+    }
+
+    private Future<EventBusMessage> processSetLastUsedGatewayRequest(final EventBusMessage request) {
+        final String tenantId = request.getTenant();
+        final String deviceId = request.getDeviceId();
+        final String gatewayId = request.getGatewayId();
+        final SpanContext spanContext = request.getSpanContext();
+
+        final Span span = newChildSpan(SPAN_NAME_SET_LAST_USED_GATEWAY, spanContext, tenantId, deviceId, gatewayId);
+        final Future<EventBusMessage> resultFuture;
+        if (tenantId == null || deviceId == null || gatewayId == null) {
+            TracingHelper.logError(span, "missing tenant, device and/or gateway");
+            resultFuture = Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
+        } else {
+            final Future<RegistrationResult> result = Future.future();
+            log.debug("setting last-used gateway for tenant [{}], device [{}] to {}", tenantId, deviceId, gatewayId);
+            setLastUsedGateway(tenantId, deviceId, gatewayId, span, result);
+
             resultFuture = result.map(res -> {
                 return request.getResponse(res.getStatus())
                         .setDeviceId(deviceId)
@@ -158,6 +215,7 @@ public abstract class BaseRegistrationService<T> extends EventBusService<T> impl
      * @param deviceId The ID of the device to remove.
      * @param resultHandler The handler to invoke with the registration information.
      */
+    @Override
     public void getDevice(final String tenantId, final String deviceId,
             final Handler<AsyncResult<RegistrationResult>> resultHandler) {
         handleUnimplementedOperation(resultHandler);
@@ -298,6 +356,18 @@ public abstract class BaseRegistrationService<T> extends EventBusService<T> impl
                     TracingHelper.logError(span, "update of the 'last-via' property failed: " + t.toString());
                     return Future.failedFuture(t);
                 });
+    }
+
+    @Override
+    public void setLastUsedGateway(final String tenantId, final String deviceId, final String gatewayId,
+                                   final Span span, final Handler<AsyncResult<RegistrationResult>> resultHandler) {
+        handleUnimplementedOperation(resultHandler);
+    }
+
+    @Override
+    public void getLastUsedGateway(final String tenantId, final String deviceId, final Span span,
+                                   final Handler<AsyncResult<RegistrationResult>> resultHandler) {
+        handleUnimplementedOperation(resultHandler);
     }
 
     /**

@@ -40,6 +40,14 @@ public final class RegistrationConstants extends RequestResponseApiConstants {
      * The AMQP 1.0 <em>subject</em> to use for the <em>update device registration</em> operation.
      */
     public static final String ACTION_UPDATE     = "update";
+    /**
+     * The AMQP 1.0 <em>subject</em> to use for the <em>get last-used gateway</em> operation.
+     */
+    public static final String ACTION_GET_LAST_USED_GATEWAY = "getLastUsedGateway";
+    /**
+     * The AMQP 1.0 <em>subject</em> to use for the <em>set last-used gateway</em> operation.
+     */
+    public static final String ACTION_SET_LAST_USED_GATEWAY = "setLastUsedGateway";
 
     /**
      * The name of the field in a response to the <em>get registration information</em> operation

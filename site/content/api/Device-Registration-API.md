@@ -125,6 +125,90 @@ The response message's *status* property may contain the following codes:
 
 For status codes indicating an error (codes in the `400 - 499` range) the message body MAY contain a detailed description of the error that occurred.
 
+## Set Last-Used Gateway
+
+Clients use this command to *set* the gateway that last acted on behalf of a given device. 
+
+The association between device and its last-used gateway is used for scenarios where devices with multiple potential gateways are used, along with gateways subscribing to command messages only using their gateway id. In such scenarios, the value set here is needed to route command messages to the right gateway.
+
+This operation is *mandatory* to implement.
+
+**Message Flow**
+
+
+The following sequence diagram illustrates the flow of messages involved in a *Client* retrieving the last-used gateway.
+
+![Set Last-Used Gateway message flow](../setLastUsedGateway_Success.png)
+
+
+**Request Message Format**
+
+The following table provides an overview of the properties a client needs to set on a message to retrieve the last-used gateway in addition to the [Standard Request Properties]({{< relref "#standard-request-properties" >}}).
+
+| Name         | Mandatory | Location                 | AMQP Type | Description |
+| :----------- | :-------: | :----------------------- | :-------- | :---------- |
+| *subject*    | yes       | *properties*             | *string*  | MUST be set to `setLastUsedGateway`. |
+| *gateway_id* | yes       | *application-properties* | *string*  | The identifier of the gateway that last acted on behalf of a given device. If a device connects directly instead of through a gateway, the device identifier itself is to be used here. |
+
+The body of the message SHOULD be empty and will be ignored if it is not.
+
+**Response Message Format**
+
+A response to a *set last-used gateway* request contains the [Standard Response Properties]({{< relref "#standard-response-properties" >}}).
+
+The response message's *status* property may contain the following codes:
+
+| Code | Description |
+| :--- | :---------- |
+| *204* | OK, the last-used gateway id was updated. |
+| *404* | Not Found, there is no device registered with the given *device_id* within the given *tenant_id*. |
+
+For status codes indicating an error (codes in the `400 - 499` range) the message body MAY contain a detailed description of the error that occurred.
+
+## Get Last-Used Gateway
+
+Clients use this command to *retrieve* the gateway that last acted on behalf of a given device.
+
+This operation is *mandatory* to implement.
+
+**Message Flow**
+
+
+The following sequence diagram illustrates the flow of messages involved in a *Client* retrieving the last-used gateway.
+
+![Get Last-Used Gateway message flow](../getLastUsedGateway_Success.png)
+
+
+**Request Message Format**
+
+The following table provides an overview of the properties a client needs to set on a message to retrieve the last-used gateway in addition to the [Standard Request Properties]({{< relref "#standard-request-properties" >}}).
+
+| Name        | Mandatory | Location                 | AMQP Type | Description |
+| :---------- | :-------: | :----------------------- | :-------- | :---------- |
+| *subject*   | yes       | *properties*             | *string*  | MUST be set to `getLastUsedGateway`. |
+
+The body of the message SHOULD be empty and will be ignored if it is not.
+
+**Response Message Format**
+
+A response to a *get last-used gateway* request contains the [Standard Response Properties]({{< relref "#standard-response-properties" >}}).
+
+The response message includes payload with a JSON object having the following properties:
+
+| Name             | Mandatory | JSON Type     | Description |
+| :--------------- | :-------: | :------------ | :---------- |
+| *device-id*      | *yes*     | *string*      | The ID of the last-used gateway for the device, or the device ID itself if the device doesn't support usage via a gateway. |
+| *update-date*    | *no*      | *string*      | The date that the information about the last-used gateway was last updated. The date is formatted in ISO-8601 format, e.g. '2011-12-03T10:15:30Z'. |
+
+The response message's *status* property may contain the following codes:
+
+| Code | Description |
+| :--- | :---------- |
+| *200* | OK, the payload contains the gateway or device ID. |
+| *404* | Not Found, there is no device registered with the given *device_id* within the given *tenant_id* or the device supports usage via a gateway but there was no last-used gateway assigned to the device. |
+
+For status codes indicating an error (codes in the `400 - 499` range) the message body MAY contain a detailed description of the error that occurred.
+
 # Optional Operations
 
 The operations described in the following sections can be used by clients to manage device registration information. In real world scenarios the provisioning of devices will most likely be an orchestrated process spanning multiple components of which Hono will only be one.

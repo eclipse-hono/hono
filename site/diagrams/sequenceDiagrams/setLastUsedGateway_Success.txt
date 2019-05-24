@@ -1,0 +1,9 @@
+title Set Last-Used Gateway (success)
+
+Client->Device Registration Service: transfer("registration/tenant", "setLastUsedGateway", device-id, gateway-id)
+activate Device Registration Service
+note over Device Registration Service:
+set last-used gateway for device
+end note
+Device Registration Service->Client: transfer("registration/tenant/${reply-to}", "204", JSON payload)
+deactivate Device Registration Service
