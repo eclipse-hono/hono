@@ -13,6 +13,6 @@ deactivate Device Registration Service
 note right of Client:
 JSON payload contains
 - device-id
-- assertion
+- gw-supported (optional)
 - defaults (optional)
 end note
