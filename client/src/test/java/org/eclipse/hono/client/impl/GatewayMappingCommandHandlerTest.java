@@ -129,7 +129,7 @@ public class GatewayMappingCommandHandlerTest {
     public void testHandleUsingDeviceDataWithLastViaAndCommandWithReplyTo() {
         final String deviceViaId = "testDeviceVia";
         final String replyToId = "the-reply-to-id";
-        final String replyTo = String.format("%s/%s/%s", CommandConstants.COMMAND_ENDPOINT, tenantId, replyToId);
+        final String replyTo = String.format("%s/%s/%s", CommandConstants.NORTHBOUND_COMMAND_RESPONSE_ENDPOINT, tenantId, replyToId);
 
         // GIVEN deviceData with 'via' and 'last-via'
         final JsonObject deviceData = new JsonObject();

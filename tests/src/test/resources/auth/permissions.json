@@ -104,6 +104,14 @@
       {
         "resource": "control/*",
         "activities": [ "READ", "WRITE" ]
+      },
+      {
+        "resource": "command/*",
+        "activities": [ "WRITE" ]
+      },
+      {
+        "resource": "command_response/*",
+        "activities": [ "READ" ]
       }
     ],
     "DEFAULT_TENANT-application": [
@@ -117,6 +125,14 @@
       {
         "resource": "control/DEFAULT_TENANT",
         "activities": [ "READ", "WRITE" ]
+      },
+      {
+        "resource": "command/DEFAULT_TENANT",
+        "activities": [ "WRITE" ]
+      },
+      {
+        "resource": "command_response/DEFAULT_TENANT",
+        "activities": [ "READ" ]
       }
     ]
   },

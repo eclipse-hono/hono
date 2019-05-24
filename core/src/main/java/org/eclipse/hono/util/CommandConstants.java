@@ -29,6 +29,21 @@ public class CommandConstants {
     public static final String COMMAND_ENDPOINT_SHORT = "c";
 
     /**
+     * The name of the Command and Control API legacy endpoint used by northbound applications.
+     */
+    public static final String NORTHBOUND_COMMAND_LEGACY_ENDPOINT = "control";
+
+    /**
+     * The name of the northbound Command and Control API request endpoint used by northbound applications.
+     */
+    public static final String NORTHBOUND_COMMAND_REQUEST_ENDPOINT = "command";
+
+    /**
+     * The name of the northbound Command and Control API response endpoint used by northbound applications.
+     */
+    public static final String NORTHBOUND_COMMAND_RESPONSE_ENDPOINT = "command_response";
+
+    /**
      * The part of the address for a command response between a device and an adapter, which identifies the request.
      */
     public static final String COMMAND_RESPONSE_REQUEST_PART = "req";
@@ -65,12 +80,33 @@ public class CommandConstants {
     }
 
     /**
-     * Returns true if the passed endpoint denotes a command endpoint (full or short version).
+     * Returns {@code true} if the passed endpoint denotes a command endpoint (full or short version).
      *
      * @param endpoint The endpoint as a string.
      * @return {@code true} if the endpoint is a command endpoint.
      */
     public static final boolean isCommandEndpoint(final String endpoint) {
         return COMMAND_ENDPOINT.equals(endpoint) || COMMAND_ENDPOINT_SHORT.equals(endpoint);
+    }
+
+    /**
+     * Returns {@code true} if the passed endpoint denotes a command response endpoint as used by northbound applications.
+     *
+     * @param endpoint The endpoint as a string.
+     * @return {@code true} if the endpoint is a command response endpoint.
+     */
+    public static boolean isNorthboundCommandResponseEndpoint(final String endpoint) {
+        return CommandConstants.NORTHBOUND_COMMAND_LEGACY_ENDPOINT.equals(endpoint)
+                || CommandConstants.NORTHBOUND_COMMAND_RESPONSE_ENDPOINT.equals(endpoint);
+    }
+
+    /**
+     * Checks whether the given endpoint is the command legacy endpoint.
+     * 
+     * @param endpoint The endpoint as a string.
+     * @return {@code true} if the endpoint is the command legacy endpoint.
+     */
+    public static boolean isNorthboundCommandLegacyEndpoint(final String endpoint) {
+        return NORTHBOUND_COMMAND_LEGACY_ENDPOINT.equals(endpoint);
     }
 }

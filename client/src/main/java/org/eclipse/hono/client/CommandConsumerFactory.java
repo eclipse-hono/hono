@@ -123,11 +123,31 @@ public interface CommandConsumerFactory extends ConnectionLifecycle<HonoConnecti
      * once the sender is no longer needed anymore.
      * 
      * @param tenantId The ID of the tenant to send the command responses for.
-     * @param replyId The ID used to build the reply address as {@code control/tenantId/replyId}.
+     * @param replyId The ID used to build the reply address as {@code command_response/tenantId/replyId}.
      * @return A future that will complete with the sender once the link has been established.
      *         The future will be failed with a {@link ServiceInvocationException} if
      *         the link cannot be established, e.g. because this client is not connected.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
     Future<CommandResponseSender> getCommandResponseSender(String tenantId, String replyId);
+
+    /**
+     * Gets a sender for sending command responses to a business application.
+     * <p>
+     * This implementation uses the legacy command response address pattern with the <em>control</em> prefix.
+     * <p>
+     * It is the responsibility of the calling code to properly close the
+     * link by invoking {@link CommandResponseSender#close(Handler)}
+     * once the sender is no longer needed anymore.
+     *
+     * @param tenantId The ID of the tenant to send the command responses for.
+     * @param replyId The ID used to build the reply address as {@code control/tenantId/replyId}.
+     * @return A future that will complete with the sender once the link has been established.
+     *         The future will be failed with a {@link ServiceInvocationException} if
+     *         the link cannot be established, e.g. because this client is not connected.
+     * @throws NullPointerException if any of the parameters are {@code null}.
+     * @deprecated Use {@link #getCommandResponseSender(String, String)} instead.
+     */
+    @Deprecated
+    Future<CommandResponseSender> getLegacyCommandResponseSender(String tenantId, String replyId);
 }

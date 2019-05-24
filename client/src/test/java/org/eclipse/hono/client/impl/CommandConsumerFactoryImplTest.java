@@ -107,7 +107,7 @@ public class CommandConsumerFactoryImplTest {
 
         connection = HonoClientUnitTestHelper.mockHonoConnection(vertx, props);
         deviceSpecificCommandReceiver = mock(ProtonReceiver.class);
-        deviceSpecificCommandAddress = ResourceIdentifier.from(CommandConstants.COMMAND_ENDPOINT, tenantId, deviceId).toString();
+        deviceSpecificCommandAddress = ResourceIdentifier.from(CommandConstants.NORTHBOUND_COMMAND_LEGACY_ENDPOINT, tenantId, deviceId).toString();
         when(connection.createReceiver(
                 eq(deviceSpecificCommandAddress),
                 any(ProtonQoS.class),
@@ -115,7 +115,7 @@ public class CommandConsumerFactoryImplTest {
                 anyInt(),
                 anyHandler())).thenReturn(Future.succeededFuture(deviceSpecificCommandReceiver));
         tenantScopedCommandReceiver = mock(ProtonReceiver.class);
-        tenantCommandAddress = ResourceIdentifier.from(CommandConstants.COMMAND_ENDPOINT, tenantId, null).toString();
+        tenantCommandAddress = ResourceIdentifier.from(CommandConstants.NORTHBOUND_COMMAND_REQUEST_ENDPOINT, tenantId, null).toString();
         when(connection.createReceiver(
                 eq(tenantCommandAddress),
                 any(ProtonQoS.class),

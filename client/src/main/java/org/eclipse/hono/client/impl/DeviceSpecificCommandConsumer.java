@@ -85,7 +85,7 @@ public class DeviceSpecificCommandConsumer extends CommandConsumer {
 
         LOG.trace("creating new command consumer [tenant-id: {}, device-id: {}]", tenantId, deviceId);
 
-        final String address = ResourceIdentifier.from(CommandConstants.COMMAND_ENDPOINT, tenantId, deviceId).toString();
+        final String address = ResourceIdentifier.from(CommandConstants.NORTHBOUND_COMMAND_LEGACY_ENDPOINT, tenantId, deviceId).toString();
 
         final AtomicReference<ProtonReceiver> receiverRef = new AtomicReference<>();
 

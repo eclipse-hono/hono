@@ -116,8 +116,8 @@
           "maxMessageSize": 131072,
           "allowUserIdProxy": true,
           "allowAnonymousSender": true,
-          "targets": "telemetry/*, event/*, control/*",
-          "sources": "control/*"
+          "sources": "control/*, command/*",
+          "targets": "telemetry/*, event/*, control/*, command_response/*"
         }
       }
   }],

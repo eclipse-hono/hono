@@ -74,7 +74,7 @@ public class GatewayMappingCommandHandler implements Handler<CommandContext> {
                         originalCommandContext.getCurrentSpan().log("determined 'via' device " + lastViaDeviceId);
                         if (!originalCommand.isOneWay()) {
                             originalCommand.getCommandMessage().setReplyTo(String.format("%s/%s/%s",
-                                    CommandConstants.COMMAND_ENDPOINT, tenantId, originalCommand.getReplyToId()));
+                                    CommandConstants.NORTHBOUND_COMMAND_RESPONSE_ENDPOINT, tenantId, originalCommand.getReplyToId()));
                         }
                         final Command command = Command.from(originalCommand.getCommandMessage(), tenantId, lastViaDeviceId);
                         commandContext = CommandContext.from(command, originalCommandContext.getDelivery(), originalCommandContext.getReceiver(), originalCommandContext.getCurrentSpan());

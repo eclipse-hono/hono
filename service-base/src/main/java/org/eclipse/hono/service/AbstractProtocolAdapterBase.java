@@ -775,7 +775,11 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      */
     protected final Future<CommandResponseSender> createCommandResponseSender(
             final String tenantId,
-            final String replyId) {
+            final String replyId,
+            final boolean isReplyToLegacyEndpointUsed) {
+        if (isReplyToLegacyEndpointUsed) {
+            return commandConsumerFactory.getLegacyCommandResponseSender(tenantId, replyId);
+        }
         return commandConsumerFactory.getCommandResponseSender(tenantId, replyId);
     }
 
@@ -803,7 +807,8 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(response);
 
-        final Future<CommandResponseSender> senderTracker = createCommandResponseSender(tenantId, response.getReplyToId());
+        final Future<CommandResponseSender> senderTracker = createCommandResponseSender(tenantId,
+                response.getReplyToId(), response.isReplyToLegacyEndpointUsed());
         return senderTracker
                 .compose(sender -> sender.sendCommandResponse(response, context))
                 .map(delivery -> {

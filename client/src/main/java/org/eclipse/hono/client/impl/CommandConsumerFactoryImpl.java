@@ -380,6 +380,29 @@ public class CommandConsumerFactoryImpl extends AbstractHonoClientFactory implem
         });
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * This implementation always creates a new sender link.
+     */
+    @Override
+    public Future<CommandResponseSender> getLegacyCommandResponseSender(
+            final String tenantId,
+            final String replyId) {
+
+        Objects.requireNonNull(tenantId);
+        Objects.requireNonNull(replyId);
+
+        return connection.executeOrRunOnContext(result -> {
+            LegacyCommandResponseSenderImpl.create(
+                    connection,
+                    tenantId,
+                    replyId,
+                    onRemoteClose -> {})
+                    .setHandler(result);
+        });
+    }
+
     // ------------- Override AbstractHonoClientFactory methods to also connect/disconnect the gatewayMapper ------------
 
     @Override

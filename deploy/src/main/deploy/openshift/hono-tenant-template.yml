@@ -54,6 +54,24 @@ objects:
 - kind: Address
   apiVersion: enmasse.io/v1alpha1
   metadata:
+    name: ${ENMASSE_ADDRESS_SPACE}.${RESOURCE_NAME}.command
+  spec:
+    address: command/${HONO_TENANT_NAME}
+    type: anycast
+    plan: standard-small-anycast
+
+- kind: Address
+  apiVersion: enmasse.io/v1alpha1
+  metadata:
+    name: ${ENMASSE_ADDRESS_SPACE}.${RESOURCE_NAME}.command_response
+  spec:
+    address: command_response/${HONO_TENANT_NAME}
+    type: anycast
+    plan: standard-small-anycast
+
+- kind: Address
+  apiVersion: enmasse.io/v1alpha1
+  metadata:
     name: ${ENMASSE_ADDRESS_SPACE}.${RESOURCE_NAME}.event
   spec:
     address: event/${HONO_TENANT_NAME}

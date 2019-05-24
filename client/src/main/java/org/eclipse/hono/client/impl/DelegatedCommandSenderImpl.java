@@ -57,7 +57,7 @@ public class DelegatedCommandSenderImpl extends AbstractSender implements Delega
 
     @Override
     public String getEndpoint() {
-        return CommandConstants.COMMAND_ENDPOINT;
+        return CommandConstants.NORTHBOUND_COMMAND_LEGACY_ENDPOINT;
     }
 
     @Override
@@ -182,8 +182,7 @@ public class DelegatedCommandSenderImpl extends AbstractSender implements Delega
         final String deviceId = command.getDeviceId();
         final String targetAddress = getTargetAddress(tenantId, deviceId);
         final String replyToAddress = command.isOneWay() ? null
-                : String.format("%s/%s/%s",
-                CommandConstants.COMMAND_ENDPOINT, tenantId, command.getReplyToId());
+                : String.format("%s/%s/%s", command.getReplyToEndpoint(), tenantId, command.getReplyToId());
         return sendAndWaitForOutcome(
                 createDelegatedCommandMessage(command.getCommandMessage(), targetAddress, replyToAddress),
                 spanContext);
@@ -198,7 +197,7 @@ public class DelegatedCommandSenderImpl extends AbstractSender implements Delega
      * @throws NullPointerException if tenant or device id is {@code null}.
      */
     static String getTargetAddress(final String tenantId, final String deviceId) {
-        return String.format("%s/%s/%s", CommandConstants.COMMAND_ENDPOINT, Objects.requireNonNull(tenantId),
+        return String.format("%s/%s/%s", CommandConstants.NORTHBOUND_COMMAND_LEGACY_ENDPOINT, Objects.requireNonNull(tenantId),
                 Objects.requireNonNull(deviceId));
     }
 

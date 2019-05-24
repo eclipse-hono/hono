@@ -295,7 +295,7 @@ public final class ResourceIdentifier {
     /**
      * Gets a string representation of the resource identifiers' parts without the base path.
      * <p>
-     * E.g. for a resource <em>control/myTenant/deviceId/some/path</em>, the return value will be
+     * E.g. for a resource <em>command_response/myTenant/deviceId/some/path</em>, the return value will be
      * <em>deviceId/some/path</em>.
      * <p>
      * If this resource identifier doesn't contain any additional path segments after the base path, an empty string is

@@ -107,7 +107,7 @@ public class CommandClientImplTest {
         assertNotNull(messageCaptor.getValue().getMessageId());
         assertThat(messageCaptor.getValue().getContentType(), is("text/plain"));
         assertThat(messageCaptor.getValue().getReplyTo(),
-                is(String.format("%s/%s/%s/%s", client.getName(), Constants.DEFAULT_TENANT, DEVICE_ID, REPLY_ID)));
+                is(String.format("%s/%s/%s/%s", client.getReplyToEndpointName(), Constants.DEFAULT_TENANT, DEVICE_ID, REPLY_ID)));
         assertNotNull(messageCaptor.getValue().getApplicationProperties());
         assertThat(messageCaptor.getValue().getApplicationProperties().getValue().get("appKey"), is("appValue"));
     }
