@@ -54,9 +54,7 @@ a username of `sigfox` and a password of `test12`:
   "enabled": true,
   "secrets": [
     {
-      "hash-function": "sha-512",
-      "pwd-hash": "yHRiqBGqGlGBctRvzX98JpeTTk0ao9BfzR714G7737y8oOuRsFzJYGC0846lFy96FWev8sSb7MGeSqoJi3I6mw==",
-      "salt": "j9PyA6Y9obw="
+      "pwd-plain": "test12",
     }
   ],
   "type": "hashed-password"
@@ -80,11 +78,40 @@ the view `Device Type` -> `Callbacks`.
 
 Create a new "Custom" callback, with the following settings:
 
-* **Type**: `DATA` - `UPLINK`
+* **Type**: `DATA` – `UPLINK`
 * **Channel**: `URL`
-* **Url pattern**: `https://sigfox%40DEFAULT_TENANT:test12@iot-sigfox-adapter.my.hono/data/telemetry?device={device}&data={data}`
+* **Url pattern**: `https://iot-sigfox-adapter.my.hono/data/telemetry?device={device}&data={data}`
 * **Use HTTP Method**: `GET`
+* **Headers**
+  * `Authorization` – `Basic …` (see note below)
 * **Send SNI**: ☑ (Enabled)
+
+{{% note title="Credentials" %}}
+At the moment you need to manually put in the `Authorization` header,
+you cannot put the credentials into the URL, as there is a bug in the
+Sigfox backend, which cannot be fixed by Hono. The backend does not
+properly escape the `@` character, and thus sends `foo%40tenant`
+instead of `foo@tenant` to the Hono protocol adapter.
+
+As a workaround, you can explicitly set the `Authorization` header to a
+value of `Basic <base64 encoded credentials>`. You can encode the
+credentials using:
+
+~~~sh
+echo -n "sigfox@tenant:password" | base64
+~~~
+
+To get the full value, including the `Basic` you may use:
+
+~~~sh
+echo "Basic $(echo -n "sigfox@tenant:password" | base64)"
+~~~
+
+{{% /note %}}
+
+## Events
+
+You can send events by using the path `/data/event` on the URL.
 
 ## Consuming data
 
@@ -93,6 +120,5 @@ Use the standard way of consuming Hono messages.
 ## Known bugs and limitations
 
 * Command and control is currently not supported
-* Events are currently not supported
 * Only the simple `URL` and only *data* (no *service* or *device events* are
   currently supported.
