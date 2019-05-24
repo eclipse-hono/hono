@@ -34,11 +34,12 @@ public interface AsyncCommandClient extends MessageSender {
      *
      * @param command The command name.
      * @param data The command data to send to the device or {@code null} if the command has no input data.
-     * @param correlationId The identifier to use for correlating the response with the request. Note: This parameter
-     * is security sensitive. To ensure secure request response mapping choose correlationId carefully, e.g.
-     * {@link java.util.UUID#randomUUID()}.
-     * @param replyId An arbitrary string which gets used for response link address in the form of <em>control/${
-     * tenantId}/${replyId}</em> Must match the {@code replyId} passed to the command response receiver, see also below.
+     * @param correlationId The identifier to use for correlating the response with the request. Note: This parameter is
+     *            security sensitive. To ensure secure request response mapping choose correlationId carefully, e.g.
+     *            {@link java.util.UUID#randomUUID()}.
+     * @param replyId An arbitrary string which gets used for the response link address in the form of
+     *            <em>command_response/${tenantId}/${replyId}</em>. Must match the {@code replyId} passed to the
+     *            command response receiver, see also below.
      * @return A future indicating the result of the operation.
      *         <p>
      *         If the command was accepted, the future will succeed.
@@ -63,11 +64,12 @@ public interface AsyncCommandClient extends MessageSender {
      * @param command The command name.
      * @param contentType The type of the data submitted as part of the command or {@code null} if unknown.
      * @param data The command data to send to the device or {@code null} if the command has no input data.
-     * @param correlationId The identifier to use for correlating the response with the request. Note: This parameter
-     * is security sensitive. To ensure secure request response mapping choose correlationId carefully, e.g.
-     * {@link java.util.UUID#randomUUID()}.
-     * @param replyId An arbitrary string which gets used for response link address in the form of <em>control/${
-     * tenantId}/${replyId}</em>. Must match the {@code replyId} passed to the command response receiver, see also below.
+     * @param correlationId The identifier to use for correlating the response with the request. Note: This parameter is
+     *            security sensitive. To ensure secure request response mapping choose correlationId carefully, e.g.
+     *            {@link java.util.UUID#randomUUID()}.
+     * @param replyId An arbitrary string which gets used for response link address in the form of
+     *            <em>command_response/${tenantId}/${replyId}</em>. Must match the {@code replyId} passed to the command
+     *            response receiver, see also below.
      * @param properties The headers to include in the command message as AMQP application properties
      * @return A future indicating the result of the operation.
      *         <p>

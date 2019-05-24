@@ -109,12 +109,17 @@ public class CommandClientImpl extends AbstractRequestResponseClient<BufferResul
     public static final String getTargetAddress(final String tenantId, final String deviceId) {
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
-        return String.format("%s/%s/%s", CommandConstants.COMMAND_ENDPOINT, tenantId, deviceId);
+        return String.format("%s/%s/%s", CommandConstants.NORTHBOUND_COMMAND_REQUEST_ENDPOINT, tenantId, deviceId);
     }
 
     @Override
     protected String getName() {
-        return CommandConstants.COMMAND_ENDPOINT;
+        return CommandConstants.NORTHBOUND_COMMAND_REQUEST_ENDPOINT;
+    }
+
+    @Override
+    protected String getReplyToEndpointName() {
+        return CommandConstants.NORTHBOUND_COMMAND_RESPONSE_ENDPOINT;
     }
 
     @Override
@@ -240,10 +245,11 @@ public class CommandClientImpl extends AbstractRequestResponseClient<BufferResul
     /**
      * Creates a new command client for a tenant and device.
      * <p>
-     * The instance created is scoped to the given device.
-     * In particular, the sender link's target address is set to
-     * <em>control/${tenantId}/${deviceId}</em> and the receiver link's source
-     * address is set to <em>control/${tenantId}/${deviceId}/${replyId}</em>.
+     * The instance created is scoped to the given device. In particular, the target address of messages is set to
+     * <em>command/${tenantId}/${deviceId}</em>, whereas the sender link's target address is set to
+     * <em>command/${tenantId}</em>. The receiver link's source address is set to
+     * <em>command_response/${tenantId}/${deviceId}/${replyId}</em>.
+     *
      * This address is also used as the value of the <em>reply-to</em>
      * property of all command request messages sent by this client.
      *

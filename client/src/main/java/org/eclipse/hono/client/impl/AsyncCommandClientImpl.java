@@ -69,7 +69,7 @@ public class AsyncCommandClientImpl extends AbstractSender implements AsyncComma
 
     @Override
     public String getEndpoint() {
-        return CommandConstants.COMMAND_ENDPOINT;
+        return CommandConstants.NORTHBOUND_COMMAND_REQUEST_ENDPOINT;
     }
 
     /**
@@ -80,7 +80,7 @@ public class AsyncCommandClientImpl extends AbstractSender implements AsyncComma
      * @return The target address of the command message.
      */
     static String getTargetAddress(final String tenantId, final String deviceId) {
-        return String.format("%s/%s/%s", CommandConstants.COMMAND_ENDPOINT, tenantId, deviceId);
+        return String.format("%s/%s/%s", CommandConstants.NORTHBOUND_COMMAND_REQUEST_ENDPOINT, tenantId, deviceId);
     }
 
     /**
@@ -90,7 +90,7 @@ public class AsyncCommandClientImpl extends AbstractSender implements AsyncComma
      * @return The link target address.
      */
     static String getLinkTargetAddress(final String tenantId) {
-        return String.format("%s/%s", CommandConstants.COMMAND_ENDPOINT, tenantId);
+        return String.format("%s/%s", CommandConstants.NORTHBOUND_COMMAND_REQUEST_ENDPOINT, tenantId);
     }
 
     @Override
@@ -117,7 +117,7 @@ public class AsyncCommandClientImpl extends AbstractSender implements AsyncComma
         MessageHelper.setPayload(message, contentType, data);
         message.setSubject(command);
         message.setAddress(targetAddress);
-        final String replyToAddress = String.format("%s/%s/%s", CommandConstants.COMMAND_ENDPOINT, tenantId, replyId);
+        final String replyToAddress = String.format("%s/%s/%s", CommandConstants.NORTHBOUND_COMMAND_RESPONSE_ENDPOINT, tenantId, replyId);
         message.setReplyTo(replyToAddress);
 
         return sendAndWaitForOutcome(message).compose(ignore -> Future.succeededFuture());
@@ -126,8 +126,9 @@ public class AsyncCommandClientImpl extends AbstractSender implements AsyncComma
     /**
      * Creates a new asynchronous command client for a tenant and device.
      * <p>
-     * The instance created is scoped to the given device. In particular, the sender link's target address is set to
-     * <em>control/${tenantId}/${deviceId}</em>.
+     * The instance created is scoped to the given device. In particular, the target address of messages is set to
+     * <em>command/${tenantId}/${deviceId}</em>, whereas the sender link's target address is set to
+     * <em>command/${tenantId}</em>.
      *
      * @param con The connection to the Hono server.
      * @param tenantId The tenant that the device belongs to.

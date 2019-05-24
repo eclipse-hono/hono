@@ -78,7 +78,7 @@ public class TenantScopedCommandConsumer extends CommandConsumer {
 
         LOG.trace("creating new tenant scoped command consumer [tenant-id: {}]", tenantId);
 
-        final String address = ResourceIdentifier.from(CommandConstants.COMMAND_ENDPOINT, tenantId, null).toString();
+        final String address = ResourceIdentifier.from(CommandConstants.NORTHBOUND_COMMAND_REQUEST_ENDPOINT, tenantId, null).toString();
 
         return con.createReceiver(
                 address,

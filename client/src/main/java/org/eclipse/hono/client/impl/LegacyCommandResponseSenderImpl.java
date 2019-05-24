@@ -34,7 +34,7 @@ import io.vertx.proton.ProtonSender;
  * A wrapper around an AMQP link for sending response messages to
  * commands downstream.
  */
-public class CommandResponseSenderImpl extends AbstractSender implements CommandResponseSender {
+public class LegacyCommandResponseSenderImpl extends AbstractSender implements CommandResponseSender {
 
     /**
      * The default amount of time to wait for credits after link creation. This is higher as in the client defaults,
@@ -42,7 +42,7 @@ public class CommandResponseSenderImpl extends AbstractSender implements Command
      */
     public static final long DEFAULT_COMMAND_FLOW_LATENCY = 200L; // ms
 
-    CommandResponseSenderImpl(
+    LegacyCommandResponseSenderImpl(
             final HonoConnection connection,
             final ProtonSender sender,
             final String tenantId,
@@ -63,7 +63,7 @@ public class CommandResponseSenderImpl extends AbstractSender implements Command
 
     @Override
     public String getEndpoint() {
-        return CommandConstants.NORTHBOUND_COMMAND_RESPONSE_ENDPOINT;
+        return CommandConstants.NORTHBOUND_COMMAND_LEGACY_ENDPOINT;
     }
 
     @Override
@@ -77,7 +77,7 @@ public class CommandResponseSenderImpl extends AbstractSender implements Command
     }
 
     static final String getTargetAddress(final String tenantId, final String replyId) {
-        return String.format("%s/%s/%s", CommandConstants.NORTHBOUND_COMMAND_RESPONSE_ENDPOINT, tenantId, replyId);
+        return String.format("%s/%s/%s", CommandConstants.NORTHBOUND_COMMAND_LEGACY_ENDPOINT, tenantId, replyId);
     }
 
     /**
@@ -120,14 +120,14 @@ public class CommandResponseSenderImpl extends AbstractSender implements Command
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(replyId);
 
-        final String targetAddress = CommandResponseSenderImpl.getTargetAddress(tenantId, replyId);
+        final String targetAddress = LegacyCommandResponseSenderImpl.getTargetAddress(tenantId, replyId);
         final ClientConfigProperties props = new ClientConfigProperties(con.getConfig());
         if (props.getFlowLatency() < DEFAULT_COMMAND_FLOW_LATENCY) {
             props.setFlowLatency(DEFAULT_COMMAND_FLOW_LATENCY);
         }
 
         return con.createSender(targetAddress, ProtonQoS.AT_LEAST_ONCE, closeHook)
-                .map(sender -> (CommandResponseSender) new CommandResponseSenderImpl(con, sender, tenantId,
+                .map(sender -> (CommandResponseSender) new LegacyCommandResponseSenderImpl(con, sender, tenantId,
                         targetAddress));
     }
 

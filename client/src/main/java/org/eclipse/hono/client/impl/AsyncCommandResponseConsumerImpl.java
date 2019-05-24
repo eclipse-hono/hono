@@ -32,7 +32,7 @@ import io.vertx.proton.ProtonReceiver;
  */
 public class AsyncCommandResponseConsumerImpl extends AbstractConsumer implements MessageConsumer {
 
-    private static final String ASYNC_COMMAND_RESPONSE_ADDRESS_TEMPLATE = CommandConstants.COMMAND_ENDPOINT
+    private static final String ASYNC_COMMAND_RESPONSE_ADDRESS_TEMPLATE = CommandConstants.NORTHBOUND_COMMAND_RESPONSE_ENDPOINT
             + "/%s/%s";
 
     private AsyncCommandResponseConsumerImpl(

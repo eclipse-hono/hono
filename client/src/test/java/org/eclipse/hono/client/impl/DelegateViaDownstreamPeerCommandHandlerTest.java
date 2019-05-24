@@ -63,7 +63,7 @@ public class DelegateViaDownstreamPeerCommandHandlerTest {
     public void setup() {
         tenantId = "testTenant";
         deviceId = "testDevice";
-        replyTo = String.format("%s/%s/%s", CommandConstants.COMMAND_ENDPOINT, tenantId, "the-reply-to-id");
+        replyTo = String.format("%s/%s/%s", CommandConstants.NORTHBOUND_COMMAND_RESPONSE_ENDPOINT, tenantId, "the-reply-to-id");
 
         final Message commandMessage = mock(Message.class);
         when(commandMessage.getSubject()).thenReturn("testSubject");
@@ -94,7 +94,7 @@ public class DelegateViaDownstreamPeerCommandHandlerTest {
             @Override
             public Future<ProtonDelivery> sendAndWaitForOutcome(final Message message, final SpanContext parent) {
                 assertThat(message.getAddress(),
-                        is(String.format("%s/%s/%s", CommandConstants.COMMAND_ENDPOINT,
+                        is(String.format("%s/%s/%s", CommandConstants.NORTHBOUND_COMMAND_LEGACY_ENDPOINT,
                                 DelegateViaDownstreamPeerCommandHandlerTest.this.tenantId,
                                 DelegateViaDownstreamPeerCommandHandlerTest.this.deviceId)));
                 assertThat(message.getReplyTo(), is(replyTo));
@@ -128,7 +128,7 @@ public class DelegateViaDownstreamPeerCommandHandlerTest {
             @Override
             public Future<ProtonDelivery> sendAndWaitForOutcome(final Message message, final SpanContext parent) {
                 assertThat(message.getAddress(),
-                        is(String.format("%s/%s/%s", CommandConstants.COMMAND_ENDPOINT,
+                        is(String.format("%s/%s/%s", CommandConstants.NORTHBOUND_COMMAND_LEGACY_ENDPOINT,
                                 DelegateViaDownstreamPeerCommandHandlerTest.this.tenantId,
                                 DelegateViaDownstreamPeerCommandHandlerTest.this.deviceId)));
                 assertThat(message.getReplyTo(), is(replyTo));
@@ -163,7 +163,7 @@ public class DelegateViaDownstreamPeerCommandHandlerTest {
             @Override
             public Future<ProtonDelivery> sendAndWaitForOutcome(final Message message, final SpanContext parent) {
                 assertThat(message.getAddress(),
-                        is(String.format("%s/%s/%s", CommandConstants.COMMAND_ENDPOINT,
+                        is(String.format("%s/%s/%s", CommandConstants.NORTHBOUND_COMMAND_LEGACY_ENDPOINT,
                                 DelegateViaDownstreamPeerCommandHandlerTest.this.tenantId,
                                 DelegateViaDownstreamPeerCommandHandlerTest.this.deviceId)));
                 assertThat(message.getReplyTo(), is(replyTo));
@@ -194,7 +194,7 @@ public class DelegateViaDownstreamPeerCommandHandlerTest {
             @Override
             public Future<ProtonDelivery> sendAndWaitForOutcome(final Message message, final SpanContext parent) {
                 assertThat(message.getAddress(),
-                        is(String.format("%s/%s/%s", CommandConstants.COMMAND_ENDPOINT,
+                        is(String.format("%s/%s/%s", CommandConstants.NORTHBOUND_COMMAND_LEGACY_ENDPOINT,
                                 DelegateViaDownstreamPeerCommandHandlerTest.this.tenantId,
                                 DelegateViaDownstreamPeerCommandHandlerTest.this.deviceId)));
                 assertThat(message.getReplyTo(), is(replyTo));

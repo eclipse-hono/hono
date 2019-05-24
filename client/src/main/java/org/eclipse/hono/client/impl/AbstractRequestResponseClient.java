@@ -126,10 +126,10 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
         this.requestTimeoutMillis = connection.getConfig().getRequestTimeout();
         if (tenantId == null) {
             this.targetAddress = getName();
-            this.replyToAddress = String.format("%s/%s", getName(), UUID.randomUUID());
+            this.replyToAddress = String.format("%s/%s", getReplyToEndpointName(), UUID.randomUUID());
         } else {
             this.targetAddress = String.format("%s/%s", getName(), tenantId);
-            this.replyToAddress = String.format("%s/%s/%s", getName(), tenantId, UUID.randomUUID());
+            this.replyToAddress = String.format("%s/%s/%s", getReplyToEndpointName(), tenantId, UUID.randomUUID());
         }
         this.tenantId = tenantId;
     }
@@ -168,7 +168,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
 
         this.requestTimeoutMillis = connection.getConfig().getRequestTimeout();
         this.targetAddress = String.format("%s/%s/%s", getName(), tenantId, deviceId);
-        this.replyToAddress = String.format("%s/%s/%s/%s", getName(), tenantId, deviceId, replyId);
+        this.replyToAddress = String.format("%s/%s/%s/%s", getReplyToEndpointName(), tenantId, deviceId, replyId);
         this.tenantId = tenantId;
     }
 
@@ -278,11 +278,24 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
     }
 
     /**
-     * Get the name of the endpoint that this client targets at.
+     * Gets the name of the endpoint that this client targets at.
      *
      * @return The name of the endpoint for this client.
      */
     protected abstract String getName();
+
+    /**
+     * Gets the name of the endpoint that will be used for the reply-to address.
+     * <p>
+     * This default implementation returns the endpoint returned by {@link #getName()}.
+     * <p>
+     * Subclasses may override this method in order to use a different endpoint name.
+     *
+     * @return The name of the endpoint for the reply-to address.
+     */
+    protected String getReplyToEndpointName() {
+        return getName();
+    }
 
     /**
      * Build a unique messageId for a request that serves as an identifier for a new message.

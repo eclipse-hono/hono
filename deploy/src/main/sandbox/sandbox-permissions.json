@@ -60,6 +60,14 @@
       {
         "resource": "control/*",
         "activities": [ "READ", "WRITE" ]
+      },
+      {
+        "resource": "command/*",
+        "activities": [ "WRITE" ]
+      },
+      {
+        "resource": "command_response/*",
+        "activities": [ "READ" ]
       }
     ]
   },
