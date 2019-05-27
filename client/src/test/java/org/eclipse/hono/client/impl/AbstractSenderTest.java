@@ -13,6 +13,7 @@
 
 package org.eclipse.hono.client.impl;
 
+import static org.eclipse.hono.client.impl.VertxMockSupport.anyHandler;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -69,14 +70,13 @@ public class AbstractSenderTest {
      * from a message if the peer does not support validation of
      * assertions.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void testSendMessageRemovesRegistrationAssertion() {
 
         // GIVEN a sender that is connected to a peer which does not
         // support validation of registration assertions
         when(protonSender.getRemoteOfferedCapabilities()).thenReturn(null);
-        when(protonSender.send(any(Message.class), any(Handler.class))).thenReturn(mock(ProtonDelivery.class));
+        when(protonSender.send(any(Message.class), anyHandler())).thenReturn(mock(ProtonDelivery.class));
         final AbstractSender sender = newSender("tenant", "endpoint");
 
         // WHEN sending a message
@@ -113,14 +113,13 @@ public class AbstractSenderTest {
     /**
      * Verifies that the sender fails if a timeout occurs.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void testSendMessageFailsOnTimeout() {
 
         // GIVEN a sender that won't receive a delivery update on sending a message 
         // and directly triggers the timeout handler
-        when(protonSender.send(any(Message.class), any(Handler.class))).thenReturn(mock(ProtonDelivery.class));
-        when(vertx.setTimer(anyLong(), any(Handler.class))).thenAnswer(invocation -> {
+        when(protonSender.send(any(Message.class), anyHandler())).thenReturn(mock(ProtonDelivery.class));
+        when(vertx.setTimer(anyLong(), anyHandler())).thenAnswer(invocation -> {
             final Handler<Long> handler = invocation.getArgument(1);
             final long timerId = 1;
             handler.handle(timerId);

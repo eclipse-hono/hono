@@ -13,6 +13,7 @@
 
 package org.eclipse.hono.client.impl;
 
+import static org.eclipse.hono.client.impl.VertxMockSupport.mockHandler;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -53,7 +54,6 @@ public class GatewayMappingCommandHandlerTest {
     /**
      * Sets up common fixture.
      */
-    @SuppressWarnings("unchecked")
     @Before
     public void setup() {
         tenantId = "testTenant";
@@ -64,7 +64,7 @@ public class GatewayMappingCommandHandlerTest {
                 .thenReturn(Future.succeededFuture(regClient));
         final GatewayMapperImpl gatewayMapper = new GatewayMapperImpl(registrationClientFactory);
 
-        nextCommandHandler = mock(Handler.class);
+        nextCommandHandler = mockHandler();
         gatewayMappingCommandHandler = new GatewayMappingCommandHandler(gatewayMapper, nextCommandHandler);
 
         commandMessage = mock(Message.class);

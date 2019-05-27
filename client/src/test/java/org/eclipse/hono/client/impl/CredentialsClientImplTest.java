@@ -48,6 +48,7 @@ import org.mockito.ArgumentCaptor;
 import java.net.HttpURLConnection;
 import java.time.Duration;
 
+import static org.eclipse.hono.client.impl.VertxMockSupport.anyHandler;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -122,7 +123,7 @@ public class CredentialsClientImplTest {
         client.get(credentialsType, authId).setHandler(ctx.asyncAssertSuccess(result -> assertion.complete()));
 
         final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
-        verify(sender).send(messageCaptor.capture(), any(Handler.class));
+        verify(sender).send(messageCaptor.capture(), anyHandler());
         response.setCorrelationId(messageCaptor.getValue().getMessageId());
         final ProtonDelivery delivery = mock(ProtonDelivery.class);
         final Message sentMessage = messageCaptor.getValue();
@@ -165,7 +166,7 @@ public class CredentialsClientImplTest {
                 .setHandler(ctx.asyncAssertSuccess(tenant -> get.complete()));
         final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
         final ProtonDelivery delivery = mock(ProtonDelivery.class);
-        verify(client.sender).send(messageCaptor.capture(), any(Handler.class));
+        verify(client.sender).send(messageCaptor.capture(), anyHandler());
 
         final Message response = ProtonHelper.message(credentialsObject.encode());
         MessageHelper.addProperty(response, MessageHelper.APP_PROPERTY_STATUS, HttpURLConnection.HTTP_OK);
@@ -188,7 +189,6 @@ public class CredentialsClientImplTest {
      *
      * @param ctx The vert.x test context.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void testGetCredentialsReturnsValueFromCache(final TestContext ctx) {
 
@@ -208,7 +208,7 @@ public class CredentialsClientImplTest {
                 .setHandler(ctx.asyncAssertSuccess(result -> {
                     // THEN the credentials is read from the cache
                     ctx.assertEquals(credentialsResult.getPayload(), result);
-                    verify(sender, never()).send(any(Message.class), any(Handler.class));
+                    verify(sender, never()).send(any(Message.class), anyHandler());
                     // and the span is finished
                     verify(span).finish();
                 }));
@@ -241,7 +241,6 @@ public class CredentialsClientImplTest {
      *
      * @param ctx The vert.x test context.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void testGetCredentialsFailsWithRejectedRequest(final TestContext ctx) {
 
@@ -249,7 +248,7 @@ public class CredentialsClientImplTest {
         final ProtonDelivery update = mock(ProtonDelivery.class);
         when(update.getRemoteState()).thenReturn(new Rejected());
         when(update.remotelySettled()).thenReturn(true);
-        when(sender.send(any(Message.class), any(Handler.class))).thenAnswer(invocation -> {
+        when(sender.send(any(Message.class), anyHandler())).thenAnswer(invocation -> {
             final Handler<ProtonDelivery> dispositionHandler = invocation.getArgument(1);
             dispositionHandler.handle(update);
             return mock(ProtonDelivery.class);

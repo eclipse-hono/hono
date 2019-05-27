@@ -13,6 +13,7 @@
 
 package org.eclipse.hono.client.impl;
 
+import static org.eclipse.hono.client.impl.VertxMockSupport.anyHandler;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.startsWith;
 import static org.junit.Assert.assertNull;
@@ -176,7 +177,7 @@ public class TenantClientImplTest {
         client.get("tenant").setHandler(ctx.asyncAssertSuccess(tenant -> get.complete()));
 
         final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
-        verify(sender).send(messageCaptor.capture(), any(Handler.class));
+        verify(sender).send(messageCaptor.capture(), anyHandler());
         final Message response = ProtonHelper.message(tenantResult.encode());
         MessageHelper.addProperty(response, MessageHelper.APP_PROPERTY_STATUS, HttpURLConnection.HTTP_OK);
         MessageHelper.addCacheDirective(response, CacheDirective.maxAgeDirective(60));
@@ -197,7 +198,6 @@ public class TenantClientImplTest {
      *
      * @param ctx The vert.x test context.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void testGetTenantReturnsValueFromCache(final TestContext ctx) {
 
@@ -215,7 +215,7 @@ public class TenantClientImplTest {
             // THEN the tenant information is read from the cache
             ctx.assertEquals(tenantResult.getPayload(), result);
             // and no request message is sent to the service
-            verify(sender, never()).send(any(Message.class), any(Handler.class));
+            verify(sender, never()).send(any(Message.class), anyHandler());
             // and the span is finished
             verify(span).finish();
         }));
@@ -246,7 +246,6 @@ public class TenantClientImplTest {
      *
      * @param ctx The vert.x test context.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void testGetTenantFailsWithRejectedRequest(final TestContext ctx) {
 
@@ -254,7 +253,7 @@ public class TenantClientImplTest {
         final ProtonDelivery update = mock(ProtonDelivery.class);
         when(update.getRemoteState()).thenReturn(new Rejected());
         when(update.remotelySettled()).thenReturn(true);
-        when(sender.send(any(Message.class), any(Handler.class))).thenAnswer(invocation -> {
+        when(sender.send(any(Message.class), anyHandler())).thenAnswer(invocation -> {
             final Handler<ProtonDelivery> dispositionHandler = invocation.getArgument(1);
             dispositionHandler.handle(update);
             return mock(ProtonDelivery.class);
@@ -276,7 +275,6 @@ public class TenantClientImplTest {
      * 
      * @param ctx The vert.x test context.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void testGetTenantByCaUsesRFC2253SubjectDn(final TestContext ctx) {
 
@@ -289,7 +287,7 @@ public class TenantClientImplTest {
         // THEN the message being sent contains the subject DN in RFC 2253 format in the
         // payload
         final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
-        verify(sender).send(messageCaptor.capture(), any(Handler.class));
+        verify(sender).send(messageCaptor.capture(), anyHandler());
         final Message sentMessage = messageCaptor.getValue();
         final JsonObject payload = MessageHelper.getJsonPayload(sentMessage);
         assertThat(payload.getString(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN), is("CN=ca,OU=Hono,O=Eclipse"));
@@ -301,7 +299,6 @@ public class TenantClientImplTest {
      * 
      * @param ctx The vert.x test context.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void testGetTenantIncludesRequiredInformationInRequest(final TestContext ctx) {
 
@@ -312,7 +309,7 @@ public class TenantClientImplTest {
 
         // THEN the message being sent contains the tenant ID as search criteria
         final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
-        verify(sender).send(messageCaptor.capture(), any(Handler.class));
+        verify(sender).send(messageCaptor.capture(), anyHandler());
         final Message sentMessage = messageCaptor.getValue();
         assertNull(MessageHelper.getTenantId(sentMessage));
         assertThat(sentMessage.getMessageId().toString(), startsWith(TenantConstants.MESSAGE_ID_PREFIX));

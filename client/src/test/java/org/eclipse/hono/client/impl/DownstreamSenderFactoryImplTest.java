@@ -14,6 +14,7 @@
 
 package org.eclipse.hono.client.impl;
 
+import static org.eclipse.hono.client.impl.VertxMockSupport.anyHandler;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -54,12 +55,11 @@ public class DownstreamSenderFactoryImplTest {
     /**
      * Sets up the fixture.
      */
-    @SuppressWarnings("unchecked")
     @Before
     public void setUp() {
         vertx = mock(Vertx.class);
         // run timers immediately
-        when(vertx.setTimer(anyLong(), any(Handler.class))).thenAnswer(invocation -> {
+        when(vertx.setTimer(anyLong(), anyHandler())).thenAnswer(invocation -> {
             final Handler<Void> task = invocation.getArgument(1);
             task.handle(null);
             return 1L;
@@ -74,13 +74,12 @@ public class DownstreamSenderFactoryImplTest {
      * 
      * @param ctx The helper to use for running async tests.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void testGetTelemetrySenderFailsIfInvokedConcurrently(final TestContext ctx) {
 
         // GIVEN a factory that already tries to create a telemetry sender for "tenant" (and never completes doing so)
         final Future<ProtonSender> sender = Future.future();
-        when(connection.createSender(anyString(), any(ProtonQoS.class), any(Handler.class))).thenReturn(sender);
+        when(connection.createSender(anyString(), any(ProtonQoS.class), anyHandler())).thenReturn(sender);
         final Future<DownstreamSender> result = factory.getOrCreateTelemetrySender("telemetry/tenant");
         assertFalse(result.isComplete());
 
@@ -98,13 +97,12 @@ public class DownstreamSenderFactoryImplTest {
      * Verifies that a request to create a sender is failed immediately when the
      * underlying connection to the server fails.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void testGetTelemetrySenderFailsOnConnectionFailure() {
 
         // GIVEN a factory that tries to create a telemetry sender for "tenant"
         final Future<ProtonSender> sender = Future.future();
-        when(connection.createSender(anyString(), any(ProtonQoS.class), any(Handler.class))).thenReturn(sender);
+        when(connection.createSender(anyString(), any(ProtonQoS.class), anyHandler())).thenReturn(sender);
         final ArgumentCaptor<DisconnectListener> disconnectHandler = ArgumentCaptor.forClass(DisconnectListener.class);
         verify(connection).addDisconnectListener(disconnectHandler.capture());
 
