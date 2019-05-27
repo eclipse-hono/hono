@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,14 +14,15 @@
 package org.eclipse.hono.adapter.lora.providers;
 
 import org.eclipse.hono.adapter.lora.LoraConstants;
-import org.eclipse.hono.util.HexDecodingException;
 import org.eclipse.hono.util.RegistrationConstants;
-import org.eclipse.hono.util.Strings;
+
+import com.google.common.io.BaseEncoding;
 
 import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonObject;
 
 import java.util.Base64;
+import java.util.Objects;
 
 /**
  * A utility class to provide common features for different @{@link LoraProvider}s.
@@ -94,37 +95,54 @@ public class LoraUtils {
     }
 
     /**
-     * Converts a hex string to base 64.
+     * Converts the hex encoding of a byte array to its Base64 encoding.
      *
-     * @param hex the hex string to convert
-     * @return the base 64 encoded string
+     * @param hex The hex string to convert.
+     * @return The Base64 encoding.
+     * @throws NullPointerException if hex string is {@code null}.
+     * @throws LoraProviderMalformedPayloadException if the given string is not a valid hex encoding.
      */
     public static String convertFromHexToBase64(final String hex) {
+
+        Objects.requireNonNull(hex);
         try {
-            return Base64.getEncoder().encodeToString(Strings.decodeHex(hex.toCharArray()));
-        } catch (final HexDecodingException e) {
-            throw new LoraProviderMalformedPayloadException("Exception while decoding hex data", e);
+            final byte[] decodedBytes = BaseEncoding.base16().decode(hex.toUpperCase());
+            return Base64.getEncoder().encodeToString(decodedBytes);
+        } catch (final IllegalArgumentException e) {
+            // malformed hex encoding
+            throw new LoraProviderMalformedPayloadException("cannot decode hex data", e);
         }
     }
 
     /**
-     * Converts a base 64 string to hex.
+     * Converts the Base64 encoding of a byte array to its hex encoding.
      *
-     * @param base64 the base 64 string to convert
-     * @return the converted hex string
+     * @param base64 The Base64 encoding of the data.
+     * @return The hex encoding.
+     * @throws NullPointerException if Base64 string is {@code null}.
+     * @throws LoraProviderMalformedPayloadException if the given string is not a valid Base64 encoding.
      */
     public static String convertFromBase64ToHex(final String base64) {
-        return Strings.encodeHexAsString(Base64.getDecoder().decode(base64));
+
+        Objects.requireNonNull(base64);
+        try {
+            return convertToHexString(Base64.getDecoder().decode(base64));
+        } catch (final IllegalArgumentException e) {
+            // malformed Base64
+            throw new LoraProviderMalformedPayloadException("cannot decode Base64 data", e);
+        }
     }
 
     /**
-     * Converts a binary array to hex.
+     * Gets the hex encoding of binary data.
      *
-     * @param payload the payload to convert
-     * @return the converted hex string
+     * @param data The data to convert.
+     * @return The hex encoding.
+     * @throws NullPointerException if data is {@code null}.
      */
-    public static String convertToHexString(final byte[] payload) {
-        return new String(Strings.encodeHex(payload));
+    public static String convertToHexString(final byte[] data) {
+        Objects.requireNonNull(data);
+        return BaseEncoding.base16().encode(data);
     }
 
     /**

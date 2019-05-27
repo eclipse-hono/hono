@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -11,7 +11,7 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package org.eclipse.hono.adapter.lora;
+package org.eclipse.hono.adapter.lora.providers;
 
 import static org.junit.Assert.*;
 
@@ -26,7 +26,7 @@ import io.vertx.core.json.JsonObject;
 public class LoraUtilsTest {
 
     private static final String BUMLUX_AS_BASE64 = "YnVtbHV4";
-    private static final String BUMLUX_AS_HEX = "62756d6c7578";
+    private static final String BUMLUX_AS_HEX = "62756D6C7578";
     private static final byte[] BUMLUX_AS_BYTE_ARRAY = { 0x62, 0x75, 0x6d, 0x6c, 0x75, 0x78 };
 
     /**
@@ -53,6 +53,22 @@ public class LoraUtilsTest {
     public void convertToHexString() {
         final String hexResult = LoraUtils.convertToHexString(BUMLUX_AS_BYTE_ARRAY);
         assertEquals(BUMLUX_AS_HEX, hexResult);
+    }
+
+    /**
+     * Verifies that hex encoding that contains an odd number of characters is detected.
+     */
+    @Test(expected = LoraProviderMalformedPayloadException.class)
+    public void testOddHexInput() {
+        LoraUtils.convertFromHexToBase64("6");
+    }
+
+    /**
+     * Verifies that hex encoding that contains an invalid character is detected.
+     */
+    @Test(expected = LoraProviderMalformedPayloadException.class)
+    public void testInvalidHexInput() {
+        LoraUtils.convertFromHexToBase64("68A5K9");
     }
 
     /**
