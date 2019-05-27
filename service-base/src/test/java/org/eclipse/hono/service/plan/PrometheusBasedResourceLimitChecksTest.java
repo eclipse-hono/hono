@@ -12,7 +12,6 @@
  */
 package org.eclipse.hono.service.plan;
 
-import static java.time.format.DateTimeFormatter.ISO_LOCAL_DATE;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.core.IsNull.nullValue;
 import static org.junit.Assert.assertThat;
@@ -27,7 +26,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.time.Duration;
-import java.time.LocalDate;
+import java.time.OffsetDateTime;
+import java.time.format.DateTimeFormatter;
 
 import org.eclipse.hono.cache.CacheProvider;
 import org.eclipse.hono.cache.ExpiringValueCache;
@@ -197,7 +197,7 @@ public class PrometheusBasedResourceLimitChecksTest {
         final JsonObject dataVolumeConfig = new JsonObject()
                 .put(PrometheusBasedResourceLimitChecks.FIELD_MAX_BYTES, 20_000_000)
                 .put(PrometheusBasedResourceLimitChecks.FIELD_PERIOD_IN_DAYS, 90)
-                .put(PrometheusBasedResourceLimitChecks.FIELD_EFFECTIVE_SINCE, "2019-04-25");
+                .put(PrometheusBasedResourceLimitChecks.FIELD_EFFECTIVE_SINCE, "2019-04-25T14:30Z");
 
         final TenantObject tenant = TenantObject.from(Constants.DEFAULT_TENANT, true);
         tenant.setProperty(TenantConstants.FIELD_RESOURCE_LIMITS,
@@ -205,7 +205,8 @@ public class PrometheusBasedResourceLimitChecksTest {
 
         assertThat(limitChecksImpl.getMaximumNumberOfBytes(tenant), is(20_000_000L));
         assertThat(limitChecksImpl.getPeriodInDays(tenant), is(90L));
-        assertThat(limitChecksImpl.getEffectiveSince(tenant), is(LocalDate.parse("2019-04-25", ISO_LOCAL_DATE)));
+        assertThat(limitChecksImpl.getEffectiveSince(tenant), is(
+                DateTimeFormatter.ISO_OFFSET_DATE_TIME.parse("2019-04-25T14:30Z", OffsetDateTime::from).toInstant()));
     }
 
     /**
@@ -231,7 +232,7 @@ public class PrometheusBasedResourceLimitChecksTest {
         final JsonObject limitsConfig = new JsonObject().put(PrometheusBasedResourceLimitChecks.FIELD_DATA_VOLUME,
                 new JsonObject()
                         .put(PrometheusBasedResourceLimitChecks.FIELD_MAX_BYTES, 100)
-                        .put(PrometheusBasedResourceLimitChecks.FIELD_EFFECTIVE_SINCE, "2019-01-03")
+                        .put(PrometheusBasedResourceLimitChecks.FIELD_EFFECTIVE_SINCE, "2019-01-03T14:30Z")
                         .put(PrometheusBasedResourceLimitChecks.FIELD_PERIOD_IN_DAYS, 30));
         final TenantObject tenant = TenantObject.from("tenant", true).setResourceLimits(limitsConfig);
 
@@ -255,7 +256,7 @@ public class PrometheusBasedResourceLimitChecksTest {
         final JsonObject limitsConfig = new JsonObject().put(PrometheusBasedResourceLimitChecks.FIELD_DATA_VOLUME,
                 new JsonObject()
                         .put(PrometheusBasedResourceLimitChecks.FIELD_MAX_BYTES, 100)
-                        .put(PrometheusBasedResourceLimitChecks.FIELD_EFFECTIVE_SINCE, "2019-01-03")
+                        .put(PrometheusBasedResourceLimitChecks.FIELD_EFFECTIVE_SINCE, "2019-01-03T14:30Z")
                         .put(PrometheusBasedResourceLimitChecks.FIELD_PERIOD_IN_DAYS, 30));
         final TenantObject tenant = TenantObject.from("tenant", true).setResourceLimits(limitsConfig);
 
@@ -297,7 +298,7 @@ public class PrometheusBasedResourceLimitChecksTest {
         final JsonObject limitsConfig = new JsonObject().put(PrometheusBasedResourceLimitChecks.FIELD_DATA_VOLUME,
                 new JsonObject()
                         .put(PrometheusBasedResourceLimitChecks.FIELD_MAX_BYTES, 100)
-                        .put(PrometheusBasedResourceLimitChecks.FIELD_EFFECTIVE_SINCE, "2019-01-03")
+                        .put(PrometheusBasedResourceLimitChecks.FIELD_EFFECTIVE_SINCE, "2019-01-03T14:30Z")
                         .put(PrometheusBasedResourceLimitChecks.FIELD_PERIOD_IN_DAYS, 30));
         final TenantObject tenant = TenantObject.from("tenant", true).setResourceLimits(limitsConfig);
 
@@ -323,7 +324,7 @@ public class PrometheusBasedResourceLimitChecksTest {
         final JsonObject limitsConfig = new JsonObject().put(PrometheusBasedResourceLimitChecks.FIELD_DATA_VOLUME,
                 new JsonObject()
                         .put(PrometheusBasedResourceLimitChecks.FIELD_MAX_BYTES, 100)
-                        .put(PrometheusBasedResourceLimitChecks.FIELD_EFFECTIVE_SINCE, "2019-01-03")
+                        .put(PrometheusBasedResourceLimitChecks.FIELD_EFFECTIVE_SINCE, "2019-01-03T14:30Z")
                         .put(PrometheusBasedResourceLimitChecks.FIELD_PERIOD_IN_DAYS, 30));
         final TenantObject tenant = TenantObject.from("tenant", true).setResourceLimits(limitsConfig);
 

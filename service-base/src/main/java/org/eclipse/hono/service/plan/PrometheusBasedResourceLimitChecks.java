@@ -15,7 +15,8 @@ package org.eclipse.hono.service.plan;
 import static java.time.temporal.ChronoUnit.DAYS;
 
 import java.time.Duration;
-import java.time.LocalDate;
+import java.time.Instant;
+import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.Objects;
@@ -157,7 +158,7 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
 
         Objects.requireNonNull(tenant);
         final long maxBytes = getMaximumNumberOfBytes(tenant);
-        final LocalDate effectiveSince = getEffectiveSince(tenant);
+        final Instant effectiveSince = getEffectiveSince(tenant);
         final long periodInDays = getPeriodInDays(tenant);
 
         log.trace("message limit config for tenant [{}] are [{}:{}, {}:{}, {}:{}]", tenant.getTenantId(),
@@ -239,20 +240,20 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
     }
 
     /**
-     * Gets the date on which the data volume limit came into effect.
+     * Gets the instant on which the data volume limit came into effect.
      * <p>
-     * The date string should comply to the {@link DateTimeFormatter#ISO_LOCAL_DATE}
+     * The date string should comply to the {@link DateTimeFormatter#ISO_OFFSET_DATE_TIME}
      *
      * @param tenant The tenant configuration object.
-     * @return The date on which the data volume limit came into effective or {@code null} if not set.
+     * @return The instant on which the data volume limit came into effective or {@code null} if not set.
      * @throws DateTimeParseException if the date string fails to comply with the
-     *             {@link DateTimeFormatter#ISO_LOCAL_DATE} format.
+     *             {@link DateTimeFormatter#ISO_OFFSET_DATE_TIME} format.
      */
-    LocalDate getEffectiveSince(final TenantObject tenant) {
+    Instant getEffectiveSince(final TenantObject tenant) {
         return Optional.ofNullable(tenant.getResourceLimits())
                 .map(limits -> limits.getJsonObject(FIELD_DATA_VOLUME))
                 .map(dataVolumeLimits -> dataVolumeLimits.getString(FIELD_EFFECTIVE_SINCE))
-                .map(effectiveSince -> LocalDate.parse(effectiveSince, DateTimeFormatter.ISO_LOCAL_DATE))
+                .map(this::getInstant)
                 .orElse(null);
     }
 
@@ -333,12 +334,12 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
     /**
      * Calculate the period for which the data usage is to be retrieved from the prometheus server.
      * 
-     * @param effectiveSince The date on which the data volume limit came into effect.
+     * @param effectiveSince The instant on which the data volume limit came into effect.
      * @param periodInDays The number of days for which the data usage is to be calculated.
      * @return The period for which the data usage is to be calculated.
      */
-    private long calculateDataUsagePeriod(final LocalDate effectiveSince, final long periodInDays) {
-        final long inclusiveDaysBetween = DAYS.between(effectiveSince, LocalDate.now()) + 1;
+    private long calculateDataUsagePeriod(final Instant effectiveSince, final long periodInDays) {
+        final long inclusiveDaysBetween = DAYS.between(effectiveSince, Instant.now()) + 1;
         if (inclusiveDaysBetween > 0 && periodInDays > 0) {
             final long dataUsagePeriodInDays = inclusiveDaysBetween % periodInDays;
             return dataUsagePeriodInDays == 0 ? periodInDays : dataUsagePeriodInDays;
@@ -351,5 +352,18 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
                 .ifPresent(success -> cache.put(key, result,
                         Duration.ofSeconds(config.getCacheTimeout())));
         return result;
+    }
+
+    private Instant getInstant(final String timestamp) {
+
+        if (timestamp == null) {
+            return null;
+        } else {
+            try {
+                return DateTimeFormatter.ISO_OFFSET_DATE_TIME.parse(timestamp, OffsetDateTime::from).toInstant();
+            } catch (DateTimeParseException e) {
+                return null;
+            }
+        }
     }
 }
