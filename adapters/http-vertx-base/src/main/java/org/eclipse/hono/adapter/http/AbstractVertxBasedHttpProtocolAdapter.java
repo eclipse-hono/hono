@@ -617,10 +617,12 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                 final Future<Integer> ttdTracker = CompositeFuture.all(tokenTracker, tenantTracker)
                         .compose(ok -> {
                             final Integer ttdParam = HttpUtils.getTimeTilDisconnect(ctx);
+                            LOG.info("got ttdParam from routing context: {}", ttdParam);
                             return getTimeUntilDisconnect(tenantTracker.result(), ttdParam).map(effectiveTtd -> {
                                 if (effectiveTtd != null) {
                                     currentSpan.setTag(MessageHelper.APP_PROPERTY_DEVICE_TTD, effectiveTtd);
                                 }
+                                LOG.info("effectiveTtd: {}", effectiveTtd);
                                 return effectiveTtd;
                             });
                         });
@@ -702,7 +704,13 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                             // the command consumer is used for a single request only
                             // we can close the consumer only AFTER we have accepted a
                             // potential command
-                            Optional.ofNullable(commandConsumerTracker.result()).ifPresent(consumer -> consumer.close(null));
+                            //Optional.ofNullable(commandConsumerTracker.result()).ifPresent(consumer -> consumer.close(null));
+                            if (commandConsumerTracker.result() != null) {
+                                LOG.info("close commandConsumer (1)");
+                                commandConsumerTracker.result().close(null);
+                            } else {
+                                LOG.info("commandConsumer null (1)");
+                            }
                         });
                         ctx.response().exceptionHandler(t -> {
                             LOG.debug("failed to send http response for [{}] message from device [tenantId: {}, deviceId: {}]",
@@ -724,7 +732,13 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                             // the command consumer is used for a single request only
                             // we can close the consumer only AFTER we have released a
                             // potential command
-                            Optional.ofNullable(commandConsumerTracker.result()).ifPresent(consumer -> consumer.close(null));
+                            //Optional.ofNullable(commandConsumerTracker.result()).ifPresent(consumer -> consumer.close(null));
+                            if (commandConsumerTracker.result() != null) {
+                                LOG.info("close commandConsumer (2)");
+                                commandConsumerTracker.result().close(null);
+                            } else {
+                                LOG.info("commandConsumer null (2)");
+                            }
                         });
                         ctx.response().end();
                     }
@@ -742,7 +756,13 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                     // the command consumer is used for a single request only
                     // we can close the consumer only AFTER we have released a
                     // potential command
-                    Optional.ofNullable(commandConsumerTracker.result()).ifPresent(consumer -> consumer.close(null));
+                    //Optional.ofNullable(commandConsumerTracker.result()).ifPresent(consumer -> consumer.close(null));
+                    if (commandConsumerTracker.result() != null) {
+                        LOG.info("close commandConsumer (3)");
+                        commandConsumerTracker.result().close(null);
+                    } else {
+                        LOG.info("commandConsumer null (3)");
+                    }
 
                     final ProcessingOutcome outcome;
                     if (ClientErrorException.class.isInstance(t)) {
@@ -862,6 +882,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
         if (ttdSecs == null || ttdSecs <= 0) {
             // no need to wait for a command
             responseReady.tryComplete();
+            LOG.info("createCommandConsumer: ttdSecs={}", ttdSecs);
             return Future.succeededFuture();
         } else {
             currentSpan.setTag(MessageHelper.APP_PROPERTY_DEVICE_TTD, ttdSecs);
@@ -926,6 +947,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                             } else {
                                 // let the other request handle the command (if any)
                                 responseReady.tryComplete();
+                                LOG.warn("another request from the same device that contains a TTD value is already being processed, let the other request handle the command", t);
                                 return Future.succeededFuture();
                             }
                         } else {

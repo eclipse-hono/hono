@@ -103,6 +103,7 @@ public class CommandConsumerFactoryImpl extends AbstractHonoClientFactory implem
 
     @Override
     protected void onDisconnect() {
+        log.info("onDisconnect: clear deviceSpecificCommandConsumerFactory; entries: {}", deviceSpecificCommandConsumerFactory.getActiveClients());
         deviceSpecificCommandConsumerFactory.clearState();
         tenantScopedCommandConsumerFactory.clearState();
         deviceSpecificCommandHandlers.clear();
@@ -130,7 +131,7 @@ public class CommandConsumerFactoryImpl extends AbstractHonoClientFactory implem
             final String key = getKey(tenantId, deviceId);
             final MessageConsumer commandConsumer = deviceSpecificCommandConsumerFactory.getClient(key);
             if (commandConsumer != null) {
-                log.debug("cannot create concurrent command consumer [tenant: {}, device-id: {}]", tenantId, deviceId);
+                log.warn("cannot create concurrent command consumer [tenant: {}, device-id: {}]", tenantId, deviceId);
                 result.fail(new ResourceConflictException("message consumer already in use"));
             } else {
                 // create the device specific consumer
@@ -347,10 +348,12 @@ public class CommandConsumerFactoryImpl extends AbstractHonoClientFactory implem
                     sourceAddress -> { // local close hook
                         // stop liveness check
                         Optional.ofNullable(livenessChecks.remove(key)).ifPresent(connection.getVertx()::cancelTimer);
+                        log.info("local close hook; remove client {}", key);
                         deviceSpecificCommandConsumerFactory.removeClient(key);
                         deviceSpecificCommandHandlers.remove(key);
                     },
                     sourceAddress -> { // remote close hook
+                        log.info("remote close hook; remove client {}", key);
                         deviceSpecificCommandConsumerFactory.removeClient(key);
                         deviceSpecificCommandHandlers.remove(key);
                         remoteCloseHandler.handle(null);

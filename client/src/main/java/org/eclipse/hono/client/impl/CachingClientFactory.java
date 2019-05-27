@@ -198,4 +198,12 @@ class CachingClientFactory<T> extends ClientFactory<T> {
             }
         }
     }
+
+    /**
+     * Gets the active clients.
+     * @return The active clients.
+     */
+    public Map<String, T> getActiveClients() {
+        return activeClients;
+    }
 }

@@ -253,7 +253,7 @@ public abstract class HttpTestBase {
                 count -> {
                     return httpClient.create(
                             getEndpointUri(),
-                            Buffer.buffer("hello " + count),
+                            Buffer.buffer("testUploadMessagesUsingBasicAuth " + count),
                             requestHeaders,
                             response -> response.statusCode() == HttpURLConnection.HTTP_ACCEPTED
                                 && hasAccessControlExposedHeaders(response.headers()));
@@ -299,7 +299,7 @@ public abstract class HttpTestBase {
                     final MultiMap headers = (count.intValue() & 1) == 0 ? requestHeadersOne : requestHeadersTwo;
                     return httpClient.create(
                             getEndpointUri(),
-                            Buffer.buffer("hello " + count),
+                            Buffer.buffer("testUploadMessagesViaGateway " + count),
                             headers,
                             response -> response.statusCode() == HttpURLConnection.HTTP_ACCEPTED
                                     && hasAccessControlExposedHeaders(response.headers()));
@@ -395,8 +395,9 @@ public abstract class HttpTestBase {
         final CountDownLatch received = new CountDownLatch(numberOfMessages);
         final Async setup = ctx.async();
 
+        logger.info("testUploadMessages: createConsumer");
         createConsumer(tenantId, msg -> {
-            logger.trace("received {}", msg);
+            logger.debug("received {}", msg);
             assertMessageProperties(ctx, msg);
             if (messageConsumer != null) {
                 messageConsumer.accept(msg);
@@ -408,13 +409,16 @@ public abstract class HttpTestBase {
         }).setHandler(ctx.asyncAssertSuccess(ok -> setup.complete()));
 
         setup.await();
+        logger.info("testUploadMessages: createConsumer DONE");
         final long start = System.currentTimeMillis();
         final AtomicInteger messageCount = new AtomicInteger(0);
 
         while (messageCount.get() < numberOfMessages) {
 
             final Async sending = ctx.async();
-            requestSender.apply(messageCount.getAndIncrement()).compose(this::assertHttpResponse).setHandler(attempt -> {
+            messageCount.incrementAndGet();
+            logger.info("send message {}", messageCount.get());
+            requestSender.apply(messageCount.get()).compose(this::assertHttpResponse).setHandler(attempt -> {
                 if (attempt.succeeded()) {
                     logger.debug("sent message {}", messageCount.get());
                 } else {
@@ -431,8 +435,9 @@ public abstract class HttpTestBase {
         }
 
         final long timeToWait = Math.max(TEST_TIMEOUT_MILLIS - 50 - (System.currentTimeMillis() - testStartTimeMillis), 1);
+        logger.info("setup timeout to {}", timeToWait);
         if (!received.await(timeToWait, TimeUnit.MILLISECONDS)) {
-            logger.info("sent {} and received {} messages after {} milliseconds",
+            logger.info("timeout reached: sent {} and received {} messages after {} milliseconds",
                     messageCount, numberOfMessages - received.getCount(), System.currentTimeMillis() - start);
             ctx.fail("did not receive all messages sent");
         } else {
@@ -512,7 +517,7 @@ public abstract class HttpTestBase {
 
             return httpClient.create(
                     getEndpointUri(),
-                    Buffer.buffer("hello"),
+                    Buffer.buffer("testUploadMessageFailsForDisabledTenant"),
                     requestHeaders,
                     response -> response.statusCode() == HttpURLConnection.HTTP_ACCEPTED);
 
@@ -547,7 +552,7 @@ public abstract class HttpTestBase {
 
             return httpClient.create(
                     getEndpointUri(),
-                    Buffer.buffer("hello"),
+                    Buffer.buffer("testUploadMessageFailsForDisabledDevice"),
                     requestHeaders,
                     response -> response.statusCode() == HttpURLConnection.HTTP_ACCEPTED);
 
@@ -684,7 +689,7 @@ public abstract class HttpTestBase {
             // might fail immediately because the links have not been established yet
             return httpClient.create(
                 getEndpointUri(),
-                Buffer.buffer("trigger msg"),
+                Buffer.buffer("testHandleConcurrentUploadWithTtd: trigger msg"),
                 MultiMap.caseInsensitiveMultiMap()
                     .add(HttpHeaders.CONTENT_TYPE, "application/trigger")
                     .add(HttpHeaders.AUTHORIZATION, authorization)
@@ -703,7 +708,7 @@ public abstract class HttpTestBase {
 
         final Future<MultiMap> firstRequest = httpClient.create(
                 getEndpointUri(),
-                Buffer.buffer("hello one"),
+                Buffer.buffer("testHandleConcurrentUploadWithTtd: hello one"),
                 requestHeaders,
                 response -> response.statusCode() >= 200 && response.statusCode() < 300)
                 .map(headers -> {
@@ -721,7 +726,7 @@ public abstract class HttpTestBase {
                 .add(Constants.HEADER_TIME_TIL_DISCONNECT, "5");
         final Future<MultiMap> secondRequest = httpClient.create(
                 getEndpointUri(),
-                Buffer.buffer("hello two"),
+                Buffer.buffer("testHandleConcurrentUploadWithTtd: hello two"),
                 requestHeaders,
                 response -> response.statusCode() >= 200 && response.statusCode() < 300)
                 .map(headers -> {
@@ -757,7 +762,7 @@ public abstract class HttpTestBase {
      * @throws InterruptedException if the test fails.
      */
     @Test
-    public void testUploadMessagesWithTtdThatDoNotReplyWithCommand(final TestContext ctx) throws InterruptedException {
+    public void testUploadMessagesWithTtdThatDoNotReplyWithCommand(final TestContext ctx) throws InterruptedException { // TODO Fix test
 
         final Async setup = ctx.async();
         final TenantObject tenant = TenantObject.from(tenantId, true);
@@ -769,11 +774,13 @@ public abstract class HttpTestBase {
 
         helper.registry.addDeviceForTenant(tenant, deviceId, PWD).setHandler(ctx.asyncAssertSuccess(ok -> setup.complete()));
         setup.await();
+        logger.info("done with setup");
 
         testUploadMessages(ctx, tenantId,
                 msg -> {
                     final Integer ttd = MessageHelper.getTimeUntilDisconnect(msg);
-                    logger.trace("received message [ttd: {}]", ttd);
+                    logger.debug("received message [ttd: {}]: {}", ttd, msg);
+                    logger.debug("app properties of received message: {}", msg.getApplicationProperties());
                     ctx.assertNotNull(ttd);
                     final Optional<TimeUntilDisconnectNotification> notificationOpt = TimeUntilDisconnectNotification.fromMessage(msg);
                     ctx.assertTrue(notificationOpt.isPresent());
@@ -785,7 +792,7 @@ public abstract class HttpTestBase {
                 count -> {
                     return httpClient.create(
                             getEndpointUri(),
-                            Buffer.buffer("hello " + count),
+                            Buffer.buffer("testUploadMessagesWithTtdThatDoNotReplyWithCommand " + count),
                             requestHeaders,
                             response -> response.statusCode() == HttpURLConnection.HTTP_ACCEPTED).map(responseHeaders -> {
 
