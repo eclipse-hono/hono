@@ -58,7 +58,6 @@ public class DelegateViaDownstreamPeerCommandHandlerTest {
     /**
      * Sets up common fixture.
      */
-    @SuppressWarnings("unchecked")
     @Before
     public void setup() {
         tenantId = "testTenant";

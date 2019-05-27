@@ -13,6 +13,8 @@
 
 package org.eclipse.hono.client.impl;
 
+import static org.eclipse.hono.client.impl.VertxMockSupport.anyHandler;
+import static org.eclipse.hono.client.impl.VertxMockSupport.mockHandler;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
@@ -284,6 +286,7 @@ public class HonoConnectionImplTest {
      * @param ctx The test context.
      */
     @Test
+    @SuppressWarnings("deprecation")
     public void testConnectTriesToReconnectOnFailedConnectAttempt(final TestContext ctx) {
 
         // GIVEN a client that is configured to connect to a peer
@@ -315,6 +318,7 @@ public class HonoConnectionImplTest {
      *
      */
     @Test
+    @SuppressWarnings("deprecation")
     public void testOnRemoteCloseTriggersReconnection(final TestContext ctx) {
 
         // GIVEN a client that is connected to a server
@@ -361,7 +365,6 @@ public class HonoConnectionImplTest {
      *
      * @param ctx The test execution context.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void testConnectSucceedsAfterDisconnect(final TestContext ctx) {
 
@@ -370,6 +373,7 @@ public class HonoConnectionImplTest {
             final Future<Void> disconnected = Future.future();
             // WHEN the client disconnects
             honoConnection.disconnect(disconnected);
+            @SuppressWarnings("unchecked")
             final ArgumentCaptor<Handler<AsyncResult<ProtonConnection>>> closeHandler = ArgumentCaptor.forClass(Handler.class);
             verify(con).closeHandler(closeHandler.capture());
             closeHandler.getValue().handle(Future.succeededFuture(con));
@@ -388,7 +392,6 @@ public class HonoConnectionImplTest {
      * @param ctx The test context.
      *
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void testClientDoesNotTriggerReconnectionAfterShutdown(final TestContext ctx) {
 
@@ -405,7 +408,7 @@ public class HonoConnectionImplTest {
             }
             resultHandler.handle(Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE)));
             return null;
-        }).when(factory).connect(any(), any(Handler.class), any(Handler.class), any(Handler.class));
+        }).when(factory).connect(any(), anyHandler(), anyHandler(), anyHandler());
         honoConnection = new HonoConnectionImpl(vertx, factory, props);
         honoConnection.connect().setHandler(
                 ctx.asyncAssertFailure(cause -> {
@@ -507,13 +510,12 @@ public class HonoConnectionImplTest {
     @Test
     public void testCreateReceiverFailsWithoutErrorCondition(final TestContext ctx) {
 
-        testCreateReceiverFails(ctx, () -> (ErrorCondition) null, cause -> {
+        testCreateReceiverFails(ctx, () -> null, cause -> {
             return cause instanceof ClientErrorException &&
                     ((ClientErrorException) cause).getErrorCode() == HttpURLConnection.HTTP_NOT_FOUND;
         });
     }
 
-    @SuppressWarnings({ "unchecked" })
     private void testCreateReceiverFails(
             final TestContext ctx,
             final Supplier<ErrorCondition> errorSupplier,
@@ -522,8 +524,9 @@ public class HonoConnectionImplTest {
         final ProtonReceiver receiver = mock(ProtonReceiver.class);
         when(receiver.getRemoteCondition()).thenReturn(errorSupplier.get());
         when(con.createReceiver(anyString())).thenReturn(receiver);
+        @SuppressWarnings("unchecked")
         final Handler<String> remoteCloseHook = mock(Handler.class);
-        when(vertx.setTimer(anyLong(), any(Handler.class))).thenAnswer(invocation -> {
+        when(vertx.setTimer(anyLong(), anyHandler())).thenAnswer(invocation -> {
             // do not run timers immediately
             return 0L;
         });
@@ -538,8 +541,9 @@ public class HonoConnectionImplTest {
                 "source", ProtonQoS.AT_LEAST_ONCE, (delivery, msg) -> {}, remoteCloseHook);
 
         // THEN link establishment is failed after the configured amount of time
-        verify(vertx).setTimer(eq(props.getLinkEstablishmentTimeout()), any(Handler.class));
+        verify(vertx).setTimer(eq(props.getLinkEstablishmentTimeout()), anyHandler());
         // and when the peer rejects to open the link
+        @SuppressWarnings("unchecked")
         final ArgumentCaptor<Handler<AsyncResult<ProtonReceiver>>> openHandler = ArgumentCaptor.forClass(Handler.class);
         verify(receiver).openHandler(openHandler.capture());
         openHandler.getValue().handle(Future.failedFuture(new IllegalStateException()));
@@ -557,14 +561,13 @@ public class HonoConnectionImplTest {
      * 
      * @param ctx The vert.x test context.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void testCreateReceiverFailsOnTimeout(final TestContext ctx) {
 
         final ProtonReceiver receiver = mock(ProtonReceiver.class);
         when(receiver.isOpen()).thenReturn(Boolean.TRUE);
         when(con.createReceiver(anyString())).thenReturn(receiver);
-        final Handler<String> remoteCloseHook = mock(Handler.class);
+        final Handler<String> remoteCloseHook = mockHandler();
 
         // GIVEN an established connection
         final Async connectAttempt = ctx.async();
@@ -593,7 +596,7 @@ public class HonoConnectionImplTest {
 
         testCreateSenderFails(
                 ctx,
-                () -> (ErrorCondition) new ErrorCondition(AmqpError.RESOURCE_LIMIT_EXCEEDED, "unauthorized"),
+                () -> new ErrorCondition(AmqpError.RESOURCE_LIMIT_EXCEEDED, "unauthorized"),
                 cause -> {
                     return cause instanceof ServiceInvocationException;
                 });
@@ -611,7 +614,7 @@ public class HonoConnectionImplTest {
 
         testCreateSenderFails(
                 ctx,
-                () -> (ErrorCondition) null,
+                () -> null,
                 cause -> {
                     return cause instanceof ClientErrorException &&
                         ((ClientErrorException) cause).getErrorCode() == HttpURLConnection.HTTP_NOT_FOUND;

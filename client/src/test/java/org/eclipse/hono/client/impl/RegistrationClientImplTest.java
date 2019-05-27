@@ -13,6 +13,7 @@
 
 package org.eclipse.hono.client.impl;
 
+import static org.eclipse.hono.client.impl.VertxMockSupport.anyHandler;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -46,7 +47,6 @@ import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.opentracing.Tracer.SpanBuilder;
-import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
@@ -113,7 +113,6 @@ public class RegistrationClientImplTest {
      * 
      * @param ctx The vert.x test context.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void testAssertRegistrationAddsResponseToCacheOnCacheMiss(final TestContext ctx) {
 
@@ -125,7 +124,7 @@ public class RegistrationClientImplTest {
         client.assertRegistration("myDevice").setHandler(ctx.asyncAssertSuccess(result -> assertion.complete()));
 
         final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
-        verify(sender).send(messageCaptor.capture(), any(Handler.class));
+        verify(sender).send(messageCaptor.capture(), anyHandler());
         final JsonObject registrationAssertion = newRegistrationAssertionResult();
         final Message response = ProtonHelper.message(registrationAssertion.encode());
         MessageHelper.addProperty(response, MessageHelper.APP_PROPERTY_STATUS, HttpURLConnection.HTTP_OK);
@@ -147,7 +146,6 @@ public class RegistrationClientImplTest {
      * 
      * @param ctx The vert.x test context.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void testAssertRegistrationInvokesServiceIfNoCacheConfigured(final TestContext ctx) {
 
@@ -162,7 +160,7 @@ public class RegistrationClientImplTest {
         client.assertRegistration("device").setHandler(ctx.asyncAssertSuccess(result -> assertion.complete()));
 
         final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
-        verify(sender).send(messageCaptor.capture(), any(Handler.class));
+        verify(sender).send(messageCaptor.capture(), anyHandler());
         response.setCorrelationId(messageCaptor.getValue().getMessageId());
         final ProtonDelivery delivery = mock(ProtonDelivery.class);
         client.handleResponse(delivery, response);
@@ -180,7 +178,6 @@ public class RegistrationClientImplTest {
      * 
      * @param ctx The vert.x test context.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void testGetRegistrationInfoReturnsValueFromCache(final TestContext ctx) {
 
@@ -196,7 +193,7 @@ public class RegistrationClientImplTest {
             // THEN the registration information is read from the cache
             ctx.assertEquals(registrationAssertion, result);
             // and no request message is sent to the service
-            verify(sender, never()).send(any(Message.class), any(Handler.class));
+            verify(sender, never()).send(any(Message.class), anyHandler());
             // and the span is finished
             verify(span).finish();
         }));
@@ -209,7 +206,6 @@ public class RegistrationClientImplTest {
      * 
      * @param ctx The vert.x test context.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void testGetRegistrationInfoIncludesRequiredParamsInRequest(final TestContext ctx) {
 
@@ -220,7 +216,7 @@ public class RegistrationClientImplTest {
 
         // THEN the message being sent contains the device ID and the gateway ID
         final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
-        verify(sender).send(messageCaptor.capture(), any(Handler.class));
+        verify(sender).send(messageCaptor.capture(), anyHandler());
         final Message sentMessage = messageCaptor.getValue();
         assertThat(MessageHelper.getDeviceId(sentMessage), is("device"));
         assertThat(

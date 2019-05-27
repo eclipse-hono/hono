@@ -44,10 +44,10 @@ public class TracingHelperTest {
         final String errorMessage = "my error message";
 
         TracingHelper.logError(span, errorMessage);
-        final ArgumentCaptor<Map> itemsCaptor = ArgumentCaptor.forClass(Map.class);
+        final ArgumentCaptor<Map<String, ?>> itemsCaptor = ArgumentCaptor.forClass(Map.class);
         verify(span).log(itemsCaptor.capture());
 
-        final Map capturedItemsMap = itemsCaptor.getValue();
+        final Map<?, ?> capturedItemsMap = itemsCaptor.getValue();
         assertThat(capturedItemsMap, is(notNullValue()));
         assertThat(capturedItemsMap.size(), is(2));
         assertThat(capturedItemsMap.get(Fields.MESSAGE), is(errorMessage));
@@ -64,10 +64,10 @@ public class TracingHelperTest {
         final String errorMessage = "my error message";
 
         TracingHelper.logError(span, Collections.singletonMap(Fields.MESSAGE, errorMessage));
-        final ArgumentCaptor<Map> itemsCaptor = ArgumentCaptor.forClass(Map.class);
+        final ArgumentCaptor<Map<String, ?>> itemsCaptor = ArgumentCaptor.forClass(Map.class);
         verify(span).log(itemsCaptor.capture());
 
-        final Map capturedItemsMap = itemsCaptor.getValue();
+        final Map<?, ?> capturedItemsMap = itemsCaptor.getValue();
         assertThat(capturedItemsMap, is(notNullValue()));
         assertThat(capturedItemsMap.size(), is(2));
         assertThat(capturedItemsMap.get(Fields.MESSAGE), is(errorMessage));
@@ -84,10 +84,10 @@ public class TracingHelperTest {
         final Exception exception = new Exception("my error message");
 
         TracingHelper.logError(span, exception);
-        final ArgumentCaptor<Map> itemsCaptor = ArgumentCaptor.forClass(Map.class);
+        final ArgumentCaptor<Map<String, ?>> itemsCaptor = ArgumentCaptor.forClass(Map.class);
         verify(span).log(itemsCaptor.capture());
 
-        final Map capturedItemsMap = itemsCaptor.getValue();
+        final Map<?, ?> capturedItemsMap = itemsCaptor.getValue();
         assertThat(capturedItemsMap, is(notNullValue()));
         assertThat(capturedItemsMap.size(), is(2));
         assertThat(capturedItemsMap.get(Fields.ERROR_OBJECT), is(exception));

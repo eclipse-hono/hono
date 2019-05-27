@@ -12,6 +12,7 @@
  *******************************************************************************/
 package org.eclipse.hono.client.impl;
 
+import static org.eclipse.hono.client.impl.VertxMockSupport.anyHandler;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -74,7 +75,6 @@ public class TelemetrySenderImplTest {
      * 
      * @param ctx The vert.x test context.
      */
-    @SuppressWarnings({ "unchecked" })
     @Test
     public void testSendMessageDoesNotWaitForAcceptedOutcome(final TestContext ctx) {
 
@@ -85,7 +85,7 @@ public class TelemetrySenderImplTest {
         doAnswer(invocation -> {
             handlerRef.set(invocation.getArgument(1));
             return mock(ProtonDelivery.class);
-        }).when(sender).send(any(Message.class), any(Handler.class));
+        }).when(sender).send(any(Message.class), anyHandler());
 
         // WHEN trying to send a message
         final Future<ProtonDelivery> result = messageSender.send("device", "some payload", "application/text");
@@ -104,7 +104,6 @@ public class TelemetrySenderImplTest {
     /**
      * Verifies that the sender fails if no credit is available.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void testSendAndWaitForOutcomeFailsOnLackOfCredit() {
 
@@ -118,21 +117,20 @@ public class TelemetrySenderImplTest {
 
         // THEN the message is not sent
         assertFalse(result.succeeded());
-        verify(sender, never()).send(any(Message.class), any(Handler.class));
+        verify(sender, never()).send(any(Message.class), anyHandler());
     }
 
     /**
      * Verifies that a timeout occurring while a message is sent doesn't cause the corresponding 
      * OpenTracing span to stay unfinished.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void testSendMessageFailsOnTimeout() {
 
         // GIVEN a sender that won't receive a delivery update on sending a message 
         // and directly triggers the timeout handler
-        when(sender.send(any(Message.class), any(Handler.class))).thenReturn(mock(ProtonDelivery.class));
-        when(vertx.setTimer(anyLong(), any(Handler.class))).thenAnswer(invocation -> {
+        when(sender.send(any(Message.class), anyHandler())).thenReturn(mock(ProtonDelivery.class));
+        when(vertx.setTimer(anyLong(), anyHandler())).thenAnswer(invocation -> {
             final Handler<Long> handler = invocation.getArgument(1);
             final long timerId = 1;
             handler.handle(timerId);

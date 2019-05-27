@@ -25,6 +25,7 @@ import io.vertx.proton.ProtonQoS;
 import io.vertx.proton.ProtonReceiver;
 import io.vertx.proton.ProtonSender;
 
+import static org.eclipse.hono.client.impl.VertxMockSupport.anyHandler;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Matchers.anyBoolean;
 import static org.mockito.Matchers.anyString;
@@ -50,7 +51,6 @@ public final class HonoClientUnitTestHelper {
      * @param vertx The vert.x instance that the mock of the context is created for.
      * @return The mocked context.
      */
-    @SuppressWarnings("unchecked")
     public static Context mockContext(final Vertx vertx) {
 
         final Context context = mock(Context.class);
@@ -60,7 +60,7 @@ public final class HonoClientUnitTestHelper {
             final Handler<Void> handler = invocation.getArgument(0);
             handler.handle(null);
             return null;
-        }).when(context).runOnContext(any(Handler.class));
+        }).when(context).runOnContext(anyHandler());
         return context;
     }
 
@@ -132,7 +132,6 @@ public final class HonoClientUnitTestHelper {
      * @param props The client properties to use.
      * @return The connection.
      */
-    @SuppressWarnings({ "unchecked", "rawtypes" })
     public static HonoConnection mockHonoConnection(final Vertx vertx, final ClientConfigProperties props) {
 
         final Tracer tracer = NoopTracerFactory.create();
@@ -140,9 +139,9 @@ public final class HonoClientUnitTestHelper {
         when(connection.getVertx()).thenReturn(vertx);
         when(connection.getConfig()).thenReturn(props);
         when(connection.getTracer()).thenReturn(tracer);
-        when(connection.executeOrRunOnContext(any(Handler.class))).then(invocation -> {
-            final Future result = Future.future();
-            final Handler<Future> handler = invocation.getArgument(0);
+        when(connection.executeOrRunOnContext(anyHandler())).then(invocation -> {
+            final Future<?> result = Future.future();
+            final Handler<Future<?>> handler = invocation.getArgument(0);
             handler.handle(result);
             return result;
         });

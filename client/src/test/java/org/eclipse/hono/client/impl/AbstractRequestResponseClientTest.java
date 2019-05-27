@@ -13,6 +13,7 @@
 
 package org.eclipse.hono.client.impl;
 
+import static org.eclipse.hono.client.impl.VertxMockSupport.anyHandler;
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
@@ -151,7 +152,6 @@ public class AbstractRequestResponseClientTest  {
      * 
      * @param ctx The vert.x test context.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void testCreateAndSendRequestSendsProperRequestMessage(final TestContext ctx) {
 
@@ -165,7 +165,7 @@ public class AbstractRequestResponseClientTest  {
 
         // THEN the message is sent and the message being sent contains the headers as application properties
         final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
-        verify(sender).send(messageCaptor.capture(), any(Handler.class));
+        verify(sender).send(messageCaptor.capture(), anyHandler());
         assertThat(messageCaptor.getValue(), is(notNullValue()));
         assertThat(messageCaptor.getValue().getBody(), is(notNullValue()));
         assertThat(messageCaptor.getValue().getBody(), instanceOf(Data.class));
@@ -174,7 +174,7 @@ public class AbstractRequestResponseClientTest  {
         assertThat(messageCaptor.getValue().getApplicationProperties(), is(notNullValue()));
         assertThat(messageCaptor.getValue().getApplicationProperties().getValue().get("test-key"), is("test-value"));
         // and a timer has been set to time out the request after 200 ms
-        verify(vertx).setTimer(eq(200L), any(Handler.class));
+        verify(vertx).setTimer(eq(200L), anyHandler());
     }
 
     /**
@@ -183,7 +183,6 @@ public class AbstractRequestResponseClientTest  {
      * 
      * @param ctx The vert.x test context.
      */
-    @SuppressWarnings({ "unchecked", "rawtypes" })
     @Test
     public void testCreateAndSendRequestFailsOnRejectedMessage(final TestContext ctx) {
 
@@ -205,7 +204,8 @@ public class AbstractRequestResponseClientTest  {
         rejected.setError(ProtonHelper.condition(Constants.AMQP_BAD_REQUEST, "request message is malformed"));
         final ProtonDelivery delivery = mock(ProtonDelivery.class);
         when(delivery.getRemoteState()).thenReturn(rejected);
-        final ArgumentCaptor<Handler> dispositionHandlerCaptor = ArgumentCaptor.forClass(Handler.class);
+        @SuppressWarnings("unchecked")
+        final ArgumentCaptor<Handler<ProtonDelivery>> dispositionHandlerCaptor = ArgumentCaptor.forClass(Handler.class);
         verify(sender).send(any(Message.class), dispositionHandlerCaptor.capture());
         dispositionHandlerCaptor.getValue().handle(delivery);
     }
@@ -216,7 +216,6 @@ public class AbstractRequestResponseClientTest  {
      * 
      * @param ctx The vert.x test context.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void testHandleResponseInvokesHandlerForMatchingCorrelationId(final TestContext ctx) {
 
@@ -244,7 +243,7 @@ public class AbstractRequestResponseClientTest  {
         // and the status code conveyed in the response is set on the span
         verify(span).setTag(Tags.HTTP_STATUS.getKey(), 200);
         // and no response time-out handler has been set
-        verify(vertx, never()).setTimer(anyLong(), any(Handler.class));
+        verify(vertx, never()).setTimer(anyLong(), anyHandler());
     }
 
     /**
@@ -254,7 +253,6 @@ public class AbstractRequestResponseClientTest  {
      * 
      * @param ctx The vert.x test context.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void testCancelRequestFailsResponseHandler(final TestContext ctx) {
 
@@ -268,7 +266,7 @@ public class AbstractRequestResponseClientTest  {
             final Handler<Long> task = invocation.getArgument(1);
             task.handle(1L);
             return null;
-        }).when(vertx).setTimer(anyLong(), any(Handler.class));
+        }).when(vertx).setTimer(anyLong(), anyHandler());
 
         client.createAndSendRequest(
                 "request",
@@ -290,7 +288,6 @@ public class AbstractRequestResponseClientTest  {
      * 
      * @param ctx The vert.x test context.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void testCreateAndSendRequestFailsIfSenderIsNotOpen(final TestContext ctx) {
 
@@ -303,7 +300,7 @@ public class AbstractRequestResponseClientTest  {
                 Buffer.buffer("hello"),
                 ctx.asyncAssertFailure(t -> {
                     // THEN the request fails immediately with a 503
-                    verify(sender, never()).send(any(Message.class), any(Handler.class));
+                    verify(sender, never()).send(any(Message.class), anyHandler());
                     assertFailureCause(ctx, span, t, HttpURLConnection.HTTP_UNAVAILABLE);
                 }),
                 span);
@@ -339,7 +336,6 @@ public class AbstractRequestResponseClientTest  {
      * 
      * @param ctx The vert.x test context.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void testCreateAndSendRequestAddsResponseToCache(final TestContext ctx) {
 
@@ -353,7 +349,7 @@ public class AbstractRequestResponseClientTest  {
                     eq(Duration.ofSeconds(RequestResponseClientConfigProperties.DEFAULT_RESPONSE_CACHE_TIMEOUT)));
         }), "cacheKey");
         final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
-        verify(sender).send(messageCaptor.capture(), any(Handler.class));
+        verify(sender).send(messageCaptor.capture(), anyHandler());
         final Message response = ProtonHelper.message("result");
         MessageHelper.addProperty(response, MessageHelper.APP_PROPERTY_STATUS, HttpURLConnection.HTTP_OK);
         response.setCorrelationId(messageCaptor.getValue().getMessageId());
@@ -367,7 +363,6 @@ public class AbstractRequestResponseClientTest  {
      * 
      * @param ctx The vert.x test context.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void testCreateAndSendRequestAddsResponseToCacheWithMaxAge(final TestContext ctx) {
 
@@ -380,7 +375,7 @@ public class AbstractRequestResponseClientTest  {
             verify(cache).put(eq("cacheKey"), any(SimpleRequestResponseResult.class), eq(Duration.ofSeconds(35)));
         }), "cacheKey");
         final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
-        verify(sender).send(messageCaptor.capture(), any(Handler.class));
+        verify(sender).send(messageCaptor.capture(), anyHandler());
         final Message response = ProtonHelper.message("result");
         MessageHelper.addProperty(response, MessageHelper.APP_PROPERTY_STATUS, HttpURLConnection.HTTP_OK);
         MessageHelper.addCacheDirective(response, CacheDirective.maxAgeDirective(35));
@@ -395,7 +390,6 @@ public class AbstractRequestResponseClientTest  {
      * 
      * @param ctx The vert.x test context.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void testCreateAndSendRequestDoesNotAddResponseToCache(final TestContext ctx) {
 
@@ -408,7 +402,7 @@ public class AbstractRequestResponseClientTest  {
             verify(cache, never()).put(eq("cacheKey"), any(SimpleRequestResponseResult.class), any(Duration.class));
         }), "cacheKey");
         final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
-        verify(sender).send(messageCaptor.capture(), any(Handler.class));
+        verify(sender).send(messageCaptor.capture(), anyHandler());
         final Message response = ProtonHelper.message("result");
         MessageHelper.addProperty(response, MessageHelper.APP_PROPERTY_STATUS, HttpURLConnection.HTTP_OK);
         MessageHelper.addCacheDirective(response, CacheDirective.noCacheDirective());
@@ -423,7 +417,6 @@ public class AbstractRequestResponseClientTest  {
      * 
      * @param ctx The vert.x test context.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void testCreateAndSendRequestDoesNotAddNonCacheableResponseToCache(final TestContext ctx) {
 
@@ -436,7 +429,7 @@ public class AbstractRequestResponseClientTest  {
         client.createAndSendRequest("get", (Buffer) null, ctx.asyncAssertSuccess(result -> invocation.complete()), "cacheKey");
 
         final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
-        verify(sender).send(messageCaptor.capture(), any(Handler.class));
+        verify(sender).send(messageCaptor.capture(), anyHandler());
         final Message response = ProtonHelper.message();
         response.setCorrelationId(messageCaptor.getValue().getMessageId());
         MessageHelper.addProperty(response, MessageHelper.APP_PROPERTY_STATUS, HttpURLConnection.HTTP_NOT_FOUND);
@@ -454,7 +447,6 @@ public class AbstractRequestResponseClientTest  {
      *
      * @param ctx The vert.x test context.
      */
-    @SuppressWarnings({ "unchecked", "rawtypes" })
     @Test
     public void testSendOneWayRequestSucceedsOnAcceptedMessage(final TestContext ctx) {
 
@@ -484,7 +476,8 @@ public class AbstractRequestResponseClientTest  {
         final Accepted accepted = new Accepted();
         final ProtonDelivery delivery = mock(ProtonDelivery.class);
         when(delivery.getRemoteState()).thenReturn(accepted);
-        final ArgumentCaptor<Handler> dispositionHandlerCaptor = ArgumentCaptor.forClass(Handler.class);
+        @SuppressWarnings("unchecked")
+        final ArgumentCaptor<Handler<ProtonDelivery>> dispositionHandlerCaptor = ArgumentCaptor.forClass(Handler.class);
         verify(sender).send(any(Message.class), dispositionHandlerCaptor.capture());
         dispositionHandlerCaptor.getValue().handle(delivery);
 

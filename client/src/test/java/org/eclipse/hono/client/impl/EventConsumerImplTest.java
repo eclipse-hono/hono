@@ -13,6 +13,7 @@
 
 package org.eclipse.hono.client.impl;
 
+import static org.eclipse.hono.client.impl.VertxMockSupport.anyHandler;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -34,7 +35,6 @@ import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 
 import io.vertx.core.Future;
-import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
@@ -86,7 +86,6 @@ public class EventConsumerImplTest {
      * 
      * @param ctx The test context.
      */
-    @SuppressWarnings({ "unchecked" })
     @Test
     public void testCreateRegistersBiConsumerAsMessageHandler(final TestContext ctx) {
 
@@ -105,7 +104,7 @@ public class EventConsumerImplTest {
                 anyString(),
                 any(ProtonQoS.class),
                 any(ProtonMessageHandler.class),
-                any(Handler.class))).thenReturn(Future.succeededFuture(receiver));
+                anyHandler())).thenReturn(Future.succeededFuture(receiver));
 
         final Async consumerCreation = ctx.async();
         EventConsumerImpl.create(
@@ -116,7 +115,7 @@ public class EventConsumerImplTest {
 
         final ArgumentCaptor<ProtonMessageHandler> messageHandler = ArgumentCaptor.forClass(ProtonMessageHandler.class);
         verify(connection).createReceiver(eq("event/tenant"), eq(ProtonQoS.AT_LEAST_ONCE),
-                messageHandler.capture(), any(Handler.class));
+                messageHandler.capture(), anyHandler());
         consumerCreation.await();
 
         // WHEN an event is received

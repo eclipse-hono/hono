@@ -13,11 +13,11 @@
 
 package org.eclipse.hono.client.impl;
 
+import static org.eclipse.hono.client.impl.VertxMockSupport.anyHandler;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThat;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
@@ -36,7 +36,6 @@ import org.junit.rules.Timeout;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 
-import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.ext.unit.TestContext;
@@ -96,15 +95,14 @@ public class CommandClientImplTest {
      * 
      * @param ctx The vert.x test context.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void testSendCommandSetsProperties(final TestContext ctx) {
-        final Map<String, Object> applicationProperties = new HashMap<String, Object>();
+        final Map<String, Object> applicationProperties = new HashMap<>();
         applicationProperties.put("appKey", "appValue");
 
         client.sendCommand("doSomething", "text/plain", Buffer.buffer("payload"), applicationProperties);
         final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
-        verify(sender).send(messageCaptor.capture(), any(Handler.class));
+        verify(sender).send(messageCaptor.capture(), anyHandler());
         assertThat(messageCaptor.getValue().getSubject(), is("doSomething"));
         assertNotNull(messageCaptor.getValue().getMessageId());
         assertThat(messageCaptor.getValue().getContentType(), is("text/plain"));
@@ -127,15 +125,14 @@ public class CommandClientImplTest {
      *
      * @param ctx The vert.x test context.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void testSendOneWayCommandSetsCorrelationIdAndEmptyReplyTo(final TestContext ctx) {
-        final Map<String, Object> applicationProperties = new HashMap<String, Object>();
+        final Map<String, Object> applicationProperties = new HashMap<>();
         applicationProperties.put("appKey", "appValue");
 
         client.sendOneWayCommand("doSomething", "text/plain", Buffer.buffer("payload"), applicationProperties);
         final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
-        verify(sender).send(messageCaptor.capture(), any(Handler.class));
+        verify(sender).send(messageCaptor.capture(), anyHandler());
         assertThat(messageCaptor.getValue().getSubject(), is("doSomething"));
         assertNotNull(messageCaptor.getValue().getMessageId());
         assertThat(messageCaptor.getValue().getContentType(), is("text/plain"));
