@@ -40,7 +40,7 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
 @RunWith(VertxUnitRunner.class)
 public class TelemetryHttpIT extends HttpTestBase {
 
-    private static final String URI = String.format("/%s", TelemetryConstants.TELEMETRY_ENDPOINT);
+    private static final String URI = "/" + TelemetryConstants.TELEMETRY_ENDPOINT;
 
     @Override
     protected String getEndpointUri() {

@@ -294,15 +294,18 @@ public abstract class HttpTestBase {
                 .add(HttpHeaders.AUTHORIZATION, getBasicAuth(tenantId, gatewayTwoId, PWD))
                 .add(HttpHeaders.ORIGIN, ORIGIN_URI);
 
-        testUploadMessages(ctx, tenantId,
+        final String uri = String.format("%s/%s/%s", getEndpointUri(), tenantId, deviceId);
+
+        testUploadMessages(
+                ctx,
+                tenantId,
                 count -> {
                     final MultiMap headers = (count.intValue() & 1) == 0 ? requestHeadersOne : requestHeadersTwo;
-                    return httpClient.create(
-                            getEndpointUri(),
+                    return httpClient.update( // GW uses PUT when acting on behalf of a device
+                            uri,
                             Buffer.buffer("hello " + count),
                             headers,
-                            response -> response.statusCode() == HttpURLConnection.HTTP_ACCEPTED
-                                    && hasAccessControlExposedHeaders(response.headers()));
+                            status -> status == HttpURLConnection.HTTP_ACCEPTED);
                 });
     }
 
