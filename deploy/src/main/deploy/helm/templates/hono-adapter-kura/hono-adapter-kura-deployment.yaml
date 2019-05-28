@@ -27,7 +27,7 @@ spec:
           command: ['sh', '-c', 'until nslookup {{ .Values.jaeger.agentHost }}; do echo waiting for {{ .Values.jaeger.agentHost }}; sleep 2; done;']
       {{- end}}
       containers:
-      - image: {{ .Values.honoContainerRegistry }}/eclipse/hono-adapter-kura:{{ .Chart.AppVersion }}
+      - image: {{ .Values.honoContainerRegistry }}/eclipse/hono-adapter-kura:{{ .Values.honoImageTag }}
         imagePullPolicy: IfNotPresent
         name: eclipse-hono-adapter-kura
         ports:

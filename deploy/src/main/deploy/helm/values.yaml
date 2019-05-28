@@ -5,10 +5,14 @@
 project:
   groupId: ${project.groupId}
 
+# the name (including tag) of the container image to
+# use for the Dispatch Router container
 dispatchRouter:
   image:
     name: ${dispatch-router.image.name}
 
+# the name (including tag) of the container image to
+# use for the ActiveMQ Artemis container
 artemis:
   image:
     name: ${artemis.image.name}
@@ -19,21 +23,32 @@ artemis:
 # by default we pull from Docker Hub
 honoContainerRegistry: index.docker.io
 
+# the image tag to use when pulling Hono container images
+# the default value is the chart's app version
+# can be overridden in order to pull custom built images
+# from a (private) container registry
+honoImageTag: ${helm.app-version}
+
+# options to pass to the JVM when starting up Hono's containers
 defaultJavaOptions: ${default-java-options}
 
-# the port that the Hono components' Prometheus scraping endpoint is exposed
+# the port that the Hono components' Prometheus scraping endpoint is exposed on
 monitoring:
   prometheus:
     port: ${prometheus.scraping.port}
 
-# the port that the Hono components' health check resources are exposed at
+# the port that the Hono components' health check resources are exposed on
 healthCheckPort: ${vertx.health.port}
 
-# whether we are deploying to OpenShift (platform: openshift) or plain Kubernetes (platform: kubernetes)
-# this flag is used to determine whether we need to deploy Route resources as well
+# the container orchestration platform we are deploying to
+# supported values are:
+# - openshift
+# - kubernetes
+#
+# when setting to "openshift", Route resources will also be deployed
 platform: kubernetes
 
-# this flag is used to determine whether external services should be deployed using the
+# indicates whether external services should be deployed using the
 # "LoadBalancer" type (true) or the "NodePort" type (false)
 # will always be false when deploying to "platform: openshift".
 useLoadBalancer: false
