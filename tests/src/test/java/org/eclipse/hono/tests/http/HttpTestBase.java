@@ -18,7 +18,6 @@ import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.security.KeyPair;
 import java.util.Base64;
-import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -768,21 +767,19 @@ public abstract class HttpTestBase {
                 .add(HttpHeaders.CONTENT_TYPE, "text/plain")
                 .add(HttpHeaders.AUTHORIZATION, authorization)
                 .add(HttpHeaders.ORIGIN, ORIGIN_URI)
-                .add(Constants.HEADER_TIME_TIL_DISCONNECT, "1");
+                .add(Constants.HEADER_TIME_TIL_DISCONNECT, "2");
 
         helper.registry.addDeviceForTenant(tenant, deviceId, PWD).setHandler(ctx.asyncAssertSuccess(ok -> setup.complete()));
         setup.await();
 
         testUploadMessages(ctx, tenantId,
                 msg -> {
-                    final Integer ttd = MessageHelper.getTimeUntilDisconnect(msg);
-                    logger.trace("received message [ttd: {}]", ttd);
-                    ctx.assertNotNull(ttd);
-                    final Optional<TimeUntilDisconnectNotification> notificationOpt = TimeUntilDisconnectNotification.fromMessage(msg);
-                    ctx.assertTrue(notificationOpt.isPresent());
-                    final TimeUntilDisconnectNotification notification = notificationOpt.get();
-                    ctx.assertEquals(tenantId, notification.getTenantId());
-                    ctx.assertEquals(deviceId, notification.getDeviceId());
+                    logger.trace("received message");
+                    TimeUntilDisconnectNotification.fromMessage(msg).ifPresent(notification -> {
+                        ctx.assertEquals(2, notification.getTtd());
+                        ctx.assertEquals(tenantId, notification.getTenantId());
+                        ctx.assertEquals(deviceId, notification.getDeviceId());
+                    });
                     // do NOT send a command, but let the HTTP adapter's timer expire
                 },
                 count -> {
@@ -799,7 +796,7 @@ public abstract class HttpTestBase {
                                 return responseHeaders;
                             });
                 },
-                3);
+                5);
     }
 
     /**
