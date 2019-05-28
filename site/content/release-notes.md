@@ -22,6 +22,8 @@ title = "Release Notes"
   device registry. The API is defined using an OpenAPI v3 specification and is
   part of the Git repository, and served at
   https://eclipse.org/hono/api/device-registry-v1.yaml.
+* The Command & Control feature now supports gateway agnostic addressing of devices. This means that applications are
+  able to send commands to devices without knowing the particular gateway they may be connected to.
 
 ### Fixes & Enhancements
 
@@ -48,6 +50,11 @@ title = "Release Notes"
 * The response message format of the *assert Device Registration* operation of the Device Registration API
   has been changed to include an optional `gw-supported` boolean field. The value of this field refers to 
   whether the device on which the operation is invoked allows one or more gateways to act on its behalf.
+* The AMQP sender link address to be used by *business applications* to send commands to devices has been 
+  changed from `control/${tenant_id}/${device_id}` to `control/${tenant_id}` with command messages requiring 
+  the `to` property to be set to `control/${tenant_id}/${device_id}`. Using `control/${tenant_id}/${device_id}`
+  as sender link address is still possible but gateway agnostic addressing of devices is not supported for 
+  such command messages.
 
 ## 1.0-M3
 
