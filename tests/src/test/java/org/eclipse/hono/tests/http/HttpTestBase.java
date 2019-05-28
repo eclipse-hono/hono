@@ -141,6 +141,8 @@ public abstract class HttpTestBase {
      */
     protected SelfSignedCertificate deviceCert;
 
+    private long testStartTimeMillis;
+
     /**
      * Sets up clients.
      * 
@@ -166,6 +168,7 @@ public abstract class HttpTestBase {
     @Before
     public void setUp() {
 
+        testStartTimeMillis = System.currentTimeMillis();
         logger.info("running {}", testName.getMethodName());
         logger.info("using HTTP adapter [host: {}, http port: {}, https port: {}]",
                 IntegrationTestSupport.HTTP_HOST,
@@ -427,7 +430,7 @@ public abstract class HttpTestBase {
             sending.await();
         }
 
-        final long timeToWait = Math.max(TEST_TIMEOUT_MILLIS - 1000, Math.round(numberOfMessages * 20));
+        final long timeToWait = Math.max(TEST_TIMEOUT_MILLIS - 50 - (System.currentTimeMillis() - testStartTimeMillis), 1);
         if (!received.await(timeToWait, TimeUnit.MILLISECONDS)) {
             logger.info("sent {} and received {} messages after {} milliseconds",
                     messageCount, numberOfMessages - received.getCount(), System.currentTimeMillis() - start);
