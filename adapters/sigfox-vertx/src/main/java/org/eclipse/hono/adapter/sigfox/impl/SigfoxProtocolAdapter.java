@@ -44,7 +44,7 @@ import io.vertx.ext.web.handler.ChainAuthHandler;
 import io.vertx.ext.web.handler.CorsHandler;
 
 /**
- * A Vert.x based Hono protocol adapter for receiving HTTP push messages from and sending commands to the Sigfox
+ * A Vert.x based Hono protocol adapter for receiving HTTP push messages from and sending commands to the SigFox
  * backend.
  */
 public final class SigfoxProtocolAdapter extends AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> {

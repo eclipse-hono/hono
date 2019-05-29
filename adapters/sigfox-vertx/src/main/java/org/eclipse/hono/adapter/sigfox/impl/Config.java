@@ -48,12 +48,12 @@ public class Config extends AbstractAdapterConfig {
         final HttpProtocolAdapterProperties httpProtocolAdapterProperties = adapterProperties();
         if (!httpProtocolAdapterProperties.isAuthenticationRequired()) {
             throw new IllegalStateException(
-                    "LoRa Protocol Adapter does not support unauthenticated mode. Please change your configuration accordingly.");
+                    "SigFox Protocol Adapter does not support unauthenticated mode. Please change your configuration accordingly.");
         }
     }
 
     /**
-     * Creates a new LoRa adapter instance.
+     * Creates a new SigFox adapter instance.
      * 
      * @return The new instance.
      */
@@ -104,7 +104,7 @@ public class Config extends AbstractAdapterConfig {
     }
 
     /**
-     * Exposes the LoRa adapter's configuration properties as a Spring bean.
+     * Exposes the SigFox adapter's configuration properties as a Spring bean.
      *
      * @return The configuration properties.
      */
@@ -115,7 +115,7 @@ public class Config extends AbstractAdapterConfig {
     }
 
     /**
-     * Exposes a factory for creating LoRa adapter instances.
+     * Exposes a factory for creating SigFox adapter instances.
      *
      * @return The factory bean.
      */
