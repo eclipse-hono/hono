@@ -2,7 +2,7 @@
 title = "Release Notes"
 +++
 
-## 1.0-M4 (not released yet)
+## 1.0-M4
 
 ### New Features
 
@@ -18,15 +18,15 @@ title = "Release Notes"
   type *hashed-password* and *x509-cert* for a configurable amount of time. Please refer to the
   [Device Registry Admin Guide]({{< ref "/admin-guide/device-registry-config.md" >}}) for details
   regarding the configuration properties to use.
-* There is now an official HTTP API for managing devices served by the
-  device registry. The API is defined using an OpenAPI v3 specification and is
-  part of the Git repository, and served at
+* There is now an official specification of an HTTP API for managing the content of a device registry.
+  The API is defined using by means of OpenAPI v3 and is available at
   https://eclipse.org/hono/api/device-registry-v1.yaml.
+  Note, that the API is not yet implemented by the example device registry that comes with Hono.
 * The Command & Control feature now supports gateway agnostic addressing of devices. This means that applications are
   able to send commands to devices without knowing the particular gateway they may be connected to.
-* The concept and implementation of *message limit* have been added. The protocol adapters can be now 
+* The concept and implementation of *message limit* have been added. The protocol adapters can be now
   enabled to verify this *message limit* for each tenant before accepting any telemetry/event messages.
-  Please refer to the [resource limits]({{< ref "/concepts/resource-limits.md" >}}) for details.  
+  Please refer to the [resource limits]({{< ref "/concepts/resource-limits.md" >}}) for details.
 * A basic Sigfox protocol adapter, for use with the Sigfox backend. Please read
   the [Sigfox protocol adapter]({{< ref "/user-guide/sigfox-adapter" >}})
   documentation to learn more about pre-requisites and limitations.
@@ -34,7 +34,6 @@ title = "Release Notes"
 ### Fixes & Enhancements
 
 * vert.x has been updated to version 3.7.0.
-* The already deprecated method `io.vertx.core.Future.completer` is not used anymore.
 
 ### API Changes
 
