@@ -49,8 +49,6 @@ import io.vertx.ext.web.handler.CorsHandler;
  */
 public final class SigfoxProtocolAdapter extends AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> {
 
-    private static final String TYPE_NAME = "hono-sigfox";
-
     private static final String SIGFOX_PROPERTY_PREFIX = "sigfox.";
 
     private static final String SIGFOX_PARAM_DEVICE_ID = "device";
@@ -84,10 +82,9 @@ public final class SigfoxProtocolAdapter extends AbstractVertxBasedHttpProtocolA
         this.usernamePasswordAuthProvider = Objects.requireNonNull(provider);
     }
 
-
     @Override
     protected String getTypeName() {
-        return TYPE_NAME;
+        return Constants.PROTOCOL_ADAPTER_TYPE_MQTT;
     }
 
     private void setupAuthorization(final Router router) {
