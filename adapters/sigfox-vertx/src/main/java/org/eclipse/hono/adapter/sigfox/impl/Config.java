@@ -22,9 +22,6 @@ import org.eclipse.hono.service.AbstractAdapterConfig;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.springframework.beans.factory.config.ObjectFactoryCreatingFactoryBean;
 import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.cache.CacheManager;
-import org.springframework.cache.annotation.EnableCaching;
-import org.springframework.cache.concurrent.ConcurrentMapCacheManager;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Scope;
@@ -36,7 +33,6 @@ import io.micrometer.spring.autoconfigure.MeterRegistryCustomizer;
  * Spring Boot configuration for the Sigfox adapter.
  */
 @Configuration
-@EnableCaching
 public class Config extends AbstractAdapterConfig {
 
     private static final String CONTAINER_ID_HONO_SIGFOX_ADAPTER = "Hono Sigfox Adapter";
@@ -124,16 +120,6 @@ public class Config extends AbstractAdapterConfig {
         final ObjectFactoryCreatingFactoryBean factory = new ObjectFactoryCreatingFactoryBean();
         factory.setTargetBeanName(BEAN_NAME_SIGFOX_PROTOCOL_ADAPTER);
         return factory;
-    }
-
-    /**
-     * Gets the cache manager.
-     *
-     * @return the cache manager
-     */
-    @Bean
-    public CacheManager cacheManager() {
-        return new ConcurrentMapCacheManager();
     }
 
     /**
