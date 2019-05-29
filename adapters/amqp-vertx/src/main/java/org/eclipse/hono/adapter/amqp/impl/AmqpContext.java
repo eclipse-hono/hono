@@ -37,6 +37,7 @@ import io.vertx.proton.ProtonHelper;
  */
 public class AmqpContext extends MapBasedExecutionContext {
 
+    private static final int HTTP_TOO_MANY_REQUESTS = 429;
     private ProtonDelivery delivery;
     private Message message;
     private ResourceIdentifier address;
@@ -203,6 +204,8 @@ public class AmqpContext extends MapBasedExecutionContext {
                 return ProtonHelper.condition(Constants.AMQP_BAD_REQUEST, error.getMessage());
             case HttpURLConnection.HTTP_FORBIDDEN:
                 return ProtonHelper.condition(AmqpError.UNAUTHORIZED_ACCESS, error.getMessage());
+            case HTTP_TOO_MANY_REQUESTS:
+                return ProtonHelper.condition(AmqpError.RESOURCE_LIMIT_EXCEEDED, error.getMessage());
             default:
                 return ProtonHelper.condition(AmqpError.PRECONDITION_FAILED, error.getMessage());
             }
