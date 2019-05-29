@@ -76,11 +76,12 @@ Create a new *device*, referencing the previous *gateway device*. The
 Log in to the Sigfox backend at https://backend.sigfox.com and then open up
 the view `Device Type` -> `Callbacks`.
 
-Create a new "Custom" callback, with the following settings:
+Create a new "Custom" callback, with the following settings
+(replacing `<TENANT>` with the name of the tenant):
 
 * **Type**: `DATA` – `UPLINK`
 * **Channel**: `URL`
-* **Url pattern**: `https://iot-sigfox-adapter.my.hono/data/telemetry?device={device}&data={data}`
+* **Url pattern**: `https://iot-sigfox-adapter.my.hono/data/telemetry/<TENANT>?device={device}&data={data}`
 * **Use HTTP Method**: `GET`
 * **Headers**
   * `Authorization` – `Basic …` (see note below)

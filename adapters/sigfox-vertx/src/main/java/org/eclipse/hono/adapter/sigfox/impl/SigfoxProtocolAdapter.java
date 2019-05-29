@@ -13,6 +13,7 @@
 
 package org.eclipse.hono.adapter.sigfox.impl;
 
+import java.net.HttpURLConnection;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -20,6 +21,7 @@ import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.adapter.http.AbstractVertxBasedHttpProtocolAdapter;
 import org.eclipse.hono.adapter.http.HttpProtocolAdapterProperties;
 import org.eclipse.hono.auth.Device;
+import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.service.auth.device.HonoClientBasedAuthProvider;
 import org.eclipse.hono.service.auth.device.UsernamePasswordAuthProvider;
 import org.eclipse.hono.service.auth.device.UsernamePasswordCredentials;
@@ -47,9 +49,15 @@ import io.vertx.ext.web.handler.CorsHandler;
  */
 public final class SigfoxProtocolAdapter extends AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> {
 
+    private static final String TYPE_NAME = "hono-sigfox";
+
     private static final String SIGFOX_PROPERTY_PREFIX = "sigfox.";
 
-    private static final String SIGFOX_PATH_PARAM_DEVICE_ID = "deviceId";
+    private static final String SIGFOX_PARAM_DEVICE_ID = "deviceId";
+
+    private static final String SIGFOX_PARAM_DATA = "data";
+
+    private static final String SIGFOX_PARAM_TENANT = "tenant";
 
     private static final Logger LOG = LoggerFactory.getLogger(SigfoxProtocolAdapter.class);
 
@@ -79,16 +87,16 @@ public final class SigfoxProtocolAdapter extends AbstractVertxBasedHttpProtocolA
 
     @Override
     protected String getTypeName() {
-        return "hono-sigfox";
+        return TYPE_NAME;
     }
 
     private void setupAuthorization(final Router router) {
         final ChainAuthHandler authHandler = new HonoChainAuthHandler();
 
         authHandler.append(new HonoBasicAuthHandler(
-                Optional.ofNullable(usernamePasswordAuthProvider).orElse(
-                        new UsernamePasswordAuthProvider(getCredentialsClientFactory(), getConfig(), tracer)),
-                getConfig().getRealm(), tracer));
+                Optional.ofNullable(this.usernamePasswordAuthProvider).orElse(
+                        new UsernamePasswordAuthProvider(getCredentialsClientFactory(), getConfig(), this.tracer)),
+                getConfig().getRealm(), this.tracer));
 
         router.route().handler(authHandler);
     }
@@ -98,13 +106,14 @@ public final class SigfoxProtocolAdapter extends AbstractVertxBasedHttpProtocolA
 
         setupAuthorization(router);
 
-        router.route("/data/telemetry")
+        router.route("/data/telemetry/:" + SIGFOX_PARAM_TENANT)
                 .method(HttpMethod.GET)
                 .handler(dataCorsHandler())
                 .handler(ctx -> dataHandler(ctx, this::uploadTelemetryMessage));
 
-        router.route("/data/event")
+        router.route("/data/event/:" + SIGFOX_PARAM_TENANT)
                 .method(HttpMethod.GET)
+                .handler(dataCorsHandler())
                 .handler(ctx -> dataHandler(ctx, this::uploadEventMessage));
 
         router.errorHandler(500, t -> {
@@ -131,17 +140,31 @@ public final class SigfoxProtocolAdapter extends AbstractVertxBasedHttpProtocolA
 
         final Device gatewayDevice = (Device) ctx.user();
 
-        final String tenant = gatewayDevice.getTenantId();
+        final String deviceTenant = gatewayDevice.getTenantId();
+        final String requestTenant = ctx.pathParam(SIGFOX_PARAM_TENANT);
 
-        final String deviceId = ctx.queryParams().get(SIGFOX_PATH_PARAM_DEVICE_ID);
-        final Buffer data = decodeData(ctx.queryParams().get("data"));
+        final String deviceId = ctx.queryParams().get(SIGFOX_PARAM_DEVICE_ID);
+        final Buffer data = decodeData(ctx.queryParams().get(SIGFOX_PARAM_DATA));
 
-        LOG.debug("{} handler - deviceId: {}, data: {}", ctx.request().method(), deviceId, data);
+        LOG.debug("{} handler - tenant: {}, deviceId: {}, data: {}",
+                ctx.request().method(), deviceTenant, requestTenant, deviceId, data);
+
+        if ( requestTenant == null ) {
+            ctx.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
+                    "missing the tenant information in the request URL"));
+            return;
+        }
+
+        if (!requestTenant.equals(deviceTenant)) {
+            ctx.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
+                    "tenant information mismatch"));
+            return;
+        }
 
         final String contentType = (data != null) ? CONTENT_TYPE_OCTET_STREAM
                 : EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION;
 
-        uploadHandler.upload(ctx, tenant, deviceId, data, contentType);
+        uploadHandler.upload(ctx, deviceTenant, deviceId, data, contentType);
     }
 
     @Override
