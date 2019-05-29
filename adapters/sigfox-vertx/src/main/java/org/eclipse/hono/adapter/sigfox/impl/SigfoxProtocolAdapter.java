@@ -13,7 +13,6 @@
 
 package org.eclipse.hono.adapter.sigfox.impl;
 
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -26,17 +25,21 @@ import org.eclipse.hono.service.auth.device.UsernamePasswordAuthProvider;
 import org.eclipse.hono.service.auth.device.UsernamePasswordCredentials;
 import org.eclipse.hono.service.http.HonoBasicAuthHandler;
 import org.eclipse.hono.service.http.HonoChainAuthHandler;
+import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.io.BaseEncoding;
 
+import io.vertx.core.Handler;
 import io.vertx.core.buffer.Buffer;
+import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.ChainAuthHandler;
+import io.vertx.ext.web.handler.CorsHandler;
 
 /**
  * A Vert.x based Hono protocol adapter for receiving HTTP push messages from and sending commands to the Sigfox
@@ -44,9 +47,9 @@ import io.vertx.ext.web.handler.ChainAuthHandler;
  */
 public final class SigfoxProtocolAdapter extends AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> {
 
-    private static final String SIGFOX_HEADER_PREFIX = "sigfox-";
-
     private static final String SIGFOX_PROPERTY_PREFIX = "sigfox.";
+
+    private static final String SIGFOX_PATH_PARAM_DEVICE_ID = "deviceId";
 
     private static final Logger LOG = LoggerFactory.getLogger(SigfoxProtocolAdapter.class);
 
@@ -97,19 +100,26 @@ public final class SigfoxProtocolAdapter extends AbstractVertxBasedHttpProtocolA
 
         router.route("/data/telemetry")
                 .method(HttpMethod.GET)
-                .method(HttpMethod.POST)
-                .method(HttpMethod.PUT)
+                .handler(dataCorsHandler())
                 .handler(ctx -> dataHandler(ctx, this::uploadTelemetryMessage));
 
         router.route("/data/event")
                 .method(HttpMethod.GET)
-                .method(HttpMethod.POST)
-                .method(HttpMethod.PUT)
                 .handler(ctx -> dataHandler(ctx, this::uploadEventMessage));
 
         router.errorHandler(500, t -> {
             LOG.warn("Unhandled exception", t);
         });
+    }
+
+    private Handler<RoutingContext> dataCorsHandler() {
+        return CorsHandler.create(getConfig().getCorsAllowedOrigin())
+                .allowedMethod(HttpMethod.GET)
+                .allowedHeader(Constants.HEADER_TIME_TIL_DISCONNECT)
+                .allowedHeader(HttpHeaders.AUTHORIZATION.toString())
+                .allowedHeader(HttpHeaders.CONTENT_TYPE.toString())
+                .exposedHeader(Constants.HEADER_COMMAND)
+                .exposedHeader(Constants.HEADER_COMMAND_REQUEST_ID);
     }
 
     protected void dataHandler(final RoutingContext ctx, final UploadHandler uploadHandler) {
@@ -123,8 +133,8 @@ public final class SigfoxProtocolAdapter extends AbstractVertxBasedHttpProtocolA
 
         final String tenant = gatewayDevice.getTenantId();
 
-        final String deviceId = ctx.queryParams().get("device");
-        final Buffer data = decode(ctx.queryParams().get("data"));
+        final String deviceId = ctx.queryParams().get(SIGFOX_PATH_PARAM_DEVICE_ID);
+        final Buffer data = decodeData(ctx.queryParams().get("data"));
 
         LOG.debug("{} handler - deviceId: {}, data: {}", ctx.request().method(), deviceId, data);
 
@@ -141,32 +151,16 @@ public final class SigfoxProtocolAdapter extends AbstractVertxBasedHttpProtocolA
         // pass along all query parameters that start with 'sigfox.'
         // If a key has multiple values, then only one of them will be mapped.
 
-        for (final Map.Entry<String, String> entry : ctx.queryParams()) {
+        for (final var entry : ctx.queryParams()) {
             if (entry.getKey() == null || !entry.getKey().startsWith(SIGFOX_PROPERTY_PREFIX)) {
                 continue;
             }
             downstreamMessage.getApplicationProperties().getValue().put(entry.getKey(), entry.getValue());
         }
 
-        // pass along all headers that start with 'sigfox-' and map the prefix to "sigfox."
-        // If a key has multiple values, then only one of them will be mapped.
-
-        for (final Map.Entry<String, String> entry : ctx.request().headers()) {
-            String key = entry.getKey();
-            if (key == null) {
-                continue;
-            }
-            key = key.toLowerCase();
-            if (!key.startsWith(SIGFOX_HEADER_PREFIX)) {
-                continue;
-            }
-            key = key.substring(SIGFOX_HEADER_PREFIX.length());
-            downstreamMessage.getApplicationProperties().getValue().put(SIGFOX_PROPERTY_PREFIX + key, entry.getValue());
-        }
-
     }
 
-    private static Buffer decode(final String data) {
+    private static Buffer decodeData(final String data) {
         if (data == null) {
             return Buffer.buffer();
         }
