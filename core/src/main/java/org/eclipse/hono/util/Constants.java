@@ -59,11 +59,11 @@ public final class Constants {
      */
     public static final String PROTOCOL_ADAPTER_TYPE_AMQP= "hono-amqp";
     /**
-     * The type of the Eclipse coap adapter.
+     * The type of the CoAP protocol adapter.
      */
     public static final String PROTOCOL_ADAPTER_TYPE_COAP= "hono-coap";
     /**
-     * The type of the http protocol adapter.
+     * The type of the HTTP protocol adapter.
      */
     public static final String PROTOCOL_ADAPTER_TYPE_HTTP= "hono-http";
     /**
@@ -71,7 +71,11 @@ public final class Constants {
      */
     public static final String PROTOCOL_ADAPTER_TYPE_KURA= "hono-kura-mqtt";
     /**
-     * The type of the mqtt protocol adapter.
+     * The type of the LoRaWAN protocol adapter.
+     */
+    public static final String PROTOCOL_ADAPTER_TYPE_LORA= "hono-lora";
+    /**
+     * The type of the MQTT protocol adapter.
      */
     public static final String PROTOCOL_ADAPTER_TYPE_MQTT= "hono-mqtt";
 

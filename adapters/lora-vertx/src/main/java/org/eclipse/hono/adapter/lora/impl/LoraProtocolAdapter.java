@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -150,7 +150,7 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
 
     @Override
     protected String getTypeName() {
-        return "hono-lora";
+        return Constants.PROTOCOL_ADAPTER_TYPE_LORA;
     }
 
     @Override
