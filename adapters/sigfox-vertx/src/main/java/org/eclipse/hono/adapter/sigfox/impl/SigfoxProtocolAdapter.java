@@ -53,7 +53,7 @@ public final class SigfoxProtocolAdapter extends AbstractVertxBasedHttpProtocolA
 
     private static final String SIGFOX_PROPERTY_PREFIX = "sigfox.";
 
-    private static final String SIGFOX_PARAM_DEVICE_ID = "deviceId";
+    private static final String SIGFOX_PARAM_DEVICE_ID = "device";
 
     private static final String SIGFOX_PARAM_DATA = "data";
 
