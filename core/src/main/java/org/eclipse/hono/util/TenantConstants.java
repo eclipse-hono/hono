@@ -38,7 +38,7 @@ public final class TenantConstants extends RequestResponseApiConstants {
     /**
      * The name of the property that contains the type name of a protocol adapter.
      */
-    public static final String FIELD_ADAPTERS_TYPE               = "type";
+    public static final String FIELD_ADAPTERS_TYPE = "type";
     /**
      * The name of the property that indicates whether a protocol adapter requires
      * all devices to authenticate.
@@ -49,6 +49,10 @@ public final class TenantConstants extends RequestResponseApiConstants {
      * adapters should use for a tenant.
      */
     public static final String FIELD_MAX_TTD = "max-ttd";
+    /**
+     * The name of the property that contains the algorithm used for a public key.
+     */
+    public static final String FIELD_PAYLOAD_KEY_ALGORITHM = "algorithm";
     /**
      * The name of the property that contains the Base64 encoded (binary) DER encoding of
      * the trusted certificate configured for a tenant.

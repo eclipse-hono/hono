@@ -113,7 +113,8 @@ public class TenantObjectTest {
                 .put(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA,
                         new JsonObject()
                         .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, trustedCaCert.getSubjectX500Principal().getName(X500Principal.RFC2253))
-                        .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, Base64.getEncoder().encodeToString(trustedCaCert.getPublicKey().getEncoded())));
+                        .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, Base64.getEncoder().encodeToString(trustedCaCert.getPublicKey().getEncoded()))
+                        .put(TenantConstants.FIELD_PAYLOAD_KEY_ALGORITHM, trustedCaCert.getPublicKey().getAlgorithm()));
 
         final TenantObject tenant = config.mapTo(TenantObject.class);
         assertThat(tenant.getTrustedCaSubjectDn(), is(trustedCaCert.getSubjectX500Principal()));

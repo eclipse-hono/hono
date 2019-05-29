@@ -33,13 +33,18 @@ COAP_ADAPTER_KEY_STORE=coapKeyStore.p12
 COAP_ADAPTER_KEY_STORE_PWD=coapkeys
 AMQP_ADAPTER_KEY_STORE=amqpKeyStore.p12
 AMQP_ADAPTER_KEY_STORE_PWD=amqpkeys
+# set to either EC or RSA
+KEY_ALG=EC
 
 function create_key { 
 
   echo ""
-  openssl genrsa 4096 | openssl pkcs8 -topk8 -nocrypt -inform PEM -outform PEM -out $DIR/$1
-#  openssl ecparam -name prime256v1 -genkey -noout | openssl pkcs8 -topk8 -nocrypt -inform PEM -outform PEM -out $DIR/$1
-  
+  if [ $KEY_ALG == "EC" ]
+  then
+    openssl ecparam -name prime256v1 -genkey -noout | openssl pkcs8 -topk8 -nocrypt -inform PEM -outform PEM -out $DIR/$1
+  else
+    openssl genrsa 4096 | openssl pkcs8 -topk8 -nocrypt -inform PEM -outform PEM -out $DIR/$1
+  fi
 }
 
 function create_cert {
@@ -107,6 +112,7 @@ CA_SUBJECT=$(openssl x509 -in $DIR/default_tenant-cert.pem -noout -subject -name
 PK=$(openssl x509 -in $DIR/default_tenant-cert.pem -noout -pubkey | sed /^---/d | sed -z 's/\n//g')
 echo "trusted-ca.subject-dn=$CA_SUBJECT" > $DIR/trust-anchor.properties
 echo "trusted-ca.public-key=$PK" >> $DIR/trust-anchor.properties
+echo "trusted-ca.algorithm=$KEY_ALG" >> $DIR/trust-anchor.properties
 
 create_cert qdrouter
 create_cert auth-server $AUTH_SERVER_KEY_STORE $AUTH_SERVER_KEY_STORE_PWD

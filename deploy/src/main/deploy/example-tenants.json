@@ -3,7 +3,8 @@
     "tenant-id": "DEFAULT_TENANT",
     "trusted-ca": {
       "subject-dn": "${trusted-ca.subject-dn}",
-      "public-key": "${trusted-ca.public-key}"
+      "public-key": "${trusted-ca.public-key}",
+      "algorithm": "${trusted-ca.algorithm}"
     },
     "enabled": true
   },

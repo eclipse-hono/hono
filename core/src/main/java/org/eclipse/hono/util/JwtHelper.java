@@ -14,6 +14,8 @@ package org.eclipse.hono.util;
 
 import java.nio.charset.StandardCharsets;
 import java.security.Key;
+import java.security.interfaces.ECKey;
+import java.security.interfaces.RSAKey;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Date;
@@ -106,10 +108,15 @@ public abstract class JwtHelper {
      */
     protected final void setPrivateKey(final String keyPath) {
         Objects.requireNonNull(keyPath);
-        this.algorithm = SignatureAlgorithm.RS256;
-        this.key = KeyLoader.fromFiles(vertx, keyPath, null).getPrivateKey();
+        key = KeyLoader.fromFiles(vertx, keyPath, null).getPrivateKey();
         if (key == null) {
             throw new IllegalArgumentException("cannot load private key: " + keyPath);
+        } else if (key instanceof ECKey) {
+            algorithm = SignatureAlgorithm.ES256;
+        } else if (key instanceof RSAKey) {
+            algorithm = SignatureAlgorithm.RS256;
+        } else {
+            throw new IllegalArgumentException("unsupported private key type: " + key.getClass());
         }
     }
 
@@ -123,10 +130,15 @@ public abstract class JwtHelper {
      */
     protected final void setPublicKey(final String keyPath) {
         Objects.requireNonNull(keyPath);
-        this.algorithm = SignatureAlgorithm.RS256;
-        this.key = KeyLoader.fromFiles(vertx, null, keyPath).getPublicKey();
+        key = KeyLoader.fromFiles(vertx, null, keyPath).getPublicKey();
         if (key == null) {
             throw new IllegalArgumentException("cannot load public key: " + keyPath);
+        } else if (key instanceof ECKey) {
+            algorithm = SignatureAlgorithm.ES256;
+        } else if (key instanceof RSAKey) {
+            algorithm = SignatureAlgorithm.RS256;
+        } else {
+            throw new IllegalArgumentException("unsupported public key type: " + key.getClass());
         }
     }
 

@@ -2,6 +2,14 @@
 title = "Release Notes"
 +++
 
+## 1.0-M5 (not released yet)
+
+### New Features
+
+* Hono's protocol adapters and the other components now support using ECC based server certificates.
+  The protocol adapters also support authenticating devices which present an ECC based client certificate.
+  The example configuration now uses ECC based certificates by default.
+
 ## 1.0-M4
 
 ### New Features

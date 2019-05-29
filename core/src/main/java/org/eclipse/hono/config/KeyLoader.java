@@ -175,9 +175,9 @@ public final class KeyLoader {
 
     }
 
-    private static PrivateKey generateRsaKey(final KeySpec keySpec) throws GeneralSecurityException {
+    private static PrivateKey generatePrivateKey(final String algorithm, final KeySpec keySpec) throws GeneralSecurityException {
         return KeyFactory
-                .getInstance("RSA")
+                .getInstance(algorithm)
                 .generatePrivate(keySpec);
     }
 
@@ -202,7 +202,7 @@ public final class KeyLoader {
         } catch (final IllegalArgumentException e) {
             throw e;
         } catch (final Exception e) {
-            throw new IllegalArgumentException(format("%s: Failed to load PEM file: ", pathName), e);
+            throw new IllegalArgumentException(String.format("%s: Failed to load PEM file: ", pathName), e);
         }
 
     }
@@ -216,13 +216,22 @@ public final class KeyLoader {
             switch (pem.getType()) {
 
             case "PRIVATE KEY":
-                return generateRsaKey(new PKCS8EncodedKeySpec(pem.getPayload()));
+                // in PKCS#8 the key algorithm is indicated at the beginning of the ASN.1 structure
+                // so we can use the corresponding key factory once we know the algorithm name
+                final String algorithm = PrivateKeyParser.getPKCS8EncodedKeyAlgorithm(pem.getPayload());
+                if ("RSA".equals(algorithm)) {
+                    return generatePrivateKey(algorithm, new PKCS8EncodedKeySpec(pem.getPayload()));
+                } else if ("EC".equals(algorithm)) {
+                    return generatePrivateKey(algorithm, new PKCS8EncodedKeySpec(pem.getPayload()));
+                } else {
+                    throw new IllegalArgumentException(String.format("%s: Unsupported key algorithm: %s", keyPath, algorithm));
+                }
 
             case "RSA PRIVATE KEY":
-                return generateRsaKey(PrivateKeyParser.getRSAKeySpec(pem.getPayload()));
+                return generatePrivateKey("RSA", PrivateKeyParser.getRSAKeySpec(pem.getPayload()));
 
             default:
-                throw new IllegalArgumentException(format("%s: Unsupported key type: %s", keyPath, pem.getType()));
+                throw new IllegalArgumentException(String.format("%s: Unsupported key type: %s", keyPath, pem.getType()));
 
             }
         });
@@ -258,7 +267,7 @@ public final class KeyLoader {
             LOG.debug("loading keys from key store containing {} entries", store.size());
             for (final Enumeration<String> e = store.aliases(); e.hasMoreElements();) {
                 final String alias = e.nextElement();
-                LOG.info("current alias: {}", alias);
+                LOG.debug("current alias: {}", alias);
                 if (store.isKeyEntry(alias)) {
                     LOG.debug("loading private key [{}]", alias);
                     privateKey = (PrivateKey) store.getKey(alias, password);

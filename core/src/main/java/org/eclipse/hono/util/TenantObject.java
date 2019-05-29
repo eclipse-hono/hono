@@ -148,6 +148,7 @@ public final class TenantObject extends JsonBackedValueObject {
         final JsonObject trustedCa = new JsonObject();
         trustedCa.put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, subjectDn.getName(X500Principal.RFC2253));
         trustedCa.put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, publicKey.getEncoded());
+        trustedCa.put(TenantConstants.FIELD_PAYLOAD_KEY_ALGORITHM, publicKey.getAlgorithm());
         return setProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, trustedCa);
     }
 
@@ -265,7 +266,7 @@ public final class TenantObject extends JsonBackedValueObject {
                 return null;
             } else {
                 try {
-                    final String type = Optional.ofNullable((String) getProperty(keyProps, TenantConstants.FIELD_ADAPTERS_TYPE)).orElse("RSA");
+                    final String type = getProperty(keyProps, TenantConstants.FIELD_PAYLOAD_KEY_ALGORITHM, "RSA");
                     final X509EncodedKeySpec keySpec = new X509EncodedKeySpec(Base64.getDecoder().decode(encodedKey));
                     final KeyFactory factory = KeyFactory.getInstance(type);
                     final PublicKey publicKey = factory.generatePublic(keySpec);
