@@ -8,11 +8,7 @@ A tenant is a logical entity, which groups together a set of devices and consist
 The tenant meta information is used for example to determine if a given tenant is allowed to use a certain protocol adapter or if devices are required to use authentication.
 <!--more-->
 
-{{% note %}}
-This API has been added in Hono 0.6. Previous versions do not support nor implement the Tenant API.
-{{% /note %}}
-
-This document *describes* the Tenant API by means of available operations and data structure format only. 
+This document *describes* the Tenant API by means of available operations and data structure format only.
 Please refer to [Multi Tenancy]({{< ref "/concepts/tenancy.md" >}}) for details regarding the way Hono supports multiple tenants.
 
 Note, however, that in real world applications the tenant information will probably be kept and managed in an existing *system of record*, using e.g. a database for persisting the data. The Tenant API accounts for this fact by means of defining only the [Get Tenant Information]({{< relref "#get-tenant-information" >}}) operation as *mandatory*, i.e. this operation is strictly required by a Hono instance for it to work properly, whereas the remaining operations are defined as *optional* from a Hono perspective.

@@ -17,11 +17,6 @@ The Command & Control API is defined by means of AMQP 1.0 message exchanges, i.e
 There is also a description of Command & Control [at the conceptual level]({{< ref "/concepts/command-and-control.md" >}}) 
 and the [Getting Started]({{< ref "/getting-started.md" >}}) guide contains a walk through example.
 
-{{% note %}}
-The Command & Control API has been added in Hono 0.6. Prior versions do neither support nor implement it. One-way commands have been added in Hono 0.8.
-{{% /note %}}
-
-
 # Operations
 
 The following API defines operations that can be used by *Business Applications* to send commands to devices over an AMQP 1.0 Network.
