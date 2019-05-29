@@ -211,12 +211,12 @@ title = "Release Notes"
 ### New Features
 
 * The MQTT adapter now supports commands to be published using QoS 1. Please refer to
-  [MQTT adapter User Guide]({{< relref "/user-guide/mqtt-adapter.md" >}}) for details.
+  [MQTT adapter User Guide]({{< ref "/user-guide/mqtt-adapter.md" >}}) for details.
 * The MQTT adapter now supports limiting the number of concurrent connections in order
   to prevent running out of resources. Please refer to
-  [MQTT Adapter Configuration]({{< relref "/admin-guide/mqtt-adapter-config.md" >}}) for details.
+  [MQTT Adapter Configuration]({{< ref "/admin-guide/mqtt-adapter-config.md" >}}) for details.
 * The new *Helm deployment* for Kubernetes has been added. Please refer to
-  [Kubernetes deployment guide]({{< relref "/deployment/kubernetes.md" >}}) for details.
+  [Helm based deployment guide]({{< ref "/deployment/helm-based-deployment.md" >}}) for details.
 
 ### Fixes & Enhancements
 

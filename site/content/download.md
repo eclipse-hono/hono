@@ -21,7 +21,7 @@ deploy/docker/swarm_deploy.sh
 
 Hono supports deployment to the following container orchestration platforms:
 
-* [Kubernetes]({{< ref "/deployment/kubernetes.md" >}})
+* [Kubernetes]({{< ref "/deployment/helm-based-deployment.md" >}})
 * [OpenShift]({{< ref "/deployment/openshift.md" >}})
 * [Docker Swarm]({{< ref "/deployment/docker-swarm.md" >}})
 
