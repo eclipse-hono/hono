@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -128,7 +128,7 @@ public final class SigfoxProtocolAdapter extends AbstractVertxBasedHttpProtocolA
                 .exposedHeader(Constants.HEADER_COMMAND_REQUEST_ID);
     }
 
-    protected void dataHandler(final RoutingContext ctx, final UploadHandler uploadHandler) {
+    private void dataHandler(final RoutingContext ctx, final UploadHandler uploadHandler) {
 
         if (!(ctx.user() instanceof Device)) {
             LOG.warn("Not a device");
