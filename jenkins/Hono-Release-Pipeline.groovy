@@ -136,7 +136,7 @@ def commitAndPush() {
 def copyArtifacts() {
     stage("Copy Artifacts") {
         sh ''' 
-            chmod +r deploy/target/eclipse-hono-deploy-${RELEASE_VERSION}.tar.gz
+            chmod +r deploy/target/eclipse-hono-${RELEASE_VERSION}-*.tar.gz
             chmod +r cli/target/hono-cli-${RELEASE_VERSION}-exec.jar
             cp deploy/target/eclipse-hono-${RELEASE_VERSION}-*.tar.gz /home/data/httpd/download.eclipse.org/hono/
             cp cli/target/hono-cli-${RELEASE_VERSION}-exec.jar /home/data/httpd/download.eclipse.org/hono/
