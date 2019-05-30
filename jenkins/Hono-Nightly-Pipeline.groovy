@@ -50,7 +50,7 @@ def nightlyBuild(def utils) {
     stage('Build') {
         withMaven(maven: utils.getMavenVersion(), jdk: utils.getJDKVersion(), options: [jacocoPublisher(disabled: true), artifactsPublisher(disabled: true)]) {
             sh 'mvn clean package javadoc:aggregate'
-            sh 'mvn --projects :hono-service-auth,:hono-service-device-registry,:hono-adapter-http-vertx,:hono-adapter-mqtt-vertx,:hono-adapter-kura,:hono-adapter-amqp-vertx,:hono-adapter-coap-vertx,:hono-example -am deploy -DcreateJavadoc=true -DenableEclipseJarSigner=true'
+            sh 'mvn --projects :hono-service-auth,:hono-service-device-registry,:hono-adapter-http-vertx,:hono-adapter-mqtt-vertx,:hono-adapter-kura,:hono-adapter-amqp-vertx,:hono-adapter-lora-vertx,:hono-adapter-sigfox-vertx,:hono-adapter-coap-vertx,:hono-example,:hono-cli -am deploy -DcreateJavadoc=true -DenableEclipseJarSigner=true'
         }
     }
 }

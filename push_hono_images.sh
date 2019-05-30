@@ -14,10 +14,18 @@
 
 TAG=$1
 CR=$2
+IMAGES=hono-adapter-http-vertx \
+       hono-adapter-mqtt-vertx \
+       hono-adapter-kura \
+       hono-adapter-amqp-vertx \
+       hono-adapter-lora-vertx \
+       hono-adapter-sigfox-vertx \
+       hono-service-auth \
+       hono-service-device-registry
 
 if [ -n "$TAG" ]
 then
-  for image in hono-adapter-http-vertx hono-adapter-mqtt-vertx hono-adapter-kura hono-adapter-amqp-vertx hono-service-auth hono-service-device-registry
+  for image in $IMAGES
   do
     ECLIPSE_IMAGE_NAME="eclipse/$image"
     IMAGE_NAME=$ECLIPSE_IMAGE_NAME
