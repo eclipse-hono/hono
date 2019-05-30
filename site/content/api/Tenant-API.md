@@ -414,8 +414,9 @@ The table below provides an overview of the members defined for the *trusted-ca*
 | Name                     | Mandatory  | Type          | Default Value | Description |
 | :------------------------| :--------: | :------------ | :------------ | :---------- |
 | *subject-dn*             | *yes*      | *string*      |               | The subject DN of the trusted root certificate in the format defined by [RFC 2253](https://www.ietf.org/rfc/rfc2253.txt). |
-| *cert*                   | *no*       | *string*      |               | The Base64 encoded binary DER encoding of the trusted root certificate. |
+| *cert*                   | *no*       | *string*      |               | The Base64 encoded binary DER encoding of the trusted root X.509 certificate. |
 | *public-key*             | *no*       | *string*      |               | The Base64 encoded binary DER encoding of the trusted root certificate's public key. |
+| *algorithm*              | *no*       | *string*      | `RSA`        | The name of the public key algorithm. Supported values are `RSA` and `EC`. This property is ignored if the *cert* property is used to store a certificate. |
 
 * The *subject-dn* MUST be unique among all registered tenants.
   * Implementations MUST reject requests to add or update a tenant with payload that contains a subject DN that is already configured for another tenant and return a status code of *409 Conflict*.
