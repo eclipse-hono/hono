@@ -38,7 +38,7 @@ After the archive has been extracted, the chart can be found in the `eclipse-hon
 The Hono command line client is available from the [download page]({{< ref "/download.md" >}}).
 Note that running the command line client requires a Java 11 runtime environment being installed locally.
 
-## Deploying Hono using Helm's Tiller Service
+## Deploying Hono
 
 The recommended way of deploying Hono is by means of using Helm's *Tiller* service running on the Kubernetes cluster:
 
@@ -57,11 +57,11 @@ helm status eclipse-hono
 helm get eclipse-hono
 ~~~
 
-## Deploying Hono without using Helm's Tiller Service
+### Deploying Hono using kubectl
 
 In cases where installation of Helm's Tiller service into the cluster is not an option, the Kubernetes resource descriptors created by Helm can be deployed manually using the `kubectl` command line tool.
 
-Then run the following commands to generate the resource descriptors using Helm:
+Run the following commands to generate the resource descriptors using Helm:
 
 ~~~sh
 # in directory: eclipse-hono-$VERSION/deploy/
@@ -69,7 +69,7 @@ helm dep update helm/
 helm template --name eclipse-hono --namespace hono --output-dir . helm/
 ~~~
 
-This will create an `eclipse-hono` folder containing all the resource descriptors which can be deployed to the cluster using the following commands:
+This will create an `eclipse-hono` folder containing all the resource descriptors which can then be deployed to the cluster using `kubectl`:
 
 ~~~sh
 # in directory: eclipse-hono-$VERSION/deploy/
