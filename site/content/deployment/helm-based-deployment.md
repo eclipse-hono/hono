@@ -8,7 +8,7 @@ This page describes the steps necessary to deploy Hono to a [Kubernetes](https:/
 <!--more-->
 
 {{% note %}}
-The example configuration that comes with Hono and which is used in this guide is not supposed to be used for evaluation and development purposes only.
+The example configuration that comes with Hono and which is used in this guide is supposed to be used for evaluation and development purposes only.
 {{% /note %}}
 
 ## Prerequisites
