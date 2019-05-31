@@ -13,7 +13,9 @@
 package org.eclipse.hono.service.registration;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
@@ -117,23 +119,60 @@ public abstract class AbstractCompleteRegistrationServiceTest {
     @Test
     public void testGetSucceedsForRegisteredDevice(final VertxTestContext ctx) {
 
-        final Future<RegistrationResult> result = Future.future();
-        final Checkpoint get = ctx.checkpoint(2);
+        final Future<RegistrationResult> addResult = Future.future();
 
-        getCompleteRegistrationService().addDevice(TENANT, DEVICE, new JsonObject(), result);
-        result.compose(response -> {
-            assertEquals(HttpURLConnection.HTTP_CREATED, response.getStatus());
-            get.flag();
-            final Future<RegistrationResult> addResult = Future.future();
-            getCompleteRegistrationService().getDevice(TENANT, DEVICE, addResult);
-            return addResult;
-        }).setHandler(
-                ctx.succeeding(s -> ctx.verify(() -> {
-                            assertEquals(HttpURLConnection.HTTP_OK, s.getStatus());
-                            assertNotNull(s.getPayload());
-                            get.flag();
-                        }
-                )));
+        getCompleteRegistrationService().addDevice(TENANT, DEVICE, new JsonObject(), addResult);
+        addResult.map(r -> ctx.verify(() -> {
+            assertEquals(HttpURLConnection.HTTP_CREATED, r.getStatus());
+        }))
+        .compose(ok -> {
+            final Future<RegistrationResult> getResult = Future.future();
+            getCompleteRegistrationService().getDevice(TENANT, DEVICE, getResult);
+            return getResult;
+        })
+        .setHandler(ctx.succeeding(s -> ctx.verify(() -> {
+            assertEquals(HttpURLConnection.HTTP_OK, s.getStatus());
+            assertNotNull(s.getPayload());
+            ctx.completeNow();
+        })));
+    }
+
+    /**
+     * Verifies that the registry returns a copy of the registered device information
+     * on each invocation of the get operation..
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testGetReturnsCopyOfOriginalData(final VertxTestContext ctx) {
+
+        final Future<RegistrationResult> addResult = Future.future();
+        final Future<RegistrationResult> getResult = Future.future();
+
+        getCompleteRegistrationService().addDevice(TENANT, DEVICE, new JsonObject(), addResult);
+        addResult
+        .compose(r -> {
+            ctx.verify(() -> assertEquals(HttpURLConnection.HTTP_CREATED, r.getStatus()));
+            getCompleteRegistrationService().getDevice(TENANT, DEVICE, getResult);
+            return getResult;
+        })
+        .compose(r -> {
+            ctx.verify(() -> assertEquals(HttpURLConnection.HTTP_OK, r.getStatus()));
+            r.getPayload().put("new-prop", true);
+            final Future<RegistrationResult> secondGetResult = Future.future();
+            getCompleteRegistrationService().getDevice(TENANT, DEVICE, secondGetResult);
+            return secondGetResult;
+        })
+        .setHandler(ctx.succeeding(secondGetResult -> {
+            ctx.verify(() -> {
+                assertEquals(HttpURLConnection.HTTP_OK, secondGetResult.getStatus());
+                assertNotNull(getResult.result().getPayload().getBoolean("new-prop"));
+                assertNotEquals(getResult.result().getPayload(), secondGetResult.getPayload());
+                assertNotNull(secondGetResult.getPayload());
+                assertNull(secondGetResult.getPayload().getBoolean("new-prop"));
+                ctx.completeNow();
+            });
+        }));
     }
 
     /**

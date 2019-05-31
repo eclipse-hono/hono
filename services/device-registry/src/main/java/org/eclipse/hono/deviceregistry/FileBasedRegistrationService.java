@@ -21,6 +21,7 @@ import static org.eclipse.hono.util.RequestResponseApiConstants.FIELD_ENABLED;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -248,7 +249,7 @@ public final class FileBasedRegistrationService extends CompleteBaseRegistration
         if (data != null) {
             return RegistrationResult.from(
                     HTTP_OK,
-                    getResultPayload(deviceId, data),
+                    getResultPayload(deviceId, data.copy()),
                     getCacheDirective(deviceId, tenantId));
         } else {
             return RegistrationResult.from(HTTP_NOT_FOUND);
@@ -316,7 +317,9 @@ public final class FileBasedRegistrationService extends CompleteBaseRegistration
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
 
-        final JsonObject obj = data != null ? data : new JsonObject().put(FIELD_ENABLED, Boolean.TRUE);
+        final JsonObject obj = Optional.ofNullable(data)
+                .map(d -> d.copy())
+                .orElse(new JsonObject().put(FIELD_ENABLED, Boolean.TRUE));
         final Map<String, JsonObject> devices = getDevicesForTenant(tenantId);
         if (devices.size() < getConfig().getMaxDevicesPerTenant()) {
             if (devices.putIfAbsent(deviceId, obj) == null) {
@@ -346,17 +349,24 @@ public final class FileBasedRegistrationService extends CompleteBaseRegistration
         Objects.requireNonNull(deviceId);
 
         if (getConfig().isModificationEnabled()) {
-            final JsonObject obj = data != null ? data : new JsonObject().put(FIELD_ENABLED, Boolean.TRUE);
-            final Map<String, JsonObject> devices = identities.get(tenantId);
-            if (devices != null && devices.containsKey(deviceId)) {
-                devices.put(deviceId, obj);
-                dirty = true;
-                return RegistrationResult.from(HTTP_NO_CONTENT);
-            } else {
-                return RegistrationResult.from(HTTP_NOT_FOUND);
-            }
+            return doUpdateDevice(tenantId, deviceId, data);
         } else {
             return RegistrationResult.from(HTTP_FORBIDDEN);
+        }
+    }
+
+    private RegistrationResult doUpdateDevice(final String tenantId, final String deviceId, final JsonObject data) {
+
+        final JsonObject obj = Optional.ofNullable(data)
+                .map(d -> d.copy())
+                .orElse(new JsonObject().put(FIELD_ENABLED, Boolean.TRUE));
+        final Map<String, JsonObject> devices = identities.get(tenantId);
+        if (devices != null && devices.containsKey(deviceId)) {
+            devices.put(deviceId, obj);
+            dirty = true;
+            return RegistrationResult.from(HTTP_NO_CONTENT);
+        } else {
+            return RegistrationResult.from(HTTP_NOT_FOUND);
         }
     }
 

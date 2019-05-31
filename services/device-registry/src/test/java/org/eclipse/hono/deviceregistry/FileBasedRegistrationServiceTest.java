@@ -210,8 +210,6 @@ public class FileBasedRegistrationServiceTest extends AbstractCompleteRegistrati
             ctx.completeNow();
         }));
         registrationService.doStart(startupTracker);
-
-
     }
 
     /**
