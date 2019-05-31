@@ -319,25 +319,26 @@ public abstract class BaseRegistrationService<T> extends EventBusService<T> impl
     }
 
     /**
-     * Updates device registration data and adds a 'last-via' property containing the given gateway identifier
+     * Updates device registration data and adds a {@code last-via} property containing the given gateway identifier
      * as well as the current date.
      * <p>
-     * This method this called by this class' default implementation of <em>assertRegistration</em> for a device that
-     * has one or more gateway entries in its 'via' definition.
+     * This method is called by this class' default implementation of <em>assertRegistration</em> for a device that
+     * has one or more gateways defined in its {@code via} property.
      * <p>
      * If such a device connects directly instead of through a gateway, the device identifier is to be used as value
      * for the <em>gatewayId</em> parameter.
      * <p>
      * Subclasses need to override this method and provide a reasonable implementation in order to support scenarios
-     * where devices with multiple potential 'via' gateways are used, along with gateways subscribing to command 
-     * messages only using their gateway id. In such scenarios, the 'last-via' value is needed to route command messages
-     * to the right gateway.
+     * where devices may connect via multiple gateways, along with gateways subscribing to command messages only
+     * using their gateway id. In such scenarios, the identifier stored in the {@code last-via} property is
+     * used to route command messages to the protocol adapter that the gateway is connected to.
      *
      * @param tenantId The tenant id.
      * @param deviceId The device id.
      * @param gatewayId The gateway id (or the device id if the request comes directly from the device).
-     * @param deviceData The current data associated with the device.
+     * @param deviceData The device's current registration information.
      * @return A future indicating whether the operation succeeded or not.
+     * @throws NullPointerException if any of the parameters are {@code null}.
      */
     protected abstract Future<Void> updateDeviceLastVia(String tenantId, String deviceId, String gatewayId, JsonObject deviceData);
 

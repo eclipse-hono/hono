@@ -152,9 +152,24 @@ public abstract class CompleteBaseRegistrationService<T> extends BaseRegistratio
         }
     }
 
+    /**
+     * {@inheritDoc}
+     * <p>
+     * This implementation delegates to {@link #updateDevice(String, String, JsonObject, Handler)}
+     * in order to store the device's updated registration information.
+     */
     @Override
-    protected Future<Void> updateDeviceLastVia(final String tenantId, final String deviceId, final String gatewayId,
+    protected Future<Void> updateDeviceLastVia(
+            final String tenantId,
+            final String deviceId,
+            final String gatewayId,
             final JsonObject deviceData) {
+
+        Objects.requireNonNull(tenantId);
+        Objects.requireNonNull(deviceId);
+        Objects.requireNonNull(gatewayId);
+        Objects.requireNonNull(deviceData);
+
         final Future<Void> resultFuture = Future.future();
         deviceData.put(RegistrationConstants.FIELD_LAST_VIA, createLastViaObject(gatewayId));
         updateDevice(tenantId, deviceId, deviceData, res -> {

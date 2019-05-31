@@ -10,6 +10,10 @@ title = "Release Notes"
   The protocol adapters also support authenticating devices which present an ECC based client certificate.
   The example configuration now uses ECC based certificates by default.
 
+### Fixes & Enhancements
+
+* The Hono Sandbox's protocol adapters support using the gateway mode again.
+
 ## 1.0-M4
 
 ### New Features

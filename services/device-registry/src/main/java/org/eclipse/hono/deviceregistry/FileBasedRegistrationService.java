@@ -26,8 +26,10 @@ import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.service.registration.CompleteBaseRegistrationService;
 import org.eclipse.hono.util.CacheDirective;
+import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.RegistrationResult;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -330,6 +332,34 @@ public final class FileBasedRegistrationService extends CompleteBaseRegistration
             }
         } else {
             return RegistrationResult.from(HTTP_FORBIDDEN);
+        }
+    }
+
+    /**
+     * {@inheritDoc}
+     * <p>
+     * This implementation bypasses the check of the <em>modificationEnabled</em> property
+     * and thus always updates the last gateway.
+     */
+    @Override
+    protected Future<Void> updateDeviceLastVia(
+            final String tenantId,
+            final String deviceId,
+            final String gatewayId,
+            final JsonObject deviceData) {
+
+        Objects.requireNonNull(tenantId);
+        Objects.requireNonNull(deviceId);
+        Objects.requireNonNull(gatewayId);
+        Objects.requireNonNull(deviceData);
+
+        deviceData.put(RegistrationConstants.FIELD_LAST_VIA, createLastViaObject(gatewayId));
+        final RegistrationResult updateResult = doUpdateDevice(tenantId, deviceId, deviceData);
+
+        if (updateResult.isError()) {
+            return Future.failedFuture(StatusCodeMapper.from(updateResult));
+        } else {
+            return Future.succeededFuture();
         }
     }
 
