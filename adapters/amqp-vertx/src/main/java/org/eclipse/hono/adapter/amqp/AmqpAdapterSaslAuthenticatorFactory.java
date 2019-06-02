@@ -294,7 +294,7 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
                 tenantTracker
                         .compose(tenant -> {
                             try {
-                                final TrustAnchor trustAnchor = tenantTracker.result().getTrustAnchor();
+                                final TrustAnchor trustAnchor = tenantTracker.result().getTrustAnchors().get(0);
                                 return certValidator.validate(Collections.singletonList(deviceCert), trustAnchor);
                             } catch(final GeneralSecurityException e) {
                                 LOG.debug("cannot retrieve trust anchor of tenant [{}]", tenant.getTenantId(), e);

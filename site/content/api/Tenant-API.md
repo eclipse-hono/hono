@@ -293,7 +293,7 @@ The table below provides an overview of the standard members defined for the JSO
 | *defaults*               | *no*      | *object*      | `-`          | Arbitrary *default* properties for devices belonging to the tenant. The properties can be used by protocol adapters to augment downstream messages with missing information, e.g. setting a default content type or TTL. |
 | *enabled*                | *no*      | *boolean*     | `true`       | If set to `false` the tenant is currently disabled. Protocol adapters MUST NOT allow devices of a disabled tenant to connect and MUST NOT accept data published by such devices. |
 | *resource-limits*         | *no*      | *object*     | `-`          | The resource-limits such as the maximum number of connections and the maximum data volume for a given period can be set. The format of a configuration option is described here [Resource Limits Configuration Format]({{< relref "#resource-limits-configuration-format" >}}).|
-| *trust-ca*             | *no*      | *JSON array* | `-`          | The list of trusted certificate authorities to use for validating certificates presented by devices of the tenant for authentication purposes. The JSON array consist of JSON objects, each describing the configuration information of a trusted CA. See [Trusted Certificate Authority Format]({{< relref "#trusted-ca-format" >}}) for a definition of the content model of the object and an example tenant configured to use two trusted certification authorities. |
+| *trust-ca*             | *no*      | *object* or *array* | `-`          | The trusted certificate authority(ies) to use for validating certificates presented by devices of the tenant for authentication purposes. The tenant payload can contain either a single JSON object or an array of JSON objects. See [Trusted Certificate Authority Format]({{< relref "#trusted-ca-format" >}}) for a definition of the content model of the object. |
 | *adapters*               | *no*      | *array*       | `-`          | A list of configuration options valid for certain adapters only. The format of a configuration option is described here [Adapter Configuration Format]({{< relref "#adapter-configuration-format" >}}). **NB** If the element is provided then the list MUST NOT be empty. **NB** Only a single entry per *type* is allowed. If multiple entries for the same *type* are present it is handled as an error. **NB** If the element is omitted then all adapters are *enabled* in their default configuration. |
 
 If any of the mandatory members is either missing or contains invalid data, implementations MUST NOT accept the payload and return *400 Bad Request* status code.
@@ -431,16 +431,12 @@ Below is an example for a payload of the response to a *get* request for tenant 
  {
    "tenant-id" : "TEST_TENANT",
    "enabled" : true,
-   "trust-store": [ {
+   "trusted-ca": [ {
 	    "subject-dn": "CN=ca,OU=Hono,O=Eclipse",
-	    "public-key": "NOTAPUBLICKEY",
-	    "not-before": "2015-01-01T00:00:00+0000",
-	    "not-after": "2025-01-01T00:00:00+0000"
+	    "public-key": "NOTAPUBLICKEY"
 	  }, {
 	    "subject-dn": "CN=ca,OU=Hono,O=Eclipse",
-	    "public-key": "NOTAPUBLICKEY",
-	    "not-before": "2024-01-01T00:00:00+0000",
-	    "not-after": "2034-01-01T00:00:00+0000"
+	    "public-key": "NOTAPUBLICKEY"
 	  } ]
  }
 ~~~

@@ -39,7 +39,6 @@ import org.junit.rules.Timeout;
 import org.junit.runner.RunWith;
 
 import io.vertx.core.Vertx;
-import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
@@ -186,14 +185,14 @@ public class TenantAmqpIT {
         final X500Principal subjectDn = new X500Principal("CN=ca, OU=Hono, O=Eclipse");
         final TenantObject payload = new TenantObject()
                 .setTenantId(tenantId)
-                .setTrustAnchor(getRandomPublicKey(), subjectDn);
+                .addTrustAnchor(getRandomPublicKey(), subjectDn);
 
         helper.registry.addTenant(JsonObject.mapFrom(payload))
                 .compose(r -> tenantClient.get(subjectDn))
                 .setHandler(ctx.asyncAssertSuccess(tenantObject -> {
 
                     ctx.assertEquals(tenantId, tenantObject.getTenantId());
-                    final List<JsonObject> trustedCas = tenantObject.getTrustConfigurations();
+                    final List<JsonObject> trustedCas = tenantObject.getTrustedCAs();
                     ctx.assertEquals(1, trustedCas.size());
                     ctx.assertNotNull(trustedCas.get(0));
                     final X500Principal trustedSubjectDn = new X500Principal(trustedCas.get(0).getString(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN));
@@ -216,7 +215,7 @@ public class TenantAmqpIT {
         final X500Principal subjectDn = new X500Principal("CN=ca-http,OU=Hono,O=Eclipse");
         final TenantObject payload = new TenantObject()
                 .setTenantId(tenantId)
-                .setTrustAnchor(getRandomPublicKey(), subjectDn)
+                .addTrustAnchor(getRandomPublicKey(), subjectDn)
                 .addAdapterConfiguration(new JsonObject()
                         .put(TenantConstants.FIELD_ADAPTERS_TYPE, Constants.PROTOCOL_ADAPTER_TYPE_HTTP)
                         .put(TenantConstants.FIELD_ENABLED, true)
@@ -246,7 +245,7 @@ public class TenantAmqpIT {
 
         final String tenantId = Constants.DEFAULT_TENANT;
         final TenantObject payload = TenantObject.from(tenantId, true)
-                .setTrustConfiguration(new JsonArray().add(malformedTrustedCa));
+                .addTrustedCA(malformedTrustedCa);
 
         helper.registry.addTenant(JsonObject.mapFrom(payload))
         .setHandler(ctx.asyncAssertFailure(t -> {

@@ -206,7 +206,7 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
 
         helper.getCertificate(deviceCert.certificatePath()).compose(cert -> {
             final TenantObject tenant = TenantObject.from(tenantId, true);
-            tenant.setTrustAnchor(cert.getPublicKey(), cert.getSubjectX500Principal());
+            tenant.addTrustAnchor(cert.getPublicKey(), cert.getSubjectX500Principal());
             return helper.registry.addDeviceForTenant(tenant, deviceId, cert);
         }).compose(ok -> connectToAdapter(deviceCert))
         .compose(con -> createProducer(null))

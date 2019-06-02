@@ -64,9 +64,9 @@ public final class TenantConstants extends RequestResponseApiConstants {
      */
     public static final String FIELD_PAYLOAD_PUBLIC_KEY = "public-key";
     /**
-     * The name of the property that contains the list of trusted certificate authorities configured for this tenant.
+     * The name of the property that contains the list of trusted certificate authorities configured for a tenant.
      */
-    public static final String FIELD_PAYLOAD_TRUSTED_CA = "trust-ca";
+    public static final String FIELD_PAYLOAD_TRUSTED_CA = "trusted-ca";
 
     /**
      * The name of the Tenant API endpoint.

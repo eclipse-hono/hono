@@ -309,8 +309,8 @@ public final class FileBasedTenantService extends CompleteBaseTenantService<File
                 log.debug("request: {}", tenantSpec.encodePrettily());
                 final TenantObject tenant = tenantSpec.mapTo(TenantObject.class);
                 tenant.setTenantId(tenantId);
-                final TenantObject conflictingTenant = getByCa(tenant.getTrustedCaSubjectDn());
-                if (conflictingTenant != null) {
+
+                if (hasConflict(tenantId, tenant)) {
                     // we are trying to use the same CA as an already existing tenant
                     return TenantResult.from(HttpURLConnection.HTTP_CONFLICT);
                 } else {
@@ -361,8 +361,8 @@ public final class FileBasedTenantService extends CompleteBaseTenantService<File
                 try {
                     final TenantObject tenant = tenantSpec.mapTo(TenantObject.class);
                     tenant.setTenantId(tenantId);
-                    final TenantObject conflictingTenant = getByCa(tenant.getTrustedCaSubjectDn());
-                    if (conflictingTenant != null && !tenantId.equals(conflictingTenant.getTenantId())) {
+
+                    if (hasConflict(tenantId, tenant)) {
                         // we are trying to use the same CA as another tenant
                         return TenantResult.from(HttpURLConnection.HTTP_CONFLICT);
                     } else {
@@ -381,13 +381,28 @@ public final class FileBasedTenantService extends CompleteBaseTenantService<File
         }
     }
 
+    private boolean hasConflict(final String tenantId, final TenantObject tenant) {
+        boolean hasConflict = false;
+        if (tenant.getTrustedCaSubjectDns() != null) {
+            hasConflict = tenant.getTrustedCaSubjectDns().stream()
+                    .anyMatch(subjectDn -> hasConflict(tenantId, subjectDn));
+        }
+        return hasConflict;
+    }
+
+    private boolean hasConflict(final String tenantId, final X500Principal subjectDn) {
+        final TenantObject conflictingTenant = getByCa(subjectDn);
+        return conflictingTenant != null && !tenantId.equals(conflictingTenant.getTenantId());
+    }
+
     private TenantObject getByCa(final X500Principal subjectDn) {
 
         if (subjectDn == null) {
             return null;
         } else {
             return tenants.values().stream()
-                    .filter(t -> subjectDn.equals(t.getTrustedCaSubjectDn()))
+                    .filter(t -> Objects.nonNull(t.getTrustedCaSubjectDns()))
+                    .filter(t -> t.getTrustedCaSubjectDns().contains(subjectDn))
                     .findFirst().orElse(null);
         }
     }

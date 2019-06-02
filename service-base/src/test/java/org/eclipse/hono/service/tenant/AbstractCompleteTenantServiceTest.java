@@ -79,11 +79,11 @@ public abstract class AbstractCompleteTenantServiceTest {
                 .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, "CN=taken")
                 .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, "NOTAKEY");
         final TenantObject tenant = TenantObject.from("tenant", true)
-                .setProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, trustedCa);
+                .addTrustedCA(trustedCa);
 
         addTenant("tenant", JsonObject.mapFrom(tenant)).map(ok -> {
             final TenantObject newTenant = TenantObject.from("newTenant", true)
-                    .setTrustConfiguration(new JsonArray().add(trustedCa));
+                    .addTrustedCA(trustedCa);
             getCompleteTenantService().add(
                     "newTenant",
                     JsonObject.mapFrom(newTenant),
@@ -149,8 +149,8 @@ public abstract class AbstractCompleteTenantServiceTest {
                 assertEquals(HttpURLConnection.HTTP_OK, s.getStatus());
                 final TenantObject obj = s.getPayload().mapTo(TenantObject.class);
                 assertEquals("tenant", obj.getTenantId());
-                final List<JsonObject> cas = obj.getTrustConfigurations();
-                assertEquals(cas.size(), 1);
+                final List<JsonObject> cas = obj.getTrustedCAs();
+                assertEquals(1, cas.size());
                 assertEquals(trustedCa, cas.get(0));
                 ctx.completeNow();
             })));
@@ -254,13 +254,13 @@ public abstract class AbstractCompleteTenantServiceTest {
                 .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, "CN=taken")
                 .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, "NOTAKEY");
         final TenantObject tenantOne = TenantObject.from("tenantOne", true)
-                .setTrustConfiguration(new JsonArray().add(trustedCa));
+                .addTrustedCA(trustedCa);
         final TenantObject tenantTwo = TenantObject.from("tenantTwo", true);
         addTenant("tenantOne", JsonObject.mapFrom(tenantOne))
         .compose(ok -> addTenant("tenantTwo", JsonObject.mapFrom(tenantTwo)))
         .compose(ok -> {
             // WHEN updating the second tenant to use the same CA as the first tenant
-            tenantTwo.setProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, trustedCa);
+            tenantTwo.addTrustedCA(trustedCa);
             final Future<TenantResult<JsonObject>> result = Future.future();
             getCompleteTenantService().update(
                     "tenantTwo",

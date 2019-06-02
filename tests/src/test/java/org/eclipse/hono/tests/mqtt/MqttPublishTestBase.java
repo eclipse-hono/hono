@@ -210,7 +210,7 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
 
         helper.getCertificate(deviceCert.certificatePath())
         .compose(cert -> {
-            tenant.setTrustAnchor(cert.getPublicKey(), cert.getIssuerX500Principal());
+            tenant.addTrustAnchor(cert.getPublicKey(), cert.getIssuerX500Principal());
             return helper.registry.addDeviceForTenant(tenant, deviceId, cert);
         }).setHandler(ctx.asyncAssertSuccess(ok -> setup.complete()));
         setup.await();

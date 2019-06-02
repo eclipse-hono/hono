@@ -94,7 +94,7 @@ public class MqttConnectionIT extends MqttTestBase {
         helper.getCertificate(deviceCert.certificatePath())
         .compose(cert -> {
             final TenantObject tenant = TenantObject.from(tenantId, true);
-            tenant.setTrustAnchor(cert.getPublicKey(), cert.getIssuerX500Principal());
+            tenant.addTrustAnchor(cert.getPublicKey(), cert.getIssuerX500Principal());
             return helper.registry.addDeviceForTenant(tenant, deviceId, cert);
         }).compose(ok -> {
             return connectToAdapter(deviceCert);
@@ -177,7 +177,7 @@ public class MqttConnectionIT extends MqttTestBase {
 
         helper.getCertificate(deviceCert.certificatePath())
         .compose(cert -> {
-            tenant.setTrustAnchor(cert.getPublicKey(), cert.getIssuerX500Principal());
+            tenant.addTrustAnchor(cert.getPublicKey(), cert.getIssuerX500Principal());
             return helper.registry.addTenant(JsonObject.mapFrom(tenant));
         }).compose(ok -> helper.registry.registerDevice(tenant.getTenantId(), deviceId))
         .compose(ok -> {
@@ -238,7 +238,7 @@ public class MqttConnectionIT extends MqttTestBase {
 
         helper.getCertificate(deviceCert.certificatePath())
         .compose(cert -> {
-            tenant.setTrustAnchor(cert.getPublicKey(), cert.getIssuerX500Principal());
+            tenant.addTrustAnchor(cert.getPublicKey(), cert.getIssuerX500Principal());
             return helper.registry.addDeviceForTenant(tenant, deviceId, cert);
         })
         // WHEN a device that belongs to the tenant tries to connect to the adapter
@@ -338,7 +338,7 @@ public class MqttConnectionIT extends MqttTestBase {
         helper.getCertificate(deviceCert.certificatePath())
         .compose(cert -> {
             final TenantObject tenant = TenantObject.from(tenantId, false);
-            tenant.setTrustAnchor(cert.getPublicKey(), cert.getIssuerX500Principal());
+            tenant.addTrustAnchor(cert.getPublicKey(), cert.getIssuerX500Principal());
             return helper.registry.addDeviceForTenant(tenant, deviceId, cert);
         })
         .compose(ok -> connectToAdapter(deviceCert))

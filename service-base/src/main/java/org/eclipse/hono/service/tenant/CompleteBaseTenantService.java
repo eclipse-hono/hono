@@ -258,34 +258,23 @@ public abstract class CompleteBaseTenantService<T> extends BaseTenantService<T> 
      */
     private boolean hasValidTrustedCaSpec(final JsonObject payload) {
 
-        final Object object = payload.getValue(TenantConstants.FIELD_PAYLOAD_TRUST_STORE);
+        final Object object = payload.getValue(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA);
         if (object == null) {
             return true;
-        } else if (!JsonArray.class.isInstance(object)) {
-            return false;
-        } else {
+        } else if (JsonObject.class.isInstance(object)) {
+            return isValidTrustedCaSpec((JsonObject) object);
+        } else if (JsonArray.class.isInstance(object)){
             final JsonArray trustConfigs = (JsonArray) object;
-            if (trustConfigs.size() == 0) {
-                return false;
-            } else {
-                return isValidTrustedCaSpec(trustConfigs);
-            }
+            return trustConfigs.size() > 0 && isValidTrustedCaSpec(trustConfigs);
+        } else {
+            return false;
         }
     }
 
     private boolean isValidTrustedCaSpec(final JsonArray trustConfigs) {
         final boolean containsInvalidTrustedCa = trustConfigs.stream()
-                .anyMatch(obj -> !JsonObject.class.isInstance(obj));
-        if (containsInvalidTrustedCa) {
-            return false;
-        } else {
-            final boolean containsInvalidConfig = trustConfigs.stream().anyMatch(trustedCa -> !isValidTrustedCaSpec((JsonObject) trustedCa));
-            if (containsInvalidConfig) {
-                return false;
-            } else {
-                return true;
-            }
-        }
+                .anyMatch(trustedCa -> !JsonObject.class.isInstance(trustedCa) || !isValidTrustedCaSpec((JsonObject) trustedCa));
+        return !containsInvalidTrustedCa;
     }
 
     /**
