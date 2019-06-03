@@ -842,7 +842,8 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                   <goal>remove</goal>
                 </goals>
                 <configuration>
-                  <removeAll>true</removeAll>
+                  <removeVolumes>true</removeVolumes>
+                  <removeMode>all</removeMode>
                 </configuration>
               </execution>
             </executions>
