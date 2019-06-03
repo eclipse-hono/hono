@@ -1,7 +1,7 @@
 +++
 title = "Downloads"
 menu = "main"
-slug = "Download"
+linkTitle = "Download"
 weight = 150
 +++
 

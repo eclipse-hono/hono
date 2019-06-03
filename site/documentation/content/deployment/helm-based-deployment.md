@@ -13,30 +13,30 @@ The example configuration that comes with Hono and which is used in this guide i
 
 ## Prerequisites
 
-### Kubernetes Cluster
+#### Kubernetes Cluster
 
 The most basic requirement is, of course, a Kubernetes cluster to deploy to.
-Please refer to the [Kubernetes setup guide]({{< ref "/deployment/create-kubernetes-cluster.md" >}}) for options regarding the setup of a Kubernetes cluster.
+The [Kubernetes setup guide]({{< relref "create-kubernetes-cluster.md" >}}) describes options available for setting up a cluster.
 
-### Helm
+#### Helm
 
 Helm is a tool for managing (complex) Kubernetes applications. In this guide it is used to deploy Hono to the cluster.
-Please refer to [Helm's installation instructions](https://docs.helm.sh/install/) for details.
+[Helm's installation instructions](https://docs.helm.sh/install/) provide more details.
 
-### Kubectl
+#### Kubectl
 
 The kubectl tool is used to manage a Kubernetes cluster from the command line. In this guide it is used to retrieve information about Hono's service endpoints from the cluster.
-Follow the [installation guide](https://kubernetes.io/docs/tasks/tools/install-kubectl/) in order to set up `kubetcl` on your local machine.
+The [installation guide](https://kubernetes.io/docs/tasks/tools/install-kubectl/) provides instructions for setting up `kubetcl` locally.
 
-### Hono Helm Chart
+#### Hono Helm Chart
 
-The Helm chart is contained in the Hono archive that is available from the [download page](https://www.eclipse.org/hono/download/).
+The Helm chart is contained in the Hono archive that is available from [Hono's download page](https://www.eclipse.org/hono/download/).
 After the archive has been extracted, the chart can be found in the `eclipse-hono-$VERSION/deploy/helm` folder.
 
-### Hono Command Line Client
+#### Hono Command Line Client
 
 The Hono command line client is available from the [download page](https://www.eclipse.org/hono/download/).
-Note that running the command line client requires a Java 11 runtime environment being installed locally.
+The command line client requires a Java 11 runtime environment to run.
 
 ## Deploying Hono
 
@@ -49,7 +49,7 @@ helm install --dep-up --name eclipse-hono --namespace hono helm/
 
 This will create namespace `hono` in the cluster and install all the components to that namespace. The name of the Helm release will be `eclipse-hono`.
 
-You can check the status of the deployment using one of the following commands:
+The status of the deployment can be checked using any of the following commands:
 
 ~~~sh
 helm list
@@ -61,7 +61,7 @@ helm get eclipse-hono
 
 In cases where installation of Helm's Tiller service into the cluster is not an option, the Kubernetes resource descriptors created by Helm can be deployed manually using the `kubectl` command line tool.
 
-Run the following commands to generate the resource descriptors using Helm:
+The following commands generate the resource descriptors:
 
 ~~~sh
 # in directory: eclipse-hono-$VERSION/deploy/
@@ -79,7 +79,7 @@ find . -path "./eclipse-hono/*" -name crd*.yaml -exec kubectl apply -f {} \;
 kubectl apply -f ./eclipse-hono -R
 ~~~
 
-## Accessing Hono's API
+## Verifying the Installation
 
 Once deployment has completed, Hono's external API endpoints are exposed via corresponding Kubernetes *Services*.
 The following command lists all services and their endpoints:
@@ -106,58 +106,41 @@ prometheus-operated                     ClusterIP      None             <none>  
 ~~~
 
 The listing above has been retrieved from a Minikube cluster that emulates a load balancer via the `minikube tunnel` command (refer to the [Minikube Networking docs](https://github.com/kubernetes/minikube/blob/master/docs/networking.md#loadbalancer-emulation-minikube-tunnel) for details).
-The service endpoints are accessible on the *EXTERNAL-IP* addresses and the corresponding *PORT(S)*, e.g. 8080 for the HTTP adapter and 28080 for the device registry.
+The service endpoints can be accessed at the *EXTERNAL-IP* addresses and corresponding *PORT(S)*, e.g. 8080 for the HTTP adapter (*hono-adapter-http-vertx*) and 28080 for the device registry (*hono-service-device-registry*).
 
-### Starting a Consumer
-
-Data published by devices is usually consumed by downstream applications which connect directly to the AMQP messaging network (represented by the `hono-dispatch-router-ext` service.
-The following command starts a consumer from the command line:
-
-~~~sh
-# in directory: eclipse-hono-$VERSION/deploy/
-eval $(services.sh)
-
-# in the directory where the Hono command line client has been downloaded to:
-java -jar hono-cli-*-exec.jar --hono.client.host=$AMQP_NETWORK_IP --hono.client.port=15672 --hono.client.username=consumer@HONO --hono.client.password=verysecret --spring.profiles.active=receiver
-~~~
-
-This will start a new consumer that logs all telemetry and event messages to the console.
-
-### Uploading Telemetry
-
-In another console, run the following command in order to put the IP addresses of Hono's service endpoints to
-some environment variables:
+The following command assigns the IP addresses of the exposed services to environment variables so that they can easily be used from the command line:
 
 ~~~sh
 # in directory: eclipse-hono-$VERSION/deploy/
 eval $(services.sh)
 ~~~
 
-In order to upload telemetry data to Hono, a device needs to be registered with the system first.
-The following command registers a device with ID `4711` in the example device registry that is deployed with Hono:
+The following command can then be used to check for the existence of the *DEFAULT_TENANT* which is created as part of the installation:
 
 ~~~sh
-curl -X POST -i -H 'Content-Type: application/json' --data-binary '{"device-id": "4711"}' http://$REGISTRY_IP:28080/registration/DEFAULT_TENANT
+curl -sIX GET http://$REGISTRY_IP:28080/tenant/DEFAULT_TENANT
+
+HTTP/1.1 200 OK
+content-type: application/json; charset=utf-8
+content-length: 289
 ~~~
 
-After having the device registered, uploading telemetry is just a simple HTTP POST command to the *HTTP Adapter*:
+<a name="dashboard"></a>
+
+## Accessing the Grafana Dashboard
+
+Hono comes with an example Grafana dashboard which provides some insight into the messages flowing through the protocol adapters.
+The following command needs to be run first in order to forward the Grafana service's endpoint to the local host:
 
 ~~~sh
-curl -i -u sensor1@DEFAULT_TENANT:hono-secret -H 'Content-Type: application/json' --data-binary '{"temp": 5}' http://$HTTP_ADAPTER_IP:8080/telemetry
+kubectl port-forward service/eclipse-hono-grafana 3000 -n hono
 ~~~
 
-Other than using the *HTTP Adapter*, it's possible to upload telemetry data using the *MQTT Adapter* as well:
-
-~~~sh
-mosquitto_pub -h $MQTT_ADAPTER_IP -u 'sensor1@DEFAULT_TENANT' -P hono-secret -t telemetry -m '{"temp": 5}'
-~~~
-
-The username and password used above for device `4711` are part of the example configuration that comes with Hono.
-See [Device Identity]({{< ref "/concepts/device-identity.md" >}}) for an explanation of how devices are identified in Hono and how device identity is related to authentication.
+Then the dashboard can be opened by pointing a browser to http://localhost:3000 using credentials `admin:admin`.
 
 ## Undeploying Hono
 
-To undeploy a Hono instance that has been deployed using Helm's Tiller service, run:
+A Hono instance that has been deployed using Helm's Tiller service can be undeployed by running
 
 ~~~sh
 helm delete --purge eclipse-hono
@@ -172,22 +155,23 @@ kubectl delete crd jaegers.jaegertracing.io
 kubectl delete svc -n hono eclipse-hono-jaeger-operator
 ~~~
 
-To undeploy a Hono instance that has been deployed manually from the resource files, run:
+A Hono instance that has been deployed manually using the resource files can be undeployed by running
 
 ~~~sh
 # in directory: eclipse-hono-$VERSION/deploy/
 kubectl delete -f ./eclipse-hono -R
 ~~~
 
-## Deploying from Source
+## Deploying custom Container Images
 
-The sections above describe how a released version of Hono can be deployed using Helm. In some cases it might be desirable to build Hono from source, e.g. in order to use a different metrics back end or to [enable Jaeger tracing]({{< relref "#deploying-jaeger" >}}). In these cases, the Helm templates contained in the source tree can be used instead of the Helm chart from the download page.
+The sections above describe how Hono's pre-built container images can be deployed using Helm. In some cases it might be desirable to build Hono from source, e.g. in order to use a different metrics back end or to [enable Jaeger tracing](#deploying-jaeger). In these cases, the Helm templates contained in the source tree can be used instead of the Helm chart from the download page.
 
 The container images created as part of the build process need to be made available to the Kubernetes cluster that Hono should be deployed to. This usually requires the images to be pushed to a (private) container registry that the cluster has pull access to. Please refer to the documentation of the employed Kubernetes service provider for details regarding the setup and configuration of a private container registry.
 
 ### Deploying via a private Registry
 
-The build process can be started using the following command:
+The first step is getting the source code of Hono. Please refer to [Building from Source]({{< relref "building_hono.md" >}}) for details.
+Once the source code has been retrieved, the build process can be started using the following command:
 
 ~~~sh
 # in base directory of Hono working tree:
@@ -215,13 +199,14 @@ helm install --dep-up --name eclipse-hono --namespace hono --set honoContainerRe
 
 ### Deploying to Minikube
 
-When using Minikube as the deployment target, things are a little easier. Minikube comes with an embedded Docker daemon which can be used to build the container images instead of using a local daemon, thus eliminating the need to push the images to a registry altogether. In order to use Minikube's Docker daemon, run the following command:
+When using Minikube as the deployment target, things are a little easier. Minikube comes with an embedded Docker daemon which can be used to build the container images instead of using a local Docker daemon, thus eliminating the need to push the images to a registry altogether.
+In order to use Minikube's Docker daemon, the following command needs to be run:
 
 ~~~sh
 eval $(minikube docker-env)
 ~~~
 
-This will set the Docker environment variables to point to Minikube's Docker daemon which will then be used for building the container images and storing them locally in the Minikube VM.
+This will set the Docker environment variables to point to Minikube's Docker daemon which can then be used for building the container images and storing them locally in the Minikube VM.
 
 In any case the build process can be started using the following command:
 
