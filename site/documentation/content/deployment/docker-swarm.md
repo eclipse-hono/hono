@@ -1,6 +1,6 @@
 +++
 title = "Docker Swarm"
-weight = 480
+weight = 492
 +++
 
 Eclipse Hono&trade; components are distributed by means of Docker images which can be deployed to arbitrary environments where Docker is available. This section provides step-by-step instructions for deploying Hono to a cluster of Docker Engine nodes running in *Swarm mode*.

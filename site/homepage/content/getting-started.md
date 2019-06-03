@@ -1,67 +1,102 @@
 +++
-title = "Getting started"
+title = "Getting started with Eclipse Hono"
+linkTitle = "Getting started"
 menu = "main"
 weight = 100
 +++
 
-Eclipse Hono&trade; consists of a set of micro services provided as Docker images. You can either build the Docker images yourself from the source code or you can run Hono by means of the pre-built Docker images available from our [Docker Hub repositories](https://hub.docker.com/u/eclipse/).
+This guide will walk you through an interactive example usage scenario of Eclipse Hono. You will learn how devices can use Hono's protocol adapters to publish telemetry data and events using both HTTP and/or MQTT. You will also see how a downstream application can consume this data using Hono's north bound API without requiring the application to know anything about the specifics of the communication protocols used by the devices.
 
-This guide will walk you through building the images and example code from source, starting a Hono instance on your local computer and interacting with Hono via its HTTP adapter.
+## Prerequisites for the Getting started Guide
 
-## Prerequisites
+This guide requires several tools to be installed on your computer.
+During the course of this guide, the devices publishing data will be represented by means of running some command line tools for posting HTTP requests and for publishing MQTT packets.
 
-In order to build and run the images you need access to a [Docker](http://www.docker.com) daemon running either locally on your computer or another host you have access to. Please follow the instructions on the [Docker web site](http://www.docker.com) to install *Docker Engine* on your platform.
+#### Curl HTTP Command Line Client
 
-As noted above, Hono consists of multiple service components that together comprise a Hono instance. The remainder of this guide employs Docker's *Swarm Mode* for configuring, running and managing all Hono components as a whole.
-In order to enable *Swarm Mode* on your *Docker Engine* run the following command
+The `curl` command is used in this guide for registering devices with Hono and for simulating a device publishing data using HTTP.
+On most *nix like systems `curl` will probably already be installed. Otherwise, please refer to the
+[Curl project page](https://curl.haxx.se/) for installation instructions.
 
-    docker swarm init
+#### Mosquitto MQTT Command Line Client
 
-Please refer to the [Docker Swarm Mode documentation](https://docs.docker.com/engine/swarm/swarm-mode/) for details.
+The `mosquitto_pub` command is used in this guide for simulating a device publishing data using the MQTT protocol.
+Please refer to the [Mosquitto project page](https://mosquitto.org/) for installation instructions, if you do not
+have it installed already.
 
-{{% warning %}}
-You will need at least Docker Engine version 1.13.1 in order to run the example in this guide. By the time of writing, the latest released version of Docker was 18.09.0.
-{{% /warning %}}
+**NB** The installation of the Mosquitto command line client is optional. If you do not install it then you will not be able to simulate
+an MQTT based device but otherwise will be able to get the same results described in this guide.
 
-### Compiling
+#### Hono Command Line Client
 
-Recently released versions of OpenJDK 1.8.0 and 10 contain several bugs that prevent Hono from being compiled successfully using any of these JDKs.
-It is therefore recommended to use OpenJDK 9 or 11.0.1 instead. Note that using any of these JDKs for compiling the source code will still result in class files that can be run on any JVM >= 1.8.0.
+The Hono command line client is used in this guide for simulating an application that consumes telemetry data and events published by devices.
+The client is available from [Hono's download page]({{< relref "downloads" >}}).
+Note that running the command line client requires a Java 11 runtime environment being installed locally.
 
-If you do not already have a working Maven installation on your system, please follow the [installation instructions on the Maven home page](https://maven.apache.org/).
+#### Hono Sandbox
 
-Then run the following from the project's root folder
+The most important prerequisite is, of course, a Hono instance that you can work with.
 
-    mvn clean install -Ddocker.host=tcp://${host}:${port} -Pbuild-docker-image,metrics-prometheus
+The most straightforward option to use for this guide is the [Hono Sandbox]({{< relref "sandbox" >}}) which is running on
+infrastructure provided by the Eclipse Foundation and which is publicly accessible from the internet.
 
-with `${host}` and `${port}` reflecting the name/IP address and port of the host where Docker is running on. This will build all libraries, Docker images and example code. If you are running on Linux and Docker is installed locally or you have set the `DOCKER_HOST` environment variable, you can omit the `-Ddocker.host` property definition.
+Using the Sandbox, there is no need to set up your own Hono instance locally. However, it requires several non-standard ports
+being accessible from your computer which may not be the case, e.g. if you are behind a firewall restricting internet access to
+a few standard ports only.
 
-If you plan to build the Docker images more frequently, e.g. because you want to extend or improve the Hono code, then you should define the `docker.host` property in your Maven `settings.xml` file containing the very same value as you would use on the command line as indicated above. This way you can simply do a `mvn clean install` later on and the Docker images will be built automatically as well because the `build-docker-image` profile is activated automatically if the Maven property `docker.host` is set.
-
-{{% note %}}
-The first build might take several minutes because Docker will need to download all the base images that Hono is relying on. However, most of these will be cached by Docker so that subsequent builds will be running much faster.
-{{% /note %}}
-
-## Starting Hono
-
-As part of the build process, a set of scripts for deploying and undeploying Hono to/from a Docker Swarm is generated in the `deploy/target/deploy/docker` folder.
-To deploy and start Hono simply run the following from the `deploy/target/deploy/docker` directory
+You can verify if you can access the relevant ports of the Sandbox by running the following command and comparing the output:
 
 ~~~sh
-# in base directory of Hono repository:
-chmod +x deploy/target/deploy/docker/swarm_*.sh
-deploy/target/deploy/docker/swarm_deploy.sh
+curl -sIX GET http://hono.eclipse.org:28080/tenant/DEFAULT_TENANT
 ~~~
 
-The first command makes the generated scripts executable. This needs to be done once after each build.
-The second command creates and starts up Docker Swarm *services* for all components that together comprise a Hono instance, in particular the following services are started:
+If you get output like this
 
-{{< figure src="/hono/img/Hono_instance.svg" title="Hono Instance Containers">}}
+~~~sh
+HTTP/1.1 200 OK
+content-type: application/json; charset=utf-8
+content-length: 45
+~~~
+
+you can use the Sandbox. Run the following commands to set some environment variables which will be used during the guide
+
+~~~sh
+export REGISTRY_IP=hono.eclipse.org
+export HTTP_ADAPTER_IP=hono.eclipse.org
+export MQTT_ADAPTER_IP=hono.eclipse.org
+~~~
+
+and then proceed to the [Overview of Hono Components](#overview).
+
+However, if the `curl` command yielded different output, you will need to set up Hono locally as described in the next section.
+
+#### Setting up a local Hono Instance
+
+In case you cannot access the Hono Sandbox as described above, you will need to set up an instance of Hono running on your local computer.
+For evaluation purposes a single node *Minikube* cluster is sufficient to deploy Hono to.
+
+1. Please refer to the [installation instructions](https://www.eclipse.org/hono/docs/latest/deployment/create-kubernetes-cluster/#local-development) for setting up a local Minikube cluster, then
+1. follow the [Deployment Guide](https://www.eclipse.org/hono/docs/latest/deployment/helm-based-deployment/) in order to install Hono to your local Minikube cluster.
+
+Once Hono has been deployed to your local cluster, run the following commands to set some environment variables which will be used during the guide
+
+~~~sh
+export REGISTRY_IP=$(kubectl get service hono-service-device-registry-ext --output='jsonpath={.status.loadBalancer.ingress[0].ip}' -n hono)
+export HTTP_ADAPTER_IP=$(kubectl get service hono-adapter-http-vertx --output='jsonpath={.status.loadBalancer.ingress[0].ip}' -n hono)
+export MQTT_ADAPTER_IP=$(kubectl get service hono-adapter-mqtt-vertx --output='jsonpath={.status.loadBalancer.ingress[0].ip}' -n hono)
+~~~
+
+<a name="overview"></a>
+## Overview of Hono Components
+
+Hono consists of a set of microservices which are deployed as Docker containers. The diagram below provides an overview of the containers that are part of the example deployment of Hono on the Sandbox or a local Minikube cluster.
+
+{{< figure src="../img/Hono_instance.svg" title="Components of the example Hono deployment" alt="The Docker containers representing the services of the example Hono deployment" >}}
 
 * Hono Instance
   * An *HTTP Adapter* instance that exposes Hono's Telemetry and Event APIs as URI resources.
   * A *Kura Adapter* instance that exposes Hono's Telemetry and Event APIs as an [Eclipse Kura&trade;](https://www.eclipse.org/kura) compatible MQTT topic hierarchy.
-  * A *MQTT Adapter* instance that exposes Hono's Telemetry and Event APIs as a generic MQTT topic hierarchy.
+  * An *MQTT Adapter* instance that exposes Hono's Telemetry and Event APIs as a generic MQTT topic hierarchy.
   * An *AMQP Adapter* instance that exposes Hono's Telemetry and Event APIs as a set of AMQP 1.0 addresses.
   * A *Device Registry* instance that manages registration information and issues device registration assertions to protocol adapters.
   * An *Auth Server* instance that authenticates Hono components and issues tokens asserting identity and authorities.
@@ -72,123 +107,116 @@ The second command creates and starts up Docker Swarm *services* for all compone
   * A *Prometheus* instance for storing metrics data from services and protocol adapters.
   * A *Grafana* instance providing a dash board visualizing the collected metrics data.
 
-You can list all services by executing
+In the example scenario used in the remainder of this guide, the devices will connect to the HTTP and MQTT adapters in order to publish telemetry data and events.
+The devices will be authenticated using information stored in the Device Registry. The data is then forwarded downstream to the example application via the AMQP Messaging Network.
 
+## Registering Devices
+
+When a device tries to connect to one of Hono's protocol adapters, the protocol adapter first tries to authenticate the device using information kept in the Device Registry. 
+The information maintained in the registry includes the *tenant* (a logical scope) that the device belongs to, the device's unique *identity* within the tenant and the *credentials* used by the device for authentication.
+
+Before a device can connect to Hono and publish any data, the corresponding information needs to be added to the Device Registry.
+
+### Creating a new Tenant
+
+Choose a (random) tenant identifier and register it using the Device Registry's HTTP API (replace `my-tenant` with your identifier):
 ~~~sh
-docker service ls
-~~~
+export MY_TENANT=my-tenant
+curl -i -H "content-type: application/json" --data-binary '{"tenant-id": "'$MY_TENANT'"}' http://$REGISTRY_IP:28080/tenant
 
-## Starting a Consumer
-
-The telemetry data produced by devices is usually consumed by downstream applications that use it to implement their corresponding business functionality.
-In this example we will use a simple command line client that logs all telemetry and event messages to the console.
-You can start the client from the `cli` folder as follows:
-
-~~~sh
-# in directory: hono/cli/
-mvn spring-boot:run -Drun.arguments=--hono.client.host=localhost,--hono.client.username=consumer@HONO,--hono.client.password=verysecret,--message.type=telemetry
-~~~
-
-Event messages are very similar to telemetry ones, except that they use `AT LEAST ONCE` quality of service. You can receive and log event messages uploaded to Hono using the same client.
-
-In order to do so, run the client from the `cli` folder as follows:
-
-~~~sh
-# in directory: hono/cli/
-mvn spring-boot:run -Drun.arguments=--hono.client.host=localhost,--hono.client.username=consumer@HONO,--hono.client.password=verysecret,--message.type=event
-~~~
-
-In order to receive and log both telemetry and event messages, run the client from the `cli` folder as follows:
-
-~~~sh
-# in directory: hono/cli/
-mvn spring-boot:run -Drun.arguments=--hono.client.host=localhost,--hono.client.username=consumer@HONO,--hono.client.password=verysecret
-~~~
-
-{{% warning %}}
-Replace *localhost* with the name or IP address of the host that Docker is running on.
-{{% /warning %}}
-
-## Publishing Data
-
-Now that the Hono instance is up and running you can use Hono's protocol adapters to upload some telemetry data and watch it being forwarded to the downstream consumer.
-
-The following sections will use the HTTP adapter to publish the telemetry data because it is very easy to access using a standard HTTP client like `curl` or [`HTTPie`](https://httpie.org/) from the command line.
-
-Please refer to the [HTTP Adapter](https://www.eclipse.org/hono/docs/latest/user-guide/http-adapter/) documentation for additional information on how to access Hono's functionality via HTTP.
-
-{{% warning %}}
-The following sections assume that the HTTP adapter Docker container has been started on the local machine. However, if you started the HTTP adapter on another host or VM then make sure to replace *localhost* with the name or IP address of that (Docker) host.
-{{% /warning %}}
-
-### Registering a Device
-
-The first thing to do is registering a device identity with Hono. Hono uses this information to authorize access to the device's telemetry data and functionality.
-
-The following command registers a device with ID `4711` with the Device Registry.
-
-~~~sh
-curl -X POST -i -H 'Content-Type: application/json' -d '{"device-id": "4711"}' \
-http://localhost:28080/registration/DEFAULT_TENANT
-~~~
-
-or (using HTTPie):
-
-~~~sh
-http POST http://localhost:28080/registration/DEFAULT_TENANT device-id=4711
-~~~
-
-The result will contain a `Location` header containing the resource path created for the device. In this example it will look like this:
-
-~~~
 HTTP/1.1 201 Created
-Location: /registration/DEFAULT_TENANT/4711
+Location:  /tenant/my-tenant
 Content-Length: 0
 ~~~
 
-You can then retrieve registration data for the device using
+{{% note title="Conflict" %}}
+You will receive a response with a `409` status code if a tenant with the given identifier already exists.
+In this case, simply pick another (random) identifier and try again.
+{{% /note %}}
+
+### Adding a Device to the Tenant
+
+Choose a (random) device identifier and register it using the Device Registry's HTTP API (replace `my-device` with your identifier):
+~~~sh
+export MY_DEVICE=my-device
+curl -i -H "content-type: application/json" --data-binary '{"device-id": "'$MY_DEVICE'"}' http://$REGISTRY_IP:28080/registration/$MY_TENANT
+
+HTTP/1.1 201 Created
+Location: /registration/my-tenant/my-device
+Content-Length: 0
+~~~
+
+### Setting a Password for the Device
+
+Choose a (random) password and register it using the Device Registry's HTTP API (replace `my-pwd` with your password):
+~~~sh
+export MY_PWD=my-pwd
+curl -i -H "content-type: application/json" --data-binary '{
+  "device-id": "'$MY_DEVICE'",
+  "type": "hashed-password",
+  "auth-id": "'$MY_DEVICE'",
+  "secrets": [{
+      "pwd-plain": "'$MY_PWD'"
+  }]
+}' http://$REGISTRY_IP:28080/credentials/$MY_TENANT
+
+HTTP/1.1 201 Created
+Location: /credentials/my-tenant/my-device/hashed-password
+Content-Length: 0
+~~~
+
+## Starting the example Application
+
+The telemetry data produced by devices is usually consumed by downstream applications that use it to implement their corresponding business functionality.
+In this guide we will use the Hono command line client to simulate such an application.
+The client will connect to Hono's north bound [Telemetry](https://www.eclipse.org/hono/docs/latest/api/telemetry-api/) and [Event API](https://www.eclipse.org/hono/docs/latest/api/event-api/)s using the AMQP 1.0 transport protocol, subscribe to all telemetry and event messages and log the messages to the console.
+
+Open a new terminal window and set the `AMQP_NETWORK_IP` environment variable.
+If you are using the Sandbox server:
 
 ~~~sh
-curl -i http://localhost:28080/registration/DEFAULT_TENANT/4711
+export AMQP_NETWORK_IP=hono.eclipse.org
 ~~~
 
-or (using HTTPie):
+Otherwise, if you are using a local Minikube cluster:
 
 ~~~sh
-http http://localhost:28080/registration/DEFAULT_TENANT/4711
+export AMQP_NETWORK_IP=$(kubectl get service hono-dispatch-router-ext --output='jsonpath={.status.loadBalancer.ingress[0].ip}' -n hono)
 ~~~
 
-which will result in something like this:
-
-~~~json
-HTTP/1.1 200 OK
-Content-Type: application/json; charset=utf-8
-Content-Length: 35
-
-{
-  "data" : {
-      "enabled": true
-  },
-  "device-id" : "4711"
-}
-~~~
-
-### Uploading Telemetry Data using the HTTP Adapter
+The client can then be started from the command line as follows (make sure to replace `my-tenant` with your tenant identifier):
 
 ~~~sh
-curl -X POST -i -u sensor1@DEFAULT_TENANT:hono-secret -H 'Content-Type: application/json' \
---data-binary '{"temp": 5}' http://localhost:8080/telemetry
+# in directory where the hono-cli-*-exec.jar file has been downloaded to
+export MY_TENANT=my-tenant
+java -jar hono-cli-*-exec.jar --hono.client.host=$AMQP_NETWORK_IP --hono.client.port=15672 --hono.client.username=consumer@HONO --hono.client.password=verysecret --spring.profiles.active=receiver --tenant.id=$MY_TENANT
 ~~~
 
-or (using HTTPie):
+## Publishing Telemetry Data to the HTTP Adapter
+
+Now that the downstream application is running, devices can start publishing telemetry data and events using Hono's protocol adapters.
+First, you will simulate a device publishing data to Hono using the HTTP protocol.
+Go back to the original terminal and run:
 
 ~~~sh
-http --auth sensor1@DEFAULT_TENANT:hono-secret POST http://localhost:8080/telemetry temp:=5
+curl -i -u $MY_DEVICE@$MY_TENANT:$MY_PWD -H 'Content-Type: application/json' --data-binary '{"temp": 5}' http://$HTTP_ADAPTER_IP:8080/telemetry
+
+HTTP/1.1 202 Accepted
+Content-Length: 0
 ~~~
 
-The username and password used above for device `4711` are part of the example configuration that comes with Hono. See [Device Identity](https://www.eclipse.org/hono/docs/latest/concepts/device-identity/) for an explanation of how devices are identified in Hono and how device identity is related to authentication.
+If you have started the downstream application as described above, you should now see the telemetry message being logged to the application's console
+in the other terminal. The output should look something like this:
 
-When you first invoke any of the two commands above after you have started up your Hono instance, you may get the following response:
+~~~sh
+13:36:49.169 [vert.x-eventloop-thread-0] INFO  org.eclipse.hono.cli.Receiver - received telemetry message [device: my-device, content-type: application/json]: {"temp": 5}
+13:36:49.170 [vert.x-eventloop-thread-0] INFO  org.eclipse.hono.cli.Receiver - ... with application properties: {orig_adapter=hono-http, device_id=my-device, orig_address=/telemetry, JMS_AMQP_CONTENT_TYPE=application/json}
+~~~
+
+You can publish more data simply by re-running the `curl` command above with arbitrary payload.
+
+{{% note title="Service Unavailable" %}}
+When you invoke the command above for the first time, you may get the following response:
 
 ~~~
 HTTP/1.1 503 Service Unavailable
@@ -199,40 +227,74 @@ Retry-After: 2
 temporarily unavailable
 ~~~
 
-This is because the first request to publish data for a tenant (`DEFAULT_TENANT` in the example) is used as the trigger to establish a tenant specific sender link with the AMQP 1.0 Messaging Network to forward the data over. However, the HTTP adapter may not receive credits quickly enough for the request to be served immediately.
-You can simply ignore this response and re-submit the command. You should then get a response like this:
+This is because the first request to publish data for a given tenant is used as the trigger to establish a tenant specific sender link with
+the AMQP 1.0 Messaging Network to forward the data over. However, the HTTP adapter may not receive credits quickly enough for the
+request to be served immediately. You can simply ignore this response and re-submit the command.
+{{% /note %}}
 
-~~~
+If you haven't started the application you will always get `503 Resource Unavailable` responses because Hono does not
+accept any telemetry data from devices if there aren't any consumers connected that are interested in the data. The reason for this is
+that Hono *never* persists Telemetry data and thus it doesn't make any sense to accept and process telemetry data if there is no
+consumer to deliver it to.
+
+The HTTP Adapter also supports publishing telemetry messages using *at least once* delivery semantics. For information on how that works
+and additional examples for interacting with Hono via HTTP, please refer to the
+[HTTP Adapter's User Guide](https://www.eclipse.org/hono/docs/latest/user-guide/http-adapter/).
+
+## Publishing Events to the HTTP Adapter
+
+In a similar way you can upload events:
+
+~~~sh
+curl -i -u $MY_DEVICE@$MY_TENANT:$MY_PWD -H 'Content-Type: application/json' --data-binary '{"alarm": "fire"}' http://$HTTP_ADAPTER_IP:8080/event
+
 HTTP/1.1 202 Accepted
 Content-Length: 0
 ~~~
 
-If you have started the consumer as described above, you should now see the telemetry message being logged to the console. You can publish more data simply by issuing additional requests.
+Again, you should see the event being logged to the console of the downstream application.
 
-If you haven't started a consumer you will continue to get `503 Resource Unavailable` responses because Hono does not accept any telemetry data from devices if there aren't any consumers connected that are interested in the data. Telemetry data is *never* persisted within Hono, thus it doesn't make any sense to accept and process telemetry data if there is no consumer to deliver it to.
+## Publishing Telemetry Data to the MQTT Adapter
 
-The HTTP Adapter also supports publishing telemetry messages using *at least once* delivery semantics. For information on how that works and additional examples for interacting with Hono via HTTP, please refer to the [HTTP adapter's User Guide](https://www.eclipse.org/hono/docs/latest/user-guide/http-adapter/) .
-
-### Uploading Event Data using the HTTP Adapter
-
-In a similar way you can upload event data, using curl
+Devices can also publish data to Hono using the MQTT protocol. If you have installed the `mosquitto_pub` command line client, you
+can run the following command to publish arbitrary telemetry data to Hono's MQTT adapter using QoS 0:
 
 ~~~sh
-curl -X POST -i -u sensor1@DEFAULT_TENANT:hono-secret -H 'Content-Type: application/json' \
---data-binary '{"alarm": "fire"}' http://localhost:8080/event
+mosquitto_pub -h $MQTT_ADAPTER_IP -u $MY_DEVICE@$MY_TENANT -P $MY_PWD -t telemetry -m '{"temp": 5}'
 ~~~
 
-or (using HTTPie):
+Again, you should now see the telemetry message being logged to console of the downstream application.
+
+The MQTT Adapter also supports publishing telemetry messages using QoS 1. For information on how that works
+and additional examples for interacting with Hono via MQTT, please refer to the
+[MQTT Adapter's User Guide](https://www.eclipse.org/hono/docs/latest/user-guide/mqtt-adapter/).
+
+## Publishing Events to the MQTT Adapter
+
+In a similar way you can upload events:
 
 ~~~sh
-http --auth sensor1@DEFAULT_TENANT:hono-secret POST http://localhost:8080/event alarm=fire
+mosquitto_pub -h $MQTT_ADAPTER_IP -u $MY_DEVICE@$MY_TENANT -P $MY_PWD -t event -q 1 -m '{"temp": 5}'
 ~~~
 
-## Using Command & Control
+Again, you should now see the telemetry message being logged to console of the downstream application.
 
-Command & Control is available since Hono 0.8.
+{{% note title="Congratulations" %}}
+You have successfully connected a device to Hono and published sensor data for consumption by an application connected to Hono's north bound API.
+The application used the AMQP 1.0 protocol to receive messages regardless of the transport protocol used by the device to publish the data.
 
-The following walk-through example shows how to use it.
+**What to try next?**
+
+* Continue with the next sections to learn how applications can send commands to devices by means of the [Command & Control API](https://www.eclipse.org/hono/docs/latest/api/command-and-control/).
+* Take a look at some of the metrics collected by Hono's components by opening the Hono dashboard. On the Sandbox server the dashboard is available at https://hono.eclipse.org:3000. When running a local Minikube cluster, please refer to [Opening the Dashboard](https://www.eclipse.org/hono/docs/latest/deployment/helm-based-deployment/#dashboard) for instructions.
+* Check out the [User Guides](https://www.eclipse.org/hono/docs/latest/user-guide/) to explore more options for devices to connect to Hono using different transport protocols.
+* Learn more about the managing tenants, devices and credentials using the [Device Registry's HTTP API](https://www.eclipse.org/hono/docs/latest/user-guide/device-registry/).
+{{% /note %}}
+
+## Sending Commands to a Device
+
+The following walk-through example will guide you through some of the more advanced functionality of Hono.
+In particular you will see how an application can send a command to a device and receive a response containing the outcome of the command.
 
 ### Starting the example application
 
@@ -354,35 +416,3 @@ The following parts of Hono are involved in the upper scenario:
 
 The [Command and Control Concepts](https://www.eclipse.org/hono/docs/latest/concepts/command-and-control/) page contains sequence diagrams that
 explain this in more detail.
-
-## Adding Tenants
-
-In the above examples, we have always used the `DEFAULT_TENANT`, which is pre-configured in the example setup.
-
-You can add more tenants to Hono by using the [Tenant management HTTP endpoints](https://www.eclipse.org/hono/docs/latest/user-guide/device-registry/index.html#managing-tenants) of the Device Registry. Each tenant you create can have its own configuration, e.g. for specifying which protocol adapters the tenant is allowed to use.
-
-## Viewing Metrics
-
-Open the [Grafana dashboard](http://localhost:3000) in a browser using `admin/admin` as login credentials.
-
-{{% warning %}}
-If you do not run Docker on localhost, replace *localhost* in the link with the correct name or IP address of the Docker host that the Grafana container is running on.
-{{% /warning %}}
-
-## Stopping Hono
-
-The Hono instance's Docker services can be stopped and removed using the following command:
-
-~~~sh
-hono/deploy/target/deploy/docker/swarm_undeploy.sh
-~~~
-
-Please refer to the [Docker Swarm documentation](https://docs.docker.com/engine/swarm/services/) for details regarding the management of individual services.
-
-## Restarting
-
-In order to start up the instance again:
-
-~~~sh
-hono/deploy/target/deploy/docker/swarm_deploy.sh
-~~~

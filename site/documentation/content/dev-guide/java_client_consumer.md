@@ -8,7 +8,7 @@ for devices belonging to the default tenant.
 
 It also includes support for Command and Control:
 
-if indicated by a received downstream message that contains a `ttd` value (refer to [Device notifications]({{< relref "/concepts/device-notifications.md" >}}) for details) it tries to send a command to the device.
+if indicated by a received downstream message that contains a `ttd` value (refer to [Device notifications]({{< relref "concepts/device-notifications.md" >}}) for details) it tries to send a command to the device.
 If the value of `ttd` indicates that the device stays connected for an unlimited time (`ttd == -1`), the application will periodically repeat to send a command until
 notified the device is disconnected again (`ttd == 0`).
 
@@ -63,7 +63,7 @@ Please note that consumers do not connect with Hono directly, but rather with an
 ### Command and Control
 
 By using a helper class provided by Hono, a callback in the application code is invoked when a downstream message was received
-that signals the device will stay connected to the protocol adapter for some time (see [Device notifications]({{< relref "/concepts/device-notifications.md" >}}) for details).
+that signals the device will stay connected to the protocol adapter for some time (see [Device notifications]({{< relref "concepts/device-notifications.md" >}}) for details).
 
 Inside this callback an arbitrary simple command is sent down to the device (once or periodically) and the response is logged to the console.
 
