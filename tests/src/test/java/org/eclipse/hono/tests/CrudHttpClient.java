@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -120,6 +120,7 @@ public final class CrudHttpClient {
         final Future<MultiMap> result = Future.future();
 
         context.runOnContext(go -> {
+            @SuppressWarnings("deprecation")
             final HttpClientRequest req = client.options(requestOptions)
                     .handler(response -> {
                         if (successPredicate.test(response.statusCode())) {
@@ -234,6 +235,7 @@ public final class CrudHttpClient {
         final Future<MultiMap> result = Future.future();
 
         context.runOnContext(go -> {
+            @SuppressWarnings("deprecation")
             final HttpClientRequest req = client.post(requestOptions)
                     .handler(response -> {
                         LOGGER.trace("response status code {}", response.statusCode());
@@ -352,6 +354,7 @@ public final class CrudHttpClient {
         final Future<MultiMap> result = Future.future();
 
         context.runOnContext(go -> {
+            @SuppressWarnings("deprecation")
             final HttpClientRequest req = client.put(requestOptions)
                     .handler(response -> {
                         if (successPredicate.test(response.statusCode())) {
@@ -405,14 +408,18 @@ public final class CrudHttpClient {
 
         final Future<Buffer> result = Future.future();
 
-        client.get(requestOptions)
+        context.runOnContext(go -> {
+            @SuppressWarnings("deprecation")
+            final HttpClientRequest req = client.get(requestOptions)
             .handler(response -> {
                 if (successPredicate.test(response.statusCode())) {
                     response.bodyHandler(body -> result.tryComplete(body));
                 } else {
                     result.tryFail(newServiceInvocationException(response.statusCode()));
                 }
-            }).exceptionHandler(result::tryFail).end();
+            }).exceptionHandler(result::tryFail);
+            req.end();
+        });
 
         return result;
     }
@@ -449,14 +456,16 @@ public final class CrudHttpClient {
         final Future<Void> result = Future.future();
 
         context.runOnContext(go -> {
-            client.delete(requestOptions)
+            @SuppressWarnings("deprecation")
+            final HttpClientRequest req = client.delete(requestOptions)
             .handler(response -> {
                 if (successPredicate.test(response.statusCode())) {
                     result.tryComplete();
                 } else {
                     result.tryFail(newServiceInvocationException(response.statusCode()));
                 }
-            }).exceptionHandler(result::tryFail).end();
+            }).exceptionHandler(result::tryFail);
+            req.end();
         });
 
         return result;
