@@ -215,7 +215,7 @@ public class JmsIntegrationTestSupport {
     }
 
     static Destination getDestination(final String endpoint, final String tenantId) {
-        return new JmsQueue(String.format("%s%s%s", endpoint, IntegrationTestSupport.PATH_SEPARATOR, tenantId));
+        return new JmsQueue(String.format("%s/%s", endpoint, tenantId));
     }
 
     /**

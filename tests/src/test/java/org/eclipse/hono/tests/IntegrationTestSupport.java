@@ -59,91 +59,294 @@ import io.vertx.ext.unit.TestContext;
  */
 public final class IntegrationTestSupport {
 
+    /**
+     * The default port exposed by the AMQP adapter.
+     */
     public static final int    DEFAULT_AMQP_PORT = 5672;
+    /**
+     * The default TLS secured port exposed by the AMQP adapter.
+     */
     public static final int    DEFAULT_AMQPS_PORT = 5671;
+    /**
+     * The default port exposed by the CoAP adapter.
+     */
     public static final int    DEFAULT_COAP_PORT = 5683;
+    /**
+     * The default DTLS secured port exposed by the CoAP adapter.
+     */
     public static final int    DEFAULT_COAPS_PORT = 5684;
+    /**
+     * The default AMQP port exposed by the device registry.
+     */
     public static final int    DEFAULT_DEVICEREGISTRY_AMQP_PORT = 25672;
+    /**
+     * The default HTTP port exposed by the device registry.
+     */
     public static final int    DEFAULT_DEVICEREGISTRY_HTTP_PORT = 28080;
+    /**
+     * The default AMQP port exposed by the AMQP Messaging Network.
+     */
     public static final int    DEFAULT_DOWNSTREAM_PORT = 15672;
+    /**
+     * The default IP address that services and adapters bind their endpoints to.
+     */
     public static final String DEFAULT_HOST = InetAddress.getLoopbackAddress().getHostAddress();
+    /**
+     * The default port exposed by the HTTP adapter.
+     */
     public static final int    DEFAULT_HTTP_PORT = 8080;
+    /**
+     * The default TLS secured port exposed by the HTTP adapter.
+     */
     public static final int    DEFAULT_HTTPS_PORT = 8443;
+    /**
+     * The default number of iterations to use with the BCrypt hash algorithm.
+     */
     public static final int    DEFAULT_MAX_BCRYPT_ITERATIONS = 10;
+    /**
+     * The default port exposed by the MQTT adapter.
+     */
     public static final int    DEFAULT_MQTT_PORT = 1883;
+    /**
+     * The default TLS secured port exposed by the MQTT adapter.
+     */
     public static final int    DEFAULT_MQTTS_PORT = 8883;
 
+    /**
+     * The name of the system property to use for setting the IP address of the Auth service.
+     */
     public static final String PROPERTY_AUTH_HOST = "auth.host";
+    /**
+     * The name of the system property to use for setting the port number that the Auth service
+     * should listen on.
+     */
     public static final String PROPERTY_AUTH_PORT = "auth.amqp.port";
+    /**
+     * The name of the system property to use for setting the username that protocol adapters
+     * use for authenticating to the Device Registry in a SASL handshake.
+     */
     public static final String PROPERTY_HONO_USERNAME = "hono.username";
+    /**
+     * The name of the system property to use for setting the password that protocol adapters
+     * use for authenticating to the Device Registry in a SASL handshake.
+     */
     public static final String PROPERTY_HONO_PASSWORD = "hono.password";
+    /**
+     * The name of the system property to use for setting the IP address of the Device Registry.
+     */
     public static final String PROPERTY_DEVICEREGISTRY_HOST = "deviceregistry.host";
+    /**
+     * The name of the system property to use for setting the port number that the Device Registry
+     * should listen on for AMQP connections.
+     */
     public static final String PROPERTY_DEVICEREGISTRY_AMQP_PORT = "deviceregistry.amqp.port";
+    /**
+     * The name of the system property to use for setting the port number that the Device Registry
+     * should listen on for HTTP connections.
+     */
     public static final String PROPERTY_DEVICEREGISTRY_HTTP_PORT = "deviceregistry.http.port";
+    /**
+     * The name of the system property to use for setting the IP address of the AMQP Messaging Network.
+     */
     public static final String PROPERTY_DOWNSTREAM_HOST = "downstream.host";
+    /**
+     * The name of the system property to use for setting the port number that the AMQP Messaging
+     * Network should listen on for connections.
+     */
     public static final String PROPERTY_DOWNSTREAM_PORT = "downstream.amqp.port";
+    /**
+     * The name of the system property to use for setting the username for authenticating to
+     * the AMQP Messaging Network.
+     */
     public static final String PROPERTY_DOWNSTREAM_USERNAME = "downstream.username";
+    /**
+     * The name of the system property to use for setting the password for authenticating to
+     * the AMQP Messaging Network.
+     */
     public static final String PROPERTY_DOWNSTREAM_PASSWORD = "downstream.password";
+    /**
+     * The name of the system property to use for setting the IP address of the CoAP protocol adapter.
+     */
     public static final String PROPERTY_COAP_HOST = "coap.host";
+    /**
+     * The name of the system property to use for setting the port number that the CoAP adapter
+     * should listen on for requests.
+     */
     public static final String PROPERTY_COAP_PORT = "coap.port";
+    /**
+     * The name of the system property to use for setting the port number that the CoAP adapter
+     * should listen on for secure requests.
+     */
     public static final String PROPERTY_COAPS_PORT = "coaps.port";
+    /**
+     * The name of the system property to use for setting the IP address of the HTTP protocol adapter.
+     */
     public static final String PROPERTY_HTTP_HOST = "http.host";
+    /**
+     * The name of the system property to use for setting the port number that the HTTP adapter
+     * should listen on for requests.
+     */
     public static final String PROPERTY_HTTP_PORT = "http.port";
+    /**
+     * The name of the system property to use for setting the port number that the HTTP adapter
+     * should listen on for secure requests.
+     */
     public static final String PROPERTY_HTTPS_PORT = "https.port";
+    /**
+     * The name of the system property to use for setting the IP address of the MQTT protocol adapter.
+     */
     public static final String PROPERTY_MQTT_HOST = "mqtt.host";
+    /**
+     * The name of the system property to use for setting the port number that the MQTT adapter
+     * should listen on for connections.
+     */
     public static final String PROPERTY_MQTT_PORT = "mqtt.port";
+    /**
+     * The name of the system property to use for setting the port number that the MQTT adapter
+     * should listen on for secure connections.
+     */
     public static final String PROPERTY_MQTTS_PORT = "mqtts.port";
+    /**
+     * The name of the system property to use for setting the IP address of the AMQP protocol adapter.
+     */
     public static final String PROPERTY_AMQP_HOST = "adapter.amqp.host";
+    /**
+     * The name of the system property to use for setting the port number that the AMQP adapter
+     * should listen on for connections.
+     */
     public static final String PROPERTY_AMQP_PORT = "adapter.amqp.port";
+    /**
+     * The name of the system property to use for setting the port number that the AMQP adapter
+     * should listen on for secure connections.
+     */
     public static final String PROPERTY_AMQPS_PORT = "adapter.amqps.port";
-    public static final String PROPERTY_TENANT = "tenant";
+    /**
+     * The name of the system property to use for setting the maximum number of BCrypt iterations supported
+     * by Hono.
+     */
     public static final String PROPTERY_MAX_BCRYPT_ITERATIONS = "max.bcrypt.iterations";
 
+    /**
+     * The IP address of the Auth service.
+     */
     public static final String AUTH_HOST = System.getProperty(PROPERTY_AUTH_HOST, DEFAULT_HOST);
+    /**
+     * The port number that the Auth service listens on.
+     */
     public static final int    AUTH_PORT = Integer.getInteger(PROPERTY_AUTH_PORT, Constants.PORT_AMQP);
 
+    /**
+     * The username that clients use for authenticating to the Device Registry in a SASL handshake.
+     */
     public static final String HONO_USER = System.getProperty(PROPERTY_HONO_USERNAME);
+    /**
+     * The password that protocol adapters use for authenticating to the Device Registry in a SASL handshake.
+     */
     public static final String HONO_PWD = System.getProperty(PROPERTY_HONO_PASSWORD);
 
+    /**
+     * The IP address of the Device Registry.
+     */
     public static final String HONO_DEVICEREGISTRY_HOST = System.getProperty(PROPERTY_DEVICEREGISTRY_HOST, DEFAULT_HOST);
+    /**
+     * The port number that the Device Registry listens on for AMQP connections.
+     */
     public static final int    HONO_DEVICEREGISTRY_AMQP_PORT = Integer.getInteger(PROPERTY_DEVICEREGISTRY_AMQP_PORT, DEFAULT_DEVICEREGISTRY_AMQP_PORT);
+    /**
+     * The port number that the Device Registry listens on for HTTP requests.
+     */
     public static final int    HONO_DEVICEREGISTRY_HTTP_PORT = Integer.getInteger(PROPERTY_DEVICEREGISTRY_HTTP_PORT, DEFAULT_DEVICEREGISTRY_HTTP_PORT);
 
+    /**
+     * The IP address of the AMQP Messaging Network.
+     */
     public static final String DOWNSTREAM_HOST = System.getProperty(PROPERTY_DOWNSTREAM_HOST, DEFAULT_HOST);
+    /**
+     * The port number that the AMQP Messaging Network listens on for connections.
+     */
     public static final int    DOWNSTREAM_PORT = Integer.getInteger(PROPERTY_DOWNSTREAM_PORT, DEFAULT_DOWNSTREAM_PORT);
+    /**
+     * The username that applications use for authenticating to the AMQP Messaging Network.
+     */
     public static final String DOWNSTREAM_USER = System.getProperty(PROPERTY_DOWNSTREAM_USERNAME);
+    /**
+     * The password that applications use for authenticating to the AMQP Messaging Network.
+     */
     public static final String DOWNSTREAM_PWD = System.getProperty(PROPERTY_DOWNSTREAM_PASSWORD);
+    /**
+     * The username that applications use for authenticating to the AMQP Messaging Network when
+     * requiring access to the default tenant only.
+     */
     public static final String RESTRICTED_CONSUMER_NAME = "user1@HONO";
+    /**
+     * The password that applications use for authenticating to the AMQP Messaging Network when
+     * requiring access to the default tenant only.
+     */
     public static final String RESTRICTED_CONSUMER_PWD = "pw";
 
+    /**
+     * The IP address of the CoAP protocol adapter.
+     */
     public static final String COAP_HOST = System.getProperty(PROPERTY_COAP_HOST, DEFAULT_HOST);
+    /**
+     * The  port number that the CoAP adapter listens on for requests.
+     */
     public static final int    COAP_PORT = Integer.getInteger(PROPERTY_COAP_PORT, DEFAULT_COAP_PORT);
+    /**
+     * The  port number that the CoAP adapter listens on for secure requests.
+     */
     public static final int    COAPS_PORT = Integer.getInteger(PROPERTY_COAPS_PORT, DEFAULT_COAPS_PORT);
+    /**
+     * The IP address of the HTTP protocol adapter.
+     */
     public static final String HTTP_HOST = System.getProperty(PROPERTY_HTTP_HOST, DEFAULT_HOST);
+    /**
+     * The  port number that the HTTP adapter listens on for requests.
+     */
     public static final int    HTTP_PORT = Integer.getInteger(PROPERTY_HTTP_PORT, DEFAULT_HTTP_PORT);
+    /**
+     * The  port number that the HTTP adapter listens on for secure requests.
+     */
     public static final int    HTTPS_PORT = Integer.getInteger(PROPERTY_HTTPS_PORT, DEFAULT_HTTPS_PORT);
+    /**
+     * The IP address of the MQTT protocol adapter.
+     */
     public static final String MQTT_HOST = System.getProperty(PROPERTY_MQTT_HOST, DEFAULT_HOST);
+    /**
+     * The  port number that the MQTT adapter listens on for connections.
+     */
     public static final int    MQTT_PORT = Integer.getInteger(PROPERTY_MQTT_PORT, DEFAULT_MQTT_PORT);
+    /**
+     * The  port number that the MQTT adapter listens on for secure connections.
+     */
     public static final int    MQTTS_PORT = Integer.getInteger(PROPERTY_MQTTS_PORT, DEFAULT_MQTTS_PORT);
+    /**
+     * The IP address of the AMQP protocol adapter.
+     */
     public static final String AMQP_HOST = System.getProperty(PROPERTY_AMQP_HOST, DEFAULT_HOST);
+    /**
+     * The  port number that the AMQP adapter listens on for connections.
+     */
     public static final int    AMQP_PORT = Integer.getInteger(PROPERTY_AMQP_PORT, DEFAULT_AMQP_PORT);
+    /**
+     * The  port number that the AMQP adapter listens on for secure connections.
+     */
     public static final int    AMQPS_PORT = Integer.getInteger(PROPERTY_AMQPS_PORT, DEFAULT_AMQPS_PORT);
 
-    public static final String PATH_SEPARATOR = System.getProperty("hono.pathSeparator", "/");
+    /**
+     * The number of messages to send by default in protocol adapter tests.
+     */
     public static final int    MSG_COUNT = Integer.getInteger("msg.count", 400);
 
+    /**
+     * The maximum number of BCrypt iterations supported by Hono.
+     */
     public static final int    MAX_BCRYPT_ITERATIONS = Integer.getInteger(PROPTERY_MAX_BCRYPT_ITERATIONS, DEFAULT_MAX_BCRYPT_ITERATIONS);
 
+    /**
+     * The absolute path to the trust store to use for establishing secure connections with Hono.
+     */
     public static final String TRUST_STORE_PATH = System.getProperty("trust-store.path");
-
-    /**
-     * The name of the tenant for which only the MQTT adapter is enabled.
-     */
-    public static final String TENANT_MQTT_ONLY = "MQTT_ONLY";
-    /**
-     * The name of the tenant for which only the HTTP adapter is enabled.
-     */
-    public static final String TENANT_HTTP_ONLY = "HTTP_ONLY";
 
     private static final Logger LOGGER = LoggerFactory.getLogger(IntegrationTestSupport.class);
     private static final BCryptPasswordEncoder bcryptPwdEncoder = new BCryptPasswordEncoder(4);
