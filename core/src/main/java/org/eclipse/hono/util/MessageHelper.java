@@ -12,7 +12,6 @@
  *******************************************************************************/
 package org.eclipse.hono.util;
 
-import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.HashMap;
@@ -345,11 +344,22 @@ public final class MessageHelper {
     }
 
     /**
-     * Gets a message's body as Buffer object.
-     *
+     * Gets the payload data contained in a message's body.
+     * <p>
+     * The bytes in the returned buffer are determined as follows:
+     * <ul>
+     * <li>If the body is a Data section, the bytes contained in the
+     * Data section are returned.</li>
+     * <li>If the body is an AmqpValue section and contains a byte array,
+     * the bytes in the array are returned.</li>
+     * <li>If the body is an AmqpValue section and contains a String,
+     * the String's UTF-8 encoding is returned.</li>
+     * <li>In all other cases, {@code null} is returned.</li>
+     * </ul>
+     * 
      * @param msg The AMQP 1.0 message to parse the body of.
-     * @return The message body as a Buffer or {@code null} if the message does not have a <em>Data</em> nor an
-     *         <em>AmqpValue</em> section.
+     * @return The bytes representing the payload or {@code null} if
+     *         the message neither has a <em>Data</em> nor <em>AmqpValue</em> section.
      * @throws NullPointerException if the message is {@code null}.
      */
     public static Buffer getPayload(final Message msg) {
@@ -377,12 +387,22 @@ public final class MessageHelper {
     }
 
     /**
-     * Gets a message's body as String.
-     *
-     * @param message The AMQP 1.0 message to parse the body of.
-     * @return The message body as a {@link String} or {@code null} if the message does not have a <em>Data</em> nor an
-     *         <em>AmqpValue</em> section.
+     * Gets the payload data contained in a message's body as a String.
+     * <p>
+     * The String returned is created as follows:
+     * <ul>
+     * <li>If the body is a Data section, the String is created by
+     * interpreting the bytes as UTF-8 encoded characters.</li>
+     * <li>If the body is an AmqpValue section and contains a byte array,
+     * the String is created by interpreting the bytes as UTF-8 encoded characters.</li>
+     * <li>If the body is an AmqpValue section and contains a String,
+     * the String is returned as is.</li>
+     * <li>In all other cases, {@code null} is returned.</li>
+     * </ul>
      * 
+     * @param message The AMQP 1.0 message to parse the body of.
+     * @return The String representation of the payload data or {@code null} if the message
+     *         body does not contain data that can be decoded into a String.
      * @throws NullPointerException if the message is {@code null}.
      */
     public static String getPayloadAsString(final Message message) {
@@ -394,20 +414,22 @@ public final class MessageHelper {
             return null;
         }
 
+        // The code below is almost identical to the getPayload method.
+        // However, in case of an AmqpValue containing a String,
+        // we prevent encoding/decoding of the String to/from its UTF-8 bytes.
         if (message.getBody() instanceof Data) {
 
             final Data body = (Data) message.getBody();
-            return StandardCharsets.UTF_8.decode(body.getValue().asByteBuffer()).toString();
+            return Buffer.buffer(body.getValue().getArray()).toString();
 
         } else if (message.getBody() instanceof AmqpValue) {
 
             final AmqpValue body = (AmqpValue) message.getBody();
             if (body.getValue() instanceof byte[]) {
-                return StandardCharsets.UTF_8.decode(ByteBuffer.wrap((byte[]) body.getValue())).toString();
+                return Buffer.buffer((byte[]) body.getValue()).toString();
             } else if (body.getValue() instanceof String) {
                 return (String) body.getValue();
             }
-
         }
 
         LOG.debug("unsupported body type [{}]", message.getBody().getClass().getName());
