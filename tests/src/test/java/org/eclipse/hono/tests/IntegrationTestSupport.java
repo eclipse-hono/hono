@@ -134,6 +134,16 @@ public final class IntegrationTestSupport {
      */
     public static final String PROPERTY_HONO_PASSWORD = "hono.password";
     /**
+     * The name of the system property to use for setting the username of the principal that
+     * has access to all tenants.
+     */
+    public static final String PROPERTY_TENANT_ADMIN_USERNAME = "tenant.admin.username";
+    /**
+     * The name of the system property to use for setting the password of the principal that
+     * has access to all tenants.
+     */
+    public static final String PROPERTY_TENANT_ADMIN_PASSWORD = "tenant.admin.password";
+    /**
      * The name of the system property to use for setting the IP address of the Device Registry.
      */
     public static final String PROPERTY_DEVICEREGISTRY_HOST = "deviceregistry.host";
@@ -238,13 +248,22 @@ public final class IntegrationTestSupport {
     public static final int    AUTH_PORT = Integer.getInteger(PROPERTY_AUTH_PORT, Constants.PORT_AMQP);
 
     /**
-     * The username that clients use for authenticating to the Device Registry in a SASL handshake.
+     * The username of the principal that has access to the DEFAULT_TENANT only.
      */
     public static final String HONO_USER = System.getProperty(PROPERTY_HONO_USERNAME);
     /**
-     * The password that protocol adapters use for authenticating to the Device Registry in a SASL handshake.
+     * The password of the principal that has access to the DEFAULT_TENANT only.
      */
     public static final String HONO_PWD = System.getProperty(PROPERTY_HONO_PASSWORD);
+    /**
+     * The username of the principal that has access to all tenants.
+     */
+    public static final String TENANT_ADMIN_USER = System.getProperty(PROPERTY_TENANT_ADMIN_USERNAME);
+    /**
+     * The password of the principal that has access to all tenants..
+     */
+    public static final String TENANT_ADMIN_PWD = System.getProperty(PROPERTY_TENANT_ADMIN_PASSWORD);
+
 
     /**
      * The IP address of the Device Registry.

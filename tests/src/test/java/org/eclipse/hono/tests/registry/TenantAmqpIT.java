@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,6 +14,7 @@
 package org.eclipse.hono.tests.registry;
 
 import java.net.HttpURLConnection;
+import java.security.GeneralSecurityException;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
@@ -26,8 +27,6 @@ import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.TenantClient;
 import org.eclipse.hono.client.TenantClientFactory;
 import org.eclipse.hono.tests.IntegrationTestSupport;
-import org.eclipse.hono.util.Constants;
-import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantObject;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -50,11 +49,11 @@ public class TenantAmqpIT {
 
     private static final Vertx vertx = Vertx.vertx();
 
-    private static TenantClientFactory tenantClientFactory;
-    private static TenantClient tenantClient;
+    private static TenantClientFactory allTenantClientFactory;
+    private static TenantClientFactory defaultTenantClientFactory;
+    private static TenantClient allTenantClient;
+    private static TenantClient defaultTenantClient;
     private static IntegrationTestSupport helper;
-
-
 
     /**
      * Global timeout for all test cases.
@@ -63,7 +62,9 @@ public class TenantAmqpIT {
     public Timeout globalTimeout = new Timeout(5, TimeUnit.SECONDS);
 
     /**
-     * Starts the device registry, connects a tenantClientFactory and provides a tenant API tenantClientFactory.
+     * Creates an HTTP client for managing the fixture of test cases
+     * and creates a {@link TenantClient} for invoking operations of the
+     * Tenant API.
      *
      * @param ctx The vert.x test context.
      */
@@ -73,14 +74,25 @@ public class TenantAmqpIT {
         helper = new IntegrationTestSupport(vertx);
         helper.initRegistryClient();
 
-        tenantClientFactory = DeviceRegistryAmqpTestSupport.prepareTenantClientFactory(vertx,
+        allTenantClientFactory = DeviceRegistryAmqpTestSupport.prepareTenantClientFactory(vertx,
+                IntegrationTestSupport.TENANT_ADMIN_USER, IntegrationTestSupport.TENANT_ADMIN_PWD);
+
+        allTenantClientFactory
+        .connect()
+        .compose(c -> allTenantClientFactory.getOrCreateTenantClient())
+        .setHandler(ctx.asyncAssertSuccess(r -> {
+            allTenantClient = r;
+        }));
+
+        defaultTenantClientFactory = DeviceRegistryAmqpTestSupport.prepareTenantClientFactory(vertx,
                 IntegrationTestSupport.HONO_USER, IntegrationTestSupport.HONO_PWD);
 
-        tenantClientFactory.connect()
-            .compose(c -> tenantClientFactory.getOrCreateTenantClient())
-            .setHandler(ctx.asyncAssertSuccess(r -> {
-                tenantClient = r;
-            }));
+        defaultTenantClientFactory
+        .connect()
+        .compose(c -> defaultTenantClientFactory.getOrCreateTenantClient())
+        .setHandler(ctx.asyncAssertSuccess(r -> {
+            defaultTenantClient = r;
+        }));
     }
 
     /**
@@ -91,7 +103,6 @@ public class TenantAmqpIT {
     @After
     public void cleanUp(final TestContext ctx) {
         helper.deleteObjects(ctx);
-        helper.registry.removeTenant(Constants.DEFAULT_TENANT);
     }
 
     /**
@@ -102,153 +113,123 @@ public class TenantAmqpIT {
     @AfterClass
     public static void shutdown(final TestContext ctx) {
 
-        DeviceRegistryAmqpTestSupport.disconnect(ctx, tenantClientFactory);
-
+        DeviceRegistryAmqpTestSupport.disconnect(ctx, allTenantClientFactory);
+        DeviceRegistryAmqpTestSupport.disconnect(ctx, defaultTenantClientFactory);
     }
 
     /**
-     * Verifies that a tenantClientFactory can use the get operation to retrieve information for an existing
-     * tenant.
+     * Verifies that an existing tenant can be retrieved.
      *
      * @param ctx The vert.x test context.
      */
     @Test
     public void testGetTenant(final TestContext ctx) {
 
-        final String tenantId = Constants.DEFAULT_TENANT;
-        final TenantObject payload = new TenantObject()
-                .setTenantId(tenantId);
+        final String tenantId = helper.getRandomTenantId();
+        final TenantObject tenant = TenantObject.from(tenantId, true);
 
-        helper.registry.addTenant( JsonObject.mapFrom(payload))
-                .compose(r -> tenantClient.get(tenantId))
-                .setHandler(ctx.asyncAssertSuccess(tenantObject -> {
-                   ctx.assertEquals(tenantId, tenantObject.getTenantId());
-           }));
+        helper.registry
+        .addTenant(JsonObject.mapFrom(tenant))
+        .compose(r -> allTenantClient.get(tenantId))
+        .setHandler(ctx.asyncAssertSuccess(tenantObject -> {
+            ctx.assertTrue(tenantObject.isEnabled());
+            ctx.assertEquals(tenantId, tenantObject.getTenantId());
+        }));
     }
 
     /**
-     * Verifies that a tenantClientFactory cannot retrieve information for a tenant that he is not authorized to
-     * get information for.
+     * Verifies that a request to retrieve information for a tenant that the client
+     * is not authorized for fails with a 403 status.
      *
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testGetNotConfiguredTenantReturnsUnauthorized(final TestContext ctx) {
+    public void testGetTenantFailsIfNotAuthorized(final TestContext ctx) {
 
         final String tenantId = helper.getRandomTenantId();
-        final TenantObject payload = new TenantObject()
-                .setTenantId(tenantId)
-                .addAdapterConfiguration( new JsonObject()
-                                .put(TenantConstants.FIELD_ADAPTERS_TYPE, Constants.PROTOCOL_ADAPTER_TYPE_HTTP)
-                                .put(TenantConstants.FIELD_ENABLED, true)
-                                .put(TenantConstants.FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED, true));
+        final TenantObject payload = TenantObject.from(tenantId, true);
 
-        helper.registry.addTenant(JsonObject.mapFrom(payload))
-                .compose(r -> tenantClient.get(tenantId))
-                .setHandler(ctx.asyncAssertFailure(t -> {
-                        ctx.assertEquals(
-                                HttpURLConnection.HTTP_FORBIDDEN,
-                                ((ServiceInvocationException) t).getErrorCode());
-                    }));
+        helper.registry
+        .addTenant(JsonObject.mapFrom(payload))
+        .compose(r -> defaultTenantClient.get(tenantId))
+        .setHandler(ctx.asyncAssertFailure(t -> {
+                ctx.assertEquals(
+                        HttpURLConnection.HTTP_FORBIDDEN,
+                        ((ServiceInvocationException) t).getErrorCode());
+        }));
     }
 
     /**
      * Verifies that a request to retrieve information for a non existing tenant
-     * fails with a {@link HttpURLConnection#HTTP_NOT_FOUND}.
+     * fails with a 404 status.
      *
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testGetConfiguredButNotCreatedTenantReturnsNotFound(final TestContext ctx) {
+    public void testGetTenantFailsForNonExistingTenant(final TestContext ctx) {
 
-        tenantClient
-                .get("NON_EXISTING_TENANT")
-                .setHandler(ctx.asyncAssertFailure(t -> {
-                    ctx.assertEquals(
-                            HttpURLConnection.HTTP_NOT_FOUND,
-                            ((ServiceInvocationException) t).getErrorCode());
-                }));
+        allTenantClient
+        .get("non-existing-tenant")
+        .setHandler(ctx.asyncAssertFailure(t -> {
+            ctx.assertEquals(
+                    HttpURLConnection.HTTP_NOT_FOUND,
+                    ((ServiceInvocationException) t).getErrorCode());
+        }));
     }
 
     /**
-     * Verifies that a tenantClientFactory can use the getByCa operation to retrieve information for
-     * a tenant by the subject DN of the trusted certificate authority.
+     * Verifies that an existing tenant can be retrieved by a trusted CA's subject DN.
      *
      * @param ctx The vert.x test context.
      * @throws NoSuchAlgorithmException if the public key cannot be generated
      */
     @Test
-    public void testGetByCaSucceeds(final TestContext ctx) throws NoSuchAlgorithmException {
+    public void testGetTenantByCa(final TestContext ctx) throws NoSuchAlgorithmException {
 
-        final String tenantId = Constants.DEFAULT_TENANT;
+        final String tenantId = helper.getRandomTenantId();
         final X500Principal subjectDn = new X500Principal("CN=ca, OU=Hono, O=Eclipse");
-        final TenantObject payload = new TenantObject()
-                .setTenantId(tenantId)
-                .setTrustAnchor(getRandomPublicKey(), subjectDn);
+        final PublicKey publicKey = getRandomPublicKey();
+        final TenantObject payload = TenantObject.from(tenantId, true)
+                .setTrustAnchor(publicKey, subjectDn);
 
-        helper.registry.addTenant(JsonObject.mapFrom(payload))
-                .compose(r -> tenantClient.get(subjectDn))
-                .setHandler(ctx.asyncAssertSuccess(tenantObject -> {
-
-                    ctx.assertEquals(tenantId, tenantObject.getTenantId());
-                    final JsonObject trustedCa = tenantObject.getProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA);
-                    ctx.assertNotNull(trustedCa);
-                    final X500Principal trustedSubjectDn = new X500Principal(trustedCa.getString(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN));
-                    ctx.assertEquals(subjectDn, trustedSubjectDn);
-                }));
+        helper.registry
+        .addTenant(JsonObject.mapFrom(payload))
+        .compose(r -> allTenantClient.get(subjectDn))
+        .setHandler(ctx.asyncAssertSuccess(tenantObject -> {
+            try {
+                ctx.assertEquals(tenantId, tenantObject.getTenantId());
+                ctx.assertEquals(subjectDn, tenantObject.getTrustedCaSubjectDn());
+                ctx.assertEquals(publicKey, tenantObject.getTrustAnchor().getCAPublicKey());
+            } catch (GeneralSecurityException e) {
+                ctx.fail(e);
+            }
+        }));
     }
 
     /**
      * Verifies that a request to retrieve information for a tenant by the
      * subject DN of the trusted certificate authority fails with a
-     * <em>403 Forbidden</em> if the tenantClientFactory is not authorized to retrieve
+     * <em>403 Forbidden</em> status if the client is not authorized to retrieve
      * information for the tenant.
      *
      * @param ctx The vert.x test context.
      * @throws NoSuchAlgorithmException if the public key cannot be generated
      */
     @Test
-    public void testGetByCaFailsIfNotAuthorized(final TestContext ctx) throws NoSuchAlgorithmException {
+    public void testGetTenantByCaFailsIfNotAuthorized(final TestContext ctx) throws NoSuchAlgorithmException {
+
         final String tenantId = helper.getRandomTenantId();
         final X500Principal subjectDn = new X500Principal("CN=ca-http,OU=Hono,O=Eclipse");
-        final TenantObject payload = new TenantObject()
-                .setTenantId(tenantId)
-                .setTrustAnchor(getRandomPublicKey(), subjectDn)
-                .addAdapterConfiguration(new JsonObject()
-                        .put(TenantConstants.FIELD_ADAPTERS_TYPE, Constants.PROTOCOL_ADAPTER_TYPE_HTTP)
-                        .put(TenantConstants.FIELD_ENABLED, true)
-                        .put(TenantConstants.FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED, true));
-
-        helper.registry.addTenant(JsonObject.mapFrom(payload))
-                .compose(r ->  tenantClient.get(subjectDn))
-                .setHandler(ctx.asyncAssertFailure(t -> {
-                        ctx.assertEquals(
-                                HttpURLConnection.HTTP_FORBIDDEN,
-                                ((ServiceInvocationException) t).getErrorCode());
-                    }));
-    }
-
-    /**
-     * Verify that a request to add a tenant returns a 400 status code when the request payload defines a trusted CA
-     * configuration containing an invalid Base64 encoding for its <em>public-key</em> property.
-     *
-     * @param ctx The Vert.x test context.
-     */
-    @Test
-    public void testAddTenantFailsIfTrustedCaPublicKeyHasInvalidEncoding(final TestContext ctx) {
-
-        final JsonObject malformedTrustedCa = new JsonObject()
-                .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, "CN=test")
-                .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, "NotBase64Encoded");
-
-        final String tenantId = Constants.DEFAULT_TENANT;
         final TenantObject payload = TenantObject.from(tenantId, true)
-                .setProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, malformedTrustedCa);
+                .setTrustAnchor(getRandomPublicKey(), subjectDn);
 
-        helper.registry.addTenant(JsonObject.mapFrom(payload))
+        helper.registry
+        .addTenant(JsonObject.mapFrom(payload))
+        .compose(r -> defaultTenantClient.get(subjectDn))
         .setHandler(ctx.asyncAssertFailure(t -> {
-                    ctx.assertEquals(HttpURLConnection.HTTP_BAD_REQUEST,
-                            ((ServiceInvocationException) t).getErrorCode());
+                ctx.assertEquals(
+                        HttpURLConnection.HTTP_FORBIDDEN,
+                        ((ServiceInvocationException) t).getErrorCode());
         }));
     }
 
