@@ -1,0 +1,6 @@
+title Connect to Device Connection Service
+
+Client->+Device Connection Service: 2.1 attach("sender", "device_con/${tenant_id}")
+Device Connection Service->-Client: 2.2 attach("receiver", "device_con/${tenant_id}")
+Client->+Device Connection Service: 3.1 attach("receiver", "device_con/${tenant_id}/${reply-to}")
+Device Connection Service->-Client: 3.2 attach("sender", "device_con/${tenant_id}/${reply-to}")
