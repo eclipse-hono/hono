@@ -793,6 +793,19 @@ public final class MessageHelper {
     }
 
     /**
+     * Checks if a message's body consists of an AMQP <em>AmqpValue</em> section.
+     * 
+     * @param message The message to check.
+     * @return {@code true} if the body consists of an AmqpValue section, {@code false} otherwise.
+     * @throws NullPointerException If message is {@code null}.
+     */
+    public static boolean hasAmqpValueBody(final Message message) {
+
+        Objects.requireNonNull(message);
+        return message.getBody() instanceof AmqpValue;
+    }
+
+    /**
      * Returns a copy of the given message.
      * <p>
      * This is a shallow copy of the <em>Message</em> object, except for the copied <em>Properties</em>.
