@@ -1,0 +1,9 @@
+title Set Last Known Gateway for Device (success)
+
+Client->Device Connection Service: transfer("device_con/tenant", "set-last-gw", device-id, gateway-id)
+activate Device Connection Service
+note over Device Connection Service:
+set last known gateway for device
+end note
+Device Connection Service->Client: transfer("device_con/tenant/${reply-to}", "204", JSON payload)
+deactivate Device Connection Service
