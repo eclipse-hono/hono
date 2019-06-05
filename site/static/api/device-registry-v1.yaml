@@ -189,7 +189,7 @@ paths:
             - $ref: '#/components/parameters/resourceVersion'
          responses:
             204:
-               description: object deleted
+               $ref: '#/components/responses/Deleted'
             401:
                $ref: '#/components/responses/Unauthorized'
             403:
@@ -319,7 +319,7 @@ paths:
             - $ref: '#/components/parameters/resourceVersion'
          responses:
             204:
-               $ref: '#/components/responses/Delete'
+               $ref: '#/components/responses/Deleted'
             401:
                $ref: '#/components/responses/Unauthorized'
             403:
@@ -404,7 +404,7 @@ paths:
             - $ref: '#/components/parameters/resourceVersion'
          responses:
             204:
-               $ref: '#/components/responses/Delete'
+               $ref: '#/components/responses/Deleted'
             401:
                $ref: '#/components/responses/Unauthorized'
             403:
