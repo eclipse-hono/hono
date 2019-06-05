@@ -65,7 +65,7 @@ public class CredentialsAmqpIT {
     public static void prepareDeviceRegistry(final TestContext ctx) {
 
         helper = new IntegrationTestSupport(vertx);
-        helper.initRegistryClient(ctx);
+        helper.initRegistryClient();
 
         client = DeviceRegistryAmqpTestSupport.prepareCredentialsClientFactory(vertx,
                 IntegrationTestSupport.HONO_USER, IntegrationTestSupport.HONO_PWD);

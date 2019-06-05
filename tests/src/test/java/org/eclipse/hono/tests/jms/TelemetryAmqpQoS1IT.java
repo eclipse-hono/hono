@@ -66,7 +66,7 @@ public class TelemetryAmqpQoS1IT {
     public static void init() {
         vertx = Vertx.vertx();
         helper = new IntegrationTestSupport(vertx);
-        helper.initRegistryClient(null);
+        helper.initRegistryClient();
     }
 
     /**

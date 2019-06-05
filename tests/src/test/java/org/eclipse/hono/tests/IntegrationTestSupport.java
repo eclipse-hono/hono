@@ -404,7 +404,7 @@ public final class IntegrationTestSupport {
      */
     public void init(final TestContext ctx, final ClientConfigProperties downstreamProps) {
 
-        initRegistryClient(ctx);
+        initRegistryClient();
         final Async amqpNetworkConnection = ctx.async();
         applicationClientFactory = IntegrationTestApplicationClientFactory.create(HonoConnection.newConnection(vertx, downstreamProps));
         applicationClientFactory.connect().setHandler(ctx.asyncAssertSuccess(ok -> {
@@ -416,10 +416,8 @@ public final class IntegrationTestSupport {
 
     /**
      * Creates an HTTP client for accessing the Device Registry.
-     * 
-     * @param ctx The vert.x test context.
      */
-    public void initRegistryClient(final TestContext ctx) {
+    public void initRegistryClient() {
 
         registry = new DeviceRegistryHttpClient(
                 vertx,

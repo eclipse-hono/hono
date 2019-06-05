@@ -71,7 +71,7 @@ public class TenantAmqpIT {
     public static void prepareDeviceRegistry(final TestContext ctx) {
 
         helper = new IntegrationTestSupport(vertx);
-        helper.initRegistryClient(ctx);
+        helper.initRegistryClient();
 
         tenantClientFactory = DeviceRegistryAmqpTestSupport.prepareTenantClientFactory(vertx,
                 IntegrationTestSupport.HONO_USER, IntegrationTestSupport.HONO_PWD);
