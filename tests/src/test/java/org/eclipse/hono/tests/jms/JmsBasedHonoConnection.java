@@ -46,6 +46,7 @@ import org.slf4j.LoggerFactory;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.buffer.Buffer;
 
 /**
  * A helper for implementing integration tests for Hono using Apache Qpid JMS Client.
@@ -137,13 +138,14 @@ public class JmsBasedHonoConnection implements ConnectionLifecycle<JmsBasedHonoC
     public void disconnect(final Handler<AsyncResult<Void>> completionHandler) {
         try {
             connection.close();
+            connection = null;
             completionHandler.handle(Future.succeededFuture());
         } catch (JMSException e) {
             completionHandler.handle(Future.failedFuture(e));
         }
     }
 
-    private JmsBasedHonoConnection createSession() throws JMSException {
+    private void createSession() throws JMSException {
 
         try {
             final ConnectionFactory cf = (ConnectionFactory) ctx.lookup("server");
@@ -154,8 +156,6 @@ public class JmsBasedHonoConnection implements ConnectionLifecycle<JmsBasedHonoC
             }
             connection.start();
             session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
-
-            return this;
 
         } catch (NamingException e) {
             throw new IllegalStateException("initial context does not contain entry for server");
@@ -260,18 +260,37 @@ public class JmsBasedHonoConnection implements ConnectionLifecycle<JmsBasedHonoC
      * The device ID is put into property {@link MessageHelper#APP_PROPERTY_DEVICE_ID}.
      * 
      * @param payload The payload.
-     * @param deviceId The identifier of the device that the data is reported for.
+     * @param deviceId The identifier of the device that is subject to the message or {@code null}
+     *                 if the message is not subjected to a device.
      * @return The message.
      * @throws JMSException if the message could not be created.
      * @throws IllegalStateException if the connection is not established.
      */
     public BytesMessage newMessage(final String payload, final String deviceId) throws JMSException {
+        final BytesMessage message = newMessage(Buffer.buffer(payload));
+        if (deviceId != null) {
+            message.setStringProperty(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId);
+        }
+        return message;
+    }
+
+    /**
+     * Creates a new message for a payload.
+     * 
+     * @param payload The payload of the message or {@code null} if an empty message should be created.
+     * @return The message.
+     * @throws JMSException if the message could not be created.
+     * @throws IllegalStateException if the connection is not established.
+     */
+    public BytesMessage newMessage(final Buffer payload) throws JMSException {
+
         if (session == null) {
             throw new IllegalStateException("connection not established");
         }
         final BytesMessage message = session.createBytesMessage();
-        message.setStringProperty(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId);
-        message.writeUTF(payload);
+        if (payload != null) {
+            message.writeBytes(payload.getBytes());
+        }
         return message;
     }
 

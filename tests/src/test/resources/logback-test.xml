@@ -43,6 +43,7 @@
   <logger name="org.eclipse.hono.tests.http" level="INFO"/>
   <logger name="org.eclipse.hono.tests.jms" level="INFO"/>
   <logger name="org.eclipse.hono.tests.mqtt" level="INFO"/>
+  <logger name="org.eclipse.hono.tests.registry" level="INFO"/>
 
   <logger name="org.eclipse.californium" level="WARN"/>
   <logger name="org.eclipse.californium.core" level="WARN"/>

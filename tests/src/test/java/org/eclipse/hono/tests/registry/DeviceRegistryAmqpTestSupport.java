@@ -17,12 +17,13 @@ import org.eclipse.hono.client.ConnectionLifecycle;
 import org.eclipse.hono.client.CredentialsClientFactory;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.RegistrationClientFactory;
-import org.eclipse.hono.client.TenantClientFactory;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.ext.unit.TestContext;
+import io.vertx.junit5.Checkpoint;
+import io.vertx.junit5.VertxTestContext;
 
 /**
  * Helper class to support integration tests for the device registry.
@@ -32,19 +33,6 @@ public final class DeviceRegistryAmqpTestSupport {
 
     private DeviceRegistryAmqpTestSupport() {
         // prevent instantiation
-    }
-
-    /**
-     * Gets a factory for creating a client for accessing the Tenant service.
-     *
-     * @param vertx The Vert.x instance to run on, if {@code null} a new Vert.x instance is used.
-     * @param username The username to use for authenticating to the service.
-     * @param password The password to use for authenticating to the service.
-     * @return The factory.
-     */
-    protected static TenantClientFactory prepareTenantClientFactory(final Vertx vertx, final String username, final String password) {
-
-        return TenantClientFactory.create(HonoConnection.newConnection(vertx, IntegrationTestSupport.getDeviceRegistryProperties(username, password)));
     }
 
     /**
@@ -93,4 +81,30 @@ public final class DeviceRegistryAmqpTestSupport {
         }
         clientTracker.otherwiseEmpty().setHandler(ctx.asyncAssertSuccess());
     }
+
+    /**
+     * Closes the connection of the provided factory.
+     * <p>
+     * Any senders or consumers opened by this client will be implicitly closed as well. Any subsequent attempts to
+     * connect this client again will fail.
+     *
+     * @param ctx The test context that the tests are executed on.
+     * @param checkpoint The checkpoint to flag on successful closing.
+     * @param factory The factory to disconnect.
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     */
+    protected static void disconnect(
+            final VertxTestContext ctx,
+            final Checkpoint checkpoint,
+            final ConnectionLifecycle<?> factory) {
+
+        final Future<Void> clientTracker = Future.future();
+        if (factory != null) {
+            factory.disconnect(clientTracker);
+        } else {
+            clientTracker.complete();
+        }
+        clientTracker.otherwiseEmpty().setHandler(ctx.succeeding(ok -> checkpoint.flag()));
+    }
+
 }

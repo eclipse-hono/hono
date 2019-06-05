@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -50,7 +50,7 @@ public final class TenantMessageFilter extends BaseMessageFilter {
             LOG.trace("message [{}] contains no reply-to address", msg.getMessageId());
             return false;
         } else if (msg.getBody() != null && !MessageHelper.hasDataBody(msg)) {
-            LOG.trace("message [{}] contains no Data section payload", msg.getMessageId());
+            LOG.trace("message [{}] contains no Data section", msg.getMessageId());
             return false;
         } else {
             return true;
