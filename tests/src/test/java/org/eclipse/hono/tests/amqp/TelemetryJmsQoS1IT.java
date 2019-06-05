@@ -10,7 +10,7 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
-package org.eclipse.hono.tests.jms;
+package org.eclipse.hono.tests.amqp;
 
 import static org.junit.Assert.assertTrue;
 
@@ -47,11 +47,11 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
  * Send and receive telemetry messages to/from Hono.
  */
 @RunWith(VertxUnitRunner.class)
-public class TelemetryAmqpQoS1IT {
+public class TelemetryJmsQoS1IT {
 
     private static final int DEFAULT_TEST_TIMEOUT = 5000;
     private static final int DELIVERY_MODE = DeliveryMode.NON_PERSISTENT;
-    private static final Logger LOG = LoggerFactory.getLogger(TelemetryAmqpQoS1IT.class);
+    private static final Logger LOG = LoggerFactory.getLogger(TelemetryJmsQoS1IT.class);
 
     private static Vertx vertx;
     private static IntegrationTestSupport helper;
