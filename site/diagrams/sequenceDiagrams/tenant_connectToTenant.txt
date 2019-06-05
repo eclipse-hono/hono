@@ -1,7 +1,8 @@
-title Connect to Tenant Service
+Client->+Tenant Service: 1.1 open
+Tenant Service->-Client: 1.2 open
 
-Client->+Tenant Service: 1.1 attach("sender", "tenant")
-Tenant Service->-Client: 1.2 attach("receiver", "tenant")
+Client->+Tenant Service: 2.1 attach(sender, "tenant")
+Tenant Service->-Client: 2.2 attach(receiver, "tenant")
 
-Client->+Tenant Service: 2.1 attach("receiver", "tenant/${reply-to}")
-Tenant Service->-Client: 2.2 attach("sender", "tenant/${reply-to}")
+Client->+Tenant Service: 3.1 attach(receiver, "tenant/${reply-to}")
+Tenant Service->-Client: 3.2 attach(sender, "tenant/${reply-to}")

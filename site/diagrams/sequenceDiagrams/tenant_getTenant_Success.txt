@@ -1,9 +1,7 @@
-title Get Tenant Information (success)
-
-Client->+Tenant Service: transfer("tenant", "get", search criteria)
+Client->+Tenant Service: transfer(to: "tenant", subject: "get", body: search criteria)
 
 note over Tenant Service:
-lookup tenant
+look up tenant
 end note
 
-Tenant Service->-Client: transfer("tenant/${reply-to}", "200", tenantInformation)
+Tenant Service->-Client: transfer(to: "tenant/${reply-to}", status: "200", body: tenantInformation)
