@@ -511,7 +511,7 @@ public final class TenantObject extends JsonBackedValueObject {
      * Sets the resource limits for the tenant.
      *
      * @param resourceLimits The resource limits configuration to add.
-     * @return The TenantObject.
+     * @return This tenant for command chaining.
      * @throws NullPointerException if resource limits to be set is {@code null}.
      */
     @JsonIgnore
@@ -536,9 +536,11 @@ public final class TenantObject extends JsonBackedValueObject {
      * 
      * @param defaultProperties The properties or an empty JSON object if no default properties
      *         have been defined for this tenant.
+     * @return This tenant for command chaining.
      */
     @JsonIgnore
-    public void setDefaults(final JsonObject defaultProperties) {
+    public TenantObject setDefaults(final JsonObject defaultProperties) {
         setProperty(TenantConstants.FIELD_PAYLOAD_DEFAULTS, Objects.requireNonNull(defaultProperties));
+        return this;
     }
 }
