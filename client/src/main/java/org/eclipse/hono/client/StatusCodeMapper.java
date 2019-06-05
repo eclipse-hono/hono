@@ -37,12 +37,11 @@ public abstract class StatusCodeMapper {
      * Creates an exception for a generic result of a service invocation.
      * 
      * @param result The result containing the status code.
-     * @param <T> The type of the payload contained in the result.
      * @return The exception.
      * @throws NullPointerException if result is {@code null}.
      * @throws IllegalArgumentException if the result statusCode does not represent a valid error code (i.e. it is not &ge; 400 and &lt; 600)
      */
-    public static final <T> ServiceInvocationException from(final RequestResponseResult<T> result) {
+    public static final ServiceInvocationException from(final RequestResponseResult<?> result) {
 
         return StatusCodeMapper.from(result.getStatus(), null);
     }
