@@ -23,7 +23,7 @@ import io.vertx.core.Future;
  * A factory for creating clients for Hono's Credentials API.
  *
  */
-public interface CredentialsClientFactory extends ConnectionLifecycle {
+public interface CredentialsClientFactory extends ConnectionLifecycle<HonoConnection> {
 
     /**
      * Creates a new factory for an existing connection.

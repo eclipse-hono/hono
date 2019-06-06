@@ -211,9 +211,9 @@ public class AbstractProtocolAdapterBaseTest {
         final Handler<Void> commandConnectionLostHandler = mock(Handler.class);
         givenAnAdapterConfiguredWithServiceClients(mock(Handler.class), commandConnectionEstablishedHandler, commandConnectionLostHandler);
         adapter.startInternal().setHandler(ctx.succeeding(ok -> ctx.verify(() -> {
-            final ArgumentCaptor<DisconnectListener> disconnectHandlerCaptor = ArgumentCaptor.forClass(DisconnectListener.class);
+            final ArgumentCaptor<DisconnectListener<HonoConnection>> disconnectHandlerCaptor = ArgumentCaptor.forClass(DisconnectListener.class);
             verify(commandConsumerFactory).addDisconnectListener(disconnectHandlerCaptor.capture());
-            final ArgumentCaptor<ReconnectListener> reconnectHandlerCaptor = ArgumentCaptor.forClass(ReconnectListener.class);
+            final ArgumentCaptor<ReconnectListener<HonoConnection>> reconnectHandlerCaptor = ArgumentCaptor.forClass(ReconnectListener.class);
             verify(commandConsumerFactory).addReconnectListener(reconnectHandlerCaptor.capture());
             // WHEN the command connection is lost
             disconnectHandlerCaptor.getValue().onDisconnect(mock(HonoConnection.class));

@@ -18,14 +18,15 @@ package org.eclipse.hono.client;
 /**
  * A listener to be notified when a connection is lost unexpectedly.
  *
+ * @param <T> The type of connection that this is a listener for.
  */
 @FunctionalInterface
-public interface DisconnectListener {
+public interface DisconnectListener<T> {
 
     /**
      * Invoked when the connection to a Hono service is lost unexpectedly.
      * 
      * @param client The client representing the connection to the service.
      */
-    void onDisconnect(HonoConnection client);
+    void onDisconnect(T client);
 }

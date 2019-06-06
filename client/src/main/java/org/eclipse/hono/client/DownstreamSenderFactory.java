@@ -22,7 +22,7 @@ import io.vertx.core.Future;
  * A factory for creating clients for Hono's south bound Telemetry and Event APIs.
  *
  */
-public interface DownstreamSenderFactory extends ConnectionLifecycle {
+public interface DownstreamSenderFactory extends ConnectionLifecycle<HonoConnection> {
 
     /**
      * Creates a new factory for an existing connection.

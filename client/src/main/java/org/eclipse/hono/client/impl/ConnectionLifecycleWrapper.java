@@ -15,7 +15,6 @@ package org.eclipse.hono.client.impl;
 
 import org.eclipse.hono.client.ConnectionLifecycle;
 import org.eclipse.hono.client.DisconnectListener;
-import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.ReconnectListener;
 
 import io.vertx.core.AsyncResult;
@@ -25,32 +24,34 @@ import io.vertx.core.Handler;
 /**
  * ConnectionLifecycle base class that delegates all method invocations to a given
  * ConnectionLifecycle instance.
+ * 
+ * @param <T> The type of connection.
  */
-public abstract class ConnectionLifecycleWrapper implements ConnectionLifecycle {
+public abstract class ConnectionLifecycleWrapper<T> implements ConnectionLifecycle<T> {
 
-    private final ConnectionLifecycle delegate;
+    private final ConnectionLifecycle<T> delegate;
 
     /**
      * Creates a new ConnectionLifecycleWrapper instance.
      *
      * @param delegate The object to invoke the ConnectionLifecycle methods on.
      */
-    public ConnectionLifecycleWrapper(final ConnectionLifecycle delegate) {
+    public ConnectionLifecycleWrapper(final ConnectionLifecycle<T> delegate) {
         this.delegate = delegate;
     }
 
     @Override
-    public Future<HonoConnection> connect() {
+    public Future<T> connect() {
         return delegate.connect();
     }
 
     @Override
-    public void addDisconnectListener(final DisconnectListener listener) {
+    public void addDisconnectListener(final DisconnectListener<T> listener) {
         delegate.addDisconnectListener(listener);
     }
 
     @Override
-    public void addReconnectListener(final ReconnectListener listener) {
+    public void addReconnectListener(final ReconnectListener<T> listener) {
         delegate.addReconnectListener(listener);
     }
 

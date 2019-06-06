@@ -19,9 +19,10 @@ package org.eclipse.hono.client;
  * A listener to be notified when a connection is re-established after
  * it has been lost unexpectedly.
  *
+ * @param <T> The type of connection that this is a listener for.
  */
 @FunctionalInterface
-public interface ReconnectListener {
+public interface ReconnectListener<T> {
 
     /**
      * Invoked after the connection to a Hono service has been re-established
@@ -29,5 +30,5 @@ public interface ReconnectListener {
      * 
      * @param client The client representing the (re-established) connection to the service.
      */
-    void onReconnect(HonoConnection client);
+    void onReconnect(T client);
 }

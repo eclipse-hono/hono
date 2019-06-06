@@ -23,7 +23,7 @@ import io.vertx.core.Handler;
  * A factory for creating clients for the <em>AMQP 1.0 Messaging Network</em> to
  * receive commands and send responses.
  */
-public interface CommandConsumerFactory extends ConnectionLifecycle {
+public interface CommandConsumerFactory extends ConnectionLifecycle<HonoConnection> {
 
     /**
      * Creates a new factory for an existing connection.

@@ -20,7 +20,7 @@ import io.vertx.core.Future;
  * A component that maps a given device to the gateway through which data was last published for the given device.
  *
  */
-public interface GatewayMapper extends ConnectionLifecycle {
+public interface GatewayMapper extends ConnectionLifecycle<HonoConnection> {
 
     /**
      * Determines the gateway device id for the given device id (if applicable).

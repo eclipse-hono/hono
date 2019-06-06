@@ -16,6 +16,7 @@ package org.eclipse.hono.client.impl;
 import java.util.Objects;
 
 import org.eclipse.hono.client.GatewayMapper;
+import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.RegistrationClientFactory;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.RegistrationConstants;
@@ -27,7 +28,7 @@ import io.vertx.core.json.JsonObject;
 /**
  * A component that maps a given device to the gateway through which data was last published for the given device.
  */
-public class GatewayMapperImpl extends ConnectionLifecycleWrapper implements GatewayMapper {
+public class GatewayMapperImpl extends ConnectionLifecycleWrapper<HonoConnection> implements GatewayMapper {
 
     private final RegistrationClientFactory registrationClientFactory;
 

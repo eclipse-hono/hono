@@ -435,7 +435,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
                 disconnectFromService(commandConsumerFactory));
     }
 
-    private Future<Void> disconnectFromService(final ConnectionLifecycle connection) {
+    private Future<Void> disconnectFromService(final ConnectionLifecycle<HonoConnection> connection) {
 
         final Future<Void> disconnectTracker = Future.future();
         connection.disconnect(disconnectTracker);
@@ -614,7 +614,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * @throws NullPointerException if serviceName is {@code null}.
      * @throws IllegalArgumentException if factory is {@code null}.
      */
-    protected final Future<HonoConnection> connectToService(final ConnectionLifecycle factory, final String serviceName) {
+    protected final Future<HonoConnection> connectToService(final ConnectionLifecycle<HonoConnection> factory, final String serviceName) {
         return connectToService(factory, serviceName, null, null);
     }
 
@@ -634,10 +634,10 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * @throws IllegalArgumentException if factory is {@code null}.
      */
     protected final Future<HonoConnection> connectToService(
-            final ConnectionLifecycle factory,
+            final ConnectionLifecycle<HonoConnection> factory,
             final String serviceName,
-            final DisconnectListener disconnectListener,
-            final ReconnectListener reconnectListener) {
+            final DisconnectListener<HonoConnection> disconnectListener,
+            final ReconnectListener<HonoConnection> reconnectListener) {
 
         Objects.requireNonNull(factory);
         factory.addDisconnectListener(c -> {

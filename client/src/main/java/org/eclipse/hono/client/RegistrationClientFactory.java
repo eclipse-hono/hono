@@ -23,7 +23,7 @@ import io.vertx.core.Future;
  * A factory for creating clients for Hono's Device Registration API.
  *
  */
-public interface RegistrationClientFactory extends ConnectionLifecycle {
+public interface RegistrationClientFactory extends ConnectionLifecycle<HonoConnection> {
 
     /**
      * Creates a new factory for an existing connection.

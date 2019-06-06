@@ -28,7 +28,7 @@ import io.vertx.proton.ProtonDelivery;
  * A factory for creating clients for Hono's north bound APIs.
  *
  */
-public interface ApplicationClientFactory extends ConnectionLifecycle {
+public interface ApplicationClientFactory extends ConnectionLifecycle<HonoConnection> {
 
     /**
      * Creates a new factory for an existing connection.

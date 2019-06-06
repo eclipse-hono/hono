@@ -64,7 +64,7 @@ import io.vertx.proton.ProtonSender;
  * from the same Context or to make sure that the handlers are running on the correct Context, e.g. by using
  * the {@link #executeOrRunOnContext(Handler)} method. 
  */
-public interface HonoConnection extends ConnectionLifecycle {
+public interface HonoConnection extends ConnectionLifecycle<HonoConnection> {
 
     /**
      * Creates a new connection using the default implementation.

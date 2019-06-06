@@ -103,7 +103,8 @@ public class DownstreamSenderFactoryImplTest {
         // GIVEN a factory that tries to create a telemetry sender for "tenant"
         final Future<ProtonSender> sender = Future.future();
         when(connection.createSender(anyString(), any(ProtonQoS.class), anyHandler())).thenReturn(sender);
-        final ArgumentCaptor<DisconnectListener> disconnectHandler = ArgumentCaptor.forClass(DisconnectListener.class);
+        @SuppressWarnings("unchecked")
+        final ArgumentCaptor<DisconnectListener<HonoConnection>> disconnectHandler = ArgumentCaptor.forClass(DisconnectListener.class);
         verify(connection).addDisconnectListener(disconnectHandler.capture());
 
         final Future<DownstreamSender> result = factory.getOrCreateTelemetrySender("telemetry/tenant");

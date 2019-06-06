@@ -276,7 +276,8 @@ public class CommandConsumerFactoryImplTest {
         verify(vertx).setPeriodic(eq(CommandConsumerFactoryImpl.MIN_LIVENESS_CHECK_INTERVAL_MILLIS), livenessCheck.capture());
 
         // WHEN the command connection fails
-        final ArgumentCaptor<DisconnectListener> disconnectListener = ArgumentCaptor.forClass(DisconnectListener.class);
+        @SuppressWarnings("unchecked")
+        final ArgumentCaptor<DisconnectListener<HonoConnection>> disconnectListener = ArgumentCaptor.forClass(DisconnectListener.class);
         verify(connection).addDisconnectListener(disconnectListener.capture());
         disconnectListener.getValue().onDisconnect(connection);
 

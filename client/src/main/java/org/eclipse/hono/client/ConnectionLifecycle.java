@@ -21,8 +21,9 @@ import io.vertx.core.Handler;
 /**
  * Provides access to the life cycle of a connection to a Hono service.
  *
+ * @param <T> The type of connection that this is the life-cycle of.
  */
-public interface ConnectionLifecycle {
+public interface ConnectionLifecycle<T> {
 
     /**
      * Establishes the underlying AMQP connection to the service.
@@ -37,14 +38,14 @@ public interface ConnectionLifecycle {
      *         <li>the maximum number of (unsuccessful) connection attempts have been made.</li>
      *         </ul>
      */
-    Future<HonoConnection> connect();
+    Future<T> connect();
 
     /**
      * Adds a listener to be notified when the connection is lost unexpectedly.
      * 
      * @param listener The listener to add.
      */
-    void addDisconnectListener(DisconnectListener listener);
+    void addDisconnectListener(DisconnectListener<T> listener);
 
     /**
      * Adds a listener to be notified when the connection has been re-established after
@@ -52,7 +53,7 @@ public interface ConnectionLifecycle {
      * 
      * @param listener The listener to add.
      */
-    void addReconnectListener(ReconnectListener listener);
+    void addReconnectListener(ReconnectListener<T> listener);
 
     /**
      * Checks whether the connection is currently established.

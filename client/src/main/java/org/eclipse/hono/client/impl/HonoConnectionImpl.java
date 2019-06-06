@@ -98,8 +98,8 @@ public class HonoConnectionImpl implements HonoConnection {
      */
     protected volatile Context context;
 
-    private final List<DisconnectListener> disconnectListeners = new ArrayList<>();
-    private final List<ReconnectListener> reconnectListeners = new ArrayList<>();
+    private final List<DisconnectListener<HonoConnection>> disconnectListeners = new ArrayList<>();
+    private final List<ReconnectListener<HonoConnection>> reconnectListeners = new ArrayList<>();
     private final AtomicBoolean connecting = new AtomicBoolean(false);
     private final AtomicBoolean shuttingDown = new AtomicBoolean(false);
     private final AtomicBoolean disconnecting = new AtomicBoolean(false);
@@ -195,12 +195,12 @@ public class HonoConnectionImpl implements HonoConnection {
     }
 
     @Override
-    public final void addDisconnectListener(final DisconnectListener listener) {
+    public final void addDisconnectListener(final DisconnectListener<HonoConnection> listener) {
         disconnectListeners.add(listener);
     }
 
     @Override
-    public final void addReconnectListener(final ReconnectListener listener) {
+    public final void addReconnectListener(final ReconnectListener<HonoConnection> listener) {
         reconnectListeners.add(listener);
     }
 
@@ -463,7 +463,7 @@ public class HonoConnectionImpl implements HonoConnection {
 
     private void notifyReconnectHandlers(final AsyncResult<HonoConnection> reconnectAttempt) {
         if (reconnectAttempt.succeeded()) {
-            for (ReconnectListener listener : reconnectListeners) {
+            for (ReconnectListener<HonoConnection> listener : reconnectListeners) {
                 listener.onReconnect(this);
             }
         }
@@ -483,7 +483,7 @@ public class HonoConnectionImpl implements HonoConnection {
 
     private void notifyDisconnectHandlers() {
 
-        for (DisconnectListener listener : disconnectListeners) {
+        for (DisconnectListener<HonoConnection> listener : disconnectListeners) {
             listener.onDisconnect(this);
         }
     }

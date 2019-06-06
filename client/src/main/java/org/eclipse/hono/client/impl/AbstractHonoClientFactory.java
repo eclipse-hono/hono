@@ -31,7 +31,7 @@ import io.vertx.core.Handler;
 /**
  * A base class for implementing client factories.
  */
-abstract class AbstractHonoClientFactory implements ConnectionLifecycle {
+abstract class AbstractHonoClientFactory implements ConnectionLifecycle<HonoConnection> {
 
     /**
      * A logger to be shared with subclasses.
@@ -57,7 +57,7 @@ abstract class AbstractHonoClientFactory implements ConnectionLifecycle {
      * Simply delegates to {@link HonoConnection#addDisconnectListener(DisconnectListener)}.
      */
     @Override
-    public void addDisconnectListener(final DisconnectListener listener) {
+    public void addDisconnectListener(final DisconnectListener<HonoConnection> listener) {
         connection.addDisconnectListener(listener);
     }
 
@@ -67,7 +67,7 @@ abstract class AbstractHonoClientFactory implements ConnectionLifecycle {
      * Simply delegates to {@link HonoConnection#addReconnectListener(ReconnectListener)}.
      */
     @Override
-    public void addReconnectListener(final ReconnectListener listener) {
+    public void addReconnectListener(final ReconnectListener<HonoConnection> listener) {
         connection.addReconnectListener(listener);
     }
 
