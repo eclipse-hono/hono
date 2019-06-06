@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -18,7 +18,6 @@ import org.eclipse.hono.client.CredentialsClientFactory;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.RegistrationClientFactory;
 import org.eclipse.hono.client.TenantClientFactory;
-import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 
 import io.vertx.core.Future;
@@ -35,16 +34,6 @@ public final class DeviceRegistryAmqpTestSupport {
         // prevent instantiation
     }
 
-    private static ClientConfigProperties getClientConfig(final String username, final String password) {
-        final ClientConfigProperties clientProps = new ClientConfigProperties();
-        clientProps.setName("test");
-        clientProps.setHost(IntegrationTestSupport.HONO_DEVICEREGISTRY_HOST);
-        clientProps.setPort(IntegrationTestSupport.HONO_DEVICEREGISTRY_AMQP_PORT);
-        clientProps.setUsername(username);
-        clientProps.setPassword(password);
-        return clientProps;
-    }
-
     /**
      * Gets a factory for creating a client for accessing the Tenant service.
      *
@@ -55,7 +44,7 @@ public final class DeviceRegistryAmqpTestSupport {
      */
     protected static TenantClientFactory prepareTenantClientFactory(final Vertx vertx, final String username, final String password) {
 
-        return TenantClientFactory.create(HonoConnection.newConnection(vertx, getClientConfig(username, password)));
+        return TenantClientFactory.create(HonoConnection.newConnection(vertx, IntegrationTestSupport.getDeviceRegistryProperties(username, password)));
     }
 
     /**
@@ -68,7 +57,7 @@ public final class DeviceRegistryAmqpTestSupport {
      */
     protected static CredentialsClientFactory prepareCredentialsClientFactory(final Vertx vertx, final String username, final String password) {
 
-        return CredentialsClientFactory.create(HonoConnection.newConnection(vertx, getClientConfig(username, password)));
+        return CredentialsClientFactory.create(HonoConnection.newConnection(vertx, IntegrationTestSupport.getDeviceRegistryProperties(username, password)));
     }
 
     /**
@@ -81,7 +70,7 @@ public final class DeviceRegistryAmqpTestSupport {
      */
     protected static RegistrationClientFactory prepareRegistrationClientFactory(final Vertx vertx, final String username, final String password) {
 
-        return RegistrationClientFactory.create(HonoConnection.newConnection(vertx, getClientConfig(username, password)));
+        return RegistrationClientFactory.create(HonoConnection.newConnection(vertx, IntegrationTestSupport.getDeviceRegistryProperties(username, password)));
     }
 
     /**
@@ -94,7 +83,7 @@ public final class DeviceRegistryAmqpTestSupport {
      * @param factory The factory to disconnect.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    protected static void disconnect(final TestContext ctx, final ConnectionLifecycle factory) {
+    protected static void disconnect(final TestContext ctx, final ConnectionLifecycle<?> factory) {
 
         final Future<Void> clientTracker = Future.future();
         if (factory != null) {

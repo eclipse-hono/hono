@@ -52,6 +52,8 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
+import io.vertx.junit5.Checkpoint;
+import io.vertx.junit5.VertxTestContext;
 
 /**
  * A helper class for integration tests.
@@ -375,6 +377,72 @@ public final class IntegrationTestSupport {
         this.vertx = Objects.requireNonNull(vertx);
     }
 
+    private static ClientConfigProperties getClientConfigProperties(
+            final String host,
+            final int port,
+            final String username,
+            final String password) {
+
+        final ClientConfigProperties props = new ClientConfigProperties();
+        props.setHost(host);
+        props.setPort(port);
+        props.setUsername(username);
+        props.setPassword(password);
+        return props;
+    }
+
+    /**
+     * Creates properties for connecting to the AMQP Messaging Network.
+     * 
+     * @return The properties.
+     */
+    public static ClientConfigProperties getMessagingNetworkProperties() {
+
+        final ClientConfigProperties props = getClientConfigProperties(
+                IntegrationTestSupport.DOWNSTREAM_HOST,
+                IntegrationTestSupport.DOWNSTREAM_PORT,
+                IntegrationTestSupport.DOWNSTREAM_USER,
+                IntegrationTestSupport.DOWNSTREAM_PWD);
+        props.setFlowLatency(200);
+        return props;
+    }
+
+    /**
+     * Creates properties for connecting to the AMQP protocol adapter.
+     * 
+     * @param username The username to use for authenticating to the adapter.
+     * @param password The password to use for authenticating to the adapter.
+     * @return The properties.
+     */
+    public static ClientConfigProperties getAmqpAdapterProperties(final String username, final String password) {
+
+        final ClientConfigProperties props = getClientConfigProperties(
+                IntegrationTestSupport.AMQP_HOST,
+                IntegrationTestSupport.AMQP_PORT,
+                username,
+                password);
+        props.setFlowLatency(200);
+        return props;
+    }
+
+    /**
+     * Creates properties for connecting to the device registry.
+     * 
+     * @param username The username to use for authenticating to the device registry.
+     * @param password The password to use for authenticating to the device registry.
+     * @return The properties.
+     */
+    public static ClientConfigProperties getDeviceRegistryProperties(final String username, final String password) {
+
+        final ClientConfigProperties props = getClientConfigProperties(
+                IntegrationTestSupport.HONO_DEVICEREGISTRY_HOST,
+                IntegrationTestSupport.HONO_DEVICEREGISTRY_AMQP_PORT,
+                username,
+                password);
+        return props;
+    }
+
+
     /**
      * Connects to the AMQP 1.0 Messaging Network.
      * <p>
@@ -384,13 +452,7 @@ public final class IntegrationTestSupport {
      */
     public void init(final TestContext ctx) {
 
-        final ClientConfigProperties downstreamProps = new ClientConfigProperties();
-        downstreamProps.setHost(IntegrationTestSupport.DOWNSTREAM_HOST);
-        downstreamProps.setPort(IntegrationTestSupport.DOWNSTREAM_PORT);
-        downstreamProps.setUsername(IntegrationTestSupport.DOWNSTREAM_USER);
-        downstreamProps.setPassword(IntegrationTestSupport.DOWNSTREAM_PWD);
-        downstreamProps.setFlowLatency(200);
-        init(ctx, downstreamProps);
+        init(ctx, getMessagingNetworkProperties());
     }
 
     /**
@@ -451,6 +513,36 @@ public final class IntegrationTestSupport {
             deletion.await(1000);
         });
         tenantsToDelete.clear();
+    }
+
+    /**
+     * Deletes all temporary objects from the Device Registry which
+     * have been created during the last test execution.
+     * 
+     * @param ctx The vert.x context.
+     */
+    public void deleteObjects(final VertxTestContext ctx) {
+
+        if (!devicesToDelete.isEmpty()) {
+            final Checkpoint deviceDeletion = ctx.checkpoint(devicesToDelete.size());
+            devicesToDelete.forEach((tenantId, devices) -> {
+                devices.forEach(deviceId -> {
+                    CompositeFuture.join(
+                            registry.deregisterDevice(tenantId, deviceId),
+                            registry.removeAllCredentials(tenantId, deviceId))
+                        .setHandler(ok -> deviceDeletion.flag());
+                });
+            });
+            devicesToDelete.clear();
+        }
+
+        if (!tenantsToDelete.isEmpty()) {
+            final Checkpoint tenantDeletion = ctx.checkpoint(tenantsToDelete.size());
+            tenantsToDelete.forEach(tenantId -> {
+                registry.removeTenant(tenantId).setHandler(ok -> tenantDeletion.flag());
+            });
+            tenantsToDelete.clear();
+        }
     }
 
     /**

@@ -12,7 +12,7 @@
  *******************************************************************************/
 package org.eclipse.hono.tests.amqp;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.LongSummaryStatistics;
 import java.util.concurrent.CountDownLatch;
@@ -28,25 +28,28 @@ import javax.jms.MessageProducer;
 import javax.naming.NamingException;
 
 import org.eclipse.hono.tests.IntegrationTestSupport;
-import org.eclipse.hono.tests.JmsIntegrationTestSupport;
+import org.eclipse.hono.tests.jms.JmsBasedHonoConnection;
 import org.eclipse.hono.util.TelemetryConstants;
 import org.eclipse.hono.util.TenantObject;
-import org.junit.After;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.vertx.core.Future;
 import io.vertx.core.Vertx;
-import io.vertx.ext.unit.Async;
-import io.vertx.ext.unit.TestContext;
-import io.vertx.ext.unit.junit.VertxUnitRunner;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 
 /**
  * Send and receive telemetry messages to/from Hono.
  */
-@RunWith(VertxUnitRunner.class)
+@ExtendWith(VertxExtension.class)
 public class TelemetryJmsQoS1IT {
 
     private static final int DEFAULT_TEST_TIMEOUT = 5000;
@@ -56,89 +59,125 @@ public class TelemetryJmsQoS1IT {
     private static Vertx vertx;
     private static IntegrationTestSupport helper;
 
-    private JmsIntegrationTestSupport receiver;
-    private JmsIntegrationTestSupport sender;
+    private static JmsBasedHonoConnection amqpMessagingNetwork;
+
+    private MessageConsumer downstreamConsumer;
+    private JmsBasedHonoConnection amqpAdapter;
 
     /**
-     * Sets up vert.x.
-     */
-    @BeforeClass
-    public static void init() {
-        vertx = Vertx.vertx();
-        helper = new IntegrationTestSupport(vertx);
-        helper.initRegistryClient();
-    }
-
-    /**
-     * Closes the connections to Hono services.
+     * Creates a connection to the AMP Messaging Network.
      * 
      * @param ctx The vert.x test context.
      */
-    @After
-    public void after(final TestContext ctx) {
-        LOG.info("closing JMS connections...");
-        try {
-            if (receiver != null) {
-                receiver.close();
+    @BeforeAll
+    public static void init(final VertxTestContext ctx) {
+        vertx = Vertx.vertx();
+        helper = new IntegrationTestSupport(vertx);
+        helper.initRegistryClient();
+
+        amqpMessagingNetwork = JmsBasedHonoConnection.newConnection(IntegrationTestSupport.getMessagingNetworkProperties());
+        amqpMessagingNetwork.connect().setHandler(ctx.completing());
+    }
+
+    /**
+     * Prints the test name to the console.
+     * 
+     * @param info The current test's meta information.
+     */
+    @BeforeEach
+    public void printTestName(final TestInfo info) {
+        LOG.info("running {}", info.getDisplayName());
+    }
+
+    /**
+     * Closes the downstream consumer an the connection
+     * to the AMQP adapter.
+     * 
+     * @param ctx The vert.x test context.
+     */
+    @AfterEach
+    public void after(final VertxTestContext ctx) {
+
+        if (downstreamConsumer != null) {
+            try {
+                downstreamConsumer.close();
+            } catch (JMSException e) {
+                // ignore
             }
-            if (sender != null) {
-                sender.close();
-            }
-        } catch (JMSException e) {
-            // nothing to do
+        }
+        if (amqpAdapter != null) {
+            LOG.info("closing connection to AMQP protocol adapter");
+            amqpAdapter.disconnect(ctx.succeeding());
         }
         helper.deleteObjects(ctx);
+        ctx.completeNow();
+    }
+
+    /**
+     * Closes the connection to the AMQP Messaging Network.
+     * 
+     * @param ctx The vert.x test context.
+     */
+    @AfterAll
+    public static void shutdown(final VertxTestContext ctx) {
+        if (amqpMessagingNetwork != null) {
+            LOG.info("closing connection to AMQP Messaging Network");
+            amqpMessagingNetwork.disconnect(ctx.completing());
+        } else {
+            ctx.completeNow();
+        }
     }
 
     /**
      * Verifies that telemetry messages uploaded to the Hono server are all received
      * by a downstream consumer.
      * 
-     * @param ctx The vert.x test context.
      * @throws Exception if the test fails.
      */
     @Test
-    public void testTelemetryUpload(final TestContext ctx) throws Exception {
+    public void testTelemetryUpload() throws Exception {
 
         final String tenantId = helper.getRandomTenantId();
         final String deviceId = helper.getRandomDeviceId(tenantId);
         final String username = IntegrationTestSupport.getUsername(deviceId, tenantId);
         final String pwd = "secret";
         final TenantObject tenant = TenantObject.from(tenantId, true);
-        final Async registration = ctx.async();
-        helper.registry.addDeviceForTenant(tenant, deviceId, pwd).setHandler(ctx.asyncAssertSuccess(ok -> registration.complete()));
-        registration.await(1000);
+
+        final VertxTestContext setup = new VertxTestContext();
+        helper.registry.addDeviceForTenant(tenant, deviceId, pwd)
+        .compose(ok -> getAmqpAdapterConnection(username, pwd))
+        .setHandler(setup.succeeding(connection -> {
+            amqpAdapter = connection;
+            setup.completeNow();
+        }));
+        assertTrue(setup.awaitCompletion(5, TimeUnit.SECONDS));
 
         final CountDownLatch latch = new CountDownLatch(IntegrationTestSupport.MSG_COUNT);
         final LongSummaryStatistics stats = new LongSummaryStatistics();
 
-        givenAReceiver();
-        // prepare consumer
-        final MessageConsumer messageConsumer = receiver.createTelemetryConsumer(tenantId);
+        givenATelemetryConsumer(tenantId);
 
-        messageConsumer.setMessageListener(message -> {
+        downstreamConsumer.setMessageListener(message -> {
             latch.countDown();
             gatherStatistics(stats, message);
-            if (LOG.isTraceEnabled()) {
+            if (LOG.isInfoEnabled()) {
                 final long messagesReceived = IntegrationTestSupport.MSG_COUNT - latch.getCount();
                 if (messagesReceived % 100 == 0) {
-                    LOG.trace("Received {} messages.", messagesReceived);
+                    LOG.info("Received {} messages.", messagesReceived);
                 }
             }
         });
 
-        givenASender(username, pwd);
+        final MessageProducer messageProducer = amqpAdapter.createAnonymousProducer();
+        final Destination telemetryEndpoint = JmsBasedHonoConnection.getDestination(TelemetryConstants.TELEMETRY_ENDPOINT);
 
-        final MessageProducer messageProducer = sender.createAnonymousProducer();
-        final Destination telemetryEndpoint = JmsIntegrationTestSupport.getDestination(TelemetryConstants.TELEMETRY_ENDPOINT);
-
-        IntStream.range(0, IntegrationTestSupport.MSG_COUNT).forEach(i -> {
+        IntStream.range(1, IntegrationTestSupport.MSG_COUNT + 1).forEach(i -> {
             try {
-                final Message message = sender.newMessage("msg " + i, deviceId);
+                final Message message = amqpAdapter.newMessage("msg " + i, deviceId);
                 messageProducer.send(telemetryEndpoint, message, DELIVERY_MODE, Message.DEFAULT_PRIORITY, Message.DEFAULT_TIME_TO_LIVE);
 
                 if (i % 100 == 0) {
-                    LOG.trace("Sent message {}", i);
+                    LOG.info("Sent {} messages", i);
                 }
             } catch (final JMSException e) {
                 LOG.error("Error occurred while sending message: {}", e.getMessage(), e);
@@ -148,22 +187,21 @@ public class TelemetryJmsQoS1IT {
         final long timeToWait = Math.max(DEFAULT_TEST_TIMEOUT, Math.round(IntegrationTestSupport.MSG_COUNT * 1.2));
 
         // wait for messages to arrive
-        assertTrue("did not receive all " + IntegrationTestSupport.MSG_COUNT + " messages", latch.await(timeToWait, TimeUnit.MILLISECONDS));
+        assertTrue(
+                latch.await(timeToWait, TimeUnit.MILLISECONDS),
+                () -> "did not receive all " + IntegrationTestSupport.MSG_COUNT + " messages");
         LOG.info("Delivery statistics: {}", stats);
     }
 
-    private void givenAReceiver() throws JMSException, NamingException {
-        receiver = JmsIntegrationTestSupport.newClient(
-                JmsIntegrationTestSupport.DISPATCH_ROUTER,
-                IntegrationTestSupport.DOWNSTREAM_USER,
-                IntegrationTestSupport.DOWNSTREAM_PWD);
+    private void givenATelemetryConsumer(final String tenant) throws JMSException, NamingException {
+
+        downstreamConsumer = amqpMessagingNetwork.createTelemetryConsumer(tenant);
     }
 
-    private void givenASender(final String username, final String pwd) throws JMSException, NamingException {
-        sender = JmsIntegrationTestSupport.newClient(
-                JmsIntegrationTestSupport.AMQP_ADAPTER,
-                username,
-                pwd);
+    private Future<JmsBasedHonoConnection> getAmqpAdapterConnection(final String username, final String pwd) {
+
+        return JmsBasedHonoConnection.newConnection(IntegrationTestSupport.getAmqpAdapterProperties(username, pwd))
+                .connect();
     }
 
     private static void gatherStatistics(final LongSummaryStatistics stats, final Message message) {
