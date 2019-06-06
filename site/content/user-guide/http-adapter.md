@@ -538,8 +538,7 @@ The adapter includes the following meta data in the application properties of me
 | *device_id*        | *string*  | The identifier of the device that the message originates from.  |
 | *orig_adapter*     | *string*  | Contains the adapter's *type name* which can be used by downstream consumers to determine the protocol adapter that the message has been received over. The HTTP adapter's type name is `hono-http`. |
 | *orig_address*     | *string*  | Contains the (relative) URI that the device has originally posted the data to. |
-| *ttd*              | *integer* | Contains the effective number of seconds that the device will wait for a response. This property
-is only set if the HTTP request contains the `hono-ttd` header or request parameter. |
+| *ttd*              | *integer* | Contains the effective number of seconds that the device will wait for a response. This property is only set if the HTTP request contains the `hono-ttd` header or request parameter. |
 
 The adapter also considers *defaults* registered for the device at either the [tenant]({{< ref "/api/Tenant-API.md#payload-format" >}}) or the [device level]({{< ref "/api/Device-Registration-API.md#payload-format" >}}). The values of the default properties are determined as follows:
 
