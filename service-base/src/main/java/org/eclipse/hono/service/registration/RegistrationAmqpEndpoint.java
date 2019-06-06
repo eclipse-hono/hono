@@ -12,10 +12,12 @@
  *******************************************************************************/
 package org.eclipse.hono.service.registration;
 
+import java.net.HttpURLConnection;
 import java.util.Objects;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.auth.HonoUser;
+import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.amqp.RequestResponseEndpoint;
 import org.eclipse.hono.util.EventBusMessage;
@@ -25,6 +27,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
+import io.vertx.core.json.DecodeException;
 
 /**
  * An {@code AmqpEndpoint} for managing device registration information.
@@ -67,13 +70,17 @@ public class RegistrationAmqpEndpoint extends RequestResponseEndpoint<ServiceCon
             final ResourceIdentifier targetAddress,
             final HonoUser clientPrincipal) {
 
-        return Future.succeededFuture(EventBusMessage.forOperation(requestMessage)
-                .setAppCorrelationId(requestMessage)
-                .setCorrelationId(requestMessage)
-                .setTenant(targetAddress.getTenantId())
-                .setDeviceId(requestMessage)
-                .setGatewayId(requestMessage)
-                .setJsonPayload(requestMessage));
+        try {
+            return Future.succeededFuture(EventBusMessage.forOperation(requestMessage)
+                    .setAppCorrelationId(requestMessage)
+                    .setCorrelationId(requestMessage)
+                    .setTenant(targetAddress.getTenantId())
+                    .setDeviceId(requestMessage)
+                    .setGatewayId(requestMessage)
+                    .setJsonPayload(requestMessage));
+        } catch (DecodeException e) {
+            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "malformed request payload"));
+        }
     }
 
     @Override

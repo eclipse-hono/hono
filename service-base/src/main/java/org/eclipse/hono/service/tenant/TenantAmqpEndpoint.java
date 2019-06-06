@@ -29,6 +29,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
+import io.vertx.core.json.DecodeException;
 
 /**
  * An {@code AmqpEndpoint} for managing tenant information.
@@ -144,11 +145,15 @@ public class TenantAmqpEndpoint extends RequestResponseEndpoint<ServiceConfigPro
             final ResourceIdentifier targetAddress,
             final HonoUser clientPrincipal) {
 
-        return Future.succeededFuture(EventBusMessage.forOperation(requestMessage)
-                .setAppCorrelationId(requestMessage)
-                .setCorrelationId(requestMessage)
-                .setTenant(requestMessage)
-                .setJsonPayload(requestMessage));
+        try {
+            return Future.succeededFuture(EventBusMessage.forOperation(requestMessage)
+                    .setAppCorrelationId(requestMessage)
+                    .setCorrelationId(requestMessage)
+                    .setTenant(requestMessage)
+                    .setJsonPayload(requestMessage));
+        } catch (DecodeException e) {
+            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "malformed request payload"));
+        }
     }
 
     @Override
