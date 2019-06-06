@@ -24,6 +24,7 @@ import org.apache.qpid.proton.amqp.UnsignedLong;
 import org.apache.qpid.proton.message.Message;
 
 import io.opentracing.SpanContext;
+import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonObject;
 
 /**
@@ -317,6 +318,7 @@ public class EventBusMessage {
      * 
      * @param msg The AMQP message to retrieve the payload from.
      * @return This message for chaining.
+     * @throws DecodeException if the payload of the AMQP message does not contain proper JSON.
      */
     public EventBusMessage setJsonPayload(final Message msg) {
         setJsonPayload(MessageHelper.getJsonPayload(msg));
