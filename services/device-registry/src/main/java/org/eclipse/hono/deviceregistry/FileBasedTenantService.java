@@ -306,7 +306,9 @@ public final class FileBasedTenantService extends CompleteBaseTenantService<File
             return TenantResult.from(HttpURLConnection.HTTP_CONFLICT);
         } else {
             try {
-                log.debug("request: {}", tenantSpec.encodePrettily());
+                if (log.isTraceEnabled()) {
+                    log.trace("tenant to add: {}", tenantSpec.encodePrettily());
+                }
                 final TenantObject tenant = tenantSpec.mapTo(TenantObject.class);
                 tenant.setTenantId(tenantId);
                 final TenantObject conflictingTenant = getByCa(tenant.getTrustedCaSubjectDn());
