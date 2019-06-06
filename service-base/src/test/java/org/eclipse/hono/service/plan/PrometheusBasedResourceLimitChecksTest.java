@@ -72,7 +72,7 @@ public class PrometheusBasedResourceLimitChecksTest {
     private WebClient webClient;
     private HttpRequest<Buffer> request;
     private CacheProvider cacheProvider;
-    private ExpiringValueCache limitsCache;
+    private ExpiringValueCache<Object, Object> limitsCache;
 
 
     /**
@@ -289,7 +289,6 @@ public class PrometheusBasedResourceLimitChecksTest {
      *
      * @param ctx The vert.x test context.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void testMessageLimitUsesValueFromCache(final TestContext ctx) {
 
@@ -315,7 +314,6 @@ public class PrometheusBasedResourceLimitChecksTest {
      *
      * @param ctx The vert.x test context.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void testMessageLimitStoresValueToCache(final TestContext ctx){
 

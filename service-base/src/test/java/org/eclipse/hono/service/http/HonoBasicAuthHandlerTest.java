@@ -111,7 +111,7 @@ public class HonoBasicAuthHandlerTest {
      * Verifies that the handler returns the status code {@link HttpURLConnection#HTTP_BAD_REQUEST} in case of malformed
      * authorization header.
      */
-    @SuppressWarnings({ "unchecked", "rawtypes" })
+    @SuppressWarnings({ "unchecked" })
     @Test
     public void testHandleFailsForMalformedAuthorizationHeader() {
 
