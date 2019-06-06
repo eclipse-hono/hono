@@ -154,7 +154,8 @@ public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties>
 
             receiver.setQoS(ProtonQoS.AT_LEAST_ONCE);
             receiver.setAutoAccept(true); // settle received messages if the handler succeeds
-
+            receiver.setTarget(receiver.getRemoteTarget());
+            receiver.setSource(receiver.getRemoteSource());
             // We do manual flow control, credits are replenished after responses have been sent.
             receiver.setPrefetch(0);
 
@@ -385,10 +386,11 @@ public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties>
         }
 
         logger.debug("establishing response sender link with client [{}]", sender.getName());
-
+        sender.setQoS(ProtonQoS.AT_LEAST_ONCE);
+        sender.setSource(sender.getRemoteSource());
+        sender.setTarget(sender.getRemoteTarget());
         registerSenderForReplyTo(replyTo, sender);
 
-        sender.setQoS(ProtonQoS.AT_LEAST_ONCE);
 
         HonoProtonHelper.setCloseHandler(sender, remoteClose -> {
             logger.debug("client [{}] closed sender link", sender.getName());
@@ -443,7 +445,7 @@ public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties>
         if (sender == null) {
             logger.warn("sender was not allocated for replyTo address [{}]", replyTo);
         } else {
-            logger.debug("deallocated sender [{}] for replies to [{}]", sender, replyTo);
+            logger.debug("deallocated sender [{}] for replies to [{}]", sender.getName(), replyTo);
         }
 
     }
@@ -457,12 +459,8 @@ public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties>
     private void flowCreditToRequestor(final ProtonReceiver receiver, final String replyTo) {
 
         receiver.flow(1);
-
-        if (logger.isTraceEnabled()) {
-            logger.trace("replenished client [reply-to: {}, current credit: {}]", replyTo,
-                    receiver.getCredit());
-        }
-
+        logger.trace("replenished client [reply-to: {}, current credit: {}]", replyTo,
+                receiver.getCredit());
     }
 
     /**
