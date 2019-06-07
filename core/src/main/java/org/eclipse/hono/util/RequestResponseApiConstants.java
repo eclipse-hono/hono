@@ -82,6 +82,7 @@ public abstract class RequestResponseApiConstants {
      * @param response The response message.
      * @return The AMQP message.
      * @throws NullPointerException if endpoint is {@code null}.
+     * @throws IllegalArgumentException if the response does not contain a correlation ID.
      */
     public static final Message getAmqpReply(final String endpoint, final EventBusMessage response) {
 
@@ -92,40 +93,42 @@ public abstract class RequestResponseApiConstants {
 
         if (correlationId == null) {
             throw new IllegalArgumentException("response must contain correlation ID");
-        } else {
-            final String tenantId = response.getTenant();
-            final String deviceId = response.getDeviceId();
-            final Integer status = response.getStatus();
-            final boolean isApplCorrelationId = response.isAppCorrelationId();
-            final String cacheDirective = response.getCacheDirective();
-            final JsonObject payload = response.getJsonPayload();
-            final ResourceIdentifier address = ResourceIdentifier.from(endpoint, tenantId, deviceId);
-
-            final Message message = ProtonHelper.message();
-            message.setMessageId(UUID.randomUUID().toString());
-            message.setCorrelationId(correlationId);
-            message.setAddress(address.toString());
-
-            final Map<String, Object> map = new HashMap<>();
-            map.put(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId);
-            map.put(MessageHelper.APP_PROPERTY_STATUS, status);
-            if (deviceId != null) {
-                map.put(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId);
-            }
-            if (cacheDirective != null) {
-                map.put(MessageHelper.APP_PROPERTY_CACHE_CONTROL, cacheDirective);
-            }
-            message.setApplicationProperties(new ApplicationProperties(map));
-
-            if (isApplCorrelationId) {
-                final Map<Symbol, Object> annotations = new HashMap<>();
-                annotations.put(Symbol.valueOf(MessageHelper.ANNOTATION_X_OPT_APP_CORRELATION_ID), true);
-                message.setMessageAnnotations(new MessageAnnotations(annotations));
-            }
-
-            MessageHelper.setJsonPayload(message, payload);
-
-            return message;
         }
+
+        final String tenantId = response.getTenant();
+        final String deviceId = response.getDeviceId();
+        final Integer status = response.getStatus();
+        final boolean isApplCorrelationId = response.isAppCorrelationId();
+        final String cacheDirective = response.getCacheDirective();
+        final JsonObject payload = response.getJsonPayload();
+        final ResourceIdentifier address = ResourceIdentifier.from(endpoint, tenantId, deviceId);
+
+        final Message message = ProtonHelper.message();
+        message.setMessageId(UUID.randomUUID().toString());
+        message.setCorrelationId(correlationId);
+        message.setAddress(address.toString());
+
+        final Map<String, Object> map = new HashMap<>();
+        map.put(MessageHelper.APP_PROPERTY_STATUS, status);
+        if (tenantId != null) {
+            map.put(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId);
+        }
+        if (deviceId != null) {
+            map.put(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId);
+        }
+        if (cacheDirective != null) {
+            map.put(MessageHelper.APP_PROPERTY_CACHE_CONTROL, cacheDirective);
+        }
+        message.setApplicationProperties(new ApplicationProperties(map));
+
+        if (isApplCorrelationId) {
+            final Map<Symbol, Object> annotations = new HashMap<>();
+            annotations.put(Symbol.valueOf(MessageHelper.ANNOTATION_X_OPT_APP_CORRELATION_ID), true);
+            message.setMessageAnnotations(new MessageAnnotations(annotations));
+        }
+
+        MessageHelper.setJsonPayload(message, payload);
+
+        return message;
     }
 }
