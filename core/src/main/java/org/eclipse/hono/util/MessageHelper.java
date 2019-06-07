@@ -685,16 +685,68 @@ public final class MessageHelper {
     }
 
     /**
-     * Set the payload of the message using an AMQP <em>Data</em> section.
+     * Sets the payload of an AMQP message using a <em>Data</em> section.
      * <p>
-     * If the payload is {@code null}, then neither the payload nor content type will be set.
+     * The message's <em>content-type</em> will be set to {@link #CONTENT_TYPE_APPLICATION_JSON}.
+     * The message's Data section will contain the UTF-8 encoding of the given JSON object.
      * </p>
      * 
-     * @param message The message to update.
-     * @param contentType An optional content type.
-     * @param payload The optional message payload.
+     * @param message The message.
+     * @param payload The payload or {@code null} if there is no payload to convey in the message body.
      * 
-     * @throws NullPointerException If the parameter {@code message} was {@code null}.
+     * @throws NullPointerException If message is {@code null}.
+     */
+    public static void setJsonPayload(final Message message, final JsonObject payload) {
+        Objects.requireNonNull(message);
+
+        setPayload(message, CONTENT_TYPE_APPLICATION_JSON, payload != null ? payload.toBuffer() : null);
+    }
+
+    /**
+     * Sets the payload of an AMQP message using a <em>Data</em> section.
+     * <p>
+     * The message's <em>content-type</em> will be set to {@link #CONTENT_TYPE_APPLICATION_JSON}.
+     * The message's Data section will contain the UTF-8 encoding of the given payload.
+     * <b>Note:</b> No formal check is done if the payload actually is a JSON string.
+     * </p>
+     * 
+     * @param message The message.
+     * @param payload The payload or {@code null} if there is no payload to convey in the message body.
+     * 
+     * @throws NullPointerException If message is {@code null}.
+     */
+    public static void setJsonPayload(final Message message, final String payload) {
+        Objects.requireNonNull(message);
+
+        setPayload(message, CONTENT_TYPE_APPLICATION_JSON,
+                payload != null ? payload.getBytes(StandardCharsets.UTF_8) : null);
+    }
+
+    /**
+     * Sets the payload of an AMQP message using a <em>Data</em> section.
+     * 
+     * @param message The message.
+     * @param contentType The type of the payload. If {@code null} the message's <em>content-type</em>
+     *                    property will not be set.
+     * @param payload The payload or {@code null} if there is no payload to convey in the message body.
+     * 
+     * @throws NullPointerException If message is {@code null}.
+     */
+    public static void setPayload(final Message message, final String contentType, final Buffer payload) {
+        Objects.requireNonNull(message);
+
+        setPayload(message, contentType, payload != null ? payload.getBytes() : null);
+    }
+
+    /**
+     * Sets the payload of an AMQP message using a <em>Data</em> section.
+     * 
+     * @param message The message.
+     * @param contentType The type of the payload. The message's <em>content-type</em> property
+     *                    will only be set if both this and the payload parameter are not {@code null}.
+     * @param payload The payload or {@code null} if there is no payload to convey in the message body.
+     * 
+     * @throws NullPointerException If message is {@code null}.
      */
     public static void setPayload(final Message message, final String contentType, final byte[] payload) {
         Objects.requireNonNull(message);
@@ -705,62 +757,6 @@ public final class MessageHelper {
                 message.setContentType(contentType);
             }
         }
-    }
-
-    /**
-     * Set the payload of the message using a {@link Data} section.
-     * <p>
-     * If the payload is {@code null}, then neither the payload, nor content type will be set.
-     * </p>
-     * 
-     * @param message The message to update.
-     * @param contentType An optional content type.
-     * @param payload The optional message payload.
-     * 
-     * @throws NullPointerException If the parameter {@code message} was {@code null}.
-     */
-    public static void setPayload(final Message message, final String contentType, final Buffer payload) {
-        Objects.requireNonNull(message);
-
-        setPayload(message, contentType, payload != null ? payload.getBytes() : null);
-    }
-
-    /**
-     * Set the JSON payload of the message using a {@link Data} section.
-     * <p>
-     * If the payload is {@code null}, then neither the payload, nor content type will be set.
-     * </p>
-     * 
-     * @param message The message to update.
-     * @param payload The optional message payload.
-     * 
-     * @throws NullPointerException If the parameter {@code message} was {@code null}.
-     */
-    public static void setJsonPayload(final Message message, final JsonObject payload) {
-        Objects.requireNonNull(message);
-
-        setPayload(message, CONTENT_TYPE_APPLICATION_JSON, payload != null ? payload.toBuffer() : null);
-    }
-
-    /**
-     * Set the JSON payload of the message using a {@link Data} section.
-     * <p>
-     * If the payload is {@code null}, then neither the payload, nor content type will be set.
-     * </p>
-     * <p>
-     * <b>Note:</b> No formal check is done if the payload actually is a JSON string.
-     * </p>
-     * 
-     * @param message The message to update.
-     * @param payload The optional message payload.
-     * 
-     * @throws NullPointerException If the parameter {@code message} was {@code null}.
-     */
-    public static void setJsonPayload(final Message message, final String payload) {
-        Objects.requireNonNull(message);
-
-        setPayload(message, CONTENT_TYPE_APPLICATION_JSON,
-                payload != null ? payload.getBytes(StandardCharsets.UTF_8) : null);
     }
 
     /**
