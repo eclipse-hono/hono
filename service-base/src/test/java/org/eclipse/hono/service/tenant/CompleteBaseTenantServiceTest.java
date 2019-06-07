@@ -24,6 +24,15 @@ import java.util.UUID;
 
 import javax.security.auth.x500.X500Principal;
 
+import io.opentracing.Span;
+import io.vertx.core.AsyncResult;
+import io.vertx.core.Future;
+import io.vertx.core.Handler;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
+import io.vertx.core.net.SelfSignedCertificate;
+import io.vertx.ext.unit.TestContext;
+import io.vertx.ext.unit.junit.VertxUnitRunner;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.util.EventBusMessage;
@@ -36,22 +45,12 @@ import org.junit.Test;
 import org.junit.rules.Timeout;
 import org.junit.runner.RunWith;
 
-import io.opentracing.Span;
-import io.vertx.core.AsyncResult;
-import io.vertx.core.Future;
-import io.vertx.core.Handler;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
-import io.vertx.core.net.SelfSignedCertificate;
-import io.vertx.ext.unit.TestContext;
-import io.vertx.ext.unit.junit.VertxUnitRunner;
-
-
 /**
  * Tests verifying behavior of {@link CompleteBaseTenantService}.
  *
  */
 @RunWith(VertxUnitRunner.class)
+@Deprecated
 public class CompleteBaseTenantServiceTest {
 
     private static final String TEST_TENANT = "dummy";
@@ -96,20 +95,6 @@ public class CompleteBaseTenantServiceTest {
         tenantService.processRequest(request).setHandler(ctx.asyncAssertSuccess(response -> {
             ctx.assertEquals(HttpURLConnection.HTTP_CREATED, response.getStatus());
             ctx.assertEquals(TEST_TENANT, response.getTenant());
-        }));
-    }
-
-    /**
-     * Verifies that the base service fails for an incomplete message that does not contain mandatory fields.
-     *
-     * @param ctx The vert.x test context.
-     */
-    @Test
-    public void testAddFailsForIncompleteMessage(final TestContext ctx) {
-
-        final EventBusMessage msg = EventBusMessage.forOperation(TenantConstants.TenantAction.add.toString());
-        tenantService.processRequest(msg).setHandler(ctx.asyncAssertFailure(t -> {
-            ctx.assertEquals(HttpURLConnection.HTTP_BAD_REQUEST, ((ServiceInvocationException) t).getErrorCode());
         }));
     }
 
@@ -331,7 +316,7 @@ public class CompleteBaseTenantServiceTest {
 
     private static CompleteBaseTenantService<ServiceConfigProperties> createCompleteBaseTenantService() {
 
-        return new CompleteBaseTenantService<ServiceConfigProperties>() {
+        return new CompleteBaseTenantService<>() {
 
             @Override
             public void add(final String tenantId, final JsonObject tenantObj, final Handler<AsyncResult<TenantResult<JsonObject>>> resultHandler) {

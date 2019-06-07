@@ -23,16 +23,23 @@ import org.eclipse.hono.config.VertxProperties;
 import org.eclipse.hono.service.HealthCheckServer;
 import org.eclipse.hono.service.VertxBasedHealthCheckServer;
 import org.eclipse.hono.service.credentials.CredentialsAmqpEndpoint;
-import org.eclipse.hono.service.credentials.CredentialsHttpEndpoint;
+
 import org.eclipse.hono.service.deviceconnection.DeviceConnectionAmqpEndpoint;
+
+import org.eclipse.hono.service.management.credentials.CredentialsManagementHttpEndpoint;
+import org.eclipse.hono.service.management.credentials.CredentialsManagementService;
+import org.eclipse.hono.service.management.device.DeviceManagementHttpEndpoint;
+import org.eclipse.hono.service.management.device.DeviceManagementService;
+import org.eclipse.hono.service.management.tenant.TenantManagementHttpEndpoint;
+
+import org.eclipse.hono.service.management.tenant.TenantManagementService;
+
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.service.registration.RegistrationAmqpEndpoint;
-import org.eclipse.hono.service.registration.RegistrationHttpEndpoint;
 import org.eclipse.hono.service.tenant.TenantAmqpEndpoint;
-import org.eclipse.hono.service.tenant.TenantHttpEndpoint;
 import org.eclipse.hono.util.Constants;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.beans.factory.config.ObjectFactoryCreatingFactoryBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -52,9 +59,6 @@ import io.vertx.core.VertxOptions;
  */
 @Configuration
 public class ApplicationConfig {
-
-    private static final String BEAN_NAME_DEVICE_REGISTRY_AMQP_SERVER = "deviceRegistryAmqpServer";
-    private static final String BEAN_NAME_DEVICE_REGISTRY_REST_SERVER = "deviceRegistryRestServer";
 
     /**
      * Exposes a Vert.x instance as a Spring bean.
@@ -166,31 +170,6 @@ public class ApplicationConfig {
     }
 
     /**
-     * Creates a new instance of the Device Registry's AMQP 1.0 endpoint.
-     * <p>
-     * The endpoint is used for accessing both, the <em>Device Registration</em> and the <em>Credentials</em> API.
-     * 
-     * @return The endpoint.
-     */
-    @Bean(BEAN_NAME_DEVICE_REGISTRY_AMQP_SERVER)
-    @Scope("prototype")
-    public DeviceRegistryAmqpServer deviceRegistryAmqpServer(){
-        return new DeviceRegistryAmqpServer();
-    }
-
-    /**
-     * Gets a factory for creating instances of the AMQP 1.0 based endpoint.
-     * 
-     * @return The factory.
-     */
-    @Bean
-    public ObjectFactoryCreatingFactoryBean deviceRegistryAmqpServerFactory() {
-        final ObjectFactoryCreatingFactoryBean factory = new ObjectFactoryCreatingFactoryBean();
-        factory.setTargetBeanName(BEAN_NAME_DEVICE_REGISTRY_AMQP_SERVER);
-        return factory;
-    }
-
-    /**
      * Gets properties for configuring the Device Registry's REST endpoint.
      * 
      * @return The properties.
@@ -210,8 +189,9 @@ public class ApplicationConfig {
      */
     @Bean
     @Scope("prototype")
-    public RegistrationHttpEndpoint registrationHttpEndpoint() {
-        return new RegistrationHttpEndpoint(vertx());
+    @ConditionalOnBean(DeviceManagementService.class)
+    public DeviceManagementHttpEndpoint registrationHttpEndpoint() {
+        return new DeviceManagementHttpEndpoint(vertx());
     }
 
     /**
@@ -221,8 +201,9 @@ public class ApplicationConfig {
      */
     @Bean
     @Scope("prototype")
-    public CredentialsHttpEndpoint credentialsHttpEndpoint() {
-        return new CredentialsHttpEndpoint(vertx());
+    @ConditionalOnBean(CredentialsManagementService.class)
+    public CredentialsManagementHttpEndpoint credentialsHttpEndpoint() {
+        return new CredentialsManagementHttpEndpoint(vertx());
     }
 
     /**
@@ -232,33 +213,9 @@ public class ApplicationConfig {
      */
     @Bean
     @Scope("prototype")
-    public TenantHttpEndpoint tenantHttpEndpoint() {
-        return new TenantHttpEndpoint(vertx());
-    }
-
-    /**
-     * Creates a new instance of the Device Registry's REST endpoint.
-     * <p>
-     * The endpoint is used for accessing both, the <em>Device Registration</em> and the <em>Credentials</em> API.
-     * 
-     * @return The endpoint.
-     */
-    @Bean(BEAN_NAME_DEVICE_REGISTRY_REST_SERVER)
-    @Scope("prototype")
-    public DeviceRegistryRestServer deviceRegistryRestServer(){
-        return new DeviceRegistryRestServer();
-    }
-
-    /**
-     * Gets a factory for creating instances of the REST based endpoint.
-     * 
-     * @return The factory.
-     */
-    @Bean
-    public ObjectFactoryCreatingFactoryBean deviceRegistryRestServerFactory() {
-        final ObjectFactoryCreatingFactoryBean factory = new ObjectFactoryCreatingFactoryBean();
-        factory.setTargetBeanName(BEAN_NAME_DEVICE_REGISTRY_REST_SERVER);
-        return factory;
+    @ConditionalOnBean(TenantManagementService.class)
+    public TenantManagementHttpEndpoint tenantHttpEndpoint() {
+        return new TenantManagementHttpEndpoint(vertx());
     }
 
     /**

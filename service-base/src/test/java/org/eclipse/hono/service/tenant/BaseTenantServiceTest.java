@@ -41,6 +41,7 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
  *
  */
 @RunWith(VertxUnitRunner.class)
+@Deprecated
 public class BaseTenantServiceTest {
 
     private static final String TEST_TENANT = "dummy";
@@ -120,7 +121,7 @@ public class BaseTenantServiceTest {
 
     private static BaseTenantService<ServiceConfigProperties> createBaseTenantService() {
 
-        return new BaseTenantService<ServiceConfigProperties>() {
+        return new BaseTenantService<>() {
 
             @Override
             public void get(final String tenantId, final Span span,

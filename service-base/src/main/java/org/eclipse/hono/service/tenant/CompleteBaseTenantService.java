@@ -19,7 +19,6 @@ import io.vertx.core.Handler;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import org.eclipse.hono.client.ClientErrorException;
-
 import org.eclipse.hono.util.EventBusMessage;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.TenantConstants;
@@ -44,7 +43,9 @@ import java.util.Optional;
  * in the message.
  *
  * @param <T> The type of configuration properties this service requires.
+ * @deprecated - Use {@link TenantService} and {@link org.eclipse.hono.service.management.tenant.TenantManagementService} instead.
  */
+@Deprecated
 public abstract class CompleteBaseTenantService<T> extends BaseTenantService<T> implements CompleteTenantService {
 
     /**
@@ -52,7 +53,7 @@ public abstract class CompleteBaseTenantService<T> extends BaseTenantService<T> 
      * <p>
      * This method validates the request payload against the Tenant API specification
      * before invoking the corresponding {@code TenantService} methods.
-     * 
+     *
      * @param request The request message.
      * @return A future indicating the outcome of the service invocation.
      * @throws NullPointerException If the request message is {@code null}.
@@ -80,13 +81,15 @@ public abstract class CompleteBaseTenantService<T> extends BaseTenantService<T> 
     private Future<EventBusMessage> processAddRequest(final EventBusMessage request) {
 
         final String tenantId = request.getTenant();
-        final JsonObject payload = getRequestPayload(request.getJsonPayload());
 
         if (tenantId == null) {
             log.debug("request does not contain mandatory property [{}]",
                     MessageHelper.APP_PROPERTY_TENANT_ID);
             return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
-        } else if (isValidRequestPayload(payload)) {
+        }
+
+        final JsonObject payload = getRequestPayload(request.getJsonPayload());
+        if (isValidRequestPayload(payload)) {
             log.debug("creating tenant [{}]", tenantId);
             final Future<TenantResult<JsonObject>> addResult = Future.future();
             addNotPresentFieldsWithDefaultValuesForTenant(payload);
@@ -205,7 +208,7 @@ public abstract class CompleteBaseTenantService<T> extends BaseTenantService<T> 
 
         if (!String.class.isInstance(subjectDn)) {
             return false;
-        } 
+        }
         if (encodedCert != null && encodedKey == null) {
             // validate the certificate
             return isEncodedCertificate(encodedCert);

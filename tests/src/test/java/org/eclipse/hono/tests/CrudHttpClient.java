@@ -31,6 +31,7 @@ import io.vertx.core.http.HttpClientOptions;
 import io.vertx.core.http.HttpClientRequest;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.RequestOptions;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,7 +42,7 @@ import org.slf4j.LoggerFactory;
  */
 public final class CrudHttpClient {
 
-    private static final String CONTENT_TYPE_JSON = "application/json";
+    public static final String CONTENT_TYPE_JSON = "application/json";
 
     private final Logger LOGGER = LoggerFactory.getLogger(getClass());
     private final HttpClient client;
@@ -73,7 +74,7 @@ public final class CrudHttpClient {
         this.context = vertx.getOrCreateContext();
     }
 
-    private RequestOptions getRequestOptions() {
+    private RequestOptions createRequestOptions() {
         return new RequestOptions()
                 .setSsl(options.isSsl())
                 .setHost(options.getDefaultHost())
@@ -96,7 +97,7 @@ public final class CrudHttpClient {
             final Predicate<Integer> successPredicate) {
 
         Objects.requireNonNull(uri);
-        return options(getRequestOptions().setURI(uri), requestHeaders, successPredicate);
+        return options(createRequestOptions().setURI(uri), requestHeaders, successPredicate);
     }
 
     /**
@@ -149,7 +150,8 @@ public final class CrudHttpClient {
      * @return A future that will succeed if the predicate evaluates to {@code true}.
      * @throws NullPointerException if URI or predicate are {@code null}.
      */
-    public Future<Void> create(final String uri, final JsonObject body, final Predicate<HttpClientResponse> successPredicate) {
+    public Future<MultiMap> create(final String uri, final JsonObject body,
+            final Predicate<HttpClientResponse> successPredicate) {
         return create(uri, body, CONTENT_TYPE_JSON, successPredicate);
     }
 
@@ -163,7 +165,8 @@ public final class CrudHttpClient {
      * @return A future that will succeed if the predicate evaluates to {@code true}.
      * @throws NullPointerException if URI, content type or predicate are {@code null}.
      */
-    public Future<Void> create(final String uri, final JsonObject body, final String contentType, final Predicate<HttpClientResponse> successPredicate) {
+    public Future<MultiMap> create(final String uri, final JsonObject body, final String contentType,
+            final Predicate<HttpClientResponse> successPredicate) {
 
         return create(uri, Optional.ofNullable(body).map(json -> json.toBuffer()).orElse(null), contentType, successPredicate);
     }
@@ -178,13 +181,14 @@ public final class CrudHttpClient {
      * @return A future that will succeed if the predicate evaluates to {@code true}.
      * @throws NullPointerException if URI or predicate are {@code null}.
      */
-    public Future<Void> create(final String uri, final Buffer body, final String contentType, final Predicate<HttpClientResponse> successPredicate) {
+    public Future<MultiMap> create(final String uri, final Buffer body, final String contentType,
+            final Predicate<HttpClientResponse> successPredicate) {
 
         final MultiMap headers = Optional.ofNullable(contentType)
                 .map(ct -> MultiMap.caseInsensitiveMultiMap().add(HttpHeaders.CONTENT_TYPE, contentType))
                 .orElse(null);
 
-        return create(uri, body, headers, successPredicate).compose(ok -> Future.succeededFuture());
+        return create(uri, body, headers, successPredicate);
     }
 
     /**
@@ -207,7 +211,7 @@ public final class CrudHttpClient {
         Objects.requireNonNull(successPredicate);
 
         return create(
-                getRequestOptions().setURI(uri),
+                createRequestOptions().setURI(uri),
                 body,
                 requestHeaders,
                 successPredicate);
@@ -269,7 +273,22 @@ public final class CrudHttpClient {
      * @return A future that will succeed if the predicate evaluates to {@code true}.
      * @throws NullPointerException if URI or predicate are {@code null}.
      */
-    public Future<Void> update(final String uri, final JsonObject body, final Predicate<Integer> successPredicate) {
+    public Future<MultiMap> update(final String uri, final JsonObject body, final Predicate<Integer> successPredicate) {
+        return update(uri, body, CONTENT_TYPE_JSON, successPredicate);
+    }
+
+    /**
+     * Updates a resource using an HTTP PUT request.
+     * <p>
+     * The content type in the request is set to <em>application/json</em>.
+     *
+     * @param uri The resource to update.
+     * @param body The content to update the resource with.
+     * @param successPredicate A predicate on the returned HTTP status code for determining success.
+     * @return A future that will succeed if the predicate evaluates to {@code true}.
+     * @throws NullPointerException if URI or predicate are {@code null}.
+     */
+    public Future<MultiMap> update(final String uri, final JsonArray body, final Predicate<Integer> successPredicate) {
         return update(uri, body, CONTENT_TYPE_JSON, successPredicate);
     }
 
@@ -283,7 +302,23 @@ public final class CrudHttpClient {
      * @return A future that will succeed if the predicate evaluates to {@code true}.
      * @throws NullPointerException if URI or predicate are {@code null}.
      */
-    public Future<Void> update(final String uri, final JsonObject body, final String contentType, final Predicate<Integer> successPredicate) {
+    public Future<MultiMap> update(final String uri, final JsonObject body, final String contentType,
+            final Predicate<Integer> successPredicate) {
+        return update(uri, Optional.ofNullable(body).map(json -> json.toBuffer()).orElse(null), contentType, successPredicate);
+    }
+
+    /**
+     * Updates a resource using an HTTP PUT request.
+     *
+     * @param uri The resource to update.
+     * @param body The content to update the resource with.
+     * @param contentType The content type to set in the request.
+     * @param successPredicate A predicate on the returned HTTP status code for determining success.
+     * @return A future that will succeed if the predicate evaluates to {@code true}.
+     * @throws NullPointerException if URI or predicate are {@code null}.
+     */
+    public Future<MultiMap> update(final String uri, final JsonArray body, final String contentType,
+            final Predicate<Integer> successPredicate) {
         return update(uri, Optional.ofNullable(body).map(json -> json.toBuffer()).orElse(null), contentType, successPredicate);
     }
 
@@ -297,13 +332,14 @@ public final class CrudHttpClient {
      * @return A future that will succeed if the predicate evaluates to {@code true}.
      * @throws NullPointerException if URI or predicate are {@code null}.
      */
-    public Future<Void> update(final String uri, final Buffer body, final String contentType, final Predicate<Integer> successPredicate) {
+    public Future<MultiMap> update(final String uri, final Buffer body, final String contentType,
+            final Predicate<Integer> successPredicate) {
 
         final MultiMap headers = Optional.ofNullable(contentType)
                 .map(ct -> MultiMap.caseInsensitiveMultiMap().add(HttpHeaders.CONTENT_TYPE, ct))
                 .orElse(null);
 
-        return update(uri, body, headers, successPredicate).compose(ok -> Future.succeededFuture());
+        return update(uri, body, headers, successPredicate);
     }
 
     /**
@@ -326,7 +362,7 @@ public final class CrudHttpClient {
         Objects.requireNonNull(successPredicate);
 
         return update(
-                getRequestOptions().setURI(uri),
+                createRequestOptions().setURI(uri),
                 body,
                 requestHeaders,
                 successPredicate);
@@ -389,7 +425,7 @@ public final class CrudHttpClient {
 
         Objects.requireNonNull(uri);
         Objects.requireNonNull(successPredicate);
-        return get(getRequestOptions().setURI(uri), successPredicate);
+        return get(createRequestOptions().setURI(uri), successPredicate);
     }
 
     /**
@@ -437,7 +473,7 @@ public final class CrudHttpClient {
         Objects.requireNonNull(uri);
         Objects.requireNonNull(successPredicate);
 
-        return delete(getRequestOptions().setURI(uri), successPredicate);
+        return delete(createRequestOptions().setURI(uri), successPredicate);
     }
 
     /**

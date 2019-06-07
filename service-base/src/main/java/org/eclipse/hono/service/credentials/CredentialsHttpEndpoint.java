@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -16,7 +16,6 @@ package org.eclipse.hono.service.credentials;
 import java.net.HttpURLConnection;
 import java.util.Objects;
 
-import io.vertx.core.http.HttpHeaders;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.http.AbstractHttpEndpoint;
@@ -24,7 +23,10 @@ import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.EventBusMessage;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
+import io.vertx.core.http.HttpHeaders;
+import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
@@ -36,7 +38,9 @@ import io.vertx.ext.web.handler.BodyHandler;
  * This endpoint implements Hono's <a href="https://www.eclipse.org/hono/docs/latest/api/credentials-api/">Credentials API</a>.
  * It receives HTTP requests representing operation invocations and sends them to the address {@link CredentialsConstants#CREDENTIALS_ENDPOINT} on the vertx
  * event bus for processing. The outcome is then returned to the client in the HTTP response.
+ * @deprecated - Use {@link org.eclipse.hono.service.management.credentials.CredentialsManagementHttpEndpoint} instead.
  */
+@Deprecated
 public final class CredentialsHttpEndpoint extends AbstractHttpEndpoint<ServiceConfigProperties> {
 
     // path parameters for capturing parts of the URI path
@@ -178,7 +182,7 @@ public final class CredentialsHttpEndpoint extends AbstractHttpEndpoint<ServiceC
 
         sendAction(ctx, requestMsg, getDefaultResponseHandler(ctx,
                 status -> status == HttpURLConnection.HTTP_NO_CONTENT,
-                null));
+                (Handler<HttpServerResponse>) null));
     }
 
     private void removeCredentialsForDevice(final RoutingContext ctx) {
@@ -200,7 +204,7 @@ public final class CredentialsHttpEndpoint extends AbstractHttpEndpoint<ServiceC
 
         sendAction(ctx, requestMsg, getDefaultResponseHandler(ctx,
                 status -> status == HttpURLConnection.HTTP_NO_CONTENT,
-                null));
+                (Handler<HttpServerResponse>) null));
     }
 
     /**
@@ -222,7 +226,7 @@ public final class CredentialsHttpEndpoint extends AbstractHttpEndpoint<ServiceC
 
         sendAction(ctx, requestMsg, getDefaultResponseHandler(ctx,
                 status -> status == HttpURLConnection.HTTP_OK,
-                null));
+                (Handler<HttpServerResponse>) null));
 
     }
 
@@ -239,7 +243,7 @@ public final class CredentialsHttpEndpoint extends AbstractHttpEndpoint<ServiceC
 
         sendAction(ctx, requestMsg, getDefaultResponseHandler(ctx,
                 status -> status == HttpURLConnection.HTTP_OK,
-                null));
+                (Handler<HttpServerResponse>) null));
     }
 
 }

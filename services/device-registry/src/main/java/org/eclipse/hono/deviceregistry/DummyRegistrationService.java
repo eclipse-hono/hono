@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -10,12 +10,14 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
+
 package org.eclipse.hono.deviceregistry;
 
 import java.net.HttpURLConnection;
 
-import org.eclipse.hono.service.registration.BaseRegistrationService;
+import org.eclipse.hono.service.registration.AbstractRegistrationService;
 import org.eclipse.hono.util.RegistrationResult;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
@@ -26,16 +28,12 @@ import io.vertx.core.Handler;
 import io.vertx.core.json.JsonObject;
 
 /**
- *
+ * Dummy implementation of the registration service.
  */
 @Service
+@Qualifier("backend")
 @ConditionalOnProperty(name = "hono.app.type", havingValue = "dummy")
-public class DummyRegistrationService extends BaseRegistrationService<Object> {
-
-    @Override
-    public void setConfig(final Object configuration) {
-
-    }
+public class DummyRegistrationService extends AbstractRegistrationService {
 
     @Override
     public void assertRegistration(final String tenantId, final String deviceId, final Span span,
@@ -54,8 +52,8 @@ public class DummyRegistrationService extends BaseRegistrationService<Object> {
     }
 
     @Override
-    protected Future<Void> updateDeviceLastVia(final String tenantId, final String deviceId, final String gatewayId,
-            final JsonObject deviceData) {
-        return Future.succeededFuture();
+    protected void getDevice(final String tenantId, final String deviceId, final Handler<AsyncResult<RegistrationResult>> resultHandler) {
+        resultHandler.handle(Future.failedFuture("Not implemented"));
     }
+
 }

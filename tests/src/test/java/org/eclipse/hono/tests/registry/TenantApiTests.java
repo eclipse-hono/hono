@@ -99,7 +99,7 @@ abstract class TenantApiTests extends DeviceRegistryTestBase {
                 assertThat(tenantObject.getResourceLimits()).isEqualTo(resourceLimits);
                 assertThat(tenantObject.getDefaults()).isEqualTo(defaults);
                 assertThat(tenantObject.getAdapterConfigurations()).isEqualTo(adapterConfig);
-                assertThat((Object) tenantObject.getProperty("customer")).isEqualTo("ACME Inc.");
+                assertThat(tenantObject.getProperty("customer", String.class)).isEqualTo("ACME Inc.");
             });
             ctx.completeNow();
         }));
@@ -211,7 +211,7 @@ abstract class TenantApiTests extends DeviceRegistryTestBase {
             keyGen.initialize(1024);
             final KeyPair keypair = keyGen.genKeyPair();
             return keypair.getPublic();
-        } catch (NoSuchAlgorithmException e) {
+        } catch (final NoSuchAlgorithmException e) {
             // cannot happen because RSA mandatory on every JRE
             throw new IllegalStateException("JRE does not support RSA algorithm");
         }

@@ -70,7 +70,6 @@ public final class CredentialsConstants extends RequestResponseApiConstants {
      * for authentication.
      */
     public static final String FIELD_SECRETS_NOT_AFTER           = "not-after";
-
     /**
      * The Credential service's endpoint name.
      */
@@ -133,6 +132,7 @@ public final class CredentialsConstants extends RequestResponseApiConstants {
         /**
          * The AMQP subject property value to use for invoking the <em>remove Credentials</em> operation.
          */
+        @Deprecated
         remove,
         /**
          * The name that all unknown operations are mapped to.

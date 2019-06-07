@@ -82,7 +82,7 @@ public final class RegistrationConstants extends RequestResponseApiConstants {
 
     /**
      * Checks if a given string represents a valid action.
-     * 
+     *
      * @param action The string to check.
      * @return {@code true} if the given string is a supported action.
      */

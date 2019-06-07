@@ -1,0 +1,39 @@
+[
+  {
+    "tenant": "DEFAULT_TENANT",
+    "devices": [
+      {
+        "device-id": "4711",
+        "data": {
+          "enabled": true,
+          "comment": [
+            "messages published without a content type will get the default type defined below",
+            "non-standard properties ('importance') will be added to the message's application-properties"
+          ],
+          "defaults": {
+            "content-type": "application/vnd.bumlux",
+            "importance": "high"
+          }
+        }
+      },
+      {
+        "device-id": "4712",
+        "data": {
+          "enabled": true,
+          "comment": [
+            "this device connects only via the gateway indicated by the 'via' property",
+            "therefore, no credentials are registered for the device"
+          ],
+          "via": "gw-1"
+        }
+      },
+      {
+        "device-id": "gw-1",
+        "data": {
+          "enabled": true,
+          "comment": "this device is authorized to publish data on behalf of device 4712"
+        }
+      }
+    ]
+  }
+]

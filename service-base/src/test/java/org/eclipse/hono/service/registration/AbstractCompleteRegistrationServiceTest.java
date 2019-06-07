@@ -33,6 +33,7 @@ import java.net.HttpURLConnection;
  * Abstract class used as a base for verifying behavior of {@link CompleteRegistrationService} in device registry implementations.
  *
  */
+@Deprecated
 public abstract class AbstractCompleteRegistrationServiceTest {
 
     /**

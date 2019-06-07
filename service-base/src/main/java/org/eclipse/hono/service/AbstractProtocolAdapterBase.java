@@ -820,6 +820,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      *                                    the legacy endpoint for command responses.
      * @return The sender.
      */
+    @SuppressWarnings("deprecation")
     protected final Future<CommandResponseSender> createCommandResponseSender(
             final String tenantId,
             final String replyId,

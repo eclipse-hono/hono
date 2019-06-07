@@ -12,16 +12,10 @@
  *******************************************************************************/
 package org.eclipse.hono.service.registration;
 
-import static org.eclipse.hono.util.Constants.JSON_FIELD_DEVICE_ID;
-
 import java.net.HttpURLConnection;
-import java.time.ZoneOffset;
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.Objects;
 
 import org.eclipse.hono.client.ClientErrorException;
-import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.util.EventBusMessage;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.RegistrationResult;
@@ -39,7 +33,9 @@ import io.vertx.core.json.JsonObject;
  * in the message.
  *
  * @param <T> The type of configuration properties this service requires.
+ * @deprecated - Use {@link RegistrationService} and {@link org.eclipse.hono.service.management.device.DeviceManagementService} instead.
  */
+@Deprecated
 public abstract class CompleteBaseRegistrationService<T> extends BaseRegistrationService<T> implements CompleteRegistrationService {
 
     /**
@@ -154,52 +150,6 @@ public abstract class CompleteBaseRegistrationService<T> extends BaseRegistratio
 
     /**
      * {@inheritDoc}
-     * <p>
-     * This implementation delegates to {@link #updateDevice(String, String, JsonObject, Handler)}
-     * in order to store the device's updated registration information.
-     */
-    @Override
-    protected Future<Void> updateDeviceLastVia(
-            final String tenantId,
-            final String deviceId,
-            final String gatewayId,
-            final JsonObject deviceData) {
-
-        Objects.requireNonNull(tenantId);
-        Objects.requireNonNull(deviceId);
-        Objects.requireNonNull(gatewayId);
-        Objects.requireNonNull(deviceData);
-
-        final Future<Void> resultFuture = Future.future();
-        deviceData.put(RegistrationConstants.FIELD_LAST_VIA, createLastViaObject(gatewayId));
-        updateDevice(tenantId, deviceId, deviceData, res -> {
-            if (res.failed() || res.result() == null) {
-                resultFuture.fail(res.cause());
-            } else if (res.result().isError()) {
-                resultFuture.fail(StatusCodeMapper.from(res.result()));
-            } else {
-                resultFuture.complete();
-            }
-        });
-        return resultFuture;
-    }
-
-    /**
-     * Creates the JsonObject used as value for the <em>last-via</em> property.
-     * 
-     * @param gatewayId The gateway id.
-     * @return JSON value for the <em>last-via</em> property.
-     */
-    protected final JsonObject createLastViaObject(final String gatewayId) {
-        final JsonObject lastViaObj = new JsonObject();
-        lastViaObj.put(JSON_FIELD_DEVICE_ID, gatewayId);
-        lastViaObj.put(RegistrationConstants.FIELD_LAST_VIA_UPDATE_DATE,
-                ZonedDateTime.now(ZoneOffset.UTC).format(DateTimeFormatter.ISO_INSTANT));
-        return lastViaObj;
-    }
-
-    /**
-     * {@inheritDoc}
      *
      * This default implementation simply invokes the given handler with a successful Future containing an empty result
      * with status code 501 (Not Implemented).
@@ -233,6 +183,27 @@ public abstract class CompleteBaseRegistrationService<T> extends BaseRegistratio
      */
     @Override
     public void removeDevice(final String tenantId, final String deviceId,
+            final Handler<AsyncResult<RegistrationResult>> resultHandler) {
+        handleUnimplementedOperation(resultHandler);
+    }
+
+    /**
+     * Gets device registration data by device ID.
+     *
+     * @param tenantId The tenant the device belongs to.
+     * @param deviceId The ID of the device to get registration data for.
+     * @param resultHandler The handler to invoke with the result of the operation. The <em>status</em> will be
+     *            <ul>
+     *            <li><em>200 OK</em> if a device with the given ID is registered for the tenant. The <em>payload</em>
+     *            will contain the properties registered for the device.</li>
+     *            <li><em>404 Not Found</em> if no device with the given identifier is registered for the tenant.</li>
+     *            </ul>
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     * @see <a href="https://www.eclipse.org/hono/api/device-registration-api/#get-registration-information"> Device
+     *      Registration API - Get Registration Information</a>
+     */
+    @Override
+    public void getDevice(final String tenantId, final String deviceId,
             final Handler<AsyncResult<RegistrationResult>> resultHandler) {
         handleUnimplementedOperation(resultHandler);
     }

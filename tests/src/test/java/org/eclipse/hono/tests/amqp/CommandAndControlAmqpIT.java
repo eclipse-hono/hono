@@ -34,13 +34,13 @@ import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.CommandClient;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.MessageSender;
+import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.BufferResult;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
-import org.eclipse.hono.util.TenantObject;
 import org.eclipse.hono.util.TimeUntilDisconnectNotification;
 import org.junit.Before;
 import org.junit.Test;
@@ -70,8 +70,8 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
     private static final String REJECTED_COMMAND_ERROR_MESSAGE = "rejected command error message";
     private String tenantId;
     private String deviceId;
-    private String password = "secret";
-    private TenantObject tenant;
+    private final String password = "secret";
+    private Tenant tenant;
 
     /**
      * Sets up the fixture.
@@ -81,7 +81,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
         log.info("running {}", testName.getMethodName());
         tenantId = helper.getRandomTenantId();
         deviceId = helper.getRandomDeviceId(tenantId);
-        tenant = TenantObject.from(tenantId, true);
+        tenant = new Tenant();
     }
 
     /**
@@ -146,7 +146,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
         final Async setup = ctx.async();
         final Async notificationReceived = ctx.async();
 
-        connectToAdapter(tenant, deviceId, password, () -> createEventConsumer(tenantId, msg -> {
+        connectToAdapter(tenantId, tenant, deviceId, password, () -> createEventConsumer(tenantId, msg -> {
             // expect empty notification with TTD -1
             ctx.assertEquals(EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION, msg.getContentType());
             final TimeUntilDisconnectNotification notification = TimeUntilDisconnectNotification.fromMessage(msg).orElse(null);
@@ -390,7 +390,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
         final Async setup = ctx.async();
         final Async notificationReceived = ctx.async();
 
-        connectToAdapter(tenant, deviceId, password, () -> createEventConsumer(tenantId, msg -> {
+        connectToAdapter(tenantId, tenant, deviceId, password, () -> createEventConsumer(tenantId, msg -> {
             // expect empty notification with TTD -1
             ctx.assertEquals(EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION, msg.getContentType());
             final TimeUntilDisconnectNotification notification = TimeUntilDisconnectNotification.fromMessage(msg).orElse(null);
@@ -514,27 +514,28 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
      * Registers a device and opens a connection to the MQTT adapter using
      * the device's credentials.
      * 
+     * @param tenantId The ID of the tenant that the device blongs to.
      * @param tenant The tenant that the device belongs to.
      * @param deviceId The identifier of the device.
      * @param password The password to use for authentication.
-     * @param consumerFactory The factory for creating the consumer of messages
-     *                   published by the device or {@code null} if no consumer
-     *                   should be created.
-     * @return A future that will be completed with the CONNACK packet received
-     *         from the adapter or failed if the connection could not be established. 
+     * @param consumerFactory The factory for creating the consumer of messages published by the device or {@code null}
+     *            if no consumer should be created.
+     * @return A future that will be completed with the CONNACK packet received from the adapter or failed if the
+     *         connection could not be established.
      */
     protected final Future<ProtonConnection> connectToAdapter(
-            final TenantObject tenant,
+            final String tenantId,
+            final Tenant tenant,
             final String deviceId,
             final String password,
             final Supplier<Future<MessageConsumer>> consumerFactory) {
 
         return helper.registry
-        .addDeviceForTenant(tenant, deviceId, password)
+                .addDeviceForTenant(tenantId, tenant, deviceId, password)
         .compose(ok -> Optional.ofNullable(consumerFactory)
                 .map(factory -> factory.get())
                 .orElse(Future.succeededFuture()))
-        .compose(ok -> connectToAdapter(IntegrationTestSupport.getUsername(deviceId, tenant.getTenantId()), password))
+                .compose(ok -> connectToAdapter(IntegrationTestSupport.getUsername(deviceId, tenantId), password))
         .recover(t -> {
             log.error("failed to establish connection to AMQP adapter [host: {}, port: {}]",
                     IntegrationTestSupport.AMQP_HOST, IntegrationTestSupport.AMQP_PORT, t);

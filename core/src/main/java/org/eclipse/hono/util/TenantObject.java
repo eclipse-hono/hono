@@ -77,7 +77,7 @@ public final class TenantObject extends JsonBackedValueObject {
      */
     @JsonIgnore
     public String getTenantId() {
-        return (String) getProperty(TenantConstants.FIELD_PAYLOAD_TENANT_ID);
+        return getProperty(TenantConstants.FIELD_PAYLOAD_TENANT_ID, String.class);
     }
 
     /**
@@ -98,7 +98,7 @@ public final class TenantObject extends JsonBackedValueObject {
      */
     @JsonIgnore
     public boolean isEnabled() {
-        return (Boolean) getProperty(TenantConstants.FIELD_ENABLED, true);
+        return getProperty(TenantConstants.FIELD_ENABLED, Boolean.class, true);
     }
 
     /**
@@ -121,11 +121,12 @@ public final class TenantObject extends JsonBackedValueObject {
     @JsonIgnore
     public X500Principal getTrustedCaSubjectDn() {
 
-        final JsonObject trustedCa = getProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA);
+        final JsonObject trustedCa = getProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, JsonObject.class);
         if (trustedCa == null) {
             return null;
         } else {
-            return Optional.ofNullable((String) getProperty(trustedCa, TenantConstants.FIELD_PAYLOAD_SUBJECT_DN))
+            return Optional
+                    .ofNullable(getProperty(trustedCa, TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, String.class))
                     .map(dn -> new X500Principal(dn)).orElse(null);
         }
     }
@@ -170,7 +171,7 @@ public final class TenantObject extends JsonBackedValueObject {
             final JsonObject trustedCa = new JsonObject()
                     .put(TenantConstants.FIELD_PAYLOAD_CERT, certificate.getEncoded());
             return setProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, trustedCa);
-        } catch (CertificateEncodingException e) {
+        } catch (final CertificateEncodingException e) {
             throw new IllegalArgumentException("cannot encode certificate");
         }
     }
@@ -193,7 +194,7 @@ public final class TenantObject extends JsonBackedValueObject {
     @JsonIgnore
     public X509Certificate getTrustedCertificateAuthority() throws CertificateException {
 
-        final JsonObject trustedCa = getProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA);
+        final JsonObject trustedCa = getProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, JsonObject.class);
         if (trustedCa == null) {
             return null;
         } else {
@@ -249,7 +250,8 @@ public final class TenantObject extends JsonBackedValueObject {
                 trustAnchor = new TrustAnchor(cert, null);
                 return trustAnchor;
             } else {
-                return getTrustAnchorForPublicKey(getProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA));
+                return getTrustAnchorForPublicKey(
+                        getProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, JsonObject.class));
             }
         }
     }
@@ -260,13 +262,14 @@ public final class TenantObject extends JsonBackedValueObject {
         if (keyProps == null) {
             return null;
         } else {
-            final String subjectDn = getProperty(keyProps, TenantConstants.FIELD_PAYLOAD_SUBJECT_DN);
-            final String encodedKey = getProperty(keyProps, TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY);
+            final String subjectDn = getProperty(keyProps, TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, String.class);
+            final String encodedKey = getProperty(keyProps, TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, String.class);
             if (subjectDn == null || encodedKey == null) {
                 return null;
             } else {
                 try {
-                    final String type = getProperty(keyProps, TenantConstants.FIELD_PAYLOAD_KEY_ALGORITHM, "RSA");
+                    final String type = getProperty(keyProps, TenantConstants.FIELD_PAYLOAD_KEY_ALGORITHM, String.class,
+                            "RSA");
                     final X509EncodedKeySpec keySpec = new X509EncodedKeySpec(Base64.getDecoder().decode(encodedKey));
                     final KeyFactory factory = KeyFactory.getInstance(type);
                     final PublicKey publicKey = factory.generatePublic(keySpec);
@@ -294,7 +297,7 @@ public final class TenantObject extends JsonBackedValueObject {
             return null;
         } else {
             final List<Map<String, Object>> result = new LinkedList<>();
-            adapterConfigurations.values().forEach(config -> result.add(((JsonObject) config).getMap()));
+            adapterConfigurations.values().forEach(config -> result.add(config.getMap()));
             return result;
         }
     }
@@ -313,7 +316,7 @@ public final class TenantObject extends JsonBackedValueObject {
             return null;
         } else {
             final JsonArray result = new JsonArray();
-            adapterConfigurations.values().forEach(config -> result.add((JsonObject) config));
+            adapterConfigurations.values().forEach(config -> result.add(config));
             return result;
         }
     }
@@ -428,13 +431,12 @@ public final class TenantObject extends JsonBackedValueObject {
     }
 
     /**
-     * Gets the maximum number of seconds that a protocol adapter should
-     * wait for a command targeted at a device.
+     * Gets the maximum number of seconds that a protocol adapter should wait for a command targeted at a device.
      * <p>
      * The returned value is determined as follows:
      * <ol>
-     * <li>if this tenant configuration contains an integer typed {@link TenantConstants#FIELD_MAX_TTD}
-     * property specific to the given adapter type, then return its value if it is &gt;= 0</li>
+     * <li>if this tenant configuration contains an integer typed {@link TenantConstants#FIELD_MAX_TTD} property
+     * specific to the given adapter type, then return its value if it is &gt;= 0</li>
      * <li>otherwise, if this tenant configuration contains a general integer typed
      * {@link TenantConstants#FIELD_MAX_TTD} property, then return its value if it is &gt;= 0</li>
      * <li>otherwise, return {@link TenantConstants#DEFAULT_MAX_TTD}</li>
@@ -448,13 +450,14 @@ public final class TenantObject extends JsonBackedValueObject {
 
         Objects.requireNonNull(typeName);
 
-        final int maxTtd = Optional.ofNullable(getAdapterConfiguration(typeName)).map(conf -> {
-            return Optional.ofNullable(getProperty(conf, TenantConstants.FIELD_MAX_TTD)).map(obj -> {
-                return (Integer) obj;
-            }).orElse(TenantConstants.DEFAULT_MAX_TTD);
-        }).orElse(Optional.ofNullable(getProperty(TenantConstants.FIELD_MAX_TTD)).map(obj -> {
-            return (Integer) obj;
-        }).orElse(TenantConstants.DEFAULT_MAX_TTD));
+        final int maxTtd = Optional
+                .ofNullable(getAdapterConfiguration(typeName))
+                .map(conf -> {
+                    return Optional.ofNullable(getProperty(conf, TenantConstants.FIELD_MAX_TTD, Integer.class))
+                            .orElse(TenantConstants.DEFAULT_MAX_TTD);
+                })
+                .orElse(Optional.ofNullable(getProperty(TenantConstants.FIELD_MAX_TTD, Integer.class))
+                        .orElse(TenantConstants.DEFAULT_MAX_TTD));
 
         if (maxTtd < 0) {
             return TenantConstants.DEFAULT_MAX_TTD;
@@ -483,6 +486,22 @@ public final class TenantObject extends JsonBackedValueObject {
     }
 
     /**
+     * Creates a TenantObject from the enabled property.
+     *
+     * @param enabled {@code true} if the tenant shall be enabled.
+     * @return The TenantObject.
+     * @throws NullPointerException if enabled is {@code null}.
+     */
+    public static TenantObject from(final Boolean enabled) {
+
+        Objects.requireNonNull(enabled);
+
+        final TenantObject result = new TenantObject();
+        result.setEnabled(enabled);
+        return result;
+    }
+
+    /**
      * Creates new protocol adapter configuration properties.
      * 
      * @param type The adapter type.
@@ -504,7 +523,7 @@ public final class TenantObject extends JsonBackedValueObject {
      */
     @JsonIgnore
     public JsonObject getResourceLimits() {
-        return getProperty(TenantConstants.FIELD_RESOURCE_LIMITS);
+        return getProperty(TenantConstants.FIELD_RESOURCE_LIMITS, JsonObject.class);
     }
 
     /**
@@ -528,7 +547,7 @@ public final class TenantObject extends JsonBackedValueObject {
      */
     @JsonIgnore
     public JsonObject getDefaults() {
-        return getProperty(TenantConstants.FIELD_PAYLOAD_DEFAULTS, new JsonObject());
+        return getProperty(TenantConstants.FIELD_PAYLOAD_DEFAULTS, JsonObject.class, new JsonObject());
     }
 
     /**

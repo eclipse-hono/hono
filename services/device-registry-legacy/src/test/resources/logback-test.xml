@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Copyright (c) 2016, 2017 Contributors to the Eclipse Foundation
+   
+    See the NOTICE file(s) distributed with this work for additional
+    information regarding copyright ownership.
+   
+    This program and the accompanying materials are made available under the
+    terms of the Eclipse Public License 2.0 which is available at
+    http://www.eclipse.org/legal/epl-2.0
+   
+    SPDX-License-Identifier: EPL-2.0
+ -->
+
+<configuration>
+
+  <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+    <!-- encoders are assigned the type
+         ch.qos.logback.classic.encoder.PatternLayoutEncoder by default -->
+    <encoder>
+      <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+    </encoder>
+  </appender>
+
+  <root level="INFO">
+    <appender-ref ref="STDOUT" />
+  </root>
+
+  <logger name="org.eclipse.hono" level="INFO"/>
+  <logger name="org.eclipse.hono.service" level="INFO"/>
+  <logger name="org.eclipse.hono.service.amqp" level="INFO"/>
+  <logger name="org.eclipse.hono.service.auth" level="INFO"/>
+  <logger name="org.eclipse.hono.deviceregistry" level="INFO"/>
+  <logger name="org.eclipse.hono.service.auth.delegating" level="INFO"/>
+  <logger name="org.eclipse.hono.service.credentials" level="INFO"/>
+
+  <logger name="io.vertx.proton.impl" level="INFO"/>
+  <logger name="io.vertx.proton.sasl.impl" level="INFO"/>
+
+</configuration>

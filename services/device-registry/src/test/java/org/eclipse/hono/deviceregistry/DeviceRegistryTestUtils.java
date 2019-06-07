@@ -14,7 +14,7 @@
 package org.eclipse.hono.deviceregistry;
 
 import java.io.IOException;
-import java.io.InputStream;
+import com.google.common.io.Resources;
 
 import io.vertx.core.buffer.Buffer;
 
@@ -37,14 +37,8 @@ public final class DeviceRegistryTestUtils {
      */
     public static Buffer readFile(final String resourceName) throws IOException {
 
-        final Buffer result = Buffer.buffer();
-        try (InputStream is = DeviceRegistryTestUtils.class.getResourceAsStream(resourceName)) {
-            int bytesRead = 0;
-            final byte[] readBuffer = new byte[4096];
-            while ((bytesRead = is.read(readBuffer)) != -1) {
-                result.appendBytes(readBuffer, 0, bytesRead);
-            }
-        }
-        return result;
+        final var buffer = Resources.toByteArray(Resources.getResource(DeviceRegistryTestUtils.class, resourceName));
+        return Buffer.buffer(buffer);
+
     }
 }

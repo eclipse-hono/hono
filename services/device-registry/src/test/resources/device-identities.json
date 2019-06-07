@@ -24,7 +24,7 @@
             "this device connects only via the gateway indicated by the 'via' property",
             "therefore, no credentials are registered for the device"
           ],
-          "via": "gw-1"
+          "via": ["gw-1"]
         }
       },
       {

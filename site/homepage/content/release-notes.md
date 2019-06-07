@@ -2,6 +2,90 @@
 title = "Release Notes"
 +++
 
+## 1.0-M6
+
+### New Features
+
+* Implementation of the new HTTP management API for tenants, devices and
+  credentials.
+
+### API Changes
+
+* With the implementation of the new HTTP management API for the device registry,
+  the class hierarchy for implementing device registry was significantly
+  refactored. This also includes the deprecation of a list of classes and tests.
+  Also see [Device registry changes](#device-registry-changes) for more information.
+* The *complete* interfaces, and the *base* and *complete* implementation
+  classes for services got deprecated, and are planned to be removed in a future
+  release. Also see [Device registry changes](#device-registry-changes) for
+  more information.
+
+### Device registry changes
+
+The section summarizes changes made for 1.0-M5 in the device registry.
+
+During the development of Hono 1.0, we defined a new HTTP API for managing
+information stored in the device registry. This API replaces the current,
+provisional API, which was originally intended for tests to manipulate the file
+based device registry during system tests. The new HTTP based API is intended
+to replace the existing HTTP API, as well as the management part of the AMQP
+based API.
+
+The first major change is, that all the *complete* classes got deprecated. As
+they are based on the services for the protocol adapters. And those services
+are no longer considered to be used for managing information. The replacement
+for those classes are the new management APIs.
+
+Each of the three APIs got a companion API for *management*, which are located
+in the `org.eclipse.hono.service.management` base package.
+
+The class hierarchy was decoupled in order to make it easier to implement those
+services. The new design only requires to implement a service, which is not
+based on any other interface. And while your concrete implement still can
+implement the `Verticle` interface, this is no longer a requirement.
+
+Also the *base* classes got deprecated. Instead of inheriting the common
+functionality, to bind to the *event bus*, that functionality got moved into new
+*event bus adapter* classes, which take the reference of a service, and bind
+this service to the *event bus* instead of using inheritance. Those change
+make it possible to  re-use much of the functionality, but do not impose the
+requirement to inherit from either the *complete* or *base* classes. And
+this finally allows your service implementation to be extend your specific
+base class, and re-use common Hono functionality at the same time. This allows
+service implementations to implement both the standard API, as well as the
+management API in the same class. As Java does not allow inheritance
+from multiple classes, this was not possible before.
+
+The new default file based device registry, was modified to use the new class
+hierarchy and support the new management model.
+
+The device registry, which was provided in 1.0-M4 and before, is still part of
+the source tree, but was moved to `services/device-registry-legacy`. It is
+there to show the compatibility with the older class hierarchy, using the,
+now deprecated, *base* and *complete* classes. Newer implementations should not
+be build on this model.
+
+Clients of the *base* variants of the services, like the protocol adapters,
+do not need to make any changes.
+
+Implementations of the device registry services, using the existing *base* and
+*complete* can re-use that model, but are encouraged to migrate to the new model
+as soon as possible, as the legacy model is planned to be removed. The only
+impacting change is that the service interfaces no longer extend from
+`Verticle` directly, but that has been moved to the *base* implementation.
+
+Implementations of the services for protocol adapters (the non-management API),
+can switch to the new class hierarchy by dropping inheritance to the *base*
+class, and starting up a new instance of the corresponding *event bus adapter*,
+providing a reference to the service. For the `RegistrationService` it is also
+possible to inherit common functionality from `AbstractRegistrationService`.
+
+Implementations of the services for management need to simply inherit from the
+new management interfaces, and set up the *event bus adapters* the same way.
+
+The module `device-registry-legacy` as well as all classes and interfaces,
+which got deprecated, are planned to be dropped in 1.1.
+
 ## 1.0-M5
 
 ### New Features
@@ -12,6 +96,7 @@ title = "Release Notes"
 * Hono now specifies a [Device Connection API](https://www.eclipse.org/hono/docs/latest/api/device-connection-api/) and
   contains an exemplary implementation of this API included in the device registry component. The purpose of the API is
   to be able to set and retrieve information about the connections from devices or gateways to the protocol adapters.
+* This version implements the new HTTP management API for tenants, devices, and credentials.
 
 ### Fixes & Enhancements
 
@@ -48,14 +133,13 @@ title = "Release Notes"
 * The `control` prefix in the northbound and southbound Command & Control endpoints has been renamed to `command`. 
   The endpoint names with the `control` prefix are still supported but deprecated. The northbound endpoint for
   *business applications* to receive command responses has the `command_response` prefix now. The old `control` prefix
-  for the receiver address is also still supported but deprecated. 
+  for the receiver address is also still supported but deprecated.
 * The `deviceId` parameter of the `getOrCreateCommandClient` and `getOrCreateAsyncCommandClient` methods of the 
   `org.eclipse.hono.client.ApplicationClientFactory` interface has been removed.
   This means that a `CommandClient` or `AsyncCommandClient` instance can be used to send commands to arbitrary
   devices of a tenant now. Accordingly, the `CommandClient.sendCommand` and `AsyncCommandClient.sendAsyncCommand`
   methods now require an additional `deviceId` parameter.
 * The deprecated methods of `org.eclipse.hono.client.HonoConnection` have been removed.
-
 
 ## 1.0-M4
 

@@ -11,7 +11,6 @@
  * SPDX-License-Identifier: EPL-2.0
  */
 
-
 package org.eclipse.hono.auth;
 
 import java.security.NoSuchAlgorithmException;
@@ -45,8 +44,12 @@ import io.vertx.core.json.JsonObject;
  */
 public class SpringBasedHonoPasswordEncoder implements HonoPasswordEncoder {
 
+    /**
+     * The default Bcrypt strength setting.
+     */
+    public static final int DEFAULT_BCRYPT_STRENGTH = 10;
+
     private static final Logger LOG = LoggerFactory.getLogger(SpringBasedHonoPasswordEncoder.class);
-    private static final int DEFAULT_BCRYPT_STRENGTH = 10;
 
     private final Map<String, PasswordEncoder> encoders = new HashMap<>();
     private final PasswordEncoder encoderForEncode;
@@ -141,7 +144,7 @@ public class SpringBasedHonoPasswordEncoder implements HonoPasswordEncoder {
             final EncodedPassword encodedPassword = EncodedPassword.fromHonoSecret(credentialsOnRecord);
             final PasswordEncoder encoder = Optional.ofNullable(encoders.get(encodedPassword.hashFunction)).orElse(encoderForEncode);
             return encoder.matches(rawPassword, encodedPassword.format());
-        } catch (IllegalArgumentException e) {
+        } catch (final IllegalArgumentException e) {
             // invalid Base64 scheme
             LOG.debug("error matching password", e);
             return false;
@@ -155,7 +158,7 @@ public class SpringBasedHonoPasswordEncoder implements HonoPasswordEncoder {
 
         try {
             return SecureRandom.getInstance("NativePRNGNonBlocking"); // non-blocking UNIX
-        } catch (NoSuchAlgorithmException e) {
+        } catch (final NoSuchAlgorithmException e) {
             return new SecureRandom(); // might block
         }
     }

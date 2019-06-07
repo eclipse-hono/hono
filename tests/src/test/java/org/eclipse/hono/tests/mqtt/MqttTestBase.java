@@ -17,8 +17,8 @@ import java.util.Optional;
 import java.util.function.Supplier;
 
 import org.eclipse.hono.client.MessageConsumer;
+import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tests.IntegrationTestSupport;
-import org.eclipse.hono.util.TenantObject;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -136,35 +136,35 @@ public abstract class MqttTestBase {
     }
 
     /**
-     * Registers a device and opens a connection to the MQTT adapter using
-     * the device's credentials.
+     * Registers a device and opens a connection to the MQTT adapter using the device's credentials.
      * 
+     * @param tenantId The id of the tenant that the device belongs to.
      * @param tenant The tenant that the device belongs to.
      * @param deviceId The identifier of the device.
      * @param password The password to use for authentication.
-     * @param consumerFactory The factory for creating the consumer of messages
-     *                   published by the device or {@code null} if no consumer
-     *                   should be created.
-     * @return A future that will be completed with the CONNACK packet received
-     *         from the adapter or failed if the connection could not be established. 
+     * @param consumerFactory The factory for creating the consumer of messages published by the device or {@code null}
+     *            if no consumer should be created.
+     * @return A future that will be completed with the CONNACK packet received from the adapter or failed if the
+     *         connection could not be established.
      */
     protected final Future<MqttConnAckMessage> connectToAdapter(
-            final TenantObject tenant,
+            final String tenantId,
+            final Tenant tenant,
             final String deviceId,
             final String password,
             final Supplier<Future<MessageConsumer>> consumerFactory) {
 
         return helper.registry
-        .addDeviceForTenant(tenant, deviceId, password)
-        .compose(ok -> Optional.ofNullable(consumerFactory)
-                .map(factory -> factory.get())
-                .orElse(Future.succeededFuture()))
-        .compose(ok -> connectToAdapter(IntegrationTestSupport.getUsername(deviceId, tenant.getTenantId()), password))
-        .recover(t -> {
-            LOGGER.debug("failed to establish connection to MQTT adapter [host: {}, port: {}]",
-                    IntegrationTestSupport.MQTT_HOST, IntegrationTestSupport.MQTT_PORT, t);
-            return Future.failedFuture(t);
-        });
+                .addDeviceForTenant(tenantId, tenant, deviceId, password)
+                .compose(ok -> Optional.ofNullable(consumerFactory)
+                        .map(factory -> factory.get())
+                        .orElse(Future.succeededFuture()))
+                .compose(ok -> connectToAdapter(IntegrationTestSupport.getUsername(deviceId, tenantId), password))
+                .recover(t -> {
+                    LOGGER.debug("failed to establish connection to MQTT adapter [host: {}, port: {}]",
+                            IntegrationTestSupport.MQTT_HOST, IntegrationTestSupport.MQTT_PORT, t);
+                    return Future.failedFuture(t);
+                });
 
     }
 

@@ -38,7 +38,9 @@ import io.vertx.ext.web.RoutingContext;
  * This endpoint implements Hono's <a href="https://www.eclipse.org/hono/docs/latest/api/device-registration-api/">Device Registration API</a>.
  * It receives HTTP requests representing operation invocations and sends them to an address on the vertx
  * event bus for processing. The outcome is then returned to the peer in the HTTP response.
+ * @deprecated - Use {@link org.eclipse.hono.service.management.device.DeviceManagementHttpEndpoint} instead.
  */
+@Deprecated
 public final class RegistrationHttpEndpoint extends AbstractHttpEndpoint<ServiceConfigProperties> {
 
     /**
@@ -101,7 +103,7 @@ public final class RegistrationHttpEndpoint extends AbstractHttpEndpoint<Service
             response.setStatusCode(status);
             switch (status) {
                 case HttpURLConnection.HTTP_OK:
-                    HttpUtils.setResponseBody(ctx.response(), registrationResult);
+                    HttpUtils.setResponseBody(ctx.response(), registrationResult.getJsonPayload());
                 default:
                     response.end();
                 }

@@ -33,6 +33,7 @@ import java.net.HttpURLConnection;
  * Abstract class used as a base for verifying behavior of {@link CompleteTenantService} in device registry implementations.
  *
  */
+@Deprecated
 public abstract class AbstractCompleteTenantServiceTest {
 
     /**
@@ -148,7 +149,7 @@ public abstract class AbstractCompleteTenantServiceTest {
                 assertEquals(HttpURLConnection.HTTP_OK, s.getStatus());
                 final TenantObject obj = s.getPayload().mapTo(TenantObject.class);
                 assertEquals("tenant", obj.getTenantId());
-                final JsonObject ca = obj.getProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA);
+                final JsonObject ca = obj.getProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, JsonObject.class);
                 assertEquals(trustedCa, ca);
                 ctx.completeNow();
             })));

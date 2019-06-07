@@ -294,6 +294,15 @@ public class EventBusMessage {
     }
 
     /**
+     * Gets the value of the object identifier property.
+     *
+     * @return The value or {@code null} if not set.
+     */
+    public String getObjectId() {
+        return getJsonPayload().getString(RequestResponseApiConstants.FIELD_OBJECT_ID);
+    }
+
+    /**
      * Adds a property for the request/response payload.
      * <p>
      * The property will only be added if the value is not {@code null}.
@@ -455,6 +464,28 @@ public class EventBusMessage {
         } else {
             return decodeIdFromJson(encodedId);
         }
+    }
+
+    /**
+     * Adds a property for the resource version option.
+     * <p>
+     * The property will only be added if the value is not {@code null}.
+     *
+     * @param version The version value.
+     * @return This message for chaining.
+     */
+    public EventBusMessage setResourceVersion(final String version) {
+        setProperty(MessageHelper.APP_PROPERTY_RESOURCE_VERSION, version);
+        return this;
+    }
+
+    /**
+     * Gets the value of the cache resource version property.
+     *
+     * @return The value or {@code null} if not set.
+     */
+    public String getResourceVersion() {
+        return getProperty(MessageHelper.APP_PROPERTY_RESOURCE_VERSION);
     }
 
     /**

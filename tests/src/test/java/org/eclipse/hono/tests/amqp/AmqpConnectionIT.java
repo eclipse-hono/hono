@@ -15,15 +15,14 @@ package org.eclipse.hono.tests.amqp;
 
 import java.security.GeneralSecurityException;
 import java.security.KeyPair;
-import java.util.Base64;
 import java.util.UUID;
 
-import javax.security.auth.x500.X500Principal;
 import javax.security.sasl.SaslException;
 
+import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tests.IntegrationTestSupport;
+import org.eclipse.hono.tests.Tenants;
 import org.eclipse.hono.util.Constants;
-import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantObject;
 import org.junit.After;
 import org.junit.Before;
@@ -81,10 +80,10 @@ public class AmqpConnectionIT extends AmqpAdapterTestBase {
         final String tenantId = helper.getRandomTenantId();
         final String deviceId = helper.getRandomDeviceId(tenantId);
         final String password = "secret";
-        final TenantObject tenant = TenantObject.from(tenantId, true);
+        final Tenant tenant = new Tenant();
 
         helper.registry
-        .addDeviceForTenant(tenant, deviceId, password)
+                .addDeviceForTenant(tenantId, tenant, deviceId, password)
         .compose(ok -> connectToAdapter(IntegrationTestSupport.getUsername(deviceId, tenantId), password))
         .setHandler(ctx.asyncAssertSuccess());
     }
@@ -125,10 +124,10 @@ public class AmqpConnectionIT extends AmqpAdapterTestBase {
         final String tenantId = helper.getRandomTenantId();
         final String deviceId = helper.getRandomDeviceId(tenantId);
         final String password = "secret";
-        final TenantObject tenant = TenantObject.from(tenantId, true);
+        final Tenant tenant = new Tenant();
 
         helper.registry
-        .addDeviceForTenant(tenant, deviceId, password)
+                .addDeviceForTenant(tenantId, tenant, deviceId, password)
         // WHEN the device tries to connect using a wrong password
         .compose(ok -> connectToAdapter(IntegrationTestSupport.getUsername(deviceId, tenantId), "wrong password"))
         .setHandler(ctx.asyncAssertFailure(t -> {
@@ -151,16 +150,10 @@ public class AmqpConnectionIT extends AmqpAdapterTestBase {
         final String password = "secret";
 
         // GIVEN a tenant for which the AMQP adapter is disabled
-        final TenantObject tenant = TenantObject.from(tenantId, true);
-        final JsonObject adapterConfigurationHttp = new JsonObject()
-                .put(TenantConstants.FIELD_ADAPTERS_TYPE, Constants.PROTOCOL_ADAPTER_TYPE_HTTP)
-                .put(TenantConstants.FIELD_ENABLED, Boolean.TRUE);
-        final JsonObject adapterConfigurationAmqp = new JsonObject()
-                .put(TenantConstants.FIELD_ADAPTERS_TYPE, Constants.PROTOCOL_ADAPTER_TYPE_AMQP)
-                .put(TenantConstants.FIELD_ENABLED, Boolean.FALSE);
-        tenant.addAdapterConfiguration(adapterConfigurationHttp);
-        tenant.addAdapterConfiguration(adapterConfigurationAmqp);
-        helper.registry.addDeviceForTenant(tenant, deviceId, password)
+        final Tenant tenant = new Tenant();
+        Tenants.setAdapterEnabled(tenant, Constants.PROTOCOL_ADAPTER_TYPE_HTTP, true);
+        Tenants.setAdapterEnabled(tenant, Constants.PROTOCOL_ADAPTER_TYPE_AMQP, false);
+        helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, password)
         // WHEN a device that belongs to the tenant tries to connect to the adapter
         .compose(ok -> connectToAdapter(IntegrationTestSupport.getUsername(deviceId, tenantId), password))
         .setHandler(ctx.asyncAssertFailure(t -> {
@@ -181,10 +174,10 @@ public class AmqpConnectionIT extends AmqpAdapterTestBase {
         final String tenantId = helper.getRandomTenantId();
         final String deviceId = helper.getRandomDeviceId(tenantId);
         final String password = "secret";
-        final TenantObject tenant = TenantObject.from(tenantId, true);
+        final Tenant tenant = new Tenant();
 
         helper.registry
-            .addDeviceForTenant(tenant, deviceId, password)
+                .addDeviceForTenant(tenantId, tenant, deviceId, password)
             .compose(device -> helper.registry.deregisterDevice(tenantId, deviceId))
             .compose(ok -> connectToAdapter(IntegrationTestSupport.getUsername(deviceId, tenantId), password))
             .setHandler(ctx.asyncAssertFailure(t -> {
@@ -205,9 +198,9 @@ public class AmqpConnectionIT extends AmqpAdapterTestBase {
         final String tenantId = helper.getRandomTenantId();
         final String deviceId = helper.getRandomDeviceId(tenantId);
         final String password = "secret";
-        final TenantObject tenant = TenantObject.from(tenantId, true);
+        final Tenant tenant = new Tenant();
 
-        helper.registry.addDeviceForTenant(tenant, deviceId, password)
+        helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, password)
         // WHEN the device tries to connect using a malformed username
         .compose(ok -> connectToAdapter(deviceId, "secret"))
         .setHandler(context.asyncAssertFailure(t -> {
@@ -217,9 +210,8 @@ public class AmqpConnectionIT extends AmqpAdapterTestBase {
     }
 
     /**
-     * Verifies that the adapter fails to authenticate a device if the device's client
-     * certificate's signature cannot be validated using the trust anchor that is registered
-     * for the tenant that the device belongs to.
+     * Verifies that the adapter fails to authenticate a device if the device's client certificate's signature cannot be
+     * validated using the trust anchor that is registered for the tenant that the device belongs to.
      *
      * @param ctx The test context.
      * @throws GeneralSecurityException if the tenant's trust anchor cannot be generated
@@ -229,31 +221,26 @@ public class AmqpConnectionIT extends AmqpAdapterTestBase {
 
         final String tenantId = helper.getRandomTenantId();
         final String deviceId = helper.getRandomDeviceId(tenantId);
-        final TenantObject tenant = TenantObject.from(tenantId, true);
-
         final KeyPair keyPair = helper.newEcKeyPair();
+
         final SelfSignedCertificate deviceCert = SelfSignedCertificate.create(UUID.randomUUID().toString());
 
         // GIVEN a tenant configured with a trust anchor
         helper.getCertificate(deviceCert.certificatePath())
-        .compose(cert -> {
-            tenant.setProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA,
-                    new JsonObject()
-                        .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, cert.getIssuerX500Principal().getName(X500Principal.RFC2253))
-                        .put(TenantConstants.FIELD_ADAPTERS_TYPE, "EC")
-                        .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, Base64.getEncoder().encodeToString(keyPair.getPublic().getEncoded())));
-            return helper.registry.addDeviceForTenant(tenant, deviceId, cert);
-        })
-        .compose(ok -> {
-            // WHEN a device tries to connect to the adapter
-            // using a client certificate that cannot be validated
-            // using the trust anchor registered for the device's tenant
-            return connectToAdapter(deviceCert);
-        })
-        .setHandler(ctx.asyncAssertFailure(t -> {
-            // THEN the connection is not established
-            ctx.assertTrue(t instanceof SaslException);
-        }));
+                .compose(cert -> {
+                    final var tenant = Tenants.createTenantForTrustAnchor(cert, keyPair.getPublic());
+                    return helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, cert);
+                })
+                .compose(ok -> {
+                    // WHEN a device tries to connect to the adapter
+                    // using a client certificate that cannot be validated
+                    // using the trust anchor registered for the device's tenant
+                    return connectToAdapter(deviceCert);
+                })
+                .setHandler(ctx.asyncAssertFailure(t -> {
+                    // THEN the connection is not established
+                    ctx.assertTrue(t instanceof SaslException);
+                }));
     }
 
 }

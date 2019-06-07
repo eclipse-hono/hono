@@ -26,12 +26,12 @@ import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.MessageSender;
+import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
-import org.eclipse.hono.util.TenantObject;
 import org.eclipse.hono.util.TimeUntilDisconnectNotification;
 import org.junit.Before;
 import org.junit.Test;
@@ -59,8 +59,8 @@ public class CommandAndControlMqttIT extends MqttTestBase {
 
     private String tenantId;
     private String deviceId;
-    private String password = "secret";
-    private TenantObject tenant;
+    private final String password = "secret";
+    private Tenant tenant;
 
     /**
      * Sets up the fixture.
@@ -71,7 +71,7 @@ public class CommandAndControlMqttIT extends MqttTestBase {
         LOGGER.info("running {}", testName.getMethodName());
         tenantId = helper.getRandomTenantId();
         deviceId = helper.getRandomDeviceId(tenantId);
-        tenant = TenantObject.from(tenantId, true);
+        tenant = new Tenant();
     }
 
     private Future<MessageConsumer> createConsumer(final String tenantId, final Consumer<Message> messageConsumer) {
@@ -218,7 +218,7 @@ public class CommandAndControlMqttIT extends MqttTestBase {
         final Async notificationReceived = ctx.async();
 
         helper.registry
-        .addDeviceForTenant(tenant, deviceId, password)
+        .addDeviceForTenant(tenantId, tenant, deviceId, password)
         .compose(ok -> connectToAdapter(IntegrationTestSupport.getUsername(deviceId, tenantId), password))
         .compose(ok -> createConsumer(tenantId, msg -> {
             // expect empty notification with TTD -1
@@ -293,20 +293,21 @@ public class CommandAndControlMqttIT extends MqttTestBase {
         final Async notificationReceived = ctx.async();
 
         helper.registry
-        .addDeviceForTenant(tenant, deviceId, password)
-        .compose(ok -> connectToAdapter(IntegrationTestSupport.getUsername(deviceId, tenantId), password))
-        .compose(ok -> createConsumer(tenantId, msg -> {
-            // expect empty notification with TTD -1
-            ctx.assertEquals(EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION, msg.getContentType());
-            final TimeUntilDisconnectNotification notification = TimeUntilDisconnectNotification.fromMessage(msg).orElse(null);
-            LOGGER.info("received notification [{}]", notification);
-            ctx.assertNotNull(notification);
-            if (notification.getTtd() == -1) {
-                notificationReceived.complete();
-            }
-        })).compose(conAck -> subscribeToCommands(msg -> {
-            ctx.fail("should not have received command");
-        }, 0)).setHandler(ctx.asyncAssertSuccess(ok -> setup.complete()));
+                .addDeviceForTenant(tenantId, tenant, deviceId, password)
+                .compose(ok -> connectToAdapter(IntegrationTestSupport.getUsername(deviceId, tenantId), password))
+                .compose(ok -> createConsumer(tenantId, msg -> {
+                    // expect empty notification with TTD -1
+                    ctx.assertEquals(EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION, msg.getContentType());
+                    final TimeUntilDisconnectNotification notification = TimeUntilDisconnectNotification
+                            .fromMessage(msg).orElse(null);
+                    LOGGER.info("received notification [{}]", notification);
+                    ctx.assertNotNull(notification);
+                    if (notification.getTtd() == -1) {
+                        notificationReceived.complete();
+                    }
+                })).compose(conAck -> subscribeToCommands(msg -> {
+                    ctx.fail("should not have received command");
+                }, 0)).setHandler(ctx.asyncAssertSuccess(ok -> setup.complete()));
         setup.await();
         notificationReceived.await();
 

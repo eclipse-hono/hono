@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -20,17 +20,15 @@ import org.eclipse.hono.util.TenantResult;
 import io.opentracing.Span;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
-import io.vertx.core.Verticle;
 import io.vertx.core.json.JsonObject;
 
 /**
  * A service for keeping record of tenant information.
  * This interface only covers mandatory operations.
- * See {@link CompleteTenantService} for complete API.
  *
  * @see <a href="https://www.eclipse.org/hono/docs/latest/api/tenant-api/">Tenant API</a>
  */
-public interface TenantService extends Verticle {
+public interface TenantService {
 
     /**
      * Gets tenant configuration information for a tenant identifier.
@@ -41,7 +39,7 @@ public interface TenantService extends Verticle {
      *             <ul>
      *             <li><em>200 OK</em> if a tenant with the given ID is registered.
      *             The <em>payload</em> will contain the tenant's configuration information.</li>
-     *             <li><em>404 Not Found</em> if no tenant with the given identifier exists.</li>
+     *             <li><em>404 Not Found</em> if no tenant with the given identifier and version exists.</li>
      *             </ul>
      * @throws NullPointerException if any of the parameters are {@code null}.
      * @see <a href="https://www.eclipse.org/hono/docs/latest/api/tenant-api/#get-tenant-information">

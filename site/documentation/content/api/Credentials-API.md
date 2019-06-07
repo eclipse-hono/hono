@@ -110,6 +110,8 @@ The table below provides an overview of the standard members defined for the JSO
 
 For each set of credentials the combination of *auth-id* and *type* MUST be unique within a tenant.
 
+The device registry may choose to not return information which is not suitable for authentication a device. This includes for example the `enabled` property. If set to `false`, then the device registry may choose to treat this request as if no credentials would be found. For secrets for example, this could mean that the device registry does not return secrets which are not valid at the current point in time.
+
 **NB** Care needs to be taken that the value for the *authentication identifier* is compliant with the authentication mechanism(s) it is supposed to be used with. For example, when using standard HTTP Basic authentication, the *username* part of the Basic Authorization header value (which corresponds to the *auth-id*) MUST not contain any *colon* (`:`) characters, because the colon character is used as the separator between username and password. Similar constraints may exist for other authentication mechanisms, so the *authentication identifier* needs to be chosen with the anticipated mechanism(s) being used in mind. Otherwise, devices may fail to authenticate with protocol adapters, even if the credentials provided by the device match the credentials registered for the device. In general, using only characters from the `[a-zA-Z0-9_-]` range for the authentication identifier should be compatible with most mechanisms.
 
 ### Secrets Format

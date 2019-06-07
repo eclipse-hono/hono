@@ -94,7 +94,7 @@ public final class CredentialsObject extends JsonBackedValueObject {
      */
     @JsonIgnore
     public String getDeviceId() {
-        return (String) getProperty(CredentialsConstants.FIELD_PAYLOAD_DEVICE_ID);
+        return getProperty(CredentialsConstants.FIELD_PAYLOAD_DEVICE_ID, String.class);
     }
 
     /**
@@ -116,7 +116,7 @@ public final class CredentialsObject extends JsonBackedValueObject {
      */
     @JsonIgnore
     public String getType() {
-        return (String) getProperty(CredentialsConstants.FIELD_TYPE);
+        return getProperty(CredentialsConstants.FIELD_TYPE, String.class);
     }
 
     /**
@@ -138,7 +138,7 @@ public final class CredentialsObject extends JsonBackedValueObject {
      */
     @JsonIgnore
     public String getAuthId() {
-        return (String) getProperty(CredentialsConstants.FIELD_AUTH_ID);
+        return getProperty(CredentialsConstants.FIELD_AUTH_ID, String.class);
     }
 
     /**
@@ -162,7 +162,7 @@ public final class CredentialsObject extends JsonBackedValueObject {
      */
     @JsonIgnore
     public boolean isEnabled() {
-        return (Boolean) getProperty(CredentialsConstants.FIELD_ENABLED, true);
+        return getProperty(CredentialsConstants.FIELD_ENABLED, Boolean.class, true);
     }
 
     /**
@@ -188,7 +188,7 @@ public final class CredentialsObject extends JsonBackedValueObject {
      */
     @JsonIgnore
     public JsonArray getSecrets() {
-        return Optional.ofNullable((JsonArray) getProperty(CredentialsConstants.FIELD_SECRETS))
+        return Optional.ofNullable(getProperty(CredentialsConstants.FIELD_SECRETS, JsonArray.class))
                 .orElseGet(() -> {
                     final JsonArray result = new JsonArray();
                     setProperty(CredentialsConstants.FIELD_SECRETS, result);
@@ -455,7 +455,7 @@ public final class CredentialsObject extends JsonBackedValueObject {
         } else {
             try {
                 return DateTimeFormatter.ISO_OFFSET_DATE_TIME.parse(timestamp, OffsetDateTime::from).toInstant();
-            } catch (DateTimeParseException e) {
+            } catch (final DateTimeParseException e) {
                 return null;
             }
         }

@@ -29,6 +29,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
+import java.util.OptionalInt;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -36,6 +37,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ClientConfigProperties;
+import org.eclipse.hono.service.credentials.AbstractCredentialsServiceTest;
+import org.eclipse.hono.service.management.credentials.PasswordCredential;
 import org.eclipse.hono.util.BufferResult;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.TimeUntilDisconnectNotification;
@@ -43,7 +46,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
@@ -535,10 +537,7 @@ public final class IntegrationTestSupport {
         devicesToDelete.forEach((tenantId, devices) -> {
             devices.forEach(deviceId -> {
                 final Async deletion = ctx.async();
-                CompositeFuture.join(
-                        registry.deregisterDevice(tenantId, deviceId),
-                        registry.removeAllCredentials(tenantId, deviceId))
-                    .setHandler(ok -> deletion.complete());
+                registry.deregisterDevice(tenantId, deviceId).setHandler(ok -> deletion.complete());
                 deletion.await(1000);
             });
         });
@@ -564,10 +563,7 @@ public final class IntegrationTestSupport {
             final Checkpoint deviceDeletion = ctx.checkpoint(devicesToDelete.size());
             devicesToDelete.forEach((tenantId, devices) -> {
                 devices.forEach(deviceId -> {
-                    CompositeFuture.join(
-                            registry.deregisterDevice(tenantId, deviceId),
-                            registry.removeAllCredentials(tenantId, deviceId))
-                        .setHandler(ok -> deviceDeletion.flag());
+                    registry.deregisterDevice(tenantId, deviceId).setHandler(ok -> deviceDeletion.flag());
                 });
             });
             devicesToDelete.clear();
@@ -911,7 +907,7 @@ public final class IntegrationTestSupport {
                 digest.update(salt);
             }
             return Base64.getEncoder().encodeToString(digest.digest(clearTextPassword.getBytes(StandardCharsets.UTF_8)));
-        } catch (NoSuchAlgorithmException e) {
+        } catch (final NoSuchAlgorithmException e) {
             return "hash function not supported";
         }
     }
@@ -962,6 +958,18 @@ public final class IntegrationTestSupport {
         final Future<Buffer> result = Future.future();
         vertx.fileSystem().readFile(path, result);
         return result;
+    }
+
+    /**
+     * Create a new password credential, suitable for use in the integration test environment.
+     * 
+     * @param authId The auth ID to use.
+     * @param password The password to use.
+     * @return The new instance.
+     */
+    public static PasswordCredential createPasswordCredential(final String authId, final String password) {
+        return AbstractCredentialsServiceTest.createPasswordCredential(authId, password,
+                OptionalInt.of(IntegrationTestSupport.MAX_BCRYPT_ITERATIONS));
     }
 
 }

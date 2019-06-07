@@ -67,6 +67,10 @@ public abstract class RequestResponseApiConstants {
      * The name of the field that contains the payload of a request or response message.
      */
     public static final String FIELD_PAYLOAD   = "payload";
+    /**
+     * The name of the field that contains the identifier of the object.
+     */
+    public static final String FIELD_OBJECT_ID = "id";
 
     /**
      * Empty default constructor.

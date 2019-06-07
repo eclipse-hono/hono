@@ -26,13 +26,15 @@
     <appender-ref ref="STDOUT" />
   </root>
 
-  <logger name="org.eclipse.hono" level="INFO"/>
+  <logger name="org.eclipse.hono" level="DEBUG"/>
+  <!-- 
   <logger name="org.eclipse.hono.service" level="INFO"/>
   <logger name="org.eclipse.hono.service.amqp" level="INFO"/>
   <logger name="org.eclipse.hono.service.auth" level="INFO"/>
   <logger name="org.eclipse.hono.deviceregistry" level="INFO"/>
   <logger name="org.eclipse.hono.service.auth.delegating" level="INFO"/>
   <logger name="org.eclipse.hono.service.credentials" level="INFO"/>
+   -->
 
   <logger name="io.vertx.proton.impl" level="INFO"/>
   <logger name="io.vertx.proton.sasl.impl" level="INFO"/>

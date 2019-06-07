@@ -158,7 +158,7 @@ public abstract class EventBusService<C> extends ConfigurationSupportingVerticle
         final SpanContext spanContext = TracingHelper.extractSpanContext(tracer, msg.headers());
         request.setSpanContext(spanContext);
         processRequest(request).recover(t -> {
-            log.debug("cannot process request [operation: {}]: {}", request.getOperation(), t.getMessage());
+            log.debug("cannot process request [operation: {}]: {}", request.getOperation(), t.getMessage(), t);
             final int status = ServiceInvocationException.extractStatusCode(t);
             return Future.succeededFuture(request.getResponse(status));
         }).map(response -> {

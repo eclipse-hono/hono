@@ -50,7 +50,7 @@ public class CredentialsObjectTest {
         assertThat(unmarshaled.getAuthId(), is("my-device"));
         assertThat(unmarshaled.getType(), is(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD));
         assertFalse(unmarshaled.isEnabled());
-        assertThat((String) unmarshaled.getProperty("client-id"), is("MQTT-client-4523653"));
+        assertThat(unmarshaled.getProperty("client-id", String.class), is("MQTT-client-4523653"));
     }
 
     /**

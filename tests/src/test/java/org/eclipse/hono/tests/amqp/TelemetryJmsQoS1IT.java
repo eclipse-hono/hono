@@ -27,10 +27,10 @@ import javax.jms.MessageConsumer;
 import javax.jms.MessageProducer;
 import javax.naming.NamingException;
 
+import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.tests.jms.JmsBasedHonoConnection;
 import org.eclipse.hono.util.TelemetryConstants;
-import org.eclipse.hono.util.TenantObject;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -101,7 +101,7 @@ public class TelemetryJmsQoS1IT {
         if (downstreamConsumer != null) {
             try {
                 downstreamConsumer.close();
-            } catch (JMSException e) {
+            } catch (final JMSException e) {
                 // ignore
             }
         }
@@ -141,10 +141,10 @@ public class TelemetryJmsQoS1IT {
         final String deviceId = helper.getRandomDeviceId(tenantId);
         final String username = IntegrationTestSupport.getUsername(deviceId, tenantId);
         final String pwd = "secret";
-        final TenantObject tenant = TenantObject.from(tenantId, true);
+        final Tenant tenant = new Tenant();
 
         final VertxTestContext setup = new VertxTestContext();
-        helper.registry.addDeviceForTenant(tenant, deviceId, pwd)
+        helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, pwd)
         .compose(ok -> getAmqpAdapterConnection(username, pwd))
         .setHandler(setup.succeeding(connection -> {
             amqpAdapter = connection;
