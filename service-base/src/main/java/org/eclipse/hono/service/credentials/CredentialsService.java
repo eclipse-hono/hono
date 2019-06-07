@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -16,9 +16,9 @@ package org.eclipse.hono.service.credentials;
 import org.eclipse.hono.util.CredentialsResult;
 
 import io.opentracing.Span;
+import io.opentracing.noop.NoopSpan;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
-import io.vertx.core.Verticle;
 import io.vertx.core.json.JsonObject;
 
 /**
@@ -27,7 +27,7 @@ import io.vertx.core.json.JsonObject;
  *
  * @see <a href="https://www.eclipse.org/hono/docs/latest/api/credentials-api/">Credentials API</a>
  */
-public interface CredentialsService extends Verticle {
+public interface CredentialsService {
 
     /**
      * Gets credentials for a device.
@@ -46,7 +46,10 @@ public interface CredentialsService extends Verticle {
      * @see <a href="https://www.eclipse.org/hono/docs/latest/api/credentials-api/#get-credentials">
      *      Credentials API - Get Credentials</a>
      */
-    void get(String tenantId, String type, String authId, Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler);
+    default void get(final String tenantId, final String type, final String authId,
+            final Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
+        get(tenantId, type, authId, NoopSpan.INSTANCE, resultHandler);
+    }
 
     /**
      * Gets credentials for a device.
@@ -70,10 +73,8 @@ public interface CredentialsService extends Verticle {
      * @see <a href="https://www.eclipse.org/hono/docs/latest/api/credentials-api/#get-credentials">
      *      Credentials API - Get Credentials</a>
      */
-    default void get(final String tenantId, final String type, final String authId, final Span span,
-            final Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
-        get(tenantId, type, authId, resultHandler);
-    }
+    void get(String tenantId, String type, String authId, Span span,
+            Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler);
 
     /**
      * Gets credentials for a device, providing additional client connection context.
@@ -93,7 +94,10 @@ public interface CredentialsService extends Verticle {
      * @see <a href="https://www.eclipse.org/hono/docs/latest/api/credentials-api/#get-credentials">
      *      Credentials API - Get Credentials</a>
      */
-    void get(String tenantId, String type, String authId, JsonObject clientContext, Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler);
+    default void get(final String tenantId, final String type, final String authId, final JsonObject clientContext,
+            final Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
+        get(tenantId, type, authId, clientContext, NoopSpan.INSTANCE, resultHandler);
+    }
 
     /**
      * Gets credentials for a device, providing additional client connection context.
@@ -118,9 +122,7 @@ public interface CredentialsService extends Verticle {
      * @see <a href="https://www.eclipse.org/hono/docs/latest/api/credentials-api/#get-credentials">
      *      Credentials API - Get Credentials</a>
      */
-    default void get(final String tenantId, final String type, final String authId, final JsonObject clientContext,
-            final Span span,
-            final Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
-        get(tenantId, type, authId, clientContext, resultHandler);
-    }
+    void get(String tenantId, String type, String authId, JsonObject clientContext, Span span,
+            Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler);
+
 }

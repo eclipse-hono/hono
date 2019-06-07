@@ -52,6 +52,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
     <amqp.java.options></amqp.java.options>
     <http.java.options></http.java.options>
     <mqtt.java.options></mqtt.java.options>
+    <deviceregistry.image>hono-service-device-registry</deviceregistry.image>
   </properties>
 
   <dependencies>
@@ -80,6 +81,14 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
     <dependency>
       <groupId>org.eclipse.hono</groupId>
       <artifactId>hono-core</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.hono</groupId>
+      <artifactId>hono-service-base</artifactId>
+      <version>${project.version}</version>
+      <classifier>tests</classifier>
+      <type>test-jar</type>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -317,7 +326,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                   <name>${docker.image.org-name}/hono-service-device-registry-test</name>
                   <alias>device-registry</alias>
                   <build>
-                    <from>${docker.image.org-name}/hono-service-device-registry:${project.version}</from>
+                    <from>${docker.image.org-name}/${deviceregistry.image}:${project.version}</from>
                     <assembly>
                       <mode>dir</mode>
                       <basedir>/</basedir>
@@ -955,9 +964,13 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                 <trust-store.path>${project.build.directory}/certs/trusted-certs.pem</trust-store.path>
                 <test.env>${test.env}</test.env>
                 <max.bcrypt.iterations>${max.bcrypt.iterations}</max.bcrypt.iterations>
+                <vertx.logger-delegate-factory-class-name>io.vertx.core.logging.SLF4JLogDelegateFactory</vertx.logger-delegate-factory-class-name>
                 <!-- javax.net.debug>ssl:handshake</javax.net.debug-->
               </systemProperties>
               <failIfNoSpecifiedTests>false</failIfNoSpecifiedTests>
+              <excludes>
+                <exclude>org.eclipse.hono.tests.registry.legacy/**IT.java</exclude>
+              </excludes>
             </configuration>
             <executions>
               <execution>
@@ -967,6 +980,32 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                 </goals>
               </execution>
             </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+
+    <!--
+    Test profile for the legacy device registry
+    -->
+    <profile>
+      <id>tests-legacy-device-registry</id>
+      <properties>
+        <deviceregistry.image>hono-service-device-registry-legacy</deviceregistry.image>
+      </properties>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-failsafe-plugin</artifactId>
+            <configuration>
+              <includes>
+                <include>org.eclipse.hono.tests.registry.legacy/**IT.java</include>
+              </includes>
+              <excludes>
+                <exclude>org.eclipse.hono.tests.registry/**IT.java</exclude>
+              </excludes>
+            </configuration>
           </plugin>
         </plugins>
       </build>

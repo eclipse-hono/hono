@@ -31,6 +31,7 @@ import java.net.HttpURLConnection;
  * Abstract class used as a base for verifying behavior of {@link CompleteCredentialsService} in device registry implementations.
  *
  */
+@Deprecated
 public abstract class AbstractCompleteCredentialsServiceTest {
 
     /**
@@ -215,7 +216,7 @@ public abstract class AbstractCompleteCredentialsServiceTest {
      * @return A succeeded future if the credentials exist.
      */
     protected static Future<Void> assertRegistered(
-            final CompleteCredentialsService svc,
+            final CredentialsService svc,
             final String tenant,
             final String authId,
             final String type) {
@@ -233,7 +234,7 @@ public abstract class AbstractCompleteCredentialsServiceTest {
      * @return A succeeded future if the credentials do not exist.
      */
     protected static Future<Void> assertNotRegistered(
-            final CompleteCredentialsService svc,
+            final CredentialsService svc,
             final String tenant,
             final String authId,
             final String type) {
@@ -242,7 +243,7 @@ public abstract class AbstractCompleteCredentialsServiceTest {
     }
 
     private static Future<Void> assertGet(
-            final CompleteCredentialsService svc,
+            final CredentialsService svc,
             final String tenant,
             final String authId,
             final String type,

@@ -113,8 +113,8 @@ public class TenantHttpIT {
     @Test
     public void testAddTenantSucceeds(final TestContext context)  {
 
-        final JsonObject requestBodyAddTenant = buildTenantPayload(tenantId);
-        registry.addTenant(requestBodyAddTenant).setHandler(context.asyncAssertSuccess());
+        final JsonObject requestBodyAddTenant = buildTenantPayload();
+        registry.addTenant(tenantId, requestBodyAddTenant).setHandler(context.asyncAssertSuccess());
     }
 
     /**
@@ -126,11 +126,11 @@ public class TenantHttpIT {
     @Test
     public void testAddTenantRejectsDuplicateRegistration(final TestContext context)  {
 
-        final JsonObject payload = buildTenantPayload(tenantId);
+        final JsonObject payload = buildTenantPayload();
 
-        registry.addTenant(payload).compose(ar -> {
+        registry.addTenant(tenantId, payload).compose(ar -> {
             // now try to add the tenant again
-            return registry.addTenant(payload, HttpURLConnection.HTTP_CONFLICT);
+            return registry.addTenant(tenantId, payload, HttpURLConnection.HTTP_CONFLICT);
         }).setHandler(context.asyncAssertSuccess());
     }
 
@@ -143,8 +143,8 @@ public class TenantHttpIT {
     @Test
     public void testAddTenantFailsForWrongContentType(final TestContext context)  {
 
-        registry.addTenant(
-                buildTenantPayload(tenantId),
+        registry.addTenant(tenantId,
+                buildTenantPayload(),
                 "application/x-www-form-urlencoded",
                 HttpURLConnection.HTTP_BAD_REQUEST).setHandler(context.asyncAssertSuccess());
     }
@@ -157,7 +157,7 @@ public class TenantHttpIT {
     @Test
     public void testAddTenantFailsForEmptyBody(final TestContext context) {
 
-        registry.addTenant(null, "application/json", HttpURLConnection.HTTP_BAD_REQUEST).setHandler(context.asyncAssertSuccess());
+        registry.addTenant(tenantId, null, "application/json", HttpURLConnection.HTTP_BAD_REQUEST).setHandler(context.asyncAssertSuccess());
     }
 
     /**
@@ -168,11 +168,11 @@ public class TenantHttpIT {
     @Test
     public void testUpdateTenantSucceeds(final TestContext context) {
 
-        final JsonObject orig = buildTenantPayload(tenantId);
+        final JsonObject orig = buildTenantPayload();
         final JsonObject altered = orig.copy();
         altered.put(TenantConstants.FIELD_ENABLED, Boolean.FALSE);
 
-        registry.addTenant(orig)
+        registry.addTenant(tenantId, orig)
             .compose(ar -> registry.updateTenant(tenantId, altered, HttpURLConnection.HTTP_NO_CONTENT))
             .compose(ur -> registry.getTenant(tenantId))
             .compose(b -> {
@@ -190,7 +190,7 @@ public class TenantHttpIT {
     @Test
     public void testUpdateTenantFailsForNonExistingTenant(final TestContext context) {
 
-        final JsonObject altered = buildTenantPayload(tenantId);
+        final JsonObject altered = buildTenantPayload();
 
         registry.updateTenant(tenantId, altered, HttpURLConnection.HTTP_NOT_FOUND)
             .setHandler(context.asyncAssertSuccess());
@@ -205,8 +205,8 @@ public class TenantHttpIT {
     @Test
     public void testRemoveTenantSucceeds(final TestContext context) {
 
-        final JsonObject tenantPayload = buildTenantPayload(tenantId);
-        registry.addTenant(tenantPayload)
+        final JsonObject tenantPayload = buildTenantPayload();
+        registry.addTenant(tenantId, tenantPayload)
             .compose(ar -> registry.removeTenant(tenantId, HttpURLConnection.HTTP_NO_CONTENT))
             .setHandler(context.asyncAssertSuccess());
     }
@@ -231,9 +231,9 @@ public class TenantHttpIT {
     @Test
     public void testGetAddedTenant(final TestContext context)  {
 
-        final JsonObject requestBody = buildTenantPayload(tenantId);
+        final JsonObject requestBody = buildTenantPayload();
 
-        registry.addTenant(requestBody)
+        registry.addTenant(tenantId, requestBody)
             .compose(ar -> registry.getTenant(tenantId))
             .compose(b -> {
                 context.assertTrue(IntegrationTestSupport.testJsonObjectToBeContained(b.toJsonObject(), requestBody));
@@ -252,9 +252,9 @@ public class TenantHttpIT {
         final JsonObject trustConfig = new JsonObject()
                 .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, "test-dn")
                 .put(TenantConstants.FIELD_PAYLOAD_CERT, "NotBased64Encoded");
-        final JsonObject requestBody = buildTenantPayload(tenantId)
+        final JsonObject requestBody = buildTenantPayload()
                 .put(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, trustConfig);
-        registry.addTenant(requestBody, "application/json", HttpURLConnection.HTTP_BAD_REQUEST).setHandler(context.asyncAssertSuccess());
+        registry.addTenant(tenantId, requestBody, "application/json", HttpURLConnection.HTTP_BAD_REQUEST).setHandler(context.asyncAssertSuccess());
     }
 
     /**
@@ -262,10 +262,9 @@ public class TenantHttpIT {
      * <p>
      * The tenant object created contains configurations for the http and the mqtt adapter.
      *
-     * @param tenantId The tenant identifier.
      * @return The tenant object.
      */
-    private static JsonObject buildTenantPayload(final String tenantId) {
+    private static JsonObject buildTenantPayload() {
         final JsonArray adapterConfigs = new JsonArray();
         adapterConfigs.add(TenantObject.newAdapterConfig(Constants.PROTOCOL_ADAPTER_TYPE_HTTP, true)
                 .put(TenantConstants.FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED, true));
@@ -273,10 +272,9 @@ public class TenantHttpIT {
                 .put(TenantConstants.FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED, true));
         adapterConfigs.add(TenantObject.newAdapterConfig("custom", false)
                 .put("options", new JsonObject().put("maxInstances", 4)));
-        final TenantObject tenantPayload = TenantObject.from(tenantId, true)
-                .setProperty("plan", "unlimited")
+        final TenantObject tenantPayload = TenantObject.from(true)
+                .setProperty("ext", new JsonObject().put("plan", "unlimited"))
                 .setAdapterConfigurations(adapterConfigs);
         return JsonObject.mapFrom(tenantPayload);
     }
-
 }

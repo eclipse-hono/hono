@@ -89,7 +89,7 @@ public class TenantObjectTest {
 
         final TenantObject obj = mapper.readValue(jsonString, TenantObject.class);
         assertNotNull(obj);
-        assertThat(obj.getProperty("plan"), is("gold"));
+        assertThat(obj.getProperty("plan", String.class), is("gold"));
 
         final JsonObject customAdapterConfig = obj.getAdapterConfiguration("custom");
         assertNotNull(customAdapterConfig);

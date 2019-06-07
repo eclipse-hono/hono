@@ -19,10 +19,10 @@ import java.util.function.Consumer;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.MessageConsumer;
+import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
-import org.eclipse.hono.util.TenantObject;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -30,7 +30,6 @@ import io.netty.handler.codec.mqtt.MqttQoS;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.buffer.Buffer;
-import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
@@ -101,11 +100,11 @@ public class EventMqttIT extends MqttPublishTestBase {
         // GIVEN a tenant for which all messages have a TTL of 500ms
         final String tenantId = helper.getRandomTenantId();
         final String deviceId = helper.getRandomDeviceId(tenantId);
-        final TenantObject tenant = TenantObject.from(tenantId, true);
-        tenant.setDefaults(new JsonObject().put(MessageHelper.SYS_HEADER_PROPERTY_TTL, 500));
+        final Tenant tenant = new Tenant();
+        tenant.getDefaults().put(MessageHelper.SYS_HEADER_PROPERTY_TTL, 500);
         final Async setup = ctx.async();
 
-        helper.registry.addDeviceForTenant(tenant, deviceId, "secret")
+        helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, "secret")
         .setHandler(ctx.asyncAssertSuccess(ok -> setup.complete()));
         setup.await();
 

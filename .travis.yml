@@ -7,8 +7,12 @@ jdk:
 
 install: true # no need to call 'mvn install'
 
-script:
-  - mvn verify -B -e -Dmsg.count=400 -Dtest.env=true -DcreateJavadoc=true -Ddocker.host=unix:///var/run/docker.sock -Dservice.startup.timeout=600000 -Dmax.event-loop.execute-time=20000 -Pbuild-docker-image,run-tests -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn
+jobs:
+  include:
+    - script: mvn verify -B -e -Dmsg.count=400 -Dtest.env=true -DcreateJavadoc=true -Ddocker.host=unix:///var/run/docker.sock -Dservice.startup.timeout=600000 -Dmax.event-loop.execute-time=20000 -Pbuild-docker-image,run-tests -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn
+      name: Standard device registry
+    - script: mvn verify -B -e -Dmsg.count=400 -Dtest.env=true -DcreateJavadoc=true -Ddocker.host=unix:///var/run/docker.sock -Dservice.startup.timeout=600000 -Dmax.event-loop.execute-time=20000 -Pbuild-docker-image,run-tests,tests-legacy-device-registry -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn
+      name: Legacy device registry
 
 env:
   global:

@@ -23,6 +23,7 @@ import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.amqp.RequestResponseEndpoint;
 import org.eclipse.hono.util.EventBusMessage;
 import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.util.RegistryManagementConstants;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.TenantConstants;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -60,7 +61,7 @@ public class TenantAmqpEndpoint extends RequestResponseEndpoint<ServiceConfigPro
      */
     @Override
     protected final String getEventBusServiceAddress() {
-        return TenantConstants.EVENT_BUS_ADDRESS_TENANT_IN;
+        return RegistryManagementConstants.EVENT_BUS_ADDRESS_TENANT_IN;
     }
 
     /**

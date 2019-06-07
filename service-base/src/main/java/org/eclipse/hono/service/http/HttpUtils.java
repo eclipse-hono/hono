@@ -23,6 +23,7 @@ import java.util.Optional;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpServerResponse;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.RoutingContext;
 
@@ -308,6 +309,24 @@ public final class HttpUtils {
     }
 
     /**
+     * Writes a JSON array to an HTTP response body.
+     * <p>
+     * This method also sets the <em>content-length</em> header of the HTTP response
+     * and sets the <em>content-type</em> header to {@link #CONTENT_TYPE_JSON_UTF8}
+     * but does not end the response.
+     *
+     * @param response The HTTP response.
+     * @param body The JSON array to serialize to the response body (may be {@code null}).
+     * @throws NullPointerException if response is {@code null}.
+     */
+    public static void setResponseBody(final HttpServerResponse response, final JsonArray body) {
+        Objects.requireNonNull(response);
+        if (body != null) {
+            setResponseBody(response, body.toBuffer(), CONTENT_TYPE_JSON_UTF8);
+        }
+    }
+
+    /**
      * Writes a JSON object to an HTTP response body.
      * <p>
      * This method also sets the <em>content-length</em> header of the HTTP response
@@ -367,6 +386,18 @@ public final class HttpUtils {
             response.putHeader(HttpHeaders.CONTENT_LENGTH, String.valueOf(buffer.length()));
             response.write(buffer);
         }
+    }
+
+    /**
+     * Test if an HTTP status code is considered an error.
+     * <p>
+     * The test will consider everything in the range of 400 (inclusive) to 600 (exclusive) an error.
+     * 
+     * @param status the status to test
+     * @return {@code true} if the status is an "error", {@code false} otherwise.
+     */
+    public static boolean isError(final int status) {
+        return status >= HttpURLConnection.HTTP_BAD_REQUEST && status < 600;
     }
 
 }

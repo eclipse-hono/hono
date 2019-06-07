@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -21,7 +21,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.net.HttpURLConnection;
-
 import org.eclipse.hono.auth.HonoPasswordEncoder;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ServiceConfigProperties;
@@ -47,6 +46,7 @@ import io.vertx.junit5.VertxTestContext;
  * Tests verifying behavior of {@link CompleteBaseCredentialsService}.
  */
 @ExtendWith(VertxExtension.class)
+@Deprecated
 public class CompleteBaseCredentialsServiceTest {
 
     private static final String TEST_TENANT = "dummy";
@@ -346,17 +346,17 @@ public class CompleteBaseCredentialsServiceTest {
     private static CompleteBaseCredentialsService<ServiceConfigProperties> createCompleteBaseCredentialsService(
             final HonoPasswordEncoder pwdEncoder) {
 
-        return new CompleteBaseCredentialsService<ServiceConfigProperties>(pwdEncoder) {
+        return new CompleteBaseCredentialsService<>(pwdEncoder) {
 
             @Override
             public void add(final String tenantId, final JsonObject credentialsObject,
-                            final Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
+                    final Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
                 resultHandler.handle(Future.succeededFuture(CredentialsResult.from(HttpURLConnection.HTTP_CREATED)));
             }
 
             @Override
             public void update(final String tenantId, final JsonObject credentialsObject,
-                            final Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
+                    final Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
                 resultHandler.handle(Future.succeededFuture(CredentialsResult.from(HttpURLConnection.HTTP_NO_CONTENT)));
             }
 
@@ -373,6 +373,18 @@ public class CompleteBaseCredentialsServiceTest {
             @Override
             protected int getMaxBcryptIterations() {
                 return MAX_ITERATIONS;
+            }
+
+            @Override
+            public void get(final String tenantId, final String type, final String authId, final Span span,
+                    final Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
+                handleUnimplementedOperation(resultHandler);
+            }
+
+            @Override
+            public void get(final String tenantId, final String type, final String authId, final JsonObject clientContext, final Span span,
+                    final Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
+                handleUnimplementedOperation(resultHandler);
             }
         };
     }

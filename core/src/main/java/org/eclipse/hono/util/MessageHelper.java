@@ -100,6 +100,10 @@ public final class MessageHelper {
      * reported the data belongs to.
      */
     public static final String APP_PROPERTY_TENANT_ID = "tenant_id";
+    /**
+     * The name of the AMQP 1.0 message application property containing the resource version expected by the client.
+     */
+    public static final String APP_PROPERTY_RESOURCE_VERSION = "resource_version";
 
     /**
      * The AMQP 1.0 <em>delivery-count</em> message header property.

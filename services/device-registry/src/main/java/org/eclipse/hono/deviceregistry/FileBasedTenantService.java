@@ -13,21 +13,43 @@
 
 package org.eclipse.hono.deviceregistry;
 
-import java.net.HttpURLConnection;
+import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
+import static java.net.HttpURLConnection.HTTP_CONFLICT;
+import static java.net.HttpURLConnection.HTTP_CREATED;
+import static java.net.HttpURLConnection.HTTP_FORBIDDEN;
+import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
+import static java.net.HttpURLConnection.HTTP_NO_CONTENT;
+import static java.net.HttpURLConnection.HTTP_OK;
+import static java.net.HttpURLConnection.HTTP_PRECON_FAILED;
+
+import io.vertx.core.AbstractVerticle;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.UUID;
 
 import javax.security.auth.x500.X500Principal;
 
-import org.eclipse.hono.service.tenant.CompleteBaseTenantService;
+import org.eclipse.hono.service.management.Id;
+import org.eclipse.hono.service.management.OperationResult;
+import org.eclipse.hono.service.management.Result;
+import org.eclipse.hono.service.management.tenant.ResourceLimits;
+import org.eclipse.hono.service.management.tenant.Tenant;
+import org.eclipse.hono.service.management.tenant.TenantManagementService;
+import org.eclipse.hono.service.management.tenant.TrustedCertificateAuthority;
+import org.eclipse.hono.service.tenant.TenantService;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CacheDirective;
+import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantObject;
 import org.eclipse.hono.util.TenantResult;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.stereotype.Repository;
+import org.springframework.stereotype.Component;
 
 import io.opentracing.Span;
 import io.vertx.core.AsyncResult;
@@ -44,23 +66,30 @@ import io.vertx.core.json.JsonObject;
  * On startup this adapter loads all registered tenants from a file. On shutdown all tenants kept in memory are written
  * to the file.
  */
-@Repository
+@Component
+@Qualifier("serviceImpl")
 @ConditionalOnProperty(name = "hono.app.type", havingValue = "file", matchIfMissing = true)
-public final class FileBasedTenantService extends CompleteBaseTenantService<FileBasedTenantsConfigProperties> {
+public final class FileBasedTenantService extends AbstractVerticle implements TenantService, TenantManagementService {
+
+    private static final Logger log = LoggerFactory.getLogger(FileBasedTenantService.class);
 
     // <ID, tenant>
-    private final Map<String, TenantObject> tenants = new HashMap<>();
+    private final Map<String, Versioned<TenantObject>> tenants = new HashMap<>();
     private boolean running = false;
     private boolean dirty = false;
+    private FileBasedTenantsConfigProperties config;
 
     @Autowired
-    @Override
     public void setConfig(final FileBasedTenantsConfigProperties configuration) {
-        setSpecificConfig(configuration);
+        this.config = configuration;
+    }
+
+    protected FileBasedTenantsConfigProperties getConfig() {
+        return config;
     }
 
     @Override
-    protected void doStart(final Future<Void> startFuture) {
+    public void start(final Future<Void> startFuture) {
 
         if (running) {
             startFuture.complete();
@@ -152,16 +181,16 @@ public final class FileBasedTenantService extends CompleteBaseTenantService<File
     private void addTenant(final JsonObject tenant) {
 
         try {
-            final TenantObject tenantObject = tenant.mapTo(TenantObject.class);
-            log.debug("loading tenant [{}]", tenantObject.getTenantId());
-            tenants.put(tenantObject.getTenantId(), tenantObject);
+            final Versioned<TenantObject> tenantObject = new Versioned<>(tenant.mapTo(TenantObject.class));
+            log.debug("loading tenant [{}]", tenantObject.getValue().getTenantId());
+            tenants.put(tenantObject.getValue().getTenantId(), tenantObject);
         } catch (final IllegalArgumentException e) {
             log.warn("cannot deserialize tenant", e);
         }
     }
 
     @Override
-    protected void doStop(final Future<Void> stopFuture) {
+    public void stop(final Future<Void> stopFuture) {
 
         if (running) {
             saveToFile().compose(s -> {
@@ -182,7 +211,7 @@ public final class FileBasedTenantService extends CompleteBaseTenantService<File
 
                 final JsonArray tenantsJson = new JsonArray();
                 tenants.values().stream().forEach(tenant -> {
-                    tenantsJson.add(JsonObject.mapFrom(tenant));
+                    tenantsJson.add(JsonObject.mapFrom(tenant.getValue()));
                 });
 
                 final Future<Void> writeHandler = Future.future();
@@ -205,26 +234,52 @@ public final class FileBasedTenantService extends CompleteBaseTenantService<File
     }
 
     @Override
-    public void get(final String tenantId, final Span span, final Handler<AsyncResult<TenantResult<JsonObject>>> resultHandler) {
+    public void get(final String tenantId, final Handler<AsyncResult<TenantResult<JsonObject>>> resultHandler) {
+        resultHandler.handle(Future.succeededFuture(getTenantResult(tenantId, null)));
+    }
 
+    @Override
+    public void get(final X500Principal subjectDn, final Handler<AsyncResult<TenantResult<JsonObject>>> resultHandler) {
+
+        Objects.requireNonNull(subjectDn);
+        Objects.requireNonNull(resultHandler);
+
+        resultHandler.handle(Future.succeededFuture(getForCertificateAuthority(subjectDn, null)));
+    }
+
+    @Override
+    public void read(final String tenantId, final Span span, final Handler<AsyncResult<OperationResult<Tenant>>> resultHandler) {
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(resultHandler);
 
-        resultHandler.handle(Future.succeededFuture(getTenantResult(tenantId, span)));
+        resultHandler.handle(Future.succeededFuture(getTenantObjectResult(tenantId, span)));
+    }
+
+    OperationResult<Tenant> getTenantObjectResult(final String tenantId, final Span span){
+
+        final Versioned<TenantObject> tenant = tenants.get(tenantId);
+
+        if (tenant == null) {
+            TracingHelper.logError(span, "Tenant not found");
+            return OperationResult.empty(HTTP_NOT_FOUND);
+        } else {
+            return OperationResult.ok(
+                    HTTP_OK,
+                    convertTenantObject(tenant.getValue()),
+                    Optional.ofNullable(getCacheDirective()),
+                    Optional.ofNullable(tenant.getVersion()));
+        }
     }
 
     TenantResult<JsonObject> getTenantResult(final String tenantId, final Span span) {
 
-        final TenantObject tenant = tenants.get(tenantId);
+        final Versioned<TenantObject> tenant = tenants.get(tenantId);
 
         if (tenant == null) {
             TracingHelper.logError(span, "tenant not found");
-            return TenantResult.from(HttpURLConnection.HTTP_NOT_FOUND);
+            return TenantResult.from(HTTP_NOT_FOUND);
         } else {
-            return TenantResult.from(
-                    HttpURLConnection.HTTP_OK,
-                    JsonObject.mapFrom(tenant),
-                    getCacheDirective());
+            return TenantResult.from(HTTP_OK, JsonObject.mapFrom(tenant.getValue()), getCacheDirective());
         }
     }
 
@@ -242,107 +297,127 @@ public final class FileBasedTenantService extends CompleteBaseTenantService<File
 
         if (subjectDn == null) {
             TracingHelper.logError(span, "missing subject DN");
-            return TenantResult.from(HttpURLConnection.HTTP_BAD_REQUEST);
+            return TenantResult.from(HTTP_BAD_REQUEST);
         } else {
-            final TenantObject tenant = getByCa(subjectDn);
+            final Versioned<TenantObject> tenant = getByCa(subjectDn);
 
             if (tenant == null) {
                 TracingHelper.logError(span, "no tenant found for subject DN");
-                return TenantResult.from(HttpURLConnection.HTTP_NOT_FOUND);
+                return TenantResult.from(HTTP_NOT_FOUND);
             } else {
-                return TenantResult.from(HttpURLConnection.HTTP_OK, JsonObject.mapFrom(tenant), getCacheDirective());
+                return TenantResult.from(HTTP_OK, JsonObject.mapFrom(tenant.getValue()), getCacheDirective());
             }
         }
     }
 
     @Override
-    public void remove(final String tenantId, final Handler<AsyncResult<TenantResult<JsonObject>>> resultHandler) {
+    public void remove(final String tenantId, final Optional<String> resourceVersion, final Span span,
+            final Handler<AsyncResult<Result<Void>>> resultHandler) {
 
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(resultHandler);
-        resultHandler.handle(Future.succeededFuture(removeTenant(tenantId)));
+        Objects.requireNonNull(resourceVersion);
+
+        resultHandler.handle(Future.succeededFuture(removeTenant(tenantId, resourceVersion, span)));
     }
 
-    TenantResult<JsonObject> removeTenant(final String tenantId) {
+    Result<Void> removeTenant(final String tenantId, final Optional<String> resourceVersion, final Span span) {
 
         Objects.requireNonNull(tenantId);
 
         if (getConfig().isModificationEnabled()) {
-            if (tenants.remove(tenantId) != null) {
-                dirty = true;
-                return TenantResult.from(HttpURLConnection.HTTP_NO_CONTENT);
+            if (tenants.containsKey(tenantId)) {
+                final String actualVersion = tenants.get(tenantId).getVersion();
+                if (checkResourceVersion(resourceVersion, actualVersion)) {
+                    tenants.remove(tenantId);
+                    dirty = true;
+                    return Result.from(HTTP_NO_CONTENT);
+                } else {
+                    TracingHelper.logError(span, "Resource Version mismatch.");
+                    return Result.from(HTTP_PRECON_FAILED);
+                }
             } else {
-                return TenantResult.from(HttpURLConnection.HTTP_NOT_FOUND);
+                TracingHelper.logError(span, "Tenant not found.");
+                return Result.from(HTTP_NOT_FOUND);
             }
         } else {
-            return TenantResult.from(HttpURLConnection.HTTP_FORBIDDEN);
+            TracingHelper.logError(span, "Modification is disabled for Tenant Service");
+            return Result.from(HTTP_FORBIDDEN);
         }
     }
 
     @Override
-    public void add(final String tenantId, final JsonObject tenantSpec, final Handler<AsyncResult<TenantResult<JsonObject>>> resultHandler) {
+    public void add(final Optional<String> tenantId, final JsonObject tenantSpec,
+            final Span span, final Handler<AsyncResult<OperationResult<Id>>> resultHandler) {
 
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(tenantSpec);
         Objects.requireNonNull(resultHandler);
 
-        resultHandler.handle(Future.succeededFuture(add(tenantId, tenantSpec)));
+        final String tenantIdValue = tenantId.orElseGet(this::generateTenantId);
+        resultHandler.handle(Future.succeededFuture(add(tenantIdValue, tenantSpec, span)));
     }
 
     /**
      * Adds a tenant.
      *
-     * @param tenantId The identifier of the tenant.
+     * @param tenantId The identifier of the tenant. If null, an random ID will be generated.
      * @param tenantSpec The information to register for the tenant.
      * @return The outcome of the operation indicating success or failure.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
-    public TenantResult<JsonObject> add(final String tenantId, final JsonObject tenantSpec) {
+    private OperationResult<Id> add(final String tenantId, final JsonObject tenantSpec, final Span span) {
 
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(tenantSpec);
 
         if (tenants.containsKey(tenantId)) {
-            return TenantResult.from(HttpURLConnection.HTTP_CONFLICT);
-        } else {
-            try {
-                if (log.isTraceEnabled()) {
-                    log.trace("tenant to add: {}", tenantSpec.encodePrettily());
-                }
-                final TenantObject tenant = tenantSpec.mapTo(TenantObject.class);
-                tenant.setTenantId(tenantId);
-                final TenantObject conflictingTenant = getByCa(tenant.getTrustedCaSubjectDn());
-                if (conflictingTenant != null) {
-                    // we are trying to use the same CA as an already existing tenant
-                    return TenantResult.from(HttpURLConnection.HTTP_CONFLICT);
-                } else {
-                    tenants.put(tenantId, tenant);
-                    dirty = true;
-                    return TenantResult.from(HttpURLConnection.HTTP_CREATED);
-                }
-            } catch (final IllegalArgumentException e) {
-                log.debug("error parsing payload of add tenant request", e);
-                return TenantResult.from(HttpURLConnection.HTTP_BAD_REQUEST);
+            TracingHelper.logError(span, "Conflict : tenantId already exists.");
+            return OperationResult.empty(HTTP_CONFLICT);
+        }
+        try {
+            if (log.isTraceEnabled()) {
+                log.trace("tenant to add: {}", tenantSpec.encodePrettily());
             }
+            final Versioned<TenantObject> tenant = new Versioned<>(tenantSpec.mapTo(TenantObject.class));
+            tenant.getValue().setTenantId(tenantId);
+            final Versioned<TenantObject> conflictingTenant = getByCa(tenant.getValue().getTrustedCaSubjectDn());
+
+            if (conflictingTenant != null) {
+                // we are trying to use the same CA as an already existing tenant
+                TracingHelper.logError(span, "Conflict : CA already used by an existing tenant.");
+                return OperationResult.empty(HTTP_CONFLICT);
+            } else {
+                tenants.put(tenantId, tenant);
+                dirty = true;
+                return OperationResult.ok(HTTP_CREATED,
+                        Id.of(tenantId), Optional.empty(), Optional.of(tenant.getVersion()));
+            }
+        } catch (final IllegalArgumentException e) {
+            log.debug("error parsing payload of add tenant request", e);
+            TracingHelper.logError(span, e);
+            return OperationResult.empty(HTTP_BAD_REQUEST);
         }
     }
 
     /**
      * Updates the tenant information.
-     * 
+     *
      * @param tenantId The tenant to update
      * @param tenantSpec The new tenant information
+     * @param expectedResourceVersion The version identifier of the tenant information to update.
      * @param resultHandler The handler receiving the result of the operation.
-     * 
+     *
      * @throws NullPointerException if either of the input parameters is {@code null}.
      */
     @Override
-    public void update(final String tenantId, final JsonObject tenantSpec, final Handler<AsyncResult<TenantResult<JsonObject>>> resultHandler) {
+    public void update(final String tenantId, final JsonObject tenantSpec, final Optional<String> expectedResourceVersion,
+            final Span span, final Handler<AsyncResult<OperationResult<Void>>> resultHandler) {
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(tenantSpec);
         Objects.requireNonNull(resultHandler);
 
-        resultHandler.handle(Future.succeededFuture(update(tenantId, tenantSpec)));
+        resultHandler.handle(Future.succeededFuture(update(tenantId, tenantSpec, expectedResourceVersion, span)));
     }
 
     /**
@@ -350,10 +425,13 @@ public final class FileBasedTenantService extends CompleteBaseTenantService<File
      *
      * @param tenantId The identifier of the tenant.
      * @param tenantSpec The information to update the tenant with.
+     * @param expectedResourceVersion The version identifier of the tenant information to update.
+     * @param span The tracing span to use.
      * @return The outcome of the operation indicating success or failure.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
-    public TenantResult<JsonObject> update(final String tenantId, final JsonObject tenantSpec) {
+    public OperationResult<Void> update(final String tenantId, final JsonObject tenantSpec,
+            final Optional<String> expectedResourceVersion, final Span span) {
 
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(tenantSpec);
@@ -361,35 +439,79 @@ public final class FileBasedTenantService extends CompleteBaseTenantService<File
         if (getConfig().isModificationEnabled()) {
             if (tenants.containsKey(tenantId)) {
                 try {
-                    final TenantObject tenant = tenantSpec.mapTo(TenantObject.class);
-                    tenant.setTenantId(tenantId);
-                    final TenantObject conflictingTenant = getByCa(tenant.getTrustedCaSubjectDn());
-                    if (conflictingTenant != null && !tenantId.equals(conflictingTenant.getTenantId())) {
+                    final TenantObject newTenantData = tenantSpec.mapTo(TenantObject.class);
+                    newTenantData.setTenantId(tenantId);
+                    final Versioned<TenantObject> conflictingTenant = getByCa(newTenantData.getTrustedCaSubjectDn());
+                    if (conflictingTenant != null && !tenantId.equals(conflictingTenant.getValue().getTenantId())) {
                         // we are trying to use the same CA as another tenant
-                        return TenantResult.from(HttpURLConnection.HTTP_CONFLICT);
+                        TracingHelper.logError(span, "Conflict : CA already used by an existing tenant.");
+                        return OperationResult.empty(HTTP_CONFLICT);
                     } else {
-                        tenants.put(tenantId, tenant);
-                        dirty = true;
-                        return TenantResult.from(HttpURLConnection.HTTP_NO_CONTENT);
+                        final Versioned<TenantObject> updatedTenant = tenants.get(tenantId).update(expectedResourceVersion, () -> newTenantData);
+                        if ( updatedTenant != null ) {
+
+                            tenants.put(tenantId, updatedTenant);
+                            dirty = true;
+                            return OperationResult.ok(HTTP_NO_CONTENT,
+                                    null, Optional.empty(),
+                                    Optional.of(updatedTenant.getVersion()));
+                        } else {
+                            TracingHelper.logError(span, "Resource Version mismatch.");
+                            return OperationResult.empty(HTTP_PRECON_FAILED);
+                        }
                     }
                 } catch (final IllegalArgumentException e) {
-                    return TenantResult.from(HttpURLConnection.HTTP_BAD_REQUEST);
+                    TracingHelper.logError(span, e);
+                    return OperationResult.empty(HTTP_BAD_REQUEST);
                 }
             } else {
-                return TenantResult.from(HttpURLConnection.HTTP_NOT_FOUND);
+                TracingHelper.logError(span, "Tenant not found.");
+                return OperationResult.empty(HTTP_NOT_FOUND);
             }
         } else {
-            return TenantResult.from(HttpURLConnection.HTTP_FORBIDDEN);
+            TracingHelper.logError(span, "Modification disabled for Tenant Service.");
+            return OperationResult.empty(HTTP_FORBIDDEN);
         }
     }
 
-    private TenantObject getByCa(final X500Principal subjectDn) {
+    static Tenant convertTenantObject(final TenantObject tenantObject) {
+
+        if (tenantObject == null) {
+            return null;
+        }
+
+        final var tenant = new Tenant();
+
+        tenant.setEnabled(tenantObject.getProperty(TenantConstants.FIELD_ENABLED, Boolean.class));
+
+        Optional.ofNullable(tenantObject.getProperty("ext", JsonObject.class))
+                .map(JsonObject::getMap)
+                .ifPresent(tenant::setExtensions);
+
+        Optional.ofNullable(tenantObject.getAdapterConfigurations())
+                .map(JsonArray::getList)
+                .ifPresent(tenant::setAdapters);
+
+        Optional.ofNullable(tenantObject.getResourceLimits())
+                .filter(JsonObject.class::isInstance)
+                .map(JsonObject.class::cast)
+                .map(json -> json.mapTo(ResourceLimits.class))
+                .ifPresent(tenant::setLimits);
+
+        Optional.ofNullable(tenantObject.getProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, JsonObject.class))
+                .map(json -> json.mapTo(TrustedCertificateAuthority.class))
+                .ifPresent(tenant::setTrustedCertificateAuthority);
+
+        return tenant;
+    }
+
+    private Versioned<TenantObject> getByCa(final X500Principal subjectDn) {
 
         if (subjectDn == null) {
             return null;
         } else {
             return tenants.values().stream()
-                    .filter(t -> subjectDn.equals(t.getTrustedCaSubjectDn()))
+                    .filter(t -> subjectDn.equals(t.getValue().getTrustedCaSubjectDn()))
                     .findFirst().orElse(null);
         }
     }
@@ -414,5 +536,21 @@ public final class FileBasedTenantService extends CompleteBaseTenantService<File
     public String toString() {
         return String.format("%s[filename=%s]", FileBasedTenantService.class.getSimpleName(),
                 getConfig().getFilename());
+    }
+
+    /**
+     * Generate a random tenant ID.
+     */
+    private String generateTenantId() {
+        String id;
+        do {
+            id = UUID.randomUUID().toString();
+        } while (tenants.containsKey(id));
+        log.debug("Generated tenantID: {}", id);
+        return id;
+    }
+
+    private boolean checkResourceVersion(final Optional<String> expectedVersion, final String actualValue) {
+        return actualValue.equals(expectedVersion.orElse(actualValue));
     }
 }

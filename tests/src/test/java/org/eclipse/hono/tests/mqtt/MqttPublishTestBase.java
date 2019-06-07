@@ -27,9 +27,10 @@ import java.util.function.Consumer;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.ServerErrorException;
+import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tests.IntegrationTestSupport;
+import org.eclipse.hono.tests.Tenants;
 import org.eclipse.hono.util.MessageHelper;
-import org.eclipse.hono.util.TenantObject;
 import org.junit.Test;
 
 import io.vertx.core.AsyncResult;
@@ -61,7 +62,7 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
     private final String password = "secret";
 
     // <MQTT message ID, PUBACK handler>
-    private Map<Integer, Handler<Integer>> pendingMessages = new HashMap<>();
+    private final Map<Integer, Handler<Integer>> pendingMessages = new HashMap<>();
 
     /**
      * Sends a message on behalf of a device to the MQTT adapter.
@@ -152,10 +153,10 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
 
         final String tenantId = helper.getRandomTenantId();
         final String deviceId = helper.getRandomDeviceId(tenantId);
-        final TenantObject tenant = TenantObject.from(tenantId, true);
+        final Tenant tenant = new Tenant();
         final Async setup = ctx.async();
 
-        helper.registry.addDeviceForTenant(tenant, deviceId, password)
+        helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, password)
         .setHandler(ctx.asyncAssertSuccess(ok -> setup.complete()));
         setup.await();
         doTestUploadMessages(
@@ -178,10 +179,10 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
 
         final String tenantId = helper.getRandomTenantId();
         final String deviceId = helper.getRandomDeviceId(tenantId);
-        final TenantObject tenant = TenantObject.from(tenantId, true);
+        final Tenant tenant = new Tenant();
         final Async setup = ctx.async();
 
-        helper.registry.addDeviceForTenant(tenant, deviceId, password)
+        helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, password)
         .setHandler(ctx.asyncAssertSuccess(ok -> setup.complete()));
         setup.await();
         doTestUploadMessages(
@@ -193,8 +194,8 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
     }
 
     /**
-     * Verifies that a number of messages published by a device authenticating with a
-     * client certificate can be successfully consumed via the AMQP Messaging Network.
+     * Verifies that a number of messages published by a device authenticating with a client certificate can be
+     * successfully consumed via the AMQP Messaging Network.
      * 
      * @param ctx The test context.
      * @throws InterruptedException if the test fails.
@@ -205,14 +206,13 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
         final SelfSignedCertificate deviceCert = SelfSignedCertificate.create(UUID.randomUUID().toString());
         final String tenantId = helper.getRandomTenantId();
         final String deviceId = helper.getRandomDeviceId(tenantId);
-        final TenantObject tenant = TenantObject.from(tenantId, true);
         final Async setup = ctx.async();
 
         helper.getCertificate(deviceCert.certificatePath())
-        .compose(cert -> {
-            tenant.setTrustAnchor(cert.getPublicKey(), cert.getIssuerX500Principal());
-            return helper.registry.addDeviceForTenant(tenant, deviceId, cert);
-        }).setHandler(ctx.asyncAssertSuccess(ok -> setup.complete()));
+                .compose(cert -> {
+                    final var tenant = Tenants.createTenantForTrustAnchor(cert);
+                    return helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, cert);
+                }).setHandler(ctx.asyncAssertSuccess(ok -> setup.complete()));
         setup.await();
         doTestUploadMessages(
                 ctx,

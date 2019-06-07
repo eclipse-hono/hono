@@ -57,8 +57,9 @@ public class DefaultFailureHandler implements Handler<RoutingContext> {
             if (ctx.response().ended()) {
                 LOG.debug("skipping processing of failed route, response already ended");
             } else {
-                LOG.debug("handling failed route for request [method: {}, URI: {}]",
-                        ctx.request().method(), ctx.request().absoluteURI());
+                LOG.debug("handling failed route for request [method: {}, URI: {}, status: {}] - {}",
+                        ctx.request().method(), ctx.request().absoluteURI(), ctx.statusCode(), ctx.getBody(),
+                        ctx.failure());
                 if (ctx.failure() != null) {
                     if (ctx.failure() instanceof ServiceInvocationException) {
                         final ServiceInvocationException e = (ServiceInvocationException) ctx.failure();

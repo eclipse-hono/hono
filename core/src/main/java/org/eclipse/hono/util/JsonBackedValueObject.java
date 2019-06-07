@@ -50,13 +50,13 @@ abstract class JsonBackedValueObject {
      * Gets a property value.
      * 
      * @param name The property name.
+     * @param clazz The target type.
      * @param <T> The type of the property.
-     * @return The property value or {@code null} if the property is not set
-     *         or is of an unexpected type.
+     * @return The property value or {@code null} if the property is not set or is of an unexpected type.
      * @throws NullPointerException if name is {@code null}.
      */
-    public final <T> T getProperty(final String name) {
-        return getProperty(json, name);
+    public final <T> T getProperty(final String name, final Class<T> clazz) {
+        return getProperty(json, name, clazz);
     }
 
     /**
@@ -65,12 +65,12 @@ abstract class JsonBackedValueObject {
      * @param name The property name.
      * @param defaultValue A default value to return if the property is {@code null}.
      * @param <T> The type of the property.
-     * @return The property value or the default value if the property is not set
-     *         or is of an unexpected type.
+     * @param clazz The target type.
+     * @return The property value or the default value if the property is not set or is of an unexpected type.
      * @throws NullPointerException if name is {@code null}.
      */
-    public final <T> T getProperty(final String name, final T defaultValue) {
-        return getProperty(json, name, defaultValue);
+    public final <T> T getProperty(final String name, final Class<T> clazz, final T defaultValue) {
+        return getProperty(json, name, clazz, defaultValue);
     }
 
     /**
@@ -78,13 +78,13 @@ abstract class JsonBackedValueObject {
      * 
      * @param parent The JSON to get the property value from.
      * @param name The property name.
+     * @param clazz The target type.
      * @param <T> The type of the property.
-     * @return The property value or {@code null} if the property is not set
-     *         or is of an unexpected type.
+     * @return The property value or {@code null} if the property is not set or is of an unexpected type.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
-    protected final <T> T getProperty(final JsonObject parent, final String name) {
-        return getProperty(parent, name, null);
+    protected static final <T> T getProperty(final JsonObject parent, final String name, final Class<T> clazz) {
+        return getProperty(parent, name, clazz, null);
     }
 
     /**
@@ -93,17 +93,20 @@ abstract class JsonBackedValueObject {
      * @param parent The JSON to get the property value from.
      * @param name The property name.
      * @param defaultValue A default value to return if the property is {@code null}.
+     * @param clazz The target type.
      * @param <T> The type of the property.
-     * @return The property value or the given default value if the property is not set
-     *         or is of an unexpected type.
+     * @return The property value or the given default value if the property is not set or is of an unexpected type.
      * @throws NullPointerException if any of parent or name are {@code null}.
      */
-    @SuppressWarnings("unchecked")
-    protected final <T> T getProperty(final JsonObject parent, final String name, final T defaultValue) {
+    protected static final <T> T getProperty(final JsonObject parent, final String name, final Class<T> clazz,
+            final T defaultValue) {
         final Object value = parent.getValue(Objects.requireNonNull(name), defaultValue);
+        if (value == null) {
+            return defaultValue;
+        }
         try {
-            return (T) value;
-        } catch (ClassCastException e) {
+            return clazz.cast(value);
+        } catch (final ClassCastException e) {
             return defaultValue;
         }
     }

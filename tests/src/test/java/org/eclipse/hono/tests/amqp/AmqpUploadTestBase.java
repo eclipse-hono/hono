@@ -23,10 +23,11 @@ import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.ServerErrorException;
+import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tests.IntegrationTestSupport;
+import org.eclipse.hono.tests.Tenants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
-import org.eclipse.hono.util.TenantObject;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -148,10 +149,10 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
         final String deviceId = helper.getRandomDeviceId(tenantId);
         final String targetAddress = String.format("%s/%s/%s", getEndpointName(), tenantId, deviceId);
 
-        final TenantObject tenant = TenantObject.from(tenantId, true);
+        final Tenant tenant = new Tenant();
         final Async setup = context.async();
         helper.registry
-                .addDeviceForTenant(tenant, deviceId, DEVICE_PASSWORD)
+                .addDeviceForTenant(tenantId, tenant, deviceId, DEVICE_PASSWORD)
                 .setHandler(context.asyncAssertSuccess(ok -> setup.complete()));
         setup.await();
 
@@ -205,9 +206,8 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
         final SelfSignedCertificate deviceCert = SelfSignedCertificate.create(UUID.randomUUID().toString());
 
         helper.getCertificate(deviceCert.certificatePath()).compose(cert -> {
-            final TenantObject tenant = TenantObject.from(tenantId, true);
-            tenant.setTrustAnchor(cert.getPublicKey(), cert.getSubjectX500Principal());
-            return helper.registry.addDeviceForTenant(tenant, deviceId, cert);
+            final var tenant = Tenants.createTenantForTrustAnchor(cert);
+            return helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, cert);
         }).compose(ok -> connectToAdapter(deviceCert))
         .compose(con -> createProducer(null))
         .map(s -> {
@@ -341,13 +341,13 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
 
         final String username = IntegrationTestSupport.getUsername(deviceId, tenantId);
 
-        final TenantObject tenant = TenantObject.from(tenantId, true);
+        final Tenant tenant = new Tenant();
         if (disableTenant) {
-            tenant.addAdapterConfiguration(TenantObject.newAdapterConfig(Constants.PROTOCOL_ADAPTER_TYPE_AMQP, false));
+            Tenants.setAdapterEnabled(tenant, Constants.PROTOCOL_ADAPTER_TYPE_AMQP, false);
         }
 
         return helper.registry
-                .addDeviceForTenant(tenant, deviceId, DEVICE_PASSWORD)
+                .addDeviceForTenant(tenantId, tenant, deviceId, DEVICE_PASSWORD)
                 .compose(ok -> connectToAdapter(username, DEVICE_PASSWORD))
                 .compose(con -> createProducer(null)).recover(t -> {
                     log.error("error setting up AMQP protocol adapter", t);

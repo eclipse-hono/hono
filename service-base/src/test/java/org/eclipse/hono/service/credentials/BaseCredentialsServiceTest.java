@@ -17,7 +17,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import java.net.HttpURLConnection;
 
 import org.eclipse.hono.client.ServiceInvocationException;
-import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsObject;
 import org.eclipse.hono.util.CredentialsResult;
@@ -34,12 +33,12 @@ import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 
 /**
- * Tests verifying behavior of {@link BaseCredentialsService}.
+ * Tests verifying behavior of {@link CredentialsService}.
  */
 @ExtendWith(VertxExtension.class)
 public class BaseCredentialsServiceTest {
 
-    private static BaseCredentialsService<ServiceConfigProperties> service;
+    private static EventBusCredentialsAdapter<?> service;
 
     private static final String TEST_TENANT = "dummy";
 
@@ -48,7 +47,7 @@ public class BaseCredentialsServiceTest {
      */
     @BeforeAll
     public static void setUp() {
-        service = createBaseCredentialsService();
+        service = createCredentialsService();
     }
 
     /**
@@ -108,17 +107,32 @@ public class BaseCredentialsServiceTest {
                 .setJsonPayload(payload);
     }
 
-    private static BaseCredentialsService<ServiceConfigProperties> createBaseCredentialsService() {
+    private static EventBusCredentialsAdapter<?> createCredentialsService() {
 
-        return new BaseCredentialsService<ServiceConfigProperties>() {
+        final var service = new CredentialsService() {
 
             @Override
-            public void setConfig(final ServiceConfigProperties configuration) {
+            public void get(final String tenantId, final String type, final String authId, final Span span,
+                    final Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
             }
 
             @Override
-            public void getAll(final String tenantId, final String deviceId, final Span span,
+            public void get(final String tenantId, final String type, final String authId, final JsonObject clientContext, final Span span,
                     final Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
+            }
+        };
+
+        return new EventBusCredentialsAdapter<>() {
+
+            @Override
+            protected CredentialsService getService() {
+                return service;
+            }
+
+            @Override
+            public void setConfig(final Object configuration) {
+                // TODO Auto-generated method stub
+
             }
         };
     }

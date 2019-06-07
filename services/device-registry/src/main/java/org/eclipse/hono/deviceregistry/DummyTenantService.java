@@ -14,28 +14,29 @@ package org.eclipse.hono.deviceregistry;
 
 import java.net.HttpURLConnection;
 
-import org.eclipse.hono.service.tenant.BaseTenantService;
+import javax.security.auth.x500.X500Principal;
+
+import org.eclipse.hono.service.tenant.TenantService;
 import org.eclipse.hono.util.TenantObject;
 import org.eclipse.hono.util.TenantResult;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
 import io.opentracing.Span;
+import io.opentracing.noop.NoopSpan;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.json.JsonObject;
 
 /**
- *
+ * Dummy tenant implementation.
  */
 @Service
+@Qualifier("backend")
 @ConditionalOnProperty(name = "hono.app.type", havingValue = "dummy")
-public class DummyTenantService extends BaseTenantService<Object> {
-
-    @Override
-    public void setConfig(final Object configuration) {
-    }
+public class DummyTenantService implements TenantService {
 
     @Override
     public void get(final String tenantId, final Span span,
@@ -46,5 +47,15 @@ public class DummyTenantService extends BaseTenantService<Object> {
         resultHandler.handle(Future.succeededFuture(TenantResult.from(HttpURLConnection.HTTP_OK,
                 JsonObject.mapFrom(tenant),
                 null)));
+    }
+
+    @Override
+    public void get(final String tenantId, final Handler<AsyncResult<TenantResult<JsonObject>>> resultHandler) {
+        get(tenantId, NoopSpan.INSTANCE, resultHandler);
+    }
+
+    @Override
+    public void get(final X500Principal subjectDn, final Handler<AsyncResult<TenantResult<JsonObject>>> resultHandler) {
+        get(subjectDn, NoopSpan.INSTANCE, resultHandler);
     }
 }

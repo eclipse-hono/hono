@@ -14,6 +14,7 @@
 package org.eclipse.hono.deviceregistry;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -25,15 +26,20 @@ import static org.mockito.Mockito.when;
 
 import java.net.HttpURLConnection;
 import java.nio.charset.StandardCharsets;
+import java.util.Optional;
 
-import org.eclipse.hono.service.tenant.AbstractCompleteTenantServiceTest;
-import org.eclipse.hono.service.tenant.CompleteBaseTenantService;
+import org.eclipse.hono.service.management.tenant.Tenant;
+import org.eclipse.hono.service.management.tenant.TenantManagementService;
+import org.eclipse.hono.service.tenant.AbstractTenantServiceTest;
+import org.eclipse.hono.service.tenant.TenantService;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.TenantObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 
+import io.opentracing.noop.NoopSpan;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
@@ -46,13 +52,12 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 
-
 /**
  * Tests verifying behavior of {@link FileBasedTenantService}.
  *
  */
 @ExtendWith(VertxExtension.class)
-public class FileBasedTenantServiceTest extends AbstractCompleteTenantServiceTest {
+public class FileBasedTenantServiceTest extends AbstractTenantServiceTest {
 
     private static final String FILE_NAME = "/tenants.json";
 
@@ -82,7 +87,12 @@ public class FileBasedTenantServiceTest extends AbstractCompleteTenantServiceTes
     }
 
     @Override
-    public CompleteBaseTenantService<FileBasedTenantsConfigProperties> getCompleteTenantService() {
+    public TenantService getTenantService() {
+        return svc;
+    }
+
+    @Override
+    public TenantManagementService getTenantManagementService() {
         return svc;
     }
 
@@ -118,7 +128,7 @@ public class FileBasedTenantServiceTest extends AbstractCompleteTenantServiceTes
             verify(fileSystem).createFile(eq(FILE_NAME), any(Handler.class));
             ctx.completeNow();
         })));
-        svc.doStart(startupTracker);
+        svc.start(startupTracker);
     }
 
     /**
@@ -146,7 +156,7 @@ public class FileBasedTenantServiceTest extends AbstractCompleteTenantServiceTes
         startupTracker.setHandler(ctx.failing(started -> {
             ctx.completeNow();
         }));
-        svc.doStart(startupTracker);
+        svc.start(startupTracker);
     }
 
     /**
@@ -176,7 +186,7 @@ public class FileBasedTenantServiceTest extends AbstractCompleteTenantServiceTes
         startupTracker.setHandler(ctx.completing(
             // THEN startup succeeds
         ));
-        svc.doStart(startupTracker);
+        svc.start(startupTracker);
     }
 
     /**
@@ -206,7 +216,7 @@ public class FileBasedTenantServiceTest extends AbstractCompleteTenantServiceTes
         })
         .setHandler(ctx.completing());
 
-        svc.doStart(startFuture);
+        svc.start(startFuture);
     }
 
     /**
@@ -230,7 +240,7 @@ public class FileBasedTenantServiceTest extends AbstractCompleteTenantServiceTes
             verify(fileSystem, never()).readFile(anyString(), any(Handler.class));
             ctx.completeNow();
         })));
-        svc.doStart(startFuture);
+        svc.start(startFuture);
     }
 
     /**
@@ -298,7 +308,7 @@ public class FileBasedTenantServiceTest extends AbstractCompleteTenantServiceTes
         props.setModificationEnabled(false);
 
         // WHEN trying to add a new tenant
-        svc.add("fancy-new-tenant", new JsonObject(), ctx.succeeding(s -> ctx.verify(() -> {
+        svc.add(Optional.of("fancy-new-tenant"), new JsonObject(), NoopSpan.INSTANCE, ctx.succeeding(s -> ctx.verify(() -> {
             // THEN the request succeeds
             assertEquals(HttpURLConnection.HTTP_CREATED, s.getStatus());
             ctx.completeNow();
@@ -318,7 +328,7 @@ public class FileBasedTenantServiceTest extends AbstractCompleteTenantServiceTes
         props.setModificationEnabled(false);
 
         // WHEN trying to update the tenant
-        svc.remove("tenant", ctx.succeeding(s -> ctx.verify(() -> {
+        svc.remove("tenant", Optional.empty(), NoopSpan.INSTANCE, ctx.succeeding(s -> ctx.verify(() -> {
             // THEN the update fails
             assertEquals(HttpURLConnection.HTTP_FORBIDDEN, s.getStatus());
             ctx.completeNow();
@@ -338,11 +348,31 @@ public class FileBasedTenantServiceTest extends AbstractCompleteTenantServiceTes
         props.setModificationEnabled(false);
 
         // WHEN trying to update the tenant
-        svc.update("tenant", new JsonObject(), ctx.succeeding(s -> ctx.verify(() -> {
+        svc.update("tenant", new JsonObject(), null, NoopSpan.INSTANCE, ctx.succeeding(s -> ctx.verify(() -> {
             // THEN the update fails
             assertEquals(HttpURLConnection.HTTP_FORBIDDEN, s.getStatus());
             ctx.completeNow();
         })));
+    }
+
+    /**
+     * Test that a conversion of {@code null} doesn't throw an exception.
+     */
+    @Test
+    public void testNullConversion() {
+        assertNull(FileBasedTenantService.convertTenantObject(null));
+    }
+
+    /**
+     * Test converting tenant objects.
+     */
+    @Test
+    public void testConversion() {
+        final TenantObject tenantObject = new TenantObject();
+        tenantObject.setEnabled(true);
+
+        final Tenant tenant = FileBasedTenantService.convertTenantObject(tenantObject);
+        assertEquals(Boolean.TRUE, tenant.getEnabled());
     }
 
 }

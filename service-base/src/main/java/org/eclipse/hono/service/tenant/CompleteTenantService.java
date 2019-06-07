@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -24,7 +24,9 @@ import org.eclipse.hono.util.TenantResult;
  * See {@link TenantService} for the mandatory only API.
  *
  * @see <a href="https://www.eclipse.org/hono/docs/latest/api/tenant-api/">Tenant API</a>
+ * @deprecated - Use {@link TenantService} and {@link org.eclipse.hono.service.management.tenant.TenantManagementService} instead.
  */
+@Deprecated
 public interface CompleteTenantService extends TenantService {
 
     /**
@@ -32,15 +34,14 @@ public interface CompleteTenantService extends TenantService {
      *
      * @param tenantId The identifier of the tenant to add.
      * @param tenantObj The configuration information to add for the tenant (may be {@code null}).
-     * @param resultHandler The handler to invoke with the result of the operation.
-     *             The <em>status</em> will be
-     *             <ul>
-     *             <li><em>201 Created</em> if the tenant has been added successfully.</li>
-     *             <li><em>409 Conflict</em> if a tenant with the given identifier already exists.</li>
-     *             </ul>
+     * @param resultHandler The handler to invoke with the result of the operation. The <em>status</em> will be
+     *            <ul>
+     *            <li><em>201 Created</em> if the tenant has been added successfully.</li>
+     *            <li><em>409 Conflict</em> if a tenant with the given identifier already exists.</li>
+     *            </ul>
      * @throws NullPointerException if any of the parameters are {@code null}.
-     * @see <a href="https://github.com/eclipse/hono/blob/1.0-M4/site/content/api/Tenant-API.md#add-tenant">
-     *      Tenant API - Add Tenant</a>
+     * @see <a href="https://github.com/eclipse/hono/blob/1.0-M4/site/content/api/Tenant-API.md#add-tenant"> Tenant API
+     *      - Add Tenant</a>
      */
     void add(String tenantId, JsonObject tenantObj, Handler<AsyncResult<TenantResult<JsonObject>>> resultHandler);
 

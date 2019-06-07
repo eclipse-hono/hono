@@ -18,16 +18,19 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.net.HttpURLConnection;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import org.eclipse.hono.client.RegistrationClient;
+import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.junit.jupiter.api.Test;
 
 import io.vertx.core.Future;
-import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxTestContext;
@@ -55,8 +58,7 @@ abstract class DeviceRegistrationApiTests extends DeviceRegistryTestBase {
     }
 
     /**
-     * Verifies that the registry succeeds a request to assert a
-     * device's registration status.
+     * Verifies that the registry succeeds a request to assert a device's registration status.
      *
      * @param ctx The vert.x test context.
      */
@@ -66,26 +68,27 @@ abstract class DeviceRegistrationApiTests extends DeviceRegistryTestBase {
 
         final JsonObject defaults = new JsonObject()
                 .put(MessageHelper.SYS_PROPERTY_CONTENT_TYPE, "application/vnd.acme+json");
-        final JsonObject deviceData = new JsonObject()
-                .put(RegistrationConstants.FIELD_PAYLOAD_DEFAULTS, defaults);
+        final Device device = new Device();
+        device.setDefaults(defaults.getMap());
         final String deviceId = getHelper().getRandomDeviceId(Constants.DEFAULT_TENANT);
 
         getHelper().registry
-        .registerDevice(Constants.DEFAULT_TENANT, deviceId, deviceData)
-        .compose(r -> getClient(Constants.DEFAULT_TENANT))
-        .compose(client -> client.assertRegistration(deviceId))
-        .setHandler(ctx.succeeding(resp -> {
-            ctx.verify(() -> {
-                assertThat(resp.getString(RegistrationConstants.FIELD_PAYLOAD_DEVICE_ID)).isEqualTo(deviceId);
-                assertThat(resp.getJsonObject(RegistrationConstants.FIELD_PAYLOAD_DEFAULTS)).isEqualTo(defaults);
-            });
-            ctx.completeNow();
-        }));
+                .registerDevice(Constants.DEFAULT_TENANT, deviceId, device)
+                .compose(r -> getClient(Constants.DEFAULT_TENANT))
+                .compose(client -> client.assertRegistration(deviceId))
+                .setHandler(ctx.succeeding(resp -> {
+                    ctx.verify(() -> {
+                        assertThat(resp.getString(RegistrationConstants.FIELD_PAYLOAD_DEVICE_ID)).isEqualTo(deviceId);
+                        assertThat(resp.getJsonObject(RegistrationConstants.FIELD_PAYLOAD_DEFAULTS))
+                                .isEqualTo(defaults);
+                    });
+                    ctx.completeNow();
+                }));
     }
 
     /**
-     * Verifies that the registry succeeds a request to assert the registration status
-     * of a device that connects via an authorized gateway.
+     * Verifies that the registry succeeds a request to assert the registration status of a device that connects via an
+     * authorized gateway.
      *
      * @param ctx The vert.x test context.
      */
@@ -95,23 +98,25 @@ abstract class DeviceRegistrationApiTests extends DeviceRegistryTestBase {
 
         final String gatewayId = getHelper().getRandomDeviceId(Constants.DEFAULT_TENANT);
         final String deviceId = getHelper().getRandomDeviceId(Constants.DEFAULT_TENANT);
-        final JsonArray via = new JsonArray().add(gatewayId).add("another-gateway");
+
+        final List<String> via = Arrays.asList(gatewayId, "another-gateway");
+        final Device device = new Device();
+        device.setVia(via);
 
         getHelper().registry
-        .registerDevice(Constants.DEFAULT_TENANT, gatewayId)
-        .compose(ok -> getHelper().registry.registerDevice(
-                Constants.DEFAULT_TENANT,
-                deviceId,
-                new JsonObject().put(RegistrationConstants.FIELD_VIA, via)))
-        .compose(ok -> getClient(Constants.DEFAULT_TENANT))
-        .compose(client -> client.assertRegistration(deviceId, gatewayId))
-        .setHandler(ctx.succeeding(resp -> {
-            ctx.verify(() -> {
-                assertThat(resp.getString(RegistrationConstants.FIELD_PAYLOAD_DEVICE_ID)).isEqualTo(deviceId);
-                assertThat(resp.getJsonArray(RegistrationConstants.FIELD_VIA)).isEqualTo(via);
-            });
-            ctx.completeNow();
-        }));
+                .registerDevice(Constants.DEFAULT_TENANT, gatewayId)
+                .compose(ok -> getHelper().registry.registerDevice(
+                        Constants.DEFAULT_TENANT,
+                        deviceId, device))
+                .compose(ok -> getClient(Constants.DEFAULT_TENANT))
+                .compose(client -> client.assertRegistration(deviceId, gatewayId))
+                .setHandler(ctx.succeeding(resp -> {
+                    ctx.verify(() -> {
+                        assertThat(resp.getString(RegistrationConstants.FIELD_PAYLOAD_DEVICE_ID)).isEqualTo(deviceId);
+                        assertThat(resp.getJsonArray(RegistrationConstants.FIELD_VIA)).containsExactlyElementsOf(via);
+                    });
+                    ctx.completeNow();
+                }));
     }
 
     /**
@@ -155,8 +160,8 @@ abstract class DeviceRegistrationApiTests extends DeviceRegistryTestBase {
     }
 
     /**
-     * Verifies that the registry fails a disabled gateway's request to assert a
-     * device's registration status with a 403 error code.
+     * Verifies that the registry fails a disabled gateway's request to assert a device's registration status with a 403
+     * error code.
      *
      * @param ctx The vert.x test context.
      */
@@ -169,23 +174,26 @@ abstract class DeviceRegistrationApiTests extends DeviceRegistryTestBase {
         final String deviceId = getHelper().getRandomDeviceId(Constants.DEFAULT_TENANT);
         final String gatewayId = getHelper().getRandomDeviceId(Constants.DEFAULT_TENANT);
 
+        final Device gateway = new Device();
+        gateway.setEnabled(false);
+        final Device device = new Device();
+        device.setVia(Collections.singletonList(gatewayId));
+
         getHelper().registry
-        .registerDevice(Constants.DEFAULT_TENANT, gatewayId, new JsonObject().put(RegistrationConstants.FIELD_ENABLED, false))
-        .compose(ok -> getHelper().registry.registerDevice(
-                Constants.DEFAULT_TENANT,
-                deviceId,
-                new JsonObject().put(RegistrationConstants.FIELD_VIA, gatewayId)))
-        .compose(r -> getClient(Constants.DEFAULT_TENANT))
-        .compose(client -> client.assertRegistration(deviceId, gatewayId))
-        .setHandler(ctx.failing(t -> {
-            assertErrorCode(t, HttpURLConnection.HTTP_FORBIDDEN);
-            ctx.completeNow();
-        }));
+                .registerDevice(Constants.DEFAULT_TENANT, gatewayId, gateway)
+                .compose(ok -> getHelper().registry.registerDevice(
+                        Constants.DEFAULT_TENANT, deviceId, device))
+                .compose(r -> getClient(Constants.DEFAULT_TENANT))
+                .compose(client -> client.assertRegistration(deviceId, gatewayId))
+                .setHandler(ctx.failing(t -> {
+                    assertErrorCode(t, HttpURLConnection.HTTP_FORBIDDEN);
+                    ctx.completeNow();
+                }));
     }
 
     /**
-     * Verifies that the registry fails a gateway's request to assert a
-     * device's registration status for which it is not authorized with a 403 error code.
+     * Verifies that the registry fails a gateway's request to assert a device's registration status for which it is not
+     * authorized with a 403 error code.
      *
      * @param ctx The vert.x test context.
      */
@@ -200,22 +208,23 @@ abstract class DeviceRegistrationApiTests extends DeviceRegistryTestBase {
         final String authorizedGateway = getHelper().getRandomDeviceId(Constants.DEFAULT_TENANT);
         final String unauthorizedGateway = getHelper().getRandomDeviceId(Constants.DEFAULT_TENANT);
 
+        final Device device = new Device();
+        device.setVia(Collections.singletonList(authorizedGateway));
+
         getHelper().registry
-        .registerDevice(Constants.DEFAULT_TENANT, authorizedGateway)
-        .compose(ok -> getHelper().registry.registerDevice(Constants.DEFAULT_TENANT, unauthorizedGateway))
-        .compose(ok -> getHelper().registry.registerDevice(Constants.DEFAULT_TENANT, deviceId,
-                new JsonObject().put(RegistrationConstants.FIELD_VIA, new JsonArray().add(authorizedGateway))))
-        .compose(ok -> getClient(Constants.DEFAULT_TENANT))
-        .compose(client -> client.assertRegistration(deviceId, unauthorizedGateway))
-        .setHandler(ctx.failing( t -> {
-            assertErrorCode(t, HttpURLConnection.HTTP_FORBIDDEN);
-            ctx.completeNow();
-        }));
+                .registerDevice(Constants.DEFAULT_TENANT, authorizedGateway)
+                .compose(ok -> getHelper().registry.registerDevice(Constants.DEFAULT_TENANT, unauthorizedGateway))
+                .compose(ok -> getHelper().registry.registerDevice(Constants.DEFAULT_TENANT, deviceId, device))
+                .compose(ok -> getClient(Constants.DEFAULT_TENANT))
+                .compose(client -> client.assertRegistration(deviceId, unauthorizedGateway))
+                .setHandler(ctx.failing(t -> {
+                    assertErrorCode(t, HttpURLConnection.HTTP_FORBIDDEN);
+                    ctx.completeNow();
+                }));
     }
 
     /**
-     * Verifies that the registry fails to assert a disabled device's
-     * registration status with a 404 error code.
+     * Verifies that the registry fails to assert a disabled device's registration status with a 404 error code.
      *
      * @param ctx The vert.x test context.
      */
@@ -225,14 +234,16 @@ abstract class DeviceRegistrationApiTests extends DeviceRegistryTestBase {
 
         final String deviceId = getHelper().getRandomDeviceId(Constants.DEFAULT_TENANT);
 
+        final Device device = new Device();
+        device.setEnabled(false);
+
         getHelper().registry
-        .registerDevice(Constants.DEFAULT_TENANT, deviceId,
-            new JsonObject().put(RegistrationConstants.FIELD_ENABLED, false))
-        .compose(ok -> getClient(Constants.DEFAULT_TENANT))
-        .compose(client -> client.assertRegistration(deviceId))
-        .setHandler(ctx.failing(t -> {
-            ctx.verify(() -> assertErrorCode(t, HttpURLConnection.HTTP_NOT_FOUND));
-            ctx.completeNow();
-        }));
+                .registerDevice(Constants.DEFAULT_TENANT, deviceId, device)
+                .compose(ok -> getClient(Constants.DEFAULT_TENANT))
+                .compose(client -> client.assertRegistration(deviceId))
+                .setHandler(ctx.failing(t -> {
+                    ctx.verify(() -> assertErrorCode(t, HttpURLConnection.HTTP_NOT_FOUND));
+                    ctx.completeNow();
+                }));
     }
 }

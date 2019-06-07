@@ -13,6 +13,9 @@
 
 package org.eclipse.hono.tests.coap;
 
+import static org.hamcrest.core.IsInstanceOf.instanceOf;
+import static org.junit.Assert.assertThat;
+
 import java.net.HttpURLConnection;
 import java.net.Inet4Address;
 import java.net.InetAddress;
@@ -21,6 +24,8 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -46,20 +51,20 @@ import org.eclipse.californium.scandium.config.DtlsConnectorConfig;
 import org.eclipse.californium.scandium.dtls.pskstore.PskStore;
 import org.eclipse.californium.scandium.dtls.pskstore.StaticPskStore;
 import org.eclipse.hono.client.MessageConsumer;
-import org.eclipse.hono.client.ServiceInvocationException;
-import org.eclipse.hono.client.StatusCodeMapper;
+
+import org.eclipse.hono.service.management.credentials.GenericCredential;
+import org.eclipse.hono.service.management.device.Device;
+import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tests.IntegrationTestSupport;
+import org.eclipse.hono.tests.Tenants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
-import org.eclipse.hono.util.CredentialsObject;
 import org.eclipse.hono.util.MessageHelper;
-import org.eclipse.hono.util.RegistrationConstants;
-import org.eclipse.hono.util.TenantConstants;
-import org.eclipse.hono.util.TenantObject;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestName;
@@ -71,7 +76,6 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
-import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
@@ -93,8 +97,10 @@ public abstract class CoapTestBase {
      */
     protected static IntegrationTestSupport helper;
 
+    protected static final long TEST_TIMEOUT_MILLIS = 20000; // 20 seconds
+
     private static final Vertx VERTX = Vertx.vertx();
-    private static final long TEST_TIMEOUT_MILLIS = 20000; // 20 seconds
+
     private static final int MESSAGES_TO_SEND = 60;
 
     /**
@@ -187,7 +193,6 @@ public abstract class CoapTestBase {
      * @return The client.
      */
     protected CoapClient getCoapClient() {
-
         return new CoapClient();
     }
 
@@ -291,6 +296,13 @@ public abstract class CoapTestBase {
         return result;
     }
 
+    private static void assertStatus(final TestContext ctx, final int expectedStatus, final Throwable t) {
+        ctx.verify(v -> {
+            assertThat(t, instanceOf(CoapResultException.class));
+        });
+        ctx.assertEquals(expectedStatus, ((CoapResultException) t).getErrorCode());
+    }
+
     /**
      * Verifies that a number of messages uploaded to Hono's CoAP adapter
      * can be successfully consumed via the AMQP Messaging Network.
@@ -302,10 +314,10 @@ public abstract class CoapTestBase {
     public void testUploadMessagesAnonymously(final TestContext ctx) throws InterruptedException {
 
         final Async setup = ctx.async();
-        final TenantObject tenant = TenantObject.from(tenantId, true);
+        final Tenant tenant = new Tenant();
 
         helper.registry
-            .addDeviceForTenant(tenant, deviceId, SECRET)
+                .addDeviceForTenant(tenantId, tenant, deviceId, SECRET)
             .setHandler(ctx.asyncAssertSuccess(ok -> setup.complete()));
         setup.await();
 
@@ -321,9 +333,8 @@ public abstract class CoapTestBase {
     }
 
     /**
-     * Verifies that a number of messages uploaded to Hono's CoAP adapter
-     * using TLS_PSK based authentication can be successfully
-     * consumed via the AMQP Messaging Network.
+     * Verifies that a number of messages uploaded to Hono's CoAP adapter using TLS_PSK based authentication can be
+     * successfully consumed via the AMQP Messaging Network.
      * 
      * @param ctx The test context.
      * @throws InterruptedException if the test fails.
@@ -332,10 +343,11 @@ public abstract class CoapTestBase {
     public void testUploadMessagesUsingPsk(final TestContext ctx) throws InterruptedException {
 
         final Async setup = ctx.async();
-        final TenantObject tenant = TenantObject.from(tenantId, true);
+        final Tenant tenant = new Tenant();
 
-        helper.registry.addPskDeviceForTenant(tenant, deviceId, SECRET)
-        .setHandler(ctx.asyncAssertSuccess(ok -> setup.complete()));
+        helper.registry
+                .addPskDeviceForTenant(tenantId, tenant, deviceId, SECRET)
+                .setHandler(ctx.asyncAssertSuccess(ok -> setup.complete()));
         setup.await();
 
         final CoapClient client = getCoapsClient(deviceId, tenantId, SECRET);
@@ -361,14 +373,14 @@ public abstract class CoapTestBase {
     public void testUploadMessagesViaGateway(final TestContext ctx) throws InterruptedException {
 
         // GIVEN a device that is connected via two gateways
-        final TenantObject tenant = TenantObject.from(tenantId, true);
+        final Tenant tenant = new Tenant();
         final String gatewayOneId = helper.getRandomDeviceId(tenantId);
         final String gatewayTwoId = helper.getRandomDeviceId(tenantId);
-        final JsonObject deviceData = new JsonObject()
-                .put("via", new JsonArray().add(gatewayOneId).add(gatewayTwoId));
+        final Device deviceData = new Device();
+        deviceData.setVia(Arrays.asList(gatewayOneId, gatewayTwoId));
 
         final Async setup = ctx.async();
-        helper.registry.addPskDeviceForTenant(tenant, gatewayOneId, SECRET)
+        helper.registry.addPskDeviceForTenant(tenantId, tenant, gatewayOneId, SECRET)
         .compose(ok -> helper.registry.addPskDeviceToTenant(tenantId, gatewayTwoId, SECRET))
         .compose(ok -> helper.registry.registerDevice(tenantId, deviceId, deviceData))
         .setHandler(ctx.asyncAssertSuccess(ok -> setup.complete()));
@@ -405,7 +417,7 @@ public abstract class CoapTestBase {
             final String tenantId,
             final Supplier<Future<?>> warmUp,
             final Function<Integer, Future<OptionSet>> requestSender) throws InterruptedException {
-        this.testUploadMessages(ctx, tenantId, warmUp, null, requestSender);
+        testUploadMessages(ctx, tenantId, warmUp, null, requestSender);
     }
 
     /**
@@ -427,7 +439,7 @@ public abstract class CoapTestBase {
             final Supplier<Future<?>> warmUp,
             final Consumer<Message> messageConsumer,
             final Function<Integer, Future<OptionSet>> requestSender) throws InterruptedException {
-        this.testUploadMessages(ctx, tenantId, warmUp, messageConsumer, requestSender, MESSAGES_TO_SEND);
+        testUploadMessages(ctx, tenantId, warmUp, messageConsumer, requestSender, MESSAGES_TO_SEND);
     }
 
     /**
@@ -435,14 +447,12 @@ public abstract class CoapTestBase {
      *
      * @param ctx The test context to run on.
      * @param tenantId The tenant that the device belongs to.
-     * @param warmUp A sender of messages used to warm up the adapter before
-     *               running the test itself or {@code null} if no warm up should
-     *               be performed. 
+     * @param warmUp A sender of messages used to warm up the adapter before running the test itself or {@code null} if
+     *            no warm up should be performed.
      * @param messageConsumer Consumer that is invoked when a message was received.
      * @param requestSender The test device that will publish the data.
      * @param numberOfMessages The number of messages that are uploaded.
-     * @throws InterruptedException if the test is interrupted before it
-     *              has finished.
+     * @throws InterruptedException if the test is interrupted before it has finished.
      */
     protected void testUploadMessages(
             final TestContext ctx,
@@ -466,8 +476,8 @@ public abstract class CoapTestBase {
                 logger.info("messages received: {}", numberOfMessages - received.getCount());
             }
         })
-        .compose(ok -> Optional.ofNullable(warmUp).map(w -> w.get()).orElse(Future.succeededFuture()))
-        .setHandler(ctx.asyncAssertSuccess(ok -> setup.complete()));
+                .compose(ok -> Optional.ofNullable(warmUp).map(w -> w.get()).orElse(Future.succeededFuture()))
+                .setHandler(ctx.asyncAssertSuccess(ok -> setup.complete()));
 
         setup.await();
         final long start = System.currentTimeMillis();
@@ -476,18 +486,20 @@ public abstract class CoapTestBase {
         while (messageCount.get() < numberOfMessages) {
 
             final Async sending = ctx.async();
-            requestSender.apply(messageCount.getAndIncrement()).compose(this::assertCoapResponse).setHandler(attempt -> {
-                if (attempt.succeeded()) {
-                    logger.debug("sent message {}", messageCount.get());
-                } else {
-                    logger.info("failed to send message {}: {}", messageCount.get(), attempt.cause().getMessage());
-                    ctx.fail(attempt.cause());
-                }
-                sending.complete();
-            });
+            requestSender.apply(messageCount.getAndIncrement()).compose(this::assertCoapResponse)
+                    .setHandler(attempt -> {
+                        if (attempt.succeeded()) {
+                            logger.debug("sent message {}", messageCount.get());
+                        } else {
+                            logger.info("failed to send message {}: {}", messageCount.get(),
+                                    attempt.cause().getMessage());
+                            ctx.fail(attempt.cause());
+                        }
+                        sending.complete();
+                    });
 
             if (messageCount.get() % 20 == 0) {
-                logger.info("messages sent: " + messageCount.get());
+                logger.info("messages sent: {}", messageCount.get());
             }
             sending.await();
         }
@@ -511,20 +523,21 @@ public abstract class CoapTestBase {
      * @param ctx The vert.x test context.
      */
     @Test
+    @Ignore("No possibility to add a malfored key anymore")
     public void testUploadFailsForMalformedSharedSecret(final TestContext ctx) {
 
         final Async setup = ctx.async();
-        final TenantObject tenant = TenantObject.from(tenantId, true);
+        final Tenant tenant = new Tenant();
 
         // GIVEN a device for which an invalid shared key has been configured
-        final JsonObject secret = CredentialsObject.emptySecret(null, null)
-                .put(CredentialsConstants.FIELD_SECRETS_KEY, "notBase64");
-        final CredentialsObject creds = new CredentialsObject(deviceId, deviceId, CredentialsConstants.SECRETS_TYPE_PRESHARED_KEY);
-        creds.addSecret(secret);
+        final GenericCredential credential = new GenericCredential();
+        credential.setAuthId(deviceId);
+        credential.setType(CredentialsConstants.SECRETS_TYPE_PRESHARED_KEY);
+        credential.getAdditionalProperties().put(CredentialsConstants.FIELD_SECRETS_KEY, "notBase64");
 
-        helper.registry.addTenant(JsonObject.mapFrom(tenant))
+        helper.registry.addTenant(tenantId, JsonObject.mapFrom(tenant))
         .compose(ok -> helper.registry.registerDevice(tenantId, deviceId))
-        .compose(ok -> helper.registry.addCredentials(tenantId, JsonObject.mapFrom(creds)))
+                .compose(ok -> helper.registry.addCredentials(tenantId, deviceId, Collections.singleton(credential)))
         .setHandler(ctx.asyncAssertSuccess(ok -> setup.complete()));
         setup.await();
 
@@ -535,7 +548,7 @@ public abstract class CoapTestBase {
         client.advanced(getHandler(result), createCoapsRequest(Code.POST, getPostResource(), 0));
         result.setHandler(ctx.asyncAssertFailure(t -> {
             // THEN the request fails because the DTLS handshake cannot be completed
-            ctx.assertEquals(HttpURLConnection.HTTP_UNAVAILABLE, ((ServiceInvocationException) t).getErrorCode());
+            assertStatus(ctx, HttpURLConnection.HTTP_UNAVAILABLE, t);
         }));
     }
 
@@ -548,10 +561,10 @@ public abstract class CoapTestBase {
     @Test
     public void testUploadFailsForNonMatchingSharedKey(final TestContext ctx) {
 
-        final TenantObject tenant = TenantObject.from(tenantId, true);
+        final Tenant tenant = new Tenant();
 
         // GIVEN a device for which PSK credentials have been registered
-        helper.registry.addPskDeviceForTenant(tenant, deviceId, "NOT" + SECRET)
+        helper.registry.addPskDeviceForTenant(tenantId, tenant, deviceId, "NOT" + SECRET)
         .compose(ok -> {
             // WHEN a device tries to upload data and authenticate using the PSK
             // identity for which the server has a different shared secret on record
@@ -561,13 +574,13 @@ public abstract class CoapTestBase {
             return result;
         }).setHandler(ctx.asyncAssertFailure(t -> {
             // THEN the request fails because the DTLS handshake cannot be completed
-            ctx.assertEquals(HttpURLConnection.HTTP_UNAVAILABLE, ((ServiceInvocationException) t).getErrorCode());
+            assertStatus(ctx, HttpURLConnection.HTTP_UNAVAILABLE, t);
         }));
     }
 
     /**
-     * Verifies that the CoAP adapter rejects messages from a device
-     * that belongs to a tenant for which the CoAP adapter has been disabled.
+     * Verifies that the CoAP adapter rejects messages from a device that belongs to a tenant for which the CoAP adapter
+     * has been disabled.
      *
      * @param ctx The test context
      */
@@ -575,25 +588,21 @@ public abstract class CoapTestBase {
     public void testUploadMessageFailsForDisabledTenant(final TestContext ctx) {
 
         // GIVEN a tenant for which the CoAP adapter is disabled
-        final JsonObject adapterDetailsHttp = new JsonObject()
-                .put(TenantConstants.FIELD_ADAPTERS_TYPE, Constants.PROTOCOL_ADAPTER_TYPE_COAP)
-                .put(TenantConstants.FIELD_ENABLED, false);
-        final TenantObject tenant = TenantObject.from(tenantId, true);
-        tenant.addAdapterConfiguration(adapterDetailsHttp);
+        final Tenant tenant = new Tenant();
+        Tenants.setAdapterEnabled(tenant, Constants.PROTOCOL_ADAPTER_TYPE_COAP, false);
 
-        helper.registry.addPskDeviceForTenant(tenant, deviceId, SECRET)
-        .compose(ok -> {
+        helper.registry.addPskDeviceForTenant(tenantId, tenant, deviceId, SECRET)
+                .compose(ok -> {
 
-            // WHEN a device that belongs to the tenant uploads a message
-            final CoapClient client = getCoapsClient(deviceId, tenantId, SECRET);
-            final Future<OptionSet> result = Future.future();
-            client.advanced(getHandler(result), createCoapsRequest(Code.POST, getPostResource(), 0));
-            return result;
-        }).setHandler(ctx.asyncAssertFailure(t -> {
-
-            // THEN the request fails with a 403
-            ctx.assertEquals(HttpURLConnection.HTTP_FORBIDDEN, ((ServiceInvocationException) t).getErrorCode());
-        }));
+                    // WHEN a device that belongs to the tenant uploads a message
+                    final CoapClient client = getCoapsClient(deviceId, tenantId, SECRET);
+                    final Future<OptionSet> result = Future.future();
+                    client.advanced(getHandler(result), createCoapsRequest(Code.POST, getPostResource(), 0));
+                    return result;
+                }).setHandler(ctx.asyncAssertFailure(t -> {
+                    // THEN the request fails with a 403
+                    assertStatus(ctx, HttpURLConnection.HTTP_FORBIDDEN, t);
+                }));
     }
 
     /**
@@ -605,11 +614,11 @@ public abstract class CoapTestBase {
     public void testUploadMessageFailsForDisabledDevice(final TestContext ctx) {
 
         // GIVEN a disabled device
-        final TenantObject tenant = TenantObject.from(tenantId, true);
-        final JsonObject deviceData = new JsonObject()
-                .put(RegistrationConstants.FIELD_ENABLED, false);
+        final Tenant tenant = new Tenant();
+        final Device deviceData = new Device();
+        deviceData.setEnabled(false);
 
-        helper.registry.addPskDeviceForTenant(tenant, deviceId, deviceData, SECRET)
+        helper.registry.addPskDeviceForTenant(tenantId, tenant, deviceId, deviceData, SECRET)
         .compose(ok -> {
 
             // WHEN the device tries to upload a message
@@ -622,7 +631,8 @@ public abstract class CoapTestBase {
             // THEN the request fails because the DTLS handshake cannot be completed
             logger.info("could not publish message for disabled device [tenant-id: {}, device-id: {}]",
                     tenantId, deviceId);
-            ctx.assertEquals(HttpURLConnection.HTTP_NOT_FOUND, ((ServiceInvocationException) t).getErrorCode());
+                    ctx.assertEquals(HttpURLConnection.HTTP_NOT_FOUND, ((CoapResultException) t).getErrorCode());
+                    assertStatus(ctx, HttpURLConnection.HTTP_NOT_FOUND, t);
         }));
     }
 
@@ -636,14 +646,14 @@ public abstract class CoapTestBase {
     public void testUploadMessageFailsForDisabledGateway(final TestContext ctx) {
 
         // GIVEN a device that is connected via a disabled gateway
-        final TenantObject tenant = TenantObject.from(tenantId, true);
+        final Tenant tenant = new Tenant();
         final String gatewayId = helper.getRandomDeviceId(tenantId);
-        final JsonObject gatewayData = new JsonObject()
-                .put(RegistrationConstants.FIELD_ENABLED, Boolean.FALSE);
-        final JsonObject deviceData = new JsonObject()
-                .put("via", gatewayId);
+        final Device gatewayData = new Device();
+        gatewayData.setEnabled(false);
+        final Device deviceData = new Device();
+        deviceData.setVia(Collections.singletonList(gatewayId));
 
-        helper.registry.addPskDeviceForTenant(tenant, gatewayId, gatewayData, SECRET)
+        helper.registry.addPskDeviceForTenant(tenantId, tenant, gatewayId, gatewayData, SECRET)
         .compose(ok -> helper.registry.registerDevice(tenantId, deviceId, deviceData))
         .compose(ok -> {
 
@@ -658,13 +668,13 @@ public abstract class CoapTestBase {
             // THEN the message gets rejected by the CoAP adapter with a 403
             logger.info("could not publish message for disabled gateway [tenant-id: {}, gateway-id: {}]",
                     tenantId, gatewayId);
-            ctx.assertEquals(HttpURLConnection.HTTP_FORBIDDEN, ((ServiceInvocationException) t).getErrorCode());
+                    assertStatus(ctx, HttpURLConnection.HTTP_FORBIDDEN, t);
         }));
     }
 
     /**
-     * Verifies that the CoAP adapter rejects messages from a gateway
-     * for a device that it is not authorized for with a 403.
+     * Verifies that the CoAP adapter rejects messages from a gateway for a device that it is not authorized for with a
+     * 403.
      *
      * @param ctx The test context
      */
@@ -672,28 +682,31 @@ public abstract class CoapTestBase {
     public void testUploadMessageFailsForUnauthorizedGateway(final TestContext ctx) {
 
         // GIVEN a device that is connected via gateway "not-the-created-gateway"
-        final TenantObject tenant = TenantObject.from(tenantId, true);
+        final Tenant tenant = new Tenant();
         final String gatewayId = helper.getRandomDeviceId(tenantId);
-        final JsonObject deviceData = new JsonObject()
-                .put("via", "not-the-created-gateway");
+        final Device deviceData = new Device();
+        deviceData.setVia(Collections.singletonList("not-the-created-gateway"));
 
-        helper.registry.addPskDeviceForTenant(tenant, gatewayId, SECRET)
-        .compose(ok -> helper.registry.registerDevice(tenantId, deviceId, deviceData))
-        .compose(ok -> {
+        helper.registry
+                .addPskDeviceForTenant(tenantId, tenant, gatewayId, SECRET)
+                .compose(ok -> helper.registry.registerDevice(tenantId, deviceId, deviceData))
+                .compose(ok -> {
 
-            // WHEN another gateway tries to upload a message for the device
-            final Future<OptionSet> result = Future.future();
-            final CoapClient client = getCoapsClient(gatewayId, tenantId, SECRET);
-            client.advanced(getHandler(result), createCoapsRequest(Code.PUT, getPutResource(tenantId, deviceId), 0));
-            return result;
+                    // WHEN another gateway tries to upload a message for the device
+                    final Future<OptionSet> result = Future.future();
+                    final CoapClient client = getCoapsClient(gatewayId, tenantId, SECRET);
+                    client.advanced(getHandler(result),
+                            createCoapsRequest(Code.PUT, getPutResource(tenantId, deviceId), 0));
+                    return result;
 
-        }).setHandler(ctx.asyncAssertFailure(t -> {
+                })
+                .setHandler(ctx.asyncAssertFailure(t -> {
 
-            // THEN the message gets rejected by the HTTP adapter with a 403
-            logger.info("could not publish message for unauthorized gateway [tenant-id: {}, gateway-id: {}]",
-                    tenantId, gatewayId);
-            ctx.assertEquals(HttpURLConnection.HTTP_FORBIDDEN, ((ServiceInvocationException) t).getErrorCode());
-        }));
+                    // THEN the message gets rejected by the HTTP adapter with a 403
+                    logger.info("could not publish message for unauthorized gateway [tenant-id: {}, gateway-id: {}]",
+                            tenantId, gatewayId);
+                    assertStatus(ctx, HttpURLConnection.HTTP_FORBIDDEN, t);
+                }));
     }
 
     private void assertMessageProperties(final TestContext ctx, final Message msg) {
@@ -733,10 +746,9 @@ public abstract class CoapTestBase {
     /**
      * Gets a handler for CoAP responses.
      * 
-     * @param responseHandler The handler to invoke with the outcome of the request.
-     *                        the handler will be invoked with a succeeded result if the response
-     *                        contains a 2.04 (Changed) code. Otherwise it will be invoked with
-     *                        a result that is failed with a {@link ServiceInvocationException}.
+     * @param responseHandler The handler to invoke with the outcome of the request. the handler will be invoked with a
+     *            succeeded result if the response contains a 2.04 (Changed) code. Otherwise it will be invoked with a
+     *            result that is failed with a {@link CoapResultException}.
      * @return The handler.
      */
     protected final CoapHandler getHandler(final Handler<AsyncResult<OptionSet>> responseHandler) {
@@ -746,10 +758,9 @@ public abstract class CoapTestBase {
     /**
      * Gets a handler for CoAP responses.
      * 
-     * @param responseHandler The handler to invoke with the outcome of the request.
-     *                        the handler will be invoked with a succeeded result if the response
-     *                        contains the expected code. Otherwise it will be invoked with
-     *                        a result that is failed with a {@link ServiceInvocationException}.
+     * @param responseHandler The handler to invoke with the outcome of the request. the handler will be invoked with a
+     *            succeeded result if the response contains the expected code. Otherwise it will be invoked with a
+     *            result that is failed with a {@link CoapResultException}.
      * @param expectedStatusCode The status code that is expected in the response.
      * @return The handler.
      */
@@ -761,13 +772,15 @@ public abstract class CoapTestBase {
                 if (response.getCode() == expectedStatusCode) {
                     responseHandler.handle(Future.succeededFuture(response.getOptions()));
                 } else {
-                    responseHandler.handle(Future.failedFuture(StatusCodeMapper.from(toHttpStatusCode(response.getCode()), response.getResponseText())));
+                    responseHandler.handle(Future.failedFuture(
+                            new CoapResultException(toHttpStatusCode(response.getCode()), response.getResponseText())));
                 }
             }
 
             @Override
             public void onError() {
-                responseHandler.handle(Future.failedFuture(new ServiceInvocationException(HttpURLConnection.HTTP_UNAVAILABLE)));
+                responseHandler
+                        .handle(Future.failedFuture(new CoapResultException(HttpURLConnection.HTTP_UNAVAILABLE)));
             }
         };
     }
@@ -827,7 +840,7 @@ public abstract class CoapTestBase {
         }
         try {
             return new URI(scheme, null, IntegrationTestSupport.COAP_HOST, port, resource, null, null);
-        } catch (URISyntaxException e) {
+        } catch (final URISyntaxException e) {
             // cannot happen
             return null;
         }

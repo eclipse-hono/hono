@@ -15,25 +15,44 @@ package org.eclipse.hono.deviceregistry;
 
 import java.net.HttpURLConnection;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.eclipse.hono.auth.HonoPasswordEncoder;
-import org.eclipse.hono.service.credentials.CompleteBaseCredentialsService;
+import org.eclipse.hono.auth.BCryptHelper;
+import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.service.credentials.CredentialsService;
+import org.eclipse.hono.service.management.OperationResult;
+import org.eclipse.hono.service.management.Result;
+import org.eclipse.hono.service.management.credentials.CommonCredential;
+import org.eclipse.hono.service.management.credentials.CredentialsManagementService;
+import org.eclipse.hono.service.management.credentials.PasswordCredential;
+import org.eclipse.hono.service.management.credentials.PasswordSecret;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CacheDirective;
+import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsResult;
+import org.eclipse.hono.util.RegistryManagementConstants;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Repository;
 
 import io.opentracing.Span;
+import io.opentracing.noop.NoopSpan;
+import io.vertx.core.AbstractVerticle;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -41,7 +60,8 @@ import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-
+import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
+import static java.net.HttpURLConnection.HTTP_OK;
 
 
 /**
@@ -51,8 +71,10 @@ import io.vertx.core.json.JsonObject;
  * On shutdown all credentials kept in memory are written to the file (if configured).
  */
 @Repository
+@Qualifier("serviceImpl")
 @ConditionalOnProperty(name = "hono.app.type", havingValue = "file", matchIfMissing = true)
-public final class FileBasedCredentialsService extends CompleteBaseCredentialsService<FileBasedCredentialsConfigProperties> {
+public final class FileBasedCredentialsService extends AbstractVerticle
+        implements CredentialsManagementService, CredentialsService {
 
     /**
      * The name of the JSON array within a tenant that contains the credentials.
@@ -63,26 +85,23 @@ public final class FileBasedCredentialsService extends CompleteBaseCredentialsSe
      */
     public static final String FIELD_TENANT = "tenant";
 
+    private static final Logger log = LoggerFactory.getLogger(FileBasedCredentialsService.class);
+
     // <tenantId, <authId, credentialsData[]>>
     private final Map<String, Map<String, JsonArray>> credentials = new HashMap<>();
+    // <tenantId, <deviceId, version>>
+    private final Map<String, Map<String, String>> versions = new HashMap<>();
     private boolean running = false;
     private boolean dirty = false;
+    private FileBasedCredentialsConfigProperties config;
 
-    /**
-     * Creates a new service instance for a password encoder.
-     * 
-     * @param pwdEncoder The encoder to use for hashing clear text passwords.
-     * @throws NullPointerException if encoder is {@code null}.
-     */
     @Autowired
-    public FileBasedCredentialsService(final HonoPasswordEncoder pwdEncoder) {
-        super(pwdEncoder);
+    public void setConfig(final FileBasedCredentialsConfigProperties configuration) {
+        this.config = configuration;
     }
 
-    @Autowired
-    @Override
-    public void setConfig(final FileBasedCredentialsConfigProperties configuration) {
-        setSpecificConfig(configuration);
+    public FileBasedCredentialsConfigProperties getConfig() {
+        return config;
     }
 
     private Future<Void> checkFileExists(final boolean createIfMissing) {
@@ -102,7 +121,7 @@ public final class FileBasedCredentialsService extends CompleteBaseCredentialsSe
     }
 
     @Override
-    protected void doStart(final Future<Void> startFuture) {
+    public void start(final Future<Void> startFuture) {
 
         if (running) {
             startFuture.complete();
@@ -117,20 +136,22 @@ public final class FileBasedCredentialsService extends CompleteBaseCredentialsSe
                 running = true;
                 startFuture.complete();
             } else {
-                checkFileExists(getConfig().isSaveToFile()).compose(ok -> {
-                    return loadCredentials();
-                }).compose(s -> {
-                    if (getConfig().isSaveToFile()) {
-                        log.info("saving credentials to file every 3 seconds");
-                        vertx.setPeriodic(3000, saveIdentities -> {
-                            saveToFile();
-                        });
-                    } else {
-                        log.info("persistence is disabled, will not save credentials to file");
-                    }
-                    running = true;
-                    startFuture.complete();
-                }, startFuture);
+                checkFileExists(getConfig().isSaveToFile())
+                        .compose(ok -> loadCredentials())
+                        .compose(s -> {
+                            if (getConfig().isSaveToFile()) {
+                                log.info("saving credentials to file every 3 seconds");
+                                vertx.setPeriodic(3000, saveIdentities -> {
+                                    saveToFile();
+                                });
+                            } else {
+                                log.info("persistence is disabled, will not save credentials to file");
+                            }
+                            running = true;
+                            return Future.succeededFuture();
+                        })
+                        .<Void> mapEmpty()
+                        .setHandler(startFuture);
             }
         }
     }
@@ -145,12 +166,13 @@ public final class FileBasedCredentialsService extends CompleteBaseCredentialsSe
             final Future<Buffer> readResult = Future.future();
             log.debug("trying to load credentials from file {}", getConfig().getFilename());
             vertx.fileSystem().readFile(getConfig().getFilename(), readResult);
-            return readResult.compose(buffer -> {
-                return addAll(buffer);
-            }).recover(t -> {
-                log.debug("cannot load credentials from file [{}]: {}", getConfig().getFilename(), t.getMessage());
-                return Future.succeededFuture();
-            });
+            return readResult
+                    .compose(this::addAll)
+                    .recover(t -> {
+                        log.debug("cannot load credentials from file [{}]: {}", getConfig().getFilename(),
+                                t.getMessage());
+                        return Future.succeededFuture();
+                    });
         }
     }
 
@@ -195,7 +217,7 @@ public final class FileBasedCredentialsService extends CompleteBaseCredentialsSe
     }
 
     @Override
-    protected void doStop(final Future<Void> stopFuture) {
+    public void stop(final Future<Void> stopFuture) {
 
         if (running) {
             saveToFile().compose(s -> {
@@ -205,6 +227,7 @@ public final class FileBasedCredentialsService extends CompleteBaseCredentialsSe
         } else {
             stopFuture.complete();
         }
+
     }
 
     Future<Void> saveToFile() {
@@ -280,46 +303,10 @@ public final class FileBasedCredentialsService extends CompleteBaseCredentialsSe
 
         final JsonObject data = getSingleCredentials(tenantId, authId, type, clientContext, span);
         if (data == null) {
-            resultHandler.handle(Future.succeededFuture(CredentialsResult.from(HttpURLConnection.HTTP_NOT_FOUND)));
+            resultHandler.handle(Future.succeededFuture(CredentialsResult.from(HTTP_NOT_FOUND)));
         } else {
             resultHandler.handle(Future.succeededFuture(
-                    CredentialsResult.from(HttpURLConnection.HTTP_OK, data.copy(), getCacheDirective(type))));
-        }
-    }
-
-    /**
-     * {@inheritDoc}
-     * <p>
-     * The result object will include a <em>no-cache</em> directive.
-     */
-    @Override
-    public void getAll(final String tenantId, final String deviceId, final Span span,
-            final Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
-
-        Objects.requireNonNull(tenantId);
-        Objects.requireNonNull(deviceId);
-        Objects.requireNonNull(resultHandler);
-
-        final Map<String, JsonArray> credentialsForTenant = credentials.get(tenantId);
-        if (credentialsForTenant == null) {
-            TracingHelper.logError(span, "no credentials found for tenant");
-            resultHandler.handle(Future.succeededFuture(CredentialsResult.from(HttpURLConnection.HTTP_NOT_FOUND)));
-        } else {
-            final JsonArray matchingCredentials = new JsonArray();
-            // iterate over all credentials per auth-id in order to find credentials matching the given device
-            for (final JsonArray credentialsForAuthId : credentialsForTenant.values()) {
-                findCredentialsForDevice(credentialsForAuthId, deviceId, matchingCredentials);
-            }
-            if (matchingCredentials.isEmpty()) {
-                TracingHelper.logError(span, "no credentials found for device");
-                resultHandler.handle(Future.succeededFuture(CredentialsResult.from(HttpURLConnection.HTTP_NOT_FOUND)));
-            } else {
-                final JsonObject result = new JsonObject()
-                        .put(CredentialsConstants.FIELD_CREDENTIALS_TOTAL, matchingCredentials.size())
-                        .put(CredentialsConstants.CREDENTIALS_ENDPOINT, matchingCredentials);
-                resultHandler.handle(Future.succeededFuture(
-                        CredentialsResult.from(HttpURLConnection.HTTP_OK, result, CacheDirective.noCacheDirective())));
-            }
+                    CredentialsResult.from(HTTP_OK, data.copy(), getCacheDirective(type))));
         }
     }
 
@@ -338,8 +325,34 @@ public final class FileBasedCredentialsService extends CompleteBaseCredentialsSe
     }
 
     /**
-     * Get the credentials associated with the authId and the given type.
-     * If type is null, all credentials associated with the authId are returned (as JsonArray inside the return value).
+     * Gets a property value of a given type from a JSON object.
+     *
+     * @param clazz Type class of the type
+     * @param payload The object to get the property from.
+     * @param field The name of the property.
+     * @param <T> The type of the field.
+     * @return The property value or {@code null} if no such property exists or is not of the expected type.
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     */
+    protected static <T> T getTypesafeValueForField(final Class<T> clazz, final JsonObject payload,
+            final String field) {
+
+        Objects.requireNonNull(clazz);
+        Objects.requireNonNull(payload);
+        Objects.requireNonNull(field);
+
+        final Object result = payload.getValue(field);
+
+        if (clazz.isInstance(result)) {
+            return clazz.cast(result);
+        }
+
+        return null;
+    }
+
+    /**
+     * Get the credentials associated with the authId and the given type. If type is null, all credentials associated
+     * with the authId are returned (as JsonArray inside the return value).
      *
      * @param tenantId The id of the tenant the credentials belong to.
      * @param authId The authentication identifier to look up credentials for.
@@ -355,243 +368,404 @@ public final class FileBasedCredentialsService extends CompleteBaseCredentialsSe
         Objects.requireNonNull(type);
 
         final Map<String, JsonArray> credentialsForTenant = credentials.get(tenantId);
-        if (credentialsForTenant != null) {
-            final JsonArray authIdCredentials = credentialsForTenant.get(authId);
-            if (authIdCredentials != null) {
-                for (final Object authIdCredentialEntry : authIdCredentials) {
-                    final JsonObject authIdCredential = (JsonObject) authIdCredentialEntry;
-                    // return the first matching type entry for this authId
-                    if (type.equals(authIdCredential.getString(CredentialsConstants.FIELD_TYPE))) {
-                        if (clientContext != null) {
-                            final AtomicBoolean match = new AtomicBoolean(true);
-                            clientContext.forEach(field -> {
-                                if (authIdCredential.containsKey(field.getKey())) {
-                                    if (!authIdCredential.getString(field.getKey()).equals(field.getValue())) {
-                                        match.set(false);
-                                    }
-                                } else {
-                                    match.set(false);
-                                }
-                            });
-                            if (!match.get()) {
-                                continue;
-                            }
-                        }
-                        return authIdCredential;
-                    }
-                }
-                if (clientContext != null) {
-                    TracingHelper.logError(span, "no credentials found with matching type and client context");
-                } else {
-                    TracingHelper.logError(span, "no credentials found with matching type");
-                }
-            } else {
-                TracingHelper.logError(span, "no credentials found for auth-id");
-            }
-        } else {
+        if (credentialsForTenant == null) {
             TracingHelper.logError(span, "no credentials found for tenant");
+            return null;
         }
+
+        final JsonArray authIdCredentials = credentialsForTenant.get(authId);
+        if (authIdCredentials == null) {
+            TracingHelper.logError(span, "no credentials found for auth-id");
+            return null;
+        }
+
+        for (final Object authIdCredentialEntry : authIdCredentials) {
+            final JsonObject authIdCredential = (JsonObject) authIdCredentialEntry;
+
+            if (!type.equals(authIdCredential.getString(CredentialsConstants.FIELD_TYPE))) {
+                // auth-id doesn't match ... continue search
+                continue;
+            }
+
+            if (Boolean.FALSE.equals(authIdCredential.getBoolean(CredentialsConstants.FIELD_ENABLED, true))) {
+                // do not report disabled
+                continue;
+            }
+
+            if (clientContext != null) {
+                final AtomicBoolean match = new AtomicBoolean(true);
+                clientContext.forEach(field -> {
+                    if (authIdCredential.containsKey(field.getKey())) {
+                        if (!authIdCredential.getString(field.getKey()).equals(field.getValue())) {
+                            match.set(false);
+                        }
+                    } else {
+                        match.set(false);
+                    }
+                });
+                if (!match.get()) {
+                    continue;
+                }
+            }
+
+            // copy
+            final var authIdCredentialCopy = authIdCredential.copy();
+            final var secrets = authIdCredentialCopy.getJsonArray(CredentialsConstants.FIELD_SECRETS);
+
+            for (final Iterator<Object> i = secrets.iterator(); i.hasNext();) {
+
+                final Object o = i.next();
+                if (!(o instanceof JsonObject)) {
+                    i.remove();
+                    continue;
+                }
+
+                final JsonObject secret = (JsonObject) o;
+                if (Boolean.FALSE.equals(secret.getBoolean(CredentialsConstants.FIELD_ENABLED, true))) {
+                    i.remove();
+                    continue;
+                }
+            }
+
+            if (secrets.isEmpty()) {
+                // no more secrets left
+                continue;
+            }
+
+            // return the first entry that matches
+            return authIdCredentialCopy;
+        }
+
+        // we ended up with no match
+        if (clientContext != null) {
+            TracingHelper.logError(span, "no credentials found with matching type and client context");
+        } else {
+            TracingHelper.logError(span, "no credentials found with matching type");
+        }
+
         return null;
     }
 
     @Override
-    public void add(final String tenantId, final JsonObject credentials, final Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
+    public void set(final String tenantId, final String deviceId, final Optional<String> resourceVersion,
+                    final List<CommonCredential> secrets, final Span span, final Handler<AsyncResult<OperationResult<Void>>> resultHandler) {
 
-        Objects.requireNonNull(tenantId);
-        Objects.requireNonNull(credentials);
-        Objects.requireNonNull(resultHandler);
-        final CredentialsResult<JsonObject> credentialsResult = addCredentialsResult(tenantId, credentials);
-        resultHandler.handle(Future.succeededFuture(credentialsResult));
+        resultHandler.handle(Future.succeededFuture(set(tenantId, deviceId, resourceVersion, span, secrets)));
+
     }
 
-    private CredentialsResult<JsonObject> addCredentialsResult(final String tenantId, final JsonObject credentialsToAdd) {
+    private OperationResult<Void> set(final String tenantId, final String deviceId,
+            final Optional<String> resourceVersion, final Span span, final List<CommonCredential> credentials) {
 
-        final String authId = credentialsToAdd.getString(CredentialsConstants.FIELD_AUTH_ID);
-        final String type = credentialsToAdd.getString(CredentialsConstants.FIELD_TYPE);
-        log.debug("adding credentials for device [tenant-id: {}, auth-id: {}, type: {}]", tenantId, authId, type);
-
-        final Map<String, JsonArray> credentialsForTenant = getCredentialsForTenant(tenantId);
-
-        final JsonArray authIdCredentials = getAuthIdCredentials(authId, credentialsForTenant);
-
-        // check if credentials already exist with the type and auth-id from the payload
-        for (final Object credentialsObj: authIdCredentials) {
-            final JsonObject credentials = (JsonObject) credentialsObj;
-            if (credentials.getString(CredentialsConstants.FIELD_TYPE).equals(type)) {
-                return CredentialsResult.from(HttpURLConnection.HTTP_CONFLICT);
-            }
+        if (!checkResourceVersion(tenantId, deviceId, resourceVersion)) {
+            TracingHelper.logError(span, "Resource version mismatch");
+            return OperationResult.empty(HttpURLConnection.HTTP_PRECON_FAILED);
         }
 
-        authIdCredentials.add(credentialsToAdd);
-        dirty = true;
-        return CredentialsResult.from(HttpURLConnection.HTTP_CREATED);
+        // change version
+        final var newVersion = UUID.randomUUID().toString();
+        setResourceVersion(tenantId, deviceId, newVersion);
+
+        // clean out all existing credentials for this device
+        try {
+            removeAllForDevice(tenantId, deviceId, span);
+        } catch (final ClientErrorException e) {
+            TracingHelper.logError(span, e);
+            return OperationResult.empty(e.getErrorCode());
+        }
+
+        // authId->credentials[]
+        final Map<String, JsonArray> credentialsForTenant = createOrGetCredentialsForTenant(tenantId);
+
+        // now add the new ones
+        for (final CommonCredential credential : credentials) {
+
+            try {
+                checkCredential(credential);
+            } catch (final IllegalStateException e) {
+                TracingHelper.logError(span, e);
+                log.debug("Failed to validate credentials", e);
+                return OperationResult.empty(HttpURLConnection.HTTP_BAD_REQUEST);
+            }
+
+            final String authId = credential.getAuthId();
+            final JsonObject credentialObject = JsonObject.mapFrom(credential);
+            final String type = credentialObject.getString(CredentialsConstants.FIELD_TYPE);
+            final var json = createOrGetAuthIdCredentials(authId, credentialsForTenant);
+
+            // find credentials - matching by type
+            var credentialsJson = json.stream()
+                    .filter(JsonObject.class::isInstance).map(JsonObject.class::cast)
+                    .filter(j -> type.equals(j.getString(CredentialsConstants.FIELD_TYPE)))
+                    .findAny().orElse(null);
+
+            if (credentialsJson == null) {
+                // did not found an entry, add new one
+                credentialsJson = new JsonObject();
+                credentialsJson.put(CredentialsConstants.FIELD_AUTH_ID, authId);
+                credentialsJson.put(CredentialsConstants.FIELD_PAYLOAD_DEVICE_ID, deviceId);
+                credentialsJson.put(CredentialsConstants.FIELD_TYPE, type);
+                credentialsJson.put(CredentialsConstants.FIELD_ENABLED, credential.getEnabled());
+                credentialsJson.put(RegistryManagementConstants.FIELD_EXT, credential.getExtensions());
+                json.add(credentialsJson);
+            }
+
+            if (!deviceId.equals(credentialsJson.getString(CredentialsConstants.FIELD_PAYLOAD_DEVICE_ID))) {
+                // found an entry for another device, with the same auth-id
+                TracingHelper.logError(span, "Auth-id already used for another device");
+                return OperationResult.empty(HttpURLConnection.HTTP_CONFLICT);
+            }
+
+            // start updating
+            dirty = true;
+
+            var secretsJson = credentialsJson.getJsonArray(CredentialsConstants.FIELD_SECRETS);
+            if (secretsJson == null) {
+                // secrets field was missing, assign
+                secretsJson = new JsonArray();
+                credentialsJson.put(CredentialsConstants.FIELD_SECRETS, secretsJson);
+            }
+            secretsJson.addAll(credentialObject.getJsonArray(CredentialsConstants.FIELD_SECRETS));
+            credentialsForTenant.put(authId, json);
+        }
+
+        return OperationResult.ok(HttpURLConnection.HTTP_NO_CONTENT, null, Optional.empty(), Optional.of(newVersion));
     }
 
-    @Override
-    public void update(final String tenantId, final JsonObject newCredentials, final Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
-
-        Objects.requireNonNull(tenantId);
-        Objects.requireNonNull(newCredentials);
-        Objects.requireNonNull(resultHandler);
-
-        if (getConfig().isModificationEnabled()) {
-            final String authId = newCredentials.getString(CredentialsConstants.FIELD_AUTH_ID);
-            final String type = newCredentials.getString(CredentialsConstants.FIELD_TYPE);
-            log.debug("updating credentials for device [tenant-id: {}, auth-id: {}, type: {}]", tenantId, authId, type);
-
-            final Map<String, JsonArray> credentialsForTenant = getCredentialsForTenant(tenantId);
-            if (credentialsForTenant == null) {
-                resultHandler.handle(Future.succeededFuture(CredentialsResult.from(HttpURLConnection.HTTP_NOT_FOUND)));
-            } else {
-                final JsonArray credentialsForAuthId = credentialsForTenant.get(authId);
-                if (credentialsForAuthId == null) {
-                    resultHandler.handle(Future.succeededFuture(CredentialsResult.from(HttpURLConnection.HTTP_NOT_FOUND)));
-                } else {
-                    // find credentials of given type
-                    boolean removed = false;
-                    final Iterator<Object> credentialsIterator = credentialsForAuthId.iterator();
-                    while (credentialsIterator.hasNext()) {
-                        final JsonObject creds = (JsonObject) credentialsIterator.next();
-                        if (creds.getString(CredentialsConstants.FIELD_TYPE).equals(type)) {
-                            credentialsIterator.remove();
-                            removed = true;
-                            break;
-                        }
-                    }
-                    if (removed) {
-                        credentialsForAuthId.add(newCredentials);
-                        dirty = true;
-                        resultHandler.handle(Future.succeededFuture(CredentialsResult.from(HttpURLConnection.HTTP_NO_CONTENT)));
-                    } else {
-                        resultHandler.handle(Future.succeededFuture(CredentialsResult.from(HttpURLConnection.HTTP_NOT_FOUND)));
-                    }
+    /**
+     * Validate a secret.
+     *
+     * @param credential The secret to validate.
+     * @throws IllegalStateException if the secret is not valid.
+     */
+    protected void checkCredential(final CommonCredential credential) {
+        credential.checkValidity();
+        if (credential instanceof PasswordCredential) {
+            for (final PasswordSecret passwordSecret : ((PasswordCredential) credential).getSecrets()) {
+                checkHashedPassword(passwordSecret);
+                switch (passwordSecret.getHashFunction()) {
+                    case RegistryManagementConstants.HASH_FUNCTION_BCRYPT:
+                        final String pwdHash = passwordSecret.getPasswordHash();
+                        verifyBcryptPasswordHash(pwdHash);
+                        break;
+                    default:
+                        // pass
                 }
+                // pass
             }
-        } else {
-            resultHandler.handle(Future.succeededFuture(CredentialsResult.from(HttpURLConnection.HTTP_FORBIDDEN)));
         }
     }
 
-    @Override
-    public void remove(final String tenantId, final String type, final String authId, final Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
+    /**
+     * Verifies that a hash value is a valid BCrypt password hash.
+     * <p>
+     * The hash must be a version 2a hash and must not use more than the configured
+     * maximum number of iterations as returned by {@link #getMaxBcryptIterations()}.
+     *
+     * @param pwdHash The hash to verify.
+     * @throws IllegalStateException if the secret does not match the criteria.
+     */
+    protected void verifyBcryptPasswordHash(final String pwdHash) {
 
-        Objects.requireNonNull(tenantId);
-        Objects.requireNonNull(type);
-        Objects.requireNonNull(authId);
-        Objects.requireNonNull(resultHandler);
+        Objects.requireNonNull(pwdHash);
+        if (BCryptHelper.getIterations(pwdHash) > getMaxBcryptIterations()) {
+            throw new IllegalStateException("password hash uses too many iterations, max is " + getMaxBcryptIterations());
+        }
+    }
 
-        if (getConfig().isModificationEnabled()) {
-            final Map<String, JsonArray> credentialsForTenant = credentials.get(tenantId);
-            if (credentialsForTenant == null) {
-                resultHandler.handle(Future.succeededFuture(CredentialsResult.from(HttpURLConnection.HTTP_NOT_FOUND)));
-            } else {
-                final JsonArray credentialsForAuthId = credentialsForTenant.get(authId);
-                if (credentialsForAuthId == null) {
-                    resultHandler.handle(Future.succeededFuture(CredentialsResult.from(HttpURLConnection.HTTP_NOT_FOUND)));
-                } else if (removeCredentialsFromCredentialsArray(null, type, credentialsForAuthId)) {
-                    if (credentialsForAuthId.isEmpty()) {
-                        credentialsForTenant.remove(authId); // do not leave empty array as value
-                    }
-                    resultHandler.handle(Future.succeededFuture(CredentialsResult.from(HttpURLConnection.HTTP_NO_CONTENT)));
-                } else {
-                    resultHandler.handle(Future.succeededFuture(CredentialsResult.from(HttpURLConnection.HTTP_NOT_FOUND)));
+    private void checkHashedPassword(final PasswordSecret secret) {
+        if (secret.getHashFunction() == null) {
+            throw new IllegalStateException("missing/invalid hash function");
+        }
+
+        if (secret.getPasswordHash() == null) {
+            throw new IllegalStateException("missing/invalid password hash");
+        }
+    }
+
+    /**
+     * Remove all credentials that point to a device.
+     * 
+     * @param tenantId The tenant to process.
+     * @param deviceId The device id to look for.
+     */
+    private void removeAllForDevice(final String tenantId, final String deviceId, final Span span) {
+
+        final boolean canModify = getConfig().isModificationEnabled();
+
+        final Map<String, JsonArray> credentialsForTenant = createOrGetCredentialsForTenant(tenantId);
+
+        for (final JsonArray versionedCredentials : credentialsForTenant.values()) {
+
+            for (final Iterator<Object> i = versionedCredentials.iterator(); i.hasNext();) {
+
+                final Object o = i.next();
+
+                if (!(o instanceof JsonObject)) {
+                    continue;
                 }
+
+                final JsonObject credentials = (JsonObject) o;
+                final String currentDeviceId = credentials.getString(Constants.JSON_FIELD_DEVICE_ID);
+                if (!deviceId.equals(currentDeviceId)) {
+                    continue;
+                }
+
+                // check if we may overwrite
+
+                if (!canModify) {
+                    TracingHelper.logError(span, "Modification is disabled for the Credentials service.");
+                    throw new ClientErrorException(HttpURLConnection.HTTP_FORBIDDEN);
+                }
+
+                // remove device from credentials set
+                i.remove();
+                this.dirty = true;
             }
-        } else {
-            resultHandler.handle(Future.succeededFuture(CredentialsResult.from(HttpURLConnection.HTTP_FORBIDDEN)));
         }
     }
 
     @Override
-    public void removeAll(final String tenantId, final String deviceId, final Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
+    public void get(final String tenantId, final String deviceId, final Span span,
+            final Handler<AsyncResult<OperationResult<List<CommonCredential>>>> resultHandler) {
 
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(resultHandler);
 
-        if (getConfig().isModificationEnabled()) {
+        final Map<String, JsonArray> credentialsForTenant = credentials.get(tenantId);
+        if (credentialsForTenant == null) {
+            TracingHelper.logError(span, "No credentials found for tenant");
+            resultHandler.handle(Future.succeededFuture(OperationResult.ok(HTTP_NOT_FOUND, null, Optional.empty(),
+                    Optional.of(getOrCreateResourceVersion(tenantId, deviceId)))));
+            return;
+        }
 
-            final Map<String, JsonArray> credentialsForTenant = credentials.get(tenantId);
-            if (credentialsForTenant == null) {
-                resultHandler.handle(Future.succeededFuture(CredentialsResult.from(HttpURLConnection.HTTP_NOT_FOUND)));
-            } else {
+        final JsonArray matchingCredentials = new JsonArray();
+        // iterate over all credentials per auth-id in order to find credentials matching the given device
+        for (final JsonArray credentialsForAuthId : credentialsForTenant.values()) {
+            findCredentialsForDevice(credentialsForAuthId, deviceId, matchingCredentials);
+        }
+        if (matchingCredentials.isEmpty()) {
+            TracingHelper.logError(span, "No credentials found for device");
+            resultHandler.handle(Future.succeededFuture(OperationResult.ok(HTTP_NOT_FOUND, null, Optional.empty(),
+                    Optional.of(getOrCreateResourceVersion(tenantId, deviceId)))));
+            return;
+        }
 
-                boolean removedAnyElement = false;
+        // convert credentials
 
-                // delete based on type (no authId provided) - this might consume more time on large data sets and is thus
-                // handled explicitly
-                for (final JsonArray credentialsForAuthId : credentialsForTenant.values()) {
-                    if (removeCredentialsFromCredentialsArray(deviceId, CredentialsConstants.SPECIFIER_WILDCARD, credentialsForAuthId)) {
-                        removedAnyElement = true;
-                    }
-                }
+        final List<CommonCredential> credentials = new ArrayList<>();
+        for (final Object credential : matchingCredentials) {
+            final JsonObject credentialsObject = (JsonObject) credential;
+            credentialsObject.remove(CredentialsConstants.FIELD_PAYLOAD_DEVICE_ID);
+            final CommonCredential cred = credentialsObject.mapTo(CommonCredential.class);
+            credentials.add(cred);
+        }
 
-                // there might be empty credentials arrays left now, so remove them in a second run
-                cleanupEmptyCredentialsArrays(credentialsForTenant);
+        resultHandler.handle(Future.succeededFuture(
+                OperationResult.ok(HTTP_OK,
+                        credentials,
+                        // TODO check cache directive
+                        Optional.empty(),
+                        Optional.of(getOrCreateResourceVersion(tenantId, deviceId)))));
 
-                if (removedAnyElement) {
-                    dirty = true;
-                    resultHandler.handle(Future.succeededFuture(CredentialsResult.from(HttpURLConnection.HTTP_NO_CONTENT)));
-                } else {
-                    resultHandler.handle(Future.succeededFuture(CredentialsResult.from(HttpURLConnection.HTTP_NOT_FOUND)));
-                }
-            }
+    }
+
+    /**
+     * Remove all the credentials for the given device ID.
+     * @param tenantId the Id of the tenant which the device belongs to.
+     * @param deviceId the id of the device that is deleted.
+     * @param span The active OpenTracing span for this operation.
+     * @param resultHandler the operation result.
+     */
+    public void remove(final String tenantId, final String deviceId,
+            final Span span, final Handler<AsyncResult<Result<Void>>> resultHandler) {
+        Objects.requireNonNull(tenantId);
+        Objects.requireNonNull(deviceId);
+        Objects.requireNonNull(resultHandler);
+
+        log.debug("removing credentials for device [tenant-id: {}, device-id: {}]", tenantId, deviceId);
+
+        resultHandler.handle(Future.succeededFuture(remove(tenantId, deviceId, span)));
+    }
+
+    private Result<Void> remove(final String tenantId, final String deviceId, final Span span) {
+
+        setResourceVersion(tenantId, deviceId, null);
+
+        try {
+            removeAllForDevice(tenantId, deviceId, span);
+        } catch (final ClientErrorException e) {
+            TracingHelper.logError(span, e);
+            return Result.from(e.getErrorCode());
+        }
+
+        return Result.from(HttpURLConnection.HTTP_NO_CONTENT);
+    }
+
+    private boolean checkResourceVersion(final String tenantId, final String deviceId, final Optional<String> resourceVersion) {
+
+        if (resourceVersion.isEmpty()) {
+            return true;
+        }
+
+        final String version = versions.getOrDefault(tenantId, Collections.emptyMap()).get(deviceId);
+        if (version == null) {
+            // we have no version, and never told anyone, so the requested version of wrong.
+            return false;
+        }
+
+        return version.equals(resourceVersion.get());
+    }
+
+    private String setResourceVersion(final String tenantId, final String deviceId, final String version) {
+
+        if (version != null) {
+
+            versions
+                    .computeIfAbsent(tenantId, key -> new HashMap<>())
+                    .put(deviceId, version);
+
         } else {
-            resultHandler.handle(Future.succeededFuture(CredentialsResult.from(HttpURLConnection.HTTP_FORBIDDEN)));
-        }
-    }
 
-    private void cleanupEmptyCredentialsArrays(final Map<String, JsonArray> mapToCleanup) {
+            versions.getOrDefault(tenantId, Collections.emptyMap()).remove(deviceId);
 
-        // use an iterator here to allow removal during looping (streams currently do not allow this)
-        final Iterator<Entry<String, JsonArray>> entries = mapToCleanup.entrySet().iterator();
-        while (entries.hasNext()) {
-            final Entry<String, JsonArray> entry = entries.next();
-            if (entry.getValue().isEmpty()) {
-                entries.remove();
-            }
-        }
-    }
-
-    private boolean removeCredentialsFromCredentialsArray(final String deviceId, final String type, final JsonArray credentialsForAuthId) {
-
-        boolean removedElement = false;
-
-        if (credentialsForAuthId != null) {
-            // the credentials in the array always have the same authId, but possibly different types
-            // use an iterator here to allow removal during looping (streams currently do not allow this)
-            final Iterator<Object> credentialsIterator = credentialsForAuthId.iterator();
-            while (credentialsIterator.hasNext()) {
-
-                final JsonObject element = (JsonObject) credentialsIterator.next();
-                final String credType = element.getString(CredentialsConstants.FIELD_TYPE);
-                final String credDevice = element.getString(CredentialsConstants.FIELD_PAYLOAD_DEVICE_ID);
-
-                if (!CredentialsConstants.SPECIFIER_WILDCARD.equals(type) && credType.equals(type)) {
-                    // delete a single credentials instance
-                    credentialsIterator.remove();
-                    removedElement = true;
-                    break; // there can only be one matching instance due to uniqueness guarantees
-                } else if (CredentialsConstants.SPECIFIER_WILDCARD.equalsIgnoreCase(type) && credDevice.equals(deviceId)) {
-                    // delete all credentials for device
-                    credentialsIterator.remove();
-                    removedElement = true;
-                } else if (credDevice.equals(deviceId) && credType.equals(type)) {
-                    // delete all credentials for device of given type
-                    credentialsIterator.remove();
-                    removedElement = true;
-                }
-            }
         }
 
-        return removedElement;
+        return version;
+
     }
 
-    private Map<String, JsonArray> getCredentialsForTenant(final String tenantId) {
+    private String getOrCreateResourceVersion(final String tenantId, final String deviceId) {
+        return versions.computeIfAbsent(tenantId, key -> new HashMap<>())
+                .computeIfAbsent(deviceId, key -> UUID.randomUUID().toString());
+    }
+
+    @Override
+    public void get(final String tenantId, final String type, final String authId,
+            final Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
+        get(tenantId, type, authId, NoopSpan.INSTANCE, resultHandler);
+    }
+
+    @Override
+    public void get(final String tenantId, final String type, final String authId, final JsonObject clientContext,
+            final Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
+        get(tenantId, type, authId, clientContext, NoopSpan.INSTANCE, resultHandler);
+    }
+
+    /**
+     * Create or get credentials map for a single tenant.
+     * 
+     * @param tenantId The tenant to get
+     * @return The map, never returns {@code null}.
+     */
+    private Map<String, JsonArray> createOrGetCredentialsForTenant(final String tenantId) {
         return credentials.computeIfAbsent(tenantId, id -> new HashMap<>());
     }
 
-    private JsonArray getAuthIdCredentials(final String authId, final Map<String, JsonArray> credentialsForTenant) {
+    private JsonArray createOrGetAuthIdCredentials(final String authId,
+            final Map<String, JsonArray> credentialsForTenant) {
         return credentialsForTenant.computeIfAbsent(authId, id -> new JsonArray());
     }
 
@@ -623,7 +797,6 @@ public final class FileBasedCredentialsService extends CompleteBaseCredentialsSe
         return String.format("%s[filename=%s]", FileBasedCredentialsService.class.getSimpleName(), getConfig().getFilename());
     }
 
-    @Override
     protected int getMaxBcryptIterations() {
         return getConfig().getMaxBcryptIterations();
     }

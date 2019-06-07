@@ -16,7 +16,6 @@ package org.eclipse.hono.adapter.coap;
 import java.net.HttpURLConnection;
 import java.net.InetSocketAddress;
 import java.security.Principal;
-import java.util.Base64;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CancellationException;
@@ -130,13 +129,7 @@ public class CoapPreSharedKeyHandler implements PskStore, CoapAuthenticationHand
     private static byte[] getCandidateKey(final CredentialsObject credentialsOnRecord) {
 
         final List<byte[]> keys = credentialsOnRecord.getCandidateSecrets(candidateSecret -> {
-
-            final String secretKeyBase64 = candidateSecret.getString(CredentialsConstants.FIELD_SECRETS_KEY);
-            if (secretKeyBase64 != null) {
-                return Base64.getDecoder().decode(secretKeyBase64);
-            } else {
-                return new byte[0];
-            }
+            return candidateSecret.getBinary(CredentialsConstants.FIELD_SECRETS_KEY, new byte[0]);
         });
         if (keys.isEmpty()) {
             return null;
@@ -177,10 +170,8 @@ public class CoapPreSharedKeyHandler implements PskStore, CoapAuthenticationHand
         try {
             // timeout, don't block handshake too long
             return secret.get(10000, TimeUnit.MILLISECONDS);
-        } catch (InterruptedException e) {
-        } catch (TimeoutException e) {
-        } catch (CancellationException e) {
-        } catch (ExecutionException e) {
+        } catch (final InterruptedException | TimeoutException | CancellationException | ExecutionException e) {
+            LOG.info("failed to wait for key result", e);
         }
         LOG.debug("no candidate PSK secret found for identity [{}]", identity);
         return null;

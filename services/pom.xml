@@ -28,7 +28,7 @@
   <modules>
     <module>auth</module>
     <module>device-registry</module>
-    
+    <module>device-registry-legacy</module>
   </modules>
 
   <name>Hono Services</name>

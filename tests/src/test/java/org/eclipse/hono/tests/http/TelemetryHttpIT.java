@@ -18,9 +18,9 @@ import java.util.function.Consumer;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.MessageConsumer;
+import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.TelemetryConstants;
-import org.eclipse.hono.util.TenantObject;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -64,14 +64,15 @@ public class TelemetryHttpIT extends HttpTestBase {
     public void testUploadUsingQoS1(final TestContext ctx) throws InterruptedException {
 
         final Async setup = ctx.async();
-        final TenantObject tenant = TenantObject.from(tenantId, true);
+        final Tenant tenant = new Tenant();
         final MultiMap requestHeaders = MultiMap.caseInsensitiveMultiMap()
                 .add(HttpHeaders.CONTENT_TYPE, "binary/octet-stream")
                 .add(HttpHeaders.AUTHORIZATION, authorization)
                 .add(HttpHeaders.ORIGIN, ORIGIN_URI)
                 .add(Constants.HEADER_QOS_LEVEL, "1");
 
-        helper.registry.addDeviceForTenant(tenant, deviceId, PWD).setHandler(ctx.asyncAssertSuccess(ok -> setup.complete()));
+        helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, PWD)
+                .setHandler(ctx.asyncAssertSuccess(ok -> setup.complete()));
         setup.await();
 
         testUploadMessages(ctx, tenantId, count -> {
