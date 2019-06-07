@@ -32,6 +32,7 @@ import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventBusMessage;
 import org.eclipse.hono.util.HonoProtonHelper;
 import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.util.RequestResponseApiConstants;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -262,25 +263,16 @@ public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties>
                     requestMessage.getSubject(), t.getMessage());
             currentSpan.log("error processing request");
             TracingHelper.logError(currentSpan, t);
-            final int statusCode;
-            if (t instanceof ReplyException) {
-                final ReplyException ex = (ReplyException) t;
-                switch(ex.failureType()) {
-                case TIMEOUT:
-                    statusCode = HttpURLConnection.HTTP_UNAVAILABLE;
-                    break;
-                default:
-                    statusCode = HttpURLConnection.HTTP_INTERNAL_ERROR;
-                }
-            } else {
-                statusCode = ServiceInvocationException.extractStatusCode(t);
-            }
-            Tags.HTTP_STATUS.set(currentSpan, statusCode);
-            return getAmqpReply(EventBusMessage.getResponse(statusCode, requestMessage));
+
+            final ServiceInvocationException ex = getServiceInvocationException(t);
+            Tags.HTTP_STATUS.set(currentSpan, ex.getErrorCode());
+            return RequestResponseApiConstants.getErrorMessage(ex.getErrorCode(), ex.getMessage(), requestMessage);
         })
         .map(amqpMessage -> {
             if (sender.result().isOpen()) {
                 final ProtonDelivery responseDelivery = sender.result().send(amqpMessage);
+                logger.debug("sent response message to client  [correlation-id: {}, content-type: {}]",
+                        amqpMessage.getCorrelationId(), amqpMessage.getContentType());
                 currentSpan.log("sent response message to client");
                 return responseDelivery;
             } else {
@@ -293,6 +285,25 @@ public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties>
             flowCreditToRequestor(receiver, replyTo);
             currentSpan.finish();
         });
+    }
+
+    private ServiceInvocationException getServiceInvocationException(final Throwable error) {
+
+        if (error instanceof ServiceInvocationException) {
+            return (ServiceInvocationException) error;
+        } else if (error instanceof ReplyException) {
+            final ReplyException ex = (ReplyException) error;
+            switch(ex.failureType()) {
+            case TIMEOUT:
+                return new ServerErrorException(
+                        HttpURLConnection.HTTP_UNAVAILABLE,
+                        "request could not be processed at the moment");
+            default:
+                return new ServerErrorException(HttpURLConnection.HTTP_INTERNAL_ERROR);
+            }
+        } else {
+            return new ServerErrorException(HttpURLConnection.HTTP_INTERNAL_ERROR);
+        }
     }
 
     /**

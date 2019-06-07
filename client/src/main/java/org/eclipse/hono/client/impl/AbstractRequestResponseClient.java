@@ -938,4 +938,23 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
     protected final String getTenantId() {
         return tenantId;
     }
+
+    /**
+     * Checks if an AMQP message contains the result of the successful invocation
+     * of an operation.
+     * 
+     * @param status The status code from the message.
+     * @param contentType A media type describing the payload or {@code null} if unknown.
+     * @param payload The payload from the response (may be {@code null}).
+     * @return {@code true} if 200 =&lt; status &lt; 300 and the message contains a JSON
+     *                      payload.
+     */
+    protected final boolean isSuccessResponse(
+            final int status,
+            final String contentType,
+            final Buffer payload) {
+
+        return StatusCodeMapper.isSuccessful(status) && payload != null
+                && MessageHelper.CONTENT_TYPE_APPLICATION_JSON.equalsIgnoreCase(contentType);
+    }
 }

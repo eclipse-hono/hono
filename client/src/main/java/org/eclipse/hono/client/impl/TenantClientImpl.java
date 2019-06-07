@@ -113,9 +113,7 @@ public class TenantClientImpl extends AbstractRequestResponseClient<TenantResult
             final CacheDirective cacheDirective,
             final ApplicationProperties applicationProperties) {
 
-        if (payload == null) {
-            return TenantResult.from(status, (TenantObject) null, cacheDirective, applicationProperties);
-        } else {
+        if (isSuccessResponse(status, contentType, payload)) {
             try {
                 return TenantResult.from(
                         status,
@@ -126,6 +124,8 @@ public class TenantClientImpl extends AbstractRequestResponseClient<TenantResult
                 LOG.warn("received malformed payload from Tenant service", e);
                 return TenantResult.from(HttpURLConnection.HTTP_INTERNAL_ERROR, null, null, applicationProperties);
             }
+        } else {
+            return TenantResult.from(status, null, null, applicationProperties);
         }
     }
 

@@ -20,6 +20,7 @@ import java.util.UUID;
 import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
 import org.apache.qpid.proton.message.Message;
 
+import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
 import io.vertx.proton.ProtonHelper;
 
@@ -120,6 +121,34 @@ public abstract class RequestResponseApiConstants {
 
         MessageHelper.setJsonPayload(message, payload);
 
+        return message;
+    }
+
+    /**
+     * Creates an AMQP (response) message for conveying an erroneous outcome of an operation.
+     * 
+     * @param status The status code.
+     * @param errorDescription An (optional) error description which will be put to a <em>Data</em>
+     *                         section.
+     * @param requestMessage The request message.
+     * @return The response message.
+     */
+    public static final Message getErrorMessage(
+            final int status,
+            final String errorDescription,
+            final Message requestMessage) {
+
+        Objects.requireNonNull(requestMessage);
+        if (status < 100 || status >= 600) {
+            throw new IllegalArgumentException("illegal status code");
+        }
+
+        final Message message = ProtonHelper.message();
+        MessageHelper.addStatus(message, status);
+        message.setCorrelationId(MessageHelper.getCorrelationId(requestMessage));
+        if (errorDescription != null) {
+            MessageHelper.setPayload(message, MessageHelper.CONTENT_TYPE_TEXT_PLAIN, Buffer.buffer(errorDescription));
+        }
         return message;
     }
 }

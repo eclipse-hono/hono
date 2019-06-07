@@ -114,15 +114,15 @@ public class RegistrationClientImpl extends AbstractRequestResponseClient<Regist
             final CacheDirective cacheDirective,
             final ApplicationProperties applicationProperties) {
 
-        if (payload == null) {
-            return RegistrationResult.from(status, null, null, applicationProperties);
-        } else {
+        if (isSuccessResponse(status, contentType, payload)) {
             try {
                 return RegistrationResult.from(status, new JsonObject(payload), cacheDirective, applicationProperties);
             } catch (final DecodeException e) {
                 LOG.warn("received malformed payload from Device Registration service", e);
                 return RegistrationResult.from(HttpURLConnection.HTTP_INTERNAL_ERROR, null, null, applicationProperties);
             }
+        } else {
+            return RegistrationResult.from(status, null, null, applicationProperties);
         }
     }
 

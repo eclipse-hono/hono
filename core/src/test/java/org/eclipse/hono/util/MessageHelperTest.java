@@ -14,6 +14,7 @@
 package org.eclipse.hono.util;
 
 import static org.hamcrest.CoreMatchers.is;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThat;
 
@@ -91,5 +92,21 @@ public class MessageHelperTest {
         final Message msg = ProtonHelper.message();
         msg.setBody(new Data(new Binary(new byte[] { 0x01, 0x02, 0x03, 0x04 }))); // not JSON
         MessageHelper.getJsonPayload(msg);
+    }
+
+    /**
+     * Verifies that the helper does not throw an exception when reading
+     * invalid UTF-8 from a message's payload.
+     */
+    @Test
+    public void testGetPayloadAsStringHandlesNonCharacterPayload() {
+
+        final Message msg = ProtonHelper.message();
+        msg.setBody(new Data(new Binary(new byte[] { (byte) 0xc3, (byte) 0x28 })));
+        assertNotNull(MessageHelper.getPayloadAsString(msg));
+
+        msg.setBody(new Data(new Binary(new byte[] { (byte) 0xf0, (byte) 0x28, (byte) 0x8c, (byte) 0xbc })));
+        assertNotNull(MessageHelper.getPayloadAsString(msg));
+
     }
 }

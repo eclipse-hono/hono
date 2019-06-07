@@ -35,6 +35,16 @@ public abstract class StatusCodeMapper {
     }
 
     /**
+     * Checks if a given status code represents a successful invocation.
+     * 
+     * @param statusCode The code to check.
+     * @return {@code true} if the code is not {@code null} and 200 =&lt; code &lt; 300.
+     */
+    public static final boolean isSuccessful(final Integer statusCode) {
+        return statusCode != null && statusCode >= 200 && statusCode < 300;
+    }
+
+    /**
      * Creates an exception for a generic result of a service invocation.
      * 
      * @param result The result containing the status code.

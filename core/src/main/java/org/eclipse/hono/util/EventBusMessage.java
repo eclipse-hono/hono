@@ -124,36 +124,6 @@ public class EventBusMessage {
     }
 
     /**
-     * Creates a new response message in reply to a request AMQP message.
-     * <p>
-     * This method sets the following properties on the
-     * the response to the values of corresponding (application-)properties
-     * of the request message (if not {@code null}):
-     * <ul>
-     * <li><em>subject</em></li>
-     * <li><em>correlationId</em></li>
-     * <li><em>replyToAddress</em></li>
-     * <li><em>tenant</em></li>
-     * </ul>
-     * 
-     * @param status The status code indicating the outcome of the operation.
-     * @param requestMessage The original request message
-     * @return The response message.
-     * @throws NullPointerException if request is {@code null}.
-     */
-    public static EventBusMessage getResponse(final int status, final Message requestMessage) {
-
-        final EventBusMessage reply = forStatusCode(status);
-        reply.setProperty(
-                MessageHelper.SYS_PROPERTY_SUBJECT,
-                requestMessage.getSubject());
-        reply.setCorrelationId(requestMessage);
-        reply.setReplyToAddress(requestMessage);
-        reply.setTenant(requestMessage);
-        return reply;
-    }
-
-    /**
      * Creates a new message from a JSON object.
      * <p>
      * Whether the created message represents a request or a response
@@ -449,12 +419,12 @@ public class EventBusMessage {
      *            nor a message id.
      */
     public EventBusMessage setCorrelationId(final Message message) {
-        if (message.getCorrelationId() != null) {
-            return setCorrelationId(message.getCorrelationId());
-        } else if (message.getMessageId() != null) {
-            return setCorrelationId(message.getMessageId());
-        } else {
+        final Object correlationId = MessageHelper.getCorrelationId(message);
+        if (correlationId == null) {
             throw new IllegalArgumentException("message does not contain message-id nor correlation-id");
+        } else {
+            setCorrelationId(correlationId);
+            return this;
         }
     }
 

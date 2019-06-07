@@ -104,9 +104,7 @@ public class CredentialsClientImpl extends AbstractRequestResponseClient<Credent
             final CacheDirective cacheDirective,
             final ApplicationProperties applicationProperties) {
 
-        if (payload == null) {
-            return CredentialsResult.from(status, null, null, applicationProperties);
-        } else {
+        if (isSuccessResponse(status, contentType, payload)) {
             try {
                 return CredentialsResult.from(
                         status,
@@ -117,6 +115,8 @@ public class CredentialsClientImpl extends AbstractRequestResponseClient<Credent
                 LOG.warn("received malformed payload from Credentials service", e);
                 return CredentialsResult.from(HttpURLConnection.HTTP_INTERNAL_ERROR, null, null, applicationProperties);
             }
+        } else {
+            return CredentialsResult.from(status, null, null, applicationProperties);
         }
     }
 

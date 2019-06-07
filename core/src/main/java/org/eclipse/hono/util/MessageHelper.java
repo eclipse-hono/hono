@@ -193,6 +193,10 @@ public final class MessageHelper {
      * The MIME type representing the String representation of a JSON Object.
      */
     public static final String CONTENT_TYPE_APPLICATION_JSON = "application/json";
+    /**
+     * The MIME type representing plain text.
+     */
+    public static final String CONTENT_TYPE_TEXT_PLAIN = "text/plain";
 
     private static final Logger LOG = LoggerFactory.getLogger(MessageHelper.class);
 
@@ -518,6 +522,19 @@ public final class MessageHelper {
     }
 
     /**
+     * Adds a property indicating the outcome of an operation to a (response) message.
+     * <p>
+     * The value will be stored in the message's  {@link #APP_PROPERTY_STATUS} application property.
+     * 
+     * @param msg The message to to add the status to.
+     * @param status The status to set.
+     * @throws NullPointerException if any of the parameters are {@code null}.
+     */
+    public static void addStatus(final Message msg, final int status) {
+        addProperty(msg, APP_PROPERTY_STATUS, status);
+    }
+
+    /**
      * Adds a property to an AMQP 1.0 message.
      * <p>
      * The property is added to the message's <em>application-properties</em>.
@@ -525,7 +542,7 @@ public final class MessageHelper {
      * @param msg The message.
      * @param key The property key.
      * @param value The property value.
-     * @throws NullPointerException if any of th parameters are {@code null}.
+     * @throws NullPointerException if any of the parameters are {@code null}.
      */
     public static void addProperty(final Message msg, final String key, final Object value) {
 
@@ -804,5 +821,17 @@ public final class MessageHelper {
         copy.setBody(message.getBody());
         copy.setFooter(message.getFooter());
         return copy;
+    }
+
+    /**
+     * Gets the identifier to use for correlating to a given message.
+     * 
+     * @param message The message to correlate to.
+     * @return The value of the message's <em>correlation-id</em> property, if not {@code null}.
+     *         Otherwise, the value of the <em>message-id</em> property or {@code null}
+     *         if neither the message nor the correlation ID properties are set.
+     */
+    public static Object getCorrelationId(final Message message) {
+        return Optional.ofNullable(message.getCorrelationId()).orElse(message.getMessageId());
     }
 }
