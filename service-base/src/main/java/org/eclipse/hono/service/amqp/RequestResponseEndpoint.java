@@ -276,7 +276,7 @@ public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties>
                 statusCode = ServiceInvocationException.extractStatusCode(t);
             }
             Tags.HTTP_STATUS.set(currentSpan, statusCode);
-            return getAmqpReply(request.result().getResponse(statusCode));
+            return getAmqpReply(EventBusMessage.getResponse(statusCode, requestMessage));
         })
         .map(amqpMessage -> {
             if (sender.result().isOpen()) {

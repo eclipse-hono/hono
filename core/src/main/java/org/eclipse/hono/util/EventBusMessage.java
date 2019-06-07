@@ -128,6 +128,38 @@ public class EventBusMessage {
     }
 
     /**
+     * Creates a new response message in reply to a request AMQP message.
+     * <p>
+     * This method sets the following properties on the
+     * the response to the values of corresponding (application-)properties
+     * of the request message (if not {@code null}):
+     * <ul>
+     * <li><em>subject</em></li>
+     * <li><em>appCorrelationId</em></li>
+     * <li><em>correlationId</em></li>
+     * <li><em>replyToAddress</em></li>
+     * <li><em>tenant</em></li>
+     * </ul>
+     * 
+     * @param status The status code indicating the outcome of the operation.
+     * @param requestMessage The original request message
+     * @return The response message.
+     * @throws NullPointerException if request is {@code null}.
+     */
+    public static EventBusMessage getResponse(final int status, final Message requestMessage) {
+
+        final EventBusMessage reply = forStatusCode(status);
+        reply.setProperty(
+                MessageHelper.SYS_PROPERTY_SUBJECT,
+                requestMessage.getSubject());
+        reply.setAppCorrelationId(requestMessage);
+        reply.setCorrelationId(requestMessage);
+        reply.setReplyToAddress(requestMessage);
+        reply.setTenant(requestMessage);
+        return reply;
+    }
+
+    /**
      * Creates a new message from a JSON object.
      * <p>
      * Whether the created message represents a request or a response
@@ -413,7 +445,7 @@ public class EventBusMessage {
      * <p>
      * The value of the property is set
      * <ol>
-     * <li>to the AMQP message's correlation identifier, if not {@code null}, or<li>
+     * <li>to the AMQP message's correlation identifier, if not {@code null}, or</li>
      * <li>to the AMQP message's message identifier, if not {@code null}.</li>
      * </ol>
      * 

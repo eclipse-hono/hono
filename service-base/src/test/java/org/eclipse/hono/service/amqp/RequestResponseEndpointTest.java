@@ -27,12 +27,16 @@ import static org.mockito.Mockito.when;
 import static org.mockito.hamcrest.MockitoHamcrest.booleanThat;
 
 import java.net.HttpURLConnection;
+import java.util.UUID;
 
+import org.apache.qpid.proton.amqp.Binary;
 import org.apache.qpid.proton.amqp.messaging.Accepted;
+import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.amqp.messaging.Rejected;
 import org.apache.qpid.proton.amqp.transport.DeliveryState;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.auth.HonoUser;
+import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.auth.AuthorizationService;
 import org.eclipse.hono.util.Constants;
@@ -54,6 +58,7 @@ import io.vertx.core.eventbus.DeliveryOptions;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.eventbus.ReplyException;
 import io.vertx.core.eventbus.ReplyFailure;
+import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonObject;
 import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonDelivery;
@@ -189,6 +194,7 @@ public class RequestResponseEndpointTest {
         final Message msg = ProtonHelper.message();
         msg.setSubject("unauthorized");
         msg.setReplyTo(REPLY_RESOURCE.toString());
+        msg.setCorrelationId(UUID.randomUUID().toString());
         final ProtonDelivery delivery = mock(ProtonDelivery.class);
         final AuthorizationService authService = mock(AuthorizationService.class);
         when(authService.isAuthorized(any(HonoUser.class), any(ResourceIdentifier.class), anyString())).thenReturn(Future.succeededFuture(Boolean.FALSE));
@@ -237,6 +243,7 @@ public class RequestResponseEndpointTest {
         final Message msg = ProtonHelper.message();
         msg.setSubject("get");
         msg.setReplyTo(REPLY_RESOURCE.toString());
+        msg.setCorrelationId(UUID.randomUUID().toString());
         final ProtonDelivery delivery = mock(ProtonDelivery.class);
         final AuthorizationService authService = mock(AuthorizationService.class);
         when(authService.isAuthorized(any(HonoUser.class), any(ResourceIdentifier.class), anyString())).thenReturn(Future.succeededFuture(Boolean.TRUE));
@@ -259,6 +266,39 @@ public class RequestResponseEndpointTest {
 
         // THEN a response with status 500 is sent to the client
         verify(sender).send(argThat(m -> hasStatusCode(m, expectedStatus)));
+        verify(receiver).flow(1);
+    }
+
+    /**
+     * Verifies that the endpoint returns a response with status code 400
+     * for a request that contains malformed payload. 
+     */
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testHandleMessageSendsResponseForMalformedPayload() {
+
+        final Message msg = ProtonHelper.message();
+        msg.setSubject("get");
+        msg.setReplyTo(REPLY_RESOURCE.toString());
+        msg.setCorrelationId(UUID.randomUUID().toString());
+        msg.setBody(new Data(new Binary(new byte[] { 0x01, 0x02, 0x03 })));
+
+        final ProtonDelivery delivery = mock(ProtonDelivery.class);
+
+        final RequestResponseEndpoint<ServiceConfigProperties> endpoint = getEndpoint(true);
+        endpoint.onLinkAttach(connection, sender, REPLY_RESOURCE);
+
+        // WHEN a request for an operation is received that the client is authorized to invoke
+        endpoint.handleRequestMessage(connection, receiver, resource, delivery, msg);
+
+        // THEN then the message is accepted
+        verify(delivery).disposition(argThat(d -> d instanceof Accepted), booleanThat(is(Boolean.TRUE)));
+
+        // and not forwarded to the service instance
+        verify(eventBus, never()).send(eq(EVENT_BUS_ADDRESS), any(JsonObject.class), any(DeliveryOptions.class), any(Handler.class));
+
+        // and a response with the expected status is sent to the client
+        verify(sender).send(argThat(m -> hasStatusCode(m, HttpURLConnection.HTTP_BAD_REQUEST)));
         verify(receiver).flow(1);
     }
 
@@ -394,8 +434,13 @@ public class RequestResponseEndpointTest {
                     final Message requestMessage,
                     final ResourceIdentifier targetAddress,
                     final HonoUser clientPrincipal) {
-                return Future.succeededFuture(EventBusMessage.forOperation(requestMessage)
-                        .setJsonPayload(requestMessage));
+
+                try {
+                    return Future.succeededFuture(EventBusMessage.forOperation(requestMessage)
+                            .setJsonPayload(requestMessage));
+                } catch (DecodeException e) {
+                    return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
+                }
             }
 
             @Override
