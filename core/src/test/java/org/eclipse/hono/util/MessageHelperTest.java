@@ -17,9 +17,12 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThat;
 
+import org.apache.qpid.proton.amqp.Binary;
+import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.message.Message;
 import org.junit.Test;
 
+import io.vertx.core.json.DecodeException;
 import io.vertx.proton.ProtonHelper;
 
 /**
@@ -79,4 +82,14 @@ public class MessageHelperTest {
         assertNull(msg.getApplicationProperties());
     }
 
+    /**
+     * Verifies that the helper properly handles malformed JSON payload.
+     */
+    @Test(expected = DecodeException.class)
+    public void testGetJsonPayloadHandlesMalformedJson() {
+
+        final Message msg = ProtonHelper.message();
+        msg.setBody(new Data(new Binary(new byte[] { 0x01, 0x02, 0x03, 0x04 }))); // not JSON
+        MessageHelper.getJsonPayload(msg);
+    }
 }
