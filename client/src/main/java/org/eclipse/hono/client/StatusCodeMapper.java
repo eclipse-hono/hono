@@ -17,6 +17,7 @@ import java.net.HttpURLConnection;
 import java.util.Objects;
 import java.util.Optional;
 
+import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.amqp.transport.AmqpError;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.eclipse.hono.util.Constants;
@@ -97,17 +98,31 @@ public abstract class StatusCodeMapper {
     public static final ServiceInvocationException from(final ErrorCondition error) {
 
         Objects.requireNonNull(error);
+        return from(error.getCondition(), error.getDescription());
+    }
 
-        if (AmqpError.RESOURCE_LIMIT_EXCEEDED.equals(error.getCondition())) {
-            return new ClientErrorException(HttpURLConnection.HTTP_FORBIDDEN, error.getDescription());
-        } else if (AmqpError.UNAUTHORIZED_ACCESS.equals(error.getCondition())) {
-            return new ClientErrorException(HttpURLConnection.HTTP_FORBIDDEN, error.getDescription());
-        } else if (AmqpError.INTERNAL_ERROR.equals(error.getCondition())) {
-            return new ServerErrorException(HttpURLConnection.HTTP_INTERNAL_ERROR, error.getDescription());
-        } else if (Constants.AMQP_BAD_REQUEST.equals(error.getCondition())) {
-            return new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, error.getDescription());
+    /**
+     * Creates an exception for an AMQP error condition.
+     * 
+     * @param condition The error condition.
+     * @param description The error description or {@code null} if not available.
+     * @return The exception.
+     * @throws NullPointerException if error is {@code null}.
+     */
+    public static final ServiceInvocationException from(final Symbol condition, final String description) {
+
+        Objects.requireNonNull(condition);
+
+        if (AmqpError.RESOURCE_LIMIT_EXCEEDED.equals(condition)) {
+            return new ClientErrorException(HttpURLConnection.HTTP_FORBIDDEN, description);
+        } else if (AmqpError.UNAUTHORIZED_ACCESS.equals(condition)) {
+            return new ClientErrorException(HttpURLConnection.HTTP_FORBIDDEN, description);
+        } else if (AmqpError.INTERNAL_ERROR.equals(condition)) {
+            return new ServerErrorException(HttpURLConnection.HTTP_INTERNAL_ERROR, description);
+        } else if (Constants.AMQP_BAD_REQUEST.equals(condition)) {
+            return new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, description);
         } else {
-            return new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND, error.getDescription());
+            return new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND, description);
         }
     }
 }
