@@ -430,6 +430,11 @@ components:
                type: string
                description: A human readable error message of what went wrong.
 
+      DefaultProperties:
+         type: object
+         additionalProperties: true
+         description: Defaults for properties defined on the tenant and device level.
+
       Extensions:
          type: object
          additionalProperties: true
@@ -452,6 +457,8 @@ components:
                description: Only a single entry per type is allowed. If multiple entries for the same type are present it is handled as an error.
                items:
                   $ref: '#/components/schemas/Adapter'
+            "defaults":
+               $ref: '#/components/schemas/DefaultProperties'
             "limits":
                $ref: '#/components/schemas/ResourceLimit'
             "trusted-ca":
@@ -519,6 +526,13 @@ components:
             "enabled":
                type: boolean
                default: true
+            "defaults":
+               $ref: '#/components/schemas/DefaultProperties'
+            "via":
+               type: array
+               items:
+                  type: string
+               description: The device IDs of the gateways this device is assigned to.
             "ext":
                $ref: '#/components/schemas/Extensions'
 
