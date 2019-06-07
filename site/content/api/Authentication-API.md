@@ -12,17 +12,17 @@ Note that a component implementing this API will most likely need to also provid
 
 In a real world environment there will often already be an *identity management system* in place. In such cases it can make sense to just implement a *facade* exposing the Authentication API operations and mapping them to the underlying existing system's functionality.
 
-# Preconditions
+## Preconditions
 
 The preconditions for performing any of the operations are as follows:
 
 1. Client is in possession of credentials for the subject to get a token for.
 
-# Operations
+## Operations
 
 The Authentication API only defines a single operation which is mandatory to implement.
 
-## Get Token
+### Get Token
 
 Clients use this operation to
 
@@ -55,7 +55,7 @@ The following table provides an overview of the properties of the message sent t
 
 The message's body consists of a single AMQP 1.0 *AmqpValue* section which contains the UTF-8 representation of a JSON Web Token as defined in [Token Format]({{< relref "#token-format" >}}).
 
-# Token Format
+## Token Format
 
 The token returned by the *get Token* operation is a cryptographically signed JSON Web Token as defined by [RFC 7519](https://tools.ietf.org/html/rfc7519).
 
@@ -76,7 +76,7 @@ The allowed activities are encoded in a claim's value by means of simply concate
 
 The token may contain any number of additional claims which may be ignored by clients that do not understand their meaning.
 
-## Resource Authorities
+### Resource Authorities
 
 A client's authority on a resource is represented by a JWT *claim* with a name containing the resource node address prefixed with `r:` and a value containing the activities the client is allowed to perform on the resource. The node address MAY contain one or more wildcard (`*`) characters to represent *any* string.
 
@@ -98,7 +98,7 @@ the corresponding claims (in the token's JSON representation) would look like th
 }
 ~~~
 
-## Operation Authorities
+### Operation Authorities
 
 A client's authority to invoke an endpoint's operation(s) is represented by a JWT *claim* with a name containing the endpoint's node address and operation identifier prefixed with `o:` and a value of `E` (for `EXECUTE`). The endpoint node address MAY contain one or more wildcard (`*`) characters to represent *any* string. The operation identifier is the *subject* value defined by the corresponding API for the operation. The operation identifier MAY be set to `*` to represent *any* operation of the endpoint.
 

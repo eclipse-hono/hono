@@ -12,7 +12,7 @@ Note, however, that in real world applications the registration information will
 
 The Device Registration API is defined by means of AMQP 1.0 message exchanges, i.e. a client needs to connect to Hono using an AMQP 1.0 client in order to invoke operations of the API as described in the following sections.
 
-# Preconditions
+## Preconditions
 
 The preconditions for performing any of the operations are as follows:
 
@@ -24,11 +24,11 @@ This flow of messages is illustrated by the following sequence diagram (showing 
 
 ![Device Registration message flow preconditions](../connectToDeviceRegistration.png)
 
-# Mandatory Operations
+## Mandatory Operations
 
 The operations described in the following sections are invoked by Hono's components during run time and are therefore mandatory to implement.
 
-## Assert Device Registration
+### Assert Device Registration
 
 Clients use this command to verify that a device is registered for a particular tenant and is enabled.
 
@@ -86,7 +86,7 @@ The response message's *status* property may contain the following codes:
 For status codes indicating an error (codes in the `400 - 499` range) the message body MAY contain a detailed description of the error that occurred.
 
 
-## Get Registration Information
+### Get Registration Information
 
 Clients use this command to *retrieve* information about a registered device.
 
@@ -125,7 +125,7 @@ The response message's *status* property may contain the following codes:
 
 For status codes indicating an error (codes in the `400 - 499` range) the message body MAY contain a detailed description of the error that occurred.
 
-# Optional Operations
+## Optional Operations
 
 The operations described in the following sections can be used by clients to manage device registration information. In real world scenarios the provisioning of devices will most likely be an orchestrated process spanning multiple components of which Hono will only be one.
 
@@ -139,7 +139,7 @@ Functionality for *managing* the content of a device registry will be defined by
 API that will be specified as part of Hono 1.0.
 {{% /warning %}}
 
-## Register Device
+### Register Device
 
 Clients use this command to initially *add* information about a new device to Hono. Each device is registered within a *tenant*, providing the scope of the device's identifier.
 
@@ -177,7 +177,7 @@ The response message's *status* property may contain the following codes:
 
 For status codes indicating an error (codes in the `400 - 499` range) the message body MAY contain a detailed description of the error that occurred.
 
-## Update Device Registration
+### Update Device Registration
 
 Clients use this command to *update* information about an already registered device. All of the information that has been previously registered for the device gets *replaced* with the information contained in the request message.
 
@@ -213,7 +213,7 @@ The response message's *status* property may contain the following codes:
 
 For status codes indicating an error (codes in the `400 - 499` range) the message body MAY contain a detailed description of the error that occurred.
 
-## Deregister Device
+### Deregister Device
 
 Clients use this command to *remove* all information about a device from Hono. Once a device is deregistered, clients can no longer use Hono to interact with the device nor can they consume any more data produced by the device.
 
@@ -250,11 +250,11 @@ The response may contain the following status codes:
 
 For status codes indicating an error (codes in the `400 - 499` range) the message body MAY contain a detailed description of the error that occurred.
 
-# Standard Message Properties
+## Standard Message Properties
 
 Due to the nature of the request/response message pattern of the operations of the Device Registration API, there are some standard properties shared by all of the request and response messages exchanged as part of the operations.
 
-## Standard Request Properties
+### Standard Request Properties
 
 The following table provides an overview of the properties shared by all request messages regardless of the particular operation being invoked.
 
@@ -267,7 +267,7 @@ The following table provides an overview of the properties shared by all request
 | *content-type*   | yes       | *properties*             | *string*     | MUST be set to `application/json`. |
 | *device_id*      | yes       | *application-properties* | *string*     | MUST contain the ID of the device that is subject to the operation. |
 
-## Standard Response Properties
+### Standard Response Properties
 
 The following table provides an overview of the properties shared by all response messages regardless of the particular operation being invoked.
 
@@ -280,7 +280,7 @@ The following table provides an overview of the properties shared by all respons
 | *status*         | yes       | *application-properties* | *int*        | Contains the status code indicating the outcome of the operation. Concrete values and their semantics are defined for each particular operation. |
 | *cache_control*  | no        | *application-properties* | *string*     | Contains an [RFC 2616](https://tools.ietf.org/html/rfc2616#section-14.9) compliant <em>cache directive</em>. The directive contained in the property MUST be obeyed by clients that are caching responses. |
 
-# Delivery States
+## Delivery States
 
 Hono uses the following AMQP message delivery states when receiving request messages from clients:
 
@@ -289,7 +289,7 @@ Hono uses the following AMQP message delivery states when receiving request mess
 | *ACCEPTED*     | Indicates that Hono has successfully received and accepted the request for processing. |
 | *REJECTED*     | Indicates that Hono has received the request but was not able to process it. The *error* field contains information regarding the reason why. Clients should not try to re-send the request using the same message properties in this case. |
 
-# Payload Format
+## Payload Format
 
 Most of the operations of the Device Registration API allow or require the inclusion of registration data in the payload of the
 request or response messages of the operation. Such payload is carried in the body of the corresponding AMQP 
@@ -297,7 +297,7 @@ messages as part of a single *Data* section. The content type must be set to `ap
 
 The registration data is carried in the payload as a UTF-8 encoded string representation of a single JSON object. It is an error to include payload that is not of this type.
 
-## Request Payload
+### Request Payload
 
 The table below provides an overview of the standard members defined for the JSON request object:
 
@@ -325,7 +325,7 @@ The device's *enabled* property will be set to *true* by default if the request 
 if the payload does not contain the *enabled* property.
 {{% /note %}}
 
-## Response Payload
+### Response Payload
 
 
 The JSON object conveyed in a response payload always contains a string typed member of name `device-id` whose value is the ID of the device as provided during registration.

@@ -17,11 +17,11 @@ The Command & Control API is defined by means of AMQP 1.0 message exchanges, i.e
 There is also a description of Command & Control [at the conceptual level]({{< ref "/concepts/command-and-control.md" >}}) 
 and the [Getting Started]({{< ref "/getting-started.md" >}}) guide contains a walk through example.
 
-# Operations
+## Operations
 
 The following API defines operations that can be used by *Business Applications* to send commands to devices over an AMQP 1.0 Network.
 
-## Send a One-Way Command
+### Send a One-Way Command
 
 Business Applications use this operation to send a command to a device for which they do not expect to receive a response from the device.
 
@@ -78,7 +78,7 @@ The following sequence diagram illustrates how a malformed command sent by a *Bu
 
 
 
-## Send a (Request/Response) Command
+### Send a (Request/Response) Command
 
 *Business Applications* use this operation to send a command to a device for which they expect the device to send back a response.
 
@@ -168,7 +168,7 @@ The sending of a command may fail for the same reasons as those illustrated for 
 ![Command times out](../command_control_response_time_out.png)
 
 
-## Strategies for Building the Receiver Link Address
+### Strategies for Building the Receiver Link Address
 
 While the `${reply_id}` may be chosen arbitrarily by the client, the specific use case for sending commands should be considered when doing so.
 The following hints might help with creating an appropriate `${reply_id}`:
