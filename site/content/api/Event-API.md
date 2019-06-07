@@ -10,11 +10,11 @@ The *Event* API is used by *Protocol Adapters* to send event messages downstream
 The Event API is defined by means of AMQP 1.0 message exchanges, i.e. a client needs to connect to Hono using AMQP 1.0 in order to invoke operations of the API as described in the following sections. Throughout the remainder of this page we will simply use *AMQP* when referring to AMQP 1.0.
 
 
-# Southbound Operations
+## Southbound Operations
 
 The following operations can be used by *Protocol Adapters* to forward event messages received from devices to downstream consumers like *Business Applications*.
 
-## Forward Event
+### Forward Event
 
 **Preconditions**
 
@@ -44,9 +44,9 @@ When the AMQP Messaging Network fails to settle the transfer of an event message
 
 See [Telemetry API]({{< relref "Telemetry-API.md#upload-telemetry-data" >}}) for definition of message format.
 
-# Northbound Operations
+## Northbound Operations
 
-## Receive Events
+### Receive Events
 
 Hono delivers messages containing events reported by a particular device in the same order that they have been received in (using the *Forward Event* operation defined above).
 
@@ -74,11 +74,11 @@ The following sequence diagram illustrates the flow of messages involved in a *B
 See [*Telemetry API*]({{< relref "Telemetry-API.md" >}}) for definition of message format. 
 
 
-# Well-known Event Message Types
+## Well-known Event Message Types
 
 Hono defines several *well-known* event types which have specific semantics. Events of these types are identified by means of the AMQP message's *content-type*.
 
-## Empty Notification
+### Empty Notification
 
 An AMQP message containing this type of event does not have any payload so the body of the message MUST be empty.
 
@@ -93,7 +93,7 @@ The relevant properties are listed again in the following table:
 
 NB: An empty notification can be used to indicate to a *Business Application* that a device is currently ready to receive an upstream message by setting the *ttd* property. *Backend Applications* may use this information to determine the time window during which the device will be able to receive a command.
 
-## Connection Event
+### Connection Event
 
 Protocol Adapters may send this type of event to indicate that a connection with a device has
 been established or has ended. Note that such events can only be sent for authenticated devices,

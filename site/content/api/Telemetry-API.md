@@ -9,11 +9,11 @@ The *Telemetry* API is used by *Protocol Adapters* to send telemetry data downst
 
 The Telemetry API is defined by means of AMQP 1.0 message exchanges, i.e. a client needs to connect to Hono using AMQP 1.0 in order to invoke operations of the API as described in the following sections. Throughout the remainder of this page we will simply use *AMQP* when referring to AMQP 1.0.
 
-# Southbound Operations
+## Southbound Operations
 
 The following operations can be used by *Protocol Adapters* to forward telemetry data received from devices to downstream consumers like *Business Applications*.
 
-## Forward Telemetry Data
+### Forward Telemetry Data
 
 **Preconditions**
 
@@ -78,9 +78,9 @@ The body of the message MUST consist of a single AMQP *Data* section containing 
 
 Any additional properties set by the client in either the *properties* or *application-properties* sections are preserved by Hono, i.e. these properties will also be contained in the message delivered to consumers.
 
-# Northbound Operations
+## Northbound Operations
 
-## Receive Telemetry Data
+### Receive Telemetry Data
 
 Hono delivers messages containing telemetry data reported by a particular device in the same order that they have been received in (using the *Upload Telemetry Data* operation defined above). Hono MAY drop telemetry messages that it cannot deliver to any consumers. Reasons for this include that there are no consumers connected to Hono or the existing consumers are not able to process the messages from Hono fast enough.
 

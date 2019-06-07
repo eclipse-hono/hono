@@ -12,7 +12,7 @@ Note, however, that in real world applications the device credentials will proba
 
 The Credentials API is defined by means of AMQP 1.0 message exchanges, i.e. a client needs to connect to Hono using an AMQP 1.0 client in order to invoke operations of the API as described in the following sections.
 
-# Preconditions
+## Preconditions
 
 The preconditions for invoking any of the Credential API's operations are as follows:
 
@@ -24,11 +24,11 @@ The flow of messages for creating the links is illustrated by the following sequ
 
 ![Credentials message flow preconditions](../connectToCredentials.png)
 
-# Mandatory Operations 
+## Mandatory Operations 
 
 The operations described in the following sections are invoked by Hono's components during run time and are therefore mandatory to implement.
 
-## Get Credentials
+### Get Credentials
 
 Protocol adapters use this command to *look up* credentials of a particular type for a device identity.
 
@@ -83,7 +83,7 @@ The response message's *status* property may contain the following codes:
 For status codes indicating an error (codes in the `400 - 499` range) the message body MAY contain a detailed description of the error that occurred.
 
 
-# Optional Operations
+## Optional Operations
 
 The operations described in the following sections can be used by clients to manage credentials for authenticating devices connected to protocol adapters.
 
@@ -97,7 +97,7 @@ Functionality for *managing* the content of a device registry will be defined by
 API that will be specified as part of Hono 1.0.
 {{% /warning %}}
 
-## Add Credentials
+### Add Credentials
 
 Clients may use this command to initially *add* credentials for a device. The credentials to be added may be of arbitrary type. However, [Standard Credential Types]({{< relref "#standard-credential-types" >}}) contains an overview of some common types that are used by Hono's protocol adapters and which may be useful to others as well.
 
@@ -138,7 +138,7 @@ The response message's *status* property may contain the following codes:
 
 For status codes indicating an error (codes in the `400 - 499` range) the message body MAY contain a detailed description of the error that occurred.
 
-## Update Credentials
+### Update Credentials
 
 Clients use this command to *update* existing credentials registered for a device. All of the information that has been previously registered for the device gets *replaced* with the information contained in the request message.
 
@@ -176,7 +176,7 @@ The response message's *status* property may contain the following codes:
 
 For status codes indicating an error (codes in the `400 - 499` range) the message body MAY contain a detailed description of the error that occurred.
 
-## Remove Credentials
+### Remove Credentials
 
 Clients use this command to *remove* credentials registered for a device. Once the credentials are removed, the device may no longer be able to authenticate with protocol adapters using the authentication mechanism that the removed credentials corresponded to.
 
@@ -228,11 +228,11 @@ The response message's *status* property may contain the following codes:
 
 For status codes indicating an error (codes in the `400 - 499` range) the message body MAY contain a detailed description of the error that occurred.
 
-# Standard Message Properties
+## Standard Message Properties
 
 Due to the nature of the request/response message pattern of the operations of the Credentials API, there are some standard properties shared by all of the request and response messages exchanged as part of the operations.
 
-### Standard Request Properties
+#### Standard Request Properties
 
 The following table provides an overview of the properties shared by all request messages regardless of the particular operation being invoked.
 
@@ -244,7 +244,7 @@ The following table provides an overview of the properties shared by all request
 | *reply-to*       | yes       | *properties*             | *string*    | MUST contain the source address that the client wants to received response messages from. This address MUST be the same as the source address used for establishing the client's receive link (see [Preconditions]({{< relref "#Preconditions" >}})). |
 | *content-type*   | yes       | *properties*             | *string*     | MUST be set to `application/json`. |
 
-### Standard Response Properties
+#### Standard Response Properties
 
 The following table provides an overview of the properties shared by all response messages regardless of the particular operation being invoked.
 
@@ -257,7 +257,7 @@ The following table provides an overview of the properties shared by all respons
 | *status*         | yes       | *application-properties* | *int*        | Contains the status code indicating the outcome of the operation. Concrete values and their semantics are defined for each particular operation. |
 | *cache_control*  | no        | *application-properties* | *string*     | Contains an [RFC 2616](https://tools.ietf.org/html/rfc2616#section-14.9) compliant <em>cache directive</em>. The directive contained in the property MUST be obeyed by clients that are caching responses. |
 
-# Delivery States
+## Delivery States
 
 Hono uses the following AMQP message delivery states when receiving request messages from clients:
 
@@ -266,7 +266,7 @@ Hono uses the following AMQP message delivery states when receiving request mess
 | *ACCEPTED*     | Indicates that Hono has successfully received and accepted the request for processing. |
 | *REJECTED*     | Indicates that Hono has received the request but was not able to process it. The *error* field contains information regarding the reason why. Clients should not try to re-send the request using the same message properties in this case. |
 
-# Credentials Format
+## Credentials Format
 
 Most of the operations of the Credentials API allow or require the inclusion of credential data in the payload of the
 request or response messages of the operation. Such payload is carried in the body of the corresponding AMQP 
@@ -288,7 +288,7 @@ For each set of credentials the combination of *auth-id* and *type* MUST be uniq
 
 **NB** Care needs to be taken that the value for the *authentication identifier* is compliant with the authentication mechanism(s) it is supposed to be used with. For example, when using standard HTTP Basic authentication, the *username* part of the Basic Authorization header value (which corresponds to the *auth-id*) MUST not contain any *colon* (`:`) characters, because the colon character is used as the separator between username and password. Similar constraints may exist for other authentication mechanisms, so the *authentication identifier* needs to be chosen with the anticipated mechanism(s) being used in mind. Otherwise, devices may fail to authenticate with protocol adapters, even if the credentials provided by the device match the credentials registered for the device. In general, using only characters from the `[a-zA-Z0-9_-]` range for the authentication identifier should be compatible with most mechanisms.
 
-## Secrets Format
+### Secrets Format
 
 Each set of credentials may contain arbitrary *secrets* scoped to a particular *validity period* during which the secrets may be used for authenticating a device. The validity periods MAY overlap in order to support the process of changing a secret on a device that itself doesn't support the definition of multiple secrets for gapless authentication across adjacent validity periods.
 
@@ -299,7 +299,7 @@ The table below contains the properties used to define the validity period of a 
 | *not-before*     | *no*      | *string*   | `null`        | The point in time from which on the secret may be used to authenticate devices. If not *null*, the value MUST be an [ISO 8601 compliant *combined date and time representation in extended format*](https://en.wikipedia.org/wiki/ISO_8601#Combined_date_and_time_representations). **NB** It is up to the discretion of the protocol adapter to make use of this information. |
 | *not-after*      | *no*      | *string*   | `null`        | The point in time until which the secret may be used to authenticate devices. If not *null*, the value MUST be an [ISO 8601 compliant *combined date and time representation in extended format*](https://en.wikipedia.org/wiki/ISO_8601#Combined_date_and_time_representations). **NB** It is up to the discretion of the protocol adapter to make use of this information. |
 
-## Examples
+### Examples
 
 Below is an example for a payload containing [a hashed password]({{< relref "#hashed-password" >}}) for device `4711` with auth-id `sensor1` using SHA512 as the hashing function with a 4 byte salt (Base64 encoding of `0x32AEF017`). Note that the payload does not contain a `not-before` property, thus it may be used immediately up until X-mas eve 2017.
 
@@ -336,7 +336,7 @@ The next example contains two [pre-shared secrets]({{< relref "#pre-shared-key" 
 }
 ~~~
 
-# Credential Verification
+## Credential Verification
 
 Protocol Adapters are responsible for authenticating devices when they connect. The Credentials API provides the [Get Credentials]({{< relref "#get-credentials" >}}) operation to support Protocol Adapters in doing so as illustrated below:
 
@@ -354,15 +354,15 @@ Retrieved credentials have to be verified by the *Protocol Adapter*:
    * their `not-before` property set to either `null` or the current or a past point in time **and**
    * their `not-after` property set to either `null` or the current or a future point in time.
 
-# Standard Credential Types
+## Standard Credential Types
 
 The following sections define some standard credential types and their properties. Applications are encouraged to make use of these types. However, the types are not enforced anywhere in Hono and clients may of course add application specific properties to the credential types.
 
-## Common Properties
+### Common Properties
 
 All credential types used with Hono MUST contain `device-id`, `type`, `auth-id`, `enabled` and `secrets` properties as defined in [Credentials Format]({{< relref "#credentials-format" >}}).
 
-## Hashed Password
+### Hashed Password
 
 A credential type for storing a (hashed) password for a device.
 
@@ -402,7 +402,7 @@ The table below describes the hash functions supported by Hono and how they map 
 | *sha-512*    | optional     | *salt* field     | The Base64 encoding of the bytes resulting from applying the *sha-512* hash function to the byte array consisting of the salt bytes (if a salt is used) and the UTF-8 encoding of the clear text password. |
 | *bcrypt*     | mandatory    | *pwd-hash* value | The output of applying the *Bcrypt* hash function to the clear text password. The salt is contained in the password hash.<br>**NB** Hono (currently) uses [Spring Security](https://docs.spring.io/spring-security/site/docs/4.2.7.RELEASE/reference/htmlsingle/#core-services-password-encoding) for matching clear text passwords against Bcrypt hashes. However, this library only supports hashes containing the `$2a$` prefix (see https://github.com/fpirsch/twin-bcrypt#about-prefixes) so Hono will fail to verify any passwords for which the corresponding Bcrypt hashes returned by the Credentials service contain e.g. the `$2y$` prefix. ||
 
-## Pre-Shared Key
+### Pre-Shared Key
 
 A credential type for storing a *Pre-shared Key* as used in TLS handshakes.
 
@@ -427,7 +427,7 @@ Example:
 
 **NB** The example above does not contain any of the `not-before`, `not-after` and `enabled` properties, thus the credentials can be used at any time according to the rules defined in [Credential Verification]({{< relref "#credential-verification" >}}).
 
-## X.509 Certificate
+### X.509 Certificate
 
 A credential type for storing the [RFC 2253](https://www.ietf.org/rfc/rfc2253.txt) formatted *subject DN* of a client certificate that is used to authenticate the device as part of a TLS handshake.
 
