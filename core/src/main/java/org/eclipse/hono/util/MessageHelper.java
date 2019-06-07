@@ -701,9 +701,9 @@ public final class MessageHelper {
     }
 
     /**
-     * Set the payload of the message using a {@link Data} section.
+     * Set the payload of the message using an AMQP <em>Data</em> section.
      * <p>
-     * If the payload is {@code null}, then neither the payload, nor content type will be set.
+     * If the payload is {@code null}, then neither the payload nor content type will be set.
      * </p>
      * 
      * @param message The message to update.
@@ -715,11 +715,11 @@ public final class MessageHelper {
     public static void setPayload(final Message message, final String contentType, final byte[] payload) {
         Objects.requireNonNull(message);
 
-        if (contentType != null) {
-            message.setContentType(contentType);
-        }
         if (payload != null) {
             message.setBody(new Data(new Binary(payload)));
+            if (contentType != null) {
+                message.setContentType(contentType);
+            }
         }
     }
 
