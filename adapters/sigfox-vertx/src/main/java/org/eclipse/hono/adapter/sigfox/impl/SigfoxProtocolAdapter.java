@@ -113,9 +113,7 @@ public final class SigfoxProtocolAdapter extends AbstractVertxBasedHttpProtocolA
                 .handler(dataCorsHandler())
                 .handler(ctx -> dataHandler(ctx, this::uploadEventMessage));
 
-        router.errorHandler(500, t -> {
-            LOG.warn("Unhandled exception", t);
-        });
+        router.errorHandler(500, t -> LOG.warn("Unhandled exception", t.failure()));
     }
 
     private Handler<RoutingContext> dataCorsHandler() {
@@ -143,7 +141,7 @@ public final class SigfoxProtocolAdapter extends AbstractVertxBasedHttpProtocolA
         final String deviceId = ctx.queryParams().get(SIGFOX_PARAM_DEVICE_ID);
         final Buffer data = decodeData(ctx.queryParams().get(SIGFOX_PARAM_DATA));
 
-        LOG.debug("{} handler - tenant: {}, deviceId: {}, data: {}",
+        LOG.debug("{} handler - deviceTenant: {}, requestTenant: {}, deviceId: {}, data: {}",
                 ctx.request().method(), deviceTenant, requestTenant, deviceId, data);
 
         if ( requestTenant == null ) {
