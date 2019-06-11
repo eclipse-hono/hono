@@ -72,7 +72,6 @@ public class RegistrationAmqpEndpoint extends RequestResponseEndpoint<ServiceCon
 
         try {
             return Future.succeededFuture(EventBusMessage.forOperation(requestMessage)
-                    .setAppCorrelationId(requestMessage)
                     .setCorrelationId(requestMessage)
                     .setTenant(targetAddress.getTenantId())
                     .setDeviceId(requestMessage)

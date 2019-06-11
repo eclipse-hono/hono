@@ -17,9 +17,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 
-import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
-import org.apache.qpid.proton.amqp.messaging.MessageAnnotations;
 import org.apache.qpid.proton.message.Message;
 
 import io.vertx.core.json.JsonObject;
@@ -98,7 +96,6 @@ public abstract class RequestResponseApiConstants {
         final String tenantId = response.getTenant();
         final String deviceId = response.getDeviceId();
         final Integer status = response.getStatus();
-        final boolean isApplCorrelationId = response.isAppCorrelationId();
         final String cacheDirective = response.getCacheDirective();
         final JsonObject payload = response.getJsonPayload();
         final ResourceIdentifier address = ResourceIdentifier.from(endpoint, tenantId, deviceId);
@@ -120,12 +117,6 @@ public abstract class RequestResponseApiConstants {
             map.put(MessageHelper.APP_PROPERTY_CACHE_CONTROL, cacheDirective);
         }
         message.setApplicationProperties(new ApplicationProperties(map));
-
-        if (isApplCorrelationId) {
-            final Map<Symbol, Object> annotations = new HashMap<>();
-            annotations.put(Symbol.valueOf(MessageHelper.ANNOTATION_X_OPT_APP_CORRELATION_ID), true);
-            message.setMessageAnnotations(new MessageAnnotations(annotations));
-        }
 
         MessageHelper.setJsonPayload(message, payload);
 

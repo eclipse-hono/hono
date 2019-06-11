@@ -147,7 +147,6 @@ public class TenantAmqpEndpoint extends RequestResponseEndpoint<ServiceConfigPro
 
         try {
             return Future.succeededFuture(EventBusMessage.forOperation(requestMessage)
-                    .setAppCorrelationId(requestMessage)
                     .setCorrelationId(requestMessage)
                     .setTenant(requestMessage)
                     .setJsonPayload(requestMessage));

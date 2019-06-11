@@ -44,10 +44,6 @@ import io.vertx.proton.ProtonHelper;
 public final class MessageHelper {
 
     /**
-     * The name of the AMQP 1.0 message annotation that is used to indicate the type of the <em>correlation-id</em>.
-     */
-    public static final String ANNOTATION_X_OPT_APP_CORRELATION_ID = "x-opt-app-correlation-id";
-    /**
      * The name of the AMQP 1.0 message annotation that is used to indicate that the sender of the
      * message intended the message to be <em>retained</em> in the MQTT sense. The value of the
      * property is a boolean. If a message does not contain this annotation, then a consumer must process
@@ -289,18 +285,6 @@ public final class MessageHelper {
     public static String getTenantIdAnnotation(final Message msg) {
         Objects.requireNonNull(msg);
         return getAnnotation(msg, APP_PROPERTY_TENANT_ID, String.class);
-    }
-
-    /**
-     * Gets the value of the {@code x-opt-appl-correlation-id} annotation from a message.
-     *
-     * @param msg the message to get the annotation from.
-     * @return the value of the annotation (if present) or {@code false} if the message does not contain the annotation.
-     */
-    public static boolean getXOptAppCorrelationId(final Message msg) {
-        Objects.requireNonNull(msg);
-        final Boolean value = getAnnotation(msg, ANNOTATION_X_OPT_APP_CORRELATION_ID, Boolean.class);
-        return value == null ? false : value;
     }
 
     /**

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -100,7 +100,6 @@ public class EventBusMessage {
      * <ul>
      * <li><em>status</em></li>
      * <li><em>operation</em></li>
-     * <li><em>appCorrelationId</em></li>
      * <li><em>correlationId</em></li>
      * <li><em>replyToAddress</em></li>
      * <li><em>tenant</em></li>
@@ -117,9 +116,6 @@ public class EventBusMessage {
                 MessageHelper.SYS_PROPERTY_SUBJECT,
                 getProperty(MessageHelper.SYS_PROPERTY_SUBJECT));
         reply.setProperty(
-                MessageHelper.ANNOTATION_X_OPT_APP_CORRELATION_ID,
-                getProperty(MessageHelper.ANNOTATION_X_OPT_APP_CORRELATION_ID));
-        reply.setProperty(
                 MessageHelper.SYS_PROPERTY_CORRELATION_ID,
                 getProperty(MessageHelper.SYS_PROPERTY_CORRELATION_ID));
         reply.setReplyToAddress(getReplyToAddress());
@@ -135,7 +131,6 @@ public class EventBusMessage {
      * of the request message (if not {@code null}):
      * <ul>
      * <li><em>subject</em></li>
-     * <li><em>appCorrelationId</em></li>
      * <li><em>correlationId</em></li>
      * <li><em>replyToAddress</em></li>
      * <li><em>tenant</em></li>
@@ -152,7 +147,6 @@ public class EventBusMessage {
         reply.setProperty(
                 MessageHelper.SYS_PROPERTY_SUBJECT,
                 requestMessage.getSubject());
-        reply.setAppCorrelationId(requestMessage);
         reply.setCorrelationId(requestMessage);
         reply.setReplyToAddress(requestMessage);
         reply.setTenant(requestMessage);
@@ -491,44 +485,6 @@ public class EventBusMessage {
         } else {
             return decodeIdFromJson(encodedId);
         }
-    }
-
-    /**
-     * Adds a property for the <em>x-opt-app-correlation-id</em> flag.
-     * 
-     * @param flag The flag.
-     * @return This message for chaining.
-     */
-    public EventBusMessage setAppCorrelationId(final boolean flag) {
-        setProperty(MessageHelper.ANNOTATION_X_OPT_APP_CORRELATION_ID, flag);
-        return this;
-    }
-
-    /**
-     * Adds a property for the <em>x-opt-app-correlation-id</em> flag.
-     * <p>
-     * The property will be set to the value of the corresponding annotation
-     * from the AMQP message or to {@code false}, if the message doesn't
-     * contain a corresponding annotation.
-     * 
-     * @param message The AMQP message to retrieve the value from.
-     * @return This message for chaining.
-     */
-    public EventBusMessage setAppCorrelationId(final Message message) {
-        setProperty(
-                MessageHelper.ANNOTATION_X_OPT_APP_CORRELATION_ID,
-                MessageHelper.getXOptAppCorrelationId(message));
-        return this;
-    }
-
-    /**
-     * Gets the value of the <em>x-opt-app-correlation-id</em> flag.
-     * 
-     * @return The value or {@code false} if not set.
-     */
-    public boolean isAppCorrelationId() {
-        final Boolean result = getProperty(MessageHelper.ANNOTATION_X_OPT_APP_CORRELATION_ID);
-        return Optional.ofNullable(result).orElse(Boolean.FALSE);
     }
 
     /**

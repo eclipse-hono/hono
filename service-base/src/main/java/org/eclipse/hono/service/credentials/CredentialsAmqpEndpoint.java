@@ -73,7 +73,6 @@ public class CredentialsAmqpEndpoint extends RequestResponseEndpoint<ServiceConf
 
         try {
             return Future.succeededFuture(EventBusMessage.forOperation(requestMessage)
-                    .setAppCorrelationId(requestMessage)
                     .setCorrelationId(requestMessage)
                     .setTenant(targetAddress.getTenantId())
                     .setJsonPayload(requestMessage));
