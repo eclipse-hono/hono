@@ -61,14 +61,14 @@ The body of the response message consists of a single *Data* section containing 
 | Name             | Mandatory | JSON Type     | Description |
 | :--------------- | :-------: | :------------ | :---------- |
 | *device-id*      | *yes*     | *string*      | The ID of the device that is subject of the assertion. |
-| *gw-supported*   | *no*      | *boolean*     | If set to `true`, the device allows one or more gateways to act on its behalf. These gateways are configured in the device registration data by means of the `via` property. |
+| *via*            | *no*      | *array*       | Information about which gateways may act on behalf of the device. The property may contain a JSON array containing the gateway ids as strings. |
 | *defaults*       | *no*      | *object*      | Default values to be used by protocol adapters for augmenting messages from devices with missing information like a *content type*. It is up to the discretion of a protocol adapter if and how to use the given default values when processing messages published by the device. |
 
 Below is an example for a payload of a response to an *assert* request for device `4711` which also includes a default *content-type*:
 ~~~json
 {
   "device-id" : "4711",
-  "gw-supported": true,
+  "via": ["4712"],
   "defaults": {
     "content-type": "application/vnd.acme+json"
   }

@@ -13,6 +13,7 @@
 package org.eclipse.hono.service.registration;
 
 import java.net.HttpURLConnection;
+import java.util.Collections;
 import java.util.Objects;
 
 import org.eclipse.hono.client.ClientErrorException;
@@ -302,7 +303,7 @@ public abstract class BaseRegistrationService<T> extends EventBusService<T> impl
 
     /**
      * Checks if a gateway may act on behalf of the given device. This is determined by checking whether
-     * the 'via' property of the device registration data has one or more entries.
+     * the {@link RegistrationConstants#FIELD_VIA} property of the device registration data has one or more entries.
      * <p>
      * Subclasses may override this method to provide a different means to determine gateway support.
      *
@@ -316,6 +317,28 @@ public abstract class BaseRegistrationService<T> extends EventBusService<T> impl
         final Object viaObj = registrationInfo.getValue(RegistrationConstants.FIELD_VIA);
         return (viaObj instanceof String && !((String) viaObj).isEmpty())
                 || (viaObj instanceof JsonArray && !((JsonArray) viaObj).isEmpty());
+    }
+
+    /**
+     * Gets the list of gateways that may act on behalf of the given device.
+     * <p>
+     * This default implementation gets the list of gateways from the value of the
+     * {@link RegistrationConstants#FIELD_VIA} property in the device's registration information.
+     * <p>
+     * Subclasses may override this method to provide a different means to determine the supported gateways.
+     *
+     * @param tenantId The tenant id.
+     * @param deviceId The device id.
+     * @param registrationInfo The device's registration information.
+     * @return The list of gateways as a JSON array of Strings (never {@code null}).
+     */
+    protected JsonArray getSupportedGatewaysForDevice(final String tenantId, final String deviceId,
+            final JsonObject registrationInfo) {
+        Object viaObj = registrationInfo.getValue(RegistrationConstants.FIELD_VIA);
+        if (viaObj instanceof String) {
+            viaObj = new JsonArray().add(viaObj);
+        }
+        return viaObj instanceof JsonArray ? (JsonArray) viaObj : new JsonArray(Collections.emptyList());
     }
 
     /**
@@ -434,8 +457,8 @@ public abstract class BaseRegistrationService<T> extends EventBusService<T> impl
     /**
      * Creates the payload of the assert Registration response message.
      * <p>
-     * The returned JSON object contains the <em>gw-supported</em> property, having a {@code true} value if a gateway
-     * may act on behalf of the device, and may also contain <em>default</em> values registered for the device under key
+     * The returned JSON object may contain the {@link RegistrationConstants#FIELD_VIA} property of the device's
+     * registration information and may also contain <em>default</em> values registered for the device under key
      * {@link RegistrationConstants#FIELD_PAYLOAD_DEFAULTS}.
      * 
      * @param tenantId The tenant the device belongs to.
@@ -447,7 +470,10 @@ public abstract class BaseRegistrationService<T> extends EventBusService<T> impl
 
         final JsonObject result = new JsonObject()
                 .put(RegistrationConstants.FIELD_PAYLOAD_DEVICE_ID, deviceId);
-        result.put(RegistrationConstants.FIELD_PAYLOAD_GATEWAY_SUPPORTED, isGatewaySupportedForDevice(tenantId, deviceId, registrationInfo));
+        final JsonArray viaObj = getSupportedGatewaysForDevice(tenantId, deviceId, registrationInfo);
+        if (!viaObj.isEmpty()) {
+            result.put(RegistrationConstants.FIELD_VIA, viaObj);
+        }
         final JsonObject defaults = registrationInfo.getJsonObject(RegistrationConstants.FIELD_PAYLOAD_DEFAULTS);
         if (defaults != null) {
             result.put(RegistrationConstants.FIELD_PAYLOAD_DEFAULTS, defaults);

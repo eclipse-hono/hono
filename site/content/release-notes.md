@@ -14,6 +14,13 @@ title = "Release Notes"
 
 * The Hono Sandbox's protocol adapters support using the gateway mode again.
 
+### API Changes
+
+* The response message format of the *assert Device Registration* operation of the Device Registration API
+  has been changed, replacing the optional `gw-supported` boolean field with an optional `via` field.
+  The value of this field contains the list of gateway that may act on behalf of the device on which
+  the operation is invoked.
+
 ## 1.0-M4
 
 ### New Features
