@@ -16,6 +16,11 @@ title = "Release Notes"
 
 ### API Changes
 
+* The optional methods of the [Tenant API]({{< ref "/api/Tenant-API.md" >}}) have been removed.
+  Implementations of the Tenant API are encouraged to expose the *tenant* endpoint defined by
+  [Hono's HTTP based management API](https://eclipse.org/hono/api/device-registry-v1.yaml) instead.
+  Several of the formerly mandatory to include properties of the request and response messages have
+  been made optional or removed altogether. Existing clients should not be affected by these changes, though.
 * The response message format of the *assert Device Registration* operation of the Device Registration API
   has been changed, replacing the optional `gw-supported` boolean field with an optional `via` field.
   The value of this field contains the list of gateway that may act on behalf of the device on which
@@ -38,8 +43,7 @@ title = "Release Notes"
   [Device Registry Admin Guide]({{< ref "/admin-guide/device-registry-config.md" >}}) for details
   regarding the configuration properties to use.
 * There is now an official specification of an HTTP API for managing the content of a device registry.
-  The API is defined using by means of OpenAPI v3 and is available at
-  https://eclipse.org/hono/api/device-registry-v1.yaml.
+  The [HTTP Management API](https://eclipse.org/hono/api/device-registry-v1.yaml) is defined using by means of OpenAPI v3.
   Note, that the API is not yet implemented by the example device registry that comes with Hono.
 * The Command & Control feature now supports gateway agnostic addressing of devices. This means that applications are
   able to send commands to devices without knowing the particular gateway they may be connected to.

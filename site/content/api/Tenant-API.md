@@ -39,8 +39,8 @@ The following table provides an overview of the properties a client needs to set
 
 | Name             | Mandatory | Location                 | AMQP Type    | Description |
 | :--------------- | :-------: | :----------------------- | :----------- | :---------- |
-| *correlation-id* | no        | *properties*             | *message-id* | MAY contain an ID used to correlate a response message to the original request. If set, it is used as the *correlation-id* property in the response, otherwise the value of the *message-id* property is used. |
-| *message-id*     | yes       | *properties*             | *string*     | MUST contain an identifier that uniquely identifies the message at the sender side. |
+| *correlation-id* | no        | *properties*             | *message-id* | MAY contain an ID used to correlate a response message to the original request. If set, it is used as the *correlation-id* property in the response, otherwise the value of the *message-id* property is used. Either this or the *message-id* property MUST be set. |
+| *message-id*     | no        | *properties*             | *string*     | MAY contain an identifier that uniquely identifies the message at the sender side. Either this or the *correlation-id* property MUST be set. |
 | *reply-to*       | yes       | *properties*             | *string*     | MUST contain the source address that the client wants to receive response messages from. This address MUST be the same as the source address used for establishing the client's receive link (see [Preconditions]({{< relref "#preconditions" >}})). |
 | *subject*        | yes       | *properties*             | *string*     | MUST be set to `get`. |
 
@@ -76,8 +76,7 @@ The following table provides an overview of the properties contained in a respon
 | Name             | Mandatory | Location                 | AMQP Type    | Description |
 | :--------------- | :-------: | :----------------------- | :----------- | :---------- |
 | *correlation-id* | yes       | *properties*             | *message-id* | Contains the *message-id* (or the *correlation-id*, if specified) of the request message that this message is the response to. |
-| *content-type*   | yes       | *properties*             | *string*     | MUST be set to `application/json`. |
-| *tenant_id*      | yes       | *application-properties* | *string*     | Contains the ID of the tenant. |
+| *content-type*   | no        | *properties*             | *string*     | MUST be set to `application/json` if the invocation of the operation was successful and the body of the response message contains payload as described below. |
 | *status*         | yes       | *application-properties* | *int*        | Contains the status code indicating the outcome of the operation. Concrete values and their semantics are defined for each particular operation. |
 | *cache_control*  | no        | *application-properties* | *string*     | Contains an [RFC 2616](https://tools.ietf.org/html/rfc2616#section-14.9) compliant <em>cache directive</em>. The directive contained in the property MUST be obeyed by clients that are caching responses. |
 
@@ -85,11 +84,13 @@ The response message's *status* property may contain the following codes:
 
 | Code  | Description |
 | :---- | :---------- |
-| *200* | OK, the payload contains the tenant information for the requested tenant. |
+| *200* | OK, The response message body contains the requested tenant information. |
+| *400* | Bad Request, the request message did not contain all mandatory properties.
 | *403* | Forbidden, the client is not authorized to retrieve information for the given tenant. |
 | *404* | Not Found, there is no tenant matching the given search criteria. |
 
-For status codes indicating an error (codes in the `400 - 499` range) the message body MAY contain a detailed description of the error that occurred.
+For status codes indicating an error (codes in the `400 - 499` range) the message body MAY contain a detailed description of the error that occurred. In this case, the response message's *content-type* property SHOULD be set accordingly.
+
 Otherwise the response message contains the information for the requested tenant as described in the following sections.
 
 <a name="payload-format"></a>
@@ -210,5 +211,5 @@ A Tenant service implementation uses the following AMQP message delivery states 
 
 | Delivery State | Description |
 | :------------- | :---------- |
-| *ACCEPTED*     | Indicates that the request has been successfully received and accepted for processing. |
-| *REJECTED*     | Indicates that the request has been received but could not be processed. The *error* field contains information regarding the reason why. Clients should not try to re-send the request using the same message properties and payload in this case. |
+| *ACCEPTED*     | Indicates that the request message has been received and accepted for processing. |
+| *REJECTED*     | Indicates that the request message has been received but cannot be processed. The disposition frame's *error* field contains information regarding the reason why. Clients should not try to re-send the request using the same message properties and payload in this case. |

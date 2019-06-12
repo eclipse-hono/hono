@@ -1,7 +1,7 @@
-Client->+Tenant Service: transfer(to: "tenant", subject: "get", body: search criteria)
+Client->+Tenant Service: transfer(subject: "get", body: search criteria)
 
 note over Tenant Service:
 look up tenant
 end note
 
-Tenant Service->-Client: transfer(to: "tenant/${reply-to}", status: "200", body: tenantInformation)
+Tenant Service->-Client: transfer(status: "200", content-type: "application/json", body: tenant info)
