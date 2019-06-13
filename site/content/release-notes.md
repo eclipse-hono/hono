@@ -30,6 +30,8 @@ title = "Release Notes"
   has been changed, replacing the optional `gw-supported` boolean field with an optional `via` field.
   The value of this field contains the list of gateway that may act on behalf of the device on which
   the operation is invoked.
+* The methods for invoking the optional operations of the Device Registration API have been removed
+  from `org.eclipse.hono.client.RegistrationClient` and `org.eclipse.hono.client.impl.RegistrationClientImpl`.
 
 ## 1.0-M4
 

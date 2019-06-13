@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -144,65 +144,4 @@ public interface RegistrationClient extends RequestResponseClient {
     default Future<JsonObject> get(String deviceId, final SpanContext context) {
         return get(deviceId);
     }
-
-    /**
-     * Registers a device with Hono.
-     * <p>
-     * A device needs to be (successfully) registered before a client can upload
-     * any data for it.
-     *
-     * @param deviceId The id of the device to register.
-     * @param data The data to register with the device.
-     * @return A future indicating the result of the operation.
-     *         <p>
-     *         The future will succeed if a response with status 201 has been received from the
-     *         registration service.
-     *         <p>
-     *         Otherwise, the future will fail with a {@link ServiceInvocationException} containing
-     *         the (error) status code returned by the service.
-     * @throws NullPointerException if device ID is {@code null}.
-     * @see RequestResponseClient#setRequestTimeout(long)
-     */
-    Future<Void> register(String deviceId, JsonObject data);
-
-    /**
-     * Updates the data a device has been registered with.
-     * <p>
-     * A device needs to be (successfully) registered before a client can upload
-     * any data for it.
-     *
-     * @param deviceId The id of the device to register.
-     * @param data The data to update the registration with (may be {@code null}).
-     *             The original data will be <em>replaced</em> with this data, i.e.
-     *             the data will not be merged with the existing data.
-     * @return A future indicating the result of the operation.
-     *         <p>
-     *         The future will succeed if a response with status 204 has been received from the
-     *         registration service.
-     *         <p>
-     *         Otherwise, the future will fail with a {@link ServiceInvocationException} containing
-     *         the (error) status code returned by the service.
-     * @throws NullPointerException if device ID is {@code null}.
-     * @see RequestResponseClient#setRequestTimeout(long)
-     */
-    Future<Void> update(String deviceId, JsonObject data);
-
-    /**
-     * Deregisters a device from Hono.
-     * <p>
-     * Once a device has been (successfully) deregistered, no more telemtry data can be uploaded
-     * for it nor can commands be sent to it anymore.
-     *
-     * @param deviceId The id of the device to deregister.
-     * @return A future indicating the result of the operation.
-     *         <p>
-     *         The future will succeed if a response with status 204 has been received from the
-     *         registration service.
-     *         <p>
-     *         Otherwise, the future will fail with a {@link ServiceInvocationException} containing
-     *         the (error) status code returned by the service.
-     * @throws NullPointerException if device ID is {@code null}.
-     * @see RequestResponseClient#setRequestTimeout(long)
-     */
-    Future<Void> deregister(String deviceId);
 }
