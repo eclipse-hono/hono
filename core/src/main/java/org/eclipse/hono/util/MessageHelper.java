@@ -327,8 +327,9 @@ public final class MessageHelper {
      */
     public static JsonObject getJsonPayload(final Message msg) {
 
-        final Buffer buffer = getPayload(msg);
-        return buffer != null ? buffer.toJsonObject() : null;
+        return Optional.ofNullable(getPayload(msg))
+                .map(buffer -> buffer.length() > 0 ? buffer.toJsonObject() : null)
+                .orElse(null);
     }
 
     /**

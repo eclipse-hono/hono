@@ -107,6 +107,17 @@ public class MessageHelperTest {
 
         msg.setBody(new Data(new Binary(new byte[] { (byte) 0xf0, (byte) 0x28, (byte) 0x8c, (byte) 0xbc })));
         assertNotNull(MessageHelper.getPayloadAsString(msg));
+    }
 
+    /**
+     * Verifies that the helper does not throw an exception when trying to
+     * read payload as JSON from an empty Data section.
+     */
+    @Test
+    public void testGetJsonPayloadHandlesEmptyDataSection() {
+
+        final Message msg = ProtonHelper.message();
+        msg.setBody(new Data(new Binary(new byte[0])));
+        assertNull(MessageHelper.getJsonPayload(msg));
     }
 }
