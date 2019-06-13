@@ -151,7 +151,11 @@ public class TenantAmqpEndpoint extends RequestResponseEndpoint<ServiceConfigPro
                     .setTenant(requestMessage)
                     .setJsonPayload(requestMessage));
         } catch (DecodeException e) {
-            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "malformed request payload"));
+            logger.debug("failed to create EventBusMessage from AMQP request message", e);
+            return Future.failedFuture(
+                    new ClientErrorException(
+                            HttpURLConnection.HTTP_BAD_REQUEST,
+                            "request message body contains malformed JSON"));
         }
     }
 
