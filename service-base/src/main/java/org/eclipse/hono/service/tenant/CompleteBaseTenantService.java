@@ -254,21 +254,30 @@ public abstract class CompleteBaseTenantService<T> extends BaseTenantService<T> 
     }
 
     /**
-     * Checks if a payload contains a valid trusted CA specification.
+     * Checks if a tenant payload contains a valid trusted CA specification.
      *
-     * @param payload The payload to check.
-     * @return boolean {@code true} if the payload is valid.
+     * @param payload The tenant payload to check.
+     * @return boolean {@code true} if the tenant payload is valid.
      */
     private boolean hasValidTrustedCaSpec(final JsonObject payload) {
 
-       final Object trustConfig = payload.getValue(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA);
-       if (trustConfig == null) {
-           return true;
-       } else if (JsonObject.class.isInstance(trustConfig)) {
-           return isValidTrustedCaSpec((JsonObject) trustConfig);
-       } else {
-           return false;
-       }
+        final Object object = payload.getValue(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA);
+        if (object == null) {
+            return true;
+        } else if (JsonObject.class.isInstance(object)) {
+            return isValidTrustedCaSpec((JsonObject) object);
+        } else if (JsonArray.class.isInstance(object)){
+            final JsonArray trustConfigs = (JsonArray) object;
+            return trustConfigs.size() > 0 && isValidTrustedCaSpec(trustConfigs);
+        } else {
+            return false;
+        }
+    }
+
+    private boolean isValidTrustedCaSpec(final JsonArray trustConfigs) {
+        final boolean containsInvalidTrustedCa = trustConfigs.stream()
+                .anyMatch(trustedCa -> !JsonObject.class.isInstance(trustedCa) || !isValidTrustedCaSpec((JsonObject) trustedCa));
+        return !containsInvalidTrustedCa;
     }
 
     /**

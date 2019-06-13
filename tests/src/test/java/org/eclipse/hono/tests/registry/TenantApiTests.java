@@ -14,6 +14,10 @@
 package org.eclipse.hono.tests.registry;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.CoreMatchers.is;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 
 import java.net.HttpURLConnection;
 import java.security.KeyPair;
@@ -21,6 +25,9 @@ import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
 import java.util.concurrent.TimeUnit;
+import java.security.cert.TrustAnchor;
+import java.util.List;
+import java.util.Set;
 
 import javax.security.auth.x500.X500Principal;
 
@@ -158,16 +165,22 @@ abstract class TenantApiTests extends DeviceRegistryTestBase {
         final X500Principal subjectDn = new X500Principal("CN=ca, OU=Hono, O=Eclipse");
         final PublicKey publicKey = getRandomPublicKey();
         final TenantObject payload = TenantObject.from(tenantId, true)
-                .setTrustAnchor(publicKey, subjectDn);
+                .addTrustAnchor(publicKey, subjectDn);
 
         getHelper().registry
         .addTenant(JsonObject.mapFrom(payload))
         .compose(r -> getAdminClient().get(subjectDn))
         .setHandler(ctx.succeeding(tenantObject -> {
             ctx.verify(() -> {
-                assertThat(tenantObject.getTenantId()).isEqualTo(tenantId);
-                assertThat(tenantObject.getTrustedCaSubjectDn()).isEqualTo(subjectDn);
-                assertThat(tenantObject.getTrustAnchor().getCAPublicKey()).isEqualTo(publicKey);
+                final Set<X500Principal> subjectNames = tenantObject.getTrustedCaSubjectDns();
+                assertNotNull(subjectNames);
+                assertThat(subjectNames.size(), is(1));
+                assertThat(tenantObject.getTenantId(), is(tenantId));
+                assertTrue(subjectNames.contains(subjectDn));
+                final List<TrustAnchor> anchors = tenantObject.getTrustAnchors();
+                assertNotNull(anchors);
+                assertThat(anchors.size(), is(1));
+                assertThat(anchors.get(0).getCAPublicKey()).isEqualTo(publicKey);
             });
             ctx.completeNow();
         }));
@@ -188,7 +201,7 @@ abstract class TenantApiTests extends DeviceRegistryTestBase {
         final String tenantId = getHelper().getRandomTenantId();
         final X500Principal subjectDn = new X500Principal("CN=ca-http,OU=Hono,O=Eclipse");
         final TenantObject payload = TenantObject.from(tenantId, true)
-                .setTrustAnchor(getRandomPublicKey(), subjectDn);
+                .addTrustAnchor(getRandomPublicKey(), subjectDn);
 
         getHelper().registry
         .addTenant(JsonObject.mapFrom(payload))

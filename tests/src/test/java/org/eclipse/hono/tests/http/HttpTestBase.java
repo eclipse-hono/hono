@@ -343,7 +343,6 @@ public abstract class HttpTestBase {
 
                 })
                 .setHandler(ctx.asyncAssertSuccess(ok -> setup.complete()));
-
         setup.await();
 
         testUploadMessages(ctx, tenantId, count -> {

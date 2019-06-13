@@ -24,7 +24,6 @@ import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantObject;
 import org.eclipse.hono.util.TenantResult;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import org.junit.jupiter.api.Test;
 
 import org.eclipse.hono.service.management.OperationResult;
@@ -33,8 +32,10 @@ import org.eclipse.hono.service.management.Id;
 
 import javax.security.auth.x500.X500Principal;
 import java.net.HttpURLConnection;
+import java.util.List;
 import java.util.Optional;
 
+import static org.junit.Assert.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
@@ -345,7 +346,10 @@ public abstract class AbstractTenantServiceTest {
                 assertEquals(HttpURLConnection.HTTP_OK, s.getStatus());
                 final TenantObject obj = s.getPayload().mapTo(TenantObject.class);
                 assertEquals("tenant", obj.getTenantId());
-                final JsonObject ca = obj.getProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, JsonObject.class);
+                final List<JsonObject> trustedCAs = obj.getTrustedCAs();
+                assertNotNull(trustedCAs);
+                assertEquals(1, trustedCAs.size());
+                final JsonObject ca = trustedCAs.get(0);
                 assertEquals(trustedCa, ca);
                 ctx.completeNow();
             })));
@@ -450,13 +454,13 @@ public abstract class AbstractTenantServiceTest {
                 .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, "CN=taken")
                 .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, "NOTAKEY");
         final TenantObject tenantOne = TenantObject.from("tenantOne", true)
-                .setProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, trustedCa);
+                .addTrustedCA(trustedCa);
         final TenantObject tenantTwo = TenantObject.from("tenantTwo", true);
         addTenant("tenantOne", JsonObject.mapFrom(tenantOne))
         .compose(ok -> addTenant("tenantTwo", JsonObject.mapFrom(tenantTwo)))
         .compose(ok -> {
             // WHEN updating the second tenant to use the same CA as the first tenant
-            tenantTwo.setProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, trustedCa);
+            tenantTwo.addTrustedCA(trustedCa);
                     final Future<OperationResult<Void>> result = Future.future();
                     getTenantManagementService().update(
                     "tenantTwo",

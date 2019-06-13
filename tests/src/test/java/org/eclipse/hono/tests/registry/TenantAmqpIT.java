@@ -145,6 +145,7 @@ public class TenantAmqpIT extends TenantApiTests {
     /**
      * {@inheritDoc}
      */
+
     @Override
     protected TenantClient getRestrictedClient() {
         return defaultTenantClient;

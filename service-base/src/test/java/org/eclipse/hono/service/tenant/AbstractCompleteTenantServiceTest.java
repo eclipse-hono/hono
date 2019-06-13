@@ -12,6 +12,7 @@
  *******************************************************************************/
 package org.eclipse.hono.service.tenant;
 
+import static org.junit.Assert.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.vertx.core.Future;
@@ -28,6 +29,7 @@ import org.junit.jupiter.api.Test;
 
 import javax.security.auth.x500.X500Principal;
 import java.net.HttpURLConnection;
+import java.util.List;
 
 /**
  * Abstract class used as a base for verifying behavior of {@link CompleteTenantService} in device registry implementations.
@@ -149,7 +151,10 @@ public abstract class AbstractCompleteTenantServiceTest {
                 assertEquals(HttpURLConnection.HTTP_OK, s.getStatus());
                 final TenantObject obj = s.getPayload().mapTo(TenantObject.class);
                 assertEquals("tenant", obj.getTenantId());
-                final JsonObject ca = obj.getProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, JsonObject.class);
+                final List<JsonObject> trustedCAs = obj.getTrustedCAs();
+                assertNotNull(trustedCAs);
+                assertEquals(1, trustedCAs.size());
+                final JsonObject ca = trustedCAs.get(0);
                 assertEquals(trustedCa, ca);
                 ctx.completeNow();
             })));
