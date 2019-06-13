@@ -158,6 +158,11 @@ public final class IntegrationTestSupport {
      */
     public static final String PROPERTY_DEVICEREGISTRY_HTTP_PORT = "deviceregistry.http.port";
     /**
+     * The name of the system property to use for indicating whether the Device Registry supports
+     * gateway mode.
+     */
+    public static final String PROPERTY_DEVICEREGISTRY_SUPPORTS_GW_MODE = "deviceregistry.supportsGatewayMode";
+    /**
      * The name of the system property to use for setting the IP address of the AMQP Messaging Network.
      */
     public static final String PROPERTY_DOWNSTREAM_HOST = "downstream.host";
@@ -237,6 +242,7 @@ public final class IntegrationTestSupport {
      * by Hono.
      */
     public static final String PROPTERY_MAX_BCRYPT_ITERATIONS = "max.bcrypt.iterations";
+
 
     /**
      * The IP address of the Auth service.
@@ -385,6 +391,7 @@ public final class IntegrationTestSupport {
     private final Set<String> tenantsToDelete = new HashSet<>();
     private final Map<String, Set<String>> devicesToDelete = new HashMap<>();
     private final Vertx vertx;
+    private final boolean gatewayModeSupported;
 
     /**
      * Creates a new helper instance.
@@ -394,6 +401,8 @@ public final class IntegrationTestSupport {
      */
     public IntegrationTestSupport(final Vertx vertx) {
         this.vertx = Objects.requireNonNull(vertx);
+        final String gatewayModeFlag = System.getProperty(PROPERTY_DEVICEREGISTRY_SUPPORTS_GW_MODE, "true");
+        gatewayModeSupported = Boolean.parseBoolean(gatewayModeFlag);
     }
 
     private static ClientConfigProperties getClientConfigProperties(
@@ -504,6 +513,15 @@ public final class IntegrationTestSupport {
                 vertx,
                 IntegrationTestSupport.HONO_DEVICEREGISTRY_HOST,
                 IntegrationTestSupport.HONO_DEVICEREGISTRY_HTTP_PORT);
+    }
+
+    /**
+     * Checks if the Device Registry supports devices connecting via gateways.
+     * 
+     * @return {@code true} if the registry supports gateway mode.
+     */
+    public boolean isGatewayModeSupported() {
+        return gatewayModeSupported;
     }
 
     /**

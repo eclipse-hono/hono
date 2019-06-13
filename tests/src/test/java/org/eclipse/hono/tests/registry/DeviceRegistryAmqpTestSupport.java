@@ -16,7 +16,6 @@ package org.eclipse.hono.tests.registry;
 import org.eclipse.hono.client.ConnectionLifecycle;
 import org.eclipse.hono.client.CredentialsClientFactory;
 import org.eclipse.hono.client.HonoConnection;
-import org.eclipse.hono.client.RegistrationClientFactory;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 
 import io.vertx.core.Future;
@@ -46,19 +45,6 @@ public final class DeviceRegistryAmqpTestSupport {
     protected static CredentialsClientFactory prepareCredentialsClientFactory(final Vertx vertx, final String username, final String password) {
 
         return CredentialsClientFactory.create(HonoConnection.newConnection(vertx, IntegrationTestSupport.getDeviceRegistryProperties(username, password)));
-    }
-
-    /**
-     * Gets a factory for creating a client for accessing the Device Registration service.
-     *
-     * @param vertx The Vert.x instance to run on, if {@code null} a new Vert.x instance is used.
-     * @param username The username to use for authenticating to the service.
-     * @param password The password to use for authenticating to the service.
-     * @return The factory.
-     */
-    protected static RegistrationClientFactory prepareRegistrationClientFactory(final Vertx vertx, final String username, final String password) {
-
-        return RegistrationClientFactory.create(HonoConnection.newConnection(vertx, IntegrationTestSupport.getDeviceRegistryProperties(username, password)));
     }
 
     /**

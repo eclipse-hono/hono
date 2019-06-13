@@ -71,7 +71,7 @@ public abstract class JmsBasedRequestResponseClient<R extends RequestResponseRes
 
     private final Map<String, Handler<AsyncResult<R>>> handlers = new ConcurrentHashMap<>();
     private final JmsBasedHonoConnection connection;
-    private final String endpoint;
+    private final String targetAddress;
     private final String replyToAddress;
 
     private MessageProducer producer;
@@ -81,10 +81,22 @@ public abstract class JmsBasedRequestResponseClient<R extends RequestResponseRes
             final JmsBasedHonoConnection connection,
             final String endpoint,
             final ClientConfigProperties clientConfig) {
+        this(connection, endpoint, null, clientConfig);
+    }
 
-        this.endpoint = endpoint;
+    JmsBasedRequestResponseClient(
+            final JmsBasedHonoConnection connection,
+            final String endpoint,
+            final String tenant,
+            final ClientConfigProperties clientConfig) {
+
         this.config = clientConfig;
-        this.replyToAddress = endpoint + "/" + UUID.randomUUID().toString();
+        this.targetAddress = Optional.ofNullable(tenant)
+                .map(t -> String.format("%s/%s", endpoint, tenant))
+                .orElse(endpoint);
+        this.replyToAddress = Optional.ofNullable(tenant)
+                .map(t -> String.format("%s/%s/%s", endpoint, tenant, UUID.randomUUID().toString()))
+                .orElse(String.format("%s/%s", endpoint, UUID.randomUUID().toString()));
 
         this.connection = connection;
     }
@@ -100,7 +112,7 @@ public abstract class JmsBasedRequestResponseClient<R extends RequestResponseRes
     }
 
     private void createProducer() throws JMSException {
-        producer = connection.createProducer(endpoint);
+        producer = connection.createProducer(targetAddress);
     }
 
     private void createConsumer() throws JMSException {
@@ -118,7 +130,29 @@ public abstract class JmsBasedRequestResponseClient<R extends RequestResponseRes
     }
 
     /**
-     * Creates a new message for payload.
+     * Creates an empty message for textual payload.
+     * 
+     * @return The message.
+     * @throws JMSException if the message could not be created.
+     * @throws NullPointerException if payload is {@code null}.
+     */
+    protected final TextMessage createTextMessage() throws JMSException {
+        return createTextMessage();
+    }
+
+    /**
+     * Creates an empty message for binary payload.
+     * 
+     * @return The message.
+     * @throws JMSException if the message could not be created.
+     * @throws NullPointerException if payload is {@code null}.
+     */
+    protected final BytesMessage createMessage() throws JMSException {
+        return createMessage((Buffer) null);
+    }
+
+    /**
+     * Creates a message for binary payload.
      * 
      * @param payload The payload of the message.
      * @return The message.
@@ -130,7 +164,7 @@ public abstract class JmsBasedRequestResponseClient<R extends RequestResponseRes
     }
 
     /**
-     * Creates a new message for payload.
+     * Creates a message for binary payload.
      * 
      * @param payload The payload of the message or {@code null} if an empty message should be created.
      * @return The message.

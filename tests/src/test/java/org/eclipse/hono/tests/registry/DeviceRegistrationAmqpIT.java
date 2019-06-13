@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,59 +13,49 @@
 
 package org.eclipse.hono.tests.registry;
 
-import java.net.HttpURLConnection;
-import java.util.concurrent.TimeUnit;
-
+import org.eclipse.hono.client.HonoConnection;
+import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.RegistrationClientFactory;
-import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.tests.IntegrationTestSupport;
-import org.eclipse.hono.util.Constants;
-import org.eclipse.hono.util.RegistrationConstants;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.extension.ExtendWith;
 
+import io.vertx.core.Future;
 import io.vertx.core.Vertx;
-import io.vertx.core.json.JsonObject;
-import io.vertx.ext.unit.TestContext;
-import io.vertx.ext.unit.junit.VertxUnitRunner;
+import io.vertx.junit5.Checkpoint;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 
 /**
  * Tests verifying the behavior of the Device Registry component's Device Registration AMQP endpoint.
  */
-@RunWith(VertxUnitRunner.class)
-public class DeviceRegistrationAmqpIT {
+@ExtendWith(VertxExtension.class)
+public class DeviceRegistrationAmqpIT extends DeviceRegistrationApiTests {
 
-    private static final String NON_EXISTING_DEVICE_ID = "non-existing-device";
-    private static final String NON_EXISTING_GATWAY_ID = "non-existing-gateway";
     private static final Vertx vertx = Vertx.vertx();
     private static IntegrationTestSupport helper;
     private static RegistrationClientFactory registrationClientFactory;
-
-    /**
-     * Global timeout for all test cases.
-     */
-    @Rule
-    public Timeout globalTimeout = new Timeout(5, TimeUnit.SECONDS);
 
     /**
      * Starts the device registry and connects a client.
      *
      * @param ctx The vert.x test context.
      */
-    @BeforeClass
-    public static void init(final TestContext ctx) {
+    @BeforeAll
+    public static void init(final VertxTestContext ctx) {
 
         helper = new IntegrationTestSupport(vertx);
         helper.initRegistryClient();
 
-        registrationClientFactory = DeviceRegistryAmqpTestSupport.prepareRegistrationClientFactory(vertx,
-                IntegrationTestSupport.HONO_USER, IntegrationTestSupport.HONO_PWD);
-        registrationClientFactory.connect().setHandler(ctx.asyncAssertSuccess());
+        registrationClientFactory = RegistrationClientFactory.create(
+                HonoConnection.newConnection(
+                        vertx,
+                        IntegrationTestSupport.getDeviceRegistryProperties(
+                                IntegrationTestSupport.HONO_USER,
+                                IntegrationTestSupport.HONO_PWD)));
+        registrationClientFactory.connect().setHandler(ctx.completing());
     }
 
     /**
@@ -73,9 +63,10 @@ public class DeviceRegistrationAmqpIT {
      *
      * @param ctx The vert.x test context.
      */
-    @After
-    public void cleanUp(final TestContext ctx) {
+    @AfterEach
+    public void cleanUp(final VertxTestContext ctx) {
         helper.deleteObjects(ctx);
+        ctx.completeNow();
     }
 
     /**
@@ -83,86 +74,26 @@ public class DeviceRegistrationAmqpIT {
      *
      * @param ctx The vert.x test context.
      */
-    @AfterClass
-    public static void shutdown(final TestContext ctx) {
-
-        DeviceRegistryAmqpTestSupport.disconnect(ctx, registrationClientFactory);
+    @AfterAll
+    public static void shutdown(final VertxTestContext ctx) {
+        final Checkpoint cons = ctx.checkpoint();
+        DeviceRegistryAmqpTestSupport.disconnect(ctx, cons, registrationClientFactory);
     }
 
     /**
-     * Verifies that the registry succeeds a request to assert a
-     * device's registration status.
-     *
-     * @param ctx The vert.x test context.
+     * {@inheritDoc}
      */
-    @Test
-    public void testAssertRegistrationSucceedsForDevice(final TestContext ctx) {
-
-        final String deviceId = helper.getRandomDeviceId(Constants.DEFAULT_TENANT);
-
-         helper.registry.registerDevice(Constants.DEFAULT_TENANT, deviceId)
-                .compose(r -> registrationClientFactory.getOrCreateRegistrationClient(Constants.DEFAULT_TENANT))
-                .compose(client -> client.assertRegistration(deviceId))
-                .setHandler(ctx.asyncAssertSuccess(resp -> {
-                    ctx.assertEquals(deviceId, resp.getString(RegistrationConstants.FIELD_PAYLOAD_DEVICE_ID));
-                }));
+    @Override
+    protected IntegrationTestSupport getHelper() {
+        return helper;
     }
 
     /**
-     * Verifies that the registry fails to assert a non-existing device's
-     * registration status with a 404 error code.
-     *
-     * @param ctx The vert.x test context.
+     * {@inheritDoc}
      */
-    @Test
-    public void testAssertRegistrationFailsForUnknownDevice(final TestContext ctx) {
-        registrationClientFactory.getOrCreateRegistrationClient(Constants.DEFAULT_TENANT)
-            .compose(client -> client.assertRegistration(NON_EXISTING_DEVICE_ID))
-            .setHandler(ctx.asyncAssertFailure(t -> assertErrorCode(t, HttpURLConnection.HTTP_NOT_FOUND, ctx)));
-    }
-
-    /**
-     * Verifies that the registry fails to assert a disabled device's
-     * registration status with a 404 error code.
-     *
-     * @param ctx The vert.x test context.
-     */
-    @Test
-    public void testAssertRegistrationFailsForDisabledDevice(final TestContext ctx) {
-
-        final String deviceId = helper.getRandomDeviceId(Constants.DEFAULT_TENANT);
-
-        helper.registry.registerDevice(Constants.DEFAULT_TENANT, deviceId,
-                    new JsonObject().put(RegistrationConstants.FIELD_ENABLED, false))
-                .compose(r -> registrationClientFactory.getOrCreateRegistrationClient(Constants.DEFAULT_TENANT))
-                .compose(client -> client.assertRegistration(deviceId))
-                .setHandler(ctx.asyncAssertFailure( t -> {
-                    assertErrorCode(t, HttpURLConnection.HTTP_NOT_FOUND, ctx);
-                }));
-    }
-
-    /**
-     * Verifies that the registry fails a non-existing gateway's request to assert a
-     * device's registration status with a 403 error code.
-     *
-     * @param ctx The vert.x test context.
-     */
-    @Test
-    public void testAssertRegistrationFailsForNonExistingGateway(final TestContext ctx) {
-
-        final String deviceId = helper.getRandomDeviceId(Constants.DEFAULT_TENANT);
-
-        helper.registry.registerDevice(Constants.DEFAULT_TENANT, deviceId)
-                .compose(r -> registrationClientFactory.getOrCreateRegistrationClient(Constants.DEFAULT_TENANT))
-                .compose(client -> client.assertRegistration(deviceId, NON_EXISTING_GATWAY_ID))
-                .setHandler(ctx.asyncAssertFailure(t -> {
-                    assertErrorCode(t, HttpURLConnection.HTTP_FORBIDDEN, ctx);
-                }));
-    }
-
-    private static void assertErrorCode(final Throwable error, final int expectedErrorCode, final TestContext ctx) {
-        ctx.assertTrue(error instanceof ServiceInvocationException);
-        ctx.assertEquals(expectedErrorCode, ((ServiceInvocationException) error).getErrorCode());
+    @Override
+    protected Future<RegistrationClient> getClient(final String tenant) {
+        return registrationClientFactory.getOrCreateRegistrationClient(tenant);
     }
 }
 

@@ -39,6 +39,8 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
     <!-- use minimum number of iterations in order to speed up test execution --> 
     <max.bcrypt.iterations>4</max.bcrypt.iterations>
     <max.event-loop.execute-time>5000</max.event-loop.execute-time>
+    <!-- should be set to false if testing against a registry that doesn't support GW mode -->
+    <deviceregistry.supportsGatewayMode>true</deviceregistry.supportsGatewayMode>
     <hono.amqp-network.host>hono-dispatch-router.hono</hono.amqp-network.host>
     <hono.registration.host>hono-service-device-registry.hono</hono.registration.host>
     <hono.auth.host>hono-service-auth.hono</hono.auth.host>
@@ -932,6 +934,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                 <deviceregistry.host>${deviceregistry.ip}</deviceregistry.host>
                 <deviceregistry.amqp.port>${deviceregistry.amqp.port}</deviceregistry.amqp.port>
                 <deviceregistry.http.port>${deviceregistry.http.port}</deviceregistry.http.port>
+                <deviceregistry.supportsGatewayMode>${deviceregistry.supportsGatewayMode}</deviceregistry.supportsGatewayMode>
                 <coap.host>${coap.ip}</coap.host>
                 <coap.port>${coap.port}</coap.port>
                 <coaps.port>${coaps.port}</coaps.port>
