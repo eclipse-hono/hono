@@ -40,17 +40,16 @@ public final class TenantMessageFilter extends BaseMessageFilter {
      */
     public static boolean verify(final ResourceIdentifier linkTarget, final Message msg) {
 
-        if (msg.getMessageId() == null && msg.getCorrelationId() == null) {
+        final Object correlationId = MessageHelper.getCorrelationId(msg);
+
+        if (correlationId == null) {
             LOG.trace("message has neither a message-id nor correlation-id");
             return false;
         } else if (msg.getSubject() == null) {
-            LOG.trace("message [{}] does not contain subject", msg.getMessageId());
+            LOG.trace("message [correlation ID: {}] does not contain a subject", correlationId);
             return false;
         } else if (msg.getReplyTo() == null) {
-            LOG.trace("message [{}] contains no reply-to address", msg.getMessageId());
-            return false;
-        } else if (msg.getBody() != null && !MessageHelper.hasDataBody(msg)) {
-            LOG.trace("message [{}] contains no Data section", msg.getMessageId());
+            LOG.trace("message [correlation ID: {}] contains no reply-to address", correlationId);
             return false;
         } else {
             return true;
