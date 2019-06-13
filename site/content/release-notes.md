@@ -17,7 +17,12 @@ title = "Release Notes"
 ### API Changes
 
 * The optional methods of the [Tenant API]({{< ref "/api/Tenant-API.md" >}}) have been removed.
-  Implementations of the Tenant API are encouraged to expose the *tenant* endpoint defined by
+  Implementations of the Tenant API are encouraged to expose the *tenants* endpoint defined by
+  [Hono's HTTP based management API](https://eclipse.org/hono/api/device-registry-v1.yaml) instead.
+  Several of the formerly mandatory to include properties of the request and response messages have
+  been made optional or removed altogether. Existing clients should not be affected by these changes, though.
+* The optional methods of the [Device Registration API]({{< ref "/api/Device-Registration-API.md" >}}) have been removed.
+  Implementations of the Device Registration API are encouraged to expose the *devices* endpoint defined by
   [Hono's HTTP based management API](https://eclipse.org/hono/api/device-registry-v1.yaml) instead.
   Several of the formerly mandatory to include properties of the request and response messages have
   been made optional or removed altogether. Existing clients should not be affected by these changes, though.
