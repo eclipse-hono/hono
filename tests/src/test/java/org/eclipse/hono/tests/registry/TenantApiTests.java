@@ -13,9 +13,7 @@
 
 package org.eclipse.hono.tests.registry;
 
-import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.net.HttpURLConnection;
 import java.security.KeyPair;
@@ -26,7 +24,6 @@ import java.util.concurrent.TimeUnit;
 
 import javax.security.auth.x500.X500Principal;
 
-import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.TenantClient;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.TenantConstants;
@@ -97,12 +94,12 @@ abstract class TenantApiTests extends DeviceRegistryTestBase {
         .compose(ok -> getAdminClient().get(tenantId))
         .setHandler(ctx.succeeding(tenantObject -> {
             ctx.verify(() -> {
-                assertTrue(tenantObject.isEnabled());
-                assertThat(tenantObject.getTenantId(), is(tenantId));
-                assertThat(tenantObject.getResourceLimits(), is(resourceLimits));
-                assertThat(tenantObject.getDefaults(), is(defaults));
-                assertThat(tenantObject.getAdapterConfigurations(), is(adapterConfig));
-                assertThat(tenantObject.getProperty("customer"), is("ACME Inc."));
+                assertThat(tenantObject.isEnabled()).isTrue();
+                assertThat(tenantObject.getTenantId()).isEqualTo(tenantId);
+                assertThat(tenantObject.getResourceLimits()).isEqualTo(resourceLimits);
+                assertThat(tenantObject.getDefaults()).isEqualTo(defaults);
+                assertThat(tenantObject.getAdapterConfigurations()).isEqualTo(adapterConfig);
+                assertThat((Object) tenantObject.getProperty("customer")).isEqualTo("ACME Inc.");
             });
             ctx.completeNow();
         }));
@@ -125,7 +122,7 @@ abstract class TenantApiTests extends DeviceRegistryTestBase {
         .addTenant(JsonObject.mapFrom(payload))
         .compose(r -> getRestrictedClient().get(tenantId))
         .setHandler(ctx.failing(t -> {
-            ctx.verify(() -> assertThat(((ServiceInvocationException) t).getErrorCode(), is(HttpURLConnection.HTTP_FORBIDDEN)));
+            assertErrorCode(t, HttpURLConnection.HTTP_FORBIDDEN);
             ctx.completeNow();
         }));
     }
@@ -143,7 +140,7 @@ abstract class TenantApiTests extends DeviceRegistryTestBase {
         getAdminClient()
         .get("non-existing-tenant")
         .setHandler(ctx.failing(t -> {
-            ctx.verify(() -> assertThat(((ServiceInvocationException) t).getErrorCode(), is(HttpURLConnection.HTTP_NOT_FOUND)));
+            assertErrorCode(t, HttpURLConnection.HTTP_NOT_FOUND);
             ctx.completeNow();
         }));
     }
@@ -168,9 +165,9 @@ abstract class TenantApiTests extends DeviceRegistryTestBase {
         .compose(r -> getAdminClient().get(subjectDn))
         .setHandler(ctx.succeeding(tenantObject -> {
             ctx.verify(() -> {
-                assertThat(tenantObject.getTenantId(), is(tenantId));
-                assertThat(tenantObject.getTrustedCaSubjectDn(), is(subjectDn));
-                assertThat(tenantObject.getTrustAnchor().getCAPublicKey(), is(publicKey));
+                assertThat(tenantObject.getTenantId()).isEqualTo(tenantId);
+                assertThat(tenantObject.getTrustedCaSubjectDn()).isEqualTo(subjectDn);
+                assertThat(tenantObject.getTrustAnchor().getCAPublicKey()).isEqualTo(publicKey);
             });
             ctx.completeNow();
         }));
@@ -197,7 +194,7 @@ abstract class TenantApiTests extends DeviceRegistryTestBase {
         .addTenant(JsonObject.mapFrom(payload))
         .compose(r -> getRestrictedClient().get(subjectDn))
         .setHandler(ctx.failing(t -> {
-            ctx.verify(() -> assertThat(((ServiceInvocationException) t).getErrorCode(), is(HttpURLConnection.HTTP_FORBIDDEN)));
+            assertErrorCode(t, HttpURLConnection.HTTP_FORBIDDEN);
             ctx.completeNow();
         }));
     }

@@ -134,17 +134,8 @@ public class TenantJmsIT extends TenantApiTests {
     public static void shutdown(final VertxTestContext ctx) {
 
         final Checkpoint connectionClosed = ctx.checkpoint(2);
-        if (defaultTenantConnection == null) {
-            connectionClosed.flag();
-        } else {
-            defaultTenantConnection.disconnect(ctx.succeeding(ok -> connectionClosed.flag()));
-        }
-
-        if (allTenantConnection == null) {
-            connectionClosed.flag();
-        } else {
-            allTenantConnection.disconnect(ctx.succeeding(ok -> connectionClosed.flag()));
-        }
+        disconnect(ctx, connectionClosed, defaultTenantConnection);
+        disconnect(ctx, connectionClosed, allTenantConnection);
     }
 
     /**

@@ -13,7 +13,15 @@
 
 package org.eclipse.hono.tests.registry;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
+import org.eclipse.hono.client.ConnectionLifecycle;
+import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.tests.IntegrationTestSupport;
+
+import io.vertx.core.Future;
+import io.vertx.junit5.Checkpoint;
+import io.vertx.junit5.VertxTestContext;
 
 /**
  * A base class for implementing integration tests for
@@ -28,5 +36,43 @@ abstract class DeviceRegistryTestBase {
      * @return The helper.
      */
     protected abstract IntegrationTestSupport getHelper();
+
+    /**
+     * Asserts that a given error is a {@link ServiceInvocationException}
+     * with a particular error code.
+     * 
+     * @param error The error.
+     * @param expectedErrorCode The error code.
+     * @throws AssertionError if the assertion fails.
+     */
+    static void assertErrorCode(final Throwable error, final int expectedErrorCode) {
+        assertThat(error).isInstanceOf(ServiceInvocationException.class);
+        assertThat(((ServiceInvocationException) error).getErrorCode()).isEqualTo(expectedErrorCode);
+    }
+
+    /**
+     * Closes the connection of the provided factory.
+     * <p>
+     * Any senders or consumers opened by this client will be implicitly closed as well. Any subsequent attempts to
+     * connect this client again will fail.
+     *
+     * @param ctx The test context that the tests are executed on.
+     * @param checkpoint The checkpoint to flag on successful closing.
+     * @param factory The factory to disconnect.
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     */
+    static void disconnect(
+            final VertxTestContext ctx,
+            final Checkpoint checkpoint,
+            final ConnectionLifecycle<?> factory) {
+
+        final Future<Void> clientTracker = Future.future();
+        if (factory != null) {
+            factory.disconnect(clientTracker);
+        } else {
+            clientTracker.complete();
+        }
+        clientTracker.otherwiseEmpty().setHandler(ctx.succeeding(ok -> checkpoint.flag()));
+    }
 
 }

@@ -14,16 +14,13 @@
 
 package org.eclipse.hono.tests.registry;
 
-import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.net.HttpURLConnection;
 import java.util.concurrent.TimeUnit;
 
 import org.eclipse.hono.client.RegistrationClient;
-import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
@@ -79,8 +76,8 @@ abstract class DeviceRegistrationApiTests extends DeviceRegistryTestBase {
         .compose(client -> client.assertRegistration(deviceId))
         .setHandler(ctx.succeeding(resp -> {
             ctx.verify(() -> {
-                assertThat(resp.getString(RegistrationConstants.FIELD_PAYLOAD_DEVICE_ID), is(deviceId));
-                assertThat(resp.getJsonObject(RegistrationConstants.FIELD_PAYLOAD_DEFAULTS), is(defaults));
+                assertThat(resp.getString(RegistrationConstants.FIELD_PAYLOAD_DEVICE_ID)).isEqualTo(deviceId);
+                assertThat(resp.getJsonObject(RegistrationConstants.FIELD_PAYLOAD_DEFAULTS)).isEqualTo(defaults);
             });
             ctx.completeNow();
         }));
@@ -110,8 +107,8 @@ abstract class DeviceRegistrationApiTests extends DeviceRegistryTestBase {
         .compose(client -> client.assertRegistration(deviceId, gatewayId))
         .setHandler(ctx.succeeding(resp -> {
             ctx.verify(() -> {
-                assertThat(resp.getString(RegistrationConstants.FIELD_PAYLOAD_DEVICE_ID), is(deviceId));
-                assertThat(resp.getJsonArray(RegistrationConstants.FIELD_VIA), is(via));
+                assertThat(resp.getString(RegistrationConstants.FIELD_PAYLOAD_DEVICE_ID)).isEqualTo(deviceId);
+                assertThat(resp.getJsonArray(RegistrationConstants.FIELD_VIA)).isEqualTo(via);
             });
             ctx.completeNow();
         }));
@@ -237,18 +234,5 @@ abstract class DeviceRegistrationApiTests extends DeviceRegistryTestBase {
             ctx.verify(() -> assertErrorCode(t, HttpURLConnection.HTTP_NOT_FOUND));
             ctx.completeNow();
         }));
-    }
-
-    /**
-     * Asserts that a given error is a {@link ServiceInvocationException}
-     * with a particular error code.
-     * 
-     * @param error The error.
-     * @param expectedErrorCode The error code.
-     * @throws AssertionError if the assertion fails.
-     */
-    public static void assertErrorCode(final Throwable error, final int expectedErrorCode) {
-        assertTrue(error instanceof ServiceInvocationException);
-        assertThat(((ServiceInvocationException) error).getErrorCode(), is(expectedErrorCode));
     }
 }

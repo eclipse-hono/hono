@@ -122,8 +122,8 @@ public class TenantAmqpIT extends TenantApiTests {
     public static void shutdown(final VertxTestContext ctx) {
 
         final Checkpoint connections = ctx.checkpoint(2);
-        DeviceRegistryAmqpTestSupport.disconnect(ctx, connections, allTenantClientFactory);
-        DeviceRegistryAmqpTestSupport.disconnect(ctx, connections, defaultTenantClientFactory);
+        disconnect(ctx, connections, allTenantClientFactory);
+        disconnect(ctx, connections, defaultTenantClientFactory);
     }
 
     /**

@@ -77,7 +77,7 @@ public class DeviceRegistrationAmqpIT extends DeviceRegistrationApiTests {
     @AfterAll
     public static void shutdown(final VertxTestContext ctx) {
         final Checkpoint cons = ctx.checkpoint();
-        DeviceRegistryAmqpTestSupport.disconnect(ctx, cons, registrationClientFactory);
+        disconnect(ctx, cons, registrationClientFactory);
     }
 
     /**

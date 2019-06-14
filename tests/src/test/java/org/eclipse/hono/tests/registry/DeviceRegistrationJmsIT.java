@@ -112,7 +112,7 @@ public class DeviceRegistrationJmsIT extends DeviceRegistrationApiTests {
     @AfterAll
     public static void shutdown(final VertxTestContext ctx) {
         final Checkpoint cons = ctx.checkpoint();
-        DeviceRegistryAmqpTestSupport.disconnect(ctx, cons, registrationConnection);
+        disconnect(ctx, cons, registrationConnection);
     }
 
     /**
