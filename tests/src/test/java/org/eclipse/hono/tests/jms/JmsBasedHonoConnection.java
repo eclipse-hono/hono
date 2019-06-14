@@ -194,7 +194,7 @@ public class JmsBasedHonoConnection implements ConnectionLifecycle<JmsBasedHonoC
         if (session == null) {
             throw new IllegalStateException("No JMS session");
         } else {
-            LOG.info("creating producer [{}]", destination);
+            LOG.debug("creating producer [{}]", destination);
             return session.createProducer(destination);
         }
     }
@@ -232,7 +232,7 @@ public class JmsBasedHonoConnection implements ConnectionLifecycle<JmsBasedHonoC
         if (session == null) {
             throw new IllegalStateException("No JMS session");
         } else {
-            LOG.info("creating consumer [{}]", destination);
+            LOG.debug("creating consumer [{}]", destination);
             return session.createConsumer(destination);
         }
     }
