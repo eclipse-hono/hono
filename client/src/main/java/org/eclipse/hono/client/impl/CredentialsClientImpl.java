@@ -199,9 +199,8 @@ public class CredentialsClientImpl extends AbstractRequestResponseClient<Credent
         Objects.requireNonNull(clientContext);
 
         final Future<CredentialsResult<CredentialsObject>> responseTracker = Future.future();
-        final JsonObject specification = new JsonObject()
-                .put(CredentialsConstants.FIELD_TYPE, type)
-                .put(CredentialsConstants.FIELD_AUTH_ID, authId)
+        final JsonObject specification = CredentialsConstants
+                .getSearchCriteria(type, authId)
                 .mergeIn(clientContext);
         final TriTuple<CredentialsConstants.CredentialsAction, String, Integer> key = TriTuple
                 .of(CredentialsConstants.CredentialsAction.get, String.format("%s-%s", type, authId), clientContext.hashCode());

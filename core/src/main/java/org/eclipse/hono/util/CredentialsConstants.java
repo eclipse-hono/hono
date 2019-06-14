@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -22,21 +22,58 @@ import io.vertx.core.json.JsonObject;
  */
 public final class CredentialsConstants extends RequestResponseApiConstants {
 
-    /* message payload fields */
+    /**
+     * The name of the field that contains the type of credentials.
+     */
     public static final String FIELD_TYPE                        = "type";
+    /**
+     * The name of the field that contains the authentication identifier.
+     */
     public static final String FIELD_AUTH_ID                     = "auth-id";
+    /**
+     * The name of the field that contains the secret(s) of the credentials.
+     */
     public static final String FIELD_SECRETS                     = "secrets";
+    /**
+     * The name of the field that contains the number of credentials contained in a message.
+     */
     public static final String FIELD_CREDENTIALS_TOTAL           = "total";
 
     /* secrets fields */
+    /**
+     * The name of the field that contains the password hash.
+     */
     public static final String FIELD_SECRETS_PWD_HASH            = "pwd-hash";
+    /**
+     * The name of the field that contains the clear text password.
+     */
     public static final String FIELD_SECRETS_PWD_PLAIN           = "pwd-plain";
+    /**
+     * The name of the field that contains the salt for the password hash.
+     */
     public static final String FIELD_SECRETS_SALT                = "salt";
+    /**
+     * The name of the field that contains the name of the hash function used for a hashed password.
+     */
     public static final String FIELD_SECRETS_HASH_FUNCTION       = "hash-function";
+    /**
+     * The name of the field that contains a (pre-shared) key.
+     */
     public static final String FIELD_SECRETS_KEY                 = "key";
+    /**
+     * The name of the field that contains the earliest point in time a secret may be used
+     * for authentication.
+     */
     public static final String FIELD_SECRETS_NOT_BEFORE          = "not-before";
+    /**
+     * The name of the field that contains the latest point in time a secret may be used
+     * for authentication.
+     */
     public static final String FIELD_SECRETS_NOT_AFTER           = "not-after";
 
+    /**
+     * The Credential service's endpoint name.
+     */
     public static final String CREDENTIALS_ENDPOINT              = "credentials";
 
     /**
@@ -51,6 +88,9 @@ public final class CredentialsConstants extends RequestResponseApiConstants {
      * The type name that indicates a pre-shared key secret.
      */
     public static final String SECRETS_TYPE_PRESHARED_KEY        = "psk";
+    /**
+     * The name of the field that contains the pattern to use for matching authentication identifiers.
+     */
     public static final String SPECIFIER_WILDCARD                = "*";
 
     /**
@@ -78,7 +118,26 @@ public final class CredentialsConstants extends RequestResponseApiConstants {
      * Request actions that belong to the Credentials API.
      */
     public enum CredentialsAction {
-        get, add, update, remove, unknown;
+        /**
+         * The AMQP subject property value to use for invoking the <em>get Credentials</em> operation.
+         */
+        get,
+        /**
+         * The AMQP subject property value to use for invoking the <em>add Credentials</em> operation.
+         */
+        add,
+        /**
+         * The AMQP subject property value to use for invoking the <em>update Credentials</em> operation.
+         */
+        update,
+        /**
+         * The AMQP subject property value to use for invoking the <em>remove Credentials</em> operation.
+         */
+        remove,
+        /**
+         * The name that all unknown operations are mapped to.
+         */
+        unknown;
 
         /**
          * Construct a CredentialsAction from a subject.
@@ -110,6 +169,24 @@ public final class CredentialsConstants extends RequestResponseApiConstants {
 
     private CredentialsConstants() {
         // prevent instantiation
+    }
+
+    /**
+     * Creates a JSON object containing search criteria for Credentials.
+     * 
+     * @param type The type of credentials to get.
+     * @param authId The authentication ID to get credentials for.
+     * @return The search criteria.
+     * @throws NullPointerException if any of the parameters are {@code null}.
+     */
+    public static JsonObject getSearchCriteria(final String type, final String authId) {
+
+        Objects.requireNonNull(type);
+        Objects.requireNonNull(authId);
+
+        return new JsonObject()
+                .put(FIELD_TYPE, type)
+                .put(FIELD_AUTH_ID, authId);
     }
 
     /**
