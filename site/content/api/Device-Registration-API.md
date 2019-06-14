@@ -61,7 +61,7 @@ The body of the response message consists of a single *Data* section containing 
 | Name             | Mandatory | JSON Type     | Description |
 | :--------------- | :-------: | :------------ | :---------- |
 | *device-id*      | *yes*     | *string*      | The ID of the device that is subject of the assertion. |
-| *via*            | *no*      | *array*       | Information about which gateways may act on behalf of the device. The property may contain a JSON array containing the gateway ids as strings. |
+| *via*            | *no*      | *array*       | The IDs (JSON strings) of gateways which may act on behalf of the device. This property MUST be set if any gateways are registered for the device. If the assertion request contained a *gateway_id* property and the response's *status* property has value `200` (indicating a successful assertion) then the array MUST at least contain the gateway ID from the request. |
 | *defaults*       | *no*      | *object*      | Default values to be used by protocol adapters for augmenting messages from devices with missing information like a *content type*. It is up to the discretion of a protocol adapter if and how to use the given default values when processing messages published by the device. |
 
 Below is an example for a payload of a response to an *assert* request for device `4711` which also includes a default *content-type*:
