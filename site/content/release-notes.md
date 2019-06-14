@@ -32,6 +32,12 @@ title = "Release Notes"
   the operation is invoked.
 * The methods for invoking the optional operations of the Device Registration API have been removed
   from `org.eclipse.hono.client.RegistrationClient` and `org.eclipse.hono.client.impl.RegistrationClientImpl`.
+* The optional methods of the [Credentials API]({{< ref "/api/Credentials-API.md" >}}) have been removed.
+  Implementations of the Credentials API are encouraged to expose the *credentials* endpoint defined by
+  [Hono's HTTP based management API](https://eclipse.org/hono/api/device-registry-v1.yaml) instead.
+  Several of the formerly mandatory to include properties of the request and response messages have
+  been made optional or removed altogether. Existing clients should not be affected by these changes, though.
+
 
 ## 1.0-M4
 
