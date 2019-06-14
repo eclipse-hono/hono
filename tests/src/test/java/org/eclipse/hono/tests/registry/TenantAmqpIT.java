@@ -13,8 +13,6 @@
 
 package org.eclipse.hono.tests.registry;
 
-import java.util.concurrent.TimeUnit;
-
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.TenantClient;
 import org.eclipse.hono.client.TenantClientFactory;
@@ -23,7 +21,6 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
@@ -31,7 +28,6 @@ import org.slf4j.LoggerFactory;
 
 import io.vertx.core.Vertx;
 import io.vertx.junit5.Checkpoint;
-import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 
@@ -39,7 +35,7 @@ import io.vertx.junit5.VertxTestContext;
  * Tests verifying the behavior of the Device Registry component's Tenant AMQP endpoint.
  */
 @ExtendWith(VertxExtension.class)
-public class TenantAmqpIT {
+public class TenantAmqpIT extends TenantApiTests {
 
     private static final Logger LOG = LoggerFactory.getLogger(TenantAmqpIT.class);
     private static final Vertx vertx = Vertx.vertx();
@@ -131,67 +127,26 @@ public class TenantAmqpIT {
     }
 
     /**
-     * Verifies that an existing tenant can be retrieved.
-     * 
-     * @param ctx The vert.x test context.
+     * {@inheritDoc}
      */
-    @Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
-    @Test
-    public void testGetTenant(final VertxTestContext ctx) {
-
-        TenantApiTests.testGetTenant(ctx, helper, allTenantClient);
+    @Override
+    protected IntegrationTestSupport getHelper() {
+        return helper;
     }
 
     /**
-     * Verifies that a request to retrieve information for a tenant that the client
-     * is not authorized for fails with a 403 status.
-     *
-     * @param ctx The vert.x test context.
+     * {@inheritDoc}
      */
-    @Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
-    @Test
-    public void testGetTenantFailsIfNotAuthorized(final VertxTestContext ctx) {
-
-        TenantApiTests.testGetTenantFailsIfNotAuthorized(ctx, helper, defaultTenantClient);
+    @Override
+    protected TenantClient getAdminClient() {
+        return allTenantClient;
     }
 
     /**
-     * Verifies that a request to retrieve information for a non existing tenant
-     * fails with a 404 status.
-     *
-     * @param ctx The vert.x test context.
+     * {@inheritDoc}
      */
-    @Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
-    @Test
-    public void testGetTenantFailsForNonExistingTenant(final VertxTestContext ctx) {
-
-        TenantApiTests.testGetTenantFailsForNonExistingTenant(ctx, helper, allTenantClient);
-    }
-
-    /**
-     * Verifies that an existing tenant can be retrieved by a trusted CA's subject DN.
-     *
-     * @param ctx The vert.x test context.
-     */
-    @Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
-    @Test
-    public void testGetTenantByCa(final VertxTestContext ctx) {
-
-        TenantApiTests.testGetTenantByCa(ctx, helper, allTenantClient);
-    }
-
-    /**
-     * Verifies that a request to retrieve information for a tenant by the
-     * subject DN of the trusted certificate authority fails with a
-     * <em>403 Forbidden</em> status if the client is not authorized to retrieve
-     * information for the tenant.
-     *
-     * @param ctx The vert.x test context.
-     */
-    @Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
-    @Test
-    public void testGetTenantByCaFailsIfNotAuthorized(final VertxTestContext ctx) {
-
-        TenantApiTests.testGetTenantByCaFailsIfNotAuthorized(ctx, helper, defaultTenantClient);
+    @Override
+    protected TenantClient getRestrictedClient() {
+        return defaultTenantClient;
     }
 }

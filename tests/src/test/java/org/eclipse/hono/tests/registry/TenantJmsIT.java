@@ -48,7 +48,7 @@ import io.vertx.junit5.VertxTestContext;
  * Tests verifying the behavior of the Device Registry component's Tenant AMQP endpoint.
  */
 @ExtendWith(VertxExtension.class)
-public class TenantJmsIT {
+public class TenantJmsIT extends TenantApiTests {
 
     private static final Logger LOG = LoggerFactory.getLogger(TenantJmsIT.class);
     private static final Vertx vertx = Vertx.vertx();
@@ -148,41 +148,27 @@ public class TenantJmsIT {
     }
 
     /**
-     * Verifies that an existing tenant can be retrieved.
-     * 
-     * @param ctx The vert.x test context.
+     * {@inheritDoc}
      */
-    @Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
-    @Test
-    public void testGetTenant(final VertxTestContext ctx) {
-
-        TenantApiTests.testGetTenant(ctx, helper, allTenantClient);
+    @Override
+    protected IntegrationTestSupport getHelper() {
+        return helper;
     }
 
     /**
-     * Verifies that a request to retrieve information for a tenant that the client
-     * is not authorized for fails with a 403 status.
-     *
-     * @param ctx The vert.x test context.
+     * {@inheritDoc}
      */
-    @Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
-    @Test
-    public void testGetTenantFailsIfNotAuthorized(final VertxTestContext ctx) {
-
-        TenantApiTests.testGetTenantFailsIfNotAuthorized(ctx, helper, defaultTenantClient);
+    @Override
+    protected TenantClient getAdminClient() {
+        return allTenantClient;
     }
 
     /**
-     * Verifies that a request to retrieve information for a non existing tenant
-     * fails with a 404 status.
-     *
-     * @param ctx The vert.x test context.
+     * {@inheritDoc}
      */
-    @Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
-    @Test
-    public void testGetTenantFailsForNonExistingTenant(final VertxTestContext ctx) {
-
-        TenantApiTests.testGetTenantFailsForNonExistingTenant(ctx, helper, allTenantClient);
+    @Override
+    protected TenantClient getRestrictedClient() {
+        return defaultTenantClient;
     }
 
     /**
@@ -262,32 +248,5 @@ public class TenantJmsIT {
             });
             ctx.completeNow();
         }));
-    }
-
-    /**
-     * Verifies that an existing tenant can be retrieved by a trusted CA's subject DN.
-     *
-     * @param ctx The vert.x test context.
-     */
-    @Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
-    @Test
-    public void testGetTenantByCa(final VertxTestContext ctx) {
-
-        TenantApiTests.testGetTenantByCa(ctx, helper, allTenantClient);
-    }
-
-    /**
-     * Verifies that a request to retrieve information for a tenant by the
-     * subject DN of the trusted certificate authority fails with a
-     * <em>403 Forbidden</em> status if the client is not authorized to retrieve
-     * information for the tenant.
-     *
-     * @param ctx The vert.x test context.
-     */
-    @Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
-    @Test
-    public void testGetTenantByCaFailsIfNotAuthorized(final VertxTestContext ctx) {
-
-        TenantApiTests.testGetTenantByCaFailsIfNotAuthorized(ctx, helper, defaultTenantClient);
     }
 }
