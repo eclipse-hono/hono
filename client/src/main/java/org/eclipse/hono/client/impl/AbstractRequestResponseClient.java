@@ -659,6 +659,9 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
 
         final Span currentSpan = newChildSpan(spanContext, "invoke '" + action + "' on " + getName() + " endpoint");
         createAndSendRequest(action, properties, payload, contentType, ar -> {
+            if (ar.failed()) {
+                TracingHelper.logError(currentSpan, ar.cause());
+            }
             currentSpan.finish();
             resultHandler.handle(ar);
         }, cacheKey, currentSpan);
