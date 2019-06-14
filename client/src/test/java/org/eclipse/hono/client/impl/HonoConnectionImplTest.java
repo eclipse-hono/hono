@@ -18,6 +18,7 @@ import static org.eclipse.hono.client.impl.VertxMockSupport.mockHandler;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.AdditionalAnswers.answerVoid;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -36,6 +37,7 @@ import java.util.function.Supplier;
 
 import javax.security.sasl.AuthenticationException;
 
+import org.apache.qpid.proton.amqp.messaging.Target;
 import org.apache.qpid.proton.amqp.transport.AmqpError;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.amqp.transport.Source;
@@ -682,5 +684,95 @@ public class HonoConnectionImplTest {
         verify(sender).close();
         verify(sender).free();
         verify(remoteCloseHook, never()).handle(anyString());
+    }
+
+    /**
+     * Verifies that the attempt to create a sender succeeds when sender never gets credits.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testCreateSenderThatGetsNoCredits(final TestContext ctx) {
+        final ProtonSender sender = mock(ProtonSender.class);
+        when(sender.isOpen()).thenReturn(Boolean.TRUE);
+        when(con.createSender(anyString())).thenReturn(sender);
+        final Target target = new Target();
+        target.setAddress("someAddress");
+        when(sender.getRemoteTarget()).thenReturn(target);
+        when(sender.getCredit()).thenReturn(0);
+        // just invoke openHandler with succeeded future
+        doAnswer(answerVoid(
+                (final Handler<AsyncResult<ProtonSender>> handler) -> handler.handle(Future.succeededFuture(sender))))
+                        .when(sender).openHandler(any(Handler.class));
+        final Handler<String> remoteCloseHook = mock(Handler.class);
+
+        // GIVEN an established connection
+        final Async connectAttempt = ctx.async();
+        honoConnection.connect().setHandler(ctx.asyncAssertSuccess(ok -> connectAttempt.complete()));
+        connectAttempt.await();
+
+        final Async senderCreation = ctx.async();
+        honoConnection.createSender(
+                "target", ProtonQoS.AT_LEAST_ONCE, remoteCloseHook)
+                .setHandler(createSenderResult -> {
+                    ctx.assertEquals(sender, createSenderResult.result());
+                    ctx.verify(v -> {
+                        // sendQueueDrainHandler gets unset
+                        verify(sender).sendQueueDrainHandler(null);
+                        senderCreation.complete();
+                    });
+                });
+    }
+
+    /**
+     * Verifies that the attempt to create a sender succeeds when sender gets credits within flowLatency.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testCreateSenderThatGetsDelayedCredits(final TestContext ctx) {
+        // We need to delay timer task. In this case simply forever.
+        final long waitOnCreditsTimerId = 23;
+        when(vertx.setTimer(anyLong(), any(Handler.class))).thenAnswer(invocation -> {
+            // do not call handler any time
+            return waitOnCreditsTimerId;
+        });
+        when(vertx.cancelTimer(waitOnCreditsTimerId)).thenReturn(true);
+
+        final ProtonSender sender = mock(ProtonSender.class);
+        when(sender.isOpen()).thenReturn(Boolean.TRUE);
+        when(con.createSender(anyString())).thenReturn(sender);
+        final Target target = new Target();
+        target.setAddress("someAddress");
+        when(sender.getRemoteTarget()).thenReturn(target);
+        when(sender.getCredit()).thenReturn(0);
+        // mock handlers
+        doAnswer(answerVoid(
+                (final Handler<AsyncResult<ProtonSender>> handler) -> handler.handle(Future.succeededFuture(sender))))
+                        .when(sender).openHandler(any(Handler.class));
+        doAnswer(answerVoid(
+                (final Handler<ProtonSender> handler) -> handler.handle(sender)))
+                        .when(sender).sendQueueDrainHandler(any(Handler.class));
+        final Handler<String> remoteCloseHook = mock(Handler.class);
+
+        // GIVEN an established connection
+        final Async connectAttempt = ctx.async();
+        honoConnection.connect().setHandler(ctx.asyncAssertSuccess(ok -> connectAttempt.complete()));
+        connectAttempt.await();
+
+        final Async senderCreation = ctx.async();
+        honoConnection.createSender(
+                "target", ProtonQoS.AT_LEAST_ONCE, remoteCloseHook)
+                .setHandler(createSenderResult -> {
+                    ctx.assertEquals(sender, createSenderResult.result());
+                    ctx.verify(v -> {
+                        // sendQueueDrainHandler gets unset
+                        verify(sender).sendQueueDrainHandler(null);
+                        verify(vertx).cancelTimer(waitOnCreditsTimerId);
+                        senderCreation.complete();
+                    });
+                });
     }
 }

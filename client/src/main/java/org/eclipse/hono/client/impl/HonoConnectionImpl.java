@@ -635,10 +635,22 @@ public class HonoConnectionImpl implements HonoConnection {
                         log.debug("sender open [target: {}, sendQueueFull: {}]", targetAddress, sender.sendQueueFull());
                         // wait on credits a little time, if not already given
                         if (sender.getCredit() <= 0) {
-                            vertx.setTimer(clientConfigProperties.getFlowLatency(), timerID -> {
-                                log.debug("sender [target: {}] has {} credits after grace period of {}ms", targetAddress,
-                                        sender.getCredit(), clientConfigProperties.getFlowLatency());
-                                senderFuture.tryComplete(sender);
+                            final long waitOnCreditsTimerId = vertx.setTimer(clientConfigProperties.getFlowLatency(),
+                                    timerID -> {
+                                        log.debug("sender [target: {}] has {} credits after grace period of {}ms",
+                                                targetAddress,
+                                                sender.getCredit(), clientConfigProperties.getFlowLatency());
+                                        sender.sendQueueDrainHandler(null);
+                                        senderFuture.tryComplete(sender);
+                                    });
+                            sender.sendQueueDrainHandler(replenishedSender -> {
+                                log.debug("sender [target: {}] has received {} initial credits",
+                                        targetAddress, replenishedSender.getCredit());
+                                if (vertx.cancelTimer(waitOnCreditsTimerId)) {
+                                    result.tryComplete(replenishedSender);
+                                    replenishedSender.sendQueueDrainHandler(null);
+                                } // otherwise the timer has already completed the future and cleaned up
+                                  // sendQueueDrainHandler
                             });
                         } else {
                             senderFuture.tryComplete(sender);
