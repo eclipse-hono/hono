@@ -16,13 +16,14 @@ title = "Release Notes"
 
 ### API Changes
 
-* The optional methods of the [Tenant API]({{< ref "/api/Tenant-API.md" >}}) have been removed.
-  Implementations of the Tenant API are encouraged to expose the *tenants* endpoint defined by
+* The optional methods of the [Tenant API](https://www.eclipse.org/hono/docs/latest/api/tenant-api/index.html) have been
+  removed. Implementations of the Tenant API are encouraged to expose the *tenants* endpoint defined by
   [Hono's HTTP based management API](https://eclipse.org/hono/api/device-registry-v1.yaml) instead.
   Several of the formerly mandatory to include properties of the request and response messages have
   been made optional or removed altogether. Existing clients should not be affected by these changes, though.
-* The optional methods of the [Device Registration API]({{< ref "/api/Device-Registration-API.md" >}}) have been removed.
-  Implementations of the Device Registration API are encouraged to expose the *devices* endpoint defined by
+* The optional methods of the 
+  [Device Registration API](https://www.eclipse.org/hono/docs/latest/api/device-registration-api/index.html) have been 
+  removed. Implementations of the Device Registration API are encouraged to expose the *devices* endpoint defined by
   [Hono's HTTP based management API](https://eclipse.org/hono/api/device-registry-v1.yaml) instead.
   Several of the formerly mandatory to include properties of the request and response messages have
   been made optional or removed altogether. Existing clients should not be affected by these changes, though.
@@ -32,9 +33,9 @@ title = "Release Notes"
   the operation is invoked.
 * The methods for invoking the optional operations of the Device Registration API have been removed
   from `org.eclipse.hono.client.RegistrationClient` and `org.eclipse.hono.client.impl.RegistrationClientImpl`.
-* The optional methods of the [Credentials API]({{< ref "/api/Credentials-API.md" >}}) have been removed.
-  Implementations of the Credentials API are encouraged to expose the *credentials* endpoint defined by
-  [Hono's HTTP based management API](https://eclipse.org/hono/api/device-registry-v1.yaml) instead.
+* The optional methods of the [Credentials API](https://www.eclipse.org/hono/docs/latest/api/credentials-api/index.html) 
+  have been removed. Implementations of the Credentials API are encouraged to expose the *credentials* endpoint defined
+  by [Hono's HTTP based management API](https://eclipse.org/hono/api/device-registry-v1.yaml) instead.
   Several of the formerly mandatory to include properties of the request and response messages have
   been made optional or removed altogether. Existing clients should not be affected by these changes, though.
 
@@ -44,8 +45,8 @@ title = "Release Notes"
 ### New Features
 
 * Default properties can now also be set at the tenant level, affecting all devices
-  belonging to the tenant. Please refer to the [protocol adapter user guides](https://www.eclipse.org/hono/docs/latest/user-guide/)
-  for details.
+  belonging to the tenant. Please refer to the 
+  [protocol adapter user guides](https://www.eclipse.org/hono/docs/latest/user-guide/) for details.
 * `CredentialsClientImpl` now supports caching of response data received from a Credentials service based on 
   *cache directives*. The protocol adapters are now equipped to cache the response from the Credentials Service.
   The protocol adapters support configuration variables to set the default cache timeout, the minimum 
@@ -53,11 +54,11 @@ title = "Release Notes"
 * The example device registry's Credentials service implementation now includes a *cache directive*
   in its response to the *get Credentials* operation which allows clients to cache credentials of
   type *hashed-password* and *x509-cert* for a configurable amount of time. Please refer to the
-  [Device Registry Admin Guide](https://www.eclipse.org/hono/docs/latest/admin-guide/device-registry-config/) for details
-  regarding the configuration properties to use.
+  [Device Registry Admin Guide](https://www.eclipse.org/hono/docs/latest/admin-guide/device-registry-config/) 
+  for details regarding the configuration properties to use.
 * There is now an official specification of an HTTP API for managing the content of a device registry.
-  The [HTTP Management API](https://www.eclipse.org/hono/docs/latest/api/device-registry-v1.yaml) is defined using by means of OpenAPI v3.
-  Note, that the API is not yet implemented by the example device registry that comes with Hono.
+  The [HTTP Management API](https://www.eclipse.org/hono/docs/latest/api/device-registry-v1.yaml) is defined using by 
+  means of OpenAPI v3. Note, that the API is not yet implemented by the example device registry that comes with Hono.
 * The Command & Control feature now supports gateway agnostic addressing of devices. This means that applications are
   able to send commands to devices without knowing the particular gateway they may be connected to.
 * The concept and implementation of *message limit* have been added. The protocol adapters can be now
