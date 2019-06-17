@@ -1,5 +1,6 @@
 +++
-title = "Telemetry API"
+title = "Telemetry API Specification"
+linkTitle = "Telemetry API"
 weight = 405
 +++
 

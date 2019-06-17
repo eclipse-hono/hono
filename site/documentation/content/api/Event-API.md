@@ -1,5 +1,6 @@
 +++
-title = "Event API"
+title = "Event API Specification"
+linkTitle = "Event API"
 weight = 410
 +++
 

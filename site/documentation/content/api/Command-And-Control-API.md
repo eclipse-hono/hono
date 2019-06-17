@@ -1,5 +1,6 @@
 +++
-title = "Command & Control API"
+title = "Command & Control API Specification"
+linkTitle = "Command & Control API"
 weight = 415
 +++
 

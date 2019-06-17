@@ -1,5 +1,6 @@
 +++
-title = "Authentication API"
+title = "Authentication API Specification"
+linkTitle = "Authentication API"
 weight = 435
 +++
 

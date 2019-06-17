@@ -1,6 +1,6 @@
 +++
 title = "Device Registration API Specification"
-slug = "Device Registration API"
+linkTitle = "Device Registration API"
 weight = 425
 +++
 

@@ -1,6 +1,6 @@
 +++
 title = "Tenant API Specification"
-slug = "Tenant API"
+linkTitle = "Tenant API"
 weight = 420
 +++
 
