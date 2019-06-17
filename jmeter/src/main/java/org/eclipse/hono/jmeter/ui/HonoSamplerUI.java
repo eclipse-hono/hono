@@ -61,6 +61,12 @@ public abstract class HonoSamplerUI extends AbstractSamplerGui {
         return null;
     }
 
+    /**
+     * Gets a panel wrapping a choice field.
+     * 
+     * @param labeledChoice The choice to wrap.
+     * @return The panel.
+     */
     protected JPanel getWrapperPanelToFixAlignment(final JLabeledChoice labeledChoice) {
         // wrap the JLabeledChoice in extra panel to align it on the right
         final JPanel wrapperPanel = new JPanel(new BorderLayout());
