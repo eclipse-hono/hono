@@ -1,14 +1,12 @@
-title Get Last Known Gateway for Device (success)
-
-Client->Device Connection Service: transfer("device_con/tenant", "get-last-gw", device-id)
+Client->Device Connection Service: transfer(subject: "get-last-gw", device_id: "device-1")
 activate Device Connection Service
 note over Device Connection Service:
 get last known gateway for device
 end note
-Device Connection Service->Client: transfer("device_con/tenant/${reply-to}", "200", JSON payload)
+Device Connection Service->Client: transfer(status: "200", body: JSON payload)
 deactivate Device Connection Service
 note right of Client:
 JSON payload contains
 - gateway-id
-- update-date (optional)
+- last-updated (optional)
 end note

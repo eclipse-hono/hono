@@ -1,5 +1,6 @@
 +++
-title = "Device Connection API"
+title = "Device Connection API Specification"
+slug = "Device Connection API"
 weight = 425
 +++
 
@@ -17,11 +18,7 @@ The Device Connection API is defined by means of AMQP 1.0 message exchanges, i.e
 
 {{< figure src="../connectToDeviceConnection.png" alt="A client establishes an AMQP connection and the links required to invoke operations of the Device Connection service" title="Client connecting to Device Connection service" >}}
 
-## Operations
-
-The operations described in the following sections are invoked by Hono's components during run time and are therefore mandatory to implement.
-
-### Set Last Known Gateway for Device
+## Set last known Gateway for Device
 
 Clients use this command to *set* the gateway that last acted on behalf of a given device.
 
@@ -30,10 +27,7 @@ As this operation is invoked frequently by Hono's components, implementors may c
 **Message Flow**
 
 
-The following sequence diagram illustrates the flow of messages involved in a *Client* setting the last known gateway for a device.
-
-![Set Last Known Gateway for Device message flow](../set-last-gw_Success.png)
-
+{{< figure src="../setLastKnownGatewayForDevice_Success.png" title="Client sets the last known gateway for a device" alt="A client sends a request message for setting the last known gateway and receives a response containing a confirmation" >}}
 
 **Request Message Format**
 
@@ -52,26 +46,23 @@ A response to a *set last known gateway for device* request contains the [Standa
 
 The response message's *status* property may contain the following codes:
 
-| Code | Description |
-| :--- | :---------- |
-| *204* | OK, the last known gateway for the device was updated. |
-| *400* | Bad Request, the last known gateway has NOT been updated due to invalid data in the request. |
+| Code  | Description |
+| :---- | :---------- |
+| *204* | OK, the last known gateway for the device has been updated. |
+| *400* | Bad Request, the last known gateway has not been updated due to invalid or missing data in the request. |
 
 Implementors of this API may return a *404* status code in order to indicate that no device and/or gateway with the given identifier exists for the given tenant. However, performing such a check is optional.
 
 For status codes indicating an error (codes in the `400 - 499` range) the message body MAY contain a detailed description of the error that occurred.
 
-### Get Last Known Gateway for Device
+## Get last known Gateway for Device
 
 Clients use this command to *retrieve* the gateway that last acted on behalf of a given device.
 
 **Message Flow**
 
 
-The following sequence diagram illustrates the flow of messages involved in a *Client* retrieving the last known gateway for a Device.
-
-![Get Last Known Gateway for Device message flow](../get-last-gw_Success.png)
-
+{{< figure src="../getLastKnownGatewayForDevice_Success.png" title="Client retrieving the last known gateway for a device" alt="A client sends a request message for retrieving the last known gateway and receives a response containing the information" >}}
 
 **Request Message Format**
 
@@ -105,7 +96,7 @@ The response message's *status* property may contain the following codes:
 | Code | Description |
 | :--- | :---------- |
 | *200* | OK, the payload contains the gateway ID. |
-| *400* | Bad Request, the last known gateway could not be retrieved due to invalid data in the request. |
+| *400* | Bad Request, the request message does not contain all required information/properties. |
 | *404* | Not Found, there is no last known gateway assigned to the device. |
 
 Implementors of this API may return a *404* status code in order to indicate that no device with the given identifier exists for the given tenant. However, performing such a check is optional.
