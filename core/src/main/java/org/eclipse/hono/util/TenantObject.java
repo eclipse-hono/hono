@@ -697,20 +697,6 @@ public final class TenantObject extends JsonBackedValueObject {
     }
 
     /**
-     * Get the list of configured trusted CAs for this tenant.
-     * 
-     * @return The list of configured trusted CAs or {@code null} if this tenant has no configured trusted CA.
-     * 
-     */
-    @JsonIgnore
-    public List<JsonObject> getTrustedCAs() {
-        if (trustConfigurations == null) {
-            return null;
-        } else {
-            return trustConfigurations.values().stream().flatMap(List::stream).collect(Collectors.toList());
-        }
-    }
-    /**
      * Gets all the trusted certificate authorities configured for this tenant.
      * 
      * @return The list of X.509 certificates or {@code null} if no certificate authority

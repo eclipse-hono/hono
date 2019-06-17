@@ -109,7 +109,7 @@ The table below provides an overview of the standard members defined for the JSO
 | *enabled*                | *yes*     | *boolean*     | If set to `false` the tenant is currently disabled. Protocol adapters MUST NOT allow devices of a disabled tenant to connect and MUST NOT accept data published by such devices. |
 | *resource-limits*        | *no*      | *object*      | Any resource limits that should be enforced for the tenant, e.g. the maximum number of concurrent connections and the maximum data volume for a given period. Refer to [Resource Limits Configuration Format]({{< relref "#resource-limits-configuration-format" >}}) for details. |
 | *tenant-id*              | *yes*     | *string*      | The ID of the tenant. |
-| *trusted-ca*             | *no*      | *object* or *array*     | The trusted certificate authority(ies) to use for validating certificates presented by devices of the tenant for authentication purposes. The *trusted-ca* property can contain either a single JSON object  or an array of JSON objects. See [Trusted Certificate Authority Format]({{< relref "#trusted-ca-format" >}}) for a definition of the content model of the object. |
+| *trusted-ca*             | *no*      | *array*     | The list of trusted certificate authorities to use for validating certificates presented by devices of the tenant for authentication purposes. See [Trusted Certificate Authority Format]({{< relref "#trusted-ca-format" >}}) for a definition of the content model of the object. **NB** If the element is provided then the list MUST NOT be empty. **NB** If the element is present, then the list MUST contain JSON objects. |
 
 The JSON object MAY contain an arbitrary number of additional members with arbitrary names which can be of a scalar or a complex type.
 This allows for future *well-known* additions and also allows to add further information which might be relevant to a *custom* adapter only.
@@ -153,25 +153,22 @@ The JSON structure below contains example information for tenant `TEST_TENANT`. 
 
 ### Trusted CA Format
 
-The *trusted-ca* property of the tenant (JSON) payload can contain either a single JSON object containing the trusted CA to use for validating certificates of devices belonging to the tenant.
-+The tenant can also be configured with multiple trusted certificates. In this case, the *trusted-ca* property can contain an array of JSON objects, were each JSON object represents a single trusted CA. The table below provides an overview of the members defined in a JSON object contained in the *trust-ca* property:
+If the *trusted-ca* property is provided, then it MUST contain a non-empty array of JSON objects, were each JSON object represents a single trusted CA. The table below provides an overview of the members defined in a JSON object contained in the *trust-ca* property:
 
 | Name                     | Mandatory  | Type          | Default Value | Description |
 | :------------------------| :--------: | :------------ | :------------ | :---------- |
-| *subject-dn*             | *yes*      | *string*      |               | The subject DN of the trusted root certificate in the format defined by [RFC 2253](https://www.ietf.org/rfc/rfc2253.txt). |
-| *cert*                   | *no*       | *string*      |               | The Base64 encoded binary DER encoding of the trusted root X.509 certificate. |
+| *subject-dn*             | *yes*      | *string*      |               | The subject DN of the trusted root certificate in the format defined by [RFC 2253](https://www.ietf.org/rfc/rfc2253.txt). The subject DN MUST be unique across tenants. |
 | *public-key*             | *no*       | *string*      |               | The Base64 encoded binary DER encoding of the trusted root certificate's public key. |
-| *not-before*             | *no*       | *string*      |               | The property indicating that the trusted root X.509 certificate is not valid before the given date. |
-| *not-after*              | *no*       | *string*      |               | The property indicating that the trusted root X.509 certificate is not valid after the given date. |
+| *not-before*             | *no*       | *string*      |               | The property indicating that the trusted root X.509 certificate is not valid before the given date. The date format is defined by [RFC 5280](https://www.ietf.org/rfc/rfc5280.txt). |
+| *not-after*              | *no*       | *string*      |               | The property indicating that the trusted root X.509 certificate is not valid after the given date. The date format is defined by [RFC 5280](https://www.ietf.org/rfc/rfc5280.txt).|
 | *algorithm*              | *no*       | *string*      | `RSA`        | The name of the public key algorithm. Supported values are `RSA` and `EC`. This property is ignored if the *cert* property is used to store a certificate. |
 
 * The *subject-dn* MUST be unique among all registered tenants.
 * Either the *cert* or the *public-key* MUST be set.
-* If the *cert* property is used to store a certificate then the *not-before*, *not-after* and *algorithm* properties are ignored.
 
 **Examples**
 
-Below is an example for a payload of the response to a *get* request for tenant `TEST_TENANT` configured with two trusted certificate authorities.
+Below is an example for a payload of the response to a *get* request for tenant `TEST_TENANT`. The tenant is configured with two valid trusted certificates issued by the same issuer and having overlapping validity periods.
 
 ~~~json
  {
@@ -179,10 +176,14 @@ Below is an example for a payload of the response to a *get* request for tenant 
    "enabled" : true,
    "trusted-ca": [ {
            "subject-dn": "CN=ca,OU=Hono,O=Eclipse",
-           "public-key": "NOTAPUBLICKEY"
+           "public-key": "NOTAPUBLICKEY",
+           "not-before": "2015-01-01T00:00:00+0000",
+           "not-after": "2025-01-01T00:00:00+0000"
          }, {
            "subject-dn": "CN=ca,OU=Hono,O=Eclipse",
-           "public-key": "NOTAPUBLICKEY"
+           "public-key": "NOTAPUBLICKEY",
+           "not-before": "2024-01-01T00:00:00+0000",
+           "not-after": "2034-01-01T00:00:00+0000"
          } ]
  }
 ~~~
