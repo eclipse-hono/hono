@@ -13,8 +13,10 @@
 package org.eclipse.hono.service.plan;
 
 import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.core.IsNull.nullValue;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -34,11 +36,9 @@ import org.eclipse.hono.cache.ExpiringValueCache;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantObject;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
@@ -46,27 +46,22 @@ import io.vertx.core.Handler;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import io.vertx.ext.unit.TestContext;
-import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.ext.web.client.HttpRequest;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.predicate.ResponsePredicate;
 import io.vertx.ext.web.codec.BodyCodec;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 
 /**
  * Verifies the behavior of {@link PrometheusBasedResourceLimitChecks}.
  */
-@RunWith(VertxUnitRunner.class)
+@ExtendWith(VertxExtension.class)
 public class PrometheusBasedResourceLimitChecksTest {
 
     private static final int DEFAULT_PORT = 8080;
     private static final String DEFAULT_HOST = "localhost";
-    /**
-     * Time out each test after five seconds.
-     */
-    @Rule
-    public final Timeout timeout = Timeout.seconds(5);
 
     private PrometheusBasedResourceLimitChecks limitChecksImpl;
     private WebClient webClient;
@@ -79,7 +74,7 @@ public class PrometheusBasedResourceLimitChecksTest {
      * Sets up the fixture.
      */
     @SuppressWarnings("unchecked")
-    @Before
+    @BeforeEach
     public void setup() {
 
         request = mock(HttpRequest.class);
@@ -108,37 +103,47 @@ public class PrometheusBasedResourceLimitChecksTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testConnectionLimitIsNotReached(final TestContext ctx) {
+    public void testConnectionLimitIsNotReached(final VertxTestContext ctx) {
 
         givenCurrentConnections(9);
         final JsonObject limitsConfig = new JsonObject()
                 .put(PrometheusBasedResourceLimitChecks.FIELD_MAX_CONNECTIONS, 10);
         final TenantObject tenant = TenantObject.from(Constants.DEFAULT_TENANT, true);
         tenant.setProperty(TenantConstants.FIELD_RESOURCE_LIMITS, limitsConfig);
-        limitChecksImpl.isConnectionLimitReached(tenant).setHandler(ctx.asyncAssertSuccess(b -> {
-            ctx.assertEquals(Boolean.FALSE, b);
-            verify(webClient).get(eq(DEFAULT_PORT), eq(DEFAULT_HOST), anyString());
-        }));
+
+        limitChecksImpl.isConnectionLimitReached(tenant).setHandler(
+                ctx.succeeding(response -> {
+                    ctx.verify(() -> {
+                        assertFalse(response);
+                        verify(webClient).get(eq(DEFAULT_PORT), eq(DEFAULT_HOST), anyString());
+                    });
+                    ctx.completeNow();
+                }));
     }
 
     /**
      * Verifies that the connection limit check returns {@code true} if the limit
      * is reached.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testConnectionLimitIsReached(final TestContext ctx) {
+    public void testConnectionLimitIsReached(final VertxTestContext ctx) {
 
         givenCurrentConnections(10);
         final JsonObject limitsConfig = new JsonObject()
                 .put(PrometheusBasedResourceLimitChecks.FIELD_MAX_CONNECTIONS, 10);
         final TenantObject tenant = TenantObject.from(Constants.DEFAULT_TENANT, true);
         tenant.setProperty(TenantConstants.FIELD_RESOURCE_LIMITS, limitsConfig);
-        limitChecksImpl.isConnectionLimitReached(tenant).setHandler(ctx.asyncAssertSuccess(b -> {
-            ctx.assertEquals(Boolean.TRUE, b);
-            verify(webClient).get(eq(DEFAULT_PORT), eq(DEFAULT_HOST), anyString());
-        }));
+
+        limitChecksImpl.isConnectionLimitReached(tenant).setHandler(
+                ctx.succeeding(response -> {
+                    ctx.verify(() -> {
+                        assertTrue(response);
+                        verify(webClient).get(eq(DEFAULT_PORT), eq(DEFAULT_HOST), anyString());
+                    });
+                    ctx.completeNow();
+                }));
     }
 
     /**
@@ -215,17 +220,17 @@ public class PrometheusBasedResourceLimitChecksTest {
     @Test
     public void testEffectiveSinceWhenNotSet() {
         final TenantObject tenant = TenantObject.from(Constants.DEFAULT_TENANT, true);
-        assertThat(limitChecksImpl.getEffectiveSince(tenant), is(nullValue()));
+        assertNull(limitChecksImpl.getEffectiveSince(tenant));
     }
 
     /**
      *
      * Verifies that the message limit check returns {@code false} if the limit is not exceeded.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testMessageLimitNotExceeded(final TestContext ctx) {
+    public void testMessageLimitNotExceeded(final VertxTestContext ctx) {
 
         givenDataVolumeUsageInBytes(90);
         final long incomingMessageSize = 10;
@@ -237,19 +242,22 @@ public class PrometheusBasedResourceLimitChecksTest {
         final TenantObject tenant = TenantObject.from("tenant", true).setResourceLimits(limitsConfig);
 
         limitChecksImpl.isMessageLimitReached(tenant, incomingMessageSize)
-                .setHandler(ctx.asyncAssertSuccess(b -> {
-                    ctx.assertEquals(Boolean.FALSE, b);
-                    verify(webClient).get(eq(DEFAULT_PORT), eq(DEFAULT_HOST), anyString());
+                .setHandler(ctx.succeeding(response -> {
+                    ctx.verify(() -> {
+                        assertFalse(response);
+                        verify(webClient).get(eq(DEFAULT_PORT), eq(DEFAULT_HOST), anyString());
+                    });
+                    ctx.completeNow();
                 }));
     }
 
     /**
      * Verifies that the message limit check returns {@code true} if the limit is exceeded.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testMessageLimitExceeded(final TestContext ctx) {
+    public void testMessageLimitExceeded(final VertxTestContext ctx) {
 
         givenDataVolumeUsageInBytes(100);
         final long incomingMessageSize = 20;
@@ -261,26 +269,33 @@ public class PrometheusBasedResourceLimitChecksTest {
         final TenantObject tenant = TenantObject.from("tenant", true).setResourceLimits(limitsConfig);
 
         limitChecksImpl.isMessageLimitReached(tenant, incomingMessageSize)
-                .setHandler(ctx.asyncAssertSuccess(b -> {
-                    ctx.assertEquals(Boolean.TRUE, b);
-                    verify(webClient).get(eq(DEFAULT_PORT), eq(DEFAULT_HOST), anyString());
+                .setHandler(ctx.succeeding(response -> {
+                    ctx.verify(() -> {
+                        assertTrue(response);
+                        verify(webClient).get(eq(DEFAULT_PORT), eq(DEFAULT_HOST), anyString());
+                    });
+                    ctx.completeNow();
                 }));
     }
 
     /**
      * Verifies that the message limit check returns {@code false} if the limit is not set and no call is made to
      * retrieve metrics data from the prometheus server.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testMessageLimitNotExceededWhenNotConfigured(final TestContext ctx) {
+    public void testMessageLimitNotExceededWhenNotConfigured(final VertxTestContext ctx) {
 
         final TenantObject tenant = TenantObject.from("tenant", true);
+
         limitChecksImpl.isMessageLimitReached(tenant, 10)
-                .setHandler(ctx.asyncAssertSuccess(b -> {
-                    ctx.assertEquals(Boolean.FALSE, b);
-                    verify(webClient, never()).get(any(), any());
+                .setHandler(ctx.succeeding(response -> {
+                    ctx.verify(() -> {
+                        assertFalse(response);
+                        verify(webClient, never()).get(any(), any());
+                    });
+                    ctx.completeNow();
                 }));
     }
 
@@ -290,7 +305,7 @@ public class PrometheusBasedResourceLimitChecksTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testMessageLimitUsesValueFromCache(final TestContext ctx) {
+    public void testMessageLimitUsesValueFromCache(final VertxTestContext ctx) {
 
         when(limitsCache.get(any())).thenReturn(100L);
         final long incomingMessageSize = 20;
@@ -302,9 +317,12 @@ public class PrometheusBasedResourceLimitChecksTest {
         final TenantObject tenant = TenantObject.from("tenant", true).setResourceLimits(limitsConfig);
 
         limitChecksImpl.isMessageLimitReached(tenant, incomingMessageSize)
-                .setHandler(ctx.asyncAssertSuccess(b -> {
-                    ctx.assertEquals(Boolean.TRUE, b);
-                    verify(webClient, never()).get(eq(DEFAULT_PORT), eq(DEFAULT_HOST), anyString());
+                .setHandler(ctx.succeeding(response -> {
+                    ctx.verify(() -> {
+                        assertTrue(response);
+                        verify(webClient, never()).get(eq(DEFAULT_PORT), eq(DEFAULT_HOST), anyString());
+                    });
+                    ctx.completeNow();
                 }));
     }
 
@@ -315,7 +333,7 @@ public class PrometheusBasedResourceLimitChecksTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testMessageLimitStoresValueToCache(final TestContext ctx){
+    public void testMessageLimitStoresValueToCache(final VertxTestContext ctx) {
 
         givenDataVolumeUsageInBytes(100);
         final long incomingMessageSize = 20;
@@ -327,9 +345,12 @@ public class PrometheusBasedResourceLimitChecksTest {
         final TenantObject tenant = TenantObject.from("tenant", true).setResourceLimits(limitsConfig);
 
         limitChecksImpl.isMessageLimitReached(tenant, incomingMessageSize)
-                .setHandler(ctx.asyncAssertSuccess(b -> {
-                    verify(webClient).get(eq(DEFAULT_PORT), eq(DEFAULT_HOST), anyString());
-                    verify(cacheProvider.getCache(any())).put(any(), any(), any(Duration.class));
+                .setHandler(ctx.succeeding(response -> {
+                    ctx.verify(() -> {
+                        verify(webClient).get(eq(DEFAULT_PORT), eq(DEFAULT_HOST), anyString());
+                        verify(cacheProvider.getCache(any())).put(any(), any(), any(Duration.class));
+                    });
+                    ctx.completeNow();
                 }));
     }
 
@@ -345,7 +366,7 @@ public class PrometheusBasedResourceLimitChecksTest {
     }
 
     @SuppressWarnings("unchecked")
-    private void givenDataVolumeUsageInBytes(final int consumedBytes){
+    private void givenDataVolumeUsageInBytes(final int consumedBytes) {
         doAnswer(invocation -> {
             final Handler<AsyncResult<HttpResponse<JsonObject>>> responseHandler = invocation.getArgument(0);
             final HttpResponse<JsonObject> response = mock(HttpResponse.class);
