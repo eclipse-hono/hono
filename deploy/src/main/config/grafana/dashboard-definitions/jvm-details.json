@@ -539,7 +539,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "process_files_open{host=~\"$instance\"}",
+          "expr": "process_files_open_files{host=~\"$instance\"}",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "open files - {{host}}",
@@ -647,7 +647,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "sum(jvm_threads_live{host=~\"$instance\"})",
+          "expr": "sum(jvm_threads_live_threads{host=~\"$instance\"})",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "",
