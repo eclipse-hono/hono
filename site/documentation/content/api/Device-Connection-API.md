@@ -1,6 +1,6 @@
 +++
 title = "Device Connection API Specification"
-slug = "Device Connection API"
+linkTitle = "Device Connection API"
 weight = 425
 +++
 
