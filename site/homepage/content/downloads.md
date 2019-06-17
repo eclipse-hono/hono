@@ -22,9 +22,9 @@ deploy/docker/swarm_deploy.sh
 
 Hono supports deployment to the following container orchestration platforms:
 
-* [Kubernetes](https://www.eclipse.org/hono/docs/stable/deployment/helm-based-deployment/)
-* [OpenShift](https://www.eclipse.org/hono/docs/stable/deployment/openshift/)
-* [Docker Swarm](https://www.eclipse.org/hono/docs/stable/deployment/docker-swarm/)
+* [Kubernetes](https://www.eclipse.org/hono/docs/latest/deployment/helm-based-deployment/)
+* [OpenShift](https://www.eclipse.org/hono/docs/latest/deployment/openshift/)
+* [Docker Swarm](https://www.eclipse.org/hono/docs/latest/deployment/docker-swarm/)
 
 A Java based command line client for consuming telemetry data and events from Hono is available for download as well:
 
@@ -38,7 +38,7 @@ java -jar hono-cli-0.9-exec.jar --hono.client.host=hono.eclipse.org --hono.clien
 --spring.profiles.active=receiver --tenant.id=DEFAULT_TENANT
 ~~~
 
-Please refer to the [Admin Guide](https://www.eclipse.org/hono/docs/stable/admin-guide/hono-client-configuration/) for details regarding the command line options that the client supports.
+Please refer to the [Admin Guide](https://www.eclipse.org/hono/docs/latest/admin-guide/hono-client-configuration/) for details regarding the command line options that the client supports.
 
 ### Latest Milestone
 
