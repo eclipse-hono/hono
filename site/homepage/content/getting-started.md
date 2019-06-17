@@ -115,7 +115,7 @@ Now that the Hono instance is up and running you can use Hono's protocol adapter
 
 The following sections will use the HTTP adapter to publish the telemetry data because it is very easy to access using a standard HTTP client like `curl` or [`HTTPie`](https://httpie.org/) from the command line.
 
-Please refer to the [HTTP Adapter](https://www.eclipse.org/hono/docs/stable/user-guide/http-adapter/) documentation for additional information on how to access Hono's functionality via HTTP.
+Please refer to the [HTTP Adapter](https://www.eclipse.org/hono/docs/latest/user-guide/http-adapter/) documentation for additional information on how to access Hono's functionality via HTTP.
 
 {{% warning %}}
 The following sections assume that the HTTP adapter Docker container has been started on the local machine. However, if you started the HTTP adapter on another host or VM then make sure to replace *localhost* with the name or IP address of that (Docker) host.
@@ -186,7 +186,7 @@ or (using HTTPie):
 http --auth sensor1@DEFAULT_TENANT:hono-secret POST http://localhost:8080/telemetry temp:=5
 ~~~
 
-The username and password used above for device `4711` are part of the example configuration that comes with Hono. See [Device Identity](https://www.eclipse.org/hono/docs/stable/concepts/device-identity/) for an explanation of how devices are identified in Hono and how device identity is related to authentication.
+The username and password used above for device `4711` are part of the example configuration that comes with Hono. See [Device Identity](https://www.eclipse.org/hono/docs/latest/concepts/device-identity/) for an explanation of how devices are identified in Hono and how device identity is related to authentication.
 
 When you first invoke any of the two commands above after you have started up your Hono instance, you may get the following response:
 
@@ -211,7 +211,7 @@ If you have started the consumer as described above, you should now see the tele
 
 If you haven't started a consumer you will continue to get `503 Resource Unavailable` responses because Hono does not accept any telemetry data from devices if there aren't any consumers connected that are interested in the data. Telemetry data is *never* persisted within Hono, thus it doesn't make any sense to accept and process telemetry data if there is no consumer to deliver it to.
 
-The HTTP Adapter also supports publishing telemetry messages using *at least once* delivery semantics. For information on how that works and additional examples for interacting with Hono via HTTP, please refer to the [HTTP adapter's User Guide](https://www.eclipse.org/hono/docs/stable/user-guide/http-adapter/) .
+The HTTP Adapter also supports publishing telemetry messages using *at least once* delivery semantics. For information on how that works and additional examples for interacting with Hono via HTTP, please refer to the [HTTP adapter's User Guide](https://www.eclipse.org/hono/docs/latest/user-guide/http-adapter/) .
 
 ### Uploading Event Data using the HTTP Adapter
 
@@ -239,7 +239,7 @@ The following walk-through example shows how to use it.
 Hono comes with an example application (located in the `example` module) that is as small as possible but still covers the main message communication patterns.
 This application also supports Command &amp; Control.
 
-Please start (and potentially configure) the application as described [here](https://www.eclipse.org/hono/docs/stable/dev-guide/java_client_consumer/).
+Please start (and potentially configure) the application as described [here](https://www.eclipse.org/hono/docs/latest/dev-guide/java_client_consumer/).
 The application writes the payload of incoming messages to standard output and will serve to view how messages are received
 and sent by Hono. 
 
@@ -276,7 +276,7 @@ The response to the `curl` command contains the command from the example applica
     
 The example application sets the `brightness` to a random value between 0 and 100 on each invocation. It also generates a unique correlation identifier for each new command to be sent to the device. The device will need to include this identifier in its response to the command so that the application can properly correlate the response with the request.
 
-**NB:** If the application would send a *one-way command* instead (see [Command and Control Concepts](https://www.eclipse.org/hono/docs/stable/concepts/command-and-control/)), the `hono-cmd-req-id` response header would be missing.
+**NB:** If the application would send a *one-way command* instead (see [Command and Control Concepts](https://www.eclipse.org/hono/docs/latest/concepts/command-and-control/)), the `hono-cmd-req-id` response header would be missing.
 
 {{% note %}}
 If you are running Hono on another node than the application, e.g. using *Docker Machine*, *Minikube* or *Minishift*, and the clock of that node is not in sync with the node that your (example) application is running on, then the application might consider the *time til disconnect* indicated by the device in its *hono-ttd* parameter to already have expired. This will happen if the application node's clock is ahead of the clock on the HTTP protocol adapter node. Consequently, this will result in the application **not** sending any command to the device.
@@ -308,7 +308,7 @@ In order to do so, the client needs to be run with the `command` profile as foll
 mvn spring-boot:run -Drun.arguments=--hono.client.host=localhost,--hono.client.username=consumer@HONO,--hono.client.password=verysecret -Drun.profiles=command,ssl
 ~~~
 
-The client will prompt the user to enter the command's name, the payload to send and the payload's content type. For more information about command and payload refer to [Command and Control Concepts](https://www.eclipse.org/hono/docs/stable/concepts/command-and-control/).
+The client will prompt the user to enter the command's name, the payload to send and the payload's content type. For more information about command and payload refer to [Command and Control Concepts](https://www.eclipse.org/hono/docs/latest/concepts/command-and-control/).
 
 The example below illustrates how a command to set the volume with a JSON payload is sent to device `4711`.
 
@@ -322,7 +322,7 @@ The example below illustrates how a command to set the volume with a JSON payloa
     INFO  org.eclipse.hono.cli.Commander - Command sent to device... [Command request will timeout in 60 seconds]
 
 In the above example, the client waits up to 60 seconds for the response from the device before giving up.
-For more information on how to connect devices, receive commands and send responses refer to [Commands using HTTP](https://www.eclipse.org/hono/docs/stable/user-guide/http-adapter/index.html#specifying-the-time-a-device-will-wait-for-a-response) and [Commands using MQTT](https://www.eclipse.org/hono/docs/stable/user-guide/mqtt-adapter/index.html#command-control).
+For more information on how to connect devices, receive commands and send responses refer to [Commands using HTTP](https://www.eclipse.org/hono/docs/latest/user-guide/http-adapter/index.html#specifying-the-time-a-device-will-wait-for-a-response) and [Commands using MQTT](https://www.eclipse.org/hono/docs/latest/user-guide/mqtt-adapter/index.html#command-control).
 
 The received command response `{"result":"success"}` is displayed as shown in the below example. 
 
@@ -352,14 +352,14 @@ The following parts of Hono are involved in the upper scenario:
 * HTTP protocol adapter: receives the command and forwards it to the device in the HTTP response body
 * Device sends result of processing the command to HTTP adapter which then forwards it to the application
 
-The [Command and Control Concepts](https://www.eclipse.org/hono/docs/stable/concepts/command-and-control/) page contains sequence diagrams that
+The [Command and Control Concepts](https://www.eclipse.org/hono/docs/latest/concepts/command-and-control/) page contains sequence diagrams that
 explain this in more detail.
 
 ## Adding Tenants
 
 In the above examples, we have always used the `DEFAULT_TENANT`, which is pre-configured in the example setup.
 
-You can add more tenants to Hono by using the [Tenant management HTTP endpoints](https://www.eclipse.org/hono/docs/stable/user-guide/device-registry/index.html#managing-tenants) of the Device Registry. Each tenant you create can have its own configuration, e.g. for specifying which protocol adapters the tenant is allowed to use.
+You can add more tenants to Hono by using the [Tenant management HTTP endpoints](https://www.eclipse.org/hono/docs/latest/user-guide/device-registry/index.html#managing-tenants) of the Device Registry. Each tenant you create can have its own configuration, e.g. for specifying which protocol adapters the tenant is allowed to use.
 
 ## Viewing Metrics
 

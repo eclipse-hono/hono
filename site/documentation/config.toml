@@ -40,7 +40,7 @@ pluralizeListTitles = "false"
   ordersectionsby = "weight"
   # Change default color scheme with a variant one. Can be "red", "blue", "green".
   themeVariant = "hono"
-  urlPrefixOfVersionStable = "/hono/docs/stable/"
+  urlPrefixOfVersionStable = "/hono/docs/latest/"
   honoVersion = "latest" # might be overriden during build by value in site/documentation/config_release_version.toml
 
 [blackfriday]
