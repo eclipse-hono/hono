@@ -1,5 +1,6 @@
 +++
-title = "Credentials API"
+title = "Credentials API Specification"
+slug = "Credentials API"
 weight = 430
 +++
 
