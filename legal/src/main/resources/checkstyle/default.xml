@@ -69,7 +69,7 @@
     <!-- javadoc validation -->
 
     <module name="JavadocMethod">
-      <property name="scope" value="public"/>
+      <property name="scope" value="protected"/>
       <property name="ignoreMethodNamesRegex" value="^main$"/>
       <property name="allowMissingPropertyJavadoc" value="true"/>
     </module>
