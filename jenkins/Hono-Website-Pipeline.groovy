@@ -74,7 +74,7 @@ def build() {
                echo "cloning Hono web site repository..."
                git clone ssh://genie.hono@git.eclipse.org:29418/www.eclipse.org/hono $WORKSPACE/hono-web-site
                echo "scrubbing web site target directory..."
-               rm -rf "$WORKSPACE/hono-web-site/!(copyrighted-logos)"
+               rm -rf $WORKSPACE/hono-web-site/* # TODO replace by `rm -rf "$WORKSPACE/hono-web-site/!(copyrighted-logos)"`
                '''
         }
     }
