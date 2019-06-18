@@ -42,11 +42,11 @@ import org.eclipse.hono.util.TenantConstants;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.cache.guava.GuavaCacheManager;
+import org.springframework.cache.caffeine.CaffeineCacheManager;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Scope;
 
-import com.google.common.cache.CacheBuilder;
+import com.github.benmanes.caffeine.cache.Caffeine;
 
 import io.opentracing.Tracer;
 import io.opentracing.contrib.tracerresolver.TracerResolver;
@@ -210,7 +210,7 @@ public abstract class AbstractAdapterConfig {
     @Qualifier(RegistrationConstants.REGISTRATION_ENDPOINT)
     @Scope("prototype")
     public CacheProvider registrationCacheProvider() {
-        return newGuavaCache(registrationClientFactoryConfig());
+        return newCaffeineCache(registrationClientFactoryConfig());
     }
 
     /**
@@ -273,7 +273,7 @@ public abstract class AbstractAdapterConfig {
     @Qualifier(CredentialsConstants.CREDENTIALS_ENDPOINT)
     @Scope("prototype")
     public CacheProvider credentialsCacheProvider() {
-        return newGuavaCache(credentialsClientFactoryConfig());
+        return newCaffeineCache(credentialsClientFactoryConfig());
     }
 
     /**
@@ -336,7 +336,7 @@ public abstract class AbstractAdapterConfig {
     @Qualifier(TenantConstants.TENANT_ENDPOINT)
     @Scope("prototype")
     public CacheProvider tenantCacheProvider() {
-        return newGuavaCache(tenantServiceClientConfig());
+        return newCaffeineCache(tenantServiceClientConfig());
     }
 
     /**
@@ -448,36 +448,35 @@ public abstract class AbstractAdapterConfig {
     }
 
     /**
-     * Create a new cache provider based on Guava and Spring Cache.
+     * Create a new cache provider based on Caffeine and Spring Cache.
      *
      * @param config The configuration to use as base for this cache.
      * @return A new cache provider or {@code null} if no cache should be used.
      */
-    private static CacheProvider newGuavaCache(final RequestResponseClientConfigProperties config) {
-        return newGuavaCache(config.getResponseCacheMinSize(), config.getResponseCacheMaxSize());
+    private static CacheProvider newCaffeineCache(final RequestResponseClientConfigProperties config) {
+        return newCaffeineCache(config.getResponseCacheMinSize(), config.getResponseCacheMaxSize());
     }
 
     /**
-     * Create a new cache provider based on Guava and Spring Cache.
+     * Create a new cache provider based on Caffeine and Spring Cache.
      *
      * @param minCacheSize The minimum size of the cache.
      * @param maxCacheSize the maximum size of the cache.
      * @return A new cache provider or {@code null} if no cache should be used.
      */
-    private static CacheProvider newGuavaCache(final int minCacheSize, final long maxCacheSize) {
+    private static CacheProvider newCaffeineCache(final int minCacheSize, final long maxCacheSize) {
 
         if (maxCacheSize <= 0) {
             return null;
         }
 
-        final CacheBuilder<Object, Object> builder = CacheBuilder.newBuilder()
-                .concurrencyLevel(1)
+        final Caffeine<Object, Object> caffeine = Caffeine.newBuilder()
                 .initialCapacity(minCacheSize)
                 .maximumSize(Math.max(minCacheSize, maxCacheSize));
 
-        final GuavaCacheManager manager = new GuavaCacheManager();
+        final CaffeineCacheManager manager = new CaffeineCacheManager();
         manager.setAllowNullValues(false);
-        manager.setCacheBuilder(builder);
+        manager.setCaffeine(caffeine);
 
         return new SpringCacheProvider(manager);
     }
@@ -525,6 +524,6 @@ public abstract class AbstractAdapterConfig {
     public ResourceLimitChecks resourceLimitChecks() {
         final PrometheusBasedResourceLimitChecksConfig config = resourceLimitChecksConfig();
         return new PrometheusBasedResourceLimitChecks(WebClient.create(vertx()), config,
-                newGuavaCache(config.getCacheMinSize(), config.getCacheMaxSize()));
+                newCaffeineCache(config.getCacheMinSize(), config.getCacheMaxSize()));
     }
 }
