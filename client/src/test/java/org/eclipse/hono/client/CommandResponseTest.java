@@ -13,17 +13,18 @@
 
 package org.eclipse.hono.client;
 
-import static org.junit.Assert.*;
 import static org.hamcrest.CoreMatchers.*;
+import static org.junit.Assert.*;
 
 import java.net.HttpURLConnection;
 
-import io.vertx.proton.ProtonHelper;
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.junit.Test;
 
+import io.vertx.proton.ProtonHelper;
 
 /**
  * Verifies behavior of {@link CommandResponse}.
@@ -207,7 +208,7 @@ public class CommandResponseTest {
         final String replyToOptionsBitFlag = Command.encodeReplyToOptions(replyToContainedDeviceId, false);
         final Message message = ProtonHelper.message();
         message.setAddress(ResourceIdentifier
-                .from("control", TENANT_ID, String.format("%s/%srid-1", DEVICE_ID, replyToOptionsBitFlag)).toString());
+                .from(getCommandResponseEndpoint(), TENANT_ID, String.format("%s/%srid-1", DEVICE_ID, replyToOptionsBitFlag)).toString());
         MessageHelper.addProperty(message, MessageHelper.APP_PROPERTY_STATUS, HttpURLConnection.HTTP_OK);
         final CommandResponse response = CommandResponse.from(message);
         assertThat(response, nullValue());
@@ -234,7 +235,7 @@ public class CommandResponseTest {
         final String replyToOptionsBitFlag = Command.encodeReplyToOptions(replyToContainedDeviceId, false);
         final Message message = ProtonHelper.message();
         message.setAddress(ResourceIdentifier
-                .from("control", TENANT_ID, String.format("%s/%srid-1", DEVICE_ID, replyToOptionsBitFlag)).toString());
+                .from(getCommandResponseEndpoint(), TENANT_ID, String.format("%s/%srid-1", DEVICE_ID, replyToOptionsBitFlag)).toString());
         message.setCorrelationId(CORRELATION_ID);
         final CommandResponse response = CommandResponse.from(message);
         assertThat(response, nullValue());
@@ -249,7 +250,7 @@ public class CommandResponseTest {
         final String replyToOptionsBitFlag = Command.encodeReplyToOptions(replyToContainedDeviceId, false);
         final Message message = ProtonHelper.message();
         message.setAddress(ResourceIdentifier
-                .from("control", TENANT_ID, String.format("%s/%srid-1", DEVICE_ID, replyToOptionsBitFlag)).toString());
+                .from(getCommandResponseEndpoint(), TENANT_ID, String.format("%s/%srid-1", DEVICE_ID, replyToOptionsBitFlag)).toString());
         message.setCorrelationId(CORRELATION_ID);
         MessageHelper.addProperty(message, MessageHelper.APP_PROPERTY_STATUS, 777);
         final CommandResponse response = CommandResponse.from(message);
@@ -264,7 +265,7 @@ public class CommandResponseTest {
     public void testFromMessageFailsForInvalidAddressWithNothingBehindDeviceId() {
         final Message message = ProtonHelper.message();
         // use address with an invalid resource id part (nothing behind the device id)
-        message.setAddress(ResourceIdentifier.from("control", TENANT_ID, DEVICE_ID).toString());
+        message.setAddress(ResourceIdentifier.from(getCommandResponseEndpoint(), TENANT_ID, DEVICE_ID).toString());
         message.setCorrelationId(CORRELATION_ID);
         MessageHelper.addProperty(message, MessageHelper.APP_PROPERTY_STATUS, HttpURLConnection.HTTP_OK);
         final CommandResponse response = CommandResponse.from(message);
@@ -280,7 +281,7 @@ public class CommandResponseTest {
         final String replyToOptionsBitFlag = Command.encodeReplyToOptions(replyToContainedDeviceId, false);
         final Message message = ProtonHelper.message();
         message.setAddress(ResourceIdentifier
-                .from("control", TENANT_ID, String.format("%s/%s", DEVICE_ID, replyToOptionsBitFlag)).toString());
+                .from(getCommandResponseEndpoint(), TENANT_ID, String.format("%s/%s", DEVICE_ID, replyToOptionsBitFlag)).toString());
         message.setCorrelationId(CORRELATION_ID);
         MessageHelper.addProperty(message, MessageHelper.APP_PROPERTY_STATUS, HttpURLConnection.HTTP_OK);
         final CommandResponse response = CommandResponse.from(message);
@@ -296,7 +297,7 @@ public class CommandResponseTest {
         final String replyToOptionsBitFlag = "X"; // invalid value to test with
         final Message message = ProtonHelper.message();
         message.setAddress(ResourceIdentifier
-                .from("control", TENANT_ID, String.format("%s/%srid-1", DEVICE_ID, replyToOptionsBitFlag)).toString());
+                .from(getCommandResponseEndpoint(), TENANT_ID, String.format("%s/%srid-1", DEVICE_ID, replyToOptionsBitFlag)).toString());
         message.setCorrelationId(CORRELATION_ID);
         MessageHelper.addProperty(message, MessageHelper.APP_PROPERTY_STATUS, HttpURLConnection.HTTP_OK);
         final CommandResponse response = CommandResponse.from(message);
@@ -312,7 +313,7 @@ public class CommandResponseTest {
         final String replyToOptionsBitFlag = Command.encodeReplyToOptions(replyToContainedDeviceId, false);
         final Message message = ProtonHelper.message();
         message.setAddress(ResourceIdentifier
-                .from("control", TENANT_ID, String.format("%s/%srid-1", DEVICE_ID, replyToOptionsBitFlag)).toString());
+                .from(getCommandResponseEndpoint(), TENANT_ID, String.format("%s/%srid-1", DEVICE_ID, replyToOptionsBitFlag)).toString());
         message.setCorrelationId(CORRELATION_ID);
         MessageHelper.addProperty(message, MessageHelper.APP_PROPERTY_STATUS, HttpURLConnection.HTTP_OK);
         final CommandResponse response = CommandResponse.from(message);
@@ -368,12 +369,16 @@ public class CommandResponseTest {
         final String replyToOptionsBitFlag = Command.encodeReplyToOptions(true, replyToLegacyEndpointUsed);
         final Message message = ProtonHelper.message();
         message.setAddress(ResourceIdentifier
-                .from("control", TENANT_ID, String.format("%s/%srid-1", DEVICE_ID, replyToOptionsBitFlag)).toString());
+                .from(getCommandResponseEndpoint(), TENANT_ID, String.format("%s/%srid-1", DEVICE_ID, replyToOptionsBitFlag)).toString());
         message.setCorrelationId(CORRELATION_ID);
         MessageHelper.addProperty(message, MessageHelper.APP_PROPERTY_STATUS, HttpURLConnection.HTTP_OK);
         final CommandResponse response = CommandResponse.from(message);
         assertThat(response, notNullValue());
         assertThat(response.getReplyToId(), is("4711/rid-1"));
         assertThat(response.isReplyToLegacyEndpointUsed(), is(replyToLegacyEndpointUsed));
+    }
+
+    private String getCommandResponseEndpoint() {
+        return CommandConstants.COMMAND_ENDPOINT;
     }
 }

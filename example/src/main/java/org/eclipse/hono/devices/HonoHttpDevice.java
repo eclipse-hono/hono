@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -23,6 +23,7 @@ import java.util.concurrent.CompletionException;
 import java.util.function.Predicate;
 
 import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
 
@@ -223,7 +224,7 @@ public class HonoHttpDevice {
     private Future<Integer> sendCommandResponse(final String contentType, final Buffer payload, final String commandReqId, final int status) {
 
         final Future<Integer> result = Future.future();
-        final HttpClientRequest req = httpClient.post(String.format("/control/res/%s", commandReqId))
+        final HttpClientRequest req = httpClient.post(String.format("/%s/res/%s", CommandConstants.COMMAND_ENDPOINT, commandReqId))
                 .handler(response -> {
                     result.complete(response.statusCode());
                 });

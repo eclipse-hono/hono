@@ -31,6 +31,7 @@ import org.eclipse.hono.service.http.HonoBasicAuthHandler;
 import org.eclipse.hono.service.http.HonoChainAuthHandler;
 import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.service.http.X509AuthHandler;
+import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
 
 import io.vertx.core.Handler;
@@ -111,14 +112,16 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
                     getConfig().getRealm(), tracer));
             addTelemetryApiRoutes(router, authHandler);
             addEventApiRoutes(router, authHandler);
-            addCommandResponseRoutes(router, authHandler);
+            addCommandResponseRoutes(CommandConstants.COMMAND_ENDPOINT, router, authHandler);
+            addCommandResponseRoutes(CommandConstants.COMMAND_LEGACY_ENDPOINT, router, authHandler);
         } else {
 
             LOG.warn("device authentication has been disabled");
             LOG.warn("any device may publish data on behalf of all other devices");
             addTelemetryApiRoutes(router, null);
             addEventApiRoutes(router, null);
-            addCommandResponseRoutes(router, null);
+            addCommandResponseRoutes(CommandConstants.COMMAND_ENDPOINT, router, null);
+            addCommandResponseRoutes(CommandConstants.COMMAND_LEGACY_ENDPOINT, router, null);
         }
     }
 
@@ -206,45 +209,48 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
                 .handler(ctx -> uploadEventMessage(ctx, getTenantParam(ctx), getDeviceIdParam(ctx)));
     }
 
-    private void addCommandResponseRoutes(final Router router, final Handler<RoutingContext> authHandler) {
+    private void addCommandResponseRoutes(final String commandResponsePrefix, final Router router,
+            final Handler<RoutingContext> authHandler) {
 
         // support CORS headers for PUTing command response messages
-        router.routeWithRegex("\\/control\\/res\\/[^\\/]+\\/[^\\/]+\\/.*").handler(CorsHandler.create(getConfig().getCorsAllowedOrigin())
-                .allowedMethod(HttpMethod.PUT)
-                .allowedHeader(Constants.HEADER_COMMAND_RESPONSE_STATUS)
-                .allowedHeader(HttpHeaders.AUTHORIZATION.toString())
-                .allowedHeader(HttpHeaders.CONTENT_TYPE.toString()));
+        router.routeWithRegex(String.format("\\/%s\\/res\\/[^\\/]+\\/[^\\/]+\\/.*", commandResponsePrefix))
+                .handler(CorsHandler.create(getConfig().getCorsAllowedOrigin())
+                        .allowedMethod(HttpMethod.PUT)
+                        .allowedHeader(Constants.HEADER_COMMAND_RESPONSE_STATUS)
+                        .allowedHeader(HttpHeaders.AUTHORIZATION.toString())
+                        .allowedHeader(HttpHeaders.CONTENT_TYPE.toString()));
 
         if (getConfig().isAuthenticationRequired()) {
 
+            final String commandResponseMatchAllPath = String.format("/%s/res/*", commandResponsePrefix);
             // support CORS headers for POSTing command response messages
-            router.route("/control/res/*").handler(CorsHandler.create(getConfig().getCorsAllowedOrigin())
+            router.route(commandResponseMatchAllPath).handler(CorsHandler.create(getConfig().getCorsAllowedOrigin())
                     .allowedMethod(HttpMethod.POST)
                     .allowedHeader(Constants.HEADER_COMMAND_RESPONSE_STATUS)
                     .allowedHeader(HttpHeaders.AUTHORIZATION.toString())
                     .allowedHeader(HttpHeaders.CONTENT_TYPE.toString()));
 
             // require auth for POSTing command response messages
-            router.route(HttpMethod.POST, "/control/res/*").handler(authHandler);
+            router.route(HttpMethod.POST, commandResponseMatchAllPath).handler(authHandler);
 
             // route for POSTing command response messages using tenant and device ID determined as part of
             // device authentication
-            router.route(HttpMethod.POST, String.format("/control/res/:%s", PARAM_COMMAND_REQUEST_ID))
+            router.route(HttpMethod.POST, String.format("/%s/res/:%s", commandResponsePrefix, PARAM_COMMAND_REQUEST_ID))
                 .handler(this::handlePostCommandResponse);
 
             // require auth for PUTing command response message
-            router.route(HttpMethod.PUT, "/control/res/*").handler(authHandler);
+            router.route(HttpMethod.PUT, commandResponseMatchAllPath).handler(authHandler);
             // assert that authenticated device's tenant matches tenant from path variables
             router.route(
                     HttpMethod.PUT,
-                    String.format("/control/res/:%s/:%s/:%s", PARAM_TENANT, PARAM_DEVICE_ID, PARAM_COMMAND_REQUEST_ID))
+                    String.format("/%s/res/:%s/:%s/:%s", commandResponsePrefix, PARAM_TENANT, PARAM_DEVICE_ID, PARAM_COMMAND_REQUEST_ID))
                .handler(this::assertTenant);
         }
 
         // route for uploading command response message
         router.route(
                 HttpMethod.PUT,
-                String.format("/control/res/:%s/:%s/:%s", PARAM_TENANT, PARAM_DEVICE_ID, PARAM_COMMAND_REQUEST_ID))
+                String.format("/%s/res/:%s/:%s/:%s", commandResponsePrefix, PARAM_TENANT, PARAM_DEVICE_ID, PARAM_COMMAND_REQUEST_ID))
             .handler(ctx -> uploadCommandResponseMessage(ctx, getTenantParam(ctx), getDeviceIdParam(ctx),
                     getCommandRequestIdParam(ctx), getCommandResponseStatusParam(ctx)));
     }

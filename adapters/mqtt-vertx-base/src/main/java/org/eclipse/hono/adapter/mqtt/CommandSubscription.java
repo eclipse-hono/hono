@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -52,12 +52,16 @@ public class CommandSubscription {
         this.topic = topic;
         final String[] parts = topic.split("\\/");
         if (parts.length != 5 || !"#".equals(parts[4])) {
-            throw new IllegalArgumentException("topic filter does not match pattern: control|c/+/+/req|q/#");
+            throw new IllegalArgumentException(
+                    "topic filter does not match pattern: " + CommandConstants.COMMAND_ENDPOINT + "|"
+                            + CommandConstants.COMMAND_LEGACY_ENDPOINT + "|"
+                            + CommandConstants.COMMAND_ENDPOINT_SHORT + "/+/+/req|q/#");
         }
         endpoint = parts[0];
         if (!CommandConstants.isCommandEndpoint(endpoint)) {
             throw new IllegalArgumentException(
                     "the endpoint needs to be '" + CommandConstants.COMMAND_ENDPOINT + "' or '"
+                            + CommandConstants.COMMAND_LEGACY_ENDPOINT + "' or '"
                             + CommandConstants.COMMAND_ENDPOINT_SHORT + "'");
         }
         req = parts[3];

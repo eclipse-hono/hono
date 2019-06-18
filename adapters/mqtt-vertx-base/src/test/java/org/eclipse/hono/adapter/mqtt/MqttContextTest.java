@@ -73,7 +73,7 @@ public class MqttContextTest {
                 MetricsTags.EndpointType.EVENT);
         assertEndpoint(
                 newMessage(CommandConstants.COMMAND_ENDPOINT_SHORT, "tenant", "device"),
-                MetricsTags.EndpointType.CONTROL);
+                MetricsTags.EndpointType.COMMAND);
     }
 
     private static void assertEndpoint(final MqttPublishMessage msg, final MetricsTags.EndpointType expectedEndpoint) {

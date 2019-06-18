@@ -25,6 +25,7 @@ import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.adapter.lora.LoraConstants;
 import org.eclipse.hono.adapter.lora.LoraMessageType;
 import org.eclipse.hono.client.Command;
+import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.CredentialsObject;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.junit.Assert;
@@ -439,7 +440,7 @@ public class KerlinkProviderTest {
         final Message message = Message.Factory.create();
         message.setSubject("subject");
         message.setCorrelationId("correlation_id");
-        message.setReplyTo("control/bumlux");
+        message.setReplyTo(CommandConstants.NORTHBOUND_COMMAND_RESPONSE_ENDPOINT + "/bumlux");
 
         final JsonObject payload = new JsonObject();
         payload.put(LoraConstants.FIELD_LORA_DOWNLINK_PAYLOAD, "bumlux".getBytes(Charsets.UTF_8));

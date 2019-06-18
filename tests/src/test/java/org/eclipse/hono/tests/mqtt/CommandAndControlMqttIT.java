@@ -56,8 +56,6 @@ import io.vertx.proton.ProtonHelper;
 public class CommandAndControlMqttIT extends MqttTestBase {
 
     private static final int COMMANDS_TO_SEND = 60;
-    private static final String COMMAND_TOPIC_TEMPLATE = CommandConstants.COMMAND_ENDPOINT + "/%s/%s";
-    private static final String COMMAND_RESPONSE_TOPIC_TEMPLATE = "control///res/%s/%d";
 
     private String tenantId;
     private String deviceId;
@@ -92,9 +90,36 @@ public class CommandAndControlMqttIT extends MqttTestBase {
                     result.fail("could not subscribe to command topic");
                 }
             });
-            mqttClient.subscribe("control/+/+/req/#", qos);
+            mqttClient.subscribe(getCommandEndpoint() + "/+/+/req/#", qos);
         });
         return result;
+    }
+
+    /**
+     * Checks whether the legacy Command & Control endpoint shall be used.
+     * <p>
+     * Returns {@code false} by default. Subclasses may return {@code true} here to perform tests using the legacy
+     * command endpoint.
+     *
+     * @return {@code true} if the legacy command endpoint shall be used.
+     */
+    protected boolean useLegacyCommandEndpoint() {
+        return false;
+    }
+
+    private String getCommandEndpoint() {
+        return useLegacyCommandEndpoint() ? CommandConstants.COMMAND_LEGACY_ENDPOINT : CommandConstants.COMMAND_ENDPOINT;
+    }
+
+    private String getCommandSenderLinkTargetAddress(final String tenantId, final String deviceId) {
+        if (useLegacyCommandEndpoint()) {
+            return String.format("%s/%s/%s", CommandConstants.COMMAND_LEGACY_ENDPOINT, tenantId, deviceId);
+        }
+        return String.format("%s/%s", CommandConstants.COMMAND_ENDPOINT, tenantId);
+    }
+
+    private String getCommandMessageTargetAddress(final String tenantId, final String deviceId) {
+        return String.format("%s/%s/%s", getCommandEndpoint(), tenantId, deviceId);
     }
 
     /**
@@ -111,7 +136,7 @@ public class CommandAndControlMqttIT extends MqttTestBase {
         final Async commandsReceived = ctx.async(commandsToSend);
         testSendCommandSucceeds(ctx, msg -> {
             final ResourceIdentifier topic = ResourceIdentifier.fromString(msg.topicName());
-            ctx.assertEquals(CommandConstants.COMMAND_ENDPOINT, topic.getEndpoint());
+            ctx.assertEquals(getCommandEndpoint(), topic.getEndpoint());
             // extract command
             final String command = topic.getResourcePath()[5];
             LOGGER.trace("received one-way command [name: {}]", command);
@@ -151,13 +176,13 @@ public class CommandAndControlMqttIT extends MqttTestBase {
 
         testSendCommandSucceeds(ctx, msg -> {
             final ResourceIdentifier topic = ResourceIdentifier.fromString(msg.topicName());
-            if (CommandConstants.COMMAND_ENDPOINT.equals(topic.getEndpoint())) {
+            if (getCommandEndpoint().equals(topic.getEndpoint())) {
                 // extract command and request ID
                 final String commandRequestId = topic.getResourcePath()[4];
                 final String command = topic.getResourcePath()[5];
                 LOGGER.trace("received command [name: {}, req-id: {}]", command, commandRequestId);
                 // send response
-                final String responseTopic = String.format(COMMAND_RESPONSE_TOPIC_TEMPLATE, commandRequestId, HttpURLConnection.HTTP_OK);
+                final String responseTopic = String.format("%s///res/%s/%d", getCommandEndpoint(), commandRequestId, HttpURLConnection.HTTP_OK);
                 mqttClient.publish(
                         responseTopic,
                         Buffer.buffer(command + ": ok"),
@@ -287,25 +312,28 @@ public class CommandAndControlMqttIT extends MqttTestBase {
 
         final AtomicReference<MessageSender> sender = new AtomicReference<>();
         final Async senderCreation = ctx.async();
-        final String commandTopic = String.format(COMMAND_TOPIC_TEMPLATE, tenantId, deviceId);
+        final String targetAddress = getCommandSenderLinkTargetAddress(tenantId, deviceId);
 
-        helper.applicationClientFactory.createGenericMessageSender(commandTopic).map(s -> {
+        helper.applicationClientFactory.createGenericMessageSender(targetAddress).map(s -> {
+            LOGGER.debug("created generic sender for sending commands [target address: {}]", targetAddress);
             sender.set(s);
             senderCreation.complete();
             return s;
         });
         senderCreation.await(2000);
 
-        // send a message without subject
+        LOGGER.debug("sending command message lacking subject");
         final Message messageWithoutSubject = ProtonHelper.message("input data");
+        messageWithoutSubject.setAddress(getCommandMessageTargetAddress(tenantId, deviceId));
         messageWithoutSubject.setMessageId("message-id");
         messageWithoutSubject.setReplyTo("reply/to/address");
         sender.get().sendAndWaitForOutcome(messageWithoutSubject).setHandler(ctx.asyncAssertFailure(t -> {
             ctx.assertTrue(t instanceof ClientErrorException);
         }));
 
-        // send a message without message and correlation ID
+        LOGGER.debug("sending command message lacking message ID and correlation ID");
         final Message messageWithoutId = ProtonHelper.message("input data");
+        messageWithoutId.setAddress(getCommandMessageTargetAddress(tenantId, deviceId));
         messageWithoutId.setSubject("setValue");
         messageWithoutId.setReplyTo("reply/to/address");
         sender.get().sendAndWaitForOutcome(messageWithoutId).setHandler(ctx.asyncAssertFailure(t -> {

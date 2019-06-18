@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -45,12 +45,12 @@ public class ResourceIdentifierTest {
      */
     @Test
     public void testFromStringAllowsEmptyPathSegments() {
-        final ResourceIdentifier resourceId = ResourceIdentifier.fromString("control///req/cmd-req-id");
+        final ResourceIdentifier resourceId = ResourceIdentifier.fromString("endpoint///req/cmd-req-id");
         assertNotNull(resourceId);
-        assertThat(resourceId.getEndpoint(), is("control"));
+        assertThat(resourceId.getEndpoint(), is("endpoint"));
         assertNull(resourceId.getTenantId());
         assertNull(resourceId.getResourceId());
-        assertThat(resourceId.getBasePath(), is("control"));
+        assertThat(resourceId.getBasePath(), is("endpoint"));
         assertThat(resourceId.getPathWithoutBase(), is("/req/cmd-req-id"));
         assertThat(resourceId.getResourcePath()[4], is("cmd-req-id"));
     }

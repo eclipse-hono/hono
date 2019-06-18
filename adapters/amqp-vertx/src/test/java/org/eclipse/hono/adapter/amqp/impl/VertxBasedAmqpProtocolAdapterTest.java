@@ -400,7 +400,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
         when(deviceConnection.attachments()).thenReturn(mock(Record.class));
         when(commandConsumerFactory.createCommandConsumer(eq(TEST_TENANT_ID), eq(TEST_DEVICE), any(Handler.class), any(Handler.class), anyLong()))
             .thenReturn(Future.succeededFuture(mock(MessageConsumer.class)));
-        final String sourceAddress = String.format("%s/%s/%s", CommandConstants.COMMAND_ENDPOINT, TEST_TENANT_ID, TEST_DEVICE);
+        final String sourceAddress = String.format("%s/%s/%s", getCommandEndpoint(), TEST_TENANT_ID, TEST_DEVICE);
         final ProtonSender sender = getSender(sourceAddress);
 
         adapter.handleRemoteSenderOpenForCommands(deviceConnection, sender);
@@ -433,7 +433,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
         final MessageConsumer commandConsumer = mock(MessageConsumer.class);
         when(commandConsumerFactory.createCommandConsumer(eq(TEST_TENANT_ID), eq(TEST_DEVICE), any(Handler.class), any(Handler.class), anyLong()))
             .thenReturn(Future.succeededFuture(commandConsumer));
-        final String sourceAddress = String.format("%s", CommandConstants.COMMAND_ENDPOINT);
+        final String sourceAddress = String.format("%s", getCommandEndpoint());
         final ProtonSender sender = getSender(sourceAddress);
         final Device authenticatedDevice = new Device(TEST_TENANT_ID, TEST_DEVICE);
         final ProtonConnection deviceConnection = mock(ProtonConnection.class);
@@ -460,7 +460,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
     /**
      * Verifies that the adapter closes a corresponding command consumer if
      * the device closes the connection to the adapter.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
@@ -478,7 +478,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
     /**
      * Verifies that the adapter closes a corresponding command consumer if
      * the connection to a device fails unexpectedly.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
@@ -496,7 +496,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
     /**
      * Verifies that the adapter closes a corresponding command consumer if
      * the connection to a device fails unexpectedly.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @SuppressWarnings("unchecked")
@@ -529,7 +529,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
         final MessageConsumer commandConsumer = mock(MessageConsumer.class);
         when(commandConsumerFactory.createCommandConsumer(eq(TEST_TENANT_ID), eq(TEST_DEVICE), any(Handler.class), any(Handler.class), anyLong()))
             .thenReturn(Future.succeededFuture(commandConsumer));
-        final String sourceAddress = CommandConstants.COMMAND_ENDPOINT;
+        final String sourceAddress = getCommandEndpoint();
         final ProtonSender sender = getSender(sourceAddress);
 
         adapter.handleRemoteSenderOpenForCommands(deviceConnection, sender);
@@ -548,7 +548,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
 
     /**
      * Verify that the AMQP adapter forwards command responses downstream.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
@@ -563,7 +563,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
         givenAConfiguredTenant(TEST_TENANT_ID, true);
 
         // WHEN an unauthenticated device publishes a command response
-        final String replyToAddress = String.format("%s/%s/%s", CommandConstants.COMMAND_ENDPOINT, TEST_TENANT_ID,
+        final String replyToAddress = String.format("%s/%s/%s", getCommandEndpoint(), TEST_TENANT_ID,
                 Command.getDeviceFacingReplyToId("test-reply-id", TEST_DEVICE, false));
 
         final Map<String, Object> propertyMap = new HashMap<>();
@@ -658,7 +658,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
 
         // WHEN an application sends a one-way command to the device
         final ProtonDelivery commandDelivery = mock(ProtonDelivery.class);
-        final String commandAddress = String.format("%s/%s/%s", CommandConstants.COMMAND_ENDPOINT, TEST_TENANT_ID, TEST_DEVICE);
+        final String commandAddress = String.format("%s/%s/%s", getCommandEndpoint(), TEST_TENANT_ID, TEST_DEVICE);
         final Buffer payload = Buffer.buffer("payload");
         final Message message = getFakeMessage(commandAddress, payload, "commandToEecute");
         final Command command = Command.from(message, TEST_TENANT_ID, TEST_DEVICE);
@@ -849,6 +849,22 @@ public class VertxBasedAmqpProtocolAdapterTest {
                             eq(payload.length()),
                             any());
                 }));
+    }
+
+    private String getCommandEndpoint() {
+        return useLegacyCommandEndpoint() ? CommandConstants.COMMAND_LEGACY_ENDPOINT : CommandConstants.COMMAND_ENDPOINT;
+    }
+
+    /**
+     * Checks whether the legacy Command & Control endpoint shall be used.
+     * <p>
+     * Returns {@code false} by default. Subclasses may return {@code true} here to perform tests using the legacy
+     * command endpoint.
+     *
+     * @return {@code true} if the legacy command endpoint shall be used.
+     */
+    protected boolean useLegacyCommandEndpoint() {
+        return false;
     }
 
     private Target getTarget(final ResourceIdentifier resource) {

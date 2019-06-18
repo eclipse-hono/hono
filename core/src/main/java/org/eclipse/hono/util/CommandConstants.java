@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -21,7 +21,12 @@ public class CommandConstants {
     /**
      * The name of the Command and Control API endpoint.
      */
-    public static final String COMMAND_ENDPOINT = "control";
+    public static final String COMMAND_ENDPOINT = "command";
+
+    /**
+     * The name of the legacy Command and Control API endpoint.
+     */
+    public static final String COMMAND_LEGACY_ENDPOINT = "control";
 
     /**
      * The short name of the control endpoint.
@@ -29,7 +34,7 @@ public class CommandConstants {
     public static final String COMMAND_ENDPOINT_SHORT = "c";
 
     /**
-     * The name of the Command and Control API legacy endpoint used by northbound applications.
+     * The name of the legacy Command and Control API endpoint used by northbound applications.
      */
     public static final String NORTHBOUND_COMMAND_LEGACY_ENDPOINT = "control";
 
@@ -86,7 +91,8 @@ public class CommandConstants {
      * @return {@code true} if the endpoint is a command endpoint.
      */
     public static final boolean isCommandEndpoint(final String endpoint) {
-        return COMMAND_ENDPOINT.equals(endpoint) || COMMAND_ENDPOINT_SHORT.equals(endpoint);
+        return COMMAND_ENDPOINT.equals(endpoint) || COMMAND_LEGACY_ENDPOINT.equals(endpoint)
+                || COMMAND_ENDPOINT_SHORT.equals(endpoint);
     }
 
     /**
