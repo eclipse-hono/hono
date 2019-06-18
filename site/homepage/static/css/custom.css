@@ -1,11 +1,11 @@
 
-#footer div.incubation {
-  float: right;
-  width: 99px;
+#footer div.eclipse-logos {
+  height: 120px;
 }
 
-#footer div.eclipse-logo {
-  width: 250px;
+#footer div.eclipse-logos #logo-eclipse-foundation {
+  margin: -20px;
+  height: 120px;
 }
 
 .alert {
