@@ -227,7 +227,7 @@ public final class TenantObject extends JsonBackedValueObject {
             return trustAnchors;
         } else {
             trustAnchors = new ArrayList<>();
-            final List<JsonObject> configs = Optional.ofNullable(getTrustConfigurationsAsList()).orElse(Collections.emptyList());
+            final List<JsonObject> configs = Optional.ofNullable(getTrustedCAs()).orElse(Collections.emptyList());
             for (JsonObject config : configs) {
                 final TrustAnchor anchor = getTrustAnchor(config);
                 if (anchor != null) {
@@ -618,13 +618,13 @@ public final class TenantObject extends JsonBackedValueObject {
     }
 
     /**
-     * Get all the trusted certificate authorities configured for this tenant.
+     * Get the list of configured trusted CAs for this tenant.
      * 
-     * @return A list of trusted CA configurations for this tenant 
-     *         or {@code null} if no trusted CA has been set for this tenant.
+     * @return The list of configured trusted CAs or {@code null} if this tenant has no configured trusted CA.
+     *
      */
     @JsonIgnore
-    private List<JsonObject> getTrustConfigurationsAsList() {
+    public List<JsonObject> getTrustedCAs() {
 
         if (trustConfigurations == null) {
             return null;
@@ -707,7 +707,7 @@ public final class TenantObject extends JsonBackedValueObject {
      */
     @JsonIgnore
     public List<X509Certificate> getTrustedCertificateAuthorities() throws CertificateException {
-        final List<JsonObject> configs = getTrustConfigurationsAsList();
+        final List<JsonObject> configs = getTrustedCAs();
         if (configs == null) {
             return null;
         } else {
