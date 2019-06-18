@@ -23,6 +23,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Collections;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import io.vertx.core.buffer.impl.BufferImpl;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
@@ -39,6 +40,7 @@ import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.Command;
 import org.eclipse.hono.client.CommandContext;
 import org.eclipse.hono.client.CommandResponse;
+import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.service.auth.device.HonoClientBasedAuthProvider;
 import org.eclipse.hono.service.auth.device.SubjectDnCredentials;
@@ -100,6 +102,7 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
     private HonoClientBasedAuthProvider<UsernamePasswordCredentials> usernamePasswordAuthProvider;
     private HonoClientBasedAuthProvider<SubjectDnCredentials> clientCertAuthProvider;
     private LoraCommandProperties loraCommandProperties;
+    private final AtomicBoolean startOfLoraCommandConsumersScheduled = new AtomicBoolean();
 
     /**
      * Sets the LoRa providers that this adapter should support.
@@ -319,6 +322,13 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
         ctx.response().end();
     }
 
+    @Override
+    protected void onCommandConnectionEstablished(final HonoConnection commandConnection) {
+        if (startOfLoraCommandConsumersScheduled.compareAndSet(false, true)) {
+            scheduleStartLoraCommandConsumers();
+        }
+    }
+
     private void scheduleStartLoraCommandConsumers() {
         final List<String> commandEnabledTenants = loraCommandProperties.getCommandEnabledTenants();
         LOG.info("Starting Lora command consumers for tenants [{}] ...", commandEnabledTenants);
@@ -347,11 +357,6 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
                     LOG.info("Closing command consumer");
                 },
                 LORA_COMMAND_CONSUMER_RETRY_INTERVAL);
-    }
-
-    @Override
-    protected void onStartupSuccess() {
-        scheduleStartLoraCommandConsumers();
     }
 
     private void commandConsumer(final String tenantId, final CommandContext receivedCommandContext) {
