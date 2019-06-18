@@ -49,7 +49,7 @@ docker service create $CREATE_OPTIONS --name ${hono.prometheus.service} \
   ${prometheus.image.name} \
   --config.file=/run/secrets/prometheus.yml \
   --storage.tsdb.path=/prometheus \
-  --storage.tsdb.retention=8h
+  --storage.tsdb.retention=2h
 echo ... done
 
 echo
@@ -59,13 +59,21 @@ docker config create -l project=$NS overview.json $SCRIPTPATH/grafana/dashboard-
 docker config create -l project=$NS message-details.json $SCRIPTPATH/grafana/dashboard-definitions/message-details.json
 docker config create -l project=$NS jvm-details.json $SCRIPTPATH/grafana/dashboard-definitions/jvm-details.json
 docker config create -l project=$NS prometheus.yaml $SCRIPTPATH/grafana/provisioning/datasources/prometheus.yaml
-docker service create $CREATE_OPTIONS --name grafana -p 3001:3000 \
+docker service create $CREATE_OPTIONS --name grafana -p 3000:3000 \
+  --secret source=hono.eclipse.org-key.pem,target=/etc/grafana/hono.eclipse.org-key.pem \
+  --secret source=hono.eclipse.org-cert.pem,target=/etc/grafana/hono.eclipse.org-cert.pem \
   --config source=filesystem-provisioner.yaml,target=/etc/grafana/provisioning/dashboards/filesystem-provisioner.yaml \
   --config source=overview.json,target=/etc/grafana/dashboard-definitions/overview.json \
   --config source=jvm-details.json,target=/etc/grafana/dashboard-definitions/jvm-details.json \
   --config source=message-details.json,target=/etc/grafana/dashboard-definitions/message-details.json \
   --config source=prometheus.yaml,target=/etc/grafana/provisioning/datasources/prometheus.yaml \
-  --limit-memory 64m \
+  --limit-memory 128m \
+  --env GF_SERVER_PROTOCOL=https \
+  --env GF_SERVER_CERT_FILE=/etc/grafana/hono.eclipse.org-cert.pem \
+  --env GF_SERVER_CERT_KEY=/etc/grafana/hono.eclipse.org-key.pem \
+  --env GF_AUTH_DISABLE_LOGIN_FORM=true \
+  --env GF_AUTH_ANONYMOUS_ENABLED=true \
+  --env GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer \
   grafana/grafana:${grafana.version}
 echo ... done
 
@@ -241,11 +249,13 @@ echo "Deploying NGINX for redirecting to Hono web site"
 docker config create -l project=$NS site.conf $SCRIPTPATH/nginx.conf
 # we bind mount the directory that is used by Certbot to
 # get/update the Let's Encrypt certificate
-docker service create --detach=false --name hono-nginx -p 80:80 \
+docker service create $CREATE_OPTIONS --name hono-nginx -p 443:443 \
   --limit-memory 32m \
+  --secret source=hono.eclipse.org-key.pem,target=/etc/nginx/hono.eclipse.org-key.pem,mode=0440 \
+  --secret source=hono.eclipse.org-cert.pem,target=/etc/nginx/hono.eclipse.org-cert.pem \
   --config source=site.conf,target=/etc/nginx/conf.d/site.conf,mode=0440 \
   --mount type=bind,source=/var/www/certbot,target=/var/www/letsencrypt \
-  nginx:1.13
+  nginx:1.17
 echo ... done
 
 echo ECLIPSE HONO SANDBOX DEPLOYED TO DOCKER SWARM
