@@ -79,7 +79,7 @@ public final class VertxBasedMqttProtocolAdapter extends AbstractVertxBasedMqttP
                     result.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "Only QoS 1 supported for event messages"));
                 }
                 break;
-            case CONTROL:
+            case COMMAND:
                 if (MqttQoS.EXACTLY_ONCE.equals(qos)) {
                     // client tries to send control message using QoS 2
                     result.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "QoS 2 not supported for command response messages"));

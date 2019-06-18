@@ -519,7 +519,7 @@ public class VertxBasedHttpProtocolAdapterTest {
 
         mockSuccessfulAuthentication("DEFAULT_TENANT", "device_1");
 
-        httpClient.post(String.format("/control/res/%s", "wrongCommandRequestId"))
+        httpClient.post(getCommandResponsePath("wrongCommandRequestId"))
                 .addQueryParam(Constants.HEADER_COMMAND_RESPONSE_STATUS, "200")
                 .putHeader(HttpHeaders.CONTENT_TYPE.toString(), HttpUtils.CONTENT_TYPE_JSON)
                 .basicAuthentication("testuser@DEFAULT_TENANT", "password123")
@@ -539,7 +539,7 @@ public class VertxBasedHttpProtocolAdapterTest {
 
         mockSuccessfulAuthentication("DEFAULT_TENANT", "device_1");
 
-        httpClient.post(String.format("/control/res/%s", CMD_REQ_ID))
+        httpClient.post(getCommandResponsePath(CMD_REQ_ID))
                 .addQueryParam(Constants.HEADER_COMMAND_RESPONSE_STATUS, "600")
                 .putHeader(HttpHeaders.CONTENT_TYPE.toString(), HttpUtils.CONTENT_TYPE_JSON)
                 .basicAuthentication("testuser@DEFAULT_TENANT", "password123")
@@ -559,7 +559,7 @@ public class VertxBasedHttpProtocolAdapterTest {
 
         mockSuccessfulAuthentication("DEFAULT_TENANT", "device_1");
 
-        httpClient.post(String.format("/control/res/%s", CMD_REQ_ID))
+        httpClient.post(getCommandResponsePath(CMD_REQ_ID))
                 .putHeader(HttpHeaders.CONTENT_TYPE.toString(), HttpUtils.CONTENT_TYPE_JSON)
                 .basicAuthentication("testuser@DEFAULT_TENANT", "password123")
                 .putHeader(HttpHeaders.ORIGIN.toString(), "hono.eclipse.org")
@@ -581,7 +581,7 @@ public class VertxBasedHttpProtocolAdapterTest {
         when(commandResponseSender.sendCommandResponse(any(CommandResponse.class), (SpanContext) any())).thenReturn(
                 Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE)));
 
-        httpClient.post(String.format("/control/res/%s", CMD_REQ_ID))
+        httpClient.post(getCommandResponsePath(CMD_REQ_ID))
                 .addQueryParam(Constants.HEADER_COMMAND_RESPONSE_STATUS, "200")
                 .putHeader(HttpHeaders.CONTENT_TYPE.toString(), HttpUtils.CONTENT_TYPE_JSON)
                 .basicAuthentication("testuser@DEFAULT_TENANT", "password123")
@@ -607,13 +607,33 @@ public class VertxBasedHttpProtocolAdapterTest {
         when(commandResponseSender.sendCommandResponse(any(CommandResponse.class), (SpanContext) any())).thenReturn(
                 Future.succeededFuture(remotelySettledDelivery));
 
-        httpClient.post(String.format("/control/res/%s", CMD_REQ_ID))
+        httpClient.post(getCommandResponsePath(CMD_REQ_ID))
                 .addQueryParam(Constants.HEADER_COMMAND_RESPONSE_STATUS, "200")
                 .putHeader(HttpHeaders.CONTENT_TYPE.toString(), HttpUtils.CONTENT_TYPE_JSON)
                 .basicAuthentication("testuser@DEFAULT_TENANT", "password123")
                 .putHeader(HttpHeaders.ORIGIN.toString(), "hono.eclipse.org")
                 .expect(ResponsePredicate.SC_ACCEPTED)
                 .sendJsonObject(new JsonObject(), ctx.asyncAssertSuccess());
+    }
+
+    private String getCommandResponsePath(final String wrongCommandRequestId) {
+        return String.format("/%s/res/%s", getCommandEndpoint(), wrongCommandRequestId);
+    }
+
+    private String getCommandEndpoint() {
+        return useLegacyCommandEndpoint() ? CommandConstants.COMMAND_LEGACY_ENDPOINT : CommandConstants.COMMAND_ENDPOINT;
+    }
+
+    /**
+     * Checks whether the legacy Command & Control endpoint shall be used.
+     * <p>
+     * Returns {@code false} by default. Subclasses may return {@code true} here to perform tests using the legacy
+     * command endpoint.
+     *
+     * @return {@code true} if the legacy command endpoint shall be used.
+     */
+    protected boolean useLegacyCommandEndpoint() {
+        return false;
     }
 
     private static Message newMockMessage(final String tenantId, final String deviceId, final String name) {

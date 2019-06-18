@@ -32,6 +32,7 @@ import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.tests.CrudHttpClient;
 import org.eclipse.hono.tests.IntegrationTestSupport;
+import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
@@ -86,7 +87,6 @@ public abstract class HttpTestBase {
 
     private static final String COMMAND_TO_SEND = "setBrightness";
     private static final String COMMAND_JSON_KEY = "brightness";
-    private static final String COMMAND_RESPONSE_URI_TEMPLATE = "/control/res/%s";
 
     private static final String ORIGIN_WILDCARD = "*";
     private static final Vertx VERTX = Vertx.vertx();
@@ -947,8 +947,24 @@ public abstract class HttpTestBase {
                 });
     }
 
-    private static String getCommandResponseUri(final String commandRequestId) {
-        return String.format(COMMAND_RESPONSE_URI_TEMPLATE, commandRequestId);
+    private String getCommandResponseUri(final String commandRequestId) {
+        return String.format("/%s/res/%s", getCommandEndpoint(), commandRequestId);
+    }
+
+    /**
+     * Checks whether the legacy Command & Control endpoint shall be used.
+     * <p>
+     * Returns {@code false} by default. Subclasses may return {@code true} here to perform tests using the legacy
+     * command endpoint.
+     *
+     * @return {@code true} if the legacy command endpoint shall be used.
+     */
+    protected boolean useLegacyCommandEndpoint() {
+        return false;
+    }
+
+    private String getCommandEndpoint() {
+        return useLegacyCommandEndpoint() ? CommandConstants.COMMAND_LEGACY_ENDPOINT : CommandConstants.COMMAND_ENDPOINT;
     }
 
     private void assertMessageProperties(final TestContext ctx, final Message msg) {

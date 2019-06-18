@@ -57,13 +57,11 @@ import io.vertx.proton.ProtonSender;
 
 
 /**
- * Integration tests for sending commands to device connected to the MQTT adapter.
+ * Integration tests for sending commands to a device connected to the AMQP adapter.
  *
  */
 @RunWith(VertxUnitRunner.class)
 public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
-
-    private static final String COMMAND_ADDRESS_TEMPLATE = CommandConstants.COMMAND_ENDPOINT + "/%s/%s";
 
     private String tenantId;
     private String deviceId;
@@ -81,6 +79,37 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
         tenant = TenantObject.from(tenantId, true);
     }
 
+    /**
+     * Checks whether the legacy Command & Control endpoint shall be used.
+     * <p>
+     * Returns {@code false} by default. Subclasses may return {@code true} here to perform tests using the legacy
+     * command endpoint.
+     *
+     * @return {@code true} if the legacy command endpoint shall be used.
+     */
+    protected boolean useLegacyCommandEndpoint() {
+        return false;
+    }
+
+    private String getCommandEndpoint() {
+        return useLegacyCommandEndpoint() ? CommandConstants.COMMAND_LEGACY_ENDPOINT : CommandConstants.COMMAND_ENDPOINT;
+    }
+
+    private String getCommandSenderLinkTargetAddress(final String tenantId, final String deviceId) {
+        if (useLegacyCommandEndpoint()) {
+            return String.format("%s/%s/%s", CommandConstants.COMMAND_LEGACY_ENDPOINT, tenantId, deviceId);
+        }
+        return String.format("%s/%s", CommandConstants.COMMAND_ENDPOINT, tenantId);
+    }
+
+    private String getCommandMessageTargetAddress(final String tenantId, final String deviceId) {
+        return String.format("%s/%s/%s", getCommandEndpoint(), tenantId, deviceId);
+    }
+
+    private String getCommandSubscriptionAddress(final String tenantId, final String deviceId) {
+        return String.format("%s/%s/%s", getCommandEndpoint(), tenantId, deviceId);
+    }
+
     private Future<MessageConsumer> createEventConsumer(final String tenantId, final Consumer<Message> messageConsumer) {
 
         return helper.applicationClientFactory.createEventConsumer(tenantId, messageConsumer, remoteClose -> {});
@@ -93,7 +122,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
 
         final Future<ProtonReceiver> result = Future.future();
         context.runOnContext(go -> {
-            final ProtonReceiver recv = connection.createReceiver(String.format(COMMAND_ADDRESS_TEMPLATE, tenantId, deviceId));
+            final ProtonReceiver recv = connection.createReceiver(getCommandSubscriptionAddress(tenantId, deviceId));
             recv.setQoS(ProtonQoS.AT_LEAST_ONCE);
             recv.openHandler(result);
             recv.handler(msgHandler);
@@ -359,7 +388,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
 
         final AtomicReference<MessageSender> sender = new AtomicReference<>();
         final Async senderCreation = ctx.async();
-        final String targetAddress = String.format(COMMAND_ADDRESS_TEMPLATE, tenantId, deviceId);
+        final String targetAddress = getCommandSenderLinkTargetAddress(tenantId, deviceId);
 
         helper.applicationClientFactory.createGenericMessageSender(targetAddress).map(s -> {
             log.debug("created generic sender for sending commands [target address: {}]", targetAddress);
@@ -371,6 +400,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
 
         log.debug("sending command message lacking subject");
         final Message messageWithoutSubject = ProtonHelper.message("input data");
+        messageWithoutSubject.setAddress(getCommandMessageTargetAddress(tenantId, deviceId));
         messageWithoutSubject.setMessageId("message-id");
         messageWithoutSubject.setReplyTo("reply/to/address");
         sender.get().sendAndWaitForOutcome(messageWithoutSubject).setHandler(ctx.asyncAssertFailure(t -> {
@@ -379,6 +409,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
 
         log.debug("sending command message lacking message ID and correlation ID");
         final Message messageWithoutId = ProtonHelper.message("input data");
+        messageWithoutId.setAddress(getCommandMessageTargetAddress(tenantId, deviceId));
         messageWithoutId.setSubject("setValue");
         messageWithoutId.setReplyTo("reply/to/address");
         sender.get().sendAndWaitForOutcome(messageWithoutId).setHandler(ctx.asyncAssertFailure(t -> {

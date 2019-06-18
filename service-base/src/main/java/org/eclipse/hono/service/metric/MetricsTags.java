@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -45,7 +45,7 @@ public final class MetricsTags {
         /**
          * The endpoint for command &amp; control messages.
          */
-        CONTROL(CommandConstants.COMMAND_ENDPOINT),
+        COMMAND(CommandConstants.COMMAND_ENDPOINT),
         /**
          * The unknown endpoint.
          */
@@ -97,7 +97,8 @@ public final class MetricsTags {
                 return EVENT;
             case CommandConstants.COMMAND_ENDPOINT:
             case CommandConstants.COMMAND_ENDPOINT_SHORT:
-                return CONTROL;
+            case CommandConstants.COMMAND_LEGACY_ENDPOINT:
+                return COMMAND;
             default:
                 return UNKNOWN;
             }

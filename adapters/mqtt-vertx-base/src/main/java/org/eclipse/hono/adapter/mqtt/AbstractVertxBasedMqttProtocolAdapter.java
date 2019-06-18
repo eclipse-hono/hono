@@ -761,7 +761,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                     resource.getTenantId(),
                     resource.getResourceId(),
                     message.payload());
-        case CONTROL:
+        case COMMAND:
             return uploadCommandResponseMessage(ctx, resource);
         default:
             return Future

@@ -57,6 +57,7 @@ import org.eclipse.hono.service.auth.device.AuthHandler;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.service.metric.MetricsTags.EndpointType;
 import org.eclipse.hono.service.plan.ResourceLimitChecks;
+import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
@@ -805,7 +806,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         when(commandConsumerFactory.createCommandConsumer(eq("tenant"), eq("deviceId"), any(Handler.class), any(Handler.class), anyLong()))
             .thenReturn(Future.succeededFuture(commandConsumer));
         final List<MqttTopicSubscription> subscriptions = Collections.singletonList(
-                newMockTopicSubscription("control/tenant/deviceId/req/#", qos));
+                newMockTopicSubscription(getCommandSubscriptionTopic("tenant", "deviceId"), qos));
         final MqttSubscribeMessage msg = mock(MqttSubscribeMessage.class);
         when(msg.messageId()).thenReturn(15);
         when(msg.topicSubscriptions()).thenReturn(subscriptions);
@@ -832,7 +833,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
     /**
      * Verifies that the adapter includes a status code for each topic filter
      * in its SUBACK packet.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @SuppressWarnings("unchecked")
@@ -855,8 +856,8 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         // and for subscribing to commands
         when(commandConsumerFactory.createCommandConsumer(eq("tenant-1"), eq("device-A"), any(Handler.class), any(Handler.class), anyLong()))
             .thenReturn(Future.succeededFuture(mock(MessageConsumer.class)));
-        subscriptions.add(newMockTopicSubscription("control/tenant-1/device-A/req/#", MqttQoS.AT_MOST_ONCE));
-        subscriptions.add(newMockTopicSubscription("control/tenant-1/device-B/req/#", MqttQoS.EXACTLY_ONCE));
+        subscriptions.add(newMockTopicSubscription(getCommandSubscriptionTopic("tenant-1", "device-A"), MqttQoS.AT_MOST_ONCE));
+        subscriptions.add(newMockTopicSubscription(getCommandSubscriptionTopic("tenant-1", "device-B"), MqttQoS.EXACTLY_ONCE));
         final MqttSubscribeMessage msg = mock(MqttSubscribeMessage.class);
         when(msg.messageId()).thenReturn(15);
         when(msg.topicSubscriptions()).thenReturn(subscriptions);
@@ -1121,6 +1122,26 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
                     anyInt(),
                     any());
         }));
+    }
+
+    private String getCommandSubscriptionTopic(final String tenantId, final String deviceId) {
+        return String.format("%s/%s/%s/req/#", getCommandEndpoint(), tenantId, deviceId);
+    }
+
+    private String getCommandEndpoint() {
+        return useLegacyCommandEndpoint() ? CommandConstants.COMMAND_LEGACY_ENDPOINT : CommandConstants.COMMAND_ENDPOINT;
+    }
+
+    /**
+     * Checks whether the legacy Command & Control endpoint shall be used.
+     * <p>
+     * Returns {@code false} by default. Subclasses may return {@code true} here to perform tests using the legacy
+     * command endpoint.
+     * 
+     * @return {@code true} if the legacy command endpoint shall be used.
+     */
+    protected boolean useLegacyCommandEndpoint() {
+        return false;
     }
 
     private void forceClientMocksToConnected() {
