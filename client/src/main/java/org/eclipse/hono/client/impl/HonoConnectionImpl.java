@@ -605,55 +605,62 @@ public class HonoConnectionImpl implements HonoConnection {
         Objects.requireNonNull(qos);
 
         return executeOrRunOnContext(result -> {
+            checkConnected().compose(v -> {
+                final Future<ProtonSender> senderFuture = Future.future();
+                final ProtonSender sender = connection.createSender(targetAddress);
+                sender.setQoS(qos);
+                sender.setAutoSettle(true);
+                sender.openHandler(senderOpen -> {
 
-            final ProtonSender sender = connection.createSender(targetAddress);
-            sender.setQoS(qos);
-            sender.setAutoSettle(true);
-            sender.openHandler(senderOpen -> {
+                    // we only "try" to complete/fail the result future because
+                    // it may already have been failed if the connection broke
+                    // away after we have sent our attach frame but before we have
+                    // received the peer's attach frame
 
-                // we only "try" to complete/fail the result future because
-                // it may already have been failed if the connection broke
-                // away after we have sent our attach frame but before we have
-                // received the peer's attach frame
+                    if (senderOpen.failed()) {
+                        // this means that we have received the peer's attach
+                        // and the subsequent detach frame in one TCP read
+                        final ErrorCondition error = sender.getRemoteCondition();
+                        if (error == null) {
+                            log.debug("opening sender [{}] failed", targetAddress, senderOpen.cause());
+                            senderFuture.tryFail(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND,
+                                    "cannot open sender", senderOpen.cause()));
+                        } else {
+                            log.debug("opening sender [{}] failed: {} - {}", targetAddress, error.getCondition(), error.getDescription());
+                            senderFuture.tryFail(StatusCodeMapper.from(error));
+                        }
 
-                if (senderOpen.failed()) {
-                    // this means that we have received the peer's attach
-                    // and the subsequent detach frame in one TCP read
-                    final ErrorCondition error = sender.getRemoteCondition();
-                    if (error == null) {
-                        log.debug("opening sender [{}] failed", targetAddress, senderOpen.cause());
-                        result.tryFail(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND, "cannot open sender", senderOpen.cause()));
+                    } else if (HonoProtonHelper.isLinkEstablished(sender)) {
+
+                        log.debug("sender open [target: {}, sendQueueFull: {}]", targetAddress, sender.sendQueueFull());
+                        // wait on credits a little time, if not already given
+                        if (sender.getCredit() <= 0) {
+                            vertx.setTimer(clientConfigProperties.getFlowLatency(), timerID -> {
+                                log.debug("sender [target: {}] has {} credits after grace period of {}ms", targetAddress,
+                                        sender.getCredit(), clientConfigProperties.getFlowLatency());
+                                senderFuture.tryComplete(sender);
+                            });
+                        } else {
+                            senderFuture.tryComplete(sender);
+                        }
+
                     } else {
-                        log.debug("opening sender [{}] failed: {} - {}", targetAddress, error.getCondition(), error.getDescription());
-                        result.tryFail(StatusCodeMapper.from(error));
+                        // this means that the peer did not create a local terminus for the link
+                        // and will send a detach frame for closing the link very shortly
+                        // see AMQP 1.0 spec section 2.6.3
+                        log.debug("peer did not create terminus for target [{}] and will detach the link", targetAddress);
+                        senderFuture.tryFail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE));
                     }
-
-                } else if (HonoProtonHelper.isLinkEstablished(sender)) {
-
-                    log.debug("sender open [target: {}, sendQueueFull: {}]", targetAddress, sender.sendQueueFull());
-                    // wait on credits a little time, if not already given
-                    if (sender.getCredit() <= 0) {
-                        vertx.setTimer(clientConfigProperties.getFlowLatency(), timerID -> {
-                            log.debug("sender [target: {}] has {} credits after grace period of {}ms", targetAddress,
-                                    sender.getCredit(), clientConfigProperties.getFlowLatency());
-                            result.tryComplete(sender);
-                        });
-                    } else {
-                        result.tryComplete(sender);
-                    }
-
-                } else {
-                    // this means that the peer did not create a local terminus for the link
-                    // and will send a detach frame for closing the link very shortly
-                    // see AMQP 1.0 spec section 2.6.3
-                    log.debug("peer did not create terminus for target [{}] and will detach the link", targetAddress);
-                    result.tryFail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE));
-                }
-            });
-            HonoProtonHelper.setDetachHandler(sender, remoteDetached -> onRemoteDetach(sender, connection.getRemoteContainer(), false, closeHook));
-            HonoProtonHelper.setCloseHandler(sender, remoteClosed -> onRemoteDetach(sender, connection.getRemoteContainer(), true, closeHook));
-            sender.open();
-            vertx.setTimer(clientConfigProperties.getLinkEstablishmentTimeout(), tid -> onTimeOut(sender, clientConfigProperties, result));
+                });
+                HonoProtonHelper.setDetachHandler(sender,
+                        remoteDetached -> onRemoteDetach(sender, connection.getRemoteContainer(), false, closeHook));
+                HonoProtonHelper.setCloseHandler(sender,
+                        remoteClosed -> onRemoteDetach(sender, connection.getRemoteContainer(), true, closeHook));
+                sender.open();
+                vertx.setTimer(clientConfigProperties.getLinkEstablishmentTimeout(),
+                        tid -> onTimeOut(sender, clientConfigProperties, senderFuture));
+                return senderFuture;
+            }).setHandler(result);
         });
     }
 
@@ -682,51 +689,59 @@ public class HonoConnectionImpl implements HonoConnection {
         }
 
         return executeOrRunOnContext(result -> {
-            final ProtonReceiver receiver = connection.createReceiver(sourceAddress);
-            receiver.setAutoAccept(true);
-            receiver.setQoS(qos);
-            receiver.setPrefetch(preFetchSize);
-            receiver.handler((delivery, message) -> {
-                messageHandler.handle(delivery, message);
-                if (log.isTraceEnabled()) {
-                    final int remainingCredits = receiver.getCredit() - receiver.getQueued();
-                    log.trace("handling message [remotely settled: {}, queued messages: {}, remaining credit: {}]",
-                            delivery.remotelySettled(), receiver.getQueued(), remainingCredits);
-                }
-            });
-            receiver.openHandler(recvOpen -> {
-
-                // we only "try" to complete/fail the result future because
-                // it may already have been failed if the connection broke
-                // away after we have sent our attach frame but before we have
-                // received the peer's attach frame
-
-                if (recvOpen.failed()) {
-                    // this means that we have received the peer's attach
-                    // and the subsequent detach frame in one TCP read
-                    final ErrorCondition error = receiver.getRemoteCondition();
-                    if (error == null) {
-                        log.debug("opening receiver [{}] failed", sourceAddress, recvOpen.cause());
-                        result.tryFail(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND, "cannot open receiver", recvOpen.cause()));
-                    } else {
-                        log.debug("opening receiver [{}] failed: {} - {}", sourceAddress, error.getCondition(), error.getDescription());
-                        result.tryFail(StatusCodeMapper.from(error));
+            checkConnected().compose(v -> {
+                final Future<ProtonReceiver> receiverFuture = Future.future();
+                final ProtonReceiver receiver = connection.createReceiver(sourceAddress);
+                receiver.setAutoAccept(true);
+                receiver.setQoS(qos);
+                receiver.setPrefetch(preFetchSize);
+                receiver.handler((delivery, message) -> {
+                    messageHandler.handle(delivery, message);
+                    if (log.isTraceEnabled()) {
+                        final int remainingCredits = receiver.getCredit() - receiver.getQueued();
+                        log.trace("handling message [remotely settled: {}, queued messages: {}, remaining credit: {}]",
+                                delivery.remotelySettled(), receiver.getQueued(), remainingCredits);
                     }
-                } else if (HonoProtonHelper.isLinkEstablished(receiver)) {
-                    log.debug("receiver open [source: {}]", sourceAddress);
-                    result.tryComplete(recvOpen.result());
-                } else {
-                    // this means that the peer did not create a local terminus for the link
-                    // and will send a detach frame for closing the link very shortly
-                    // see AMQP 1.0 spec section 2.6.3
-                    log.debug("peer did not create terminus for source [{}] and will detach the link", sourceAddress);
-                    result.tryFail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE));
-                }
-            });
-            HonoProtonHelper.setDetachHandler(receiver, remoteDetached -> onRemoteDetach(receiver, connection.getRemoteContainer(), false, remoteCloseHook));
-            HonoProtonHelper.setCloseHandler(receiver, remoteClosed -> onRemoteDetach(receiver, connection.getRemoteContainer(), true, remoteCloseHook));
-            receiver.open();
-            vertx.setTimer(clientConfigProperties.getLinkEstablishmentTimeout(), tid -> onTimeOut(receiver, clientConfigProperties, result));
+                });
+                receiver.openHandler(recvOpen -> {
+
+                    // we only "try" to complete/fail the result future because
+                    // it may already have been failed if the connection broke
+                    // away after we have sent our attach frame but before we have
+                    // received the peer's attach frame
+
+                    if (recvOpen.failed()) {
+                        // this means that we have received the peer's attach
+                        // and the subsequent detach frame in one TCP read
+                        final ErrorCondition error = receiver.getRemoteCondition();
+                        if (error == null) {
+                            log.debug("opening receiver [{}] failed", sourceAddress, recvOpen.cause());
+                            receiverFuture.tryFail(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND,
+                                    "cannot open receiver", recvOpen.cause()));
+                        } else {
+                            log.debug("opening receiver [{}] failed: {} - {}", sourceAddress, error.getCondition(), error.getDescription());
+                            receiverFuture.tryFail(StatusCodeMapper.from(error));
+                        }
+                    } else if (HonoProtonHelper.isLinkEstablished(receiver)) {
+                        log.debug("receiver open [source: {}]", sourceAddress);
+                        receiverFuture.tryComplete(recvOpen.result());
+                    } else {
+                        // this means that the peer did not create a local terminus for the link
+                        // and will send a detach frame for closing the link very shortly
+                        // see AMQP 1.0 spec section 2.6.3
+                        log.debug("peer did not create terminus for source [{}] and will detach the link", sourceAddress);
+                        receiverFuture.tryFail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE));
+                    }
+                });
+                HonoProtonHelper.setDetachHandler(receiver, remoteDetached -> onRemoteDetach(receiver,
+                        connection.getRemoteContainer(), false, remoteCloseHook));
+                HonoProtonHelper.setCloseHandler(receiver, remoteClosed -> onRemoteDetach(receiver,
+                        connection.getRemoteContainer(), true, remoteCloseHook));
+                receiver.open();
+                vertx.setTimer(clientConfigProperties.getLinkEstablishmentTimeout(),
+                        tid -> onTimeOut(receiver, clientConfigProperties, receiverFuture));
+                return receiverFuture;
+            }).setHandler(result);
         });
     }
 
