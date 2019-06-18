@@ -23,13 +23,9 @@
   max-width: 220px;
 }
 
-.logo .logo-img {
-  height: 120px;
-}
-
-.logo .logo-title {
-  color: #f08712 !important;
-  font-size: xx-large !important;
+.logo-img {
+  width: 160px;
+  padding-top: 6px;
 }
 
 .cc-revoke.cc-bottom {
