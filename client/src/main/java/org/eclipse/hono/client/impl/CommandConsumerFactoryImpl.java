@@ -20,6 +20,7 @@ import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.apache.qpid.proton.amqp.messaging.Rejected;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.Command;
@@ -188,7 +189,14 @@ public class CommandConsumerFactoryImpl extends AbstractHonoClientFactory implem
                 connection,
                 tenantId,
                 (originalMessageDelivery, message) -> {
-                    final String deviceId = ResourceIdentifier.fromString(message.getAddress()).getResourceId();
+                    final String deviceId = message.getAddress() != null ? ResourceIdentifier.fromString(message.getAddress()).getResourceId() : null;
+                    if (deviceId == null) {
+                        log.debug("address of command message is invalid: {}", message.getAddress());
+                        final Rejected rejected = new Rejected();
+                        rejected.setError(new ErrorCondition(Constants.AMQP_BAD_REQUEST, "malformed command message"));
+                        originalMessageDelivery.disposition(rejected, true);
+                        return;
+                    }
                     final Command command = Command.from(message, tenantId, deviceId);
                     final SpanContext spanContext = TracingHelper.extractSpanContext(connection.getTracer(), message);
                     final Span currentSpan = CommandConsumer.createSpan("delegate and send command", tenantId, deviceId, connection.getTracer(), spanContext);
