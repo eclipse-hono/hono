@@ -1,7 +1,7 @@
 +++
 title = "Frequently Asked Questions"
 menu = "main"
-linkTitle = "FAQs"
+linkTitle = "FAQ"
 weight = 550
 +++
 
