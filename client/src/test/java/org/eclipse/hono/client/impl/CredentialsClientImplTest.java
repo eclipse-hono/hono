@@ -12,19 +12,20 @@
  *******************************************************************************/
 package org.eclipse.hono.client.impl;
 
-import io.opentracing.Span;
-import io.opentracing.SpanContext;
-import io.opentracing.Tracer;
-import io.opentracing.tag.Tags;
-import io.vertx.core.Handler;
-import io.vertx.core.Vertx;
-import io.vertx.core.json.JsonObject;
-import io.vertx.ext.unit.Async;
-import io.vertx.ext.unit.TestContext;
-import io.vertx.ext.unit.junit.VertxUnitRunner;
-import io.vertx.proton.ProtonDelivery;
-import io.vertx.proton.ProtonHelper;
-import io.vertx.proton.ProtonSender;
+import static org.eclipse.hono.client.impl.VertxMockSupport.anyHandler;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import java.net.HttpURLConnection;
+import java.time.Duration;
+
+import io.vertx.core.Future;
 import org.apache.qpid.proton.amqp.messaging.Rejected;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.cache.ExpiringValueCache;
@@ -38,38 +39,30 @@ import org.eclipse.hono.util.CredentialsResult;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RequestResponseApiConstants;
 import org.eclipse.hono.util.TriTuple;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 
-import java.net.HttpURLConnection;
-import java.time.Duration;
-
-import static org.eclipse.hono.client.impl.VertxMockSupport.anyHandler;
-import static org.junit.Assert.assertEquals;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import io.opentracing.Span;
+import io.opentracing.SpanContext;
+import io.opentracing.Tracer;
+import io.opentracing.tag.Tags;
+import io.vertx.core.Handler;
+import io.vertx.core.Vertx;
+import io.vertx.core.json.JsonObject;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
+import io.vertx.proton.ProtonDelivery;
+import io.vertx.proton.ProtonHelper;
+import io.vertx.proton.ProtonSender;
 
 /**
  * Tests verifying behavior of {@link CredentialsClientImpl}.
  *
  */
-@RunWith(VertxUnitRunner.class)
+@ExtendWith(VertxExtension.class)
 public class CredentialsClientImplTest {
-
-    /**
-     * Time out test cases after 5 seconds.
-     */
-    @Rule
-    public Timeout globalTimeout = Timeout.seconds(5);
 
     private ProtonSender sender;
     private CredentialsClientImpl client;
@@ -81,7 +74,7 @@ public class CredentialsClientImplTest {
      * Sets up the fixture.
      */
     @SuppressWarnings("unchecked")
-    @Before
+    @BeforeEach
     public void setUp() {
 
         final SpanContext spanContext = mock(SpanContext.class);
@@ -109,7 +102,7 @@ public class CredentialsClientImplTest {
      */
     @SuppressWarnings("unchecked")
     @Test
-    public void testGetCredentialsInvokesServiceIfNoCacheConfigured(final TestContext ctx) {
+    public void testGetCredentialsInvokesServiceIfNoCacheConfigured(final VertxTestContext ctx) {
 
         final String authId = "test-auth";
         final String credentialsType = CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD;
@@ -119,27 +112,29 @@ public class CredentialsClientImplTest {
         MessageHelper.addCacheDirective(response, CacheDirective.maxAgeDirective(60));
 
         // WHEN getting credential information information
-        final Async assertion = ctx.async();
-        client.get(credentialsType, authId).setHandler(ctx.asyncAssertSuccess(result -> assertion.complete()));
+        final Future<CredentialsObject> getFuture = client.get(credentialsType, authId);
 
         final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
         verify(sender).send(messageCaptor.capture(), anyHandler());
         response.setCorrelationId(messageCaptor.getValue().getMessageId());
         final ProtonDelivery delivery = mock(ProtonDelivery.class);
         final Message sentMessage = messageCaptor.getValue();
+
+        getFuture.setHandler(ctx.succeeding(result -> {
+            // THEN the credentials has been retrieved from the service
+            // and not been put to the cache
+            verify(cache, never()).put(any(), any(CredentialsResult.class), any(Duration.class));
+            // and the span is finished
+            verify(span).finish();
+
+            assertEquals(sentMessage.getSubject(), CredentialsConstants.CredentialsAction.get.toString());
+            assertEquals(MessageHelper.getJsonPayload(sentMessage).getString(CredentialsConstants.FIELD_TYPE),
+                    credentialsType);
+            assertEquals(MessageHelper.getJsonPayload(sentMessage).getString(CredentialsConstants.FIELD_AUTH_ID), authId);
+            ctx.completeNow();
+        }));
+
         client.handleResponse(delivery, response);
-
-        // THEN the credentials has been retrieved from the service
-        assertion.await();
-        // and not been put to the cache
-        verify(cache, never()).put(any(), any(CredentialsResult.class), any(Duration.class));
-        // and the span is finished
-        verify(span).finish();
-
-        assertEquals(sentMessage.getSubject(), CredentialsConstants.CredentialsAction.get.toString());
-        assertEquals(MessageHelper.getJsonPayload(sentMessage).getString(CredentialsConstants.FIELD_TYPE),
-                credentialsType);
-        assertEquals(MessageHelper.getJsonPayload(sentMessage).getString(CredentialsConstants.FIELD_AUTH_ID), authId);
     }
 
     /**
@@ -150,7 +145,7 @@ public class CredentialsClientImplTest {
      */
     @SuppressWarnings("unchecked")
     @Test
-    public void testGetCredentialsAddsResponseToCacheOnCacheMiss(final TestContext ctx) {
+    public void testGetCredentialsAddsResponseToCacheOnCacheMiss(final VertxTestContext ctx) {
 
         final String authId = "test-auth";
         final String credentialsType = CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD;
@@ -161,9 +156,17 @@ public class CredentialsClientImplTest {
         final JsonObject clientContext = new JsonObject();
 
         // WHEN getting credentials information
-        final Async get = ctx.async();
         client.get(credentialsType, authId, clientContext)
-                .setHandler(ctx.asyncAssertSuccess(tenant -> get.complete()));
+                .setHandler(ctx.succeeding(tenant -> {
+                    // THEN the credentials result has been added to the cache.
+                    verify(cache).put(
+                            eq(TriTuple.of(CredentialsConstants.CredentialsAction.get,
+                                    String.format("%s-%s", credentialsType, authId), clientContext.hashCode())),
+                            any(CredentialsResult.class), any(Duration.class));
+                    // and the span is finished
+                    verify(span).finish();
+                    ctx.completeNow();
+                }));
         final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
         final ProtonDelivery delivery = mock(ProtonDelivery.class);
         verify(client.sender).send(messageCaptor.capture(), anyHandler());
@@ -173,15 +176,6 @@ public class CredentialsClientImplTest {
         MessageHelper.addCacheDirective(response, CacheDirective.maxAgeDirective(60));
         response.setCorrelationId(messageCaptor.getValue().getMessageId());
         client.handleResponse(delivery, response);
-
-        // THEN the credentials result has been added to the cache.
-        get.await();
-        verify(cache).put(
-                eq(TriTuple.of(CredentialsConstants.CredentialsAction.get,
-                        String.format("%s-%s", credentialsType, authId), clientContext.hashCode())),
-                any(CredentialsResult.class), any(Duration.class));
-        // and the span is finished
-        verify(span).finish();
     }
 
     /**
@@ -190,7 +184,7 @@ public class CredentialsClientImplTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testGetCredentialsReturnsValueFromCache(final TestContext ctx) {
+    public void testGetCredentialsReturnsValueFromCache(final VertxTestContext ctx) {
 
         final String authId = "test-auth";
         final String credentialsType = CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD;
@@ -205,12 +199,13 @@ public class CredentialsClientImplTest {
 
         // WHEN getting credentials
         client.get(credentialsType, authId)
-                .setHandler(ctx.asyncAssertSuccess(result -> {
+                .setHandler(ctx.succeeding(result -> {
                     // THEN the credentials is read from the cache
-                    ctx.assertEquals(credentialsResult.getPayload(), result);
+                    assertEquals(credentialsResult.getPayload(), result);
                     verify(sender, never()).send(any(Message.class), anyHandler());
                     // and the span is finished
                     verify(span).finish();
+                    ctx.completeNow();
                 }));
 
     }
@@ -221,18 +216,19 @@ public class CredentialsClientImplTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testGetCredentialsFailsWithSendError(final TestContext ctx) {
+    public void testGetCredentialsFailsWithSendError(final VertxTestContext ctx) {
 
         // GIVEN a client with no credit left
         when(sender.sendQueueFull()).thenReturn(true);
 
         // WHEN getting credentials
         client.get(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, "test-auth")
-                .setHandler(ctx.asyncAssertFailure(t -> {
+                .setHandler(ctx.failing(t -> {
                     // THEN the invocation fails and the span is marked as erroneous
                     verify(span).setTag(eq(Tags.ERROR.getKey()), eq(Boolean.TRUE));
                     // and the span is finished
                     verify(span).finish();
+                    ctx.completeNow();
                 }));
     }
 
@@ -242,7 +238,7 @@ public class CredentialsClientImplTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testGetCredentialsFailsWithRejectedRequest(final TestContext ctx) {
+    public void testGetCredentialsFailsWithRejectedRequest(final VertxTestContext ctx) {
 
         // GIVEN a client with no credit left
         final ProtonDelivery update = mock(ProtonDelivery.class);
@@ -256,13 +252,14 @@ public class CredentialsClientImplTest {
 
         // WHEN getting credentials
         client.get(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, "test-auth")
-                .setHandler(ctx.asyncAssertFailure(t -> {
-                    ctx.assertEquals(HttpURLConnection.HTTP_BAD_REQUEST,
+                .setHandler(ctx.failing(t -> {
+                    assertEquals(HttpURLConnection.HTTP_BAD_REQUEST,
                             ((ServiceInvocationException) t).getErrorCode());
                     // THEN the invocation fails and the span is marked as erroneous
                     verify(span).setTag(eq(Tags.ERROR.getKey()), eq(Boolean.TRUE));
                     // and the span is finished
                     verify(span).finish();
+                    ctx.completeNow();
                 }));
     }
 

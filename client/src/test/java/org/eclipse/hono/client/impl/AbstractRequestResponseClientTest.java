@@ -17,7 +17,9 @@ import static org.eclipse.hono.client.impl.VertxMockSupport.anyHandler;
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
-import static org.junit.Assert.assertThat;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
@@ -47,11 +49,9 @@ import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 
 import io.opentracing.Span;
@@ -61,9 +61,8 @@ import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
-import io.vertx.ext.unit.Async;
-import io.vertx.ext.unit.TestContext;
-import io.vertx.ext.unit.junit.VertxUnitRunner;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 import io.vertx.proton.ProtonDelivery;
 import io.vertx.proton.ProtonHelper;
 import io.vertx.proton.ProtonReceiver;
@@ -74,16 +73,10 @@ import io.vertx.proton.ProtonSender;
  * Tests verifying behavior of {@link AbstractRequestResponseClient}.
  *
  */
-@RunWith(VertxUnitRunner.class)
+@ExtendWith(VertxExtension.class)
 public class AbstractRequestResponseClientTest  {
 
     private static final String MESSAGE_ID = "messageid";
-
-    /**
-     * Global timeout for all test cases.
-     */
-    @Rule
-    public Timeout timeout = Timeout.seconds(5);
 
     private AbstractRequestResponseClient<SimpleRequestResponseResult> client;
     private ExpiringValueCache<Object, SimpleRequestResponseResult> cache;
@@ -96,7 +89,7 @@ public class AbstractRequestResponseClientTest  {
      * Sets up the fixture.
      */
     @SuppressWarnings("unchecked")
-    @Before
+    @BeforeEach
     public void setUp() {
 
         final SpanContext spanContext = mock(SpanContext.class);
@@ -128,7 +121,7 @@ public class AbstractRequestResponseClientTest  {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testCreateAndSendRequestFailsWithServerErrorExceptionIfSendQueueFull(final TestContext ctx) {
+    public void testCreateAndSendRequestFailsWithServerErrorExceptionIfSendQueueFull(final VertxTestContext ctx) {
 
         // GIVEN a request-response client with a full send queue
         when(sender.sendQueueFull()).thenReturn(Boolean.TRUE);
@@ -137,11 +130,12 @@ public class AbstractRequestResponseClientTest  {
         client.createAndSendRequest(
                 "get",
                 Buffer.buffer("hello"),
-                ctx.asyncAssertFailure(t -> {
+                ctx.failing(t -> {
                     // THEN the message is not sent
                     verify(sender, never()).send(any(Message.class));
                     // and the request result handler is failed with a 503
                     assertFailureCause(ctx, span, t, HttpURLConnection.HTTP_UNAVAILABLE);
+                    ctx.completeNow();
                 }),
                 span);
     }
@@ -149,11 +143,9 @@ public class AbstractRequestResponseClientTest  {
     /**
      * Verifies that the client creates and sends a message based on provided headers and payload
      * and sets a timer for canceling the request if no response is received.
-     * 
-     * @param ctx The vert.x test context.
      */
     @Test
-    public void testCreateAndSendRequestSendsProperRequestMessage(final TestContext ctx) {
+    public void testCreateAndSendRequestSendsProperRequestMessage() {
 
         // GIVEN a request-response client that times out requests after 200 ms
         client.setRequestTimeout(200);
@@ -184,7 +176,7 @@ public class AbstractRequestResponseClientTest  {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testCreateAndSendRequestFailsOnRejectedMessage(final TestContext ctx) {
+    public void testCreateAndSendRequestFailsOnRejectedMessage(final VertxTestContext ctx) {
 
         // GIVEN a request-response client that times out requests after 200 ms
         client.setRequestTimeout(200);
@@ -194,9 +186,10 @@ public class AbstractRequestResponseClientTest  {
         client.createAndSendRequest(
                 "get",
                 payload.toBuffer(),
-                ctx.asyncAssertFailure(t -> {
+                ctx.failing(t -> {
                     // THEN the result handler is failed with a 400 status code
                     assertFailureCause(ctx, span, t, HttpURLConnection.HTTP_BAD_REQUEST);
+                    ctx.completeNow();
                 }),
                 span);
         // and the peer rejects the message
@@ -217,17 +210,21 @@ public class AbstractRequestResponseClientTest  {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testHandleResponseInvokesHandlerForMatchingCorrelationId(final TestContext ctx) {
+    public void testHandleResponseInvokesHandlerForMatchingCorrelationId(final VertxTestContext ctx) {
 
         // GIVEN a request message that has been sent to a peer
-        final Async responseReceived = ctx.async();
         client.createAndSendRequest(
                 "request",
                 Buffer.buffer("hello"),
-                ctx.asyncAssertSuccess(s -> {
-                    ctx.assertEquals(200, s.getStatus());
-                    ctx.assertEquals("payload", s.getPayload().toString());
-                    responseReceived.complete();
+                ctx.succeeding(s -> {
+                    // THEN the response is passed to the handler registered with the request
+                    assertEquals(200, s.getStatus());
+                    assertEquals("payload", s.getPayload().toString());
+                    // and the status code conveyed in the response is set on the span
+                    verify(span).setTag(Tags.HTTP_STATUS.getKey(), 200);
+                    // and no response time-out handler has been set
+                    verify(vertx, never()).setTimer(anyLong(), anyHandler());
+                    ctx.completeNow();
                 }),
                 span);
 
@@ -237,13 +234,6 @@ public class AbstractRequestResponseClientTest  {
         MessageHelper.addProperty(response, MessageHelper.APP_PROPERTY_STATUS, 200);
         final ProtonDelivery delivery = mock(ProtonDelivery.class);
         client.handleResponse(delivery, response);
-
-        // THEN the response is passed to the handler registered with the request
-        responseReceived.await();
-        // and the status code conveyed in the response is set on the span
-        verify(span).setTag(Tags.HTTP_STATUS.getKey(), 200);
-        // and no response time-out handler has been set
-        verify(vertx, never()).setTimer(anyLong(), anyHandler());
     }
 
     /**
@@ -254,7 +244,7 @@ public class AbstractRequestResponseClientTest  {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testCancelRequestFailsResponseHandler(final TestContext ctx) {
+    public void testCancelRequestFailsResponseHandler(final VertxTestContext ctx) {
 
         // GIVEN a request-response client which times out requests after 200 ms
         client.setRequestTimeout(200);
@@ -271,13 +261,14 @@ public class AbstractRequestResponseClientTest  {
         client.createAndSendRequest(
                 "request",
                 Buffer.buffer("hello"),
-                ctx.asyncAssertFailure(t -> {
+                ctx.failing(t -> {
                     // THEN the request handler is failed
-                    ctx.assertEquals(
+                    assertEquals(
                             HttpURLConnection.HTTP_UNAVAILABLE,
                             ((ServerErrorException) t).getErrorCode());
                     verify(span).setTag(Tags.HTTP_STATUS.getKey(), HttpURLConnection.HTTP_UNAVAILABLE);
                     verify(span, never()).finish();
+                    ctx.completeNow();
                 }),
                 span);
     }
@@ -289,7 +280,7 @@ public class AbstractRequestResponseClientTest  {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testCreateAndSendRequestFailsIfSenderIsNotOpen(final TestContext ctx) {
+    public void testCreateAndSendRequestFailsIfSenderIsNotOpen(final VertxTestContext ctx) {
 
         // GIVEN a client whose sender is not open
         when(sender.isOpen()).thenReturn(Boolean.FALSE);
@@ -298,10 +289,11 @@ public class AbstractRequestResponseClientTest  {
         client.createAndSendRequest(
                 "get",
                 Buffer.buffer("hello"),
-                ctx.asyncAssertFailure(t -> {
+                ctx.failing(t -> {
                     // THEN the request fails immediately with a 503
                     verify(sender, never()).send(any(Message.class), anyHandler());
                     assertFailureCause(ctx, span, t, HttpURLConnection.HTTP_UNAVAILABLE);
+                    ctx.completeNow();
                 }),
                 span);
     }
@@ -313,20 +305,17 @@ public class AbstractRequestResponseClientTest  {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testCreateAndSendRequestFailsIfReceiverIsNotOpen(final TestContext ctx) {
+    public void testCreateAndSendRequestFailsIfReceiverIsNotOpen(final VertxTestContext ctx) {
 
         // GIVEN a client whose receiver is not open
         when(receiver.isOpen()).thenReturn(Boolean.FALSE);
 
         // WHEN sending a request
-        final Async requestFailure = ctx.async();
-        client.createAndSendRequest("get", null, ctx.asyncAssertFailure(t -> {
-            ctx.assertTrue(ServerErrorException.class.isInstance(t));
-            requestFailure.complete();
+        client.createAndSendRequest("get", null, ctx.failing(t -> {
+            // THEN the request fails immediately
+            assertTrue(ServerErrorException.class.isInstance(t));
+            ctx.completeNow();
         }));
-
-        // THEN the request fails immediately
-        requestFailure.await();
     }
 
     /**
@@ -337,16 +326,18 @@ public class AbstractRequestResponseClientTest  {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testCreateAndSendRequestAddsResponseToCache(final TestContext ctx) {
+    public void testCreateAndSendRequestAddsResponseToCache(final VertxTestContext ctx) {
 
         // GIVEN an adapter with an empty cache
         client.setResponseCache(cache);
 
         // WHEN sending a request
-        client.createAndSendRequest("get", (Buffer) null, ctx.asyncAssertSuccess(result -> {
+        client.createAndSendRequest("get", (Buffer) null, ctx.succeeding(result -> {
+            assertEquals(200, result.getStatus());
             // THEN the response has been put to the cache
             verify(cache).put(eq("cacheKey"), any(SimpleRequestResponseResult.class),
                     eq(Duration.ofSeconds(RequestResponseClientConfigProperties.DEFAULT_RESPONSE_CACHE_TIMEOUT)));
+            ctx.completeNow();
         }), "cacheKey");
         final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
         verify(sender).send(messageCaptor.capture(), anyHandler());
@@ -364,15 +355,17 @@ public class AbstractRequestResponseClientTest  {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testCreateAndSendRequestAddsResponseToCacheWithMaxAge(final TestContext ctx) {
+    public void testCreateAndSendRequestAddsResponseToCacheWithMaxAge(final VertxTestContext ctx) {
 
         // GIVEN an adapter with an empty cache
         client.setResponseCache(cache);
 
         // WHEN sending a request
-        client.createAndSendRequest("get", (Buffer) null, ctx.asyncAssertSuccess(result -> {
+        client.createAndSendRequest("get", (Buffer) null, ctx.succeeding(result -> {
+            assertEquals(200, result.getStatus());
             // THEN the response has been put to the cache
             verify(cache).put(eq("cacheKey"), any(SimpleRequestResponseResult.class), eq(Duration.ofSeconds(35)));
+            ctx.completeNow();
         }), "cacheKey");
         final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
         verify(sender).send(messageCaptor.capture(), anyHandler());
@@ -391,15 +384,17 @@ public class AbstractRequestResponseClientTest  {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testCreateAndSendRequestDoesNotAddResponseToCache(final TestContext ctx) {
+    public void testCreateAndSendRequestDoesNotAddResponseToCache(final VertxTestContext ctx) {
 
         // GIVEN an adapter with an empty cache
         client.setResponseCache(cache);
 
         // WHEN sending a request
-        client.createAndSendRequest("get", (Buffer) null, ctx.asyncAssertSuccess(result -> {
+        client.createAndSendRequest("get", (Buffer) null, ctx.succeeding(result -> {
+            assertEquals(200, result.getStatus());
             // THEN the response is not put to the cache
             verify(cache, never()).put(eq("cacheKey"), any(SimpleRequestResponseResult.class), any(Duration.class));
+            ctx.completeNow();
         }), "cacheKey");
         final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
         verify(sender).send(messageCaptor.capture(), anyHandler());
@@ -418,15 +413,18 @@ public class AbstractRequestResponseClientTest  {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testCreateAndSendRequestDoesNotAddNonCacheableResponseToCache(final TestContext ctx) {
+    public void testCreateAndSendRequestDoesNotAddNonCacheableResponseToCache(final VertxTestContext ctx) {
 
         // GIVEN an adapter with an empty cache
         client.setResponseCache(cache);
 
         // WHEN getting a 404 response to a request which contains
         // no cache directive
-        final Async invocation = ctx.async();
-        client.createAndSendRequest("get", (Buffer) null, ctx.asyncAssertSuccess(result -> invocation.complete()), "cacheKey");
+        client.createAndSendRequest("get", (Buffer) null, ctx.succeeding(result -> {
+            // THEN the response is not put to the cache
+            verify(cache, never()).put(eq("cacheKey"), any(SimpleRequestResponseResult.class), any(Duration.class));
+            ctx.completeNow();
+        }), "cacheKey");
 
         final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
         verify(sender).send(messageCaptor.capture(), anyHandler());
@@ -435,10 +433,6 @@ public class AbstractRequestResponseClientTest  {
         MessageHelper.addProperty(response, MessageHelper.APP_PROPERTY_STATUS, HttpURLConnection.HTTP_NOT_FOUND);
         final ProtonDelivery delivery = mock(ProtonDelivery.class);
         client.handleResponse(delivery, response);
-
-        // THEN the response is not put to the cache
-        invocation.await();
-        verify(cache, never()).put(eq("cacheKey"), any(SimpleRequestResponseResult.class), any(Duration.class));
     }
 
     /**
@@ -448,13 +442,12 @@ public class AbstractRequestResponseClientTest  {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testSendOneWayRequestSucceedsOnAcceptedMessage(final TestContext ctx) {
+    public void testSendOneWayRequestSucceedsOnAcceptedMessage(final VertxTestContext ctx) {
 
         // GIVEN a request-response client that times out requests after 200 ms
         client.setRequestTimeout(200);
 
         // WHEN sending a one-way request message with some headers and payload
-        final Async sendSuccess = ctx.async();
         final JsonObject payload = new JsonObject().put("key", "value");
         final Map<String, Object> applicationProps = new HashMap<>();
 
@@ -469,8 +462,9 @@ public class AbstractRequestResponseClientTest  {
         final Span span = mock(Span.class);
         when(span.context()).thenReturn(spanContext);
 
-        client.sendRequest(request, ctx.asyncAssertSuccess(t -> {
-            sendSuccess.complete();
+        client.sendRequest(request, ctx.succeeding(t -> {
+            // THEN the result handler is succeeded
+            ctx.completeNow();
         }), null, span);
         // and the peer accepts the message
         final Accepted accepted = new Accepted();
@@ -480,9 +474,6 @@ public class AbstractRequestResponseClientTest  {
         final ArgumentCaptor<Handler<ProtonDelivery>> dispositionHandlerCaptor = ArgumentCaptor.forClass(Handler.class);
         verify(sender).send(any(Message.class), dispositionHandlerCaptor.capture());
         dispositionHandlerCaptor.getValue().handle(delivery);
-
-        // THEN the result handler is succeeded
-        sendSuccess.await();
     }
 
     /**
@@ -524,12 +515,12 @@ public class AbstractRequestResponseClientTest  {
     }
 
     private void assertFailureCause(
-            final TestContext ctx,
+            final VertxTestContext ctx,
             final Span span,
             final Throwable cause,
             final int expectedErrorCode) {
 
-        ctx.assertEquals(
+        assertEquals(
                 expectedErrorCode,
                 ((ServiceInvocationException) cause).getErrorCode());
         verify(span).setTag(Tags.HTTP_STATUS.getKey(), expectedErrorCode);

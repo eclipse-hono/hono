@@ -19,8 +19,9 @@ import static org.eclipse.hono.util.DeviceConnectionConstants.DeviceConnectionAc
 import static org.eclipse.hono.util.DeviceConnectionConstants.DeviceConnectionAction.SET_LAST_GATEWAY;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.startsWith;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThat;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -30,7 +31,6 @@ import static org.mockito.Mockito.when;
 
 import java.net.HttpURLConnection;
 
-import io.opentracing.tag.Tags;
 import org.apache.qpid.proton.amqp.messaging.Rejected;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.HonoConnection;
@@ -39,23 +39,21 @@ import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.DeviceConnectionConstants;
 import org.eclipse.hono.util.MessageHelper;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.opentracing.Tracer.SpanBuilder;
+import io.opentracing.tag.Tags;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
-import io.vertx.ext.unit.Async;
-import io.vertx.ext.unit.TestContext;
-import io.vertx.ext.unit.junit.VertxUnitRunner;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 import io.vertx.proton.ProtonDelivery;
 import io.vertx.proton.ProtonHelper;
 import io.vertx.proton.ProtonReceiver;
@@ -66,14 +64,8 @@ import io.vertx.proton.ProtonSender;
  * Tests verifying behavior of {@link DeviceConnectionClientImpl}.
  *
  */
-@RunWith(VertxUnitRunner.class)
+@ExtendWith(VertxExtension.class)
 public class DeviceConnectionClientImplTest {
-
-    /**
-     * Time out test cases after 5 seconds.
-     */
-    @Rule
-    public Timeout globalTimeout = Timeout.seconds(5);
 
     private Vertx vertx;
     private ProtonSender sender;
@@ -86,7 +78,7 @@ public class DeviceConnectionClientImplTest {
      * Sets up the fixture.
      */
     @SuppressWarnings("unchecked")
-    @Before
+    @BeforeEach
     public void setUp() {
 
         final SpanContext spanContext = mock(SpanContext.class);
@@ -117,14 +109,17 @@ public class DeviceConnectionClientImplTest {
      */
     @SuppressWarnings("unchecked")
     @Test
-    public void testGetLastKnownGatewayForDeviceSuccess(final TestContext ctx) {
+    public void testGetLastKnownGatewayForDeviceSuccess(final VertxTestContext ctx) {
 
         final JsonObject getLastGatewayResult = newGetLastGatewayResult("gatewayId");
 
         // WHEN getting the last known gateway
-        final Async assertion = ctx.async();
         client.getLastKnownGatewayForDevice("deviceId", span.context())
-                .setHandler(ctx.asyncAssertSuccess(r -> assertion.complete()));
+                .setHandler(ctx.succeeding(r -> {
+                    // THEN the last known gateway has been retrieved from the service and the span is finished
+                    verify(span).finish();
+                    ctx.completeNow();
+                }));
 
         final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
         verify(sender).send(messageCaptor.capture(), any(Handler.class));
@@ -134,11 +129,6 @@ public class DeviceConnectionClientImplTest {
         response.setCorrelationId(messageCaptor.getValue().getMessageId());
         final ProtonDelivery delivery = mock(ProtonDelivery.class);
         client.handleResponse(delivery, response);
-
-        // THEN the last known gateway has been retrieved from the service
-        assertion.await();
-        // and the span is finished
-        verify(span).finish();
     }
 
     /**
@@ -149,12 +139,16 @@ public class DeviceConnectionClientImplTest {
      */
     @SuppressWarnings("unchecked")
     @Test
-    public void testSetLastKnownGatewayForDeviceSuccess(final TestContext ctx) {
+    public void testSetLastKnownGatewayForDeviceSuccess(final VertxTestContext ctx) {
 
         // WHEN setting the last known gateway
-        final Async assertion = ctx.async();
         client.setLastKnownGatewayForDevice("deviceId", "gatewayId", span.context())
-                .setHandler(ctx.asyncAssertSuccess(r -> assertion.complete()));
+                .setHandler(ctx.succeeding(r -> {
+                    // THEN the response for setting the last known gateway has been handled by the service
+                    // and the span is finished
+                    verify(span).finish();
+                    ctx.completeNow();
+                }));
 
         final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
         verify(sender).send(messageCaptor.capture(), any(Handler.class));
@@ -164,11 +158,6 @@ public class DeviceConnectionClientImplTest {
         response.setCorrelationId(messageCaptor.getValue().getMessageId());
         final ProtonDelivery delivery = mock(ProtonDelivery.class);
         client.handleResponse(delivery, response);
-
-        // THEN the response for setting the last known gateway has been handled by the service
-        assertion.await();
-        // and the span is finished
-        verify(span).finish();
     }
 
     /**
@@ -178,18 +167,19 @@ public class DeviceConnectionClientImplTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testGetLastKnownGatewayForDeviceFailsWithSendError(final TestContext ctx) {
+    public void testGetLastKnownGatewayForDeviceFailsWithSendError(final VertxTestContext ctx) {
 
         // GIVEN a client with no credit left 
         when(sender.sendQueueFull()).thenReturn(true);
 
         // WHEN getting last known gateway information
         client.getLastKnownGatewayForDevice("deviceId", span.context())
-                .setHandler(ctx.asyncAssertFailure(t -> {
+                .setHandler(ctx.failing(t -> {
                     // THEN the invocation fails and the span is marked as erroneous
                     verify(span).setTag(eq(Tags.ERROR.getKey()), eq(Boolean.TRUE));
                     // and the span is finished
                     verify(span).finish();
+                    ctx.completeNow();
                 }));
     }
 
@@ -200,18 +190,19 @@ public class DeviceConnectionClientImplTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testSetLastKnownGatewayForDeviceFailsWithSendError(final TestContext ctx) {
+    public void testSetLastKnownGatewayForDeviceFailsWithSendError(final VertxTestContext ctx) {
 
         // GIVEN a client with no credit left 
         when(sender.sendQueueFull()).thenReturn(true);
 
         // WHEN getting last known gateway information
         client.setLastKnownGatewayForDevice("deviceId", "gatewayId", span.context())
-                .setHandler(ctx.asyncAssertFailure(t -> {
+                .setHandler(ctx.failing(t -> {
                     // THEN the invocation fails and the span is marked as erroneous
                     verify(span).setTag(eq(Tags.ERROR.getKey()), eq(Boolean.TRUE));
                     // and the span is finished
                     verify(span).finish();
+                    ctx.completeNow();
                 }));
     }
 
@@ -222,7 +213,7 @@ public class DeviceConnectionClientImplTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testGetLastKnownGatewayForDeviceFailsWithRejectedRequest(final TestContext ctx) {
+    public void testGetLastKnownGatewayForDeviceFailsWithRejectedRequest(final VertxTestContext ctx) {
 
         // GIVEN a client with no credit left
         final ProtonDelivery update = mock(ProtonDelivery.class);
@@ -236,13 +227,14 @@ public class DeviceConnectionClientImplTest {
 
         // WHEN getting last known gateway information
         client.getLastKnownGatewayForDevice("deviceId", span.context())
-                .setHandler(ctx.asyncAssertFailure(t -> {
-                    ctx.assertEquals(HttpURLConnection.HTTP_BAD_REQUEST,
+                .setHandler(ctx.failing(t -> {
+                    assertEquals(HttpURLConnection.HTTP_BAD_REQUEST,
                             ((ServiceInvocationException) t).getErrorCode());
                     // THEN the invocation fails and the span is marked as erroneous
                     verify(span).setTag(eq(Tags.ERROR.getKey()), eq(Boolean.TRUE));
                     // and the span is finished
                     verify(span).finish();
+                    ctx.completeNow();
                 }));
     }
 
@@ -253,7 +245,7 @@ public class DeviceConnectionClientImplTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testSetLastKnownGatewayForDeviceFailsWithRejectedRequest(final TestContext ctx) {
+    public void testSetLastKnownGatewayForDeviceFailsWithRejectedRequest(final VertxTestContext ctx) {
 
         // GIVEN a client with no credit left
         final ProtonDelivery update = mock(ProtonDelivery.class);
@@ -267,24 +259,23 @@ public class DeviceConnectionClientImplTest {
 
         // WHEN getting last known gateway information
         client.setLastKnownGatewayForDevice("deviceId", "gatewayId", span.context())
-                .setHandler(ctx.asyncAssertFailure(t -> {
-                    ctx.assertEquals(HttpURLConnection.HTTP_BAD_REQUEST,
+                .setHandler(ctx.failing(t -> {
+                    assertEquals(HttpURLConnection.HTTP_BAD_REQUEST,
                             ((ServiceInvocationException) t).getErrorCode());
                     // THEN the invocation fails and the span is marked as erroneous
                     verify(span).setTag(eq(Tags.ERROR.getKey()), eq(Boolean.TRUE));
                     // and the span is finished
                     verify(span).finish();
+                    ctx.completeNow();
                 }));
     }
 
     /**
      * Verifies that the client includes the required information in the <em>get last known gateway</em> operation
      * request message sent to the device connection service.
-     * 
-     * @param ctx The vert.x test context.
      */
     @Test
-    public void testGetLastKnownGatewayForDeviceIncludesRequiredInformationInRequest(final TestContext ctx) {
+    public void testGetLastKnownGatewayForDeviceIncludesRequiredInformationInRequest() {
 
         // WHEN getting last known gateway information
         client.getLastKnownGatewayForDevice("deviceId", span.context());
@@ -302,11 +293,9 @@ public class DeviceConnectionClientImplTest {
     /**
      * Verifies that the client includes the required information in the <em>set last known gateway</em> operation
      * request message sent to the device connection service.
-     *
-     * @param ctx The vert.x test context.
      */
     @Test
-    public void testSetLastKnownGatewayForDeviceIncludesRequiredInformationInRequest(final TestContext ctx) {
+    public void testSetLastKnownGatewayForDeviceIncludesRequiredInformationInRequest() {
 
         // WHEN getting last known gateway information
         client.setLastKnownGatewayForDevice("deviceId", "gatewayId", span.context());

@@ -15,9 +15,9 @@ package org.eclipse.hono.client.impl;
 
 import static org.eclipse.hono.client.impl.VertxMockSupport.anyHandler;
 import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThat;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
@@ -29,17 +29,14 @@ import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.util.Constants;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
-import io.vertx.ext.unit.TestContext;
-import io.vertx.ext.unit.junit.VertxUnitRunner;
+import io.vertx.junit5.VertxExtension;
 import io.vertx.proton.ProtonReceiver;
 import io.vertx.proton.ProtonSender;
 
@@ -47,16 +44,11 @@ import io.vertx.proton.ProtonSender;
  * Tests verifying behavior of {@link CommandClientImpl}.
  *
  */
-@RunWith(VertxUnitRunner.class)
+@ExtendWith(VertxExtension.class)
 public class CommandClientImplTest {
 
     private static final String DEVICE_ID = "device";
     private static final String REPLY_ID = "very-unique";
-    /**
-     * Time out test cases after 3 seconds.
-     */
-    @Rule
-    public Timeout globalTimeout = Timeout.seconds(3);
 
     private Vertx vertx;
     private ProtonSender sender;
@@ -66,7 +58,7 @@ public class CommandClientImplTest {
     /**
      * Sets up the fixture.
      */
-    @Before
+    @BeforeEach
     public void setUp() {
 
         vertx = mock(Vertx.class);
@@ -92,11 +84,9 @@ public class CommandClientImplTest {
      * <li>content-type set to given type</li>
      * <li>reply-to address set to default address created from device and UUID</li>
      * </ul>
-     * 
-     * @param ctx The vert.x test context.
      */
     @Test
-    public void testSendCommandSetsProperties(final TestContext ctx) {
+    public void testSendCommandSetsProperties() {
         final Map<String, Object> applicationProperties = new HashMap<>();
         applicationProperties.put("appKey", "appValue");
 
@@ -122,11 +112,9 @@ public class CommandClientImplTest {
      * <li>reply-to address set to {@code null}</li>
      * <li>correlationId set to a UUID</li>
      * </ul>
-     *
-     * @param ctx The vert.x test context.
      */
     @Test
-    public void testSendOneWayCommandSetsCorrelationIdAndEmptyReplyTo(final TestContext ctx) {
+    public void testSendOneWayCommandSetsCorrelationIdAndEmptyReplyTo() {
         final Map<String, Object> applicationProperties = new HashMap<>();
         applicationProperties.put("appKey", "appValue");
 

@@ -15,7 +15,8 @@ package org.eclipse.hono.client.impl;
 
 import static org.eclipse.hono.client.impl.VertxMockSupport.anyHandler;
 import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertThat;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -36,11 +37,9 @@ import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.RegistrationResult;
 import org.eclipse.hono.util.TriTuple;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 
 import io.opentracing.Span;
@@ -49,9 +48,8 @@ import io.opentracing.Tracer;
 import io.opentracing.Tracer.SpanBuilder;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
-import io.vertx.ext.unit.Async;
-import io.vertx.ext.unit.TestContext;
-import io.vertx.ext.unit.junit.VertxUnitRunner;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 import io.vertx.proton.ProtonDelivery;
 import io.vertx.proton.ProtonHelper;
 import io.vertx.proton.ProtonReceiver;
@@ -62,14 +60,8 @@ import io.vertx.proton.ProtonSender;
  * Tests verifying behavior of {@link RegistrationClientImpl}.
  *
  */
-@RunWith(VertxUnitRunner.class)
+@ExtendWith(VertxExtension.class)
 public class RegistrationClientImplTest {
-
-    /**
-     * Time out test cases after 5 seconds.
-     */
-    @Rule
-    public Timeout globalTimeout = Timeout.seconds(5);
 
     private Vertx vertx;
     private ProtonSender sender;
@@ -83,7 +75,7 @@ public class RegistrationClientImplTest {
      * Sets up the fixture.
      */
     @SuppressWarnings("unchecked")
-    @Before
+    @BeforeEach
     public void setUp() {
 
         final SpanContext spanContext = mock(SpanContext.class);
@@ -114,14 +106,19 @@ public class RegistrationClientImplTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testAssertRegistrationAddsResponseToCacheOnCacheMiss(final TestContext ctx) {
+    public void testAssertRegistrationAddsResponseToCacheOnCacheMiss(final VertxTestContext ctx) {
 
         // GIVEN an adapter with an empty cache
         client.setResponseCache(cache);
 
         // WHEN getting registration information
-        final Async assertion = ctx.async();
-        client.assertRegistration("myDevice").setHandler(ctx.asyncAssertSuccess(result -> assertion.complete()));
+        client.assertRegistration("myDevice").setHandler(ctx.succeeding(result -> {
+            // THEN the registration information has been added to the cache
+            verify(cache).put(eq(TriTuple.of("assert", "myDevice", null)), any(RegistrationResult.class), any(Duration.class));
+            // and the span is finished
+            verify(span).finish();
+            ctx.completeNow();
+        }));
 
         final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
         verify(sender).send(messageCaptor.capture(), anyHandler());
@@ -132,12 +129,6 @@ public class RegistrationClientImplTest {
         response.setCorrelationId(messageCaptor.getValue().getMessageId());
         final ProtonDelivery delivery = mock(ProtonDelivery.class);
         client.handleResponse(delivery, response);
-
-        // THEN the registration information has been added to the cache
-        assertion.await();
-        verify(cache).put(eq(TriTuple.of("assert", "myDevice", null)), any(RegistrationResult.class), any(Duration.class));
-        // and the span is finished
-        verify(span).finish();
     }
 
     /**
@@ -147,7 +138,7 @@ public class RegistrationClientImplTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testAssertRegistrationInvokesServiceIfNoCacheConfigured(final TestContext ctx) {
+    public void testAssertRegistrationInvokesServiceIfNoCacheConfigured(final VertxTestContext ctx) {
 
         // GIVEN an adapter with no cache configured
         final JsonObject registrationAssertion = newRegistrationAssertionResult();
@@ -156,21 +147,20 @@ public class RegistrationClientImplTest {
         MessageHelper.addCacheDirective(response, CacheDirective.maxAgeDirective(60));
 
         // WHEN getting registration information
-        final Async assertion = ctx.async();
-        client.assertRegistration("device").setHandler(ctx.asyncAssertSuccess(result -> assertion.complete()));
+        client.assertRegistration("device").setHandler(ctx.succeeding(result -> {
+            // THEN the registration information has been retrieved from the service
+            // and not been put to the cache
+            verify(cache, never()).put(any(), any(RegistrationResult.class), any(Duration.class));
+            // and the span is finished
+            verify(span).finish();
+            ctx.completeNow();
+        }));
 
         final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
         verify(sender).send(messageCaptor.capture(), anyHandler());
         response.setCorrelationId(messageCaptor.getValue().getMessageId());
         final ProtonDelivery delivery = mock(ProtonDelivery.class);
         client.handleResponse(delivery, response);
-
-        // THEN the registration information has been retrieved from the service
-        assertion.await();
-        // and not been put to the cache
-        verify(cache, never()).put(any(), any(RegistrationResult.class), any(Duration.class));
-        // and the span is finished
-        verify(span).finish();
     }
 
     /**
@@ -179,7 +169,7 @@ public class RegistrationClientImplTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testGetRegistrationInfoReturnsValueFromCache(final TestContext ctx) {
+    public void testGetRegistrationInfoReturnsValueFromCache(final VertxTestContext ctx) {
 
         // GIVEN an adapter with a cache containing a registration assertion
         // response for "device"
@@ -189,13 +179,14 @@ public class RegistrationClientImplTest {
         when(cache.get(eq(TriTuple.of("assert", "device", "gateway")))).thenReturn(regResult);
 
         // WHEN getting registration information
-        client.assertRegistration("device", "gateway").setHandler(ctx.asyncAssertSuccess(result -> {
+        client.assertRegistration("device", "gateway").setHandler(ctx.succeeding(result -> {
             // THEN the registration information is read from the cache
-            ctx.assertEquals(registrationAssertion, result);
+            assertEquals(registrationAssertion, result);
             // and no request message is sent to the service
             verify(sender, never()).send(any(Message.class), anyHandler());
             // and the span is finished
             verify(span).finish();
+            ctx.completeNow();
         }));
 
     }
@@ -203,11 +194,9 @@ public class RegistrationClientImplTest {
     /**
      * Verifies that the client includes the required information in the request
      * message sent to the Device Registration service.
-     * 
-     * @param ctx The vert.x test context.
      */
     @Test
-    public void testGetRegistrationInfoIncludesRequiredParamsInRequest(final TestContext ctx) {
+    public void testGetRegistrationInfoIncludesRequiredParamsInRequest() {
 
         // GIVEN an adapter without a cache
 
