@@ -18,13 +18,13 @@ title = "Release Notes"
 
 * The optional methods of the [Tenant API](https://www.eclipse.org/hono/docs/latest/api/tenant-api/index.html) have been
   removed. Implementations of the Tenant API are encouraged to expose the *tenants* endpoint defined by
-  [Hono's HTTP based management API](https://eclipse.org/hono/api/device-registry-v1.yaml) instead.
+  [Hono's HTTP based management API](https://www.eclipse.org/hono/docs/latest/api/device-registry-v1.yaml) instead.
   Several of the formerly mandatory to include properties of the request and response messages have
   been made optional or removed altogether. Existing clients should not be affected by these changes, though.
 * The optional methods of the 
   [Device Registration API](https://www.eclipse.org/hono/docs/latest/api/device-registration-api/index.html) have been 
   removed. Implementations of the Device Registration API are encouraged to expose the *devices* endpoint defined by
-  [Hono's HTTP based management API](https://eclipse.org/hono/api/device-registry-v1.yaml) instead.
+  [Hono's HTTP based management API](https://www.eclipse.org/hono/docs/latest/api/device-registry-v1.yaml) instead.
   Several of the formerly mandatory to include properties of the request and response messages have
   been made optional or removed altogether. Existing clients should not be affected by these changes, though.
 * The response message format of the *assert Device Registration* operation of the Device Registration API
@@ -35,7 +35,7 @@ title = "Release Notes"
   from `org.eclipse.hono.client.RegistrationClient` and `org.eclipse.hono.client.impl.RegistrationClientImpl`.
 * The optional methods of the [Credentials API](https://www.eclipse.org/hono/docs/latest/api/credentials-api/index.html) 
   have been removed. Implementations of the Credentials API are encouraged to expose the *credentials* endpoint defined
-  by [Hono's HTTP based management API](https://eclipse.org/hono/api/device-registry-v1.yaml) instead.
+  by [Hono's HTTP based management API](https://www.eclipse.org/hono/docs/latest/api/device-registry-v1.yaml) instead.
   Several of the formerly mandatory to include properties of the request and response messages have
   been made optional or removed altogether. Existing clients should not be affected by these changes, though.
 
