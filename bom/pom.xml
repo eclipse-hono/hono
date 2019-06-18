@@ -34,6 +34,7 @@
     <dispatch-router.image.name>quay.io/enmasse/qdrouterd-base:1.7.0</dispatch-router.image.name>
     <grafana.version>5.3.2</grafana.version>
     <guava.version>25.0-jre</guava.version>
+    <caffeine.version>2.6.2</caffeine.version>
     <hamcrest-core.version>2.1</hamcrest-core.version>
     <jackson.version>2.9.8</jackson.version>
     <jaeger.version>0.32.0</jaeger.version>
@@ -56,9 +57,9 @@
     <qpid-jms.version>0.42.0</qpid-jms.version>
     <slf4j.version>1.7.26</slf4j.version>
     <snakeyaml.version>1.17</snakeyaml.version>
-    <spring.version>4.3.23.RELEASE</spring.version>
-    <spring-boot.version>1.5.20.RELEASE</spring-boot.version>
-    <spring-security-crypto.version>4.2.12.RELEASE</spring-security-crypto.version>
+    <spring.version>5.1.8.RELEASE</spring.version>
+    <spring-boot.version>2.1.5.RELEASE</spring-boot.version>
+    <spring-security-crypto.version>5.1.5.RELEASE</spring-security-crypto.version>
     <truth.version>0.28</truth.version>
     <vertx.version>3.7.0</vertx.version>
     <wiremock.version>2.22.0</wiremock.version>
@@ -402,6 +403,11 @@
             <artifactId>animal-sniffer-annotations</artifactId>
           </exclusion>
         </exclusions>
+      </dependency>
+      <dependency>
+        <groupId>com.github.ben-manes.caffeine</groupId>
+        <artifactId>caffeine</artifactId>
+        <version>${caffeine.version}</version>
       </dependency>
       <dependency>
         <groupId>io.opentracing</groupId>

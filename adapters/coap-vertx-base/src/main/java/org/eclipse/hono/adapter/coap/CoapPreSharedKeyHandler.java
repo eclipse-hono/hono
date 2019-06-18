@@ -39,8 +39,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import com.google.common.cache.Cache;
-import com.google.common.cache.CacheBuilder;
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 
 import io.vertx.core.Context;
 import io.vertx.core.Future;
@@ -87,12 +87,11 @@ public class CoapPreSharedKeyHandler implements PskStore, CoapAuthenticationHand
         this.context = Objects.requireNonNull(context);
         this.config = Objects.requireNonNull(config);
         this.credentialsClientFactory = Objects.requireNonNull(credentialsClientFactory);
-        final CacheBuilder<Object, Object> builder = CacheBuilder.newBuilder()
-                .concurrencyLevel(1)
+        this.devices = Caffeine.newBuilder()
                 .softValues()
                 .initialCapacity(config.getDeviceCacheMinSize())
-                .maximumSize(config.getDeviceCacheMaxSize());
-        this.devices = builder.build();
+                .maximumSize(config.getDeviceCacheMaxSize())
+                .build();
     }
 
     /**
