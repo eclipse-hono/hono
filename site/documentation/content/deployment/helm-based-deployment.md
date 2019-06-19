@@ -88,11 +88,10 @@ The following command lists all services and their endpoints:
 kubectl get service -n hono
 
 NAME                                    TYPE           CLUSTER-IP       EXTERNAL-IP     PORT(S)
-eclipse-hono-grafana                    ClusterIP      10.98.116.21     <none>          80/TCP
+eclipse-hono-grafana                    ClusterIP      10.98.116.21     <none>          3000/TCP
 eclipse-hono-kube-state-metrics         ClusterIP      10.111.143.45    <none>          8080/TCP
 eclipse-hono-prometheus-node-exporter   ClusterIP      10.99.123.105    <none>          9100/TCP
 eclipse-hono-prometheus-op-operator     ClusterIP      10.107.136.47    <none>          8080/TCP
-grafana                                 NodePort       10.100.132.96    <none>          3000:31000/TCP
 hono-adapter-amqp-vertx                 LoadBalancer   10.97.243.98     10.97.243.98    5672:32672/TCP,5671:32671/TCP
 hono-adapter-http-vertx                 LoadBalancer   10.104.162.33    10.104.162.33   8080:30080/TCP,8443:30443/TCP
 hono-adapter-kura                       LoadBalancer   10.110.31.68     10.110.31.68    1883:31884/TCP,8883:30884/TCP

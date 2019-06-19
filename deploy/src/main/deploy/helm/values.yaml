@@ -132,7 +132,8 @@ prometheus-operator:
     # - name: "image-pull-secret"
 
 
-  ## Using default values from https://github.com/helm/charts/blob/master/stable/grafana/values.yaml
+  ## Configuration options for Grafana instance that can be created along with Prometheus
+  ## see https://github.com/helm/charts/blob/master/stable/grafana/values.yaml
   ##
   grafana:
     enabled: true
@@ -142,6 +143,17 @@ prometheus-operator:
     defaultDashboardsEnabled: false
 
     adminPassword: admin
+
+    ## Expose the grafana service to be accessed from outside the cluster (LoadBalancer service).
+    ## or access it from within the cluster (ClusterIP service). Set the service type and the port to serve it.
+    ## ref: http://kubernetes.io/docs/user-guide/services/
+    ##
+    service:
+      type: ClusterIP
+      port: 3000
+      annotations: {}
+      labels:
+        app: hono-metrics
 
     ingress:
       ## If true, Prometheus Ingress will be created
