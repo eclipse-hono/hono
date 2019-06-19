@@ -486,6 +486,17 @@ components:
                description: The Base64 encoded binary DER encoding of the
                             trusted root certificate. Either this property
                             or `public-key` must be set.
+            "algorithm":
+               type: string
+               description: The algorithm used for the public key of the CA.
+                            If the `cert` property is used to provide an
+                            X.509 certificate then the algorithm is determined
+                            from the certificate and this property is ignored.
+                            Otherwise, i.e. if the `public-key` property is
+                            used, this property must be set to the algorithm
+                            used, if other than the default.
+               default: RSA
+               example: EC
 
       Adapter:
          type: object
