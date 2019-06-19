@@ -508,8 +508,8 @@ public abstract class AbstractAdapterConfig {
      * @return The properties.
      */
     @Bean
-    @ConfigurationProperties(prefix = "hono.plan.prometheusBased")
-    @ConditionalOnProperty(name = "hono.plan.prometheusBased.host")
+    @ConfigurationProperties(prefix = "hono.plan.prometheus-based")
+    @ConditionalOnProperty(name = "hono.plan.prometheus-based.host")
     public PrometheusBasedResourceLimitChecksConfig resourceLimitChecksConfig() {
         return new PrometheusBasedResourceLimitChecksConfig();
     }
@@ -520,7 +520,7 @@ public abstract class AbstractAdapterConfig {
      * @return A ResourceLimitChecks instance.
      */
     @Bean
-    @ConditionalOnProperty(name = "hono.plan.prometheusBased.host")
+    @ConditionalOnProperty(name = "hono.plan.prometheus-based.host")
     public ResourceLimitChecks resourceLimitChecks() {
         final PrometheusBasedResourceLimitChecksConfig config = resourceLimitChecksConfig();
         return new PrometheusBasedResourceLimitChecks(WebClient.create(vertx()), config,
