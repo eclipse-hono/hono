@@ -125,7 +125,7 @@ public class Config extends AbstractAdapterConfig {
      * @return The connection event producer based on {@link LoggingConnectionEventProducer}.
      */
     @Bean
-    @ConditionalOnProperty(value = "hono.connectionEvents.producer", havingValue = "logging", matchIfMissing = true)
+    @ConditionalOnProperty(value = "hono.connection-events.producer", havingValue = "logging", matchIfMissing = true)
     public ConnectionEventProducer connectionEventProducerLogging() {
         return new LoggingConnectionEventProducer();
     }
@@ -136,7 +136,7 @@ public class Config extends AbstractAdapterConfig {
      * @return The connection event producer based on {@link HonoEventConnectionEventProducer}.
      */
     @Bean
-    @ConditionalOnProperty(value = "hono.connectionEvents.producer", havingValue = "events")
+    @ConditionalOnProperty(value = "hono.connection-events.producer", havingValue = "events")
     public ConnectionEventProducer connectionEventProducerEvents() {
         return new HonoEventConnectionEventProducer();
     }
