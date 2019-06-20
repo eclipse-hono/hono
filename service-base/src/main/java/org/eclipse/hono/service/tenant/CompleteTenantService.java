@@ -23,7 +23,7 @@ import org.eclipse.hono.util.TenantResult;
  * This interface presents all the available operations on the API.
  * See {@link TenantService} for the mandatory only API.
  *
- * @see <a href="https://www.eclipse.org/hono/api/tenant-api/">Tenant API</a>
+ * @see <a href="https://www.eclipse.org/hono/docs/latest/api/tenant-api/">Tenant API</a>
  */
 public interface CompleteTenantService extends TenantService {
 
@@ -39,7 +39,7 @@ public interface CompleteTenantService extends TenantService {
      *             <li><em>409 Conflict</em> if a tenant with the given identifier already exists.</li>
      *             </ul>
      * @throws NullPointerException if any of the parameters are {@code null}.
-     * @see <a href="https://www.eclipse.org/hono/api/tenant-api/#add-tenant">
+     * @see <a href="https://github.com/eclipse/hono/blob/1.0-M4/site/content/api/Tenant-API.md#add-tenant">
      *      Tenant API - Add Tenant</a>
      */
     void add(String tenantId, JsonObject tenantObj, Handler<AsyncResult<TenantResult<JsonObject>>> resultHandler);
@@ -56,7 +56,7 @@ public interface CompleteTenantService extends TenantService {
      *             <li><em>404 Not Found</em> if no tenant with the given identifier exists.</li>
      *             </ul>
      * @throws NullPointerException if any of the parameters are {@code null}.
-     * @see <a href="https://www.eclipse.org/hono/api/tenant-api/#update-tenant">
+     * @see <a href="https://github.com/eclipse/hono/blob/1.0-M4/site/content/api/Tenant-API.md#update-tenant">
      *      Tenant API - Update Tenant</a>
      */
     void update(String tenantId, JsonObject tenantObj, Handler<AsyncResult<TenantResult<JsonObject>>> resultHandler);
@@ -72,7 +72,7 @@ public interface CompleteTenantService extends TenantService {
      *             <li><em>404 Not Found</em> if no tenant with the given identifier exists.</li>
      *             </ul>
      * @throws NullPointerException if any of the parameters are {@code null}.
-     * @see <a href="https://www.eclipse.org/hono/api/tenant-api/#remove-tenant">
+     * @see <a href="https://github.com/eclipse/hono/blob/1.0-M4/site/content/api/Tenant-API.md#remove-tenant">
      *      Tenant API - Remove Tenant</a>
      */
     void remove(String tenantId, Handler<AsyncResult<TenantResult<JsonObject>>> resultHandler);

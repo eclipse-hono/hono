@@ -66,7 +66,7 @@ public final class EncodedPassword {
      * Creates a new instance from Hono Secret.
      * <p>
      * The secret is expected to be of type <em>hashed-password</em> as defined by
-     * <a href="https://www.eclipse.org/hono/api/credentials-api/#hashed-password">Hono's Credentials API</a>.
+     * <a href="https://www.eclipse.org/hono/docs/latest/api/credentials-api/#hashed-password">Hono's Credentials API</a>.
      *
      * @param secret JSON object that contains the Hono-formatted secret.
      * @return The password value object.

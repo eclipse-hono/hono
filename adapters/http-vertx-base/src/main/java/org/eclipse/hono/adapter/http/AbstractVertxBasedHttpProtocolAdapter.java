@@ -496,7 +496,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
      * <p>
      * This method always sends a response to the device. The status code will be set
      * as specified in the
-     * <a href="https://www.eclipse.org/hono/user-guide/http-adapter/#publish-telemetry-data-authenticated-device">
+     * <a href="https://www.eclipse.org/hono/docs/latest/user-guide/http-adapter/#publish-telemetry-data-authenticated-device">
      * HTTP adapter User Guide</a>.
      *
      * @param ctx The context to retrieve cookies and the HTTP response from.
@@ -545,7 +545,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
      * <p>
      * This method always sends a response to the device. The status code will be set
      * as specified in the
-     * <a href="https://www.eclipse.org/hono/user-guide/http-adapter/#publish-an-event-authenticated-device">
+     * <a href="https://www.eclipse.org/hono/docs/latest/user-guide/http-adapter/#publish-an-event-authenticated-device">
      * HTTP adapter User Guide</a>.
      *
      * @param ctx The context to retrieve cookies and the HTTP response from.

@@ -167,7 +167,7 @@ public class CredentialsClientImpl extends AbstractRequestResponseClient<Credent
 
     /**
      * Invokes the <em>Get Credentials</em> operation of Hono's
-     * <a href="https://www.eclipse.org/hono/api/Credentials-API">Credentials API</a>
+     * <a href="https://www.eclipse.org/hono/docs/latest/api/credentials-api/">Credentials API</a>
      * on the service represented by the <em>sender</em> and <em>receiver</em> links.
      */
     @Override
@@ -177,7 +177,7 @@ public class CredentialsClientImpl extends AbstractRequestResponseClient<Credent
 
     /**
      * Invokes the <em>Get Credentials</em> operation of Hono's
-     * <a href="https://www.eclipse.org/hono/api/Credentials-API">Credentials API</a>
+     * <a href="https://www.eclipse.org/hono/docs/latest/api/credentials-api/">Credentials API</a>
      * on the service represented by the <em>sender</em> and <em>receiver</em> links.
      */
     @Override
@@ -187,7 +187,7 @@ public class CredentialsClientImpl extends AbstractRequestResponseClient<Credent
 
     /**
      * Invokes the <em>Get Credentials</em> operation of Hono's
-     * <a href="https://www.eclipse.org/hono/api/Credentials-API">Credentials API</a>
+     * <a href="https://www.eclipse.org/hono/docs/latest/api/credentials-api/">Credentials API</a>
      * on the service represented by the <em>sender</em> and <em>receiver</em> links.
      */
     @Override

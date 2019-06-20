@@ -27,7 +27,7 @@ public class ProtocolAdapterProperties extends ServiceConfigProperties {
 
     /**
      * Checks whether the protocol adapter always authenticates devices using their provided credentials as defined
-     * in the <a href="https://www.eclipse.org/hono/api/credentials-api/">Credentials API</a>.
+     * in the <a href="https://www.eclipse.org/hono/docs/latest/api/credentials-api/">Credentials API</a>.
      * <p>
      * If this property is {@code false} then devices are always allowed to publish data without providing
      * credentials. This should only be set to false in test setups.
@@ -42,7 +42,7 @@ public class ProtocolAdapterProperties extends ServiceConfigProperties {
 
     /**
      * Sets whether the protocol adapter always authenticates devices using their provided credentials as defined
-     * in the <a href="https://www.eclipse.org/hono/api/credentials-api/">Credentials API</a>.
+     * in the <a href="https://www.eclipse.org/hono/docs/latest/api/credentials-api/">Credentials API</a>.
      * <p>
      * If this property is set to {@code false} then devices are always allowed to publish data without providing
      * credentials. This should only be set to false in test setups.

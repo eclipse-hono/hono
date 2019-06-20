@@ -28,7 +28,7 @@ import io.vertx.core.json.JsonObject;
  * This interface only covers mandatory operations.
  * See {@link CompleteTenantService} for complete API.
  *
- * @see <a href="https://www.eclipse.org/hono/api/tenant-api/">Tenant API</a>
+ * @see <a href="https://www.eclipse.org/hono/docs/latest/api/tenant-api/">Tenant API</a>
  */
 public interface TenantService extends Verticle {
 
@@ -44,7 +44,7 @@ public interface TenantService extends Verticle {
      *             <li><em>404 Not Found</em> if no tenant with the given identifier exists.</li>
      *             </ul>
      * @throws NullPointerException if any of the parameters are {@code null}.
-     * @see <a href="https://www.eclipse.org/hono/api/tenant-api/#get-tenant-information">
+     * @see <a href="https://www.eclipse.org/hono/docs/latest/api/tenant-api/#get-tenant-information">
      *      Tenant API - Get Tenant Information</a>
      */
     void get(String tenantId, Handler<AsyncResult<TenantResult<JsonObject>>> resultHandler);
@@ -66,7 +66,7 @@ public interface TenantService extends Verticle {
      *             <li><em>404 Not Found</em> if no tenant with the given identifier exists.</li>
      *             </ul>
      * @throws NullPointerException if any of the parameters are {@code null}.
-     * @see <a href="https://www.eclipse.org/hono/api/tenant-api/#get-tenant-information">
+     * @see <a href="https://www.eclipse.org/hono/docs/latest/api/tenant-api/#get-tenant-information">
      *      Tenant API - Get Tenant Information</a>
      */
     default void get(final String tenantId, final Span span,
@@ -92,7 +92,7 @@ public interface TenantService extends Verticle {
      *             <li><em>404 Not Found</em> if no matching tenant exists.</li>
      *             </ul>
      * @throws NullPointerException if any of the parameters are {@code null}.
-     * @see <a href="https://www.eclipse.org/hono/api/tenant-api/#get-tenant-information">
+     * @see <a href="https://www.eclipse.org/hono/docs/latest/api/tenant-api/#get-tenant-information">
      *      Tenant API - Get Tenant Information</a>
      */
     void get(X500Principal subjectDn, Handler<AsyncResult<TenantResult<JsonObject>>> resultHandler);
@@ -120,7 +120,7 @@ public interface TenantService extends Verticle {
      *             <li><em>404 Not Found</em> if no matching tenant exists.</li>
      *             </ul>
      * @throws NullPointerException if any of the parameters are {@code null}.
-     * @see <a href="https://www.eclipse.org/hono/api/tenant-api/#get-tenant-information">
+     * @see <a href="https://www.eclipse.org/hono/docs/latest/api/tenant-api/#get-tenant-information">
      *      Tenant API - Get Tenant Information</a>
      */
     default void get(final X500Principal subjectDn, final Span span,

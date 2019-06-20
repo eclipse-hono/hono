@@ -38,7 +38,7 @@ import io.vertx.core.json.JsonObject;
 
 /**
  * Encapsulates the credentials information for a device as defined by the
- * <a href="https://www.eclipse.org/hono/api/credentials-api/">Credentials API</a>.
+ * <a href="https://www.eclipse.org/hono/docs/latest/api/credentials-api/">Credentials API</a>.
  */
 public final class CredentialsObject extends JsonBackedValueObject {
 

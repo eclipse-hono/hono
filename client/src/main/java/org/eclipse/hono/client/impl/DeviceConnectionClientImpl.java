@@ -158,7 +158,7 @@ public class DeviceConnectionClientImpl extends AbstractRequestResponseClient<De
 
     /**
      * Invokes the <em>Set Last Known Gateway for Device</em> operation of Hono's
-     * <a href="https://www.eclipse.org/hono/api/device-connection-api">Device Connection API</a>
+     * <a href="https://www.eclipse.org/hono/docs/latest/api/device-connection-api">Device Connection API</a>
      * on the service represented by the <em>sender</em> and <em>receiver</em> links.
      */
     @Override
@@ -189,7 +189,7 @@ public class DeviceConnectionClientImpl extends AbstractRequestResponseClient<De
 
     /**
      * Invokes the <em>Get Last Known Gateway for Device</em> operation of Hono's
-     * <a href="https://www.eclipse.org/hono/api/device-connection-api">Device Connection API</a>
+     * <a href="https://www.eclipse.org/hono/docs/latest/api/device-connection-api">Device Connection API</a>
      * on the service represented by the <em>sender</em> and <em>receiver</em> links.
      */
     @Override
