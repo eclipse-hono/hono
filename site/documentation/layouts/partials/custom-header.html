@@ -5,3 +5,11 @@ Don’t forget to include style HTML tag directive in your file
 
 <link rel="stylesheet" href="https://www.eclipse.org/eclipse.org-common/themes/solstice/public/stylesheets/vendor/cookieconsent/cookieconsent.min.css">
 <link rel="stylesheet" href='{{ "css/hono.css" | relURL }}'>
+
+<!-- Twitter Card meta tags -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:site" content="@{{ .Site.Params.twitter }}">
+<meta name="twitter:title" content="{{ if .Title }}{{ .Title }}{{ else }}{{ .Site.Title }}{{ end }}">
+{{ if .Params.banner }}<meta name="twitter:image" content="{{ .Params.banner | absURL }}">
+{{ else }}<meta name="twitter:image" content="{{ .Site.Params.twitterImage | absURL }}">
+{{ end }}<meta name="twitter:description" content="{{ if .Params.description }}{{ .Params.description }}{{ else }}{{ .Site.Params.defaultDescription }}{{ end }}">

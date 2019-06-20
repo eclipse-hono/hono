@@ -42,6 +42,10 @@ pluralizeListTitles = "false"
   themeVariant = "hono"
   urlPrefixOfVersionStable = "/hono/docs/latest/"
   honoVersion = "latest" # might be overriden during build by value in site/documentation/config_release_version.toml
+  
+  # Twitter
+  twitter = "EclipseHono"
+  twitterImage = "images/HONO-Logo_Bild-Wort_quer-w-310x120px.svg"
 
 [blackfriday]
   smartypants = true

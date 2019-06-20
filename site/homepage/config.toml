@@ -11,16 +11,16 @@ pluralizeListTitles = "false"
 # The menu is defined in the file menu_main.toml
 
 [params]
-  author = "The Eclipse Hono Project"
-  description = "A set of micro-services for connecting millions of devices."
-  copyright = "&copy; 2019 The Eclipse Hono Project"
+    author = "The Eclipse Hono Project"
+    description = "A set of micro-services for connecting millions of devices."
+    copyright = "&copy; 2019 The Eclipse Hono Project"
     viewMorePostLink = "/blog/"
     defaultKeywords = []
     defaultDescription = "A set of micro-services for connecting millions of devices."
 
     # Twitter
-#    twitter = "EclipseHono"
-#    twitterImage = "img/twitter-default.png"
+    twitter = "EclipseHono"
+    twitterImage = "img/HONO-Logo_Bild-Wort_quer-s-310x120px.svg"
 
     # Style options: default (light-blue), blue, green, marsala, pink, red, turquoise, violet
     style = "hono"
