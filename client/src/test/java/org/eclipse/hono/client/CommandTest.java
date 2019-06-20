@@ -64,7 +64,7 @@ public class CommandTest {
         assertThat(cmd.getCorrelationId(), is(correlationId));
         assertFalse(cmd.isOneWay());
         assertThat(cmd.getCommandMessage().getReplyTo(), is(String.format("%s/%s/%s/%s%s",
-                CommandConstants.COMMAND_ENDPOINT, Constants.DEFAULT_TENANT, "4711", replyToOptionsBitFlag, replyToId)));
+                CommandConstants.COMMAND_RESPONSE_ENDPOINT, Constants.DEFAULT_TENANT, "4711", replyToOptionsBitFlag, replyToId)));
     }
 
     /**
@@ -88,7 +88,7 @@ public class CommandTest {
         assertNotNull(cmd.getCommandMessage());
         assertNotNull(cmd.getCommandMessage().getReplyTo());
         assertThat(cmd.getCommandMessage().getReplyTo(), is(String.format("%s/%s/%s/%s%s",
-                CommandConstants.COMMAND_ENDPOINT, Constants.DEFAULT_TENANT, "4711", replyToOptionsBitFlag, replyToId)));
+                CommandConstants.COMMAND_RESPONSE_ENDPOINT, Constants.DEFAULT_TENANT, "4711", replyToOptionsBitFlag, replyToId)));
     }
 
     /**
@@ -111,7 +111,7 @@ public class CommandTest {
         assertNotNull(cmd.getCommandMessage());
         assertNotNull(cmd.getCommandMessage().getReplyTo());
         assertThat(cmd.getCommandMessage().getReplyTo(), is(String.format("%s/%s/%s/%s%s",
-                CommandConstants.COMMAND_ENDPOINT, Constants.DEFAULT_TENANT, "4711", replyToOptionsBitFlag, replyToId)));
+                CommandConstants.COMMAND_RESPONSE_ENDPOINT, Constants.DEFAULT_TENANT, "4711", replyToOptionsBitFlag, replyToId)));
     }
 
     /**
@@ -135,7 +135,7 @@ public class CommandTest {
         assertNotNull(cmd.getCommandMessage());
         assertNotNull(cmd.getCommandMessage().getReplyTo());
         assertThat(cmd.getCommandMessage().getReplyTo(), is(String.format("%s/%s/%s/%s%s",
-                CommandConstants.COMMAND_ENDPOINT, Constants.DEFAULT_TENANT, "4711", replyToOptionsBitFlag, replyToId)));
+                CommandConstants.COMMAND_RESPONSE_ENDPOINT, Constants.DEFAULT_TENANT, "4711", replyToOptionsBitFlag, replyToId)));
     }
 
     /**

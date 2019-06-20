@@ -148,7 +148,7 @@ public final class Command {
                         validationErrorJoiner.add("reply-to part after tenant not set: " + message.getReplyTo());
                     } else {
                         message.setReplyTo(
-                                String.format("%s/%s/%s", CommandConstants.COMMAND_ENDPOINT, tenantId,
+                                String.format("%s/%s/%s", CommandConstants.COMMAND_RESPONSE_ENDPOINT, tenantId,
                                         getDeviceFacingReplyToId(originalReplyToId, deviceId, replyToLegacyEndpointUsed)));
                     }
                 }
