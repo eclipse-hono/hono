@@ -291,6 +291,16 @@ is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [Maven Central](http://search.maven.org/remotecontent?filepath=io/vertx/vertx-web/${vertx.version}/vertx-web-${vertx.version}-sources.jar).
 
+### vert.x Web Client ${vertx.version}
+
+This product includes software developed by the [vert.x project](http://vertx.io).
+
+Your use of *vert.x Web* is subject to the terms and conditions of the Apache Software License 2.0.
+A copy of the Apache Software License 2.0 is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and
+is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
+
+The source code is available from [Maven Central](http://search.maven.org/remotecontent?filepath=io/vertx/vertx-web-client/${vertx.version}/vertx-web-client-${vertx.version}-sources.jar).
+
 # Trademarks
 
 * Eclipse Hono and the Eclipse Hono project logo are trademarks of the Eclipse Foundation.
