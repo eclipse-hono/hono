@@ -170,20 +170,29 @@ class CachingClientFactory<T> extends ClientFactory<T> {
             creationLocks.put(key, Boolean.TRUE);
             log.debug("creating new client for [{}]", key);
 
-            clientInstanceSupplier.get().setHandler(creationAttempt -> {
+            try {
+                clientInstanceSupplier.get().setHandler(creationAttempt -> {
+                    creationLocks.remove(key);
+                    creationRequests.remove(connectionFailureHandler);
+                    if (creationAttempt.succeeded()) {
+                        final T newClient = creationAttempt.result();
+                        log.debug("successfully created new client for [{}]", key);
+                        activeClients.put(key, newClient);
+                        result.handle(Future.succeededFuture(newClient));
+                    } else {
+                        log.debug("failed to create new client for [{}]", key, creationAttempt.cause());
+                        activeClients.remove(key);
+                        result.handle(Future.failedFuture(creationAttempt.cause()));
+                    }
+                });
+            } catch (final Exception ex) {
                 creationLocks.remove(key);
                 creationRequests.remove(connectionFailureHandler);
-                if (creationAttempt.succeeded()) {
-                    final T newClient = creationAttempt.result();
-                    log.debug("successfully created new client for [{}]", key);
-                    activeClients.put(key, newClient);
-                    result.handle(Future.succeededFuture(newClient));
-                } else {
-                    log.debug("failed to create new client for [{}]", key, creationAttempt.cause());
-                    activeClients.remove(key);
-                    result.handle(Future.failedFuture(creationAttempt.cause()));
-                }
-            });
+                log.error("exception creating new client for [{}]", key, ex);
+                activeClients.remove(key);
+                result.handle(Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_INTERNAL_ERROR, 
+                        String.format("exception creating new client for [%s]: %s", key, ex.getMessage()))));
+            }
 
         } else {
             if (retry < MAX_CREATION_RETRIES) {
