@@ -9,9 +9,6 @@ weight = 196
 
 Commands can be sent following a *request/response* or a *one-way* pattern. For *Request/Response* commands, there is always a response expected from the device.
 
-You can try the implementation directly by following the [Getting Started](https://www.eclipse.org/hono/getting-started/) guide.
-
-
 ## Command & Control over HTTP Adapter
 
 The following sequence diagrams give an overview of a device connecting via HTTP, which gets a command from the business application in the response to a downstream message - being an arbitrary event in this example. The application and the adapter connect to the AMQP Network, which forwards the transfer - for clarity this is not shown in the diagram. 

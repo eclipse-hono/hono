@@ -18,7 +18,7 @@ The plugin provides a *Hono Receiver Sampler* which can be used together with JM
 
 ## Example Test Plans
 
-The `<hono-installation>/jmeter/src/jmeter` folder contains several JMeter test plans which you can use as a basis for your own tests. All test plans can be run against any standard Hono installation, e.g. as deployed in the [Getting started Guide](https://www.eclipse.org/hono/getting-started/).
+The `<hono-installation>/jmeter/src/jmeter` folder contains several JMeter test plans which you can use as a basis for your own tests. All test plans can be run against Hono's [example deployment]({{< relref "deployment" >}}).
 
 1.  `http_messaging_throughput_test.jmx` runs a set of HTTP clients and AMQP 1.0 consumers for a given period of time. The senders publish data to Hono' HTTP adapter while the consumers receive messages from the AMQP 1.0 Messaging Network (in case of the example installation this is the Qpid Dispatch Router). The test plan measures the number of messages that are sent/received during the test execution.
 1.  `mqtt_messaging_throughput_test.jmx` runs a set of MQTT clients and AMQP 1.0 consumers for a given period of time. The clients publish data to Hono' MQTT adapter while the consumers receive messages from the AMQP 1.0 Messaging Network (in case of the example installation this is the Qpid Dispatch Router). The test plan measures the number of messages that are sent/received during the test execution. To use this plan you also need to add the [JMeter plugin for MQTT](https://github.com/emqx/mqtt-jmeter) to your JMeter plugin path.
