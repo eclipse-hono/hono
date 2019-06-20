@@ -23,7 +23,7 @@ import io.vertx.core.Verticle;
 /**
  * A service for keeping record of device connection information.
  *
- * @see <a href="https://www.eclipse.org/hono/api/device-connection-api/">Device Connection API</a>
+ * @see <a href="https://www.eclipse.org/hono/docs/latest/api/device-connection-api/">Device Connection API</a>
  */
 public interface DeviceConnectionService extends Verticle {
 

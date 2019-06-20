@@ -24,7 +24,7 @@ import io.vertx.core.Verticle;
  * A minimal service for keeping record of device identities.
  * This interface covers only the mandatory operations.
  *
- * @see <a href="https://www.eclipse.org/hono/api/device-registration-api/">Device Registration API</a>
+ * @see <a href="https://www.eclipse.org/hono/docs/latest/api/device-registration-api/">Device Registration API</a>
  */
 public interface RegistrationService extends Verticle {
 
@@ -43,7 +43,7 @@ public interface RegistrationService extends Verticle {
      *             registered for the tenant or its <em>enabled</em> property is {@code false}.</li>
      *             </ul>
      * @throws NullPointerException if any of the parameters is {@code null}.
-     * @see <a href="https://www.eclipse.org/hono/api/device-registration-api/#assert-device-registration">
+     * @see <a href="https://www.eclipse.org/hono/docs/latest/api/device-registration-api/#assert-device-registration">
      *      Device Registration API - Assert Device Registration</a>
      */
     void assertRegistration(String tenantId, String deviceId, Handler<AsyncResult<RegistrationResult>> resultHandler);
@@ -68,7 +68,7 @@ public interface RegistrationService extends Verticle {
      *             registered for the tenant or its <em>enabled</em> property is {@code false}.</li>
      *             </ul>
      * @throws NullPointerException if any of the parameters is {@code null}.
-     * @see <a href="https://www.eclipse.org/hono/api/device-registration-api/#assert-device-registration">
+     * @see <a href="https://www.eclipse.org/hono/docs/latest/api/device-registration-api/#assert-device-registration">
      *      Device Registration API - Assert Device Registration</a>
      */
     default void assertRegistration(final String tenantId, final String deviceId, final Span span,
@@ -105,7 +105,7 @@ public interface RegistrationService extends Verticle {
      *             registered for the tenant or its <em>enabled</em> property is {@code false}.</li>
      *             </ul>
      * @throws NullPointerException if any of the parameters is {@code null}.
-     * @see <a href="https://www.eclipse.org/hono/api/device-registration-api/#assert-device-registration">
+     * @see <a href="https://www.eclipse.org/hono/docs/latest/api/device-registration-api/#assert-device-registration">
      *      Device Registration API - Assert Device Registration</a>
      */
     void assertRegistration(String tenantId, String deviceId, String gatewayId, Handler<AsyncResult<RegistrationResult>> resultHandler);
@@ -144,7 +144,7 @@ public interface RegistrationService extends Verticle {
      *             registered for the tenant or its <em>enabled</em> property is {@code false}.</li>
      *             </ul>
      * @throws NullPointerException if any of the parameters is {@code null}.
-     * @see <a href="https://www.eclipse.org/hono/api/device-registration-api/#assert-device-registration">
+     * @see <a href="https://www.eclipse.org/hono/docs/latest/api/device-registration-api/#assert-device-registration">
      *      Device Registration API - Assert Device Registration</a>
      */
     default void assertRegistration(final String tenantId, final String deviceId, final String gatewayId,
@@ -168,7 +168,7 @@ public interface RegistrationService extends Verticle {
      *             is registered for the tenant.</li>
      *             </ul>
      * @throws NullPointerException if any of the parameters is {@code null}.
-     * @see <a href="https://www.eclipse.org/hono/api/device-registration-api/#get-registration-information">
+     * @see <a href="https://github.com/eclipse/hono/blob/1.0-M4/site/content/api/Device-Registration-API.md#get-registration-information">
      *      Device Registration API - Get Registration Information</a>
      */
     void getDevice(String tenantId, String deviceId, Handler<AsyncResult<RegistrationResult>> resultHandler);

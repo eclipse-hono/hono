@@ -24,7 +24,7 @@ import io.vertx.core.json.JsonObject;
  * A service for keeping record of device credentials.
  * This interface presents all the available operations on the API.
  *
- * @see <a href="https://www.eclipse.org/hono/api/credentials-api/">Credentials API</a>
+ * @see <a href="https://github.com/eclipse/hono/blob/1.0-M4/site/content/api/Credentials-API.md">Credentials API</a>
  */
 public interface CompleteCredentialsService extends CredentialsService {
 
@@ -46,7 +46,7 @@ public interface CompleteCredentialsService extends CredentialsService {
      *         such a check.</li>
      *         </ul>
      * @throws NullPointerException if any of the parameters is {@code null}.
-     * @see <a href="https://www.eclipse.org/hono/api/credentials-api/#add-credentials">
+     * @see <a href="https://github.com/eclipse/hono/blob/1.0-M4/site/content/api/Credentials-API.md#add-credentials">
      *      Credentials API - Add Credentials</a>
      */
     void add(String tenantId, JsonObject credentialsObject, Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler);
@@ -96,7 +96,7 @@ public interface CompleteCredentialsService extends CredentialsService {
      *
      * @param tenantId The tenant the device belongs to.
      * @param credentialsObject A map containing keys and values that fulfill the credentials format of the credentials api.
-     *                  See <a href="https://www.eclipse.org/hono/api/Credentials-API/#credentials-format">Credentials Format</a> for details.
+     *                  See <a href="https://github.com/eclipse/hono/blob/1.0-M4/site/content/api/Credentials-API.md#credentials-format">Credentials Format</a> for details.
      * @param resultHandler The handler to invoke with the result of the operation.
      *         The <em>status</em> will be
      *         <ul>
@@ -106,7 +106,7 @@ public interface CompleteCredentialsService extends CredentialsService {
      *         <li><em>404 Not Found</em> if no credentials of the given type and auth-id exist.</li>
      *         </ul>
      * @throws NullPointerException if any of the parameters is {@code null}.
-     * @see <a href="https://www.eclipse.org/hono/api/credentials-api/#update-credentials">
+     * @see <a href="https://github.com/eclipse/hono/blob/1.0-M4/site/content/api/Credentials-API.md#update-credentials">
      *      Credentials API - Update Credentials</a>
      */
     void update(String tenantId, JsonObject credentialsObject, Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler);
@@ -125,7 +125,7 @@ public interface CompleteCredentialsService extends CredentialsService {
      *         <li><em>404 Not Found</em> if no credentials match the given criteria.</li>
      *         </ul>
      * @throws NullPointerException if any of the parameters is {@code null}.
-     * @see <a href="https://www.eclipse.org/hono/api/credentials-api/#remove-credentials">
+     * @see <a href="https://github.com/eclipse/hono/blob/1.0-M4/site/content/api/Credentials-API.md#remove-credentials">
      *      Credentials API - Remove Credentials</a>
      */
     void remove(String tenantId, String type, String authId, Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler);
@@ -143,7 +143,7 @@ public interface CompleteCredentialsService extends CredentialsService {
      *         <li><em>404 Not Found</em> if no credentials are registered for the device.</li>
      *         </ul>
      * @throws NullPointerException if any of the parameters is {@code null}.
-     * @see <a href="https://www.eclipse.org/hono/api/credentials-api/#remove-credentials">
+     * @see <a href="https://github.com/eclipse/hono/blob/1.0-M4/site/content/api/Credentials-API.md#remove-credentials">
      *      Credentials API - Remove Credentials</a>
      */
     void removeAll(String tenantId, String deviceId, Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler);

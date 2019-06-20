@@ -34,7 +34,7 @@ import io.vertx.core.json.DecodeException;
 /**
  * An {@code AmqpEndpoint} for managing tenant information.
  * <p>
- * This endpoint implements Hono's <a href="https://www.eclipse.org/hono/api/tenant-api/">Tenant API</a>. It receives AMQP 1.0
+ * This endpoint implements Hono's <a href="https://www.eclipse.org/hono/docs/latest/api/tenant-api/">Tenant API</a>. It receives AMQP 1.0
  * messages representing requests and sends them to an address on the vertx event bus for processing. The outcome is
  * then returned to the peer in a response message.
  */

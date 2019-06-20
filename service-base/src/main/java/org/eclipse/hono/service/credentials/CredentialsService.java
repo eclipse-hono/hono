@@ -25,7 +25,7 @@ import io.vertx.core.json.JsonObject;
  * A service for keeping record of device credentials.
  * This interface only covers mandatory operations.
  *
- * @see <a href="https://www.eclipse.org/hono/api/credentials-api/">Credentials API</a>
+ * @see <a href="https://www.eclipse.org/hono/docs/latest/api/credentials-api/">Credentials API</a>
  */
 public interface CredentialsService extends Verticle {
 
@@ -43,7 +43,7 @@ public interface CredentialsService extends Verticle {
      *         <li><em>404 Not Found</em> if no credentials matching the criteria exist.</li>
      *         </ul>
      * @throws NullPointerException if any of the parameters is {@code null}.
-     * @see <a href="https://www.eclipse.org/hono/api/credentials-api/#get-credentials">
+     * @see <a href="https://www.eclipse.org/hono/docs/latest/api/credentials-api/#get-credentials">
      *      Credentials API - Get Credentials</a>
      */
     void get(String tenantId, String type, String authId, Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler);
@@ -67,7 +67,7 @@ public interface CredentialsService extends Verticle {
      *         <li><em>404 Not Found</em> if no credentials matching the criteria exist.</li>
      *         </ul>
      * @throws NullPointerException if any of the parameters is {@code null}.
-     * @see <a href="https://www.eclipse.org/hono/api/credentials-api/#get-credentials">
+     * @see <a href="https://www.eclipse.org/hono/docs/latest/api/credentials-api/#get-credentials">
      *      Credentials API - Get Credentials</a>
      */
     default void get(final String tenantId, final String type, final String authId, final Span span,
@@ -90,7 +90,7 @@ public interface CredentialsService extends Verticle {
      *         <li><em>404 Not Found</em> if no credentials matching the criteria exist.</li>
      *         </ul>
      * @throws NullPointerException if any of the parameters is {@code null}.
-     * @see <a href="https://www.eclipse.org/hono/api/credentials-api/#get-credentials">
+     * @see <a href="https://www.eclipse.org/hono/docs/latest/api/credentials-api/#get-credentials">
      *      Credentials API - Get Credentials</a>
      */
     void get(String tenantId, String type, String authId, JsonObject clientContext, Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler);
@@ -115,7 +115,7 @@ public interface CredentialsService extends Verticle {
      *         <li><em>404 Not Found</em> if no credentials matching the criteria exist.</li>
      *         </ul>
      * @throws NullPointerException if any of the parameters is {@code null}.
-     * @see <a href="https://www.eclipse.org/hono/api/credentials-api/#get-credentials">
+     * @see <a href="https://www.eclipse.org/hono/docs/latest/api/credentials-api/#get-credentials">
      *      Credentials API - Get Credentials</a>
      */
     default void get(final String tenantId, final String type, final String authId, final JsonObject clientContext,

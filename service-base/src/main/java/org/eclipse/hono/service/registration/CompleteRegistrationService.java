@@ -22,7 +22,7 @@ import org.eclipse.hono.util.RegistrationResult;
  * A service for keeping record of device identities.
  * This interface presents all the available operations on the API.
  * 
- * @see <a href="https://www.eclipse.org/hono/api/device-registration-api/">Device Registration API</a>
+ * @see <a href="https://www.eclipse.org/hono/docs/latest/api/device-registration-api/">Device Registration API</a>
  */
 public interface CompleteRegistrationService extends RegistrationService {
 
@@ -40,7 +40,7 @@ public interface CompleteRegistrationService extends RegistrationService {
      *             for the tenant.</li>
      *             </ul>
      * @throws NullPointerException if any of tenant, device ID or result handler is {@code null}.
-     * @see <a href="https://www.eclipse.org/hono/api/device-registration-api/#register-device">
+     * @see <a href="https://github.com/eclipse/hono/blob/1.0-M4/site/content/api/Device-Registration-API.md#register-device">
      *      Device Registration API - Register Device</a>
      */
     void addDevice(String tenantId, String deviceId, JsonObject otherKeys, Handler<AsyncResult<RegistrationResult>> resultHandler);
@@ -60,7 +60,7 @@ public interface CompleteRegistrationService extends RegistrationService {
      *             registered for the tenant.</li>
      *             </ul>
      * @throws NullPointerException if any of tenant, device ID or result handler is {@code null}.
-     * @see <a href="https://www.eclipse.org/hono/api/device-registration-api/#update-device-registration">
+     * @see <a href="https://github.com/eclipse/hono/blob/1.0-M4/site/content/api/Device-Registration-API.md#update-device-registration">
      *      Device Registration API - Update Device Registration</a>
      */
     void updateDevice(String tenantId, String deviceId, JsonObject otherKeys, Handler<AsyncResult<RegistrationResult>> resultHandler);
@@ -78,7 +78,7 @@ public interface CompleteRegistrationService extends RegistrationService {
      *             registered for the tenant.</li>
      *             </ul>
      * @throws NullPointerException if any of the parameters is {@code null}.
-     * @see <a href="https://www.eclipse.org/hono/api/device-registration-api/#deregister-device">
+     * @see <a href="https://www.eclipse.org/hono/docs/latest/api/device-registration-api/#deregister-device">
      *      Device Registration API - Deregister Device</a>
      */
     void removeDevice(String tenantId, String deviceId, Handler<AsyncResult<RegistrationResult>> resultHandler);

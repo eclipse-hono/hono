@@ -468,7 +468,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
      * <p>
      * This method currently only supports topic filters for subscribing to
      * commands as defined by Hono's
-     * <a href="https://www.eclipse.org/hono/user-guide/mqtt-adapter/#command-control">
+     * <a href="https://www.eclipse.org/hono/docs/latest/user-guide/mqtt-adapter/#command-control">
      * MQTT adapter user guide</a>.
      * <p>
      * When a device subscribes to a command topic filter, this method opens a
@@ -601,7 +601,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
      * <p>
      * This method currently only supports topic filters for unsubscribing from
      * commands as defined by Hono's
-     * <a href="https://www.eclipse.org/hono/user-guide/mqtt-adapter/#receive-commands">
+     * <a href="https://www.eclipse.org/hono/docs/latest/user-guide/mqtt-adapter/#command-control">
      * MQTT adapter user guide</a>.
      *
      * @param endpoint The endpoint representing the connection to the device.

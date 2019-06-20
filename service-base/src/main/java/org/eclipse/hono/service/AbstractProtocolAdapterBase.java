@@ -948,7 +948,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * Gets configuration information for a tenant.
      * <p>
      * The returned JSON object contains information as defined by Hono's
-     * <a href="https://www.eclipse.org/hono/api/tenant-api/#response-payload">Tenant API</a>.
+     * <a href="https://www.eclipse.org/hono/docs/latest/api/tenant-api/#get-tenant-information">Tenant API</a>.
      *
      * @param tenantId The tenant to retrieve information for.
      * @return A future indicating the outcome of the operation.
@@ -970,7 +970,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * Gets configuration information for a tenant.
      * <p>
      * The returned JSON object contains information as defined by Hono's
-     * <a href="https://www.eclipse.org/hono/api/tenant-api/#response-payload">Tenant API</a>.
+     * <a href="https://www.eclipse.org/hono/docs/latest/api/tenant-api/#get-tenant-information">Tenant API</a>.
      *
      * @param tenantId The tenant to retrieve information for.
      * @param context The currently active OpenTracing span that is used to
