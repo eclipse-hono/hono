@@ -52,6 +52,7 @@ import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.proton.ProtonClientOptions;
 import io.vertx.proton.ProtonConnection;
+import io.vertx.proton.ProtonHelper;
 import io.vertx.proton.ProtonLink;
 import io.vertx.proton.ProtonMessageHandler;
 import io.vertx.proton.ProtonQoS;
@@ -708,11 +709,16 @@ public class HonoConnectionImpl implements HonoConnection {
                 receiver.setQoS(qos);
                 receiver.setPrefetch(preFetchSize);
                 receiver.handler((delivery, message) -> {
-                    messageHandler.handle(delivery, message);
-                    if (log.isTraceEnabled()) {
-                        final int remainingCredits = receiver.getCredit() - receiver.getQueued();
-                        log.trace("handling message [remotely settled: {}, queued messages: {}, remaining credit: {}]",
-                                delivery.remotelySettled(), receiver.getQueued(), remainingCredits);
+                    try {
+                        messageHandler.handle(delivery, message);
+                        if (log.isTraceEnabled()) {
+                            final int remainingCredits = receiver.getCredit() - receiver.getQueued();
+                            log.trace("handling message [remotely settled: {}, queued messages: {}, remaining credit: {}]",
+                                    delivery.remotelySettled(), receiver.getQueued(), remainingCredits);
+                        }
+                    } catch (final Exception ex) {
+                        log.warn("error handling message", ex);
+                        ProtonHelper.released(delivery, true);
                     }
                 });
                 receiver.openHandler(recvOpen -> {
