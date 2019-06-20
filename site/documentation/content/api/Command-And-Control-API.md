@@ -26,12 +26,16 @@ Business Applications use this operation to send a command to a device for which
 **Preconditions**
 
 1. The *Business Application* has established an AMQP connection with the AMQP 1.0 Network.
-2. The *Business Application* has established an AMQP link in role *sender* with the target address `control/${tenant_id}`, where `${tenant_id}` is the ID of the tenant that the device belongs to.
-This link is used by the *Business Application* to send command messages. The `to` property of the command messages contains the target address `control/${tenant_id}/${device_id}`, where `${device_id}` is the ID of the device to send the message to.
+2. The *Business Application* has established an AMQP link in role *sender* with the target address `command/${tenant_id}`, where `${tenant_id}` is the ID of the tenant that the device belongs to.
+This link is used by the *Business Application* to send command messages. The `to` property of the command messages contains the target address `command/${tenant_id}/${device_id}`, where `${device_id}` is the ID of the device to send the message to.
 
 The following sequence diagram illustrates the establishment of the required link:
 
 ![Send One-Way Command Preconditions](../command_control_send_preconditions.png)
+
+{{% note %}}
+Previous versions of Hono used `control` instead of `command` as address prefix for the sender link. Using the `control` prefix is still supported but deprecated. 
+{{% /note %}}
 
 **Message Format**
 
@@ -39,7 +43,7 @@ The following table provides an overview of the properties the *Business Applica
 
 | Name             | Mandatory | Location                 | Type         | Description |
 | :--------------- | :-------: | :----------------------- | :----------- | :---------- |
-| *to*             | yes       | *properties*             | *string*     | MUST contain the target address `control/${tenant_id}/${device_id}` of the message, where `${device_id}` is the ID of the device to send the message to. |
+| *to*             | yes       | *properties*             | *string*     | MUST contain the target address `command/${tenant_id}/${device_id}` of the message, where `${device_id}` is the ID of the device to send the message to. |
 | *subject*        | yes       | *properties*             | *string*     | The name of the command to be executed by the device. |
 | *content-type*   | no        | *properties*             | *string*     | If present, MUST contain a *Media Type* as defined by [RFC 2046](https://tools.ietf.org/html/rfc2046) which describes the semantics and format of the command's input data contained in the message payload. However, not all protocol adapters will support this property as not all transport protocols provide means to convey this information, e.g. MQTT 3.1.1 has no notion of message headers. |
 | *message-id*     | yes       | *properties*             | *string*     | An identifier that uniquely identifies the message at the sender side. |
@@ -86,10 +90,14 @@ The following sequence diagram illustrates how a malformed command sent by a *Bu
 <a name="receiver-link-precondition"></a>
 
 1. The *Business Application* has established an AMQP connection with the AMQP 1.0 Network.
-2. The *Business Application* has established an AMQP link in role *sender* with the target address `control/${tenant_id}`, where `${tenant_id}` is the ID of the tenant that the device belongs to.
-This link is used by the *Business Application* to send command messages. The `to` property of the command messages contains the target address `control/${tenant_id}/${device_id}`, where `${device_id}` is the ID of the device to send the message to.
-3. The *Business Application* has established an AMQP link in role *receiver* with the source address `control/${tenant_id}/${reply_id}`.
+2. The *Business Application* has established an AMQP link in role *sender* with the target address `command/${tenant_id}`, where `${tenant_id}` is the ID of the tenant that the device belongs to.
+This link is used by the *Business Application* to send command messages. The `to` property of the command messages contains the target address `command/${tenant_id}/${device_id}`, where `${device_id}` is the ID of the device to send the message to.
+3. The *Business Application* has established an AMQP link in role *receiver* with the source address `command_response/${tenant_id}/${reply_id}`.
 This link is used by the *Business Application* to receive the response to the command from the device. This link’s source address is also used as the `reply-to` address for the request messages. The `${reply_id}` may be any [arbitrary string]({{< relref "#strategies-for-building-the-receiver-link-address" >}}) chosen by the application.
+
+{{% note %}}
+Previous versions of Hono used `control` instead of `command` and `command_response` as address prefix for both the sender and receiver link. Using the `control` prefix is still supported but deprecated. Note that when using the old prefix, the sender link address must be `control/${tenant_id}/${device_id}` and that gateway agnostic addressing of devices is not supported for commands sent on this link.  
+{{% /note %}}
 
 **Link establishment**
 
@@ -107,7 +115,7 @@ The following table provides an overview of the properties the *Business Applica
 
 | Name             | Mandatory | Location                 | Type         | Description |
 | :--------------- | :-------: | :----------------------- | :----------- | :---------- |
-| *to*             | yes       | *properties*             | *string*     | MUST contain the target address `control/${tenant_id}/${device_id}` of the message, where `${device_id}` is the ID of the device to send the message to. |
+| *to*             | yes       | *properties*             | *string*     | MUST contain the target address `command/${tenant_id}/${device_id}` of the message, where `${device_id}` is the ID of the device to send the message to. |
 | *subject*        | yes       | *properties*             | *string*     | MUST contain the command name to be executed by a device. |
 | *content-type*   | no        | *properties*             | *string*     | If present, MUST contain a *Media Type* as defined by [RFC 2046](https://tools.ietf.org/html/rfc2046) which describes the semantics and format of the command's input data contained in the message payload. However, not all protocol adapters will support this property as not all transport protocols provide means to convey this information, e.g. MQTT 3.1.1 has no notion of message headers. |
 | *correlation-id* | no        | *properties*             | *message-id* | If present, MUST contain an ID used to correlate a response message to the original request. If set, it is used as the *correlation-id* property in the response, otherwise the value of the *message-id* property is used. |

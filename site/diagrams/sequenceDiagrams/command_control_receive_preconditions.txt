@@ -1,0 +1,5 @@
+participant AMQP 1.0 Network
+participant Business Application
+
+Business Application->AMQP 1.0 Network: attach("receiver","command_response/${tenant_id}/${reply-id}")
+AMQP 1.0 Network->Business Application: attach("sender","command_response/${tenant_id}/${reply-id}")

@@ -187,9 +187,13 @@ For *Request/Response* commands, devices send their responses to commands by mea
 
 The following sections define the topic filters/names to use for subscribing to and responding to commands. The following *shorthand* versions of topic path segments are supported:
 
-* `c` instead of `control`
+* `c` instead of `command`
 * `q` instead of `req`
 * `s` instead of `res`
+
+{{% note %}}
+Previous versions of Hono used `control` instead of `command` as topic prefix. Using the `control` prefix is still supported but deprecated. 
+{{% /note %}}
 
 The following variables are used:
 
@@ -207,29 +211,29 @@ The MQTT adapter currently does not require nor use any properties.
 
 An authenticated device MUST use the following topic filter to subscribe to commands:
 
-* `control/+/+/req/#`
+* `command/+/+/req/#`
 
 **Example**
 
-    mosquitto_sub -v -u 'sensor1@DEFAULT_TENANT' -P hono-secret -t control/+/+/req/#
+    mosquitto_sub -v -u 'sensor1@DEFAULT_TENANT' -P hono-secret -t command/+/+/req/#
 
 The adapter will then publish commands for the device to topic:
 
-* for *Request/Response* commands: `control///req/${req-id}/${command}[/*][/property-bag]`
-* for *one-way* commands: `control///req//${command}[/*][/property-bag]`
+* for *Request/Response* commands: `command///req/${req-id}/${command}[/*][/property-bag]`
+* for *one-way* commands: `command///req//${command}[/*][/property-bag]`
 
 
 **Example**
 
 For example, if the [HonoExampleApplication]({{< relref "/dev-guide/java_client_consumer.md" >}}) was started, after the `ttd` event requested by the subscription of mosquitto_sub, it layers a command that arrives as follows:  
 
-    control///q/1010f8ab0b53-bd96-4d99-9d9c-56b868474a6a/setBrightness {
+    command///q/1010f8ab0b53-bd96-4d99-9d9c-56b868474a6a/setBrightness {
        "brightness" : 79
     }
 
 If the command is a *one-way* command, it will arrive as follows:
 
-    control///q//setBrightness {
+    command///q//setBrightness {
        "brightness" : 79
     }
 
@@ -238,19 +242,19 @@ If the command is a *one-way* command, it will arrive as follows:
 
 An unauthenticated device MUST use the following topic filter to subscribe to commands:
 
-* `control/${tenant-id}/${device-id}/req/#`
+* `command/${tenant-id}/${device-id}/req/#`
 
 **Example**
 
-    mosquitto_sub -v -t control/DEFAULT_TENANT/4711/req/#
+    mosquitto_sub -v -t command/DEFAULT_TENANT/4711/req/#
 
 The adapter will then publish *Request/Response* commands for the device to topic:
 
-* `control/${tenant-id}/${device-id}/req/${req-id}/${command}[/*][/property-bag]`
+* `command/${tenant-id}/${device-id}/req/${req-id}/${command}[/*][/property-bag]`
 
 and *one-way* commands to the topic:
 
-* `control/${tenant-id}/${device-id}/req//${command}[/*][/property-bag]`
+* `command/${tenant-id}/${device-id}/req//${command}[/*][/property-bag]`
 
 (For an example of the incoming command see above at authenticated device)
 
@@ -258,25 +262,25 @@ and *one-way* commands to the topic:
 
 An authenticated device MUST send the response to a previously received command to the following topic:
 
-* `control///res/${req-id}/${status}`
+* `command///res/${req-id}/${status}`
 
 **Example**
 
 After a command has arrived as in the above example, you send a response using the arrived `${req-id}`:
 
-    mosquitto_pub -u 'sensor1@DEFAULT_TENANT' -P hono-secret -t control///res/1010f8ab0b53-bd96-4d99-9d9c-56b868474a6a/200 -m '{"lumen": 200}'
+    mosquitto_pub -u 'sensor1@DEFAULT_TENANT' -P hono-secret -t command///res/1010f8ab0b53-bd96-4d99-9d9c-56b868474a6a/200 -m '{"lumen": 200}'
 
 ### Sending a Response to a Command (unauthenticated Device)
 
 An unauthenticated device MUST send the response to a previously received command to the following topic:
 
-* `control/${tenant-id}/${device-id}/res/${req-id}/${status}`
+* `command/${tenant-id}/${device-id}/res/${req-id}/${status}`
 
 **Example**
 
 After a command has arrived as in the above example, you send a response using the arrived `${req-id}`:
 
-    mosquitto_pub -t control/DEFAULT_TENANT/4711/res/1010f8ab0b53-bd96-4d99-9d9c-56b868474a6a/200 -m '{"lumen": 200}'
+    mosquitto_pub -t command/DEFAULT_TENANT/4711/res/1010f8ab0b53-bd96-4d99-9d9c-56b868474a6a/200 -m '{"lumen": 200}'
 
 ## Downstream Meta Data
 

@@ -417,7 +417,7 @@ Example:
 ## Sending a Response to a Command (authenticated Device)
 
 * Since: 0.7
-* URI: `/control/res/${commandRequestId}` or `/control/res/${commandRequestId}?hono-cmd-status=${status}`
+* URI: `/command/res/${commandRequestId}` or `/command/res/${commandRequestId}?hono-cmd-status=${status}`
 * Method: `POST`
 * Request Headers:
   * (optional) `Authorization`: The device's *auth-id* and plain text password encoded according to the [Basic HTTP authentication scheme](https://tools.ietf.org/html/rfc7617). If not set, the adapter expects the device to present a client certificate as part of the TLS handshake during connection establishment.
@@ -439,13 +439,17 @@ Example:
 
 This is the preferred way for devices to respond to commands. It is available only if the protocol adapter is configured to require devices to authenticate (which is the default).
 
+{{% note %}}
+Previous versions of Hono used `control` instead of `command` as prefix in the command response URI. Using the `control` prefix is still supported but deprecated. 
+{{% /note %}}
+
 **Example**
 
 Send a response to a previously received command with the command-request-id `req-id-uuid` for device `4711`:
 
     curl -i -X POST -u sensor1@DEFAULT_TENANT:hono-secret -H 'Content-Type: application/json' \
      --data-binary '{"brightness-changed": true}' \
-     http://127.0.0.1:8080/control/res/req-id-uuid?hono-cmd-status=200
+     http://127.0.0.1:8080/command/res/req-id-uuid?hono-cmd-status=200
 
     HTTP/1.1 202 Accepted
     Content-Length: 0
@@ -453,7 +457,7 @@ Send a response to a previously received command with the command-request-id `re
 ## Sending a Response to a Command (unauthenticated Device)
 
 * Since: 0.7
-* URI: `/control/res/${tenantId}/${deviceId}/${commandRequestId}` or `/control/res/${tenantId}/${deviceId}/${commandRequestId}?hono-cmd-status=${status}`
+* URI: `/command/res/${tenantId}/${deviceId}/${commandRequestId}` or `/command/res/${tenantId}/${deviceId}/${commandRequestId}?hono-cmd-status=${status}`
 * Method: `PUT`
 * Request Headers:
   * (optional) `Content-Type`: A media type describing the semantics and format of the payload contained in the request body (the outcome of processing the command). (since 0.7)
@@ -475,13 +479,16 @@ Send a response to a previously received command with the command-request-id `re
 
 This resource MUST be used by devices that have not authenticated to the protocol adapter. Note that this requires the `HONO_HTTP_AUTHENTICATION_REQUIRED` configuration property to be explicitly set to `false`.
 
+{{% note %}}
+Previous versions of Hono used `control` instead of `command` as prefix in the command response URI. Using the `control` prefix is still supported but deprecated. 
+{{% /note %}}
 
 **Examples**
 
 Send a response to a previously received command with the command-request-id `req-id-uuid` for the unauthenticated device `4711`:
 
     curl -i -X PUT -H 'Content-Type: application/json' --data-binary '{"brightness-changed": true}' \
-     http://127.0.0.1:8080/control/res/DEFAULT_TENANT/4711/req-id-uuid?hono-cmd-status=200
+     http://127.0.0.1:8080/command/res/DEFAULT_TENANT/4711/req-id-uuid?hono-cmd-status=200
 
     HTTP/1.1 202 Accepted
     Content-Length: 0
@@ -490,7 +497,7 @@ Send a response to a previously received command with the command-request-id `re
 ## Sending a Response to a Command (authenticated Gateway)
 
 * Since: 0.7
-* URI: `/control/res/${tenantId}/${deviceId}/${commandRequestId}` or `/control/res/${tenantId}/${deviceId}/${commandRequestId}?hono-cmd-status=${status}`
+* URI: `/command/res/${tenantId}/${deviceId}/${commandRequestId}` or `/command/res/${tenantId}/${deviceId}/${commandRequestId}?hono-cmd-status=${status}`
 * Method: `PUT`
 * Request Headers:
   * (optional) `Authorization`: The gateway's *auth-id* and plain text password encoded according to the [Basic HTTP authentication scheme](https://tools.ietf.org/html/rfc7617). If not set, the adapter expects the gateway to present a client certificate as part of the TLS handshake during connection establishment.
@@ -522,7 +529,7 @@ Send a response to a previously received command with the command-request-id `re
 
     curl -i -X PUT -u gw@DEFAULT_TENANT:gw-secret -H 'Content-Type: application/json' \
      --data-binary '{"brightness-changed": true}' \
-     http://127.0.0.1:8080/control/res/DEFAULT_TENANT/4712/req-id-uuid?hono-cmd-status=200
+     http://127.0.0.1:8080/command/res/DEFAULT_TENANT/4712/req-id-uuid?hono-cmd-status=200
 
     HTTP/1.1 202 Accepted
     Content-Length: 0

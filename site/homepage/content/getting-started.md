@@ -291,7 +291,7 @@ If the received command was *not* a *one-way command*, and the device has receiv
 
     curl -i -X POST -u sensor1@DEFAULT_TENANT:hono-secret -H 'Content-Type: application/json' \
     -H 'hono-cmd-status: 200' --data-binary '{"success": true}' \
-    http://127.0.0.1:8080/control/res/10117f669c12-09ef-416d-88c1-1787f894856d
+    http://127.0.0.1:8080/command/res/10117f669c12-09ef-416d-88c1-1787f894856d
     
     HTTP/1.1 202 Accepted
     Content-Length: 0

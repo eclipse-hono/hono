@@ -1,7 +1,7 @@
 participant AMQP 1.0 Network
 participant Business Application
 
-Business Application->AMQP 1.0 Network: transfer("control/${tenant_id}/${device_id}", command)
+Business Application->AMQP 1.0 Network: transfer("command/${tenant_id}/${device_id}", command)
 note over AMQP 1.0 Network
 device is not connected
 end note over
