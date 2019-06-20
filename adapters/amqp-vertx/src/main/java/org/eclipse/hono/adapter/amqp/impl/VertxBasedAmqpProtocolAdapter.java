@@ -828,7 +828,8 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                 return doUploadMessage(context, resource, getTelemetrySender(resource.getTenantId()), currentSpan);
             case EVENT:
                 return doUploadMessage(context, resource, getEventSender(resource.getTenantId()), currentSpan);
-            case COMMAND:
+            case COMMAND: // for backwards compatibility: support the legacy "control" endpoint (mapped to COMMAND) for command responses
+            case COMMAND_RESPONSE:
                 return doUploadCommandResponseMessage(context, resource, currentSpan);
             default:
                 return Future
@@ -991,7 +992,8 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             result.fail(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND));
         } else {
             switch (ctx.getEndpoint()) {
-            case COMMAND:
+            case COMMAND: // for backwards compatibility: support the legacy "control" endpoint (mapped to COMMAND) for command responses
+            case COMMAND_RESPONSE:
             case TELEMETRY:
                 result.complete(ctx);
                 break;

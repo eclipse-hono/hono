@@ -47,6 +47,11 @@ public final class MetricsTags {
          */
         COMMAND(CommandConstants.COMMAND_ENDPOINT),
         /**
+         * The endpoint for command &amp; control messages provided by protocol adapters that use a separate endpoint 
+         * for command responses.
+         */
+        COMMAND_RESPONSE(CommandConstants.COMMAND_RESPONSE_ENDPOINT),
+        /**
          * The unknown endpoint.
          */
         UNKNOWN("unknown");
@@ -99,6 +104,8 @@ public final class MetricsTags {
             case CommandConstants.COMMAND_ENDPOINT_SHORT:
             case CommandConstants.COMMAND_LEGACY_ENDPOINT:
                 return COMMAND;
+            case CommandConstants.COMMAND_RESPONSE_ENDPOINT:
+                return COMMAND_RESPONSE;
             default:
                 return UNKNOWN;
             }

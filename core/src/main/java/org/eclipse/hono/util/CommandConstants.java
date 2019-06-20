@@ -34,6 +34,12 @@ public class CommandConstants {
     public static final String COMMAND_ENDPOINT_SHORT = "c";
 
     /**
+     * The name of the Command and Control API endpoint provided by protocol adapters that use a separate endpoint for
+     * command responses.
+     */
+    public static final String COMMAND_RESPONSE_ENDPOINT = "command_response";
+
+    /**
      * The name of the legacy Command and Control API endpoint used by northbound applications.
      */
     public static final String NORTHBOUND_COMMAND_LEGACY_ENDPOINT = "control";
