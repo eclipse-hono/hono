@@ -6,16 +6,16 @@ Device->HTTP Adapter: 1. HTTP request ("POST", "/event", "hono-ttd=30")
 activate HTTP Adapter
 HTTP Adapter->Application: 2. transfer("event/TENANT","4711","ttd=30")
 activate Application
-Application->HTTP Adapter: 3. transfer("control/TENANT/4711","light","ON")
+Application->HTTP Adapter: 3. transfer("command/TENANT/4711","light","ON")
 HTTP Adapter->Device: 4. HTTP response (("200", "hono-cmd=light", "hono-cmd-req-id=${reqId}"), "ON")
 HTTP Adapter->Application: disposition("accepted")
 deactivate HTTP Adapter
 note over Device
 Command response in next operation
 end note over
-Device->HTTP Adapter: 5. HTTP request("POST", "/control/res/${reqId}/200", "lumen=100")
+Device->HTTP Adapter: 5. HTTP request("POST", "/command/res/${reqId}/200", "lumen=100")
 activate HTTP Adapter
-HTTP Adapter->Application: 6. transfer("control/TENANT/4711/${replyId}","status=200","lumen=100")
+HTTP Adapter->Application: 6. transfer("command_response/TENANT/4711/${replyId}","status=200","lumen=100")
 Application->HTTP Adapter: disposition("accepted")
 deactivate Application
 HTTP Adapter->Device: 7. HTTP response ("202")

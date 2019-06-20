@@ -254,8 +254,12 @@ Devices send their responses to commands by means of sending an AMQP message wit
 
 A device MUST use the following source address in its *attach* frame to open a link for receiving commands:
 
-* `control` (authenticated device)
-* `control/${tenant}/${device-id}` (unauthenticated device)
+* `command` (authenticated device)
+* `command/${tenant}/${device-id}` (unauthenticated device)
+
+{{% note %}}
+Previous versions of Hono used `control` instead of `command` as address prefix. Using the `control` prefix is still supported but deprecated. 
+{{% /note %}}
 
 The adapter supports *AT LEAST ONCE* delivery of command messages only. A client therefore MUST use `unsettled` for the *snd-settle-mode* and `first` for the *rcv-settle-mode* fields of its *attach* frame during link establishment. All other combinations are not supported and result in the termination of the link.
 

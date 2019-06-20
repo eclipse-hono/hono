@@ -38,6 +38,10 @@ title = "Release Notes"
   by [Hono's HTTP based management API](https://www.eclipse.org/hono/docs/latest/api/device-registry-v1.yaml) instead.
   Several of the formerly mandatory to include properties of the request and response messages have
   been made optional or removed altogether. Existing clients should not be affected by these changes, though.
+* The `control` prefix in the northbound and southbound Command & Control endpoints has been renamed to `command`. 
+  The endpoint names with the `control` prefix are still supported but deprecated. The northbound endpoint for
+  *business applications* to receive command responses has the `command_response` prefix now. The old `control` prefix
+  for the receiver address is also still supported but deprecated. 
 
 
 ## 1.0-M4

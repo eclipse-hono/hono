@@ -23,7 +23,7 @@ The following sequence diagrams give an overview of a device connecting via HTTP
 
 With the *hono-ttd* request parameter in (1) the device indicates it will stay connected for max. 30 seconds. In the shown example this means that it can handle the response to the HTTP request for up to 30 seconds before considering the request being expired. 
 
-Internally the application is notified that there is a time interval of 30 seconds to send a command (see [Device notifications]({{< relref "device-notifications.md" >}}) for details).  This notification will be consumed by the application (2) and it now tries to send a command (3) to the device at the given address `control/TENANT/4711`.
+Internally the application is notified that there is a time interval of 30 seconds to send a command (see [Device notifications]({{< relref "device-notifications.md" >}}) for details).  This notification will be consumed by the application (2) and it now tries to send a command (3) to the device at the given address `command/TENANT/4711`.
 If the device is not connected or the time interval is expired already, there is no such link open and the application would get no credits so send the command.
 
 The HTTP Adapter gets the command and writes it in the response of the devices `send event` (4), if the request was successful (status 2xx). The HTTP Adapter sets the following response headers and optionally a payload.
@@ -38,7 +38,7 @@ The *hono-cmd* is the command that should be executed by the device. Typically t
 
 **For Request/Response commands**:
 
-The *hono-cmd-req-id* is needed for the command response to correlate it. It has to be sent back from the device to the adapter in a following operation (5). 
+The *hono-cmd-req-id* response header is needed for the command response to correlate it. It has to be sent back from the device to the adapter in a following operation (5). 
  
 The device needs to respond to the command (5), to inform the business application about the outcome of executing the command. For this purpose 
 specific URIs are defined in [HTTP Adapter]({{< relref "/user-guide/http-adapter.md#sending-a-response-to-a-previously-received-command" >}}).
@@ -53,21 +53,21 @@ that was opened by the application. If the response reached the application, the
 
 When the device is connected to the MQTT Adapter it receives *Request/Response* commands on the topic:
 
-* `control/[${tenant}]/[${device-id}]/req/${req-id}/${command}`
+* `command/[${tenant}]/[${device-id}]/req/${req-id}/${command}`
 
 and *one-way* commands on the topic:
 
-* `control/[${tenant}]/[${device-id}]/req//${command}`
+* `command/[${tenant}]/[${device-id}]/req//${command}`
 
 Authenticated devices typically subscribe to
 
-* `control/+/+/req/#`
+* `command/+/+/req/#`
 
 while unauthenticated devices have to fully specify their `${tenant}` and `${device-id}` during the subscription.
 
 The response of the command will be sent by the device to 
 
-* `control/[${tenant}]/[${device-id}]/res/${req-id}/${status}`
+* `command/[${tenant}]/[${device-id}]/res/${req-id}/${status}`
 
 If the device is authenticated, the `${tenant}` and `${device-id}` are left empty (resulting in 3 subsequent `/`s).
 
@@ -85,8 +85,8 @@ The following diagrams show the message flow for commands over the MQTT adapter:
 
 When a device connected to the AMQP adapter wants to receive commands from the adapter, it opens a receiver link specifying the following source address:
 
-* `control` for authenticated devices
-* `control/${tenant}/${device-id}` for unauthenticated devices
+* `command` for authenticated devices
+* `command/${tenant}/${device-id}` for unauthenticated devices
 
 Once the receiver link is opened, the AMQP adapter sends command messages to devices through the link. The *subject* property of the request message contains the actual command to be executed on the device.
 
