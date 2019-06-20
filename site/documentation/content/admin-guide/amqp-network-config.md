@@ -6,7 +6,7 @@ weight = 345
 The *Qpid Dispatch Router*, together with the *Apache Artemis* message broker, serves as the default *AMQP 1.0 Messaging Network* that is used in Hono's example deployment as described in the [Deployment Guides]({{< relref "deployment" >}}).
 <!--more-->
 
-The Dispatch Router component exposes service endpoints implementing the *north bound* part of Hono's [Telemetry]({{< relref "Telemetry-API.md" >}}), [Event]({{< relref "Event-API.md" >}}) and [Command & Control]({{< relref "Command-and-Control-API.md" >}}) APIs which are used by applications to interact with devices.
+The Dispatch Router component exposes service endpoints implementing the *north bound* part of Hono's [Telemetry]({{< relref "Telemetry-API.md" >}}), [Event]({{< relref "Event-API.md" >}}) and [Command & Control]({{< relref "Command-And-Control-API.md" >}}) APIs which are used by applications to interact with devices.
 
 
 ## Dispatch Router Configuration
