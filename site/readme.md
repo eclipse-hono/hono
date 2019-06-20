@@ -2,7 +2,7 @@ This folder contains the content of the Hono website.
 It is built using the [Hugo template system](https://gohugo.io).
 The website consists of the homepage and the documentation, which are two separate hugo projects. 
 
-# Building
+# Building locally
 
 In order to build the site
 
@@ -16,8 +16,7 @@ This will render the HTML pages constituting the site into `~/hono/site/target`.
 Please refer to the Hugo documentation for more options.
 
 **The result of this build is not what is being deployed to the actual Hono web site, which is more complex and includes
- documentation of older versions.** This is done by the jenkins pipelines `jenkins/Hono-Release-Pipeline.groovy` 
- and `jenkins/Hono-Website-Pipeline.groovy`.
+ documentation of older versions** (see below).
 
 # Debugging
 
@@ -36,5 +35,50 @@ The web site is available at https://www.eclipse.org/hono.
 
 Publishing changes to the web site is done by means of pushing HTML files and other content to Hono's
 web site Git repository at the Eclipse Foundation.
-This is performed every night by the Eclipse build server using the Jenkins pipeline 
-script `~/hono/jenkins/Hono-Website-Pipeline.groovy`.
+This is performed every night by the Eclipse build server.
+
+## Release and Versioning
+
+For each supported version of Hono a separate version of the documentation is build. This is mostly automated by 
+Jenkins pipelines. 
+
+The build process of the documentation makes assumptions on the release of Hono. First of all the 
+[Semantic Versioning](https://semver.org/) schema is used for version numbers. For the purpose of the documentation 
+a version only includes MAJOR and MINOR level, meaning that the documentation always reflects the latest patch level 
+of a MINOR (+ MAJOR) version of Hono.
+
+Every *newly* released MINOR (or MAJOR) version is considered to be the stable version.
+
+The files `site/homepage/versions_supported.csv` and `site/homepage/tag_stable.txt` determine which versions of the
+documentation are published. They are _written_ by the release pipeline (`jenkins/Hono-Release-Pipeline.groovy`) and 
+_read_ by the website pipeline (`jenkins/Hono-Website-Pipeline.groovy`).
+
+The website pipeline builds the following versions:
+
+* `latest`: always built from the current `HEAD` of the master branch
+* each version in `site/homepage/versions_supported.csv`
+* `stable`: the version from the Git tag in the file `site/homepage/tag_stable.txt` (if the file exists and contains a Git tag)
+
+### What are the checkboxes in the release pipeline doing?
+
+If the checkbox *DEPLOY_DOCUMENTATION* is checked, the version that is being released is added (appended) to the file
+ `site/homepage/versions_supported.csv`.
+If the checkbox *STABLE_DOCUMENTATION* is checked additionally the Git tag of the version that is being released is 
+written to the file `site/homepage/tag_stable.txt` (replaces the previous content). 
+ 
+NB: Even though a change only on the patch level is not considered a new version, don't forget to check the 
+checkboxes *DEPLOY_DOCUMENTATION* and *STABLE_DOCUMENTATION* in the release pipeline when releasing a patch for 
+the stable version.
+
+### How to set the checkboxes when releasing a new version?
+
+| I want to release a new...    | Example   | `DEPLOY_DOCUMENTATION`    | `STABLE_DOCUMENTATION` |
+ ---                            | ---       | ---                       | --- 
+MINOR version                   | 1.**1**.0 | &#x2611;                  | &#x2611;       
+MAJOR version                   | **2**.0.0 | &#x2611;                  | &#x2611;       
+PATCH level on _stable_ version | 2.0.**1** | &#x2611;                  | &#x2611;       
+PATCH level on older version    | 1.1.**1** | &#x2611;                  | &#x2610;       
+pre-release version             | 2.1.0-M1  | &#x2610;                  | &#x2610;       
+
+Versions that are no longer supported need to be manually removed from `site/homepage/versions_supported.csv`. Same goes
+for old patch releases of a supported version. 
