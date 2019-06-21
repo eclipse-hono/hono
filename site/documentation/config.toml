@@ -45,7 +45,7 @@ pluralizeListTitles = "false"
   
   # Twitter
   twitter = "EclipseHono"
-  twitterImage = "images/HONO-Logo_Bild-Wort_quer-w-310x120px.svg"
+  twitterImage = "images/twitter_image.png"
 
 [blackfriday]
   smartypants = true
