@@ -390,30 +390,6 @@ paths:
             412:
                $ref: '#/components/responses/ResourceVersionMismatch'
 
-      delete:
-         tags:
-            - credentials
-         summary: Delete all credentials of a device
-         description: |
-             Deletes all credentials from a device registration. The device is
-             still registered, and a following call to *get* credentials must
-             not return `404`, as the device is still registered. Instead an
-             empty result must be returned.
-         operationId: deleteAllCredentials
-         parameters:
-            - $ref: '#/components/parameters/resourceVersion'
-         responses:
-            204:
-               $ref: '#/components/responses/Deleted'
-            401:
-               $ref: '#/components/responses/Unauthorized'
-            403:
-               $ref: '#/components/responses/NotAllowed'
-            404:
-               $ref: '#/components/responses/NotFound'
-            412:
-               $ref: '#/components/responses/ResourceVersionMismatch'
-
 components:
 
    schemas:
