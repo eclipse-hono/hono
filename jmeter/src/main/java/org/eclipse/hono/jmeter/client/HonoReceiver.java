@@ -15,8 +15,6 @@ package org.eclipse.hono.jmeter.client;
 
 import java.util.concurrent.CompletableFuture;
 
-import javax.jms.IllegalStateException;
-
 import org.apache.jmeter.samplers.SampleResult;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ApplicationClientFactory;
