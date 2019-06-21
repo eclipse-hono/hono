@@ -72,6 +72,11 @@
       <property name="scope" value="protected"/>
       <property name="ignoreMethodNamesRegex" value="^main$"/>
       <property name="allowMissingPropertyJavadoc" value="true"/>
+      <!--
+        prevent failing the check if checkstyle is unable to load an exception class
+        which might happen occasionally
+      -->
+      <property name="suppressLoadErrors" value="true"/>
     </module>
     <module name="JavadocStyle"/>
     <module name="JavadocType"/>
