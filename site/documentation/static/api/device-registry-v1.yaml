@@ -527,23 +527,25 @@ components:
 
       CredentialsSet:
          type: array
+         description: A set of credentials. The entries in this list must be
+                      unique by the composite key of `auth-id` and `type`.
          items:
-            $ref: '#/components/schemas/TypedSecret'
+            $ref: '#/components/schemas/TypedCredentials'
 
-      TypedSecret:
+      TypedCredentials:
          additionalProperties: false
          oneOf:
-            - $ref: '#/components/schemas/PasswordSecret'
-            - $ref: '#/components/schemas/PSKSecret'
-            - $ref: '#/components/schemas/X509CertificateSecret'
+            - $ref: '#/components/schemas/PasswordCredentials'
+            - $ref: '#/components/schemas/PSKCredentials'
+            - $ref: '#/components/schemas/X509CertificateCredentials'
          discriminator:
             propertyName: type
             mapping:
-               "hashed-password": '#/components/schemas/PasswordSecret'
-               "psk": '#/components/schemas/PSKSecret'
-               "x509-cert": '#/components/schemas/X509CertificateSecret'
+               "hashed-password": '#/components/schemas/PasswordCredentials'
+               "psk": '#/components/schemas/PSKCredentials'
+               "x509-cert": '#/components/schemas/X509CertificateCredentials'
 
-      CommonSecret:
+      CommonCredentials:
          type: object
          additionalProperties: false
          required:
@@ -554,6 +556,52 @@ components:
                type: string
             "auth-id":
                type: string
+            "enabled":
+               type: boolean
+               default: true
+            "ext":
+               $ref: '#/components/schemas/Extensions'
+
+      PasswordCredentials:
+         additionalProperties: false
+         allOf:
+            - $ref: '#/components/schemas/CommonCredentials'
+            - type: object
+              additionalProperties: false
+              properties:
+                 "secrets":
+                    type: array
+                    items:
+                       $ref: '#/components/schemas/PasswordSecret'
+
+      PSKCredentials:
+         additionalProperties: false
+         allOf:
+            - $ref: '#/components/schemas/CommonCredentials'
+            - type: object
+              additionalProperties: false
+              properties:
+                 "secrets":
+                    type: array
+                    items:
+                       $ref: '#/components/schemas/PSKSecret'
+
+      X509CertificateCredentials:
+         additionalProperties: false
+         allOf:
+            - $ref: '#/components/schemas/CommonCredentials'
+            - type: object
+              additionalProperties: false
+              properties:
+                 "secrets":
+                    type: array
+                    items:
+                       $ref: '#/components/schemas/X509CertificateSecret'
+
+      CommonSecret:
+         type: object
+         additionalProperties: false
+         properties:
             "enabled":
                type: boolean
                default: true
