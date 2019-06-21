@@ -70,16 +70,15 @@
   <!-- Twitter Card meta tags -->
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:site" content="@{{ .Site.Params.twitter }}">
-  <meta name="twitter:title" content="{{ if .Title }}{{ .Title }}{{ else }}{{ .Site.Title }}{{ end }}">
-  {{ if .Params.banner }}<meta name="twitter:image" content="{{ .Params.banner | absURL }}">
-  {{ else }}<meta name="twitter:image" content="{{ .Site.Params.twitterImage | absURL }}">
-  {{ end }}<meta name="twitter:description" content="{{ if .Params.description }}{{ .Params.description }}{{ else }}{{ .Site.Params.defaultDescription }}{{ end }}">
+  <meta name="twitter:title" content="{{ .Title }} :: {{ .Site.Title }}">
+  <meta name="twitter:image" content="{{ .Site.Params.twitterImage | absURL }}">
+  <meta name="twitter:description" content="{{ if .Params.description }}{{ .Params.description }}{{ else }}{{ .Site.Params.defaultDescription }}{{ end }}">
 
   <!-- Facebook OpenGraph tags -->
-  <meta property="og:title" content="{{ .Title }}" />
+  <meta property="og:title" content="{{ .Title }} :: {{ .Site.Title }}" />
   <meta property="og:type" content="website" />
   <meta property="og:url" content="{{ .Permalink }}/" />
-  <meta property="og:image" content="{{ .Site.Params.logo }}" />
+  <meta property="og:image" content="{{ .Site.Params.twitterImage | absURL }}" />
 
   <link rel="stylesheet" href="https://www.eclipse.org/eclipse.org-common/themes/solstice/public/stylesheets/vendor/cookieconsent/cookieconsent.min.css">
 
