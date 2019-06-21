@@ -31,6 +31,12 @@ hono:
     port: 5671
     credentialsPath: ${secret.path}/http-adapter.credentials
     trustStorePath: ${secret.path}/trusted-certs.pem
+  deviceConnection:
+    name: 'Hono HTTP Adapter'
+    host: ${hono.registration.service}${service.suffix}
+    port: 5671
+    credentialsPath: ${secret.path}/http-adapter.credentials
+    trustStorePath: ${secret.path}/trusted-certs.pem
   command:
     name: 'Hono HTTP Adapter'
     host: messaging${service.suffix}

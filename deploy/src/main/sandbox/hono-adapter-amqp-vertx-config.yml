@@ -29,6 +29,11 @@ hono:
     host: ${hono.registration.service}${service.suffix}
     port: 5672
     credentialsPath: /run/secrets/amqp-adapter.credentials
+  deviceConnection:
+    name: 'Hono AMQP Adapter'
+    host: ${hono.registration.service}${service.suffix}
+    port: 5672
+    credentialsPath: /run/secrets/amqp-adapter.credentials
   command:
     name: 'Hono AMQP Adapter'
     amqpHostname: hono-internal

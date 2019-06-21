@@ -31,6 +31,11 @@ hono:
     host: ${hono.registration.service}${service.suffix}
     port: 5672
     credentialsPath: /run/secrets/mqtt-adapter.credentials
+  deviceConnection:
+    name: 'Hono MQTT Adapter'
+    host: ${hono.registration.service}${service.suffix}
+    port: 5672
+    credentialsPath: /run/secrets/mqtt-adapter.credentials
   command:
     name: 'Hono MQTT Adapter'
     host: ${hono.amqp-network.service}${service.suffix}

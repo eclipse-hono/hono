@@ -45,6 +45,14 @@ hono:
     password: mqtt-secret
     linkEstablishmentTimeout: ${link.establishment.timeout}
     flowLatency: ${flow.latency}
+  deviceConnection:
+    name: 'Hono MQTT Adapter'
+    host: ${hono.registration.host}
+    port: 5672
+    username: mqtt-adapter@HONO
+    password: mqtt-secret
+    linkEstablishmentTimeout: ${link.establishment.timeout}
+    flowLatency: ${flow.latency}
   command:
     name: 'Hono MQTT Adapter'
     host: ${hono.amqp-network.host}
