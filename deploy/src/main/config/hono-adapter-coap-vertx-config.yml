@@ -33,6 +33,12 @@ hono:
     port: 5671
     credentialsPath: ${secret.path}/coap-adapter.credentials
     trustStorePath: ${secret.path}/trusted-certs.pem
+  deviceConnection:
+    name: 'Hono COAP Adapter'
+    host: ${hono.registration.service}${service.suffix}
+    port: 5671
+    credentialsPath: ${secret.path}/coap-adapter.credentials
+    trustStorePath: ${secret.path}/trusted-certs.pem
   command:
     name: 'Hono COAP Adapter'
     amqpHostname: hono-internal

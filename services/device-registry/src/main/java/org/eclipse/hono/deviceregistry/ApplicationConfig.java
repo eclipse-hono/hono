@@ -24,6 +24,7 @@ import org.eclipse.hono.service.HealthCheckServer;
 import org.eclipse.hono.service.VertxBasedHealthCheckServer;
 import org.eclipse.hono.service.credentials.CredentialsAmqpEndpoint;
 import org.eclipse.hono.service.credentials.CredentialsHttpEndpoint;
+import org.eclipse.hono.service.deviceconnection.DeviceConnectionAmqpEndpoint;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.service.registration.RegistrationAmqpEndpoint;
 import org.eclipse.hono.service.registration.RegistrationHttpEndpoint;
@@ -151,6 +152,17 @@ public class ApplicationConfig {
     @Scope("prototype")
     public TenantAmqpEndpoint tenantAmqpEndpoint() {
         return new TenantAmqpEndpoint(vertx());
+    }
+
+    /**
+     * Creates a new instance of an AMQP 1.0 protocol handler for Hono's <em>Device Connection</em> API.
+     *
+     * @return The handler.
+     */
+    @Bean
+    @Scope("prototype")
+    public DeviceConnectionAmqpEndpoint deviceConnectionAmqpEndpoint() {
+        return new DeviceConnectionAmqpEndpoint(vertx());
     }
 
     /**
@@ -283,6 +295,18 @@ public class ApplicationConfig {
     @ConfigurationProperties(prefix = "hono.tenant.svc")
     public FileBasedTenantsConfigProperties tenantsProperties() {
         return new FileBasedTenantsConfigProperties();
+    }
+
+    /**
+     * Gets properties for configuring {@code InMemoryDeviceConnectionService} which implements
+     * the <em>Device Connection</em> API.
+     *
+     * @return The properties.
+     */
+    @Bean
+    @ConfigurationProperties(prefix = "hono.deviceConnection.svc")
+    public MapBasedDeviceConnectionsConfigProperties deviceConnectionsProperties() {
+        return new MapBasedDeviceConnectionsConfigProperties();
     }
 
     /**

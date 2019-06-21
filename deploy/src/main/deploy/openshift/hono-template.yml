@@ -359,6 +359,12 @@ objects:
           trustStorePath: /var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt
           trustStoreFormat: PEM
           credentialsPath: /etc/secrets/registry.properties
+        deviceConnection:
+          name: 'Hono AMQP Adapter'
+          port: 5671
+          trustStorePath: /var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt
+          trustStoreFormat: PEM
+          credentialsPath: /etc/secrets/registry.properties
 
     logback-spring.xml: |+
         <?xml version="1.0" encoding="UTF-8"?>
@@ -685,6 +691,12 @@ objects:
           trustStoreFormat: PEM
           credentialsPath: /etc/secrets/registry.properties
         tenant:
+          name: 'Hono MQTT Adapter'
+          port: 5671
+          trustStorePath: /var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt
+          trustStoreFormat: PEM
+          credentialsPath: /etc/secrets/registry.properties
+        deviceConnection:
           name: 'Hono MQTT Adapter'
           port: 5671
           trustStorePath: /var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt
@@ -1046,6 +1058,12 @@ objects:
           trustStoreFormat: PEM
           credentialsPath: /etc/secrets/registry.properties
         tenant:
+          name: 'Hono HTTP Adapter'
+          port: 5671
+          trustStorePath: /var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt
+          trustStoreFormat: PEM
+          credentialsPath: /etc/secrets/registry.properties
+        deviceConnection:
           name: 'Hono HTTP Adapter'
           port: 5671
           trustStorePath: /var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt

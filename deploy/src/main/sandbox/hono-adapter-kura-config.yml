@@ -30,6 +30,11 @@ hono:
     host: ${hono.registration.service}${service.suffix}
     port: 5672
     credentialsPath: /run/secrets/kura-adapter.credentials
+  deviceConnection:
+    name: 'Hono Kura Adapter'
+    host: ${hono.registration.service}${service.suffix}
+    port: 5672
+    credentialsPath: /run/secrets/kura-adapter.credentials
   command:
     name: 'Hono Kura Adapter'
     host: ${hono.amqp-network.service}${service.suffix}

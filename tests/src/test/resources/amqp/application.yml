@@ -44,6 +44,14 @@ hono:
     password: amqp-secret
     linkEstablishmentTimeout: ${link.establishment.timeout}
     flowLatency: ${flow.latency}
+  deviceConnection:
+    name: 'Hono AMQP Adapter'
+    host: ${hono.registration.host}
+    port: 5672 # AMQP port of the device registry
+    username: amqp-adapter@HONO
+    password: amqp-secret
+    linkEstablishmentTimeout: ${link.establishment.timeout}
+    flowLatency: ${flow.latency}
   command:
     name: 'Hono AMQP Adapter'
     host: ${hono.amqp-network.host}

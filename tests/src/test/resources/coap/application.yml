@@ -45,6 +45,14 @@ hono:
     password: coap-secret
     linkEstablishmentTimeout: ${link.establishment.timeout}
     flowLatency: ${flow.latency}
+  deviceConnection:
+    name: 'Hono CoAP Adapter'
+    host: ${hono.registration.host}
+    port: 5672
+    username: coap-adapter@HONO
+    password: coap-secret
+    linkEstablishmentTimeout: ${link.establishment.timeout}
+    flowLatency: ${flow.latency}
   command:
     name: 'Hono CoAP Adapter'
     host: ${hono.amqp-network.host}

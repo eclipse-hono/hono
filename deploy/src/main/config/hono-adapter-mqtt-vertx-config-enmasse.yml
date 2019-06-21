@@ -31,6 +31,12 @@ hono:
     port: 5671
     credentialsPath: ${secret.path}/mqtt-adapter.credentials
     trustStorePath: ${secret.path}/trusted-certs.pem
+  deviceConnection:
+    name: 'Hono MQTT Adapter'
+    host: ${hono.registration.service}${service.suffix}
+    port: 5671
+    credentialsPath: ${secret.path}/mqtt-adapter.credentials
+    trustStorePath: ${secret.path}/trusted-certs.pem
   command:
     name: 'Hono MQTT Adapter'
     host: messaging${service.suffix}
