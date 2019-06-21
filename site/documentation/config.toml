@@ -1,7 +1,7 @@
 baseurl = "https://www.eclipse.org/hono/docs/latest/" # might be overriden during build by value in site/documentation/config_release_version.toml
 
 languageCode = "en-us"
-title = "Eclipse Hono"
+title = "Eclipse Hono&trade;"
 theme = "hugo-theme-learn"
 metadataformat = "toml"
 canonifyurls = false

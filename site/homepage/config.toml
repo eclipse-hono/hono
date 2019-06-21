@@ -1,6 +1,6 @@
 baseurl = "https://www.eclipse.org/hono/"
 languageCode = "en-us"
-title = "Eclipse Hono"
+title = "Eclipse Hono&trade;"
 theme = "hugo-universal-theme"
 metadataformat = "toml"
 canonifyurls = false
