@@ -15,7 +15,6 @@ package org.eclipse.hono.adapter.sigfox.impl;
 
 import javax.annotation.PostConstruct;
 
-import org.eclipse.hono.adapter.http.HttpProtocolAdapterProperties;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.service.AbstractAdapterConfig;
@@ -41,7 +40,7 @@ public class Config extends AbstractAdapterConfig {
 
     @PostConstruct
     void validateConfiguration() {
-        final HttpProtocolAdapterProperties httpProtocolAdapterProperties = adapterProperties();
+        final SigfoxProtocolAdapterProperties httpProtocolAdapterProperties = adapterProperties();
         if (!httpProtocolAdapterProperties.isAuthenticationRequired()) {
             throw new IllegalStateException(
                     "SigFox Protocol Adapter does not support unauthenticated mode. Please change your configuration accordingly.");
@@ -105,9 +104,9 @@ public class Config extends AbstractAdapterConfig {
      * @return The configuration properties.
      */
     @Bean
-    @ConfigurationProperties(prefix = "hono.http")
-    public HttpProtocolAdapterProperties adapterProperties() {
-        return new HttpProtocolAdapterProperties();
+    @ConfigurationProperties(prefix = "hono.sigfox")
+    public SigfoxProtocolAdapterProperties adapterProperties() {
+        return new SigfoxProtocolAdapterProperties();
     }
 
     /**
