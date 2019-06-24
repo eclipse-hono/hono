@@ -46,6 +46,7 @@ import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.CommandConsumerFactory;
 import org.eclipse.hono.client.CredentialsClientFactory;
+import org.eclipse.hono.client.DeviceConnectionClientFactory;
 import org.eclipse.hono.client.DownstreamSender;
 import org.eclipse.hono.client.DownstreamSenderFactory;
 import org.eclipse.hono.client.HonoConnection;
@@ -99,6 +100,7 @@ public class AbstractVertxBasedCoapAdapterTest {
     private TenantClient tenantClient;
     private CoapAdapterProperties config;
     private CommandConsumerFactory commandConsumerFactory;
+    private DeviceConnectionClientFactory deviceConnectionClientFactory;
     private ResourceLimitChecks resourceLimitChecks;
 
     /**
@@ -137,6 +139,9 @@ public class AbstractVertxBasedCoapAdapterTest {
 
         commandConsumerFactory = mock(CommandConsumerFactory.class);
         when(commandConsumerFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
+
+        deviceConnectionClientFactory = mock(DeviceConnectionClientFactory.class);
+        when(deviceConnectionClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
 
         resourceLimitChecks = mock(ResourceLimitChecks.class);
         when(resourceLimitChecks.isMessageLimitReached(any(TenantObject.class), anyLong()))
@@ -588,6 +593,7 @@ public class AbstractVertxBasedCoapAdapterTest {
             adapter.setCredentialsClientFactory(credentialsClientFactory);
         }
         adapter.setCommandConsumerFactory(commandConsumerFactory);
+        adapter.setDeviceConnectionClientFactory(deviceConnectionClientFactory);
         adapter.setMetrics(mock(CoapAdapterMetrics.class));
         adapter.setResourceLimitChecks(resourceLimitChecks);
         adapter.init(vertx, mock(Context.class));

@@ -19,21 +19,30 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
+import java.net.HttpURLConnection;
+import java.util.Collections;
+
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.Command;
 import org.eclipse.hono.client.CommandContext;
+import org.eclipse.hono.client.DeviceConnectionClient;
+import org.eclipse.hono.client.DeviceConnectionClientFactory;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.RegistrationClientFactory;
 import org.eclipse.hono.util.CommandConstants;
-import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.DeviceConnectionConstants;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 
 import io.opentracing.Span;
+import io.opentracing.SpanContext;
+import io.opentracing.Tracer;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.proton.ProtonDelivery;
 import io.vertx.proton.ProtonReceiver;
@@ -44,6 +53,7 @@ import io.vertx.proton.ProtonReceiver;
 public class GatewayMappingCommandHandlerTest {
 
     private RegistrationClient regClient;
+    private DeviceConnectionClient devConClient;
     private String tenantId;
     private String deviceId;
     private Handler<CommandContext> nextCommandHandler;
@@ -56,13 +66,25 @@ public class GatewayMappingCommandHandlerTest {
      */
     @Before
     public void setup() {
+        final SpanContext spanContext = mock(SpanContext.class);
+        final Span span = mock(Span.class);
+        when(span.context()).thenReturn(spanContext);
+        final Tracer.SpanBuilder spanBuilder = HonoClientUnitTestHelper.mockSpanBuilder(span);
+        final Tracer tracer = mock(Tracer.class);
+        when(tracer.buildSpan(anyString())).thenReturn(spanBuilder);
+
         tenantId = "testTenant";
         deviceId = "testDevice";
         regClient = mock(RegistrationClient.class);
         final RegistrationClientFactory registrationClientFactory = mock(RegistrationClientFactory.class);
         when(registrationClientFactory.getOrCreateRegistrationClient(anyString()))
                 .thenReturn(Future.succeededFuture(regClient));
-        final GatewayMapperImpl gatewayMapper = new GatewayMapperImpl(registrationClientFactory);
+
+        devConClient = mock(DeviceConnectionClient.class);
+        final DeviceConnectionClientFactory deviceConnectionClientFactory = mock(DeviceConnectionClientFactory.class);
+        when(deviceConnectionClientFactory.getOrCreateDeviceConnectionClient(anyString()))
+                .thenReturn(Future.succeededFuture(devConClient));
+        final GatewayMapperImpl gatewayMapper = new GatewayMapperImpl(registrationClientFactory, deviceConnectionClientFactory, tracer);
 
         nextCommandHandler = mockHandler();
         gatewayMappingCommandHandler = new GatewayMappingCommandHandler(gatewayMapper, nextCommandHandler);
@@ -78,14 +100,14 @@ public class GatewayMappingCommandHandlerTest {
     }
 
     /**
-     * Verifies that the <em>handle</em> method behaves correctly when called in the context of a device for which 'via'
-     * is not set.
+     * Verifies that the <em>handle</em> method behaves correctly when called in the context of a device for which no
+     * 'via' entry is set.
      */
     @Test
     public void testHandleUsingEmptyDeviceData() {
-        // GIVEN deviceData with no 'via'
-        final JsonObject deviceData = new JsonObject();
-        when(regClient.get(anyString(), any())).thenReturn(Future.succeededFuture(deviceData));
+        // GIVEN assertRegistrationResult with no 'via'
+        final JsonObject assertRegistrationResult = new JsonObject();
+        when(regClient.assertRegistration(anyString(), any(), any())).thenReturn(Future.succeededFuture(assertRegistrationResult));
 
         // WHEN handle() is invoked
         gatewayMappingCommandHandler.handle(commandContext);
@@ -97,47 +119,51 @@ public class GatewayMappingCommandHandlerTest {
     }
 
     /**
-     * Verifies that the <em>handle</em> method behaves correctly when called in the context of a device for which 'via'
-     * and 'last-via' is set.
+     * Verifies that the <em>handle</em> method behaves correctly when called in the context of a device for which a
+     * 'via' entry is set and for which the last known gateway is set.
      */
     @Test
-    public void testHandleUsingDeviceDataWithLastVia() {
-        final String deviceViaId = "testDeviceVia";
+    public void testHandleReturningLastUsedGateway() {
+        final String gatewayId = "testDeviceVia";
 
-        // GIVEN deviceData with 'via' and 'last-via'
-        final JsonObject deviceData = new JsonObject();
-        deviceData.put(RegistrationConstants.FIELD_VIA, deviceViaId);
-        final JsonObject lastViaObject = new JsonObject();
-        lastViaObject.put(Constants.JSON_FIELD_DEVICE_ID, deviceViaId);
-        deviceData.put(RegistrationConstants.FIELD_LAST_VIA, lastViaObject);
-        when(regClient.get(anyString(), any())).thenReturn(Future.succeededFuture(deviceData));
+        // GIVEN assertRegistration result with non-empty 'via'
+        final JsonObject assertRegistrationResult = new JsonObject();
+        final JsonArray viaArray = new JsonArray(Collections.singletonList(gatewayId));
+        assertRegistrationResult.put(RegistrationConstants.FIELD_VIA, viaArray);
+        when(regClient.assertRegistration(anyString(), any(), any())).thenReturn(Future.succeededFuture(assertRegistrationResult));
+        // and a non-empty getLastKnownGatewayForDevice result
+        final JsonObject lastKnownGatewayResult = new JsonObject();
+        lastKnownGatewayResult.put(DeviceConnectionConstants.FIELD_GATEWAY_ID, gatewayId);
+        when(devConClient.getLastKnownGatewayForDevice(anyString(), any())).thenReturn(Future.succeededFuture(lastKnownGatewayResult));
 
         // WHEN handle() is invoked
         gatewayMappingCommandHandler.handle(commandContext);
 
-        // THEN the nextCommandHandler is called with an adapted commandContext (with deviceViaId)
+        // THEN the nextCommandHandler is called with an adapted commandContext (with gatewayId)
         final ArgumentCaptor<CommandContext> commandContextArgumentCaptor = ArgumentCaptor.forClass(CommandContext.class);
         verify(nextCommandHandler).handle(commandContextArgumentCaptor.capture());
-        assertThat(commandContextArgumentCaptor.getValue().getCommand().getDeviceId(), is(deviceViaId));
+        assertThat(commandContextArgumentCaptor.getValue().getCommand().getDeviceId(), is(gatewayId));
     }
 
     /**
-     * Verifies that the <em>handle</em> method behaves correctly when called in the context of a device for which 'via'
-     * and 'last-via' is set and where the command has a 'reply-to' value set.
+     * Verifies that the <em>handle</em> method behaves correctly when called in the context of a device for which a
+     * 'via' entry is set and for which the last known gateway is set and where the command has a 'reply-to' value set.
      */
     @Test
-    public void testHandleUsingDeviceDataWithLastViaAndCommandWithReplyTo() {
-        final String deviceViaId = "testDeviceVia";
+    public void testHandleReturningLastUsedGatewayWithCommandReplyToSet() {
+        final String gatewayId = "testDeviceVia";
         final String replyToId = "the-reply-to-id";
         final String replyTo = String.format("%s/%s/%s", CommandConstants.NORTHBOUND_COMMAND_RESPONSE_ENDPOINT, tenantId, replyToId);
 
-        // GIVEN deviceData with 'via' and 'last-via'
-        final JsonObject deviceData = new JsonObject();
-        deviceData.put(RegistrationConstants.FIELD_VIA, deviceViaId);
-        final JsonObject lastViaObject = new JsonObject();
-        lastViaObject.put(Constants.JSON_FIELD_DEVICE_ID, deviceViaId);
-        deviceData.put(RegistrationConstants.FIELD_LAST_VIA, lastViaObject);
-        when(regClient.get(anyString(), any())).thenReturn(Future.succeededFuture(deviceData));
+        // GIVEN assertRegistration result with non-empty 'via'
+        final JsonObject assertRegistrationResult = new JsonObject();
+        final JsonArray viaArray = new JsonArray(Collections.singletonList(gatewayId));
+        assertRegistrationResult.put(RegistrationConstants.FIELD_VIA, viaArray);
+        when(regClient.assertRegistration(anyString(), any(), any())).thenReturn(Future.succeededFuture(assertRegistrationResult));
+        // and a non-empty getLastKnownGatewayForDevice result
+        final JsonObject lastKnownGatewayResult = new JsonObject();
+        lastKnownGatewayResult.put(DeviceConnectionConstants.FIELD_GATEWAY_ID, gatewayId);
+        when(devConClient.getLastKnownGatewayForDevice(anyString(), any())).thenReturn(Future.succeededFuture(lastKnownGatewayResult));
 
         // AND a commandMessage with reply-to set
         when(commandMessage.getReplyTo()).thenReturn(replyTo);
@@ -150,25 +176,56 @@ public class GatewayMappingCommandHandlerTest {
         // WHEN handle() is invoked
         gatewayMappingCommandHandler.handle(commandContext);
 
-        // THEN the nextCommandHandler is called with an adapted commandContext (with deviceViaId) and original reply-to id
+        // THEN the nextCommandHandler is called with an adapted commandContext (with gatewayId) and original reply-to id
         final ArgumentCaptor<CommandContext> commandContextArgumentCaptor = ArgumentCaptor.forClass(CommandContext.class);
         verify(nextCommandHandler).handle(commandContextArgumentCaptor.capture());
-        assertThat(commandContextArgumentCaptor.getValue().getCommand().getDeviceId(), is(deviceViaId));
+        assertThat(commandContextArgumentCaptor.getValue().getCommand().getDeviceId(), is(gatewayId));
         assertThat(commandContextArgumentCaptor.getValue().getCommand().getCommandMessage().getReplyTo(), is(replyTo));
     }
 
     /**
-     * Verifies that the <em>handle</em> method behaves correctly when called in the context of a device for which 'via'
-     * is set but 'last-via' is not set.
+     * Verifies that the <em>handle</em> method behaves correctly when called in the context of a device for which the
+     * 'via' entry contains one gateway and for which no last known gateway is set.
      */
     @Test
-    public void testHandleUsingDeviceDataWithoutLastVia() {
-        final String deviceViaId = "testDeviceVia";
+    public void testHandleReturningSingleViaGateway() {
+        final String gatewayId = "testDeviceVia";
 
-        // GIVEN deviceData with 'via' but no 'last-via'
-        final JsonObject deviceData = new JsonObject();
-        deviceData.put(RegistrationConstants.FIELD_VIA, deviceViaId);
-        when(regClient.get(anyString(), any())).thenReturn(Future.succeededFuture(deviceData));
+        // GIVEN assertRegistrationResult with a single 'via' array entry
+        final JsonObject assertRegistrationResult = new JsonObject();
+        final JsonArray viaArray = new JsonArray(Collections.singletonList(gatewayId));
+        assertRegistrationResult.put(RegistrationConstants.FIELD_VIA, viaArray);
+        when(regClient.assertRegistration(anyString(), any(), any())).thenReturn(Future.succeededFuture(assertRegistrationResult));
+        // and a 404 getLastKnownGatewayForDevice response
+        when(devConClient.getLastKnownGatewayForDevice(anyString(), any()))
+                .thenReturn(Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND)));
+
+        // WHEN handle() is invoked
+        gatewayMappingCommandHandler.handle(commandContext);
+
+        // THEN the nextCommandHandler is called with an adapted commandContext (with gatewayId)
+        final ArgumentCaptor<CommandContext> commandContextArgumentCaptor = ArgumentCaptor.forClass(CommandContext.class);
+        verify(nextCommandHandler).handle(commandContextArgumentCaptor.capture());
+        assertThat(commandContextArgumentCaptor.getValue().getCommand().getDeviceId(), is(gatewayId));
+    }
+
+    /**
+     * Verifies that the <em>handle</em> method behaves correctly when no mapped gateway could be determined.
+     */
+    @Test
+    public void testHandleWithNoMappedGatewayFound() {
+        final String gatewayId = "testDeviceVia";
+
+        // GIVEN assertRegistrationResult with 'via'
+        final JsonObject assertRegistrationResult = new JsonObject();
+        final JsonArray viaArray = new JsonArray();
+        viaArray.add(gatewayId);
+        viaArray.add("otherGatewayId");
+        assertRegistrationResult.put(RegistrationConstants.FIELD_VIA, viaArray);
+        when(regClient.assertRegistration(anyString(), any(), any())).thenReturn(Future.succeededFuture(assertRegistrationResult));
+        // and a 404 getLastKnownGatewayForDevice response
+        when(devConClient.getLastKnownGatewayForDevice(anyString(), any()))
+                .thenReturn(Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND)));
 
         // WHEN handle() is invoked
         gatewayMappingCommandHandler.handle(commandContext);
@@ -184,7 +241,7 @@ public class GatewayMappingCommandHandlerTest {
     @Test
     public void testHandleWithRegistrationClientException() {
         // GIVEN a registrationClient that returns a failed future
-        when(regClient.get(anyString(), any())).thenReturn(Future.failedFuture("expected exception"));
+        when(regClient.assertRegistration(anyString(), any(), any())).thenReturn(Future.failedFuture("expected exception"));
 
         // WHEN handle() is invoked
         gatewayMappingCommandHandler.handle(commandContext);

@@ -38,6 +38,7 @@ import org.eclipse.hono.client.CommandContext;
 import org.eclipse.hono.client.CommandResponse;
 import org.eclipse.hono.client.CommandResponseSender;
 import org.eclipse.hono.client.CredentialsClientFactory;
+import org.eclipse.hono.client.DeviceConnectionClientFactory;
 import org.eclipse.hono.client.DownstreamSender;
 import org.eclipse.hono.client.DownstreamSenderFactory;
 import org.eclipse.hono.client.HonoConnection;
@@ -113,6 +114,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
     private TenantClient                  tenantClient;
     private HttpProtocolAdapterProperties config;
     private CommandConsumerFactory        commandConsumerFactory;
+    private DeviceConnectionClientFactory deviceConnectionClientFactory;
     private MessageConsumer               commandConsumer;
     private Vertx                         vertx;
     private Context                       context;
@@ -162,6 +164,9 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         registrationClientFactory = mock(RegistrationClientFactory.class);
         when(registrationClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
         when(registrationClientFactory.getOrCreateRegistrationClient(anyString())).thenReturn(Future.succeededFuture(regClient));
+
+        deviceConnectionClientFactory = mock(DeviceConnectionClientFactory.class);
+        when(deviceConnectionClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
 
         commandConsumer = mock(MessageConsumer.class);
         doAnswer(invocation -> {
@@ -931,6 +936,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         adapter.setRegistrationClientFactory(registrationClientFactory);
         adapter.setCredentialsClientFactory(credentialsClientFactory);
         adapter.setCommandConsumerFactory(commandConsumerFactory);
+        adapter.setDeviceConnectionClientFactory(deviceConnectionClientFactory);
         adapter.setResourceLimitChecks(resourceLimitChecks);
         return adapter;
     }

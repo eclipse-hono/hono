@@ -35,6 +35,7 @@ import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.CommandConsumerFactory;
 import org.eclipse.hono.client.CredentialsClientFactory;
+import org.eclipse.hono.client.DeviceConnectionClientFactory;
 import org.eclipse.hono.client.DisconnectListener;
 import org.eclipse.hono.client.DownstreamSenderFactory;
 import org.eclipse.hono.client.HonoConnection;
@@ -88,6 +89,7 @@ public class AbstractProtocolAdapterBaseTest {
     private CredentialsClientFactory credentialsClientFactory;
     private DownstreamSenderFactory downstreamSenderFactory;
     private CommandConsumerFactory commandConsumerFactory;
+    private DeviceConnectionClientFactory deviceConnectionClientFactory;
 
     /**
      * Sets up the fixture.
@@ -114,6 +116,9 @@ public class AbstractProtocolAdapterBaseTest {
         commandConsumerFactory = mock(CommandConsumerFactory.class);
         when(commandConsumerFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
 
+        deviceConnectionClientFactory = mock(DeviceConnectionClientFactory.class);
+        when(deviceConnectionClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
+
         properties = new ProtocolAdapterProperties();
         adapter = newProtocolAdapter(properties);
         adapter.setTenantClientFactory(tenantService);
@@ -121,6 +126,7 @@ public class AbstractProtocolAdapterBaseTest {
         adapter.setCredentialsClientFactory(credentialsClientFactory);
         adapter.setDownstreamSenderFactory(downstreamSenderFactory);
         adapter.setCommandConsumerFactory(commandConsumerFactory);
+        adapter.setDeviceConnectionClientFactory(deviceConnectionClientFactory);
 
         vertx = mock(Vertx.class);
         // run timers immediately
@@ -149,6 +155,7 @@ public class AbstractProtocolAdapterBaseTest {
         adapter.setCredentialsClientFactory(credentialsClientFactory);
         adapter.setDownstreamSenderFactory(downstreamSenderFactory);
         adapter.setCommandConsumerFactory(commandConsumerFactory);
+        adapter.setDeviceConnectionClientFactory(deviceConnectionClientFactory);
 
         // WHEN starting the adapter
         adapter.startInternal().setHandler(ctx.failing(t -> ctx.verify(() -> {
@@ -240,6 +247,7 @@ public class AbstractProtocolAdapterBaseTest {
         adapter.setRegistrationClientFactory(registrationClientFactory);
         adapter.setTenantClientFactory(tenantService);
         adapter.setCommandConsumerFactory(commandConsumerFactory);
+        adapter.setDeviceConnectionClientFactory(deviceConnectionClientFactory);
     }
 
     /**

@@ -18,7 +18,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.function.BiConsumer;
 
-import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
@@ -28,6 +27,8 @@ import org.eclipse.hono.client.CommandResponse;
 import org.eclipse.hono.client.CommandResponseSender;
 import org.eclipse.hono.client.ConnectionLifecycle;
 import org.eclipse.hono.client.CredentialsClientFactory;
+import org.eclipse.hono.client.DeviceConnectionClient;
+import org.eclipse.hono.client.DeviceConnectionClientFactory;
 import org.eclipse.hono.client.DisconnectListener;
 import org.eclipse.hono.client.DownstreamSender;
 import org.eclipse.hono.client.DownstreamSenderFactory;
@@ -49,6 +50,7 @@ import org.eclipse.hono.service.plan.NoopResourceLimitChecks;
 import org.eclipse.hono.service.plan.ResourceLimitChecks;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
+import org.eclipse.hono.util.DeviceConnectionConstants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
@@ -60,6 +62,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 
 import io.micrometer.core.instrument.Timer.Sample;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import io.opentracing.SpanContext;
 import io.opentracing.tag.Tags;
 import io.vertx.core.CompositeFuture;
@@ -68,6 +71,7 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.net.TrustOptions;
 import io.vertx.ext.healthchecks.HealthCheckHandler;
@@ -97,6 +101,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     private DownstreamSenderFactory downstreamSenderFactory;
     private RegistrationClientFactory registrationClientFactory;
     private TenantClientFactory tenantClientFactory;
+    private DeviceConnectionClientFactory deviceConnectionClientFactory;
     private CredentialsClientFactory credentialsClientFactory;
     private CommandConsumerFactory commandConsumerFactory;
     private ConnectionLimitManager connectionLimitManager;
@@ -178,6 +183,37 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      */
     protected final Future<TenantClient> getTenantClient() {
         return getTenantClientFactory().getOrCreateTenantClient();
+    }
+
+    /**
+     * Sets the factory to use for creating a client for the Device Connection service.
+     *
+     * @param factory The factory.
+     * @throws NullPointerException if the factory is {@code null}.
+     */
+    @Qualifier(DeviceConnectionConstants.DEVICE_CONNECTION_ENDPOINT)
+    @Autowired
+    public final void setDeviceConnectionClientFactory(final DeviceConnectionClientFactory factory) {
+        this.deviceConnectionClientFactory = Objects.requireNonNull(factory);
+    }
+
+    /**
+     * Sets the factory used for creating a client for the Device Connection service.
+     *
+     * @return The factory.
+     */
+    public final DeviceConnectionClientFactory getDeviceConnectionClientFactory() {
+        return deviceConnectionClientFactory;
+    }
+
+    /**
+     * Gets a client for interacting with the Device Connection service.
+     *
+     * @param tenantId The tenant that the client is scoped to.
+     * @return The client.
+     */
+    protected final Future<DeviceConnectionClient> getDeviceConnectionClient(final String tenantId) {
+        return getDeviceConnectionClientFactory().getOrCreateDeviceConnectionClient(tenantId);
     }
 
     /**
@@ -372,11 +408,14 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
             result.fail(new IllegalStateException("Credentials client factory must be set"));
         } else if (commandConsumerFactory == null) {
             result.fail(new IllegalStateException("Command & Control client factory must be set"));
+        } else if (deviceConnectionClientFactory == null) {
+            result.fail(new IllegalStateException("Device Connection client factory must be set"));
         } else {
             connectToService(tenantClientFactory, "Tenant service");
             connectToService(downstreamSenderFactory, "AMQP Messaging Network");
             connectToService(registrationClientFactory, "Device Registration service");
             connectToService(credentialsClientFactory, "Credentials service");
+            connectToService(deviceConnectionClientFactory, "Device Connection service");
 
             connectToService(
                     commandConsumerFactory,
@@ -432,6 +471,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
                 disconnectFromService(tenantClientFactory),
                 disconnectFromService(registrationClientFactory),
                 disconnectFromService(credentialsClientFactory),
+                disconnectFromService(deviceConnectionClientFactory),
                 disconnectFromService(commandConsumerFactory));
     }
 
@@ -737,7 +777,12 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
                 .map(client -> client.isConnected())
                 .orElse(Future.failedFuture(new ServerErrorException(
                         HttpURLConnection.HTTP_UNAVAILABLE, "Command & Control client factory is not set")));
-        return CompositeFuture.all(tenantCheck, registrationCheck, credentialsCheck, messagingCheck, commandCheck).map(ok -> null);
+        final Future<Void> deviceConnectionCheck = Optional.ofNullable(deviceConnectionClientFactory)
+                .map(client -> client.isConnected())
+                .orElse(Future.failedFuture(new ServerErrorException(
+                        HttpURLConnection.HTTP_UNAVAILABLE, "Device Connection client factory is not set")));
+        return CompositeFuture.all(tenantCheck, registrationCheck, credentialsCheck, messagingCheck, commandCheck,
+                deviceConnectionCheck).mapEmpty();
     }
 
     /**
@@ -896,7 +941,9 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * The returned JSON object may include <em>default</em>
      * values for properties to set on messages published by the device under
      * property {@link RegistrationConstants#FIELD_PAYLOAD_DEFAULTS}.
-     * 
+     * <p>
+     * Note that this method will also update the last gateway associated with the given device (if applicable).
+     *
      * @param tenantId The tenant that the device belongs to.
      * @param deviceId The device to get the assertion for.
      * @param authenticatedDevice The device that has authenticated to this protocol adapter.
@@ -922,7 +969,53 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
 
         return gatewayId
                 .compose(gwId -> getRegistrationClient(tenantId))
-                .compose(client -> client.assertRegistration(deviceId, gatewayId.result(), context));
+                .compose(client -> client.assertRegistration(deviceId, gatewayId.result(), context))
+                .compose(registrationAssertion -> updateLastGateway(registrationAssertion,
+                        tenantId, deviceId, authenticatedDevice, context));
+    }
+
+    /**
+     * Updates the last known gateway associated with the given device.
+     *
+     * @param registrationAssertion The registration assertion JSON object as returned by
+     *            {@link #getRegistrationAssertion(String, String, Device, SpanContext)}.
+     * @param tenantId The tenant that the device belongs to.
+     * @param deviceId The device to update the last known gateway for.
+     * @param authenticatedDevice The device that has authenticated to this protocol adapter.
+     *            <p>
+     *            If not {@code null} then the authenticated device is compared to the given tenant and device ID. If
+     *            they differ in the device identifier, then the authenticated device is considered to be a gateway
+     *            acting on behalf of the device.
+     * @param context The currently active OpenTracing span that is used to trace the operation.
+     * @return The registration assertion.
+     * @throws NullPointerException if any of tenant or device ID are {@code null}.
+     */
+    protected final Future<JsonObject> updateLastGateway(
+            final JsonObject registrationAssertion,
+            final String tenantId,
+            final String deviceId,
+            final Device authenticatedDevice,
+            final SpanContext context) {
+
+        Objects.requireNonNull(tenantId);
+        Objects.requireNonNull(deviceId);
+
+        if (!isGatewaySupportedForDevice(registrationAssertion)) {
+            return Future.succeededFuture(registrationAssertion);
+        }
+
+        final Future<String> gatewayId = getGatewayId(tenantId, deviceId, authenticatedDevice);
+
+        return gatewayId
+                .compose(gwId -> getDeviceConnectionClient(tenantId))
+                .compose(client -> client.setLastKnownGatewayForDevice(deviceId,
+                        Optional.ofNullable(gatewayId.result()).orElse(deviceId), context))
+                .map(registrationAssertion);
+    }
+
+    private boolean isGatewaySupportedForDevice(final JsonObject registrationAssertion) {
+        final Object viaObj = registrationAssertion.getValue(RegistrationConstants.FIELD_VIA);
+        return viaObj instanceof JsonArray && !((JsonArray) viaObj).isEmpty();
     }
 
     private Future<String> getGatewayId(final String tenantId, final String deviceId,

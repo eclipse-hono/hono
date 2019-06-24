@@ -43,6 +43,7 @@ import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.CommandConsumerFactory;
 import org.eclipse.hono.client.CredentialsClientFactory;
+import org.eclipse.hono.client.DeviceConnectionClientFactory;
 import org.eclipse.hono.client.DownstreamSender;
 import org.eclipse.hono.client.DownstreamSenderFactory;
 import org.eclipse.hono.client.HonoConnection;
@@ -121,6 +122,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
     private MqttProtocolAdapterProperties config;
     private MqttAdapterMetrics metrics;
     private CommandConsumerFactory commandConsumerFactory;
+    private DeviceConnectionClientFactory deviceConnectionClientFactory;
     private Context context;
 
     /**
@@ -178,6 +180,9 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         when(commandConsumerFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
         when(commandConsumerFactory.isConnected()).thenReturn(
                 Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE)));
+
+        deviceConnectionClientFactory = mock(DeviceConnectionClientFactory.class);
+        when(deviceConnectionClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
 
         authHandler = mock(AuthHandler.class);
         resourceLimitChecks = mock(ResourceLimitChecks.class);
@@ -1150,6 +1155,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         when(registrationClientFactory.isConnected()).thenReturn(Future.succeededFuture());
         when(credentialsClientFactory.isConnected()).thenReturn(Future.succeededFuture());
         when(commandConsumerFactory.isConnected()).thenReturn(Future.succeededFuture());
+        when(deviceConnectionClientFactory.isConnected()).thenReturn(Future.succeededFuture());
     }
 
     @SuppressWarnings("unchecked")
@@ -1207,6 +1213,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         adapter.setRegistrationClientFactory(registrationClientFactory);
         adapter.setCredentialsClientFactory(credentialsClientFactory);
         adapter.setCommandConsumerFactory(commandConsumerFactory);
+        adapter.setDeviceConnectionClientFactory(deviceConnectionClientFactory);
         adapter.setAuthHandler(authHandler);
         adapter.setResourceLimitChecks(resourceLimitChecks);
 

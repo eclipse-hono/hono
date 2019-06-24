@@ -32,6 +32,7 @@ import org.eclipse.hono.client.CommandContext;
 import org.eclipse.hono.client.CommandResponse;
 import org.eclipse.hono.client.CommandResponseSender;
 import org.eclipse.hono.client.CredentialsClientFactory;
+import org.eclipse.hono.client.DeviceConnectionClientFactory;
 import org.eclipse.hono.client.DownstreamSender;
 import org.eclipse.hono.client.DownstreamSenderFactory;
 import org.eclipse.hono.client.HonoConnection;
@@ -101,6 +102,7 @@ public class VertxBasedHttpProtocolAdapterTest {
     private static VertxBasedHttpProtocolAdapter httpAdapter;
     private static CommandConsumerFactory commandConsumerFactory;
     private static CommandResponseSender commandResponseSender;
+    private static DeviceConnectionClientFactory deviceConnectionClientFactory;
     private static Vertx vertx;
     private static String deploymentId;
     private static WebClient httpClient;
@@ -169,6 +171,14 @@ public class VertxBasedHttpProtocolAdapterTest {
             return null;
         }).when(commandConsumerFactory).disconnect(any(Handler.class));
 
+        deviceConnectionClientFactory = mock(DeviceConnectionClientFactory.class);
+        when(deviceConnectionClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
+        doAnswer(invocation -> {
+            final Handler<AsyncResult<Void>> shutdownHandler = invocation.getArgument(0);
+            shutdownHandler.handle(Future.succeededFuture());
+            return null;
+        }).when(deviceConnectionClientFactory).disconnect(any(Handler.class));
+
         commandResponseSender = mock(CommandResponseSender.class);
         when(commandConsumerFactory.getCommandResponseSender(anyString(), anyString())).thenReturn(
                 Future.succeededFuture(commandResponseSender));
@@ -187,6 +197,7 @@ public class VertxBasedHttpProtocolAdapterTest {
         httpAdapter.setDownstreamSenderFactory(downstreamSenderFactory);
         httpAdapter.setRegistrationClientFactory(registrationClientFactory);
         httpAdapter.setCommandConsumerFactory(commandConsumerFactory);
+        httpAdapter.setDeviceConnectionClientFactory(deviceConnectionClientFactory);
         httpAdapter.setUsernamePasswordAuthProvider(usernamePasswordAuthProvider);
 
         vertx.deployVerticle(httpAdapter, ctx.asyncAssertSuccess(id -> {

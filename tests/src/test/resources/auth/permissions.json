@@ -36,6 +36,14 @@
       {
         "operation": "tenant/*:*",
         "activities": [ "EXECUTE" ]
+      },
+      {
+        "resource": "device_con/*",
+        "activities": [ "READ", "WRITE" ]
+      },
+      {
+        "operation": "device_con/*:*",
+        "activities": [ "EXECUTE" ]
       }
     ],
     "DEFAULT_TENANT-manager": [

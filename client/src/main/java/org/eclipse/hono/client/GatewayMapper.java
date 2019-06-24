@@ -27,17 +27,25 @@ public interface GatewayMapper extends ConnectionLifecycle<HonoConnection> {
      * <p>
      * The value of the returned Future can be either
      * <ul>
-     * <li>the gateway device id</li>
-     * <li>{@code null} if the device is configured to be accessed via a gateway (i.e. one or more 'via' devices are
-     * set), but no 'last-via' device is set, meaning that no message has been sent yet for this device.</li>
+     * <li>the id of the gateway that last acted on behalf of the given device</li>
+     * <li>the 'via' gateway id of the device registration information if no last known gateway is set for the device
+     * and the 'via' entry only contains a single entry</li>
      * <li>the given device id if the device is not configured to be accessed via a gateway</li>
      * </ul>
      *
      * @param tenantId The tenant identifier.
      * @param deviceId The device identifier.
      * @param context The currently active OpenTracing span context or {@code null}.
-     * @return A succeeded Future containing the mapped gateway device id or {@code null};
-     *         or a failed Future if there was an error determining the mapped gateway device.
+     * @return A succeeded Future containing the mapped gateway device id or the device id itself;
+     *         or a failed Future with:
+     *         <ul>
+     *         <li>a {@link ClientErrorException} with status <em>Not Found</em> if no last known gateway was set
+     *         for the device and the 'via' entry of the device registration contains more than one entry</li>
+     *         <li>a {@link ClientErrorException} with status <em>Not Found</em> if the last known gateway for the
+     *         device was not found in the 'via' entry of the device registration</li>
+     *         <li>a {@link ServiceInvocationException} with an error code indicating the cause of the failure
+     *         determining the device registration information or the mapped gateway device</li>
+     *         </ul>
      */
     Future<String> getMappedGatewayDevice(String tenantId, String deviceId, SpanContext context);
 
