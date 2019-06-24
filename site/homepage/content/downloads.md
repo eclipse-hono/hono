@@ -30,7 +30,7 @@ A Java based command line client for consuming telemetry data and events from Ho
 
 * [Eclipse Hono 0.9 Command Line Client](https://www.eclipse.org/downloads/download.php?file=/hono/hono-cli-0.9-exec.jar)
 
-The client can be run from the command line like this:
+The client requires a Java 11 runtime environment and can be run from the command line like this:
 
 ~~~sh
 java -jar hono-cli-0.9-exec.jar --hono.client.host=hono.eclipse.org --hono.client.port=15671 \
@@ -64,7 +64,9 @@ These artifacts are available for reference only. Please always use the latest v
 
 ## Source Code
 
-The source code can be cloned (using [Git](https://git-scm.com/)) or downloaded from the [Eclipse Hono GitHub repository](https://github.com/eclipse/hono)
+The source code can be cloned (using [Git](https://git-scm.com/)) or downloaded from the [Eclipse Hono GitHub repository]
+(https://github.com/eclipse/hono). The [Building from Source](https://www.eclipse.org/hono/docs/latest/dev-guide/building-hono/)
+guide provides instructions on how to build Hono locally.
 
 ## Release Notes
 

@@ -1,6 +1,6 @@
 +++
 title = "Consuming Messages from Java"
-weight = 385
+weight = 390
 +++
 
 To illustrate how Eclipse Hono&trade; can be integrated with Java code, a simple application is provided that consumes telemetry and event data 
