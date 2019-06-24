@@ -7,24 +7,17 @@ weight = 150
 
 ## Binaries
 
-The preferred way of deploying Eclipse Hono&trade; is by means of using the pre-built Docker images provided
-on [Docker Hub](https://hub.docker.com/u/eclipse/).
+Eclipse Hono's service components are provided by means of pre-built Docker images available from
+[Docker Hub](https://hub.docker.com/u/eclipse/). These container images can be deployed to popular
+container orchestration platforms like Kubernetes and OpenShift.
 
-The most convenient way to both pull the images and start corresponding containers is by means of running the deployment script contained in the release archive.
+The release archive contains all files necessary to deploy Hono to a Kubernetes cluster using the
+[Helm package manager](https://helm.sh).
 
 * [Eclipse Hono 0.9 Archive](https://www.eclipse.org/downloads/download.php?file=/hono/eclipse-hono-deploy-0.9.tar.gz)
 
-After downloading the archive, extract it to a local folder, change into that folder and run the following from the command line (assuming that your local Docker client is configured to connect to a Docker Swarm manager):
+Download and extract the archive and follow the [deployment guide](https://www.eclipse.org/hono/docs/latest/deployment/helm-based-deployment/).
 
-~~~sh
-deploy/docker/swarm_deploy.sh
-~~~
-
-Hono supports deployment to the following container orchestration platforms:
-
-* [Kubernetes](https://www.eclipse.org/hono/docs/latest/deployment/helm-based-deployment/)
-* [OpenShift](https://www.eclipse.org/hono/docs/latest/deployment/openshift/)
-* [Docker Swarm](https://www.eclipse.org/hono/docs/latest/deployment/docker-swarm/)
 
 A Java based command line client for consuming telemetry data and events from Hono is available for download as well:
 
@@ -70,4 +63,4 @@ guide provides instructions on how to build Hono locally.
 
 ## Release Notes
 
-For a list of the changes in this release, take a look at the [release notes]({{< ref "/release-notes.md" >}}).
+For a list of the changes in this release, take a look at the [release notes]({{< relref "release-notes" >}}).
