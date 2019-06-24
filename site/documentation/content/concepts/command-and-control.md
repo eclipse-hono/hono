@@ -15,11 +15,11 @@ The following sequence diagrams give an overview of a device connecting via HTTP
 
 **(Request/Response) command over HTTP:**
  
-![Command & Control over HTTP Adapter](../command_control_concept_http.png) 
+{{< figure src="../command_control_concept_http.svg" title="Command & Control over HTTP Adapter" >}}
 
 **One-way command over HTTP:**
 
-![One-way Command & Control over HTTP Adapter](../command_control_concept_one_way_http.png) 
+{{< figure src="../command_control_concept_one_way_http.svg" title="One-way Command & Control over HTTP Adapter" >}} 
 
 With the *hono-ttd* request parameter in (1) the device indicates it will stay connected for max. 30 seconds. In the shown example this means that it can handle the response to the HTTP request for up to 30 seconds before considering the request being expired. 
 
@@ -75,11 +75,11 @@ The following diagrams show the message flow for commands over the MQTT adapter:
 
 **Request/Response commands** :
 
-![Request/Response Command over MQTT Adapter](../command_control_concept_mqtt.png) 
+{{< figure src="../command_control_concept_mqtt.svg" title="Request/Response Command over MQTT Adapter" >}} 
 
 **one-way commands** :
 
-![One-way Command over MQTT Adapter](../command_control_concept_one_way_mqtt.png) 
+{{< figure src="../command_control_concept_one_way_mqtt.svg" title="One-way Command over MQTT Adapter" >}} 
 
 ## Command & Control over AMQP Adapter
 
@@ -112,4 +112,4 @@ If the application expects a response (i.e the *reply-to* property is set), then
 | *correlation-id*  | yes             | *properties*             | *string*    | MUST contain the identifier used to correlate the response with the original request, which is the value of the correlation-id of the original request. |
 | *status*          | yes             | *application-properties* | *string*    | The status code indicating the outcome of processing the command by the device. MUST be set by the device after executing the command. |
 
-![Command & Control over AMQP Adapter](../command_control_concept_amqp.png) 
+{{< figure src="../command_control_concept_amqp.svg" title="Command & Control over AMQP Adapter" >}} 

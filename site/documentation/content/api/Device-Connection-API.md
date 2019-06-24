@@ -16,7 +16,7 @@ The Device Connection API is defined by means of AMQP 1.0 message exchanges, i.e
 1. Client has established an AMQP link in role *sender* on the connection using target address `device_con/${tenant_id}`. This link is used by the client to send commands concerning device connections to Hono.
 1. Client has established an AMQP link in role *receiver* on the connection using source address `device_con/${tenant_id}/${reply-to}` where *reply-to* may be any arbitrary string chosen by the client. This link is used by the client to receive responses to the requests it has sent to the Device Connection service. This link's source address is also referred to as the *reply-to* address for the request messages.
 
-{{< figure src="../connectToDeviceConnection.png" alt="A client establishes an AMQP connection and the links required to invoke operations of the Device Connection service" title="Client connecting to Device Connection service" >}}
+{{< figure src="../connectToDeviceConnection.svg" alt="A client establishes an AMQP connection and the links required to invoke operations of the Device Connection service" title="Client connecting to Device Connection service" >}}
 
 ## Set last known Gateway for Device
 
@@ -27,7 +27,7 @@ As this operation is invoked frequently by Hono's components, implementors may c
 **Message Flow**
 
 
-{{< figure src="../setLastKnownGatewayForDevice_Success.png" title="Client sets the last known gateway for a device" alt="A client sends a request message for setting the last known gateway and receives a response containing a confirmation" >}}
+{{< figure src="../setLastKnownGatewayForDevice_Success.svg" title="Client sets the last known gateway for a device" alt="A client sends a request message for setting the last known gateway and receives a response containing a confirmation" >}}
 
 **Request Message Format**
 
@@ -62,7 +62,7 @@ Clients use this command to *retrieve* the gateway that last acted on behalf of 
 **Message Flow**
 
 
-{{< figure src="../getLastKnownGatewayForDevice_Success.png" title="Client retrieving the last known gateway for a device" alt="A client sends a request message for retrieving the last known gateway and receives a response containing the information" >}}
+{{< figure src="../getLastKnownGatewayForDevice_Success.svg" title="Client retrieving the last known gateway for a device" alt="A client sends a request message for retrieving the last known gateway and receives a response containing the information" >}}
 
 **Request Message Format**
 

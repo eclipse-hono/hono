@@ -26,7 +26,7 @@ Business Applications use this operation to send a command to a device for which
 
 The following sequence diagram illustrates the establishment of the required link:
 
-![Send One-Way Command Preconditions](../command_control_send_preconditions.png)
+{{< figure src="../command_control_send_preconditions.svg" title="Send One-Way Command Preconditions" >}}
 
 {{% note title="Deprecation" %}}
 Previous versions of Hono required applications to
@@ -69,15 +69,15 @@ Hono indicates the outcome of the operation by means of the following AMQP deliv
 
 The following sequence diagram shows the successful delivery of a command to a device:
 
-![Successfully send a One-Way Command](../command_control_one_way_success.png)
+{{< figure src="../command_control_one_way_success.svg" title="Successfully send a One-Way Command" >}}
 
 The following sequence diagram shows how the delivery of a command fails because the device is not connected:
 
-![Device not connected](../command_control_device_not_connected.png)
+{{< figure src="../command_control_device_not_connected.svg" title="Device not connected" >}}
 
 The following sequence diagram illustrates how a malformed command sent by a *Business Application* gets rejected:
 
-![Malformed Command message](../command_control_malformed_message.png)
+{{< figure src="../command_control_malformed_message.svg" title="Malformed Command message" >}}
 
 
 
@@ -109,11 +109,11 @@ Note that the deprecated link addresses also **do not** support sending commands
 
 The following sequence diagram illustrates the establishment of the required sender link:
 
-![Send Command Preconditions](../command_control_send_preconditions.png)
+{{< figure src="../command_control_send_preconditions.svg" title="Send Command Preconditions" >}}
 
 The following sequence diagram illustrates the establishment of the required receiver link:
 
-![Receive Response Preconditions](../command_control_receive_preconditions.png)
+{{< figure src="../command_control_receive_preconditions.svg" title="Receive Response Preconditions" >}}
 
 **Command Message Format**
 
@@ -173,8 +173,8 @@ If a command message response contains a payload, the body of the message MUST c
 
 The following sequence diagram illustrates how a *Business Application* sends a command and receives the response from the device:
 
-![Successfully send a Command](../command_control_success.png)
+{{< figure src="../command_control_success.svg" title="Successfully send a Command" >}}
 
 The sending of a command may fail for the same reasons as those illustrated for sending a one-way command. Additionally, the sending of a command may be considered unsuccessful by an application if it does not receive the response from the device in a reasonable amount of time:
 
-![Command times out](../command_control_response_time_out.png)
+{{< figure src="../command_control_response_time_out.svg" title="Command times out" >}}

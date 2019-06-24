@@ -40,7 +40,7 @@ Hono's HTTP adapter allows devices to indicate, which delivery semantics they wa
 
 The following sequence diagram illustrates the flow of messages involved in the *HTTP Adapter* forwarding an *unsettled* telemetry data message to the downstream AMQP Messaging Network implementing *AT MOST ONCE* delivery semantics.
 
-![Forward telemetry data flow (AT MOST ONCE)](../forwardTelemetry_qos0.png)
+{{< figure src="../forwardTelemetry_qos0.svg" title="Forward telemetry data flow (AT MOST ONCE)" >}}
 
 1. *Device* `4711` PUTs telemetry data to the *HTTP Adapter*
    1. *HTTP Adapter* transfers telemetry data to *AMQP 1.0 Messaging Network*.
@@ -54,7 +54,7 @@ If the messaging network had sent a disposition frame with the *rejected* instea
 
 The following sequence diagram illustrates the flow of messages involved in the *HTTP Adapter* forwarding an *unsettled* telemetry data message to the downstream AMQP Messaging Network implementing *AT LEAST ONCE* delivery semantics.
 
-![Forward telemetry data flow (AT LEAST ONCE)](../forwardTelemetry_qos1.png)
+{{< figure src="../forwardTelemetry_qos1.svg" title="Forward telemetry data flow (AT LEAST ONCE)" >}}
 
 1. *Device* `4711` PUTs telemetry data to the *HTTP Adapter*, indicating *QoS Level* 1.
    1. *HTTP Adapter* transfers telemetry data to *AMQP 1.0 Messaging Network*.
@@ -102,7 +102,7 @@ In addition a client MAY include a boolean link property `ordering-required` wit
 
 The following sequence diagram illustrates the flow of messages involved in a *Business Application* receiving a telemetry data message from Hono. The delivery mode used is *AT LEAST ONCE*.
 
-![Receive Telemetry Data](../consumeTelemetry_Success.png)
+{{< figure src="../consumeTelemetry_Success.svg" title="Receive Telemetry Data" >}}
 
 1. *AMQP 1.0 Messaging Network* delivers telemetry message to *Business Application*.
 1. *Business Application* acknowledges reception of message.

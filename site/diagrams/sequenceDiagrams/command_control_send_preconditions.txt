@@ -1,5 +1,0 @@
-participant AMQP 1.0 Network
-participant Business Application
-
-Business Application->AMQP 1.0 Network: attach("sender","command/${tenant_id}")
-AMQP 1.0 Network->Business Application: attach("receiver","command/${tenant_id}")

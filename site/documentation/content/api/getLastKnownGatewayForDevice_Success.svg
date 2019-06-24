@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" contentScriptType="application/ecmascript" contentStyleType="text/css" height="318px" preserveAspectRatio="none" style="width:626px;height:318px;" version="1.1" viewBox="0 0 626 318" width="626.4px" zoomAndPan="magnify"><defs><filter height="300%" id="fr586u9aoixsx" width="300%" x="-1" y="-1"><feGaussianBlur result="blurOut" stdDeviation="2.4"/><feColorMatrix in="blurOut" result="blurOut2" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .4 0"/><feOffset dx="4.8" dy="4.8" in="blurOut2" result="blurOut3"/><feBlend in="SourceGraphic" in2="blurOut3" mode="normal"/></filter></defs><g><rect fill="#FFFFFF" filter="url(#fr586u9aoixsx)" height="81.9188" style="stroke: #A80036; stroke-width: 1.2;" width="12" x="467.4" y="83.3156"/><line style="stroke: #A80036; stroke-width: 1.2; stroke-dasharray: 5.0,5.0;" x1="43.2" x2="43.2" y1="45.9563" y2="270.1125"/><line style="stroke: #A80036; stroke-width: 1.2; stroke-dasharray: 5.0,5.0;" x1="472.8" x2="472.8" y1="45.9563" y2="270.1125"/><rect fill="#FEFECE" filter="url(#fr586u9aoixsx)" height="36.3562" style="stroke: #A80036; stroke-width: 1.7999999999999998;" width="63.6" x="9.6" y="3.6"/><text fill="#000000" font-family="sans-serif" font-size="16.8" lengthAdjust="spacingAndGlyphs" textLength="46.8" x="18" y="27.5941">Client</text><rect fill="#FEFECE" filter="url(#fr586u9aoixsx)" height="36.3562" style="stroke: #A80036; stroke-width: 1.7999999999999998;" width="63.6" x="9.6" y="268.9125"/><text fill="#000000" font-family="sans-serif" font-size="16.8" lengthAdjust="spacingAndGlyphs" textLength="46.8" x="18" y="292.9066">Client</text><rect fill="#FEFECE" filter="url(#fr586u9aoixsx)" height="36.3562" style="stroke: #A80036; stroke-width: 1.7999999999999998;" width="238.8" x="351.6" y="3.6"/><text fill="#000000" font-family="sans-serif" font-size="16.8" lengthAdjust="spacingAndGlyphs" textLength="222" x="360" y="27.5941">Device Connection Service</text><rect fill="#FEFECE" filter="url(#fr586u9aoixsx)" height="36.3562" style="stroke: #A80036; stroke-width: 1.7999999999999998;" width="238.8" x="351.6" y="268.9125"/><text fill="#000000" font-family="sans-serif" font-size="16.8" lengthAdjust="spacingAndGlyphs" textLength="222" x="360" y="292.9066">Device Connection Service</text><rect fill="#FFFFFF" filter="url(#fr586u9aoixsx)" height="81.9188" style="stroke: #A80036; stroke-width: 1.2;" width="12" x="467.4" y="83.3156"/><polygon fill="#A80036" points="453,78.5156,465,83.3156,453,88.1156,457.8,83.3156" style="stroke: #A80036; stroke-width: 1.2;"/><line style="stroke: #A80036; stroke-width: 1.2;" x1="43.8" x2="460.2" y1="83.3156" y2="83.3156"/><text fill="#000000" font-family="sans-serif" font-size="15.6" lengthAdjust="spacingAndGlyphs" textLength="400.8" x="52.2" y="77.2365">transfer(subject: "get-last-gw", device_id: "device-1")</text><path d="M328.8,98.9156 L328.8,128.9156 L612,128.9156 L612,110.9156 L600,98.9156 L328.8,98.9156 " fill="#FBFB77" filter="url(#fr586u9aoixsx)" style="stroke: #A80036; stroke-width: 1.2;"/><path d="M600,98.9156 L600,110.9156 L612,110.9156 L600,98.9156 " fill="#FBFB77" style="stroke: #A80036; stroke-width: 1.2;"/><text fill="#000000" font-family="sans-serif" font-size="15.6" lengthAdjust="spacingAndGlyphs" textLength="258" x="336" y="119.3959">get last known gateway for device</text><polygon fill="#A80036" points="57,160.4344,45,165.2344,57,170.0344,52.2,165.2344" style="stroke: #A80036; stroke-width: 1.2;"/><line style="stroke: #A80036; stroke-width: 1.2;" x1="49.8" x2="472.2" y1="165.2344" y2="165.2344"/><text fill="#000000" font-family="sans-serif" font-size="15.6" lengthAdjust="spacingAndGlyphs" textLength="330" x="64.2" y="159.1553">transfer(status: "200", body: JSON payload)</text><path d="M49.2,180.8344 L49.2,246.8344 L260.4,246.8344 L260.4,192.8344 L248.4,180.8344 L49.2,180.8344 " fill="#FBFB77" filter="url(#fr586u9aoixsx)" style="stroke: #A80036; stroke-width: 1.2;"/><path d="M248.4,180.8344 L248.4,192.8344 L260.4,192.8344 L248.4,180.8344 " fill="#FBFB77" style="stroke: #A80036; stroke-width: 1.2;"/><text fill="#000000" font-family="sans-serif" font-size="15.6" lengthAdjust="spacingAndGlyphs" textLength="172.8" x="56.4" y="201.3146">JSON payload contains</text><text fill="#000000" font-family="sans-serif" font-size="15.6" lengthAdjust="spacingAndGlyphs" textLength="93.6" x="56.4" y="219.474">- gateway-id</text><text fill="#000000" font-family="sans-serif" font-size="15.6" lengthAdjust="spacingAndGlyphs" textLength="186" x="56.4" y="237.6334">- last-updated (optional)</text><!--
+@startuml
+scale 1.2
+
+Client -> "Device Connection Service": transfer(subject: "get-last-gw", device_id: "device-1")
+activate "Device Connection Service"
+note over "Device Connection Service"
+get last known gateway for device
+end note
+"Device Connection Service" -> Client: transfer(status: "200", body: JSON payload)
+deactivate "Device Connection Service"
+note right of Client
+JSON payload contains
+- gateway-id
+- last-updated (optional)
+end note
+@enduml
+
+PlantUML version 1.2019.07beta1(Unknown compile time)
+(GPL source distribution)
+Java Runtime: Java(TM) SE Runtime Environment
+JVM: Java HotSpot(TM) 64-Bit Server VM
+Java Version: 1.7.0_25-b15
+Operating System: Linux
+Default Encoding: UTF-8
+Language: en
+Country: US
+--></g></svg>
