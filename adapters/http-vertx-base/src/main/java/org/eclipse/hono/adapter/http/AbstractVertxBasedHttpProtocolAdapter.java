@@ -616,7 +616,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                 // is enabled for the tenant
                 final Future<Integer> ttdTracker = CompositeFuture.all(tokenTracker, tenantTracker)
                         .compose(ok -> {
-                            final Integer ttdParam = HttpUtils.getTimeTillDisconnect(ctx);
+                            final Integer ttdParam = getTimeUntilDisconnectFromRequest(ctx);
                             return getTimeUntilDisconnect(tenantTracker.result(), ttdParam).map(effectiveTtd -> {
                                 if (effectiveTtd != null) {
                                     currentSpan.setTag(MessageHelper.APP_PROPERTY_DEVICE_TTD, effectiveTtd);
@@ -769,6 +769,19 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
     }
 
     /**
+     * Extract the "time till disconnect" from the provided request.
+     * <p>
+     * The default behavior is to call {@link HttpUtils#getTimeTillDisconnect(RoutingContext)}. The method may be
+     * overridden by protocol adapters that which not to use the default behavior.
+     * 
+     * @param ctx The context to extract the TTD from.
+     * @return The TTD in seconds, or {@code null} in case none is set, or it could not be parsed to an integer.
+     */
+    protected Integer getTimeUntilDisconnectFromRequest(final RoutingContext ctx) {
+        return HttpUtils.getTimeTillDisconnect(ctx);
+    }
+
+    /**
      * Adds a handler for tidying up when a device closes the HTTP connection before
      * a response could be sent.
      * <p>
@@ -800,21 +813,49 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
 
     private void setResponsePayload(final HttpServerResponse response, final CommandContext commandContext, final Span currentSpan) {
         if (commandContext == null) {
-            response.setStatusCode(HttpURLConnection.HTTP_ACCEPTED);
+            setEmptyResponsePayload(response, currentSpan);
         } else {
-            final Command command = commandContext.getCommand();
-            response.putHeader(Constants.HEADER_COMMAND, command.getName());
-            currentSpan.setTag(Constants.HEADER_COMMAND, command.getName());
-            LOG.trace("adding command [name: {}, request-id: {}] to response for device [tenant-id: {}, device-id: {}]",
-                    command.getName(), command.getRequestId(), command.getTenant(), command.getDeviceId());
-            if (!command.isOneWay()) {
-                response.putHeader(Constants.HEADER_COMMAND_REQUEST_ID, command.getRequestId());
-                currentSpan.setTag(Constants.HEADER_COMMAND_REQUEST_ID, command.getRequestId());
-            }
-
-            response.setStatusCode(HttpURLConnection.HTTP_OK);
-            HttpUtils.setResponseBody(response, command.getPayload(), command.getContentType());
+            setNonEmptyResponsePayload(response, commandContext, currentSpan);
         }
+    }
+
+    /**
+     * Respond to a request with an empty command response.
+     * <p>
+     * The default implementation simply sets a status of {@link HttpURLConnection#HTTP_ACCEPTED}.
+     * 
+     * @param response The response to update.
+     * @param currentSpan The current tracing span.
+     */
+    protected void setEmptyResponsePayload(final HttpServerResponse response, final Span currentSpan) {
+        response.setStatusCode(HttpURLConnection.HTTP_ACCEPTED);
+    }
+
+    /**
+     * Response to a request with a non-empty command response.
+     * <p>
+     * The default implementation sets the command headers and the status to {@link HttpURLConnection#HTTP_OK}.
+     * 
+     * @param response The response to update.
+     * @param commandContext The command context, will not be {@code null}.
+     * @param currentSpan The current tracing span.
+     */
+    protected void setNonEmptyResponsePayload(final HttpServerResponse response, final CommandContext commandContext,
+            final Span currentSpan) {
+
+        final Command command = commandContext.getCommand();
+        response.putHeader(Constants.HEADER_COMMAND, command.getName());
+        currentSpan.setTag(Constants.HEADER_COMMAND, command.getName());
+        LOG.debug("adding command [name: {}, request-id: {}] to response for device [tenant-id: {}, device-id: {}]",
+                command.getName(), command.getRequestId(), command.getTenant(), command.getDeviceId());
+
+        if (!command.isOneWay()) {
+            response.putHeader(Constants.HEADER_COMMAND_REQUEST_ID, command.getRequestId());
+            currentSpan.setTag(Constants.HEADER_COMMAND_REQUEST_ID, command.getRequestId());
+        }
+
+        response.setStatusCode(HttpURLConnection.HTTP_OK);
+        HttpUtils.setResponseBody(response, command.getPayload(), command.getContentType());
     }
 
     /**
@@ -873,7 +914,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                         Tags.COMPONENT.set(commandContext.getCurrentSpan(), getTypeName());
                         final Command command = commandContext.getCommand();
                         final Sample commandSample = getMetrics().startTimer();
-                        if (command.isValid()) {
+                        if (isCommandValid(command, currentSpan)) {
                             if (responseReady.isComplete()) {
                                 // the timer has already fired, release the command
                                 getMetrics().reportCommand(
@@ -933,6 +974,20 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                         }
                     });
         }
+    }
+
+    /**
+     * Validate if a command is valid and can be sent as response.
+     * <p>
+     * The default implementation will call {@link Command#isValid()}. Protocol adapters may override this, but should
+     * consider calling the super method.
+     * 
+     * @param command The command to validate, will never be {@code null}.
+     * @param currentSpan The current tracing span.
+     * @return {@code true} if the command is valid, {@code false} otherwise.
+     */
+    protected boolean isCommandValid(final Command command, final Span currentSpan) {
+        return command.isValid();
     }
 
     /**

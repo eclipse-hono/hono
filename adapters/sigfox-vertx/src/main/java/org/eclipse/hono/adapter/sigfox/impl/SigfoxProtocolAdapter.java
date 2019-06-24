@@ -19,14 +19,17 @@ import java.util.Optional;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.adapter.http.AbstractVertxBasedHttpProtocolAdapter;
-import org.eclipse.hono.adapter.http.HttpProtocolAdapterProperties;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.client.Command;
+import org.eclipse.hono.client.CommandContext;
 import org.eclipse.hono.service.auth.device.HonoClientBasedAuthProvider;
 import org.eclipse.hono.service.auth.device.UsernamePasswordAuthProvider;
 import org.eclipse.hono.service.auth.device.UsernamePasswordCredentials;
 import org.eclipse.hono.service.http.HonoBasicAuthHandler;
 import org.eclipse.hono.service.http.HonoChainAuthHandler;
+import org.eclipse.hono.service.http.HttpUtils;
+import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
 import org.slf4j.Logger;
@@ -34,10 +37,13 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.io.BaseEncoding;
 
+import io.opentracing.Span;
 import io.vertx.core.Handler;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpMethod;
+import io.vertx.core.http.HttpServerResponse;
+import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.ChainAuthHandler;
@@ -47,7 +53,10 @@ import io.vertx.ext.web.handler.CorsHandler;
  * A Vert.x based Hono protocol adapter for receiving HTTP push messages from and sending commands to the SigFox
  * backend.
  */
-public final class SigfoxProtocolAdapter extends AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> {
+public final class SigfoxProtocolAdapter
+        extends AbstractVertxBasedHttpProtocolAdapter<SigfoxProtocolAdapterProperties> {
+
+    private static final String DOWNLINK_DATA_FIELD = "downlinkData";
 
     private static final String SIGFOX_PROPERTY_PREFIX = "sigfox.";
 
@@ -56,6 +65,10 @@ public final class SigfoxProtocolAdapter extends AbstractVertxBasedHttpProtocolA
     private static final String SIGFOX_PARAM_DATA = "data";
 
     private static final String SIGFOX_PARAM_TENANT = "tenant";
+
+    private static final String SIGFOX_HEADER_PARAM_ACK = "ack";
+
+    private static final String SIGFOX_QUERY_PARAM_ACK = "ack";
 
     private static final Logger LOG = LoggerFactory.getLogger(SigfoxProtocolAdapter.class);
 
@@ -139,10 +152,11 @@ public final class SigfoxProtocolAdapter extends AbstractVertxBasedHttpProtocolA
         final String requestTenant = ctx.pathParam(SIGFOX_PARAM_TENANT);
 
         final String deviceId = ctx.queryParams().get(SIGFOX_PARAM_DEVICE_ID);
-        final Buffer data = decodeData(ctx.queryParams().get(SIGFOX_PARAM_DATA));
+        final String strData = ctx.queryParams().get(SIGFOX_PARAM_DATA);
+        final Buffer data = decodeData(strData);
 
         LOG.debug("{} handler - deviceTenant: {}, requestTenant: {}, deviceId: {}, data: {}",
-                ctx.request().method(), deviceTenant, requestTenant, deviceId, data);
+                ctx.request().method(), deviceTenant, requestTenant, deviceId, strData);
 
         if ( requestTenant == null ) {
             ctx.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
@@ -185,4 +199,92 @@ public final class SigfoxProtocolAdapter extends AbstractVertxBasedHttpProtocolA
         return Buffer.buffer(BaseEncoding.base16().decode(data.toUpperCase()));
     }
 
+    @Override
+    protected Integer getTimeUntilDisconnectFromRequest(final RoutingContext ctx) {
+
+        String ack = ctx.queryParams().get(SIGFOX_QUERY_PARAM_ACK);
+
+        if (ack == null) {
+            ack = ctx.request().getHeader(SIGFOX_HEADER_PARAM_ACK);
+        }
+
+        if (ack == null) {
+            return null;
+        }
+
+        LOG.debug("Ack required for request?: '{}'", ack);
+
+        if ( !Boolean.parseBoolean(ack)) {
+            return null;
+        }
+
+        return getConfig().getTtdWhenAckRequired();
+    }
+
+    @Override
+    protected boolean isCommandValid(final Command command, final Span span) {
+
+        if (!super.isCommandValid(command, span)) {
+            return false;
+        }
+
+        if (!command.isOneWay()) {
+            // two way commands are not supported
+            TracingHelper.logError(span, "command must be one way");
+            return false;
+        }
+
+        if (command.getPayload() == null) {
+            TracingHelper.logError(span, "command has no payload");
+            return false;
+        }
+
+        if (command.getPayloadSize() != 8) {
+            // wrong size
+            TracingHelper.logError(span,
+                    "command payload size must be exactly 8 bytes long, is " + command.getPayloadSize());
+            return false;
+        }
+
+        return true;
+
+    }
+
+    @Override
+    protected void setEmptyResponsePayload(final HttpServerResponse response, final Span currentSpan) {
+        LOG.debug("Setting empty response for ACK");
+
+        response.setStatusCode(HttpURLConnection.HTTP_NO_CONTENT);
+        currentSpan.log("responding with: no content");
+    }
+
+    @Override
+    protected void setNonEmptyResponsePayload(final HttpServerResponse response, final CommandContext commandContext,
+            final Span currentSpan) {
+
+        currentSpan.log("responding with: payload");
+
+        final Command command = commandContext.getCommand();
+        response.setStatusCode(HttpURLConnection.HTTP_OK);
+        final Buffer payload = convertToResponsePayload(command);
+
+        LOG.debug("Setting response for ACK: {}", payload);
+
+        HttpUtils.setResponseBody(response, payload, HttpUtils.CONTENT_TYPE_JSON);
+
+    }
+
+    private Buffer convertToResponsePayload(final Command command) {
+        final JsonObject payload = new JsonObject();
+
+        payload.put(command.getDeviceId(),
+                new JsonObject()
+                        .put(DOWNLINK_DATA_FIELD,
+                                BaseEncoding
+                                        .base16()
+                                        .encode(command.getPayload().getBytes())
+                                        .toLowerCase()));
+
+        return payload.toBuffer();
+    }
 }
