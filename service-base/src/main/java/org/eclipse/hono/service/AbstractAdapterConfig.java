@@ -18,6 +18,7 @@ import java.util.Optional;
 import org.eclipse.hono.cache.CacheProvider;
 import org.eclipse.hono.client.CommandConsumerFactory;
 import org.eclipse.hono.client.CredentialsClientFactory;
+import org.eclipse.hono.client.DeviceConnectionClientFactory;
 import org.eclipse.hono.client.DownstreamSenderFactory;
 import org.eclipse.hono.client.GatewayMapper;
 import org.eclipse.hono.client.HonoConnection;
@@ -35,6 +36,7 @@ import org.eclipse.hono.service.plan.ResourceLimitChecks;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
+import org.eclipse.hono.util.DeviceConnectionConstants;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.TenantConstants;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -338,6 +340,57 @@ public abstract class AbstractAdapterConfig {
     }
 
     /**
+     * Exposes a factory for creating clients for the <em>Device Connection</em> API as a Spring bean.
+     *
+     * @return The factory.
+     */
+    @Bean
+    @Qualifier(DeviceConnectionConstants.DEVICE_CONNECTION_ENDPOINT)
+    @Scope("prototype")
+    public DeviceConnectionClientFactory deviceConnectionClientFactory() {
+        return DeviceConnectionClientFactory.create(deviceConnectionServiceConnection());
+    }
+
+    /**
+     * Exposes the connection used for accessing the device connection service as a Spring bean.
+     *
+     * @return The connection.
+     */
+    @Bean
+    @Qualifier(DeviceConnectionConstants.DEVICE_CONNECTION_ENDPOINT)
+    @Scope("prototype")
+    public HonoConnection deviceConnectionServiceConnection() {
+        return HonoConnection.newConnection(vertx(), deviceConnectionServiceClientConfig());
+    }
+
+    /**
+     * Exposes configuration properties for accessing the device connection service as a Spring bean.
+     *
+     * @return The properties.
+     */
+    @Qualifier(DeviceConnectionConstants.DEVICE_CONNECTION_ENDPOINT)
+    @ConfigurationProperties(prefix = "hono.deviceConnection")
+    @Bean
+    public RequestResponseClientConfigProperties deviceConnectionServiceClientConfig() {
+        final RequestResponseClientConfigProperties config = new RequestResponseClientConfigProperties();
+        customizeDeviceConnectionClientFactoryConfig(config);
+        return config;
+    }
+
+    /**
+     * Further customizes the properties provided by the {@link #deviceConnectionServiceClientConfig()}
+     * method.
+     * <p>
+     * This method does nothing by default. Subclasses may override this method to set additional
+     * properties programmatically.
+     *
+     * @param config The configuration to customize.
+     */
+    protected void customizeDeviceConnectionClientFactoryConfig(final RequestResponseClientConfigProperties config) {
+        // empty by default
+    }
+
+    /**
      * Exposes configuration properties for Command and Control.
      *
      * @return The Properties.
@@ -380,7 +433,7 @@ public abstract class AbstractAdapterConfig {
     @Bean
     @Scope("prototype")
     public GatewayMapper gatewayMapper() {
-        return new GatewayMapperImpl(registrationClientFactory());
+        return new GatewayMapperImpl(registrationClientFactory(), deviceConnectionClientFactory(), getTracer());
     }
 
     /**

@@ -106,6 +106,7 @@ public final class HonoClientUnitTestHelper {
         when(spanBuilder.withTag(anyString(), anyBoolean())).thenReturn(spanBuilder);
         when(spanBuilder.withTag(anyString(), anyString())).thenReturn(spanBuilder);
         when(spanBuilder.withTag(anyString(), (Number) any())).thenReturn(spanBuilder);
+        when(spanBuilder.ignoreActiveSpan()).thenReturn(spanBuilder);
         when(spanBuilder.start()).thenReturn(spanToCreate);
         return spanBuilder;
     }
