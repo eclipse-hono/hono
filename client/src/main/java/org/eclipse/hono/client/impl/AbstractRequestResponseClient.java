@@ -674,6 +674,8 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
         createAndSendRequest(action, properties, payload, contentType, ar -> {
             if (ar.failed()) {
                 TracingHelper.logError(currentSpan, ar.cause());
+            } else if (ar.result().isError()) {
+                Tags.ERROR.set(currentSpan, Boolean.TRUE);
             }
             currentSpan.finish();
             resultHandler.handle(ar);
