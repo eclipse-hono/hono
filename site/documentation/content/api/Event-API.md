@@ -32,7 +32,7 @@ The AMQP messages used to forward events to the AMQP Messaging Network MUST have
 
 The following sequence diagram illustrates the flow of messages involved in the *MQTT Adapter* forwarding an event to the downstream AMQP Messaging Network.
 
-![Forward event flow](../forwardEvent.png)
+{{< figure src="../forwardEvent.svg" title="Forward event flow" >}}
 
 1. *Device* `4711` publishes an event using MQTT QoS 1.
    1. *MQTT Adapter* transfers data to *AMQP 1.0 Messaging Network*.
@@ -65,7 +65,7 @@ Hono supports *AT LEAST ONCE* delivery of *Event* messages only. A client theref
 The following sequence diagram illustrates the flow of messages involved in a *Business Application* receiving an event data message from Hono. 
 
 
-![Receive event data flow](../consumeEvent_Success.png)
+{{< figure src="../consumeEvent_Success.svg" title="Receive event data flow (success)" >}}
 
 1. *AMQP 1.0 Messaging Network* delivers event message to *Business Application*.
 1. *Business Application* acknowledges reception of message.

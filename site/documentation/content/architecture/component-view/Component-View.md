@@ -41,6 +41,6 @@ The *AMQP 1.0 Messaging Network* is not *per se* a component being developed as 
 
 The diagram below provides an overview of the default implementation of the Messaging Network component used with Hono.
 
-{{< figure src="../hono-messaging.png" >}}
+{{< figure src="../hono-messaging.png"  >}}
 
 Scaling out messaging infrastructure is a not a trivial task. Hono **does not** provide an out-of-the-box solution to this problem but instead integrates with the [EnMasse](http://enmasse.io) project which aims at providing *Messaging as a Service* infrastructure.

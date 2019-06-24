@@ -2,6 +2,13 @@ This folder contains the content of the Hono website.
 It is built using the [Hugo template system](https://gohugo.io).
 The website consists of the homepage and the documentation, which are two separate hugo projects. 
 
+# Sequence diagrams
+
+The UML Sequence Diagrams are created with the [PlantUML online server](http://www.plantuml.com/plantuml). The SVG files
+contain the source code and can be edited by pasting their link on this page like e.g.:
+
+    https://raw.githubusercontent.com/eclipse/hono/master/site/documentation/content/api/setLastKnownGatewayForDevice_Success.svg 
+
 # Building locally
 
 In order to build the site

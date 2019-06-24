@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" contentScriptType="application/ecmascript" contentStyleType="text/css" height="434.4px" preserveAspectRatio="none" style="width:727px;height:434px;" version="1.1" viewBox="0 0 727 434" width="727.2px" zoomAndPan="magnify"><defs><filter height="300%" id="f96ajnid7hb" width="300%" x="-1" y="-1"><feGaussianBlur result="blurOut" stdDeviation="2.4"/><feColorMatrix in="blurOut" result="blurOut2" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .4 0"/><feOffset dx="4.8" dy="4.8" in="blurOut2" result="blurOut3"/><feBlend in="SourceGraphic" in2="blurOut3" mode="normal"/></filter></defs><g><line style="stroke: #A80036; stroke-width: 1.2; stroke-dasharray: 5.0,5.0;" x1="97.2" x2="97.2" y1="45.9563" y2="386.9906"/><line style="stroke: #A80036; stroke-width: 1.2; stroke-dasharray: 5.0,5.0;" x1="622.2" x2="622.2" y1="45.9563" y2="386.9906"/><rect fill="#FEFECE" filter="url(#f96ajnid7hb)" height="36.3562" style="stroke: #A80036; stroke-width: 1.7999999999999998;" width="170.4" x="9.6" y="3.6"/><text fill="#000000" font-family="sans-serif" font-size="16.8" lengthAdjust="spacingAndGlyphs" textLength="153.6" x="18" y="27.5941">AMQP 1.0 Network</text><rect fill="#FEFECE" filter="url(#f96ajnid7hb)" height="36.3562" style="stroke: #A80036; stroke-width: 1.7999999999999998;" width="170.4" x="9.6" y="385.7906"/><text fill="#000000" font-family="sans-serif" font-size="16.8" lengthAdjust="spacingAndGlyphs" textLength="153.6" x="18" y="409.7848">AMQP 1.0 Network</text><rect fill="#FEFECE" filter="url(#f96ajnid7hb)" height="36.3562" style="stroke: #A80036; stroke-width: 1.7999999999999998;" width="188.4" x="526.2" y="3.6"/><text fill="#000000" font-family="sans-serif" font-size="16.8" lengthAdjust="spacingAndGlyphs" textLength="171.6" x="534.6" y="27.5941">Business Application</text><rect fill="#FEFECE" filter="url(#f96ajnid7hb)" height="36.3562" style="stroke: #A80036; stroke-width: 1.7999999999999998;" width="188.4" x="526.2" y="385.7906"/><text fill="#000000" font-family="sans-serif" font-size="16.8" lengthAdjust="spacingAndGlyphs" textLength="171.6" x="534.6" y="409.7848">Business Application</text><polygon fill="#A80036" points="110.4,78.5156,98.4,83.3156,110.4,88.1156,105.6,83.3156" style="stroke: #A80036; stroke-width: 1.2;"/><line style="stroke: #A80036; stroke-width: 1.2;" x1="103.2" x2="621.6" y1="83.3156" y2="83.3156"/><text fill="#000000" font-family="sans-serif" font-size="15.6" lengthAdjust="spacingAndGlyphs" textLength="459.6" x="117.6" y="77.2365">transfer("command/${tenant_id}/${device_id}", command)</text><path d="M12,98.9156 L12,146.9156 L176.4,146.9156 L176.4,110.9156 L164.4,98.9156 L12,98.9156 " fill="#FBFB77" filter="url(#f96ajnid7hb)" style="stroke: #A80036; stroke-width: 1.2;"/><path d="M164.4,98.9156 L164.4,110.9156 L176.4,110.9156 L164.4,98.9156 " fill="#FBFB77" style="stroke: #A80036; stroke-width: 1.2;"/><text fill="#000000" font-family="sans-serif" font-size="15.6" lengthAdjust="spacingAndGlyphs" textLength="139.2" x="19.2" y="119.3959">forward command</text><text fill="#000000" font-family="sans-serif" font-size="15.6" lengthAdjust="spacingAndGlyphs" textLength="69.6" x="19.2" y="137.5553">to device</text><polygon fill="#A80036" points="608.4,178.5938,620.4,183.3937,608.4,188.1938,613.2,183.3937" style="stroke: #A80036; stroke-width: 1.2;"/><line style="stroke: #A80036; stroke-width: 1.2;" x1="97.2" x2="615.6" y1="183.3937" y2="183.3937"/><text fill="#000000" font-family="sans-serif" font-size="15.6" lengthAdjust="spacingAndGlyphs" textLength="176.4" x="105.6" y="177.3146">disposition("accepted")</text><path d="M16.8,198.9938 L16.8,246.9937 L172.8,246.9937 L172.8,210.9938 L160.8,198.9938 L16.8,198.9938 " fill="#FBFB77" filter="url(#f96ajnid7hb)" style="stroke: #A80036; stroke-width: 1.2;"/><path d="M160.8,198.9938 L160.8,210.9938 L172.8,210.9938 L160.8,198.9938 " fill="#FBFB77" style="stroke: #A80036; stroke-width: 1.2;"/><text fill="#000000" font-family="sans-serif" font-size="15.6" lengthAdjust="spacingAndGlyphs" textLength="130.8" x="24" y="219.474">wait for response</text><text fill="#000000" font-family="sans-serif" font-size="15.6" lengthAdjust="spacingAndGlyphs" textLength="90" x="24" y="237.6334">from device</text><polygon fill="#A80036" points="608.4,278.6719,620.4,283.4719,608.4,288.2719,613.2,283.4719" style="stroke: #A80036; stroke-width: 1.2;"/><line style="stroke: #A80036; stroke-width: 1.2;" x1="97.2" x2="615.6" y1="283.4719" y2="283.4719"/><text fill="#000000" font-family="sans-serif" font-size="15.6" lengthAdjust="spacingAndGlyphs" textLength="496.8" x="105.6" y="277.3928">transfer("command_response/${tenant_id}/${reply_id}", status)</text><path d="M540,299.0719 L540,329.0719 L700.8,329.0719 L700.8,311.0719 L688.8,299.0719 L540,299.0719 " fill="#FBFB77" filter="url(#f96ajnid7hb)" style="stroke: #A80036; stroke-width: 1.2;"/><path d="M688.8,299.0719 L688.8,311.0719 L700.8,311.0719 L688.8,299.0719 " fill="#FBFB77" style="stroke: #A80036; stroke-width: 1.2;"/><text fill="#000000" font-family="sans-serif" font-size="15.6" lengthAdjust="spacingAndGlyphs" textLength="135.6" x="547.2" y="319.5521">process response</text><polygon fill="#A80036" points="110.4,360.5906,98.4,365.3906,110.4,370.1906,105.6,365.3906" style="stroke: #A80036; stroke-width: 1.2;"/><line style="stroke: #A80036; stroke-width: 1.2;" x1="103.2" x2="621.6" y1="365.3906" y2="365.3906"/><text fill="#000000" font-family="sans-serif" font-size="15.6" lengthAdjust="spacingAndGlyphs" textLength="176.4" x="117.6" y="359.3115">disposition("accepted")</text><!--
+@startuml
+scale 1.2
+
+participant "AMQP 1.0 Network"
+participant "Business Application"
+
+"Business Application" -> "AMQP 1.0 Network": transfer("command/${tenant_id}/${device_id}", command)
+note over "AMQP 1.0 Network"
+forward command
+to device
+end note
+"AMQP 1.0 Network" -> "Business Application": disposition("accepted")
+note over "AMQP 1.0 Network"
+wait for response
+from device
+end note
+"AMQP 1.0 Network" -> "Business Application": transfer("command_response/${tenant_id}/${reply_id}", status)
+note over "Business Application"
+process response
+end note
+"Business Application" -> "AMQP 1.0 Network": disposition("accepted")
+@enduml
+
+PlantUML version 1.2019.07beta1(Unknown compile time)
+(GPL source distribution)
+Java Runtime: Java(TM) SE Runtime Environment
+JVM: Java HotSpot(TM) 64-Bit Server VM
+Java Version: 1.7.0_25-b15
+Operating System: Linux
+Default Encoding: UTF-8
+Language: en
+Country: US
+--></g></svg>

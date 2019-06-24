@@ -77,9 +77,9 @@ When a device unsubscribes again, the adapter automatically sends a *Time until 
 The following sequence diagram shows a *Time until disconnect notification* while sending a telemetry message downstream
 via the HTTP protocol adapter:
 
-![Device command readiness with telemetry data](../device_commandReadinessImplicit.png)
+{{< figure src="../device_commandReadinessImplicit.svg" title="Device command readiness with telemetry data" >}}
 
 The following sequence diagram shows a *Time until disconnect notification* by sending an empty event message downstream
 via the HTTP protocol adapter:
 
-![Device command readiness with explicit event](../device_commandReadinessExplicit.png)
+{{< figure src="../device_commandReadinessExplicit.svg" title="Device command readiness with explicit event" >}}

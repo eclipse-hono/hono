@@ -21,7 +21,7 @@ The Tenant API is defined by means of AMQP 1.0 message exchanges, i.e. a client 
 1. Client has established an AMQP link in role *sender* on the connection using target address `tenant`. This link is used by the client to send request messages to the Tenant service.
 1. Client has established an AMQP link in role *receiver* on the connection using source address `tenant/${reply-to}` where *reply-to* may be any arbitrary string chosen by the client. This link is used by the client to receive responses to the requests it has sent to the Tenant service. This link's source address is also referred to as the *reply-to* address for the request messages.
 
-{{< figure src="../tenant_ConnectToTenant.png" alt="A client establishes an AMQP connection and the links required to invoke operations of the Tenant service" title="Client connecting to Tenant service" >}}
+{{< figure src="../tenant_ConnectToTenant.svg" alt="A client establishes an AMQP connection and the links required to invoke operations of the Tenant service" title="Client connecting to Tenant service" >}}
 
 ## Get Tenant Information
 
@@ -31,7 +31,7 @@ Clients use this operation to *retrieve* information about a tenant.
 
 The following sequence diagram illustrates the flow of messages involved in a *Client* retrieving tenant information.
 
-{{< figure src="../tenant_GetTenantSuccess.png" title="Client retrieving tenant information" alt="A client sends a request message for retrieving tenant information and receives a response containing the information" >}}
+{{< figure src="../tenant_GetTenantSuccess.svg" title="Client retrieving tenant information" alt="A client sends a request message for retrieving tenant information and receives a response containing the information" >}}
 
 **Request Message Format**
 

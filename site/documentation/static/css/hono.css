@@ -61,3 +61,19 @@
   text-align: center;
   padding: 5px;
 }
+
+#body-inner figure a img {
+  float: left;
+}
+
+figcaption {
+  clear: both;
+  display: table;
+  text-align: left;
+}
+
+#body-inner figure::after {
+  content: "";
+  clear: both;
+  display: table;
+}
