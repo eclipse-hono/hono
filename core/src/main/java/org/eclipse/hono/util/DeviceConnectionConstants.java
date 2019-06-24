@@ -66,6 +66,11 @@ public final class DeviceConnectionConstants extends RequestResponseApiConstants
             this.subject = subject;
         }
 
+        /**
+         * Gets the AMQP message subject corresponding to this action.
+         * 
+         * @return The subject.
+         */
         public String getSubject() {
             return subject;
         }
