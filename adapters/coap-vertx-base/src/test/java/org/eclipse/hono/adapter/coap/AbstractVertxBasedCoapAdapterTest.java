@@ -542,7 +542,7 @@ public class AbstractVertxBasedCoapAdapterTest {
 
         final CoapServer server = mock(CoapServer.class);
         if (startupShouldFail) {
-            doThrow(new IllegalStateException("Coap Server start with intented failure!")).when(server).start();
+            doThrow(new IllegalStateException("Coap Server start with intended failure!")).when(server).start();
         } else {
             doNothing().when(server).start();
         }
@@ -564,7 +564,7 @@ public class AbstractVertxBasedCoapAdapterTest {
             final boolean complete,
             final Handler<Void> onStartupSuccess) {
 
-        final AbstractVertxBasedCoapAdapter<CoapAdapterProperties> adapter = new AbstractVertxBasedCoapAdapter<CoapAdapterProperties>() {
+        final AbstractVertxBasedCoapAdapter<CoapAdapterProperties> adapter = new AbstractVertxBasedCoapAdapter<>() {
 
             @Override
             protected String getTypeName() {

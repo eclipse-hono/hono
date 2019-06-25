@@ -903,7 +903,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
             final HttpServer server,
             final Handler<Void> onStartupSuccess) {
 
-        final AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> adapter = new AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties>() {
+        final AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> adapter = new AbstractVertxBasedHttpProtocolAdapter<>() {
 
             @Override
             protected String getTypeName() {

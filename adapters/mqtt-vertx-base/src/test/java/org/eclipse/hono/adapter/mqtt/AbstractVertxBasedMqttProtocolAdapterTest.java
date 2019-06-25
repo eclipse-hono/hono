@@ -1187,7 +1187,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
 
     private AbstractVertxBasedMqttProtocolAdapter<MqttProtocolAdapterProperties> getAdapter(final MqttServer server) {
 
-        final AbstractVertxBasedMqttProtocolAdapter<MqttProtocolAdapterProperties> adapter = new AbstractVertxBasedMqttProtocolAdapter<MqttProtocolAdapterProperties>() {
+        final AbstractVertxBasedMqttProtocolAdapter<MqttProtocolAdapterProperties> adapter = new AbstractVertxBasedMqttProtocolAdapter<>() {
 
             @Override
             protected String getTypeName() {

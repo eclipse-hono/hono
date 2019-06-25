@@ -111,7 +111,7 @@ public class DownstreamSenderFactoryImplTest {
         assertFalse(result.isComplete());
 
         // WHEN the underlying connection fails
-        disconnectHandler.getValue().onDisconnect(connection);;
+        disconnectHandler.getValue().onDisconnect(connection);
 
         // THEN all creation requests are failed
         assertTrue(result.failed());

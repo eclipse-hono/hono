@@ -153,6 +153,7 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
      *         The future will be failed with a {@link ServiceInvocationException}
      *         if the check could not be performed.
      */
+    @Override
     public Future<Boolean> isMessageLimitReached(final TenantObject tenant,
             final long payloadSize) {
 

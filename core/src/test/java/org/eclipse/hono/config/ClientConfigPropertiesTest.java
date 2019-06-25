@@ -35,7 +35,7 @@ public class ClientConfigPropertiesTest {
      * property file.
      */
     @Test
-    public void testLoadCrdentialsFromPropertiesFile() {
+    public void testLoadCredentialsFromPropertiesFile() {
 
         final String path = resources.resolve("credentials").toString();
         final ClientConfigProperties props = new ClientConfigProperties();

@@ -53,7 +53,7 @@ public class HttpUtilsTest {
      * the {@link HttpUtils#getTimeTilDisconnect(RoutingContext)} method.
      */
     @Test
-    public void testGetTimeTilDisonnectUsesHeader() {
+    public void testGetTimeTilDisconnectUsesHeader() {
 
         // GIVEN a time til disconnect
         final Integer timeTilDisconnect = 60;
@@ -61,7 +61,7 @@ public class HttpUtilsTest {
         when(httpServerRequest.getHeader(Constants.HEADER_TIME_TIL_DISCONNECT)).thenReturn(timeTilDisconnect.toString());
 
         // THEN the get method returns this value
-        assertEquals(HttpUtils.getTimeTilDisconnect(routingContext), timeTilDisconnect);
+        assertEquals(timeTilDisconnect, HttpUtils.getTimeTilDisconnect(routingContext));
     }
 
     /**
@@ -69,7 +69,7 @@ public class HttpUtilsTest {
      * the {@link HttpUtils#getTimeTilDisconnect(RoutingContext)} method.
      */
     @Test
-    public void testGetTimeTilDisonnectUsesQueryParam() {
+    public void testGetTimeTilDisconnectUsesQueryParam() {
 
         // GIVEN a time til disconnect
         final Integer timeTilDisconnect = 60;
@@ -77,7 +77,7 @@ public class HttpUtilsTest {
         when(httpServerRequest.getParam(Constants.HEADER_TIME_TIL_DISCONNECT)).thenReturn(timeTilDisconnect.toString());
 
         // THEN the get method returns this value
-        assertEquals(HttpUtils.getTimeTilDisconnect(routingContext), timeTilDisconnect);
+        assertEquals(timeTilDisconnect, HttpUtils.getTimeTilDisconnect(routingContext));
     }
 
     /**
@@ -86,7 +86,7 @@ public class HttpUtilsTest {
      * {@link Constants#HEADER_TIME_TIL_DISCONNECT} is neither provided as query parameter nor as requests header.
      */
     @Test
-    public void testGetTimeTilDisonnectReturnsNullIfNotSpecified() {
+    public void testGetTimeTilDisconnectReturnsNullIfNotSpecified() {
 
         assertNull(HttpUtils.getTimeTilDisconnect(routingContext));
     }

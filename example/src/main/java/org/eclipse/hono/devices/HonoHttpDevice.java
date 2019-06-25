@@ -83,11 +83,11 @@ public class HonoHttpDevice {
         EmptyEventAlreadyInvalid(null, EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION, 0, true),
         JsonEventWithoutTtd(new JsonObject().put("threshold", "exceeded"), "application/json", null, true),
         JsonEventWithTtd(new JsonObject().put("threshold", "exceeded"), "application/json", 120, true),
-        TelemetryWithoutTtd(new JsonObject().put("wheather", "sunny"), "application/json", null, false),
-        TelemetryWithTtd(new JsonObject().put("wheather", "cloudy"), "application/json", 60, false);
+        TelemetryWithoutTtd(new JsonObject().put("weather", "sunny"), "application/json", null, false),
+        TelemetryWithTtd(new JsonObject().put("weather", "cloudy"), "application/json", 60, false);
 
         /**
-         * The payload of the message, defined as JsonObject. Maybe {@code null}.
+         * The payload of the message, defined as JsonObject. May be {@code null}.
          */
         private final JsonObject payload;
         /**

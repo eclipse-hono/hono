@@ -55,7 +55,7 @@ public final class AuthoritiesImpl implements Authorities {
      * 
      * @param claims The claims object to retrieve authorities from.
      * @return The authorities.
-     * @throws NullPointerException is claims is {@code null}.
+     * @throws NullPointerException if claims is {@code null}.
      */
     public static Authorities from(final Claims claims) {
         Objects.requireNonNull(claims);

@@ -256,7 +256,7 @@ public final class MessageHelper {
         String assertion = null;
         final ApplicationProperties properties = msg.getApplicationProperties();
         if (properties != null) {
-            Object obj = null;
+            final Object obj;
             if (removeAssertion) {
                 obj = properties.getValue().remove(APP_PROPERTY_REGISTRATION_ASSERTION);
             } else {
@@ -553,7 +553,7 @@ public final class MessageHelper {
 
         final ApplicationProperties props = Optional.ofNullable(msg.getApplicationProperties())
                 .orElseGet(() -> {
-                    final ApplicationProperties result = new ApplicationProperties(new HashMap<String, Object>());
+                    final ApplicationProperties result = new ApplicationProperties(new HashMap<>());
                     msg.setApplicationProperties(result);
                     return result;
                 });

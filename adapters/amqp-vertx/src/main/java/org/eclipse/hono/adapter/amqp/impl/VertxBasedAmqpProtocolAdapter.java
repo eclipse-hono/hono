@@ -168,7 +168,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                                 new X509AuthProvider(getCredentialsClientFactory(), getConfig(), tracer));
                     }
                     return Future.succeededFuture();
-                }).compose(succcess -> {
+                }).compose(success -> {
                     return CompositeFuture.all(bindSecureServer(), bindInsecureServer());
                 }).compose(success -> {
                     startFuture.complete();

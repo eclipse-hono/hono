@@ -109,7 +109,7 @@ public class X509AuthHandlerTest {
      * An X.509 certificate which contains a subject and issuer only.
      *
      */
-    private class EmptyCertificate extends X509Certificate {
+    private static class EmptyCertificate extends X509Certificate {
 
         private final X500Principal subject;
         private final X500Principal issuer;

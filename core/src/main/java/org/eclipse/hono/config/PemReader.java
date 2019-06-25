@@ -203,7 +203,7 @@ public final class PemReader {
             if (end.matches()) {
 
                 if (buffer == null) {
-                    throw new IOException("PEM: Encountered END without preceeding BEGIN statement");
+                    throw new IOException("PEM: Encountered END without preceding BEGIN statement");
                 }
 
                 final String endType = end.group(1);

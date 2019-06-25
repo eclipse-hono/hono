@@ -257,7 +257,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     /**
      * Gets the producer of connection events.
      *
-     * @return The implementation for producing connection events. Maybe {@code null}.
+     * @return The implementation for producing connection events. May be {@code null}.
      */
     public ConnectionEventProducer getConnectionEventProducer() {
         return this.connectionEventProducer;
@@ -1507,7 +1507,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
 
     /**
      * Gets the manager to use for connection limits.
-     * @return The manager. Maybe {@code null}.
+     * @return The manager. May be {@code null}.
      */
     public final ConnectionLimitManager getConnectionLimitManager() {
         return connectionLimitManager;

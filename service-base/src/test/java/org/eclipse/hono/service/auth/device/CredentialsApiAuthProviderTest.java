@@ -148,7 +148,7 @@ public class CredentialsApiAuthProviderTest {
 
     private CredentialsApiAuthProvider<AbstractDeviceCredentials> getProvider(final AbstractDeviceCredentials credentials, final Tracer tracer) {
 
-        return new CredentialsApiAuthProvider<AbstractDeviceCredentials>(credentialsClientFactory, tracer) {
+        return new CredentialsApiAuthProvider<>(credentialsClientFactory, tracer) {
 
             @Override
             protected AbstractDeviceCredentials getCredentials(final JsonObject authInfo) {

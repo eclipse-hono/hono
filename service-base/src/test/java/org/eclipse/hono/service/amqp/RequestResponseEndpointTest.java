@@ -411,7 +411,7 @@ public class RequestResponseEndpointTest {
 
     private RequestResponseEndpoint<ServiceConfigProperties> getEndpoint(final boolean passesFormalVerification) {
 
-        final RequestResponseEndpoint<ServiceConfigProperties> endpoint = new RequestResponseEndpoint<ServiceConfigProperties>(vertx) {
+        final RequestResponseEndpoint<ServiceConfigProperties> endpoint = new RequestResponseEndpoint<>(vertx) {
 
             @Override
             public String getName() {

@@ -70,7 +70,7 @@ public class AmqpServiceBaseTest {
 
     private AmqpServiceBase<ServiceConfigProperties> createServer(final AmqpEndpoint amqpEndpoint, final Handler<ProtonConnection> onClientDisconnect) {
 
-        final AmqpServiceBase<ServiceConfigProperties> server = new AmqpServiceBase<ServiceConfigProperties>() {
+        final AmqpServiceBase<ServiceConfigProperties> server = new AmqpServiceBase<>() {
 
             @Override
             protected String getServiceName() {

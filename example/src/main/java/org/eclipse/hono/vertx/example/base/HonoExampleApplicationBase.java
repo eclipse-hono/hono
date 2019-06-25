@@ -139,7 +139,7 @@ public class HonoExampleApplicationBase {
      * {@link #handleCommandReadinessNotification(TimeUntilDisconnectNotification)} if the message indicates that it
      * stays connected for a specified time. Supported are telemetry and event MessageConsumer.
      *
-     * @return Future A succeeded future that contains the MessageConsumer if the creation was successful, a failed
+     * @return A succeeded future that contains the MessageConsumer if the creation was successful, a failed
      *         Future otherwise.
      */
     private Future<MessageConsumer> createConsumer() {
@@ -430,7 +430,7 @@ public class HonoExampleApplicationBase {
      * @return Map The application property map.
      */
     private Map<String, Object> buildCommandProperties() {
-        final Map<String, Object> applicationProperties = new HashMap<String, Object>(1);
+        final Map<String, Object> applicationProperties = new HashMap<>(1);
         applicationProperties.put("appId", "example#1");
         return applicationProperties;
     }

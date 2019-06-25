@@ -660,7 +660,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
         final ProtonDelivery commandDelivery = mock(ProtonDelivery.class);
         final String commandAddress = String.format("%s/%s/%s", getCommandEndpoint(), TEST_TENANT_ID, TEST_DEVICE);
         final Buffer payload = Buffer.buffer("payload");
-        final Message message = getFakeMessage(commandAddress, payload, "commandToEecute");
+        final Message message = getFakeMessage(commandAddress, payload, "commandToExecute");
         final Command command = Command.from(message, TEST_TENANT_ID, TEST_DEVICE);
         final CommandContext context = CommandContext.from(command, commandDelivery, commandReceiver, mock(Span.class));
         adapter.onCommandReceived(deviceLink, context);

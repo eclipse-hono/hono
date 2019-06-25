@@ -207,25 +207,24 @@ public class HonoReceiver extends AbstractClient {
             final byte[] messageBody = payload.getBytes();
             bytesReceived += messageBody.length;
             final Long senderTime = getSenderTime(message, messageBody);
-            if (sampler.isUseSenderTime() && senderTime == null) {
-                errorCount++;
-                setSampleStartIfNotSetYet(sampleReceivedTime);
-                LOGGER.warn("got message without sender time information; increasing errorCount in batch to {}; current batch size: {}",
-                        errorCount, messageCount);
-                return;
-            }
-
             if (sampler.isUseSenderTime()) {
-                setSampleStartIfNotSetYet(senderTime); // set sample start only once when the first message is received.
-                final long sampleDeliveryTime = sampleReceivedTime - senderTime;
-                if (sampleDeliveryTime < 0) {
-                    // means that time on sender and receiver is not in sync
-                    LOGGER.debug("got negative delivery time from received sender time: {}ms", sampleDeliveryTime);
-                    senderClockNotInSync = true;
+                if (senderTime == null) {
+                    errorCount++;
+                    setSampleStartIfNotSetYet(sampleReceivedTime);
+                    LOGGER.warn("got message without sender time information; increasing errorCount in batch to {}; current batch size: {}",
+                            errorCount, messageCount);
+                } else {
+                    setSampleStartIfNotSetYet(senderTime); // set sample start only once when the first message is received.
+                    final long sampleDeliveryTime = sampleReceivedTime - senderTime;
+                    if (sampleDeliveryTime < 0) {
+                        // means that time on sender and receiver is not in sync
+                        LOGGER.debug("got negative delivery time from received sender time: {}ms", sampleDeliveryTime);
+                        senderClockNotInSync = true;
+                    }
+                    totalSampleDeliveryTime += sampleDeliveryTime;
+                    LOGGER.trace("received message; current batch size: {}; reception timestamp: {}; delivery time: {}ms; remaining credit: {}",
+                            messageCount, sampleReceivedTime, sampleDeliveryTime, messageConsumer.getRemainingCredit());
                 }
-                totalSampleDeliveryTime += sampleDeliveryTime;
-                LOGGER.trace("received message; current batch size: {}; reception timestamp: {}; delivery time: {}ms; remaining credit: {}",
-                        messageCount, sampleReceivedTime, sampleDeliveryTime, messageConsumer.getRemainingCredit());
             } else {
                 setSampleStartIfNotSetYet(sampleReceivedTime);
                 LOGGER.trace("received message; current batch size: {}; reception timestamp: {}; remaining credit: {}", 

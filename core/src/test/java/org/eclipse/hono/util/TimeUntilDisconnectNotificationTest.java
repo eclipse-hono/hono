@@ -41,8 +41,8 @@ public class TimeUntilDisconnectNotificationTest {
         assertTrue(ttdNotificationOpt.isPresent());
 
         final TimeUntilDisconnectNotification notification = ttdNotificationOpt.get();
-        assertNotificationProperties(notification, msg);
-        assertEquals(notification.getTtd(), Integer.valueOf(10));
+        assertNotificationProperties(notification);
+        assertEquals(Integer.valueOf(10), notification.getTtd());
     }
 
     /**
@@ -57,11 +57,11 @@ public class TimeUntilDisconnectNotificationTest {
         assertTrue(ttdNotificationOpt.isPresent());
         final TimeUntilDisconnectNotification notification = ttdNotificationOpt.get();
 
-        assertNotificationProperties(notification, msg);
+        assertNotificationProperties(notification);
         assertEquals(notification.getTtd(), Integer.valueOf(MessageHelper.TTD_VALUE_UNLIMITED));
     }
 
-    private void assertNotificationProperties(final TimeUntilDisconnectNotification notification, final Message msg) {
+    private void assertNotificationProperties(final TimeUntilDisconnectNotification notification) {
         assertTrue(notification.getMillisecondsUntilExpiry() > 0);
         assertTrue(Constants.DEFAULT_TENANT.equals(notification.getTenantId()));
         assertTrue("4711".equals(notification.getDeviceId()));

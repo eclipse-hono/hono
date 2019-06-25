@@ -454,7 +454,7 @@ public class AbstractProtocolAdapterBaseTest {
             final Handler<Void> commandConnectionEstablishedHandler,
             final Handler<Void> commandConnectionLostHandler) {
 
-        final AbstractProtocolAdapterBase<ProtocolAdapterProperties> result = new AbstractProtocolAdapterBase<ProtocolAdapterProperties>() {
+        final AbstractProtocolAdapterBase<ProtocolAdapterProperties> result = new AbstractProtocolAdapterBase<>() {
 
             @Override
             public String getTypeName() {

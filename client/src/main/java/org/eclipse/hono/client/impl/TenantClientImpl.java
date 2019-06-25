@@ -133,7 +133,6 @@ public class TenantClientImpl extends AbstractRequestResponseClient<TenantResult
      * Gets the AMQP <em>target</em> address to use for sending requests to Hono's Tenant API endpoint.
      *
      * @return The target address.
-     * @throws NullPointerException if tenant is {@code null}.
      */
     public static final String getTargetAddress() {
         return TenantConstants.TENANT_ENDPOINT;

@@ -39,7 +39,7 @@ public class EventBusServiceTest {
      */
     @BeforeAll
     public static void setUp() {
-        service = new EventBusService<Object>() {
+        service = new EventBusService<>() {
 
             @Override
             public void setConfig(final Object configuration) {

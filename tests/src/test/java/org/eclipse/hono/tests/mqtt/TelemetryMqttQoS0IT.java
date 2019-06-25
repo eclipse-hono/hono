@@ -75,7 +75,7 @@ public class TelemetryMqttQoS0IT extends MqttPublishTestBase {
     @Override
     protected void assertMessageReceivedRatio(final long received, final long sent, final TestContext ctx) {
 
-        int expectedPercentage = 100;
+        final int expectedPercentage;
         if (isTestEnvironment()) {
             LOGGER.info("running on CI test environment, allowing for 100 percent of messages to be lost ...");
             expectedPercentage = 0;

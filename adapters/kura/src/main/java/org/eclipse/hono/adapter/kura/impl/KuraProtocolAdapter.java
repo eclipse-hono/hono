@@ -60,7 +60,7 @@ public final class KuraProtocolAdapter extends AbstractVertxBasedMqttProtocolAda
 
         final Future<ResourceIdentifier> result = Future.future();
         final ResourceIdentifier topic = ctx.topic();
-        ResourceIdentifier mappedTopic = null;
+        final ResourceIdentifier mappedTopic;
 
         if (getConfig().getControlPrefix().equals(topic.getEndpoint())) {
 

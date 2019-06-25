@@ -392,7 +392,7 @@ public class ClientConfigProperties extends AbstractConfig {
      * <p>
      * The default value of this property is {@link #DEFAULT_INITIAL_CREDITS}.
      *
-     * @return The number of inital credits.
+     * @return The number of initial credits.
      */
     public final int getInitialCredits() {
         return initialCredits;

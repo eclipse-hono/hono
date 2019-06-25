@@ -115,12 +115,6 @@ public class TenantClientImplTest {
      * 
      * @param ctx The vert.x test context.
      */
-    /**
-     * Verifies that the client includes the required information in the request
-     * message sent to the Tenant service.
-     * 
-     * @param ctx The vert.x test context.
-     */
     @SuppressWarnings("unchecked")
     @Test
     public void testGetTenantInvokesServiceIfNoCacheConfigured(final VertxTestContext ctx) {

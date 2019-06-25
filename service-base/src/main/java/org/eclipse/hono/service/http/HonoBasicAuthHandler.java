@@ -78,6 +78,7 @@ public class HonoBasicAuthHandler extends BasicAuthHandlerImpl {
         final RoutingContextDecorator routingContextDecorator = new RoutingContextDecorator(context.currentRoute(),
                 context) {
 
+            @Override
             public void fail(final Throwable throwable) {
                 HttpUtils.badRequest(context, "Malformed authorization header");
             }

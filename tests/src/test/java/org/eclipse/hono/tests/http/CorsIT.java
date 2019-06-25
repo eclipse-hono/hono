@@ -184,7 +184,7 @@ public class CorsIT {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testCorsPreflightRequestForPuttingCommandResonse(final TestContext ctx) {
+    public void testCorsPreflightRequestForPuttingCommandResponse(final TestContext ctx) {
 
         httpClient.options(
                 String.format("/%s/res/%s/%s/%s", CommandConstants.COMMAND_ENDPOINT, "my-tenant", "my-device", "cmd-request-id"),

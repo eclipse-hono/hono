@@ -207,7 +207,7 @@ public abstract class AbstractServiceBase<T extends ServiceConfigProperties> ext
         } else {
             return Constants.PORT_UNCONFIGURED;
         }
-    };
+    }
 
     /**
      * Gets the insecure port number that this service has bound to.
@@ -396,7 +396,7 @@ public abstract class AbstractServiceBase<T extends ServiceConfigProperties> ext
      * If <em>config</em> contains key &amp; certificate configuration it is added to
      * the given server options and the <em>ssl</em> flag is set to {@code true}.
      * <p>
-     * If the server option' ssl flag is set, then the protocols from the <em>disabledTlsVersions</em>
+     * If the server option's ssl flag is set, then the protocols from the <em>disabledTlsVersions</em>
      * configuration property are removed from the options (and thus disabled).
      * <p>
      * Finally, if a working instance of Netty's <em>tcnative</em> library is found, then
