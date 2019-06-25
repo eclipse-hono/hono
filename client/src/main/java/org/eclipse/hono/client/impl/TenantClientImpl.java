@@ -73,7 +73,7 @@ public class TenantClientImpl extends AbstractRequestResponseClient<TenantResult
      * @param connection The connection to Hono.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
-    TenantClientImpl(final HonoConnection connection) {
+    protected TenantClientImpl(final HonoConnection connection) {
         super(connection, null);
     }
 
