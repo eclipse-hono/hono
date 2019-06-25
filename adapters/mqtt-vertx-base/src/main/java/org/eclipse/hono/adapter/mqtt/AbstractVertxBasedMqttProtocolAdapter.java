@@ -176,7 +176,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                         new UsernamePasswordAuthProvider(
                                 getCredentialsClientFactory(),
                                 getConfig(),
-                                tracer)));
+                                tracer), tracer));
     }
 
     /**

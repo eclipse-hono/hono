@@ -21,7 +21,11 @@ import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.service.auth.device.ExecutionContextAuthHandler;
 import org.eclipse.hono.service.auth.device.HonoClientBasedAuthProvider;
 import org.eclipse.hono.service.auth.device.UsernamePasswordCredentials;
+import org.eclipse.hono.tracing.TracingHelper;
 
+import io.opentracing.SpanContext;
+import io.opentracing.Tracer;
+import io.opentracing.noop.NoopSpanContext;
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 import io.vertx.mqtt.MqttAuth;
@@ -33,13 +37,18 @@ import io.vertx.mqtt.MqttAuth;
  */
 public class ConnectPacketAuthHandler extends ExecutionContextAuthHandler<MqttContext> {
 
+    private final Tracer tracer;
+
     /**
      * Creates a new handler for a Hono client based auth provider.
      * 
      * @param authProvider The provider to use for verifying a device's credentials.
+     * @param tracer The tracer instance.
      */
-    public ConnectPacketAuthHandler(final HonoClientBasedAuthProvider<UsernamePasswordCredentials> authProvider) {
+    public ConnectPacketAuthHandler(final HonoClientBasedAuthProvider<UsernamePasswordCredentials> authProvider,
+            final Tracer tracer) {
         super(authProvider);
+        this.tracer = tracer;
     }
 
     /**
@@ -79,9 +88,14 @@ public class ConnectPacketAuthHandler extends ExecutionContextAuthHandler<MqttCo
                     "device provided malformed credentials in CONNECT packet"));
 
         } else {
-            result.complete(new JsonObject()
+            final JsonObject credentialsJSON = new JsonObject()
                     .put("username", auth.getUsername())
-                    .put("password", auth.getPassword()));
+                    .put("password", auth.getPassword());
+            final SpanContext spanContext = context.getTracingContext();
+            if (spanContext != null && !(spanContext instanceof NoopSpanContext)) {
+                TracingHelper.injectSpanContext(tracer, spanContext, credentialsJSON);
+            }
+            result.complete(credentialsJSON);
         }
 
         return result;
