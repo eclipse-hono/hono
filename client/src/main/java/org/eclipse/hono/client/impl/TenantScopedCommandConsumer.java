@@ -84,6 +84,8 @@ public class TenantScopedCommandConsumer extends CommandConsumer {
                 address,
                 ProtonQoS.AT_LEAST_ONCE,
                 messageHandler,
+                con.getConfig().getInitialCredits(),
+                false, // no auto-accept
                 sourceAddress -> {
                     LOG.debug("command receiver link [tenant-id: {}] closed remotely", tenantId);
                     remoteCloseHandler.handle(sourceAddress);

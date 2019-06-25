@@ -693,6 +693,17 @@ public class HonoConnectionImpl implements HonoConnection {
             final ProtonMessageHandler messageHandler,
             final int preFetchSize,
             final Handler<String> remoteCloseHook) {
+        return createReceiver(sourceAddress, qos, messageHandler, preFetchSize, true, remoteCloseHook);
+    }
+
+    @Override
+    public Future<ProtonReceiver> createReceiver(
+            final String sourceAddress,
+            final ProtonQoS qos,
+            final ProtonMessageHandler messageHandler,
+            final int preFetchSize,
+            final boolean autoAccept,
+            final Handler<String> remoteCloseHook) {
 
         Objects.requireNonNull(sourceAddress);
         Objects.requireNonNull(qos);
@@ -705,7 +716,7 @@ public class HonoConnectionImpl implements HonoConnection {
             checkConnected().compose(v -> {
                 final Future<ProtonReceiver> receiverFuture = Future.future();
                 final ProtonReceiver receiver = connection.createReceiver(sourceAddress);
-                receiver.setAutoAccept(true);
+                receiver.setAutoAccept(autoAccept);
                 receiver.setQoS(qos);
                 receiver.setPrefetch(preFetchSize);
                 receiver.handler((delivery, message) -> {

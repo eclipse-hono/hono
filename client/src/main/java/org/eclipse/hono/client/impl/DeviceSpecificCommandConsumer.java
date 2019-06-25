@@ -104,6 +104,7 @@ public class DeviceSpecificCommandConsumer extends CommandConsumer {
                     commandHandler.handle(CommandContext.from(command, delivery, receiverRef.get(), currentSpan));
                 },
                 0, // no pre-fetching
+                false, // no auto-accept
                 sourceAddress -> {
                     LOG.debug("command receiver link [tenant-id: {}, device-id: {}] closed remotely",
                             tenantId, deviceId);
