@@ -130,17 +130,6 @@ public abstract class JmsBasedRequestResponseClient<R extends RequestResponseRes
     }
 
     /**
-     * Creates an empty message for textual payload.
-     * 
-     * @return The message.
-     * @throws JMSException if the message could not be created.
-     * @throws NullPointerException if payload is {@code null}.
-     */
-    protected final TextMessage createTextMessage() throws JMSException {
-        return createTextMessage();
-    }
-
-    /**
      * Creates an empty message for binary payload.
      * 
      * @return The message.
@@ -152,7 +141,7 @@ public abstract class JmsBasedRequestResponseClient<R extends RequestResponseRes
     }
 
     /**
-     * Creates a message for binary payload.
+     * Creates a message for JSON payload.
      * 
      * @param payload The payload of the message.
      * @return The message.
