@@ -18,6 +18,7 @@ import static org.eclipse.hono.client.impl.VertxMockSupport.argumentCaptorHandle
 import static org.eclipse.hono.client.impl.VertxMockSupport.mockHandler;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -113,6 +114,7 @@ public class CommandConsumerFactoryImplTest {
                 any(ProtonQoS.class),
                 any(ProtonMessageHandler.class),
                 anyInt(),
+                anyBoolean(),
                 anyHandler())).thenReturn(Future.succeededFuture(deviceSpecificCommandReceiver));
         tenantScopedCommandReceiver = mock(ProtonReceiver.class);
         tenantCommandAddress = ResourceIdentifier.from(CommandConstants.NORTHBOUND_COMMAND_REQUEST_ENDPOINT, tenantId, null).toString();
@@ -120,6 +122,8 @@ public class CommandConsumerFactoryImplTest {
                 eq(tenantCommandAddress),
                 any(ProtonQoS.class),
                 any(ProtonMessageHandler.class),
+                anyInt(),
+                anyBoolean(),
                 anyHandler())).thenReturn(Future.succeededFuture(tenantScopedCommandReceiver));
         gatewayMapper = mock(GatewayMapper.class);
         commandConsumerFactory = new CommandConsumerFactoryImpl(connection, gatewayMapper);
@@ -142,6 +146,7 @@ public class CommandConsumerFactoryImplTest {
                 any(ProtonQoS.class),
                 any(ProtonMessageHandler.class),
                 anyInt(),
+                anyBoolean(),
                 anyHandler()))
         .thenReturn(Future.failedFuture(ex));
 
@@ -186,6 +191,7 @@ public class CommandConsumerFactoryImplTest {
                 eq(ProtonQoS.AT_LEAST_ONCE),
                 any(ProtonMessageHandler.class),
                 eq(0),
+                eq(false),
                 captor.capture());
         captor.getValue().handle(deviceSpecificCommandAddress);
         verify(closeHandler).handle(null);
@@ -236,6 +242,7 @@ public class CommandConsumerFactoryImplTest {
                     eq(ProtonQoS.AT_LEAST_ONCE),
                     any(ProtonMessageHandler.class),
                     eq(0),
+                    eq(false),
                     anyHandler());
             return newConsumer;
         }).setHandler(ctx.asyncAssertSuccess());
@@ -290,6 +297,7 @@ public class CommandConsumerFactoryImplTest {
                 eq(ProtonQoS.AT_LEAST_ONCE),
                 any(ProtonMessageHandler.class),
                 eq(0),
+                eq(false),
                 anyHandler());
 
         // and when the consumer is finally closed locally
@@ -319,6 +327,7 @@ public class CommandConsumerFactoryImplTest {
                 eq(ProtonQoS.AT_LEAST_ONCE),
                 any(ProtonMessageHandler.class),
                 anyInt(),
+                anyBoolean(),
                 anyHandler())).thenReturn(createdReceiver);
 
         // WHEN the liveness check fires
@@ -332,6 +341,7 @@ public class CommandConsumerFactoryImplTest {
                 eq(ProtonQoS.AT_LEAST_ONCE),
                 any(ProtonMessageHandler.class),
                 eq(0),
+                eq(false),
                 anyHandler());
 
         // and when the first attempt has finally timed out
@@ -345,6 +355,7 @@ public class CommandConsumerFactoryImplTest {
                 eq(ProtonQoS.AT_LEAST_ONCE),
                 any(ProtonMessageHandler.class),
                 eq(0),
+                eq(false),
                 anyHandler());
     }
 }

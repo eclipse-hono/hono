@@ -26,6 +26,8 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 import org.apache.qpid.proton.amqp.messaging.Accepted;
+import org.apache.qpid.proton.amqp.messaging.Rejected;
+import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.AsyncCommandClient;
 import org.eclipse.hono.client.ClientErrorException;
@@ -33,7 +35,9 @@ import org.eclipse.hono.client.CommandClient;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.tests.IntegrationTestSupport;
+import org.eclipse.hono.util.BufferResult;
 import org.eclipse.hono.util.CommandConstants;
+import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.TenantObject;
@@ -63,6 +67,7 @@ import io.vertx.proton.ProtonSender;
 @RunWith(VertxUnitRunner.class)
 public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
 
+    private static final String REJECTED_COMMAND_ERROR_MESSAGE = "rejected command error message";
     private String tenantId;
     private String deviceId;
     private String password = "secret";
@@ -180,6 +185,20 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
                             updatedDelivery.getRemoteState().getClass().getSimpleName());
                 }
             });
+        };
+    }
+
+    private ProtonMessageHandler createRejectingCommandConsumer(final TestContext ctx) {
+        return (delivery, msg) -> {
+            ctx.assertNotNull(msg.getReplyTo());
+            ctx.assertNotNull(msg.getSubject());
+            ctx.assertNotNull(msg.getCorrelationId());
+            final String command = msg.getSubject();
+            final Object correlationId = msg.getCorrelationId();
+            log.debug("received command [name: {}, reply-to: {}, correlation-id: {}]", command, msg.getReplyTo(), correlationId);
+            final Rejected rejected = new Rejected();
+            rejected.setError(new ErrorCondition(Constants.AMQP_BAD_REQUEST, REJECTED_COMMAND_ERROR_MESSAGE));
+            delivery.disposition(rejected, true);
         };
     }
 
@@ -415,6 +434,80 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
         sender.get().sendAndWaitForOutcome(messageWithoutId).setHandler(ctx.asyncAssertFailure(t -> {
             ctx.assertTrue(t instanceof ClientErrorException);
         }));
+    }
+
+    /**
+     * Verifies that the adapter forwards the <em>rejected</em> disposition, received from a device, back to the
+     * application.
+     *
+     * @param ctx The vert.x test context.
+     * @throws InterruptedException if not all commands and responses are exchanged in time.
+     */
+    @Test
+    public void testSendCommandFailsForCommandRejectedByDevice(final TestContext ctx) throws InterruptedException {
+
+        connectAndSubscribe(ctx, sender -> createRejectingCommandConsumer(ctx));
+
+        final int totalNoOfCommandsToSend = 3;
+        final CountDownLatch commandsFailed = new CountDownLatch(totalNoOfCommandsToSend);
+        final AtomicInteger commandsSent = new AtomicInteger(0);
+        final AtomicLong lastReceivedTimestamp = new AtomicLong();
+        final long start = System.currentTimeMillis();
+
+        final Async commandClientCreation = ctx.async();
+        final Future<CommandClient> commandClient = helper.applicationClientFactory.getOrCreateCommandClient(tenantId, deviceId, "test-client")
+                .setHandler(ctx.asyncAssertSuccess(c -> {
+                    c.setRequestTimeout(300);
+                    commandClientCreation.complete();
+                }));
+        commandClientCreation.await();
+
+        while (commandsSent.get() < totalNoOfCommandsToSend) {
+            final Async commandSent = ctx.async();
+            context.runOnContext(go -> {
+                final Buffer msg = Buffer.buffer("value: " + commandsSent.getAndIncrement());
+                final Future<BufferResult> sendCmdFuture = commandClient.result().sendCommand("setValue", "text/plain",
+                        msg, null);
+                sendCmdFuture.setHandler(sendAttempt -> {
+                    if (sendAttempt.succeeded()) {
+                        log.debug("sending command {} succeeded unexpectedly", commandsSent.get());
+                    } else {
+                        if (sendAttempt.cause() instanceof ClientErrorException
+                                && ((ClientErrorException) sendAttempt.cause()).getErrorCode() == HttpURLConnection.HTTP_BAD_REQUEST
+                                && REJECTED_COMMAND_ERROR_MESSAGE.equals(sendAttempt.cause().getMessage())) {
+                            log.debug("sending command {} failed as expected: {}", commandsSent.get(),
+                                    sendAttempt.cause().toString());
+                            lastReceivedTimestamp.set(System.currentTimeMillis());
+                            commandsFailed.countDown();
+                            if (commandsFailed.getCount() % 20 == 0) {
+                                log.info("commands failed as expected: {}",
+                                        totalNoOfCommandsToSend - commandsFailed.getCount());
+                            }
+                        } else {
+                            log.debug("sending command {} failed with an unexpected error", commandsSent.get(),
+                                    sendAttempt.cause());
+                        }
+                    }
+                    if (commandsSent.get() % 20 == 0) {
+                        log.info("commands sent: " + commandsSent.get());
+                    }
+                    commandSent.complete();
+                });
+            });
+
+            commandSent.await();
+        }
+
+        final long timeToWait = totalNoOfCommandsToSend * 300 + 300;
+        if (!commandsFailed.await(timeToWait, TimeUnit.MILLISECONDS)) {
+            log.info("Timeout of {} milliseconds reached, stop waiting for commands", timeToWait);
+        }
+        final long commandsCompleted = totalNoOfCommandsToSend - commandsFailed.getCount();
+        log.info("commands sent: {}, commands failed: {} after {} milliseconds",
+                commandsSent.get(), commandsCompleted, lastReceivedTimestamp.get() - start);
+        if (commandsCompleted != commandsSent.get()) {
+            ctx.fail("did not complete all commands sent");
+        }
     }
 
     /**

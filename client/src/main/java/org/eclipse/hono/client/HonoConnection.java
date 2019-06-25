@@ -381,6 +381,33 @@ public interface HonoConnection extends ConnectionLifecycle<HonoConnection> {
             Handler<String> remoteCloseHook);
 
     /**
+     * Creates a receiver link.
+     *
+     * @param sourceAddress The address to receive messages from.
+     * @param qos The quality of service to use for the link.
+     * @param messageHandler The handler to invoke with every message received.
+     * @param preFetchSize The number of credits to flow to the peer as soon as the link
+     *                     has been established. A value of 0 prevents pre-fetching and
+     *                     allows for manual flow control using the returned receiver's
+     *                     <em>flow</em> method.
+     * @param autoAccept {@code true} if received deliveries should be automatically accepted (and settled)
+     *                   after the message handler runs for them, if no other disposition has been applied
+     *                   during handling.
+     * @param remoteCloseHook The handler to invoke when the link is closed at the peer's request (may be {@code null}).
+     * @return A future for the created link. The future will be completed once the link is open.
+     *         The future will fail with a {@link ServiceInvocationException} if the link cannot be opened.
+     * @throws NullPointerException if any of the arguments other than close hook is {@code null}.
+     * @throws IllegalArgumentException if the pre-fetch size is &lt; 0.
+     */
+    Future<ProtonReceiver> createReceiver(
+            String sourceAddress,
+            ProtonQoS qos,
+            ProtonMessageHandler messageHandler,
+            int preFetchSize,
+            boolean autoAccept,
+            Handler<String> remoteCloseHook);
+
+    /**
      * Closes an AMQP link and frees up its allocated resources.
      * <p>
      * This method is equivalent to {@link #closeAndFree(ProtonLink, long, Handler)}
