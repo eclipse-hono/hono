@@ -67,7 +67,7 @@ sudo apt-get install azure-cli
 #### Install Kubectl
 
 The kubectl tool is used to manage a Kubernetes cluster from the command line.
-Follow the [installation guide](https://kubernetes.io/docs/tasks/tools/install-kubectl/) in order to set up `kubetcl` on your local machine.
+Follow the [installation guide](https://kubernetes.io/docs/tasks/tools/install-kubectl/) in order to set up `kubectl` on your local machine.
 
 #### Log in to Azure
 
@@ -124,7 +124,7 @@ Now it's time to create the AKS cluster.
 ```sh
 az ad sp create-for-rbac --skip-assignment
 ```
-If successfull, *appId* and *password* will be displayed.
+If successful, *appId* and *password* will be displayed.
 
 #### Create Cluster
 
@@ -191,7 +191,7 @@ Open [http://127.0.0.1:8001](http://127.0.0.1:8001) in your browser and select *
 
 ### Cleaning up
 
-Use the following command to delete all created resources (incl. the ubernetes cluster and the private container registry)
+Use the following command to delete all created resources (incl. the Kubernetes cluster and the private container registry)
 once they are no longer needed:
 
 ```sh

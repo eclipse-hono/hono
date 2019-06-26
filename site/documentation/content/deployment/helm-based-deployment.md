@@ -26,7 +26,7 @@ Helm is a tool for managing (complex) Kubernetes applications. In this guide it 
 #### Kubectl
 
 The kubectl tool is used to manage a Kubernetes cluster from the command line. In this guide it is used to retrieve information about Hono's service endpoints from the cluster.
-The [installation guide](https://kubernetes.io/docs/tasks/tools/install-kubectl/) provides instructions for setting up `kubetcl` locally.
+The [installation guide](https://kubernetes.io/docs/tasks/tools/install-kubectl/) provides instructions for setting up `kubectl` locally.
 
 #### Hono Helm Chart
 
