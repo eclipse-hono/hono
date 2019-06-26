@@ -541,6 +541,32 @@ public final class TenantObject extends JsonBackedValueObject {
     }
 
     /**
+     * Gets the minimum message size in bytes.
+     * 
+     * @return The minimum message size in bytes or {@link TenantConstants#DEFAULT_MINIMUM_MESSAGE_SIZE} if not set.
+     */
+    @JsonIgnore
+    public int getMinimumMessageSize() {
+        return getProperty(TenantConstants.FIELD_MINIMUM_MESSAGE_SIZE, Integer.class,
+                TenantConstants.DEFAULT_MINIMUM_MESSAGE_SIZE);
+    }
+
+    /**
+     * Sets the minimum message size in bytes.
+     * 
+     * @param payloadSize The payload size of the incoming message.
+     * @return The TenantObject.
+     * @throws IllegalArgumentException if the message payload size is negative.
+     */
+    public TenantObject setMinimumMessageSize(final int payloadSize) {
+
+        if (payloadSize < 0) {
+            throw new IllegalArgumentException("message payload size must be >= 0");
+        }
+        return setProperty(TenantConstants.FIELD_MINIMUM_MESSAGE_SIZE, payloadSize);
+    }
+
+    /**
      * Gets the default property values used for all devices of this tenant.
      * 
      * @return The default properties or an empty JSON object if no default properties

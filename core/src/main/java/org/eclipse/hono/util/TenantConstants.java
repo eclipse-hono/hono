@@ -28,6 +28,10 @@ public final class TenantConstants extends RequestResponseApiConstants {
     public static final int DEFAULT_MAX_TTD = 60; // seconds
 
     /**
+     * The default message size is set to 0, which implies no minimum size is defined.
+     */
+    public static final int DEFAULT_MINIMUM_MESSAGE_SIZE = 0;
+    /**
      *  Messages that are sent by the Hono client for the Tenant API use this as a prefix for the messageId.
      */
     public static final String MESSAGE_ID_PREFIX = "tenant-client";
@@ -69,6 +73,11 @@ public final class TenantConstants extends RequestResponseApiConstants {
      * The name of the property that contains the trusted certificate authority configured for a tenant.
      */
     public static final String FIELD_PAYLOAD_TRUSTED_CA = "trusted-ca";
+
+    /**
+     * The name of the property that contains the minimum message size in bytes.
+     */
+    public static final String FIELD_MINIMUM_MESSAGE_SIZE = "minimum-message-size";
 
     /**
      * The name of the Tenant API endpoint.

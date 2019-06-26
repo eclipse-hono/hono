@@ -15,6 +15,7 @@ package org.eclipse.hono.util;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.nullValue;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThat;
@@ -318,6 +319,31 @@ public class TenantObjectTest {
     public void testGetResourceLimitsWhenNotSet() {
         final TenantObject tenantObject = TenantObject.from(Constants.DEFAULT_TENANT, true);
         assertThat(tenantObject.getResourceLimits(), is(nullValue()));
+    }
+
+    /**
+     * Verifies that the minimum message size is returned based on the configured value.
+     */
+    @Test
+    public void testGetMinimumMessageSize() {
+
+        final TenantObject tenantObject = TenantObject
+                .from(Constants.DEFAULT_TENANT, true)
+                .setMinimumMessageSize(4 * 1024);
+
+        assertEquals(4 * 1024, tenantObject.getMinimumMessageSize());
+    }
+
+    /**
+     * Verifies that default value is returned when no minimum message size is set.
+     */
+    @Test
+    public void testGetMinimumMessageSizeNotSet() {
+
+        final TenantObject tenantObject = TenantObject
+                .from(Constants.DEFAULT_TENANT, true);
+
+        assertEquals(TenantConstants.DEFAULT_MINIMUM_MESSAGE_SIZE, tenantObject.getMinimumMessageSize());
     }
 
     private static X509Certificate getCaCertificate() throws GeneralSecurityException, IOException {
