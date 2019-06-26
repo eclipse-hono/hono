@@ -112,8 +112,10 @@ The following command assigns the IP addresses of the exposed services to enviro
 
 ~~~sh
 # in directory: eclipse-hono-$VERSION/deploy/
-eval $(services.sh)
+eval "$(./services.sh)"
 ~~~
+
+If the above command reports `could not determine IP address of service` errors and if Minikube is used, make sure the `minikube tunnel` command has been invoked to emulate load balancers.
 
 The following command can then be used to check for the existence of the *DEFAULT_TENANT* which is created as part of the installation:
 

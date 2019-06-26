@@ -18,7 +18,12 @@ function get_service_ip {
   IP_ADDR=$(kubectl get service $1 --output='jsonpath={.status.loadBalancer.ingress[0].ip}' -n $NS 2> /dev/null)
   if [ $? -eq 0 ]
   then
-    echo export $2=$IP_ADDR
+    if [ "$IP_ADDR" != '' ]
+    then
+      echo export $2=$IP_ADDR
+    else
+      echo "echo \"could not determine IP address of service '$1'\""
+    fi
   fi
 }
 
@@ -31,5 +36,5 @@ get_service_ip hono-adapter-kura KURA_ADAPTER_IP
 get_service_ip hono-adapter-mqtt-vertx MQTT_ADAPTER_IP
 echo "# Run this command to populate environment variables"
 echo "# with the IP addresses of Hono's API endpoints:"
-echo "# eval \$(services.sh namespace)"
+echo "# eval \"\$(./services.sh namespace)\""
 echo "# with namespace being the Kubernetes namespace that you deployed Hono to"
