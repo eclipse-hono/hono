@@ -135,53 +135,46 @@ public interface ApplicationClientFactory extends ConnectionLifecycle<HonoConnec
             BiConsumer<ProtonDelivery, Message> consumer, Handler<Void> closeHandler);
 
     /**
-     * Gets a client for sending commands to a device.
+     * Gets a client for sending commands to devices of the given tenant.
      * <p>
      * The client returned may be either newly created or it may be an existing
-     * client for the given device.
+     * client for the given tenant.
      * <p>
      * This method will use an implementation specific mechanism (e.g. a UUID) to create
-     * a unique reply-to address to be included in commands sent to the device. The protocol
-     * adapters need to convey an encoding of the reply-to address to the device when delivering
-     * the command. Consequently, the number of bytes transferred to the device depends on the
-     * length of the reply-to address being used. In situations where this is a major concern it
-     * might be advisable to use {@link #getOrCreateCommandClient(String, String, String)} for
-     * creating a command client and provide custom (and shorter) <em>reply-to identifier</em>
+     * a unique reply-to address to be included in commands sent to devices of the tenant.
+     * The protocol adapters need to convey an encoding of the reply-to address to the device
+     * when delivering the command. Consequently, the number of bytes transferred to the device
+     * depends on the length of the reply-to address being used. In situations where this is a
+     * major concern it might be advisable to use {@link #getOrCreateCommandClient(String, String)}
+     * for creating a command client and provide custom (and shorter) <em>reply-to identifier</em>
      * to be used in the reply-to address.
      *
-     * @param tenantId The tenant that the device belongs to.
-     * @param deviceId The device to send the commands to.
+     * @param tenantId The tenant of the devices to which commands shall be sent.
      * @return A future that will complete with the command and control client (if successful) or
      *         fail if the client cannot be created, e.g. because the underlying connection
      *         is not established or if a concurrent request to create a client for the same
-     *         tenant and device is already being executed.
+     *         tenant is already being executed.
      * @throws NullPointerException if the tenantId is {@code null}.
      */
-    Future<CommandClient> getOrCreateCommandClient(String tenantId, String deviceId);
+    Future<CommandClient> getOrCreateCommandClient(String tenantId);
 
     /**
-     * Gets a client for sending commands to a device.
+     * Gets a client for sending commands to devices of the given tenant.
      * <p>
      * The client returned may be either newly created or it may be an existing
-     * client for the given device.
+     * client for the given tenant and replyId.
      *
-     * @param tenantId The tenant that the device belongs to.
-     * @param deviceId The device to send the commands to.
-     * @param replyId An arbitrary string which (in conjunction with the tenant and device ID) uniquely
-     *                identifies this command client.
-     *                This identifier will only be used for creating a <em>new</em> client for the device.
-     *                If this method returns an existing client for the device then the client will use
-     *                the reply-to address determined during its initial creation. In particular, this
-     *                means that if the (existing) client has originally been created using the
-     *                {@link #getOrCreateCommandClient(String, String)} method, then the reply-to address
-     *                used by the client will most likely not contain the given identifier.
+     * @param tenantId The tenant of the devices to which commands shall be sent.
+     * @param replyId An arbitrary string which will be used to create the reply-to address to be included in
+     *                commands sent to devices of the tenant. The combination of tenant and replyId has to be
+     *                unique among all CommandClient instances to make sure command response messages can be received.
      * @return A future that will complete with the command and control client (if successful) or
      *         fail if the client cannot be created, e.g. because the underlying connection
      *         is not established or if a concurrent request to create a client for the same
-     *         tenant and device is already being executed.
+     *         tenant and replyId is already being executed.
      * @throws NullPointerException if the tenantId is {@code null}.
      */
-    Future<CommandClient> getOrCreateCommandClient(String tenantId, String deviceId, String replyId);
+    Future<CommandClient> getOrCreateCommandClient(String tenantId, String replyId);
 
     /**
      * Gets a client for sending commands to a device asynchronously, i.e. command responses get received by a

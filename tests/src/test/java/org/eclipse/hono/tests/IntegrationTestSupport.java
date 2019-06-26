@@ -675,14 +675,14 @@ public final class IntegrationTestSupport {
             final Map<String, Object> properties,
             final long requestTimeout) {
 
-        return applicationClientFactory.getOrCreateCommandClient(tenantId, deviceId).compose(commandClient -> {
+        return applicationClientFactory.getOrCreateCommandClient(tenantId).compose(commandClient -> {
 
             commandClient.setRequestTimeout(requestTimeout);
             final Future<BufferResult> result = Future.future();
             final Handler<Void> send = s -> {
                 // send the command upstream to the device
                 LOGGER.trace("sending command [name: {}, contentType: {}, payload: {}]", command, contentType, payload);
-                commandClient.sendCommand(command, contentType, payload, properties).map(responsePayload -> {
+                commandClient.sendCommand(deviceId, command, contentType, payload, properties).map(responsePayload -> {
                     LOGGER.debug("successfully sent command [name: {}, payload: {}] and received response [payload: {}]",
                             command, payload, responsePayload);
                     commandClient.close(v -> {});
@@ -752,14 +752,14 @@ public final class IntegrationTestSupport {
             final Map<String, Object> properties,
             final long requestTimeout) {
 
-        return applicationClientFactory.getOrCreateCommandClient(tenantId, deviceId).compose(commandClient -> {
+        return applicationClientFactory.getOrCreateCommandClient(tenantId).compose(commandClient -> {
 
             commandClient.setRequestTimeout(requestTimeout);
             final Future<Void> result = Future.future();
             final Handler<Void> send = s -> {
                 // send the command upstream to the device
                 LOGGER.trace("sending one-way command [name: {}, contentType: {}, payload: {}]", command, contentType, payload);
-                commandClient.sendOneWayCommand(command, contentType, payload, properties).map(ok -> {
+                commandClient.sendOneWayCommand(deviceId, command, contentType, payload, properties).map(ok -> {
                     LOGGER.debug("successfully sent one-way command [name: {}, payload: {}]", command, payload);
                     commandClient.close(v -> {});
                     return (Void) null;

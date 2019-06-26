@@ -69,7 +69,6 @@ public class CommandClientImplTest {
         client = new CommandClientImpl(
                 connection,
                 Constants.DEFAULT_TENANT,
-                DEVICE_ID,
                 REPLY_ID,
                 sender,
                 receiver);
@@ -90,14 +89,14 @@ public class CommandClientImplTest {
         final Map<String, Object> applicationProperties = new HashMap<>();
         applicationProperties.put("appKey", "appValue");
 
-        client.sendCommand("doSomething", "text/plain", Buffer.buffer("payload"), applicationProperties);
+        client.sendCommand(DEVICE_ID, "doSomething", "text/plain", Buffer.buffer("payload"), applicationProperties);
         final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
         verify(sender).send(messageCaptor.capture(), anyHandler());
         assertThat(messageCaptor.getValue().getSubject(), is("doSomething"));
         assertNotNull(messageCaptor.getValue().getMessageId());
         assertThat(messageCaptor.getValue().getContentType(), is("text/plain"));
         assertThat(messageCaptor.getValue().getReplyTo(),
-                is(String.format("%s/%s/%s/%s", client.getReplyToEndpointName(), Constants.DEFAULT_TENANT, DEVICE_ID, REPLY_ID)));
+                is(String.format("%s/%s/%s", client.getReplyToEndpointName(), Constants.DEFAULT_TENANT, REPLY_ID)));
         assertNotNull(messageCaptor.getValue().getApplicationProperties());
         assertThat(messageCaptor.getValue().getApplicationProperties().getValue().get("appKey"), is("appValue"));
     }
@@ -118,7 +117,7 @@ public class CommandClientImplTest {
         final Map<String, Object> applicationProperties = new HashMap<>();
         applicationProperties.put("appKey", "appValue");
 
-        client.sendOneWayCommand("doSomething", "text/plain", Buffer.buffer("payload"), applicationProperties);
+        client.sendOneWayCommand(DEVICE_ID, "doSomething", "text/plain", Buffer.buffer("payload"), applicationProperties);
         final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
         verify(sender).send(messageCaptor.capture(), anyHandler());
         assertThat(messageCaptor.getValue().getSubject(), is("doSomething"));
