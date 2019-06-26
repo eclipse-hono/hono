@@ -207,10 +207,10 @@ public class HonoCommander extends AbstractClient {
     }
 
     private void sendCommandAndReceiveResponse(final String tenantId, final String deviceId) {
-        applicationClientFactory.getOrCreateCommandClient(tenantId, deviceId)
+        applicationClientFactory.getOrCreateCommandClient(tenantId)
                 .map(this::setCommandTimeOut)
                 .compose(commandClient -> commandClient
-                        .sendCommand(sampler.getCommand(), Buffer.buffer(sampler.getCommandPayload()))
+                        .sendCommand(deviceId, sampler.getCommand(), Buffer.buffer(sampler.getCommandPayload()))
                         .map(commandResponse -> {
                             final String commandResponseText = Optional.ofNullable(commandResponse.getPayload())
                                     .orElse(Buffer.buffer()).toString();

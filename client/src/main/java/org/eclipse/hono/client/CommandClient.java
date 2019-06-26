@@ -34,6 +34,7 @@ public interface CommandClient extends RequestResponseClient {
      * A device needs to be (successfully) registered before a client can upload
      * any data for it. The device also needs to be connected for a successful delivery.
      *
+     * @param deviceId The device to send the command to.
      * @param command The command name.
      * @param data The command data to send to the device or {@code null} if the command has no input data.
      * @return A future indicating the result of the operation.
@@ -46,7 +47,7 @@ public interface CommandClient extends RequestResponseClient {
      * @throws NullPointerException if command is {@code null}.
      * @see RequestResponseClient#setRequestTimeout(long)
      */
-    Future<BufferResult> sendCommand(String command, Buffer data);
+    Future<BufferResult> sendCommand(String deviceId, String command, Buffer data);
 
     /**
      * Sends a command to a device and expects a response.
@@ -54,6 +55,7 @@ public interface CommandClient extends RequestResponseClient {
      * A device needs to be (successfully) registered before a client can upload
      * any data for it. The device also needs to be connected for a successful delivery.
      *
+     * @param deviceId The device to send the command to.
      * @param command The command name.
      * @param contentType The type of the data submitted as part of the command or {@code null} if unknown.
      * @param data The command data to send to the device or {@code null} if the command has no input data.
@@ -67,7 +69,7 @@ public interface CommandClient extends RequestResponseClient {
      * @throws NullPointerException if command is {@code null}.
      * @see RequestResponseClient#setRequestTimeout(long)
      */
-    Future<BufferResult> sendCommand(String command, String contentType, Buffer data, Map<String, Object> properties);
+    Future<BufferResult> sendCommand(String deviceId, String command, String contentType, Buffer data, Map<String, Object> properties);
 
     /**
      * Sends a <em>one-way command</em> to a device, i.e. there is no response expected from the device.
@@ -75,6 +77,7 @@ public interface CommandClient extends RequestResponseClient {
      * A device needs to be (successfully) registered before a client can upload
      * any data for it. The device also needs to be connected for a successful delivery.
      *
+     * @param deviceId The device to send the command to.
      * @param command The one-way command name.
      * @param data The command data to send to the device or {@code null} if the one-way command has no input data.
      * @return A future indicating the result of the operation.
@@ -85,7 +88,7 @@ public interface CommandClient extends RequestResponseClient {
      * @throws NullPointerException if command is {@code null}.
      * @see RequestResponseClient#setRequestTimeout(long)
      */
-    Future<Void> sendOneWayCommand(String command, Buffer data);
+    Future<Void> sendOneWayCommand(String deviceId, String command, Buffer data);
 
     /**
      * Sends a <em>one-way command</em> to a device, i.e. there is no response from the device expected.
@@ -93,6 +96,7 @@ public interface CommandClient extends RequestResponseClient {
      * A device needs to be (successfully) registered before a client can upload
      * any data for it. The device also needs to be connected for a successful delivery.
      *
+     * @param deviceId The device to send the command to.
      * @param command The one-way command name.
      * @param contentType The type of the data submitted as part of the one-way command or {@code null} if unknown.
      * @param data The command data to send to the device or {@code null} if the command has no input data.
@@ -105,5 +109,5 @@ public interface CommandClient extends RequestResponseClient {
      * @throws NullPointerException if command is {@code null}.
      * @see RequestResponseClient#setRequestTimeout(long)
      */
-    Future<Void> sendOneWayCommand(String command, String contentType, Buffer data, Map<String, Object> properties);
+    Future<Void> sendOneWayCommand(String deviceId, String command, String contentType, Buffer data, Map<String, Object> properties);
 }

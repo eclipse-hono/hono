@@ -72,17 +72,17 @@ public class Commander extends AbstractApplicationClient {
 
         LOG.info("Command sent to device... [request will timeout in {} seconds]", requestTimeoutInSecs);
 
-        final Future<CommandClient> commandClient = clientFactory.getOrCreateCommandClient(tenantId, deviceId);
+        final Future<CommandClient> commandClient = clientFactory.getOrCreateCommandClient(tenantId);
         return commandClient
                 .map(this::setRequestTimeOut)
                 .compose(c -> {
                     if (command.isOneWay()) {
-                        return c
-                                .sendOneWayCommand(command.getName(), command.getContentType(), Buffer.buffer(command.getPayload()), null)
+                        return c.sendOneWayCommand(deviceId, command.getName(), command.getContentType(),
+                                Buffer.buffer(command.getPayload()), null)
                                 .map(ok -> c);
                     } else {
-                        return c
-                                .sendCommand(command.getName(), command.getContentType(), Buffer.buffer(command.getPayload()), null)
+                        return c.sendCommand(deviceId, command.getName(), command.getContentType(),
+                                Buffer.buffer(command.getPayload()), null)
                                 .map(this::printResponse)
                                 .map(ok -> c);
                     }

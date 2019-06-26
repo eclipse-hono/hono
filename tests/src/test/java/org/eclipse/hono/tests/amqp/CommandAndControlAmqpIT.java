@@ -221,7 +221,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
             log.debug("received command [name: {}]", msg.getSubject());
             commandsReceived.countDown();
         }, (commandClient, payload) -> {
-            return commandClient.sendOneWayCommand("setValue", "text/plain", payload, null);
+            return commandClient.sendOneWayCommand(deviceId, "setValue", "text/plain", payload, null);
         }, commandsToSend);
 
         commandsReceived.await();
@@ -311,7 +311,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
                 ctx,
                 sender -> createCommandConsumer(ctx, sender),
                 (commandClient, payload) -> {
-                    return commandClient.sendCommand("setValue", "text/plain", payload, null)
+                    return commandClient.sendCommand(deviceId, "setValue", "text/plain", payload, null)
                             .map(response -> {
                                 ctx.assertEquals(deviceId, response.getApplicationProperty(MessageHelper.APP_PROPERTY_DEVICE_ID, String.class));
                                 ctx.assertEquals(tenantId, response.getApplicationProperty(MessageHelper.APP_PROPERTY_TENANT_ID, String.class));
@@ -335,7 +335,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
         final long start = System.currentTimeMillis();
 
         final Async commandClientCreation = ctx.async();
-        final Future<CommandClient> commandClient = helper.applicationClientFactory.getOrCreateCommandClient(tenantId, deviceId, "test-client")
+        final Future<CommandClient> commandClient = helper.applicationClientFactory.getOrCreateCommandClient(tenantId, "test-client")
                 .setHandler(ctx.asyncAssertSuccess(c -> {
                     c.setRequestTimeout(200);
                     commandClientCreation.complete();
@@ -455,7 +455,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
         final long start = System.currentTimeMillis();
 
         final Async commandClientCreation = ctx.async();
-        final Future<CommandClient> commandClient = helper.applicationClientFactory.getOrCreateCommandClient(tenantId, deviceId, "test-client")
+        final Future<CommandClient> commandClient = helper.applicationClientFactory.getOrCreateCommandClient(tenantId, "test-client")
                 .setHandler(ctx.asyncAssertSuccess(c -> {
                     c.setRequestTimeout(300);
                     commandClientCreation.complete();
@@ -466,7 +466,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
             final Async commandSent = ctx.async();
             context.runOnContext(go -> {
                 final Buffer msg = Buffer.buffer("value: " + commandsSent.getAndIncrement());
-                final Future<BufferResult> sendCmdFuture = commandClient.result().sendCommand("setValue", "text/plain",
+                final Future<BufferResult> sendCmdFuture = commandClient.result().sendCommand(deviceId, "setValue", "text/plain",
                         msg, null);
                 sendCmdFuture.setHandler(sendAttempt -> {
                     if (sendAttempt.succeeded()) {

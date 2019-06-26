@@ -80,11 +80,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
                             HttpURLConnection.HTTP_GONE
     };
 
-    /**
-     * Target address of the request message.
-     * Note that the target address of the sender link may be different, see {@link #getLinkTargetAddress()}.
-     */
-    protected final String targetAddress;
+    protected final String linkTargetAddress;
 
     private final Map<Object, TriTuple<Handler<AsyncResult<R>>, Object, Span>> replyMap = new HashMap<>();
     private Handler<Void> drainHandler;
@@ -122,14 +118,42 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
             final HonoConnection connection,
             final String tenantId) {
 
+        this(connection, tenantId, UUID.randomUUID().toString());
+    }
+
+    /**
+     * Creates a request-response client.
+     * <p>
+     * The created instance's sender link's target address is set to
+     * <em>${name}[/${tenantId}]</em> and the receiver link's source
+     * address is set to <em>${name}[/${tenantId}]/${replyId}</em>
+     * (where ${name} is the value returned by {@link #getName()}).
+     * <p>
+     * The latter address is also used as the value of the <em>reply-to</em>
+     * property of all request messages sent by this client.
+     * <p>
+     * The client will be ready to use after invoking {@link #createLinks()} or
+     * {@link #createLinks(Handler, Handler)} only.
+     *
+     * @param connection The connection to the service.
+     * @param tenantId The tenant that the client should be scoped to or {@code null} if the
+     *                 client should not be scoped to a tenant.
+     * @param replyId The replyId to use in the reply-to address.
+     * @throws NullPointerException if any of context or configuration are {@code null}.
+     */
+    protected AbstractRequestResponseClient(
+            final HonoConnection connection,
+            final String tenantId,
+            final String replyId) {
+
         super(connection);
         this.requestTimeoutMillis = connection.getConfig().getRequestTimeout();
         if (tenantId == null) {
-            this.targetAddress = getName();
-            this.replyToAddress = String.format("%s/%s", getReplyToEndpointName(), UUID.randomUUID());
+            this.linkTargetAddress = getName();
+            this.replyToAddress = String.format("%s/%s", getReplyToEndpointName(), replyId);
         } else {
-            this.targetAddress = String.format("%s/%s", getName(), tenantId);
-            this.replyToAddress = String.format("%s/%s/%s", getReplyToEndpointName(), tenantId, UUID.randomUUID());
+            this.linkTargetAddress = String.format("%s/%s", getName(), tenantId);
+            this.replyToAddress = String.format("%s/%s/%s", getReplyToEndpointName(), tenantId, replyId);
         }
         this.tenantId = tenantId;
     }
@@ -167,7 +191,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
         Objects.requireNonNull(replyId);
 
         this.requestTimeoutMillis = connection.getConfig().getRequestTimeout();
-        this.targetAddress = String.format("%s/%s/%s", getName(), tenantId, deviceId);
+        this.linkTargetAddress = String.format("%s/%s/%s", getName(), tenantId, deviceId);
         this.replyToAddress = String.format("%s/%s/%s/%s", getReplyToEndpointName(), tenantId, deviceId, replyId);
         this.tenantId = tenantId;
     }
@@ -200,7 +224,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      */
     public final void setResponseCache(final ExpiringValueCache<Object, R> cache) {
         this.responseCache = cache;
-        LOG.info("enabling caching of responses from {}", targetAddress);
+        LOG.info("enabling caching of responses from {}", getName());
     }
 
     /**
@@ -323,17 +347,16 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
             ApplicationProperties applicationProperties);
 
     /**
-     * The target address of the sender link on which the request message is sent.
+     * The default target address for request messages sent with this client.
      * <p>
-     * This default implementation returns the target address of the request message.
+     * This default implementation returns the link target address.
      * <p>
-     * Subclasses may override this method in order to use a different address for creating the sender link.
-     * For example, an empty address could be returned here to create an anonymous relay link.
+     * Subclasses may override this method in order to use a different address as default for sending messages.
      *
-     * @return The link target address.
+     * @return The message target address.
      */
-    protected String getLinkTargetAddress() {
-        return targetAddress;
+    protected String getDefaultMessageTargetAddress() {
+        return linkTargetAddress;
     }
 
     /**
@@ -364,7 +387,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
         return createReceiver(replyToAddress, receiverCloseHook)
                 .compose(recv -> {
                     this.receiver = recv;
-                    return createSender(getLinkTargetAddress(), senderCloseHook);
+                    return createSender(linkTargetAddress, senderCloseHook);
                 }).compose(sender -> {
                     LOG.debug("request-response client for peer [{}] created", connection.getConfig().getHost());
                     this.sender = sender;
@@ -467,7 +490,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
                 // response has already been processed
             } else {
                 LOG.debug("canceling request [target: {}, correlation ID: {}]: {}",
-                        targetAddress, correlationId, result.cause().getMessage());
+                        linkTargetAddress, correlationId, result.cause().getMessage());
                 final Span span = handler.three();
                 if (span != null) {
                     Tags.HTTP_STATUS.set(span, ServiceInvocationException.extractStatusCode(result.cause()));
@@ -498,8 +521,6 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
     /**
      * Build a Proton message with a provided subject (serving as the operation that shall be invoked).
      * The message can be extended by arbitrary application properties passed in.
-     * <p>
-     * To enable specific message properties that are not considered here, the method can be overridden by subclasses.
      *
      * @param subject The subject system property of the message.
      * @param appProperties The map containing arbitrary application properties.
@@ -510,14 +531,30 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      *                  (see {@link AbstractHonoClient#setApplicationProperties(Message, Map)}
      */
     private Message createMessage(final String subject, final Map<String, Object> appProperties) {
+        return createMessage(subject, getDefaultMessageTargetAddress(), appProperties);
+    }
+
+    /**
+     * Build a Proton message with a provided subject (serving as the operation that shall be invoked).
+     * The message can be extended by arbitrary application properties passed in.
+     *
+     * @param subject The subject system property of the message.
+     * @param address The address of the message, put in the <em>to</em> property.
+     * @param appProperties The map containing arbitrary application properties.
+     *                      Maybe null if no application properties are needed.
+     * @return The Proton message constructed from the provided parameters.
+     * @throws NullPointerException if the subject is {@code null}.
+     * @throws IllegalArgumentException if the application properties contain not AMQP 1.0 compatible values
+     *                  (see {@link AbstractHonoClient#setApplicationProperties(Message, Map)}
+     */
+    private Message createMessage(final String subject, final String address,
+            final Map<String, Object> appProperties) {
 
         Objects.requireNonNull(subject);
         final Message msg = ProtonHelper.message();
         final String messageId = createMessageId();
         AbstractHonoClient.setApplicationProperties(msg, appProperties);
-        if (!targetAddress.equals(getLinkTargetAddress())) {
-            msg.setAddress(targetAddress);
-        }
+        msg.setAddress(address);
         msg.setReplyTo(replyToAddress);
         msg.setMessageId(messageId);
         msg.setSubject(subject);
@@ -526,6 +563,9 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
 
     /**
      * Creates a request message for a payload and sends it to the peer.
+     * <p>
+     * This method uses the {@link #getDefaultMessageTargetAddress()} method to determine the value of the message's
+     * <em>to</em> property.
      * <p>
      * This method simply invokes {@link #createAndSendRequest(String, Map, Buffer, Handler)} with {@code null} for the
      * properties parameter.
@@ -545,6 +585,9 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
 
     /**
      * Creates a request message for a payload and sends it to the peer.
+     * <p>
+     * This method uses the {@link #getDefaultMessageTargetAddress()} method to determine the value of the message's
+     * <em>to</em> property.
      * <p>
      * This method simply invokes {@link #createAndSendRequest(String, Map, Buffer, String, Handler, Object, Span)} with
      * {@code null} for the properties, content type and cache key parameters.
@@ -567,6 +610,9 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
     /**
      * Creates a request message for a payload and sends it to the peer.
      * <p>
+     * This method uses the {@link #getDefaultMessageTargetAddress()} method to determine the value of the message's
+     * <em>to</em> property.
+     * <p>
      * This method simply invokes {@link #createAndSendRequest(String, Map, Buffer, Handler)}
      * with {@code null} for the properties parameter.
      * 
@@ -587,6 +633,9 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
 
     /**
      * Creates a request message for a payload and headers and sends it to the peer.
+     * <p>
+     * This method uses the {@link #getDefaultMessageTargetAddress()} method to determine the value of the message's
+     * <em>to</em> property.
      * 
      * @param action The operation that the request is supposed to trigger/invoke.
      * @param properties The headers to include in the request message as AMQP application properties.
@@ -610,6 +659,9 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
 
     /**
      * Creates a request message for a payload with content-type JSON and headers and sends it to the peer.
+     * <p>
+     * This method uses the {@link #getDefaultMessageTargetAddress()} method to determine the value of the message's
+     * <em>to</em> property.
      * <p>
      * This method first checks if the sender has any credit left. If not, the result handler is failed immediately.
      * Otherwise, the request message is sent and a timer is started which fails the result handler,
@@ -642,6 +694,9 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
 
     /**
      * Creates a request message for a payload and headers and sends it to the peer.
+     * <p>
+     * This method uses the {@link #getDefaultMessageTargetAddress()} method to determine the value of the message's
+     * <em>to</em> property.
      * <p>
      * This method first checks if the sender has any credit left. If not, the result handler is failed immediately.
      * Otherwise, the request message is sent and a timer is started which fails the result handler,
@@ -685,13 +740,16 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
     /**
      * Creates a request message for a payload and headers and sends it to the peer.
      * <p>
+     * This method uses the {@link #getDefaultMessageTargetAddress()} method to determine the value of the message's
+     * <em>to</em> property.
+     * <p>
      * This method first checks if the sender has any credit left. If not, the result handler is failed immediately.
      * Otherwise, the request message is sent and a timer is started which fails the result handler,
      * if no response is received within <em>requestTimeoutMillis</em> milliseconds.
      * <p>
      * In case of an error the {@code Tags.HTTP_STATUS} tag of the span is set accordingly.
      * However, the span is never finished by this method.
-     * 
+     *
      * @param action The operation that the request is supposed to trigger/invoke.
      * @param properties The headers to include in the request message as AMQP application properties.
      * @param payload The payload to include in the request message as a an AMQP Value section.
@@ -715,12 +773,51 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
             final Object cacheKey,
             final Span currentSpan) {
 
+        createAndSendRequest(action, getDefaultMessageTargetAddress(), properties, payload, contentType, resultHandler,
+                cacheKey, currentSpan);
+    }
+
+    /**
+     * Creates a request message for a payload and headers and sends it to the peer.
+     * <p>
+     * This method first checks if the sender has any credit left. If not, the result handler is failed immediately.
+     * Otherwise, the request message is sent and a timer is started which fails the result handler,
+     * if no response is received within <em>requestTimeoutMillis</em> milliseconds.
+     * <p>
+     * In case of an error the {@code Tags.HTTP_STATUS} tag of the span is set accordingly.
+     * However, the span is never finished by this method.
+     * 
+     * @param action The operation that the request is supposed to trigger/invoke.
+     * @param address The address to send the message to.
+     * @param properties The headers to include in the request message as AMQP application properties.
+     * @param payload The payload to include in the request message as a an AMQP Value section.
+     * @param contentType The content type of the payload.
+     * @param resultHandler The handler to notify about the outcome of the request. The handler is failed with
+     *                      a {@link ServerErrorException} if the request cannot be sent to the remote service,
+     *                      e.g. because there is no connection to the service or there are no credits available
+     *                      for sending the request or the request timed out.
+     * @param cacheKey The key to use for caching the response (if the service allows caching).
+     * @param currentSpan The <em>Opentracing</em> span used to trace the request execution.
+     * @throws NullPointerException if any of action, result handler or currentSpan is {@code null}.
+     * @throws IllegalArgumentException if the properties contain any non-primitive typed values.
+     * @see AbstractHonoClient#setApplicationProperties(Message, Map)
+     */
+    protected final void createAndSendRequest(
+            final String action,
+            final String address,
+            final Map<String, Object> properties,
+            final Buffer payload,
+            final String contentType,
+            final Handler<AsyncResult<R>> resultHandler,
+            final Object cacheKey,
+            final Span currentSpan) {
+
         Objects.requireNonNull(action);
         Objects.requireNonNull(resultHandler);
         Objects.requireNonNull(currentSpan);
 
         if (isOpen()) {
-            final Message request = createMessage(action, properties);
+            final Message request = createMessage(action, address, properties);
             MessageHelper.setPayload(request, contentType, payload);
             sendRequest(request, resultHandler, cacheKey, currentSpan);
         } else {
@@ -751,7 +848,8 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
             final Object cacheKey,
             final Span currentSpan) {
 
-        Tags.MESSAGE_BUS_DESTINATION.set(currentSpan, targetAddress);
+        final String requestTargetAddress = request.getAddress() != null ? request.getAddress() : getDefaultMessageTargetAddress();
+        Tags.MESSAGE_BUS_DESTINATION.set(currentSpan, requestTargetAddress);
         Tags.SPAN_KIND.set(currentSpan, Tags.SPAN_KIND_CLIENT);
         Tags.HTTP_METHOD.set(currentSpan, request.getSubject());
         if (tenantId != null) {
@@ -761,7 +859,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
         connection.executeOrRunOnContext(res -> {
 
             if (sender.sendQueueFull()) {
-                LOG.debug("cannot send request to peer, no credit left for link [target: {}]", targetAddress);
+                LOG.debug("cannot send request to peer, no credit left for link [link target: {}]", linkTargetAddress);
                 Tags.HTTP_STATUS.set(currentSpan, HttpURLConnection.HTTP_UNAVAILABLE);
                 resultHandler.handle(Future.failedFuture(new ServerErrorException(
                         HttpURLConnection.HTTP_UNAVAILABLE, "no credit available for sending request")));
@@ -787,18 +885,18 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
                         final Rejected rejected = (Rejected) remoteState;
                         if (rejected.getError() != null) {
                             LOG.debug("service did not accept request [target address: {}, subject: {}, correlation ID: {}]: {}",
-                                    targetAddress, request.getSubject(), correlationId, rejected.getError());
+                                    requestTargetAddress, request.getSubject(), correlationId, rejected.getError());
                             failedResult.fail(StatusCodeMapper.from(rejected.getError()));
                             cancelRequest(correlationId, failedResult);
                         } else {
                             LOG.debug("service did not accept request [target address: {}, subject: {}, correlation ID: {}]",
-                                    targetAddress, request.getSubject(), correlationId);
+                                    requestTargetAddress, request.getSubject(), correlationId);
                             failedResult.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
                             cancelRequest(correlationId, failedResult);
                         }
                     } else if (Accepted.class.isInstance(remoteState)) {
                         LOG.trace("service has accepted request [target address: {}, subject: {}, correlation ID: {}]",
-                                targetAddress, request.getSubject(), correlationId);
+                                requestTargetAddress, request.getSubject(), correlationId);
                         currentSpan.log("request accepted by peer");
                         // if no reply-to is set, the request is assumed to be one-way (no response is expected)
                         if (request.getReplyTo() == null) {
@@ -808,12 +906,12 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
                         }
                     } else if (Released.class.isInstance(remoteState)) {
                         LOG.debug("service did not accept request [target address: {}, subject: {}, correlation ID: {}], remote state: {}",
-                                targetAddress, request.getSubject(), correlationId, remoteState);
+                                requestTargetAddress, request.getSubject(), correlationId, remoteState);
                         failedResult.fail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE));
                         cancelRequest(correlationId, failedResult);
                     } else if (Modified.class.isInstance(remoteState)) {
                         LOG.debug("service did not accept request [target address: {}, subject: {}, correlation ID: {}], remote state: {}",
-                                targetAddress, request.getSubject(), correlationId, remoteState);
+                                requestTargetAddress, request.getSubject(), correlationId, remoteState);
                         final Modified modified = (Modified) deliveryUpdated.getRemoteState();
                         failedResult.fail(modified.getUndeliverableHere() ? new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND)
                                 : new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE));
@@ -830,10 +928,10 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
                     final String deviceId = MessageHelper.getDeviceId(request);
                     if (deviceId == null) {
                         LOG.debug("sent request [target address: {}, subject: {}, correlation ID: {}] to service",
-                                targetAddress, request.getSubject(), correlationId);
+                                requestTargetAddress, request.getSubject(), correlationId);
                     } else {
                         LOG.debug("sent request [target address: {}, subject: {}, correlation ID: {}, device ID: {}] to service",
-                                targetAddress, request.getSubject(), correlationId, deviceId);
+                                requestTargetAddress, request.getSubject(), correlationId, deviceId);
                     }
                 }
             }

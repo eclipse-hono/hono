@@ -274,15 +274,15 @@ public class HonoExampleApplicationBase {
      * @param notification The notification that was received for the device.
      */
     private Future<CommandClient> createCommandClientAndSendCommand(final TimeUntilDisconnectNotification notification) {
-        return clientFactory.getOrCreateCommandClient(notification.getTenantId(), notification.getDeviceId())
+        return clientFactory.getOrCreateCommandClient(notification.getTenantId())
                 .map(commandClient -> {
                     commandClient.setRequestTimeout(calculateCommandTimeout(notification));
 
                     // send the command upstream to the device
                     if (SEND_ONE_WAY_COMMANDS) {
-                        sendOneWayCommandToAdapter(commandClient, notification);
+                        sendOneWayCommandToAdapter(notification.getDeviceId(), commandClient, notification);
                     } else {
-                        sendCommandToAdapter(commandClient, notification);
+                        sendCommandToAdapter(notification.getDeviceId(), commandClient, notification);
                     }
                     return commandClient;
                 }).otherwise(t -> {
@@ -339,14 +339,14 @@ public class HonoExampleApplicationBase {
      * @param commandClient The command client to be used for sending the command to the device.
      * @param ttdNotification The ttd notification that was received for the device.
      */
-    private void sendCommandToAdapter(final CommandClient commandClient, final TimeUntilDisconnectNotification ttdNotification) {
+    private void sendCommandToAdapter(final String deviceId, final CommandClient commandClient, final TimeUntilDisconnectNotification ttdNotification) {
         final Buffer commandBuffer = buildCommandPayload();
         final String command = "setBrightness";
         if (LOG.isDebugEnabled()) {
             LOG.debug("Sending command [{}] to [{}].", command, ttdNotification.getTenantAndDeviceId());
         }
 
-        commandClient.sendCommand(command, "application/json", commandBuffer, buildCommandProperties()).map(result -> {
+        commandClient.sendCommand(deviceId, command, "application/json", commandBuffer, buildCommandProperties()).map(result -> {
             if (LOG.isDebugEnabled()) {
                 LOG.debug("Successfully sent command payload: [{}].", commandBuffer.toString());
                 LOG.debug("And received response: [{}].", Optional.ofNullable(result.getPayload()).orElse(Buffer.buffer()).toString());
@@ -381,7 +381,7 @@ public class HonoExampleApplicationBase {
      * @param commandClient The command client to be used for sending the notification command to the device.
      * @param ttdNotification The ttd notification that was received for the device.
      */
-    private void sendOneWayCommandToAdapter(final CommandClient commandClient, final TimeUntilDisconnectNotification ttdNotification) {
+    private void sendOneWayCommandToAdapter(final String deviceId, final CommandClient commandClient, final TimeUntilDisconnectNotification ttdNotification) {
         final Buffer commandBuffer = buildOneWayCommandPayload();
         final String command = "sendLifecycleInfo";
 
@@ -389,7 +389,7 @@ public class HonoExampleApplicationBase {
             LOG.debug("Sending one-way command [{}] to [{}].", command, ttdNotification.getTenantAndDeviceId());
         }
 
-        commandClient.sendOneWayCommand(command, commandBuffer).map(statusResult -> {
+        commandClient.sendOneWayCommand(deviceId, command, commandBuffer).map(statusResult -> {
             if (LOG.isDebugEnabled()) {
                 LOG.debug("Successfully sent one-way command payload: [{}] and received status [{}].", commandBuffer.toString(), statusResult);
             }

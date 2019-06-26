@@ -25,6 +25,7 @@ import org.eclipse.hono.client.AsyncCommandClient;
 import org.eclipse.hono.client.CommandClient;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.MessageConsumer;
+import org.eclipse.hono.util.CommandConstants;
 
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -109,36 +110,37 @@ public class ApplicationClientFactoryImpl extends AbstractHonoClientFactory impl
      * {@inheritDoc}
      */
     @Override
-    public Future<CommandClient> getOrCreateCommandClient(final String tenantId, final String deviceId) {
-        return getOrCreateCommandClient(tenantId, deviceId, UUID.randomUUID().toString());
+    public Future<CommandClient> getOrCreateCommandClient(final String tenantId) {
+        Objects.requireNonNull(tenantId);
+
+        final String cacheKey = String.format("%s/%s", CommandConstants.NORTHBOUND_COMMAND_REQUEST_ENDPOINT, tenantId);
+        return getOrCreateCommandClient(tenantId, UUID.randomUUID().toString(), cacheKey);
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public Future<CommandClient> getOrCreateCommandClient(
-            final String tenantId,
-            final String deviceId,
-            final String replyId) {
-
+    public Future<CommandClient> getOrCreateCommandClient(final String tenantId, final String replyId) {
         Objects.requireNonNull(tenantId);
-        Objects.requireNonNull(deviceId);
         Objects.requireNonNull(replyId);
 
-        log.debug("get or create command client for [tenantId: {}, deviceId: {}, replyId: {}]", tenantId, deviceId,
-                replyId);
+        final String cacheKey = String.format("%s/%s/%s", CommandConstants.NORTHBOUND_COMMAND_REQUEST_ENDPOINT, tenantId, replyId);
+        return getOrCreateCommandClient(tenantId, replyId, cacheKey);
+    }
+
+    private Future<CommandClient> getOrCreateCommandClient(final String tenantId, final String replyId,
+            final String cacheKey) {
+        log.debug("get or create command client for [tenantId: {}, replyId: {}]", tenantId, replyId);
         return connection.executeOrRunOnContext(result -> {
-            final String targetAddress = CommandClientImpl.getTargetAddress(tenantId, deviceId);
             commandClientFactory.getOrCreateClient(
-                    targetAddress,
+                    cacheKey,
                     () -> CommandClientImpl.create(
                             connection,
                             tenantId,
-                            deviceId,
                             replyId,
-                            s -> removeCommandClient(targetAddress),
-                            s -> removeCommandClient(targetAddress)),
+                            s -> removeCommandClient(cacheKey),
+                            s -> removeCommandClient(cacheKey)),
                     result);
         });
     }

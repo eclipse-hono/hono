@@ -49,7 +49,6 @@ public class CommandClientImpl extends AbstractRequestResponseClient<BufferResul
     private static final Logger LOG = LoggerFactory.getLogger(CommandClientImpl.class);
 
     private long messageCounter;
-    private final String linkTargetAddress;
 
     /**
      * Creates a client for sending commands to devices.
@@ -59,18 +58,15 @@ public class CommandClientImpl extends AbstractRequestResponseClient<BufferResul
      *
      * @param connection The connection to Hono.
      * @param tenantId The tenant that the device belongs to.
-     * @param deviceId The device to create the client for.
      * @param replyId The replyId to use in the reply-to address.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
     CommandClientImpl(
             final HonoConnection connection,
             final String tenantId,
-            final String deviceId,
             final String replyId) {
 
-        super(connection, tenantId, deviceId, replyId);
-        this.linkTargetAddress = String.format("%s/%s", getName(), tenantId);
+        super(connection, tenantId, replyId);
     }
 
     /**
@@ -78,7 +74,6 @@ public class CommandClientImpl extends AbstractRequestResponseClient<BufferResul
      *
      * @param connection The connection to Hono.
      * @param tenantId The tenant that the device belongs to.
-     * @param deviceId The device to create the client for.
      * @param replyId The replyId to use in the reply-to address.
      * @param sender The link to use for sending command requests.
      * @param receiver The link to use for receiving command responses.
@@ -87,12 +82,11 @@ public class CommandClientImpl extends AbstractRequestResponseClient<BufferResul
     CommandClientImpl(
             final HonoConnection connection,
             final String tenantId,
-            final String deviceId,
             final String replyId,
             final ProtonSender sender,
             final ProtonReceiver receiver) {
 
-        this(connection, tenantId, deviceId, replyId);
+        this(connection, tenantId, replyId);
         this.sender = Objects.requireNonNull(sender);
         this.receiver = Objects.requireNonNull(receiver);
     }
@@ -120,11 +114,6 @@ public class CommandClientImpl extends AbstractRequestResponseClient<BufferResul
     @Override
     protected String getReplyToEndpointName() {
         return CommandConstants.NORTHBOUND_COMMAND_RESPONSE_ENDPOINT;
-    }
-
-    @Override
-    protected String getLinkTargetAddress() {
-        return linkTargetAddress;
     }
 
     /**
@@ -155,12 +144,12 @@ public class CommandClientImpl extends AbstractRequestResponseClient<BufferResul
     /**
      * {@inheritDoc}
      * <p>
-     * This method simply invokes {@link #sendCommand(String, String, Buffer, Map)} with
+     * This method simply invokes {@link #sendCommand(String, String, String, Buffer, Map)} with
      * {@code null} as the *content-type* and {@code null} as *application properties*.
      */
     @Override
-    public Future<BufferResult> sendCommand(final String command, final Buffer data) {
-        return sendCommand(command, null, data, null);
+    public Future<BufferResult> sendCommand(final String deviceId, final String command, final Buffer data) {
+        return sendCommand(deviceId, command, null, data, null);
     }
 
     /**
@@ -170,14 +159,18 @@ public class CommandClientImpl extends AbstractRequestResponseClient<BufferResul
      * from a device with the request.
      */
     @Override
-    public Future<BufferResult> sendCommand(final String command, final String contentType, final Buffer data, final Map<String, Object> properties) {
+    public Future<BufferResult> sendCommand(final String deviceId, final String command, final String contentType,
+            final Buffer data, final Map<String, Object> properties) {
 
         Objects.requireNonNull(command);
 
         final Span currentSpan = newChildSpan(null, command);
 
         final Future<BufferResult> responseTracker = Future.future();
-        createAndSendRequest(command, properties, data, contentType, responseTracker, null, currentSpan);
+
+        final String messageTargetAddress = getTargetAddress(getTenantId(), deviceId);
+        createAndSendRequest(command, messageTargetAddress, properties, data, contentType, responseTracker,
+                null, currentSpan);
 
         return responseTracker
                 .recover(t -> {
@@ -198,15 +191,16 @@ public class CommandClientImpl extends AbstractRequestResponseClient<BufferResul
     }
 
     @Override
-    public Future<Void> sendOneWayCommand(final String command, final Buffer data) {
-        return sendOneWayCommand(command, null, data, null);
+    public Future<Void> sendOneWayCommand(final String deviceId, final String command, final Buffer data) {
+        return sendOneWayCommand(deviceId, command, null, data, null);
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public Future<Void> sendOneWayCommand(final String command, final String contentType, final Buffer data, final Map<String, Object> properties) {
+    public Future<Void> sendOneWayCommand(final String deviceId, final String command, final String contentType,
+            final Buffer data, final Map<String, Object> properties) {
         Objects.requireNonNull(command);
 
         final Span currentSpan = newChildSpan(null, command);
@@ -218,7 +212,7 @@ public class CommandClientImpl extends AbstractRequestResponseClient<BufferResul
             AbstractHonoClient.setApplicationProperties(request, properties);
 
             final String messageId = createMessageId();
-            request.setAddress(targetAddress);
+            request.setAddress(getTargetAddress(getTenantId(), deviceId));
             request.setMessageId(messageId);
             request.setSubject(command);
 
@@ -255,7 +249,6 @@ public class CommandClientImpl extends AbstractRequestResponseClient<BufferResul
      *
      * @param con The connection to Hono.
      * @param tenantId The tenant that the device belongs to.
-     * @param deviceId The device to create the client for.
      * @param replyId The replyId to use in the reply-to address.
      * @param senderCloseHook A handler to invoke if the peer closes the sender link unexpectedly.
      * @param receiverCloseHook A handler to invoke if the peer closes the receiver link unexpectedly.
@@ -265,12 +258,11 @@ public class CommandClientImpl extends AbstractRequestResponseClient<BufferResul
     public static final Future<CommandClient> create(
             final HonoConnection con,
             final String tenantId,
-            final String deviceId,
             final String replyId,
             final Handler<String> senderCloseHook,
             final Handler<String> receiverCloseHook) {
 
-        final CommandClientImpl client = new CommandClientImpl(con, tenantId, deviceId, replyId);
+        final CommandClientImpl client = new CommandClientImpl(con, tenantId, replyId);
         return client.createLinks(senderCloseHook, receiverCloseHook)
                 .map(ok -> {
                     LOG.debug("successfully created command client for [{}]", tenantId);
