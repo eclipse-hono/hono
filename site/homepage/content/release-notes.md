@@ -9,6 +9,9 @@ title = "Release Notes"
 * Hono's protocol adapters and the other components now support using ECC based server certificates.
   The protocol adapters also support authenticating devices which present an ECC based client certificate.
   The example configuration now uses ECC based certificates by default.
+* Hono now specifies a [Device Connection API](https://www.eclipse.org/hono/docs/latest/api/device-connection-api/) and
+  contains an exemplary implementation of this API included in the device registry component. The purpose of the API is
+  to be able to set and retrieve information about the connections from devices or gateways to the protocol adapters.
 
 ### Fixes & Enhancements
 
