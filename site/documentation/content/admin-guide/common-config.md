@@ -29,3 +29,11 @@ it is **not** active.
 | Environment Variable<br>Command Line Option | Mandatory | Default | Description                                                             |
 | :------------------------------------------ | :-------: | :------ | :-----------------------------------------------------------------------|
 | `HONO_VERTX_PREFER_NATIVE`<br>`--hono.vertx.preferNative`| no | `false` | Tries to enable epoll() support on Linux, when available   |
+
+## Configuring the Java VM
+
+The Java VM started in Hono's components can be configured with arbitrary command line options by means of setting the `_JAVA_OPTIONS` environment variable.
+
+| Environment Variable | Mandatory | Default | Description |
+| :------------------- | :-------: | :------ | :-----------|
+| `_JAVA_OPTIONS`    | no        | -       | Any options that should be passed to the Java VM on the command line, e.g. `-Xmx128m` |

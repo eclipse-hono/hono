@@ -173,8 +173,8 @@ def copyArtifacts() {
     stage("Copy Artifacts") {
         sh ''' 
             chmod +r deploy/target/eclipse-hono-${RELEASE_VERSION}-*.tar.gz
-            chmod +r cli/target/hono-cli-${RELEASE_VERSION}-exec.jar
             cp deploy/target/eclipse-hono-${RELEASE_VERSION}-*.tar.gz /home/data/httpd/download.eclipse.org/hono/
+            chmod +r cli/target/hono-cli-${RELEASE_VERSION}-exec.jar
             cp cli/target/hono-cli-${RELEASE_VERSION}-exec.jar /home/data/httpd/download.eclipse.org/hono/
            '''
     }

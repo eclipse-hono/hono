@@ -341,7 +341,7 @@ The example application sets the `brightness` to a random value between 0 and 10
 **NB:** If the application would send a *one-way command* instead (see [Command and Control Concepts](https://www.eclipse.org/hono/docs/latest/concepts/command-and-control/)), the `hono-cmd-req-id` response header would be missing.
 
 {{% note %}}
-If you are running Hono on another node than the application, e.g. using *Docker Machine*, *Minikube* or *Minishift*, and the clock of that node is not in sync with the node that your (example) application is running on, then the application might consider the *time til disconnect* indicated by the device in its *hono-ttd* parameter to already have expired. This will happen if the application node's clock is ahead of the clock on the HTTP protocol adapter node. Consequently, this will result in the application **not** sending any command to the device.
+If you are running Hono on another node than the application, e.g. using *Minikube* or *Minishift*, and the clock of that node is not in sync with the node that your (example) application is running on, then the application might consider the *time til disconnect* indicated by the device in its *hono-ttd* parameter to already have expired. This will happen if the application node's clock is ahead of the clock on the HTTP protocol adapter node. Consequently, this will result in the application **not** sending any command to the device.
 
 Thus, you need to make sure that the clocks of the node running the application and the node running the HTTP protocol adapter are synchronized (you may want to search the internet for several solutions to this problem).
 {{% /note %}}

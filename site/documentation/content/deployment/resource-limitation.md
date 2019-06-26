@@ -37,24 +37,6 @@ The following JVM options can be used in Java 9 and later in order to change thi
 
 * `-XX:MinRAMPercentage`, `-XX:MaxRAMPercentage` and `-XX:InitialRAMPercentage` can be used to set the (minimum, maximum and initial) percentage of total memory that may be allocated for the heap. A value of 70-80% should work if no other processes are running in the same container.
 
-### Docker Swarm
-
-As stated above, the Docker images provided by Hono run on OpenJDK 11. Options can be passed to the JVM during startup by means of setting the `_JAVA_OPTIONS` environment variable on the container. The following example from the Docker Swarm deployment script illustrates this mechanism:
-
-~~~sh
-docker service create --name hono-adapter-http-vertx -p 8080:8080 \
-  --secret http-adapter.credentials \
-  --secret hono-adapter-http-vertx-config.yml \
-  --limit-memory 256m \
-  --env _JAVA_OPTIONS="-XX:MinRAMPercentage=80 -XX:MaxRAMPercentage=80" \
-  --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-adapter-http-vertx-config.yml \
-  --env SPRING_PROFILES_ACTIVE=dev \
-  --env LOGGING_CONFIG=classpath:logback-spring.xml \
-  eclipse/hono-adapter-http-vertx:0.6
-~~~
-
-The fourth line sets a hard limit of 256 MB of total memory that the container may use. The fifth line then configures the JVM to use 80% of the 256 MB total memory for its heap.
-
 ### Kubernetes
 
 In Kubernetes (and OpenShift) the resource limits for a *pod*, and thus the container(s) that are part of the pod, can be configured in the corresponding *PodSpec*. The following example from the HTTP adapter's Kubernetes *Deployment* resource descriptor illustrates the mechanism:

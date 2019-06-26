@@ -13,6 +13,9 @@ title = "Release Notes"
 ### Fixes & Enhancements
 
 * The Hono Sandbox's protocol adapters support using the gateway mode again.
+* The [Getting Started]({{< relref "getting-started" >}}) guide has been rewritten
+  to use the [Hono Sandbox]({{< relref "sandbox" >}}) or a local Minikube cluster
+  instead of Docker Swarm.
 
 ### API Changes
 

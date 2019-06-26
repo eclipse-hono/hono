@@ -27,7 +27,7 @@
   <name>Hono Deployment</name>
   <url>https://www.eclipse.org/hono</url>
 
-  <description>Scripts for deploying a Hono instance to a Docker Swarm, a Kubernetes or an Openshift cluster using example configuration properties.</description>
+  <description>A Helm chart for deploying a Hono instance to a Kubernetes or OpenShift cluster using example configuration properties.</description>
 
   <properties>
     <docker.skip.build>true</docker.skip.build>
@@ -138,29 +138,6 @@
             </configuration>
           </execution>
           <execution>
-            <id>create_docker_config_files</id>
-            <phase>process-resources</phase>
-            <goals>
-              <goal>copy-resources</goal>
-            </goals>
-            <configuration>
-              <outputDirectory>${project.build.directory}/deploy/docker</outputDirectory>
-              <resources>
-                <resource>
-                  <directory>${project.basedir}/src/main/deploy/docker</directory>
-                  <filtering>true</filtering>
-                </resource>
-                <resource>
-                  <directory>${project.basedir}/src/main/config</directory>
-                  <filtering>true</filtering>
-                </resource>
-              </resources>
-              <filters>
-                <filter>${project.basedir}/src/main/docker-config.properties</filter>
-              </filters>
-            </configuration>
-          </execution>
-          <execution>
             <id>create_helm_config_files</id>
             <phase>process-resources</phase>
             <goals>
@@ -238,7 +215,6 @@
             <configuration>
               <attach>false</attach>
               <descriptors>
-                <descriptor>src/main/assembly/deploy.xml</descriptor>
                 <descriptor>src/main/assembly/chart.xml</descriptor>
               </descriptors>
               <tarLongFileMode>posix</tarLongFileMode>

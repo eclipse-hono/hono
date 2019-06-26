@@ -58,7 +58,7 @@ These artifacts are available for reference only. Please always use the latest v
 ## Source Code
 
 The source code can be cloned (using [Git](https://git-scm.com/)) or downloaded from the [Eclipse Hono GitHub repository]
-(https://github.com/eclipse/hono). The [Building from Source](https://www.eclipse.org/hono/docs/latest/dev-guide/building-hono/)
+(https://github.com/eclipse/hono). The [Building from Source](https://www.eclipse.org/hono/docs/latest/dev-guide/building_hono/)
 guide provides instructions on how to build Hono locally.
 
 ## Release Notes
