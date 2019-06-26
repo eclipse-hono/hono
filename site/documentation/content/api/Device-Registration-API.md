@@ -7,6 +7,8 @@ weight = 425
 The *Device Registration API* is used by Hono's protocol adapters to get information about devices connecting to the adapters.
 <!--more-->
 
+The Device API also present an HTTP endpoint for management operations, such as creating, updating and deleting devices.
+
 The Device Registration API is defined by means of AMQP 1.0 message exchanges, i.e. a client needs to connect to Hono using an AMQP 1.0 client in order to invoke operations of the API as described in the following sections.
 
 <a name="preconditions"></a>
@@ -101,6 +103,8 @@ All the management operations are accessible through the `/devices` HTTP endpoin
 ### Create a device
 
 An HTTP `POST` method request on the device endpoint triggers the device creation in the device registry.
+
+*NOTE* : when a device is created, an empty set of credentials MUST be created for this device. 
 
 #### URL pattern
 The device id value can be optionally appended to the URL : `devices/{tenantID}/{deviceId}`.
@@ -345,6 +349,8 @@ The body MAY contain a Json Object with more details on the error. See the [erro
 ### Delete a Device information
 
 An HTTP `DELETE` method request on the device endpoint will remove the device details in the device registry.
+
+*NOTE* : when a device is deleted, all the associated credentials MUST be removed. 
 
 #### URL pattern
 The device id value MUST be appended to the URL : `devices/{deviceId}`.

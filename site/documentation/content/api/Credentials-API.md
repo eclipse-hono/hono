@@ -11,7 +11,7 @@ Credentials are of a certain *type* which indicates which authentication mechani
 
 The Credentials API is defined by means of AMQP 1.0 message exchanges, i.e. a client needs to connect to Hono using an AMQP 1.0 client in order to invoke operations of the API as described in the following sections.
 
-//TODO : ADD smtgh about the management API 
+The Credentials API also present an HTTP endpoint to update credentials.
 
 <a name="preconditions"></a>
 ## Preconditions for invoking the Credentials API
